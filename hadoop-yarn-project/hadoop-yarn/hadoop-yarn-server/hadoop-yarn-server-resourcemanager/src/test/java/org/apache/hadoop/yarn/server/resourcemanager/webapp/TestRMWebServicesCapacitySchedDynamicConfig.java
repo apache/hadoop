@@ -24,6 +24,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.junit.AfterClass;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
@@ -39,10 +40,12 @@ import org.junit.runners.Parameterized;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfigGeneratorForTest.createConfiguration;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.GB;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.assertJsonResponse;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.backupSchedulerConfigFileInTarget;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.createMutableRM;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.createWebAppDescriptor;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.getExpectedResourceFile;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.reinitialize;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.restoreSchedulerConfigFileInTarget;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.runTest;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.sendRequest;
 import static org.assertj.core.api.Assertions.fail;
@@ -72,6 +75,12 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends JerseyTestBase 
   public TestRMWebServicesCapacitySchedDynamicConfig(boolean legacyQueueMode) {
     super(createWebAppDescriptor());
     this.legacyQueueMode = legacyQueueMode;
+    backupSchedulerConfigFileInTarget();
+  }
+
+  @AfterClass
+  public static void afterClass() {
+    restoreSchedulerConfigFileInTarget();
   }
 
   @Test
@@ -86,7 +95,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends JerseyTestBase 
     conf.put("yarn.scheduler.capacity.root.test1.test1_1.capacity", "12.5");
     conf.put("yarn.scheduler.capacity.root.test1.test1_2.capacity", "12.5");
     conf.put("yarn.scheduler.capacity.root.test1.test1_3.capacity", "75");
-    try (MockRM rm = createMutableRM(createConfiguration(conf))) {
+    try (MockRM rm = createMutableRM(createConfiguration(conf), false)) {
       runTest(EXPECTED_FILE_TMPL, "testPercentageMode", rm, resource());
     }
   }
@@ -102,7 +111,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends JerseyTestBase 
     conf.put("yarn.scheduler.capacity.root.test1.test1_1.capacity", "[memory=2048,vcores=2]");
     conf.put("yarn.scheduler.capacity.root.test1.test1_2.capacity", "[memory=2048,vcores=2]");
     conf.put("yarn.scheduler.capacity.root.test1.test1_3.capacity", "[memory=12288,vcores=12]");
-    try (MockRM rm = createMutableRM(createConfiguration(conf))) {
+    try (MockRM rm = createMutableRM(createConfiguration(conf), false)) {
       runTest(EXPECTED_FILE_TMPL, "testAbsoluteMode", rm, resource());
     }
   }
@@ -119,7 +128,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends JerseyTestBase 
     conf.put("yarn.scheduler.capacity.root.test1.test1_1.capacity", "2w");
     conf.put("yarn.scheduler.capacity.root.test1.test1_2.capacity", "2w");
     conf.put("yarn.scheduler.capacity.root.test1.test1_3.capacity", "12w");
-    try (MockRM rm = createMutableRM(createConfiguration(conf))) {
+    try (MockRM rm = createMutableRM(createConfiguration(conf), false)) {
       // capacity and normalizedWeight are set differently between legacy/non-legacy queue mode
       runTest(EXPECTED_FILE_TMPL, "testWeightMode", rm, resource());
     }
@@ -140,7 +149,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends JerseyTestBase 
 
     Configuration config = createConfiguration(conf);
     setupAQC(config, "yarn.scheduler.capacity.root.test2.");
-    try (MockRM rm = createMutableRM(config)) {
+    try (MockRM rm = createMutableRM(config, false)) {
       // capacity and normalizedWeight are set differently between legacy/non-legacy queue mode
       rm.registerNode("h1:1234", 32 * GB, 32);
       assertJsonResponse(sendRequest(resource()),

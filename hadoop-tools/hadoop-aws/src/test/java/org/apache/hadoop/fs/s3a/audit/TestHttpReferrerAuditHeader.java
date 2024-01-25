@@ -204,7 +204,7 @@ public class TestHttpReferrerAuditHeader extends AbstractAuditingTest {
           + "&id=e8ede3c7-8506-4a43-8268-fe8fcbb510a4-00000278&t0=154"
           + "&fs=e8ede3c7-8506-4a43-8268-fe8fcbb510a4&t1=156&"
           + "ts=1620905165700\""
-          + " \"Hadoop 3.4.0-SNAPSHOT, java/1.8.0_282 vendor/AdoptOpenJDK\""
+          + " \"Hadoop 3.5.0-SNAPSHOT, java/1.8.0_282 vendor/AdoptOpenJDK\""
           + " -"
           + " TrIqtEYGWAwvu0h1N9WJKyoqM0TyHUaY+ZZBwP2yNf2qQp1Z/0="
           + " SigV4"

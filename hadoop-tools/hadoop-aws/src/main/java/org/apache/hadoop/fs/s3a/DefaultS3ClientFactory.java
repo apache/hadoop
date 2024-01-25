@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.s3a.impl.AWSClientConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,7 +33,9 @@ import software.amazon.awssdk.core.client.config.SdkAdvancedClientOption;
 import software.amazon.awssdk.core.interceptor.ExecutionInterceptor;
 import software.amazon.awssdk.core.retry.RetryPolicy;
 import software.amazon.awssdk.http.apache.ApacheHttpClient;
+import software.amazon.awssdk.http.auth.spi.scheme.AuthScheme;
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
+import software.amazon.awssdk.identity.spi.AwsCredentialsIdentity;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3BaseClientBuilder;
@@ -52,10 +55,17 @@ import org.apache.hadoop.fs.store.LogExactlyOnce;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_DEFAULT_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.CENTRAL_ENDPOINT;
-import static org.apache.hadoop.fs.s3a.impl.AWSHeaders.REQUESTER_PAYS_HEADER;
+import static org.apache.hadoop.fs.s3a.Constants.FIPS_ENDPOINT;
+import static org.apache.hadoop.fs.s3a.Constants.HTTP_SIGNER_CLASS_NAME;
+import static org.apache.hadoop.fs.s3a.Constants.HTTP_SIGNER_ENABLED;
+import static org.apache.hadoop.fs.s3a.Constants.HTTP_SIGNER_ENABLED_DEFAULT;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_SECURE_CONNECTIONS;
 import static org.apache.hadoop.fs.s3a.Constants.SECURE_CONNECTIONS;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_SERVICE_IDENTIFIER_S3;
+import static org.apache.hadoop.fs.s3a.auth.SignerFactory.createHttpSigner;
+import static org.apache.hadoop.fs.s3a.impl.AWSHeaders.REQUESTER_PAYS_HEADER;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.AUTH_SCHEME_AWS_SIGV_4;
+import static org.apache.hadoop.util.Preconditions.checkArgument;
 
 
 /**
@@ -94,6 +104,13 @@ public class DefaultS3ClientFactory extends Configured
 
   /** Exactly once log to inform about ignoring the AWS-SDK Warnings for CSE. */
   private static final LogExactlyOnce IGNORE_CSE_WARN = new LogExactlyOnce(LOG);
+
+  /**
+   * Error message when an endpoint is set with FIPS enabled: {@value}.
+   */
+  @VisibleForTesting
+  public static final String ERROR_ENDPOINT_WITH_FIPS =
+      "An endpoint cannot set when " + FIPS_ENDPOINT + " is true";
 
   @Override
   public S3Client createS3Client(
@@ -162,14 +179,26 @@ public class DefaultS3ClientFactory extends Configured
     configureEndpointAndRegion(builder, parameters, conf);
 
     S3Configuration serviceConfiguration = S3Configuration.builder()
-            .pathStyleAccessEnabled(parameters.isPathStyleAccess())
-            .build();
+        .pathStyleAccessEnabled(parameters.isPathStyleAccess())
+        .checksumValidationEnabled(parameters.isChecksumValidationEnabled())
+        .build();
 
-    return builder
-        .overrideConfiguration(createClientOverrideConfiguration(parameters, conf))
+    final ClientOverrideConfiguration.Builder override =
+        createClientOverrideConfiguration(parameters, conf);
+
+    S3BaseClientBuilder s3BaseClientBuilder = builder
+        .overrideConfiguration(override.build())
         .credentialsProvider(parameters.getCredentialSet())
         .disableS3ExpressSessionAuth(!parameters.isExpressCreateSession())
         .serviceConfiguration(serviceConfiguration);
+
+    if (conf.getBoolean(HTTP_SIGNER_ENABLED, HTTP_SIGNER_ENABLED_DEFAULT)) {
+      // use an http signer through an AuthScheme
+      final AuthScheme<AwsCredentialsIdentity> signer =
+          createHttpSigner(conf, AUTH_SCHEME_AWS_SIGV_4, HTTP_SIGNER_CLASS_NAME);
+      builder.putAuthScheme(signer);
+    }
+    return (BuilderT) s3BaseClientBuilder;
   }
 
   /**
@@ -177,9 +206,11 @@ public class DefaultS3ClientFactory extends Configured
    * @param parameters parameter object
    * @param conf configuration object
    * @throws IOException any IOE raised, or translated exception
+   * @throws RuntimeException some failures creating an http signer
    * @return the override configuration
+   * @throws IOException any IOE raised, or translated exception
    */
-  protected ClientOverrideConfiguration createClientOverrideConfiguration(
+  protected ClientOverrideConfiguration.Builder createClientOverrideConfiguration(
       S3ClientCreationParameters parameters, Configuration conf) throws IOException {
     final ClientOverrideConfiguration.Builder clientOverrideConfigBuilder =
         AWSClientConfig.createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_S3);
@@ -211,7 +242,7 @@ public class DefaultS3ClientFactory extends Configured
     final RetryPolicy.Builder retryPolicyBuilder = AWSClientConfig.createRetryPolicyBuilder(conf);
     clientOverrideConfigBuilder.retryPolicy(retryPolicyBuilder.build());
 
-    return clientOverrideConfigBuilder.build();
+    return clientOverrideConfigBuilder;
   }
 
   /**
@@ -232,6 +263,7 @@ public class DefaultS3ClientFactory extends Configured
    * @param conf  conf configuration object
    * @param <BuilderT> S3 client builder type
    * @param <ClientT> S3 client type
+   * @throws IllegalArgumentException if endpoint is set when FIPS is enabled.
    */
   private <BuilderT extends S3BaseClientBuilder<BuilderT, ClientT>, ClientT> void configureEndpointAndRegion(
       BuilderT builder, S3ClientCreationParameters parameters, Configuration conf) {
@@ -247,7 +279,18 @@ public class DefaultS3ClientFactory extends Configured
       region = Region.of(configuredRegion);
     }
 
+    // FIPs? Log it, then reject any attempt to set an endpoint
+    final boolean fipsEnabled = parameters.isFipsEnabled();
+    if (fipsEnabled) {
+      LOG.debug("Enabling FIPS mode");
+    }
+    // always setting it guarantees the value is non-null,
+    // which tests expect.
+    builder.fipsEnabled(fipsEnabled);
+
     if (endpoint != null) {
+      checkArgument(!fipsEnabled,
+          "%s : %s", ERROR_ENDPOINT_WITH_FIPS, endpoint);
       builder.endpointOverride(endpoint);
       // No region was configured, try to determine it from the endpoint.
       if (region == null) {

@@ -105,6 +105,7 @@ public final class AWSClientConfig {
    * @param awsServiceIdentifier service
    * @return the builder inited with signer, timeouts and UA.
    * @throws IOException failure.
+   * @throws RuntimeException some failures creating an http signer
    */
   public static ClientOverrideConfiguration.Builder createClientConfigBuilder(Configuration conf,
       String awsServiceIdentifier) throws IOException {

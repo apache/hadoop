@@ -737,4 +737,66 @@ static DataInputBuffer createFakeCredentials(Random r, int nTok)
     }
     Assert.assertTrue(javaOpts.contains("-Xmx256m"));
   }
+
+  @Test
+  public void testAdminOptionsPrecedeUserDefinedJavaOptions() throws Exception {
+    ContainerLocalizerWrapper wrapper = new ContainerLocalizerWrapper();
+    ContainerLocalizer localizer = wrapper.setupContainerLocalizerForTest();
+
+    Configuration conf = new Configuration();
+    conf.setStrings(YarnConfiguration.NM_CONTAINER_LOCALIZER_ADMIN_JAVA_OPTS_KEY,
+        "adminOption1 adminOption2");
+    conf.setStrings(YarnConfiguration.NM_CONTAINER_LOCALIZER_JAVA_OPTS_KEY,
+        " userOption1 userOption2");
+    List<String> javaOpts = localizer.getJavaOpts(conf);
+
+    Assert.assertEquals(4, javaOpts.size());
+    Assert.assertTrue(javaOpts.get(0).equals("adminOption1"));
+    Assert.assertTrue(javaOpts.get(1).equals("adminOption2"));
+    Assert.assertTrue(javaOpts.get(2).equals("userOption1"));
+    Assert.assertTrue(javaOpts.get(3).equals("userOption2"));
+  }
+
+  @Test
+  public void testAdminOptionsPrecedeDefaultUserOptions() throws Exception {
+    ContainerLocalizerWrapper wrapper = new ContainerLocalizerWrapper();
+    ContainerLocalizer localizer = wrapper.setupContainerLocalizerForTest();
+
+    Configuration conf = new Configuration();
+    conf.setStrings(YarnConfiguration.NM_CONTAINER_LOCALIZER_ADMIN_JAVA_OPTS_KEY,
+        "adminOption1 adminOption2");
+    List<String> javaOpts = localizer.getJavaOpts(conf);
+
+    Assert.assertEquals(3, javaOpts.size());
+    Assert.assertTrue(javaOpts.get(0).equals("adminOption1"));
+    Assert.assertTrue(javaOpts.get(1).equals("adminOption2"));
+    Assert.assertTrue(javaOpts.get(2).equals("-Xmx256m"));
+  }
+
+  @Test
+  public void testUserOptionsWhenAdminOptionsAreNotDefined() throws Exception {
+    ContainerLocalizerWrapper wrapper = new ContainerLocalizerWrapper();
+    ContainerLocalizer localizer = wrapper.setupContainerLocalizerForTest();
+
+    Configuration conf = new Configuration();
+    conf.setStrings(YarnConfiguration.NM_CONTAINER_LOCALIZER_JAVA_OPTS_KEY,
+        "userOption1 userOption2");
+    List<String> javaOpts = localizer.getJavaOpts(conf);
+
+    Assert.assertEquals(2, javaOpts.size());
+    Assert.assertTrue(javaOpts.get(0).equals("userOption1"));
+    Assert.assertTrue(javaOpts.get(1).equals("userOption2"));
+  }
+
+  @Test
+  public void testJavaOptionsWithoutDefinedAdminOrUserOptions() throws Exception {
+    ContainerLocalizerWrapper wrapper = new ContainerLocalizerWrapper();
+    ContainerLocalizer localizer = wrapper.setupContainerLocalizerForTest();
+
+    Configuration conf = new Configuration();
+    List<String> javaOpts = localizer.getJavaOpts(conf);
+
+    Assert.assertEquals(1, javaOpts.size());
+    Assert.assertTrue(javaOpts.get(0).equals("-Xmx256m"));
+  }
 }

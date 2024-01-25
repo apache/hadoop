@@ -101,7 +101,8 @@ public class IAMInstanceCredentialsProvider
       // if the exception contains an IOE, extract it
       // so its type is the immediate cause of this new exception.
       Throwable t = e;
-      final IOException ioe = maybeExtractIOException("IAM endpoint", e);
+      final IOException ioe = maybeExtractIOException("IAM endpoint", e,
+          "resolveCredentials()");
       if (ioe != null) {
         t = ioe;
       }

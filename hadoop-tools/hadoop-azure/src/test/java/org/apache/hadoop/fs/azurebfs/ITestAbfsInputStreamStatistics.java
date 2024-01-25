@@ -280,7 +280,7 @@ public class ITestAbfsInputStreamStatistics
       // AbfsRestOperation Instance required for eTag.
       AbfsRestOperation abfsRestOperation = fs.getAbfsClient()
           .getPathStatus(nullStatFilePath.toUri().getPath(), false,
-              getTestTracingContext(fs, false));
+              getTestTracingContext(fs, false), null);
 
       // AbfsInputStream with no StreamStatistics.
       in = new AbfsInputStream(fs.getAbfsClient(), null,

@@ -49,6 +49,7 @@ import org.apache.hadoop.fs.azurebfs.diagnostics.LongConfigurationBasicValidator
 import org.apache.hadoop.fs.azurebfs.diagnostics.StringConfigurationBasicValidator;
 import org.apache.hadoop.fs.azurebfs.enums.Trilean;
 import org.apache.hadoop.fs.azurebfs.extensions.CustomTokenProviderAdaptee;
+import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
 import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider;
@@ -116,6 +117,11 @@ public class AbfsConfiguration{
       ConfigurationKey = AZURE_READ_OPTIMIZE_FOOTER_READ,
       DefaultValue = DEFAULT_OPTIMIZE_FOOTER_READ)
   private boolean optimizeFooterRead;
+
+  @IntegerConfigurationValidatorAnnotation(
+          ConfigurationKey = AZURE_FOOTER_READ_BUFFER_SIZE,
+          DefaultValue = DEFAULT_FOOTER_READ_BUFFER_SIZE)
+  private int footerReadBufferSize;
 
   @BooleanConfigurationValidatorAnnotation(
       ConfigurationKey = FS_AZURE_ACCOUNT_IS_EXPECT_HEADER_ENABLED,
@@ -336,6 +342,10 @@ public class AbfsConfiguration{
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey =
           FS_AZURE_ABFS_RENAME_RESILIENCE, DefaultValue = DEFAULT_ENABLE_ABFS_RENAME_RESILIENCE)
   private boolean renameResilience;
+
+  private String clientProvidedEncryptionKey;
+
+  private String clientProvidedEncryptionKeySHA;
 
   public AbfsConfiguration(final Configuration rawConfig, String accountName)
       throws IllegalAccessException, InvalidConfigurationValueException, IOException {
@@ -641,6 +651,10 @@ public class AbfsConfiguration{
 
   public boolean optimizeFooterRead() {
     return this.optimizeFooterRead;
+  }
+
+  public int getFooterReadBufferSize() {
+    return this.footerReadBufferSize;
   }
 
   public int getReadBufferSize() {
@@ -957,6 +971,32 @@ public class AbfsConfiguration{
     }
   }
 
+  public EncryptionContextProvider createEncryptionContextProvider() {
+    try {
+      String configKey = FS_AZURE_ENCRYPTION_CONTEXT_PROVIDER_TYPE;
+      if (get(configKey) == null) {
+        return null;
+      }
+      Class<? extends EncryptionContextProvider> encryptionContextClass =
+          getAccountSpecificClass(configKey, null,
+              EncryptionContextProvider.class);
+      Preconditions.checkArgument(encryptionContextClass != null, String.format(
+          "The configuration value for %s is invalid, or config key is not account-specific",
+          configKey));
+
+      EncryptionContextProvider encryptionContextProvider =
+          ReflectionUtils.newInstance(encryptionContextClass, rawConfig);
+      Preconditions.checkArgument(encryptionContextProvider != null,
+          String.format("Failed to initialize %s", encryptionContextClass));
+
+      LOG.trace("{} init complete", encryptionContextClass.getName());
+      return encryptionContextProvider;
+    } catch (Exception e) {
+      throw new IllegalArgumentException(
+          "Unable to load encryption context provider class: ", e);
+    }
+  }
+
   public boolean isReadAheadEnabled() {
     return this.enabledReadAhead;
   }
@@ -1068,9 +1108,22 @@ public class AbfsConfiguration{
     return this.enableAbfsListIterator;
   }
 
-  public String getClientProvidedEncryptionKey() {
-    String accSpecEncKey = accountConf(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY);
-    return rawConfig.get(accSpecEncKey, null);
+  public String getEncodedClientProvidedEncryptionKey() {
+    if (clientProvidedEncryptionKey == null) {
+      String accSpecEncKey = accountConf(
+          FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY);
+      clientProvidedEncryptionKey = rawConfig.get(accSpecEncKey, null);
+    }
+    return clientProvidedEncryptionKey;
+  }
+
+  public String getEncodedClientProvidedEncryptionKeySHA() {
+    if (clientProvidedEncryptionKeySHA == null) {
+      String accSpecEncKey = accountConf(
+          FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY_SHA);
+      clientProvidedEncryptionKeySHA = rawConfig.get(accSpecEncKey, null);
+    }
+    return clientProvidedEncryptionKeySHA;
   }
 
   @VisibleForTesting
@@ -1136,6 +1189,11 @@ public class AbfsConfiguration{
   @VisibleForTesting
   public void setOptimizeFooterRead(boolean optimizeFooterRead) {
     this.optimizeFooterRead = optimizeFooterRead;
+  }
+
+  @VisibleForTesting
+  public void setFooterReadBufferSize(int footerReadBufferSize) {
+    this.footerReadBufferSize = footerReadBufferSize;
   }
 
   @VisibleForTesting
