@@ -32,7 +32,7 @@ import static org.junit.Assert.assertEquals;
 
 
 /**
- * Test S3 Access Grants configurations
+ * Test S3 Access Grants configurations.
  */
 public class TestS3AccessGrantConfiguration {
 
@@ -88,13 +88,15 @@ public class TestS3AccessGrantConfiguration {
     verifyS3AGPluginDisabled(builder);
   }
 
-  private <BuilderT extends S3BaseClientBuilder<BuilderT, ClientT>, ClientT> void verifyS3AGPluginEnabled(BuilderT builder) {
+  private <BuilderT extends S3BaseClientBuilder<BuilderT, ClientT>, ClientT> void
+      verifyS3AGPluginEnabled(BuilderT builder) {
     assertEquals(builder.plugins().size(), 1);
     assertEquals(builder.plugins().get(0).getClass().getName(),
         "software.amazon.awssdk.s3accessgrants.plugin.S3AccessGrantsPlugin");
   }
 
-  private <BuilderT extends S3BaseClientBuilder<BuilderT, ClientT>, ClientT> void verifyS3AGPluginDisabled(BuilderT builder) {
-    assertEquals(builder.plugins().size(),0);
+  private <BuilderT extends S3BaseClientBuilder<BuilderT, ClientT>, ClientT> void
+      verifyS3AGPluginDisabled(BuilderT builder) {
+    assertEquals(builder.plugins().size(), 0);
   }
 }
