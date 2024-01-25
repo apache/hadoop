@@ -338,7 +338,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
              */
             AppendRequestParameters reqParams = new AppendRequestParameters(
                 offset, 0, bytesLength, mode, false, leaseId, isExpectHeaderEnabled);
-            AbfsRestOperation op = client.append(path,
+            AbfsRestOperation op = getClient().append(path,
                 blockUploadData.toByteArray(), reqParams, cachedSasToken.get(),
                 contextEncryptionAdapter, new TracingContext(tracingContext));
             cachedSasToken.update(op.getSasToken());
@@ -655,7 +655,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     AbfsPerfTracker tracker = client.getAbfsPerfTracker();
     try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker,
             "flushWrittenBytesToServiceInternal", "flush")) {
-      AbfsRestOperation op = client.flush(path, offset, retainUncommitedData,
+      AbfsRestOperation op = getClient().flush(path, offset, retainUncommitedData,
           isClose, cachedSasToken.get(), leaseId, contextEncryptionAdapter,
           new TracingContext(tracingContext));
       cachedSasToken.update(op.getSasToken());
@@ -794,5 +794,10 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
   @VisibleForTesting
   ListeningExecutorService getExecutorService() {
     return executorService;
+  }
+
+  @VisibleForTesting
+  AbfsClient getClient() {
+    return client;
   }
 }
