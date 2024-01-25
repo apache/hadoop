@@ -407,10 +407,11 @@ public class DefaultS3ClientFactory extends Configured
   }
 
   public static <BuilderT extends S3BaseClientBuilder<BuilderT, ClientT>, ClientT> void
-  applyS3AccessGrantsConfigurations(BuilderT builder, Configuration conf) {
+      applyS3AccessGrantsConfigurations(BuilderT builder, Configuration conf) {
     boolean s3agEnabled = conf.getBoolean(AWS_S3_ACCESS_GRANTS_ENABLED, false);
     if (s3agEnabled) {
-      boolean s3agFallbackEnabled = conf.getBoolean(AWS_S3_ACCESS_GRANTS_FALLBACK_TO_IAM_ENABLED, false);
+      boolean s3agFallbackEnabled = conf.getBoolean(
+          AWS_S3_ACCESS_GRANTS_FALLBACK_TO_IAM_ENABLED, false);
       S3AccessGrantsPlugin accessGrantsPlugin =
           S3AccessGrantsPlugin.builder().enableFallback(s3agFallbackEnabled).build();
       builder.addPlugin(accessGrantsPlugin);
