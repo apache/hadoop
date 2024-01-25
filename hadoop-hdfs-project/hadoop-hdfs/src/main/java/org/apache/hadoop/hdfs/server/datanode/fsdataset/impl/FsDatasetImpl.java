@@ -2737,9 +2737,6 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           Block.getGenerationStamp(diskMetaFile.getName()) :
           HdfsConstants.GRANDFATHER_GENERATION_STAMP;
 
-      final boolean isRegular = FileUtil.isRegularFile(diskMetaFile, false) &&
-          FileUtil.isRegularFile(diskFile, false);
-
       if (vol.getStorageType() == StorageType.PROVIDED) {
         if (memBlockInfo == null) {
           // replica exists on provided store but not in memory
@@ -2907,9 +2904,17 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
             + memBlockInfo.getNumBytes() + " to "
             + memBlockInfo.getBlockDataLength());
         memBlockInfo.setNumBytes(memBlockInfo.getBlockDataLength());
-      } else if (!isRegular) {
-        corruptBlock = new Block(memBlockInfo);
-        LOG.warn("Block:{} is not a regular file.", corruptBlock.getBlockId());
+      } else {
+        // Check whether the memory block file and meta file are both regular files.
+        File memBlockFile = new File(memBlockInfo.getBlockURI());
+        File memMetaFile = new File(memBlockInfo.getMetadataURI());
+        boolean isRegular = FileUtil.isRegularFile(memMetaFile, false) &&
+            FileUtil.isRegularFile(memBlockFile, false);
+        if (!isRegular) {
+          corruptBlock = new Block(memBlockInfo);
+          LOG.warn("Block:{} has some regular files, block file is {} and meta file is {}.",
+              corruptBlock.getBlockId(), memBlockFile, memMetaFile);
+        }
       }
     } finally {
       if (dataNodeMetrics != null) {
