@@ -1058,13 +1058,13 @@ public class AbfsClient implements Closeable {
                                       TracingContext tracingContext)
           throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders
-        = (isPaginatedDeleteEnabled(tracingContext, recursive)
+        = (isPaginatedDelete(tracingContext, recursive)
         && xMsVersion.compareTo(API_VERSION.AUG_03_2023) < 0)
         ? createDefaultHeaders(API_VERSION.AUG_03_2023)
         : createDefaultHeaders(xMsVersion);
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
 
-    if (isPaginatedDeleteEnabled(tracingContext, recursive)) {
+    if (isPaginatedDelete(tracingContext, recursive)) {
       // Add paginated query parameter
       abfsUriQueryBuilder.addQuery(QUERY_PARAM_PAGINATED, TRUE);
     }
@@ -1415,7 +1415,7 @@ public class AbfsClient implements Closeable {
     return abfsConfiguration.isPaginatedDeleteEnabled();
   }
 
-  private Boolean isPaginatedDeleteEnabled(TracingContext tracingContext,
+  private Boolean isPaginatedDelete(TracingContext tracingContext,
       boolean isRecursiveDelete) throws AzureBlobFileSystemException {
     return getIsPaginatedDeleteEnabled()
         && getIsNamespaceEnabled(tracingContext) && isRecursiveDelete;

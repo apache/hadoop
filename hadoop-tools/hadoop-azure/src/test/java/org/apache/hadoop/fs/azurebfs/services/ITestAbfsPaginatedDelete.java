@@ -22,7 +22,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
@@ -250,6 +249,7 @@ public class ITestAbfsPaginatedDelete extends AbstractAbfsIntegrationTest {
     Assume.assumeTrue(configKey + " config is mandatory for the test to run",
         value != null && value.trim().length() > 1);
 
+    // Set the required configuration
     Configuration conf = getRawConfiguration();
     conf.set(FS_AZURE_BLOB_FS_CLIENT_ID, clientId);
     conf.set(FS_AZURE_BLOB_FS_CLIENT_SECRET, clientSecret);
