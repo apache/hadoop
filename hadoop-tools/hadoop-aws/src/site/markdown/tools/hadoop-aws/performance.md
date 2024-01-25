@@ -211,7 +211,7 @@ for parallel IO (especially uploads) by setting the properties
 | property | meaning | default |
 |----------|---------|---------|
 | `fs.s3a.threads.max`| Threads in the AWS transfer manager| 10 |
-| `fs.s3a.connection.maximum`| Maximum number of HTTP connections | 10|
+| `fs.s3a.connection.maximum`| Maximum number of HTTP connections | 500 |
 
 We recommend using larger values for processes which perform
 a lot of IO: `DistCp`, Spark Workers and similar.
@@ -219,11 +219,11 @@ a lot of IO: `DistCp`, Spark Workers and similar.
 ```xml
 <property>
   <name>fs.s3a.threads.max</name>
-  <value>20</value>
+  <value>10</value>
 </property>
 <property>
   <name>fs.s3a.connection.maximum</name>
-  <value>20</value>
+  <value>500</value>
 </property>
 ```
 
