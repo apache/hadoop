@@ -53,9 +53,15 @@ public class QueueNodeLabelsSettings {
   }
 
   private void initializeAccessibleLabels(CapacitySchedulerConfiguration configuration) {
-    this.accessibleLabels = configuration.getAccessibleNodeLabels(queuePath.getFullPath());
-    // Inherit labels from parent if not set
-    if (this.accessibleLabels == null && parent != null) {
+    Set<String> nodeLabels = configuration.getAccessibleNodeLabels(queuePath.getFullPath());
+    if (null != nodeLabels) {
+      // Reading "accessibleLabels" can cause NPE without ReadLock.
+      // Since getAccessibleNodeLabels() can return null, If someone access
+      // "accessibleLabels" before assigning it from parent can cause NPE.
+      // So use local instance and assign it only if not null
+      this.accessibleLabels = nodeLabels;
+    } else if (null != parent) {
+      // Inherit labels from parent if not set
       this.accessibleLabels = parent.getAccessibleNodeLabels();
     }
   }
