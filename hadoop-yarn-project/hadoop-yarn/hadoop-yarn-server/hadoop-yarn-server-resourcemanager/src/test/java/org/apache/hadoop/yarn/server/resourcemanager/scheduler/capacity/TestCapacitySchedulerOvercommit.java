@@ -36,16 +36,18 @@ public class TestCapacitySchedulerOvercommit extends TestSchedulerOvercommit {
         CapacityScheduler.class, ResourceScheduler.class);
 
     // Remove limits on AMs to allow multiple applications running
+    QueuePath rootPath = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+    QueuePath defaultPath = new QueuePath(CapacitySchedulerConfiguration.ROOT + ".default");
     CapacitySchedulerConfiguration csConf =
         new CapacitySchedulerConfiguration(conf);
     csConf.setMaximumApplicationMasterResourcePerQueuePercent(
-        CapacitySchedulerConfiguration.ROOT, 100.0f);
+        rootPath, 100.0f);
     csConf.setMaximumAMResourcePercentPerPartition(
-        CapacitySchedulerConfiguration.ROOT, "", 100.0f);
+        rootPath, "", 100.0f);
     csConf.setMaximumApplicationMasterResourcePerQueuePercent(
-        CapacitySchedulerConfiguration.ROOT + ".default", 100.0f);
+        defaultPath, 100.0f);
     csConf.setMaximumAMResourcePercentPerPartition(
-        CapacitySchedulerConfiguration.ROOT + ".default", "", 100.0f);
+        defaultPath, "", 100.0f);
 
     return csConf;
   }

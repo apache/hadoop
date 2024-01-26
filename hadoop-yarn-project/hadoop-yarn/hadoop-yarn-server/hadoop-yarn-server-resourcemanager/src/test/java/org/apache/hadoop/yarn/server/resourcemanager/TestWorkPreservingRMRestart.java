@@ -70,6 +70,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
 
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
     .TestCapacitySchedulerAutoCreatedQueueBase;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSAppAttempt;
@@ -572,46 +573,48 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
   private static final String QUEUE_DOESNT_EXIST = "NoSuchQueue";
   private static final String USER_1 = "user1";
   private static final String USER_2 = "user2";
+  private static final String Q_R_PATH = CapacitySchedulerConfiguration.ROOT + "." + R;
+  private static final String Q_A_PATH = Q_R_PATH + "." + A;
+  private static final String Q_B_PATH = Q_R_PATH + "." + B;
+  private static final String Q_B1_PATH = Q_B_PATH + "." + B1;
+  private static final String Q_B2_PATH = Q_B_PATH + "." + B2;
+
+  private static final QueuePath ROOT = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+  private static final QueuePath R_QUEUE_PATH = new QueuePath(Q_R_PATH);
+  private static final QueuePath A_QUEUE_PATH = new QueuePath(Q_A_PATH);
+  private static final QueuePath B_QUEUE_PATH = new QueuePath(Q_B_PATH);
+  private static final QueuePath B1_QUEUE_PATH = new QueuePath(Q_B1_PATH);
+  private static final QueuePath B2_QUEUE_PATH = new QueuePath(Q_B2_PATH);
 
   private void setupQueueConfiguration(CapacitySchedulerConfiguration conf) {
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] { R });
-    final String Q_R = CapacitySchedulerConfiguration.ROOT + "." + R;
-    conf.setCapacity(Q_R, 100);
-    final String Q_A = Q_R + "." + A;
-    final String Q_B = Q_R + "." + B;
-    conf.setQueues(Q_R, new String[] {A, B});
-    conf.setCapacity(Q_A, 50);
-    conf.setCapacity(Q_B, 50);
+    conf.setQueues(ROOT, new String[] {R});
+    conf.setCapacity(R_QUEUE_PATH, 100);
+    conf.setQueues(R_QUEUE_PATH, new String[] {A, B});
+    conf.setCapacity(A_QUEUE_PATH, 50);
+    conf.setCapacity(B_QUEUE_PATH, 50);
     conf.setDouble(CapacitySchedulerConfiguration
       .MAXIMUM_APPLICATION_MASTERS_RESOURCE_PERCENT, 0.5f);
   }
   
   private void setupQueueConfigurationOnlyA(
       CapacitySchedulerConfiguration conf) {
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] { R });
-    final String Q_R = CapacitySchedulerConfiguration.ROOT + "." + R;
-    conf.setCapacity(Q_R, 100);
-    final String Q_A = Q_R + "." + A;
-    conf.setQueues(Q_R, new String[] {A});
-    conf.setCapacity(Q_A, 100);
+    conf.setQueues(ROOT, new String[] {R});
+    conf.setCapacity(R_QUEUE_PATH, 100);
+    conf.setQueues(R_QUEUE_PATH, new String[] {A});
+    conf.setCapacity(A_QUEUE_PATH, 100);
     conf.setDouble(CapacitySchedulerConfiguration
       .MAXIMUM_APPLICATION_MASTERS_RESOURCE_PERCENT, 1.0f);
   }
 
   private void setupQueueConfigurationChildOfB(CapacitySchedulerConfiguration conf) {
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] { R });
-    final String Q_R = CapacitySchedulerConfiguration.ROOT + "." + R;
-    conf.setCapacity(Q_R, 100);
-    final String Q_A = Q_R + "." + A;
-    final String Q_B = Q_R + "." + B;
-    final String Q_B1 = Q_B + "." + B1;
-    final String Q_B2 = Q_B + "." + B2;
-    conf.setQueues(Q_R, new String[] {A, B});
-    conf.setCapacity(Q_A, 50);
-    conf.setCapacity(Q_B, 50);
-    conf.setQueues(Q_B, new String[] {B1, B2});
-    conf.setCapacity(Q_B1, 50);
-    conf.setCapacity(Q_B2, 50);
+    conf.setQueues(ROOT, new String[] {R});
+    conf.setCapacity(R_QUEUE_PATH, 100);
+    conf.setQueues(R_QUEUE_PATH, new String[] {A, B});
+    conf.setCapacity(A_QUEUE_PATH, 50);
+    conf.setCapacity(B_QUEUE_PATH, 50);
+    conf.setQueues(B_QUEUE_PATH, new String[] {B1, B2});
+    conf.setCapacity(B1_QUEUE_PATH, 50);
+    conf.setCapacity(B2_QUEUE_PATH, 50);
     conf.setDouble(CapacitySchedulerConfiguration
         .MAXIMUM_APPLICATION_MASTERS_RESOURCE_PERCENT, 0.5f);
   }
@@ -641,9 +644,9 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     MockRM.finishAMAndVerifyAppState(app1, rm1, nm1, am1);
 
     CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration(conf);
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[]{QUEUE_DOESNT_EXIST});
+    csConf.setQueues(ROOT, new String[]{QUEUE_DOESNT_EXIST});
     final String noQueue = CapacitySchedulerConfiguration.ROOT + "." + QUEUE_DOESNT_EXIST;
-    csConf.setCapacity(noQueue, 100);
+    csConf.setCapacity(new QueuePath(noQueue), 100);
     rm2 = new MockRM(csConf, memStore);
 
     rm2.start();
@@ -1669,24 +1672,19 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
       return;
     }
     CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration(conf);
+    final QueuePath defaultPath = new QueuePath(ROOT + "." + "default");
+    final QueuePath joe = new QueuePath(ROOT + "." + "joe");
+    final QueuePath john = new QueuePath(ROOT + "." + "john");
 
-    csConf.setQueues(
-            CapacitySchedulerConfiguration.ROOT, new String[] {"default", "joe", "john"});
-    csConf.setCapacity(
-            CapacitySchedulerConfiguration.ROOT + "." + "joe", 25);
-    csConf.setCapacity(
-            CapacitySchedulerConfiguration.ROOT + "." + "john", 25);
-    csConf.setCapacity(
-            CapacitySchedulerConfiguration.ROOT + "." + "default", 50);
+    csConf.setQueues(ROOT, new String[] {"default", "joe", "john"});
+    csConf.setCapacity(joe, 25);
+    csConf.setCapacity(john, 25);
+    csConf.setCapacity(defaultPath, 50);
 
-    final String q1 = CapacitySchedulerConfiguration.ROOT + "." + "joe";
-    final String q2 = CapacitySchedulerConfiguration.ROOT + "." + "john";
-    csConf.setQueues(q1, new String[] {"test"});
-    csConf.setQueues(q2, new String[] {"test"});
-    csConf.setCapacity(
-            CapacitySchedulerConfiguration.ROOT + "." + "joe.test", 100);
-    csConf.setCapacity(
-            CapacitySchedulerConfiguration.ROOT + "." + "john.test", 100);
+    csConf.setQueues(joe, new String[] {"test"});
+    csConf.setQueues(john, new String[] {"test"});
+    csConf.setCapacity(new QueuePath(joe.getFullPath(), "test"), 100);
+    csConf.setCapacity(new QueuePath(john.getFullPath(), "test"), 100);
 
     csConf.set(CapacitySchedulerConfiguration.MAPPING_RULE_JSON,
         "{\"rules\" : [{\"type\": \"user\", \"policy\" : \"specified\", " +

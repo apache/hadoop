@@ -25,6 +25,7 @@ import java.util.TreeSet;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.Plan;
@@ -72,7 +73,7 @@ public class SimpleCapacityReplanner implements Planner {
   @Override
   public void init(String planQueueName,
       ReservationSchedulerConfiguration conf) {
-    this.lengthOfCheckZone = conf.getEnforcementWindow(planQueueName);
+    this.lengthOfCheckZone = conf.getEnforcementWindow(new QueuePath(planQueueName));
   }
 
   @Override

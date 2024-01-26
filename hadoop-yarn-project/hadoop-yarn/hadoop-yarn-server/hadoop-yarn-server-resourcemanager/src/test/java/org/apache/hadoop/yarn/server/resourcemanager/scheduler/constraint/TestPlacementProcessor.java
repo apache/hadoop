@@ -45,6 +45,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -416,10 +417,14 @@ public class TestPlacementProcessor {
     stopRM();
     CapacitySchedulerConfiguration csConf =
         new CapacitySchedulerConfiguration();
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
-        new String[] {"a", "b"});
-    csConf.setCapacity(CapacitySchedulerConfiguration.ROOT + ".a", 15.0f);
-    csConf.setCapacity(CapacitySchedulerConfiguration.ROOT + ".b", 85.0f);
+
+    QueuePath root = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+    QueuePath queueA = new QueuePath(CapacitySchedulerConfiguration.ROOT + ".a");
+    QueuePath queueB = new QueuePath(CapacitySchedulerConfiguration.ROOT + ".b");
+
+    csConf.setQueues(root, new String[] {"a", "b"});
+    csConf.setCapacity(queueA, 15.0f);
+    csConf.setCapacity(queueB, 85.0f);
     YarnConfiguration conf = new YarnConfiguration(csConf);
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
         ResourceScheduler.class);

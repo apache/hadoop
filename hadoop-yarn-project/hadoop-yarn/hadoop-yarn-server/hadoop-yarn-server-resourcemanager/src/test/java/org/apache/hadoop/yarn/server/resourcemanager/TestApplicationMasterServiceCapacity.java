@@ -41,6 +41,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -260,18 +261,19 @@ public class TestApplicationMasterServiceCapacity extends
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration(config);
 
     // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {"a", "b"});
-    conf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "x", 100);
-    conf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "y", 100);
+    QueuePath root = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+    conf.setQueues(root, new String[] {"a", "b"});
+    conf.setCapacityByLabel(root, "x", 100);
+    conf.setCapacityByLabel(root, "y", 100);
 
-    final String A = CapacitySchedulerConfiguration.ROOT + ".a";
+    final QueuePath A = new QueuePath(CapacitySchedulerConfiguration.ROOT + ".a");
     conf.setCapacity(A, 50);
     conf.setMaximumCapacity(A, 100);
     conf.setAccessibleNodeLabels(A, toSet("x"));
     conf.setDefaultNodeLabelExpression(A, "x");
     conf.setCapacityByLabel(A, "x", 100);
 
-    final String B = CapacitySchedulerConfiguration.ROOT + ".b";
+    final QueuePath B = new QueuePath(CapacitySchedulerConfiguration.ROOT + ".b");
     conf.setCapacity(B, 50);
     conf.setMaximumCapacity(B, 100);
     conf.setAccessibleNodeLabels(B, toSet("y"));

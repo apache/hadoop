@@ -26,6 +26,7 @@ import org.junit.Test;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.mockframework.ProportionalCapacityPreemptionPolicyMockFramework;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.never;
@@ -120,10 +121,15 @@ public class TestProportionalCapacityPreemptionPolicyIntraQueue
      * purpose is to test that disabling preemption on a specific queue will
      * avoid intra-queue preemption.
      */
-    conf.setPreemptionDisabled("root.a", true);
-    conf.setPreemptionDisabled("root.b", true);
-    conf.setPreemptionDisabled("root.c", true);
-    conf.setPreemptionDisabled("root.d", true);
+    QueuePath a = new QueuePath("root.a");
+    QueuePath b = new QueuePath("root.b");
+    QueuePath c = new QueuePath("root.c");
+    QueuePath d = new QueuePath("root.d");
+
+    conf.setPreemptionDisabled(a, true);
+    conf.setPreemptionDisabled(b, true);
+    conf.setPreemptionDisabled(c, true);
+    conf.setPreemptionDisabled(d, true);
 
     String labelsConfig = "=100,true;";
     String nodesConfig = // n1 has no label

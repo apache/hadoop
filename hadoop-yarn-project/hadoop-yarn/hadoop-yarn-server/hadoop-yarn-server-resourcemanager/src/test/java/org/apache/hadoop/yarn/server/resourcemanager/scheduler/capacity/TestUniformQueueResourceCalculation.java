@@ -146,12 +146,12 @@ public class TestUniformQueueResourceCalculation extends CapacitySchedulerQueueC
 
   @Test
   public void testAbsoluteResourceCalculation() throws IOException {
-    csConf.setMinimumResourceRequirement("", new QueuePath(A), QUEUE_A_RES);
-    csConf.setMinimumResourceRequirement("", new QueuePath(B), QUEUE_B_RES);
-    csConf.setMinimumResourceRequirement("", new QueuePath(A1), QUEUE_A1_RES);
-    csConf.setMinimumResourceRequirement("", new QueuePath(A2), QUEUE_A2_RES);
-    csConf.setMinimumResourceRequirement("", new QueuePath(A11), QUEUE_A11_RES);
-    csConf.setMinimumResourceRequirement("", new QueuePath(A12), QUEUE_A12_RES);
+    csConf.setMinimumResourceRequirement("", A, QUEUE_A_RES);
+    csConf.setMinimumResourceRequirement("", B, QUEUE_B_RES);
+    csConf.setMinimumResourceRequirement("", A1, QUEUE_A1_RES);
+    csConf.setMinimumResourceRequirement("", A2, QUEUE_A2_RES);
+    csConf.setMinimumResourceRequirement("", A11, QUEUE_A11_RES);
+    csConf.setMinimumResourceRequirement("", A12, QUEUE_A12_RES);
 
     QueueAssertionBuilder queueAssertionBuilder = createAssertionBuilder()
         .withQueue(A)

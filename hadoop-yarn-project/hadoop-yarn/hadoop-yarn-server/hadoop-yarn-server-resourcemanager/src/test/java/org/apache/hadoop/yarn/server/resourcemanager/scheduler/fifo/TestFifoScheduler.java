@@ -109,6 +109,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemoved
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeResourceUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
@@ -860,8 +861,9 @@ public class TestFifoScheduler {
   @Test(timeout = 50000)
   public void testReconnectedNode() throws Exception {
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
-    conf.setQueues("default", new String[] { "default" });
-    conf.setCapacity("default", 100);
+    QueuePath defaultQueuePath = new QueuePath("default");
+    conf.setQueues(defaultQueuePath, new String[] {"default"});
+    conf.setCapacity(defaultQueuePath, 100);
     FifoScheduler fs = new FifoScheduler();
     fs.init(conf);
     fs.start();
