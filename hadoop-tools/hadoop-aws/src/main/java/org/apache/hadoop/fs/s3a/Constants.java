@@ -1719,8 +1719,10 @@ public final class Constants {
   /**
    * Default value for {@link #OPTIMIZED_COPY_FROM_LOCAL}.
    * Value: {@value}.
+   * Changed to false in internal cloudera release because
+   * RAZ breaks when enabled. See {CDPD-65881}.
    */
-  public static final boolean OPTIMIZED_COPY_FROM_LOCAL_DEFAULT = true;
+  public static final boolean OPTIMIZED_COPY_FROM_LOCAL_DEFAULT = false;
 
   /**
    * Is this a v2 SDK build? value {@value}.

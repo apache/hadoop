@@ -318,7 +318,10 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
         return "copy";
       },
           with(INVOCATION_COPY_FROM_LOCAL_FILE, 1),
-          with(OBJECT_PUT_REQUESTS, 1),
+              // Number of PUT request is zero because
+              // {@code org.apache.hadoop.fs.s3a.Constants#COPY_FROM_LOCAL_ENABLED_DEFAULT}
+              // has been set to false.
+          with(OBJECT_PUT_REQUESTS, 0),
           with(OBJECT_PUT_BYTES, len));
       verifyFileContents(s3a, remotePath, data);
       // print final stats
