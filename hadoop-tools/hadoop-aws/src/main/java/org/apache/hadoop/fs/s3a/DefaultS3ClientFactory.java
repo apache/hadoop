@@ -268,9 +268,9 @@ public class DefaultS3ClientFactory extends Configured
   private <BuilderT extends S3BaseClientBuilder<BuilderT, ClientT>, ClientT> void configureEndpointAndRegion(
       BuilderT builder, S3ClientCreationParameters parameters, Configuration conf) {
     final String endpointStr = parameters.getEndpoint();
-    URI endpoint = getS3Endpoint(endpointStr, conf);
+    final URI endpoint = getS3Endpoint(endpointStr, conf);
 
-    String configuredRegion = parameters.getRegion();
+    final String configuredRegion = parameters.getRegion();
     Region region = null;
     String origin = "";
 
@@ -302,6 +302,11 @@ public class DefaultS3ClientFactory extends Configured
         if (region != null) {
           origin = "endpoint";
           if (endpointEndsWithCentral) {
+            // No need to override endpoint with "s3.amazonaws.com".
+            // Let the client take care of endpoint resolution. Overriding
+            // the endpoint with "s3.amazonaws.com" causes 400 Bad Request
+            // errors for non-existent buckets and objects.
+            // ref: https://github.com/aws/aws-sdk-java-v2/issues/4846
             overrideEndpoint = false;
             builder.crossRegionAccessEnabled(true);
             origin = "origin with cross region access";

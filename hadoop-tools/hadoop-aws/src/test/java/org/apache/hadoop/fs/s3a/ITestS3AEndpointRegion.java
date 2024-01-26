@@ -278,10 +278,10 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
   @Test
   public void testCentralEndpointCrossRegionAccess() throws Throwable {
     describe("Create bucket on different region and access it using central endpoint");
-    Configuration conf = getConfiguration();
+    final Configuration conf = getConfiguration();
     removeBaseAndBucketOverrides(conf, ENDPOINT, AWS_REGION);
 
-    Configuration newConf = new Configuration(conf);
+    final Configuration newConf = new Configuration(conf);
 
     newConf.set(ENDPOINT, CENTRAL_ENDPOINT);
 
@@ -289,17 +289,26 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
     newFS.initialize(getFileSystem().getUri(), newConf);
 
     final String file = getMethodName();
-    Path basePath = methodPath();
+    final Path basePath = methodPath();
     final Path srcDir = new Path(basePath, "srcdir");
     newFS.mkdirs(srcDir);
-    Path src = new Path(srcDir, file);
+    Path srcFilePath = new Path(srcDir, file);
 
-    try (FSDataOutputStream out = newFS.create(src)) {
+    try (FSDataOutputStream out = newFS.create(srcFilePath)) {
       out.write(new byte[] {1, 2, 3});
     }
 
-    ContractTestUtils.assertIsFile(getFileSystem(), new Path(srcDir, file));
+    ContractTestUtils.assertIsFile(getFileSystem(), srcFilePath);
     newFS.delete(srcDir, true);
+
+    Assertions
+        .assertThat(newFS.exists(srcFilePath))
+        .describedAs("Existence of file: " + srcFilePath)
+        .isFalse();
+    Assertions
+        .assertThat(getFileSystem().exists(srcFilePath))
+        .describedAs("Existence of file: " + srcFilePath)
+        .isFalse();
   }
 
   private final class RegionInterceptor implements ExecutionInterceptor {
