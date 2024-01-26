@@ -119,7 +119,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationTimeoutsRespo
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
-import org.apache.hadoop.yarn.api.records.ReservationId;;
+import org.apache.hadoop.yarn.api.records.ReservationId;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
@@ -274,16 +274,16 @@ public class FederationClientInterceptor
         YarnConfiguration.DEFAULT_ROUTER_INTERCEPTOR_ALLOW_PARTIAL_RESULT_ENABLED);
 
     overrideMaxClusterCapability = conf.getBoolean(
-            YarnConfiguration.FEDERATION_OVERRIDE_MAX_CLUSTER_CAPABILITY,
-            YarnConfiguration.FEDERATION_DEFAULT_OVERRIDE_MAX_CLUSTER_CAPABILITY);
+        YarnConfiguration.FEDERATION_OVERRIDE_MAX_CLUSTER_CAPABILITY,
+        YarnConfiguration.FEDERATION_DEFAULT_OVERRIDE_MAX_CLUSTER_CAPABILITY);
 
     overrideMaxClusterMemoryCapability = conf.getLong(
-            YarnConfiguration.FEDERATION_OVERRIDE_MAX_CLUSTER_MEMORY_CAPABILITY_MB,
-            YarnConfiguration.FEDERATION_DEFAULT_OVERRIDE_MAX_CLUSTER_MEMORY_CAPABILITY_MB);
+        YarnConfiguration.FEDERATION_OVERRIDE_MAX_CLUSTER_MEMORY_CAPABILITY_MB,
+        YarnConfiguration.FEDERATION_DEFAULT_OVERRIDE_MAX_CLUSTER_MEMORY_CAPABILITY_MB);
 
     overrideMaxClusterVCoreCapability = conf.getInt(
-            YarnConfiguration.FEDERATION_OVERRIDE_MAX_CLUSTER_CPU_CAPABILITY_VCORES,
-            YarnConfiguration.FEDERATION_DEFAULT_OVERRIDE_MAX_CLUSTER_CPU_CAPABILITY_VCORES);
+        YarnConfiguration.FEDERATION_OVERRIDE_MAX_CLUSTER_CPU_CAPABILITY_VCORES,
+        YarnConfiguration.FEDERATION_DEFAULT_OVERRIDE_MAX_CLUSTER_CPU_CAPABILITY_VCORES);
   }
 
   @Override
@@ -381,7 +381,7 @@ public class FederationClientInterceptor
         // can consolidate on the response returned by Router here
         if (overrideMaxClusterCapability) {
           response.setMaximumResourceCapability(Resource.newInstance(overrideMaxClusterMemoryCapability,
-                  overrideMaxClusterVCoreCapability));
+              overrideMaxClusterVCoreCapability));
         }
 
         long stopTime = clock.getTime();

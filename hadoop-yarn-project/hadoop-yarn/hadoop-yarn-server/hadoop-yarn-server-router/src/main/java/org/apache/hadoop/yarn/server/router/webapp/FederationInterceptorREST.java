@@ -286,16 +286,16 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
         YarnConfiguration.DEFAULT_CLIENTRM_SUBMIT_INTERVAL_TIME, TimeUnit.MILLISECONDS);
 
     overrideMaxClusterCapability = conf.getBoolean(
-            YarnConfiguration.FEDERATION_OVERRIDE_MAX_CLUSTER_CAPABILITY,
-            YarnConfiguration.FEDERATION_DEFAULT_OVERRIDE_MAX_CLUSTER_CAPABILITY);
+        YarnConfiguration.FEDERATION_OVERRIDE_MAX_CLUSTER_CAPABILITY,
+        YarnConfiguration.FEDERATION_DEFAULT_OVERRIDE_MAX_CLUSTER_CAPABILITY);
 
     overrideMaxClusterMemoryCapability = conf.getLong(
-            YarnConfiguration.FEDERATION_OVERRIDE_MAX_CLUSTER_MEMORY_CAPABILITY_MB,
-            YarnConfiguration.FEDERATION_DEFAULT_OVERRIDE_MAX_CLUSTER_MEMORY_CAPABILITY_MB);
+        YarnConfiguration.FEDERATION_OVERRIDE_MAX_CLUSTER_MEMORY_CAPABILITY_MB,
+        YarnConfiguration.FEDERATION_DEFAULT_OVERRIDE_MAX_CLUSTER_MEMORY_CAPABILITY_MB);
 
     overrideMaxClusterVCoreCapability = conf.getInt(
-            YarnConfiguration.FEDERATION_OVERRIDE_MAX_CLUSTER_CPU_CAPABILITY_VCORES,
-            YarnConfiguration.FEDERATION_DEFAULT_OVERRIDE_MAX_CLUSTER_CPU_CAPABILITY_VCORES);
+        YarnConfiguration.FEDERATION_OVERRIDE_MAX_CLUSTER_CPU_CAPABILITY_VCORES,
+        YarnConfiguration.FEDERATION_DEFAULT_OVERRIDE_MAX_CLUSTER_CPU_CAPABILITY_VCORES);
   }
 
   @VisibleForTesting
@@ -421,9 +421,9 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
         // Since we fetch getNewApplication response from a random subcluster each time, we
         // can consolidate on the response returned by Router here
         if (overrideMaxClusterCapability) {
-          NewApplication appId =
-                  new NewApplication(getApplicationIdFromGetNewApplicationResponse(response).toString(),
-                          new ResourceInfo(Resource.newInstance(overrideMaxClusterMemoryCapability, overrideMaxClusterVCoreCapability)));
+          NewApplication appId = new NewApplication(
+              getApplicationIdFromGetNewApplicationResponse(response).toString(),
+                  new ResourceInfo(Resource.newInstance(overrideMaxClusterMemoryCapability, overrideMaxClusterVCoreCapability)));
           return Response.status(Status.OK).entity(appId).build();
 
         }
