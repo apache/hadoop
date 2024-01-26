@@ -387,7 +387,8 @@ public class DefaultS3ClientFactory extends Configured
     // Spark sets "fs.s3a.endpoint" to "s3.amazonaws.com".
     // This applies to Spark versions with the changes of SPARK-35878.
     // ref:
-    // https://github.com/apache/spark/blob/v3.5.0/core/src/main/scala/org/apache/spark/deploy/SparkHadoopUtil.scala#L528
+    // https://github.com/apache/spark/blob/v3.5.0/core/
+    // src/main/scala/org/apache/spark/deploy/SparkHadoopUtil.scala#L528
     // If we do not allow cross region access, Spark would not be able to
     // access any bucket that is not present in the given region.
     // Hence, we should use default region us-east-2 to allow cross-region
