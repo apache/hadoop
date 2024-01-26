@@ -235,10 +235,9 @@ public final class CredentialProviderListFactory {
         LOG_REMAPPED_ENTRY.warn("Credentials option {} contains AWS v1 SDK entry {}; mapping to {}",
             key, className, mapped);
         className = mapped;
-      }
-      if (awsCredsMappedClasses != null && awsCredsMappedClasses.containsKey(className)) {
+      } else if (awsCredsMappedClasses != null && awsCredsMappedClasses.containsKey(className)) {
         final String mapped = awsCredsMappedClasses.get(className);
-        LOG_REMAPPED_ENTRY.info("Credential entry {} is mapped to {}", className, mapped);
+        LOG_REMAPPED_ENTRY.debug("Credential entry {} is mapped to {}", className, mapped);
         className = mapped;
       }
       // now scan the forbidden list. doing this after any mappings ensures the v1 names

@@ -2716,4 +2716,72 @@ public class TestConfiguration {
 
     assertFalse("ConcurrentModificationException occurred", exceptionOccurred.get());
   }
+
+  @Test
+  public void testStringCollectionSplitByEquals() {
+    Configuration conf = new Configuration();
+    conf.set("custom_key", "");
+    Map<String, String> splitMap =
+        conf.getTrimmedStringCollectionSplitByEquals("custom_key");
+    Assertions
+        .assertThat(splitMap.size())
+        .describedAs("Map of key value pairs derived from config, split by equals(=) and comma(,)")
+        .isEqualTo(0);
+
+    splitMap = conf.getTrimmedStringCollectionSplitByEquals("not_present");
+    Assertions
+        .assertThat(splitMap.size())
+        .describedAs("Map of key value pairs derived from config, split by equals(=) and comma(,)")
+        .isEqualTo(0);
+
+    conf.set("custom_key", "element.first.key1 = element.first.val1");
+    splitMap = conf.getTrimmedStringCollectionSplitByEquals(
+        "custom_key");
+    Assertions
+        .assertThat(splitMap.size())
+        .describedAs("Map of key value pairs derived from config, split by equals(=) and comma(,)")
+        .isEqualTo(1);
+    Assertions
+        .assertThat(splitMap)
+        .describedAs("Map of key value pairs derived from config, split by equals(=) and comma(,)")
+        .containsEntry("element.first.key1", "element.first.val1");
+
+    conf.set("custom_key",
+        "element.xyz.key1 =element.abc.val1 , element.xyz.key2= element.abc.val2");
+    splitMap = conf.getTrimmedStringCollectionSplitByEquals(
+        "custom_key");
+    Assertions
+        .assertThat(splitMap.size())
+        .describedAs("Map of key value pairs derived from config, split by equals(=) and comma(,)")
+        .isEqualTo(2);
+    Assertions
+        .assertThat(splitMap)
+        .describedAs("Map of key value pairs derived from config, split by equals(=) and comma(,)")
+        .containsEntry("element.xyz.key1", "element.abc.val1")
+        .containsEntry("element.xyz.key2", "element.abc.val2");
+
+    conf.set("custom_key",
+        "\nelement.xyz.key1 =element.abc.val1 \n"
+            + ", element.xyz.key2=element.abc.val2,element.xyz.key3=element.abc.val3"
+            + " , element.xyz.key4     =element.abc.val4,element.xyz.key5=        "
+            + "element.abc.val5 ,\n \n \n "
+            + " element.xyz.key6      =       element.abc.val6 \n , \n"
+            + "element.xyz.key7=element.abc.val7,\n");
+    splitMap = conf.getTrimmedStringCollectionSplitByEquals(
+        "custom_key");
+    Assertions
+        .assertThat(splitMap.size())
+        .describedAs("Map of key value pairs derived from config, split by equals(=) and comma(,)")
+        .isEqualTo(7);
+    Assertions
+        .assertThat(splitMap)
+        .describedAs("Map of key value pairs derived from config, split by equals(=) and comma(,)")
+        .containsEntry("element.xyz.key1", "element.abc.val1")
+        .containsEntry("element.xyz.key2", "element.abc.val2")
+        .containsEntry("element.xyz.key3", "element.abc.val3")
+        .containsEntry("element.xyz.key4", "element.abc.val4")
+        .containsEntry("element.xyz.key5", "element.abc.val5")
+        .containsEntry("element.xyz.key6", "element.abc.val6")
+        .containsEntry("element.xyz.key7", "element.abc.val7");
+  }
 }

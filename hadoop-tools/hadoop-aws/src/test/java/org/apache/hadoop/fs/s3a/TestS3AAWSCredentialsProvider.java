@@ -229,7 +229,10 @@ public class TestS3AAWSCredentialsProvider {
             ASSUMED_ROLE_CREDENTIALS_PROVIDER,
             new ArrayList<>(),
             new HashSet<>());
-    assertEquals("Credentials not matching", 3, credentials.size());
+    Assertions
+        .assertThat(credentials.size())
+        .describedAs("List of Credentials providers")
+        .isEqualTo(3);
   }
 
   @Test
@@ -253,7 +256,10 @@ public class TestS3AAWSCredentialsProvider {
             AWS_CREDENTIALS_PROVIDER,
             new ArrayList<>(),
             new HashSet<>());
-    assertEquals("Credentials not matching", 4, credentials.size());
+    Assertions
+        .assertThat(credentials.size())
+        .describedAs("List of Credentials providers")
+        .isEqualTo(4);
   }
 
   @Test

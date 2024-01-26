@@ -68,7 +68,10 @@ public final class Constants {
   public static final String AWS_CREDENTIALS_PROVIDER =
       "fs.s3a.aws.credentials.provider";
 
-  // aws credentials providers mapping with key/value pairs
+  /**
+   * AWS credentials providers mapping with key/value pairs.
+   * Value = {@value}
+   */
   public static final String AWS_CREDENTIALS_PROVIDER_MAPPING =
       "fs.s3a.aws.credentials.provider.mapping";
 
