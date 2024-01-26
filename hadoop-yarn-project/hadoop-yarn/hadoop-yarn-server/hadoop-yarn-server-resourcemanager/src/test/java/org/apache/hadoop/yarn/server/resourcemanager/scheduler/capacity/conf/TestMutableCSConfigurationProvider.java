@@ -29,6 +29,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.AdminService;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf.YarnConfigurationStore.LogMutation;
 import org.apache.hadoop.yarn.webapp.dao.QueueConfigInfo;
 import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
@@ -221,12 +222,13 @@ public class TestMutableCSConfigurationProvider {
   public void testAddRemoveQueueWithSpacesInConfig() throws Exception {
     CapacitySchedulerConfiguration csConf =
         new CapacitySchedulerConfiguration();
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
-        new String[] {" a   , b, c" });
+    QueuePath root = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+    QueuePath a = root.createNewLeaf("a");
+    QueuePath b = root.createNewLeaf("b");
+    QueuePath c = root.createNewLeaf("c");
 
-    final String a = CapacitySchedulerConfiguration.ROOT + ".a";
-    final String b = CapacitySchedulerConfiguration.ROOT + ".b";
-    final String c = CapacitySchedulerConfiguration.ROOT + ".c";
+    csConf.setQueues(root, new String[] {" a   , b, c" });
+
     csConf.setCapacity(a, 0);
     csConf.setCapacity(b, 50);
     csConf.setCapacity(c, 50);
