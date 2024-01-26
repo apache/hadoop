@@ -30,6 +30,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.placement.SecondaryGroupExi
 import org.apache.hadoop.yarn.server.resourcemanager.placement.SpecifiedPlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.UserPlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placement.schema.MappingRulesDescription;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placement.schema.Rule;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placement.schema.Rule.FallbackResult;
@@ -121,7 +122,7 @@ class QueuePlacementConverter {
     PlacementRule parentRule = userRule.getParentRule();
     boolean parentCreate = ((FSPlacementRule) parentRule).getCreateFlag();
     Policy policy;
-    String queueName = null;
+    QueuePath queueName = null;
 
     if (parentRule instanceof PrimaryGroupPlacementRule) {
       policy = Policy.PRIMARY_GROUP_USER;
@@ -130,7 +131,7 @@ class QueuePlacementConverter {
     } else if (parentRule instanceof DefaultPlacementRule) {
       DefaultPlacementRule defaultRule = (DefaultPlacementRule) parentRule;
       policy = Policy.USER;
-      queueName = defaultRule.defaultQueueName;
+      queueName = new QueuePath(defaultRule.defaultQueueName);
     } else {
       throw new IllegalArgumentException(
           "Unsupported parent nested rule: "
@@ -187,7 +188,7 @@ class QueuePlacementConverter {
       boolean create,
       FSConfigToCSConfigRuleHandler ruleHandler,
       boolean fsParentCreate,
-      String parentQueue,
+      QueuePath parentQueue,
       CapacitySchedulerConfiguration csConf,
       boolean usePercentages) {
 
@@ -196,7 +197,7 @@ class QueuePlacementConverter {
     // "parent" is already set to "root" at this point,
     // so we override it if necessary
     if (parentQueue != null) {
-      rule.setParentQueue(parentQueue);
+      rule.setParentQueue(parentQueue.getFullPath());
     }
 
     if (usePercentages) {
@@ -207,13 +208,13 @@ class QueuePlacementConverter {
         } else if (policy == Policy.SECONDARY_GROUP_USER) {
           ruleHandler.handleFSParentCreateFlag("root.<secondaryGroup>");
         } else {
-          ruleHandler.handleFSParentCreateFlag(parentQueue);
+          ruleHandler.handleFSParentCreateFlag(parentQueue.getFullPath());
         }
       }
 
       // check if parent conflicts with existing static queues
       if (create && policy == Policy.USER) {
-        ruleHandler.handleRuleAutoCreateFlag(parentQueue);
+        ruleHandler.handleRuleAutoCreateFlag(parentQueue.getFullPath());
         checkStaticDynamicConflict(parentQueue, csConf, ruleHandler);
       }
     } else {
@@ -230,15 +231,15 @@ class QueuePlacementConverter {
     return rule;
   }
 
-  private void checkStaticDynamicConflict(String parentPath,
+  private void checkStaticDynamicConflict(QueuePath parentPath,
       CapacitySchedulerConfiguration csConf,
       FSConfigToCSConfigRuleHandler ruleHandler) {
-    String[] childQueues = csConf.getQueues(parentPath);
+    List<String> childQueues = csConf.getQueues(parentPath);
 
     // User must be warned: static + dynamic queues are under the
     // same parent
-    if (childQueues != null && childQueues.length > 0) {
-      ruleHandler.handleChildStaticDynamicConflict(parentPath);
+    if (childQueues != null && childQueues.size() > 0) {
+      ruleHandler.handleChildStaticDynamicConflict(parentPath.getFullPath());
     }
   }
 }

@@ -28,6 +28,7 @@ import org.apache.hadoop.yarn.api.records.ReservationACL;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.security.AccessType;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.allocation.AllocationFileParser;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.allocation.QueueProperties;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -194,9 +195,9 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
    * Get the map of reservation ACLs to {@link AccessControlList} for the
    * specified queue.
    */
-  public Map<ReservationACL, AccessControlList> getReservationAcls(String
+  public Map<ReservationACL, AccessControlList> getReservationAcls(QueuePath
         queue) {
-    return this.resAcls.get(queue);
+    return this.resAcls.get(queue.getFullPath());
   }
 
   /**
@@ -341,52 +342,52 @@ public class AllocationConfiguration extends ReservationSchedulerConfiguration {
   }
 
   @Override
-  public boolean isReservable(String queue) {
-    return reservableQueues.contains(queue);
+  public boolean isReservable(QueuePath queue) {
+    return reservableQueues.contains(queue.getFullPath());
   }
 
   @Override
-  public long getReservationWindow(String queue) {
+  public long getReservationWindow(QueuePath queue) {
     return globalReservationQueueConfig.getReservationWindowMsec();
   }
 
   @Override
-  public float getAverageCapacity(String queue) {
+  public float getAverageCapacity(QueuePath queue) {
     return globalReservationQueueConfig.getAvgOverTimeMultiplier() * 100;
   }
 
   @Override
-  public float getInstantaneousMaxCapacity(String queue) {
+  public float getInstantaneousMaxCapacity(QueuePath queue) {
     return globalReservationQueueConfig.getMaxOverTimeMultiplier() * 100;
   }
 
   @Override
-  public String getReservationAdmissionPolicy(String queue) {
+  public String getReservationAdmissionPolicy(QueuePath queue) {
     return globalReservationQueueConfig.getReservationAdmissionPolicy();
   }
 
   @Override
-  public String getReservationAgent(String queue) {
+  public String getReservationAgent(QueuePath queue) {
     return globalReservationQueueConfig.getReservationAgent();
   }
 
   @Override
-  public boolean getShowReservationAsQueues(String queue) {
+  public boolean getShowReservationAsQueues(QueuePath queue) {
     return globalReservationQueueConfig.shouldShowReservationAsQueues();
   }
 
   @Override
-  public String getReplanner(String queue) {
+  public String getReplanner(QueuePath queue) {
     return globalReservationQueueConfig.getPlanner();
   }
 
   @Override
-  public boolean getMoveOnExpiry(String queue) {
+  public boolean getMoveOnExpiry(QueuePath queue) {
     return globalReservationQueueConfig.shouldMoveOnExpiry();
   }
 
   @Override
-  public long getEnforcementWindow(String queue) {
+  public long getEnforcementWindow(QueuePath queue) {
     return globalReservationQueueConfig.getEnforcementWindowMsec();
   }
 
