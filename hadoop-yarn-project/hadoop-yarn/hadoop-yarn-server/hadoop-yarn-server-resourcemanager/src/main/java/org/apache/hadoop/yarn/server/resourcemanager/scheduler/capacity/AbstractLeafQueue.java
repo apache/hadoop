@@ -123,6 +123,8 @@ public class AbstractLeafQueue extends AbstractCSQueue {
 
   private final UsersManager usersManager;
 
+  private boolean userLimitEnabled;
+
   // cache last cluster resource to compute actual capacity
   private Resource lastClusterResource = Resources.none();
 
@@ -194,6 +196,8 @@ public class AbstractLeafQueue extends AbstractCSQueue {
 
       setOrderingPolicy(
           configuration.<FiCaSchedulerApp>getAppOrderingPolicy(getQueuePath()));
+
+      userLimitEnabled = configuration.getUserLimitEnabled(getQueuePath());
 
       usersManager.setUserLimit(configuration.getUserLimit(getQueuePath()));
       usersManager.setUserLimitFactor(configuration.getUserLimitFactor(getQueuePath()));
@@ -277,6 +281,7 @@ public class AbstractLeafQueue extends AbstractCSQueue {
               getEffectiveCapacity(CommonNodeLabelsManager.NO_LABEL)
               + " effectiveMaxResource=" +
               getEffectiveMaxCapacity(CommonNodeLabelsManager.NO_LABEL)
+              + "\n" + "userLimitEnabled = " + userLimitEnabled
               + "\n" + "userLimit = " + usersManager.getUserLimit()
               + " [= configuredUserLimit ]" + "\n" + "userLimitFactor = "
               + usersManager.getUserLimitFactor()
@@ -387,6 +392,11 @@ public class AbstractLeafQueue extends AbstractCSQueue {
   void setUserLimitFactor(float userLimitFactor) {
     usersManager.setUserLimitFactor(userLimitFactor);
     usersManager.userLimitNeedsRecompute();
+  }
+
+  @VisibleForTesting
+  void setUserLimitEnabled(boolean userLimitEnabled) {
+    this.userLimitEnabled = userLimitEnabled;
   }
 
   @Override
@@ -1233,44 +1243,46 @@ public class AbstractLeafQueue extends AbstractCSQueue {
         }
       }
 
-      CachedUserLimit cul = userLimits.get(application.getUser());
-      Resource cachedUserLimit = null;
-      if (cul != null) {
-        cachedUserLimit = cul.userLimit;
-      }
-      Resource userLimit = computeUserLimitAndSetHeadroom(application,
-          clusterResource, candidates.getPartition(), schedulingMode,
-          cachedUserLimit);
-      if (cul == null) {
-        cul = new CachedUserLimit(userLimit);
-        CachedUserLimit retVal =
-            userLimits.putIfAbsent(application.getUser(), cul);
-        if (retVal != null) {
-          // another thread updated the user limit cache before us
-          cul = retVal;
-          userLimit = cul.userLimit;
+      if (userLimitEnabled) {
+        CachedUserLimit cul = userLimits.get(application.getUser());
+        Resource cachedUserLimit = null;
+        if (cul != null) {
+          cachedUserLimit = cul.userLimit;
         }
-      }
-      // Check user limit
-      boolean userAssignable = true;
-      if (!cul.canAssign && Resources.fitsIn(appReserved, cul.reservation)) {
-        userAssignable = false;
-      } else {
-        userAssignable = canAssignToUser(clusterResource, application.getUser(),
-            userLimit, application, candidates.getPartition(),
-            currentResourceLimits);
-        if (!userAssignable && Resources.fitsIn(cul.reservation, appReserved)) {
-          cul.canAssign = false;
-          cul.reservation = appReserved;
+        Resource userLimit = computeUserLimitAndSetHeadroom(application,
+                clusterResource, candidates.getPartition(), schedulingMode,
+                cachedUserLimit);
+        if (cul == null) {
+          cul = new CachedUserLimit(userLimit);
+          CachedUserLimit retVal =
+                  userLimits.putIfAbsent(application.getUser(), cul);
+          if (retVal != null) {
+            // another thread updated the user limit cache before us
+            cul = retVal;
+            userLimit = cul.userLimit;
+          }
         }
-      }
-      if (!userAssignable) {
-        application.updateAMContainerDiagnostics(AMState.ACTIVATED,
-            "User capacity has reached its maximum limit.");
-        ActivitiesLogger.APP.recordRejectedAppActivityFromLeafQueue(
-            activitiesManager, node, application, application.getPriority(),
-            ActivityDiagnosticConstant.QUEUE_HIT_USER_MAX_CAPACITY_LIMIT);
-        continue;
+        // Check user limit
+        boolean userAssignable = true;
+        if (!cul.canAssign && Resources.fitsIn(appReserved, cul.reservation)) {
+          userAssignable = false;
+        } else {
+          userAssignable = canAssignToUser(clusterResource, application.getUser(),
+                  userLimit, application, candidates.getPartition(),
+                  currentResourceLimits);
+          if (!userAssignable && Resources.fitsIn(cul.reservation, appReserved)) {
+            cul.canAssign = false;
+            cul.reservation = appReserved;
+          }
+        }
+        if (!userAssignable) {
+          application.updateAMContainerDiagnostics(AMState.ACTIVATED,
+                  "User capacity has reached its maximum limit.");
+          ActivitiesLogger.APP.recordRejectedAppActivityFromLeafQueue(
+                  activitiesManager, node, application, application.getPriority(),
+                  ActivityDiagnosticConstant.QUEUE_HIT_USER_MAX_CAPACITY_LIMIT);
+          continue;
+        }
       }
 
       // Try to schedule
@@ -1333,7 +1345,7 @@ public class AbstractLeafQueue extends AbstractCSQueue {
         allocation.getAllocatedOrReservedContainer();
 
     // Do not check limits when allocation from a reserved container
-    if (allocation.getAllocateFromReservedContainer() == null) {
+    if (allocation.getAllocateFromReservedContainer() == null && userLimitEnabled) {
       readLock.lock();
       try {
         FiCaSchedulerApp app =
@@ -2054,16 +2066,18 @@ public class AbstractLeafQueue extends AbstractCSQueue {
       // activate the pending applications if possible
       activateApplications();
 
-      // In case of any resource change, invalidate recalculateULCount to clear
-      // the computed user-limit.
-      usersManager.userLimitNeedsRecompute();
+      if (userLimitEnabled) {
+        // In case of any resource change, invalidate recalculateULCount to clear
+        // the computed user-limit.
+        usersManager.userLimitNeedsRecompute();
 
-      // Update application properties
-      for (FiCaSchedulerApp application : orderingPolicy
-          .getSchedulableEntities()) {
-        computeUserLimitAndSetHeadroom(application, clusterResource,
-            RMNodeLabelsManager.NO_LABEL,
-            SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY, null);
+        // Update application properties
+        for (FiCaSchedulerApp application : orderingPolicy
+                .getSchedulableEntities()) {
+          computeUserLimitAndSetHeadroom(application, clusterResource,
+                  RMNodeLabelsManager.NO_LABEL,
+                  SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY, null);
+        }
       }
     } finally {
       writeLock.unlock();

@@ -120,6 +120,9 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public static final String USER_LIMIT = "minimum-user-limit-percent";
 
   @Private
+  public static final String USER_LIMIT_ENABLE = "user-limit-enable";
+
+  @Private
   public static final String USER_LIMIT_FACTOR = "user-limit-factor";
 
   @Private
@@ -211,6 +214,9 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
 
   @Private
   public static final int DEFAULT_USER_LIMIT = 100;
+
+  @Private
+  public static final boolean DEFAULT_USER_LIMIT_ENABLE = true;
 
   @Private
   public static final float DEFAULT_USER_LIMIT_FACTOR = 1.0f;
@@ -751,6 +757,13 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   @VisibleForTesting
   public void setDefaultUserLimit(float defaultUserLimit) {
     setFloat(PREFIX + USER_LIMIT, defaultUserLimit);
+  }
+
+  public boolean getUserLimitEnabled(String queue) {
+    boolean userLimitEnabled = getBoolean(
+            getQueuePrefix(queue) + USER_LIMIT_ENABLE,
+            DEFAULT_USER_LIMIT_ENABLE);
+    return userLimitEnabled;
   }
 
   public float getUserLimitFactor(String queue) {

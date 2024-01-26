@@ -1810,6 +1810,97 @@ public class TestLeafQueue {
   }
 
   @Test
+  public void testDisableUserLimits() throws Exception {
+    // Mock the queue
+    LeafQueue a = stubLeafQueue((LeafQueue)queues.get(A));
+    //unset maxCapacity
+    a.setMaxCapacity(1.0f);
+
+    when(csContext.getClusterResource())
+            .thenReturn(Resources.createResource(16 * GB, 32));
+
+    // User
+    final String user_0 = "user_0";
+
+    // Submit applications
+    final ApplicationAttemptId appAttemptId_0 =
+            TestUtils.getMockApplicationAttemptId(0, 0);
+    FiCaSchedulerApp app_0 =
+            new FiCaSchedulerApp(appAttemptId_0, user_0, a,
+                    a.getAbstractUsersManager(), spyRMContext);
+    a.submitApplicationAttempt(app_0, user_0);
+
+    // Setup some nodes
+    String host_0 = "127.0.0.1";
+    FiCaSchedulerNode node_0 = TestUtils.getMockNode(host_0, DEFAULT_RACK, 0, 8*GB);
+    String host_1 = "127.0.0.2";
+    FiCaSchedulerNode node_1 = TestUtils.getMockNode(host_1, DEFAULT_RACK, 0, 8*GB);
+
+    final int numNodes = 2;
+    Resource clusterResource =
+            Resources.createResource(numNodes * (8*GB), numNodes * 16);
+    when(csContext.getNumClusterNodes()).thenReturn(numNodes);
+    root.updateClusterResource(clusterResource,
+            new ResourceLimits(clusterResource));
+
+    // Setup resource-requests
+    Priority priority = TestUtils.createMockPriority(1);
+    app_0.updateResourceRequests(Collections.singletonList(
+            TestUtils.createResourceRequest(ResourceRequest.ANY, 3*GB, 2, true,
+                    priority, recordFactory)));
+
+    Map<ApplicationAttemptId, FiCaSchedulerApp> apps = ImmutableMap.of(
+            app_0.getApplicationAttemptId(), app_0);
+    Map<NodeId, FiCaSchedulerNode> nodes = ImmutableMap.of(node_0.getNodeID(),
+            node_0, node_1.getNodeID(), node_1);
+
+    /**
+     * Start testing...
+     */
+
+    // Set user-limit
+    a.setUserLimit(100);
+    a.setUserLimitFactor(1);
+    root.updateClusterResource(clusterResource,
+            new ResourceLimits(clusterResource));
+
+    // user limit is 2GB
+    Resource userLimit = a.computeUserLimitAndSetHeadroom(app_0, clusterResource,
+            RMNodeLabelsManager.NO_LABEL,
+            SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY, null);
+    assertEquals(2 * GB, userLimit.getMemorySize());
+
+    // Allocate one container
+    applyCSAssignment(clusterResource,
+            a.assignContainers(clusterResource, node_0,
+                    new ResourceLimits(clusterResource),
+                    SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY), a, nodes, apps);
+    assertEquals(3*GB, a.getUsedResources().getMemorySize());
+    assertEquals(3*GB, app_0.getCurrentConsumption().getMemorySize());
+
+    // Now user limit is exceeded, can't allocate another container.
+    applyCSAssignment(clusterResource,
+            a.assignContainers(clusterResource, node_0,
+                    new ResourceLimits(clusterResource),
+                    SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY), a, nodes, apps);
+    assertEquals(3*GB, a.getUsedResources().getMemorySize());
+    assertEquals(3*GB, app_0.getCurrentConsumption().getMemorySize());
+
+    // Set user limit enable to false
+    a.setUserLimitEnabled(false);
+    root.updateClusterResource(clusterResource,
+            new ResourceLimits(clusterResource));
+
+    // Now we can allocate another container because user limit is disabled.
+    applyCSAssignment(clusterResource,
+            a.assignContainers(clusterResource, node_0,
+                    new ResourceLimits(clusterResource),
+                    SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY), a, nodes, apps);
+    assertEquals(6*GB, a.getUsedResources().getMemorySize());
+    assertEquals(6*GB, app_0.getCurrentConsumption().getMemorySize());
+  }
+
+  @Test
   public void testDecimalUserLimits() throws Exception {
     // Mock the queue
     LeafQueue a = stubLeafQueue((LeafQueue)queues.get(A));
