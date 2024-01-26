@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedExceptionAction;
 
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -47,6 +49,13 @@ public abstract class ACLsTestBase {
   protected static final String QUEUEA = "queueA";
   protected static final String QUEUEB = "queueB";
   protected static final String QUEUEC = "queueC";
+  protected static final QueuePath ROOT = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+  protected static final QueuePath A_QUEUE_PATH = new QueuePath(
+      CapacitySchedulerConfiguration.ROOT + "." + QUEUEA);
+  protected static final QueuePath B_QUEUE_PATH = new QueuePath(
+      CapacitySchedulerConfiguration.ROOT + "." + QUEUEB);
+  protected static final QueuePath C_QUEUE_PATH = new QueuePath(
+      CapacitySchedulerConfiguration.ROOT + "." + QUEUEC);
 
   protected static final Logger LOG =
       LoggerFactory.getLogger(TestApplicationACLs.class);

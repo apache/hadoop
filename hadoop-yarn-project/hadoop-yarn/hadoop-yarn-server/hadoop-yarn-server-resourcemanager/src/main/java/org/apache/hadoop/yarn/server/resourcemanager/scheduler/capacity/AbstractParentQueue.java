@@ -134,7 +134,7 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
     this.childQueues = new ArrayList<>();
     this.allowZeroCapacitySum =
           queueContext.getConfiguration()
-              .getAllowZeroCapacitySum(getQueuePath());
+              .getAllowZeroCapacitySum(getQueuePathObject());
 
   }
 
@@ -168,7 +168,7 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
 
       // Initialize queue ordering policy
       queueOrderingPolicy = configuration.getQueueOrderingPolicy(
-          getQueuePath(), parent == null ?
+          getQueuePathObject(), parent == null ?
               null :
               ((AbstractParentQueue) parent).getQueueOrderingPolicyConfigName());
       queueOrderingPolicy.setQueues(childQueues);
@@ -229,7 +229,7 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
               "{Queue=" + queue.getQueuePath() + ", label=" + nodeLabel
                   + " uses weight mode}. ");
         }
-        if (checkConfigTypeIsAbsoluteResource(queue.getQueuePath(), nodeLabel)) {
+        if (checkConfigTypeIsAbsoluteResource(queue.getQueuePathObject(), nodeLabel)) {
           absoluteMinResSet = true;
           // There's a special handling: when absolute resource is configured,
           // capacity will be calculated (and set) for UI/metrics purposes, so
@@ -549,7 +549,7 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
    */
   public boolean isEligibleForAutoQueueCreation() {
     return isDynamicQueue() || queueContext.getConfiguration().
-        isAutoQueueCreationV2Enabled(getQueuePath());
+        isAutoQueueCreationV2Enabled(getQueuePathObject());
   }
 
   @Override
@@ -1617,7 +1617,7 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
   public boolean isEligibleForAutoDeletion() {
     return isDynamicQueue() && getChildQueues().size() == 0 &&
         queueContext.getConfiguration().
-            isAutoExpiredDeletionEnabled(this.getQueuePath());
+            isAutoExpiredDeletionEnabled(this.getQueuePathObject());
   }
 
   public AutoCreatedQueueTemplate getAutoCreatedQueueTemplate() {
