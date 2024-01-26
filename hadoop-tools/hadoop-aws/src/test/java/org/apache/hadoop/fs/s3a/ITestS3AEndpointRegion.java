@@ -289,7 +289,7 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
     newFS.initialize(getFileSystem().getUri(), newConf);
 
     final String file = getMethodName();
-    Path basePath = new Path("basePath-" + getMethodName());
+    Path basePath = methodPath();
     final Path srcDir = new Path(basePath, "srcdir");
     newFS.mkdirs(srcDir);
     Path src = new Path(srcDir, file);
@@ -317,7 +317,7 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
     public void beforeExecution(Context.BeforeExecution context,
         ExecutionAttributes executionAttributes)  {
 
-      if (endpoint != null) {
+      if (endpoint != null && (!endpoint.endsWith(CENTRAL_ENDPOINT) || !US_EAST_2.equals(region))) {
         Assertions.assertThat(
                 executionAttributes.getAttribute(AwsExecutionAttribute.ENDPOINT_OVERRIDDEN))
             .describedAs("Endpoint not overridden").isTrue();

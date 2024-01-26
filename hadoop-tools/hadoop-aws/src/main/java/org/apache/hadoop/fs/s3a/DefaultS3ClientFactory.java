@@ -290,22 +290,30 @@ public class DefaultS3ClientFactory extends Configured
     builder.fipsEnabled(fipsEnabled);
 
     if (endpoint != null) {
+      boolean overrideEndpoint = true;
       checkArgument(!fipsEnabled,
           "%s : %s", ERROR_ENDPOINT_WITH_FIPS, endpoint);
-      builder.endpointOverride(endpoint);
       // No region was configured, try to determine it from the endpoint.
       if (region == null) {
-        boolean endpointEndsWithCentral = endpointStr.endsWith(CENTRAL_ENDPOINT);
-        region = getS3RegionFromEndpoint(endpointStr, endpointEndsWithCentral);
+        boolean endpointEndsWithCentral =
+            endpointStr.endsWith(CENTRAL_ENDPOINT);
+        region = getS3RegionFromEndpoint(endpointStr,
+            endpointEndsWithCentral);
         if (region != null) {
           origin = "endpoint";
           if (endpointEndsWithCentral) {
+            overrideEndpoint = false;
             builder.crossRegionAccessEnabled(true);
-            LOG.debug("Enabling cross region access for endpoint {}", endpointStr);
+            origin = "origin with cross region access";
+            LOG.debug("Enabling cross region access for endpoint {}",
+                endpointStr);
           }
         }
       }
-      LOG.debug("Setting endpoint to {}", endpoint);
+      if (overrideEndpoint) {
+        builder.endpointOverride(endpoint);
+        LOG.debug("Setting endpoint to {}", endpoint);
+      }
     }
 
     if (region != null) {
@@ -377,6 +385,7 @@ public class DefaultS3ClientFactory extends Configured
     // Select default region here to enable cross-region access.
     // If both "fs.s3a.endpoint" and "fs.s3a.endpoint.region" are empty,
     // Spark sets "fs.s3a.endpoint" to "s3.amazonaws.com".
+    // This applies to Spark versions with the changes of SPARK-35878.
     // ref:
     // https://github.com/apache/spark/blob/v3.5.0/core/src/main/scala/org/apache/spark/deploy/SparkHadoopUtil.scala#L528
     // If we do not allow cross region access, Spark would not be able to
