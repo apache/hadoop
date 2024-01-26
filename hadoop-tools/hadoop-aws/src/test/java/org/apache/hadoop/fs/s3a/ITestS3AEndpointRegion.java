@@ -299,6 +299,8 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
     }
 
     ContractTestUtils.assertIsFile(getFileSystem(), srcFilePath);
+    ContractTestUtils.assertIsFile(newFS, srcFilePath);
+
     newFS.delete(srcDir, true);
 
     Assertions
