@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_READ_BLOCKID_COUNTS_METRIC_ENABLED_KEY;
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.assertInverseQuantileGauges;
 import static org.apache.hadoop.test.MetricsAsserts.assertQuantileGauges;
@@ -31,6 +32,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.management.ManagementFactory;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -45,6 +47,8 @@ import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.net.unix.TemporarySocketDirectory;
 import org.apache.hadoop.util.Lists;
+
+import org.eclipse.jetty.util.ajax.JSON;
 import org.junit.Assume;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -609,6 +613,7 @@ public class TestDataNodeMetrics {
     DataNode dn = cluster.getDataNodes().get(0);
     MetricsRecordBuilder rb = getMetrics(dn.getMetrics().name());
     assertCounter("HeartbeatsNumOps", 1L, rb);
+    cluster.close();
   }
   @Test(timeout = 60000)
   public void testSlowMetrics() throws Exception {
@@ -681,6 +686,7 @@ public class TestDataNodeMetrics {
     assertCounter("HeartbeatsForminidfs-ns-nn1NumOps", 1L, rb);
     assertCounter("HeartbeatsForminidfs-ns-nn2NumOps", 1L, rb);
     assertCounter("HeartbeatsNumOps", 2L, rb);
+    cluster.close();
   }
 
   @Test
@@ -812,6 +818,48 @@ public class TestDataNodeMetrics {
           int readXceiversCount = MetricsAsserts.getIntGauge("DataNodeReadActiveXceiversCount",
               getMetrics(datanode.getMetrics().name()));
           return readXceiversCount == 0;
+        }
+      }, 100, 10000);
+    }
+  }
+
+  @Test
+  public void testReadBlockIdCounts() throws Exception {
+    HdfsConfiguration config = new HdfsConfiguration();
+    config.setBoolean(DFS_DATANODE_READ_BLOCKID_COUNTS_METRIC_ENABLED_KEY, true);
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(config).build()) {
+      cluster.waitActive();
+      FileSystem fs = cluster.getFileSystem();
+      List<DataNode> datanodes = cluster.getDataNodes();
+      assertEquals(1, datanodes.size());
+
+      final MBeanServer mBeanServer = ManagementFactory.getPlatformMBeanServer();
+      final ObjectName mxBeanName = new ObjectName("Hadoop:service=DataNode,name=DataNodeInfo");
+      Object readBlockIdCountsNullObj = mBeanServer.getAttribute(mxBeanName, "ReadBlockIdCounts");
+      assertEquals("{}", JSON.toString(readBlockIdCountsNullObj));
+
+      Path path = new Path("/ReadBlockIdCountsTestFile.txt");
+      try (FSDataOutputStream output = fs.create(path)) {
+        output.write("ReadBlockIdCountsTest".getBytes(StandardCharsets.UTF_8));
+        output.hsync();
+      }
+
+      StringBuilder res = new StringBuilder();
+      try (FSDataInputStream in = fs.open(path);) {
+        byte[] buffer = new byte[1024];
+        int read;
+        while ((read = in.read(buffer)) > 0) {
+          res.append(new String(buffer, 0, read));
+        }
+        assertEquals("ReadBlockIdCountsTest", res.toString());
+      }
+
+      GenericTestUtils.waitFor(() -> {
+        try {
+          Object tmp = mBeanServer.getAttribute(mxBeanName, "ReadBlockIdCounts");
+          return "{}".equals(JSON.toString(tmp));
+        } catch (Exception e) {
+          throw new RuntimeException(e);
         }
       }, 100, 10000);
     }
