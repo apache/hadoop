@@ -242,6 +242,13 @@ public final class CommitConstants {
    */
   public static final int DEFAULT_COMMITTER_THREADS = 32;
 
+
+  public static final String FS_S3A_COMMITTER_MAGIC_TRACK_COMMITS_IN_MEMORY_ENABLED =
+      "fs.s3a.committer.magic.track.commits.in.memory.enabled";
+
+  public static final boolean FS_S3A_COMMITTER_MAGIC_TRACK_COMMITS_IN_MEMORY_ENABLED_DEFAULT =
+      false;
+
   /**
    * Path  in the cluster filesystem for temporary data: {@value}.
    * This is for HDFS, not the local filesystem.

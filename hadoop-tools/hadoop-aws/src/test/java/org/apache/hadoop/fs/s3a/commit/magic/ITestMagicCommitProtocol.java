@@ -20,8 +20,11 @@ package org.apache.hadoop.fs.s3a.commit.magic;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 
+import org.apache.hadoop.conf.Configuration;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
@@ -39,6 +42,8 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import static org.apache.hadoop.fs.s3a.S3AUtils.listAndFilter;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
@@ -48,7 +53,10 @@ import static org.apache.hadoop.util.functional.RemoteIterators.toList;
 /**
  * Test the magic committer's commit protocol.
  */
+@RunWith(Parameterized.class)
 public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
+
+  private final boolean trackCommitsInMemory;
 
   @Override
   protected String suitename() {
@@ -69,6 +77,26 @@ public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
   public void setup() throws Exception {
     super.setup();
     CommitUtils.verifyIsMagicCommitFS(getFileSystem());
+  }
+
+  @Parameterized.Parameters(name = "track-commit-in-memory-{0}")
+  public static Collection<Object[]> params() {
+    return Arrays.asList(new Object[][]{
+        {false},
+        {true}
+    });
+  }
+
+  public ITestMagicCommitProtocol(boolean trackCommitsInMemory) {
+    this.trackCommitsInMemory = trackCommitsInMemory;
+  }
+
+  @Override
+  protected Configuration createConfiguration() {
+    Configuration conf = super.createConfiguration();
+    conf.setBoolean(FS_S3A_COMMITTER_MAGIC_TRACK_COMMITS_IN_MEMORY_ENABLED, trackCommitsInMemory);
+
+    return conf;
   }
 
   @Override
