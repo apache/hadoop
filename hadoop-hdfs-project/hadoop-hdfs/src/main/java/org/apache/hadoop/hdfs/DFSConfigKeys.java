@@ -188,6 +188,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final long DFS_DN_CACHED_DFSUSED_CHECK_INTERVAL_DEFAULT_MS =
       600000;
 
+  public static final String DFS_DATANODE_DELETE_CORRUPT_REPLICA_FROM_DISK_ENABLE =
+      "dfs.datanode.delete.corrupt.replica.from.disk.enable";
+  public static final boolean DFS_DATANODE_DELETE_CORRUPT_REPLICA_FROM_DISK_DEFAULT = true;
+
   public static final String  DFS_NAMENODE_PATH_BASED_CACHE_BLOCK_MAP_ALLOCATION_PERCENT =
       "dfs.namenode.path.based.cache.block.map.allocation.percent";
   public static final float    DFS_NAMENODE_PATH_BASED_CACHE_BLOCK_MAP_ALLOCATION_PERCENT_DEFAULT = 0.25f;
