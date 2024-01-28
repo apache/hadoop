@@ -4922,10 +4922,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   @Override // FSNamesystemMBean
   @Metric
-  public String getCollectSlowNodesIpAddrFrequencyMap() {
-    Map<String, Integer> recordSlowNodesIpAddr =
-        getBlockManager().getDatanodeManager().getCollectSlowNodesIpAddrFrequencyMap();
-    return JSON.toString(recordSlowNodesIpAddr);
+  public String getCollectSlowNodesIpAddrCounts() {
+    Map<String, Long> recordSlowNodesIpCounts =
+        getBlockManager().getDatanodeManager().getCollectSlowNodesIpAddrCounts();
+    return JSON.toString(recordSlowNodesIpCounts);
   }
 
   /**

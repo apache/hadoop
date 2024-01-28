@@ -26,6 +26,7 @@ import org.apache.hadoop.util.Preconditions;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.thirdparty.com.google.common.net.InetAddresses;
+import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.AtomicLongMap;
 
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -69,7 +70,6 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -215,7 +215,7 @@ public class DatanodeManager {
   private volatile long slowPeerCollectionInterval;
   private volatile int maxSlowPeerReportNodes;
 
-  private final Map<String, Integer> collectSlowNodesIpAddrFrequencyMap = new ConcurrentHashMap<>();
+  private final AtomicLongMap<String> collectSlowNodesIpAddrCounts = AtomicLongMap.create();
 
   @Nullable
   private final SlowDiskTracker slowDiskTracker;
@@ -424,7 +424,7 @@ public class DatanodeManager {
     } finally {
       slowPeerCollectorDaemon = null;
       slowNodesUuidSet.clear();
-      collectSlowNodesIpAddrFrequencyMap.clear();
+      collectSlowNodesIpAddrCounts.clear();
     }
   }
 
@@ -2211,14 +2211,13 @@ public class DatanodeManager {
     datanodeDescriptors.forEach(datanodeDescriptor -> {
       slowPeersUuidSet.add(datanodeDescriptor.getDatanodeUuid());
       String ipAddr = datanodeDescriptor.getIpAddr();
-      collectSlowNodesIpAddrFrequencyMap.putIfAbsent(ipAddr, 1);
-      collectSlowNodesIpAddrFrequencyMap.computeIfPresent(ipAddr, (k, v) -> v + 1);
+      collectSlowNodesIpAddrCounts.incrementAndGet(ipAddr);
     });
     // Clean up nodes that are not in the host2DatanodeMap
-    for (String ipAddr : collectSlowNodesIpAddrFrequencyMap.keySet()) {
+    for (String ipAddr : collectSlowNodesIpAddrCounts.asMap().keySet()) {
       DatanodeDescriptor datanodeByHost = host2DatanodeMap.getDatanodeByHost(ipAddr);
       if (datanodeByHost == null) {
-        collectSlowNodesIpAddrFrequencyMap.remove(ipAddr);
+        collectSlowNodesIpAddrCounts.decrementAndGet(ipAddr);
       }
     }
     return slowPeersUuidSet;
@@ -2252,8 +2251,8 @@ public class DatanodeManager {
    * Return the map of the frequency of collecting slow datanodes.
    * @return map type
    */
-  public Map<String, Integer> getCollectSlowNodesIpAddrFrequencyMap() {
-    return collectSlowNodesIpAddrFrequencyMap;
+  public Map<String, Long> getCollectSlowNodesIpAddrCounts() {
+    return collectSlowNodesIpAddrCounts.asMap();
   }
 
   /**

@@ -33,7 +33,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Supplier;
 
 import javax.management.MBeanAttributeInfo;
 import javax.management.MBeanInfo;
@@ -286,7 +285,7 @@ public class TestFSNamesystemMBean {
   }
 
   @Test
-  public void testCollectSlowNodesIpAddrFrequencyMetrics() throws Exception {
+  public void testCollectSlowNodesIpAddrCountsMetrics() throws Exception {
     Configuration conf = new Configuration();
     conf.setBoolean(DFS_DATANODE_PEER_STATS_ENABLED_KEY, true);
     conf.set(DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_KEY, "1000");
@@ -298,12 +297,12 @@ public class TestFSNamesystemMBean {
       DistributedFileSystem fs = cluster.getFileSystem();
       FSNamesystem fsNamesystem = cluster.getNameNode().getNamesystem();
 
-      assertEquals("{}", fsNamesystem.getCollectSlowNodesIpAddrFrequencyMap());
+      assertEquals("{}", fsNamesystem.getCollectSlowNodesIpAddrCounts());
       MBeanServer mBeanServer = ManagementFactory.getPlatformMBeanServer();
       ObjectName mxBeanName = new ObjectName("Hadoop:service=NameNode,name=FSNamesystemState");
-      String ipAddrFrequency =
-          (String) mBeanServer.getAttribute(mxBeanName, "CollectSlowNodesIpAddrFrequencyMap");
-      assertEquals("{}", ipAddrFrequency);
+      String ipAddrCounts =
+          (String) mBeanServer.getAttribute(mxBeanName, "CollectSlowNodesIpAddrCounts");
+      assertEquals("{}", ipAddrCounts);
 
       List<DataNode> dataNodes = cluster.getDataNodes();
       assertEquals(2, dataNodes.size());
@@ -321,31 +320,27 @@ public class TestFSNamesystemMBean {
         }
       }, 1000, 10000, "Slow nodes could not be detected");
 
-      GenericTestUtils.waitFor(new Supplier<Boolean>() {
-        @Override
-        public Boolean get() {
-          String ipAddrFrequency;
-          DatanodeInfo[] slowNodes;
-          try {
-            ipAddrFrequency =
-                (String) mBeanServer.getAttribute(mxBeanName, "CollectSlowNodesIpAddrFrequencyMap");
-            slowNodes = fs.getSlowDatanodeStats();
-          } catch (Exception e) {
-            throw new RuntimeException(e);
-          }
-          Map<String, Long> ipAddrFrequencyMap = (HashMap) JSON.parse(ipAddrFrequency);
-          for (Map.Entry<String, Long> entry : ipAddrFrequencyMap.entrySet()) {
-            boolean condition1 = slowNodes[0].getIpAddr().equals(entry.getKey());
-            boolean condition2 = entry.getValue() > 1;
-            return condition1 && condition2;
-          }
-          return false;
+      GenericTestUtils.waitFor(() -> {
+        String tmp;
+        DatanodeInfo[] slowNodes;
+        try {
+          tmp = (String) mBeanServer.getAttribute(mxBeanName, "CollectSlowNodesIpAddrCounts");
+          slowNodes = fs.getSlowDatanodeStats();
+        } catch (Exception e) {
+          throw new RuntimeException(e);
         }
+        Map<String, Long> ipAddrFrequencyMap = (HashMap) JSON.parse(tmp);
+        for (Map.Entry<String, Long> entry : ipAddrFrequencyMap.entrySet()) {
+          boolean condition1 = slowNodes[0].getIpAddr().equals(entry.getKey());
+          boolean condition2 = entry.getValue() > 1;
+          return condition1 && condition2;
+        }
+        return false;
       }, 100, 10000);
 
       cluster.getNameNode().reconfigureProperty(DFS_DATANODE_PEER_STATS_ENABLED_KEY, "false");
       DatanodeManager dnManager = fsNamesystem.getBlockManager().getDatanodeManager();
-      assertEquals("{}", dnManager.getCollectSlowNodesIpAddrFrequencyMap().toString());
+      assertEquals("{}", dnManager.getCollectSlowNodesIpAddrCounts().toString());
     }
   }
 

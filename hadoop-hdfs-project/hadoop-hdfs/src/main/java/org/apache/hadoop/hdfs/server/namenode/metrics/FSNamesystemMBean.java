@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.metrics;
 
+import java.util.Map;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
@@ -270,10 +272,10 @@ public interface FSNamesystemMBean {
   float getReconstructionQueuesInitProgress();
 
   /**
-   * Returns a nested JSON object listing the collect slowNodesIpAddr frequency Map,
+   * Returns a nested JSON object listing the collect slowNodesIpAddr counts Map,
    * e.g. {"1.1.1.1":4,"2.2.2.2":3}
    *
    * @return JSON string.
    */
-  String getCollectSlowNodesIpAddrFrequencyMap();
+  String getCollectSlowNodesIpAddrCounts();
 }

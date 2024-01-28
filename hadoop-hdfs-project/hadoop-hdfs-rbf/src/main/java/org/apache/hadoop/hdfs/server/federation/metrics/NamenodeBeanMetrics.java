@@ -890,7 +890,7 @@ public class NamenodeBeanMetrics
   }
 
   @Override
-  public String getCollectSlowNodesIpAddrFrequencyMap() {
+  public String getCollectSlowNodesIpAddrCounts() {
     return "N/A";
   }
 
