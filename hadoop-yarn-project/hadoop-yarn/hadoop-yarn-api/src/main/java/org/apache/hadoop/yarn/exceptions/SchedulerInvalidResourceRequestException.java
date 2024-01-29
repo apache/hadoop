@@ -41,7 +41,7 @@ public class SchedulerInvalidResourceRequestException extends YarnRuntimeExcepti
   }
 
   public SchedulerInvalidResourceRequestException(String message,
-                                                  Throwable cause) {
+      Throwable cause) {
     super(message, cause);
   }
 }
