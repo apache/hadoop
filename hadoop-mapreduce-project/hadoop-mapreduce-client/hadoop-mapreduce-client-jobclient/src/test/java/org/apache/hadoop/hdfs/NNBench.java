@@ -112,8 +112,6 @@ public class NNBench extends Configured implements Tool {
   private static final String OP_RENAME = "rename";
   private static final String OP_DELETE = "delete";
   private static final int MAX_OPERATION_EXCEPTIONS = 1000;
-  private ExecutorService executorService =
-      HadoopExecutors.newFixedThreadPool(2 * Runtime.getRuntime().availableProcessors());
   
   // To display in the format that matches the NN and DN log format
   // Example: 2007-10-26 00:01:19,853
@@ -146,6 +144,8 @@ public class NNBench extends Configured implements Tool {
   private void createControlFiles() {
     LOG.info("Creating " + numberOfMaps + " control files");
 
+    ExecutorService executorService =
+        HadoopExecutors.newFixedThreadPool(2 * Runtime.getRuntime().availableProcessors());
     List<Future<Void>> list = new ArrayList<>();
     for (int i = 0; i < numberOfMaps; i++) {
       String strFileName = "NNBench_Controlfile_" + i;
