@@ -2074,6 +2074,9 @@ public class TestRouterRpc {
     GenericTestUtils.LogCapturer auditlog =
         GenericTestUtils.LogCapturer.captureLogs(FSNamesystem.AUDIT_LOG);
 
+    // Current callerContext is null
+    assertNull(CallerContext.getCurrent());
+
     // Set client context
     CallerContext.setCurrent(
         new CallerContext.Builder("clientContext").build());
@@ -2098,6 +2101,8 @@ public class TestRouterRpc {
     GenericTestUtils.LogCapturer auditlog =
         GenericTestUtils.LogCapturer.captureLogs(FSNamesystem.AUDIT_LOG);
 
+    // Current callerContext is null
+    assertNull(CallerContext.getCurrent());
     UserGroupInformation loginUser = UserGroupInformation.getLoginUser();
     UserGroupInformation realUser = UserGroupInformation
         .createUserForTesting("testRealUser", new String[]{"group"});
