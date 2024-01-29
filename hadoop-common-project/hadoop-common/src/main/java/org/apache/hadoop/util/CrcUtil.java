@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -21,7 +21,6 @@ package org.apache.hadoop.util;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-import java.io.IOException;
 import java.util.Arrays;
 
 /**
@@ -112,15 +111,7 @@ public final class CrcUtil {
    */
   public static byte[] intToBytes(int value) {
     byte[] buf = new byte[4];
-    try {
-      writeInt(buf, 0, value);
-    } catch (IOException ioe) {
-      // Since this should only be able to occur from code bugs within this
-      // class rather than user input, we throw as a RuntimeException
-      // rather than requiring this method to declare throwing IOException
-      // for something the caller can't control.
-      throw new RuntimeException(ioe);
-    }
+    writeInt(buf, 0, value);
     return buf;
   }
 
@@ -132,16 +123,14 @@ public final class CrcUtil {
    * @param buf buf size.
    * @param offset offset.
    * @param value value.
-   * @throws IOException raised on errors performing I/O.
    */
-  public static void writeInt(byte[] buf, int offset, int value)
-      throws IOException {
+  public static void writeInt(byte[] buf, int offset, int value) {
     if (offset + 4  > buf.length) {
-      throw new IOException(String.format(
+      throw new ArrayIndexOutOfBoundsException(String.format(
           "writeInt out of bounds: buf.length=%d, offset=%d",
           buf.length, offset));
     }
-    buf[offset + 0] = (byte)((value >>> 24) & 0xff);
+    buf[offset    ] = (byte)((value >>> 24) & 0xff);
     buf[offset + 1] = (byte)((value >>> 16) & 0xff);
     buf[offset + 2] = (byte)((value >>> 8) & 0xff);
     buf[offset + 3] = (byte)(value & 0xff);
@@ -154,20 +143,17 @@ public final class CrcUtil {
    * @param offset offset.
    * @param buf buf.
    * @return int.
-   * @throws IOException raised on errors performing I/O.
    */
-  public static int readInt(byte[] buf, int offset)
-      throws IOException {
+  public static int readInt(byte[] buf, int offset) {
     if (offset + 4  > buf.length) {
-      throw new IOException(String.format(
+      throw new ArrayIndexOutOfBoundsException(String.format(
           "readInt out of bounds: buf.length=%d, offset=%d",
           buf.length, offset));
     }
-    int value = ((buf[offset + 0] & 0xff) << 24) |
+    return      ((buf[offset    ] & 0xff) << 24) |
                 ((buf[offset + 1] & 0xff) << 16) |
                 ((buf[offset + 2] & 0xff) << 8)  |
                 ((buf[offset + 3] & 0xff));
-    return value;
   }
 
   /**
@@ -176,13 +162,11 @@ public final class CrcUtil {
    * formatted value.
    *
    * @param bytes bytes.
-   * @throws IOException raised on errors performing I/O.
    * @return a list of hex formatted values.
    */
-  public static String toSingleCrcString(final byte[] bytes)
-      throws IOException {
+  public static String toSingleCrcString(final byte[] bytes) {
     if (bytes.length != 4) {
-      throw new IOException((String.format(
+      throw new IllegalArgumentException((String.format(
           "Unexpected byte[] length '%d' for single CRC. Contents: %s",
           bytes.length, Arrays.toString(bytes))));
     }
@@ -195,13 +179,11 @@ public final class CrcUtil {
    * hex formatted values.
    *
    * @param bytes bytes.
-   * @throws IOException raised on errors performing I/O.
    * @return a list of hex formatted values.
    */
-  public static String toMultiCrcString(final byte[] bytes)
-      throws IOException {
+  public static String toMultiCrcString(final byte[] bytes) {
     if (bytes.length % 4 != 0) {
-      throw new IOException((String.format(
+      throw new IllegalArgumentException((String.format(
           "Unexpected byte[] length '%d' not divisible by 4. Contents: %s",
           bytes.length, Arrays.toString(bytes))));
     }

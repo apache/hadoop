@@ -29,6 +29,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.TestSchedulerOver
  */
 public class TestCapacitySchedulerOvercommit extends TestSchedulerOvercommit {
 
+  private static final QueuePath ROOT = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+  private static final QueuePath DEFAULT = new QueuePath(CapacitySchedulerConfiguration.ROOT
+      + ".default");
   @Override
   protected Configuration getConfiguration() {
     Configuration conf = super.getConfiguration();
@@ -38,14 +41,10 @@ public class TestCapacitySchedulerOvercommit extends TestSchedulerOvercommit {
     // Remove limits on AMs to allow multiple applications running
     CapacitySchedulerConfiguration csConf =
         new CapacitySchedulerConfiguration(conf);
-    csConf.setMaximumApplicationMasterResourcePerQueuePercent(
-        CapacitySchedulerConfiguration.ROOT, 100.0f);
-    csConf.setMaximumAMResourcePercentPerPartition(
-        CapacitySchedulerConfiguration.ROOT, "", 100.0f);
-    csConf.setMaximumApplicationMasterResourcePerQueuePercent(
-        CapacitySchedulerConfiguration.ROOT + ".default", 100.0f);
-    csConf.setMaximumAMResourcePercentPerPartition(
-        CapacitySchedulerConfiguration.ROOT + ".default", "", 100.0f);
+    csConf.setMaximumApplicationMasterResourcePerQueuePercent(ROOT, 100.0f);
+    csConf.setMaximumAMResourcePercentPerPartition(ROOT, "", 100.0f);
+    csConf.setMaximumApplicationMasterResourcePerQueuePercent(DEFAULT, 100.0f);
+    csConf.setMaximumAMResourcePercentPerPartition(DEFAULT, "", 100.0f);
 
     return csConf;
   }

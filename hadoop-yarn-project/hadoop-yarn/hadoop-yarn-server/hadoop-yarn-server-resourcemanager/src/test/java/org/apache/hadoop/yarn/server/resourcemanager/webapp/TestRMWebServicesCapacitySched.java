@@ -35,6 +35,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.junit.runner.RunWith;
@@ -53,6 +54,8 @@ import static org.junit.Assert.assertEquals;
 @RunWith(Parameterized.class)
 public class TestRMWebServicesCapacitySched extends JerseyTestBase {
 
+  private static final QueuePath ROOT = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+  private static final QueuePath A = new QueuePath(CapacitySchedulerConfiguration.ROOT + ".a");
   private final boolean legacyQueueMode;
 
   @Parameterized.Parameters(name = "{index}: legacy-queue-mode={0}")
@@ -124,8 +127,8 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
   @Test
   public void testNodeLabelDefaultAPI() throws Exception {
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration(createConfig());
-    conf.setDefaultNodeLabelExpression("root", "ROOT-INHERITED");
-    conf.setDefaultNodeLabelExpression("root.a", "root-a-default-label");
+    conf.setDefaultNodeLabelExpression(ROOT, "ROOT-INHERITED");
+    conf.setDefaultNodeLabelExpression(A, "root-a-default-label");
     try (MockRM rm = createRM(conf)) {
       rm.registerNode("h1:1234", 32 * GB, 32);
       ClientResponse response = resource().path("ws/v1/cluster/scheduler")
