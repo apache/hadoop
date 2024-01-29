@@ -47,23 +47,23 @@ public class ITestSelectUnsupported extends AbstractS3ATestBase {
       " WHERE s._1 = 'foo'";
 
   /**
-   * A {@code .must(SELECT_SQL, _)} option MSUT not fail the build.
+   * A {@code .must(SELECT_SQL, _)} option MUST raise {@code UnsupportedOperationException}.
    */
   @Test
-  public void testSelectOpenFileMust() throws Throwable {
+  public void testSelectOpenFileMustFailure() throws Throwable {
 
     intercept(UnsupportedOperationException.class, SELECT_UNSUPPORTED, () ->
         getFileSystem().openFile(methodPath())
             .must(SELECT_SQL, STATEMENT)
             .build()
-            /**/.get());
+            .get());
   }
 
   /**
-   * A {@code .opt(SELECT_SQL, _)} option does not fail the build.
+   * A {@code .opt(SELECT_SQL, _)} option is ignored..
    */
   @Test
-  public void testSelectOpenFileMay() throws Throwable {
+  public void testSelectOpenFileMayIsIgnored() throws Throwable {
 
     final Path path = methodPath();
     final S3AFileSystem fs = getFileSystem();

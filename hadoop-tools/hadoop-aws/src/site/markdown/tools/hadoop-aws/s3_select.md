@@ -25,3 +25,51 @@ will reject calls to open files using the select APIs.
 
 If a build of Hadoop with S3 Select is desired, the relevant
 classes can be found in hadoop trunk commit `8bf72346a59c`.
+
+## Consequences of the removal
+
+The path capabilities probe `fs.s3a.capability.select.sql` returns "false" for any and all
+`s3a://` paths.
+
+Any `openFile()` call where a SQL query is passed in as a `must()` clause
+SHALL raise `UnsupportedOperationException`:
+```java
+// fails
+openFile("s3a://bucket/path")
+  .must("fs.s3a.select.sql", "SELECT ...")
+  .get();
+```
+
+Any `openFile()` call to an S3A Path where a SQL query is passed in as a `may()`
+clause SHALL be logged at WARN level the first time it is invoked, then ignored.
+```java
+// ignores the option after printing a warning.
+openFile("s3a://bucket/path")
+  .may("fs.s3a.select.sql", "SELECT ...")
+  .get();
+```
+
+The `hadoop s3guard select` command is no longer supported.
+
+Previously, the command would either generate an S3 select or a error (with exit code 42 being
+the one for not enough arguments):
+
+```
+hadoop s3guard select
+select [OPTIONS] [-limit rows] [-header (use|none|ignore)] [-out path] [-expected rows]
+  [-compression (gzip|bzip2|none)] [-inputformat csv] [-outputformat csv] <PATH> <SELECT QUERY>
+        make an S3 Select call
+
+[main] INFO  util.ExitUtil (ExitUtil.java:terminate(241)) - Exiting with status 42:
+       42: Too few arguments
+```
+
+Now it will fail with exit code 55 always:
+
+```
+hadoop s3guard select
+
+[main] INFO  util.ExitUtil (ExitUtil.java:terminate(241)) - Exiting with status 55:
+       55: S3 Select is no longer supported
+
+```
