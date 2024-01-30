@@ -45,6 +45,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf.YarnConfigurationStore.LogMutation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.MutableConfScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.MutableConfigurationProvider;
@@ -180,9 +181,9 @@ public class TestSchedConfCLI extends JerseyTestBase {
 
   private static void setupQueueConfiguration(
       CapacitySchedulerConfiguration config) {
-    config.setQueues(CapacitySchedulerConfiguration.ROOT,
+    config.setQueues(new QueuePath(CapacitySchedulerConfiguration.ROOT),
         new String[]{"testqueue"});
-    String a = CapacitySchedulerConfiguration.ROOT + ".testqueue";
+    QueuePath a = new QueuePath(CapacitySchedulerConfiguration.ROOT + ".testqueue");
     config.setCapacity(a, 100f);
     config.setMaximumCapacity(a, 100f);
   }

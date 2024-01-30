@@ -21,17 +21,16 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePrefixes;
 import org.apache.hadoop.yarn.webapp.dao.QueueConfigInfo;
 import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.ORDERING_POLICY;
 
 public final class ConfigurationUpdateAssembler {
 
@@ -65,38 +64,34 @@ public final class ConfigurationUpdateAssembler {
     if (queueToRemove == null) {
       return;
     }
-    if (queueToRemove.lastIndexOf('.') == -1) {
-      throw new IOException("Can't remove queue " + queueToRemove);
+    QueuePath queuePath = new QueuePath(queueToRemove);
+    if (queuePath.isRoot() || queuePath.isInvalid()) {
+      throw new IOException("Can't remove queue " + queuePath.getFullPath());
     }
-    String queueName = queueToRemove.substring(
-            queueToRemove.lastIndexOf('.') + 1);
-    List<String> siblingQueues = getSiblingQueues(queueToRemove,
+    String queueName = queuePath.getLeafName();
+    List<String> siblingQueues = getSiblingQueues(queuePath,
             proposedConf);
     if (!siblingQueues.contains(queueName)) {
-      throw new IOException("Queue " + queueToRemove + " not found");
+      throw new IOException("Queue " + queuePath.getFullPath() + " not found");
     }
     siblingQueues.remove(queueName);
-    String parentQueuePath = queueToRemove.substring(0, queueToRemove
-            .lastIndexOf('.'));
-    proposedConf.setQueues(parentQueuePath, siblingQueues.toArray(
+
+    QueuePath parentPath = queuePath.getParentObject();
+    proposedConf.setQueues(parentPath, siblingQueues.toArray(
             new String[0]));
-    String queuesConfig = CapacitySchedulerConfiguration.PREFIX
-            + parentQueuePath + CapacitySchedulerConfiguration.DOT
-            + CapacitySchedulerConfiguration.QUEUES;
+    String queuesConfig = getQueuesConfig(parentPath);
     if (siblingQueues.isEmpty()) {
       confUpdate.put(queuesConfig, null);
       // Unset Ordering Policy of Leaf Queue converted from
       // Parent Queue after removeQueue
-      String queueOrderingPolicy = CapacitySchedulerConfiguration.PREFIX
-              + parentQueuePath + CapacitySchedulerConfiguration.DOT
-              + ORDERING_POLICY;
+      String queueOrderingPolicy = getOrderingPolicyConfig(parentPath);
       proposedConf.unset(queueOrderingPolicy);
       confUpdate.put(queueOrderingPolicy, null);
     } else {
       confUpdate.put(queuesConfig, Joiner.on(',').join(siblingQueues));
     }
     for (Map.Entry<String, String> confRemove : proposedConf.getValByRegex(
-                    ".*" + queueToRemove + "\\..*")
+                    ".*" + queuePath.getFullPath() + "\\..*")
             .entrySet()) {
       proposedConf.unset(confRemove.getKey());
       confUpdate.put(confRemove.getKey(), null);
@@ -109,27 +104,23 @@ public final class ConfigurationUpdateAssembler {
     if (addInfo == null) {
       return;
     }
-    String queuePath = addInfo.getQueue();
-    String queueName = queuePath.substring(queuePath.lastIndexOf('.') + 1);
-    if (queuePath.lastIndexOf('.') == -1) {
+    QueuePath queuePath = new QueuePath(addInfo.getQueue());
+    String queueName = queuePath.getLeafName();
+    if (queuePath.isRoot() || queuePath.isInvalid()) {
       throw new IOException("Can't add invalid queue " + queuePath);
     } else if (getSiblingQueues(queuePath, proposedConf).contains(
             queueName)) {
       throw new IOException("Can't add existing queue " + queuePath);
     }
-    String parentQueue = queuePath.substring(0, queuePath.lastIndexOf('.'));
-    String[] siblings = proposedConf.getQueues(parentQueue);
-    List<String> siblingQueues = siblings == null ? new ArrayList<>() :
-            new ArrayList<>(Arrays.asList(siblings));
-    siblingQueues.add(queuePath.substring(queuePath.lastIndexOf('.') + 1));
-    proposedConf.setQueues(parentQueue,
+
+    QueuePath parentPath = queuePath.getParentObject();
+    List<String> siblingQueues = proposedConf.getQueues(parentPath);
+    siblingQueues.add(queueName);
+    proposedConf.setQueues(parentPath,
             siblingQueues.toArray(new String[0]));
-    confUpdate.put(CapacitySchedulerConfiguration.PREFIX
-                    + parentQueue + CapacitySchedulerConfiguration.DOT
-                    + CapacitySchedulerConfiguration.QUEUES,
+    confUpdate.put(getQueuesConfig(parentPath),
             Joiner.on(',').join(siblingQueues));
-    String keyPrefix = CapacitySchedulerConfiguration.PREFIX
-            + queuePath + CapacitySchedulerConfiguration.DOT;
+    String keyPrefix = QueuePrefixes.getQueuePrefix(queuePath);
     for (Map.Entry<String, String> kv : addInfo.getParams().entrySet()) {
       String keyValue = kv.getValue();
       if (keyValue == null || keyValue.isEmpty()) {
@@ -142,8 +133,7 @@ public final class ConfigurationUpdateAssembler {
     }
     // Unset Ordering Policy of Parent Queue converted from
     // Leaf Queue after addQueue
-    String queueOrderingPolicy = CapacitySchedulerConfiguration.PREFIX
-            + parentQueue + CapacitySchedulerConfiguration.DOT + ORDERING_POLICY;
+    String queueOrderingPolicy = getOrderingPolicyConfig(parentPath);
     if (siblingQueues.size() == 1) {
       proposedConf.unset(queueOrderingPolicy);
       confUpdate.put(queueOrderingPolicy, null);
@@ -156,9 +146,8 @@ public final class ConfigurationUpdateAssembler {
     if (updateInfo == null) {
       return;
     }
-    String queuePath = updateInfo.getQueue();
-    String keyPrefix = CapacitySchedulerConfiguration.PREFIX
-            + queuePath + CapacitySchedulerConfiguration.DOT;
+    QueuePath queuePath = new QueuePath(updateInfo.getQueue());
+    String keyPrefix = QueuePrefixes.getQueuePrefix(queuePath);
     for (Map.Entry<String, String> kv : updateInfo.getParams().entrySet()) {
       String keyValue = kv.getValue();
       if (keyValue == null || keyValue.isEmpty()) {
@@ -171,11 +160,16 @@ public final class ConfigurationUpdateAssembler {
     }
   }
 
-  private static List<String> getSiblingQueues(String queuePath, Configuration conf) {
-    String parentQueue = queuePath.substring(0, queuePath.lastIndexOf('.'));
-    String childQueuesKey = CapacitySchedulerConfiguration.PREFIX +
-            parentQueue + CapacitySchedulerConfiguration.DOT +
-            CapacitySchedulerConfiguration.QUEUES;
+  private static List<String> getSiblingQueues(QueuePath queuePath, Configuration conf) {
+    String childQueuesKey = getQueuesConfig(queuePath.getParentObject());
     return new ArrayList<>(conf.getTrimmedStringCollection(childQueuesKey));
+  }
+
+  private static String getQueuesConfig(QueuePath queuePath) {
+    return QueuePrefixes.getQueuePrefix(queuePath) + CapacitySchedulerConfiguration.QUEUES;
+  }
+
+  private static String getOrderingPolicyConfig(QueuePath queuePath) {
+    return QueuePrefixes.getQueuePrefix(queuePath) + CapacitySchedulerConfiguration.ORDERING_POLICY;
   }
 }

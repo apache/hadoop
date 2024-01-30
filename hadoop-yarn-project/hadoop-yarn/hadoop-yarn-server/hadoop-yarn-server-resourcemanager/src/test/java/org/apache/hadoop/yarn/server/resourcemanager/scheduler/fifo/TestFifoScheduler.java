@@ -37,6 +37,7 @@ import java.util.Map;
 
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
@@ -860,8 +861,9 @@ public class TestFifoScheduler {
   @Test(timeout = 50000)
   public void testReconnectedNode() throws Exception {
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
-    conf.setQueues("default", new String[] { "default" });
-    conf.setCapacity("default", 100);
+    QueuePath defaultQueuePath = new QueuePath("default");
+    conf.setQueues(defaultQueuePath, new String[] {"default"});
+    conf.setCapacity(defaultQueuePath, 100);
     FifoScheduler fs = new FifoScheduler();
     fs.init(conf);
     fs.start();
