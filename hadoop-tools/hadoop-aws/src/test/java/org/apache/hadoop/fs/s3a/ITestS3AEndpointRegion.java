@@ -160,11 +160,19 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
     describe("Create a client with the central endpoint but also specify region");
     Configuration conf = getConfiguration();
 
-    S3Client client = createS3Client(conf, CENTRAL_ENDPOINT, US_WEST_2, US_EAST_2, false);
+    S3Client client = createS3Client(conf, CENTRAL_ENDPOINT, US_WEST_2, US_WEST_2, false);
 
     expectInterceptorException(client);
 
-    client = createS3Client(conf, CENTRAL_ENDPOINT, US_EAST_1, US_EAST_2, false);
+    client = createS3Client(conf, CENTRAL_ENDPOINT, US_EAST_1, US_EAST_1, false);
+
+    expectInterceptorException(client);
+
+    client = createS3Client(conf, CENTRAL_ENDPOINT, EU_WEST_2, EU_WEST_2, false);
+
+    expectInterceptorException(client);
+
+    client = createS3Client(conf, CENTRAL_ENDPOINT, US_EAST_2, US_EAST_2, false);
 
     expectInterceptorException(client);
   }
@@ -276,14 +284,15 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
   }
 
   @Test
-  public void testCentralEndpointCrossRegionAccess() throws Throwable {
-    describe("Create bucket on different region and access it using central endpoint");
+  public void testCentralEndpointWithUSWest2Region() throws Throwable {
+    describe("Access bucket using central endpoint and us-west-2 region");
     final Configuration conf = getConfiguration();
-    removeBaseAndBucketOverrides(conf, ENDPOINT);
+    removeBaseAndBucketOverrides(conf, ENDPOINT, AWS_REGION);
 
     final Configuration newConf = new Configuration(conf);
 
     newConf.set(ENDPOINT, CENTRAL_ENDPOINT);
+    newConf.set(AWS_REGION, US_WEST_2);
 
     newFS = new S3AFileSystem();
     newFS.initialize(getFileSystem().getUri(), newConf);
@@ -292,7 +301,24 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
   }
 
   @Test
-  public void testCentralEndpointWithNullRegionCrossRegionAccess() throws Throwable {
+  public void testCentralEndpointWithEUWest2Region() throws Throwable {
+    describe("Access bucket using central endpoint and eu-west-2 region");
+    final Configuration conf = getConfiguration();
+    removeBaseAndBucketOverrides(conf, ENDPOINT, AWS_REGION);
+
+    final Configuration newConf = new Configuration(conf);
+
+    newConf.set(ENDPOINT, CENTRAL_ENDPOINT);
+    newConf.set(AWS_REGION, EU_WEST_2);
+
+    newFS = new S3AFileSystem();
+    newFS.initialize(getFileSystem().getUri(), newConf);
+
+    assertOpsUsingNewFs();
+  }
+
+  @Test
+  public void testCentralEndpointWithNullRegion() throws Throwable {
     describe(
         "Create bucket on different region and access it using central endpoint and null region");
     final Configuration conf = getConfiguration();

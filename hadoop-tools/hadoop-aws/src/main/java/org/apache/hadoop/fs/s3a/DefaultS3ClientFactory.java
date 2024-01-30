@@ -290,35 +290,34 @@ public class DefaultS3ClientFactory extends Configured
     builder.fipsEnabled(fipsEnabled);
 
     if (endpoint != null) {
-      boolean overrideEndpoint = true;
       checkArgument(!fipsEnabled,
           "%s : %s", ERROR_ENDPOINT_WITH_FIPS, endpoint);
       boolean endpointEndsWithCentral =
           endpointStr.endsWith(CENTRAL_ENDPOINT);
-      // No region was configured or the endpoint is central,
+
+      // No region was configured,
       // determine the region from the endpoint.
-      if (region == null || endpointEndsWithCentral) {
+      if (region == null) {
         region = getS3RegionFromEndpoint(endpointStr,
             endpointEndsWithCentral);
         if (region != null) {
           origin = "endpoint";
-          if (endpointEndsWithCentral) {
-            // No need to override endpoint with "s3.amazonaws.com".
-            // Let the client take care of endpoint resolution. Overriding
-            // the endpoint with "s3.amazonaws.com" causes 400 Bad Request
-            // errors for non-existent buckets and objects.
-            // ref: https://github.com/aws/aws-sdk-java-v2/issues/4846
-            overrideEndpoint = false;
-            builder.crossRegionAccessEnabled(true);
-            origin = "origin with cross region access";
-            LOG.debug("Enabling cross region access for endpoint {}",
-                endpointStr);
-          }
         }
       }
-      if (overrideEndpoint) {
+
+      // No need to override endpoint with "s3.amazonaws.com".
+      // Let the client take care of endpoint resolution. Overriding
+      // the endpoint with "s3.amazonaws.com" causes 400 Bad Request
+      // errors for non-existent buckets and objects.
+      // ref: https://github.com/aws/aws-sdk-java-v2/issues/4846
+      if (!endpointEndsWithCentral) {
         builder.endpointOverride(endpoint);
         LOG.debug("Setting endpoint to {}", endpoint);
+      } else {
+        builder.crossRegionAccessEnabled(true);
+        origin = "origin with cross region access";
+        LOG.debug("Enabling cross region access for endpoint {}",
+            endpointStr);
       }
     }
 
