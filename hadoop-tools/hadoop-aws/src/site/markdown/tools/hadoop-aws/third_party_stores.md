@@ -429,11 +429,6 @@ this makes renaming and deleting significantly slower.
   </property>
 
   <property>
-    <name>fs.s3a.bucket.gcs-container.select.enabled</name>
-    <value>false</value>
-  </property>
-
-  <property>
     <name>fs.s3a.bucket.gcs-container.path.style.access</name>
     <value>true</value>
   </property>

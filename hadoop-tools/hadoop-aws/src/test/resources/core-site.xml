@@ -31,6 +31,13 @@
   </property>
 
   <!-- Per-bucket configurations: landsat-pds -->
+  <!--
+    A CSV file in this bucket was used for testing S3 select.
+    Although this feature has been removed, (HADOOP-18830)
+    it is still used in some tests as a large file to read
+    in a bucket without write permissions.
+    These tests do not need a CSV file.
+  -->
   <property>
     <name>fs.s3a.bucket.landsat-pds.endpoint.region</name>
     <value>us-west-2</value>
@@ -56,13 +63,13 @@
     <description>Do not add the referrer header to landsat operations</description>
   </property>
 
-  <property>
-    <name>fs.s3a.bucket.landsat-pds.endpoint.fips</name>
-    <value>true</value>
-    <description>Use the fips endpoint</description>
-  </property>
-
   <!-- Per-bucket configurations: usgs-landsat -->
+  <!--
+    This is a requester-pays bucket (so validates that feature)
+    and, because it has many files, is used to validate paged file
+    listing without needing to create thousands of files.
+  -->
+
   <property>
     <name>fs.s3a.bucket.usgs-landsat.endpoint.region</name>
     <value>us-west-2</value>
