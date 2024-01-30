@@ -61,6 +61,7 @@ public class NodeInfo {
   private long usedMemoryOpportGB;
   private long usedVirtualCoresOpport;
   private int numQueuedContainers;
+  private int numPausedContainers;
   protected ArrayList<String> nodeLabels = new ArrayList<String>();
   private AllocationTagsInfo allocationTags;
   protected ResourceUtilizationInfo resourceUtilization;
@@ -129,6 +130,7 @@ public class NodeInfo {
       this.usedMemoryOpportGB = opportStatus.getOpportMemoryUsed();
       this.usedVirtualCoresOpport = opportStatus.getOpportCoresUsed();
       this.numQueuedContainers = opportStatus.getQueuedOpportContainers();
+      this.numPausedContainers = opportStatus.getPausedOpportContainers();
     }
 
     // add labels
@@ -224,6 +226,10 @@ public class NodeInfo {
 
   public int getNumQueuedContainers() {
     return numQueuedContainers;
+  }
+
+  public int getNumPausedContainers() {
+    return numPausedContainers;
   }
 
   public ArrayList<String> getNodeLabels() {

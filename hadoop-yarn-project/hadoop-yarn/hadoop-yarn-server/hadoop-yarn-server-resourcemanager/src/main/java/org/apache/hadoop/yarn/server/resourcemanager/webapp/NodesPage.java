@@ -104,7 +104,8 @@ class NodesPage extends RmView {
             .th(".containers", "Running Containers (O)")
             .th(".mem", "Mem Used (O)")
             .th(".vcores", "VCores Used (O)")
-            .th(".containers", "Queued Containers");
+            .th(".containers", "Queued Containers")
+            .th(".containers", "Paused Containers");
       }
 
       for (Map.Entry<String, Integer> integerEntry :
@@ -220,6 +221,8 @@ class NodesPage extends RmView {
               .append(String.valueOf(info.getUsedVirtualCoresOpport()))
               .append("\",\"")
               .append(String.valueOf(info.getNumQueuedContainers()))
+              .append("\",\"")
+              .append(String.valueOf(info.getNumPausedContainers()))
               .append("\",\"");
         }
 
