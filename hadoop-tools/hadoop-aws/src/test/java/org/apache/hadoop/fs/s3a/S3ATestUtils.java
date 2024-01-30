@@ -556,7 +556,7 @@ public final class S3ATestUtils {
    */
   public static void skipIfNotS3ExpressBucket(
       Configuration configuration) {
-    assume("Skipping test as bucket is an S3Express bucket",
+    assume("Skipping test as bucket is not an S3Express bucket",
         isS3ExpressTestBucket(configuration));
   }
 
