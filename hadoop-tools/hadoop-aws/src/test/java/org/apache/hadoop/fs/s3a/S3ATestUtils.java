@@ -551,6 +551,16 @@ public final class S3ATestUtils {
   }
 
   /**
+   * Skip a test if the test bucket is not an S3Express bucket.
+   * @param configuration configuration to probe
+   */
+  public static void skipIfNotS3ExpressBucket(
+      Configuration configuration) {
+    assume("Skipping test as bucket is not an S3Express bucket",
+        isS3ExpressTestBucket(configuration));
+  }
+
+  /**
    * Is the test bucket an S3Express bucket?
    * @param conf configuration
    * @return true if the bucket is an S3Express bucket.
