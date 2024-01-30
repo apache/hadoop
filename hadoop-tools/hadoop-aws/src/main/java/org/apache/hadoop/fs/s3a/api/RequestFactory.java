@@ -43,7 +43,6 @@ import com.amazonaws.services.s3.model.PartETag;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.SSEAwsKeyManagementParams;
 import com.amazonaws.services.s3.model.SSECustomerKey;
-import com.amazonaws.services.s3.model.SelectObjectContentRequest;
 import com.amazonaws.services.s3.model.StorageClass;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 
@@ -253,14 +252,6 @@ public interface RequestFactory {
       InputStream uploadStream,
       File sourceFile,
       long offset) throws PathIOException;
-
-  /**
-   * Create a S3 Select request for the destination object.
-   * This does not build the query.
-   * @param key object key
-   * @return the request
-   */
-  SelectObjectContentRequest newSelectRequest(String key);
 
   /**
    * Create the (legacy) V1 list request.

@@ -33,13 +33,10 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PartETag;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.PutObjectResult;
-import com.amazonaws.services.s3.model.SelectObjectContentRequest;
-import com.amazonaws.services.s3.model.SelectObjectContentResult;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
@@ -304,31 +301,6 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
    * @return the configuration.
    */
   Configuration getConf();
-
-  /**
-   * Create a S3 Select request for the destination path.
-   * This does not build the query.
-   * @param path pre-qualified path for query
-   * @return the request
-   */
-  SelectObjectContentRequest newSelectRequest(Path path);
-
-  /**
-   * Execute an S3 Select operation.
-   * On a failure, the request is only logged at debug to avoid the
-   * select exception being printed.
-   * @param source source for selection
-   * @param request Select request to issue.
-   * @param action the action for use in exception creation
-   * @return response
-   * @throws IOException failure
-   */
-  @Retries.RetryTranslated
-  SelectObjectContentResult select(
-      Path source,
-      SelectObjectContentRequest request,
-      String action)
-      throws IOException;
 
   /**
    * Increment the write operation counter

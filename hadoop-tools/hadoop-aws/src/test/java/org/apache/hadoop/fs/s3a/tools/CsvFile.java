@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.select;
+package org.apache.hadoop.fs.s3a.tools;
 
 import java.io.Closeable;
 import java.io.IOException;
