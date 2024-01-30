@@ -2093,6 +2093,8 @@ public class TestRouterRpc {
     assertTrue(logOutput.contains("clientId"));
     assertTrue(logOutput.contains("clientCallId"));
     assertTrue(verifyFileExists(routerFS, dirPath));
+
+    CallerContext.setCurrent(null);
   }
 
   @Test
@@ -2173,6 +2175,8 @@ public class TestRouterRpc {
     // set by client.
     assertFalse(auditLog.getOutput().contains("clientIp:1.1.1.1"));
     assertFalse(auditLog.getOutput().contains("clientPort:1234"));
+
+    CallerContext.setCurrent(null);
   }
 
   @Test
@@ -2208,6 +2212,8 @@ public class TestRouterRpc {
     // set by client.
     assertFalse(auditLog.getOutput().contains("clientId:mockClientId"));
     assertFalse(auditLog.getOutput().contains("clientCallId:4321"));
+
+    CallerContext.setCurrent(null);
   }
 
   @Test
