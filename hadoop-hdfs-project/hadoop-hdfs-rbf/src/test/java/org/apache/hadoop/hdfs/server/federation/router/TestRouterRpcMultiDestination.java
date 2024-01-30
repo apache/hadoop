@@ -33,9 +33,13 @@ import static org.apache.hadoop.test.Whitebox.setInternalState;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
 import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.Enumeration;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
@@ -474,8 +478,7 @@ public class TestRouterRpcMultiDestination extends TestRouterRpc {
     routerFs.getFileStatus(dirPath);
 
     String auditFlag = "src=" + dirPath.toString();
-    String clientIpInfo = "clientIp:"
-        + InetAddress.getByName("localhost").getHostAddress();
+    Set<String> clientIpInfos = getClientIpInfos();
     for (String line : auditLog.getOutput().split("\n")) {
       if (line.contains(auditFlag)) {
         // assert origin caller context exist in audit log
@@ -483,14 +486,39 @@ public class TestRouterRpcMultiDestination extends TestRouterRpc {
         assertTrue(String.format("%s doesn't contain 'clientContext'", callerContext),
             callerContext.contains("clientContext"));
         // assert client ip info exist in caller context
-        assertTrue(String.format("%s doesn't contain %s", callerContext, clientIpInfo),
-            callerContext.contains(clientIpInfo));
-        // assert client ip info appears only once in caller context
-        assertEquals(String.format("%s contains %s more than once", callerContext, clientIpInfo),
-            callerContext.indexOf(clientIpInfo), callerContext.lastIndexOf(clientIpInfo));
+        checkCallerContextContainsClientIp(clientIpInfos, callerContext);
       }
     }
     // clear client context
     CallerContext.setCurrent(null);
+  }
+
+  private static void checkCallerContextContainsClientIp(Set<String> clientIpInfos,
+      String callerContext) {
+    String clientIpInfo = null;
+    for (String curClientIpInfo : clientIpInfos) {
+      if (callerContext.contains(curClientIpInfo)) {
+        clientIpInfo = curClientIpInfo;
+        // assert client ip info appears only once in caller context
+        assertEquals(String.format("%s contains %s more than once", callerContext, clientIpInfo),
+            callerContext.indexOf(clientIpInfo), callerContext.lastIndexOf(clientIpInfo));
+        break;
+      }
+    }
+    assertNotNull(clientIpInfo);
+  }
+
+  private static Set<String> getClientIpInfos() throws SocketException {
+    Set<String> clientIpInfos = new HashSet<>();
+    Enumeration<NetworkInterface> networkInterfaces = NetworkInterface.getNetworkInterfaces();
+    while (networkInterfaces.hasMoreElements()) {
+      NetworkInterface networkInterface = networkInterfaces.nextElement();
+      Enumeration<InetAddress> inetAddresses = networkInterface.getInetAddresses();
+      while (inetAddresses.hasMoreElements()) {
+        InetAddress inetAddress = inetAddresses.nextElement();
+        clientIpInfos.add("clientIp:" + inetAddress.getHostAddress());
+      }
+    }
+    return clientIpInfos;
   }
 }
