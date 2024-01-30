@@ -160,11 +160,11 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
     describe("Create a client with the central endpoint but also specify region");
     Configuration conf = getConfiguration();
 
-    S3Client client = createS3Client(conf, CENTRAL_ENDPOINT, US_WEST_2, US_WEST_2, false);
+    S3Client client = createS3Client(conf, CENTRAL_ENDPOINT, US_WEST_2, US_EAST_2, false);
 
     expectInterceptorException(client);
 
-    client = createS3Client(conf, CENTRAL_ENDPOINT, US_EAST_1, US_EAST_1, false);
+    client = createS3Client(conf, CENTRAL_ENDPOINT, US_EAST_1, US_EAST_2, false);
 
     expectInterceptorException(client);
   }
@@ -279,6 +279,23 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
   public void testCentralEndpointCrossRegionAccess() throws Throwable {
     describe("Create bucket on different region and access it using central endpoint");
     final Configuration conf = getConfiguration();
+    removeBaseAndBucketOverrides(conf, ENDPOINT);
+
+    final Configuration newConf = new Configuration(conf);
+
+    newConf.set(ENDPOINT, CENTRAL_ENDPOINT);
+
+    newFS = new S3AFileSystem();
+    newFS.initialize(getFileSystem().getUri(), newConf);
+
+    assertOpsUsingNewFs();
+  }
+
+  @Test
+  public void testCentralEndpointWithNullRegionCrossRegionAccess() throws Throwable {
+    describe(
+        "Create bucket on different region and access it using central endpoint and null region");
+    final Configuration conf = getConfiguration();
     removeBaseAndBucketOverrides(conf, ENDPOINT, AWS_REGION);
 
     final Configuration newConf = new Configuration(conf);
@@ -288,6 +305,10 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
     newFS = new S3AFileSystem();
     newFS.initialize(getFileSystem().getUri(), newConf);
 
+    assertOpsUsingNewFs();
+  }
+
+  private void assertOpsUsingNewFs() throws IOException {
     final String file = getMethodName();
     final Path basePath = methodPath();
     final Path srcDir = new Path(basePath, "srcdir");
@@ -328,7 +349,7 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
     public void beforeExecution(Context.BeforeExecution context,
         ExecutionAttributes executionAttributes)  {
 
-      if (endpoint != null && (!endpoint.endsWith(CENTRAL_ENDPOINT) || !US_EAST_2.equals(region))) {
+      if (endpoint != null && !endpoint.endsWith(CENTRAL_ENDPOINT)) {
         Assertions.assertThat(
                 executionAttributes.getAttribute(AwsExecutionAttribute.ENDPOINT_OVERRIDDEN))
             .describedAs("Endpoint not overridden").isTrue();

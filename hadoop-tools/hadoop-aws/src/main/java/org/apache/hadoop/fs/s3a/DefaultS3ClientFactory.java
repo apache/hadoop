@@ -293,10 +293,11 @@ public class DefaultS3ClientFactory extends Configured
       boolean overrideEndpoint = true;
       checkArgument(!fipsEnabled,
           "%s : %s", ERROR_ENDPOINT_WITH_FIPS, endpoint);
-      // No region was configured, try to determine it from the endpoint.
-      if (region == null) {
-        boolean endpointEndsWithCentral =
-            endpointStr.endsWith(CENTRAL_ENDPOINT);
+      boolean endpointEndsWithCentral =
+          endpointStr.endsWith(CENTRAL_ENDPOINT);
+      // No region was configured or the endpoint is central,
+      // determine the region from the endpoint.
+      if (region == null || endpointEndsWithCentral) {
         region = getS3RegionFromEndpoint(endpointStr,
             endpointEndsWithCentral);
         if (region != null) {
