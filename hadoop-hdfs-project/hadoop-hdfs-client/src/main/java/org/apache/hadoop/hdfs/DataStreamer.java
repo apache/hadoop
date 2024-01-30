@@ -1627,7 +1627,6 @@ class DataStreamer extends Daemon {
       StorageType[] nodeStorageTypes, String[] nodeStorageIDs)
       throws IOException {
     boolean success = false;
-    long newGS = 0L;
     while (!success && !streamerClosed && dfsClient.clientRunning) {
       if (!handleRestartingDatanode()) {
         return;
@@ -1639,24 +1638,29 @@ class DataStreamer extends Daemon {
       }
 
       handleDatanodeReplacement();
-
-      // get a new generation stamp and an access token
-      final LocatedBlock lb = updateBlockForPipeline();
-      newGS = lb.getBlock().getGenerationStamp();
-      accessToken = lb.getBlockToken();
-
-      // set up the pipeline again with the remaining nodes
-      success = createBlockOutputStream(nodes, storageTypes, storageIDs, newGS,
-          isRecovery);
+      success = updateBlockAndCreateBlockOutputStream(isRecovery, false);
 
       failPacket4Testing();
 
       errorState.checkRestartingNodeDeadline(nodes);
-    } // while
 
+    } // while
+  }
+
+  private boolean updateBlockAndCreateBlockOutputStream(boolean isRecovery, boolean setCurrentBlock) throws IOException {
+    final LocatedBlock lb = updateBlockForPipeline();
+    long newGS = lb.getBlock().getGenerationStamp();
+    accessToken = lb.getBlockToken();
+    if(setCurrentBlock) {
+      block.setCurrentBlock(lb.getBlock());
+    }
+    // set up the pipeline again with the remaining nodes
+    final boolean success = createBlockOutputStream(nodes, storageTypes, storageIDs, newGS,
+            isRecovery);
     if (success) {
       updatePipeline(newGS);
     }
+    return  success;
   }
 
   /**
@@ -1691,11 +1695,16 @@ class DataStreamer extends Daemon {
     return true;
   }
 
+
+
   /**
    * Remove bad node from list of nodes if badNodeIndex was set.
    * @return true if it should continue.
    */
   boolean handleBadDatanode() {
+    return this.handleBadDatanodeInternal(this.nodes, this.storageTypes, this.storageIDs);
+  }
+  private boolean handleBadDatanodeInternal(DatanodeInfo[] nodes, StorageType[] storageTypes, String[] storageIDs) {
     final int badNodeIndex = errorState.getBadNodeIndex();
     if (badNodeIndex >= 0) {
       if (nodes.length <= 1) {
@@ -1823,13 +1832,18 @@ class DataStreamer extends Daemon {
           0L, false);
 
       if (!success) {
-        LOG.warn("Abandoning " + block);
-        dfsClient.namenode.abandonBlock(block.getCurrentBlock(),
-            stat.getFileId(), src, dfsClient.clientName);
-        block.setCurrentBlock(null);
-        final DatanodeInfo badNode = nodes[errorState.getBadNodeIndex()];
-        LOG.warn("Excluding datanode " + badNode);
-        excludedNodes.put(badNode, badNode);
+        while (!success && handleBadDatanodeInternal(nodes, nextStorageTypes, nextStorageIDs)
+                && dfsClient.dtpReplaceDatanodeOnFailureReplication > 0
+                && this.nodes.length >= dfsClient.dtpReplaceDatanodeOnFailureReplication) {
+          LOG.info("Proceeding to create block {} after excluding bad datanode from pipeline", this);
+          success = updateBlockAndCreateBlockOutputStream(false, true);
+          nodes = this.nodes;
+          nextStorageTypes = this.storageTypes;
+          nextStorageIDs = this.storageIDs;
+        }
+        if(!success) {
+          handleBlockCreationFailure();
+        }
       }
     } while (!success && --count >= 0);
 
@@ -1837,6 +1851,19 @@ class DataStreamer extends Daemon {
       throw new IOException("Unable to create new block.");
     }
     return lb;
+  }
+
+  private void handleBlockCreationFailure() throws IOException {
+    if(block != null) {
+      dfsClient.namenode.abandonBlock(block.getCurrentBlock(),
+              stat.getFileId(), src, dfsClient.clientName);
+      block.setCurrentBlock(null);
+      if(nodes != null && errorState.hasError()) {
+        final DatanodeInfo badNode = nodes[errorState.getBadNodeIndex()];
+        LOG.warn("Excluding datanode " + badNode);
+        excludedNodes.put(badNode, badNode);
+      }
+    }
   }
 
   // connects to the first datanode in the pipeline
