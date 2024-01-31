@@ -89,7 +89,19 @@ Important features and improvements are as follows:
 
 [HDFS-15294](https://issues.apache.org/jira/browse/HDFS-15294) HDFS Federation balance tool introduces one tool to balance data across different namespace.
 
+[HDFS-13522](https://issues.apache.org/jira/browse/HDFS-13522), [HDFS-16767](https://issues.apache.org/jira/browse/HDFS-16767) Support observer node from Router-Based Federation.
+
 **Improvement**
+
+[HADOOP-13144](https://issues.apache.org/jira/browse/HADOOP-13144), [HDFS-13274](https://issues.apache.org/jira/browse/HDFS-13274), [HDFS-15757](https://issues.apache.org/jira/browse/HDFS-15757)
+
+These tickets have enhanced IPC throughput between Router and NameNode via multiple connections per user, and optimized connection management.
+
+[HDFS-14090](https://issues.apache.org/jira/browse/HDFS-14090) RBF: Improved isolation for downstream name nodes. {Static}
+
+Router supports assignment of the dedicated number of RPC handlers to achieve isolation for all downstream nameservices
+it is configured to proxy. Since large or busy clusters may have relatively higher RPC traffic to the namenode compared to other clusters namenodes,
+this feature if enabled allows admins to configure higher number of RPC handlers for busy clusters.
 
 [HDFS-17128](https://issues.apache.org/jira/browse/HDFS-17128) RBF: SQLDelegationTokenSecretManager should use version of tokens updated by other routers.
 
