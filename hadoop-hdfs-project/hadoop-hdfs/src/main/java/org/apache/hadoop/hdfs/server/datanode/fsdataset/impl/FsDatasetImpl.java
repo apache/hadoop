@@ -1583,8 +1583,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
   @Override // FsDatasetSpi
   public ReplicaHandler createRbw(
-          StorageType storageType, String storageId, ExtendedBlock b,
-          boolean allowLazyPersist) throws IOException {
+      StorageType storageType, String storageId, ExtendedBlock b,
+      boolean allowLazyPersist) throws IOException {
     return createRbw(storageType, storageId, b, allowLazyPersist, 0L);
   }
 
@@ -1598,7 +1598,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       ReplicaInfo replicaInfo = volumeMap.get(b.getBlockPoolId(),
           b.getBlockId());
       if (replicaInfo != null) {
-        if(newGS != 0L) {
+        if (newGS != 0L) {
           cleanupReplica(b.getBlockPoolId(), replicaInfo);
         } else {
           throw new ReplicaAlreadyExistsException("Block " + b +
