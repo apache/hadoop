@@ -115,7 +115,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   public void setup() throws Exception {
     super.setup();
     assumeRoleTests();
-    uri = new URI(S3ATestConstants.DEFAULT_CSVTEST_FILE);
+    uri = new URI(S3ATestConstants.DEFAULT_EXTERNAL_FILE);
   }
 
   @Override

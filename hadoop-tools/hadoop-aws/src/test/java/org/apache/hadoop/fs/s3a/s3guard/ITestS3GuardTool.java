@@ -22,6 +22,7 @@ import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStreamReader;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -40,8 +41,8 @@ import static org.apache.hadoop.fs.s3a.MultipartTestUtils.assertNoUploadsAt;
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.clearAnyUploads;
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.countUploadsAt;
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.createPartUpload;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.getLandsatCSVFile;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.requireExternalFileAsPath;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.BucketInfo;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.E_BAD_STATE;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.Uploads;
@@ -57,36 +58,30 @@ public class ITestS3GuardTool extends AbstractS3GuardToolTestBase {
       "-force", "-verbose"};
 
   @Test
-  public void testLandsatBucketUnguarded() throws Throwable {
-    run(BucketInfo.NAME,
-        "-" + BucketInfo.UNGUARDED_FLAG,
-        getLandsatCSVFile(getConfiguration()));
-  }
-
-  @Test
-  public void testLandsatBucketRequireGuarded() throws Throwable {
-    runToFailure(E_BAD_STATE,
-        BucketInfo.NAME,
-        "-" + BucketInfo.GUARDED_FLAG,
-        getLandsatCSVFile(
-            ITestS3GuardTool.this.getConfiguration()));
-  }
-
-  @Test
-  public void testLandsatBucketRequireUnencrypted() throws Throwable {
+  public void testExternalBucketRequireUnencrypted() throws Throwable {
     removeBaseAndBucketOverrides(getConfiguration(), S3_ENCRYPTION_ALGORITHM);
     run(BucketInfo.NAME,
         "-" + BucketInfo.ENCRYPTION_FLAG, "none",
-        getLandsatCSVFile(getConfiguration()));
+        externalBucket());
+  }
+
+  /**
+   * Get the external bucket; this is of the default external file.
+   * If not set to the default value, the test will be skipped.
+   * @return the bucket of the default external file.
+   */
+  private String externalBucket() {
+    final URI uri = requireExternalFileAsPath(getConfiguration()).toUri();
+    final String bucket = uri.getScheme() + "://" + uri.getHost();
+    return bucket;
   }
 
   @Test
-  public void testLandsatBucketRequireEncrypted() throws Throwable {
+  public void testExternalBucketRequireEncrypted() throws Throwable {
     runToFailure(E_BAD_STATE,
         BucketInfo.NAME,
         "-" + BucketInfo.ENCRYPTION_FLAG,
-        "AES256", getLandsatCSVFile(
-            ITestS3GuardTool.this.getConfiguration()));
+        "AES256", externalBucket());
   }
 
   @Test

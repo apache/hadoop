@@ -402,49 +402,50 @@ public final class S3ATestUtils {
   }
 
   /**
-   * Get the test CSV file; assume() that it is not empty.
+   * Get the trimmed external test file option; assume() that it is not empty.
    * @param conf test configuration
    * @return test file.
    */
-  public static String getCSVTestFile(Configuration conf) {
-    String csvFile = conf
-        .getTrimmed(KEY_CSVTEST_FILE, DEFAULT_CSVTEST_FILE);
-    Assume.assumeTrue("CSV test file is not the default",
-        isNotEmpty(csvFile));
-    return csvFile;
+  public static String getExternalTestFile(Configuration conf) {
+    String filename = conf
+        .getTrimmed(KEY_CSVTEST_FILE, DEFAULT_EXTERNAL_FILE);
+    Assume.assumeTrue("External test file is not the default",
+        isNotEmpty(filename));
+    return filename;
   }
 
   /**
-   * Get the test CSV path; assume() that it is not empty.
+   * Get the trimmed external test file option; assume() that it is not empty.
    * @param conf test configuration
    * @return test file as a path.
    */
-  public static Path getCSVTestPath(Configuration conf) {
-    return new Path(getCSVTestFile(conf));
+  public static Path getExternalTestPath(Configuration conf) {
+    return new Path(getExternalTestFile(conf));
   }
 
   /**
-   * Get the test CSV file; assume() that it is not modified (i.e. we haven't
+   * Get the external test file; assume() that it is not modified (i.e. we haven't
    * switched to a new storage infrastructure where the bucket is no longer
    * read only).
    * @return test file.
    * @param conf test configuration
    */
-  public static String getLandsatCSVFile(Configuration conf) {
-    String csvFile = getCSVTestFile(conf);
-    Assume.assumeTrue("CSV test file is not the default",
-        DEFAULT_CSVTEST_FILE.equals(csvFile));
-    return csvFile;
+  public static String requireDefaultExternalTestFile(Configuration conf) {
+    String filename = getExternalTestFile(conf);
+    Assume.assumeTrue("External test file is not the default",
+        DEFAULT_EXTERNAL_FILE.equals(filename));
+    return filename;
   }
+
   /**
-   * Get the test CSV file; assume() that it is not modified (i.e. we haven't
+   * Get the test external file; assume() that it is not modified (i.e. we haven't
    * switched to a new storage infrastructure where the bucket is no longer
    * read only).
    * @param conf test configuration
    * @return test file as a path.
    */
-  public static Path getLandsatCSVPath(Configuration conf) {
-    return new Path(getLandsatCSVFile(conf));
+  public static Path requireExternalFileAsPath(Configuration conf) {
+    return new Path(requireDefaultExternalTestFile(conf));
   }
 
   /**

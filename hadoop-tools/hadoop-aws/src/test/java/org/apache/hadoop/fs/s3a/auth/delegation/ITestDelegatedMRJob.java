@@ -241,9 +241,9 @@ public class ITestDelegatedMRJob extends AbstractDelegationIT {
     describe("Mock Job test");
     JobConf conf = new JobConf(getConfiguration());
 
-    // the input here is the landsat file; which lets
+    // the input here is the external file; which lets
     // us differentiate source URI from dest URI
-    Path input = new Path(DEFAULT_CSVTEST_FILE);
+    Path input = new Path(DEFAULT_EXTERNAL_FILE);
     final FileSystem sourceFS = input.getFileSystem(conf);
 
 

@@ -289,9 +289,8 @@ for buckets in the central and EU/Ireland endpoints.
 
 ```xml
 <property>
-  <name>fs.s3a.bucket.landsat-pds.endpoint.region</name>
+  <name>fs.s3a.bucket.us2w-dataset.endpoint.region</name>
   <value>us-west-2</value>
-  <description>The region for s3a://landsat-pds URLs</description>
 </property>
 
 <property>
@@ -354,9 +353,9 @@ The boolean option `fs.s3a.endpoint.fips` (default `false`) switches the S3A con
 For a single bucket:
 ```xml
 <property>
-  <name>fs.s3a.bucket.landsat-pds.endpoint.fips</name>
+  <name>fs.s3a.bucket.noaa-isd-pds.endpoint.fips</name>
   <value>true</value>
-  <description>Use the FIPS endpoint for the landsat dataset</description>
+  <description>Use the FIPS endpoint for the NOAA dataset</description>
 </property>
 ```
 

@@ -503,7 +503,7 @@ explicitly opened up for broader access.
 ```bash
 hadoop fs -ls \
  -D fs.s3a.aws.credentials.provider=org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider \
- s3a://landsat-pds/
+ s3a://noaa-isd-pds/
 ```
 
 1. Allowing anonymous access to an S3 bucket compromises
@@ -1630,11 +1630,11 @@ a session key:
 </property>
 ```
 
-Finally, the public `s3a://landsat-pds/` bucket can be accessed anonymously:
+Finally, the public `s3a://noaa-isd-pds/` bucket can be accessed anonymously:
 
 ```xml
 <property>
-  <name>fs.s3a.bucket.landsat-pds.aws.credentials.provider</name>
+  <name>fs.s3a.bucket.noaa-isd-pds.aws.credentials.provider</name>
   <value>org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider</value>
 </property>
 ```

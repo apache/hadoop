@@ -112,7 +112,7 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
     Configuration conf = getConf();
     conf.setInt(SOCKET_SEND_BUFFER, 16 * 1024);
     conf.setInt(SOCKET_RECV_BUFFER, 16 * 1024);
-    String testFile =  conf.getTrimmed(KEY_CSVTEST_FILE, DEFAULT_CSVTEST_FILE);
+    String testFile =  conf.getTrimmed(KEY_CSVTEST_FILE, DEFAULT_EXTERNAL_FILE);
     if (testFile.isEmpty()) {
       assumptionMessage = "Empty test property: " + KEY_CSVTEST_FILE;
       LOG.warn(assumptionMessage);
@@ -394,6 +394,9 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
     CompressionCodecFactory factory
         = new CompressionCodecFactory(getConf());
     CompressionCodec codec = factory.getCodec(testData);
+    Assertions.assertThat(codec)
+        .describedAs("No codec found for %s", testData)
+        .isNotNull();
     long bytesRead = 0;
     int lines = 0;
 

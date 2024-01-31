@@ -41,7 +41,7 @@ import org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider;
 import org.apache.hadoop.fs.s3a.impl.InstantiationIOException;
 
 import static org.apache.hadoop.fs.s3a.Constants.AWS_CREDENTIALS_PROVIDER;
-import static org.apache.hadoop.fs.s3a.S3ATestConstants.DEFAULT_CSVTEST_FILE;
+import static org.apache.hadoop.fs.s3a.S3ATestConstants.DEFAULT_EXTERNAL_FILE;
 import static org.apache.hadoop.fs.s3a.auth.CredentialProviderListFactory.ANONYMOUS_CREDENTIALS_V1;
 import static org.apache.hadoop.fs.s3a.auth.CredentialProviderListFactory.EC2_CONTAINER_CREDENTIALS_V1;
 import static org.apache.hadoop.fs.s3a.auth.CredentialProviderListFactory.ENVIRONMENT_CREDENTIALS_V1;
@@ -56,10 +56,10 @@ import static org.junit.Assert.assertTrue;
 public class TestV1CredentialsProvider {
 
   /**
-   * URI of the landsat images.
+   * URI of the test file.
    */
   private static final URI TESTFILE_URI = new Path(
-      DEFAULT_CSVTEST_FILE).toUri();
+      DEFAULT_EXTERNAL_FILE).toUri();
 
   private static final Logger LOG = LoggerFactory.getLogger(TestV1CredentialsProvider.class);
 
