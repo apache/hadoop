@@ -193,16 +193,16 @@ public class AbstractLeafQueue extends AbstractCSQueue {
       setQueueResourceLimitsInfo(clusterResource);
 
       setOrderingPolicy(
-          configuration.<FiCaSchedulerApp>getAppOrderingPolicy(getQueuePath()));
+          configuration.<FiCaSchedulerApp>getAppOrderingPolicy(getQueuePathObject()));
 
-      usersManager.setUserLimit(configuration.getUserLimit(getQueuePath()));
-      usersManager.setUserLimitFactor(configuration.getUserLimitFactor(getQueuePath()));
+      usersManager.setUserLimit(configuration.getUserLimit(getQueuePathObject()));
+      usersManager.setUserLimitFactor(configuration.getUserLimitFactor(getQueuePathObject()));
 
       maxAMResourcePerQueuePercent =
           configuration.getMaximumApplicationMasterResourcePerQueuePercent(
-              getQueuePath());
+              getQueuePathObject());
 
-      maxApplications = configuration.getMaximumApplicationsPerQueue(getQueuePath());
+      maxApplications = configuration.getMaximumApplicationsPerQueue(getQueuePathObject());
       if (maxApplications < 0) {
         int maxGlobalPerQueueApps =
             configuration.getGlobalMaximumApplicationsPerQueue();
@@ -211,7 +211,7 @@ public class AbstractLeafQueue extends AbstractCSQueue {
         }
       }
 
-      priorityAcls = configuration.getPriorityAcls(getQueuePath(),
+      priorityAcls = configuration.getPriorityAcls(getQueuePathObject(),
           configuration.getClusterLevelApplicationMaxPriority());
 
       Set<String> accessibleNodeLabels = this.queueNodeLabelsSettings.getAccessibleNodeLabels();
@@ -254,10 +254,10 @@ public class AbstractLeafQueue extends AbstractCSQueue {
       }
 
       defaultAppPriorityPerQueue = Priority.newInstance(
-          configuration.getDefaultApplicationPriorityConfPerQueue(getQueuePath()));
+          configuration.getDefaultApplicationPriorityConfPerQueue(getQueuePathObject()));
 
       // Validate leaf queue's user's weights.
-      float queueUserLimit = Math.min(100.0f, configuration.getUserLimit(getQueuePath()));
+      float queueUserLimit = Math.min(100.0f, configuration.getUserLimit(getQueuePathObject()));
       getUserWeights().validateForLeafQueue(queueUserLimit, getQueuePath());
       usersManager.updateUserWeights();
 
@@ -1703,10 +1703,10 @@ public class AbstractLeafQueue extends AbstractCSQueue {
   @Override
   protected void parseAndSetDynamicTemplates() {
     // set to -1, to disable it
-    queueContext.getConfiguration().setUserLimitFactor(getQueuePath(), -1);
+    queueContext.getConfiguration().setUserLimitFactor(getQueuePathObject(), -1);
     // Set Max AM percentage to a higher value
     queueContext.getConfiguration().setMaximumApplicationMasterResourcePerQueuePercent(
-        getQueuePath(), 1f);
+        getQueuePathObject(), 1f);
     super.parseAndSetDynamicTemplates();
   }
 
@@ -1716,7 +1716,7 @@ public class AbstractLeafQueue extends AbstractCSQueue {
 
     if (parent instanceof AbstractManagedParentQueue) {
       acls.putAll(queueContext.getConfiguration().getACLsForLegacyAutoCreatedLeafQueue(
-          parent.getQueuePath()));
+          parent.getQueuePathObject()));
     } else if (parent instanceof ParentQueue) {
       acls.putAll(getACLsForFlexibleAutoCreatedLeafQueue(
           ((ParentQueue) parent).getAutoCreatedQueueTemplate()));
@@ -2432,7 +2432,7 @@ public class AbstractLeafQueue extends AbstractCSQueue {
 
   void updateMaximumApplications(boolean absoluteCapacityIsReadyForUse) {
     CapacitySchedulerConfiguration configuration = queueContext.getConfiguration();
-    int maxAppsForQueue = configuration.getMaximumApplicationsPerQueue(getQueuePath());
+    int maxAppsForQueue = configuration.getMaximumApplicationsPerQueue(getQueuePathObject());
 
     int maxDefaultPerQueueApps = configuration.getGlobalMaximumApplicationsPerQueue();
     int maxSystemApps = configuration.getMaximumSystemApplications();
@@ -2566,6 +2566,6 @@ public class AbstractLeafQueue extends AbstractCSQueue {
   public boolean isEligibleForAutoDeletion() {
     return isDynamicQueue() && getNumApplications() == 0
         && queueContext.getConfiguration().
-        isAutoExpiredDeletionEnabled(this.getQueuePath());
+        isAutoExpiredDeletionEnabled(this.getQueuePathObject());
   }
 }

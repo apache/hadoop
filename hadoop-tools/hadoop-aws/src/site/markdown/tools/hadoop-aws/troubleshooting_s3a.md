@@ -132,9 +132,7 @@ was built.
 
 This can also be caused by having more than one version of an AWS SDK
 JAR on the classpath. If the full `bundle.jar` JAR is on the
-classpath, do not add any of the `aws-sdk-` JARs *except* for
-`aws-crt.jar` (which is required) and
-`eventstream.jar` which is required when using S3 Select.
+classpath, do not add any of the `aws-sdk-` JARs.
 
 
 ### `java.lang.NoSuchMethodError` referencing an `org.apache.hadoop` class

@@ -74,7 +74,8 @@ There are three core settings to connect to an S3 store, endpoint, region and wh
   <name>fs.s3a.endpoint</name>
   <description>AWS S3 endpoint to connect to. An up-to-date list is
     provided in the AWS Documentation: regions and endpoints. Without this
-    property, the standard region (s3.amazonaws.com) is assumed.
+    property, the endpoint/hostname of the S3 Store is inferred from
+    the value of fs.s3a.endpoint.region, fs.s3a.endpoint.fips and more.
   </description>
 </property>
 
@@ -230,8 +231,9 @@ S3 endpoint, documented [by Amazon](http://docs.aws.amazon.com/general/latest/gr
 use local buckets and local copies of data, wherever possible.
 2. With the V4 signing protocol, AWS requires the explicit region endpoint
 to be used —hence S3A must be configured to use the specific endpoint. This
-is done in the configuration option `fs.s3a.endpoint`.
-3. All endpoints other than the default endpoint only support interaction
+is done by setting the regon in the configuration option `fs.s3a.endpoint.region`,
+or by explicitly setting `fs.s3a.endpoint` and `fs.s3a.endpoint.region`.
+3. All endpoints other than the default region only support interaction
 with buckets local to that S3 instance.
 4. Standard S3 buckets support "cross-region" access where use of the original `us-east-1`
    endpoint allows access to the data, but newer storage types, particularly S3 Express are
@@ -248,25 +250,12 @@ The up to date list of regions is [Available online](https://docs.aws.amazon.com
 This list can be used to specify the endpoint of individual buckets, for example
 for buckets in the central and EU/Ireland endpoints.
 
-```xml
-<property>
-  <name>fs.s3a.bucket.landsat-pds.endpoint</name>
-  <value>s3-us-west-2.amazonaws.com</value>
-</property>
-
-<property>
-  <name>fs.s3a.bucket.eu-dataset.endpoint</name>
-  <value>s3.eu-west-1.amazonaws.com</value>
-</property>
-```
-
-Declaring the region for the data is simpler, as it avoid having to look up the full URL and having to worry about historical quirks of regional endpoint hostnames.
 
 ```xml
 <property>
   <name>fs.s3a.bucket.landsat-pds.endpoint.region</name>
   <value>us-west-2</value>
-  <description>The endpoint for s3a://landsat-pds URLs</description>
+  <description>The region for s3a://landsat-pds URLs</description>
 </property>
 
 <property>
@@ -421,7 +410,6 @@ bucket by bucket basis i.e. `fs.s3a.bucket.{YOUR-BUCKET}.accesspoint.required`.
 ```
 
 Before using Access Points make sure you're not impacted by the following:
-- `ListObjectsV1` is not supported, this is also deprecated on AWS S3 for performance reasons;
 - The endpoint for S3 requests will automatically change to use
 `s3-accesspoint.REGION.amazonaws.{com | com.cn}` depending on the Access Point ARN. While
 considering endpoints, if you have any custom signers that use the host endpoint property make

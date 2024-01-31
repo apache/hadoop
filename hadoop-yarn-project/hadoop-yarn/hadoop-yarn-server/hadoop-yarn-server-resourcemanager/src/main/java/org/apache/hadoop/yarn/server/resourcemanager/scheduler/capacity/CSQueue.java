@@ -529,7 +529,7 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
    * Get Multi Node scheduling policy name.
    * @return policy name
    */
-  String getMultiNodeSortingPolicyName();
+  String getMultiNodeSortingPolicyClassName();
 
   /**
    * Get the maximum lifetime in seconds of an application which is submitted to
