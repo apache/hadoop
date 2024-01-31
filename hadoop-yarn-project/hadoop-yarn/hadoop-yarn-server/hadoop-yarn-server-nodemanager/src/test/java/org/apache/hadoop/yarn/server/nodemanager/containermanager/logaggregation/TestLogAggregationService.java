@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation;
 
+import static org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier.HDFS_DELEGATION_KIND;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -51,6 +52,7 @@ import java.io.Writer;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -83,6 +85,7 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainersRequest;
@@ -2586,6 +2589,71 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
       }
     }, 1000, 20000);
     logAggregationService.stop();
+  }
+
+  @Test (timeout = 20000)
+  public void testRemoveExpiredDelegationTokensBeforeUpload() throws Exception {
+    Configuration conf = new YarnConfiguration();
+    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
+        "kerberos");
+    UserGroupInformation.setConfiguration(conf);
+
+    ApplicationId applicationId = BuilderUtils.newApplicationId(1234, 1);
+    Application application = mockApplication();
+    this.context.getApplications().put(applicationId, application);
+
+    @SuppressWarnings("resource")
+    LogAggregationService logAggregationService =
+        new LogAggregationService(dispatcher, this.context, this.delSrvc, super.dirsHandler);
+    logAggregationService.init(this.conf);
+    logAggregationService.start();
+
+    logAggregationService.handle(new LogHandlerAppStartedEvent(applicationId,
+        this.user, null, this.acls,
+        Records.newRecord(LogAggregationContext.class)));
+
+    // Adding a valid and an expired delegation token to the credentials
+    Token renewableToken = mockRenewableToken();
+    Token expiredToken = mockExpiredToken();
+    
+    Credentials credentials = new Credentials();
+    credentials.addToken(new Text("renewableToken"), renewableToken);
+    credentials.addToken(new Text("expiredToken"), expiredToken);
+
+    UserGroupInformation ugi =
+        ((AppLogAggregatorImpl) logAggregationService.getAppLogAggregators()
+            .get(applicationId)).getUgi();
+    ugi.addCredentials(credentials);
+
+    logAggregationService.handle(new LogHandlerAppFinishedEvent(applicationId));
+
+    GenericTestUtils.waitFor(() -> {
+      Collection<Token<? extends TokenIdentifier>> tokens = ugi.getCredentials().getAllTokens();
+      return tokens.size() == 1 && tokens.contains(renewableToken);
+    }, 1000, 20000);
+    logAggregationService.stop();
+  }
+
+  private Application mockApplication() {
+    Application mockApp = mock(Application.class);
+    when(mockApp.getContainers()).thenReturn(
+        new HashMap<ContainerId, Container>());
+    return mockApp;
+  }
+
+  private Token mockRenewableToken() throws IOException, InterruptedException {
+    Token renewableToken = mock(Token.class);
+    when(renewableToken.getKind()).thenReturn(HDFS_DELEGATION_KIND);
+    when(renewableToken.renew(this.conf)).thenReturn(0L);
+    return renewableToken;
+  }
+
+  private Token mockExpiredToken() throws IOException, InterruptedException {
+    Token expiredToken = mock(Token.class);
+    when(expiredToken.getKind()).thenReturn(HDFS_DELEGATION_KIND);
+    when(expiredToken.renew(this.conf))
+        .thenThrow(new SecretManager.InvalidToken(""));
+    return expiredToken;
   }
 
   @Test (timeout = 20000)
