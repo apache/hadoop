@@ -53,9 +53,9 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
 
   <repositories>
     <repository>
-      <id>oss-snapshots</id>
-      <name>Sonatype Development Snapshot Repository</name>
-      <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+      <id>apache-staging</id>
+      <name>Apache Development Staging Repository</name>
+      <url>https://repository.apache.org/content/groups/staging</url>
     </repository>
     <repository>
       <id>${distMgmtSnapshotsId}</id>

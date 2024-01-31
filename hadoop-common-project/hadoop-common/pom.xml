@@ -39,7 +39,7 @@
 
   <dependencies>
     <dependency>
-      <groupId>com.github.pjfanning.hadoop.thirdparty</groupId>
+      <groupId>org.apache.hadoop.thirdparty</groupId>
       <artifactId>hadoop-shaded-protobuf_3_21</artifactId>
     </dependency>
     <dependency>

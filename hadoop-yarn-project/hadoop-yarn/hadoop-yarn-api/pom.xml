@@ -50,7 +50,7 @@
       <scope>provided</scope>
       <exclusions>
         <exclusion>
-          <groupId>com.github.pjfanning.hadoop.thirdparty</groupId>
+          <groupId>org.apache.hadoop.thirdparty</groupId>
           <artifactId>hadoop-shaded-protobuf_3_21</artifactId>
         </exclusion>
       </exclusions>
@@ -68,7 +68,7 @@
     </dependency>
 
     <dependency>
-      <groupId>com.github.pjfanning.hadoop.thirdparty</groupId>
+      <groupId>org.apache.hadoop.thirdparty</groupId>
       <artifactId>hadoop-shaded-protobuf_3_21</artifactId>
     </dependency>
 
@@ -79,7 +79,7 @@
       <scope>test</scope>
       <exclusions>
         <exclusion>
-          <groupId>com.github.pjfanning.hadoop.thirdparty</groupId>
+          <groupId>org.apache.hadoop.thirdparty</groupId>
           <artifactId>hadoop-shaded-protobuf_3_21</artifactId>
         </exclusion>
       </exclusions>
