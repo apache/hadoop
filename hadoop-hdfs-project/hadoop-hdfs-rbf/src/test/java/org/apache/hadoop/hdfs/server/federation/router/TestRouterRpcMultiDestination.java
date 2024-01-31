@@ -489,10 +489,15 @@ public class TestRouterRpcMultiDestination extends TestRouterRpc {
         checkCallerContextContainsClientIp(clientIpInfos, callerContext);
       }
     }
-    // clear client context
-    CallerContext.setCurrent(null);
   }
 
+  /**
+   * Check that one of the IP from all local network interfaces is contained
+   * only once in callerContext.
+   *
+   * @param clientIpInfos IP information extracted from all local network interfaces.
+   * @param callerContext current caller context.
+   */
   private static void checkCallerContextContainsClientIp(Set<String> clientIpInfos,
       String callerContext) {
     String clientIpInfo = null;
@@ -508,6 +513,13 @@ public class TestRouterRpcMultiDestination extends TestRouterRpc {
     assertNotNull(clientIpInfo);
   }
 
+  /**
+   * A local machine where we run tests may have more than 1 network interface,
+   * extracting all IP information from them.
+   *
+   * @return A set of 'clientIp:IP' where IP is taken from all local network interfaces.
+   * @throws SocketException
+   */
   private static Set<String> getClientIpInfos() throws SocketException {
     Set<String> clientIpInfos = new HashSet<>();
     Enumeration<NetworkInterface> networkInterfaces = NetworkInterface.getNetworkInterfaces();

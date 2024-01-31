@@ -137,6 +137,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -263,6 +264,12 @@ public class TestRouterRpc {
         .getDatanodeManager().setHeartbeatExpireInterval(3000);
     cluster.getCluster().getNamesystem(1).getBlockManager()
         .getDatanodeManager().setHeartbeatExpireInterval(3000);
+  }
+
+  @After
+  public void cleanup() {
+    // clear client context
+    CallerContext.setCurrent(null);
   }
 
   @AfterClass
@@ -2093,8 +2100,6 @@ public class TestRouterRpc {
     assertTrue(logOutput.contains("clientId"));
     assertTrue(logOutput.contains("clientCallId"));
     assertTrue(verifyFileExists(routerFS, dirPath));
-
-    CallerContext.setCurrent(null);
   }
 
   @Test
@@ -2175,8 +2180,6 @@ public class TestRouterRpc {
     // set by client.
     assertFalse(auditLog.getOutput().contains("clientIp:1.1.1.1"));
     assertFalse(auditLog.getOutput().contains("clientPort:1234"));
-
-    CallerContext.setCurrent(null);
   }
 
   @Test
@@ -2212,8 +2215,6 @@ public class TestRouterRpc {
     // set by client.
     assertFalse(auditLog.getOutput().contains("clientId:mockClientId"));
     assertFalse(auditLog.getOutput().contains("clientCallId:4321"));
-
-    CallerContext.setCurrent(null);
   }
 
   @Test
