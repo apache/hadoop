@@ -343,7 +343,7 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
    * @throws IOException if an error occurs
    */
   ReplicaHandler createRbw(StorageType storageType, String storageId,
-                           ExtendedBlock b, boolean allowLazyPersist, long newGS) throws IOException;
+      ExtendedBlock b, boolean allowLazyPersist, long newGS) throws IOException;
 
   /**
    * Recovers a RBW replica and returns the meta info of the replica.
