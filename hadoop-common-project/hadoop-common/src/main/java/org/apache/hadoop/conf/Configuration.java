@@ -2341,24 +2341,6 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   }
 
   /**
-   * Get the equal op (=) delimited key-value pairs of the <code>name</code> property as
-   * a collection of pair of <code>String</code>s, trimmed of the leading and trailing whitespace
-   * after delimiting the <code>name</code> by comma and new line separator.
-   * If no such property is specified then empty <code>Collection</code> is returned.
-   *
-   * @param name property name.
-   * @return property value as a <code>Map</code> of <code>String</code>s, or empty
-   * <code>Map</code>.
-   */
-  public Map<String, String> getTrimmedStringCollectionSplitByEquals(String name) {
-    String valueString = get(name);
-    if (null == valueString) {
-      return new HashMap<>();
-    }
-    return StringUtils.getTrimmedStringCollectionSplitByEquals(valueString);
-  }
-
-  /** 
    * Get the comma delimited values of the <code>name</code> property as 
    * an array of <code>String</code>s, trimmed of the leading and trailing whitespace.
    * If no such property is specified then an empty array is returned.

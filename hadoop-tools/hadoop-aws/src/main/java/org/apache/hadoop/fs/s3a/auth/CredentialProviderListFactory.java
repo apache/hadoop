@@ -218,7 +218,8 @@ public final class CredentialProviderListFactory {
         defaultValues.toArray(new Class[defaultValues.size()]));
 
     Map<String, String> awsCredsMappedClasses =
-        conf.getTrimmedStringCollectionSplitByEquals(AWS_CREDENTIALS_PROVIDER_MAPPING);
+        S3AUtils.getTrimmedStringCollectionSplitByEquals(conf,
+            AWS_CREDENTIALS_PROVIDER_MAPPING);
     Map<String, String> v1v2CredentialProviderMap = V1_V2_CREDENTIAL_PROVIDER_MAP;
     final Set<String> forbiddenClassnames =
         forbidden.stream().map(c -> c.getName()).collect(Collectors.toSet());

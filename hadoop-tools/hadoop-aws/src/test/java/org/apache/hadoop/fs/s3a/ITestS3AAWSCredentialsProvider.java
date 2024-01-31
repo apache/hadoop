@@ -108,6 +108,10 @@ public class ITestS3AAWSCredentialsProvider {
     }
   }
 
+  /**
+   * Test aws credentials provider remapping with key that maps to
+   * BadCredentialsProviderConstructor.
+   */
   @Test
   public void testBadCredentialsConstructorWithRemap() throws Exception {
     Configuration conf = createConf("aws.test.map1");
@@ -182,6 +186,10 @@ public class ITestS3AAWSCredentialsProvider {
         createFailingFS(conf));
   }
 
+  /**
+   * Test aws credentials provider remapping with key that maps to
+   * BadCredentialsProvider.
+   */
   @Test
   public void testBadCredentialsWithRemap() throws Exception {
     Configuration conf = createConf("aws.test.map.key");

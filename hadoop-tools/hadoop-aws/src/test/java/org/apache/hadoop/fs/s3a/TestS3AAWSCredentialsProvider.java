@@ -27,6 +27,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -210,6 +211,10 @@ public class TestS3AAWSCredentialsProvider {
     assertTrue("empty credentials", credentials.size() > 0);
   }
 
+  /**
+   * Test S3A credentials provider remapping with assumed role
+   * credentials provider.
+   */
   @Test
   public void testAssumedRoleWithRemap() throws Throwable {
     Configuration conf = new Configuration(false);
@@ -235,6 +240,10 @@ public class TestS3AAWSCredentialsProvider {
         .isEqualTo(3);
   }
 
+  /**
+   * Test S3A credentials provider remapping with aws
+   * credentials provider.
+   */
   @Test
   public void testAwsCredentialProvidersWithRemap() throws Throwable {
     Configuration conf = new Configuration(false);
@@ -710,6 +719,89 @@ public class TestS3AAWSCredentialsProvider {
             createProviderConfiguration(V2CredentialProviderDoesNotInstantiate.class.getName())));
     // print for the curious
     LOG.info("{}", expected.toString());
+  }
+
+  /**
+   * Tests for the string utility that will be used by S3A credentials provider.
+   */
+  @Test
+  public void testStringCollectionSplitByEquals() {
+    final Configuration configuration = new Configuration();
+    configuration.set("custom_key", "");
+    Map<String, String> splitMap =
+        S3AUtils.getTrimmedStringCollectionSplitByEquals(
+            configuration, "custom_key");
+    Assertions
+        .assertThat(splitMap.size())
+        .describedAs(
+            "Map of key value pairs derived from config, split by equals(=) and comma(,)")
+        .isEqualTo(0);
+
+    splitMap =
+        S3AUtils.getTrimmedStringCollectionSplitByEquals(
+            configuration, "not_present");
+    Assertions
+        .assertThat(splitMap.size())
+        .describedAs(
+            "Map of key value pairs derived from config, split by equals(=) and comma(,)")
+        .isEqualTo(0);
+
+    configuration.set("custom_key", "element.first.key1 = element.first.val1");
+    splitMap = S3AUtils.getTrimmedStringCollectionSplitByEquals(
+        configuration, "custom_key");
+    Assertions
+        .assertThat(splitMap.size())
+        .describedAs(
+            "Map of key value pairs derived from config, split by equals(=) and comma(,)")
+        .isEqualTo(1);
+    Assertions
+        .assertThat(splitMap)
+        .describedAs(
+            "Map of key value pairs derived from config, split by equals(=) and comma(,)")
+        .containsEntry("element.first.key1", "element.first.val1");
+
+    configuration.set("custom_key",
+        "element.xyz.key1 =element.abc.val1 , element.xyz.key2= element.abc.val2");
+    splitMap =
+        S3AUtils.getTrimmedStringCollectionSplitByEquals(
+            configuration, "custom_key");
+    Assertions
+        .assertThat(splitMap.size())
+        .describedAs(
+            "Map of key value pairs derived from config, split by equals(=) and comma(,)")
+        .isEqualTo(2);
+    Assertions
+        .assertThat(splitMap)
+        .describedAs(
+            "Map of key value pairs derived from config, split by equals(=) and comma(,)")
+        .containsEntry("element.xyz.key1", "element.abc.val1")
+        .containsEntry("element.xyz.key2", "element.abc.val2");
+
+    configuration.set("custom_key",
+        "\nelement.xyz.key1 =element.abc.val1 \n"
+            + ", element.xyz.key2=element.abc.val2,element.xyz.key3=element.abc.val3"
+            + " , element.xyz.key4     =element.abc.val4,element.xyz.key5=        "
+            + "element.abc.val5 ,\n \n \n "
+            + " element.xyz.key6      =       element.abc.val6 \n , \n"
+            + "element.xyz.key7=element.abc.val7,\n");
+    splitMap = S3AUtils.getTrimmedStringCollectionSplitByEquals(
+        configuration, "custom_key");
+    Assertions
+        .assertThat(splitMap.size())
+        .describedAs(
+            "Map of key value pairs derived from config, split by equals(=) and comma(,)")
+        .isEqualTo(7);
+    Assertions
+        .assertThat(splitMap)
+        .describedAs(
+            "Map of key value pairs derived from config, split by equals(=) and comma(,)")
+        .containsEntry("element.xyz.key1", "element.abc.val1")
+        .containsEntry("element.xyz.key2", "element.abc.val2")
+        .containsEntry("element.xyz.key3", "element.abc.val3")
+        .containsEntry("element.xyz.key4", "element.abc.val4")
+        .containsEntry("element.xyz.key5", "element.abc.val5")
+        .containsEntry("element.xyz.key6", "element.abc.val6")
+        .containsEntry("element.xyz.key7", "element.abc.val7");
   }
 
   /**
