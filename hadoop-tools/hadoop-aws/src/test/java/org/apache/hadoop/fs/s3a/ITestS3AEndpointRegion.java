@@ -38,9 +38,9 @@ import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
 import software.amazon.awssdk.services.s3.model.HeadBucketResponse;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
 import org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils;
 
@@ -282,7 +282,7 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
   }
 
   @Test
-  public void testCentralEndpointAndDifferentRegion() throws Throwable {
+  public void testCentralEndpointAndDifferentRegionThanBucket() throws Throwable {
     describe("Access public bucket using central endpoint and region "
         + "different than that of the public bucket");
     final Configuration conf = getConfiguration();
@@ -318,7 +318,7 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
   }
 
   @Test
-  public void testCentralEndpointAndSameRegion() throws Throwable {
+  public void testCentralEndpointAndSameRegionAsBucket() throws Throwable {
     describe("Access public bucket using central endpoint and region "
         + "same as that of the public bucket");
     final Configuration conf = getConfiguration();
@@ -354,9 +354,9 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
   }
 
   @Test
-  public void testCentralEndpointWithNullRegion() throws Throwable {
-    describe("Create bucket on different region and access it using"
-        + " central endpoint and null region");
+  public void testCentralEndpointAndNullRegionWithCRUD() throws Throwable {
+    describe("Access the test bucket using central endpoint and"
+        + " null region, perform file system CRUD operations");
     final Configuration conf = getConfiguration();
 
     final Configuration newConf = new Configuration(conf);
@@ -385,8 +385,27 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
       out.write(new byte[] {1, 2, 3});
     }
 
-    ContractTestUtils.assertIsFile(getFileSystem(), srcFilePath);
-    ContractTestUtils.assertIsFile(newFS, srcFilePath);
+    Assertions
+        .assertThat(newFS.exists(srcFilePath))
+        .describedAs("Existence of file: " + srcFilePath)
+        .isTrue();
+    Assertions
+        .assertThat(getFileSystem().exists(srcFilePath))
+        .describedAs("Existence of file: " + srcFilePath)
+        .isTrue();
+
+    byte[] buffer = new byte[3];
+
+    try (FSDataInputStream in = newFS.open(srcFilePath)) {
+      Assertions
+          .assertThat(in.read(buffer, 0, 3))
+          .describedAs("Total bytes read from " + srcFilePath)
+          .isEqualTo(3);
+      Assertions
+          .assertThat(buffer)
+          .describedAs("Contents read from " + srcFilePath)
+          .containsExactly(1, 2, 3);
+    }
 
     newFS.delete(srcDir, true);
 
