@@ -3909,6 +3909,19 @@
 </property>
 
 <property>
+  <name>dfs.client.ec.failed.write.block.tolerated</name>
+  <value></value>
+  <description>
+    Provide extra tolerated failed streamer for ec policy to prevent
+    the potential data loss. For example, if we use RS-6-3-1024K ec policy.
+    We can write successfully when there are 3 failure streamers. But if one of the six
+    replicas lost during reconstruction, we may lose the data forever.
+    It should better configured between [0, numParityBlocks], the default value is
+    the parity block number of some ec policy.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.quota.init-threads</name>
   <value>12</value>
   <description>
