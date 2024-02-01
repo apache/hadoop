@@ -1860,19 +1860,6 @@ class DataStreamer extends Daemon {
     return lb;
   }
 
-  private void handleBlockCreationFailure() throws IOException {
-    if (block != null) {
-      dfsClient.namenode.abandonBlock(block.getCurrentBlock(),
-        stat.getFileId(), src, dfsClient.clientName);
-      block.setCurrentBlock(null);
-      if (nodes != null && errorState.hasError()) {
-        final DatanodeInfo badNode = nodes[errorState.getBadNodeIndex()];
-        LOG.warn("Excluding datanode " + badNode);
-        excludedNodes.put(badNode, badNode);
-      }
-    }
-  }
-
   // connects to the first datanode in the pipeline
   // Returns true if success, otherwise return failure.
   //
