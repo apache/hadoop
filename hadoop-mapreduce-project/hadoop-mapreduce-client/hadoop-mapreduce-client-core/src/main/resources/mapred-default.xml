@@ -2282,4 +2282,12 @@
   </description>
 </property>
 
+<property>
+  <name>mapreduce.job.decode.configs</name>
+  <value>hive.query.string</value>
+  <description>
+    Some Configurations in job is encoded,which should be decoded before rendered.
+  </description>
+</property>
+
 </configuration>

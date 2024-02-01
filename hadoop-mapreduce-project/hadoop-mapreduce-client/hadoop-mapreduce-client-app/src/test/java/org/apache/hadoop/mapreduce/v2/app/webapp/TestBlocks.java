@@ -22,6 +22,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.PrintWriter;
 import java.util.HashMap;
 import java.util.Map;
+import java.net.URLDecoder;
 
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.util.MRJobConfUtil;
@@ -70,11 +71,15 @@ public class TestBlocks {
     final String redactedProp = "Key for redaction";
     configuration.set(MRJobConfig.MR_JOB_REDACTED_PROPERTIES,
         redactedProp);
+    final String testQueryStringEncoded = "insert+overwrite+table" +
+        "+test_hive_query_string+values%282%2C1%29";
+    final String decodeKey = "hive.query.string";
+    configuration.set("hive.query.string", testQueryStringEncoded);
+    configuration.set(MRJobConfig.MR_DECODE_CONFIGS, decodeKey);
+
     when(job.getConfFile()).thenReturn(path);
     when(job.loadConfFile()).thenReturn(configuration);
-
     when(ctx.getJob(any(JobId.class))).thenReturn(job);
-
 
     ConfBlockForTest configurationBlock = new ConfBlockForTest(ctx);
     PrintWriter pWriter = new PrintWriter(data);
@@ -94,6 +99,8 @@ public class TestBlocks {
     assertTrue(data.toString().contains(redactedProp));
     assertTrue(data.toString().contains(
         MRJobConfUtil.REDACTION_REPLACEMENT_VAL));
+    assertTrue(data.toString().contains("hive.query.string"));
+    assertTrue(data.toString().contains(URLDecoder.decode(testQueryStringEncoded, "UTF-8")));
   }
 
   /**
