@@ -90,7 +90,7 @@ public class StripedDataStreamer extends DataStreamer {
   }
 
   @Override
-  protected LocatedBlock nextBlockOutputStream() throws IOException {
+  protected LocatedBlock setupPipelineForCreate() throws IOException {
     boolean success;
     LocatedBlock lb = getFollowingBlock();
     block.setCurrentBlock(lb.getBlock());
@@ -101,7 +101,7 @@ public class StripedDataStreamer extends DataStreamer {
     DatanodeInfo[] nodes = lb.getLocations();
     StorageType[] storageTypes = lb.getStorageTypes();
     String[] storageIDs = lb.getStorageIDs();
-
+    setPipeline(lb);
     // Connect to the DataNode. If fail the internal error state will be set.
     success = createBlockOutputStream(nodes, storageTypes, storageIDs, 0L,
         false);
@@ -111,6 +111,7 @@ public class StripedDataStreamer extends DataStreamer {
       final DatanodeInfo badNode = nodes[getErrorState().getBadNodeIndex()];
       LOG.warn("Excluding datanode " + badNode);
       excludedNodes.put(badNode, badNode);
+      setPipeline(null, null, null);
       throw new IOException("Unable to create new block." + this);
     }
     return lb;
@@ -122,18 +123,18 @@ public class StripedDataStreamer extends DataStreamer {
   }
 
   @Override
-  protected void setupPipelineInternal(DatanodeInfo[] nodes,
+  protected boolean setupPipelineInternal(DatanodeInfo[] nodes,
       StorageType[] nodeStorageTypes, String[] nodeStorageIDs)
       throws IOException {
     boolean success = false;
     while (!success && !streamerClosed() && dfsClient.clientRunning) {
       if (!handleRestartingDatanode()) {
-        return;
+        return false;
       }
       if (!handleBadDatanode()) {
         // for striped streamer if it is datanode error then close the stream
         // and return. no need to replace datanode
-        return;
+        return false;
       }
 
       // get a new generation stamp and an access token
@@ -179,6 +180,7 @@ public class StripedDataStreamer extends DataStreamer {
         setStreamerAsClosed();
       }
     } // while
+    return success;
   }
 
   void setExternalError() {
