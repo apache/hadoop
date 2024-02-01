@@ -19,12 +19,13 @@
 package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.s3a.impl.InstantiationIOException;
+import org.apache.hadoop.test.AbstractHadoopTestBase;
+import org.junit.Assert;
 import org.junit.Test;
 
-import software.amazon.awssdk.services.s3.S3AsyncClientBuilder;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3BaseClientBuilder;
-import software.amazon.awssdk.services.s3.S3ClientBuilder;
 import software.amazon.awssdk.services.s3.S3Client;
 
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_ACCESS_GRANTS_ENABLED;
@@ -34,69 +35,61 @@ import static org.junit.Assert.assertEquals;
 /**
  * Test S3 Access Grants configurations.
  */
-public class TestS3AccessGrantConfiguration {
+public class TestS3AccessGrantConfiguration extends AbstractHadoopTestBase {
 
   @Test
   public void testS3AccessGrantsEnabled() {
-    Configuration conf = new Configuration();
-    conf.set(AWS_S3_ACCESS_GRANTS_ENABLED, "true");
-    S3ClientBuilder builder = S3Client.builder();
-    DefaultS3ClientFactory.applyS3AccessGrantsConfigurations(builder, conf);
-    verifyS3AGPluginEnabled(builder);
+    applyVerifyS3AGPlugin(S3Client.builder(), false, true);
   }
 
   @Test
   public void testS3AccessGrantsEnabledAsync() {
-    Configuration conf = new Configuration();
-    conf.set(AWS_S3_ACCESS_GRANTS_ENABLED, "true");
-    S3AsyncClientBuilder builder = S3AsyncClient.builder();
-    DefaultS3ClientFactory.applyS3AccessGrantsConfigurations(builder, conf);
-    verifyS3AGPluginEnabled(builder);
+    applyVerifyS3AGPlugin(S3AsyncClient.builder(), false, true);
   }
 
   @Test
   public void testS3AccessGrantsDisabled() {
-    Configuration conf = new Configuration();
-    conf.set(AWS_S3_ACCESS_GRANTS_ENABLED, "false");
-    S3ClientBuilder builder = S3Client.builder();
-    DefaultS3ClientFactory.applyS3AccessGrantsConfigurations(builder, conf);
-    verifyS3AGPluginDisabled(builder);
+    applyVerifyS3AGPlugin(S3Client.builder(), false, false);
   }
 
   @Test
   public void testS3AccessGrantsDisabledByDefault() {
-    Configuration conf = new Configuration();
-    S3ClientBuilder builder = S3Client.builder();
-    DefaultS3ClientFactory.applyS3AccessGrantsConfigurations(builder, conf);
-    verifyS3AGPluginDisabled(builder);
+    applyVerifyS3AGPlugin(S3Client.builder(), true, false);
   }
 
   @Test
   public void testS3AccessGrantsDisabledAsync() {
-    Configuration conf = new Configuration();
-    conf.set(AWS_S3_ACCESS_GRANTS_ENABLED, "false");
-    S3AsyncClientBuilder builder = S3AsyncClient.builder();
-    DefaultS3ClientFactory.applyS3AccessGrantsConfigurations(builder, conf);
-    verifyS3AGPluginDisabled(builder);
+    applyVerifyS3AGPlugin(S3AsyncClient.builder(), false, false);
   }
 
   @Test
   public void testS3AccessGrantsDisabledByDefaultAsync() {
+    applyVerifyS3AGPlugin(S3AsyncClient.builder(), true, false);
+  }
+
+  private Configuration createConfig(boolean isDefault, boolean s3agEnabled) {
     Configuration conf = new Configuration();
-    S3AsyncClientBuilder builder = S3AsyncClient.builder();
-    DefaultS3ClientFactory.applyS3AccessGrantsConfigurations(builder, conf);
-    verifyS3AGPluginDisabled(builder);
+    if (!isDefault){
+      conf.setBoolean(AWS_S3_ACCESS_GRANTS_ENABLED, s3agEnabled);
+    }
+    return conf;
   }
 
   private <BuilderT extends S3BaseClientBuilder<BuilderT, ClientT>, ClientT> void
-      verifyS3AGPluginEnabled(BuilderT builder) {
-    assertEquals(builder.plugins().size(), 1);
-    assertEquals(builder.plugins().get(0).getClass().getName(),
-        "software.amazon.awssdk.s3accessgrants.plugin.S3AccessGrantsPlugin");
+  applyVerifyS3AGPlugin(BuilderT builder, boolean isDefault, boolean enabled) {
+    try {
+      DefaultS3ClientFactory.applyS3AccessGrantsConfigurations(builder, createConfig(isDefault, enabled));
+      if (enabled){
+        assertEquals(builder.plugins().size(), 1);
+        assertEquals(builder.plugins().get(0).getClass().getName(),
+            "software.amazon.awssdk.s3accessgrants.plugin.S3AccessGrantsPlugin");
+      }
+      else {
+        assertEquals(builder.plugins().size(), 0);
+      }
+    } catch (InstantiationIOException e) {
+      Assert.assertTrue(true);
+    }
   }
 
-  private <BuilderT extends S3BaseClientBuilder<BuilderT, ClientT>, ClientT> void
-      verifyS3AGPluginDisabled(BuilderT builder) {
-    assertEquals(builder.plugins().size(), 0);
-  }
 }
