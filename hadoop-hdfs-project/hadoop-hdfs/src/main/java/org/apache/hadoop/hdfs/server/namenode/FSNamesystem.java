@@ -1582,6 +1582,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       standbyCheckpointer = new StandbyCheckpointer(conf, this);
       standbyCheckpointer.start();
     }
+    if (isNoManualAndResourceLowSafeMode()) {
+      LOG.info("Standby should not enter safe mode when resources are low, exiting safe mode.");
+      leaveSafeMode(false);
+    }
   }
 
   /**
