@@ -228,6 +228,8 @@ If you do any of these: change your credentials immediately!
 
 See [Connecting to an Amazon S3 Bucket through the S3A Connector](connecting.md).
 
+Also, please check [S3 endpoint and region settings in detail](connecting.html#s3_endpoint_region_details).
+
 ## <a name="authenticating"></a> Authenticating with S3
 
 Except when interacting with public S3 buckets, the S3A client

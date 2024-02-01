@@ -42,13 +42,16 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
+import org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils;
 
+import static org.apache.hadoop.fs.s3a.Constants.ALLOW_REQUESTER_PAYS;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.CENTRAL_ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.PATH_STYLE_ACCESS;
 import static org.apache.hadoop.fs.s3a.DefaultS3ClientFactory.ERROR_ENDPOINT_WITH_FIPS;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
+import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.DEFAULT_REQUESTER_PAYS_BUCKET_NAME;
 import static org.apache.hadoop.io.IOUtils.closeStream;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
@@ -160,21 +163,16 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
     describe("Create a client with the central endpoint but also specify region");
     Configuration conf = getConfiguration();
 
-    S3Client client = createS3Client(conf, CENTRAL_ENDPOINT, US_WEST_2, US_WEST_2, false);
+    S3Client client = createS3Client(conf, CENTRAL_ENDPOINT, US_WEST_2,
+        US_WEST_2, false);
 
     expectInterceptorException(client);
 
-    client = createS3Client(conf, CENTRAL_ENDPOINT, US_EAST_1, US_EAST_1, false);
+    client = createS3Client(conf, CENTRAL_ENDPOINT, US_EAST_1,
+        US_EAST_1, false);
 
     expectInterceptorException(client);
 
-    client = createS3Client(conf, CENTRAL_ENDPOINT, EU_WEST_2, EU_WEST_2, false);
-
-    expectInterceptorException(client);
-
-    client = createS3Client(conf, CENTRAL_ENDPOINT, US_EAST_2, US_EAST_2, false);
-
-    expectInterceptorException(client);
   }
 
   @Test
@@ -284,47 +282,89 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
   }
 
   @Test
-  public void testCentralEndpointWithUSWest2Region() throws Throwable {
-    describe("Access bucket using central endpoint and us-west-2 region");
+  public void testCentralEndpointAndDifferentRegion() throws Throwable {
+    describe("Access public bucket using central endpoint and region "
+        + "different than that of the public bucket");
     final Configuration conf = getConfiguration();
-    removeBaseAndBucketOverrides(conf, ENDPOINT, AWS_REGION);
-
     final Configuration newConf = new Configuration(conf);
 
+    removeBaseAndBucketOverrides(
+        newConf,
+        ENDPOINT,
+        AWS_REGION,
+        ALLOW_REQUESTER_PAYS,
+        KEY_REQUESTER_PAYS_FILE);
+
+    removeBaseAndBucketOverrides(
+        DEFAULT_REQUESTER_PAYS_BUCKET_NAME,
+        newConf,
+        ENDPOINT,
+        AWS_REGION,
+        ALLOW_REQUESTER_PAYS,
+        KEY_REQUESTER_PAYS_FILE);
+
     newConf.set(ENDPOINT, CENTRAL_ENDPOINT);
-    newConf.set(AWS_REGION, US_WEST_2);
+    newConf.set(AWS_REGION, EU_WEST_1);
+    newConf.setBoolean(ALLOW_REQUESTER_PAYS, true);
 
-    newFS = new S3AFileSystem();
-    newFS.initialize(getFileSystem().getUri(), newConf);
+    Path filePath = new Path(PublicDatasetTestUtils
+        .getRequesterPaysObject(newConf));
+    newFS = (S3AFileSystem) filePath.getFileSystem(newConf);
 
-    assertOpsUsingNewFs();
+    Assertions
+        .assertThat(newFS.exists(filePath))
+        .describedAs("Existence of path: " + filePath)
+        .isTrue();
   }
 
   @Test
-  public void testCentralEndpointWithEUWest2Region() throws Throwable {
-    describe("Access bucket using central endpoint and eu-west-2 region");
+  public void testCentralEndpointAndSameRegion() throws Throwable {
+    describe("Access public bucket using central endpoint and region "
+        + "same as that of the public bucket");
     final Configuration conf = getConfiguration();
-    removeBaseAndBucketOverrides(conf, ENDPOINT, AWS_REGION);
-
     final Configuration newConf = new Configuration(conf);
 
+    removeBaseAndBucketOverrides(
+        newConf,
+        ENDPOINT,
+        AWS_REGION,
+        ALLOW_REQUESTER_PAYS,
+        KEY_REQUESTER_PAYS_FILE);
+
+    removeBaseAndBucketOverrides(
+        DEFAULT_REQUESTER_PAYS_BUCKET_NAME,
+        newConf,
+        ENDPOINT,
+        AWS_REGION,
+        ALLOW_REQUESTER_PAYS,
+        KEY_REQUESTER_PAYS_FILE);
+
     newConf.set(ENDPOINT, CENTRAL_ENDPOINT);
-    newConf.set(AWS_REGION, EU_WEST_2);
+    newConf.set(AWS_REGION, US_WEST_2);
+    newConf.setBoolean(ALLOW_REQUESTER_PAYS, true);
 
-    newFS = new S3AFileSystem();
-    newFS.initialize(getFileSystem().getUri(), newConf);
+    Path filePath = new Path(PublicDatasetTestUtils
+        .getRequesterPaysObject(newConf));
+    newFS = (S3AFileSystem) filePath.getFileSystem(newConf);
 
-    assertOpsUsingNewFs();
+    Assertions
+        .assertThat(newFS.exists(filePath))
+        .describedAs("Existence of path: " + filePath)
+        .isTrue();
   }
 
   @Test
   public void testCentralEndpointWithNullRegion() throws Throwable {
-    describe(
-        "Create bucket on different region and access it using central endpoint and null region");
+    describe("Create bucket on different region and access it using"
+        + " central endpoint and null region");
     final Configuration conf = getConfiguration();
-    removeBaseAndBucketOverrides(conf, ENDPOINT, AWS_REGION);
 
     final Configuration newConf = new Configuration(conf);
+
+    removeBaseAndBucketOverrides(
+        newConf,
+        ENDPOINT,
+        AWS_REGION);
 
     newConf.set(ENDPOINT, CENTRAL_ENDPOINT);
 

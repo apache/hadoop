@@ -315,7 +315,7 @@ public class DefaultS3ClientFactory extends Configured
         LOG.debug("Setting endpoint to {}", endpoint);
       } else {
         builder.crossRegionAccessEnabled(true);
-        origin = "origin with cross region access";
+        origin = "central endpoint with cross region access";
         LOG.debug("Enabling cross region access for endpoint {}",
             endpointStr);
       }

@@ -83,7 +83,7 @@ The table below lists the configurations S3A was using and what they now map to.
 
 Previously, if no endpoint and region was configured, fall back to using us-east-1. Set
 withForceGlobalBucketAccessEnabled(true) which will allow access to buckets not in this region too.
-Since the SDK V2 no longer supports cross region access by default, we need to set the region and
+Since the SDK V2 no longer supports cross region access, we need to set the region and
 endpoint of the bucket. The behaviour has now been changed to:
 
 * If no endpoint is specified, use s3.amazonaws.com.
@@ -92,20 +92,6 @@ endpoint of the bucket. The behaviour has now been changed to:
   using this client. If the bucket is also in eu-west-2, then this will return a successful
   response. Otherwise it will throw an error with status code 301 permanently moved. This error
   contains the region of the bucket in its header, which we can then use to configure the client.
-
-The behaviour with central endpoint:
-
-* If fs.s3a.endpoint is set to s3.amazonaws.com and fs.s3a.endpoint.region is not set, S3A
-  sets the SDK region to us-east-2.
-* If fs.s3a.endpoint is set to s3.amazonaws.com, S3A does not override SDK endpoint, leaving
-  the endpoint resolution to the SDK.
-* If fs.s3a.endpoint is set to s3.amazonaws.com and fs.s3a.endpoint.region is set, the SDK
-  region will be set to the same value as fs.s3a.endpoint.region value.
-* If fs.s3a.endpoint is set to s3.amazonaws.com, S3A enables cross region access using SDK API
-  crossRegionAccessEnabled(true).
-
-The central endpoint behaviour changes are introduced by
-[HADOOP-19044](https://issues.apache.org/jira/browse/HADOOP-19044).
 
 ### List Object:
 
