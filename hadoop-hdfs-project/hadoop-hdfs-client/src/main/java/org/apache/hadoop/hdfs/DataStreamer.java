@@ -1860,7 +1860,6 @@ class DataStreamer extends Daemon {
     return lb;
   }
 
-
   // connects to the first datanode in the pipeline
   // Returns true if success, otherwise return failure.
   //
