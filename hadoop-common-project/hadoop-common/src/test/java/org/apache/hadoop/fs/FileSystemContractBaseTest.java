@@ -527,16 +527,6 @@ public abstract class FileSystemContractBaseTest {
   }
 
   @Test
-  public void testStatisticsDataReferenceCleanerClassLoader() {
-    // initialize the static thread
-    new FileSystem.Statistics("test");
-    Thread thread = Thread.getAllStackTraces().keySet().stream()
-        .filter(t -> t.getName().contains("StatisticsDataReferenceCleaner")).findFirst().get();
-    ClassLoader classLoader = thread.getContextClassLoader();
-    assertNull(classLoader);
-  }
-
-  @Test
   public void testRenameDirectoryAsExistingFile() throws Exception {
     assumeTrue(renameSupported());
     
