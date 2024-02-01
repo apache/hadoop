@@ -1647,7 +1647,8 @@ class DataStreamer extends Daemon {
     } // while
   }
 
-  private boolean updateBlockAndCreateBlockOutputStream(boolean isRecovery, boolean setCurrentBlock) throws IOException {
+  private boolean updateBlockAndCreateBlockOutputStream(boolean isRecovery, boolean setCurrentBlock)
+      throws IOException {
     final LocatedBlock lb = updateBlockForPipeline();
     long newGS = lb.getBlock().getGenerationStamp();
     accessToken = lb.getBlockToken();
@@ -1830,17 +1831,25 @@ class DataStreamer extends Daemon {
           0L, false);
 
       if (!success) {
-        while (!success && handleBadDatanodeInternal(nodes, nextStorageTypes, nextStorageIDs) &&
-         dfsClient.dtpReplaceDatanodeOnFailureReplication > 0 &&
-         this.nodes.length >= dfsClient.dtpReplaceDatanodeOnFailureReplication) {
-           LOG.info("Proceeding to create block {} after excluding bad datanode from pipeline", this);
-           success = updateBlockAndCreateBlockOutputStream(false, true);
-           nodes = this.nodes;
-           nextStorageTypes = this.storageTypes;
-           nextStorageIDs = this.storageIDs;
+        while (!success && dfsClient.dtpReplaceDatanodeOnFailureReplication > 0 &&
+            nodes.length - 1 >= dfsClient.dtpReplaceDatanodeOnFailureReplication &&
+            handleBadDatanodeInternal(nodes, nextStorageTypes, nextStorageIDs)) {
+          LOG.info("Proceeding to create block {} after excluding bad datanode from pipeline", this);
+          success = updateBlockAndCreateBlockOutputStream(false, true);
+          nodes = this.nodes;
+          nextStorageTypes = this.storageTypes;
+          nextStorageIDs = this.storageIDs;
         }
         if (!success) {
-          handleBlockCreationFailure();
+          LOG.warn("Abandoning " + block);
+          dfsClient.namenode.abandonBlock(block.getCurrentBlock(), stat.getFileId(), src, dfsClient.clientName);
+          block.setCurrentBlock(null);
+          final DatanodeInfo badNode = nodes[errorState.getBadNodeIndex()];
+          LOG.warn("Excluding datanode " + badNode);
+          excludedNodes.put(badNode, badNode);
+          if (this.nodes != null) {
+            setPipeline(null, null, null);
+          }
         }
       }
     } while (!success && --count >= 0);
