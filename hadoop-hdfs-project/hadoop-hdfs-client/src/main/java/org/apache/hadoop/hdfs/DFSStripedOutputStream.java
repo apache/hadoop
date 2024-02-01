@@ -671,9 +671,9 @@ public class DFSStripedOutputStream extends DFSOutputStream
       // for healthy streamers, wait till all of them have fetched the new block
       // and flushed out all the enqueued packets.
       flushAllInternals();
+      // recheck failed streamers again after the flush
+      newFailed = checkStreamers();
     }
-    // recheck failed streamers again after the flush
-    newFailed = checkStreamers();
     while (newFailed.size() > 0) {
       failedStreamers.addAll(newFailed);
       coordinator.clearFailureStates();
