@@ -643,11 +643,11 @@ class DataStreamer extends Daemon {
     this.accessToken = t;
   }
 
-  private void setPipeline(LocatedBlock lb) {
+  protected void setPipeline(LocatedBlock lb) {
     setPipeline(lb.getLocations(), lb.getStorageTypes(), lb.getStorageIDs());
   }
 
-  private void setPipeline(DatanodeInfo[] nodes, StorageType[] storageTypes,
+  protected void setPipeline(DatanodeInfo[] nodes, StorageType[] storageTypes,
                            String[] storageIDs) {
     synchronized (nodesLock) {
       this.nodes = nodes;
@@ -748,7 +748,7 @@ class DataStreamer extends Daemon {
 
         if (stage == BlockConstructionStage.PIPELINE_SETUP_CREATE) {
           LOG.debug("Allocating new block: {}", this);
-          setPipeline(nextBlockOutputStream());
+          setupPipelineForCreate();
           initDataStreaming();
         } else if (stage == BlockConstructionStage.PIPELINE_SETUP_APPEND) {
           LOG.debug("Append to block {}", block);
@@ -966,8 +966,8 @@ class DataStreamer extends Daemon {
               long duration = Time.monotonicNowNanos() - begin;
               if (TimeUnit.NANOSECONDS.toMillis(duration) > writeTimeout) {
                 LOG.error("No ack received, took {}ms (threshold={}ms). "
-                    + "File being written: {}, block: {}, "
-                    + "Write pipeline datanodes: {}.",
+                        + "File being written: {}, block: {}, "
+                        + "Write pipeline datanodes: {}.",
                     TimeUnit.NANOSECONDS.toMillis(duration), writeTimeout, src, block, nodes);
                 throw new InterruptedIOException("No ack received after " +
                     TimeUnit.NANOSECONDS.toSeconds(duration) + "s and a timeout of " +
@@ -1525,8 +1525,7 @@ class DataStreamer extends Daemon {
         // MIN_REPLICATION is set to 0 or less than zero, an exception will be
         // thrown if a replacement could not be found.
 
-        if (dfsClient.dtpReplaceDatanodeOnFailureReplication > 0 && nodes.length
-            >= dfsClient.dtpReplaceDatanodeOnFailureReplication) {
+        if (checkMinReplicationSatisfied()) {
           DFSClient.LOG.warn(
               "Failed to find a new datanode to add to the write pipeline,"
                   + " continue to write to the pipeline with " + nodes.length
@@ -1608,7 +1607,7 @@ class DataStreamer extends Daemon {
    * This happens when a file is appended or data streaming fails
    * It keeps on trying until a pipeline is setup
    */
-  private void setupPipelineForAppendOrRecovery() throws IOException {
+  private boolean setupPipelineForAppendOrRecovery() throws IOException {
     // Check number of datanodes. Note that if there is no healthy datanode,
     // this must be internal error because we mark external error in striped
     // outputstream only when all the streamers are in the DATA_STREAMING stage
@@ -1618,50 +1617,60 @@ class DataStreamer extends Daemon {
       LOG.warn(msg);
       lastException.set(new IOException(msg));
       streamerClosed = true;
-      return;
+      return false;
     }
-    setupPipelineInternal(nodes, storageTypes, storageIDs);
+    return setupPipelineInternal(nodes, storageTypes, storageIDs);
   }
 
-  protected void setupPipelineInternal(DatanodeInfo[] datanodes,
+  protected boolean setupPipelineInternal(DatanodeInfo[] datanodes,
       StorageType[] nodeStorageTypes, String[] nodeStorageIDs)
       throws IOException {
     boolean success = false;
+    long newGS = 0L;
+    boolean isCreateStage = BlockConstructionStage.PIPELINE_SETUP_CREATE == stage;
     while (!success && !streamerClosed && dfsClient.clientRunning) {
       if (!handleRestartingDatanode()) {
-        return;
+        return false;
       }
 
-      final boolean isRecovery = errorState.hasInternalError();
+      final boolean isRecovery = errorState.hasInternalError() && !isCreateStage;
       if (!handleBadDatanode()) {
-        return;
+        return false;
       }
 
       handleDatanodeReplacement();
-      success = updateBlockAndCreateBlockOutputStream(isRecovery, false);
+
+      if (isCreateStage && !checkMinReplicationSatisfied()) {
+        return false;
+      }
+
+      // get a new generation stamp and an access token
+      final LocatedBlock lb = updateBlockForPipeline();
+      newGS = lb.getBlock().getGenerationStamp();
+      accessToken = lb.getBlockToken();
+
+      if (isCreateStage) {
+        block.setCurrentBlock(lb.getBlock());
+      }
+
+      // set up the pipeline again with the remaining nodes
+      success = createBlockOutputStream(nodes, storageTypes, storageIDs, newGS,
+          isRecovery);
 
       failPacket4Testing();
 
       errorState.checkRestartingNodeDeadline(nodes);
-
     } // while
-  }
 
-  private boolean updateBlockAndCreateBlockOutputStream(boolean isRecovery, boolean setCurrentBlock)
-      throws IOException {
-    final LocatedBlock lb = updateBlockForPipeline();
-    long newGS = lb.getBlock().getGenerationStamp();
-    accessToken = lb.getBlockToken();
-    if (setCurrentBlock) {
-      block.setCurrentBlock(lb.getBlock());
-    }
-    // set up the pipeline again with the remaining nodes
-    final boolean success = createBlockOutputStream(nodes, storageTypes, storageIDs, newGS,
-      isRecovery);
     if (success) {
       updatePipeline(newGS);
     }
     return success;
+  }
+
+  private boolean checkMinReplicationSatisfied() {
+    return dfsClient.dtpReplaceDatanodeOnFailureReplication > 0 &&
+      nodes.length >= dfsClient.dtpReplaceDatanodeOnFailureReplication;
   }
 
   /**
@@ -1701,14 +1710,11 @@ class DataStreamer extends Daemon {
    * @return true if it should continue.
    */
   boolean handleBadDatanode() {
-    return handleBadDatanodeInternal(this.nodes, this.storageTypes, this.storageIDs);
-  }
-  private boolean handleBadDatanodeInternal(DatanodeInfo[] nodes, StorageType[] storageTypes, String[] storageIDs) {
     final int badNodeIndex = errorState.getBadNodeIndex();
     if (badNodeIndex >= 0) {
       if (nodes.length <= 1) {
         lastException.set(new IOException("All datanodes "
-          + Arrays.toString(nodes) + " are bad. Aborting..."));
+            + Arrays.toString(nodes) + " are bad. Aborting..."));
         streamerClosed = true;
         return false;
       }
@@ -1803,7 +1809,7 @@ class DataStreamer extends Daemon {
    * Must get block ID and the IDs of the destinations from the namenode.
    * Returns the list of target datanodes.
    */
-  protected LocatedBlock nextBlockOutputStream() throws IOException {
+  protected LocatedBlock setupPipelineForCreate() throws IOException {
     LocatedBlock lb;
     DatanodeInfo[] nodes;
     StorageType[] nextStorageTypes;
@@ -1825,32 +1831,20 @@ class DataStreamer extends Daemon {
       nodes = lb.getLocations();
       nextStorageTypes = lb.getStorageTypes();
       nextStorageIDs = lb.getStorageIDs();
-
+      setPipeline(lb);
       // Connect to first DataNode in the list.
       success = createBlockOutputStream(nodes, nextStorageTypes, nextStorageIDs,
-          0L, false);
+          0L, false) || setupPipelineForAppendOrRecovery();
 
       if (!success) {
-        while (!success && dfsClient.dtpReplaceDatanodeOnFailureReplication > 0 &&
-            nodes.length - 1 >= dfsClient.dtpReplaceDatanodeOnFailureReplication &&
-            handleBadDatanodeInternal(nodes, nextStorageTypes, nextStorageIDs)) {
-          LOG.info("Proceeding to create block {} after excluding bad datanode from pipeline", this);
-          success = updateBlockAndCreateBlockOutputStream(false, true);
-          nodes = this.nodes;
-          nextStorageTypes = this.storageTypes;
-          nextStorageIDs = this.storageIDs;
-        }
-        if (!success) {
-          LOG.warn("Abandoning " + block);
-          dfsClient.namenode.abandonBlock(block.getCurrentBlock(), stat.getFileId(), src, dfsClient.clientName);
-          block.setCurrentBlock(null);
-          final DatanodeInfo badNode = nodes[errorState.getBadNodeIndex()];
-          LOG.warn("Excluding datanode " + badNode);
-          excludedNodes.put(badNode, badNode);
-          if (this.nodes != null) {
-            setPipeline(null, null, null);
-          }
-        }
+        LOG.warn("Abandoning " + block);
+        dfsClient.namenode.abandonBlock(block.getCurrentBlock(),
+            stat.getFileId(), src, dfsClient.clientName);
+        block.setCurrentBlock(null);
+        final DatanodeInfo badNode = nodes[errorState.getBadNodeIndex()];
+        LOG.warn("Excluding datanode " + badNode);
+        excludedNodes.put(badNode, badNode);
+        setPipeline(null, null, null);
       }
     } while (!success && --count >= 0);
 
