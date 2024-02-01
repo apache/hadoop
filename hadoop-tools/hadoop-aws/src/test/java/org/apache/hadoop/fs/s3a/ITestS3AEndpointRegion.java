@@ -397,10 +397,7 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
     byte[] buffer = new byte[3];
 
     try (FSDataInputStream in = newFS.open(srcFilePath)) {
-      Assertions
-          .assertThat(in.read(buffer, 0, 3))
-          .describedAs("Total bytes read from " + srcFilePath)
-          .isEqualTo(3);
+      in.readFully(buffer);
       Assertions
           .assertThat(buffer)
           .describedAs("Contents read from " + srcFilePath)
@@ -411,11 +408,11 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
 
     Assertions
         .assertThat(newFS.exists(srcFilePath))
-        .describedAs("Existence of file: " + srcFilePath)
+        .describedAs("Existence of file: " + srcFilePath + " using new FS")
         .isFalse();
     Assertions
         .assertThat(getFileSystem().exists(srcFilePath))
-        .describedAs("Existence of file: " + srcFilePath)
+        .describedAs("Existence of file: " + srcFilePath + " using original FS")
         .isFalse();
   }
 
