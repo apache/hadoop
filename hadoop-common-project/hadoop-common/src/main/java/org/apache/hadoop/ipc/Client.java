@@ -1081,15 +1081,15 @@ public class Client implements AutoCloseable {
 
     @Override
     public void run() {
-      // Don't start the ipc parameter sending thread until we start this
-      // thread, because the shutdown logic only gets triggered if this
-      // thread is started.
-      rpcRequestThread.start();
-      if (LOG.isDebugEnabled())
-        LOG.debug(getName() + ": starting, having connections " 
-            + connections.size());
-
       try {
+        // Don't start the ipc parameter sending thread until we start this
+        // thread, because the shutdown logic only gets triggered if this
+        // thread is started.
+        rpcRequestThread.start();
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(getName() + ": starting, having connections " + connections.size());
+        }
+
         while (waitForWork()) {//wait here for work - read or close connection
           receiveRpcResponse();
         }
@@ -1102,10 +1102,10 @@ public class Client implements AutoCloseable {
       }
       
       close();
-      
-      if (LOG.isDebugEnabled())
-        LOG.debug(getName() + ": stopped, remaining connections "
-            + connections.size());
+
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(getName() + ": stopped, remaining connections " + connections.size());
+      }
     }
 
     /**
