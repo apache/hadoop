@@ -732,32 +732,29 @@ public class TestS3AAWSCredentialsProvider {
         S3AUtils.getTrimmedStringCollectionSplitByEquals(
             configuration, "custom_key");
     Assertions
-        .assertThat(splitMap.size())
+        .assertThat(splitMap)
         .describedAs(
             "Map of key value pairs derived from config, split by equals(=) and comma(,)")
-        .isEqualTo(0);
+        .hasSize(0);
 
     splitMap =
         S3AUtils.getTrimmedStringCollectionSplitByEquals(
             configuration, "not_present");
     Assertions
-        .assertThat(splitMap.size())
+        .assertThat(splitMap)
         .describedAs(
             "Map of key value pairs derived from config, split by equals(=) and comma(,)")
-        .isEqualTo(0);
+        .hasSize(0);
 
     configuration.set("custom_key", "element.first.key1 = element.first.val1");
     splitMap = S3AUtils.getTrimmedStringCollectionSplitByEquals(
         configuration, "custom_key");
-    Assertions
-        .assertThat(splitMap.size())
-        .describedAs(
-            "Map of key value pairs derived from config, split by equals(=) and comma(,)")
-        .isEqualTo(1);
+
     Assertions
         .assertThat(splitMap)
         .describedAs(
             "Map of key value pairs derived from config, split by equals(=) and comma(,)")
+        .hasSize(1)
         .containsEntry("element.first.key1", "element.first.val1");
 
     configuration.set("custom_key",
@@ -765,15 +762,12 @@ public class TestS3AAWSCredentialsProvider {
     splitMap =
         S3AUtils.getTrimmedStringCollectionSplitByEquals(
             configuration, "custom_key");
-    Assertions
-        .assertThat(splitMap.size())
-        .describedAs(
-            "Map of key value pairs derived from config, split by equals(=) and comma(,)")
-        .isEqualTo(2);
+
     Assertions
         .assertThat(splitMap)
         .describedAs(
             "Map of key value pairs derived from config, split by equals(=) and comma(,)")
+        .hasSize(2)
         .containsEntry("element.xyz.key1", "element.abc.val1")
         .containsEntry("element.xyz.key2", "element.abc.val2");
 
@@ -786,15 +780,12 @@ public class TestS3AAWSCredentialsProvider {
             + "element.xyz.key7=element.abc.val7,\n");
     splitMap = S3AUtils.getTrimmedStringCollectionSplitByEquals(
         configuration, "custom_key");
-    Assertions
-        .assertThat(splitMap.size())
-        .describedAs(
-            "Map of key value pairs derived from config, split by equals(=) and comma(,)")
-        .isEqualTo(7);
+
     Assertions
         .assertThat(splitMap)
         .describedAs(
             "Map of key value pairs derived from config, split by equals(=) and comma(,)")
+        .hasSize(7)
         .containsEntry("element.xyz.key1", "element.abc.val1")
         .containsEntry("element.xyz.key2", "element.abc.val2")
         .containsEntry("element.xyz.key3", "element.abc.val3")

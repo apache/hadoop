@@ -66,6 +66,25 @@ The change in interface will mean that custom credential providers will need to 
 implement `software.amazon.awssdk.auth.credentials.AwsCredentialsProvider` instead of
 `com.amazonaws.auth.AWSCredentialsProvider`.
 
+[HADOOP-18980](https://issues.apache.org/jira/browse/HADOOP-18980) introduces extended version of
+the credential provider remapping. `fs.s3a.aws.credentials.provider.mapping` can be used to
+list comma-separated key-value pairs of mapped credential providers that are separated by
+equal operator (=). The key can be used by `fs.s3a.aws.credentials.provider` config, and it
+will be translated into the specified value of credential provider class based on the key-value
+pair provided by this config.
+
+For example, if `fs.s3a.aws.credentials.provider.mapping` is set with value:
+
+    com.amazonaws.auth.AnonymousAWSCredentials=org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider,
+    com.amazonaws.auth.EC2ContainerCredentialsProviderWrapper=org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider,
+    com.amazonaws.auth.InstanceProfileCredentialsProvider=org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider
+
+With the above key-value pairs, if `fs.s3a.aws.credentials.provider` specifies
+`com.amazonaws.auth.AnonymousAWSCredentials`, it will be remapped to
+`org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider` by S3A while preparing
+AWS credential provider list.
+
+
 ### Original V1 `AWSCredentialsProvider` interface
 
 Note how the interface begins with the capitalized "AWS" acronym.
