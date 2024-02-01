@@ -354,7 +354,7 @@ Datanode supports hot swappable drives. The user can add or replace HDFS data vo
   to query the running status of the reconfiguration task. In place of
   Specifying `livenodes` would allow start or query reconfiguration
   on all live datanodes, while `decomnodes` would target decommissioning datanodes.
-  Specifying HOST:PORT would only allow start or query of reconfiguration on the 
+  Specifying HOST:PORT would only allow start or query of reconfiguration on the
   particular datanode represented by HOST:PORT.
   Examples for `livenodes` queries are `dfsadmin -reconfig datanode livenodes start` and
   `dfsadmin -reconfig datanode livenodes status`.
