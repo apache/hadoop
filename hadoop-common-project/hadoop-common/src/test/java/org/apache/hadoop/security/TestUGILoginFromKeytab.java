@@ -593,6 +593,25 @@ public class TestUGILoginFromKeytab {
     clonedRelogin.get();
   }
 
+  @Test
+  public void testUGILoginFromKeytabConfig() throws Exception {
+    String principal = "foo";
+    File keytab = new File(workDir, "foo.keytab");
+    kdc.createPrincipal(keytab, principal);
+
+    Configuration clientConfig = new Configuration();
+    clientConfig.set(CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION, "kerberos");
+    clientConfig.set(CommonConfigurationKeys.HADOOP_CLIENT_KEYTAB_PRINCIPAL, "foo");
+    clientConfig.set(CommonConfigurationKeys.HADOOP_CLIENT_KEYTAB_FILE_PATH, keytab.getPath());
+    UserGroupInformation.setConfiguration(clientConfig);
+    UserGroupInformation ugi = UserGroupInformation.getLoginUser();
+    Assert.assertTrue("UGI should be configured to login from keytab", ugi.isFromKeytab());
+
+    User user = getUser(ugi.getSubject());
+    Assert.assertNotNull(user);
+    Assert.assertNotNull(user.getLogin());
+  }
+
   private User getUser(Subject subject) {
     Iterator<User> iter = subject.getPrincipals(User.class).iterator();
     return iter.hasNext() ? iter.next() : null;

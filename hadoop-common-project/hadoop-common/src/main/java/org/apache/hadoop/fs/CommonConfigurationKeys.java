@@ -505,4 +505,13 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   public static final String HADOOP_SECURITY_RESOLVER_IMPL =
       "hadoop.security.resolver.impl";
 
+  /**
+   * The hadoop client keytab principal.
+   */
+  public static final String HADOOP_CLIENT_KEYTAB_PRINCIPAL = "hadoop.client.keytab.principal";
+
+  /**
+   * The hadoop client keytab file path.
+   */
+  public static final String HADOOP_CLIENT_KEYTAB_FILE_PATH = "hadoop.client.keytab.file.path";
 }

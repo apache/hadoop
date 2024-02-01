@@ -69,6 +69,7 @@ import javax.security.auth.login.LoginContext;
 import javax.security.auth.login.LoginException;
 import javax.security.auth.spi.LoginModule;
 
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -680,6 +681,14 @@ public class UserGroupInformation {
     // with sychronization overhead so optimistically create a login user
     // and discard if we lose the race.
     if (loginUser == null) {
+      if (isSecurityEnabled()) {
+        try {
+          tryLoginFromKeytabConfig();
+          return loginUserRef.get();
+        } catch (IOException ioe) {
+          LOG.warn("Can't login from keytab config, try to login from ticket cache");
+        }
+      }
       UserGroupInformation newLoginUser = createLoginUser(null);
       do {
         // it's extremely unlikely that the login user will be non-null
@@ -695,6 +704,24 @@ public class UserGroupInformation {
       } while (loginUser == null);
     }
     return loginUser;
+  }
+
+  /**
+   * Try to log in from the user specified keytab principal and keytab file.
+   *
+   * @throws IOException Failed IO exception
+   */
+  private static void tryLoginFromKeytabConfig() throws IOException {
+    String keytabPrincipal = conf.get(CommonConfigurationKeys.HADOOP_CLIENT_KEYTAB_PRINCIPAL);
+    String keytabFilePath = conf.get(CommonConfigurationKeys.HADOOP_CLIENT_KEYTAB_FILE_PATH);
+    if (keytabPrincipal != null && keytabFilePath != null && !keytabPrincipal.isEmpty()
+        && !keytabFilePath.isEmpty()) {
+      loginUserFromKeytab(keytabPrincipal, keytabFilePath);
+    } else {
+      throw new IOException(
+          "Invalid keytab principal: " + keytabPrincipal + " and keytab file path: "
+              + keytabFilePath);
+    }
   }
 
   /**
