@@ -530,12 +530,10 @@ public abstract class FileSystemContractBaseTest {
   public void testStatisticsDataReferenceCleanerClassLoader() {
     // initialize the static thread
     new FileSystem.Statistics("test");
-    Thread.getAllStackTraces().keySet().stream()
-        .filter(t -> t.getName().contains("StatisticsDataReferenceCleaner")).findFirst()
-        .ifPresent(t -> {
-          ClassLoader classLoader = t.getContextClassLoader();
-          assertNull(classLoader);
-        });
+    Thread thread = Thread.getAllStackTraces().keySet().stream()
+        .filter(t -> t.getName().contains("StatisticsDataReferenceCleaner")).findFirst().get();
+    ClassLoader classLoader = thread.getContextClassLoader();
+    assertNull(classLoader);
   }
 
   @Test
