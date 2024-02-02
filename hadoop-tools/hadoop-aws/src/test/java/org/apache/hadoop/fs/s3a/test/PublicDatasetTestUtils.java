@@ -54,6 +54,13 @@ public final class PublicDatasetTestUtils {
       = "s3a://usgs-landsat/collection02/catalog.json";
 
   /**
+   * Default bucket name for the requester pays bucket.
+   * Value = {@value}.
+   */
+  public static final String DEFAULT_REQUESTER_PAYS_BUCKET_NAME =
+      "usgs-landsat";
+
+  /**
    * Default bucket for an S3A file system with many objects: {@value}.
    *
    * We use a subdirectory to ensure we have permissions on all objects
