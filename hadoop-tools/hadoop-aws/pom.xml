@@ -464,6 +464,16 @@
                     <bannedImport>org.apache.hadoop.mapred.**</bannedImport>
                   </bannedImports>
                 </restrictImports>
+                <restrictImports>
+                  <includeTestCode>false</includeTestCode>
+                  <reason>Restrict S3AG plugin class imports to default client factory</reason>
+                  <exclusions>
+                    <exclusion>org.apache.hadoop.fs.s3a.DefaultS3ClientFactory</exclusion>
+                  </exclusions>
+                  <bannedImports>
+                    <bannedImport>software.amazon.awssdk.s3accessgrants.plugin.S3AccessGrantsPlugin</bannedImport>
+                  </bannedImports>
+                </restrictImports>
               </rules>
             </configuration>
           </execution>
