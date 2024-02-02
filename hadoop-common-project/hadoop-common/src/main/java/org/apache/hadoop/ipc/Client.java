@@ -1105,7 +1105,8 @@ public class Client implements AutoCloseable {
       close();
 
       if (LOG.isDebugEnabled()) {
-        LOG.debug(getName() + ": stopped, remaining connections " + connections.size());
+        LOG.debug(getName() + ": stopped, remaining connections "
+            + connections.size());
       }
     }
 
