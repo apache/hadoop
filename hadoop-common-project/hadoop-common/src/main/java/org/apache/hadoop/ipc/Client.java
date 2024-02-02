@@ -1089,7 +1089,18 @@ public class Client implements AutoCloseable {
         if (LOG.isDebugEnabled()) {
           LOG.debug(getName() + ": starting, having connections " + connections.size());
         }
+      } catch (Throwable t) {
+        // When we fail to start the rpcRequestThread, mark this connection as closed and call close().
+        // Then, we crash this thread/Connection. A new Connection will be re-created once we move this
+        // old one from the connetion pool in close().
+        String err =
+            String.format("Unexpected error in starting IPC.Connection.rpcRequestThread for connection %s", this);
+        markClosed(new IOException(err, t));
+        close();
+        throw t;
+      }
 
+      try {
         while (waitForWork()) {//wait here for work - read or close connection
           receiveRpcResponse();
         }
