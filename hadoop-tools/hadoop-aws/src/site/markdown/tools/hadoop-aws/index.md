@@ -280,6 +280,28 @@ For more information see [Upcoming upgrade to AWS Java SDK V2](./aws_sdk_upgrade
     credentials.
   </description>
 </property>
+
+<property>
+  <name>fs.s3a.aws.credentials.provider.mapping</name>
+  <description>
+    Comma-separated key-value pairs of mapped credential providers that are
+    separated by equal operator (=). The key can be used by
+    fs.s3a.aws.credentials.provider config, and it will be translated into
+    the specified value of credential provider class based on the key-value
+    pair provided by this config.
+
+    Example:
+    com.amazonaws.auth.AnonymousAWSCredentials=org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider,
+    com.amazonaws.auth.EC2ContainerCredentialsProviderWrapper=org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider,
+    com.amazonaws.auth.InstanceProfileCredentialsProvider=org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider
+
+    With the above key-value pairs, if fs.s3a.aws.credentials.provider specifies
+    com.amazonaws.auth.AnonymousAWSCredentials, it will be remapped to
+    org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider by S3A while
+    preparing AWS credential provider list for any S3 access.
+    We can use the same credentials provider list for both v1 and v2 SDK clients.
+  </description>
+</property>
 ```
 
 ### <a name="auth_env_vars"></a> Authenticating via the AWS Environment Variables

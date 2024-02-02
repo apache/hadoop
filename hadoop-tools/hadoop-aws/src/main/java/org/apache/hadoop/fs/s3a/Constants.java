@@ -69,6 +69,13 @@ public final class Constants {
       "fs.s3a.aws.credentials.provider";
 
   /**
+   * AWS credentials providers mapping with key/value pairs.
+   * Value = {@value}
+   */
+  public static final String AWS_CREDENTIALS_PROVIDER_MAPPING =
+      "fs.s3a.aws.credentials.provider.mapping";
+
+  /**
    * Extra set of security credentials which will be prepended to that
    * set in {@code "hadoop.security.credential.provider.path"}.
    * This extra option allows for per-bucket overrides.
