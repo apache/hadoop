@@ -236,3 +236,9 @@ Fully-Distributed Operation
 ---------------------------
 
 For information on setting up fully-distributed, non-trivial clusters see [Cluster Setup](./ClusterSetup.html).
+
+Hadoop in Docker containers
+---------------------------
+
+For information on setting up hadoop in docker, using either official releases or the main source code,
+check [Hadoop Docker](./HadoopDocker.html).
