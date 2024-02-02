@@ -439,18 +439,19 @@ public class DefaultS3ClientFactory extends Configured
   }
 
   public static <BuilderT extends S3BaseClientBuilder<BuilderT, ClientT>, ClientT> void
-      applyS3AccessGrantsConfigurations(BuilderT builder, Configuration conf) throws InstantiationIOException {
+      applyS3AccessGrantsConfigurations(BuilderT builder, Configuration conf) {
     boolean s3agEnabled = conf.getBoolean(AWS_S3_ACCESS_GRANTS_ENABLED, false);
     if (s3agEnabled) {
-      if (!isS3AGPluginAvailable()) {
-        throw unavailable(null, S3AG_PLUGIN_CLASSNAME, null, "No S3AG plugin available");
+      if (isS3AGPluginAvailable()) {
+        boolean s3agFallbackEnabled = conf.getBoolean(
+            AWS_S3_ACCESS_GRANTS_FALLBACK_TO_IAM_ENABLED, false);
+        S3AccessGrantsPlugin accessGrantsPlugin =
+            S3AccessGrantsPlugin.builder().enableFallback(s3agFallbackEnabled).build();
+        builder.addPlugin(accessGrantsPlugin);
+        LOG_EXACTLY_ONCE.info("s3ag plugin is added to s3 client with fallback: {}", s3agFallbackEnabled);
+      } else {
+        LOG_EXACTLY_ONCE.warn("s3ag plugin is not available.");
       }
-      boolean s3agFallbackEnabled = conf.getBoolean(
-          AWS_S3_ACCESS_GRANTS_FALLBACK_TO_IAM_ENABLED, false);
-      S3AccessGrantsPlugin accessGrantsPlugin =
-          S3AccessGrantsPlugin.builder().enableFallback(s3agFallbackEnabled).build();
-      builder.addPlugin(accessGrantsPlugin);
-      LOG_EXACTLY_ONCE.info("s3ag plugin is added to s3 client with fallback: {}", s3agFallbackEnabled);
     } else {
       LOG_EXACTLY_ONCE.debug("s3ag plugin is not added to s3 client.");
     }

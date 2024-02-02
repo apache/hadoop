@@ -77,19 +77,14 @@ public class TestS3AccessGrantConfiguration extends AbstractHadoopTestBase {
 
   private <BuilderT extends S3BaseClientBuilder<BuilderT, ClientT>, ClientT> void
   applyVerifyS3AGPlugin(BuilderT builder, boolean isDefault, boolean enabled) {
-    try {
-      DefaultS3ClientFactory.applyS3AccessGrantsConfigurations(builder, createConfig(isDefault, enabled));
-      if (enabled){
-        assertEquals(builder.plugins().size(), 1);
-        assertEquals(builder.plugins().get(0).getClass().getName(),
-            "software.amazon.awssdk.s3accessgrants.plugin.S3AccessGrantsPlugin");
-      }
-      else {
-        assertEquals(builder.plugins().size(), 0);
-      }
-    } catch (InstantiationIOException e) {
-      Assert.assertTrue(true);
+    DefaultS3ClientFactory.applyS3AccessGrantsConfigurations(builder, createConfig(isDefault, enabled));
+    if (enabled){
+      assertEquals(builder.plugins().size(), 1);
+      assertEquals(builder.plugins().get(0).getClass().getName(),
+          "software.amazon.awssdk.s3accessgrants.plugin.S3AccessGrantsPlugin");
+    }
+    else {
+      assertEquals(builder.plugins().size(), 0);
     }
   }
-
 }
