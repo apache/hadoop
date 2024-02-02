@@ -100,6 +100,42 @@ With the move to the AWS V2 SDK, there is more emphasis on the region, set by th
 
 Normally, declaring the region in `fs.s3a.endpoint.region` should be sufficient to set up the network connection to correctly connect to an AWS-hosted S3 store.
 
+### <a name="s3_endpoint_region_details"></a> S3 endpoint and region settings in detail
+
+* Configs `fs.s3a.endpoint` and `fs.s3a.endpoint.region` are used to set values
+  for S3 endpoint and region respectively.
+* If `fs.s3a.endpoint.region` is configured with valid AWS region value, S3A will
+  configure the S3 client to use this value. If this is set to a region that does
+  not match your bucket, you will receive a 301 redirect response.
+* If `fs.s3a.endpoint.region` is not set and `fs.s3a.endpoint` is set with valid
+  endpoint value, S3A will attempt to parse the region from the endpoint and
+  configure S3 client to use the region value.
+* If both `fs.s3a.endpoint` and `fs.s3a.endpoint.region` are not set, S3A will
+  use `us-east-2` as default region and enable cross region access. In this case,
+  S3A does not attempt to override the endpoint while configuring the S3 client.
+* If `fs.s3a.endpoint` is not set and `fs.s3a.endpoint.region` is set to an empty
+  string, S3A will configure S3 client without any region or endpoint override.
+  This will allow fallback to S3 SDK region resolution chain. More details
+  [here](https://docs.aws.amazon.com/sdk-for-java/latest/developer-guide/region-selection.html).
+* If `fs.s3a.endpoint` is set to central endpoint `s3.amazonaws.com` and
+  `fs.s3a.endpoint.region` is not set, S3A will use `us-east-2` as default region
+  and enable cross region access. In this case, S3A does not attempt to override
+  the endpoint while configuring the S3 client.
+* If `fs.s3a.endpoint` is set to central endpoint `s3.amazonaws.com` and
+  `fs.s3a.endpoint.region` is also set to some region, S3A will use that region
+  value and enable cross region access. In this case, S3A does not attempt to
+  override the endpoint while configuring the S3 client.
+
+When the cross region access is enabled while configuring the S3 client, even if the
+region set is incorrect, S3 SDK determines the region. This is done by making the
+request, and if the SDK receives 301 redirect response, it determines the region at
+the cost of a HEAD request, and caches it.
+
+Please note that some endpoint and region settings that require cross region access
+are complex and improving over time. Hence, they may be considered unstable.
+
+If you are working with third party stores, please check [third party stores in detail](third_party_stores.html).
+
 ### <a name="timeouts"></a> Network timeouts
 
 See [Timeouts](performance.html#timeouts).

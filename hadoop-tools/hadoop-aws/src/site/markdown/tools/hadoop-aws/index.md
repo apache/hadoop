@@ -226,7 +226,9 @@ If you do any of these: change your credentials immediately!
 
 ## Connecting to Amazon S3 or a third-party store
 
-See [Connecting to an Amazon S3 Bucket through the S3A Connector](connecting.md).
+See [Connecting to an Amazon S3 Bucket through the S3A Connector](connecting.html).
+
+Also, please check [S3 endpoint and region settings in detail](connecting.html#s3_endpoint_region_details).
 
 ## <a name="authenticating"></a> Authenticating with S3
 
