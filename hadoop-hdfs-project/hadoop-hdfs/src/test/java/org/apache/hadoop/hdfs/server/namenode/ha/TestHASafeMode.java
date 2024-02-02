@@ -999,4 +999,11 @@ public class TestHASafeMode {
           () -> miniCluster.transitionToObserver(0));
     }
   }
+
+  @Test
+  public void testTransitionToStandbyWhenSafeModeWithResourcesLow() throws Exception {
+    NameNodeAdapter.enterSafeMode(nn0, true);
+    cluster.transitionToStandby(0);
+    assertFalse("SNN should not enter safe mode when resources low", nn0.isInSafeMode());
+  }
 }
