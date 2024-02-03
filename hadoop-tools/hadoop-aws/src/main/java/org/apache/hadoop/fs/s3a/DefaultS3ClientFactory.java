@@ -418,9 +418,6 @@ public class DefaultS3ClientFactory extends Configured
     }
     try {
       Class s3agUtil = Class.forName(S3AG_UTIL_CLASSNAME);
-      Class[] argTypes = new Class[2];
-      argTypes[0] = S3BaseClientBuilder.class;
-      argTypes[1] = Configuration.class;
       Method applyS3agConfig =
           s3agUtil.getMethod("applyS3AccessGrantsConfigurations", S3BaseClientBuilder.class, Configuration.class);
       applyS3agConfig.invoke(null, builder, conf);
