@@ -267,9 +267,10 @@ public class DefaultS3ClientFactory extends Configured
    */
   private <BuilderT extends S3BaseClientBuilder<BuilderT, ClientT>, ClientT> void configureEndpointAndRegion(
       BuilderT builder, S3ClientCreationParameters parameters, Configuration conf) {
-    URI endpoint = getS3Endpoint(parameters.getEndpoint(), conf);
+    final String endpointStr = parameters.getEndpoint();
+    final URI endpoint = getS3Endpoint(endpointStr, conf);
 
-    String configuredRegion = parameters.getRegion();
+    final String configuredRegion = parameters.getRegion();
     Region region = null;
     String origin = "";
 
@@ -291,15 +292,33 @@ public class DefaultS3ClientFactory extends Configured
     if (endpoint != null) {
       checkArgument(!fipsEnabled,
           "%s : %s", ERROR_ENDPOINT_WITH_FIPS, endpoint);
-      builder.endpointOverride(endpoint);
-      // No region was configured, try to determine it from the endpoint.
+      boolean endpointEndsWithCentral =
+          endpointStr.endsWith(CENTRAL_ENDPOINT);
+
+      // No region was configured,
+      // determine the region from the endpoint.
       if (region == null) {
-        region = getS3RegionFromEndpoint(parameters.getEndpoint());
+        region = getS3RegionFromEndpoint(endpointStr,
+            endpointEndsWithCentral);
         if (region != null) {
           origin = "endpoint";
         }
       }
-      LOG.debug("Setting endpoint to {}", endpoint);
+
+      // No need to override endpoint with "s3.amazonaws.com".
+      // Let the client take care of endpoint resolution. Overriding
+      // the endpoint with "s3.amazonaws.com" causes 400 Bad Request
+      // errors for non-existent buckets and objects.
+      // ref: https://github.com/aws/aws-sdk-java-v2/issues/4846
+      if (!endpointEndsWithCentral) {
+        builder.endpointOverride(endpoint);
+        LOG.debug("Setting endpoint to {}", endpoint);
+      } else {
+        builder.crossRegionAccessEnabled(true);
+        origin = "central endpoint with cross region access";
+        LOG.debug("Enabling cross region access for endpoint {}",
+            endpointStr);
+      }
     }
 
     if (region != null) {
@@ -354,20 +373,32 @@ public class DefaultS3ClientFactory extends Configured
 
   /**
    * Parses the endpoint to get the region.
-   * If endpoint is the central one, use US_EAST_1.
+   * If endpoint is the central one, use US_EAST_2.
    *
    * @param endpoint the configure endpoint.
+   * @param endpointEndsWithCentral true if the endpoint is configured as central.
    * @return the S3 region, null if unable to resolve from endpoint.
    */
-  private static Region getS3RegionFromEndpoint(String endpoint) {
+  private static Region getS3RegionFromEndpoint(final String endpoint,
+      final boolean endpointEndsWithCentral) {
 
-    if(!endpoint.endsWith(CENTRAL_ENDPOINT)) {
+    if (!endpointEndsWithCentral) {
       LOG.debug("Endpoint {} is not the default; parsing", endpoint);
       return AwsHostNameUtils.parseSigningRegion(endpoint, S3_SERVICE_NAME).orElse(null);
     }
 
-    // endpoint is for US_EAST_1;
-    return Region.US_EAST_1;
+    // Select default region here to enable cross-region access.
+    // If both "fs.s3a.endpoint" and "fs.s3a.endpoint.region" are empty,
+    // Spark sets "fs.s3a.endpoint" to "s3.amazonaws.com".
+    // This applies to Spark versions with the changes of SPARK-35878.
+    // ref:
+    // https://github.com/apache/spark/blob/v3.5.0/core/
+    // src/main/scala/org/apache/spark/deploy/SparkHadoopUtil.scala#L528
+    // If we do not allow cross region access, Spark would not be able to
+    // access any bucket that is not present in the given region.
+    // Hence, we should use default region us-east-2 to allow cross-region
+    // access.
+    return Region.of(AWS_S3_DEFAULT_REGION);
   }
 
 }
