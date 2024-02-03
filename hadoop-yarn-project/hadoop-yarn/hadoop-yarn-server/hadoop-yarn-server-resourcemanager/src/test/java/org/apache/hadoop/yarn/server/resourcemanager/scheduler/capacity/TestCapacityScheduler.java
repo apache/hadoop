@@ -1486,7 +1486,7 @@ public class TestCapacityScheduler {
 
     waitContainerAllocated(am1, 1 * GB, 1, 2, rm1, nm1);
 
-    // Maximum resoure of b1 is 100 * 0.895 * 0.792 = 71 GB
+    // Maximum resource of b1 is 100 * 0.895 * 0.792 = 71 GB
     // 2 GBs used by am, so it's 71 - 2 = 69G.
     Assert.assertEquals(69 * GB,
         am1.doHeartbeat().getAvailableResources().getMemorySize());

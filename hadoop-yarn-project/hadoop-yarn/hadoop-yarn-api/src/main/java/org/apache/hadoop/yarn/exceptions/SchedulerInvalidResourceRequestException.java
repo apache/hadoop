@@ -29,18 +29,18 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class SchedulerInvalidResoureRequestException extends YarnRuntimeException {
+public class SchedulerInvalidResourceRequestException extends YarnRuntimeException {
   private static final long serialVersionUID = 10081123982L;
 
-  public SchedulerInvalidResoureRequestException(String message) {
+  public SchedulerInvalidResourceRequestException(String message) {
     super(message);
   }
 
-  public SchedulerInvalidResoureRequestException(Throwable cause) {
+  public SchedulerInvalidResourceRequestException(Throwable cause) {
     super(cause);
   }
 
-  public SchedulerInvalidResoureRequestException(String message,
+  public SchedulerInvalidResourceRequestException(String message,
       Throwable cause) {
     super(message, cause);
   }
