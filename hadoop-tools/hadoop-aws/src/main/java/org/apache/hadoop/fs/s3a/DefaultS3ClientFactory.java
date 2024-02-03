@@ -19,12 +19,12 @@
 package org.apache.hadoop.fs.s3a;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.net.URI;
 import java.net.URISyntaxException;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.s3a.impl.AWSClientConfig;
-import org.apache.hadoop.fs.s3a.impl.InstantiationIOException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,7 +38,6 @@ import software.amazon.awssdk.http.auth.spi.scheme.AuthScheme;
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
 import software.amazon.awssdk.identity.spi.AwsCredentialsIdentity;
 import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.s3accessgrants.plugin.S3AccessGrantsPlugin;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3BaseClientBuilder;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -56,7 +55,6 @@ import org.apache.hadoop.fs.store.LogExactlyOnce;
 
 import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_ACCESS_GRANTS_ENABLED;
-import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_ACCESS_GRANTS_FALLBACK_TO_IAM_ENABLED;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_DEFAULT_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.CENTRAL_ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.FIPS_ENDPOINT;
@@ -68,7 +66,6 @@ import static org.apache.hadoop.fs.s3a.Constants.SECURE_CONNECTIONS;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_SERVICE_IDENTIFIER_S3;
 import static org.apache.hadoop.fs.s3a.auth.SignerFactory.createHttpSigner;
 import static org.apache.hadoop.fs.s3a.impl.AWSHeaders.REQUESTER_PAYS_HEADER;
-import static org.apache.hadoop.fs.s3a.impl.InstantiationIOException.unavailable;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.AUTH_SCHEME_AWS_SIGV_4;
 import static org.apache.hadoop.util.Preconditions.checkArgument;
 
@@ -119,34 +116,8 @@ public class DefaultS3ClientFactory extends Configured
   public static final String ERROR_ENDPOINT_WITH_FIPS =
       "An endpoint cannot set when " + FIPS_ENDPOINT + " is true";
 
-  private static final String S3AG_PLUGIN_CLASSNAME =
-      "software.amazon.awssdk.s3accessgrants.plugin.S3AccessGrantsPlugin";
-
-  /**
-   * S3 Access Grants plugin availability.
-   */
-  private static final boolean S3AG_PLUGIN_FOUND = checkForS3AGPlugin();
-
-  private static boolean checkForS3AGPlugin() {
-    try {
-      ClassLoader cl = DefaultS3ClientFactory.class.getClassLoader();
-      cl.loadClass(S3AG_PLUGIN_CLASSNAME);
-      LOG.debug("S3AG plugin class {} found", S3AG_PLUGIN_CLASSNAME);
-      return true;
-    } catch (Exception e) {
-      LOG.debug("S3AG plugin class {} not found", S3AG_PLUGIN_CLASSNAME, e);
-      return false;
-    }
-  }
-
-  /**
-   * Is the Encryption client available?
-   * @return true if it was found in the classloader
-   */
-  private static synchronized boolean isS3AGPluginAvailable() {
-    return S3AG_PLUGIN_FOUND;
-  }
-
+  private static final String S3AG_UTIL_CLASSNAME =
+      "org.apache.hadoop.fs.s3a.tools.S3AccessGrantsUtil";
   @Override
   public S3Client createS3Client(
       final URI uri,
@@ -441,19 +412,32 @@ public class DefaultS3ClientFactory extends Configured
   public static <BuilderT extends S3BaseClientBuilder<BuilderT, ClientT>, ClientT> void
       applyS3AccessGrantsConfigurations(BuilderT builder, Configuration conf) {
     boolean s3agEnabled = conf.getBoolean(AWS_S3_ACCESS_GRANTS_ENABLED, false);
-    if (s3agEnabled) {
-      if (isS3AGPluginAvailable()) {
-        boolean s3agFallbackEnabled = conf.getBoolean(
-            AWS_S3_ACCESS_GRANTS_FALLBACK_TO_IAM_ENABLED, false);
-        S3AccessGrantsPlugin accessGrantsPlugin =
-            S3AccessGrantsPlugin.builder().enableFallback(s3agFallbackEnabled).build();
-        builder.addPlugin(accessGrantsPlugin);
-        LOG_EXACTLY_ONCE.info("s3ag plugin is added to s3 client with fallback: {}", s3agFallbackEnabled);
-      } else {
-        LOG_EXACTLY_ONCE.warn("s3ag plugin is not available.");
-      }
-    } else {
-      LOG_EXACTLY_ONCE.debug("s3ag plugin is not added to s3 client.");
+    if (!s3agEnabled){
+      LOG_EXACTLY_ONCE.debug("s3ag plugin is not enabled.");
+      return;
+    }
+    try {
+      Class s3agUtil = Class.forName(S3AG_UTIL_CLASSNAME);
+      Class[] argTypes = new Class[2];
+      argTypes[0] = S3BaseClientBuilder.class;
+      argTypes[1] = Configuration.class;
+      Method applyS3agConfig =
+          s3agUtil.getMethod("applyS3AccessGrantsConfigurations", S3BaseClientBuilder.class, Configuration.class);
+      applyS3agConfig.invoke(null, builder, conf);
+    } catch (ClassNotFoundException e) {
+      LOG_EXACTLY_ONCE.debug(
+          "Class {} is not found exception: {}.",
+          S3AG_UTIL_CLASSNAME,
+          e.getStackTrace()
+      );
+    } catch (Exception e) {
+      LOG_EXACTLY_ONCE.debug("{} exception: {})", e.getClass(), e.getStackTrace());
+    } catch (NoClassDefFoundError e) {
+      LOG_EXACTLY_ONCE.debug(
+          "Class {} is not found error: ",
+          S3AG_UTIL_CLASSNAME,
+          e.getStackTrace()
+      );
     }
   }
 }

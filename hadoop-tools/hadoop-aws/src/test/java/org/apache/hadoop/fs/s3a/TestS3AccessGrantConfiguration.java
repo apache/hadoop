@@ -19,9 +19,7 @@
 package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.s3a.impl.InstantiationIOException;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
-import org.junit.Assert;
 import org.junit.Test;
 
 import software.amazon.awssdk.services.s3.S3AsyncClient;
@@ -79,9 +77,10 @@ public class TestS3AccessGrantConfiguration extends AbstractHadoopTestBase {
   applyVerifyS3AGPlugin(BuilderT builder, boolean isDefault, boolean enabled) {
     DefaultS3ClientFactory.applyS3AccessGrantsConfigurations(builder, createConfig(isDefault, enabled));
     if (enabled){
-      assertEquals(builder.plugins().size(), 1);
-      assertEquals(builder.plugins().get(0).getClass().getName(),
-          "software.amazon.awssdk.s3accessgrants.plugin.S3AccessGrantsPlugin");
+      assertEquals(1, builder.plugins().size());
+      assertEquals("software.amazon.awssdk.s3accessgrants.plugin.S3AccessGrantsPlugin",
+          builder.plugins().get(0).getClass().getName()
+          );
     }
     else {
       assertEquals(builder.plugins().size(), 0);
