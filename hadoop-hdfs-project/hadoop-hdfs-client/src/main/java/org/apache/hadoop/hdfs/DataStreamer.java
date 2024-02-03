@@ -1525,7 +1525,8 @@ class DataStreamer extends Daemon {
         // MIN_REPLICATION is set to 0 or less than zero, an exception will be
         // thrown if a replacement could not be found.
 
-        if (checkMinReplicationSatisfied()) {
+        if (dfsClient.dtpReplaceDatanodeOnFailureReplication > 0 &&
+            nodes.length >= dfsClient.dtpReplaceDatanodeOnFailureReplication) {
           DFSClient.LOG.warn(
               "Failed to find a new datanode to add to the write pipeline,"
                   + " continue to write to the pipeline with " + nodes.length
@@ -1606,6 +1607,9 @@ class DataStreamer extends Daemon {
    * it can be written to.
    * This happens when a file is appended or data streaming fails
    * It keeps on trying until a pipeline is setup
+   *
+   * Returns boolean whether pipeline was setup successfully or not.
+   * This boolean is used upstream on whether to continue creating pipeline or throw exception
    */
   private boolean setupPipelineForAppendOrRecovery() throws IOException {
     // Check number of datanodes. Note that if there is no healthy datanode,
@@ -1634,15 +1638,19 @@ class DataStreamer extends Daemon {
       }
 
       final boolean isRecovery = errorState.hasInternalError() && !isCreateStage;
+
+      // During create stage, if we remove a node (nodes.length - 1)
+      //  min replication should still be satisfied.
+      if (isCreateStage && !(dfsClient.dtpReplaceDatanodeOnFailureReplication > 0 &&
+          nodes.length - 1 >= dfsClient.dtpReplaceDatanodeOnFailureReplication)) {
+        return false;
+      }
+
       if (!handleBadDatanode()) {
         return false;
       }
 
       handleDatanodeReplacement();
-
-      if (isCreateStage && !checkMinReplicationSatisfied()) {
-        return false;
-      }
 
       // get a new generation stamp and an access token
       final LocatedBlock lb = updateBlockForPipeline();
@@ -1666,11 +1674,6 @@ class DataStreamer extends Daemon {
       updatePipeline(newGS);
     }
     return success;
-  }
-
-  private boolean checkMinReplicationSatisfied() {
-    return dfsClient.dtpReplaceDatanodeOnFailureReplication > 0 &&
-      nodes.length >= dfsClient.dtpReplaceDatanodeOnFailureReplication;
   }
 
   /**
