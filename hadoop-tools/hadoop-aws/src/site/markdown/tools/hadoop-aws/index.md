@@ -590,6 +590,30 @@ obtain the credentials needed to access AWS services in the role the EC2 VM
 was deployed as.
 This AWS credential provider is enabled in S3A by default.
 
+## Custom AWS Credential Providers and Apache Spark
+
+Apache Spark employs two class loaders, one that loads "distribution" (Spark + Hadoop) classes and one that
+loads custom user classes. If the user wants to load custom implementations of AWS credential providers,
+custom signers, delegation token providers or any other dynamically loaded extension class
+through user provided jars she will need to set the following configuration:
+
+```xml
+<property>
+  <name>fs.s3a.classloader.isolation</name>
+  <value>false</value>
+</property>
+<property>
+  <name>fs.s3a.aws.credentials.provider</name>
+  <value>CustomCredentialsProvider</value>
+</property>
+```
+
+If the following property is not set or set to `true`, the following exception will be thrown:
+
+```
+java.io.IOException: From option fs.s3a.aws.credentials.provider java.lang.ClassNotFoundException: Class CustomCredentialsProvider not found
+```
+
 
 ## <a name="hadoop_credential_providers"></a>Storing secrets with Hadoop Credential Providers
 
