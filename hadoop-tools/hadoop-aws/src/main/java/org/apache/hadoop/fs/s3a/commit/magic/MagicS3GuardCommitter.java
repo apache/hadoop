@@ -278,8 +278,12 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
     return pendingSet;
   }
 
-  private List<SinglePendingCommit> loadPendingCommitsFromMemory(TaskAttemptContext context)
-      throws FileNotFoundException {
+  /**
+   * Loads the pending commits from the memory data structure for a given taskAttemptId.
+   * @param context TaskContext
+   * @return list of pending commits
+   */
+  private List<SinglePendingCommit> loadPendingCommitsFromMemory(TaskAttemptContext context) {
     String taskAttemptId = String.valueOf(context.getTaskAttemptID());
     // get all the pending commit metadata associated with the taskAttemptId.
     // This will also remove the entry from the map.

@@ -18,6 +18,15 @@
 
 package org.apache.hadoop.fs.s3a.commit.magic;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+import software.amazon.awssdk.services.s3.model.CompletedPart;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.WriteOperationHelper;
@@ -25,15 +34,7 @@ import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.fs.s3a.statistics.PutTrackerStatistics;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
-import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
-import software.amazon.awssdk.services.s3.model.CompletedPart;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import org.apache.hadoop.util.Preconditions;
 
 import static org.apache.hadoop.fs.s3a.commit.magic.MagicCommitTrackerUtils.extractTaskAttemptIdFromPath;
 

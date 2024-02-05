@@ -52,7 +52,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.Nullable;
 
-import org.apache.hadoop.fs.s3a.commit.magic.InMemoryMagicCommitTracker;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
@@ -118,6 +117,7 @@ import org.apache.hadoop.fs.s3a.audit.AuditSpanS3A;
 import org.apache.hadoop.fs.s3a.auth.SignerManager;
 import org.apache.hadoop.fs.s3a.auth.delegation.DelegationOperations;
 import org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenProvider;
+import org.apache.hadoop.fs.s3a.commit.magic.InMemoryMagicCommitTracker;
 import org.apache.hadoop.fs.s3a.impl.AWSCannedACL;
 import org.apache.hadoop.fs.s3a.impl.AWSHeaders;
 import org.apache.hadoop.fs.s3a.impl.BulkDeleteRetryHandler;

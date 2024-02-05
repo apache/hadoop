@@ -45,6 +45,7 @@ import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.S3AUtils.listAndFilter;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 import static org.apache.hadoop.fs.s3a.commit.impl.CommitUtilsWithMR.getMagicJobPath;
@@ -94,6 +95,7 @@ public class ITestMagicCommitProtocol extends AbstractITCommitProtocol {
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
+    removeBaseAndBucketOverrides(conf, FS_S3A_COMMITTER_MAGIC_TRACK_COMMITS_IN_MEMORY_ENABLED);
     conf.setBoolean(FS_S3A_COMMITTER_MAGIC_TRACK_COMMITS_IN_MEMORY_ENABLED, trackCommitsInMemory);
 
     return conf;
