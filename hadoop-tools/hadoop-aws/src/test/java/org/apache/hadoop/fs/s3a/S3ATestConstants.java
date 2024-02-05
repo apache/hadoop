@@ -116,6 +116,13 @@ public interface S3ATestConstants {
   String DEFAULT_EXTERNAL_FILE = "s3a://noaa-cors-pds/raw/2023/001/akse/AKSE001a.23_.gz";
 
   /**
+   * Default path for the multi MB test file: {@value}.
+   * @deprecated use {@link #DEFAULT_EXTERNAL_FILE}.
+   */
+  @Deprecated
+  String DEFAULT_CSVTEST_FILE = DEFAULT_EXTERNAL_FILE;
+
+  /**
    * Example path for unit tests; this is never accessed: {@value}.
    */
   String UNIT_TEST_EXAMPLE_PATH = "s3a://example/data/";
