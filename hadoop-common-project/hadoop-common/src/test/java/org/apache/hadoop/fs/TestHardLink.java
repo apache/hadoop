@@ -22,6 +22,8 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.FileStore;
+import java.nio.file.Files;
 import java.util.Arrays;
 
 import org.apache.hadoop.test.GenericTestUtils;
@@ -204,6 +206,15 @@ public class TestHardLink {
     char[] result = Arrays.copyOf(buf, cnt);
     return new String(result);
   }
+
+  private boolean supportsHardLink(File f) {
+    try {
+      FileStore store = Files.getFileStore(f.toPath());
+      return store.supportsFileAttributeView("unix");
+    } catch (IOException e) {
+      return false;
+    }
+  }
   
   /**
    * Sanity check the simplest case of HardLink.getLinkCount()
@@ -218,6 +229,16 @@ public class TestHardLink {
     assertEquals(1, getLinkCount(x2));
     assertEquals(1, getLinkCount(x3));
   }
+
+  @Test
+    public void testGetLinkCountFromFileAttribute() throws IOException {
+    assertTrue(supportsHardLink(x1));
+    assertEquals(1, getLinkCount(x1));
+    assertTrue(supportsHardLink(x2));
+    assertEquals(1, getLinkCount(x2));
+    assertTrue(supportsHardLink(x3));
+    assertEquals(1, getLinkCount(x3));
+    }
 
   /**
    * Test the single-file method HardLink.createHardLink().
