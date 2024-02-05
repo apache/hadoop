@@ -90,7 +90,7 @@ public class DefaultS3ClientFactory extends Configured
   protected static final Logger LOG =
       LoggerFactory.getLogger(DefaultS3ClientFactory.class);
 
-  private static final LogExactlyOnce LOG_EXACTLY_ONCE = new LogExactlyOnce(LOG);
+  private static final LogExactlyOnce LOG_S3AG_ENABLED = new LogExactlyOnce(LOG);
 
   /**
    * A one-off warning of default region chains in use.
@@ -117,7 +117,7 @@ public class DefaultS3ClientFactory extends Configured
       "An endpoint cannot set when " + FIPS_ENDPOINT + " is true";
 
   private static final String S3AG_UTIL_CLASSNAME =
-      "org.apache.hadoop.fs.s3a.tools.S3AccessGrantsUtil";
+      "org.apache.hadoop.fs.s3a.impl.S3AccessGrantsUtil";
   @Override
   public S3Client createS3Client(
       final URI uri,
@@ -413,24 +413,25 @@ public class DefaultS3ClientFactory extends Configured
       applyS3AccessGrantsConfigurations(BuilderT builder, Configuration conf) {
     boolean s3agEnabled = conf.getBoolean(AWS_S3_ACCESS_GRANTS_ENABLED, false);
     if (!s3agEnabled){
-      LOG_EXACTLY_ONCE.debug("s3ag plugin is not enabled.");
+      LOG.debug("S3 Access Grants plugin is not enabled.");
       return;
     }
     try {
+      LOG_S3AG_ENABLED.info("S3 Access Grants plugin is enabled.");
       Class s3agUtil = Class.forName(S3AG_UTIL_CLASSNAME);
       Method applyS3agConfig =
           s3agUtil.getMethod("applyS3AccessGrantsConfigurations", S3BaseClientBuilder.class, Configuration.class);
       applyS3agConfig.invoke(null, builder, conf);
     } catch (ClassNotFoundException e) {
-      LOG_EXACTLY_ONCE.debug(
+      LOG.debug(
           "Class {} is not found exception: {}.",
           S3AG_UTIL_CLASSNAME,
           e.getStackTrace()
       );
     } catch (Exception e) {
-      LOG_EXACTLY_ONCE.debug("{} exception: {})", e.getClass(), e.getStackTrace());
+      LOG.debug("{} exception: {})", e.getClass(), e.getStackTrace());
     } catch (NoClassDefFoundError e) {
-      LOG_EXACTLY_ONCE.debug(
+      LOG.debug(
           "Class {} is not found error: ",
           S3AG_UTIL_CLASSNAME,
           e.getStackTrace()

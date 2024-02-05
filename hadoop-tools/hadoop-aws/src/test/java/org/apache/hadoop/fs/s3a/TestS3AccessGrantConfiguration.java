@@ -86,4 +86,5 @@ public class TestS3AccessGrantConfiguration extends AbstractHadoopTestBase {
       assertEquals(builder.plugins().size(), 0);
     }
   }
+
 }
