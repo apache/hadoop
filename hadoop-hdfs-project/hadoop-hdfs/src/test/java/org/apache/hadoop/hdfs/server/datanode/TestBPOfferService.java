@@ -245,7 +245,7 @@ public class TestBPOfferService {
         throws Throwable {
       HeartbeatResponse heartbeatResponse = new HeartbeatResponse(
           datanodeCommands[nnIdx], mockHaStatuses[nnIdx], null,
-          0, isSlownode);
+          0, isSlownode, false);
 
       return heartbeatResponse;
     }

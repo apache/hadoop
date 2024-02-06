@@ -1657,13 +1657,15 @@ public class BlockManager implements BlockStatsMXBean {
     }
   }
 
-  void addKeyUpdateCommand(final List<DatanodeCommand> cmds,
+  boolean addKeyUpdateCommand(final List<DatanodeCommand> cmds,
       final DatanodeDescriptor nodeinfo) {
     // check access key update
     if (isBlockTokenEnabled() && nodeinfo.needKeyUpdate()) {
       cmds.add(new KeyUpdateCommand(blockTokenSecretManager.exportKeys()));
       nodeinfo.setNeedKeyUpdate(false);
+      return true;
     }
+    return false;
   }
   
   public DataEncryptionKey generateDataEncryptionKey() {

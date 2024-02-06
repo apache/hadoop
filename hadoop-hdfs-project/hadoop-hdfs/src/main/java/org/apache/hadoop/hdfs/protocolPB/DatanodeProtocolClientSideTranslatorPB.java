@@ -178,7 +178,7 @@ public class DatanodeProtocolClientSideTranslatorPB implements
     }
     return new HeartbeatResponse(cmds, PBHelper.convert(resp.getHaStatus()),
         rollingUpdateStatus, resp.getFullBlockReportLeaseId(),
-        resp.getIsSlownode());
+        resp.getIsSlownode(), resp.getIsCommandHighPriority());
   }
 
   @Override

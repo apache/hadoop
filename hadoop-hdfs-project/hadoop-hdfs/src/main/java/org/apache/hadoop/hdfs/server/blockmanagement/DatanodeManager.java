@@ -71,6 +71,7 @@ import java.net.UnknownHostException;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 /**
@@ -1813,7 +1814,8 @@ public class DatanodeManager {
       int xmitsInProgress, int failedVolumes,
       VolumeFailureSummary volumeFailureSummary,
       @Nonnull SlowPeerReports slowPeers,
-      @Nonnull SlowDiskReports slowDisks) throws IOException {
+      @Nonnull SlowDiskReports slowDisks,
+      AtomicBoolean containsHighPriorityCmd) throws IOException {
     final DatanodeDescriptor nodeinfo;
     try {
       nodeinfo = getDatanode(nodeReg);
@@ -1922,7 +1924,8 @@ public class DatanodeManager {
     // cache commands
     addCacheCommands(blockPoolId, nodeinfo, cmds);
     // key update command
-    blockManager.addKeyUpdateCommand(cmds, nodeinfo);
+    boolean isKeyUpdated = blockManager.addKeyUpdateCommand(cmds, nodeinfo);
+    containsHighPriorityCmd.set(isKeyUpdated);
 
     // check for balancer bandwidth update
     if (nodeinfo.getBalancerBandwidth() > 0) {

@@ -97,6 +97,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DIFF_LI
 import static org.apache.hadoop.hdfs.DFSUtil.isParentEntry;
 
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.text.CaseUtils;
@@ -4429,11 +4430,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           throws IOException {
     readLock();
     try {
+      AtomicBoolean containsHighPriorityCmd = new AtomicBoolean(false);
       //get datanode commands
       DatanodeCommand[] cmds = blockManager.getDatanodeManager().handleHeartbeat(
           nodeReg, reports, getBlockPoolId(), cacheCapacity, cacheUsed,
           xceiverCount, xmitsInProgress, failedVolumes, volumeFailureSummary,
-          slowPeers, slowDisks);
+          slowPeers, slowDisks, containsHighPriorityCmd);
       long blockReportLeaseId = 0;
       if (requestFullBlockReportLease) {
         blockReportLeaseId =  blockManager.requestBlockReportLeaseId(nodeReg);
@@ -4448,7 +4450,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       boolean isSlownode = slownodes.contains(nodeReg.getDatanodeUuid());
 
       return new HeartbeatResponse(cmds, haState, rollingUpgradeInfo,
-          blockReportLeaseId, isSlownode);
+          blockReportLeaseId, isSlownode, containsHighPriorityCmd.get());
     } finally {
       readUnlock("handleHeartbeat");
     }

@@ -36,7 +36,7 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -738,7 +738,8 @@ class BPServiceActor implements Runnable {
             if (state == HAServiceState.ACTIVE) {
               handleRollingUpgradeStatus(resp);
             }
-            commandProcessingThread.enqueue(resp.getCommands());
+            commandProcessingThread.enqueue(resp.getCommands(),
+                resp.getIsContainsHighPriorityCmds());
             isSlownode = resp.getIsSlownode();
           }
         }
@@ -1389,7 +1390,7 @@ class BPServiceActor implements Runnable {
     CommandProcessingThread(BPServiceActor actor) {
       super("Command processor");
       this.actor = actor;
-      this.queue = new LinkedBlockingQueue<>();
+      this.queue = new LinkedBlockingDeque<>();
       setDaemon(true);
     }
 
@@ -1468,6 +1469,11 @@ class BPServiceActor implements Runnable {
       return true;
     }
 
+    /**
+     * Only used for cacheReport.
+     * @param cmd
+     * @throws InterruptedException
+     */
     void enqueue(DatanodeCommand cmd) throws InterruptedException {
       if (cmd == null) {
         return;
@@ -1476,6 +1482,11 @@ class BPServiceActor implements Runnable {
       dn.getMetrics().incrActorCmdQueueLength(1);
     }
 
+    /**
+     * Used for blockReport.
+     * @param cmds
+     * @throws InterruptedException
+     */
     void enqueue(List<DatanodeCommand> cmds) throws InterruptedException {
       if (cmds == null) {
         return;
@@ -1485,8 +1496,18 @@ class BPServiceActor implements Runnable {
       dn.getMetrics().incrActorCmdQueueLength(1);
     }
 
-    void enqueue(DatanodeCommand[] cmds) throws InterruptedException {
-      queue.put(() -> processCommand(cmds));
+    /**
+     * Used for heartbeating.
+     * @param cmds
+     * @throws InterruptedException
+     */
+    void enqueue(DatanodeCommand[] cmds,
+        boolean containsHighPriorityCmds) throws InterruptedException {
+      if (containsHighPriorityCmds) {
+        ((LinkedBlockingDeque<Runnable>) queue).putFirst(() -> processCommand(cmds));
+      } else {
+        queue.put(() -> processCommand(cmds));
+      }
       dn.getMetrics().incrActorCmdQueueLength(1);
     }
   }

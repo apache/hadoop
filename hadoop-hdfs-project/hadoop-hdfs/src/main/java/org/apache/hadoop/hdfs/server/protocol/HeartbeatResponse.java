@@ -38,21 +38,24 @@ public class HeartbeatResponse {
   private final long fullBlockReportLeaseId;
 
   private final boolean isSlownode;
+  
+  private final boolean containsHighPriorityCmds;
 
   public HeartbeatResponse(DatanodeCommand[] cmds,
       NNHAStatusHeartbeat haStatus, RollingUpgradeStatus rollingUpdateStatus,
       long fullBlockReportLeaseId) {
-    this(cmds, haStatus, rollingUpdateStatus, fullBlockReportLeaseId, false);
+    this(cmds, haStatus, rollingUpdateStatus, fullBlockReportLeaseId, false, false);
   }
 
   public HeartbeatResponse(DatanodeCommand[] cmds,
       NNHAStatusHeartbeat haStatus, RollingUpgradeStatus rollingUpdateStatus,
-      long fullBlockReportLeaseId, boolean isSlownode) {
+      long fullBlockReportLeaseId, boolean isSlownode, boolean containsHighPriorityCmds) {
     commands = cmds;
     this.haStatus = haStatus;
     this.rollingUpdateStatus = rollingUpdateStatus;
     this.fullBlockReportLeaseId = fullBlockReportLeaseId;
     this.isSlownode = isSlownode;
+    this.containsHighPriorityCmds = containsHighPriorityCmds;
   }
   
   public DatanodeCommand[] getCommands() {
@@ -73,5 +76,9 @@ public class HeartbeatResponse {
 
   public boolean getIsSlownode() {
     return isSlownode;
+  }
+
+  public boolean getIsContainsHighPriorityCmds() {
+    return containsHighPriorityCmds;
   }
 }

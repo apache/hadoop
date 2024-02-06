@@ -35,6 +35,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1039,7 +1040,7 @@ public class TestDatanodeManager {
     Mockito.when(dm.getDatanode(dnReg)).thenReturn(nodeInfo);
     DatanodeCommand[] cmds = dm.handleHeartbeat(
         dnReg, new StorageReport[1], "bp-123", 0, 0, 10, 0, 0, null,
-        SlowPeerReports.EMPTY_REPORT, SlowDiskReports.EMPTY_REPORT);
+        SlowPeerReports.EMPTY_REPORT, SlowDiskReports.EMPTY_REPORT, new AtomicBoolean(false));
 
     long expectedNumCmds = Arrays.stream(
         new int[]{numReplicationTasks + numECTasksToBeReplicated, numECTasksToBeErasureCoded})
@@ -1171,7 +1172,7 @@ public class TestDatanodeManager {
 
     dm.handleHeartbeat(nodeReg, new StorageReport[1], "bp-123", 0, 0,
         10, xmitsInProgress, 0, null, SlowPeerReports.EMPTY_REPORT,
-        SlowDiskReports.EMPTY_REPORT);
+        SlowDiskReports.EMPTY_REPORT, new AtomicBoolean(false));
 
     Mockito.verify(nodeInfo).getReplicationCommand(captor.capture());
     int numReplicationTasks = captor.getValue();
