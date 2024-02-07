@@ -24,10 +24,10 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
-import org.apache.hadoop.fs.s3a.S3ATestConstants;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentialBinding;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
+import org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
@@ -48,7 +48,7 @@ public class TestS3ADelegationTokenSupport {
 
   @BeforeClass
   public static void classSetup() throws Exception {
-    externalUri = new URI(S3ATestConstants.DEFAULT_EXTERNAL_FILE);
+    externalUri = new URI(PublicDatasetTestUtils.DEFAULT_EXTERNAL_FILE);
   }
 
   @Test

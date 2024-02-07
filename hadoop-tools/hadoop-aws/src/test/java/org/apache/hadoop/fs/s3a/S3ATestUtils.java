@@ -105,6 +105,8 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletion;
 import static org.apache.hadoop.fs.s3a.impl.S3ExpressStorage.STORE_CAPABILITY_S3_EXPRESS_STORAGE;
+import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.getExternalData;
+import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.requireDefaultExternalDataFile;
 import static org.apache.hadoop.test.GenericTestUtils.buildPaths;
 import static org.apache.hadoop.util.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CREDENTIAL_PROVIDER_PATH;
@@ -402,50 +404,50 @@ public final class S3ATestUtils {
   }
 
   /**
-   * Get the trimmed external test file option; assume() that it is not empty.
+   * Get the test CSV file; assume() that it is not empty.
    * @param conf test configuration
    * @return test file.
+   * @deprecated Retained only to assist cherrypicking patches
    */
-  public static String getExternalTestFile(Configuration conf) {
-    String filename = conf
-        .getTrimmed(KEY_CSVTEST_FILE, DEFAULT_EXTERNAL_FILE);
-    Assume.assumeTrue("External test file is not the default",
-        isNotEmpty(filename));
-    return filename;
+  @Deprecated
+  public static String getCSVTestFile(Configuration conf) {
+    return getExternalData(conf).toUri().toString();
   }
 
   /**
-   * Get the trimmed external test file option; assume() that it is not empty.
+   * Get the test CSV path; assume() that it is not empty.
    * @param conf test configuration
    * @return test file as a path.
+   * @deprecated Retained only to assist cherrypicking patches
    */
-  public static Path getExternalTestPath(Configuration conf) {
-    return new Path(getExternalTestFile(conf));
+  @Deprecated
+  public static Path getCSVTestPath(Configuration conf) {
+    return getExternalData(conf);
   }
 
   /**
-   * Get the external test file; assume() that it is not modified (i.e. we haven't
+   * Get the test CSV file; assume() that it is not modified (i.e. we haven't
    * switched to a new storage infrastructure where the bucket is no longer
    * read only).
    * @return test file.
    * @param conf test configuration
+   * @deprecated Retained only to assist cherrypicking patches
    */
-  public static String requireDefaultExternalTestFile(Configuration conf) {
-    String filename = getExternalTestFile(conf);
-    Assume.assumeTrue("External test file is not the default",
-        DEFAULT_EXTERNAL_FILE.equals(filename));
-    return filename;
+  @Deprecated
+  public static String getLandsatCSVFile(Configuration conf) {
+    return requireDefaultExternalDataFile(conf);
   }
-
   /**
-   * Get the test external file; assume() that it is not modified (i.e. we haven't
+   * Get the test CSV file; assume() that it is not modified (i.e. we haven't
    * switched to a new storage infrastructure where the bucket is no longer
    * read only).
    * @param conf test configuration
    * @return test file as a path.
+   * @deprecated Retained only to assist cherrypicking patches
    */
-  public static Path requireExternalFileAsPath(Configuration conf) {
-    return new Path(requireDefaultExternalTestFile(conf));
+  @Deprecated
+  public static Path getLandsatCSVPath(Configuration conf) {
+    return getExternalData(conf);
   }
 
   /**

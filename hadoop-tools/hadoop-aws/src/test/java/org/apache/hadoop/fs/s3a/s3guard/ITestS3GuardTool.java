@@ -29,8 +29,10 @@ import java.util.List;
 
 import org.junit.Test;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.StringUtils;
 
@@ -42,7 +44,6 @@ import static org.apache.hadoop.fs.s3a.MultipartTestUtils.clearAnyUploads;
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.countUploadsAt;
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.createPartUpload;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.requireExternalFileAsPath;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.BucketInfo;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.E_BAD_STATE;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.Uploads;
@@ -71,7 +72,9 @@ public class ITestS3GuardTool extends AbstractS3GuardToolTestBase {
    * @return the bucket of the default external file.
    */
   private String externalBucket() {
-    final URI uri = requireExternalFileAsPath(getConfiguration()).toUri();
+    Configuration conf = getConfiguration();
+    Path result = PublicDatasetTestUtils.requireDefaultExternalData(conf);
+    final URI uri = result.toUri();
     final String bucket = uri.getScheme() + "://" + uri.getHost();
     return bucket;
   }

@@ -45,8 +45,8 @@ import java.util.stream.Collectors;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.createFiles;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.isBulkDeleteEnabled;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.requireExternalFileAsPath;
 import static org.apache.hadoop.fs.s3a.test.ExtraAssertions.failIf;
+import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.requireDefaultExternalData;
 import static org.apache.hadoop.test.LambdaTestUtils.*;
 import static org.apache.hadoop.util.functional.RemoteIterators.mappingRemoteIterator;
 import static org.apache.hadoop.util.functional.RemoteIterators.toList;
@@ -156,18 +156,13 @@ public class ITestS3AFailureHandling extends AbstractS3ATestBase {
     timer.end("removeKeys");
   }
 
-
-  private Path maybeGetExternalPath() {
-    return requireExternalFileAsPath(getConfiguration());
-  }
-
   /**
    * Test low-level failure handling with low level delete request.
    */
   @Test
   public void testMultiObjectDeleteNoPermissions() throws Throwable {
     describe("Delete the external file and expect it to fail");
-    Path path = maybeGetExternalPath();
+    Path path = requireDefaultExternalData(getConfiguration());
     S3AFileSystem fs = (S3AFileSystem) path.getFileSystem(
         getConfiguration());
     // create a span, expect it to be activated.
@@ -202,7 +197,7 @@ public class ITestS3AFailureHandling extends AbstractS3ATestBase {
   @Test
   public void testSingleObjectDeleteNoPermissionsTranslated() throws Throwable {
     describe("Delete the external file and expect it to fail");
-    Path path = maybeGetExternalPath();
+    Path path = requireDefaultExternalData(getConfiguration());
     S3AFileSystem fs = (S3AFileSystem) path.getFileSystem(
         getConfiguration());
     AccessDeniedException aex = intercept(AccessDeniedException.class,

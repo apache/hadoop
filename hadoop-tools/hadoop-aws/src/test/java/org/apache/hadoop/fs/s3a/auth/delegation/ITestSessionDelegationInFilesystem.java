@@ -79,6 +79,7 @@ import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenIOExceptio
 import static org.apache.hadoop.fs.s3a.auth.delegation.MiniKerberizedHadoopCluster.ALICE;
 import static org.apache.hadoop.fs.s3a.auth.delegation.MiniKerberizedHadoopCluster.assertSecurityEnabled;
 import static org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens.lookupS3ADelegationToken;
+import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.requireAnonymousDataPath;
 import static org.apache.hadoop.test.LambdaTestUtils.doAs;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.hamcrest.Matchers.containsString;
@@ -595,7 +596,7 @@ public class ITestSessionDelegationInFilesystem extends AbstractDelegationIT {
     AWSCredentialProviderList testingCreds
         = delegatedFS.getS3AInternals().shareCredentials("testing");
 
-    URI external = new URI(DEFAULT_EXTERNAL_FILE);
+    URI external = requireAnonymousDataPath(getConfiguration()).toUri();
     DefaultS3ClientFactory factory
         = new DefaultS3ClientFactory();
     Configuration conf = delegatedFS.getConf();

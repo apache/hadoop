@@ -40,12 +40,18 @@
     The original file s3a://landsat-pds/scene_list.gz is
     on a now-inaccessible bucket.
   -->
+<!--
+  This is defined in PublicDatasetTestUtils;
+  if needed for older builds, this can copied into
+  auth-keys along with the other bucket binding information,
+  which is all exclusively defined here.
 
   <property>
     <name>fs.s3a.scale.test.csvfile</name>
     <value>s3a://noaa-cors-pds/raw/2024/001/akse/AKSE001x.24_.gz</value>
     <description>file used in scale tests</description>
   </property>
+-->
 
   <property>
     <name>fs.s3a.bucket.noaa-cors-pds.endpoint.region</name>

@@ -194,7 +194,7 @@ public class CompressionCodecFactory {
    * Find the relevant compression codec for the given file based on its
    * filename suffix.
    * @param file the filename to check
-   * @return the codec object or null if no matching codec is found.
+   * @return the codec object
    */
   public CompressionCodec getCodec(Path file) {
     CompressionCodec result = null;

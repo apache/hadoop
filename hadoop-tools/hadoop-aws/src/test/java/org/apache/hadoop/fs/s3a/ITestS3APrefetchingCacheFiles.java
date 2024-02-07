@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.s3a.performance.AbstractS3ACostTest;
 import static org.apache.hadoop.fs.s3a.Constants.BUFFER_DIR;
 import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_BLOCK_SIZE_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_ENABLED_KEY;
+import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.getExternalData;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 
 /**
@@ -75,7 +76,7 @@ public class ITestS3APrefetchingCacheFiles extends AbstractS3ACostTest {
     // Sets BUFFER_DIR by calling S3ATestUtils#prepareTestConfiguration
     conf = createConfiguration();
 
-    testFile = S3ATestUtils.getExternalTestPath(conf);
+    testFile = getExternalData(conf);
     prefetchBlockSize = conf.getInt(PREFETCH_BLOCK_SIZE_KEY, BLOCK_SIZE);
     fs = FileSystem.get(testFile.toUri(), conf);
   }

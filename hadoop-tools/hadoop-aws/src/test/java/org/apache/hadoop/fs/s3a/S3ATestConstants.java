@@ -111,16 +111,11 @@ public interface S3ATestConstants {
   String KEY_CSVTEST_FILE = S3A_SCALE_TEST + "csvfile";
 
   /**
-   * Default path for the external test file: {@value}.
-   */
-  String DEFAULT_EXTERNAL_FILE = "s3a://noaa-cors-pds/raw/2023/001/akse/AKSE001a.23_.gz";
-
-  /**
    * Default path for the multi MB test file: {@value}.
-   * @deprecated use {@link #DEFAULT_EXTERNAL_FILE}.
+   * @deprecated retrieve via {@link PublicDatasetTestUtils}.
    */
   @Deprecated
-  String DEFAULT_CSVTEST_FILE = DEFAULT_EXTERNAL_FILE;
+  String DEFAULT_CSVTEST_FILE = PublicDatasetTestUtils.DEFAULT_EXTERNAL_FILE;
 
   /**
    * Example path for unit tests; this is never accessed: {@value}.
