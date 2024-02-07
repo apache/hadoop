@@ -895,7 +895,7 @@ protected Configuration createConfiguration() {
   Configuration conf = super.createConfiguration();
   S3ATestUtils.disableFilesystemCaching(conf);
   removeBaseAndBucketOverrides(conf,
-      SERVER_SIDE_ENCRYPTION_ALGORITHM);  
+      SERVER_SIDE_ENCRYPTION_ALGORITHM);
   conf.set(Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM,
           getSSEAlgorithm().getMethod());
   return conf;
