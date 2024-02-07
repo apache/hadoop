@@ -35,7 +35,7 @@
     <is.hadoop.common.component>true</is.hadoop.common.component>
     <wsce.config.dir>../etc/hadoop</wsce.config.dir>
     <wsce.config.file>wsce-site.xml</wsce.config.file>
-    <logredactor.version>2.0.14</logredactor.version>
+    <logredactor.version>2.0.16</logredactor.version>
   </properties>
 
   <dependencies>
@@ -422,16 +422,6 @@
       <version>${logredactor.version}</version>
       <scope>runtime</scope>
       <optional>true</optional>
-      <exclusions>
-        <exclusion>
-          <groupId>org.apache.logging.log4j</groupId>
-          <artifactId>log4j-api</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.apache.logging.log4j</groupId>
-          <artifactId>log4j-core</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
   </dependencies>
 
