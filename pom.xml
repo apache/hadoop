@@ -53,11 +53,6 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
 
   <repositories>
     <repository>
-      <id>apache-staging</id>
-      <name>Apache Development Staging Repository</name>
-      <url>https://repository.apache.org/content/groups/staging</url>
-    </repository>
-    <repository>
       <id>${distMgmtSnapshotsId}</id>
       <name>${distMgmtSnapshotsName}</name>
       <url>${distMgmtSnapshotsUrl}</url>
