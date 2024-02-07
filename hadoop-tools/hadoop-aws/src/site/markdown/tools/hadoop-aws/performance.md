@@ -231,7 +231,7 @@ The choice is yours. Generally recovery is better, but sometimes fail-fast is mo
 | `fs.s3a.connection.acquisition.timeout` | `60s`   | `*` | Timeout for waiting for a connection from the pool.   |
 | `fs.s3a.connection.establish.timeout`   | `30s`   |     | Time to establish the TCP/TLS connection              |
 | `fs.s3a.connection.idle.time`           | `60s`   | `*` | Maximum time for idle HTTP connections in the pool    |
-| `fs.s3a.connection.request.timeout`     | `0`     |     | If greater than zero, maximum duration of any request |
+| `fs.s3a.connection.request.timeout`     | `60s`   |     | If greater than zero, maximum time for a response     |
 | `fs.s3a.connection.timeout`             | `200s`  |     | Timeout for socket problems on a TCP channel          |
 | `fs.s3a.connection.ttl`                 | `5m`    |     | Lifetime of HTTP connections from the pool            |
 
