@@ -160,7 +160,7 @@ public class NativeAzureFileSystem extends FileSystem {
 
       // open redo file
       Path f = redoFile;
-	  int l;
+      int l;
       byte[] bytes;
       try (FSDataInputStream input = fs.open(f)) {
         bytes = new byte[MAX_RENAME_PENDING_FILE_SIZE];
