@@ -202,11 +202,6 @@
   </property>
 
   <property>
-    <name>fs.s3a.connection.request.timeout</name>
-    <value>10s</value>
-  </property>
-
-  <property>
     <name>fs.s3a.attempts.maximum</name>
     <value>1</value>
     <description>How many times should the SDK retry commands on (probably) transient errors.</description>

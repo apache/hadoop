@@ -40,6 +40,7 @@ import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_CONNECTION_KEEPALIVE;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_CONNECTION_TTL_DURATION;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_ESTABLISH_TIMEOUT_DURATION;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_MAXIMUM_CONNECTIONS;
+import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_REQUEST_TIMEOUT_DURATION;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_SOCKET_TIMEOUT_DURATION;
 import static org.apache.hadoop.fs.s3a.Constants.ESTABLISH_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.MAXIMUM_CONNECTIONS;
@@ -174,6 +175,21 @@ public class TestAwsClientConfig extends AbstractHadoopTestBase {
     Assertions.assertThat(settings.getApiCallTimeout())
         .describedAs("%s in %s", REQUEST_TIMEOUT, settings)
         .isEqualTo(Duration.ofHours(1));
+  }
+  /**
+   * Verify that the timeout from {@link org.apache.hadoop.fs.s3a.Constants#DEFAULT_REQUEST_TIMEOUT_DURATION}
+   * makes it all the way through and that nothing in in core-default or core-site is setting it.
+   * This test will fail if someone does set it in core-site.xml
+   */
+  @Test
+  public void testCreateApiConnectionSettingsDefault() {
+    final Configuration conf = new Configuration();
+    Assertions.assertThat(conf.get(REQUEST_TIMEOUT))
+        .describedAs("Request timeout %s", REQUEST_TIMEOUT)
+        .isNull();
+
+    assertDuration(REQUEST_TIMEOUT, DEFAULT_REQUEST_TIMEOUT_DURATION,
+        createApiConnectionSettings(conf).getApiCallTimeout());
   }
 
   /**
