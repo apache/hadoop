@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.TreeMap;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -49,7 +50,6 @@ import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.ResourceNotFoundException;
 import org.apache.hadoop.yarn.metrics.CustomResourceMetricValue;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
@@ -202,6 +202,8 @@ public class QueueMetrics implements MetricsSource {
     "Aggregate Preempted Seconds for NAME";
   protected Set<String> storedPartitionMetrics = Sets.newConcurrentHashSet();
 
+  ReentrantReadWriteLock.WriteLock containerAskToCountWriteLock;
+
   public QueueMetrics(MetricsSystem ms, String queueName, Queue parent,
       boolean enableUserMetrics, Configuration conf) {
 
@@ -222,6 +224,8 @@ public class QueueMetrics implements MetricsSource {
     runningTime = buildBuckets(conf);
 
     createQueueMetricsForCustomResources();
+    ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+    containerAskToCountWriteLock = lock.writeLock();
   }
 
   protected QueueMetrics tag(MetricsInfo info, String value) {
@@ -772,8 +776,16 @@ public class QueueMetrics implements MetricsSource {
           queueMetricsForCustomResources.getPendingValues(), this.registry,
           PENDING_RESOURCE_METRIC_PREFIX, PENDING_RESOURCE_METRIC_DESC);
     }
-    containerAskToCount.put(res,
-        containerAskToCount.getOrDefault(res, 0) + containers);
+    containerAskToCountWriteLock.lock();
+    try {
+      LOG.debug(
+          "Increase containerAskToCount, resource: {}, containers: {}, containerAskToCount: {}",
+          res, containers, containerAskToCount);
+      containerAskToCount.put(res,
+          containerAskToCount.getOrDefault(res, 0) + containers);
+    } finally {
+      containerAskToCountWriteLock.unlock();
+    }
   }
 
   public void decrPendingResources(String partition, String user,
@@ -817,12 +829,20 @@ public class QueueMetrics implements MetricsSource {
           queueMetricsForCustomResources.getPendingValues(), this.registry,
           PENDING_RESOURCE_METRIC_PREFIX, PENDING_RESOURCE_METRIC_DESC);
     }
-    int c = containerAskToCount.getOrDefault(res, 0);
-    int remaining = c - containers;
-    if(c == 0 || remaining <= 0) {
-      containerAskToCount.remove(res);
-    } else {
-      containerAskToCount.put(res, remaining);
+    containerAskToCountWriteLock.lock();
+    try {
+      LOG.debug(
+          "Decrease containerAskToCount, resource: {}, containers: {}, containerAskToCount: {}",
+          res, containers, containerAskToCount);
+      int c = containerAskToCount.getOrDefault(res, 0);
+      int remaining = c - containers;
+      if (c == 0 || remaining <= 0) {
+        containerAskToCount.remove(res);
+      } else {
+        containerAskToCount.put(res, remaining);
+      }
+    } finally {
+      containerAskToCountWriteLock.unlock();
     }
   }
 
