@@ -1510,7 +1510,7 @@ It is possible to configure a global timeout for AWS service calls using followi
 ```xml
 <property>
   <name>fs.s3a.connection.request.timeout</name>
-  <value>0</value>
+  <value>5m</value>
   <description>
     Time out on HTTP requests to the AWS service; 0 means no timeout.
     Measured in seconds; the usual time suffixes are all supported

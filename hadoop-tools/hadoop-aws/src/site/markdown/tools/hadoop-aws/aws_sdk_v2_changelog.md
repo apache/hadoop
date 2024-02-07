@@ -83,8 +83,8 @@ The table below lists the configurations S3A was using and what they now map to.
 
 Previously, if no endpoint and region was configured, fall back to using us-east-1. Set
 withForceGlobalBucketAccessEnabled(true) which will allow access to buckets not in this region too.
-Since the SDK V2 no longer supports cross region access, we need to set the region and endpoint of
-the bucket. The behaviour has now been changed to:
+Since the SDK V2 no longer supports cross region access, we need to set the region and
+endpoint of the bucket. The behaviour has now been changed to:
 
 * If no endpoint is specified, use s3.amazonaws.com.
 * When setting the endpoint, also set the protocol (HTTP or HTTPS)

@@ -34,6 +34,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 
 /**
  * This tests basic operations of {@link FileSystemStorageStatistics} class.
@@ -100,6 +101,14 @@ public class TestFileSystemStorageStatistics {
           key, expectedStat, storageStat);
       assertEquals(expectedStat, storageStat);
     }
+  }
+
+  @Test
+  public void testStatisticsDataReferenceCleanerClassLoader() {
+    Thread thread = Thread.getAllStackTraces().keySet().stream()
+        .filter(t -> t.getName().contains("StatisticsDataReferenceCleaner")).findFirst().get();
+    ClassLoader classLoader = thread.getContextClassLoader();
+    assertNull(classLoader);
   }
 
   /**
