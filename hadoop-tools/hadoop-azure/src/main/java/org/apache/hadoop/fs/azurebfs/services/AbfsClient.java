@@ -34,6 +34,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.utils.NamespaceUtil;
 import org.apache.hadoop.fs.store.LogExactlyOnce;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.Permissions;
@@ -309,6 +310,8 @@ public class AbfsClient implements Closeable {
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = new AbfsUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE, FILESYSTEM);
+    // appending SAS Token to query
+    appendSASTokenToQuery(ROOT_PATH, "", abfsUriQueryBuilder);
 
     final URL url = createRequestUrl(abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = getAbfsRestOperation(
@@ -331,6 +334,8 @@ public class AbfsClient implements Closeable {
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE, FILESYSTEM);
+    // appending SAS Token to query
+    appendSASTokenToQuery(ROOT_PATH, "", abfsUriQueryBuilder);
 
     final URL url = createRequestUrl(abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = getAbfsRestOperation(
@@ -371,6 +376,8 @@ public class AbfsClient implements Closeable {
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE, FILESYSTEM);
+    // appending SAS Token to query
+    appendSASTokenToQuery(ROOT_PATH, "", abfsUriQueryBuilder);
 
     final URL url = createRequestUrl(abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = getAbfsRestOperation(
@@ -387,6 +394,8 @@ public class AbfsClient implements Closeable {
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE, FILESYSTEM);
+    // appending SAS Token to query
+    appendSASTokenToQuery(ROOT_PATH, "", abfsUriQueryBuilder);
 
     final URL url = createRequestUrl(abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = getAbfsRestOperation(
@@ -1285,6 +1294,14 @@ public class AbfsClient implements Closeable {
     return directory;
   }
 
+  private String chooseSASToken(String operation, String path) throws IOException {
+    // chooses the SAS token provider class if it is configured, otherwise reads the configured fixed token
+    if (sasTokenProvider == null) {
+      return abfsConfiguration.get(ConfigurationKeys.FS_AZURE_SAS_FIXED_TOKEN);
+    }
+    return sasTokenProvider.getSASToken(this.accountName, this.filesystem, path, operation);
+  }
+
   /**
    * If configured for SAS AuthType, appends SAS token to queryBuilder.
    * @param path
@@ -1316,8 +1333,7 @@ public class AbfsClient implements Closeable {
       try {
         LOG.trace("Fetch SAS token for {} on {}", operation, path);
         if (cachedSasToken == null) {
-          sasToken = sasTokenProvider.getSASToken(this.accountName,
-              this.filesystem, path, operation);
+          sasToken = chooseSASToken(operation, path);
           if ((sasToken == null) || sasToken.isEmpty()) {
             throw new UnsupportedOperationException("SASToken received is empty or null");
           }
