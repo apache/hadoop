@@ -614,7 +614,8 @@ public class RequestFactoryImpl implements RequestFactory {
     final ListObjectsV2Request.Builder requestBuilder = ListObjectsV2Request.builder()
         .bucket(bucket)
         .maxKeys(maxKeys)
-        .optionalObjectAttributes(OptionalObjectAttributes.RESTORE_STATUS) // Optional Attribute to get the Restored Status of the Glacier Objects
+        // Optional Attribute to get the Restored Status of the Glacier Objects
+        .optionalObjectAttributes(OptionalObjectAttributes.RESTORE_STATUS)
         .prefix(key);
 
     if (delimiter != null) {

@@ -27,11 +27,16 @@ import software.amazon.awssdk.services.s3.model.S3Object;
 
 /**
  * <pre>
- * {@link S3ObjectStorageClassFilter} will filter the S3 files based on the {@code fs.s3a.glacier.read.restored.objects} configuration set in {@link S3AFileSystem}
+ * {@link S3ObjectStorageClassFilter} will filter the S3 files based on the
+ * {@code fs.s3a.glacier.read.restored.objects} configuration set in {@link S3AFileSystem}
  * The config can have 3 values:
- * {@code READ_ALL}: Retrieval of Glacier files will fail with InvalidObjectStateException: The operation is not valid for the object's storage class.
- * {@code SKIP_ALL_GLACIER}: If this value is set then this will ignore any S3 Objects which are tagged with Glacier storage classes and retrieve the others.
- * {@code READ_RESTORED_GLACIER_OBJECTS}: If this value is set then restored status of the Glacier object will be checked, if restored the objects would be read like normal S3 objects else they will be ignored as the objects would not have been retrieved from the S3 Glacier.
+ * {@code READ_ALL}: Retrieval of Glacier files will fail with InvalidObjectStateException:
+ * The operation is not valid for the object's storage class.
+ * {@code SKIP_ALL_GLACIER}: If this value is set then this will ignore any S3 Objects which are
+ * tagged with Glacier storage classes and retrieve the others.
+ * {@code READ_RESTORED_GLACIER_OBJECTS}: If this value is set then restored status of the Glacier
+ * object will be checked, if restored the objects would be read like normal S3 objects
+ * else they will be ignored as the objects would not have been retrieved from the S3 Glacier.
  * </pre>
  */
 public enum S3ObjectStorageClassFilter {
@@ -39,7 +44,8 @@ public enum S3ObjectStorageClassFilter {
   SKIP_ALL_GLACIER(S3ObjectStorageClassFilter::isNotGlacierObject),
   READ_RESTORED_GLACIER_OBJECTS(S3ObjectStorageClassFilter::isCompletedRestoredObject);
 
-  private static final Set<ObjectStorageClass> GLACIER_STORAGE_CLASSES = Sets.newHashSet(ObjectStorageClass.GLACIER, ObjectStorageClass.DEEP_ARCHIVE);
+  private static final Set<ObjectStorageClass> GLACIER_STORAGE_CLASSES = Sets.newHashSet(
+      ObjectStorageClass.GLACIER, ObjectStorageClass.DEEP_ARCHIVE);
 
   private final Function<S3Object, Boolean> filter;
 
@@ -48,7 +54,7 @@ public enum S3ObjectStorageClassFilter {
   }
 
   /**
-   * Checks if the s3 object is not an object with a storage class of glacier/deep_archive
+   * Checks if the s3 object is not an object with a storage class of glacier/deep_archive.
    * @param object s3 object
    * @return if the s3 object is not an object with a storage class of glacier/deep_archive
    */
@@ -57,7 +63,7 @@ public enum S3ObjectStorageClassFilter {
   }
 
   /**
-   * Checks if the s3 object is an object with a storage class of glacier/deep_archive
+   * Checks if the s3 object is an object with a storage class of glacier/deep_archive.
    * @param object s3 object
    * @return if the s3 object is an object with a storage class of glacier/deep_archive
    */
@@ -66,7 +72,7 @@ public enum S3ObjectStorageClassFilter {
   }
 
   /**
-   * Checks if the s3 object is completely restored
+   * Checks if the s3 object is completely restored.
    * @param object s3 object
    * @return if the s3 object is completely restored
    */

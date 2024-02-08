@@ -417,7 +417,8 @@ public class StoreContext implements ActiveThreadSpanSource<AuditSpan> {
   }
 
   /**
-   * Return the S3ObjectStorageClassFilter object for S3A, whose value is set according to the config {@code fs.s3a.glacier.read.restored.objects}
+   * Return the S3ObjectStorageClassFilter object for S3A,
+   * whose value is set according to the config {@code fs.s3a.glacier.read.restored.objects}.
    * @return  {@link S3ObjectStorageClassFilter} object
    */
   public S3ObjectStorageClassFilter getS3ObjectsStorageClassFilter() {
