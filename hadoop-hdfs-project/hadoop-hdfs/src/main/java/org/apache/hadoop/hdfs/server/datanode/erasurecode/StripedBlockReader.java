@@ -150,9 +150,9 @@ class StripedBlockReader {
     final int socketTimeout = datanode.getDnConf().getSocketTimeout();
     try {
       sock = NetUtils.getDefaultSocketFactory(conf).createSocket();
+      NetUtils.connect(sock, addr, socketTimeout);
       sock.setSoTimeout(socketTimeout * 3);
       sock.setKeepAlive(true);
-      NetUtils.connect(sock, addr, socketTimeout);
       peer = DFSUtilClient.peerFromSocketAndKey(datanode.getSaslClient(),
           sock, datanode.getDataEncryptionKeyFactoryForBlock(b),
           blockToken, datanodeId, socketTimeout);
