@@ -67,8 +67,8 @@ public class ITestS3AReadRestoredGlacierObjects extends AbstractS3ATestBase {
     });
   }
 
-  private final int MAX_RETRIES = 100;
-  private final int RETRY_DELAY_MS = 5000;
+  private final int maxRetries = 100;
+  private final int retryDelayMs = 5000;
 
   private final Type type;
   private final String glacierClass;
@@ -81,7 +81,8 @@ public class ITestS3AReadRestoredGlacierObjects extends AbstractS3ATestBase {
   private FileSystem createFiles(String s3ObjectStorageClassFilter) throws Throwable {
     Configuration conf = this.createConfiguration();
     conf.set(READ_RESTORED_GLACIER_OBJECTS, s3ObjectStorageClassFilter);
-    conf.set(STORAGE_CLASS, glacierClass); // Create Glacier objects:Storage Class:DEEP_ARCHIVE/GLACIER
+    // Create Glacier objects:Storage Class:DEEP_ARCHIVE/GLACIER
+    conf.set(STORAGE_CLASS, glacierClass);
     S3AContract contract = (S3AContract) createContract(conf);
     contract.init();
 
@@ -125,7 +126,8 @@ public class ITestS3AReadRestoredGlacierObjects extends AbstractS3ATestBase {
 
   @Test
   public void testRestoredGlacierObject() throws Throwable {
-    Assume.assumeTrue(type == Type.GLACIER); // Skipping this test for Deep Archive as expedited retrieval is not supported
+    // Skipping this test for Deep Archive as expedited retrieval is not supported
+    Assume.assumeTrue(type == Type.GLACIER);
     try (FileSystem fs = createFiles(S3ObjectStorageClassFilter.READ_RESTORED_GLACIER_OBJECTS.name())) {
       restoreGlacierObject(getFilePrefixForListObjects(), 2);
       Assertions.assertThat(
@@ -161,7 +163,7 @@ public class ITestS3AReadRestoredGlacierObjects extends AbstractS3ATestBase {
       S3ListRequest s3ListRequest = getFileSystem().createListObjectsRequest(
           getFilePrefixForListObjects(), "/");
 
-      LambdaTestUtils.await(MAX_RETRIES * RETRY_DELAY_MS, RETRY_DELAY_MS,
+      LambdaTestUtils.await(maxRetries * retryDelayMs, retryDelayMs,
           () -> !getS3GlacierObject(s3Client, s3ListRequest).restoreStatus().isRestoreInProgress());
     }
   }

@@ -254,7 +254,7 @@ public interface RequestFactory {
           List<ObjectIdentifier> keysToDelete);
 
   /**
-   * Create a request builder to initiate a restore of Glacier object
+   * Create a request builder to initiate a restore of Glacier object.
    * @param key object to restore
    * @param tier glacier retrieval tier at which the restore will be processed.
    * @param expirationDays lifetime of the active restored copy in days.

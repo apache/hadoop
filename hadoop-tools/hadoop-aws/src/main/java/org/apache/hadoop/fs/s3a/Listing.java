@@ -464,8 +464,10 @@ public class Listing extends AbstractStoreOperation {
           LOG.debug("{}: {}", keyPath, stringify(s3Object));
         }
         // Skip over keys that are ourselves and old S3N _$folder$ files
-        // Handle Glacier Storage Class objects based on the config fs.s3a.glacier.read.restored.objects value set
-        if ( s3ObjectStorageClassFilter.getFilter().apply(s3Object) &&  acceptor.accept(keyPath, s3Object) && filter.accept(keyPath)) {
+        // Handle Glacier Storage Class based on the config fs.s3a.glacier.read.restored.objects
+        if (s3ObjectStorageClassFilter.getFilter().apply(s3Object) &&
+            acceptor.accept(keyPath, s3Object) &&
+            filter.accept(keyPath)) {
           S3AFileStatus status = createFileStatus(keyPath, s3Object,
                   listingOperationCallbacks.getDefaultBlockSize(keyPath),
                   getStoreContext().getUsername(),
