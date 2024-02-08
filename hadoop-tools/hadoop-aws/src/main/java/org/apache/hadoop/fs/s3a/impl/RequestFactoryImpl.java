@@ -47,7 +47,6 @@ import com.amazonaws.services.s3.model.PartETag;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.SSEAwsKeyManagementParams;
 import com.amazonaws.services.s3.model.SSECustomerKey;
-import com.amazonaws.services.s3.model.SelectObjectContentRequest;
 import com.amazonaws.services.s3.model.StorageClass;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
@@ -561,15 +560,6 @@ public class RequestFactoryImpl implements RequestFactory {
       request.setFileOffset(offset);
     }
     setOptionalUploadPartRequestParameters(request);
-    return prepareRequest(request);
-  }
-
-  @Override
-  public SelectObjectContentRequest newSelectRequest(String key) {
-    SelectObjectContentRequest request = new SelectObjectContentRequest();
-    request.setBucketName(bucket);
-    request.setKey(key);
-    generateSSECustomerKey().ifPresent(request::setSSECustomerKey);
     return prepareRequest(request);
   }
 

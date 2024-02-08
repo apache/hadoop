@@ -180,7 +180,6 @@ public class TestRequestFactory extends AbstractHadoopTestBase {
         factory.newObjectMetadata(-1), null, srcfile));
     ByteArrayInputStream stream = new ByteArrayInputStream(new byte[0]);
     a(factory.newPutObjectRequest(path, md, null, stream));
-    a(factory.newSelectRequest(path));
   }
 
   /**
