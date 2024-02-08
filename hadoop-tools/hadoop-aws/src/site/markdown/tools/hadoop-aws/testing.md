@@ -43,7 +43,7 @@ is a more specific lie and harder to make. And, if you get caught out: you
 lose all credibility with the project.
 
 You don't need to test from a VM within the AWS infrastructure; with the
-`-Dparallel=tests` option the non-scale tests complete in under ten minutes.
+`-Dparallel=tests` option the non-scale tests complete in under twenty minutes.
 Because the tests clean up after themselves, they are also designed to be low
 cost. It's neither hard nor expensive to run the tests; if you can't,
 there's no guarantee your patch works. The reviewers have enough to do, and
@@ -539,11 +539,9 @@ Otherwise, set a large timeout in `fs.s3a.scale.test.timeout`
 The tests are executed in an order to only clean up created files after
 the end of all the tests. If the tests are interrupted, the test data will remain.
 
-## Testing through continuous integration
+## <a name="CI"> Testing through continuous integration
 
-Supporting 
-parallel test jobs against the same bucket
-
+### Parallel CI builds.
 For CI testing of the module, including the integration tests,
 it is generally necessary to support testing multiple PRs simultaneously.
 
@@ -562,30 +560,31 @@ This parallel execution feature is only for isolated builds sharing a single S3 
 not support parallel builds and tests from the same local source tree.
 
 Without the root tests being executed, set up a scheduled job to purge the test bucket of all
-data on a regular basis, to keep costs down. Running the test `ITestS3AContractRootDir` is
-sufficient for this, as is a `hadoop fs` command. 
+data on a regular basis, to keep costs down.
+The easiest way to do this is to have a bucket lifecycle rule for the bucket to delete all files more than a few days old,
+alongside one to abort all pending uploads more than 24h old.
 
-```
-hadoop fs -rm -r s3a://s3a-tests-us-west-1/*
-```
 
 ### Securing CI builds
 
 It's clearly unsafe to have CI infrastructure testing PRs submitted to apache github account
 with AWS credentials -which is why it isn't done by the Yetus-initiated builds.
 
-Anyone doing this privately should
-* Review patches before triggering the tests.
+Anyone doing this privately should:
+* Review incoming patches before triggering the tests.
 * Have a dedicated IAM role with restricted access to the test bucket, any KMS keys used, and the
   external bucket containing the CSV test file.
 * Have a build process which generates short-lived session credentials for this role.
+  The cloudstore utility's command [sessionkeys](https://github.com/steveloughran/cloudstore/blob/main/src/main/site/sessionkey.md) can assist.
+* Run the tests in an EC2 VM/container which collects the restricted IAM credentials
+  from the IAM instance/container credentials provider.
 
 ## <a name="load"></a> Load tests.
 
-Some are designed to overload AWS services with more
+Some tests are designed to overload AWS services with more
 requests per second than an AWS account is permitted.
 
-The operation of these test maybe observable to other users of the same
+The operation of these tests may be observable to other users of the same
 account -especially if they are working in the AWS region to which the
 tests are targeted.
 
@@ -596,6 +595,10 @@ These tests all have the prefix `ILoadTest`
 They do not run automatically: they must be explicitly run from the command line or an IDE.
 
 Look in the source for these and reads the Javadocs before executing.
+
+Note: one fear here was that asking for two many session/role credentials in a short period
+of time would actually lock an account out of a region. It doesn't: it simply triggers
+throttling of STS requests.
 
 ## <a name="alternate_s3"></a> Testing against non-AWS S3 Stores.
 
