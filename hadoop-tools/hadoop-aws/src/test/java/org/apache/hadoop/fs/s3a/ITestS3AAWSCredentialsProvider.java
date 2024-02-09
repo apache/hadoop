@@ -109,6 +109,23 @@ public class ITestS3AAWSCredentialsProvider {
   }
 
   /**
+   * Test aws credentials provider remapping with key that maps to
+   * BadCredentialsProviderConstructor.
+   */
+  @Test
+  public void testBadCredentialsConstructorWithRemap() throws Exception {
+    Configuration conf = createConf("aws.test.map1");
+    conf.set(AWS_CREDENTIALS_PROVIDER_MAPPING,
+        "aws.test.map1=" + BadCredentialsProviderConstructor.class.getName());
+    final InstantiationIOException ex =
+        intercept(InstantiationIOException.class, CONSTRUCTOR_EXCEPTION, () ->
+            createFailingFS(conf));
+    if (InstantiationIOException.Kind.UnsupportedConstructor != ex.getKind()) {
+      throw ex;
+    }
+  }
+
+  /**
    * Create a configuration bonded to the given provider classname.
    * @param provider provider to bond to
    * @return a configuration
@@ -167,6 +184,20 @@ public class ITestS3AAWSCredentialsProvider {
     Configuration conf = createConf(BadCredentialsProvider.class);
     intercept(AccessDeniedException.class, "", () ->
         createFailingFS(conf));
+  }
+
+  /**
+   * Test aws credentials provider remapping with key that maps to
+   * BadCredentialsProvider.
+   */
+  @Test
+  public void testBadCredentialsWithRemap() throws Exception {
+    Configuration conf = createConf("aws.test.map.key");
+    conf.set(AWS_CREDENTIALS_PROVIDER_MAPPING,
+        "aws.test.map.key=" + BadCredentialsProvider.class.getName());
+    intercept(AccessDeniedException.class,
+        "",
+        () -> createFailingFS(conf));
   }
 
   /**
