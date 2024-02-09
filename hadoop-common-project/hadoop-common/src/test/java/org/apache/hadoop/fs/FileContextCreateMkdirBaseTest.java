@@ -55,7 +55,10 @@ public abstract class FileContextCreateMkdirBaseTest {
 
   protected final FileContextTestHelper fileContextTestHelper;
   protected static FileContext fc;
-      
+
+  public static final String MKDIR_FILE_PRESENT_ERROR =
+      " should have failed as a file was present";
+
   static {
     GenericTestUtils.setLogLevel(FileSystem.LOG, Level.DEBUG);
   }
@@ -144,7 +147,7 @@ public abstract class FileContextCreateMkdirBaseTest {
     try {
       fc.mkdir(dirPath, FileContext.DEFAULT_PERM, true);
       Assert.fail("Mkdir for " + dirPath
-          + " should have failed as a file was present");
+          + MKDIR_FILE_PRESENT_ERROR);
     } catch(IOException e) {
       // failed as expected
     }

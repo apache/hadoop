@@ -13,18 +13,24 @@
  */
 package org.apache.hadoop.fs.s3a.fileContext;
 
+import java.io.IOException;
+
+import org.assertj.core.api.Assertions;
+import org.junit.Before;
+import org.junit.Test;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContextCreateMkdirBaseTest;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
-import org.junit.Before;
 
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 
 /**
- * Extends FileContextCreateMkdirBaseTest for a S3a FileContext.
+ * Extends FileContextCreateMkdirBaseTest for a S3a FileContext with
+ * create performance mode.
  */
-public class ITestS3AFileContextCreateMkdir
+public class ITestS3AFileContextCreateMkdirCreatePerf
         extends FileContextCreateMkdirBaseTest {
 
   @Before
@@ -33,6 +39,8 @@ public class ITestS3AFileContextCreateMkdir
     removeBaseAndBucketOverrides(
         conf,
         FS_S3A_CREATE_PERFORMANCE);
+    conf.setBoolean(FS_S3A_CREATE_PERFORMANCE,
+        true);
     fc = S3ATestUtils.createTestFileContext(conf);
     super.setUp();
   }
@@ -43,4 +51,22 @@ public class ITestS3AFileContextCreateMkdir
       super.tearDown();
     }
   }
+
+  @Test
+  public void testMkdirRecursiveWithExistingFile() throws IOException {
+    try {
+      super.testMkdirRecursiveWithExistingFile();
+      throw new RuntimeException(
+          "Dir creation should not have failed. "
+              + "Creation performance mode is expected "
+              + "to create dir without checking file "
+              + "status of parent dir.");
+    } catch (AssertionError e) {
+      Assertions
+          .assertThat(e)
+          .describedAs("assertion error from testMkdirOverParentFile")
+          .hasMessageContaining(MKDIR_FILE_PRESENT_ERROR);
+    }
+  }
+
 }
