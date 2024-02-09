@@ -64,7 +64,7 @@ public class ITestS3AFileContextCreateMkdirCreatePerf
     } catch (AssertionError e) {
       Assertions
           .assertThat(e)
-          .describedAs("assertion error from testMkdirOverParentFile")
+          .describedAs("assertion error from testMkdirRecursiveWithExistingFile")
           .hasMessageContaining(MKDIR_FILE_PRESENT_ERROR);
     }
   }
