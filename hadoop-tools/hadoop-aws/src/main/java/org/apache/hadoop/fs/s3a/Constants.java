@@ -1624,4 +1624,21 @@ public final class Constants {
    * Value: {@value}.
    */
   public static final boolean DEFAULT_AWS_S3_CLASSLOADER_ISOLATION = true;
+
+  /**
+   * Flag {@value}
+   * to enable S3 Access Grants to control authorization to S3 data. More information:
+   * https://aws.amazon.com/s3/features/access-grants/
+   * and
+   * https://github.com/aws/aws-s3-accessgrants-plugin-java-v2/
+   */
+  public static final String AWS_S3_ACCESS_GRANTS_ENABLED = "fs.s3a.s3accessgrants.enabled";
+
+  /**
+   * Flag {@value} to enable jobs fall back to the Job Execution IAM role in
+   * case they get Access Denied from the S3 Access Grants call. More information:
+   * https://github.com/aws/aws-s3-accessgrants-plugin-java-v2/
+   */
+  public static final String AWS_S3_ACCESS_GRANTS_FALLBACK_TO_IAM_ENABLED =
+          "fs.s3a.s3accessgrants.fallback.to.iam";
 }

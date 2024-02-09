@@ -37,6 +37,7 @@ import software.amazon.awssdk.http.auth.spi.scheme.AuthScheme;
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
 import software.amazon.awssdk.identity.spi.AwsCredentialsIdentity;
 import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.s3accessgrants.plugin.S3AccessGrantsPlugin;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3BaseClientBuilder;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -53,6 +54,8 @@ import org.apache.hadoop.fs.s3a.statistics.impl.AwsStatisticsCollector;
 import org.apache.hadoop.fs.store.LogExactlyOnce;
 
 import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_ACCESS_GRANTS_ENABLED;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_ACCESS_GRANTS_FALLBACK_TO_IAM_ENABLED;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_DEFAULT_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.CENTRAL_ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.FIPS_ENDPOINT;
@@ -93,6 +96,11 @@ public class DefaultS3ClientFactory extends Configured
    */
   private static final LogExactlyOnce WARN_OF_DEFAULT_REGION_CHAIN =
       new LogExactlyOnce(LOG);
+
+  /**
+   * A one-off logger of S3 Access Grants usage and attachment status to the S3 client.
+   */
+  private static final LogExactlyOnce LOG_S3AG_ENABLED = new LogExactlyOnce(LOG);
 
   /**
    * Warning message printed when the SDK Region chain is in use.
@@ -177,6 +185,8 @@ public class DefaultS3ClientFactory extends Configured
       throws IOException {
 
     configureEndpointAndRegion(builder, parameters, conf);
+
+    applyS3AccessGrantsConfigurations(builder, conf);
 
     S3Configuration serviceConfiguration = S3Configuration.builder()
         .pathStyleAccessEnabled(parameters.isPathStyleAccess())
@@ -400,6 +410,21 @@ public class DefaultS3ClientFactory extends Configured
     // Hence, we should use default region us-east-2 to allow cross-region
     // access.
     return Region.of(AWS_S3_DEFAULT_REGION);
+  }
+
+  private static <BuilderT extends S3BaseClientBuilder<BuilderT, ClientT>, ClientT> void
+      applyS3AccessGrantsConfigurations(BuilderT builder, Configuration conf) {
+    if (!conf.getBoolean(AWS_S3_ACCESS_GRANTS_ENABLED, false)){
+      LOG_S3AG_ENABLED.debug("S3 Access Grants plugin is not enabled.");
+      return;
+    }
+
+    LOG_S3AG_ENABLED.info("S3 Access Grants plugin is enabled.");
+    boolean isFallbackEnabled = conf.getBoolean(AWS_S3_ACCESS_GRANTS_FALLBACK_TO_IAM_ENABLED, false);
+    S3AccessGrantsPlugin accessGrantsPlugin =
+            S3AccessGrantsPlugin.builder().enableFallback(isFallbackEnabled).build();
+    builder.addPlugin(accessGrantsPlugin);
+    LOG_S3AG_ENABLED.info("S3 Access Grants plugin is added to S3 client with fallback: {}", isFallbackEnabled);
   }
 
 }
