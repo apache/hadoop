@@ -419,12 +419,13 @@ public class DefaultS3ClientFactory extends Configured
       return;
     }
 
-    LOG_S3AG_ENABLED.info("S3 Access Grants plugin is enabled.");
-    boolean isFallbackEnabled = conf.getBoolean(AWS_S3_ACCESS_GRANTS_FALLBACK_TO_IAM_ENABLED, false);
+    boolean isFallbackEnabled =
+        conf.getBoolean(AWS_S3_ACCESS_GRANTS_FALLBACK_TO_IAM_ENABLED, false);
     S3AccessGrantsPlugin accessGrantsPlugin =
-            S3AccessGrantsPlugin.builder().enableFallback(isFallbackEnabled).build();
+        S3AccessGrantsPlugin.builder().enableFallback(isFallbackEnabled).build();
     builder.addPlugin(accessGrantsPlugin);
-    LOG_S3AG_ENABLED.info("S3 Access Grants plugin is added to S3 client with fallback: {}", isFallbackEnabled);
+    LOG_S3AG_ENABLED.info(
+        "S3 Access Grants plugin is enabled with IAM fallback set to {}", isFallbackEnabled);
   }
 
 }

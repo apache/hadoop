@@ -617,16 +617,16 @@ java.io.IOException: From option fs.s3a.aws.credentials.provider java.lang.Class
 ## S3 Authorization Using S3 Access Grants
 
 [S3 Access Grants](https://aws.amazon.com/s3/features/access-grants/) can be used to grant accesses to S3 data using IAM Principals.
-In order to enable S3 Access Grants to work with S3A, we enable the 
-[S3 Access Grants plugin](https://github.com/aws/aws-s3-accessgrants-plugin-java-v2) on all S3 clients, 
+In order to enable S3 Access Grants, S3A utilizes the
+[S3 Access Grants plugin](https://github.com/aws/aws-s3-accessgrants-plugin-java-v2) on all S3 clients,
 which is found within the AWS Java SDK bundle (v2.23.19+).
 
-We support both cross-region access (by default) and the 
-[fallback-to-IAM configuration](https://github.com/aws/aws-s3-accessgrants-plugin-java-v2?tab=readme-ov-file#using-the-plugin) 
-which allows you to fallback to using your IAM role (and its permission sets directly) to access your S3 data in the case that S3 Access Grants
-is unable to authorize your S3 call.
+S3A supports both cross-region access (by default) and the
+[fallback-to-IAM configuration](https://github.com/aws/aws-s3-accessgrants-plugin-java-v2?tab=readme-ov-file#using-the-plugin)
+which allows S3A to fallback to using the IAM role (and its permission sets directly) to access S3 data in the case that S3 Access Grants
+is unable to authorize the S3 call.
 
-The following is how you can enable this feature:
+The following is how this feature can be enabled:
 
 ```xml
 <property>
@@ -640,11 +640,11 @@ The following is how you can enable this feature:
 </property>
 ```
 
-Please note that we only enable the [S3 Access Grants plugin](https://github.com/aws/aws-s3-accessgrants-plugin-java-v2) on the S3 clients 
-as part of this feature. Any usage issues or bug reporting should be done directly at the plugin's 
+Please note that S3A only enables the [S3 Access Grants plugin](https://github.com/aws/aws-s3-accessgrants-plugin-java-v2) on the S3 clients
+as part of this feature. Any usage issues or bug reporting should be done directly at the plugin's
 [GitHub repo](https://github.com/aws/aws-s3-accessgrants-plugin-java-v2/issues).
 
-For more details on using S3 Access Grants, please refer to 
+For more details on using S3 Access Grants, please refer to
 [Managing access with S3 Access Grants](https://docs.aws.amazon.com/AmazonS3/latest/userguide/access-grants.html).
 
 ## <a name="hadoop_credential_providers"></a>Storing secrets with Hadoop Credential Providers
