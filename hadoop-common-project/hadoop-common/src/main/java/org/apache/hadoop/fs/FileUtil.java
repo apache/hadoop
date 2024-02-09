@@ -55,6 +55,7 @@ import java.util.concurrent.Future;
 import java.util.jar.Attributes;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
+import java.util.stream.Collectors;
 import java.util.zip.GZIPInputStream;
 
 import org.apache.commons.collections.map.CaseInsensitiveMap;
@@ -2108,4 +2109,65 @@ public class FileUtil {
     LOG.info("Ignoring missing directory {}", path);
     LOG.debug("Directory missing", e);
   }
+
+  /**
+   * Get the maximum number of objects/files to delete in a single request.
+   * @param fs filesystem
+   * @param path path to delete under.
+   * @return a number greater than or equal to zero.
+   * @throws UnsupportedOperationException bulk delete under that path is not supported.
+   * @throws IllegalArgumentException path not valid.
+   * @throws IOException problems resolving paths
+   */
+  public static int bulkDeletePageSize(FileSystem fs, Path path) throws IOException {
+    try (BulkDelete bulk = toBulkDeleteSource(fs).createBulkDelete(path)) {
+      return bulk.pageSize();
+    }
+  }
+
+  /**
+   * Convert a filesystem to a bulk delete source.
+   * @param fs filesystem
+   * @return cast fs.
+   * @throws UnsupportedOperationException FS doesn't implement the interface.
+   */
+  private static BulkDeleteSource toBulkDeleteSource(final FileSystem fs) {
+    if (!(fs instanceof BulkDeleteSource)) {
+      throw new UnsupportedOperationException(BulkDeleteSource.BULK_DELETE_NOT_SUPPORTED);
+    }
+    return (BulkDeleteSource) fs;
+  }
+
+  /**
+   * Delete a list of files/objects.
+   * <ul>
+   *   <li>Files must be under the path provided in {@code base}.</li>
+   *   <li>The size of the list must be equal to or less than the page size.</li>
+   *   <li>Directories are not supported; the outcome of attempting to delete
+   *       directories is undefined (ignored; undetected, listed as failures...).</li>
+   *   <li>The operation is not atomic.</li>
+   *   <li>The operation is treated as idempotent: network failures may
+   *        trigger resubmission of the request -any new objects created under a
+   *        path in the list may then be deleted.</li>
+   *    <li>There is no guarantee that any parent directories exist after this call.
+   *    </li>
+   * </ul>
+   * @param fs filesystem
+   * @param base path to delete under.
+   * @param paths list of paths which must be absolute and under the base path.
+   * @return a list of all the paths which couldn't be deleted for a reason other than "not found".
+   * @throws UnsupportedOperationException bulk delete under that path is not supported.
+   * @throws IOException IO problems including networking, authentication and more.
+   * @throws IllegalArgumentException if a path argument is invalid.
+   */
+  public static List<Path> bulkDelete(FileSystem fs, Path base, List<Path> paths)
+        throws IOException {
+    try (BulkDelete bulk = toBulkDeleteSource(fs).createBulkDelete(base)) {
+      final BulkDelete.BulkDeleteOutcome outcome = bulk.bulkDelete(paths);
+      return outcome.getFailures().stream()
+          .map(BulkDelete.BulkDeleteOutcomeElement::getPath)
+          .collect(Collectors.toList());
+    }
+  }
+
 }

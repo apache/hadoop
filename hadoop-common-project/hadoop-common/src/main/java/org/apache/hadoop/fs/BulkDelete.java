@@ -26,6 +26,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * API for bulk deletion of objects/files,
  * <i>but not directories</i>.
@@ -101,7 +103,7 @@ public interface BulkDelete extends IOStatisticsSource, Closeable {
      * @param failures list of failures. This must be non-null.
      */
     public BulkDeleteOutcome(final List<BulkDeleteOutcomeElement> failures) {
-      this.failures = failures;
+      this.failures = requireNonNull(failures);
     }
 
     /**
