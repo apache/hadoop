@@ -62,7 +62,7 @@ public class TestDistCpWithRawXAttrs {
   private static final Path dir1 = new Path("/src/dir1");
   private static final Path subDir1 = new Path(dir1, "subdir1");
   private static final Path file1 = new Path("/src/file1");
-  private  static final Path file2 = new Path("/src/dir1/file2");
+  private static final Path FILE_2 = new Path("/src/dir1/file2");
   private static final String rawRootName = "/.reserved/raw";
   private static final String rootedDestName = "/dest";
   private static final String rootedSrcName = "/src";
@@ -193,9 +193,9 @@ public class TestDistCpWithRawXAttrs {
     fs.mkdirs(subDir1);
     DistributedFileSystem dfs = (DistributedFileSystem) fs;
     dfs.enableErasureCodingPolicy("XOR-2-1-1024k");
-    dfs.setErasureCodingPolicy(dir1,"XOR-2-1-1024k");
+    dfs.setErasureCodingPolicy(dir1, "XOR-2-1-1024k");
     fs.create(file1).close();
-    fs.create(file2).close();
+    fs.create(FILE_2).close();
     int res = ToolRunner.run(conf, new ECAdmin(conf), args);
     assertEquals("Unable to set EC policy on " + subDir1.toString(), res, 0);
 
@@ -206,7 +206,7 @@ public class TestDistCpWithRawXAttrs {
     FileStatus srcStatus = fs.getFileStatus(new Path(src));
     FileStatus srcDir1Status = fs.getFileStatus(dir1);
     FileStatus srcSubDir1Status = fs.getFileStatus(subDir1);
-    FileStatus srcFile2Status = fs.getFileStatus(file2);
+    FileStatus srcFile2Status = fs.getFileStatus(FILE_2);
 
     FileStatus destStatus = fs.getFileStatus(new Path(dest));
     FileStatus destDir1Status = fs.getFileStatus(destDir1);
