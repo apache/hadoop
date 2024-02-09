@@ -37,19 +37,24 @@ import org.apache.hadoop.classification.InterfaceStability;
 public interface BulkDeleteSource {
 
   /**
+   * Exception message for the case where bulk delete is not supported.
+   */
+  String BULK_DELETE_NOT_SUPPORTED = "Bulk delete not supported";
+
+  /**
    * Create a bulk delete operation.
    * There is no network IO at this point, simply the creation of
    * a bulk delete object.
-   * A path must be supplied to ensure that on viewfs and similar filesystems,
+   * A path must be supplied to assist in link resolution.
    * @param path path to delete under.
    * @return the bulk delete.
-   * @throws UnsupportedOperationException the filesystem does not support delete under that path.
+   * @throws UnsupportedOperationException bulk delete under that path is not supported.
    * @throws IllegalArgumentException path not valid.
    * @throws IOException problems resolving paths
    */
   default BulkDelete createBulkDelete(Path path)
       throws UnsupportedOperationException, IllegalArgumentException, IOException {
-    throw new UnsupportedOperationException("Bulk delete not supported");
+    throw new UnsupportedOperationException(BULK_DELETE_NOT_SUPPORTED);
   }
 
 }
