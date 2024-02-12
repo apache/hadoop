@@ -70,6 +70,7 @@ import static org.apache.hadoop.fs.s3a.auth.CredentialProviderListFactory.create
 import static org.apache.hadoop.fs.s3a.impl.InstantiationIOException.DOES_NOT_IMPLEMENT;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.test.LambdaTestUtils.interceptFuture;
+import static org.apache.hadoop.util.StringUtils.STRING_COLLECTION_SPLIT_EQUALS_INVALID_ARG;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -793,6 +794,96 @@ public class TestS3AAWSCredentialsProvider {
         .containsEntry("element.xyz.key5", "element.abc.val5")
         .containsEntry("element.xyz.key6", "element.abc.val6")
         .containsEntry("element.xyz.key7", "element.abc.val7");
+
+    configuration.set("custom_key", " = element.abc.val1");
+    try {
+      S3AUtils.getTrimmedStringCollectionSplitByEquals(
+          configuration, "custom_key");
+      throw new RuntimeException("Expected to throw IllegalArgumentException");
+    } catch (IllegalArgumentException e) {
+      Assertions
+          .assertThat(e)
+          .describedAs("Exception thrown due to illegal arguments")
+          .hasMessageStartingWith(STRING_COLLECTION_SPLIT_EQUALS_INVALID_ARG);
+    }
+
+    configuration.set("custom_key",
+        "element.first.key1 = element.first.val2 ,element.first.key1 =element.first.val1");
+    splitMap = S3AUtils.getTrimmedStringCollectionSplitByEquals(
+        configuration, "custom_key");
+    Assertions
+        .assertThat(splitMap)
+        .describedAs("Map of key value pairs split by equals(=) and comma(,)")
+        .hasSize(1)
+        .containsEntry("element.first.key1", "element.first.val1");
+
+    configuration.set("custom_key",
+        ",,, , ,, ,element.first.key1 = element.first.val2 ,"
+            + "element.first.key1 = element.first.val1 , ,,, ,");
+    splitMap = S3AUtils.getTrimmedStringCollectionSplitByEquals(
+        configuration, "custom_key");
+    Assertions
+        .assertThat(splitMap)
+        .describedAs("Map of key value pairs split by equals(=) and comma(,)")
+        .hasSize(1)
+        .containsEntry("element.first.key1", "element.first.val1");
+
+    configuration.set("custom_key", "element.abc.key1=");
+    try {
+      S3AUtils.getTrimmedStringCollectionSplitByEquals(
+          configuration, "custom_key");
+      throw new RuntimeException("Expected to throw IllegalArgumentException");
+    } catch (IllegalArgumentException e) {
+      Assertions
+          .assertThat(e)
+          .describedAs("Exception thrown due to illegal arguments")
+          .hasMessageStartingWith(STRING_COLLECTION_SPLIT_EQUALS_INVALID_ARG);
+    }
+
+    configuration.set("custom_key", "=");
+    try {
+      S3AUtils.getTrimmedStringCollectionSplitByEquals(
+          configuration, "custom_key");
+      throw new RuntimeException("Expected to throw IllegalArgumentException");
+    } catch (IllegalArgumentException e) {
+      Assertions
+          .assertThat(e)
+          .describedAs("Exception thrown due to illegal arguments")
+          .hasMessageStartingWith(STRING_COLLECTION_SPLIT_EQUALS_INVALID_ARG);
+    }
+
+    configuration.set("custom_key", "== = =    =");
+    try {
+      S3AUtils.getTrimmedStringCollectionSplitByEquals(
+          configuration, "custom_key");
+      throw new RuntimeException("Expected to throw IllegalArgumentException");
+    } catch (IllegalArgumentException e) {
+      Assertions
+          .assertThat(e)
+          .describedAs("Exception thrown due to illegal arguments")
+          .hasMessageStartingWith(STRING_COLLECTION_SPLIT_EQUALS_INVALID_ARG);
+    }
+
+    configuration.set("custom_key", ",, , ,      ,, ,");
+    splitMap = S3AUtils.getTrimmedStringCollectionSplitByEquals(
+        configuration, "custom_key");
+    Assertions
+        .assertThat(splitMap)
+        .describedAs("Map of key value pairs split by equals(=) and comma(,)")
+        .hasSize(0);
+
+    configuration.set("custom_key", ", = ");
+    try {
+      S3AUtils.getTrimmedStringCollectionSplitByEquals(
+          configuration, "custom_key");
+      throw new RuntimeException("Expected to throw IllegalArgumentException");
+    } catch (IllegalArgumentException e) {
+      Assertions
+          .assertThat(e)
+          .describedAs("Exception thrown due to illegal arguments")
+          .hasMessageStartingWith(STRING_COLLECTION_SPLIT_EQUALS_INVALID_ARG);
+    }
+
   }
 
   /**

@@ -80,6 +80,16 @@ public class StringUtils {
     WIN_ENV_VAR_PATTERN : SHELL_ENV_VAR_PATTERN;
 
   /**
+   * {@link #getTrimmedStringCollectionSplitByEquals(String)} throws
+   * {@link IllegalArgumentException} with error message starting with this string
+   * if the argument provided is not valid representation of non-empty key-value
+   * pairs.
+   */
+  public static final String STRING_COLLECTION_SPLIT_EQUALS_INVALID_ARG =
+      "Trimmed string split by equals does not correctly represent "
+          + "non-empty key-value pairs.";
+
+  /**
    * Make a string representation of the exception.
    * @param e The exception to stringify
    * @return A string with exception name and call stack.
@@ -494,9 +504,22 @@ public class StringUtils {
     String[] trimmedList = getTrimmedStrings(str);
     Map<String, String> pairs = new HashMap<>();
     for (String s : trimmedList) {
+      if (s.length() == 0) {
+        continue;
+      }
       String[] splitByKeyVal = getTrimmedStringsSplitByEquals(s);
       if (splitByKeyVal.length == 2) {
-        pairs.put(splitByKeyVal[0], splitByKeyVal[1]);
+        boolean emptyKey = org.apache.commons.lang3.StringUtils.isEmpty(splitByKeyVal[0]);
+        boolean emptyVal = org.apache.commons.lang3.StringUtils.isEmpty(splitByKeyVal[1]);
+        if (!emptyKey && !emptyVal) {
+          pairs.put(splitByKeyVal[0], splitByKeyVal[1]);
+        } else {
+          throw new IllegalArgumentException(
+              STRING_COLLECTION_SPLIT_EQUALS_INVALID_ARG + " Input: " + str);
+        }
+      } else {
+        throw new IllegalArgumentException(
+            STRING_COLLECTION_SPLIT_EQUALS_INVALID_ARG + " Input: " + str);
       }
     }
     return pairs;
