@@ -153,10 +153,17 @@ public class AbfsAHCHttpOperation extends HttpOperation {
   }
 
   private static final Stack<ConnInfo> connInfoStack = new Stack<>();
+  private static final Stack<LatencyCaptureInfo> READ_INFO_STACK = new Stack<>();
 
   private static class ConnInfo {
     long connTime;
     AbfsRestOperationType operationType;
+  }
+
+  private static class LatencyCaptureInfo {
+    long latencyCapture;
+    AbfsRestOperationType operationType;
+    int status;
   }
 
  public final static Set<HttpClientConnection> connThatCantBeClosed = new HashSet<>();
@@ -213,6 +220,11 @@ public class AbfsAHCHttpOperation extends HttpOperation {
         connInfo.operationType = abfsRestOperationType;
         connInfoStack.push(connInfo);
       }
+      LatencyCaptureInfo readLatencyCaptureInfo = new LatencyCaptureInfo();
+      readLatencyCaptureInfo.latencyCapture = recvResponseTimeMs;
+      readLatencyCaptureInfo.operationType = abfsRestOperationType;
+      readLatencyCaptureInfo.status = statusCode;
+      READ_INFO_STACK.push(readLatencyCaptureInfo);
     } finally {
       connThatCantBeClosed.remove(abfsHttpClientContext.httpClientConnection);
       if(isExpect100Error || !toBeClosedLater) {
@@ -247,8 +259,17 @@ public class AbfsAHCHttpOperation extends HttpOperation {
     if (X_MS_CLIENT_REQUEST_ID.equals(key)) {
       try {
         ConnInfo connInfo = connInfoStack.pop();
-        stringBuilder.append("_").append(
+        stringBuilder.append(":Conn_").append(
             connInfo.operationType).append("_").append(connInfo.connTime);
+      } catch (EmptyStackException ignored) {}
+      try {
+        LatencyCaptureInfo readLatencyCaptureInfo = READ_INFO_STACK.pop();
+        stringBuilder.append(":Read_")
+            .append(readLatencyCaptureInfo.operationType)
+            .append("_")
+            .append(readLatencyCaptureInfo.latencyCapture)
+            .append("_")
+            .append(readLatencyCaptureInfo.status);
       } catch (EmptyStackException ignored) {}
     }
     setHeader(key, stringBuilder.toString());
