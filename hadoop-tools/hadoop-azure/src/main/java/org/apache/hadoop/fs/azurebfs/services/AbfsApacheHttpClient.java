@@ -4,6 +4,9 @@ import javax.net.ssl.SSLSession;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
@@ -63,13 +66,21 @@ public class AbfsApacheHttpClient {
     }
 
     public boolean shouldKillConn() {
-      if(sendTime != null && sendTime > MetricPercentile.getSendPercentileVal(abfsRestOperationType, 99.9)) {
-        return true;
+//      if(sendTime != null && sendTime > MetricPercentile.getSendPercentileVal(abfsRestOperationType, 99.9)) {
+//        return true;
+//      }
+//      if(readTime != null && readTime > MetricPercentile.getRcvPercentileVal(abfsRestOperationType, 99.9)) {
+//        return true;
+//      }
+      if (httpClientConnection instanceof ManagedHttpClientConnection) {
+        AbfsApacheHttpConnection abfsApacheHttpConnection
+            = abfsApacheHttpConnectionMap.get(
+            ((ManagedHttpClientConnection) httpClientConnection).getId());
+        if (abfsApacheHttpConnection != null && abfsApacheHttpConnection.getCount() >= 5) {
+          return true;
+        }
       }
-      if(readTime != null && readTime > MetricPercentile.getRcvPercentileVal(abfsRestOperationType, 99.9)) {
-        return true;
-      }
-      return true;
+      return false;
     }
   }
 
@@ -112,14 +123,25 @@ public class AbfsApacheHttpClient {
     }
   }
 
+  public static final Map<String, AbfsApacheHttpConnection> abfsApacheHttpConnectionMap
+      = new HashMap<String, AbfsApacheHttpConnection>();
+
   public static class AbfsApacheHttpConnection implements ManagedHttpClientConnection {
 
     private ManagedHttpClientConnection httpClientConnection;
 
     private AbfsHttpClientContext abfsHttpClientContext;
 
+    int count = 0;
+    final String uuid = UUID.randomUUID().toString();
+
+    public int getCount() {
+      return count;
+    }
+
     public AbfsApacheHttpConnection(ManagedHttpClientConnection clientConnection) {
       this.httpClientConnection = clientConnection;
+      abfsApacheHttpConnectionMap.put(getId(), this);
     }
 
     public void setAbfsHttpClientContext(AbfsHttpClientContext abfsHttpClientContext) {
@@ -178,6 +200,7 @@ public class AbfsApacheHttpClient {
     @Override
     public void sendRequestHeader(final HttpRequest request)
         throws HttpException, IOException {
+      count++;
       long start = System.currentTimeMillis();
       httpClientConnection.sendRequestHeader(request);
       long elapsed = System.currentTimeMillis() - start;
@@ -285,7 +308,9 @@ public class AbfsApacheHttpClient {
 
     public AbfsConnMgr(ConnectionSocketFactory connectionSocketFactory, AbfsConfiguration abfsConfiguration) {
       super(createSocketFactoryRegistry(connectionSocketFactory), abfsConnFactory);
-      setDefaultMaxPerRoute(abfsConfiguration.getHttpClientMaxConn());
+//      setDefaultMaxPerRoute(abfsConfiguration.getHttpClientMaxConn());
+      setDefaultMaxPerRoute(1);
+      setMaxTotal(1);
     }
     @Override
     public void connect(final HttpClientConnection managedConn,
@@ -307,6 +332,9 @@ public class AbfsApacheHttpClient {
         final TimeUnit timeUnit) {
       if(AbfsAHCHttpOperation.connThatCantBeClosed.contains(managedConn)) {
         return;
+      }
+      if(keepalive == 0 && managedConn instanceof ManagedHttpClientConnection) {
+        abfsApacheHttpConnectionMap.remove(((ManagedHttpClientConnection)managedConn).getId());
       }
       super.releaseConnection(managedConn, state, keepalive, timeUnit);
     }
@@ -341,10 +369,6 @@ public class AbfsApacheHttpClient {
       final HttpResponse res = super.doSendRequest(request, conn, context);
       long elapsed = System.currentTimeMillis() - start;
       if(context instanceof AbfsHttpClientContext) {
-        if(conn instanceof AbfsApacheHttpConnection) {
-          ((AbfsApacheHttpConnection) conn).setAbfsHttpClientContext(
-              (AbfsHttpClientContext) context);
-        }
         ((AbfsHttpClientContext) context).httpClientConnection = conn;
         ((AbfsHttpClientContext) context).sendTime = elapsed;
       }

@@ -164,11 +164,15 @@ public class AbfsAHCHttpOperation extends HttpOperation {
       final int offset,
       final int length) throws IOException {
     Boolean isExpect100Error = false;
+    Boolean toBeClosedLater = true;
     try {
       try {
         long startTime = 0;
         startTime = System.nanoTime();
         httpResponse = abfsApacheHttpClient.execute(httpRequestBase, abfsHttpClientContext);
+        if(httpResponse.getEntity() == null || !httpResponse.getEntity().isStreaming()) {
+          toBeClosedLater = false;
+        }
         sendRequestTimeMs = abfsHttpClientContext.sendTime;
         recvResponseTimeMs = abfsHttpClientContext.readTime;
 
@@ -211,9 +215,10 @@ public class AbfsAHCHttpOperation extends HttpOperation {
       }
     } finally {
       connThatCantBeClosed.remove(abfsHttpClientContext.httpClientConnection);
-      if(isExpect100Error) {
+      if(isExpect100Error || !toBeClosedLater) {
         return;
       }
+
       if(abfsHttpClientContext.shouldKillConn()) {
         abfsApacheHttpClient.destroyConn(
             abfsHttpClientContext.httpClientConnection);
