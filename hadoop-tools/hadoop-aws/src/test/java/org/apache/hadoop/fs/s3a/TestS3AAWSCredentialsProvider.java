@@ -726,7 +726,7 @@ public class TestS3AAWSCredentialsProvider {
    * Tests for the string utility that will be used by S3A credentials provider.
    */
   @Test
-  public void testStringCollectionSplitByEquals() {
+  public void testStringCollectionSplitByEquals1() {
     final Configuration configuration = new Configuration();
     configuration.set("custom_key", "");
     Map<String, String> splitMap =
@@ -794,7 +794,14 @@ public class TestS3AAWSCredentialsProvider {
         .containsEntry("element.xyz.key5", "element.abc.val5")
         .containsEntry("element.xyz.key6", "element.abc.val6")
         .containsEntry("element.xyz.key7", "element.abc.val7");
+  }
 
+  /**
+   * Tests for the string utility that will be used by S3A credentials provider.
+   */
+  @Test
+  public void testStringCollectionSplitByEquals2() {
+    final Configuration configuration = new Configuration();
     configuration.set("custom_key", " = element.abc.val1");
     try {
       S3AUtils.getTrimmedStringCollectionSplitByEquals(
@@ -807,10 +814,12 @@ public class TestS3AAWSCredentialsProvider {
           .hasMessageStartingWith(STRING_COLLECTION_SPLIT_EQUALS_INVALID_ARG);
     }
 
-    configuration.set("custom_key",
+    configuration.set(
+        "custom_key",
         "element.first.key1 = element.first.val2 ,element.first.key1 =element.first.val1");
-    splitMap = S3AUtils.getTrimmedStringCollectionSplitByEquals(
-        configuration, "custom_key");
+    Map<String, String> splitMap =
+        S3AUtils.getTrimmedStringCollectionSplitByEquals(
+            configuration, "custom_key");
     Assertions
         .assertThat(splitMap)
         .describedAs("Map of key value pairs split by equals(=) and comma(,)")
