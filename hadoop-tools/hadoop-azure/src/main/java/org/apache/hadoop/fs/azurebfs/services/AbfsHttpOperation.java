@@ -23,12 +23,18 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.EmptyStackException;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
+import java.util.Stack;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
 
+import org.apache.hadoop.fs.azurebfs.conn.AbfsHttpUrlConnection;
+import org.apache.hadoop.fs.azurebfs.conn.AbfsHttpsUrlConnection;
 import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
@@ -46,6 +52,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HUNDRED_CONTINUE;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.EXPECT;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID;
 
 /**
  * Represents an HTTP operation.
@@ -54,6 +61,45 @@ public class AbfsHttpOperation extends HttpOperation {
   private static final Logger LOG = LoggerFactory.getLogger(AbfsHttpOperation.class);
 
   private HttpURLConnection connection;
+
+  private AbfsRestOperationType operationType;
+
+  private final static Stack<LatencyCaptureInfo> readLatencyInfos = new Stack<>();
+
+  private final static Stack<LatencyCaptureInfo> connLatencyInfos = new Stack<>();
+
+  private static class LatencyCaptureInfo {
+
+    long latencyCapture;
+
+    AbfsRestOperationType operationType;
+
+    int status;
+  }
+
+  public void  addConnInfo(AbfsRestOperationType operationType) {
+    AbfsHttpsUrlConnection conn = ((AbfsHttpsUrlConnection) connection);
+    LatencyCaptureInfo latencyCaptureInfo = new LatencyCaptureInfo();
+    latencyCaptureInfo.operationType = operationType;
+    latencyCaptureInfo.latencyCapture = conn.timeTaken;
+    if(!conn.isFromCache) {
+      connLatencyInfos.add(latencyCaptureInfo);
+    }
+    return;
+  }
+
+  private void captureReadLatency() {
+    LatencyCaptureInfo latencyCaptureInfo = new LatencyCaptureInfo();
+    latencyCaptureInfo.status = statusCode;
+    latencyCaptureInfo.latencyCapture = recvResponseTimeMs;
+    latencyCaptureInfo.operationType =  operationType;
+
+    readLatencyInfos.add(latencyCaptureInfo);
+  }
+
+  public void setOperationType(AbfsRestOperationType operationType) {
+    this.operationType = operationType;
+  }
 
   public static AbfsHttpOperation getAbfsHttpOperationWithFixedResult(
       final URL url,
@@ -160,13 +206,13 @@ public class AbfsHttpOperation extends HttpOperation {
     this.method = method;
 
     this.connection = openConnection();
-    if (this.connection instanceof HttpsURLConnection) {
-      HttpsURLConnection secureConn = (HttpsURLConnection) this.connection;
-      SSLSocketFactory sslSocketFactory = DelegatingSSLSocketFactory.getDefaultFactory();
-      if (sslSocketFactory != null) {
-        secureConn.setSSLSocketFactory(sslSocketFactory);
-      }
-    }
+//    if (this.connection instanceof HttpsURLConnection) {
+//      HttpsURLConnection secureConn = (HttpsURLConnection) this.connection;
+//      SSLSocketFactory sslSocketFactory = DelegatingSSLSocketFactory.getDefaultFactory();
+//      if (sslSocketFactory != null) {
+//        secureConn.setSSLSocketFactory(sslSocketFactory);
+//      }
+//    }
 
     this.connection.setConnectTimeout(CONNECT_TIMEOUT);
     this.connection.setReadTimeout(READ_TIMEOUT);
@@ -297,10 +343,26 @@ public class AbfsHttpOperation extends HttpOperation {
     startTime = System.nanoTime();
 
     parseResponse(buffer, offset, length);
+    captureReadLatency();
   }
 
   public void setRequestProperty(String key, String value) {
-    this.connection.setRequestProperty(key, value);
+    StringBuilder stringBuilder = new StringBuilder(value);
+    if(X_MS_CLIENT_REQUEST_ID.equals(key)) {
+      try {
+        LatencyCaptureInfo connLatencyCaptureInfo = connLatencyInfos.pop();
+        stringBuilder.append(":Conn_").append(
+            connLatencyCaptureInfo.operationType).append("_").append(
+            connLatencyCaptureInfo.latencyCapture);
+      } catch (EmptyStackException ignored) {}
+      try {
+        LatencyCaptureInfo readCaptureInfo = readLatencyInfos.pop();
+        stringBuilder.append(":Read_").append(readCaptureInfo.operationType)
+            .append("_").append(readCaptureInfo.latencyCapture).append("_")
+            .append(readCaptureInfo.status);
+      } catch (EmptyStackException ex) {}
+    }
+    this.connection.setRequestProperty(key, stringBuilder.toString());
   }
 
   /**
@@ -309,12 +371,25 @@ public class AbfsHttpOperation extends HttpOperation {
    * @throws IOException if an error occurs.
    */
   private HttpURLConnection openConnection() throws IOException {
-    long start = System.nanoTime();
-    try {
-      return (HttpURLConnection) url.openConnection();
-    } finally {
-      connectionTimeMs = elapsedTimeMs(start);
+    if("https".equals(url.getProtocol())) {
+      AbfsHttpsUrlConnection conn = new AbfsHttpsUrlConnection(url, null, new sun.net.www.protocol.https.Handler());
+      SSLSocketFactory sslSocketFactory = DelegatingSSLSocketFactory.getDefaultFactory();
+      if (sslSocketFactory != null) {
+        conn.setSSLSocketFactory(sslSocketFactory);
+      }
+      return conn;
     }
+
+    return  new AbfsHttpUrlConnection(url, null, new sun.net.www.protocol.http.Handler());
+//    if (!isTraceEnabled) {
+//      return (HttpURLConnection) url.openConnection();
+//    }
+//    long start = System.nanoTime();
+//    try {
+//      return (HttpURLConnection) url.openConnection();
+//    } finally {
+//      connectionTimeMs = elapsedTimeMs(start);
+//    }
   }
 
   @Override
