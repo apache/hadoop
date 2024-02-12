@@ -308,9 +308,8 @@ public class AbfsApacheHttpClient {
 
     public AbfsConnMgr(ConnectionSocketFactory connectionSocketFactory, AbfsConfiguration abfsConfiguration) {
       super(createSocketFactoryRegistry(connectionSocketFactory), abfsConnFactory);
-//      setDefaultMaxPerRoute(abfsConfiguration.getHttpClientMaxConn());
-      setDefaultMaxPerRoute(1);
-      setMaxTotal(1);
+      setDefaultMaxPerRoute(abfsConfiguration.getHttpClientMaxConn());
+      setMaxTotal(abfsConfiguration.getHttpClientMaxConn());
     }
     @Override
     public void connect(final HttpClientConnection managedConn,
