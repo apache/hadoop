@@ -20,14 +20,14 @@ package org.apache.hadoop.fs.s3a.commit;
 
 import java.util.List;
 
-import org.apache.hadoop.fs.s3a.commit.magic.InMemoryMagicCommitTracker;
-import org.apache.hadoop.fs.s3a.commit.magic.S3MagicCommitTracker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.Statistic;
+import org.apache.hadoop.fs.s3a.commit.magic.InMemoryMagicCommitTracker;
+import org.apache.hadoop.fs.s3a.commit.magic.S3MagicCommitTracker;
 import org.apache.hadoop.fs.s3a.impl.AbstractStoreOperation;
 import org.apache.hadoop.fs.s3a.statistics.PutTrackerStatistics;
 

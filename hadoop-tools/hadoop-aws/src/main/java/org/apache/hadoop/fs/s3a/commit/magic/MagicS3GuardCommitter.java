@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.s3a.commit.magic;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -288,7 +287,7 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
     // get all the pending commit metadata associated with the taskAttemptId.
     // This will also remove the entry from the map.
     List<SinglePendingCommit> pendingCommits =
-        InMemoryMagicCommitTracker.getTaskAttemptIdToMpuMetdadataMap().remove(taskAttemptId);
+        InMemoryMagicCommitTracker.getTaskAttemptIdToMpuMetdadata().remove(taskAttemptId);
     // get all the path/files associated with the taskAttemptId.
     // This will also remove the entry from the map.
     List<Path> pathsAssociatedWithTaskAttemptId =
@@ -299,7 +298,7 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
     if (pathsAssociatedWithTaskAttemptId != null) {
       for (Path path : pathsAssociatedWithTaskAttemptId) {
         boolean cleared =
-            InMemoryMagicCommitTracker.getTaskAttemptIdToBytesWritten().remove(path) != null;
+            InMemoryMagicCommitTracker.getPathToBytesWritten().remove(path) != null;
         LOG.debug("Removing path: {} from the memory isSuccess: {}", path, cleared);
       }
     } else {

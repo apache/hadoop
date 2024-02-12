@@ -18,12 +18,12 @@
 
 package org.apache.hadoop.fs.s3a.commit.magic;
 
+import java.util.List;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.commit.MagicCommitPaths;
-
-import java.util.List;
 
 import static org.apache.hadoop.util.Preconditions.checkArgument;
 

@@ -58,6 +58,10 @@ public final class CommitConstants {
    */
   public static final String PENDINGSET_SUFFIX = ".pendingset";
 
+  /**
+   * Etag name to be returned on non-committed S3 object: {@value}.
+   */
+  public static final String MAGIC_COMMITTER_PENDING_OBJECT_ETAG_NAME = "pending";
 
   /**
    * Prefix to use for config options: {@value}.
@@ -242,10 +246,15 @@ public final class CommitConstants {
    */
   public static final int DEFAULT_COMMITTER_THREADS = 32;
 
-
+  /**
+   * Should Magic committer track all the pending commits in memory?
+   */
   public static final String FS_S3A_COMMITTER_MAGIC_TRACK_COMMITS_IN_MEMORY_ENABLED =
       "fs.s3a.committer.magic.track.commits.in.memory.enabled";
 
+  /**
+   * Default value for {@link #FS_S3A_COMMITTER_MAGIC_TRACK_COMMITS_IN_MEMORY_ENABLED}: {@value}.
+   */
   public static final boolean FS_S3A_COMMITTER_MAGIC_TRACK_COMMITS_IN_MEMORY_ENABLED_DEFAULT =
       false;
 

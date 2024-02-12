@@ -41,7 +41,7 @@ import static java.util.Objects.requireNonNull;
  * uses any datatype in hadoop-mapreduce.
  */
 @InterfaceAudience.Private
-public class MagicCommitTracker extends PutTracker {
+public abstract class MagicCommitTracker extends PutTracker {
   public static final Logger LOG = LoggerFactory.getLogger(
       MagicCommitTracker.class);
 
@@ -103,22 +103,20 @@ public class MagicCommitTracker extends PutTracker {
 
   /**
    * Complete operation: generate the final commit data, put it.
-   *
-   * @param uploadId     Upload ID
-   * @param parts        list of parts
+   * @param uploadId Upload ID
+   * @param parts list of parts
    * @param bytesWritten bytes written
    * @param iostatistics nullable IO statistics
    * @return false, indicating that the commit must fail.
-   * @throws IOException              any IO problem.
+   * @throws IOException any IO problem.
    * @throws IllegalArgumentException bad argument
    */
   @Override
-  public boolean aboutToComplete(String uploadId,
+  public abstract boolean aboutToComplete(String uploadId,
       List<CompletedPart> parts,
       long bytesWritten,
-      final IOStatistics iostatistics) throws IOException {
-    return false;
-  }
+      IOStatistics iostatistics)
+      throws IOException;
 
   @Override
   public String toString() {
