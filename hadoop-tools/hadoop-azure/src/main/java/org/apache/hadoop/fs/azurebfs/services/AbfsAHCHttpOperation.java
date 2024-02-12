@@ -210,7 +210,7 @@ public class AbfsAHCHttpOperation extends HttpOperation {
       AbfsIoUtils.dumpHeadersToDebugLog("Response Headers",
           getResponseHeaders(httpResponse));
 
-      connThatCantBeClosed.add(abfsHttpClientContext.httpClientConnection);
+//      connThatCantBeClosed.add(abfsHttpClientContext.httpClientConnection);
       parseResponse(buffer, offset, length);
       abfsHttpClientContext.isBeingRead = false;
 
@@ -226,18 +226,18 @@ public class AbfsAHCHttpOperation extends HttpOperation {
       readLatencyCaptureInfo.status = statusCode;
       READ_INFO_STACK.push(readLatencyCaptureInfo);
     } finally {
-      connThatCantBeClosed.remove(abfsHttpClientContext.httpClientConnection);
-      if(isExpect100Error || !toBeClosedLater) {
-        return;
-      }
-
-      if(abfsHttpClientContext.shouldKillConn()) {
-        abfsApacheHttpClient.destroyConn(
-            abfsHttpClientContext.httpClientConnection);
-      } else {
-        abfsApacheHttpClient.releaseConn(
-            abfsHttpClientContext.httpClientConnection, abfsHttpClientContext);
-      }
+//      connThatCantBeClosed.remove(abfsHttpClientContext.httpClientConnection);
+//      if(isExpect100Error || !toBeClosedLater) {
+//        return;
+//      }
+//
+//      if(abfsHttpClientContext.shouldKillConn()) {
+//        abfsApacheHttpClient.destroyConn(
+//            abfsHttpClientContext.httpClientConnection);
+//      } else {
+//        abfsApacheHttpClient.releaseConn(
+//            abfsHttpClientContext.httpClientConnection, abfsHttpClientContext);
+//      }
     }
   }
 
