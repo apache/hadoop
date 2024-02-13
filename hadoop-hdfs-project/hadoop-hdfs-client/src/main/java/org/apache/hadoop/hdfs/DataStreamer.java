@@ -1827,7 +1827,7 @@ class DataStreamer extends Daemon {
     do {
       errorState.resetInternalError();
       lastException.clear();
-
+      streamerClosed = false;
       DatanodeInfo[] excluded = getExcludedNodes();
       lb = locateFollowingBlock(
           excluded.length > 0 ? excluded : null, oldBlock);
