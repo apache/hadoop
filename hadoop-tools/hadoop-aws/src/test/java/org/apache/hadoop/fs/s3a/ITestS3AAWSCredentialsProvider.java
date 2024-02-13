@@ -40,10 +40,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.getCSVTestPath;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DELEGATION_TOKEN_BINDING;
 import static org.apache.hadoop.fs.s3a.impl.InstantiationIOException.CONSTRUCTOR_EXCEPTION;
+import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.getExternalData;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.*;
 
@@ -207,7 +207,7 @@ public class ITestS3AAWSCredentialsProvider {
   @Test
   public void testAnonymousProvider() throws Exception {
     Configuration conf = createConf(AnonymousAWSCredentialsProvider.class);
-    Path testFile = getCSVTestPath(conf);
+    Path testFile = getExternalData(conf);
     try (FileSystem fs = FileSystem.newInstance(testFile.toUri(), conf)) {
       Assertions.assertThat(fs)
           .describedAs("Filesystem")
