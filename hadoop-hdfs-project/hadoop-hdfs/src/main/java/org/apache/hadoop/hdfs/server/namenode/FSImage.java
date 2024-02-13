@@ -24,6 +24,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -1211,6 +1212,14 @@ public class FSImage implements Closeable {
 
   public void removeFromCheckpointing(long txid) {
     currentlyCheckpointing.remove(txid);
+  }
+
+  void save(FSNamesystem src, File dst) throws IOException {
+    final SaveNamespaceContext context = new SaveNamespaceContext(src,
+        getCorrectLastAppliedOrWrittenTxId(), new Canceler());
+    final Storage.StorageDirectory storageDirectory = new Storage.StorageDirectory(dst);
+    Files.createDirectories(storageDirectory.getCurrentDir().toPath());
+    new FSImageSaver(context, storageDirectory, NameNodeFile.IMAGE).run();
   }
 
   private synchronized void saveFSImageInAllDirs(FSNamesystem source,
