@@ -284,12 +284,12 @@ a bucket.
 The up to date list of regions is [Available online](https://docs.aws.amazon.com/general/latest/gr/s3.html).
 
 This list can be used to specify the endpoint of individual buckets, for example
-for buckets in the central and EU/Ireland endpoints.
+for buckets in the us-west-2 and EU/Ireland endpoints.
 
 
 ```xml
 <property>
-  <name>fs.s3a.bucket.us2w-dataset.endpoint.region</name>
+  <name>fs.s3a.bucket.us-west-2-dataset.endpoint.region</name>
   <value>us-west-2</value>
 </property>
 
