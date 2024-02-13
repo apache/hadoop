@@ -52,6 +52,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.Nullable;
 
+import org.apache.hadoop.fs.s3a.api.S3ObjectStorageClassFilter;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
@@ -592,7 +593,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       s3aInternals = createS3AInternals();
 
       s3ObjectStorageClassFilter = Optional.of(conf.getTrimmed(READ_RESTORED_GLACIER_OBJECTS,
-              S3ObjectStorageClassFilter.READ_ALL.toString()))
+              DEFAULT_READ_RESTORED_GLACIER_OBJECTS))
           .map(String::toUpperCase)
           .map(S3ObjectStorageClassFilter::valueOf).get();
 

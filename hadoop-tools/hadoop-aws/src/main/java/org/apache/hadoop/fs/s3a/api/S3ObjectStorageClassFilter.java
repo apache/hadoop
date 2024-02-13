@@ -16,8 +16,9 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a;
+package org.apache.hadoop.fs.s3a.api;
 
+import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 import java.util.Set;
 import java.util.function.Function;
