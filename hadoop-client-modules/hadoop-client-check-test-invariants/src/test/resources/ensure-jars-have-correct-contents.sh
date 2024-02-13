@@ -58,6 +58,10 @@ allowed_expr+="|^org.apache.hadoop.application-classloader.properties$"
 allowed_expr+="|^java.policy$"
 #   * Used by javax.annotation
 allowed_expr+="|^jndi.properties$"
+allowed_expr+="|^win32-x86/$"
+allowed_expr+="|^win32-x86/attach_hotspot_windows.dll$"
+allowed_expr+="|^win32-x86-64/$"
+allowed_expr+="|^win32-x86-64/attach_hotspot_windows.dll$"
 
 allowed_expr+=")"
 declare -i bad_artifacts=0
