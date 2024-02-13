@@ -21,7 +21,6 @@ package org.apache.hadoop.fs.s3a;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Assume;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.LocatedFileStatus;
@@ -42,6 +41,7 @@ import java.nio.file.AccessDeniedException;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.createFiles;
 import static org.apache.hadoop.fs.s3a.test.ExtraAssertions.failIf;
+import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.requireDefaultExternalData;
 import static org.apache.hadoop.test.LambdaTestUtils.*;
 import static org.apache.hadoop.util.functional.RemoteIterators.mappingRemoteIterator;
 import static org.apache.hadoop.util.functional.RemoteIterators.toList;
@@ -135,22 +135,13 @@ public class ITestS3AFailureHandling extends AbstractS3ATestBase {
     timer.end("removeKeys");
   }
 
-
-  private Path maybeGetCsvPath() {
-    Configuration conf = getConfiguration();
-    String csvFile = conf.getTrimmed(KEY_CSVTEST_FILE, DEFAULT_CSVTEST_FILE);
-    Assume.assumeTrue("CSV test file is not the default",
-        DEFAULT_CSVTEST_FILE.equals(csvFile));
-    return new Path(csvFile);
-  }
-
   /**
    * Test low-level failure handling with low level delete request.
    */
   @Test
   public void testMultiObjectDeleteNoPermissions() throws Throwable {
-    describe("Delete the landsat CSV file and expect it to fail");
-    Path csvPath = maybeGetCsvPath();
+    describe("Delete the external file and expect it to fail");
+    Path csvPath = requireDefaultExternalData(getConfiguration());
     S3AFileSystem fs = (S3AFileSystem) csvPath.getFileSystem(
         getConfiguration());
     // create a span, expect it to be activated.
@@ -170,8 +161,8 @@ public class ITestS3AFailureHandling extends AbstractS3ATestBase {
    */
   @Test
   public void testSingleObjectDeleteNoPermissionsTranslated() throws Throwable {
-    describe("Delete the landsat CSV file and expect it to fail");
-    Path csvPath = maybeGetCsvPath();
+    describe("Delete the external file and expect it to fail");
+    Path csvPath = requireDefaultExternalData(getConfiguration());
     S3AFileSystem fs = (S3AFileSystem) csvPath.getFileSystem(
         getConfiguration());
     AccessDeniedException aex = intercept(AccessDeniedException.class,

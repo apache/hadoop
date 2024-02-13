@@ -481,8 +481,8 @@ This will fetch the token and save it to the named file (here, `tokens.bin`),
 even if Kerberos is disabled.
 
 ```bash
-# Fetch a token for the AWS landsat-pds bucket and save it to tokens.bin
-$ hdfs fetchdt --webservice s3a://landsat-pds/  tokens.bin
+# Fetch a token for the AWS noaa-isd-pds bucket and save it to tokens.bin
+$ hdfs fetchdt --webservice s3a://noaa-isd-pds/ tokens.bin
 ```
 
 If the command fails with `ERROR: Failed to fetch token` it means the
@@ -498,11 +498,11 @@ host on which it was created.
 ```bash
 $ bin/hdfs fetchdt --print tokens.bin
 
-Token (S3ATokenIdentifier{S3ADelegationToken/Session; uri=s3a://landsat-pds;
+Token (S3ATokenIdentifier{S3ADelegationToken/Session; uri=s3a://noaa-isd-pds;
 timestamp=1541683947569; encryption=EncryptionSecrets{encryptionMethod=SSE_S3};
 Created on vm1.local/192.168.99.1 at time 2018-11-08T13:32:26.381Z.};
 Session credentials for user AAABWL expires Thu Nov 08 14:02:27 GMT 2018; (valid))
-for s3a://landsat-pds
+for s3a://noaa-isd-pds
 ```
 The "(valid)" annotation means that the AWS credentials are considered "valid":
 there is both a username and a secret.
@@ -513,11 +513,11 @@ If delegation support is enabled, it also prints the current
 hadoop security level.
 
 ```bash
-$ hadoop s3guard bucket-info s3a://landsat-pds/
+$ hadoop s3guard bucket-info s3a://noaa-isd-pds/
 
-Filesystem s3a://landsat-pds
+Filesystem s3a://noaa-isd-pds
 Location: us-west-2
-Filesystem s3a://landsat-pds is not using S3Guard
+Filesystem s3a://noaa-isd-pds is not using S3Guard
 The "magic" committer is not supported
 
 S3A Client

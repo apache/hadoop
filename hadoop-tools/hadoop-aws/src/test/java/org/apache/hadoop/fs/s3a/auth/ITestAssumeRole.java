@@ -44,7 +44,6 @@ import org.apache.hadoop.fs.s3a.AWSBadRequestException;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
 import org.apache.hadoop.fs.s3a.MultipartUtils;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
-import org.apache.hadoop.fs.s3a.S3ATestConstants;
 import org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
@@ -64,6 +63,7 @@ import static org.apache.hadoop.fs.s3a.auth.RolePolicies.*;
 import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.forbidden;
 import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.newAssumedRoleConfig;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardToolTestHelper.exec;
+import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.requireAnonymousDataPath;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsSourceToString;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
@@ -104,7 +104,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   public void setup() throws Exception {
     super.setup();
     assumeRoleTests();
-    uri = new URI(S3ATestConstants.DEFAULT_CSVTEST_FILE);
+    uri = requireAnonymousDataPath(getConfiguration()).toUri();
   }
 
   @Override
