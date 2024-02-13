@@ -18,28 +18,10 @@
 
 package org.apache.hadoop.fs.s3a.list;
 
-import static org.apache.hadoop.fs.s3a.Constants.READ_RESTORED_GLACIER_OBJECTS;
-import static org.apache.hadoop.fs.s3a.Constants.STORAGE_CLASS;
-import static org.apache.hadoop.fs.s3a.Constants.STORAGE_CLASS_DEEP_ARCHIVE;
-import static org.apache.hadoop.fs.s3a.Constants.STORAGE_CLASS_GLACIER;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfStorageClassTestsDisabled;
-import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_LIST_REQUEST;
-
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.contract.ContractTestUtils;
-import org.apache.hadoop.fs.contract.s3a.S3AContract;
-import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
-import org.apache.hadoop.fs.s3a.S3ListRequest;
-import org.apache.hadoop.fs.s3a.S3ObjectStorageClassFilter;
-import org.apache.hadoop.fs.store.audit.AuditSpan;
-import org.apache.hadoop.test.LambdaTestUtils;
+
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
@@ -49,6 +31,27 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.RestoreObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.s3.model.Tier;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.contract.s3a.S3AContract;
+import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
+import org.apache.hadoop.fs.s3a.S3ListRequest;
+import org.apache.hadoop.fs.s3a.api.S3ObjectStorageClassFilter;
+import org.apache.hadoop.fs.store.audit.AuditSpan;
+import org.apache.hadoop.test.LambdaTestUtils;
+
+import static org.apache.hadoop.fs.s3a.Constants.READ_RESTORED_GLACIER_OBJECTS;
+import static org.apache.hadoop.fs.s3a.Constants.STORAGE_CLASS;
+import static org.apache.hadoop.fs.s3a.Constants.STORAGE_CLASS_DEEP_ARCHIVE;
+import static org.apache.hadoop.fs.s3a.Constants.STORAGE_CLASS_GLACIER;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfStorageClassTestsDisabled;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_LIST_REQUEST;
+
 
 /**
  * Tests of various cases related to Glacier/Deep Archive Storage class.
@@ -89,7 +92,7 @@ public class ITestS3AReadRestoredGlacierObjects extends AbstractS3ATestBase {
     FileSystem fs = contract.getTestFileSystem();
     Path dir = methodPath();
     fs.mkdirs(dir);
-    Path path = new Path(dir, "file1");
+    Path path = new Path(dir, "glaciated");
     ContractTestUtils.touch(fs, path);
     return fs;
   }
@@ -99,7 +102,7 @@ public class ITestS3AReadRestoredGlacierObjects extends AbstractS3ATestBase {
     Configuration newConf = super.createConfiguration();
     skipIfStorageClassTestsDisabled(newConf);
     disableFilesystemCaching(newConf);
-    removeBaseAndBucketOverrides(newConf, STORAGE_CLASS);
+    removeBaseAndBucketOverrides(newConf, STORAGE_CLASS, READ_RESTORED_GLACIER_OBJECTS);
     return newConf;
   }
 
@@ -138,7 +141,7 @@ public class ITestS3AReadRestoredGlacierObjects extends AbstractS3ATestBase {
   }
 
   @Test
-  public void testDefault() throws Throwable {
+  public void testReadAllObjects() throws Throwable {
     Assume.assumeTrue(type == Type.GLACIER_AND_DEEP_ARCHIVE);
     try (FileSystem fs = createFiles(S3ObjectStorageClassFilter.READ_ALL.name())) {
       Assertions.assertThat(
@@ -170,7 +173,7 @@ public class ITestS3AReadRestoredGlacierObjects extends AbstractS3ATestBase {
 
 
   private String getFilePrefixForListObjects() throws IOException {
-    return getFileSystem().pathToKey(new Path(methodPath(), "file1"));
+    return getFileSystem().pathToKey(new Path(methodPath(), "glaciated"));
   }
 
   private S3Object getS3GlacierObject(S3Client s3Client, S3ListRequest s3ListRequest) {
