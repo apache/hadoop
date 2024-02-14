@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
@@ -72,6 +74,8 @@ import static org.apache.hadoop.fs.s3a.Constants.SIGNING_ALGORITHM_S3;
 import static org.apache.hadoop.fs.s3a.Constants.SIGNING_ALGORITHM_STS;
 import static org.apache.hadoop.fs.s3a.Constants.SOCKET_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.USER_AGENT_PREFIX;
+import static org.apache.hadoop.fs.s3a.Constants.CUSTOM_HEADERS_S3;
+import static org.apache.hadoop.fs.s3a.Constants.CUSTOM_HEADERS_STS;
 import static org.apache.hadoop.fs.s3a.impl.ConfigurationHelper.enforceMinimumDuration;
 import static org.apache.hadoop.fs.s3a.impl.ConfigurationHelper.getDuration;
 import static org.apache.hadoop.util.Preconditions.checkArgument;
@@ -115,6 +119,8 @@ public final class AWSClientConfig {
     initRequestTimeout(conf, overrideConfigBuilder);
 
     initUserAgent(conf, overrideConfigBuilder);
+
+    initRequestHeaders(conf, overrideConfigBuilder, awsServiceIdentifier);
 
     String signer = conf.getTrimmed(SIGNING_ALGORITHM, "");
     if (!signer.isEmpty()) {
@@ -403,6 +409,48 @@ public final class AWSClientConfig {
         LOG.debug("Signer override for {} = {}", awsServiceIdentifier, signerOverride);
         clientConfig.putAdvancedOption(SdkAdvancedClientOption.SIGNER,
             SignerFactory.createSigner(signerOverride, configKey));
+      }
+    }
+  }
+
+  /**
+   *
+   * @param conf hadoop configuration
+   * @param clientConfig client configuration to update
+   * @param awsServiceIdentifier service name
+   */
+  private static void initRequestHeaders(Configuration conf,
+      ClientOverrideConfiguration.Builder clientConfig, String awsServiceIdentifier) {
+    String configKey = null;
+    switch (awsServiceIdentifier) {
+      case AWS_SERVICE_IDENTIFIER_S3:
+        configKey = CUSTOM_HEADERS_S3;
+        break;
+      case AWS_SERVICE_IDENTIFIER_STS:
+        configKey = CUSTOM_HEADERS_STS;
+        break;
+      default:
+        // Nothing to do. The original signer override is already setup
+    }
+    if (configKey != null) {
+      String[] customHeaders = conf.getTrimmedStrings(configKey);
+      if (customHeaders == null || customHeaders.length == 0) {
+        LOG.debug("No custom headers specified");
+        return;
+      }
+
+      for (String customHeader : customHeaders) {
+        String[] parts = customHeader.split("=");
+        if (parts.length != 2) {
+          String message = "Invalid format (Expected header1=value1:value2,header2=value1) for Header: ["
+                          + customHeader
+                          + "]";
+          LOG.error(message);
+          throw new IllegalArgumentException(message);
+        }
+
+        List<String> values = Arrays.asList(parts[1].split(":"));
+        clientConfig.putHeader(parts[0], values);
       }
     }
   }
