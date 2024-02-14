@@ -320,7 +320,9 @@ public class AbfsRestOperation {
 //      AbfsIoUtils.dumpHeadersToDebugLog("Request Headers",
 //          httpOperation.getConnection().getRequestProperties());
       intercept.sendingRequest(operationType, abfsCounters);
-      httpOperation.sendRequest(buffer, bufferOffset, bufferLength);
+      if((httpOperation instanceof AbfsHttpOperation && hasRequestBody) || httpOperation instanceof AbfsAHCHttpOperation) {
+        httpOperation.sendRequest(buffer, bufferOffset, bufferLength);
+      }
 //      if (hasRequestBody) {
 //        // HttpUrlConnection requires
 //        httpOperation.sendRequest(buffer, bufferOffset, bufferLength);
