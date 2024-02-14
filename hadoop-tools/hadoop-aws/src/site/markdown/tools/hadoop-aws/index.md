@@ -926,17 +926,17 @@ The switch to turn S3A auditing on or off.
   <description>
     Should auditing of S3A requests be enabled?
   </description>
-</property
+</property>
 ```
 ## <a name="glacier"></a> Glacier Object Support
 
 [Amazon S3 Glacier (S3 Glacier)](https://docs.aws.amazon.com/amazonglacier/latest/dev/introduction.html) is a secure and durable service for low-cost data archiving and
 long-term backup.
 With S3 Glacier, you can store your data cost effectively for months, years, or even decades.
-This support introduces a new config, which decides the objects returned from listStatus. 
+This support introduces a new config, which decides the objects returned from listStatus.
 Note : This is not available on all AWS S3 store types, or on third party stores.
 
-The config is as follows: 
+The config is as follows:
 ```xml
 <!--
 The switch to control how S3A handles glacier storage classes.
