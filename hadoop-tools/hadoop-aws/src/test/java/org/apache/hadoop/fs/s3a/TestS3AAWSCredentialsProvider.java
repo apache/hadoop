@@ -54,38 +54,35 @@ import org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider;
 import org.apache.hadoop.fs.s3a.auth.NoAuthWithAWSException;
 import org.apache.hadoop.fs.s3a.auth.delegation.CountInvocationsProvider;
 import org.apache.hadoop.fs.s3a.impl.InstantiationIOException;
+import org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.util.Sets;
 
 import static org.apache.hadoop.fs.s3a.Constants.ASSUMED_ROLE_CREDENTIALS_PROVIDER;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_CREDENTIALS_PROVIDER;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_CREDENTIALS_PROVIDER_MAPPING;
-import static org.apache.hadoop.fs.s3a.S3ATestConstants.DEFAULT_CSVTEST_FILE;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.authenticationContains;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.buildClassListString;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.getCSVTestPath;
 import static org.apache.hadoop.fs.s3a.auth.CredentialProviderListFactory.STANDARD_AWS_PROVIDERS;
 import static org.apache.hadoop.fs.s3a.auth.CredentialProviderListFactory.buildAWSProviderList;
 import static org.apache.hadoop.fs.s3a.auth.CredentialProviderListFactory.createAWSCredentialProviderList;
 import static org.apache.hadoop.fs.s3a.impl.InstantiationIOException.DOES_NOT_IMPLEMENT;
+import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.getExternalData;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.test.LambdaTestUtils.interceptFuture;
 import static org.apache.hadoop.util.StringUtils.STRING_COLLECTION_SPLIT_EQUALS_INVALID_ARG;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 
 /**
  * Unit tests for {@link Constants#AWS_CREDENTIALS_PROVIDER} logic.
  */
-public class TestS3AAWSCredentialsProvider {
+public class TestS3AAWSCredentialsProvider extends AbstractS3ATestBase {
 
   /**
-   * URI of the landsat images.
+   * URI of the test file: this must be anonymously accessible.
+   * As these are unit tests no actual connection to the store is made.
    */
   private static final URI TESTFILE_URI = new Path(
-      DEFAULT_CSVTEST_FILE).toUri();
+      PublicDatasetTestUtils.DEFAULT_EXTERNAL_FILE).toUri();
 
   private static final Logger LOG = LoggerFactory.getLogger(TestS3AAWSCredentialsProvider.class);
 
@@ -128,7 +125,7 @@ public class TestS3AAWSCredentialsProvider {
         TemporaryAWSCredentialsProvider.NAME
             + ", \t" + SimpleAWSCredentialsProvider.NAME
             + " ,\n " + AnonymousAWSCredentialsProvider.NAME);
-    Path testFile = getCSVTestPath(conf);
+    Path testFile = getExternalData(conf);
 
     AWSCredentialProviderList list = createAWSCredentialProviderList(
         testFile.toUri(), conf);
@@ -587,7 +584,7 @@ public class TestS3AAWSCredentialsProvider {
   @Test
   public void testConcurrentAuthentication() throws Throwable {
     Configuration conf = createProviderConfiguration(SlowProvider.class.getName());
-    Path testFile = getCSVTestPath(conf);
+    Path testFile = getExternalData(conf);
 
     AWSCredentialProviderList list = createAWSCredentialProviderList(testFile.toUri(), conf);
 
@@ -657,7 +654,7 @@ public class TestS3AAWSCredentialsProvider {
   @Test
   public void testConcurrentAuthenticationError() throws Throwable {
     Configuration conf = createProviderConfiguration(ErrorProvider.class.getName());
-    Path testFile = getCSVTestPath(conf);
+    Path testFile = getExternalData(conf);
 
     AWSCredentialProviderList list = createAWSCredentialProviderList(testFile.toUri(), conf);
     ErrorProvider provider = (ErrorProvider) list.getProviders().get(0);

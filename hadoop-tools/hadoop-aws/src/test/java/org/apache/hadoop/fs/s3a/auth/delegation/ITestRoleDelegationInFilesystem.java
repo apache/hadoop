@@ -53,8 +53,7 @@ public class ITestRoleDelegationInFilesystem extends
 
   /**
    * This verifies that the granted credentials only access the target bucket
-   * by using the credentials in a new S3 client to query the AWS-owned landsat
-   * bucket.
+   * by using the credentials in a new S3 client to query the public data bucket.
    * @param delegatedFS delegated FS with role-restricted access.
    * @throws Exception failure
    */
@@ -62,7 +61,7 @@ public class ITestRoleDelegationInFilesystem extends
   protected void verifyRestrictedPermissions(final S3AFileSystem delegatedFS)
       throws Exception {
     intercept(AccessDeniedException.class,
-        () -> readLandsatMetadata(delegatedFS));
+        () -> readExternalDatasetMetadata(delegatedFS));
   }
 
 }
