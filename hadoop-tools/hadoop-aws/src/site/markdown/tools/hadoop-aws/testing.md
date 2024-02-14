@@ -260,22 +260,20 @@ define the target region in `auth-keys.xml`.
 ### <a name="csv"></a> CSV Data Tests
 
 The `TestS3AInputStreamPerformance` tests require read access to a multi-MB
-text file. The default file for these tests is one published by amazon,
-[s3a://landsat-pds.s3.amazonaws.com/scene_list.gz](http://landsat-pds.s3.amazonaws.com/scene_list.gz).
-This is a gzipped CSV index of other files which amazon serves for open use.
+text file. The default file for these tests is a public one.
+`s3a://noaa-cors-pds/raw/2023/001/akse/AKSE001a.23_.gz`
+from the [NOAA Continuously Operating Reference Stations (CORS) Network (NCN)](https://registry.opendata.aws/noaa-ncn/)
 
 Historically it was required to be a `csv.gz` file to validate S3 Select
 support. Now that S3 Select support has been removed, other large files
 may be used instead.
-However, future versions may want to read a CSV file again, so testers
-should still reference one.
 
 The path to this object is set in the option `fs.s3a.scale.test.csvfile`,
 
 ```xml
 <property>
   <name>fs.s3a.scale.test.csvfile</name>
-  <value>s3a://landsat-pds/scene_list.gz</value>
+  <value>s3a://noaa-cors-pds/raw/2023/001/akse/AKSE001a.23_.gz</value>
 </property>
 ```
 
@@ -285,6 +283,7 @@ is hosted in Amazon's US-east datacenter.
 1. If the data cannot be read for any reason then the test will fail.
 1. If the property is set to a different path, then that data must be readable
 and "sufficiently" large.
+1. If a `.gz` file, expect decompression-related test failures.
 
 (the reason the space or newline is needed is to add "an empty entry"; an empty
 `<value/>` would be considered undefined and pick up the default)
@@ -292,14 +291,13 @@ and "sufficiently" large.
 
 If using a test file in a different AWS S3 region then
 a bucket-specific region must be defined.
-For the default test dataset, hosted in the `landsat-pds` bucket, this is:
+For the default test dataset, hosted in the `noaa-cors-pds` bucket, this is:
 
 ```xml
-<property>
-  <name>fs.s3a.bucket.landsat-pds.endpoint.region</name>
-  <value>us-west-2</value>
-  <description>The region for s3a://landsat-pds</description>
-</property>
+  <property>
+    <name>fs.s3a.bucket.noaa-cors-pds.endpoint.region</name>
+    <value>us-east-1</value>
+  </property>
 ```
 
 ### <a name="access"></a> Testing Access Point Integration
@@ -857,7 +855,7 @@ the tests become skipped, rather than fail with a trace which is really a false 
 The ordered test case mechanism of `AbstractSTestS3AHugeFiles` is probably
 the most elegant way of chaining test setup/teardown.
 
-Regarding reusing existing data, we tend to use the landsat archive of
+Regarding reusing existing data, we tend to use the noaa-cors-pds archive of
 AWS US-East for our testing of input stream operations. This doesn't work
 against other regions, or with third party S3 implementations. Thus the
 URL can be overridden for testing elsewhere.
