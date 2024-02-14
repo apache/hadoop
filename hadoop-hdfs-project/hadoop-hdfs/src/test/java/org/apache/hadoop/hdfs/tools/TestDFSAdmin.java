@@ -64,6 +64,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -1282,5 +1283,71 @@ public class TestDFSAdmin {
 
     Assertions.assertThat(outs.subList(1, 5)).containsSubsequence(success, from, to);
     Assertions.assertThat(outs.subList(5, 9)).containsSubsequence(success, from, to, retrieval);
+  }
+
+  @Test
+  public void testAllNamenodesReconfig() throws Exception {
+    final HdfsConfiguration clusterConf = new HdfsConfiguration();
+    clusterConf.setLong(DFS_HEARTBEAT_INTERVAL_KEY, 5);
+    try (MiniDFSCluster miniCluster = new MiniDFSCluster.Builder(clusterConf).nnTopology(
+        MiniDFSNNTopology.simpleHAFederatedTopology(2)).build()) {
+      miniCluster.waitActive();
+
+      final HdfsConfiguration clientConf = new HdfsConfiguration();
+      // Parse FederatedHAConf
+      DFSTestUtil.setFederatedHAConfiguration(miniCluster, clientConf);
+      admin = new DFSAdmin(clientConf);
+
+      ReconfigurationUtil reconfigurationUtil = mock(ReconfigurationUtil.class);
+      // Active and Standby have a total of 4
+      for (int i = 0; i < 4; i++) {
+        NameNode nn = miniCluster.getNameNode(i);
+        nn.setReconfigurationUtil(reconfigurationUtil);
+      }
+
+      List<ReconfigurationUtil.PropertyChange> changes = new ArrayList<>();
+      changes.add(new ReconfigurationUtil.PropertyChange(DFS_HEARTBEAT_INTERVAL_KEY, "3",
+          miniCluster.getNameNode(0).getConf().get(DFS_HEARTBEAT_INTERVAL_KEY)));
+      when(reconfigurationUtil.parseChangedProperties(any(Configuration.class),
+          any(Configuration.class))).thenReturn(changes);
+
+      int result = admin.startReconfiguration("namenode", "livenodes");
+      Assertions.assertThat(result).isEqualTo(0);
+
+      List<String> outsForStartReconfig = new ArrayList<>();
+      List<String> errsForStartReconfig = new ArrayList<>();
+      reconfigurationOutErrFormatter("startReconfiguration", "namenode", "livenodes",
+          outsForStartReconfig, errsForStartReconfig);
+
+      String started = "Started reconfiguration task on node";
+      String starting =
+          "Starting of reconfiguration task successful on 4 nodes, failed on 0 nodes.";
+      Assertions.assertThat(outsForStartReconfig).hasSize(5);
+      Assertions.assertThat(errsForStartReconfig).hasSize(0);
+      Assertions.assertThat(outsForStartReconfig.get(0)).startsWith(started);
+      Assertions.assertThat(outsForStartReconfig.get(1)).startsWith(started);
+      Assertions.assertThat(outsForStartReconfig.get(2)).startsWith(started);
+      Assertions.assertThat(outsForStartReconfig.get(3)).startsWith(started);
+      Assertions.assertThat(outsForStartReconfig.get(4)).startsWith(starting);
+
+      List<String> outs = new ArrayList<>();
+      List<String> errs = new ArrayList<>();
+      awaitReconfigurationFinished("namenode", "livenodes", outs, errs);
+      Assertions.assertThat(outs).hasSize(17);
+      Assertions.assertThat(errs).hasSize(0);
+      LOG.info("dfsadmin -reconfig namenode livenodes status output:");
+      outs.forEach(s -> LOG.info("{}", s));
+
+      Assertions.assertThat(outs.get(0)).startsWith("Reconfiguring status for node");
+
+      String success = "SUCCESS: Changed property dfs.heartbeat.interval";
+      String from = "\tFrom: \"5\"";
+      String to = "\tTo: \"3\"";
+      String retrieval =
+          "Retrieval of reconfiguration status successful on 4 nodes, failed on 0 nodes.";
+
+      Assertions.assertThat(outs.subList(1, 5)).containsSubsequence(success, from, to);
+      Assertions.assertThat(outs.subList(5, 17)).containsSubsequence(success, from, to, retrieval);
+    }
   }
 }
