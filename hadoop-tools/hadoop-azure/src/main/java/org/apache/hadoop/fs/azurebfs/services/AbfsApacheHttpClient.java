@@ -15,7 +15,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsApacheHttpExpect100Exception;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
-import org.apache.http.ConnectionReuseStrategy;
 import org.apache.http.HttpClientConnection;
 import org.apache.http.HttpConnectionMetrics;
 import org.apache.http.HttpEntityEnclosingRequest;
@@ -69,6 +68,16 @@ public class AbfsApacheHttpClient {
       this.abfsRestOperationType = operationType;
     }
 
+    public boolean shouldKillConn(AbfsConnMgr connMgr) {
+      if (shouldKillConn()) {
+        return true;
+      }
+      if (connMgr.kacCount.get() > 5) {
+        return true;
+      }
+      return false;
+    }
+
     public boolean shouldKillConn() {
 //      if(sendTime != null && sendTime > MetricPercentile.getSendPercentileVal(abfsRestOperationType, 99.9)) {
 //        return true;
@@ -120,10 +129,17 @@ public class AbfsApacheHttpClient {
 
   public static class AbfsConnFactory extends ManagedHttpClientConnectionFactory {
 
+    AbfsConnMgr connMgr;
+
+    public void setConnMgr(AbfsConnMgr connMgr) {
+      this.connMgr = connMgr;
+    }
+
+
     @Override
     public ManagedHttpClientConnection create(final HttpRoute route,
         final ConnectionConfig config) {
-      return new AbfsApacheHttpConnection(super.create(route, config));
+      return new AbfsApacheHttpConnection(super.create(route, config), connMgr);
     }
   }
 
@@ -134,6 +150,8 @@ public class AbfsApacheHttpClient {
 
     private ManagedHttpClientConnection httpClientConnection;
 
+    private final AbfsConnMgr connMgr;
+
     private AbfsHttpClientContext abfsHttpClientContext;
 
     int count = 0;
@@ -143,9 +161,11 @@ public class AbfsApacheHttpClient {
       return count;
     }
 
-    public AbfsApacheHttpConnection(ManagedHttpClientConnection clientConnection) {
+    public AbfsApacheHttpConnection(ManagedHttpClientConnection clientConnection,
+        final AbfsConnMgr connMgr) {
       this.httpClientConnection = clientConnection;
       abfsApacheHttpConnectionMap.put(getId(), this);
+      this.connMgr = connMgr;
     }
 
     public void setAbfsHttpClientContext(AbfsHttpClientContext abfsHttpClientContext) {
@@ -159,6 +179,8 @@ public class AbfsApacheHttpClient {
     @Override
     public void close() throws IOException {
       httpClientConnection.close();
+      connMgr.connCount.decrementAndGet();
+      connMgr.kacCount.decrementAndGet();
     }
 
     @Override
@@ -308,8 +330,9 @@ public class AbfsApacheHttpClient {
 //    }
 //  }
 
-  private static class AbfsConnMgr extends PoolingHttpClientConnectionManager {
+  public static class AbfsConnMgr extends PoolingHttpClientConnectionManager {
 
+    private final AtomicInteger kacCount = new AtomicInteger(0);
     private final AtomicInteger connCount = new AtomicInteger(0);
     private final AtomicInteger inTransits = new AtomicInteger(0);
 
@@ -325,6 +348,7 @@ public class AbfsApacheHttpClient {
 
     public AbfsConnMgr(ConnectionSocketFactory connectionSocketFactory, AbfsConfiguration abfsConfiguration) {
       super(createSocketFactoryRegistry(connectionSocketFactory), abfsConnFactory);
+      abfsConnFactory.setConnMgr(this);
 //      maxConn = abfsConfiguration.getHttpClientMaxConn();
       maxConn = 1;
       setDefaultMaxPerRoute(maxConn);
@@ -351,7 +375,12 @@ public class AbfsApacheHttpClient {
         throws InterruptedException, ExecutionException,
         ConnectionPoolTimeoutException {
       inTransits.incrementAndGet();
-      return super.leaseConnection(future, timeout, timeUnit);
+      try {
+        return super.leaseConnection(future, timeout, timeUnit);
+      } catch (InterruptedException | ExecutionException | ConnectionPoolTimeoutException e) {
+        inTransits.decrementAndGet();
+        throw e;
+      }
     }
 
     @Override
@@ -367,8 +396,8 @@ public class AbfsApacheHttpClient {
       }
       super.releaseConnection(managedConn, state, keepalive, timeUnit);
       inTransits.decrementAndGet();
-      if(keepalive == 0) {
-        connCount.decrementAndGet();
+      if(keepalive != 0) {
+        kacCount.incrementAndGet();
       }
     }
   }
@@ -376,12 +405,19 @@ public class AbfsApacheHttpClient {
   public static class AhcConnReuseStrategy extends
       DefaultClientConnectionReuseStrategy {
 
+    AbfsConnMgr connMgr;
+
+    public AhcConnReuseStrategy(final AbfsConnMgr connMgr) {
+      this.connMgr = connMgr;
+    }
+
     @Override
     public boolean keepAlive(final HttpResponse response,
         final HttpContext context) {
 //      response.
-      if(context instanceof AbfsHttpClientContext) {
-        if(!((AbfsHttpClientContext) context).isReadable && ((AbfsHttpClientContext) context).shouldKillConn()) {
+      if (context instanceof AbfsHttpClientContext) {
+        if (!((AbfsHttpClientContext) context).isReadable
+            && ((AbfsHttpClientContext) context).shouldKillConn(connMgr)) {
           return false;
         }
         return super.keepAlive(response, context);
@@ -389,8 +425,6 @@ public class AbfsApacheHttpClient {
       return super.keepAlive(response, context);
     }
   }
-
-  private final ConnectionReuseStrategy connectionReuseStrategy  = new AhcConnReuseStrategy();
 
   private static class AbfsHttpRequestExecutor extends HttpRequestExecutor {
 
@@ -440,7 +474,7 @@ public class AbfsApacheHttpClient {
     final HttpClientBuilder builder = HttpClients.custom();
     builder.setConnectionManager(connMgr)
         .setRequestExecutor(new AbfsHttpRequestExecutor())
-        .setConnectionReuseStrategy(connectionReuseStrategy)
+        .setConnectionReuseStrategy(new AhcConnReuseStrategy(connMgr))
         .setKeepAliveStrategy(new AbfsKeepAliveStrategy(abfsConfiguration))
         .disableContentCompression()
         .disableRedirectHandling()
