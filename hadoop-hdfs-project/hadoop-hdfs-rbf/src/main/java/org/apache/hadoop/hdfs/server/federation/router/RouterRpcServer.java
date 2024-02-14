@@ -430,6 +430,9 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
    * Clear expired namespace in the shared RouterStateIdContext.
    */
   private void clearStaleNamespacesInRouterStateIdContext() {
+    if (!router.isRouterState(RouterServiceState.RUNNING)) {
+      return;
+    }
     try {
       final Set<String> resolvedNamespaces = namenodeResolver.getNamespaces()
           .stream()
