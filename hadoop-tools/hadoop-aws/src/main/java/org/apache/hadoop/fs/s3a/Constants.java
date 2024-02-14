@@ -1528,7 +1528,6 @@ public final class Constants {
 
   /**
    * Default value of Read Restored Glacier objects config.
-   * Value = {@value}
    */
   public static final String DEFAULT_READ_RESTORED_GLACIER_OBJECTS = S3ObjectStorageClassFilter.READ_ALL.toString();
 
