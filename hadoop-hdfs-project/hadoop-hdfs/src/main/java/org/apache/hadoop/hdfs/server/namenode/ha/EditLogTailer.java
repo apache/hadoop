@@ -612,8 +612,15 @@ public class EditLogTailer {
     private NamenodeProtocol getActiveNodeProxy() throws IOException {
       if (cachedActiveProxy == null) {
         while (true) {
+          // If the thread is interrupted, quit by returning null.
+          if (Thread.currentThread().isInterrupted()) {
+            LOG.warn("Interrupted while trying to getActiveNodeProxy.");
+            return null;
+          }
+
           // if we have reached the max loop count, quit by returning null
           if ((nnLoopCount / nnCount) >= maxRetries) {
+            LOG.warn("Have reached the max loop count ({}).", nnLoopCount);
             return null;
           }
 
@@ -637,5 +644,25 @@ public class EditLogTailer {
       assert cachedActiveProxy != null;
       return cachedActiveProxy;
     }
+  }
+
+  @VisibleForTesting
+  public NamenodeProtocol getCachedActiveProxy() {
+    return cachedActiveProxy;
+  }
+
+  @VisibleForTesting
+  public long getLastRollTimeMs() {
+    return lastRollTimeMs;
+  }
+
+  @VisibleForTesting
+  public RemoteNameNodeInfo getCurrentNN() {
+    return currentNN;
+  }
+
+  @VisibleForTesting
+  public void setShouldRunForTest(boolean shouldRun) {
+    this.tailerThread.setShouldRun(shouldRun);
   }
 }

@@ -29,6 +29,8 @@ import software.amazon.awssdk.services.s3.model.S3Object;
 
 import org.slf4j.Logger;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * API version-independent container for S3 List responses.
  */
@@ -47,7 +49,7 @@ public class S3ListResult {
    * @return new list result container
    */
   public static S3ListResult v1(ListObjectsResponse result) {
-    return new S3ListResult(result, null);
+    return new S3ListResult(requireNonNull(result), null);
   }
 
   /**
@@ -56,7 +58,7 @@ public class S3ListResult {
    * @return new list result container
    */
   public static S3ListResult v2(ListObjectsV2Response result) {
-    return new S3ListResult(null, result);
+    return new S3ListResult(null, requireNonNull(result));
   }
 
   /**

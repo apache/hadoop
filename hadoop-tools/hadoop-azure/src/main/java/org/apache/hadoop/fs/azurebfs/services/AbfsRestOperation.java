@@ -83,6 +83,11 @@ public class AbfsRestOperation {
   private String failureReason;
 
   /**
+   * This variable stores the tracing context used for last Rest Operation.
+   */
+  private TracingContext lastUsedTracingContext;
+
+  /**
    * Checks if there is non-null HTTP response.
    * @return true if there is a non-null HTTP response from the ABFS call.
    */
@@ -197,10 +202,13 @@ public class AbfsRestOperation {
   public void execute(TracingContext tracingContext)
       throws AzureBlobFileSystemException {
 
+    // Since this might be a sub-sequential or parallel rest operation
+    // triggered by a single file system call, using a new tracing context.
+    lastUsedTracingContext = createNewTracingContext(tracingContext);
     try {
       IOStatisticsBinding.trackDurationOfInvocation(abfsCounters,
           AbfsStatistic.getStatNameFromHttpCall(method),
-          () -> completeExecute(tracingContext));
+          () -> completeExecute(lastUsedTracingContext));
     } catch (AzureBlobFileSystemException aze) {
       throw aze;
     } catch (IOException e) {
@@ -214,7 +222,7 @@ public class AbfsRestOperation {
    * HTTP operations.
    * @param tracingContext TracingContext instance to track correlation IDs
    */
-  private void completeExecute(TracingContext tracingContext)
+  void completeExecute(TracingContext tracingContext)
       throws AzureBlobFileSystemException {
     // see if we have latency reports from the previous requests
     String latencyHeader = getClientLatency();
@@ -408,5 +416,26 @@ public class AbfsRestOperation {
     if (abfsCounters != null) {
       abfsCounters.incrementCounter(statistic, value);
     }
+  }
+
+  /**
+   * Creates a new Tracing context before entering the retry loop of a rest operation.
+   * This will ensure all rest operations have unique
+   * tracing context that will be used for all the retries.
+   * @param tracingContext original tracingContext.
+   * @return tracingContext new tracingContext object created from original one.
+   */
+  @VisibleForTesting
+  public TracingContext createNewTracingContext(final TracingContext tracingContext) {
+    return new TracingContext(tracingContext);
+  }
+
+  /**
+   * Returns the tracing contest used for last rest operation made.
+   * @return tracingContext lasUserTracingContext.
+   */
+  @VisibleForTesting
+  public final TracingContext getLastTracingContext() {
+    return lastUsedTracingContext;
   }
 }

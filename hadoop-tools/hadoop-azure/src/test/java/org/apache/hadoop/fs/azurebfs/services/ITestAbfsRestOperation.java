@@ -49,6 +49,7 @@ import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APPEND_ACTION;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EXPECT_100_JDK_ERROR;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PATCH;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PUT;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HUNDRED_CONTINUE;
@@ -232,7 +233,7 @@ public class ITestAbfsRestOperation extends AbstractAbfsIntegrationTest {
       Mockito.doReturn(responseMessage)
           .when(abfsHttpOperation)
           .getConnResponseMessage();
-      Mockito.doThrow(new ProtocolException("Server rejected Operation"))
+      Mockito.doThrow(new ProtocolException(EXPECT_100_JDK_ERROR))
           .when(abfsHttpOperation)
           .getConnOutputStream();
       break;
@@ -290,6 +291,7 @@ public class ITestAbfsRestOperation extends AbstractAbfsIntegrationTest {
     TracingContext tracingContext = Mockito.spy(new TracingContext("abcd",
         "abcde", FSOperationType.APPEND,
         TracingHeaderFormat.ALL_ID_FORMAT, null));
+    Mockito.doReturn(tracingContext).when(op).createNewTracingContext(Mockito.any());
 
     switch (errorType) {
     case WRITE:

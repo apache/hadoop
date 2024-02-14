@@ -73,12 +73,14 @@ public class InstantiationIOException extends PathIOException {
 
   public InstantiationIOException(
       Kind kind,
-      @Nullable URI uri, String classname,
+      @Nullable URI uri,
+      @Nullable String classname,
       @Nullable String key,
       String message,
-      Throwable cause) {
+      @Nullable Throwable cause) {
     super(uri!= null ? uri.toString() : "",
-        "Class " + classname + " " + message
+        (classname != null ? ("Class " + classname + " ") : "")
+            + message
             + (key != null ? (" (configuration key " + key + ")") : ""),
         cause);
     this.kind = kind;
@@ -137,8 +139,8 @@ public class InstantiationIOException extends PathIOException {
    */
   public static InstantiationIOException unavailable(
       @Nullable URI uri,
-      String classname,
-      String key,
+      @Nullable String classname,
+      @Nullable String key,
       String text) {
     return new InstantiationIOException(Kind.Unavailable,
         uri, classname, key, text, null);

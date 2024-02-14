@@ -24,9 +24,13 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.tools.DistCp;
 import org.apache.hadoop.util.ToolRunner;
 
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.stream.Collectors;
+
+import org.assertj.core.api.Assertions;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -91,7 +95,9 @@ public class DistCpTestUtils {
     optsArr[optsArr.length - 2] = src;
     optsArr[optsArr.length - 1] = dst;
 
-    assertEquals(exitCode,
-        ToolRunner.run(conf, distCp, optsArr));
+    Assertions.assertThat(ToolRunner.run(conf, distCp, optsArr))
+        .describedAs("Exit code of distcp %s",
+            Arrays.stream(optsArr).collect(Collectors.joining(" ")))
+        .isEqualTo(exitCode);
   }
 }

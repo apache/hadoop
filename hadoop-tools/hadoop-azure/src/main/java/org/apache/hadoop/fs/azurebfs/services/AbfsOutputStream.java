@@ -26,6 +26,7 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.Future;
 import java.util.UUID;
 
+import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.impl.BackReference;
 import org.apache.hadoop.util.Preconditions;
@@ -95,6 +96,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
   private final int maxRequestsThatCanBeQueued;
 
   private ConcurrentLinkedDeque<WriteOperation> writeOperations;
+  private final ContextEncryptionAdapter contextEncryptionAdapter;
 
   // SAS tokens can be re-used until they expire
   private CachedSASToken cachedSasToken;
@@ -152,6 +154,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     this.writeOperations = new ConcurrentLinkedDeque<>();
     this.outputStreamStatistics = abfsOutputStreamContext.getStreamStatistics();
     this.fsBackRef = abfsOutputStreamContext.getFsBackRef();
+    this.contextEncryptionAdapter = abfsOutputStreamContext.getEncryptionAdapter();
 
     if (this.isAppendBlob) {
       this.maxConcurrentRequestCount = 1;
@@ -335,9 +338,9 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
              */
             AppendRequestParameters reqParams = new AppendRequestParameters(
                 offset, 0, bytesLength, mode, false, leaseId, isExpectHeaderEnabled);
-            AbfsRestOperation op =
-                client.append(path, blockUploadData.toByteArray(), reqParams,
-                    cachedSasToken.get(), new TracingContext(tracingContext));
+            AbfsRestOperation op = getClient().append(path,
+                blockUploadData.toByteArray(), reqParams, cachedSasToken.get(),
+                contextEncryptionAdapter, new TracingContext(tracingContext));
             cachedSasToken.update(op.getSasToken());
             perfInfo.registerResult(op.getResult());
             perfInfo.registerSuccess(true);
@@ -507,6 +510,9 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
       // See HADOOP-16785
       throw wrapException(path, e.getMessage(), e);
     } finally {
+      if (contextEncryptionAdapter != null) {
+        contextEncryptionAdapter.destroy();
+      }
       if (hasLease()) {
         lease.free();
         lease = null;
@@ -587,8 +593,9 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
         "writeCurrentBufferToService", "append")) {
       AppendRequestParameters reqParams = new AppendRequestParameters(offset, 0,
           bytesLength, APPEND_MODE, true, leaseId, isExpectHeaderEnabled);
-      AbfsRestOperation op = client.append(path, uploadData.toByteArray(), reqParams,
-          cachedSasToken.get(), new TracingContext(tracingContext));
+      AbfsRestOperation op = client.append(path, uploadData.toByteArray(),
+          reqParams, cachedSasToken.get(), contextEncryptionAdapter,
+          new TracingContext(tracingContext));
       cachedSasToken.update(op.getSasToken());
       outputStreamStatistics.uploadSuccessful(bytesLength);
 
@@ -648,8 +655,9 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
     AbfsPerfTracker tracker = client.getAbfsPerfTracker();
     try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker,
             "flushWrittenBytesToServiceInternal", "flush")) {
-      AbfsRestOperation op = client.flush(path, offset, retainUncommitedData, isClose,
-          cachedSasToken.get(), leaseId, new TracingContext(tracingContext));
+      AbfsRestOperation op = getClient().flush(path, offset, retainUncommitedData,
+          isClose, cachedSasToken.get(), leaseId, contextEncryptionAdapter,
+          new TracingContext(tracingContext));
       cachedSasToken.update(op.getSasToken());
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
     } catch (AzureBlobFileSystemException ex) {
@@ -786,5 +794,10 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
   @VisibleForTesting
   ListeningExecutorService getExecutorService() {
     return executorService;
+  }
+
+  @VisibleForTesting
+  AbfsClient getClient() {
+    return client;
   }
 }

@@ -176,7 +176,7 @@ Response Body:
                 "finishTime" : 1326381356010
              },
              {
-                "submitTime" : 1326381446500
+                "submitTime" : 1326381446500,
                 "state" : "SUCCEEDED",
                 "user" : "user1",
                 "reducesTotal" : 1,

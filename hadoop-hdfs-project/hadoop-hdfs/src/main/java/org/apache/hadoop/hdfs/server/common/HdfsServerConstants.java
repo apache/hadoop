@@ -42,6 +42,8 @@ import org.apache.hadoop.util.StringUtils;
 
 @InterfaceAudience.Private
 public interface HdfsServerConstants {
+  // Will be set by
+  // {@code DFSConfigKeys.DFS_NAMENODE_BLOCKPLACEMENTPOLICY_MIN_BLOCKS_FOR_WRITE_KEY}.
   int MIN_BLOCKS_FOR_WRITE = 1;
 
   long LEASE_RECOVER_PERIOD = 10 * 1000; // in ms

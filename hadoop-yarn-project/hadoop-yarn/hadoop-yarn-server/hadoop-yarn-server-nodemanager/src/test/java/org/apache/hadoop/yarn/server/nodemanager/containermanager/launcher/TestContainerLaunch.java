@@ -35,7 +35,6 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -218,7 +217,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       //Capture output from prelaunch.out
 
       List<String> output = Files.readAllLines(Paths.get(localLogDir.getAbsolutePath(), ContainerLaunch.CONTAINER_PRE_LAUNCH_STDOUT),
-          Charset.forName("UTF-8"));
+          StandardCharsets.UTF_8);
       assert(output.contains("hello"));
 
       symLinkFile = new File(tmpDir, badSymlink);
@@ -549,7 +548,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       } catch(ExitCodeException e){
         //Capture diagnostics from prelaunch.stderr
         List<String> error = Files.readAllLines(Paths.get(localLogDir.getAbsolutePath(), ContainerLaunch.CONTAINER_PRE_LAUNCH_STDERR),
-            Charset.forName("UTF-8"));
+            StandardCharsets.UTF_8);
         diagnostics = StringUtils.join("\n", error);
       }
       Assert.assertTrue(diagnostics.contains(Shell.WINDOWS ?
@@ -580,8 +579,12 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
 
     String res = ContainerLaunch.expandEnvironment(input, logPath);
 
-    String expectedAddOpens = Shell.isJavaVersionAtLeast(17) ?
-        "--add-opens=java.base/java.lang=ALL-UNNAMED" : "";
+    String additionalJdk17PlusOptions =
+        "--add-opens=java.base/java.lang=ALL-UNNAMED " +
+        "--add-exports=java.base/sun.net.dns=ALL-UNNAMED " +
+        "--add-exports=java.base/sun.net.util=ALL-UNNAMED";
+    String expectedAddOpens = Shell.isJavaVersionAtLeast(17) ? additionalJdk17PlusOptions : "";
+
     if (Shell.WINDOWS) {
       Assert.assertEquals("%HADOOP_HOME%/share/hadoop/common/*;"
           + "%HADOOP_HOME%/share/hadoop/common/lib/*;"

@@ -28,7 +28,6 @@ import java.util.concurrent.Executor;
 
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
 import software.amazon.awssdk.core.interceptor.ExecutionInterceptor;
-import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.transfer.s3.S3TransferManager;
@@ -38,6 +37,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.s3a.statistics.StatisticsFromAwsSdk;
 
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_ENDPOINT;
+import static org.apache.hadoop.fs.s3a.Constants.S3EXPRESS_CREATE_SESSION_DEFAULT;
 
 /**
  * Factory for creation of {@link S3Client} client instances.
@@ -169,8 +169,22 @@ public interface S3ClientFactory {
     /**
      * Region of the S3 bucket.
      */
-    private Region region;
+    private String region;
 
+    /**
+     * Enable S3Express create session.
+     */
+    private boolean expressCreateSession = S3EXPRESS_CREATE_SESSION_DEFAULT;
+
+    /**
+     * Enable checksum validation.
+     */
+    private boolean checksumValidationEnabled;
+
+    /**
+     * Is FIPS enabled?
+     */
+    private boolean fipsEnabled;
 
     /**
      * List of execution interceptors to include in the chain
@@ -386,26 +400,6 @@ public interface S3ClientFactory {
     }
 
     /**
-     * Set region.
-     *
-     * @param value new value
-     * @return the builder
-     */
-    public S3ClientCreationParameters withRegion(
-        final Region value) {
-      region = value;
-      return this;
-    }
-
-    /**
-     * Get the region.
-     * @return invoker
-     */
-    public Region getRegion() {
-      return region;
-    }
-
-    /**
      * Set the multipart flag..
      *
      * @param value new value
@@ -422,6 +416,93 @@ public interface S3ClientFactory {
      */
     public boolean isMultipartCopy() {
       return multipartCopy;
+    }
+
+    /**
+     * Set region.
+     *
+     * @param value new value
+     * @return the builder
+     */
+    public S3ClientCreationParameters withRegion(
+        final String value) {
+      region = value;
+      return this;
+    }
+
+    /**
+     * Get the region.
+     * @return invoker
+     */
+    public String getRegion() {
+      return region;
+    }
+
+    /**
+     * Should s3express createSession be called?
+     * @return true if the client should enable createSession.
+     */
+    public boolean isExpressCreateSession() {
+      return expressCreateSession;
+    }
+
+    /**
+     * Set builder value.
+     * @param value new value
+     * @return the builder
+     */
+    public S3ClientCreationParameters withExpressCreateSession(final boolean value) {
+      expressCreateSession = value;
+      return this;
+    }
+
+    /**
+     * Set builder value.
+     * @param value new value
+     * @return the builder
+     */
+    public S3ClientCreationParameters withChecksumValidationEnabled(final boolean value) {
+      checksumValidationEnabled = value;
+      return this;
+    }
+
+    public boolean isChecksumValidationEnabled() {
+      return checksumValidationEnabled;
+    }
+
+    @Override
+    public String toString() {
+      return "S3ClientCreationParameters{" +
+          "endpoint='" + endpoint + '\'' +
+          ", pathStyleAccess=" + pathStyleAccess +
+          ", requesterPays=" + requesterPays +
+          ", userAgentSuffix='" + userAgentSuffix + '\'' +
+          ", pathUri=" + pathUri +
+          ", minimumPartSize=" + minimumPartSize +
+          ", multiPartThreshold=" + multiPartThreshold +
+          ", multipartCopy=" + multipartCopy +
+          ", region='" + region + '\'' +
+          ", expressCreateSession=" + expressCreateSession +
+          ", checksumValidationEnabled=" + checksumValidationEnabled +
+          '}';
+    }
+
+    /**
+     * Get the FIPS flag.
+     * @return is fips enabled
+     */
+    public boolean isFipsEnabled() {
+      return fipsEnabled;
+    }
+
+    /**
+     * Set builder value.
+     * @param value new value
+     * @return the builder
+     */
+    public S3ClientCreationParameters withFipsEnabled(final boolean value) {
+      fipsEnabled = value;
+      return this;
     }
   }
 }

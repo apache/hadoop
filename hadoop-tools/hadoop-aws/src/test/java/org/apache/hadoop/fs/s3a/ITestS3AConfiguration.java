@@ -19,9 +19,11 @@
 package org.apache.hadoop.fs.s3a;
 
 import java.io.File;
+import java.io.IOException;
+import java.net.ConnectException;
 import java.net.URI;
-import java.nio.file.AccessDeniedException;
 import java.security.PrivilegedExceptionAction;
+import java.time.Duration;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Rule;
@@ -48,6 +50,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.auth.STSClientFactory;
+import org.apache.hadoop.fs.s3a.impl.AWSClientConfig;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -58,6 +61,7 @@ import org.apache.hadoop.util.VersionInfo;
 import org.apache.http.HttpStatus;
 
 import static java.util.Objects.requireNonNull;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.EU_WEST_1;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
@@ -129,7 +133,7 @@ public class ITestS3AConfiguration {
         S3ATestConstants.CONFIGURATION_TEST_ENDPOINT, "");
     if (endpoint.isEmpty()) {
       LOG.warn("Custom endpoint test skipped as " +
-          S3ATestConstants.CONFIGURATION_TEST_ENDPOINT + "config " +
+          S3ATestConstants.CONFIGURATION_TEST_ENDPOINT + " config " +
           "setting was not detected");
     } else {
       conf.set(Constants.ENDPOINT, endpoint);
@@ -157,7 +161,7 @@ public class ITestS3AConfiguration {
     conf.setInt(Constants.PROXY_PORT, 1);
     String proxy =
         conf.get(Constants.PROXY_HOST) + ":" + conf.get(Constants.PROXY_PORT);
-    expectFSCreateFailure(AWSClientIOException.class,
+    expectFSCreateFailure(ConnectException.class,
         conf, "when using proxy " + proxy);
   }
 
@@ -211,10 +215,10 @@ public class ITestS3AConfiguration {
     conf.unset(Constants.PROXY_PORT);
     conf.set(Constants.PROXY_HOST, "127.0.0.1");
     conf.set(Constants.SECURE_CONNECTIONS, "true");
-    expectFSCreateFailure(AWSClientIOException.class,
+    expectFSCreateFailure(ConnectException.class,
         conf, "Expected a connection error for proxy server");
     conf.set(Constants.SECURE_CONNECTIONS, "false");
-    expectFSCreateFailure(AWSClientIOException.class,
+    expectFSCreateFailure(ConnectException.class,
         conf, "Expected a connection error for proxy server");
   }
 
@@ -365,6 +369,7 @@ public class ITestS3AConfiguration {
       throws Exception {
 
     conf = new Configuration();
+    skipIfCrossRegionClient(conf);
     conf.set(Constants.PATH_STYLE_ACCESS, Boolean.toString(true));
     assertTrue(conf.getBoolean(Constants.PATH_STYLE_ACCESS, false));
 
@@ -403,6 +408,7 @@ public class ITestS3AConfiguration {
   @Test
   public void testDefaultUserAgent() throws Exception {
     conf = new Configuration();
+    skipIfCrossRegionClient(conf);
     fs = S3ATestUtils.createTestFileSystem(conf);
     assertNotNull(fs);
     S3Client s3 = getS3Client("User Agent");
@@ -416,6 +422,7 @@ public class ITestS3AConfiguration {
   @Test
   public void testCustomUserAgent() throws Exception {
     conf = new Configuration();
+    skipIfCrossRegionClient(conf);
     conf.set(Constants.USER_AGENT_PREFIX, "MyApp");
     fs = S3ATestUtils.createTestFileSystem(conf);
     assertNotNull(fs);
@@ -430,15 +437,22 @@ public class ITestS3AConfiguration {
   @Test
   public void testRequestTimeout() throws Exception {
     conf = new Configuration();
-    conf.set(REQUEST_TIMEOUT, "120");
-    fs = S3ATestUtils.createTestFileSystem(conf);
-    S3Client s3 = getS3Client("Request timeout (ms)");
-    SdkClientConfiguration clientConfiguration = getField(s3, SdkClientConfiguration.class,
-        "clientConfiguration");
-    assertEquals("Configured " + REQUEST_TIMEOUT +
-        " is different than what AWS sdk configuration uses internally",
-        120000,
-        clientConfiguration.option(SdkClientOption.API_CALL_ATTEMPT_TIMEOUT).toMillis());
+    // remove the safety check on minimum durations.
+    AWSClientConfig.setMinimumOperationDuration(Duration.ZERO);
+    try {
+      Duration timeout = Duration.ofSeconds(120);
+      conf.set(REQUEST_TIMEOUT, timeout.getSeconds() + "s");
+      fs = S3ATestUtils.createTestFileSystem(conf);
+      S3Client s3 = getS3Client("Request timeout (ms)");
+      SdkClientConfiguration clientConfiguration = getField(s3, SdkClientConfiguration.class,
+          "clientConfiguration");
+      Assertions.assertThat(clientConfiguration.option(SdkClientOption.API_CALL_ATTEMPT_TIMEOUT))
+          .describedAs("Configured " + REQUEST_TIMEOUT +
+              " is different than what AWS sdk configuration uses internally")
+          .isEqualTo(timeout);
+    } finally {
+      AWSClientConfig.resetMinimumOperationDuration();
+    }
   }
 
   @Test
@@ -552,6 +566,7 @@ public class ITestS3AConfiguration {
     config.set(SIGNING_ALGORITHM_STS, "CustomSTSSigner");
 
     config.set(AWS_REGION, EU_WEST_1);
+    disableFilesystemCaching(config);
     fs = S3ATestUtils.createTestFileSystem(config);
 
     S3Client s3Client = getS3Client("testS3SpecificSignerOverride");
@@ -564,7 +579,7 @@ public class ITestS3AConfiguration {
     intercept(StsException.class, "", () ->
         stsClient.getSessionToken());
 
-    intercept(AccessDeniedException.class, "", () ->
+    final IOException ioe = intercept(IOException.class, "", () ->
         Invoker.once("head", bucket, () ->
             s3Client.headBucket(HeadBucketRequest.builder().bucket(bucket).build())));
 
@@ -606,6 +621,18 @@ public class ITestS3AConfiguration {
 
     public static boolean isSTSSignerCalled() {
       return stsSignerCalled;
+    }
+  }
+
+  /**
+   * Skip a test if client created is cross region.
+   * @param configuration configuration to probe
+   */
+  private static void skipIfCrossRegionClient(
+      Configuration configuration) {
+    if (configuration.get(ENDPOINT, null) == null
+        && configuration.get(AWS_REGION, null) == null) {
+      skip("Skipping test as cross region client is in use ");
     }
   }
 }

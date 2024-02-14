@@ -29,9 +29,20 @@ import software.amazon.awssdk.auth.signer.Aws4UnsignedPayloadSigner;
 import software.amazon.awssdk.auth.signer.AwsS3V4Signer;
 import software.amazon.awssdk.core.signer.NoOpSigner;
 import software.amazon.awssdk.core.signer.Signer;
+import software.amazon.awssdk.http.auth.spi.scheme.AuthScheme;
+import software.amazon.awssdk.http.auth.spi.signer.HttpSigner;
+import software.amazon.awssdk.identity.spi.AwsCredentialsIdentity;
+import software.amazon.awssdk.identity.spi.IdentityProvider;
+import software.amazon.awssdk.identity.spi.IdentityProviders;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.S3AUtils;
+import org.apache.hadoop.fs.s3a.impl.InstantiationIOException;
 
+import static org.apache.hadoop.fs.s3a.Constants.HTTP_SIGNER_CLASS_NAME;
+import static org.apache.hadoop.fs.s3a.impl.InstantiationIOException.unavailable;
+import static org.apache.hadoop.util.Preconditions.checkArgument;
+import static org.apache.hadoop.util.Preconditions.checkState;
 
 /**
  * Signer factory used to register and create signers.
@@ -43,6 +54,9 @@ public final class SignerFactory {
   public static final String VERSION_FOUR_UNSIGNED_PAYLOAD_SIGNER = "AWS4UnsignedPayloadSignerType";
   public static final String NO_OP_SIGNER = "NoOpSignerType";
   private static final String S3_V4_SIGNER = "AWSS3V4SignerType";
+
+  /** The v2 signer is no longer available: {@value}. */
+  public static final String S3_V2_SIGNER = "S3SignerType";
 
   private static final Map<String, Class<? extends Signer>> SIGNERS
       = new ConcurrentHashMap<>();
@@ -69,12 +83,8 @@ public final class SignerFactory {
       final String signerType,
       final Class<? extends Signer> signerClass) {
 
-    if (signerType == null) {
-      throw new IllegalArgumentException("signerType cannot be null");
-    }
-    if (signerClass == null) {
-      throw new IllegalArgumentException("signerClass cannot be null");
-    }
+    checkArgument(signerType != null, "signerType cannot be null");
+    checkArgument(signerClass != null, "signerClass cannot be null");
 
     SIGNERS.put(signerType, signerClass);
   }
@@ -82,14 +92,11 @@ public final class SignerFactory {
   /**
    * Check if the signer has already been registered.
    * @param signerType signer to get
+   * @return true if the signer is registered.
    */
-  public static void verifySignerRegistered(String signerType) {
-    Class<? extends Signer> signerClass = SIGNERS.get(signerType);
-    if (signerClass == null) {
-      throw new IllegalArgumentException("unknown signer type: " + signerType);
-    }
+  public static boolean isSignerRegistered(String signerType) {
+    return SIGNERS.containsKey(signerType);
   }
-
 
   /**
    * Create an instance of the given signer.
@@ -97,13 +104,22 @@ public final class SignerFactory {
    * @param signerType The signer type.
    * @param configKey Config key used to configure the signer.
    * @return The new signer instance.
-   * @throws IOException on any problem.
+   * @throws InstantiationIOException instantiation problems.
+   * @throws IOException on any other problem.
+   *
    */
   public static Signer createSigner(String signerType, String configKey) throws IOException {
+    if (S3_V2_SIGNER.equals(signerType)) {
+      throw unavailable(null, null, configKey, S3_V2_SIGNER + " is no longer supported");
+    }
+    if (!isSignerRegistered(signerType)) {
+      throw unavailable(null, null, configKey, "unknown signer type: " + signerType);
+    }
     Class<?> signerClass = SIGNERS.get(signerType);
+
     String className = signerClass.getName();
 
-    LOG.debug("Signer class is {}", className);
+    LOG.debug("Signer class from {} and key {} is {}", signerType, configKey, className);
 
     Signer signer =
         S3AUtils.getInstanceFromReflection(className, null, null, Signer.class, "create",
@@ -111,4 +127,64 @@ public final class SignerFactory {
 
     return signer;
   }
+
+  /**
+   * Create an auth scheme instance from an ID and a signer.
+   * @param schemeId scheme id
+   * @param signer signer
+   * @return the auth scheme
+   */
+  public static AuthScheme<AwsCredentialsIdentity> createAuthScheme(
+      String schemeId,
+      HttpSigner<AwsCredentialsIdentity> signer) {
+
+    return new AuthScheme<AwsCredentialsIdentity>() {
+      @Override
+      public String schemeId() {
+        return schemeId;
+      }
+      @Override
+      public IdentityProvider<AwsCredentialsIdentity> identityProvider(
+          IdentityProviders providers) {
+        return providers.identityProvider(AwsCredentialsIdentity.class);
+      }
+      @Override
+      public HttpSigner<AwsCredentialsIdentity> signer() {
+        return signer;
+      }
+    };
+  }
+
+  /**
+   * Create an auth scheme by looking up the signer class in the configuration,
+   * loading and instantiating it.
+   * @param conf configuration
+   * @param scheme scheme to bond to
+   * @param configKey configuration key
+   * @return the auth scheme
+   * @throws InstantiationIOException failure to instantiate
+   * @throws IllegalStateException if the signer class is not defined
+   * @throws RuntimeException other configuration problems
+   */
+  public static AuthScheme<AwsCredentialsIdentity> createHttpSigner(
+      Configuration conf, String scheme, String configKey) throws IOException {
+
+    final Class<? extends HttpSigner> clazz = conf.getClass(HTTP_SIGNER_CLASS_NAME,
+        null, HttpSigner.class);
+    checkState(clazz != null, "No http signer class defined in %s", configKey);
+    LOG.debug("Creating http signer {} from {}", clazz, configKey);
+    try {
+      return createAuthScheme(scheme, clazz.newInstance());
+
+    } catch (InstantiationException | IllegalAccessException e) {
+      throw new InstantiationIOException(
+          InstantiationIOException.Kind.InstantiationFailure,
+          null,
+          clazz.getName(),
+          HTTP_SIGNER_CLASS_NAME,
+          e.toString(),
+          e);
+    }
+  }
+
 }

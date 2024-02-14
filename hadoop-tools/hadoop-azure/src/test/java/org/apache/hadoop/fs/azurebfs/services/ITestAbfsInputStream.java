@@ -169,6 +169,8 @@ public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
     final AzureBlobFileSystem fs = getFileSystem();
     getAbfsStore(fs).getAbfsConfiguration()
         .setReadSmallFilesCompletely(readSmallFilesCompletely);
+    getAbfsStore(fs).getAbfsConfiguration()
+            .setOptimizeFooterRead(false);
     return fs;
   }
 

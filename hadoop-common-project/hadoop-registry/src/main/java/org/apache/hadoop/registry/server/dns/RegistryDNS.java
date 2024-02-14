@@ -80,6 +80,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
@@ -628,7 +629,7 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
       Name zoneName = zone.getOrigin();
       DNSKEYRecord dnskeyRecord = dnsKeyRecs.get(zoneName);
       if (dnskeyRecord == null) {
-        byte[] key = Base64.decodeBase64(publicKey.getBytes("UTF-8"));
+        byte[] key = Base64.decodeBase64(publicKey.getBytes(StandardCharsets.UTF_8));
         dnskeyRecord = new DNSKEYRecord(zoneName,
             DClass.IN, ttl,
             DNSKEYRecord.Flags.ZONE_KEY,

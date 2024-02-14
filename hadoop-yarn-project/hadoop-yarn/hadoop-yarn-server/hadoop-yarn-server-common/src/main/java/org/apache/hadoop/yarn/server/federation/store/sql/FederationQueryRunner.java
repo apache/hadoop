@@ -45,11 +45,13 @@ public class FederationQueryRunner {
   public final static String QUERY_SEQUENCE_TABLE_SQL =
       "SELECT nextVal FROM sequenceTable WHERE sequenceName = %s";
 
-  public final static String INSERT_SEQUENCE_TABLE_SQL = "" +
+  public final static String INSERT_SEQUENCE_TABLE_SQL =
       "INSERT INTO sequenceTable(sequenceName, nextVal) VALUES(%s, %d)";
 
-  public final static String UPDATE_SEQUENCE_TABLE_SQL = "" +
+  public final static String UPDATE_SEQUENCE_TABLE_SQL =
       "UPDATE sequenceTable SET nextVal = %d WHERE sequenceName = %s";
+
+  public final static String DELETE_QUEUE_SQL = "DELETE FROM policies WHERE queue = %s";
 
   public static final Logger LOG = LoggerFactory.getLogger(FederationQueryRunner.class);
 
@@ -292,6 +294,59 @@ public class FederationQueryRunner {
       }
       close(statement);
     }
+  }
+
+  public void deletePolicyByQueue(Connection connection, String queue)
+      throws SQLException {
+    String deleteSQL = String.format(DELETE_QUEUE_SQL, quoteString(queue));
+    boolean committed = false;
+    Statement statement = null;
+    try {
+      statement = connection.createStatement();
+      statement.executeUpdate(deleteSQL);
+      connection.commit();
+      committed = true;
+    } catch (SQLException e) {
+      throw new SQLException("Unable to deletePolicyByQueue due to: " + e.getMessage());
+    } finally {
+      if (!committed) {
+        rollbackDBConn(connection);
+      }
+      close(statement);
+    }
+  }
+
+  public void truncateTable(Connection connection, String tableName)
+      throws SQLException {
+    DbType dbType = DatabaseProduct.getDbType(connection);
+    String deleteSQL = getTruncateStatement(dbType, tableName);
+    boolean committed = false;
+    Statement statement = null;
+    try {
+      statement = connection.createStatement();
+      statement.execute(deleteSQL);
+      connection.commit();
+      committed = true;
+    } catch (SQLException e) {
+      throw new SQLException("Unable to truncateTable due to: " + e.getMessage());
+    } finally {
+      if (!committed) {
+        rollbackDBConn(connection);
+      }
+      close(statement);
+    }
+  }
+
+  private String getTruncateStatement(DbType dbType, String tableName) {
+    if (isMYSQL(dbType)) {
+      return ("DELETE FROM \"" + tableName + "\"");
+    } else {
+      return("DELETE FROM " + tableName);
+    }
+  }
+
+  private boolean isMYSQL(DbType dbType) {
+    return dbType == DbType.MYSQL;
   }
 
   static void rollbackDBConn(Connection dbConn) {

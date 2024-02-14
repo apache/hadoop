@@ -25,6 +25,7 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -479,7 +480,28 @@ public class StringUtils {
     set.remove("");
     return set;
   }
-  
+
+  /**
+   * Splits an "=" separated value <code>String</code>, trimming leading and
+   * trailing whitespace on each value after splitting by comma and new line separator.
+   *
+   * @param str a comma separated <code>String</code> with values, may be null
+   * @return a <code>Map</code> of <code>String</code> keys and values, empty
+   * Collection if null String input.
+   */
+  public static Map<String, String> getTrimmedStringCollectionSplitByEquals(
+      String str) {
+    String[] trimmedList = getTrimmedStrings(str);
+    Map<String, String> pairs = new HashMap<>();
+    for (String s : trimmedList) {
+      String[] splitByKeyVal = getTrimmedStringsSplitByEquals(s);
+      if (splitByKeyVal.length == 2) {
+        pairs.put(splitByKeyVal[0], splitByKeyVal[1]);
+      }
+    }
+    return pairs;
+  }
+
   /**
    * Splits a comma or newline separated value <code>String</code>, trimming
    * leading and trailing whitespace on each value.
@@ -495,6 +517,22 @@ public class StringUtils {
     }
 
     return str.trim().split("\\s*[,\n]\\s*");
+  }
+
+  /**
+   * Splits "=" separated value <code>String</code>, trimming
+   * leading and trailing whitespace on each value.
+   *
+   * @param str an "=" separated <code>String</code> with values,
+   *            may be null
+   * @return an array of <code>String</code> values, empty array if null String
+   *         input
+   */
+  public static String[] getTrimmedStringsSplitByEquals(String str){
+    if (null == str || str.trim().isEmpty()) {
+      return emptyStringArray;
+    }
+    return str.trim().split("\\s*=\\s*");
   }
 
   final public static String[] emptyStringArray = {};

@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -320,7 +321,7 @@ class ImageLoaderCurrent implements ImageLoader {
     for(int i = 0; i < numINUC; i++) {
       v.visitEnclosingElement(ImageElement.INODE_UNDER_CONSTRUCTION);
       byte [] name = FSImageSerialization.readBytes(in);
-      String n = new String(name, "UTF8");
+      String n = new String(name, StandardCharsets.UTF_8);
       v.visit(ImageElement.INODE_PATH, n);
       
       if (NameNodeLayoutVersion.supports(Feature.ADD_INODE_ID, imageVersion)) {

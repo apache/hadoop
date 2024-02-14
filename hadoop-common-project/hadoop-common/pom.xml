@@ -20,11 +20,11 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project-dist</artifactId>
-    <version>3.4.0-SNAPSHOT</version>
+    <version>3.5.0-SNAPSHOT</version>
     <relativePath>../../hadoop-project-dist</relativePath>
   </parent>
   <artifactId>hadoop-common</artifactId>
-  <version>3.4.0-SNAPSHOT</version>
+  <version>3.5.0-SNAPSHOT</version>
   <description>Apache Hadoop Common</description>
   <name>Apache Hadoop Common</name>
   <packaging>jar</packaging>
@@ -40,7 +40,7 @@
   <dependencies>
     <dependency>
       <groupId>org.apache.hadoop.thirdparty</groupId>
-      <artifactId>hadoop-shaded-protobuf_3_7</artifactId>
+      <artifactId>hadoop-shaded-protobuf_3_21</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -193,8 +193,8 @@
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>log4j</groupId>
-      <artifactId>log4j</artifactId>
+      <groupId>ch.qos.reload4j</groupId>
+      <artifactId>reload4j</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>
@@ -240,7 +240,7 @@
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-log4j12</artifactId>
+      <artifactId>slf4j-reload4j</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>
@@ -263,10 +263,11 @@
       <artifactId>re2j</artifactId>
       <scope>compile</scope>
     </dependency>
+    <!-- Needed for compilation, though no longer in production.  -->
     <dependency>
       <groupId>com.google.protobuf</groupId>
       <artifactId>protobuf-java</artifactId>
-      <scope>compile</scope>
+      <scope>${common.protobuf2.scope}</scope>
     </dependency>
     <dependency>
       <groupId>com.google.code.gson</groupId>
@@ -313,6 +314,11 @@
     <dependency>
       <groupId>org.apache.sshd</groupId>
       <artifactId>sshd-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.sshd</groupId>
+      <artifactId>sshd-sftp</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -504,11 +510,11 @@
               <!--These classes have direct Protobuf references for backward compatibility reasons-->
               <excludes>
                 <exclude>**/ProtobufHelper.java</exclude>
-                <exclude>**/RpcWritable.java</exclude>
                 <exclude>**/ProtobufRpcEngineCallback.java</exclude>
                 <exclude>**/ProtobufRpcEngine.java</exclude>
                 <exclude>**/ProtobufRpcEngine2.java</exclude>
                 <exclude>**/ProtobufRpcEngineProtos.java</exclude>
+                <exclude>**/ProtobufWrapperLegacy.java</exclude>
               </excludes>
             </configuration>
           </execution>

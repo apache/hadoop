@@ -80,6 +80,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SLOWDISK_LOW_THR
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SLOWDISK_LOW_THRESHOLD_MS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_SLOWDISKS_TO_EXCLUDE_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_SLOWDISKS_TO_EXCLUDE_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_STARTUP_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_DEFAULT;
@@ -371,7 +373,8 @@ public class DataNode extends ReconfigurableBase
               DFS_DISK_BALANCER_PLAN_VALID_INTERVAL,
               DFS_DATANODE_DATA_TRANSFER_BANDWIDTHPERSEC_KEY,
               DFS_DATANODE_DATA_WRITE_BANDWIDTHPERSEC_KEY,
-              DFS_DATANODE_DATA_READ_BANDWIDTHPERSEC_KEY));
+              DFS_DATANODE_DATA_READ_BANDWIDTHPERSEC_KEY,
+              DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_KEY));
 
   public static final String METRICS_LOG_NAME = "DataNodeMetricsLog";
 
@@ -462,7 +465,7 @@ public class DataNode extends ReconfigurableBase
   private final Tracer tracer;
   private static final int NUM_CORES = Runtime.getRuntime()
       .availableProcessors();
-  private static final double CONGESTION_RATIO = 1.5;
+  private final double congestionRatio;
   private DiskBalancer diskBalancer;
   private DataSetLockManager dataSetLockManager;
 
@@ -515,6 +518,10 @@ public class DataNode extends ReconfigurableBase
     volumeChecker = new DatasetVolumeChecker(conf, new Timer());
     this.xferService =
         HadoopExecutors.newCachedThreadPool(new Daemon.DaemonFactory());
+    double congestionRationTmp = conf.getDouble(DFSConfigKeys.DFS_PIPELINE_CONGESTION_RATIO,
+        DFSConfigKeys.DFS_PIPELINE_CONGESTION_RATIO_DEFAULT);
+    this.congestionRatio = congestionRationTmp > 0 ?
+        congestionRationTmp : DFSConfigKeys.DFS_PIPELINE_CONGESTION_RATIO_DEFAULT;
   }
 
   /**
@@ -614,6 +621,10 @@ public class DataNode extends ReconfigurableBase
         new DataTransferThrottler(100, ecReconstuctReadBandwidth) : null;
     this.ecReconstuctWriteThrottler = ecReconstuctWriteBandwidth > 0 ?
         new DataTransferThrottler(100, ecReconstuctWriteBandwidth) : null;
+    double congestionRationTmp = conf.getDouble(DFSConfigKeys.DFS_PIPELINE_CONGESTION_RATIO,
+        DFSConfigKeys.DFS_PIPELINE_CONGESTION_RATIO_DEFAULT);
+    this.congestionRatio = congestionRationTmp > 0 ?
+        congestionRationTmp : DFSConfigKeys.DFS_PIPELINE_CONGESTION_RATIO_DEFAULT;
   }
 
   @Override  // ReconfigurableBase
@@ -727,6 +738,8 @@ public class DataNode extends ReconfigurableBase
     case DFS_DISK_BALANCER_ENABLED:
     case DFS_DISK_BALANCER_PLAN_VALID_INTERVAL:
       return reconfDiskBalancerParameters(property, newVal);
+    case DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_KEY:
+      return reconfSlowIoWarningThresholdParameters(property, newVal);
     default:
       break;
     }
@@ -1048,6 +1061,24 @@ public class DataNode extends ReconfigurableBase
     }
   }
 
+  private String reconfSlowIoWarningThresholdParameters(String property, String newVal)
+      throws ReconfigurationException {
+    String result;
+    try {
+      LOG.info("Reconfiguring {} to {}", property, newVal);
+      Preconditions.checkNotNull(dnConf, "DNConf has not been initialized.");
+      long slowIoWarningThreshold = (newVal == null ?
+          DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_DEFAULT :
+          Long.parseLong(newVal));
+      result = Long.toString(slowIoWarningThreshold);
+      dnConf.setDatanodeSlowIoWarningThresholdMs(slowIoWarningThreshold);
+      LOG.info("RECONFIGURE* changed {} to {}", property, newVal);
+      return result;
+    } catch (IllegalArgumentException e) {
+      throw new ReconfigurationException(property, newVal, getConf().get(property), e);
+    }
+  }
+
   /**
    * Get a list of the keys of the re-configurable properties in configuration.
    */
@@ -1070,7 +1101,7 @@ public class DataNode extends ReconfigurableBase
     }
     double load = ManagementFactory.getOperatingSystemMXBean()
         .getSystemLoadAverage();
-    return load > NUM_CORES * CONGESTION_RATIO ? PipelineAck.ECN.CONGESTED :
+    return load > NUM_CORES * congestionRatio ? PipelineAck.ECN.CONGESTED :
         PipelineAck.ECN.SUPPORTED;
   }
 
@@ -1520,14 +1551,14 @@ public class DataNode extends ReconfigurableBase
         = new ReconfigurationProtocolServerSideTranslatorPB(this);
     service = ReconfigurationProtocolService
         .newReflectiveBlockingService(reconfigurationProtocolXlator);
-    DFSUtil.addPBProtocol(getConf(), ReconfigurationProtocolPB.class, service,
+    DFSUtil.addInternalPBProtocol(getConf(), ReconfigurationProtocolPB.class, service,
         ipcServer);
 
     InterDatanodeProtocolServerSideTranslatorPB interDatanodeProtocolXlator = 
         new InterDatanodeProtocolServerSideTranslatorPB(this);
     service = InterDatanodeProtocolService
         .newReflectiveBlockingService(interDatanodeProtocolXlator);
-    DFSUtil.addPBProtocol(getConf(), InterDatanodeProtocolPB.class, service,
+    DFSUtil.addInternalPBProtocol(getConf(), InterDatanodeProtocolPB.class, service,
         ipcServer);
 
     LOG.info("Opened IPC server at {}", ipcServer.getListenerAddress());
@@ -2569,7 +2600,7 @@ public class DataNode extends ReconfigurableBase
     if (this.threadGroup != null) {
       int sleepMs = 2;
       while (true) {
-        // When shutting down for restart, wait 2.5 seconds before forcing
+        // When shutting down for restart, wait 1 second before forcing
         // termination of receiver threads.
         if (!this.shutdownForUpgrade ||
             (this.shutdownForUpgrade && (Time.monotonicNow() - timeNotified
@@ -2608,6 +2639,8 @@ public class DataNode extends ReconfigurableBase
     }
     if (metrics != null) {
       metrics.setDataNodeActiveXceiversCount(0);
+      metrics.setDataNodeReadActiveXceiversCount(0);
+      metrics.setDataNodeWriteActiveXceiversCount(0);
       metrics.setDataNodePacketResponderCount(0);
       metrics.setDataNodeBlockRecoveryWorkerCount(0);
     }
@@ -4076,8 +4109,12 @@ public class DataNode extends ReconfigurableBase
       return;
     }
     if (!fromScanner && blockScanner.isEnabled()) {
-      blockScanner.markSuspectBlock(data.getVolume(block).getStorageID(),
-          block);
+      FsVolumeSpi volume = data.getVolume(block);
+      if (volume == null) {
+        LOG.warn("Cannot find FsVolumeSpi to handle bad block: {}", block);
+        return;
+      }
+      blockScanner.markSuspectBlock(volume.getStorageID(), block);
     } else {
       try {
         reportBadBlocks(block);

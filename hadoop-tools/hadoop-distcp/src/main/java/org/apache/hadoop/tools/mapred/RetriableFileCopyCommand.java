@@ -380,6 +380,9 @@ public class RetriableFileCopyCommand extends RetriableCommand {
   private static short getReplicationFactor(
           EnumSet<FileAttribute> fileAttributes, CopyListingFileStatus source,
           FileSystem targetFS, Path tmpTargetPath) {
+    if (source.isErasureCoded()) {
+      return targetFS.getDefaultReplication(tmpTargetPath);
+    }
     return fileAttributes.contains(FileAttribute.REPLICATION)
         ? source.getReplication()
         : targetFS.getDefaultReplication(tmpTargetPath);
