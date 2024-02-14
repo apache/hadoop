@@ -46,26 +46,27 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.auth.AbstractSessionCredentialsProvider;
 import org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider;
 import org.apache.hadoop.fs.s3a.auth.NoAuthWithAWSException;
+import org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils;
 import org.apache.hadoop.io.retry.RetryPolicy;
 
+import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.getExternalData;
 import static org.apache.hadoop.fs.s3a.Constants.*;
-import static org.apache.hadoop.fs.s3a.S3ATestConstants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.test.LambdaTestUtils.interceptFuture;
-import static org.junit.Assert.*;
 
 /**
  * Unit tests for {@link Constants#AWS_CREDENTIALS_PROVIDER} logic.
  */
-public class TestS3AAWSCredentialsProvider {
+public class TestS3AAWSCredentialsProvider extends AbstractS3ATestBase {
 
   /**
-   * URI of the landsat images.
+   * URI of the test file: this must be anonymously accessible.
+   * As these are unit tests no actual connection to the store is made.
    */
   private static final URI TESTFILE_URI = new Path(
-      DEFAULT_CSVTEST_FILE).toUri();
+      PublicDatasetTestUtils.DEFAULT_EXTERNAL_FILE).toUri();
 
   @Rule
   public ExpectedException exception = ExpectedException.none();
@@ -110,7 +111,7 @@ public class TestS3AAWSCredentialsProvider {
         TemporaryAWSCredentialsProvider.NAME
             + ", \t" + SimpleAWSCredentialsProvider.NAME
             + " ,\n " + AnonymousAWSCredentialsProvider.NAME);
-    Path testFile = getCSVTestPath(conf);
+    Path testFile = getExternalData(conf);
 
     AWSCredentialProviderList list = createAWSCredentialProviderSet(
         testFile.toUri(), conf);
@@ -522,7 +523,7 @@ public class TestS3AAWSCredentialsProvider {
   @Test
   public void testConcurrentAuthentication() throws Throwable {
     Configuration conf = createProviderConfiguration(SlowProvider.class.getName());
-    Path testFile = getCSVTestPath(conf);
+    Path testFile = getExternalData(conf);
 
     AWSCredentialProviderList list = createAWSCredentialProviderSet(testFile.toUri(), conf);
 
@@ -592,7 +593,7 @@ public class TestS3AAWSCredentialsProvider {
   @Test
   public void testConcurrentAuthenticationError() throws Throwable {
     Configuration conf = createProviderConfiguration(ErrorProvider.class.getName());
-    Path testFile = getCSVTestPath(conf);
+    Path testFile = getExternalData(conf);
 
     AWSCredentialProviderList list = createAWSCredentialProviderSet(testFile.toUri(), conf);
     ErrorProvider provider = (ErrorProvider) list.getProviders().get(0);

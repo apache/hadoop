@@ -248,14 +248,13 @@ a bucket.
 The up to date list of regions is [Available online](https://docs.aws.amazon.com/general/latest/gr/s3.html).
 
 This list can be used to specify the endpoint of individual buckets, for example
-for buckets in the central and EU/Ireland endpoints.
+for buckets in the us-west-2 and EU/Ireland endpoints.
 
 
 ```xml
 <property>
-  <name>fs.s3a.bucket.landsat-pds.endpoint.region</name>
+  <name>fs.s3a.bucket.us-west-2-dataset.endpoint.region</name>
   <value>us-west-2</value>
-  <description>The region for s3a://landsat-pds URLs</description>
 </property>
 
 <property>
@@ -318,9 +317,9 @@ The boolean option `fs.s3a.endpoint.fips` (default `false`) switches the S3A con
 For a single bucket:
 ```xml
 <property>
-  <name>fs.s3a.bucket.landsat-pds.endpoint.fips</name>
+  <name>fs.s3a.bucket.noaa-isd-pds.endpoint.fips</name>
   <value>true</value>
-  <description>Use the FIPS endpoint for the landsat dataset</description>
+  <description>Use the FIPS endpoint for the NOAA dataset</description>
 </property>
 ```
 

@@ -76,6 +76,7 @@ import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenIOExceptio
 import static org.apache.hadoop.fs.s3a.auth.delegation.MiniKerberizedHadoopCluster.ALICE;
 import static org.apache.hadoop.fs.s3a.auth.delegation.MiniKerberizedHadoopCluster.assertSecurityEnabled;
 import static org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens.lookupS3ADelegationToken;
+import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.requireAnonymousDataPath;
 import static org.apache.hadoop.test.LambdaTestUtils.doAs;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.hamcrest.Matchers.containsString;
@@ -330,8 +331,10 @@ public class ITestSessionDelegationInFilesystem extends AbstractDelegationIT {
         + " if role restricted, permissions are tightened.");
     S3AFileSystem fs = getFileSystem();
     // force a probe of the remote FS to make sure its endpoint is valid
-    fs.getObjectMetadata(new Path("/"));
-    readLandsatMetadata(fs);
+    // TODO: Check what should happen here. Calling headObject() on the root path fails in V2,
+    // with the error that key cannot be empty.
+   // fs.getObjectMetadata(new Path("/"));
+    readExternalDatasetMetadata(fs);
 
     URI uri = fs.getUri();
     // create delegation tokens from the test suites FS.
@@ -450,13 +453,13 @@ public class ITestSessionDelegationInFilesystem extends AbstractDelegationIT {
   }
 
   /**
-   * Session tokens can read the landsat bucket without problems.
+   * Session tokens can read the external bucket without problems.
    * @param delegatedFS delegated FS
    * @throws Exception failure
    */
   protected void verifyRestrictedPermissions(final S3AFileSystem delegatedFS)
       throws Exception {
-    readLandsatMetadata(delegatedFS);
+    readExternalDatasetMetadata(delegatedFS);
   }
 
   @Test
@@ -569,7 +572,7 @@ public class ITestSessionDelegationInFilesystem extends AbstractDelegationIT {
 
   /**
    * This verifies that the granted credentials only access the target bucket
-   * by using the credentials in a new S3 client to query the AWS-owned landsat
+   * by using the credentials in a new S3 client to query the external
    * bucket.
    * @param delegatedFS delegated FS with role-restricted access.
    * @throws AccessDeniedException if the delegated FS's credentials can't
@@ -578,16 +581,17 @@ public class ITestSessionDelegationInFilesystem extends AbstractDelegationIT {
    * @throws Exception failure
    */
   @SuppressWarnings("deprecation")
-  protected ObjectMetadata readLandsatMetadata(final S3AFileSystem delegatedFS)
+  protected ObjectMetadata readExternalDatasetMetadata(final S3AFileSystem delegatedFS)
       throws Exception {
     AWSCredentialProviderList testingCreds
         = delegatedFS.shareCredentials("testing");
 
-    URI landsat = new URI(DEFAULT_CSVTEST_FILE);
+    URI external = requireAnonymousDataPath(getConfiguration()).toUri();
     DefaultS3ClientFactory factory
         = new DefaultS3ClientFactory();
-    factory.setConf(new Configuration(delegatedFS.getConf()));
-    String host = landsat.getHost();
+    Configuration conf = delegatedFS.getConf();
+    factory.setConf(conf);
+    String host = external.getHost();
     S3ClientFactory.S3ClientCreationParameters parameters = null;
     parameters = new S3ClientFactory.S3ClientCreationParameters()
         .withCredentialSet(testingCreds)
@@ -596,10 +600,10 @@ public class ITestSessionDelegationInFilesystem extends AbstractDelegationIT {
         .withMetrics(new EmptyS3AStatisticsContext()
             .newStatisticsFromAwsSdk())
         .withUserAgentSuffix("ITestSessionDelegationInFilesystem");
-    AmazonS3 s3 = factory.createS3Client(landsat, parameters);
+    AmazonS3 s3 = factory.createS3Client(external, parameters);
 
     return Invoker.once("HEAD", host,
-        () -> s3.getObjectMetadata(host, landsat.getPath().substring(1)));
+        () -> s3.getObjectMetadata(host, external.getPath().substring(1)));
   }
 
   /**

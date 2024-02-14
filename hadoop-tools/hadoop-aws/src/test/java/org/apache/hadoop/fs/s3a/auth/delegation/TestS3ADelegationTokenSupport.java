@@ -24,10 +24,10 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
-import org.apache.hadoop.fs.s3a.S3ATestConstants;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentialBinding;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
+import org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
@@ -45,11 +45,11 @@ import static org.junit.Assert.assertTrue;
  */
 public class TestS3ADelegationTokenSupport {
 
-  private static URI landsatUri;
+  private static URI externalUri;
 
   @BeforeClass
   public static void classSetup() throws Exception {
-    landsatUri = new URI(S3ATestConstants.DEFAULT_CSVTEST_FILE);
+    externalUri = new URI(PublicDatasetTestUtils.DEFAULT_EXTERNAL_FILE);
   }
 
   @Test
@@ -75,7 +75,7 @@ public class TestS3ADelegationTokenSupport {
         = new SessionTokenIdentifier(SESSION_TOKEN_KIND,
         alice,
         renewer,
-        new URI("s3a://landsat-pds/"),
+        new URI("s3a://anything/"),
         new MarshalledCredentials("a", "b", ""),
         new EncryptionSecrets(S3AEncryptionMethods.SSE_S3, ""),
         "origin");
@@ -117,7 +117,7 @@ public class TestS3ADelegationTokenSupport {
         SESSION_TOKEN_KIND,
         new Text(),
         renewer,
-        landsatUri,
+        externalUri,
         new MarshalledCredentials("a", "b", "c"),
         new EncryptionSecrets(), "");
 
@@ -136,7 +136,7 @@ public class TestS3ADelegationTokenSupport {
         SESSION_TOKEN_KIND,
         new Text(),
         null,
-        landsatUri,
+        externalUri,
         new MarshalledCredentials("a", "b", "c"),
         new EncryptionSecrets(), "");
 
@@ -152,7 +152,7 @@ public class TestS3ADelegationTokenSupport {
   @Test
   public void testRoleTokenIdentifierRoundTrip() throws Throwable {
     RoleTokenIdentifier id = new RoleTokenIdentifier(
-        landsatUri,
+        externalUri,
         new Text(),
         new Text(),
         new MarshalledCredentials("a", "b", "c"),
@@ -171,7 +171,7 @@ public class TestS3ADelegationTokenSupport {
   public void testFullTokenIdentifierRoundTrip() throws Throwable {
     Text renewer = new Text("renewerName");
     FullCredentialsTokenIdentifier id = new FullCredentialsTokenIdentifier(
-        landsatUri,
+        externalUri,
         new Text(),
         renewer,
         new MarshalledCredentials("a", "b", ""),
