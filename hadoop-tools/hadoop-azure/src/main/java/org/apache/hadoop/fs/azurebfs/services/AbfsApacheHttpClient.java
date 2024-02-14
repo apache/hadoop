@@ -7,7 +7,10 @@ import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsApacheHttpExpect100Exception;
@@ -27,6 +30,7 @@ import org.apache.http.config.ConnectionConfig;
 import org.apache.http.config.Registry;
 import org.apache.http.config.RegistryBuilder;
 import org.apache.http.conn.ConnectionKeepAliveStrategy;
+import org.apache.http.conn.ConnectionPoolTimeoutException;
 import org.apache.http.conn.ManagedHttpClientConnection;
 import org.apache.http.conn.routing.HttpRoute;
 import org.apache.http.conn.socket.ConnectionSocketFactory;
@@ -306,10 +310,25 @@ public class AbfsApacheHttpClient {
 
   private static class AbfsConnMgr extends PoolingHttpClientConnectionManager {
 
+    private final AtomicInteger connCount = new AtomicInteger(0);
+    private final AtomicInteger inTransits = new AtomicInteger(0);
+
+    private int maxConn;
+
+    public synchronized void checkAvailablity() {
+      if(maxConn <= inTransits.get()) {
+        maxConn *= 2;
+        setDefaultMaxPerRoute(maxConn);
+        setMaxTotal(maxConn);
+      }
+    }
+
     public AbfsConnMgr(ConnectionSocketFactory connectionSocketFactory, AbfsConfiguration abfsConfiguration) {
       super(createSocketFactoryRegistry(connectionSocketFactory), abfsConnFactory);
-      setDefaultMaxPerRoute(abfsConfiguration.getHttpClientMaxConn());
-      setMaxTotal(abfsConfiguration.getHttpClientMaxConn());
+//      maxConn = abfsConfiguration.getHttpClientMaxConn();
+      maxConn = 1;
+      setDefaultMaxPerRoute(maxConn);
+      setMaxTotal(maxConn);
     }
     @Override
     public void connect(final HttpClientConnection managedConn,
@@ -318,10 +337,21 @@ public class AbfsApacheHttpClient {
         final HttpContext context) throws IOException {
       long start = System.currentTimeMillis();
       super.connect(managedConn, route, connectTimeout, context);
+      connCount.incrementAndGet();
       long timeElapsed = System.currentTimeMillis() - start;
       if(context instanceof AbfsHttpClientContext) {
         ((AbfsHttpClientContext) context).connectTime = timeElapsed;
       }
+    }
+
+    @Override
+    protected HttpClientConnection leaseConnection(final Future future,
+        final long timeout,
+        final TimeUnit timeUnit)
+        throws InterruptedException, ExecutionException,
+        ConnectionPoolTimeoutException {
+      inTransits.incrementAndGet();
+      return super.leaseConnection(future, timeout, timeUnit);
     }
 
     @Override
@@ -336,6 +366,10 @@ public class AbfsApacheHttpClient {
         abfsApacheHttpConnectionMap.remove(((ManagedHttpClientConnection)managedConn).getId());
       }
       super.releaseConnection(managedConn, state, keepalive, timeUnit);
+      inTransits.decrementAndGet();
+      if(keepalive == 0) {
+        connCount.decrementAndGet();
+      }
     }
   }
 
@@ -432,6 +466,7 @@ public class AbfsApacheHttpClient {
   }
 
   public HttpResponse execute(HttpRequestBase httpRequest, final AbfsHttpClientContext abfsHttpClientContext) throws IOException {
+    connMgr.checkAvailablity();
     RequestConfig.Builder requestConfigBuilder = RequestConfig
         .custom()
         .setConnectTimeout(30_000)
