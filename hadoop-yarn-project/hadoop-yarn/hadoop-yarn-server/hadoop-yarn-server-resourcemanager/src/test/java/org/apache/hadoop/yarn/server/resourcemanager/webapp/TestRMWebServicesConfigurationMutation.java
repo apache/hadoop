@@ -610,7 +610,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     CapacitySchedulerConfiguration newCSConf =
         ((CapacityScheduler) rm.getResourceScheduler()).getConfiguration();
     assertEquals(3, newCSConf.getQueues(ROOT).size());
-    assertNull(newCSConf.getQueues(ROOT_C));
+    assertEquals(0, newCSConf.getQueues(ROOT_C).size());
   }
 
   @Test
