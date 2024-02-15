@@ -684,7 +684,6 @@ class DataStreamer extends Daemon {
     closeStream();
     setPipeline(null, null, null);
     stage = BlockConstructionStage.PIPELINE_SETUP_CREATE;
-    lastAckedSeqno = -1;
   }
 
   private boolean shouldStop() {
