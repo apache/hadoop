@@ -271,6 +271,16 @@ public class AbfsAHCHttpOperation extends HttpOperation {
             .append("_")
             .append(readLatencyCaptureInfo.status);
       } catch (EmptyStackException ignored) {}
+      try {
+        int reuse = AbfsApacheHttpClient.connectionReuseCount.pop();
+        stringBuilder.append(":Reuse_").append(reuse);
+      } catch (EmptyStackException ignored) {}
+      try {
+        int kac = AbfsApacheHttpClient.kacSizeStack.pop();
+        stringBuilder.append(":Kac_").append(kac);
+      } catch (EmptyStackException ignored) {}
+      stringBuilder.append(":TotalConn_").append(abfsApacheHttpClient.getParallelConnAtMoment());
+
     }
     setHeader(key, stringBuilder.toString());
   }

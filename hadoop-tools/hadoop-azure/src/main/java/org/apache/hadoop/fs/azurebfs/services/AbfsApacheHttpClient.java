@@ -6,6 +6,7 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Stack;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -48,6 +49,9 @@ import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.E
 
 
 public class AbfsApacheHttpClient {
+  public static final Stack<Integer> connectionReuseCount = new Stack<>();
+  public static final Stack<Integer> kacSizeStack = new Stack<>();
+
 
   public static class AbfsHttpClientContext extends HttpClientContext {
     Long connectTime;
@@ -72,7 +76,9 @@ public class AbfsApacheHttpClient {
       if (shouldKillConn()) {
         return true;
       }
-      if (connMgr.kacCount.get() >= 5) {
+      int kacSize = connMgr.kacCount.get();
+      kacSizeStack.push(kacSize);
+      if (kacSize >= 5) {
         return true;
       }
       return false;
@@ -89,6 +95,9 @@ public class AbfsApacheHttpClient {
         AbfsApacheHttpConnection abfsApacheHttpConnection
             = abfsApacheHttpConnectionMap.get(
             ((ManagedHttpClientConnection) httpClientConnection).getId());
+        if(abfsApacheHttpConnection != null) {
+          connectionReuseCount.push(abfsApacheHttpConnection.count);
+        }
         if (abfsApacheHttpConnection != null && abfsApacheHttpConnection.getCount() >= 5) {
           return true;
         }
@@ -158,6 +167,8 @@ public class AbfsApacheHttpClient {
     public boolean cached = false;
     final String uuid = UUID.randomUUID().toString();
 
+    private boolean isClosed = false;
+
     public int getCount() {
       return count;
     }
@@ -179,7 +190,12 @@ public class AbfsApacheHttpClient {
 
     @Override
     public void close() throws IOException {
+      boolean wasClosed = isClosed;
       httpClientConnection.close();
+      isClosed = true;
+      if(wasClosed) {
+        return;
+      }
       connMgr.connCount.decrementAndGet();
       if(cached) {
         connMgr.kacCount.decrementAndGet();
