@@ -22,6 +22,7 @@ import static org.apache.hadoop.security.token.delegation.web.DelegationTokenAut
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.apache.commons.lang3.mutable.MutableBoolean;
+import org.apache.hadoop.http.ContentTypes;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
@@ -41,7 +42,6 @@ import org.mockito.Mockito;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -204,7 +204,7 @@ public class TestDelegationTokenAuthenticationHandlerWithMocks {
       Mockito.verify(token).getUserName();
     }
     Mockito.verify(response).setStatus(HttpServletResponse.SC_OK);
-    Mockito.verify(response).setContentType(MediaType.APPLICATION_JSON);
+    Mockito.verify(response).setContentType(ContentTypes.APPLICATION_JSON);
     pwriter.close();
     String responseOutput = writer.toString();
     String tokenLabel = DelegationTokenAuthenticator.
@@ -428,7 +428,7 @@ public class TestDelegationTokenAuthenticationHandlerWithMocks {
     Assert.assertFalse(handler.managementOperation(token, request, response));
     Mockito.verify(token).getUserName();
     Mockito.verify(response).setStatus(HttpServletResponse.SC_OK);
-    Mockito.verify(response).setContentType(MediaType.APPLICATION_JSON);
+    Mockito.verify(response).setContentType(ContentTypes.APPLICATION_JSON);
     pwriter.close();
     String responseOutput = writer.toString();
     String tokenLabel = DelegationTokenAuthenticator.

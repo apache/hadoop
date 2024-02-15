@@ -34,9 +34,9 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.CancellationException;
 
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 
+import org.apache.hadoop.http.ContentTypes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -291,7 +291,7 @@ public class TimelineV2ClientImpl extends TimelineV2Client {
   private ClientResponse doPutObjects(URI base, String path,
       MultivaluedMap<String, String> params, Object obj) {
     return connector.getClient().resource(base).path(path).queryParams(params)
-        .accept(MediaType.APPLICATION_JSON).type(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON).type(ContentTypes.APPLICATION_JSON)
         .put(ClientResponse.class, obj);
   }
 

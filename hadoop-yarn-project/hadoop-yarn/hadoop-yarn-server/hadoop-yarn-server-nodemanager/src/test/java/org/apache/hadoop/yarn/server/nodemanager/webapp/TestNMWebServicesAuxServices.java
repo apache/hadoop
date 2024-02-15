@@ -31,7 +31,6 @@ import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
 
-import javax.ws.rs.core.MediaType;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
@@ -39,6 +38,7 @@ import com.sun.jersey.api.client.UniformInterfaceException;
 import com.sun.jersey.api.client.filter.LoggingFilter;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.http.ContentTypes;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.util.XMLUtils;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -188,9 +188,9 @@ public class TestNMWebServicesAuxServices extends JerseyTestBase {
     addAuxServices();
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("node")
-        .path(AUX_SERVICES_PATH).accept(MediaType.APPLICATION_JSON)
+        .path(AUX_SERVICES_PATH).accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     assertEquals("aux services isn't empty",
@@ -206,12 +206,12 @@ public class TestNMWebServicesAuxServices extends JerseyTestBase {
 
   @Test
   public void testNodeAuxServices() throws Exception {
-    testNodeHelper(AUX_SERVICES_PATH, MediaType.APPLICATION_JSON);
+    testNodeHelper(AUX_SERVICES_PATH, ContentTypes.APPLICATION_JSON);
   }
 
   @Test
   public void testNodeAuxServicesSlash() throws Exception {
-    testNodeHelper(AUX_SERVICES_PATH + "/", MediaType.APPLICATION_JSON);
+    testNodeHelper(AUX_SERVICES_PATH + "/", ContentTypes.APPLICATION_JSON);
   }
 
   // make sure default is json output
@@ -231,7 +231,7 @@ public class TestNMWebServicesAuxServices extends JerseyTestBase {
 
     ClientResponse response = r.path("ws").path("v1").path("node").path(path)
         .accept(media).get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     JSONObject info = json.getJSONObject("services");
@@ -253,9 +253,9 @@ public class TestNMWebServicesAuxServices extends JerseyTestBase {
     WebResource r = resource();
 
     ClientResponse response = r.path("ws").path("v1").path("node")
-        .path(AUX_SERVICES_PATH).accept(MediaType.APPLICATION_XML)
+        .path(AUX_SERVICES_PATH).accept(ContentTypes.APPLICATION_XML)
         .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_XML + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     String xml = response.getEntity(String.class);
     DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
@@ -276,13 +276,13 @@ public class TestNMWebServicesAuxServices extends JerseyTestBase {
     WebResource r = resource();
     try {
       r.path("ws").path("v1").path("node").path(AUX_SERVICES_PATH)
-          .accept(MediaType.APPLICATION_JSON).get(JSONObject.class);
+          .accept(ContentTypes.APPLICATION_JSON).get(JSONObject.class);
       fail("should have thrown exception on invalid user query");
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
       assertResponseStatusCode(ClientResponse.Status.BAD_REQUEST,
           response.getStatusInfo());
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       JSONObject msg = response.getEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");

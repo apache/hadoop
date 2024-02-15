@@ -34,10 +34,10 @@ import java.util.Properties;
 
 import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
-import javax.ws.rs.core.MediaType;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.ContentTypes;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
@@ -342,7 +342,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
 
     ReservationId rid = getReservationIdTestHelper(1);
     ClientResponse response = reservationSubmissionTestHelper(
-        "reservation/submit", MediaType.APPLICATION_JSON, rid);
+        "reservation/submit", ContentTypes.APPLICATION_JSON, rid);
     if (this.isAuthenticationEnabled()) {
       assertTrue(isHttpSuccessResponse(response));
       verifyReservationCount(1);
@@ -358,7 +358,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     ReservationId rid = getReservationIdTestHelper(1);
     long currentTimestamp = clock.getTime() + MINIMUM_RESOURCE_DURATION;
     ClientResponse response = reservationSubmissionTestHelper(
-        "reservation/submit", MediaType.APPLICATION_JSON, currentTimestamp, "",
+        "reservation/submit", ContentTypes.APPLICATION_JSON, currentTimestamp, "",
         rid);
 
     // Make sure that the first submission is successful
@@ -367,7 +367,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     }
 
     response = reservationSubmissionTestHelper(
-      "reservation/submit", MediaType.APPLICATION_JSON, currentTimestamp, "",
+      "reservation/submit", ContentTypes.APPLICATION_JSON, currentTimestamp, "",
       rid);
 
     // Make sure that the second submission is successful
@@ -387,7 +387,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     ReservationId rid = getReservationIdTestHelper(1);
     long currentTimestamp = clock.getTime() + MINIMUM_RESOURCE_DURATION;
     ClientResponse response = reservationSubmissionTestHelper(
-        "reservation/submit", MediaType.APPLICATION_JSON, currentTimestamp,
+        "reservation/submit", ContentTypes.APPLICATION_JSON, currentTimestamp,
         "res1", rid);
 
     // Make sure that the first submission is successful
@@ -397,7 +397,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
 
     // Change the reservation definition.
     response = reservationSubmissionTestHelper(
-        "reservation/submit", MediaType.APPLICATION_JSON,
+        "reservation/submit", ContentTypes.APPLICATION_JSON,
         currentTimestamp + MINIMUM_RESOURCE_DURATION, "res1", rid);
 
     // Make sure that the second submission is unsuccessful
@@ -417,7 +417,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
 
     ReservationId rid = getReservationIdTestHelper(1);
     ClientResponse response = reservationSubmissionTestHelper(
-        "reservation/submit", MediaType.APPLICATION_JSON, rid);
+        "reservation/submit", ContentTypes.APPLICATION_JSON, rid);
 
     assertTrue(!isHttpSuccessResponse(response));
 
@@ -431,12 +431,12 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
 
     ReservationId rid = getReservationIdTestHelper(1);
     ClientResponse response = reservationSubmissionTestHelper(
-        "reservation/submit", MediaType.APPLICATION_JSON, rid);
+        "reservation/submit", ContentTypes.APPLICATION_JSON, rid);
     if (this.isAuthenticationEnabled()) {
       assertTrue(isHttpSuccessResponse(response));
     }
     updateReservationTestHelper("reservation/update", rid,
-        MediaType.APPLICATION_JSON);
+        ContentTypes.APPLICATION_JSON);
 
     rm.stop();
   }
@@ -452,9 +452,9 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     ReservationId id2 = getReservationIdTestHelper(2);
 
     reservationSubmissionTestHelper("reservation/submit",
-            MediaType.APPLICATION_JSON, time, "res_1", id1);
+            ContentTypes.APPLICATION_JSON, time, "res_1", id1);
     reservationSubmissionTestHelper("reservation/submit",
-            MediaType.APPLICATION_JSON, time + MINIMUM_RESOURCE_DURATION,
+            ContentTypes.APPLICATION_JSON, time + MINIMUM_RESOURCE_DURATION,
             "res_2", id2);
 
     WebResource resource = constructWebResource(LIST_RESERVATION_PATH)
@@ -497,9 +497,9 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     }
 
     reservationSubmissionTestHelper("reservation/submit",
-            MediaType.APPLICATION_JSON, time, "res_1", id1);
+            ContentTypes.APPLICATION_JSON, time, "res_1", id1);
     reservationSubmissionTestHelper("reservation/submit",
-            MediaType.APPLICATION_JSON, time + MINIMUM_RESOURCE_DURATION,
+            ContentTypes.APPLICATION_JSON, time + MINIMUM_RESOURCE_DURATION,
             "res_2", id2);
 
     String timeParam = Long.toString(time + MINIMUM_RESOURCE_DURATION / 2);
@@ -537,9 +537,9 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     ReservationId id2 = getReservationIdTestHelper(2);
 
     reservationSubmissionTestHelper("reservation/submit",
-            MediaType.APPLICATION_JSON, time, "res_1", id1);
+            ContentTypes.APPLICATION_JSON, time, "res_1", id1);
     reservationSubmissionTestHelper("reservation/submit",
-            MediaType.APPLICATION_JSON, time + MINIMUM_RESOURCE_DURATION,
+            ContentTypes.APPLICATION_JSON, time + MINIMUM_RESOURCE_DURATION,
             "res_2", id2);
 
     WebResource resource;
@@ -576,9 +576,9 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     ReservationId id2 = getReservationIdTestHelper(2);
 
     reservationSubmissionTestHelper("reservation/submit",
-            MediaType.APPLICATION_JSON, time, "res_1", id1);
+            ContentTypes.APPLICATION_JSON, time, "res_1", id1);
     reservationSubmissionTestHelper("reservation/submit",
-            MediaType.APPLICATION_JSON, time + MINIMUM_RESOURCE_DURATION,
+            ContentTypes.APPLICATION_JSON, time + MINIMUM_RESOURCE_DURATION,
             "res_2", id2);
 
     WebResource resource = constructWebResource(LIST_RESERVATION_PATH)
@@ -625,9 +625,9 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     ReservationId id2 = getReservationIdTestHelper(2);
 
     reservationSubmissionTestHelper("reservation/submit",
-            MediaType.APPLICATION_JSON, time, "res_1", id1);
+            ContentTypes.APPLICATION_JSON, time, "res_1", id1);
     reservationSubmissionTestHelper("reservation/submit",
-            MediaType.APPLICATION_JSON, time + MINIMUM_RESOURCE_DURATION,
+            ContentTypes.APPLICATION_JSON, time + MINIMUM_RESOURCE_DURATION,
             "res_2", id2);
 
     WebResource resource = constructWebResource(LIST_RESERVATION_PATH)
@@ -673,9 +673,9 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     ReservationId id2 = getReservationIdTestHelper(2);
 
     reservationSubmissionTestHelper("reservation/submit",
-            MediaType.APPLICATION_JSON, time, "res_1", id1);
+            ContentTypes.APPLICATION_JSON, time, "res_1", id1);
     reservationSubmissionTestHelper("reservation/submit",
-            MediaType.APPLICATION_JSON, time + MINIMUM_RESOURCE_DURATION,
+            ContentTypes.APPLICATION_JSON, time + MINIMUM_RESOURCE_DURATION,
             "res_2", id2);
 
     WebResource resource = constructWebResource(LIST_RESERVATION_PATH)
@@ -715,9 +715,9 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     long time = clock.getTime() + MINIMUM_RESOURCE_DURATION;
 
     reservationSubmissionTestHelper("reservation/submit",
-            MediaType.APPLICATION_JSON, time, "res_1", id1);
+            ContentTypes.APPLICATION_JSON, time, "res_1", id1);
     reservationSubmissionTestHelper("reservation/submit",
-            MediaType.APPLICATION_JSON, time + MINIMUM_RESOURCE_DURATION,
+            ContentTypes.APPLICATION_JSON, time + MINIMUM_RESOURCE_DURATION,
             "res_2", id2);
 
     WebResource resource = constructWebResource(LIST_RESERVATION_PATH)
@@ -753,9 +753,9 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     ReservationId id2 = getReservationIdTestHelper(2);
 
     reservationSubmissionTestHelper("reservation/submit",
-            MediaType.APPLICATION_JSON, clock.getTime(), "res_1", id1);
+            ContentTypes.APPLICATION_JSON, clock.getTime(), "res_1", id1);
     reservationSubmissionTestHelper("reservation/submit",
-            MediaType.APPLICATION_JSON, clock.getTime(), "res_2", id2);
+            ContentTypes.APPLICATION_JSON, clock.getTime(), "res_2", id2);
 
     WebResource resource = constructWebResource(LIST_RESERVATION_PATH)
             .queryParam("queue", DEFAULT_QUEUE);
@@ -783,9 +783,9 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     ReservationId id2 = getReservationIdTestHelper(2);
 
     reservationSubmissionTestHelper("reservation/submit",
-            MediaType.APPLICATION_JSON, clock.getTime(), "res_1", id1);
+            ContentTypes.APPLICATION_JSON, clock.getTime(), "res_1", id1);
     reservationSubmissionTestHelper("reservation/submit",
-            MediaType.APPLICATION_JSON, clock.getTime(), "res_2", id2);
+            ContentTypes.APPLICATION_JSON, clock.getTime(), "res_2", id2);
 
     WebResource resource = constructWebResource(LIST_RESERVATION_PATH);
 
@@ -803,9 +803,9 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     ReservationId id2 = getReservationIdTestHelper(2);
 
     reservationSubmissionTestHelper("reservation/submit",
-            MediaType.APPLICATION_JSON, clock.getTime(), "res_1", id1);
+            ContentTypes.APPLICATION_JSON, clock.getTime(), "res_1", id1);
     reservationSubmissionTestHelper("reservation/submit",
-            MediaType.APPLICATION_JSON, clock.getTime(), "res_2", id2);
+            ContentTypes.APPLICATION_JSON, clock.getTime(), "res_2", id2);
 
     WebResource resource = constructWebResource(LIST_RESERVATION_PATH)
             .queryParam("queue", DEFAULT_QUEUE + "_invalid");
@@ -824,11 +824,11 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     ReservationId id2 = getReservationIdTestHelper(2);
 
     reservationSubmissionTestHelper("reservation/submit",
-        MediaType.APPLICATION_JSON, clock.getTime(), "res_1", id1);
+        ContentTypes.APPLICATION_JSON, clock.getTime(), "res_1", id1);
     reservationSubmissionTestHelper("reservation/submit",
-        MediaType.APPLICATION_JSON, clock.getTime(), "res_1", id1);
+        ContentTypes.APPLICATION_JSON, clock.getTime(), "res_1", id1);
     reservationSubmissionTestHelper("reservation/submit",
-        MediaType.APPLICATION_JSON, clock.getTime(), "res_2", id2);
+        ContentTypes.APPLICATION_JSON, clock.getTime(), "res_2", id2);
 
     WebResource resource = constructWebResource(LIST_RESERVATION_PATH)
             .queryParam("include-resource-allocations", "true")
@@ -863,7 +863,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     ReservationId id1 = getReservationIdTestHelper(1);
 
     reservationSubmissionTestHelper("reservation/submit",
-        MediaType.APPLICATION_JSON, clock.getTime(), "res_1", id1);
+        ContentTypes.APPLICATION_JSON, clock.getTime(), "res_1", id1);
 
     WebResource resource = constructWebResource(LIST_RESERVATION_PATH)
             .queryParam("queue", DEFAULT_QUEUE);
@@ -885,7 +885,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
 
     ReservationId id1 = getReservationIdTestHelper(1);
     reservationSubmissionTestHelper("reservation/submit",
-            MediaType.APPLICATION_JSON, clock.getTime(), "res_1", id1);
+            ContentTypes.APPLICATION_JSON, clock.getTime(), "res_1", id1);
 
     WebResource resource = constructWebResource(LIST_RESERVATION_PATH)
             .queryParam("include-resource-allocations", "true")
@@ -921,7 +921,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     ReservationId id1 = getReservationIdTestHelper(1);
 
     reservationSubmissionTestHelper("reservation/submit",
-            MediaType.APPLICATION_JSON, clock.getTime(), "res_1", id1);
+            ContentTypes.APPLICATION_JSON, clock.getTime(), "res_1", id1);
 
     WebResource resource = constructWebResource(LIST_RESERVATION_PATH)
             .queryParam("include-resource-allocations", "false")
@@ -960,10 +960,10 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
 
     ReservationId rid = getReservationIdTestHelper(1);
 
-    reservationSubmissionTestHelper("reservation/submit", MediaType
-        .APPLICATION_JSON, rid);
+    reservationSubmissionTestHelper("reservation/submit",
+        ContentTypes.APPLICATION_JSON, rid);
     testDeleteReservationHelper("reservation/delete", rid,
-        MediaType.APPLICATION_JSON);
+        ContentTypes.APPLICATION_JSON);
 
     rm.stop();
   }
@@ -982,8 +982,8 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
       throws Exception {
     Thread.sleep(1000);
     ClientResponse response = constructWebResource(GET_NEW_RESERVATION_PATH)
-        .type(MediaType.APPLICATION_JSON)
-        .accept(MediaType.APPLICATION_JSON)
+        .type(ContentTypes.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
         .post(ClientResponse.class);
 
     if (!this.isAuthenticationEnabled()) {
@@ -992,7 +992,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     }
 
     System.out.println("RESPONSE:" + response);
-    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
 
@@ -1044,7 +1044,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
 
     Thread.sleep(1000);
     ClientResponse response =
-        constructWebResource(path).entity(rsci, MediaType.APPLICATION_JSON)
+        constructWebResource(path).entity(rsci, ContentTypes.APPLICATION_JSON)
             .accept(media).post(ClientResponse.class);
 
     if (!this.isAuthenticationEnabled()) {
@@ -1076,7 +1076,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
 
     Thread.sleep(1000);
     ClientResponse response =
-        constructWebResource(path).entity(rsci, MediaType.APPLICATION_JSON)
+        constructWebResource(path).entity(rsci, ContentTypes.APPLICATION_JSON)
             .accept(media).post(ClientResponse.class);
 
     if (!this.isAuthenticationEnabled()) {
@@ -1085,7 +1085,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     }
 
     System.out.println("RESPONSE:" + response);
-    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     assertResponseStatusCode(Status.OK, response.getStatusInfo());
 
@@ -1126,7 +1126,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
 
     Thread.sleep(1000);
     ClientResponse response =
-        constructWebResource(path).entity(rsci, MediaType.APPLICATION_JSON)
+        constructWebResource(path).entity(rsci, ContentTypes.APPLICATION_JSON)
             .accept(media).post(ClientResponse.class);
 
     if (!this.isAuthenticationEnabled()) {
@@ -1135,7 +1135,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
     }
 
     System.out.println("RESPONSE:" + response);
-    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     assertResponseStatusCode(Status.OK, response.getStatusInfo());
   }
@@ -1166,7 +1166,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
       return null;
     }
 
-    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     assertResponseStatusCode(status, response.getStatusInfo());
 

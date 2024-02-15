@@ -26,6 +26,7 @@ import com.sun.jersey.core.util.MultivaluedMapImpl;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 import com.sun.jersey.test.framework.WebAppDescriptor;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.ContentTypes;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Sets;
@@ -58,7 +59,6 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response.Status;
 
 import java.io.FileOutputStream;
@@ -190,7 +190,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     ClientResponse response =
         r.path("ws").path("v1").path("cluster")
             .queryParam("user.name", userName).path("scheduler-conf")
-            .accept(MediaType.APPLICATION_JSON)
+            .accept(ContentTypes.APPLICATION_JSON)
             .get(ClientResponse.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
     JSONObject json = response.getEntity(JSONObject.class);
@@ -236,9 +236,9 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("cluster")
         .path("scheduler-conf").queryParam("user.name", userName)
-        .accept(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
         .entity(toJson(updateInfo,
-        SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
+        SchedConfUpdateInfo.class), ContentTypes.APPLICATION_JSON)
         .put(ClientResponse.class);
     newConf = getSchedulerConf();
     assertNotNull(newConf);
@@ -248,7 +248,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     response = r.path("ws").path("v1").path("cluster")
         .queryParam("user.name", userName)
         .path(RMWSConsts.FORMAT_SCHEDULER_CONF)
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+        .accept(ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
     newConf = getSchedulerConf();
     assertEquals(4, newConf.getQueues(ROOT).size());
@@ -259,7 +259,7 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     ClientResponse response = r.path("ws").path("v1").path("cluster")
         .queryParam("user.name", userName)
         .path(RMWSConsts.SCHEDULER_CONF_VERSION)
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+        .accept(ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
 
     JSONObject json = response.getEntity(JSONObject.class);
@@ -304,9 +304,9 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     response =
         r.path("ws").path("v1").path("cluster")
             .path("scheduler-conf").queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON)
+            .accept(ContentTypes.APPLICATION_JSON)
             .entity(toJson(updateInfo,
-                SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
+                SchedConfUpdateInfo.class), ContentTypes.APPLICATION_JSON)
             .put(ClientResponse.class);
 
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
@@ -343,9 +343,9 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     response =
         r.path("ws").path("v1").path("cluster")
             .path("scheduler-conf").queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON)
+            .accept(ContentTypes.APPLICATION_JSON)
             .entity(toJson(updateInfo,
-                SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
+                SchedConfUpdateInfo.class), ContentTypes.APPLICATION_JSON)
             .put(ClientResponse.class);
 
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
@@ -370,9 +370,9 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     updateInfo1.getUpdateQueueInfo().add(aUpdateInfo);
     response = r.path("ws").path("v1").path("cluster")
         .path("scheduler-conf").queryParam("user.name", userName)
-        .accept(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
         .entity(toJson(updateInfo1,
-        SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
+        SchedConfUpdateInfo.class), ContentTypes.APPLICATION_JSON)
         .put(ClientResponse.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
     CapacitySchedulerConfiguration newCSConf =
@@ -391,9 +391,9 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     updateInfo2.getAddQueueInfo().add(b1);
     response = r.path("ws").path("v1").path("cluster")
         .path("scheduler-conf").queryParam("user.name", userName)
-        .accept(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
         .entity(toJson(updateInfo2,
-        SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
+        SchedConfUpdateInfo.class), ContentTypes.APPLICATION_JSON)
         .put(ClientResponse.class);
 
     // Validate unset ordering policy of root.b after converted to
@@ -421,9 +421,9 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     updateInfo1.getUpdateQueueInfo().add(aUpdateInfo);
     response = r.path("ws").path("v1").path("cluster")
         .path("scheduler-conf").queryParam("user.name", userName)
-        .accept(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
         .entity(toJson(updateInfo1,
-        SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
+        SchedConfUpdateInfo.class), ContentTypes.APPLICATION_JSON)
         .put(ClientResponse.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
     CapacitySchedulerConfiguration newCSConf =
@@ -439,9 +439,9 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     updateInfo2.getRemoveQueueInfo().add("root.c.c1");
     response = r.path("ws").path("v1").path("cluster")
         .path("scheduler-conf").queryParam("user.name", userName)
-        .accept(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
         .entity(toJson(updateInfo2,
-        SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
+        SchedConfUpdateInfo.class), ContentTypes.APPLICATION_JSON)
         .put(ClientResponse.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
 
@@ -468,9 +468,9 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     response =
         r.path("ws").path("v1").path("cluster")
             .path("scheduler-conf").queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON)
+            .accept(ContentTypes.APPLICATION_JSON)
             .entity(toJson(updateInfo,
-                SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
+                SchedConfUpdateInfo.class), ContentTypes.APPLICATION_JSON)
             .put(ClientResponse.class);
 
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
@@ -500,9 +500,9 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     updateInfo.getRemoveQueueInfo().add("root.a.a2");
     response = r.path("ws").path("v1").path("cluster")
         .path("scheduler-conf").queryParam("user.name", userName)
-        .accept(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
         .entity(toJson(updateInfo,
-        SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
+        SchedConfUpdateInfo.class), ContentTypes.APPLICATION_JSON)
         .put(ClientResponse.class);
 
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
@@ -533,9 +533,9 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     // Remove queue 'mappedqueue' using update scheduler-conf
     updateInfo.getRemoveQueueInfo().add("root.mappedqueue");
     response = r.path("ws").path("v1").path("cluster").path("scheduler-conf")
-        .queryParam("user.name", userName).accept(MediaType.APPLICATION_JSON)
+        .queryParam("user.name", userName).accept(ContentTypes.APPLICATION_JSON)
         .entity(YarnWebServiceUtils.toJson(updateInfo, SchedConfUpdateInfo.class),
-            MediaType.APPLICATION_JSON).put(ClientResponse.class);
+            ContentTypes.APPLICATION_JSON).put(ClientResponse.class);
     String responseText = response.getEntity(String.class);
 
     // Queue 'mappedqueue' deletion will fail as there is queue mapping present
@@ -573,9 +573,9 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
 
     response = r.path("ws").path("v1").path("cluster")
         .path("scheduler-conf").queryParam("user.name", userName)
-        .accept(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
         .entity(toJson(updateInfo,
-            SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
+            SchedConfUpdateInfo.class), ContentTypes.APPLICATION_JSON)
         .put(ClientResponse.class);
 
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
@@ -598,9 +598,9 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     response =
         r.path("ws").path("v1").path("cluster")
             .path("scheduler-conf").queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON)
+            .accept(ContentTypes.APPLICATION_JSON)
             .entity(toJson(updateInfo,
-                SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
+                SchedConfUpdateInfo.class), ContentTypes.APPLICATION_JSON)
             .put(ClientResponse.class);
 
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
@@ -629,9 +629,9 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     response =
         r.path("ws").path("v1").path("cluster")
             .path("scheduler-conf").queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON)
+            .accept(ContentTypes.APPLICATION_JSON)
             .entity(toJson(updateInfo,
-                SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
+                SchedConfUpdateInfo.class), ContentTypes.APPLICATION_JSON)
             .put(ClientResponse.class);
 
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
@@ -661,9 +661,9 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     response =
         r.path("ws").path("v1").path("cluster")
             .path("scheduler-conf").queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON)
+            .accept(ContentTypes.APPLICATION_JSON)
             .entity(toJson(updateInfo,
-                SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
+                SchedConfUpdateInfo.class), ContentTypes.APPLICATION_JSON)
             .put(ClientResponse.class);
 
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
@@ -689,9 +689,9 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     response =
         r.path("ws").path("v1").path("cluster")
             .path("scheduler-conf").queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON)
+            .accept(ContentTypes.APPLICATION_JSON)
             .entity(toJson(updateInfo,
-                SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
+                SchedConfUpdateInfo.class), ContentTypes.APPLICATION_JSON)
             .put(ClientResponse.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
     CapacitySchedulerConfiguration newCSConf =
@@ -724,9 +724,9 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     response =
         r.path("ws").path("v1").path("cluster")
             .path("scheduler-conf").queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON)
+            .accept(ContentTypes.APPLICATION_JSON)
             .entity(toJson(updateInfo,
-                SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
+                SchedConfUpdateInfo.class), ContentTypes.APPLICATION_JSON)
             .put(ClientResponse.class);
     LOG.debug("Response headers: " + response.getHeaders());
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
@@ -743,9 +743,9 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     response =
         r.path("ws").path("v1").path("cluster")
             .path("scheduler-conf").queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON)
+            .accept(ContentTypes.APPLICATION_JSON)
             .entity(toJson(updateInfo,
-                SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
+                SchedConfUpdateInfo.class), ContentTypes.APPLICATION_JSON)
             .put(ClientResponse.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
     newCSConf = cs.getConfiguration();
@@ -773,9 +773,9 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     response =
         r.path("ws").path("v1").path("cluster")
             .path("scheduler-conf").queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON)
+            .accept(ContentTypes.APPLICATION_JSON)
             .entity(toJson(updateInfo,
-                SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
+                SchedConfUpdateInfo.class), ContentTypes.APPLICATION_JSON)
             .put(ClientResponse.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
     CapacitySchedulerConfiguration newCSConf =
@@ -798,9 +798,9 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     response =
         r.path("ws").path("v1").path("cluster")
             .path("scheduler-conf").queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON)
+            .accept(ContentTypes.APPLICATION_JSON)
             .entity(toJson(updateInfo,
-                SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
+                SchedConfUpdateInfo.class), ContentTypes.APPLICATION_JSON)
             .put(ClientResponse.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
     CapacitySchedulerConfiguration newCSConf =
@@ -813,9 +813,9 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     response =
         r.path("ws").path("v1").path("cluster")
             .path("scheduler-conf").queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON)
+            .accept(ContentTypes.APPLICATION_JSON)
             .entity(toJson(updateInfo,
-                SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
+                SchedConfUpdateInfo.class), ContentTypes.APPLICATION_JSON)
             .put(ClientResponse.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
     newCSConf =
@@ -843,17 +843,17 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
         .path(RMWSConsts.SCHEDULER_CONF);
     response =
         addNodeLabelsResource.queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON)
+            .accept(ContentTypes.APPLICATION_JSON)
             .entity(logAndReturnJson(addNodeLabelsResource,
                     toJson(nodeLabelsInfo, NodeLabelsInfo.class)),
-                MediaType.APPLICATION_JSON)
+                ContentTypes.APPLICATION_JSON)
             .post(ClientResponse.class);
 
     // 2. Verify new Node Label
     response =
         getNodeLabelsResource.queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+            .accept(ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     nodeLabelsInfo = response.getEntity(NodeLabelsInfo.class);
     assertEquals(1, nodeLabelsInfo.getNodeLabels().size());
@@ -878,9 +878,9 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     response =
         schedulerConfResource
             .queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON)
+            .accept(ContentTypes.APPLICATION_JSON)
             .entity(logAndReturnJson(schedulerConfResource, toJson(updateInfo,
-                SchedConfUpdateInfo.class)), MediaType.APPLICATION_JSON)
+                SchedConfUpdateInfo.class)), ContentTypes.APPLICATION_JSON)
             .put(ClientResponse.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
 
@@ -927,9 +927,9 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     response =
         schedulerConfResource
             .queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON)
+            .accept(ContentTypes.APPLICATION_JSON)
             .entity(logAndReturnJson(schedulerConfResource, toJson(updateInfo,
-                SchedConfUpdateInfo.class)), MediaType.APPLICATION_JSON)
+                SchedConfUpdateInfo.class)), ContentTypes.APPLICATION_JSON)
             .put(ClientResponse.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
 
@@ -980,9 +980,9 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
     response =
         schedulerConfResource
             .queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON)
+            .accept(ContentTypes.APPLICATION_JSON)
             .entity(logAndReturnJson(schedulerConfResource, toJson(updateInfo,
-                SchedConfUpdateInfo.class)), MediaType.APPLICATION_JSON)
+                SchedConfUpdateInfo.class)), ContentTypes.APPLICATION_JSON)
             .put(ClientResponse.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
     assertEquals(Sets.newHashSet("*"),
@@ -996,14 +996,14 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
         removeNodeLabelsResource
             .queryParam("user.name", userName)
             .queryParams(params)
-            .accept(MediaType.APPLICATION_JSON)
+            .accept(ContentTypes.APPLICATION_JSON)
             .post(ClientResponse.class);
 
     // Verify
     response =
         getNodeLabelsResource.queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+            .accept(ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     nodeLabelsInfo = response.getEntity(NodeLabelsInfo.class);
     assertEquals(0, nodeLabelsInfo.getNodeLabels().size());
@@ -1058,9 +1058,9 @@ public class TestRMWebServicesConfigurationMutation extends JerseyTestBase {
         r.path("ws").path("v1").path("cluster")
             .path(RMWSConsts.SCHEDULER_CONF_VALIDATE)
             .queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON)
+            .accept(ContentTypes.APPLICATION_JSON)
             .entity(toJson(updateInfo,
-                SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
+                SchedConfUpdateInfo.class), ContentTypes.APPLICATION_JSON)
             .post(ClientResponse.class);
     assertEquals(Status.OK.getStatusCode(), response.getStatus());
   }

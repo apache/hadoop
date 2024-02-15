@@ -27,6 +27,7 @@ import com.sun.jersey.test.framework.WebAppDescriptor;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.http.ContentTypes;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.hs.HistoryContext;
 import org.apache.hadoop.mapreduce.v2.hs.MockHistoryContext;
@@ -68,7 +69,6 @@ import org.junit.Test;
 
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.core.MediaType;
 
 import java.net.HttpURLConnection;
 import java.net.URI;
@@ -318,7 +318,7 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
     ClientResponse response = r.path("ws").path("v1")
         .path("history").path("aggregatedlogs")
         .queryParam(YarnWebServiceParams.APP_ID, APPID_1.toString())
-        .accept(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
 
     List<ContainerLogsInfo> responseList =
@@ -351,7 +351,7 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
     ClientResponse response = r.path("ws").path("v1")
         .path("history").path("aggregatedlogs")
         .queryParam(YarnWebServiceParams.APP_ID, APPID_2.toString())
-        .accept(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
 
     List<ContainerLogsInfo> responseList =
@@ -384,7 +384,7 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
         .path("history").path("aggregatedlogs")
         .queryParam(
             YarnWebServiceParams.APPATTEMPT_ID, APP_ATTEMPT_1_1.toString())
-        .accept(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
 
     List<ContainerLogsInfo> responseList =
@@ -417,7 +417,7 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
         .path("history").path("aggregatedlogs")
         .queryParam(
             YarnWebServiceParams.APPATTEMPT_ID, APP_ATTEMPT_2_2.toString())
-        .accept(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
 
     List<ContainerLogsInfo> responseList =
@@ -448,7 +448,7 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
     ClientResponse response = r.path("ws").path("v1")
         .path("history").path("containers")
         .path(CONTAINER_1_1_2.toString()).path("logs")
-        .accept(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
 
     List<ContainerLogsInfo> responseText =
@@ -496,7 +496,7 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
         .path(CONTAINER_2_2_3.toString())
         .path("logs")
         .queryParam(YarnWebServiceParams.REDIRECTED_FROM_NODE, "true")
-        .accept(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
 
     List<ContainerLogsInfo> responseText =
@@ -540,7 +540,7 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
         .path("history").path("containerlogs")
         .path(CONTAINER_1_1_2.toString())
         .path(FILE_NAME)
-        .accept(MediaType.TEXT_PLAIN)
+        .accept(ContentTypes.TEXT_PLAIN)
         .get(ClientResponse.class);
     String responseText = response.getEntity(String.class);
     assertThat(responseText).doesNotContain("Can not find logs",
@@ -592,7 +592,7 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
         .path("history").path("containerlogs")
         .path(CONTAINER_2_2_3.toString()).path(FILE_NAME)
         .queryParam(YarnWebServiceParams.REDIRECTED_FROM_NODE, "true")
-        .accept(MediaType.TEXT_PLAIN).get(ClientResponse.class);
+        .accept(ContentTypes.TEXT_PLAIN).get(ClientResponse.class);
     String responseText = response.getEntity(String.class);
     assertThat(responseText).isNotNull();
 
@@ -609,7 +609,7 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
         .path("history").path("remote-log-dir")
         .queryParam(YarnWebServiceParams.REMOTE_USER,
             USER)
-        .accept(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
     RemoteLogPaths res = response.
         getEntity(new GenericType<RemoteLogPaths>(){});
@@ -637,7 +637,7 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1")
         .path("history").path("remote-log-dir")
-        .accept(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
     RemoteLogPaths res = response.
         getEntity(new GenericType<RemoteLogPaths>(){});
@@ -666,7 +666,7 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
             USER)
         .queryParam(YarnWebServiceParams.APP_ID,
             APPID_1.toString())
-        .accept(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
     RemoteLogPaths res = response.
         getEntity(new GenericType<RemoteLogPaths>(){});
@@ -694,7 +694,7 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
     ClientResponse response = r.path("ws").path("v1")
         .path("history").path("aggregatedlogs")
         .queryParam(YarnWebServiceParams.APP_ID, nonExistingApp.toString())
-        .accept(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
     String responseText = response.getEntity(String.class);
     assertThat(responseText).contains(
@@ -708,7 +708,7 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
     ClientResponse response = r.path("ws").path("v1")
         .path("history").path("aggregatedlogs")
         .queryParam(YarnWebServiceParams.APP_ID, "some text")
-        .accept(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
     String responseText = response.getEntity(String.class);
     assertThat(responseText).contains(
@@ -727,7 +727,7 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
         .path("history").path("aggregatedlogs")
         .queryParam(YarnWebServiceParams.APPATTEMPT_ID,
             nonExistingAppAttemptId.toString())
-        .accept(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
     String responseText = response.getEntity(String.class);
     assertThat(responseText).contains(
@@ -741,7 +741,7 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
     ClientResponse response = r.path("ws").path("v1")
         .path("history").path("aggregatedlogs")
         .queryParam(YarnWebServiceParams.APPATTEMPT_ID, "some text")
-        .accept(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
     String responseText = response.getEntity(String.class);
     assertThat(responseText).contains(
@@ -762,7 +762,7 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
         .path("history").path("aggregatedlogs")
         .queryParam(YarnWebServiceParams.CONTAINER_ID,
             nonExistingContainerId.toString())
-        .accept(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
     String responseText = response.getEntity(String.class);
     assertThat(responseText).contains(
@@ -776,7 +776,7 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
     ClientResponse response = r.path("ws").path("v1")
         .path("history").path("aggregatedlogs")
         .queryParam(YarnWebServiceParams.CONTAINER_ID, "some text")
-        .accept(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
     String responseText = response.getEntity(String.class);
     assertThat(responseText).contains(
@@ -796,7 +796,7 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
     ClientResponse response = r.path("ws").path("v1")
         .path("history").path("containers")
         .path(nonExistingContainerId.toString()).path("logs")
-        .accept(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
 
     String responseText = response.getEntity(String.class);
@@ -811,7 +811,7 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
     ClientResponse response = r.path("ws").path("v1")
         .path("history").path("containers")
         .path("some text").path("logs")
-        .accept(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
 
     String responseText = response.getEntity(String.class);

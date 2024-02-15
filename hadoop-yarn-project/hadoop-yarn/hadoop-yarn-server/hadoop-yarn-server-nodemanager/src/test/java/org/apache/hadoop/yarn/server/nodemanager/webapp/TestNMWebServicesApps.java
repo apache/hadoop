@@ -33,12 +33,12 @@ import java.util.HashMap;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.core.MediaType;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.http.ContentTypes;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.util.XMLUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -190,8 +190,8 @@ public class TestNMWebServicesApps extends JerseyTestBase {
   public void testNodeAppsNone() throws JSONException, Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("node").path("apps")
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+        .accept(ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     assertEquals("apps isn't empty",
@@ -227,12 +227,12 @@ public class TestNMWebServicesApps extends JerseyTestBase {
 
   @Test
   public void testNodeApps() throws JSONException, Exception {
-    testNodeHelper("apps", MediaType.APPLICATION_JSON);
+    testNodeHelper("apps", ContentTypes.APPLICATION_JSON);
   }
 
   @Test
   public void testNodeAppsSlash() throws JSONException, Exception {
-    testNodeHelper("apps/", MediaType.APPLICATION_JSON);
+    testNodeHelper("apps/", ContentTypes.APPLICATION_JSON);
   }
 
   // make sure default is json output
@@ -254,7 +254,7 @@ public class TestNMWebServicesApps extends JerseyTestBase {
 
     ClientResponse response = r.path("ws").path("v1").path("node").path(path)
         .accept(media).get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     JSONObject info = json.getJSONObject("apps");
@@ -282,9 +282,9 @@ public class TestNMWebServicesApps extends JerseyTestBase {
     addAppContainers(app2);
 
     ClientResponse response = r.path("ws").path("v1").path("node").path("apps")
-        .queryParam("user", "mockUser").accept(MediaType.APPLICATION_JSON)
+        .queryParam("user", "mockUser").accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
 
@@ -306,9 +306,9 @@ public class TestNMWebServicesApps extends JerseyTestBase {
     addAppContainers(app2);
 
     ClientResponse response = r.path("ws").path("v1").path("node").path("apps")
-        .queryParam("user", "george").accept(MediaType.APPLICATION_JSON)
+        .queryParam("user", "george").accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     assertEquals("apps is not empty",
@@ -327,13 +327,13 @@ public class TestNMWebServicesApps extends JerseyTestBase {
 
     try {
       r.path("ws").path("v1").path("node").path("apps").queryParam("user", "")
-          .accept(MediaType.APPLICATION_JSON).get(JSONObject.class);
+          .accept(ContentTypes.APPLICATION_JSON).get(JSONObject.class);
       fail("should have thrown exception on invalid user query");
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
 
       assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       JSONObject msg = response.getEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");
@@ -366,9 +366,9 @@ public class TestNMWebServicesApps extends JerseyTestBase {
 
     ClientResponse response = r.path("ws").path("v1").path("node").path("apps")
         .queryParam("state", ApplicationState.RUNNING.toString())
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+        .accept(ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
 
-    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
 
@@ -392,8 +392,8 @@ public class TestNMWebServicesApps extends JerseyTestBase {
 
     ClientResponse response = r.path("ws").path("v1").path("node").path("apps")
         .queryParam("state", ApplicationState.INITING.toString())
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+        .accept(ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
 
@@ -413,14 +413,14 @@ public class TestNMWebServicesApps extends JerseyTestBase {
 
     try {
       r.path("ws").path("v1").path("node").path("apps")
-          .queryParam("state", "FOO_STATE").accept(MediaType.APPLICATION_JSON)
+          .queryParam("state", "FOO_STATE").accept(ContentTypes.APPLICATION_JSON)
           .get(JSONObject.class);
       fail("should have thrown exception on invalid user query");
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
 
       assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       JSONObject msg = response.getEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");
@@ -451,7 +451,7 @@ public class TestNMWebServicesApps extends JerseyTestBase {
       ClientResponse response = ue.getResponse();
 
       assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       JSONObject msg = response.getEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");
@@ -476,14 +476,14 @@ public class TestNMWebServicesApps extends JerseyTestBase {
 
     try {
       r.path("ws").path("v1").path("node").path("apps")
-          .queryParam("state", "FOO_STATE").accept(MediaType.APPLICATION_XML)
+          .queryParam("state", "FOO_STATE").accept(ContentTypes.APPLICATION_XML)
           .get(JSONObject.class);
       fail("should have thrown exception on invalid user query");
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
 
       assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
-      assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
+      assertEquals(ContentTypes.APPLICATION_XML + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       String msg = response.getEntity(String.class);
 
@@ -517,7 +517,7 @@ public class TestNMWebServicesApps extends JerseyTestBase {
 
   @Test
   public void testNodeSingleApps() throws JSONException, Exception {
-    testNodeSingleAppHelper(MediaType.APPLICATION_JSON);
+    testNodeSingleAppHelper(ContentTypes.APPLICATION_JSON);
   }
 
   // make sure default is json output
@@ -539,7 +539,7 @@ public class TestNMWebServicesApps extends JerseyTestBase {
     ClientResponse response = r.path("ws").path("v1").path("node").path("apps")
         .path(app.getAppId().toString()).accept(media)
         .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     verifyNodeAppInfo(json.getJSONObject("app"), app, hash);
@@ -556,9 +556,9 @@ public class TestNMWebServicesApps extends JerseyTestBase {
     addAppContainers(app2);
     ClientResponse response = r.path("ws").path("v1").path("node").path("apps")
         .path(app.getAppId().toString() + "/")
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+        .accept(ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
 
-    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     verifyNodeAppInfo(json.getJSONObject("app"), app, hash);
@@ -576,12 +576,12 @@ public class TestNMWebServicesApps extends JerseyTestBase {
 
     try {
       r.path("ws").path("v1").path("node").path("apps").path("app_foo_0000")
-          .accept(MediaType.APPLICATION_JSON).get(JSONObject.class);
+          .accept(ContentTypes.APPLICATION_JSON).get(JSONObject.class);
       fail("should have thrown exception on invalid user query");
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
       assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       JSONObject msg = response.getEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");
@@ -613,13 +613,13 @@ public class TestNMWebServicesApps extends JerseyTestBase {
 
     try {
       r.path("ws").path("v1").path("node").path("apps")
-          .path("application_1234_0009").accept(MediaType.APPLICATION_JSON)
+          .path("application_1234_0009").accept(ContentTypes.APPLICATION_JSON)
           .get(JSONObject.class);
       fail("should have thrown exception on invalid user query");
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
       assertResponseStatusCode(Status.NOT_FOUND, response.getStatusInfo());
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       JSONObject msg = response.getEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");
@@ -648,8 +648,8 @@ public class TestNMWebServicesApps extends JerseyTestBase {
     addAppContainers(app2);
 
     ClientResponse response = r.path("ws").path("v1").path("node").path("apps")
-        .accept(MediaType.APPLICATION_XML).get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
+        .accept(ContentTypes.APPLICATION_XML).get(ClientResponse.class);
+    assertEquals(ContentTypes.APPLICATION_XML + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     String xml = response.getEntity(String.class);
     DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
@@ -673,8 +673,8 @@ public class TestNMWebServicesApps extends JerseyTestBase {
 
     ClientResponse response = r.path("ws").path("v1").path("node").path("apps")
         .path(app.getAppId().toString() + "/")
-        .accept(MediaType.APPLICATION_XML).get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
+        .accept(ContentTypes.APPLICATION_XML).get(ClientResponse.class);
+    assertEquals(ContentTypes.APPLICATION_XML + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     String xml = response.getEntity(String.class);
     DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();

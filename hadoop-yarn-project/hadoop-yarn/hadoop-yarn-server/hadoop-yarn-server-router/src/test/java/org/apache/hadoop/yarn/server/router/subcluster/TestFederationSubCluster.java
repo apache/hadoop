@@ -62,8 +62,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static javax.servlet.http.HttpServletResponse.SC_OK;
-import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
-import static javax.ws.rs.core.MediaType.APPLICATION_XML;
+import static org.apache.hadoop.http.ContentTypes.APPLICATION_XML;
+import static org.apache.hadoop.http.ContentTypes.APPLICATION_JSON;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts.RM_WEB_SERVICE_PATH;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts.NODES;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts.APPS_NEW_APPLICATION;

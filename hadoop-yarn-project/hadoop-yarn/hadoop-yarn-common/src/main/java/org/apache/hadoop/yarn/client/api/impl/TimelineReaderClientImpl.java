@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.client.api.impl;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import com.sun.jersey.core.util.MultivaluedMapImpl;
+import org.apache.hadoop.http.ContentTypes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -35,7 +36,6 @@ import com.sun.jersey.api.client.ClientResponse;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
@@ -235,7 +235,7 @@ public class TimelineReaderClientImpl extends TimelineReaderClient {
   protected ClientResponse doGetUri(URI base, String path,
       MultivaluedMap<String, String> params) throws IOException {
     ClientResponse resp = connector.getClient().resource(base).path(path)
-        .queryParams(params).accept(MediaType.APPLICATION_JSON)
+        .queryParams(params).accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
     if (resp == null ||
         resp.getStatusInfo().getStatusCode() != ClientResponse.Status.OK
