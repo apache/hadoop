@@ -33,6 +33,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.http.ContentTypes;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.ssl.SSLFactory;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -53,7 +54,6 @@ import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response.Status;
 import java.io.StringReader;
 import java.io.StringWriter;
@@ -228,12 +228,12 @@ public class SchedConfCLI extends Configured implements Tool {
       if (UserGroupInformation.isSecurityEnabled()) {
         builder = resource
             .path("ws").path("v1").path("cluster")
-            .path("scheduler-conf").accept(MediaType.APPLICATION_XML);
+            .path("scheduler-conf").accept(ContentTypes.APPLICATION_XML);
       } else {
         builder = resource
             .path("ws").path("v1").path("cluster").path("scheduler-conf")
             .queryParam("user.name", UserGroupInformation.getCurrentUser()
-            .getShortUserName()).accept(MediaType.APPLICATION_XML);
+            .getShortUserName()).accept(ContentTypes.APPLICATION_XML);
       }
       response = builder.get(ClientResponse.class);
       if (response != null) {
@@ -274,13 +274,13 @@ public class SchedConfCLI extends Configured implements Tool {
         builder = resource
             .path("ws").path("v1").path("cluster")
             .path("/scheduler-conf/format")
-            .accept(MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON);
+            .accept(ContentTypes.APPLICATION_XML, ContentTypes.APPLICATION_JSON);
       } else {
         builder = resource
             .path("ws").path("v1").path("cluster")
             .path("/scheduler-conf/format").queryParam("user.name",
             UserGroupInformation.getCurrentUser().getShortUserName())
-            .accept(MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON);
+            .accept(ContentTypes.APPLICATION_XML, ContentTypes.APPLICATION_JSON);
       }
 
       response = builder.get(ClientResponse.class);
@@ -314,16 +314,16 @@ public class SchedConfCLI extends Configured implements Tool {
       Builder builder = null;
       if (UserGroupInformation.isSecurityEnabled()) {
         builder = resource.path("ws").path("v1").path("cluster")
-            .path("scheduler-conf").accept(MediaType.APPLICATION_JSON);
+            .path("scheduler-conf").accept(ContentTypes.APPLICATION_JSON);
       } else {
         builder = resource.path("ws").path("v1").path("cluster")
             .queryParam("user.name",
             UserGroupInformation.getCurrentUser().getShortUserName())
-            .path("scheduler-conf").accept(MediaType.APPLICATION_JSON);
+            .path("scheduler-conf").accept(ContentTypes.APPLICATION_JSON);
       }
 
       builder.entity(YarnWebServiceUtils.toJson(updateInfo,
-          SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON);
+          SchedConfUpdateInfo.class), ContentTypes.APPLICATION_JSON);
       response = builder.put(ClientResponse.class);
       if (response != null) {
         if (response.getStatus() == Status.OK.getStatusCode()) {

@@ -19,12 +19,11 @@
 package org.apache.hadoop.yarn.server.resourcemanager.webapp.helper;
 
 import com.sun.jersey.api.client.WebResource;
+import org.apache.hadoop.http.ContentTypes;
 import org.apache.hadoop.http.JettyUtils;
 import org.codehaus.jettison.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import javax.ws.rs.core.MediaType;
 
 import java.util.function.Consumer;
 
@@ -64,7 +63,7 @@ public class JsonCustomResourceTypeTestcase {
   }
 
   public void verify(Consumer<JSONObject> verifier) {
-    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
 
     logResponse();

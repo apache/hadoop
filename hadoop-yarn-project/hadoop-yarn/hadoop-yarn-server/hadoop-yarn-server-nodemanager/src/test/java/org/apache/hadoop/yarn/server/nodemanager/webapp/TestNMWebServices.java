@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
-import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import com.google.inject.Guice;
 import com.google.inject.servlet.ServletModule;
 import com.sun.jersey.api.client.ClientResponse;
@@ -33,7 +32,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.http.ContentTypes;
 import org.apache.hadoop.http.JettyUtils;
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.util.XMLUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -85,7 +86,6 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
 import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.core.MediaType;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.File;
@@ -254,7 +254,7 @@ public class TestNMWebServices extends JerseyTestBase {
   private void assertNMResourceInfoResponse(ClientResponse response, long value)
       throws JSONException {
     assertEquals("MediaType of the response is not the expected!",
-        MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+        ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     assertEquals("Unexpected value in the json response!", (int) value,
@@ -263,7 +263,7 @@ public class TestNMWebServices extends JerseyTestBase {
 
   private void assertEmptyNMResourceInfo(ClientResponse response) {
     assertEquals("MediaType of the response is not the expected!",
-        MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+        ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     assertEquals("Unexpected value in the json response!",
@@ -273,7 +273,7 @@ public class TestNMWebServices extends JerseyTestBase {
   private ClientResponse getNMResourceResponse(WebResource resource,
       String resourceName) {
     return resource.path("ws").path("v1").path("node").path("resources")
-        .path(resourceName).accept(MediaType.APPLICATION_JSON)
+        .path(resourceName).accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
   }
 
@@ -310,7 +310,7 @@ public class TestNMWebServices extends JerseyTestBase {
     String responseStr = "";
     try {
       responseStr = r.path("ws").path("v1").path("node").path("bogus")
-          .accept(MediaType.APPLICATION_JSON).get(String.class);
+          .accept(ContentTypes.APPLICATION_JSON).get(String.class);
       fail("should have thrown exception on invalid uri");
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
@@ -326,7 +326,7 @@ public class TestNMWebServices extends JerseyTestBase {
     String responseStr = "";
     try {
       responseStr = r.path("ws").path("v1").path("node")
-          .accept(MediaType.TEXT_PLAIN).get(String.class);
+          .accept(ContentTypes.TEXT_PLAIN).get(String.class);
       fail("should have thrown exception on invalid uri");
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
@@ -342,7 +342,7 @@ public class TestNMWebServices extends JerseyTestBase {
     WebResource r = resource();
     String responseStr = "";
     try {
-      responseStr = r.accept(MediaType.APPLICATION_JSON).get(String.class);
+      responseStr = r.accept(ContentTypes.APPLICATION_JSON).get(String.class);
       fail("should have thrown exception on invalid uri");
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
@@ -356,9 +356,9 @@ public class TestNMWebServices extends JerseyTestBase {
   public void testNode() throws JSONException, Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("node")
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+        .accept(ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
 
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     verifyNodeInfo(json);
@@ -368,9 +368,9 @@ public class TestNMWebServices extends JerseyTestBase {
   public void testNodeSlash() throws JSONException, Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("node/")
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+        .accept(ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
 
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     verifyNodeInfo(json);
@@ -383,7 +383,7 @@ public class TestNMWebServices extends JerseyTestBase {
     ClientResponse response = r.path("ws").path("v1").path("node")
         .get(ClientResponse.class);
 
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     verifyNodeInfo(json);
@@ -393,8 +393,8 @@ public class TestNMWebServices extends JerseyTestBase {
   public void testNodeInfo() throws JSONException, Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("node").path("info")
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+        .accept(ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     verifyNodeInfo(json);
@@ -404,9 +404,9 @@ public class TestNMWebServices extends JerseyTestBase {
   public void testNodeInfoSlash() throws JSONException, Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("node")
-        .path("info/").accept(MediaType.APPLICATION_JSON)
+        .path("info/").accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     verifyNodeInfo(json);
@@ -418,7 +418,7 @@ public class TestNMWebServices extends JerseyTestBase {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("node").path("info")
         .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     verifyNodeInfo(json);
@@ -428,9 +428,9 @@ public class TestNMWebServices extends JerseyTestBase {
   public void testSingleNodesXML() throws JSONException, Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("node")
-        .path("info/").accept(MediaType.APPLICATION_XML)
+        .path("info/").accept(ContentTypes.APPLICATION_XML)
         .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_XML+ "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_XML+ "; " + JettyUtils.UTF_8,
         response.getType().toString());
     String xml = response.getEntity(String.class);
     DocumentBuilderFactory dbf = XMLUtils.newSecureDocumentBuilderFactory();
@@ -580,7 +580,7 @@ public class TestNMWebServices extends JerseyTestBase {
     WebResource r = resource();
     ClientResponse response = getNMResourceResponse(r, "resource-1");
     assertEquals("MediaType of the response is not the expected!",
-        MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+        ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     assertEquals("Unexpected driverVersion in the json response!",
@@ -625,7 +625,7 @@ public class TestNMWebServices extends JerseyTestBase {
 
     // ask for it
     ClientResponse response = r.path(filename)
-        .accept(MediaType.TEXT_PLAIN).get(ClientResponse.class);
+        .accept(ContentTypes.TEXT_PLAIN).get(ClientResponse.class);
     String responseText = response.getEntity(String.class);
     String responseLogMessage = getLogContext(responseText);
     assertEquals(logMessage, responseLogMessage);
@@ -636,7 +636,7 @@ public class TestNMWebServices extends JerseyTestBase {
     // container log
     response = r.path(filename)
         .queryParam("size", "5")
-        .accept(MediaType.TEXT_PLAIN).get(ClientResponse.class);
+        .accept(ContentTypes.TEXT_PLAIN).get(ClientResponse.class);
     responseText = response.getEntity(String.class);
     responseLogMessage = getLogContext(responseText);
     int truncatedLength = Math.min(5, logMessage.getBytes().length);
@@ -649,7 +649,7 @@ public class TestNMWebServices extends JerseyTestBase {
     // we would get the full logs
     response = r.path(filename)
         .queryParam("size", "10000")
-        .accept(MediaType.TEXT_PLAIN).get(ClientResponse.class);
+        .accept(ContentTypes.TEXT_PLAIN).get(ClientResponse.class);
     responseText = response.getEntity(String.class);
     responseLogMessage = getLogContext(responseText);
     assertEquals(fullTextSize, responseLogMessage.getBytes().length);
@@ -659,7 +659,7 @@ public class TestNMWebServices extends JerseyTestBase {
     // container log
     response = r.path(filename)
         .queryParam("size", "-5")
-        .accept(MediaType.TEXT_PLAIN).get(ClientResponse.class);
+        .accept(ContentTypes.TEXT_PLAIN).get(ClientResponse.class);
     responseText = response.getEntity(String.class);
     responseLogMessage = getLogContext(responseText);
     assertEquals(truncatedLength, responseLogMessage.getBytes().length);
@@ -670,7 +670,7 @@ public class TestNMWebServices extends JerseyTestBase {
 
     response = r.path(filename)
         .queryParam("size", "-10000")
-        .accept(MediaType.TEXT_PLAIN).get(ClientResponse.class);
+        .accept(ContentTypes.TEXT_PLAIN).get(ClientResponse.class);
     responseText = response.getEntity(String.class);
     responseLogMessage = getLogContext(responseText);
     assertEquals("text/plain; charset=utf-8", response.getType().toString());
@@ -680,7 +680,7 @@ public class TestNMWebServices extends JerseyTestBase {
     // ask and download it
     response = r.path(filename)
         .queryParam("format", "octet-stream")
-        .accept(MediaType.TEXT_PLAIN).get(ClientResponse.class);
+        .accept(ContentTypes.TEXT_PLAIN).get(ClientResponse.class);
     responseText = response.getEntity(String.class);
     responseLogMessage = getLogContext(responseText);
     assertEquals(logMessage, responseLogMessage);
@@ -691,7 +691,7 @@ public class TestNMWebServices extends JerseyTestBase {
     // specify a invalid format value
     response = r.path(filename)
         .queryParam("format", "123")
-        .accept(MediaType.TEXT_PLAIN).get(ClientResponse.class);
+        .accept(ContentTypes.TEXT_PLAIN).get(ClientResponse.class);
     responseText = response.getEntity(String.class);
     assertEquals("The valid values for the parameter : format are "
         + WebAppUtils.listSupportedLogContentType(), responseText);
@@ -708,7 +708,7 @@ public class TestNMWebServices extends JerseyTestBase {
     WebResource r1 = resource();
     response = r1.path("ws").path("v1").path("node")
         .path("containers").path(containerIdStr)
-        .path("logs").accept(MediaType.APPLICATION_JSON)
+        .path("logs").accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
     assertEquals(200, response.getStatus());
     List<ContainerLogsInfo> responseList = response.getEntity(new GenericType<
@@ -735,7 +735,7 @@ public class TestNMWebServices extends JerseyTestBase {
       r1 = resource();
       response = r1.path("ws").path("v1").path("node")
           .path("containers").path(containerIdStr)
-          .path("logs").accept(MediaType.APPLICATION_JSON)
+          .path("logs").accept(ContentTypes.APPLICATION_JSON)
           .get(ClientResponse.class);
       assertEquals(200, response.getStatus());
       responseList = response.getEntity(new GenericType<
@@ -763,7 +763,7 @@ public class TestNMWebServices extends JerseyTestBase {
           Collections.singletonMap(containerId, aggregatedLogMessage),
           nmContext.getNodeId(), filename, "user", true);
       response = r.path(filename)
-          .accept(MediaType.TEXT_PLAIN).get(ClientResponse.class);
+          .accept(ContentTypes.TEXT_PLAIN).get(ClientResponse.class);
       responseText = response.getEntity(String.class);
       assertTrue(responseText.contains("LogAggregationType: "
           + ContainerLogAggregationType.AGGREGATED));
@@ -778,7 +778,7 @@ public class TestNMWebServices extends JerseyTestBase {
     nmContext.getContainers().remove(containerId);
     assertNull(nmContext.getContainers().get(containerId));
     response =
-        r.path(filename).accept(MediaType.TEXT_PLAIN)
+        r.path(filename).accept(ContentTypes.TEXT_PLAIN)
             .get(ClientResponse.class);
     responseText = response.getEntity(String.class);
     assertTrue(responseText.contains(logMessage));

@@ -25,6 +25,7 @@ import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 import com.sun.jersey.test.framework.WebAppDescriptor;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.ContentTypes;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
@@ -48,7 +49,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.w3c.dom.Element;
-import javax.ws.rs.core.MediaType;
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Map;
@@ -134,7 +134,7 @@ public class TestRMWebServicesFairSchedulerCustomResourceTypes
     WebResource path =
         resource().path("ws").path("v1").path("cluster").path("scheduler");
     ClientResponse response =
-        path.accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+        path.accept(ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
 
     verifyJsonResponse(path, response,
             CustomResourceTypesConfigurationProvider.getCustomResourceTypes());
@@ -155,7 +155,7 @@ public class TestRMWebServicesFairSchedulerCustomResourceTypes
     WebResource path =
         resource().path("ws").path("v1").path("cluster").path("scheduler");
     ClientResponse response =
-        path.accept(MediaType.APPLICATION_XML).get(ClientResponse.class);
+        path.accept(ContentTypes.APPLICATION_XML).get(ClientResponse.class);
 
     verifyXmlResponse(path, response,
         CustomResourceTypesConfigurationProvider.getCustomResourceTypes());
@@ -179,7 +179,7 @@ public class TestRMWebServicesFairSchedulerCustomResourceTypes
     WebResource path =
         resource().path("ws").path("v1").path("cluster").path("scheduler");
     ClientResponse response =
-        path.accept(MediaType.APPLICATION_XML).get(ClientResponse.class);
+        path.accept(ContentTypes.APPLICATION_XML).get(ClientResponse.class);
 
     verifyXmlResponse(path, response,
         CustomResourceTypesConfigurationProvider.getCustomResourceTypes());
@@ -203,7 +203,7 @@ public class TestRMWebServicesFairSchedulerCustomResourceTypes
     WebResource path =
         resource().path("ws").path("v1").path("cluster").path("scheduler");
     ClientResponse response =
-        path.accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+        path.accept(ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
 
     verifyJsonResponse(path, response,
         CustomResourceTypesConfigurationProvider.getCustomResourceTypes());

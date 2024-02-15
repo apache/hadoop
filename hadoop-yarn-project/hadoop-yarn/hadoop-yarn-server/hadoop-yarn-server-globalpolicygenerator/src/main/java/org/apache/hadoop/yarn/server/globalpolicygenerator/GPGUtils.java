@@ -29,19 +29,18 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import javax.ws.rs.core.MediaType;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.ContentTypes;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 
 /**
  * GPGUtils contains utility functions for the GPG.
@@ -83,7 +82,7 @@ public final class GPGUtils {
     ClientResponse response = null;
     try {
       response = webResource.path(RM_WEB_SERVICE_PATH).path(path)
-          .accept(MediaType.APPLICATION_XML).get(ClientResponse.class);
+          .accept(ContentTypes.APPLICATION_XML).get(ClientResponse.class);
       if (response.getStatus() == SC_OK) {
         obj = response.getEntity(returnType);
       } else {

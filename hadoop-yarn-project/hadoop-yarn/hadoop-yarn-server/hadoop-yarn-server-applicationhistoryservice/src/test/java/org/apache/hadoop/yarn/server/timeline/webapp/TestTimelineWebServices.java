@@ -27,7 +27,6 @@ import java.util.Set;
 import javax.servlet.FilterConfig;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletException;
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response.Status;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
@@ -43,6 +42,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.ContentTypes;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
@@ -191,9 +191,9 @@ public class TestTimelineWebServices extends JerseyTestBase {
   void testAbout() throws Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("timeline")
-        .accept(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     TimelineAbout actualAbout = response.getEntity(TimelineAbout.class);
     TimelineAbout expectedAbout =
@@ -249,9 +249,9 @@ public class TestTimelineWebServices extends JerseyTestBase {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("timeline")
         .path("type_1")
-        .accept(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     verifyEntities(response.getEntity(TimelineEntities.class));
   }
@@ -261,18 +261,18 @@ public class TestTimelineWebServices extends JerseyTestBase {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("timeline")
         .path("type_1").queryParam("fromId", "id_2")
-        .accept(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     assertEquals(2, response.getEntity(TimelineEntities.class).getEntities()
         .size());
 
     response = r.path("ws").path("v1").path("timeline")
         .path("type_1").queryParam("fromId", "id_1")
-        .accept(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     assertEquals(3, response.getEntity(TimelineEntities.class).getEntities()
         .size());
@@ -283,9 +283,9 @@ public class TestTimelineWebServices extends JerseyTestBase {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("timeline")
         .path("type_1").queryParam("fromTs", Long.toString(beforeTime))
-        .accept(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     assertEquals(0, response.getEntity(TimelineEntities.class).getEntities()
         .size());
@@ -293,9 +293,9 @@ public class TestTimelineWebServices extends JerseyTestBase {
     response = r.path("ws").path("v1").path("timeline")
         .path("type_1").queryParam("fromTs", Long.toString(
         System.currentTimeMillis()))
-        .accept(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     assertEquals(3, response.getEntity(TimelineEntities.class).getEntities()
         .size());
@@ -306,9 +306,9 @@ public class TestTimelineWebServices extends JerseyTestBase {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("timeline")
         .path("type_1").queryParam("primaryFilter", "user:username")
-        .accept(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     verifyEntities(response.getEntity(TimelineEntities.class));
   }
@@ -319,9 +319,9 @@ public class TestTimelineWebServices extends JerseyTestBase {
     ClientResponse response = r.path("ws").path("v1").path("timeline")
         .path("type_1").queryParam("primaryFilter",
         "appname:" + Integer.toString(Integer.MAX_VALUE))
-        .accept(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     verifyEntities(response.getEntity(TimelineEntities.class));
   }
@@ -332,9 +332,9 @@ public class TestTimelineWebServices extends JerseyTestBase {
     ClientResponse response = r.path("ws").path("v1").path("timeline")
         .path("type_1").queryParam("primaryFilter",
         "long:" + Long.toString((long) Integer.MAX_VALUE + 1L))
-        .accept(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     verifyEntities(response.getEntity(TimelineEntities.class));
   }
@@ -346,9 +346,9 @@ public class TestTimelineWebServices extends JerseyTestBase {
         .path("type_1")
         .queryParam("secondaryFilter",
             "user:username,appname:" + Integer.toString(Integer.MAX_VALUE))
-        .accept(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     verifyEntities(response.getEntity(TimelineEntities.class));
   }
@@ -358,9 +358,9 @@ public class TestTimelineWebServices extends JerseyTestBase {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("timeline")
         .path("type_1").path("id_1")
-        .accept(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     TimelineEntity entity = response.getEntity(TimelineEntity.class);
     assertNotNull(entity);
@@ -377,9 +377,9 @@ public class TestTimelineWebServices extends JerseyTestBase {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("timeline")
         .path("type_1").path("id_1").queryParam("fields", "events,otherinfo")
-        .accept(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     TimelineEntity entity = response.getEntity(TimelineEntity.class);
     assertNotNull(entity);
@@ -397,9 +397,9 @@ public class TestTimelineWebServices extends JerseyTestBase {
     ClientResponse response = r.path("ws").path("v1").path("timeline")
         .path("type_1").path("id_1").queryParam("fields", "lasteventonly," +
         "primaryfilters,relatedentities")
-        .accept(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     TimelineEntity entity = response.getEntity(TimelineEntity.class);
     assertNotNull(entity);
@@ -417,9 +417,9 @@ public class TestTimelineWebServices extends JerseyTestBase {
     ClientResponse response = r.path("ws").path("v1").path("timeline")
         .path("type_1").path("events")
         .queryParam("entityId", "id_1")
-        .accept(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     TimelineEvents events = response.getEntity(TimelineEvents.class);
     assertNotNull(events);
@@ -451,8 +451,8 @@ public class TestTimelineWebServices extends JerseyTestBase {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("timeline")
         .queryParam("user.name", "tester")
-        .accept(MediaType.APPLICATION_JSON)
-        .type(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
+        .type(ContentTypes.APPLICATION_JSON)
         .post(ClientResponse.class, entities);
     TimelinePutResponse putResposne =
         response.getEntity(TimelinePutResponse.class);
@@ -471,19 +471,19 @@ public class TestTimelineWebServices extends JerseyTestBase {
     WebResource r = resource();
     // No owner, will be rejected
     ClientResponse response = r.path("ws").path("v1").path("timeline")
-        .accept(MediaType.APPLICATION_JSON)
-        .type(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
+        .type(ContentTypes.APPLICATION_JSON)
         .post(ClientResponse.class, entities);
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     assertResponseStatusCode(Status.FORBIDDEN, response.getStatusInfo());
 
     response = r.path("ws").path("v1").path("timeline")
         .queryParam("user.name", "tester")
-        .accept(MediaType.APPLICATION_JSON)
-        .type(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
+        .type(ContentTypes.APPLICATION_JSON)
         .post(ClientResponse.class, entities);
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     TimelinePutResponse putResposne =
         response.getEntity(TimelinePutResponse.class);
@@ -492,9 +492,9 @@ public class TestTimelineWebServices extends JerseyTestBase {
     // verify the entity exists in the store
     response = r.path("ws").path("v1").path("timeline")
         .path("test type 1").path("test id 1")
-        .accept(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     entity = response.getEntity(TimelineEntity.class);
     assertNotNull(entity);
@@ -516,9 +516,9 @@ public class TestTimelineWebServices extends JerseyTestBase {
     WebResource r = resource();
     // One of the entities has no id or type. HTTP 400 will be returned
     ClientResponse response = r.path("ws").path("v1").path("timeline")
-        .queryParam("user.name", "tester").accept(MediaType.APPLICATION_JSON)
-        .type(MediaType.APPLICATION_JSON).post(ClientResponse.class, entities);
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+        .queryParam("user.name", "tester").accept(ContentTypes.APPLICATION_JSON)
+        .type(ContentTypes.APPLICATION_JSON).post(ClientResponse.class, entities);
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     assertResponseStatusCode(Status.BAD_REQUEST, response.getStatusInfo());
   }
@@ -538,10 +538,10 @@ public class TestTimelineWebServices extends JerseyTestBase {
       WebResource r = resource();
       ClientResponse response = r.path("ws").path("v1").path("timeline")
           .queryParam("user.name", "writer_user_1")
-          .accept(MediaType.APPLICATION_JSON)
-          .type(MediaType.APPLICATION_JSON)
+          .accept(ContentTypes.APPLICATION_JSON)
+          .type(ContentTypes.APPLICATION_JSON)
           .post(ClientResponse.class, entities);
-      assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       TimelinePutResponse putResponse =
           response.getEntity(TimelinePutResponse.class);
@@ -551,10 +551,10 @@ public class TestTimelineWebServices extends JerseyTestBase {
       // override/append timeline data in the same entity with different user
       response = r.path("ws").path("v1").path("timeline")
           .queryParam("user.name", "writer_user_3")
-          .accept(MediaType.APPLICATION_JSON)
-          .type(MediaType.APPLICATION_JSON)
+          .accept(ContentTypes.APPLICATION_JSON)
+          .type(ContentTypes.APPLICATION_JSON)
           .post(ClientResponse.class, entities);
-      assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       putResponse = response.getEntity(TimelinePutResponse.class);
       assertNotNull(putResponse);
@@ -575,10 +575,10 @@ public class TestTimelineWebServices extends JerseyTestBase {
       r = resource();
       response = r.path("ws").path("v1").path("timeline")
           .queryParam("user.name", "writer_user_3")
-          .accept(MediaType.APPLICATION_JSON)
-          .type(MediaType.APPLICATION_JSON)
+          .accept(ContentTypes.APPLICATION_JSON)
+          .type(ContentTypes.APPLICATION_JSON)
           .post(ClientResponse.class, entities);
-      assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       putResponse = response.getEntity(TimelinePutResponse.class);
       assertNotNull(putResponse);
@@ -591,9 +591,9 @@ public class TestTimelineWebServices extends JerseyTestBase {
       response = r.path("ws").path("v1").path("timeline")
           .path("test type 2").path("test id 3")
           .queryParam("user.name", "reader_user_3")
-          .accept(MediaType.APPLICATION_JSON)
+          .accept(ContentTypes.APPLICATION_JSON)
           .get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       entity = response.getEntity(TimelineEntity.class);
       assertNotNull(entity);
@@ -618,10 +618,10 @@ public class TestTimelineWebServices extends JerseyTestBase {
       WebResource r = resource();
       ClientResponse response = r.path("ws").path("v1").path("timeline")
           .queryParam("user.name", "anybody_1")
-          .accept(MediaType.APPLICATION_JSON)
-          .type(MediaType.APPLICATION_JSON)
+          .accept(ContentTypes.APPLICATION_JSON)
+          .type(ContentTypes.APPLICATION_JSON)
           .post(ClientResponse.class, entities);
-      assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       TimelinePutResponse putResposne =
           response.getEntity(TimelinePutResponse.class);
@@ -631,9 +631,9 @@ public class TestTimelineWebServices extends JerseyTestBase {
       response = r.path("ws").path("v1").path("timeline")
           .path("test type 7").path("test id 7")
           .queryParam("user.name", "any_body_2")
-          .accept(MediaType.APPLICATION_JSON)
+          .accept(ContentTypes.APPLICATION_JSON)
           .get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       entity = response.getEntity(TimelineEntity.class);
       assertNotNull(entity);
@@ -661,10 +661,10 @@ public class TestTimelineWebServices extends JerseyTestBase {
       WebResource r = resource();
       ClientResponse response = r.path("ws").path("v1").path("timeline")
           .queryParam("user.name", "writer_user_1")
-          .accept(MediaType.APPLICATION_JSON)
-          .type(MediaType.APPLICATION_JSON)
+          .accept(ContentTypes.APPLICATION_JSON)
+          .type(ContentTypes.APPLICATION_JSON)
           .post(ClientResponse.class, entities);
-      assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       TimelinePutResponse putResponse =
           response.getEntity(TimelinePutResponse.class);
@@ -674,9 +674,9 @@ public class TestTimelineWebServices extends JerseyTestBase {
       response = r.path("ws").path("v1").path("timeline")
           .path("test type 3").path("test id 3")
           .queryParam("user.name", "reader_user_1")
-          .accept(MediaType.APPLICATION_JSON)
+          .accept(ContentTypes.APPLICATION_JSON)
           .get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       entity = response.getEntity(TimelineEntity.class);
       assertNull(entity.getPrimaryFilters().get(
@@ -686,9 +686,9 @@ public class TestTimelineWebServices extends JerseyTestBase {
           .path("test type 3").path("test id 3")
           .queryParam("fields", "relatedentities")
           .queryParam("user.name", "reader_user_1")
-          .accept(MediaType.APPLICATION_JSON)
+          .accept(ContentTypes.APPLICATION_JSON)
           .get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       entity = response.getEntity(TimelineEntity.class);
       assertNull(entity.getPrimaryFilters().get(
@@ -698,9 +698,9 @@ public class TestTimelineWebServices extends JerseyTestBase {
           .path("test type 3").path("test id 3")
           .queryParam("fields", "primaryfilters")
           .queryParam("user.name", "reader_user_1")
-          .accept(MediaType.APPLICATION_JSON)
+          .accept(ContentTypes.APPLICATION_JSON)
           .get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       entity = response.getEntity(TimelineEntity.class);
       assertNull(entity.getPrimaryFilters().get(
@@ -710,9 +710,9 @@ public class TestTimelineWebServices extends JerseyTestBase {
       response = r.path("ws").path("v1").path("timeline")
           .path("test type 3").path("test id 3")
           .queryParam("user.name", "reader_user_2")
-          .accept(MediaType.APPLICATION_JSON)
+          .accept(ContentTypes.APPLICATION_JSON)
           .get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       assertResponseStatusCode(Status.FORBIDDEN, response.getStatusInfo());
     } finally {
@@ -736,10 +736,10 @@ public class TestTimelineWebServices extends JerseyTestBase {
       WebResource r = resource();
       ClientResponse response = r.path("ws").path("v1").path("timeline")
           .queryParam("user.name", "writer_user_1")
-          .accept(MediaType.APPLICATION_JSON)
-          .type(MediaType.APPLICATION_JSON)
+          .accept(ContentTypes.APPLICATION_JSON)
+          .type(ContentTypes.APPLICATION_JSON)
           .post(ClientResponse.class, entities);
-      assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       TimelinePutResponse putResponse =
           response.getEntity(TimelinePutResponse.class);
@@ -756,10 +756,10 @@ public class TestTimelineWebServices extends JerseyTestBase {
       r = resource();
       response = r.path("ws").path("v1").path("timeline")
           .queryParam("user.name", "writer_user_3")
-          .accept(MediaType.APPLICATION_JSON)
-          .type(MediaType.APPLICATION_JSON)
+          .accept(ContentTypes.APPLICATION_JSON)
+          .type(ContentTypes.APPLICATION_JSON)
           .post(ClientResponse.class, entities);
-      assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       putResponse = response.getEntity(TimelinePutResponse.class);
       assertEquals(0, putResponse.getErrors().size());
@@ -768,9 +768,9 @@ public class TestTimelineWebServices extends JerseyTestBase {
       response = r.path("ws").path("v1").path("timeline")
           .queryParam("user.name", "reader_user_1")
           .path("test type 4")
-          .accept(MediaType.APPLICATION_JSON)
+          .accept(ContentTypes.APPLICATION_JSON)
           .get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       entities = response.getEntity(TimelineEntities.class);
       // Reader 1 should just have the access to entity [4, 4]
@@ -802,10 +802,10 @@ public class TestTimelineWebServices extends JerseyTestBase {
       WebResource r = resource();
       ClientResponse response = r.path("ws").path("v1").path("timeline")
           .queryParam("user.name", "writer_user_1")
-          .accept(MediaType.APPLICATION_JSON)
-          .type(MediaType.APPLICATION_JSON)
+          .accept(ContentTypes.APPLICATION_JSON)
+          .type(ContentTypes.APPLICATION_JSON)
           .post(ClientResponse.class, entities);
-      assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       TimelinePutResponse putResponse =
           response.getEntity(TimelinePutResponse.class);
@@ -826,10 +826,10 @@ public class TestTimelineWebServices extends JerseyTestBase {
       r = resource();
       response = r.path("ws").path("v1").path("timeline")
           .queryParam("user.name", "writer_user_3")
-          .accept(MediaType.APPLICATION_JSON)
-          .type(MediaType.APPLICATION_JSON)
+          .accept(ContentTypes.APPLICATION_JSON)
+          .type(ContentTypes.APPLICATION_JSON)
           .post(ClientResponse.class, entities);
-      assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       putResponse = response.getEntity(TimelinePutResponse.class);
       assertEquals(0, putResponse.getErrors().size());
@@ -839,9 +839,9 @@ public class TestTimelineWebServices extends JerseyTestBase {
           .path("test type 5").path("events")
           .queryParam("user.name", "reader_user_1")
           .queryParam("entityId", "test id 5,test id 6")
-          .accept(MediaType.APPLICATION_JSON)
+          .accept(ContentTypes.APPLICATION_JSON)
           .get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       TimelineEvents events = response.getEntity(TimelineEvents.class);
       // Reader 1 should just have the access to the events of entity [5, 5]
@@ -857,9 +857,9 @@ public class TestTimelineWebServices extends JerseyTestBase {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("timeline")
         .path("domain").path("domain_id_1")
-        .accept(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     TimelineDomain domain = response.getEntity(TimelineDomain.class);
     verifyDomain(domain, "domain_id_1");
@@ -874,9 +874,9 @@ public class TestTimelineWebServices extends JerseyTestBase {
       ClientResponse response = r.path("ws").path("v1").path("timeline")
           .path("domain").path("domain_id_1")
           .queryParam("user.name", "owner_1")
-          .accept(MediaType.APPLICATION_JSON)
+          .accept(ContentTypes.APPLICATION_JSON)
           .get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       TimelineDomain domain = response.getEntity(TimelineDomain.class);
       verifyDomain(domain, "domain_id_1");
@@ -884,9 +884,9 @@ public class TestTimelineWebServices extends JerseyTestBase {
       response = r.path("ws").path("v1").path("timeline")
           .path("domain").path("domain_id_1")
           .queryParam("user.name", "tester")
-          .accept(MediaType.APPLICATION_JSON)
+          .accept(ContentTypes.APPLICATION_JSON)
           .get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       assertResponseStatusCode(Status.NOT_FOUND, response.getStatusInfo());
     } finally {
@@ -900,9 +900,9 @@ public class TestTimelineWebServices extends JerseyTestBase {
     ClientResponse response = r.path("ws").path("v1").path("timeline")
         .path("domain")
         .queryParam("owner", "owner_1")
-        .accept(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     TimelineDomains domains = response.getEntity(TimelineDomains.class);
     assertEquals(2, domains.getDomains().size());
@@ -921,9 +921,9 @@ public class TestTimelineWebServices extends JerseyTestBase {
       ClientResponse response = r.path("ws").path("v1").path("timeline")
           .path("domain")
           .queryParam("user.name", "owner_1")
-          .accept(MediaType.APPLICATION_JSON)
+          .accept(ContentTypes.APPLICATION_JSON)
           .get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       TimelineDomains domains = response.getEntity(TimelineDomains.class);
       assertEquals(2, domains.getDomains().size());
@@ -936,9 +936,9 @@ public class TestTimelineWebServices extends JerseyTestBase {
           .path("domain")
           .queryParam("owner", "owner_1")
           .queryParam("user.name", "tester")
-          .accept(MediaType.APPLICATION_JSON)
+          .accept(ContentTypes.APPLICATION_JSON)
           .get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       domains = response.getEntity(TimelineDomains.class);
       assertEquals(0, domains.getDomains().size());
@@ -955,27 +955,27 @@ public class TestTimelineWebServices extends JerseyTestBase {
     // No owner, will be rejected
     ClientResponse response = r.path("ws").path("v1")
         .path("timeline").path("domain")
-        .accept(MediaType.APPLICATION_JSON)
-        .type(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
+        .type(ContentTypes.APPLICATION_JSON)
         .put(ClientResponse.class, domain);
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     assertResponseStatusCode(Status.FORBIDDEN, response.getStatusInfo());
 
     response = r.path("ws").path("v1")
         .path("timeline").path("domain")
         .queryParam("user.name", "tester")
-        .accept(MediaType.APPLICATION_JSON)
-        .type(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
+        .type(ContentTypes.APPLICATION_JSON)
         .put(ClientResponse.class, domain);
     assertResponseStatusCode(Status.OK, response.getStatusInfo());
 
     // Verify the domain exists
     response = r.path("ws").path("v1").path("timeline")
         .path("domain").path("test_domain_id")
-        .accept(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     domain = response.getEntity(TimelineDomain.class);
     assertNotNull(domain);
@@ -988,17 +988,17 @@ public class TestTimelineWebServices extends JerseyTestBase {
     response = r.path("ws").path("v1")
         .path("timeline").path("domain")
         .queryParam("user.name", "tester")
-        .accept(MediaType.APPLICATION_JSON)
-        .type(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
+        .type(ContentTypes.APPLICATION_JSON)
         .put(ClientResponse.class, domain);
     assertResponseStatusCode(Status.OK, response.getStatusInfo());
 
     // Verify the domain is updated
     response = r.path("ws").path("v1").path("timeline")
         .path("domain").path("test_domain_id")
-        .accept(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     domain = response.getEntity(TimelineDomain.class);
     assertNotNull(domain);
@@ -1017,8 +1017,8 @@ public class TestTimelineWebServices extends JerseyTestBase {
       ClientResponse response = r.path("ws").path("v1")
           .path("timeline").path("domain")
           .queryParam("user.name", "tester")
-          .accept(MediaType.APPLICATION_JSON)
-          .type(MediaType.APPLICATION_JSON)
+          .accept(ContentTypes.APPLICATION_JSON)
+          .type(ContentTypes.APPLICATION_JSON)
           .put(ClientResponse.class, domain);
       assertResponseStatusCode(Status.OK, response.getStatusInfo());
 
@@ -1026,8 +1026,8 @@ public class TestTimelineWebServices extends JerseyTestBase {
       response = r.path("ws").path("v1")
           .path("timeline").path("domain")
           .queryParam("user.name", "other")
-          .accept(MediaType.APPLICATION_JSON)
-          .type(MediaType.APPLICATION_JSON)
+          .accept(ContentTypes.APPLICATION_JSON)
+          .type(ContentTypes.APPLICATION_JSON)
           .put(ClientResponse.class, domain);
       assertResponseStatusCode(Status.FORBIDDEN, response.getStatusInfo());
     } finally {

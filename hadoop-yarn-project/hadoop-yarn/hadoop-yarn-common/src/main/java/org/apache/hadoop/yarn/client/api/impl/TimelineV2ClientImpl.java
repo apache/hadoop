@@ -34,13 +34,14 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.CancellationException;
 
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.ContentTypes;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
@@ -56,7 +57,6 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
 
-import org.apache.hadoop.classification.VisibleForTesting;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.UniformInterfaceException;
@@ -291,7 +291,7 @@ public class TimelineV2ClientImpl extends TimelineV2Client {
   private ClientResponse doPutObjects(URI base, String path,
       MultivaluedMap<String, String> params, Object obj) {
     return connector.getClient().resource(base).path(path).queryParams(params)
-        .accept(MediaType.APPLICATION_JSON).type(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON).type(ContentTypes.APPLICATION_JSON)
         .put(ClientResponse.class, obj);
   }
 

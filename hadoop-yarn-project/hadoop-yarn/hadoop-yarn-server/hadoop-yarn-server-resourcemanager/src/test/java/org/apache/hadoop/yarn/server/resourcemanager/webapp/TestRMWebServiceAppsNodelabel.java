@@ -26,8 +26,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
 
-import javax.ws.rs.core.MediaType;
-
+import org.apache.hadoop.http.ContentTypes;
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -153,7 +152,7 @@ public class TestRMWebServiceAppsNodelabel extends JerseyTestBase {
     WebResource r = resource();
     ClientResponse response =
         r.path("ws").path("v1").path("cluster").path("apps")
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+            .accept(ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
     JSONObject json = response.getEntity(JSONObject.class);
     JSONObject apps = json.getJSONObject("apps");
     assertEquals("incorrect number of elements", 1, apps.length());
@@ -196,7 +195,7 @@ public class TestRMWebServiceAppsNodelabel extends JerseyTestBase {
 
     ClientResponse response =
         r.path("ws").path("v1").path("cluster").path("apps")
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+            .accept(ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
     JSONObject json = response.getEntity(JSONObject.class);
 
     // Verify apps resource

@@ -34,7 +34,6 @@ import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMetho
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Path;
 import javax.ws.rs.core.Context;
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import com.sun.jersey.spi.container.ResourceFilters;
@@ -91,6 +90,7 @@ import org.apache.hadoop.hdfs.web.resources.XAttrEncodingParam;
 import org.apache.hadoop.hdfs.web.resources.XAttrNameParam;
 import org.apache.hadoop.hdfs.web.resources.XAttrSetFlagParam;
 import org.apache.hadoop.hdfs.web.resources.XAttrValueParam;
+import org.apache.hadoop.http.ContentTypes;
 import org.apache.hadoop.ipc.ExternalCall;
 import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.net.Node;
@@ -235,10 +235,10 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
           createFlagParam);
       if (!noredirectParam.getValue()) {
         return Response.temporaryRedirect(uri)
-            .type(MediaType.APPLICATION_OCTET_STREAM).build();
+            .type(ContentTypes.APPLICATION_OCTET_STREAM).build();
       } else {
         final String js = JsonUtil.toJsonString("Location", uri);
-        return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+        return Response.ok(js).type(ContentTypes.APPLICATION_JSON).build();
       }
     }
     case MKDIRS:
@@ -303,10 +303,10 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
           excludeDatanodes.getValue(), bufferSize);
       if (!noRedirectParam.getValue()) {
         return Response.temporaryRedirect(uri)
-            .type(MediaType.APPLICATION_OCTET_STREAM).build();
+            .type(ContentTypes.APPLICATION_OCTET_STREAM).build();
       } else {
         final String js = JsonUtil.toJsonString("Location", uri);
-        return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+        return Response.ok(js).type(ContentTypes.APPLICATION_JSON).build();
       }
     }
     case CONCAT:
@@ -359,10 +359,10 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
             excludeDatanodes.getValue(), offset, length, bufferSize);
         if (!noredirectParam.getValue()) {
           return Response.temporaryRedirect(uri)
-              .type(MediaType.APPLICATION_OCTET_STREAM).build();
+              .type(ContentTypes.APPLICATION_OCTET_STREAM).build();
         } else {
           final String js = JsonUtil.toJsonString("Location", uri);
-          return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+          return Response.ok(js).type(ContentTypes.APPLICATION_JSON).build();
         }
       }
       case GETFILECHECKSUM:
@@ -371,10 +371,10 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
             doAsUser, fullpath, op.getValue(), -1L, null);
         if (!noredirectParam.getValue()) {
           return Response.temporaryRedirect(uri)
-              .type(MediaType.APPLICATION_OCTET_STREAM).build();
+              .type(ContentTypes.APPLICATION_OCTET_STREAM).build();
         } else {
           final String js = JsonUtil.toJsonString("Location", uri);
-          return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+          return Response.ok(js).type(ContentTypes.APPLICATION_JSON).build();
         }
       }
       case GETDELEGATIONTOKEN:

@@ -26,11 +26,11 @@ import static org.junit.Assert.fail;
 import java.io.StringReader;
 import java.util.Set;
 
-import javax.ws.rs.core.MediaType;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.ContentTypes;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.MockAppContext;
@@ -113,8 +113,8 @@ public class TestAMWebServices extends JerseyTestBase {
   public void testAM() throws JSONException, Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("mapreduce")
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+        .accept(ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
@@ -125,8 +125,8 @@ public class TestAMWebServices extends JerseyTestBase {
   public void testAMSlash() throws JSONException, Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("mapreduce/")
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+        .accept(ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
@@ -138,7 +138,7 @@ public class TestAMWebServices extends JerseyTestBase {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("mapreduce/")
         .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
@@ -149,8 +149,8 @@ public class TestAMWebServices extends JerseyTestBase {
   public void testAMXML() throws JSONException, Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("mapreduce")
-        .accept(MediaType.APPLICATION_XML).get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8,
+        .accept(ContentTypes.APPLICATION_XML).get(ClientResponse.class);
+    assertEquals(ContentTypes.APPLICATION_XML + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     String xml = response.getEntity(String.class);
     verifyAMInfoXML(xml, appContext);
@@ -160,9 +160,9 @@ public class TestAMWebServices extends JerseyTestBase {
   public void testInfo() throws JSONException, Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("mapreduce")
-        .path("info").accept(MediaType.APPLICATION_JSON)
+        .path("info").accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
@@ -173,9 +173,9 @@ public class TestAMWebServices extends JerseyTestBase {
   public void testInfoSlash() throws JSONException, Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("mapreduce")
-        .path("info/").accept(MediaType.APPLICATION_JSON)
+        .path("info/").accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
@@ -187,7 +187,7 @@ public class TestAMWebServices extends JerseyTestBase {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("mapreduce")
         .path("info/").get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
@@ -198,9 +198,9 @@ public class TestAMWebServices extends JerseyTestBase {
   public void testInfoXML() throws JSONException, Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("mapreduce")
-        .path("info/").accept(MediaType.APPLICATION_XML)
+        .path("info/").accept(ContentTypes.APPLICATION_XML)
         .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_XML + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     String xml = response.getEntity(String.class);
     verifyAMInfoXML(xml, appContext);
@@ -212,7 +212,7 @@ public class TestAMWebServices extends JerseyTestBase {
     String responseStr = "";
     try {
       responseStr = r.path("ws").path("v1").path("mapreduce").path("bogus")
-          .accept(MediaType.APPLICATION_JSON).get(String.class);
+          .accept(ContentTypes.APPLICATION_JSON).get(String.class);
       fail("should have thrown exception on invalid uri");
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
@@ -228,7 +228,7 @@ public class TestAMWebServices extends JerseyTestBase {
     String responseStr = "";
     try {
       responseStr = r.path("ws").path("v1").path("invalid")
-          .accept(MediaType.APPLICATION_JSON).get(String.class);
+          .accept(ContentTypes.APPLICATION_JSON).get(String.class);
       fail("should have thrown exception on invalid uri");
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
@@ -244,7 +244,7 @@ public class TestAMWebServices extends JerseyTestBase {
     String responseStr = "";
     try {
       responseStr = r.path("ws").path("v1").path("mapreduce")
-          .accept(MediaType.TEXT_PLAIN).get(String.class);
+          .accept(ContentTypes.TEXT_PLAIN).get(String.class);
       fail("should have thrown exception on invalid uri");
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
@@ -259,9 +259,9 @@ public class TestAMWebServices extends JerseyTestBase {
   public void testBlacklistedNodes() throws JSONException, Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("mapreduce")
-        .path("blacklistednodes").accept(MediaType.APPLICATION_JSON)
+        .path("blacklistednodes").accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
@@ -272,9 +272,9 @@ public class TestAMWebServices extends JerseyTestBase {
   public void testBlacklistedNodesXML() throws Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("mapreduce")
-        .path("blacklistednodes").accept(MediaType.APPLICATION_XML)
+        .path("blacklistednodes").accept(ContentTypes.APPLICATION_XML)
         .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_XML + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     String xml = response.getEntity(String.class);
     verifyBlacklistedNodesInfoXML(xml, appContext);

@@ -34,7 +34,6 @@ import java.util.Map;
 import java.util.Random;
 
 import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.core.MediaType;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
@@ -49,6 +48,7 @@ import org.apache.hadoop.hdfs.AppendTestUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.web.resources.*;
 import org.apache.hadoop.hdfs.web.resources.NamenodeAddressParam;
+import org.apache.hadoop.http.ContentTypes;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -470,7 +470,7 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
       conn.connect();
       assertEquals(HttpServletResponse.SC_OK, conn.getResponseCode());
       assertEquals(0, conn.getContentLength());
-      assertEquals(MediaType.APPLICATION_OCTET_STREAM, conn.getContentType());
+      assertEquals(ContentTypes.APPLICATION_OCTET_STREAM, conn.getContentType());
       assertEquals((short)0755, webhdfs.getFileStatus(dir).getPermission().toShort());
       conn.disconnect();
     }

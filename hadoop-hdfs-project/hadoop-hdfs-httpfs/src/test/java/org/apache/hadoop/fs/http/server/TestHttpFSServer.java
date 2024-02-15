@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.web.JsonUtil;
 import org.apache.hadoop.hdfs.web.JsonUtilClient;
+import org.apache.hadoop.http.ContentTypes;
 import org.apache.hadoop.lib.service.FileSystemAccess;
 import org.apache.hadoop.security.authentication.util.SignerSecretProvider;
 import org.apache.hadoop.security.authentication.util.StringSignerSecretProviderCreator;
@@ -116,7 +117,6 @@ import java.util.concurrent.Callable;
 import java.util.regex.Pattern;
 
 import javax.ws.rs.HttpMethod;
-import javax.ws.rs.core.MediaType;
 
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 
@@ -1674,7 +1674,7 @@ public class TestHttpFSServer extends HFSTestCase {
     conn = (HttpURLConnection) url.openConnection();
     conn.setRequestMethod(HttpMethod.PUT);
     conn.setRequestProperty(
-        "Content-Type", MediaType.APPLICATION_OCTET_STREAM);
+        "Content-Type", ContentTypes.APPLICATION_OCTET_STREAM);
     conn.setDoOutput(true);
     conn.connect();
     OutputStream os = conn.getOutputStream();
@@ -1949,7 +1949,7 @@ public class TestHttpFSServer extends HFSTestCase {
             path, username));
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
     conn.setRequestMethod(HttpMethod.PUT);
-    conn.setRequestProperty("Content-Type", MediaType.APPLICATION_OCTET_STREAM);
+    conn.setRequestProperty("Content-Type", ContentTypes.APPLICATION_OCTET_STREAM);
     conn.setDoOutput(true);
     conn.connect();
     Assert.assertEquals(HttpURLConnection.HTTP_OK, conn.getResponseCode());
@@ -1963,7 +1963,7 @@ public class TestHttpFSServer extends HFSTestCase {
     url = new URL(location);
     conn = (HttpURLConnection) url.openConnection();
     conn.setRequestMethod(HttpMethod.PUT);
-    conn.setRequestProperty("Content-Type", MediaType.APPLICATION_OCTET_STREAM);
+    conn.setRequestProperty("Content-Type", ContentTypes.APPLICATION_OCTET_STREAM);
     conn.setDoOutput(true);
     conn.connect();
     final String writeStr = "write some content";

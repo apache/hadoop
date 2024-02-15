@@ -53,7 +53,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.reflect.Field;
@@ -85,7 +84,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     public void doGet(HttpServletRequest request, 
                       HttpServletResponse response
                       ) throws ServletException, IOException {
-      response.setContentType(MediaType.TEXT_PLAIN + "; " + JettyUtils.UTF_8);
+      response.setContentType(ContentTypes.TEXT_PLAIN + "; " + JettyUtils.UTF_8);
       PrintWriter out = response.getWriter();
       Map<String, String[]> params = request.getParameterMap();
       SortedSet<String> keys = new TreeSet<String>(params.keySet());
@@ -113,7 +112,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     public void doGet(HttpServletRequest request, 
                       HttpServletResponse response
                       ) throws ServletException, IOException {
-      response.setContentType(MediaType.TEXT_PLAIN + "; " + JettyUtils.UTF_8);
+      response.setContentType(ContentTypes.TEXT_PLAIN + "; " + JettyUtils.UTF_8);
       PrintWriter out = response.getWriter();
       SortedSet<String> sortedKeys = new TreeSet<String>();
       Enumeration<String> keys = request.getParameterNames();
@@ -136,7 +135,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     public void doGet(HttpServletRequest request, 
                       HttpServletResponse response
                       ) throws ServletException, IOException {
-      response.setContentType(MediaType.TEXT_HTML + "; " + JettyUtils.UTF_8);
+      response.setContentType(ContentTypes.TEXT_HTML + "; " + JettyUtils.UTF_8);
       PrintWriter out = response.getWriter();
       out.print("hello world");
       out.close();
@@ -251,7 +250,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     conn = (HttpURLConnection)servletUrl.openConnection();
     conn.connect();
     assertEquals(200, conn.getResponseCode());
-    assertEquals(MediaType.TEXT_PLAIN + ";" + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.TEXT_PLAIN + ";" + JettyUtils.UTF_8,
         conn.getContentType());
 
     // We should ignore parameters for mime types - ie a parameter
@@ -260,7 +259,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     conn = (HttpURLConnection)servletUrl.openConnection();
     conn.connect();
     assertEquals(200, conn.getResponseCode());
-    assertEquals(MediaType.TEXT_PLAIN + ";" + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.TEXT_PLAIN + ";" + JettyUtils.UTF_8,
         conn.getContentType());
 
     // Servlets that specify text/html should get that content type
@@ -268,7 +267,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     conn = (HttpURLConnection)servletUrl.openConnection();
     conn.connect();
     assertEquals(200, conn.getResponseCode());
-    assertEquals(MediaType.TEXT_HTML + ";" + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.TEXT_HTML + ";" + JettyUtils.UTF_8,
         conn.getContentType());
   }
 

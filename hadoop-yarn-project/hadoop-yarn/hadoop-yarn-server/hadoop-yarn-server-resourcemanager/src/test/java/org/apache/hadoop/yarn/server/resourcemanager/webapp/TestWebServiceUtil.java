@@ -33,7 +33,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
-import javax.ws.rs.core.MediaType;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.transform.OutputKeys;
@@ -56,6 +55,7 @@ import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 import com.sun.jersey.test.framework.WebAppDescriptor;
 
+import org.apache.hadoop.http.ContentTypes;
 import org.junit.Assert;
 import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
@@ -176,12 +176,12 @@ public final class TestWebServiceUtil {
 
   public static ClientResponse sendRequest(WebResource resource) {
     return resource.path("ws").path("v1").path("cluster")
-        .path("scheduler").accept(MediaType.APPLICATION_JSON)
+        .path("scheduler").accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
   }
 
   public static void assertXmlType(ClientResponse response) {
-    assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_XML + "; " + JettyUtils.UTF_8,
         response.getType().toString());
   }
 
@@ -273,7 +273,7 @@ public final class TestWebServiceUtil {
   }
 
   public static void assertJsonType(ClientResponse response) {
-    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
   }
 

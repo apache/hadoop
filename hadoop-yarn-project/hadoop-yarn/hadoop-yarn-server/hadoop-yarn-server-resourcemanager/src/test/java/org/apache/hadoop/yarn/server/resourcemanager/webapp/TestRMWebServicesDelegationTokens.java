@@ -32,13 +32,13 @@ import java.util.concurrent.Callable;
 
 import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
-import javax.ws.rs.core.MediaType;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.http.ContentTypes;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.KerberosTestUtils;
@@ -273,10 +273,10 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
         "<delegation-token><renewer>" + renewer
             + "</renewer></delegation-token>";
     String[] mediaTypes =
-        { MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML };
+        {ContentTypes.APPLICATION_JSON, ContentTypes.APPLICATION_XML};
     Map<String, String> bodyMap = new HashMap<String, String>();
-    bodyMap.put(MediaType.APPLICATION_JSON, jsonBody);
-    bodyMap.put(MediaType.APPLICATION_XML, xmlBody);
+    bodyMap.put(ContentTypes.APPLICATION_JSON, jsonBody);
+    bodyMap.put(ContentTypes.APPLICATION_XML, xmlBody);
     for (final String mediaType : mediaTypes) {
       final String body = bodyMap.get(mediaType);
       for (final String contentType : mediaTypes) {
@@ -351,7 +351,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
     final DelegationToken dummyToken = new DelegationToken();
     dummyToken.setRenewer(renewer);
     String[] mediaTypes =
-        { MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML };
+        {ContentTypes.APPLICATION_JSON, ContentTypes.APPLICATION_XML};
     for (final String mediaType : mediaTypes) {
       for (final String contentType : mediaTypes) {
 
@@ -450,7 +450,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
           public Void call() throws Exception {
             String token = "TEST_TOKEN_STRING";
             String body = "";
-            if (mediaType.equals(MediaType.APPLICATION_JSON)) {
+            if (mediaType.equals(ContentTypes.APPLICATION_JSON)) {
               body = "{\"token\": \"" + token + "\" }";
             } else {
               body =
@@ -481,7 +481,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
     String body = "";
     // contents of body don't matter because the request processing shouldn't
     // get that far
-    if (mediaType.equals(MediaType.APPLICATION_JSON)) {
+    if (mediaType.equals(ContentTypes.APPLICATION_JSON)) {
       body = "{\"token\": \"" + token + "\" }";
       body = "{\"abcd\": \"test-123\" }";
     } else {
@@ -512,7 +512,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
     String renewer = "client2";
     dtoken.setRenewer(renewer);
     String[] mediaTypes =
-        { MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML };
+        {ContentTypes.APPLICATION_JSON, ContentTypes.APPLICATION_XML};
     for (final String mediaType : mediaTypes) {
       for (final String contentType : mediaTypes) {
 
@@ -690,7 +690,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
       getDelegationTokenFromResponse(ClientResponse response)
           throws IOException, ParserConfigurationException, SAXException,
           JSONException {
-    if (response.getType().toString().contains(MediaType.APPLICATION_JSON)) {
+    if (response.getType().toString().contains(ContentTypes.APPLICATION_JSON)) {
       return getDelegationTokenFromJson(response.getEntity(JSONObject.class));
     }
     return getDelegationTokenFromXML(response.getEntity(String.class));
@@ -761,7 +761,7 @@ public class TestRMWebServicesDelegationTokens extends JerseyTestBase {
 
   private static String generateRenewTokenBody(String mediaType, String token) {
     String body = "";
-    if (mediaType.contains(MediaType.APPLICATION_JSON)) {
+    if (mediaType.contains(ContentTypes.APPLICATION_JSON)) {
       body = "{\"token\": \"" + token + "\" }";
     } else {
       body =

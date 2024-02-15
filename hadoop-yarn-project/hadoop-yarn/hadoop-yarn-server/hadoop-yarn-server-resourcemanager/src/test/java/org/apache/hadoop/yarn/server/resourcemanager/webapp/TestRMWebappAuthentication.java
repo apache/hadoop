@@ -29,11 +29,10 @@ import java.net.URL;
 import java.util.Arrays;
 import java.util.Collection;
 
-import javax.ws.rs.core.MediaType;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.http.ContentTypes;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.KerberosTestUtils;
@@ -255,7 +254,7 @@ public class TestRMWebappAuthentication {
     url = new URL("http://localhost:8088/ws/v1/cluster/apps?user.name=client");
     conn = (HttpURLConnection) url.openConnection();
     TestRMWebServicesDelegationTokenAuthentication.setupConn(conn, "POST",
-      MediaType.APPLICATION_XML, requestBody);
+        ContentTypes.APPLICATION_XML, requestBody);
 
     conn.getInputStream();
     appExists =
