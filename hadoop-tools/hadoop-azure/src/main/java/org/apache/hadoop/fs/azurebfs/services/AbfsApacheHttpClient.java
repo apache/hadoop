@@ -436,7 +436,6 @@ public class AbfsApacheHttpClient {
       if(keepalive == 0 && managedConn instanceof ManagedHttpClientConnection) {
         abfsApacheHttpConnectionMap.remove(((ManagedHttpClientConnection)managedConn).getId());
       }
-      super.releaseConnection(managedConn, state, keepalive, timeUnit);
       inTransits.decrementAndGet();
       if(keepalive != 0) {
         kacCount.incrementAndGet();
@@ -444,6 +443,7 @@ public class AbfsApacheHttpClient {
             abfsApacheHttpConnection.cached = true;
         }
       }
+      super.releaseConnection(managedConn, state, keepalive, timeUnit);
     }
   }
 
@@ -461,8 +461,7 @@ public class AbfsApacheHttpClient {
         final HttpContext context) {
 //      response.
       if (context instanceof AbfsHttpClientContext) {
-        if (!((AbfsHttpClientContext) context).isReadable
-            && ((AbfsHttpClientContext) context).shouldKillConn(connMgr)) {
+        if (((AbfsHttpClientContext) context).shouldKillConn(connMgr)) {
           return false;
         }
         return super.keepAlive(response, context);
