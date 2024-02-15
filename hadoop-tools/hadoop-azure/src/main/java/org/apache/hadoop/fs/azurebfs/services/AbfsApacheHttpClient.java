@@ -72,7 +72,7 @@ public class AbfsApacheHttpClient {
       if (shouldKillConn()) {
         return true;
       }
-      if (connMgr.kacCount.get() > 5) {
+      if (connMgr.kacCount.get() >= 5) {
         return true;
       }
       return false;
@@ -155,6 +155,7 @@ public class AbfsApacheHttpClient {
     private AbfsHttpClientContext abfsHttpClientContext;
 
     int count = 0;
+    public boolean cached = false;
     final String uuid = UUID.randomUUID().toString();
 
     public int getCount() {
@@ -180,7 +181,9 @@ public class AbfsApacheHttpClient {
     public void close() throws IOException {
       httpClientConnection.close();
       connMgr.connCount.decrementAndGet();
-      connMgr.kacCount.decrementAndGet();
+      if(cached) {
+        connMgr.kacCount.decrementAndGet();
+      }
     }
 
     @Override
@@ -332,7 +335,16 @@ public class AbfsApacheHttpClient {
 
   public static class AbfsConnMgr extends PoolingHttpClientConnectionManager {
 
+    /**
+     * Gives count of connections that have been cached. Increment when adding in the KAC.
+     * Decrement when connection is taken from KAC, or connection from KAC is getting closed.
+     */
     private final AtomicInteger kacCount = new AtomicInteger(0);
+
+    /**
+     * Gives the number of connections at a moment. Increased when a new connection
+     * is opened. Decreased when a connection is closed.
+     */
     private final AtomicInteger connCount = new AtomicInteger(0);
     private final AtomicInteger inTransits = new AtomicInteger(0);
 
@@ -376,7 +388,15 @@ public class AbfsApacheHttpClient {
         ConnectionPoolTimeoutException {
       inTransits.incrementAndGet();
       try {
-        return super.leaseConnection(future, timeout, timeUnit);
+        HttpClientConnection connection = super.leaseConnection(future, timeout, timeUnit);
+        if(connection instanceof ManagedHttpClientConnection) {
+          AbfsApacheHttpConnection abfsApacheHttpConnection = abfsApacheHttpConnectionMap.get(((ManagedHttpClientConnection) connection).getId());
+          if(abfsApacheHttpConnection != null && abfsApacheHttpConnection.cached) {
+            kacCount.decrementAndGet();
+            abfsApacheHttpConnection.cached = false;
+          }
+        }
+        return connection;
       } catch (InterruptedException | ExecutionException | ConnectionPoolTimeoutException e) {
         inTransits.decrementAndGet();
         throw e;
@@ -391,6 +411,12 @@ public class AbfsApacheHttpClient {
       if(AbfsAHCHttpOperation.connThatCantBeClosed.contains(managedConn)) {
         return;
       }
+      final AbfsApacheHttpConnection abfsApacheHttpConnection;
+      if(managedConn instanceof ManagedHttpClientConnection) {
+        abfsApacheHttpConnection = abfsApacheHttpConnectionMap.get(((ManagedHttpClientConnection)managedConn).getId());
+      } else {
+        abfsApacheHttpConnection = null;
+      }
       if(keepalive == 0 && managedConn instanceof ManagedHttpClientConnection) {
         abfsApacheHttpConnectionMap.remove(((ManagedHttpClientConnection)managedConn).getId());
       }
@@ -398,6 +424,9 @@ public class AbfsApacheHttpClient {
       inTransits.decrementAndGet();
       if(keepalive != 0) {
         kacCount.incrementAndGet();
+        if (abfsApacheHttpConnection != null) {
+            abfsApacheHttpConnection.cached = true;
+        }
       }
     }
   }
@@ -507,6 +536,10 @@ public class AbfsApacheHttpClient {
         .setSocketTimeout(30_000);
     httpRequest.setConfig(requestConfigBuilder.build());
     return httpClient.execute(httpRequest, abfsHttpClientContext);
+  }
+
+  public int getParallelConnAtMoment() {
+    return connMgr.connCount.get();
   }
 
 
