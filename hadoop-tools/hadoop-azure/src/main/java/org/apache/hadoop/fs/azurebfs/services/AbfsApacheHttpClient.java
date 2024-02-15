@@ -525,6 +525,7 @@ public class AbfsApacheHttpClient {
         .disableContentCompression()
         .disableRedirectHandling()
         .disableAutomaticRetries()
+        .evictIdleConnections(5000L, TimeUnit.MILLISECONDS)
         .setUserAgent(""); // SDK will set the user agent header in the pipeline. Don't let Apache waste time
     httpClient = builder.build();
   }
