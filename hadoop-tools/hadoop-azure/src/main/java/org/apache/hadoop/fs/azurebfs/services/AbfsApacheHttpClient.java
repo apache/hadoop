@@ -76,12 +76,15 @@ public class AbfsApacheHttpClient {
       if (shouldKillConn()) {
         return true;
       }
-      int kacSize = connMgr.kacCount.get();
-      kacSizeStack.push(kacSize);
-      if (kacSize >= 5) {
-        return true;
+      synchronized (this) {
+        int kacSize = connMgr.kacCount.incrementAndGet();
+        if(kacSize > 5) {
+          connMgr.kacCount.decrementAndGet();
+          return true;
+        }
+        kacSizeStack.push(kacSize);
+        return false;
       }
-      return false;
     }
 
     public boolean shouldKillConn() {
@@ -438,7 +441,6 @@ public class AbfsApacheHttpClient {
       }
       inTransits.decrementAndGet();
       if(keepalive != 0) {
-        kacCount.incrementAndGet();
         if (abfsApacheHttpConnection != null) {
             abfsApacheHttpConnection.cached = true;
         }
