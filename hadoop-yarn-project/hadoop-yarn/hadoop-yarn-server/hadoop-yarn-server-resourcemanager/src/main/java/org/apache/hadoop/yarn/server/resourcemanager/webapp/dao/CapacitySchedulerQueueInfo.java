@@ -40,6 +40,9 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.PlanQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacities;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePrefixes;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.helper.CapacitySchedulerInfoHelper;
 
 @XmlRootElement
@@ -99,6 +102,7 @@ public class CapacitySchedulerQueueInfo {
   CapacitySchedulerQueueInfo(CapacityScheduler cs, CSQueue q) {
 
     queuePath = q.getQueuePath();
+    QueuePath queuePathObject = new QueuePath(queuePath);
     capacity = q.getCapacity() * 100;
     usedCapacity = q.getUsedCapacity() * 100;
 
@@ -153,7 +157,7 @@ public class CapacitySchedulerQueueInfo {
 
     CapacitySchedulerConfiguration conf = cs.getConfiguration();
     queueAcls = new QueueAclsInfo();
-    queueAcls.addAll(getSortedQueueAclInfoList(q, queuePath, conf));
+    queueAcls.addAll(getSortedQueueAclInfoList(q, queuePathObject, conf));
 
     queuePriority = q.getPriority().getPriority();
     if (q instanceof AbstractParentQueue) {
@@ -175,12 +179,12 @@ public class CapacitySchedulerQueueInfo {
         AbstractCSQueue.CapacityConfigType.ABSOLUTE_RESOURCE;
 
     autoCreateChildQueueEnabled = conf.
-        isAutoCreateChildQueueEnabled(queuePath);
-    leafQueueTemplate = new LeafQueueTemplateInfo(conf, queuePath);
+        isAutoCreateChildQueueEnabled(queuePathObject);
+    leafQueueTemplate = new LeafQueueTemplateInfo(conf, queuePathObject);
   }
 
   public static ArrayList<QueueAclInfo> getSortedQueueAclInfoList(
-      CSQueue queue, String queuePath, CapacitySchedulerConfiguration conf) {
+      CSQueue queue, QueuePath queuePath, CapacitySchedulerConfiguration conf) {
     ArrayList<QueueAclInfo> queueAclsInfo = new ArrayList<>();
     for (Map.Entry<AccessType, AccessControlList> e :
         ((AbstractCSQueue) queue).getACLs().entrySet()) {
@@ -191,7 +195,7 @@ public class CapacitySchedulerQueueInfo {
 
     String aclApplicationMaxPriority = "acl_" +
         StringUtils.toLowerCase(AccessType.APPLICATION_MAX_PRIORITY.toString());
-    String priorityAcls = conf.get(CapacitySchedulerConfiguration
+    String priorityAcls = conf.get(QueuePrefixes
         .getQueuePrefix(queuePath) + aclApplicationMaxPriority,
         CapacitySchedulerConfiguration.ALL_ACL);
 

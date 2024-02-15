@@ -38,6 +38,10 @@ public class TestWeightToPercentageConverter
     extends WeightConverterTestBase {
   private WeightToPercentConverter converter;
   private CapacitySchedulerConfiguration csConfig;
+  public static final QueuePath ROOT = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+  public static final QueuePath ROOT_A = new QueuePath("root", "a");
+  public static final QueuePath ROOT_B = new QueuePath("root", "b");
+  public static final QueuePath ROOT_C = new QueuePath("root", "c");
 
   @Before
   public void setup() {
@@ -52,7 +56,7 @@ public class TestWeightToPercentageConverter
     converter.convertWeightsForChildQueues(root, csConfig);
 
     assertFalse("Capacity zerosum allowed",
-        csConfig.getAllowZeroCapacitySum("root"));
+        csConfig.getAllowZeroCapacitySum(ROOT));
     assertEquals("root.a capacity", 100.000f,
         csConfig.getNonLabeledQueueCapacity(new QueuePath("root.a")), 0.0f);
   }
@@ -76,11 +80,11 @@ public class TestWeightToPercentageConverter
         csConfig.getPropsWithPrefix(PREFIX).size());
     // this is no fixing - it's the result of BigDecimal rounding
     assertEquals("root.a capacity", 16.667f,
-        csConfig.getNonLabeledQueueCapacity(new QueuePath("root.a")), 0.0f);
+        csConfig.getNonLabeledQueueCapacity(ROOT_A), 0.0f);
     assertEquals("root.b capacity", 33.333f,
-        csConfig.getNonLabeledQueueCapacity(new QueuePath("root.b")), 0.0f);
+        csConfig.getNonLabeledQueueCapacity(ROOT_B), 0.0f);
     assertEquals("root.c capacity", 50.000f,
-        csConfig.getNonLabeledQueueCapacity(new QueuePath("root.c")), 0.0f);
+        csConfig.getNonLabeledQueueCapacity(ROOT_C), 0.0f);
   }
 
   @Test
@@ -90,15 +94,15 @@ public class TestWeightToPercentageConverter
     converter.convertWeightsForChildQueues(root, csConfig);
 
     assertFalse("Capacity zerosum allowed",
-        csConfig.getAllowZeroCapacitySum("root"));
+        csConfig.getAllowZeroCapacitySum(ROOT));
     assertEquals("Number of properties", 22,
         csConfig.getPropsWithPrefix(PREFIX).size());
     assertEquals("root.a capacity", 0.000f,
-        csConfig.getNonLabeledQueueCapacity(new QueuePath("root.a")), 0.0f);
+        csConfig.getNonLabeledQueueCapacity(ROOT_A), 0.0f);
     assertEquals("root.b capacity", 50.000f,
-        csConfig.getNonLabeledQueueCapacity(new QueuePath("root.b")), 0.0f);
+        csConfig.getNonLabeledQueueCapacity(ROOT_B), 0.0f);
     assertEquals("root.c capacity", 50.000f,
-        csConfig.getNonLabeledQueueCapacity(new QueuePath("root.c")), 0.0f);
+        csConfig.getNonLabeledQueueCapacity(ROOT_C), 0.0f);
   }
 
   @Test
@@ -110,13 +114,13 @@ public class TestWeightToPercentageConverter
     assertEquals("Number of properties", 23,
         csConfig.getPropsWithPrefix(PREFIX).size());
     assertTrue("Capacity zerosum allowed",
-        csConfig.getAllowZeroCapacitySum("root"));
+        csConfig.getAllowZeroCapacitySum(ROOT));
     assertEquals("root.a capacity", 0.000f,
-        csConfig.getNonLabeledQueueCapacity(new QueuePath("root.a")), 0.0f);
+        csConfig.getNonLabeledQueueCapacity(ROOT_A), 0.0f);
     assertEquals("root.b capacity", 0.000f,
-        csConfig.getNonLabeledQueueCapacity(new QueuePath("root.b")), 0.0f);
+        csConfig.getNonLabeledQueueCapacity(ROOT_B), 0.0f);
     assertEquals("root.c capacity", 0.000f,
-        csConfig.getNonLabeledQueueCapacity(new QueuePath("root.c")), 0.0f);
+        csConfig.getNonLabeledQueueCapacity(ROOT_C), 0.0f);
   }
 
   @Test
@@ -128,11 +132,11 @@ public class TestWeightToPercentageConverter
     assertEquals("Number of properties", 22,
         csConfig.getPropsWithPrefix(PREFIX).size());
     assertEquals("root.a capacity", 33.334f,
-        csConfig.getNonLabeledQueueCapacity(new QueuePath("root.a")), 0.0f);
+        csConfig.getNonLabeledQueueCapacity(ROOT_A), 0.0f);
     assertEquals("root.b capacity", 33.333f,
-        csConfig.getNonLabeledQueueCapacity(new QueuePath("root.b")), 0.0f);
+        csConfig.getNonLabeledQueueCapacity(ROOT_B), 0.0f);
     assertEquals("root.c capacity", 33.333f,
-        csConfig.getNonLabeledQueueCapacity(new QueuePath("root.c")), 0.0f);
+        csConfig.getNonLabeledQueueCapacity(ROOT_C), 0.0f);
   }
 
   @Test

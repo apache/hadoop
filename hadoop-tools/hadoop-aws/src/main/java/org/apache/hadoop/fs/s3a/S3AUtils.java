@@ -66,6 +66,7 @@ import java.nio.file.AccessDeniedException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -1668,6 +1669,49 @@ public final class S3AUtils {
    */
   public static String formatRange(long rangeStart, long rangeEnd) {
     return String.format("bytes=%d-%d", rangeStart, rangeEnd);
+  }
+
+  /**
+   * Get the equal op (=) delimited key-value pairs of the <code>name</code> property as
+   * a collection of pair of <code>String</code>s, trimmed of the leading and trailing whitespace
+   * after delimiting the <code>name</code> by comma and new line separator.
+   * If no such property is specified then empty <code>Map</code> is returned.
+   *
+   * @param configuration the configuration object.
+   * @param name property name.
+   * @return property value as a <code>Map</code> of <code>String</code>s, or empty
+   * <code>Map</code>.
+   */
+  public static Map<String, String> getTrimmedStringCollectionSplitByEquals(
+      final Configuration configuration,
+      final String name) {
+    String valueString = configuration.get(name);
+    if (null == valueString) {
+      return new HashMap<>();
+    }
+    return org.apache.hadoop.util.StringUtils
+        .getTrimmedStringCollectionSplitByEquals(valueString);
+  }
+
+
+  /**
+   * If classloader isolation is {@code true}
+   * (through {@link Constants#AWS_S3_CLASSLOADER_ISOLATION}) or not
+   * explicitly set, then the classLoader of the input configuration object
+   * will be set to the input classloader, otherwise nothing will happen.
+   * @param conf configuration object.
+   * @param classLoader isolated classLoader.
+   */
+  static void maybeIsolateClassloader(Configuration conf, ClassLoader classLoader) {
+    if (conf.getBoolean(Constants.AWS_S3_CLASSLOADER_ISOLATION,
+            Constants.DEFAULT_AWS_S3_CLASSLOADER_ISOLATION)) {
+      LOG.debug("Configuration classloader set to S3AFileSystem classloader: {}", classLoader);
+      conf.setClassLoader(classLoader);
+    } else {
+      LOG.debug("Configuration classloader not changed, support classes needed will be loaded " +
+                      "from the classloader that instantiated the Configuration object: {}",
+              conf.getClassLoader());
+    }
   }
 
 }

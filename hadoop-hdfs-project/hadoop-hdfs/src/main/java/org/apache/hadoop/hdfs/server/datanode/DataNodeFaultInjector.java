@@ -162,4 +162,14 @@ public class DataNodeFaultInjector {
    * Just delay delete replica a while.
    */
   public void delayDeleteReplica() {}
+
+  /**
+   * Just delay run diff record a while.
+   */
+  public void delayDiffRecord() {}
+
+  /**
+   * Just delay getMetaDataInputStream a while.
+   */
+  public void delayGetMetaDataInputStream() {}
 }

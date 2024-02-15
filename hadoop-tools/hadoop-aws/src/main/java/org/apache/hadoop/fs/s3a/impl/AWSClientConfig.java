@@ -577,7 +577,7 @@ public final class AWSClientConfig {
 
   /**
    * Build the HTTP connection settings object from the configuration.
-   * All settings are calculated, including the api call timeout.
+   * All settings are calculated.
    * @param conf configuration to evaluate
    * @return connection settings.
    */

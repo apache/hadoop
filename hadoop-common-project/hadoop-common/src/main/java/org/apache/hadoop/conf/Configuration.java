@@ -2339,8 +2339,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     }
     return StringUtils.getTrimmedStringCollection(valueString);
   }
-  
-  /** 
+
+  /**
    * Get the comma delimited values of the <code>name</code> property as 
    * an array of <code>String</code>s, trimmed of the leading and trailing whitespace.
    * If no such property is specified then an empty array is returned.

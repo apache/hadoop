@@ -44,6 +44,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.CapacitySchedulerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
@@ -250,13 +251,13 @@ public class TestPolicyGenerator {
     CapacitySchedulerConfiguration csConf =
         new CapacitySchedulerConfiguration();
 
-    final String a = CapacitySchedulerConfiguration.ROOT + ".a";
-    final String b = CapacitySchedulerConfiguration.ROOT + ".b";
-    final String a1 = a + ".a1";
-    final String a2 = a + ".a2";
-    final String b1 = b + ".b1";
-    final String b2 = b + ".b2";
-    final String b3 = b + ".b3";
+    final QueuePath a = new QueuePath(CapacitySchedulerConfiguration.ROOT + ".a");
+    final QueuePath b = new QueuePath(CapacitySchedulerConfiguration.ROOT + ".b");
+    final QueuePath a1 = new QueuePath(a + ".a1");
+    final QueuePath a2 = new QueuePath(a + ".a2");
+    final QueuePath b1 = new QueuePath(b + ".b1");
+    final QueuePath b2 = new QueuePath(b + ".b2");
+    final QueuePath b3 = new QueuePath(b + ".b3");
     float aCapacity = 10.5f;
     float bCapacity = 89.5f;
     float a1Capacity = 30;
@@ -266,7 +267,7 @@ public class TestPolicyGenerator {
     float b3Capacity = 20;
 
     // Define top-level queues
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
+    csConf.setQueues(new QueuePath(CapacitySchedulerConfiguration.ROOT),
         new String[] {"a", "b"});
 
     csConf.setCapacity(a, aCapacity);

@@ -503,6 +503,10 @@ class BPServiceActor implements Runnable {
 
       String bpid = bpos.getBlockPoolId();
       List<Long> blockIds = dn.getFSDataset().getCacheReport(bpid);
+      // Skip cache report
+      if (blockIds.isEmpty()) {
+        return null;
+      }
       long createTime = monotonicNow();
 
       cmd = bpNamenode.cacheReport(bpRegistration, bpid, blockIds);
