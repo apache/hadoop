@@ -73,12 +73,12 @@ public class AbfsApacheHttpClient {
     }
 
     public boolean shouldKillConn(AbfsConnMgr connMgr) {
-      if (shouldKillConn()) {
+      if (shouldKillConn1(connMgr)) {
         return true;
       }
       synchronized (this) {
         int kacSize = connMgr.kacCount.incrementAndGet();
-        if(kacSize > 5) {
+        if(connMgr.abfsConfiguration.isKacLimitApplied() && kacSize > 5) {
           connMgr.kacCount.decrementAndGet();
           return true;
         }
@@ -87,7 +87,7 @@ public class AbfsApacheHttpClient {
       }
     }
 
-    public boolean shouldKillConn() {
+    public boolean shouldKillConn1(final AbfsConnMgr connMgr) {
 //      if(sendTime != null && sendTime > MetricPercentile.getSendPercentileVal(abfsRestOperationType, 99.9)) {
 //        return true;
 //      }
@@ -101,7 +101,8 @@ public class AbfsApacheHttpClient {
         if(abfsApacheHttpConnection != null) {
           connectionReuseCount.push(abfsApacheHttpConnection.count);
         }
-        if (abfsApacheHttpConnection != null && abfsApacheHttpConnection.getCount() >= 5) {
+        if (abfsApacheHttpConnection != null && connMgr.abfsConfiguration.isReuseLimitApplied() &&
+            abfsApacheHttpConnection.getCount() >= 5) {
           return true;
         }
       }
@@ -369,6 +370,8 @@ public class AbfsApacheHttpClient {
 
     private int maxConn;
 
+    public AbfsConfiguration abfsConfiguration;
+
     public synchronized void checkAvailablity() {
       if(maxConn <= inTransits.get()) {
         maxConn *= 2;
@@ -384,6 +387,7 @@ public class AbfsApacheHttpClient {
       maxConn = 1;
       setDefaultMaxPerRoute(maxConn);
       setMaxTotal(maxConn);
+      this.abfsConfiguration = abfsConfiguration;
     }
     @Override
     public void connect(final HttpClientConnection managedConn,
