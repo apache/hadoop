@@ -5793,7 +5793,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         createStoreContext(),
         createBulkDeleteCallbacks(span),
         p,
-        enableMultiObjectsDelete ? 1: pageSize,
+        enableMultiObjectsDelete ? pageSize : 1,
         span);
   }
 
