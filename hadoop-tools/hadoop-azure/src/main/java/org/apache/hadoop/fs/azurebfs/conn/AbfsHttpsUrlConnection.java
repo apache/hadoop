@@ -48,7 +48,7 @@ public class AbfsHttpsUrlConnection extends
   @Override
   public void connect() throws IOException {
     Long start = System.currentTimeMillis();
-    super.plainConnect0();
+    super.connect();
     timeTaken = System.currentTimeMillis() - start;
     if(!httpClientSet.contains(http)) {
       isFromCache = false;
