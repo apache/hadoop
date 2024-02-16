@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.hdfs.server.diskbalancer.command;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.TextStringBuilder;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.commons.cli.CommandLine;
@@ -70,17 +71,15 @@ public class QueryCommand extends Command {
     Preconditions.checkState(cmd.hasOption(DiskBalancerCLI.QUERY));
     verifyCommandOptions(DiskBalancerCLI.QUERY, cmd);
     String nodeVal = cmd.getOptionValue(DiskBalancerCLI.QUERY);
-    Preconditions.checkNotNull(nodeVal);
-    nodeVal = nodeVal.trim();
-    Set<String> resultSet = new TreeSet<>();
-    String[] nodes = nodeVal.split(",");
-    if (nodes.length == 0) {
+    if (StringUtils.isBlank(nodeVal)) {
       String warnMsg = "The number of input nodes is 0. "
           + "Please input the valid nodes.";
       throw new DiskBalancerException(warnMsg,
           DiskBalancerException.Result.INVALID_NODE);
     }
-
+    nodeVal = nodeVal.trim();
+    Set<String> resultSet = new TreeSet<>();
+    String[] nodes = nodeVal.split(",");
     Collections.addAll(resultSet, nodes);
     String outputLine = String.format(
         "Get current status of the diskbalancer for DataNode(s). "
@@ -116,7 +115,7 @@ public class QueryCommand extends Command {
         throw ex;
       }
     }
-    getPrintStream().println(result.toString());
+    getPrintStream().println(result);
   }
 
   /**
