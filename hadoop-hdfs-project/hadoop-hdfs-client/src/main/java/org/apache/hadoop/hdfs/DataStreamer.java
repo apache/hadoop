@@ -1871,7 +1871,6 @@ class DataStreamer extends Daemon {
     if (LOG.isDebugEnabled()) {
       LOG.debug("pipeline = " + Arrays.toString(nodes) + ", " + this);
     }
-
     // persist blocks on namenode on next flush
     persistBlocks.set(true);
 
