@@ -13,9 +13,6 @@
  */
 package org.apache.hadoop.fs.s3a.fileContext;
 
-import java.io.IOException;
-
-import org.assertj.core.api.Assertions;
 import org.junit.Before;
 import org.junit.Test;
 
