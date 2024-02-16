@@ -76,6 +76,10 @@ public class AbfsApacheHttpClient {
       if (shouldKillConn1(connMgr)) {
         return true;
       }
+      if(!connMgr.abfsConfiguration.isKacLimitApplied()) {
+        kacSizeStack.push(connMgr.kacCount.get());
+        return false;
+      }
       synchronized (this) {
         int kacSize = connMgr.kacCount.incrementAndGet();
         if(connMgr.abfsConfiguration.isKacLimitApplied() && kacSize > 5) {
