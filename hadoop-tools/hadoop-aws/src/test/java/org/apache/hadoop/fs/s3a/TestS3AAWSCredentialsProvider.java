@@ -791,8 +791,7 @@ public class TestS3AAWSCredentialsProvider extends AbstractS3ATestBase {
         .containsEntry("element.xyz.key6", "element.abc.val6")
         .containsEntry("element.xyz.key7", "element.abc.val7");
 
-    configuration.set(
-        "custom_key",
+    configuration.set("custom_key",
         "element.first.key1 = element.first.val2 ,element.first.key1 =element.first.val1");
     splitMap =
         S3AUtils.getTrimmedStringCollectionSplitByEquals(
