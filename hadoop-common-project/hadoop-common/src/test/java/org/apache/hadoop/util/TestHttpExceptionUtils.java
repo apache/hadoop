@@ -185,7 +185,8 @@ public class TestHttpExceptionUtils {
       HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_CREATED);
       Assert.fail();
     } catch (IOException ex) {
-      Assert.assertEquals("HTTP status [400], exception [java.lang.String], message [EX], URL [null]",
+      Assert.assertEquals(
+              "HTTP status [400], exception [java.lang.String], message [EX], URL [null]",
               ex.getMessage());
     }
   }

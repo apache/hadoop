@@ -57,7 +57,8 @@ public class HttpExceptionUtils {
   private static final String ENTER = System.getProperty("line.separator");
 
   private static final MethodHandles.Lookup PUBLIC_LOOKUP = MethodHandles.publicLookup();
-  private static final MethodType EXCEPTION_CONSTRUCTOR_TYPE = MethodType.methodType(void.class, String.class);
+  private static final MethodType EXCEPTION_CONSTRUCTOR_TYPE =
+          MethodType.methodType(void.class, String.class);
 
   /**
    * Creates a HTTP servlet response serializing the exception in it as JSON.
@@ -159,7 +160,8 @@ public class HttpExceptionUtils {
               // no need to fill in details because the catch below will create a good exception
               throw new IllegalStateException();
             }
-            MethodHandle methodHandle = PUBLIC_LOOKUP.findConstructor(klass, EXCEPTION_CONSTRUCTOR_TYPE);
+            MethodHandle methodHandle = PUBLIC_LOOKUP.findConstructor(
+                    klass, EXCEPTION_CONSTRUCTOR_TYPE);
             toThrow = (Exception) methodHandle.invoke(exMsg);
           } catch (Throwable t) {
             toThrow = new IOException(String.format(
