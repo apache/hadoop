@@ -27,6 +27,7 @@ import org.junit.Test;
 import static org.apache.hadoop.fs.FileContextTestHelper.*;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsDirectory;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertIsFile;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 import org.apache.hadoop.test.GenericTestUtils;
 import org.slf4j.event.Level;
@@ -131,7 +132,7 @@ public abstract class FileContextCreateMkdirBaseTest {
   }
 
   @Test
-  public void testMkdirRecursiveWithExistingFile() throws IOException {
+  public void testMkdirRecursiveWithExistingFile() throws Exception {
     Path f = getTestRootPath(fc, "NonExistant3/aDir");
     fc.mkdir(f, FileContext.DEFAULT_PERM, true);
     assertIsDirectory(fc.getFileStatus(f));
@@ -144,13 +145,12 @@ public abstract class FileContextCreateMkdirBaseTest {
 
     // try creating another folder which conflicts with filePath
     Path dirPath = new Path(filePath, "bDir/cDir");
-    try {
-      fc.mkdir(dirPath, FileContext.DEFAULT_PERM, true);
-      Assert.fail("Mkdir for " + dirPath
-          + MKDIR_FILE_PRESENT_ERROR);
-    } catch(IOException e) {
-      // failed as expected
-    }
+    intercept(
+        IOException.class,
+        null,
+        "Mkdir for " + dirPath + MKDIR_FILE_PRESENT_ERROR,
+        () -> fc.mkdir(dirPath, FileContext.DEFAULT_PERM, true)
+    );
   }
 
   @Test

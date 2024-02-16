@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.s3a.S3ATestUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Extends FileContextCreateMkdirBaseTest for a S3a FileContext with
@@ -53,20 +54,15 @@ public class ITestS3AFileContextCreateMkdirCreatePerf
   }
 
   @Test
-  public void testMkdirRecursiveWithExistingFile() throws IOException {
-    try {
-      super.testMkdirRecursiveWithExistingFile();
-      throw new RuntimeException(
-          "Dir creation should not have failed. "
-              + "Creation performance mode is expected "
-              + "to create dir without checking file "
-              + "status of parent dir.");
-    } catch (AssertionError e) {
-      Assertions
-          .assertThat(e)
-          .describedAs("assertion error from testMkdirRecursiveWithExistingFile")
-          .hasMessageContaining(MKDIR_FILE_PRESENT_ERROR);
-    }
+  public void testMkdirRecursiveWithExistingFile() throws Exception {
+    intercept(
+        AssertionError.class,
+        MKDIR_FILE_PRESENT_ERROR,
+        "Dir creation should not have failed. "
+            + "Creation performance mode is expected "
+            + "to create dir without checking file "
+            + "status of parent dir.",
+        super::testMkdirRecursiveWithExistingFile);
   }
 
 }
