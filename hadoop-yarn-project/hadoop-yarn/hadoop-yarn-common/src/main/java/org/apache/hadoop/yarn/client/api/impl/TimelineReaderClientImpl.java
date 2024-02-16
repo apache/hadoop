@@ -17,14 +17,14 @@
  */
 package org.apache.hadoop.yarn.client.api.impl;
 
-import org.apache.hadoop.classification.VisibleForTesting;
 import com.sun.jersey.core.util.MultivaluedMapImpl;
-import org.apache.hadoop.http.ContentTypes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.ContentTypes;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticatedURL;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;

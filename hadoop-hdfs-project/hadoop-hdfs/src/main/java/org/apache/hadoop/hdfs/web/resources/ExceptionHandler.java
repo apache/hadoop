@@ -26,16 +26,16 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
 import javax.ws.rs.ext.Provider;
 
-import org.apache.hadoop.http.ContentTypes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.hdfs.web.JsonUtil;
+import org.apache.hadoop.http.ContentTypes;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 
-import org.apache.hadoop.classification.VisibleForTesting;
 import com.sun.jersey.api.ParamException;
 import com.sun.jersey.api.container.ContainerException;
 

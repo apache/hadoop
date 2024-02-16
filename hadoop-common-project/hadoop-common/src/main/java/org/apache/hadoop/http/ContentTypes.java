@@ -19,10 +19,8 @@ package org.apache.hadoop.http;
 
 /**
  * Content Types for HTTP.
- *
- * @since 3.5.0
  */
-public class ContentTypes {
+public final class ContentTypes {
     private ContentTypes() {
     }
 

@@ -25,10 +25,10 @@ import java.util.Map;
 
 import com.sun.jersey.api.client.ClientResponse;
 
-import org.apache.hadoop.http.ContentTypes;
 import org.junit.AfterClass;
 import org.junit.Test;
 
+import org.apache.hadoop.http.ContentTypes;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
