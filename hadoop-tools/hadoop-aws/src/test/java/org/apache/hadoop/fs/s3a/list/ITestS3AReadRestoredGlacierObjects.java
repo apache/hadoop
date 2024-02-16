@@ -90,9 +90,7 @@ public class ITestS3AReadRestoredGlacierObjects extends AbstractS3ATestBase {
     contract.init();
 
     FileSystem fs = contract.getTestFileSystem();
-    Path dir = methodPath();
-    fs.mkdirs(dir);
-    Path path = new Path(dir, "glaciated");
+    Path path = new Path(methodPath(), "glaciated");
     ContractTestUtils.touch(fs, path);
     return fs;
   }

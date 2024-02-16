@@ -18,12 +18,14 @@
 
 package org.apache.hadoop.fs.s3a.api;
 
-import org.apache.hadoop.fs.s3a.S3AFileSystem;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 import java.util.Set;
 import java.util.function.Function;
+
 import software.amazon.awssdk.services.s3.model.ObjectStorageClass;
 import software.amazon.awssdk.services.s3.model.S3Object;
+
+import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
 
 
 /**
