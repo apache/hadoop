@@ -336,6 +336,10 @@
           <groupId>org.apache.hadoop.thirdparty</groupId>
           <artifactId>hadoop-shaded-guava</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>log4j</groupId>
+          <artifactId>apache-log4j-extras</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
     <!-- Add optional runtime dependency on the in-development timeline server module
