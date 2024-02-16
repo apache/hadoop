@@ -20,6 +20,7 @@ package org.apache.hadoop.util;
 
 import java.util.Locale;
 
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.util.StringUtils.STRING_COLLECTION_SPLIT_EQUALS_INVALID_ARG;
 import static org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix.long2String;
 import static org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix.string2long;
@@ -517,7 +518,7 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
   }
 
   @Test
-  public void testStringCollectionSplitByEquals() {
+  public void testStringCollectionSplitByEqualsSuccess() {
     Map<String, String> splitMap =
         StringUtils.getTrimmedStringCollectionSplitByEquals("");
     Assertions
@@ -569,17 +570,6 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
         .containsEntry("element.xyz.key6", "element.abc.val6")
         .containsEntry("element.xyz.key7", "element.abc.val7");
 
-    try {
-      StringUtils.getTrimmedStringCollectionSplitByEquals(
-          " = element.abc.val1");
-      throw new RuntimeException("Expected to throw IllegalArgumentException");
-    } catch (IllegalArgumentException e) {
-      Assertions
-          .assertThat(e)
-          .describedAs("Exception thrown due to illegal arguments")
-          .hasMessageStartingWith(STRING_COLLECTION_SPLIT_EQUALS_INVALID_ARG);
-    }
-
     splitMap = StringUtils.getTrimmedStringCollectionSplitByEquals(
         "element.first.key1 = element.first.val2 ,element.first.key1 =element.first.val1");
     Assertions
@@ -597,39 +587,6 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
         .hasSize(1)
         .containsEntry("element.first.key1", "element.first.val1");
 
-    try {
-      StringUtils.getTrimmedStringCollectionSplitByEquals(
-          "element.abc.key1=");
-      throw new RuntimeException("Expected to throw IllegalArgumentException");
-    } catch (IllegalArgumentException e) {
-      Assertions
-          .assertThat(e)
-          .describedAs("Exception thrown due to illegal arguments")
-          .hasMessageStartingWith(STRING_COLLECTION_SPLIT_EQUALS_INVALID_ARG);
-    }
-
-    try {
-      StringUtils.getTrimmedStringCollectionSplitByEquals(
-          "=");
-      throw new RuntimeException("Expected to throw IllegalArgumentException");
-    } catch (IllegalArgumentException e) {
-      Assertions
-          .assertThat(e)
-          .describedAs("Exception thrown due to illegal arguments")
-          .hasMessageStartingWith(STRING_COLLECTION_SPLIT_EQUALS_INVALID_ARG);
-    }
-
-    try {
-      StringUtils.getTrimmedStringCollectionSplitByEquals(
-          "== = =    =");
-      throw new RuntimeException("Expected to throw IllegalArgumentException");
-    } catch (IllegalArgumentException e) {
-      Assertions
-          .assertThat(e)
-          .describedAs("Exception thrown due to illegal arguments")
-          .hasMessageStartingWith(STRING_COLLECTION_SPLIT_EQUALS_INVALID_ARG);
-    }
-
     splitMap = StringUtils.getTrimmedStringCollectionSplitByEquals(
         ",, , ,      ,, ,");
     Assertions
@@ -637,17 +594,34 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
         .describedAs("Map of key value pairs split by equals(=) and comma(,)")
         .hasSize(0);
 
-    try {
-      StringUtils.getTrimmedStringCollectionSplitByEquals(
-          ",=");
-      throw new RuntimeException("Expected to throw IllegalArgumentException");
-    } catch (IllegalArgumentException e) {
-      Assertions
-          .assertThat(e)
-          .describedAs("Exception thrown due to illegal arguments")
-          .hasMessageStartingWith(STRING_COLLECTION_SPLIT_EQUALS_INVALID_ARG);
-    }
+  }
 
+  @Test
+  public void testStringCollectionSplitByEqualsFailure() throws Exception {
+    intercept(
+        IllegalArgumentException.class,
+        STRING_COLLECTION_SPLIT_EQUALS_INVALID_ARG,
+        () -> StringUtils.getTrimmedStringCollectionSplitByEquals(" = element.abc.val1"));
+
+    intercept(
+        IllegalArgumentException.class,
+        STRING_COLLECTION_SPLIT_EQUALS_INVALID_ARG,
+        () -> StringUtils.getTrimmedStringCollectionSplitByEquals("element.abc.key1="));
+
+    intercept(
+        IllegalArgumentException.class,
+        STRING_COLLECTION_SPLIT_EQUALS_INVALID_ARG,
+        () -> StringUtils.getTrimmedStringCollectionSplitByEquals("="));
+
+    intercept(
+        IllegalArgumentException.class,
+        STRING_COLLECTION_SPLIT_EQUALS_INVALID_ARG,
+        () -> StringUtils.getTrimmedStringCollectionSplitByEquals("== = =    ="));
+
+    intercept(
+        IllegalArgumentException.class,
+        STRING_COLLECTION_SPLIT_EQUALS_INVALID_ARG,
+        () -> StringUtils.getTrimmedStringCollectionSplitByEquals(",="));
   }
 
   // Benchmark for StringUtils split

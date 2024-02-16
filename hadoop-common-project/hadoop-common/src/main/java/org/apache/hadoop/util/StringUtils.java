@@ -504,23 +504,19 @@ public class StringUtils {
     String[] trimmedList = getTrimmedStrings(str);
     Map<String, String> pairs = new HashMap<>();
     for (String s : trimmedList) {
-      if (s.length() == 0) {
+      if (s.isEmpty()) {
         continue;
       }
       String[] splitByKeyVal = getTrimmedStringsSplitByEquals(s);
-      if (splitByKeyVal.length == 2) {
-        boolean emptyKey = org.apache.commons.lang3.StringUtils.isEmpty(splitByKeyVal[0]);
-        boolean emptyVal = org.apache.commons.lang3.StringUtils.isEmpty(splitByKeyVal[1]);
-        if (!emptyKey && !emptyVal) {
-          pairs.put(splitByKeyVal[0], splitByKeyVal[1]);
-        } else {
-          throw new IllegalArgumentException(
-              STRING_COLLECTION_SPLIT_EQUALS_INVALID_ARG + " Input: " + str);
-        }
-      } else {
-        throw new IllegalArgumentException(
-            STRING_COLLECTION_SPLIT_EQUALS_INVALID_ARG + " Input: " + str);
-      }
+      Preconditions.checkArgument(
+          splitByKeyVal.length == 2,
+          STRING_COLLECTION_SPLIT_EQUALS_INVALID_ARG + " Input: " + str);
+      boolean emptyKey = org.apache.commons.lang3.StringUtils.isEmpty(splitByKeyVal[0]);
+      boolean emptyVal = org.apache.commons.lang3.StringUtils.isEmpty(splitByKeyVal[1]);
+      Preconditions.checkArgument(
+          !emptyKey && !emptyVal,
+          STRING_COLLECTION_SPLIT_EQUALS_INVALID_ARG + " Input: " + str);
+      pairs.put(splitByKeyVal[0], splitByKeyVal[1]);
     }
     return pairs;
   }
