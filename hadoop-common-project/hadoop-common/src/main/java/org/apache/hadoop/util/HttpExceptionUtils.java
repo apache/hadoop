@@ -26,7 +26,9 @@ import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Writer;
-import java.lang.reflect.Constructor;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.net.HttpURLConnection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -53,6 +55,9 @@ public class HttpExceptionUtils {
   private static final String APPLICATION_JSON_MIME = "application/json";
 
   private static final String ENTER = System.getProperty("line.separator");
+
+  private static final MethodHandles.Lookup PUBLIC_LOOKUP = MethodHandles.publicLookup();
+  private static final MethodType EXCEPTION_CONSTRUCTOR_TYPE = MethodType.methodType(void.class, String.class);
 
   /**
    * Creates a HTTP servlet response serializing the exception in it as JSON.
@@ -150,13 +155,9 @@ public class HttpExceptionUtils {
           try {
             ClassLoader cl = HttpExceptionUtils.class.getClassLoader();
             Class klass = cl.loadClass(exClass);
-            if (!Exception.class.isAssignableFrom(klass)) {
-              // no need to fill in details because the catch below will create a good exception
-              throw new IllegalStateException();
-            }
-            Constructor constr = klass.getConstructor(String.class);
-            toThrow = (Exception) constr.newInstance(exMsg);
-          } catch (Exception ex) {
+            MethodHandle methodHandle = PUBLIC_LOOKUP.findConstructor(klass, EXCEPTION_CONSTRUCTOR_TYPE);
+            toThrow = (Exception) methodHandle.invoke(exMsg);
+          } catch (Throwable t) {
             toThrow = new IOException(String.format(
                 "HTTP status [%d], exception [%s], message [%s], URL [%s]",
                 conn.getResponseCode(), exClass, exMsg, conn.getURL()));
