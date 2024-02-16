@@ -539,7 +539,7 @@ Otherwise, set a large timeout in `fs.s3a.scale.test.timeout`
 The tests are executed in an order to only clean up created files after
 the end of all the tests. If the tests are interrupted, the test data will remain.
 
-## <a name="CI"> Testing through continuous integration
+## <a name="CI"/> Testing through continuous integration
 
 ### Parallel CI builds.
 For CI testing of the module, including the integration tests,
@@ -554,7 +554,7 @@ To do this
 
 ```
 mvn verify -T 1C -Dparallel-tests -DtestsThreadCount=14 -Dscale -Dfs.s3a.root.tests.enabled=false -Djob.id=001
-```   
+```
 
 This parallel execution feature is only for isolated builds sharing a single S3 bucket; it does
 not support parallel builds and tests from the same local source tree.
