@@ -73,18 +73,21 @@ public class AbfsApacheHttpClient {
     }
 
     public boolean shouldKillConn(AbfsConnMgr connMgr) {
-      if (shouldKillConn()) {
+      if (shouldKillConn1(connMgr)) {
         return true;
       }
-      int kacSize = connMgr.kacCount.get();
-      kacSizeStack.push(kacSize);
-      if (kacSize >= 5) {
-        return true;
+      synchronized (this) {
+        int kacSize = connMgr.kacCount.incrementAndGet();
+        if(connMgr.abfsConfiguration.isKacLimitApplied() && kacSize > 5) {
+          connMgr.kacCount.decrementAndGet();
+          return true;
+        }
+        kacSizeStack.push(kacSize);
+        return false;
       }
-      return false;
     }
 
-    public boolean shouldKillConn() {
+    public boolean shouldKillConn1(final AbfsConnMgr connMgr) {
 //      if(sendTime != null && sendTime > MetricPercentile.getSendPercentileVal(abfsRestOperationType, 99.9)) {
 //        return true;
 //      }
@@ -98,7 +101,8 @@ public class AbfsApacheHttpClient {
         if(abfsApacheHttpConnection != null) {
           connectionReuseCount.push(abfsApacheHttpConnection.count);
         }
-        if (abfsApacheHttpConnection != null && abfsApacheHttpConnection.getCount() >= 5) {
+        if (abfsApacheHttpConnection != null && connMgr.abfsConfiguration.isReuseLimitApplied() &&
+            abfsApacheHttpConnection.getCount() >= 5) {
           return true;
         }
       }
@@ -366,6 +370,8 @@ public class AbfsApacheHttpClient {
 
     private int maxConn;
 
+    public AbfsConfiguration abfsConfiguration;
+
     public synchronized void checkAvailablity() {
       if(maxConn <= inTransits.get()) {
         maxConn *= 2;
@@ -381,6 +387,7 @@ public class AbfsApacheHttpClient {
       maxConn = 1;
       setDefaultMaxPerRoute(maxConn);
       setMaxTotal(maxConn);
+      this.abfsConfiguration = abfsConfiguration;
     }
     @Override
     public void connect(final HttpClientConnection managedConn,
@@ -436,14 +443,13 @@ public class AbfsApacheHttpClient {
       if(keepalive == 0 && managedConn instanceof ManagedHttpClientConnection) {
         abfsApacheHttpConnectionMap.remove(((ManagedHttpClientConnection)managedConn).getId());
       }
-      super.releaseConnection(managedConn, state, keepalive, timeUnit);
       inTransits.decrementAndGet();
       if(keepalive != 0) {
-        kacCount.incrementAndGet();
         if (abfsApacheHttpConnection != null) {
             abfsApacheHttpConnection.cached = true;
         }
       }
+      super.releaseConnection(managedConn, state, keepalive, timeUnit);
     }
   }
 
@@ -461,8 +467,7 @@ public class AbfsApacheHttpClient {
         final HttpContext context) {
 //      response.
       if (context instanceof AbfsHttpClientContext) {
-        if (!((AbfsHttpClientContext) context).isReadable
-            && ((AbfsHttpClientContext) context).shouldKillConn(connMgr)) {
+        if (((AbfsHttpClientContext) context).shouldKillConn(connMgr)) {
           return false;
         }
         return super.keepAlive(response, context);
@@ -524,6 +529,7 @@ public class AbfsApacheHttpClient {
         .disableContentCompression()
         .disableRedirectHandling()
         .disableAutomaticRetries()
+        .evictIdleConnections(5000L, TimeUnit.MILLISECONDS)
         .setUserAgent(""); // SDK will set the user agent header in the pipeline. Don't let Apache waste time
     httpClient = builder.build();
   }

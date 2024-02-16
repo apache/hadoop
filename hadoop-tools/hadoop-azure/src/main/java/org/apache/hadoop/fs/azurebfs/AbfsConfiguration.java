@@ -804,6 +804,14 @@ public class AbfsConfiguration{
     return getEnum(FS_AZURE_NETWORKING_LIBRARY, DEFAULT_NETWORKING_LIBRARY);
   }
 
+  public boolean isKacLimitApplied() {
+    return getBoolean("fs.abfs.kac.limit.enabled", true);
+  }
+
+  public boolean isReuseLimitApplied() {
+    return getBoolean("fs.abfs.reuse.limit.enabled", true);
+  }
+
   public int getHttpClientMaxConn() {
     if(httpClientMaxConn != -1) {
       return httpClientMaxConn;
