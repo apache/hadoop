@@ -150,6 +150,10 @@ public class HttpExceptionUtils {
           try {
             ClassLoader cl = HttpExceptionUtils.class.getClassLoader();
             Class klass = cl.loadClass(exClass);
+            if (!klass.isAssignableFrom(Exception.class)) {
+              // no need to fill in details because the catch below will create a good exception
+              throw new IllegalStateException();
+            }
             Constructor constr = klass.getConstructor(String.class);
             toThrow = (Exception) constr.newInstance(exMsg);
           } catch (Exception ex) {

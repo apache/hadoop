@@ -164,4 +164,30 @@ public class TestHttpExceptionUtils {
     }
   }
 
+  @Test
+  public void testValidateResponseJsonErrorNonException() throws IOException {
+    Map<String, Object> json = new HashMap<String, Object>();
+    json.put(HttpExceptionUtils.ERROR_EXCEPTION_JSON, "invalid");
+    // test case where the exception classname is not a valid exception class
+    json.put(HttpExceptionUtils.ERROR_CLASSNAME_JSON, String.class.getName());
+    json.put(HttpExceptionUtils.ERROR_MESSAGE_JSON, "EX");
+    Map<String, Object> response = new HashMap<String, Object>();
+    response.put(HttpExceptionUtils.ERROR_JSON, json);
+    ObjectMapper jsonMapper = new ObjectMapper();
+    String msg = jsonMapper.writeValueAsString(response);
+    InputStream is = new ByteArrayInputStream(msg.getBytes());
+    HttpURLConnection conn = Mockito.mock(HttpURLConnection.class);
+    Mockito.when(conn.getErrorStream()).thenReturn(is);
+    Mockito.when(conn.getResponseMessage()).thenReturn("msg");
+    Mockito.when(conn.getResponseCode()).thenReturn(
+            HttpURLConnection.HTTP_BAD_REQUEST);
+    try {
+      HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_CREATED);
+      Assert.fail();
+    } catch (IOException ex) {
+      Assert.assertEquals("HTTP status [400], exception [java.lang.String], message [EX], URL [null]",
+              ex.getMessage());
+    }
+  }
+
 }
