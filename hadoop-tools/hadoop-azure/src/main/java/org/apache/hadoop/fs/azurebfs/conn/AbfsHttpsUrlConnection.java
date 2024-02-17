@@ -9,6 +9,7 @@ import java.net.Proxy;
 import java.net.URL;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.Stack;
 
 import sun.net.www.http.HttpClient;
 import sun.net.www.protocol.https.AbstractDelegateHttpsURLConnection;
@@ -38,6 +39,15 @@ public class AbfsHttpsUrlConnection extends
       final Proxy proxy,
       final Handler handler) throws IOException {
     super(url, proxy, handler);
+  }
+
+  public static class AbfsHttpClient extends HttpClient {
+    public final static Stack<Integer> finishedStack = new Stack<>();
+    @Override
+    public void finished() {
+      super.finished();
+      finishedStack.push(1);
+    }
   }
 
   @Override

@@ -361,6 +361,10 @@ public class AbfsHttpOperation extends HttpOperation {
             .append("_").append(readCaptureInfo.latencyCapture).append("_")
             .append(readCaptureInfo.status);
       } catch (EmptyStackException ex) {}
+      try {
+        AbfsHttpsUrlConnection.AbfsHttpClient.finishedStack.pop();
+        stringBuilder.append(":FinsihedConn");
+      } catch (EmptyStackException ex) {}
     }
     this.connection.setRequestProperty(key, stringBuilder.toString());
   }
