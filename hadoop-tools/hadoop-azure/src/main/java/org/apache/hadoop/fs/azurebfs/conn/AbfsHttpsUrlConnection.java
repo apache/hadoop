@@ -50,10 +50,11 @@ public class AbfsHttpsUrlConnection extends
     Long start = System.currentTimeMillis();
     super.connect();
     timeTaken = System.currentTimeMillis() - start;
-    if(!httpClientSet.contains(http)) {
-      isFromCache = false;
-    }
-    httpClientSet.add(http);
+    isFromCache = http.isCachedConnection();
+//    if(!httpClientSet.contains(http)) {
+//      isFromCache = false;
+//    }
+//    httpClientSet.add(http);
   }
 
 
