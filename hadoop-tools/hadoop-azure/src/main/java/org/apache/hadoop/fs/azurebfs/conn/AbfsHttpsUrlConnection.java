@@ -5,13 +5,17 @@ import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.Proxy;
-import java.net.URL;
+import java.io.OutputStream;
+import java.net.*;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.Stack;
 
+import sun.net.ProgressSource;
+import sun.net.www.MessageHeader;
 import sun.net.www.http.HttpClient;
+import sun.net.www.http.PosterOutputStream;
+import sun.net.www.protocol.http.HttpURLConnection;
 import sun.net.www.protocol.https.AbstractDelegateHttpsURLConnection;
 import sun.net.www.protocol.https.Handler;
 
@@ -42,10 +46,145 @@ public class AbfsHttpsUrlConnection extends
   }
 
   public static class AbfsHttpClient extends HttpClient {
+
+    private HttpClient httpClient;
+
+    public AbfsHttpClient(HttpClient client) {
+      httpClient = client;
+    }
     public final static Stack<Integer> finishedStack = new Stack<>();
+
+
+    @Override
+    public boolean getHttpKeepAliveSet() {
+      return httpClient.getHttpKeepAliveSet();
+    }
+
+
+    @Override
+    public void closeIdleConnection() {
+      httpClient.closeIdleConnection();
+    }
+
+    @Override
+    public void openServer(String s, int i) throws IOException {
+      httpClient.openServer(s, i);
+    }
+
+    @Override
+    public boolean needsTunneling() {
+      return httpClient.needsTunneling();
+    }
+
+    @Override
+    public synchronized boolean isCachedConnection() {
+      return httpClient.isCachedConnection();
+    }
+
+    @Override
+    public void afterConnect() throws IOException, UnknownHostException {
+      httpClient.afterConnect();
+    }
+
+    @Override
+    public String getURLFile() throws IOException {
+      return httpClient.getURLFile();
+    }
+
+    @Override
+    public void writeRequests(MessageHeader messageHeader) {
+      httpClient.writeRequests(messageHeader);
+    }
+
+    @Override
+    public void writeRequests(MessageHeader messageHeader, PosterOutputStream posterOutputStream) throws IOException {
+      httpClient.writeRequests(messageHeader, posterOutputStream);
+    }
+
+    @Override
+    public void writeRequests(MessageHeader messageHeader, PosterOutputStream posterOutputStream, boolean b) throws IOException {
+      httpClient.writeRequests(messageHeader, posterOutputStream, b);
+    }
+
+    @Override
+    public boolean parseHTTP(MessageHeader messageHeader, ProgressSource progressSource, HttpURLConnection httpURLConnection) throws IOException {
+      return httpClient.parseHTTP(messageHeader, progressSource, httpURLConnection);
+    }
+
+    @Override
+    public synchronized InputStream getInputStream() {
+      return httpClient.getInputStream();
+    }
+
+    @Override
+    public OutputStream getOutputStream() {
+      return httpClient.getOutputStream();
+    }
+
+    @Override
+    public String toString() {
+      return httpClient.toString();
+    }
+
+    @Override
+    public void setCacheRequest(CacheRequest cacheRequest) {
+      httpClient.setCacheRequest(cacheRequest);
+    }
+
+    @Override
+    public void setDoNotRetry(boolean b) {
+      httpClient.setDoNotRetry(b);
+    }
+
+    @Override
+    public void setIgnoreContinue(boolean b) {
+      httpClient.setIgnoreContinue(b);
+    }
+
+    @Override
+    public void closeServer() {
+      httpClient.closeServer();
+    }
+
+    @Override
+    public String getProxyHostUsed() {
+      return httpClient.getProxyHostUsed();
+    }
+
+    @Override
+    public int getProxyPortUsed() {
+      return httpClient.getProxyPortUsed();
+    }
+
+
+    @Override
+    public boolean serverIsOpen() {
+      return httpClient.serverIsOpen();
+    }
+
+    @Override
+    public void setConnectTimeout(int i) {
+      httpClient.setConnectTimeout(i);
+    }
+
+    @Override
+    public int getConnectTimeout() {
+      return httpClient.getConnectTimeout();
+    }
+
+    @Override
+    public void setReadTimeout(int i) {
+      httpClient.setReadTimeout(i);
+    }
+
+    @Override
+    public int getReadTimeout() {
+      return httpClient.getReadTimeout();
+    }
+
     @Override
     public void finished() {
-      super.finished();
+      httpClient.finished();
       finishedStack.push(1);
     }
   }
@@ -61,6 +200,7 @@ public class AbfsHttpsUrlConnection extends
     super.connect();
     timeTaken = System.currentTimeMillis() - start;
     isFromCache = http.isCachedConnection();
+    http = new AbfsHttpClient(http);
 //    if(!httpClientSet.contains(http)) {
 //      isFromCache = false;
 //    }
