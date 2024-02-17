@@ -72,26 +72,7 @@ public class AbfsApacheHttpClient {
       this.abfsRestOperationType = operationType;
     }
 
-    public boolean shouldKillConn(AbfsConnMgr connMgr) {
-      if (shouldKillConn1(connMgr)) {
-        return true;
-      }
-      if(!connMgr.abfsConfiguration.isKacLimitApplied()) {
-        kacSizeStack.push(connMgr.kacCount.get());
-        return false;
-      }
-      synchronized (this) {
-        int kacSize = connMgr.kacCount.incrementAndGet();
-        if(connMgr.abfsConfiguration.isKacLimitApplied() && kacSize > 5) {
-          connMgr.kacCount.decrementAndGet();
-          return true;
-        }
-        kacSizeStack.push(kacSize);
-        return false;
-      }
-    }
-
-    public boolean shouldKillConn1(final AbfsConnMgr connMgr) {
+    public boolean shouldKillConn(final AbfsConnMgr connMgr) {
 //      if(sendTime != null && sendTime > MetricPercentile.getSendPercentileVal(abfsRestOperationType, 99.9)) {
 //        return true;
 //      }
@@ -206,7 +187,10 @@ public class AbfsApacheHttpClient {
       }
       connMgr.connCount.decrementAndGet();
       if(cached) {
-        connMgr.kacCount.decrementAndGet();
+        synchronized (connMgr.kacCount) {
+          connMgr.kacCount--;
+          abfsApacheHttpConnectionMap.remove(getId());
+        }
       }
     }
 
@@ -363,7 +347,7 @@ public class AbfsApacheHttpClient {
      * Gives count of connections that have been cached. Increment when adding in the KAC.
      * Decrement when connection is taken from KAC, or connection from KAC is getting closed.
      */
-    private final AtomicInteger kacCount = new AtomicInteger(0);
+    private Integer kacCount = 0;
 
     /**
      * Gives the number of connections at a moment. Increased when a new connection
@@ -419,7 +403,9 @@ public class AbfsApacheHttpClient {
         if(connection instanceof ManagedHttpClientConnection) {
           AbfsApacheHttpConnection abfsApacheHttpConnection = abfsApacheHttpConnectionMap.get(((ManagedHttpClientConnection) connection).getId());
           if(abfsApacheHttpConnection != null && abfsApacheHttpConnection.cached) {
-            kacCount.decrementAndGet();
+            synchronized (kacCount) {
+              kacCount--;
+            }
             abfsApacheHttpConnection.cached = false;
           }
         }
@@ -444,16 +430,33 @@ public class AbfsApacheHttpClient {
       } else {
         abfsApacheHttpConnection = null;
       }
-      if(keepalive == 0 && managedConn instanceof ManagedHttpClientConnection) {
-        abfsApacheHttpConnectionMap.remove(((ManagedHttpClientConnection)managedConn).getId());
-      }
+//      if(keepalive == 0 && managedConn instanceof ManagedHttpClientConnection) {
+//        abfsApacheHttpConnectionMap.remove(((ManagedHttpClientConnection)managedConn).getId());
+//      }
       inTransits.decrementAndGet();
-      if(keepalive != 0) {
-        if (abfsApacheHttpConnection != null) {
-            abfsApacheHttpConnection.cached = true;
+      boolean toBeCached = true;
+      synchronized (kacCount) {
+        int kacSize = kacCount++;
+        if(kacSize >5) {
+          kacCount--;
+          toBeCached = false;
         }
       }
-      super.releaseConnection(managedConn, state, keepalive, timeUnit);
+      if(toBeCached) {
+        super.releaseConnection(managedConn, state, keepalive, timeUnit);
+      } else {
+        synchronized (managedConn) {
+          /*
+          * Taken from ConnectionHolder.releaseConnection();
+          */
+          try {
+            managedConn.close();
+          } catch (IOException ignored) {
+
+          }
+          super.releaseConnection(managedConn, null, 0, TimeUnit.MILLISECONDS);
+        }
+      }
     }
   }
 
@@ -471,9 +474,9 @@ public class AbfsApacheHttpClient {
         final HttpContext context) {
 //      response.
       if (context instanceof AbfsHttpClientContext) {
-        if (((AbfsHttpClientContext) context).shouldKillConn(connMgr)) {
-          return false;
-        }
+//        if (((AbfsHttpClientContext) context).shouldKillConn(connMgr)) {
+//          return false;
+//        }
         return super.keepAlive(response, context);
       }
       return super.keepAlive(response, context);
