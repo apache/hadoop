@@ -443,6 +443,9 @@ public class AbfsApacheHttpClient {
         }
       }
       if(toBeCached) {
+        if(abfsApacheHttpConnection != null) {
+          abfsApacheHttpConnection.cached = true;
+        }
         super.releaseConnection(managedConn, state, keepalive, timeUnit);
       } else {
         synchronized (managedConn) {
