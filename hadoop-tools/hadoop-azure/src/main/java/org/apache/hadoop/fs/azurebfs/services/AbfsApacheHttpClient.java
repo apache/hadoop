@@ -188,7 +188,7 @@ public class AbfsApacheHttpClient {
       connMgr.connCount.decrementAndGet();
       if(cached) {
         synchronized (connMgr.kacCount) {
-          connMgr.kacCount--;
+          connMgr.kacCount.decrementAndGet();
           abfsApacheHttpConnectionMap.remove(getId());
         }
       }
@@ -347,7 +347,7 @@ public class AbfsApacheHttpClient {
      * Gives count of connections that have been cached. Increment when adding in the KAC.
      * Decrement when connection is taken from KAC, or connection from KAC is getting closed.
      */
-    private Integer kacCount = 0;
+    private final AtomicInteger kacCount = new AtomicInteger(0);
 
     /**
      * Gives the number of connections at a moment. Increased when a new connection
@@ -404,7 +404,7 @@ public class AbfsApacheHttpClient {
           AbfsApacheHttpConnection abfsApacheHttpConnection = abfsApacheHttpConnectionMap.get(((ManagedHttpClientConnection) connection).getId());
           if(abfsApacheHttpConnection != null && abfsApacheHttpConnection.cached) {
             synchronized (kacCount) {
-              kacCount--;
+              kacCount.decrementAndGet();
             }
             abfsApacheHttpConnection.cached = false;
           }
@@ -436,9 +436,9 @@ public class AbfsApacheHttpClient {
       inTransits.decrementAndGet();
       boolean toBeCached = true;
       synchronized (kacCount) {
-        int kacSize = kacCount++;
+        int kacSize = kacCount.incrementAndGet();
         if(kacSize >5) {
-          kacCount--;
+          kacCount.decrementAndGet();
           toBeCached = false;
         }
       }
