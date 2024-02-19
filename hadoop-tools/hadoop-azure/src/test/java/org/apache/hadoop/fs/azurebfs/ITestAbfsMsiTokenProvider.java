@@ -19,15 +19,24 @@
 package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.Date;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
+import org.apache.hadoop.fs.azurebfs.oauth2.AzureADAuthenticator;
 import org.apache.hadoop.fs.azurebfs.oauth2.AzureADToken;
 import org.apache.hadoop.fs.azurebfs.oauth2.MsiTokenProvider;
+import org.apache.hadoop.fs.azurebfs.services.ExponentialRetryPolicy;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_TOO_MANY_REQUESTS;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_AZURE_OAUTH_TOKEN_FETCH_RETRY_MAX_ATTEMPTS;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assume.assumeThat;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
@@ -40,6 +49,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_MSI_ENDPOINT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT;
+import static org.mockito.Mockito.times;
 
 /**
  * Test MsiTokenProvider.
@@ -90,4 +100,51 @@ public final class ITestAbfsMsiTokenProvider
     return value.trim();
   }
 
+  /**
+   * Test to verify that token fetch is retried for throttling errors (too many requests 429).
+   */
+  @Test
+  public void testRetryForThrottling() throws Exception {
+    AbfsConfiguration conf = getConfiguration();
+
+    // Exception to be thrown with throttling error code 429.
+    AzureADAuthenticator.HttpException httpException
+        = new AzureADAuthenticator.HttpException(HTTP_TOO_MANY_REQUESTS,
+        "abc", "abc", "abc", "abc", "abc");
+
+    String tenantGuid = "abcd";
+    String clientId = "abcd";
+    String authEndpoint = getTrimmedPasswordString(conf,
+        FS_AZURE_ACCOUNT_OAUTH_MSI_ENDPOINT,
+        DEFAULT_FS_AZURE_ACCOUNT_OAUTH_MSI_ENDPOINT);
+    String authority = getTrimmedPasswordString(conf,
+        FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY,
+        DEFAULT_FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY);
+
+    // Mock the getTokenSingleCall to throw exception so the retry logic comes into place.
+    try (MockedStatic<AzureADAuthenticator> adAuthenticator = Mockito.mockStatic(
+        AzureADAuthenticator.class, Mockito.CALLS_REAL_METHODS)) {
+      adAuthenticator.when(
+          () -> AzureADAuthenticator.getTokenSingleCall(Mockito.anyString(),
+              Mockito.anyString(), Mockito.any(), Mockito.anyString(),
+              Mockito.anyBoolean())).thenThrow(httpException);
+
+      ExponentialRetryPolicy exponentialRetryPolicy = conf.getOauthTokenFetchRetryPolicy();
+      AzureADAuthenticator.setTokenFetchRetryPolicy(exponentialRetryPolicy);
+
+      AccessTokenProvider tokenProvider = new MsiTokenProvider(authEndpoint,
+          tenantGuid, clientId, authority);
+      AzureADToken token = null;
+      intercept(AzureADAuthenticator.HttpException.class,
+          tokenProvider::getToken);
+
+      // If the status code doesn't qualify for retry shouldRetry returns false and the loop ends.
+      // It being called multiple times verifies that the retry was done for the throttling status code 429.
+      int actualRetries = exponentialRetryPolicy.getRetryCount();
+      Assertions.assertThat(actualRetries)
+              .describedAs("Number of retries should be equal to "
+                      + "max attempts for token fetch.")
+              .isEqualTo(DEFAULT_AZURE_OAUTH_TOKEN_FETCH_RETRY_MAX_ATTEMPTS);
+    }
+  }
 }
