@@ -1468,6 +1468,7 @@ class DataXceiver extends Receiver implements Runnable {
           LOG.warn("Block token verification failed: op={}, " +
                   "remoteAddress={}, message={}",
               op, remoteAddress, e.getLocalizedMessage());
+          datanode.getMetrics().incrInvalidTokenCount();
           throw e;
         } finally {
           IOUtils.closeStream(out);

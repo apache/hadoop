@@ -1850,7 +1850,7 @@ public class DataNode extends ReconfigurableBase
   }
 
   @VisibleForTesting
-  void setIBRDisabledForTest(boolean disabled) {
+  public void setIBRDisabledForTest(boolean disabled) {
     this.ibrDisabledForTests = disabled;
   }
 
@@ -1859,7 +1859,7 @@ public class DataNode extends ReconfigurableBase
     return this.ibrDisabledForTests;
   }
 
-  void setCacheReportsDisabledForTest(boolean disabled) {
+  public void setCacheReportsDisabledForTest(boolean disabled) {
     this.cacheReportsDisabledForTests = disabled;
   }
 
