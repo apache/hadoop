@@ -2419,9 +2419,9 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
     // The replica seems is on its volume map but not on disk.
     // We can't confirm here is block file lost or disk failed.
-    // If checkFiles as true will check block or meta file existence again.
-    // If deleteCorruptReplicaFromDisk as true will delete the actual on-disk block and meta file,
-    // otherwise will remove it from volume map and notify namenode.
+    // If checkFiles is true, the existence of the block and metafile will be checked again.
+    // If deleteCorruptReplicaFromDisk is true, delete the existing block or metafile directly,
+    // otherwise just remove them from the memory volumeMap.
     try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.BLOCK_POOl,
         bpid)) {
       // Check if this block is on the volume map.
@@ -2435,6 +2435,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
               .notifyNamenodeDeletedBlock(extendedBlock, replica.getStorageUuid());
           invalidate(bpid, new Block[] {extendedBlock.getLocalBlock()});
         } else {
+          // For detailed info, please refer to HDFS-16985.
           volumeMap.remove(bpid, block);
           invalidate(bpid, replica);
         }
