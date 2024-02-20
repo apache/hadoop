@@ -189,8 +189,8 @@ public class AbfsApacheHttpClient {
       if(cached) {
         synchronized (connMgr.kacCount) {
           connMgr.kacCount.decrementAndGet();
-          abfsApacheHttpConnectionMap.remove(getId());
         }
+        abfsApacheHttpConnectionMap.remove(getId());
       }
     }
 
@@ -341,13 +341,34 @@ public class AbfsApacheHttpClient {
 //    }
 //  }
 
+  public static class IntegerWrapper {
+    int val;
+    public IntegerWrapper(int val) {
+      this.val = val;
+    }
+
+    public synchronized int incrementAndGet() {
+      val++;
+      return val;
+    }
+
+    public synchronized int decrementAndGet() {
+      val--;
+      return val;
+    }
+
+    public synchronized int get() {
+      return val;
+    }
+  }
+
   public static class AbfsConnMgr extends PoolingHttpClientConnectionManager {
 
     /**
      * Gives count of connections that have been cached. Increment when adding in the KAC.
      * Decrement when connection is taken from KAC, or connection from KAC is getting closed.
      */
-    private final AtomicInteger kacCount = new AtomicInteger(0);
+    private final IntegerWrapper kacCount = new IntegerWrapper(0);
 
     /**
      * Gives the number of connections at a moment. Increased when a new connection
@@ -360,11 +381,16 @@ public class AbfsApacheHttpClient {
 
     public AbfsConfiguration abfsConfiguration;
 
-    public synchronized void checkAvailablity() {
+    public void checkAvailablity() {
       if(maxConn <= inTransits.get()) {
-        maxConn *= 2;
-        setDefaultMaxPerRoute(maxConn);
-        setMaxTotal(maxConn);
+        synchronized (this) {
+          if (maxConn > inTransits.get()) {
+            return;
+          }
+          maxConn *= 2;
+          setDefaultMaxPerRoute(maxConn);
+          setMaxTotal(maxConn);
+        }
       }
     }
 
