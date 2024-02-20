@@ -414,6 +414,9 @@ class DataStreamer extends Daemon {
     }
 
     synchronized void adjustState4RestartingNode() {
+      if (restartingNodeIndex == -1) {
+        return;
+      }
       // Just took care of a node error while waiting for a node restart
       if (restartingNodeIndex >= 0) {
         // If the error came from a node further away than the restarting
@@ -1639,18 +1642,19 @@ class DataStreamer extends Daemon {
 
       final boolean isRecovery = errorState.hasInternalError() && !isCreateStage;
 
-      // During create stage, if we remove a node (nodes.length - 1)
-      //  min replication should still be satisfied.
-      if (isCreateStage && !(dfsClient.dtpReplaceDatanodeOnFailureReplication > 0 &&
-          nodes.length - 1 >= dfsClient.dtpReplaceDatanodeOnFailureReplication)) {
-        return false;
-      }
 
       if (!handleBadDatanode()) {
         return false;
       }
 
       handleDatanodeReplacement();
+
+      // During create stage, if we remove a node (nodes.length - 1)
+      //  min replication should still be satisfied.
+      if (isCreateStage && !(dfsClient.dtpReplaceDatanodeOnFailureReplication > 0 &&
+          nodes.length  >= dfsClient.dtpReplaceDatanodeOnFailureReplication)) {
+        return false;
+      }
 
       // get a new generation stamp and an access token
       final LocatedBlock lb = updateBlockForPipeline();
@@ -1823,6 +1827,7 @@ class DataStreamer extends Daemon {
     do {
       errorState.resetInternalError();
       lastException.clear();
+      streamerClosed = false;
 
       DatanodeInfo[] excluded = getExcludedNodes();
       lb = locateFollowingBlock(
