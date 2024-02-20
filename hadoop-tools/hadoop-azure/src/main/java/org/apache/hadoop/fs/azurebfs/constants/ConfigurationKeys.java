@@ -48,9 +48,22 @@ public final class ConfigurationKeys {
   // Retry strategy defined by the user
   public static final String AZURE_MIN_BACKOFF_INTERVAL = "fs.azure.io.retry.min.backoff.interval";
   public static final String AZURE_MAX_BACKOFF_INTERVAL = "fs.azure.io.retry.max.backoff.interval";
+  public static final String AZURE_STATIC_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED = "fs.azure.static.retry.for.connection.timeout.enabled";
+  public static final String AZURE_STATIC_RETRY_INTERVAL = "fs.azure.static.retry.interval";
   public static final String AZURE_BACKOFF_INTERVAL = "fs.azure.io.retry.backoff.interval";
   public static final String AZURE_MAX_IO_RETRIES = "fs.azure.io.retry.max.retries";
   public static final String AZURE_CUSTOM_TOKEN_FETCH_RETRY_COUNT = "fs.azure.custom.token.fetch.retry.count";
+
+  /**
+   * Config to set HTTP Connection Timeout Value for Rest Operations.
+   * Value: {@value}.
+   */
+  public static final String AZURE_HTTP_CONNECTION_TIMEOUT = "fs.azure.http.connection.timeout";
+  /**
+   * Config to set HTTP Read Timeout Value for Rest Operations.
+   * Value: {@value}.
+   */
+  public static final String AZURE_HTTP_READ_TIMEOUT = "fs.azure.http.read.timeout";
 
   //  Retry strategy for getToken calls
   public static final String AZURE_OAUTH_TOKEN_FETCH_RETRY_COUNT = "fs.azure.oauth.token.fetch.retry.max.retries";

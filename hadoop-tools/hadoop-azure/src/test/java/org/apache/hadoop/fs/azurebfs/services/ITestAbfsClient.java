@@ -52,6 +52,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EXPECT_1
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PATCH;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PUT;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HUNDRED_CONTINUE;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.*;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.EXPECT;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_HTTP_METHOD_OVERRIDE;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_ACTION;
@@ -77,7 +78,6 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SEMICOLO
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SINGLE_WHITE_SPACE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLUSTER_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLUSTER_TYPE;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_VALUE_UNKNOWN;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_CONFIGURATION_FILE_NAME;
 
 /**
@@ -365,7 +365,9 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.getAuthType()).thenReturn(currentAuthType);
-    when(client.getRetryPolicy()).thenReturn(
+    when(client.getExponentialRetryPolicy()).thenReturn(
+        new ExponentialRetryPolicy(1));
+    when(client.getRetryPolicy(any())).thenReturn(
         new ExponentialRetryPolicy(1));
 
     when(client.createDefaultUriQueryBuilder()).thenCallRealMethod();
@@ -560,7 +562,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
         appendRequestParameters.getLength(), null));
 
     AbfsHttpOperation abfsHttpOperation = Mockito.spy(new AbfsHttpOperation(url,
-        HTTP_METHOD_PUT, requestHeaders));
+        HTTP_METHOD_PUT, requestHeaders, DEFAULT_HTTP_CONNECTION_TIMEOUT, DEFAULT_HTTP_READ_TIMEOUT));
 
     // Sets the expect request property if expect header is enabled.
     if (appendRequestParameters.isExpectHeaderEnabled()) {
