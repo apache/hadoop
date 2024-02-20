@@ -178,7 +178,7 @@ public class ITestAzureBlobFileSystemListStatus extends
         TEST_CONTINUATION_TOKEN, spiedTracingContext);
 
     // Assert that none of the API calls used the same tracing header.
-    Mockito.verify(spiedTracingContext, times(0)).constructHeader(any(), any());
+    Mockito.verify(spiedTracingContext, times(0)).constructHeader(any(), any(), any());
   }
 
   /**
