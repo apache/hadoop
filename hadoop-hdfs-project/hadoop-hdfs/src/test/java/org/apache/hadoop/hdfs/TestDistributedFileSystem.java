@@ -150,7 +150,8 @@ public class TestDistributedFileSystem {
   private boolean dualPortTesting = false;
   
   private boolean noXmlDefaults = false;
-  
+
+
   HdfsConfiguration getTestConfiguration() {
     HdfsConfiguration conf;
     if (noXmlDefaults) {

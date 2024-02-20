@@ -89,6 +89,7 @@ public class StripedDataStreamer extends DataStreamer {
     return coordinator.getFollowingBlocks().poll(index);
   }
 
+
   @Override
   protected LocatedBlock nextBlockOutputStream() throws IOException {
     boolean success;

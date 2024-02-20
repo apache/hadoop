@@ -54,6 +54,7 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
       DatanodeStorage.generateUuid(), DatanodeStorage.State.NORMAL,
       StorageType.DEFAULT);
 
+  
   @Override
   public FsVolumeReferences getFsVolumeReferences() {
     return null;

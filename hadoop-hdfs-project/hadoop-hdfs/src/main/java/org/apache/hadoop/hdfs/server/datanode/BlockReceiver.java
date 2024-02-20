@@ -148,6 +148,7 @@ class BlockReceiver implements Closeable {
   private final AtomicLong lastSentTime = new AtomicLong(0L);
   private long maxSendIdleTime;
 
+
   BlockReceiver(final ExtendedBlock block, final StorageType storageType,
       final DataInputStream in,
       final String inAddr, final String myAddr,

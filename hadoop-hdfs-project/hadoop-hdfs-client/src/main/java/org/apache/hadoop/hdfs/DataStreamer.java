@@ -1848,6 +1848,7 @@ class DataStreamer extends Daemon {
       LOG.info("nodes are empty for write pipeline of " + block);
       return false;
     }
+
     String firstBadLink = "";
     boolean checkRestart = false;
     if (LOG.isDebugEnabled()) {
