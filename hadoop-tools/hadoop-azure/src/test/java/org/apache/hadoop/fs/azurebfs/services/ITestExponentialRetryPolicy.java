@@ -47,7 +47,6 @@ import java.util.Random;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
-import org.junit.Assert;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
@@ -56,9 +55,9 @@ import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 
 /**
- * Unit test TestExponentialRetryPolicy.
+ * Unit test ITestExponentialRetryPolicy.
  */
-public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
+public class ITestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
   private final int maxRetryCount = 30;
   private final int noRetryCount = 0;
   private final int retryCount = new Random().nextInt(maxRetryCount);
@@ -68,7 +67,7 @@ public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
   private static final int ANALYSIS_PERIOD = 10000;
 
 
-  public TestExponentialRetryPolicy() throws Exception {
+  public ITestExponentialRetryPolicy() throws Exception {
     super();
   }
 
@@ -86,9 +85,10 @@ public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
   @Test
   public void testDefaultMaxIORetryCount() throws Exception {
     AbfsConfiguration abfsConfig = getAbfsConfig();
-    Assert.assertEquals(
-        String.format("default maxIORetry count is %s.", maxRetryCount),
-        maxRetryCount, abfsConfig.getMaxIoRetries());
+    Assertions.assertThat(abfsConfig.getMaxIoRetries())
+        .describedAs("Max retry count should be %s", maxRetryCount)
+        .isEqualTo(maxRetryCount);
+
     testMaxIOConfig(abfsConfig);
   }
 
@@ -265,7 +265,7 @@ public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
     ExponentialRetryPolicy template = new ExponentialRetryPolicy(
         getAbfsConfig().getMaxIoRetries());
     int testModifier = 1;
-    int expectedMaxRetries = template.getRetryCount() + testModifier;
+    int expectedMaxRetries = template.getMaxRetryCount() + testModifier;
     int expectedMinBackoff = template.getMinBackoff() + testModifier;
     int expectedMaxBackoff = template.getMaxBackoff() + testModifier;
     int expectedDeltaBackoff = template.getDeltaBackoff() + testModifier;
@@ -279,10 +279,18 @@ public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
     ExponentialRetryPolicy policy = new ExponentialRetryPolicy(
         new AbfsConfiguration(config, "dummyAccountName"));
 
-    Assert.assertEquals("Max retry count was not set as expected.", expectedMaxRetries, policy.getRetryCount());
-    Assert.assertEquals("Min backoff interval was not set as expected.", expectedMinBackoff, policy.getMinBackoff());
-    Assert.assertEquals("Max backoff interval was not set as expected.", expectedMaxBackoff, policy.getMaxBackoff());
-    Assert.assertEquals("Delta backoff interval was not set as expected.", expectedDeltaBackoff, policy.getDeltaBackoff());
+    Assertions.assertThat(policy.getMaxRetryCount())
+        .describedAs("Max retry count was not set as expected.")
+        .isEqualTo(expectedMaxRetries);
+    Assertions.assertThat(policy.getMinBackoff())
+        .describedAs("Min backoff interval was not set as expected.")
+        .isEqualTo(expectedMinBackoff);
+    Assertions.assertThat(policy.getMaxBackoff())
+        .describedAs("Max backoff interval was not set as expected")
+        .isEqualTo(expectedMaxBackoff);
+    Assertions.assertThat(policy.getDeltaBackoff())
+        .describedAs("Delta backoff interval was not set as expected.")
+        .isEqualTo(expectedDeltaBackoff);
   }
 
   private AbfsConfiguration getAbfsConfig() throws Exception {
@@ -297,14 +305,14 @@ public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
     int localRetryCount = 0;
 
     while (localRetryCount < abfsConfig.getMaxIoRetries()) {
-      Assert.assertTrue(
-          "Retry should be allowed when retryCount less than max count configured.",
-          retryPolicy.shouldRetry(localRetryCount, -1));
+      Assertions.assertThat(retryPolicy.shouldRetry(localRetryCount, -1))
+          .describedAs("Retry should be allowed when retryCount less than max count configured.")
+          .isTrue();
       localRetryCount++;
     }
 
-    Assert.assertEquals(
-        "When all retries are exhausted, the retryCount will be same as max configured",
-        abfsConfig.getMaxIoRetries(), localRetryCount);
+    Assertions.assertThat(localRetryCount)
+        .describedAs("When all retries are exhausted, the retryCount will be same as max configured.")
+        .isEqualTo(abfsConfig.getMaxIoRetries());
   }
 }

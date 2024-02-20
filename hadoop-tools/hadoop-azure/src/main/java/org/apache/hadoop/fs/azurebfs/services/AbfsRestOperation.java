@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_CONTINUE;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_TIMEOUT_ABBREVIATION;
 
 /**
  * The AbfsRestOperation for Rest AbfsClient.
@@ -81,6 +82,7 @@ public class AbfsRestOperation {
    * AbfsRestOperation object.
    */
   private String failureReason;
+  private AbfsRetryPolicy retryPolicy;
 
   /**
    * This variable stores the tracing context used for last Rest Operation.
@@ -162,6 +164,7 @@ public class AbfsRestOperation {
     this.sasToken = sasToken;
     this.abfsCounters = client.getAbfsCounters();
     this.intercept = client.getIntercept();
+    this.retryPolicy = client.getExponentialRetryPolicy();
   }
 
   /**
@@ -232,15 +235,18 @@ public class AbfsRestOperation {
       requestHeaders.add(httpHeader);
     }
 
+    // By Default Exponential Retry Policy Will be used
     retryCount = 0;
+    retryPolicy = client.getExponentialRetryPolicy();
     LOG.debug("First execution of REST operation - {}", operationType);
     while (!executeHttpOperation(retryCount, tracingContext)) {
       try {
         ++retryCount;
         tracingContext.setRetryCount(retryCount);
-        LOG.debug("Retrying REST operation {}. RetryCount = {}",
-            operationType, retryCount);
-        Thread.sleep(client.getRetryPolicy().getRetryInterval(retryCount));
+        long retryInterval = retryPolicy.getRetryInterval(retryCount);
+        LOG.debug("Rest operation {} failed with failureReason: {}. Retrying with retryCount = {}, retryPolicy: {} and sleepInterval: {}",
+            operationType, failureReason, retryCount, retryPolicy.getAbbreviation(), retryInterval);
+        Thread.sleep(retryInterval);
       } catch (InterruptedException ex) {
         Thread.currentThread().interrupt();
       }
@@ -277,12 +283,13 @@ public class AbfsRestOperation {
   private boolean executeHttpOperation(final int retryCount,
     TracingContext tracingContext) throws AzureBlobFileSystemException {
     AbfsHttpOperation httpOperation;
+    boolean wasIOExceptionThrown = false;
 
     try {
       // initialize the HTTP request and open the connection
       httpOperation = createHttpOperation();
       incrementCounter(AbfsStatistic.CONNECTIONS_MADE, 1);
-      tracingContext.constructHeader(httpOperation, failureReason);
+      tracingContext.constructHeader(httpOperation, failureReason, retryPolicy.getAbbreviation());
 
       signRequest(httpOperation, hasRequestBody ? bufferLength : 0);
 
@@ -318,9 +325,10 @@ public class AbfsRestOperation {
       String hostname = null;
       hostname = httpOperation.getHost();
       failureReason = RetryReason.getAbbreviation(ex, null, null);
+      retryPolicy = client.getRetryPolicy(failureReason);
       LOG.warn("Unknown host name: {}. Retrying to resolve the host name...",
           hostname);
-      if (!client.getRetryPolicy().shouldRetry(retryCount, -1)) {
+      if (!retryPolicy.shouldRetry(retryCount, -1)) {
         throw new InvalidAbfsRestOperationException(ex, retryCount);
       }
       return false;
@@ -330,8 +338,9 @@ public class AbfsRestOperation {
       }
 
       failureReason = RetryReason.getAbbreviation(ex, -1, "");
-
-      if (!client.getRetryPolicy().shouldRetry(retryCount, -1)) {
+      retryPolicy = client.getRetryPolicy(failureReason);
+      wasIOExceptionThrown = true;
+      if (!retryPolicy.shouldRetry(retryCount, -1)) {
         throw new InvalidAbfsRestOperationException(ex, retryCount);
       }
 
@@ -339,25 +348,37 @@ public class AbfsRestOperation {
     } finally {
       int status = httpOperation.getStatusCode();
       /*
-        A status less than 300 (2xx range) or greater than or equal
-        to 500 (5xx range) should contribute to throttling metrics being updated.
-        Less than 200 or greater than or equal to 500 show failed operations. 2xx
-        range contributes to successful operations. 3xx range is for redirects
-        and 4xx range is for user errors. These should not be a part of
-        throttling backoff computation.
+       A status less than 300 (2xx range) or greater than or equal
+       to 500 (5xx range) should contribute to throttling metrics being updated.
+       Less than 200 or greater than or equal to 500 show failed operations. 2xx
+       range contributes to successful operations. 3xx range is for redirects
+       and 4xx range is for user errors. These should not be a part of
+       throttling backoff computation.
        */
       boolean updateMetricsResponseCode = (status < HttpURLConnection.HTTP_MULT_CHOICE
               || status >= HttpURLConnection.HTTP_INTERNAL_ERROR);
-      if (updateMetricsResponseCode) {
+
+      /*
+       Connection Timeout failures should not contribute to throttling
+       In case the current request fails with Connection Timeout we will have
+       ioExceptionThrown true and failure reason as CT
+       In case the current request failed with 5xx, failure reason will be
+       updated after finally block but wasIOExceptionThrown will be false;
+       */
+      boolean isCTFailure = CONNECTION_TIMEOUT_ABBREVIATION.equals(failureReason) && wasIOExceptionThrown;
+
+      if (updateMetricsResponseCode && !isCTFailure) {
         intercept.updateMetrics(operationType, httpOperation);
       }
     }
 
     LOG.debug("HttpRequest: {}: {}", operationType, httpOperation);
 
-    if (client.getRetryPolicy().shouldRetry(retryCount, httpOperation.getStatusCode())) {
-      int status = httpOperation.getStatusCode();
-      failureReason = RetryReason.getAbbreviation(null, status, httpOperation.getStorageErrorMessage());
+    int status = httpOperation.getStatusCode();
+    failureReason = RetryReason.getAbbreviation(null, status, httpOperation.getStorageErrorMessage());
+    retryPolicy = client.getRetryPolicy(failureReason);
+
+    if (retryPolicy.shouldRetry(retryCount, httpOperation.getStatusCode())) {
       return false;
     }
 
@@ -398,12 +419,16 @@ public class AbfsRestOperation {
   }
 
   /**
-   * Creates new object of {@link AbfsHttpOperation} with the url, method, and
-   * requestHeaders fields of the AbfsRestOperation object.
+   * Creates new object of {@link AbfsHttpOperation} with the url, method, requestHeader fields and
+   * timeout values as set in configuration of the AbfsRestOperation object.
+   *
+   * @return {@link AbfsHttpOperation} to be used for sending requests
    */
   @VisibleForTesting
   AbfsHttpOperation createHttpOperation() throws IOException {
-    return new AbfsHttpOperation(url, method, requestHeaders);
+    return new AbfsHttpOperation(url, method, requestHeaders,
+            client.getAbfsConfiguration().getHttpConnectionTimeout(),
+            client.getAbfsConfiguration().getHttpReadTimeout());
   }
 
   /**

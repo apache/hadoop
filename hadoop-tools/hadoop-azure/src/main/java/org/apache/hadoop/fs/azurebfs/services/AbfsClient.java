@@ -82,6 +82,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.*
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.*;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.RENAME_DESTINATION_PARENT_PATH_NOT_FOUND;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.SOURCE_PATH_NOT_FOUND;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_TIMEOUT_ABBREVIATION;
 
 /**
  * AbfsClient.
@@ -93,7 +94,8 @@ public class AbfsClient implements Closeable {
   private final URL baseUrl;
   private final SharedKeyCredentials sharedKeyCredentials;
   private String xMsVersion = DECEMBER_2019_API_VERSION;
-  private final ExponentialRetryPolicy retryPolicy;
+  private final ExponentialRetryPolicy exponentialRetryPolicy;
+  private final StaticRetryPolicy staticRetryPolicy;
   private final String filesystem;
   private final AbfsConfiguration abfsConfiguration;
   private final String userAgent;
@@ -131,7 +133,8 @@ public class AbfsClient implements Closeable {
     String baseUrlString = baseUrl.toString();
     this.filesystem = baseUrlString.substring(baseUrlString.lastIndexOf(FORWARD_SLASH) + 1);
     this.abfsConfiguration = abfsConfiguration;
-    this.retryPolicy = abfsClientContext.getExponentialRetryPolicy();
+    this.exponentialRetryPolicy = abfsClientContext.getExponentialRetryPolicy();
+    this.staticRetryPolicy = abfsClientContext.getStaticRetryPolicy();
     this.accountName = abfsConfiguration.getAccountName().substring(0, abfsConfiguration.getAccountName().indexOf(AbfsHttpConstants.DOT));
     this.authType = abfsConfiguration.getAuthType(accountName);
     this.intercept = AbfsThrottlingInterceptFactory.getInstance(accountName, abfsConfiguration);
@@ -213,8 +216,24 @@ public class AbfsClient implements Closeable {
     return abfsPerfTracker;
   }
 
-  ExponentialRetryPolicy getRetryPolicy() {
-    return retryPolicy;
+  ExponentialRetryPolicy getExponentialRetryPolicy() {
+    return exponentialRetryPolicy;
+  }
+
+  StaticRetryPolicy getStaticRetryPolicy() {
+    return staticRetryPolicy;
+  }
+
+  /**
+   * Returns the retry policy to be used for Abfs Rest Operation Failure.
+   * @param failureReason helps to decide which type of retryPolicy to be used.
+   * @return retry policy to be used.
+   */
+  public AbfsRetryPolicy getRetryPolicy(final String failureReason) {
+    return CONNECTION_TIMEOUT_ABBREVIATION.equals(failureReason)
+        && getAbfsConfiguration().getStaticRetryForConnectionTimeoutEnabled()
+        ? getStaticRetryPolicy()
+        : getExponentialRetryPolicy();
   }
 
   SharedKeyCredentials getSharedKeyCredentials() {
