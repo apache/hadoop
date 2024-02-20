@@ -942,16 +942,22 @@ public class AbfsConfiguration{
   }
 
   /**
-   * The following method chooses between a configured fixed sas token, and a user implementation of the SASTokenProvider interface,
-   * depending on which one is available. In case a user SASTokenProvider implementation is not present, and a fixed token is configured,
-   * it simply returns null, to set the sasTokenProvider object for current configuration instance to null.
-   * The fixed token is read and used later. This is done to:
-   * 1. check for cases where both are not set, while initializing AbfsConfiguration,
-   * to not proceed further than thi stage itself when none of the options are available.
-   * 2. avoid using  similar tokenProvider implementation to just read the configured fixed token,
-   * as this could create confusion. The configuration is introduced
-   * primarily to avoid using any tokenProvider class/interface. Also,implementing the SASTokenProvider requires relying on the raw configurations.
-   * It is more stable to depend on the AbfsConfiguration with which a filesystem is initialized,
+   * The user can choose between a configured fixed sas token, and a user
+   * implementation of the SASTokenProvider interface. Preference will be given
+   * to SASTokenProvider class provided as the value of "fs.azure.sas.token.provider.type".
+   * If above config is not set, it is expected that user wants to use a
+   * fixed SAS Token provided as value of "fs.azure.sas.fixed.token".
+   * <ol>
+   *   <li>If both the configs are not provided,
+   *   initialization fails and {@link TokenAccessProviderException} is thrown.</li>
+   *   <li>If both are present, SASTokenProvider class will be used to generate SAS Token.</li>
+   *   <li>If only fixed SAS Token is configured, this will return null
+   *   and Fixed SAS token will be used to sign requests.</li>
+   * </ol>
+   * Avoid using a tokenProvider implementation just to read the configured fixed token,
+   * as this could create confusion. Also,implementing the SASTokenProvider
+   * requires relying on the raw configurations. It is more stable to depend on the
+   * AbfsConfiguration with which a filesystem is initialized,
    * and eliminate chances of dynamic modifications and spurious situations.
    * @return sasTokenProvider object
    * @throws AzureBlobFileSystemException
@@ -959,7 +965,8 @@ public class AbfsConfiguration{
   public SASTokenProvider getSASTokenProvider() throws AzureBlobFileSystemException {
     AuthType authType = getEnum(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SharedKey);
     if (authType != AuthType.SAS) {
-      throw new SASTokenProviderException(String.format("Invalid auth type: %s is being used, expecting SAS", authType));
+      throw new SASTokenProviderException(String.format(
+          "Invalid auth type: %s is being used, expecting SAS.", authType));
     }
 
     try {
@@ -970,30 +977,30 @@ public class AbfsConfiguration{
       String configuredFixedToken = this.rawConfig.get(FS_AZURE_SAS_FIXED_TOKEN,
           null);
 
-      Preconditions.checkArgument(!(sasTokenProviderImplementation == null
-              && configuredFixedToken == null),
-          String.format(
-              "The value for both \"%s\" and \"%s\" cannot be invalid.",
-              FS_AZURE_SAS_TOKEN_PROVIDER_TYPE, FS_AZURE_SAS_FIXED_TOKEN));
+      Preconditions.checkArgument(
+          sasTokenProviderImplementation != null || configuredFixedToken != null,
+          "At least one of the \"%s\" and \"%s\" must be set.",
+              FS_AZURE_SAS_TOKEN_PROVIDER_TYPE, FS_AZURE_SAS_FIXED_TOKEN);
 
+      // Prefer SASTokenProvider Implementation if configured.
       if (sasTokenProviderImplementation != null) {
-        LOG.trace(
-            "Using SASTokenProvider class because it is given precedence when it is set");
+        LOG.trace("Using SASTokenProvider class because it is given precedence when it is set.");
         SASTokenProvider sasTokenProvider = ReflectionUtils.newInstance(
             sasTokenProviderImplementation, rawConfig);
         Preconditions.checkArgument(sasTokenProvider != null,
-            String.format("Failed to initialize %s",
-                sasTokenProviderImplementation));
+            "Failed to initialize %s", sasTokenProviderImplementation);
 
         LOG.trace("Initializing {}", sasTokenProviderImplementation.getName());
         sasTokenProvider.initialize(rawConfig, accountName);
         LOG.trace("{} init complete", sasTokenProviderImplementation.getName());
         return sasTokenProvider;
       } else {
+        // Configured Fixed SAS Token will be used to sign the requests.
         return null;
       }
     } catch (Exception e) {
-      throw new TokenAccessProviderException("Unable to load SAS token provider class: " + e, e);
+      throw new TokenAccessProviderException(
+          "Unable to load SAS token provider class: " + e, e);
     }
   }
 
@@ -1006,14 +1013,14 @@ public class AbfsConfiguration{
       Class<? extends EncryptionContextProvider> encryptionContextClass =
           getAccountSpecificClass(configKey, null,
               EncryptionContextProvider.class);
-      Preconditions.checkArgument(encryptionContextClass != null, String.format(
+      Preconditions.checkArgument(encryptionContextClass != null,
           "The configuration value for %s is invalid, or config key is not account-specific",
-          configKey));
+          configKey);
 
       EncryptionContextProvider encryptionContextProvider =
           ReflectionUtils.newInstance(encryptionContextClass, rawConfig);
       Preconditions.checkArgument(encryptionContextProvider != null,
-          String.format("Failed to initialize %s", encryptionContextClass));
+         "Failed to initialize %s", encryptionContextClass);
 
       LOG.trace("{} init complete", encryptionContextClass.getName());
       return encryptionContextProvider;

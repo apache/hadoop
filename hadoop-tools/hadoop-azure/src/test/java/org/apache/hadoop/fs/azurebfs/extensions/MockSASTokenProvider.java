@@ -32,15 +32,15 @@ import org.apache.hadoop.fs.azurebfs.utils.Base64;
 import org.apache.hadoop.fs.azurebfs.utils.ServiceSASGenerator;
 
 /**
- * A mock SAS token provider implementation
+ * A mock SAS token provider implementation for testing purpose
+ * Account SAS with full permission is created using storage account key
  */
 public class MockSASTokenProvider implements SASTokenProvider {
 
   private byte[] accountKey;
   private ServiceSASGenerator generator;
   private boolean skipAuthorizationForTestSetup = false;
-  protected static final Logger LOG =
-      LoggerFactory.getLogger(MockSASTokenProvider.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MockSASTokenProvider.class);
 
   // For testing we use a container SAS for all operations.
   private String generateSAS(byte[] accountKey, String accountName, String fileSystemName) {
