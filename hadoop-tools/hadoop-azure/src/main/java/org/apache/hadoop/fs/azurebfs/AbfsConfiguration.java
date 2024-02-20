@@ -959,7 +959,7 @@ public class AbfsConfiguration{
    * requires relying on the raw configurations. It is more stable to depend on the
    * AbfsConfiguration with which a filesystem is initialized,
    * and eliminate chances of dynamic modifications and spurious situations.
-   * @return sasTokenProvider object
+   * @return sasTokenProvider object.
    * @throws AzureBlobFileSystemException
    */
   public SASTokenProvider getSASTokenProvider() throws AzureBlobFileSystemException {

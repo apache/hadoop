@@ -30,8 +30,8 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsUriQueryBuilder;
 public class AccountSASGenerator extends SASGenerator {
   /**
    * Creates Account SAS from Storage Account Key.
-   * https://learn.microsoft.com/en-us/rest/api/storageservices/create-account-sas
-   * @param accountKey: the storage account key
+   * https://learn.microsoft.com/en-us/rest/api/storageservices/create-account-sas.
+   * @param accountKey: the storage account key.
    */
   public AccountSASGenerator(byte[] accountKey) {
     super(accountKey);

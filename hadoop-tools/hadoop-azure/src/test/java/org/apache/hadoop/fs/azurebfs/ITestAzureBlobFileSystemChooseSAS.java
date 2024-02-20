@@ -39,14 +39,19 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Tests to validate the choice between using a SASTokenProvider to generate
- * a SAS or using a Fixed SAS Token configured by user. To differentiate which config was used we will use different type of SAS Tokens.
- * For Fixed SAS Token we will use an Account SAS with permissions to do File system level operations.
- * For SASTokenProvider we will use a User Delegation SAS Token Provider such that File System level operations are not permitted.
+ * a SAS or using a Fixed SAS Token configured by user.
  */
 public class ITestAzureBlobFileSystemChooseSAS extends AbstractAbfsIntegrationTest{
 
   private String accountSAS = null;
 
+
+  /**
+   * To differentiate which config was used we will use different type of SAS Tokens.
+   * For Fixed SAS Token we will use an Account SAS with permissions to do File system level operations.
+   * For SASTokenProvider we will use a User Delegation SAS Token Provider
+   * such that File System level operations are not permitted.
+   */
   public ITestAzureBlobFileSystemChooseSAS() throws Exception {
     // SAS Token configured might not have permissions for creating file system.
     // Shared Key must be configured to create one. Once created, a new instance
@@ -61,7 +66,7 @@ public class ITestAzureBlobFileSystemChooseSAS extends AbstractAbfsIntegrationTe
     generateAccountSAS();  }
 
   /**
-   * Generates a Account SAS Token using the Account Shared Key to be used as a fixed SAS Token
+   * Generates a Account SAS Token using the Account Shared Key to be used as a fixed SAS Token.
    * This will be used by individual tests to set in the configurations.
    * @throws AzureBlobFileSystemException
    */
@@ -72,7 +77,7 @@ public class ITestAzureBlobFileSystemChooseSAS extends AbstractAbfsIntegrationTe
   }
 
   /**
-   * Tests the scenario where both the SASTokenProvider and a fixed SAS token are configured:
+   * Tests the scenario where both the SASTokenProvider and a fixed SAS token are configured.
    * SASTokenProvider class should be chosen and User Delegation SAS should be used.
    * @throws Exception
    */
@@ -85,10 +90,10 @@ public class ITestAzureBlobFileSystemChooseSAS extends AbstractAbfsIntegrationTe
     testAbfsConfig.set(FS_AZURE_SAS_TOKEN_PROVIDER_TYPE,
         MockDelegationSASTokenProvider.class.getName());
 
-    // configuring the Fixed SAS token which is an Account SAS
+    // configuring the Fixed SAS token which is an Account SAS.
     testAbfsConfig.set(FS_AZURE_SAS_FIXED_TOKEN, accountSAS);
 
-    // Creating a new file system with updated configs
+    // Creating a new file system with updated configs.
     try (AzureBlobFileSystem newTestFs = (AzureBlobFileSystem)
         FileSystem.newInstance(testAbfsConfig.getRawConfiguration())) {
       TracingContext tracingContext = getTestTracingContext(newTestFs, true);
@@ -98,14 +103,14 @@ public class ITestAzureBlobFileSystemChooseSAS extends AbstractAbfsIntegrationTe
             newTestFs.getAbfsStore().getFilesystemProperties(tracingContext);
           });
 
-      // Asserting that User delegation SAS token is otherwise valid and blob level operations succeed
+      // Asserting that User delegation SAS token is otherwise valid and blob level operations succeed.
       Path testPath = new Path("/testCorrectSASToken");
       newTestFs.create(testPath).close();
     }
   }
 
   /**
-   * Tests the scenario where only the fixed token is configured, and no token provider class is set:
+   * Tests the scenario where only the fixed token is configured, and no token provider class is set.
    * Account SAS Token configured as fixed SAS should be used.
    * @throws IOException
    */
@@ -114,10 +119,10 @@ public class ITestAzureBlobFileSystemChooseSAS extends AbstractAbfsIntegrationTe
     AbfsConfiguration testAbfsConfig = getConfiguration();
     removeAnyPresetConfiguration(testAbfsConfig);
 
-    // setting an account SAS token in the fixed token field
+    // setting an account SAS token in the fixed token field.
     testAbfsConfig.set(FS_AZURE_SAS_FIXED_TOKEN, accountSAS);
 
-    // Creating a new filesystem with updated configs
+    // Creating a new filesystem with updated configs.
     try (AzureBlobFileSystem newTestFs = (AzureBlobFileSystem)
         FileSystem.newInstance(testAbfsConfig.getRawConfiguration())) {
 
@@ -130,8 +135,8 @@ public class ITestAzureBlobFileSystemChooseSAS extends AbstractAbfsIntegrationTe
   }
 
   /**
-   * Tests the scenario where both the token provider class and the fixed token are not configured:
-   * whether the code errors out at the initialization stage itself
+   * Tests the scenario where both the token provider class and the fixed token are not configured.
+   * The code errors out at the initialization stage itself.
    * @throws IOException
    */
   @Test

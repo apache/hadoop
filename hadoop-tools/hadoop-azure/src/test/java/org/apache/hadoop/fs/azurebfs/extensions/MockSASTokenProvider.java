@@ -32,8 +32,8 @@ import org.apache.hadoop.fs.azurebfs.utils.Base64;
 import org.apache.hadoop.fs.azurebfs.utils.ServiceSASGenerator;
 
 /**
- * A mock SAS token provider implementation for testing purpose
- * Account SAS with full permission is created using storage account key
+ * A mock SAS token provider implementation for testing purpose.
+ * Account SAS with full permission is created using storage account key.
  */
 public class MockSASTokenProvider implements SASTokenProvider {
 

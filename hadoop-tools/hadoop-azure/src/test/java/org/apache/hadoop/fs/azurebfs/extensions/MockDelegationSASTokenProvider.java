@@ -40,7 +40,7 @@ import org.apache.hadoop.fs.azurebfs.utils.SASGenerator;
 import org.apache.hadoop.security.AccessControlException;
 
 /**
- * A mock SAS token provider implementation
+ * A mock SAS token provider implementation.
  */
 public class MockDelegationSASTokenProvider implements SASTokenProvider {
 

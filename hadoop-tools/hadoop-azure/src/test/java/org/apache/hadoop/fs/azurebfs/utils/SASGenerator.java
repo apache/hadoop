@@ -70,7 +70,7 @@ public abstract class SASGenerator {
 
   /**
    * Called by subclasses to initialize the cryptographic SHA-256 HMAC provider.
-   * @param key - a 256-bit secret key
+   * @param key - a 256-bit secret key.
    */
   protected SASGenerator(byte[] key) {
     this.key = key;
