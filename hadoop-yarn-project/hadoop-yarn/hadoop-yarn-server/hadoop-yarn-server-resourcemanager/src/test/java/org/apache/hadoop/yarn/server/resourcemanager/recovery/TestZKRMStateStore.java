@@ -148,7 +148,6 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
           throws Exception {
         setResourceManager(new ResourceManager());
         init(conf);
-        dispatcher.disableExitOnDispatchException();
         start();
         assertTrue(znodeWorkingPath.equals(workingZnode));
       }

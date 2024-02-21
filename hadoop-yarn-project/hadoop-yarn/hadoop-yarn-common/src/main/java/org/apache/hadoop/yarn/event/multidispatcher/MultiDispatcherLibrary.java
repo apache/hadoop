@@ -16,25 +16,28 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.recovery;
+package org.apache.hadoop.yarn.event.multidispatcher;
 
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
+import java.util.HashMap;
+import java.util.Map;
 
-public class RMStateStoreAppEvent extends RMStateStoreEvent {
+import org.apache.hadoop.yarn.event.Event;
+import org.apache.hadoop.yarn.event.EventHandler;
 
-  private final ApplicationStateData appState;
 
-  public RMStateStoreAppEvent(ApplicationStateData appState) {
-    super(RMStateStoreEventType.STORE_APP);
-    this.appState = appState;
+class MultiDispatcherLibrary {
+
+  private final Map<String, EventHandler> LIB = new HashMap<>();
+
+  public EventHandler getEventHandler(Event e) {
+    EventHandler handler = LIB.get(e.getType().getClass().getCanonicalName());
+    if (handler == null) {
+      throw new Error("EventHandler for " + e.getType() + ", was not found in " + LIB.keySet());
+    }
+    return handler;
   }
 
-  public ApplicationStateData getAppState() {
-    return appState;
-  }
-
-  @Override
-  public String getLockKey() {
-    return appState.getApplicationSubmissionContext().getApplicationId().toString();
+  public void register(Class<? extends Enum> eventType, EventHandler handler) {
+    LIB.put(eventType.getCanonicalName(), handler);
   }
 }

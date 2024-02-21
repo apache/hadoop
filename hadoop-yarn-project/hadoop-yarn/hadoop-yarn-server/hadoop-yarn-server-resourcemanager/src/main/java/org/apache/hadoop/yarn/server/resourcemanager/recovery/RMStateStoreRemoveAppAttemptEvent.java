@@ -34,4 +34,9 @@ public class RMStateStoreRemoveAppAttemptEvent extends RMStateStoreEvent {
   public ApplicationAttemptId getApplicationAttemptId() {
     return applicationAttemptId;
   }
+
+  @Override
+  public String getLockKey() {
+    return applicationAttemptId.getApplicationId().toString();
+  }
 }
