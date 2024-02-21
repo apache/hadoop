@@ -83,7 +83,8 @@ public class ITestAzureBlobFileSystemChooseSAS extends AbstractAbfsIntegrationTe
    */
   @Test
   public void testBothProviderFixedTokenConfigured() throws Exception {
-    AbfsConfiguration testAbfsConfig = getConfiguration();
+    AbfsConfiguration testAbfsConfig = new AbfsConfiguration(
+        getRawConfiguration(), this.getAccountName());
     removeAnyPresetConfiguration(testAbfsConfig);
 
     // Configuring a SASTokenProvider class which provides a user delegation SAS.
@@ -115,8 +116,9 @@ public class ITestAzureBlobFileSystemChooseSAS extends AbstractAbfsIntegrationTe
    * @throws IOException
    */
   @Test
-  public void testOnlyFixedTokenConfigured() throws IOException {
-    AbfsConfiguration testAbfsConfig = getConfiguration();
+  public void testOnlyFixedTokenConfigured() throws Exception {
+    AbfsConfiguration testAbfsConfig = new AbfsConfiguration(
+        getRawConfiguration(), this.getAccountName());
     removeAnyPresetConfiguration(testAbfsConfig);
 
     // setting an account SAS token in the fixed token field.
@@ -141,7 +143,8 @@ public class ITestAzureBlobFileSystemChooseSAS extends AbstractAbfsIntegrationTe
    */
   @Test
   public void testBothProviderFixedTokenUnset() throws Exception {
-    AbfsConfiguration testAbfsConfig = getConfiguration();
+    AbfsConfiguration testAbfsConfig = new AbfsConfiguration(
+        getRawConfiguration(), this.getAccountName());
     removeAnyPresetConfiguration(testAbfsConfig);
 
     intercept(TokenAccessProviderException.class, () -> {

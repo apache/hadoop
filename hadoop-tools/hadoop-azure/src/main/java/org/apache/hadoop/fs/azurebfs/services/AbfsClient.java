@@ -311,7 +311,7 @@ public class AbfsClient implements Closeable {
     final AbfsUriQueryBuilder abfsUriQueryBuilder = new AbfsUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE, FILESYSTEM);
 
-    appendSASTokenToQuery(ROOT_PATH, "", abfsUriQueryBuilder);
+    appendSASTokenToQuery(ROOT_PATH, SASTokenProvider.CREATE_FILESYSTEM_OPERATION, abfsUriQueryBuilder);
 
     final URL url = createRequestUrl(abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = getAbfsRestOperation(
@@ -335,7 +335,7 @@ public class AbfsClient implements Closeable {
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE, FILESYSTEM);
 
-    appendSASTokenToQuery(ROOT_PATH, "", abfsUriQueryBuilder);
+    appendSASTokenToQuery(ROOT_PATH, SASTokenProvider.SET_FILESYSTEM_PROPERTIES_OPERATIONS, abfsUriQueryBuilder);
 
     final URL url = createRequestUrl(abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = getAbfsRestOperation(
@@ -377,7 +377,7 @@ public class AbfsClient implements Closeable {
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE, FILESYSTEM);
 
-    appendSASTokenToQuery(ROOT_PATH, "", abfsUriQueryBuilder);
+    appendSASTokenToQuery(ROOT_PATH, SASTokenProvider.GET_FILESYSTEM_PROPERTIES_OPERATIONS, abfsUriQueryBuilder);
 
     final URL url = createRequestUrl(abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = getAbfsRestOperation(
@@ -395,7 +395,7 @@ public class AbfsClient implements Closeable {
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE, FILESYSTEM);
 
-    appendSASTokenToQuery(ROOT_PATH, "", abfsUriQueryBuilder);
+    appendSASTokenToQuery(ROOT_PATH, SASTokenProvider.DELETE_FILESYSTEM_OPERATION, abfsUriQueryBuilder);
 
     final URL url = createRequestUrl(abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = getAbfsRestOperation(

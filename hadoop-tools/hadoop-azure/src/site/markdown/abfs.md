@@ -309,13 +309,11 @@ in different deployment situations.
 The ABFS client can be deployed in different ways, with its authentication needs
 driven by them.
 
-1. With the storage account's authentication secret in the configuration:
-"Shared Key".
+1. With the storage account's authentication secret in the configuration: "Shared Key".
 2. Using OAuth 2.0 tokens of one form or another.
-3. Deployed in-Azure with the Azure VMs providing OAuth 2.0 tokens to the application,
- "Managed Instance".
+3. Deployed in-Azure with the Azure VMs providing OAuth 2.0 tokens to the application, "Managed Instance".
 4. Using Shared Access Signature (SAS) tokens provided by a custom implementation of the SASTokenProvider interface.
-2. By directly configuring a fixed Shared Access Signature (SAS) token in the account configuration settings files.
+5. By directly configuring a fixed Shared Access Signature (SAS) token in the account configuration settings files.
 
 What can be changed is what secrets/credentials are used to authenticate the caller.
 

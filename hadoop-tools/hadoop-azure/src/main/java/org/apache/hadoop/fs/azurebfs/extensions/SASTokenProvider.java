@@ -32,6 +32,7 @@ import org.apache.hadoop.security.AccessControlException;
 @InterfaceStability.Unstable
 public interface SASTokenProvider {
 
+  // Blob Level operations
   String CHECK_ACCESS_OPERATION = "check-access";
   String CREATE_DIRECTORY_OPERATION = "create-directory";
   String CREATE_FILE_OPERATION = "create-file";
@@ -49,6 +50,13 @@ public interface SASTokenProvider {
   String SET_PERMISSION_OPERATION = "set-permission";
   String SET_PROPERTIES_OPERATION = "set-properties";
   String WRITE_OPERATION = "write";
+
+
+  // Filesystem Level Operations
+  String CREATE_FILESYSTEM_OPERATION = "create-filesystem";
+  String GET_FILESYSTEM_PROPERTIES_OPERATIONS = "get-filesystem-properties";
+  String SET_FILESYSTEM_PROPERTIES_OPERATIONS = "set-filesystem-properties";
+  String DELETE_FILESYSTEM_OPERATION = "delete-filesystem";
 
   /**
    * Initialize authorizer for Azure Blob File System.
