@@ -185,7 +185,7 @@ public class AbfsApacheHttpClient {
       if(wasClosed) {
         return;
       }
-      connMgr.connCount.decrementAndGet();
+//      connMgr.connCount.decrementAndGet();
       if(cached) {
         synchronized (connMgr.kacCount) {
           connMgr.kacCount.decrementAndGet();
@@ -374,7 +374,7 @@ public class AbfsApacheHttpClient {
      * Gives the number of connections at a moment. Increased when a new connection
      * is opened. Decreased when a connection is closed.
      */
-    private final AtomicInteger connCount = new AtomicInteger(0);
+//    private final AtomicInteger connCount = new AtomicInteger(0);
     private final AtomicInteger inTransits = new AtomicInteger(0);
 
     private int maxConn;
@@ -410,7 +410,7 @@ public class AbfsApacheHttpClient {
         final HttpContext context) throws IOException {
       long start = System.currentTimeMillis();
       super.connect(managedConn, route, connectTimeout, context);
-      connCount.incrementAndGet();
+//      connCount.incrementAndGet();
       long timeElapsed = System.currentTimeMillis() - start;
       if(context instanceof AbfsHttpClientContext) {
         ((AbfsHttpClientContext) context).connectTime = timeElapsed;
@@ -597,7 +597,8 @@ public class AbfsApacheHttpClient {
   }
 
   public int getParallelConnAtMoment() {
-    return connMgr.connCount.get();
+    return 0;
+//    return connMgr.connCount.get();
   }
 
 
