@@ -31,6 +31,7 @@ import org.apache.http.config.Registry;
 import org.apache.http.config.RegistryBuilder;
 import org.apache.http.conn.ConnectionKeepAliveStrategy;
 import org.apache.http.conn.ConnectionPoolTimeoutException;
+import org.apache.http.conn.ConnectionRequest;
 import org.apache.http.conn.ManagedHttpClientConnection;
 import org.apache.http.conn.routing.HttpRoute;
 import org.apache.http.conn.socket.ConnectionSocketFactory;
@@ -386,15 +387,9 @@ public class AbfsApacheHttpClient {
       PoolStats poolStats = getTotalStats();
 
       if(poolStats.getMax() <= (poolStats.getLeased() + poolStats.getPending() + 1)) {
-        synchronized (this) {
-          poolStats = getTotalStats();
-          if(poolStats.getMax() > (poolStats.getLeased() + poolStats.getPending() + 1)) {
-            return;
-          }
-          maxConn *= 2;
-          setDefaultMaxPerRoute(maxConn);
-          setMaxTotal(maxConn);
-        }
+        maxConn *= 2;
+        setDefaultMaxPerRoute(maxConn);
+        setMaxTotal(maxConn);
       }
     }
 
@@ -407,6 +402,14 @@ public class AbfsApacheHttpClient {
       setMaxTotal(maxConn);
       this.abfsConfiguration = abfsConfiguration;
     }
+
+    @Override
+    public ConnectionRequest requestConnection(final HttpRoute route,
+        final Object state) {
+      checkAvailablity();
+      return super.requestConnection(route, state);
+    }
+
     @Override
     public void connect(final HttpClientConnection managedConn,
         final HttpRoute route,
@@ -591,7 +594,6 @@ public class AbfsApacheHttpClient {
   }
 
   public HttpResponse execute(HttpRequestBase httpRequest, final AbfsHttpClientContext abfsHttpClientContext) throws IOException {
-    connMgr.checkAvailablity();
     RequestConfig.Builder requestConfigBuilder = RequestConfig
         .custom()
         .setConnectTimeout(30_000)
