@@ -77,6 +77,7 @@ Refer to  dev-support/docker/Dockerfile):
 * Protocol Buffers 3.21.12 (required to build native code)
   $ curl -L https://github.com/protocolbuffers/protobuf/archive/refs/tags/v3.21.12.tar.gz > protobuf-3.21.12.tar.gz
   $ tar -zxvf protobuf-3.21.12.tar.gz && cd protobuf-3.21.12
+  $ ./autogen.sh
   $ ./configure
   $ make -j$(nproc)
   $ sudo make install
@@ -435,6 +436,7 @@ you may optionally install zlib, lz4, etc.
 * Protocol Buffers 3.21.12 (required to compile native code)
   $ curl -L https://github.com/protocolbuffers/protobuf/archive/refs/tags/v3.21.12.tar.gz > protobuf-3.21.12.tar.gz
   $ tar -zxvf protobuf-3.21.12.tar.gz && cd protobuf-3.21.12
+  $ ./autogen.sh
   $ ./configure
   $ make
   $ make check
@@ -473,7 +475,7 @@ Building on CentOS 8
 * Install Protocol Buffers v3.21.12.
   $ curl -L https://github.com/protocolbuffers/protobuf/archive/refs/tags/v3.21.12.tar.gz > protobuf-3.21.12.tar.gz
   $ tar -zxvf protobuf-3.21.12.tar.gz && cd protobuf-3.21.12
-  $ autoreconf -i
+  $ ./autogen.sh
   $ ./configure --prefix=/usr/local
   $ make
   $ sudo make install
