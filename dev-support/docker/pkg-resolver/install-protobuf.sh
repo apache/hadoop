@@ -46,6 +46,7 @@ if [ "$version_to_install" == "3.21.12" ]; then
       -o /opt/protobuf.tar.gz &&
     tar xzf /opt/protobuf.tar.gz --strip-components 1 -C /opt/protobuf-src &&
     cd /opt/protobuf-src &&
+    ./autogen.sh &&
     ./configure --prefix=/opt/protobuf &&
     make "-j$(nproc)" &&
     make install &&
