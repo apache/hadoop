@@ -215,6 +215,7 @@
     <yuicompressor-maven-plugin.version>1.5.1</yuicompressor-maven-plugin.version>
     <maven-project-info-reports-plugin.version>2.9</maven-project-info-reports-plugin.version>
 
+    <woodstox-core-lgpl.version>4.4.1</woodstox-core-lgpl.version>
     <!-- the version of Hadoop declared in the version resources; can be overridden
     so that Hadoop 3.x can declare itself a 2.x artifact. -->
     <declared.hadoop.version>${hadoop.version}</declared.hadoop.version>
@@ -2171,6 +2172,20 @@
               </configuration>
             </execution>
           </executions>
+        </plugin>
+        <!--  This is a know issue fix for sonar, and the link for this fix:-->
+        <!--  https://github.com/sfeir-open-source/sonar-clover/issues/52-->
+        <plugin>
+          <groupId>org.sonarsource.scanner.maven</groupId>
+          <artifactId>sonar-maven-plugin</artifactId>
+          <version>3.9.0.2155</version>
+          <dependencies>
+            <dependency>
+              <groupId>org.codehaus.woodstox</groupId>
+              <artifactId>woodstox-core-lgpl</artifactId>
+              <version>${woodstox-core-lgpl.version}</version>
+            </dependency>
+          </dependencies>
         </plugin>
         <plugin>
           <artifactId>maven-clean-plugin</artifactId>
