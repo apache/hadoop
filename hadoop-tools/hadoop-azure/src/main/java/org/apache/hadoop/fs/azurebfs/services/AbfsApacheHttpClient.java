@@ -42,6 +42,7 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.ManagedHttpClientConnectionFactory;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
+import org.apache.http.pool.PoolStats;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.protocol.HttpRequestExecutor;
 
@@ -375,16 +376,19 @@ public class AbfsApacheHttpClient {
      * is opened. Decreased when a connection is closed.
      */
 //    private final AtomicInteger connCount = new AtomicInteger(0);
-    private final AtomicInteger inTransits = new AtomicInteger(0);
+//    private final AtomicInteger inTransits = new AtomicInteger(0);
 
     private int maxConn;
 
     public AbfsConfiguration abfsConfiguration;
 
     public void checkAvailablity() {
-      if(maxConn <= inTransits.get()) {
+      PoolStats poolStats = getTotalStats();
+
+      if(poolStats.getMax() <= (poolStats.getLeased() + poolStats.getPending() + 1)) {
         synchronized (this) {
-          if (maxConn > inTransits.get()) {
+          poolStats = getTotalStats();
+          if(poolStats.getMax() > (poolStats.getLeased() + poolStats.getPending() + 1)) {
             return;
           }
           maxConn *= 2;
@@ -423,7 +427,7 @@ public class AbfsApacheHttpClient {
         final TimeUnit timeUnit)
         throws InterruptedException, ExecutionException,
         ConnectionPoolTimeoutException {
-      inTransits.incrementAndGet();
+//      inTransits.incrementAndGet();
       try {
         HttpClientConnection connection = super.leaseConnection(future, timeout, timeUnit);
         if(connection instanceof ManagedHttpClientConnection) {
@@ -437,7 +441,7 @@ public class AbfsApacheHttpClient {
         }
         return connection;
       } catch (InterruptedException | ExecutionException | ConnectionPoolTimeoutException e) {
-        inTransits.decrementAndGet();
+//        inTransits.decrementAndGet();
         throw e;
       }
     }
@@ -459,7 +463,7 @@ public class AbfsApacheHttpClient {
 //      if(keepalive == 0 && managedConn instanceof ManagedHttpClientConnection) {
 //        abfsApacheHttpConnectionMap.remove(((ManagedHttpClientConnection)managedConn).getId());
 //      }
-      inTransits.decrementAndGet();
+//      inTransits.decrementAndGet();
       boolean toBeCached = true;
       synchronized (kacCount) {
         int kacSize = kacCount.incrementAndGet();
