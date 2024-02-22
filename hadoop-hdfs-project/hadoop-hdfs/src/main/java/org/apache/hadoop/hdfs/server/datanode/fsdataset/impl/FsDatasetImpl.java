@@ -290,7 +290,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   private long curDirScannerNotifyCount;
   private long lastDirScannerNotifyTime;
   private volatile long lastDirScannerFinishTime;
-  private boolean deleteCorruptReplicaFromDisk;
+  private volatile boolean deleteCorruptReplicaFromDisk;
 
   /**
    * An FSDataset has a directory where it loads its data files.
@@ -3859,9 +3859,14 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     return asyncDiskService.countPendingDeletions();
   }
 
-  @VisibleForTesting
+  @Override
   public void setDeleteCorruptReplicaFromDisk(boolean deleteCorruptReplicaFromDisk) {
     this.deleteCorruptReplicaFromDisk = deleteCorruptReplicaFromDisk;
+  }
+
+  @Override
+  public boolean isDeleteCorruptReplicaFromDisk() {
+    return deleteCorruptReplicaFromDisk;
   }
 }
 

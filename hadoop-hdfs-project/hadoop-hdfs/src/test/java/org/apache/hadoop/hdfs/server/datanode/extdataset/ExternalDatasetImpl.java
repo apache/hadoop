@@ -487,4 +487,14 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
   public long getPendingAsyncDeletions() {
     return 0;
   }
+
+  @Override
+  public void setDeleteCorruptReplicaFromDisk(boolean deleteCorruptReplicaFromDisk) {
+
+  }
+
+  @Override
+  public boolean isDeleteCorruptReplicaFromDisk() {
+    return false;
+  }
 }

@@ -34,6 +34,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_READ_BANDWIDTHPERSEC_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_TRANSFER_BANDWIDTHPERSEC_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_WRITE_BANDWIDTHPERSEC_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DELETE_CORRUPT_REPLICA_FROM_DISK_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DELETE_CORRUPT_REPLICA_FROM_DISK_ENABLE;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MIN_OUTLIER_DETECTION_DISKS_DEFAULT;
@@ -948,4 +950,32 @@ public class TestDataNodeReconfiguration {
     }
   }
 
+  @Test
+  public void testDeleteCorruptReplicaFromDiskParameter() throws Exception {
+    for (int i = 0; i < NUM_DATA_NODE; i++) {
+      DataNode dn = cluster.getDataNodes().get(i);
+
+      // Verify dfs.datanode.delete.corrupt.replica.from.disk.enable
+      // Try invalid values.
+      LambdaTestUtils.intercept(ReconfigurationException.class,
+          "Could not change property " +
+              "dfs.datanode.delete.corrupt.replica.from.disk.enable from 'true' to 'text'",
+          () -> dn.reconfigureProperty(DFS_DATANODE_DELETE_CORRUPT_REPLICA_FROM_DISK_ENABLE,
+              "text"));
+
+      // Set default value.
+      dn.reconfigureProperty(DFS_DATANODE_DELETE_CORRUPT_REPLICA_FROM_DISK_ENABLE, null);
+      assertEquals(dn.getConf().getBoolean(DFS_DATANODE_DELETE_CORRUPT_REPLICA_FROM_DISK_ENABLE,
+              DFS_DATANODE_DELETE_CORRUPT_REPLICA_FROM_DISK_DEFAULT),
+          dn.getFSDataset().isDeleteCorruptReplicaFromDisk());
+
+      // Set dfs.datanode.delete.corrupt.replica.from.disk.enable to false.
+      dn.reconfigureProperty(DFS_DATANODE_DELETE_CORRUPT_REPLICA_FROM_DISK_ENABLE, "false");
+      assertFalse(dn.getFSDataset().isDeleteCorruptReplicaFromDisk());
+
+      // Set dfs.datanode.delete.corrupt.replica.from.disk.enable to true.
+      dn.reconfigureProperty(DFS_DATANODE_DELETE_CORRUPT_REPLICA_FROM_DISK_ENABLE, "true");
+      assertTrue(dn.getFSDataset().isDeleteCorruptReplicaFromDisk());
+    }
+  }
 }

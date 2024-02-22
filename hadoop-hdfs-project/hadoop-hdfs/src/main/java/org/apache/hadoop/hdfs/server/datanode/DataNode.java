@@ -40,6 +40,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_TRANSFER_BA
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_TRANSFER_BANDWIDTHPERSEC_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_WRITE_BANDWIDTHPERSEC_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_WRITE_BANDWIDTHPERSEC_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DELETE_CORRUPT_REPLICA_FROM_DISK_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DELETE_CORRUPT_REPLICA_FROM_DISK_ENABLE;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DNS_INTERFACE_KEY;
@@ -374,7 +376,8 @@ public class DataNode extends ReconfigurableBase
               DFS_DATANODE_DATA_TRANSFER_BANDWIDTHPERSEC_KEY,
               DFS_DATANODE_DATA_WRITE_BANDWIDTHPERSEC_KEY,
               DFS_DATANODE_DATA_READ_BANDWIDTHPERSEC_KEY,
-              DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_KEY));
+              DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_KEY,
+              DFS_DATANODE_DELETE_CORRUPT_REPLICA_FROM_DISK_ENABLE));
 
   public static final String METRICS_LOG_NAME = "DataNodeMetricsLog";
 
@@ -740,6 +743,8 @@ public class DataNode extends ReconfigurableBase
       return reconfDiskBalancerParameters(property, newVal);
     case DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_KEY:
       return reconfSlowIoWarningThresholdParameters(property, newVal);
+    case DFS_DATANODE_DELETE_CORRUPT_REPLICA_FROM_DISK_ENABLE:
+      return reconfDeleteCorruptReplicaFromDiskParameter(property, newVal);
     default:
       break;
     }
@@ -1073,6 +1078,26 @@ public class DataNode extends ReconfigurableBase
       result = Long.toString(slowIoWarningThreshold);
       dnConf.setDatanodeSlowIoWarningThresholdMs(slowIoWarningThreshold);
       LOG.info("RECONFIGURE* changed {} to {}", property, newVal);
+      return result;
+    } catch (IllegalArgumentException e) {
+      throw new ReconfigurationException(property, newVal, getConf().get(property), e);
+    }
+  }
+
+  private String reconfDeleteCorruptReplicaFromDiskParameter(String property, String newVal)
+      throws ReconfigurationException {
+    String result;
+    try {
+      LOG.info("Reconfiguring {} to {}", property, newVal);
+      if (newVal != null && !newVal.equalsIgnoreCase("true")
+          && !newVal.equalsIgnoreCase("false")) {
+        throw new IllegalArgumentException("Not a valid Boolean value for " + property);
+      }
+      boolean enable = (newVal == null ? DFS_DATANODE_DELETE_CORRUPT_REPLICA_FROM_DISK_DEFAULT :
+          Boolean.parseBoolean(newVal));
+      data.setDeleteCorruptReplicaFromDisk(enable);
+      result = Boolean.toString(enable);
+      LOG.info("RECONFIGURE* changed {} to {}", property, result);
       return result;
     } catch (IllegalArgumentException e) {
       throw new ReconfigurationException(property, newVal, getConf().get(property), e);
