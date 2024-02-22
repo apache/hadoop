@@ -57,11 +57,11 @@ public class AbfsApacheHttpClient {
 
   public static class AbfsHttpClientContext extends HttpClientContext {
     Long connectTime;
-    Long readTime;
-    Long sendTime;
+    long readTime;
+    long sendTime;
     HttpClientConnection httpClientConnection;
-    Long expect100HeaderSendTime = 0L;
-    Long expect100ResponseTime;
+    long expect100HeaderSendTime = 0L;
+    long expect100ResponseTime;
 
     long keepAliveTime;
 
@@ -228,11 +228,11 @@ public class AbfsApacheHttpClient {
 
     @Override
     public boolean isResponseAvailable(final int timeout) throws IOException {
-      Long start = System.currentTimeMillis();
+//      Long start = System.currentTimeMillis();
       boolean val = httpClientConnection.isResponseAvailable(timeout);
-      if(abfsHttpClientContext != null) {
-        abfsHttpClientContext.expect100ResponseTime += (System.currentTimeMillis() - start);
-      }
+//      if(abfsHttpClientContext != null) {
+//        abfsHttpClientContext.expect100ResponseTime += (System.currentTimeMillis() - start);
+//      }
       return val;
     }
 
@@ -240,12 +240,12 @@ public class AbfsApacheHttpClient {
     public void sendRequestHeader(final HttpRequest request)
         throws HttpException, IOException {
       count++;
-      long start = System.currentTimeMillis();
+//      long start = System.currentTimeMillis();
       httpClientConnection.sendRequestHeader(request);
-      long elapsed = System.currentTimeMillis() - start;
+//      long elapsed = System.currentTimeMillis() - start;
       if(request instanceof HttpEntityEnclosingRequest && ((HttpEntityEnclosingRequest) request).expectContinue()) {
         if(abfsHttpClientContext != null && abfsHttpClientContext.expect100HeaderSendTime == 0L) {
-          abfsHttpClientContext.expect100HeaderSendTime = elapsed;
+//          abfsHttpClientContext.expect100HeaderSendTime = elapsed;
         }
       }
     }
@@ -259,11 +259,11 @@ public class AbfsApacheHttpClient {
     @Override
     public HttpResponse receiveResponseHeader()
         throws HttpException, IOException {
-      long start = System.currentTimeMillis();
+//      long start = System.currentTimeMillis();
       HttpResponse response = httpClientConnection.receiveResponseHeader();
-      if(abfsHttpClientContext != null) {
-        abfsHttpClientContext.expect100ResponseTime += System.currentTimeMillis() - start;
-      }
+//      if(abfsHttpClientContext != null) {
+//        abfsHttpClientContext.expect100ResponseTime += System.currentTimeMillis() - start;
+//      }
       return response;
     }
 
@@ -529,12 +529,12 @@ public class AbfsApacheHttpClient {
     protected HttpResponse doSendRequest(final HttpRequest request,
         final HttpClientConnection conn,
         final HttpContext context) throws IOException, HttpException {
-      long start = System.currentTimeMillis();
+//      long start = System.currentTimeMillis();
       final HttpResponse res = super.doSendRequest(request, conn, context);
-      long elapsed = System.currentTimeMillis() - start;
+//      long elapsed = System.currentTimeMillis() - start;
       if(context instanceof AbfsHttpClientContext) {
         ((AbfsHttpClientContext) context).httpClientConnection = conn;
-        ((AbfsHttpClientContext) context).sendTime = elapsed;
+//        ((AbfsHttpClientContext) context).sendTime = elapsed;
       }
       if(request != null && request.containsHeader(EXPECT) && res != null && res.getStatusLine().getStatusCode() != 200) {
         throw new AbfsApacheHttpExpect100Exception("Server rejected operation", res);
@@ -546,11 +546,11 @@ public class AbfsApacheHttpClient {
     protected HttpResponse doReceiveResponse(final HttpRequest request,
         final HttpClientConnection conn,
         final HttpContext context) throws HttpException, IOException {
-      long start = System.currentTimeMillis();
+//      long start = System.currentTimeMillis();
       final HttpResponse res = super.doReceiveResponse(request, conn, context);
-      long elapsed = System.currentTimeMillis() - start;
+//      long elapsed = System.currentTimeMillis() - start;
       if(context instanceof AbfsHttpClientContext) {
-        ((AbfsHttpClientContext) context).readTime = elapsed;
+//        ((AbfsHttpClientContext) context).readTime = elapsed;
       }
       return res;
     }
