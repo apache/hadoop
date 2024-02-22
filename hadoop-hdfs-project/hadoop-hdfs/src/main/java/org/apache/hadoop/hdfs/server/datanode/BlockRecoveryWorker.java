@@ -450,7 +450,8 @@ public class BlockRecoveryWorker {
       } else {
         safeLength = 0;
         LOG.warn("Block recovery: More than {} datanodes do not have the replica of block {}." +
-            " Will remove this block.", dnNotHaveReplicaCnt, block);
+            " {} datanodes have zero-length replica. Will remove this block.",
+            dnNotHaveReplicaCnt, block, zeroLenReplicaCnt);
       }
 
       LOG.debug("Recovering block {}, length={}, safeLength={}, syncList={}", block,
