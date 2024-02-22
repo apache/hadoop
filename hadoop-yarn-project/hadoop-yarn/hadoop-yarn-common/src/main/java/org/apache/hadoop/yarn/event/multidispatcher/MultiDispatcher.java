@@ -40,7 +40,7 @@ import org.apache.hadoop.yarn.util.MonotonicClock;
 
 /**
  * Dispatches {@link Event}s in a parallel thread.
- * The {@link this#getEventHandler()} method can be used to post an event to the dispatcher.
+ * The {@link Dispatcher#getEventHandler()} method can be used to post an event to the dispatcher.
  * The posted event will be added to the event queue what is polled by many thread,
  * based on the config values in the {@link MultiDispatcherConfig}.
  * The posted events can be parallel executed,
