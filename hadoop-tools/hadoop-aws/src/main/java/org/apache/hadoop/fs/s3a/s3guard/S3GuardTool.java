@@ -422,8 +422,14 @@ public abstract class S3GuardTool extends Configured implements Tool,
       CommandFormat commands = getCommandFormat();
       URI fsURI = toUri(s3Path);
 
-      S3AFileSystem fs = bindFilesystem(
-          FileSystem.newInstance(fsURI, getConf()));
+      S3AFileSystem fs;
+      try {
+        fs = bindFilesystem(FileSystem.newInstance(fsURI, getConf()));
+      } catch (NoClassDefFoundError e) {
+        println(out, "Failed to instantiate S3A filesystem due to missing class: %s", e);
+        println(out, "Make sure the AWS v2 SDK is on the classpath");
+        throw e;
+      }
       Configuration conf = fs.getConf();
       URI fsUri = fs.getUri();
       println(out, "Filesystem %s", fsUri);

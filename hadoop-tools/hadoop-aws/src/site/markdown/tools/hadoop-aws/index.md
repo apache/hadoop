@@ -53,8 +53,46 @@ full details.
 
 ## <a name="overview"></a> Overview
 
-Apache Hadoop's `hadoop-aws` module provides support for AWS integration.
-applications to easily use this support.
+Apache Hadoop's `hadoop-aws` module provides support for AWS integration,
+primarily the s3a open source connector to Amazon S3 Storage, including
+Amazon S3 Express One zone storage as well as third-party stores with S3
+compatibility.
+
+## <a name="installation"></a> Installation
+
+### <a name="SDK download"></a> SDK Download
+
+This release uses the AWS SDK for Java 2.0
+
+Unless using a hadoop release with the AWS SDK `bundle.jar` JAR included
+in the binary distribution, the library MUST be downloaded and installed
+into the hadoop distribution.
+
+The exact version of the SDK to be used is listed in the file:
+```
+LICENSE-binary
+```
+The [mvn repository](https://mvnrepository.com/)
+site will list it as a "Compile Dependency" of the
+[hadoop-aws](https://mvnrepository.com/artifact/org.apache.hadoop/hadoop-aws) artifact.
+
+AWS SDK releases can be downloaded from github at [AWS SDK for Java 2.0](https://github.com/aws/aws-sdk-java-v2)
+
+Or from the [Maven central repository](https://repo1.maven.org/maven2/software/amazon/awssdk/bundle/).
+
+Download the release and place it in the directory `share/hadoop/tools/lib`
+of the hadoop distribution.
+
+* Using an earlier SDK than that this SDK was compiled and tested against
+  will not work.
+* Using a later SDK *should* work, but there are no guarantees.
+* The V1 SDK will not work.
+
+Any project declaring a dependency on `hadoop-aws` in their Maven/Ivy/SBT/Gradle
+build will automatically get the specific version of the AWS SDK which this
+module was compiled against.
+
+### <a name="inclusion-on-classpath"></a> Inclusion on classpath
 
 To include the S3A client in Apache Hadoop's default classpath:
 

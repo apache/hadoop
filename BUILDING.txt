@@ -146,7 +146,7 @@ Maven build goals:
  * Run clover                : mvn test -Pclover
  * Run Rat                   : mvn apache-rat:check
  * Build javadocs            : mvn javadoc:javadoc
- * Build distribution        : mvn package [-Pdist][-Pdocs][-Psrc][-Pnative][-Dtar][-Preleasedocs][-Pyarn-ui]
+ * Build distribution        : mvn package [-Pdist][-Pdocs][-Psrc][-Pnative][-Dtar][-Preleasedocs][-Pyarn-ui][-Pawssdk]
  * Change Hadoop version     : mvn versions:set -DnewVersion=NEWVERSION
 
  Build options:
@@ -159,6 +159,7 @@ Maven build goals:
   * Use -Pyarn-ui to build YARN UI v2. (Requires Internet connectivity)
   * Use -DskipShade to disable client jar shading to speed up build times (in
     development environments only, not to build release artifacts)
+  * Use -Pawssdk to include the AWS V2 SDK in the release distribution
 
  YARN Application Timeline Service V2 build options:
 
@@ -370,6 +371,13 @@ Create binary distribution without native code and without Javadocs:
 Create binary distribution with native code:
 
   $ mvn package -Pdist,native -DskipTests -Dtar
+
+Create binary distribution with AWS SDK:
+
+  $ mvn package -Pdist,awssdk -DskipTests -Dtar
+
+This ensures that the hadoop-aws sdk has all its dependencies,
+but does approximately double the size of the tar file.
 
 Create source distribution:
 
