@@ -283,17 +283,3 @@ public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
     assertEquals(0, abfsInputStream.getBCursor());
   }
 }
-
-//
-//
-//<<<<<<< HEAD
-//private AzureBlobFileSystem getFileSystem(boolean optimizeFooterRead,
-//    int fileSize) throws IOException {
-//final AzureBlobFileSystem fs = getFileSystem();
-//    getAbfsStore(fs).getAbfsConfiguration()
-//    .setOptimizeFooterRead(optimizeFooterRead);
-//    getAbfsStore(fs).getAbfsConfiguration()
-//    .setIsChecksumValidationEnabled(true);
-//    if (fileSize <= getAbfsStore(fs).getAbfsConfiguration()
-//    .getReadBufferSize()) {
-//    =======
