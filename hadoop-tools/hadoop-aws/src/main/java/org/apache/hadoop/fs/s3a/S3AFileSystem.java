@@ -592,10 +592,17 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
       s3aInternals = createS3AInternals();
 
-      s3ObjectStorageClassFilter = Optional.of(conf.getTrimmed(READ_RESTORED_GLACIER_OBJECTS,
-              DEFAULT_READ_RESTORED_GLACIER_OBJECTS))
-          .map(String::toUpperCase)
-          .map(S3ObjectStorageClassFilter::valueOf).get();
+      try {
+        s3ObjectStorageClassFilter = Optional.of(conf.getTrimmed(READ_RESTORED_GLACIER_OBJECTS,
+                DEFAULT_READ_RESTORED_GLACIER_OBJECTS))
+            .map(String::toUpperCase)
+            .map(S3ObjectStorageClassFilter::valueOf).get();
+      } catch (IllegalArgumentException e) {
+        LOG.warn("Invalid value for the config {} is set. Valid values are:" +
+                "READ_ALL, SKIP_ALL_GLACIER, READ_RESTORED_GLACIER_OBJECTS. Defaulting to READ_ALL",
+            READ_RESTORED_GLACIER_OBJECTS);
+        s3ObjectStorageClassFilter = S3ObjectStorageClassFilter.READ_ALL;
+      }
 
       // look for encryption data
       // DT Bindings may override this
