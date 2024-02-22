@@ -146,17 +146,11 @@ public class DefaultS3ClientFactory extends Configured
         .thresholdInBytes(parameters.getMultiPartThreshold())
         .build();
 
-    S3AsyncClientBuilder s3AsyncClientBuilder =
-        configureClientBuilder(S3AsyncClient.builder(), parameters, conf, bucket).httpClientBuilder(
-            httpClientBuilder);
-
-    if (!parameters.isClientSideEncryptionEnabled()) {
-      s3AsyncClientBuilder
-          .multipartConfiguration(multipartConfiguration)
-          .multipartEnabled(parameters.isMultipartCopy());
-    }
-
-    return s3AsyncClientBuilder.build();
+    return configureClientBuilder(S3AsyncClient.builder(), parameters, conf, bucket)
+        .httpClientBuilder(httpClientBuilder)
+        .multipartConfiguration(multipartConfiguration)
+        .multipartEnabled(parameters.isMultipartCopy())
+        .build();
   }
 
   @Override
