@@ -70,8 +70,11 @@ public class AbfsAHCHttpOperation extends HttpOperation {
     abfsApacheHttpClient = client;
   }
 
-  static void removeClient(final String clientId) {
-    abfsApacheHttpClientMap.remove(clientId);
+  static void removeClient(final String clientId) throws IOException {
+    AbfsApacheHttpClient client = abfsApacheHttpClientMap.remove(clientId);
+    if(client != null) {
+      client.close();
+    }
   }
 
   private AbfsAHCHttpOperation(final URL url, final String method, final List<AbfsHttpHeader> requestHeaders,

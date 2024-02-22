@@ -37,6 +37,7 @@ import org.apache.http.conn.routing.HttpRoute;
 import org.apache.http.conn.socket.ConnectionSocketFactory;
 import org.apache.http.conn.socket.PlainConnectionSocketFactory;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
+import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.DefaultClientConnectionReuseStrategy;
 import org.apache.http.impl.client.DefaultConnectionKeepAliveStrategy;
 import org.apache.http.impl.client.HttpClientBuilder;
@@ -53,6 +54,15 @@ import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.E
 public class AbfsApacheHttpClient {
   public static final Stack<Integer> connectionReuseCount = new Stack<>();
   public static final Stack<Integer> kacSizeStack = new Stack<>();
+
+  public void close() throws IOException {
+    if(httpClient != null) {
+      httpClient.close();
+    }
+    if(connMgr != null) {
+      connMgr.close();
+    }
+  }
 
 
   public static class AbfsHttpClientContext extends HttpClientContext {
@@ -556,7 +566,7 @@ public class AbfsApacheHttpClient {
     }
   }
 
-  final HttpClient httpClient;
+  final CloseableHttpClient httpClient;
 
   private final AbfsConnMgr connMgr;
 
