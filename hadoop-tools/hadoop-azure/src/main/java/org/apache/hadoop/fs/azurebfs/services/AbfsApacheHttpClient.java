@@ -467,6 +467,10 @@ public class AbfsApacheHttpClient {
 //        abfsApacheHttpConnectionMap.remove(((ManagedHttpClientConnection)managedConn).getId());
 //      }
 //      inTransits.decrementAndGet();
+      if(keepalive == 0) {
+        super.releaseConnection(managedConn, state, keepalive, timeUnit);
+        return;
+      }
       boolean toBeCached = true;
       synchronized (kacCount) {
         int kacSize = kacCount.incrementAndGet();
@@ -572,7 +576,7 @@ public class AbfsApacheHttpClient {
         .disableContentCompression()
         .disableRedirectHandling()
         .disableAutomaticRetries()
-        .evictIdleConnections(5000L, TimeUnit.MILLISECONDS)
+//        .evictIdleConnections(5000L, TimeUnit.MILLISECONDS)
         .setUserAgent(""); // SDK will set the user agent header in the pipeline. Don't let Apache waste time
     httpClient = builder.build();
   }
