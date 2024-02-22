@@ -370,6 +370,7 @@ public class ITestS3AConfiguration {
 
     conf = new Configuration();
     skipIfCrossRegionClient(conf);
+    unsetEncryption(conf);
     conf.set(Constants.PATH_STYLE_ACCESS, Boolean.toString(true));
     assertTrue(conf.getBoolean(Constants.PATH_STYLE_ACCESS, false));
 
@@ -409,6 +410,7 @@ public class ITestS3AConfiguration {
   public void testDefaultUserAgent() throws Exception {
     conf = new Configuration();
     skipIfCrossRegionClient(conf);
+    unsetEncryption(conf);
     fs = S3ATestUtils.createTestFileSystem(conf);
     assertNotNull(fs);
     S3Client s3 = getS3Client("User Agent");
@@ -423,6 +425,7 @@ public class ITestS3AConfiguration {
   public void testCustomUserAgent() throws Exception {
     conf = new Configuration();
     skipIfCrossRegionClient(conf);
+    unsetEncryption(conf);
     conf.set(Constants.USER_AGENT_PREFIX, "MyApp");
     fs = S3ATestUtils.createTestFileSystem(conf);
     assertNotNull(fs);
@@ -437,6 +440,7 @@ public class ITestS3AConfiguration {
   @Test
   public void testRequestTimeout() throws Exception {
     conf = new Configuration();
+    unsetEncryption(conf);
     // remove the safety check on minimum durations.
     AWSClientConfig.setMinimumOperationDuration(Duration.ZERO);
     try {
@@ -588,6 +592,12 @@ public class ITestS3AConfiguration {
 
     Assertions.assertThat(CustomSTSSigner.isSTSSignerCalled())
         .describedAs("Custom STS signer not called").isTrue();
+  }
+
+  private void unsetEncryption(Configuration conf) {
+    removeBaseAndBucketOverrides(conf, S3_ENCRYPTION_ALGORITHM);
+    conf.set(Constants.S3_ENCRYPTION_ALGORITHM,
+        S3AEncryptionMethods.NONE.getMethod());
   }
 
   public static final class CustomS3Signer implements Signer {
