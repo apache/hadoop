@@ -24,20 +24,22 @@ import java.util.Map;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
 
-
+/**
+ * Stores {@link EventHandler} for {@link Event} in {@link MultiDispatcher}
+ */
 class MultiDispatcherLibrary {
 
-  private final Map<String, EventHandler> LIB = new HashMap<>();
+  private final Map<String, EventHandler> lib = new HashMap<>();
 
   public EventHandler getEventHandler(Event e) {
-    EventHandler handler = LIB.get(e.getType().getClass().getCanonicalName());
+    EventHandler handler = lib.get(e.getType().getClass().getCanonicalName());
     if (handler == null) {
-      throw new Error("EventHandler for " + e.getType() + ", was not found in " + LIB.keySet());
+      throw new Error("EventHandler for " + e.getType() + ", was not found in " + lib.keySet());
     }
     return handler;
   }
 
   public void register(Class<? extends Enum> eventType, EventHandler handler) {
-    LIB.put(eventType.getCanonicalName(), handler);
+    lib.put(eventType.getCanonicalName(), handler);
   }
 }

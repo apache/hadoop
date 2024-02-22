@@ -77,13 +77,8 @@ public class MultiDispatcher extends AbstractService implements Dispatcher {
   @Override
   protected void serviceInit(Configuration conf) throws Exception{
     super.serviceInit(conf);
-    this.config = new MultiDispatcherConfig(getConfig(), this.dispatcherName);
-    this.eventQueue = new LinkedBlockingQueue<>(this.config.getQueueSize());
-  }
-
-  @Override
-  protected void serviceStart() throws Exception {
-    super.serviceStart();
+    this.config = new MultiDispatcherConfig(getConfig(), dispatcherName);
+    this.eventQueue = new LinkedBlockingQueue<>(config.getQueueSize());
     createWorkerPool();
     createMonitorThread();
     DefaultMetricsSystem.instance().register(
@@ -134,8 +129,8 @@ public class MultiDispatcher extends AbstractService implements Dispatcher {
       try {
         handler.handle(event);
       } finally {
-        metrics.updateRate(event.getType(), clock.getTime() - start);
         locks.unLock(event);
+        metrics.updateRate(event.getType(), clock.getTime() - start);
         metrics.removeEvent(event.getType());
       }
     };
