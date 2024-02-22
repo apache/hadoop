@@ -105,6 +105,17 @@ public class ITestS3AReadRestoredGlacierObjects extends AbstractS3ATestBase {
   }
 
   @Test
+  public void testConfigWithInvalidValue() throws Throwable {
+    Assume.assumeTrue(type == Type.GLACIER_AND_DEEP_ARCHIVE);
+    String invalidValue = "ABCDE";
+    try (FileSystem fs = createFiles(invalidValue)) {
+      Assertions.assertThat(
+              fs.listStatus(methodPath()))
+          .describedAs("FileStatus List of %s", methodPath()).isNotEmpty();
+    }
+  }
+
+  @Test
   public void testIgnoreGlacierObject() throws Throwable {
     Assume.assumeTrue(type == Type.GLACIER_AND_DEEP_ARCHIVE);
     try (FileSystem fs = createFiles(S3ObjectStorageClassFilter.SKIP_ALL_GLACIER.name())) {
