@@ -172,4 +172,12 @@ public class TestErrorTranslation extends AbstractHadoopTestBase {
           sdkException("top", sdkException("middle", NoSuchKeyException.builder().build())));
     });
   }
+
+  @Test
+  public void testEncryptionClientExceptionExtractionWithRTE() throws Throwable {
+    intercept(S3EncryptionClientException.class, () -> {
+      throw maybeExtractSdkException(new S3EncryptionClientException("top",
+          new UnsupportedOperationException()));
+    });
+  }
 }
