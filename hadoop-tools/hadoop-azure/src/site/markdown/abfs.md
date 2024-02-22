@@ -941,7 +941,7 @@ string retrieved from a GetFileStatus request to the server.
 implementing EncryptionContextProvider.
 
 ### <a name="serverconfigoptions"></a> Server Options
-When the config `fs.azure.io.read.tolerate.concurrent.append` is made true, the
+`fs.azure.io.read.tolerate.concurrent.append`: When the config is made true, the
 If-Match header sent to the server for read calls will be set as * otherwise the
 same will be set with ETag. This is basically a mechanism in place to handle the
 reads with optimistic concurrency.
@@ -949,13 +949,22 @@ Please refer the following links for further information.
 1. https://docs.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/read
 2. https://azure.microsoft.com/de-de/blog/managing-concurrency-in-microsoft-azure-storage-2/
 
-listStatus API fetches the FileStatus information from server in a page by page
-manner. The config `fs.azure.list.max.results` used to set the maxResults URI
- param which sets the pagesize(maximum results per call). The value should
- be >  0. By default this will be 5000. Server has a maximum value for this
- parameter as 5000. So even if the config is above 5000 the response will only
+`fs.azure.list.max.results`: listStatus API fetches the FileStatus information
+from server in a page by page manner. The config is used to set the maxResults URI
+param which sets the page size(maximum results per call). The value should
+be >  0. By default, this will be 5000. Server has a maximum value for this
+parameter as 5000. So even if the config is above 5000 the response will only
 contain 5000 entries. Please refer the following link for further information.
 https://docs.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/list
+
+`fs.azure.enable.checksum.validation`: When the config is set to true, Content-MD5
+headers are sent to the server for read and append calls. This provides a way
+to verify the integrity of data during transport. This will have performance
+impact due to MD5 Hash re-computation on Client and Server side. Please refer
+to the Azure documentation for
+[Read](https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/read)
+and [Append](https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/update)
+APIs for more details
 
 ### <a name="throttlingconfigoptions"></a> Throttling Options
 ABFS driver has the capability to throttle read and write operations to achieve

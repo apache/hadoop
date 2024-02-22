@@ -275,6 +275,9 @@ public final class ConfigurationKeys {
   /** Add extra resilience to rename failures, at the expense of performance. */
   public static final String FS_AZURE_ABFS_RENAME_RESILIENCE = "fs.azure.enable.rename.resilience";
 
+  /** Add extra layer of verification of the integrity of the request content during transport: {@value}. */
+  public static final String FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION = "fs.azure.enable.checksum.validation";
+
   public static String accountProperty(String property, String account) {
     return property + "." + account;
   }
