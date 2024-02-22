@@ -25,6 +25,7 @@ import org.apache.http.Header;
 import org.apache.http.HttpClientConnection;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
 import org.apache.http.client.methods.HttpGet;
@@ -183,9 +184,9 @@ public class AbfsAHCHttpOperation extends HttpOperation {
         sendRequestTimeMs = abfsHttpClientContext.sendTime;
         recvResponseTimeMs = abfsHttpClientContext.readTime;
 
-        MetricPercentile.addSendDataPoint(abfsRestOperationType, sendRequestTimeMs);
-        MetricPercentile.addRcvDataPoint(abfsRestOperationType, recvResponseTimeMs);
-        MetricPercentile.addTotalDataPoint(abfsRestOperationType, sendRequestTimeMs + recvResponseTimeMs);
+//        MetricPercentile.addSendDataPoint(abfsRestOperationType, sendRequestTimeMs);
+//        MetricPercentile.addRcvDataPoint(abfsRestOperationType, recvResponseTimeMs);
+//        MetricPercentile.addTotalDataPoint(abfsRestOperationType, sendRequestTimeMs + recvResponseTimeMs);
 
       } catch (AbfsApacheHttpExpect100Exception ex) {
         LOG.debug(
@@ -226,6 +227,9 @@ public class AbfsAHCHttpOperation extends HttpOperation {
       readLatencyCaptureInfo.status = statusCode;
       READ_INFO_STACK.push(readLatencyCaptureInfo);
     } finally {
+      if(httpResponse != null && httpResponse instanceof CloseableHttpResponse) {
+        ((CloseableHttpResponse) httpResponse).close();
+      }
 //      connThatCantBeClosed.remove(abfsHttpClientContext.httpClientConnection);
 //      if(isExpect100Error || !toBeClosedLater) {
 //        return;
