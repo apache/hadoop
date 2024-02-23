@@ -296,8 +296,7 @@ public class CopyMapper extends Mapper<Text, CopyListingFileStatus, Text, Text> 
   }
 
   private void createTargetDirsWithRetry(String description, Path target,
-      Context context, FileStatus sourceStatus, FileSystem sourceFS)
-      throws IOException {
+      Context context, FileStatus sourceStatus, FileSystem sourceFS) throws IOException {
     try {
       new RetriableDirectoryCreateCommand(description).execute(target, context,
           sourceStatus, sourceFS);

@@ -74,6 +74,7 @@ import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.WithErasureCoding;
 import org.apache.hadoop.hdfs.DFSOpsCountStatistics.OpType;
 import org.apache.hadoop.hdfs.client.DfsPathCapabilities;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
@@ -146,7 +147,8 @@ import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapa
 @InterfaceAudience.LimitedPrivate({ "MapReduce", "HBase" })
 @InterfaceStability.Unstable
 public class DistributedFileSystem extends FileSystem
-    implements KeyProviderTokenIssuer, BatchListingOperations, LeaseRecoverable, SafeMode {
+    implements KeyProviderTokenIssuer, BatchListingOperations, LeaseRecoverable, SafeMode,
+    WithErasureCoding {
   private Path workingDir;
   private URI uri;
 
@@ -374,6 +376,27 @@ public class DistributedFileSystem extends FileSystem
     HdfsPathHandle id = (HdfsPathHandle) fd;
     final DFSInputStream dfsis = dfs.open(id, bufferSize, verifyChecksum);
     return dfs.createWrappedInputStream(dfsis);
+  }
+
+  @Override
+  public String getErasureCodingPolicyName(FileStatus fileStatus) {
+    return ((HdfsFileStatus) fileStatus).getErasureCodingPolicy().getName();
+  }
+
+  @Override
+  public FSDataOutputStreamBuilder<FSDataOutputStream, ?> createECFile(
+      Path path, FsPermission permission, boolean overwrite, int bufferSize,
+      short replication, long blockSize, Progressable prog,
+      ChecksumOpt checksumOpt, String ecPolicy) {
+    HdfsDataOutputStreamBuilder builder =
+        createFile(path).permission(permission).create().overwrite(true)
+            .bufferSize(bufferSize).replication(replication)
+            .blockSize(blockSize).progress(prog).recursive()
+            .ecPolicyName(ecPolicy);
+    if (checksumOpt != null) {
+      builder.checksumOpt(checksumOpt);
+    }
+    return builder;
   }
 
   /**

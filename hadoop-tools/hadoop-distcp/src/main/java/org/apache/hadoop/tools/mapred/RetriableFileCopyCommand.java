@@ -21,23 +21,22 @@ package org.apache.hadoop.tools.mapred;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.lang.reflect.InvocationTargetException;
 import java.util.EnumSet;
 
 import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
-import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.tools.DistCpOptions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
+import org.apache.hadoop.fs.WithErasureCoding;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FSDataOutputStreamBuilder;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -131,7 +130,7 @@ public class RetriableFileCopyCommand extends RetriableCommand {
   private long doCopy(CopyListingFileStatus source, Path target,
       Mapper.Context context, EnumSet<FileAttribute> fileAttributes,
       FileStatus sourceStatus)
-      throws Exception {
+      throws IOException {
     LOG.info("Copying {} to {}", source.getPath(), target);
 
     final boolean toAppend = action == FileAction.APPEND;
@@ -198,8 +197,7 @@ public class RetriableFileCopyCommand extends RetriableCommand {
       CopyListingFileStatus source, long sourceOffset, Mapper.Context context,
       EnumSet<FileAttribute> fileAttributes, final FileChecksum sourceChecksum,
       FileStatus sourceStatus,FileSystem sourceFS)
-      throws IOException, NoSuchMethodException, IllegalAccessException,
-      InvocationTargetException {
+      throws IOException {
     FsPermission permission = FsPermission.getFileDefault().applyUMask(
         FsPermission.getUMask(targetFS.getConf()));
     int copyBufferSize = context.getConfiguration().getInt(
@@ -209,12 +207,12 @@ public class RetriableFileCopyCommand extends RetriableCommand {
         .contains(DistCpOptions.FileAttribute.ERASURECODINGPOLICY);
 
     ErasureCodingPolicy ecPolicy = null;
-    if (preserveEC && sourceStatus.isErasureCoded()) {
-      if (sourceStatus instanceof HdfsFileStatus){
-        ecPolicy = ((HdfsFileStatus) sourceStatus).getErasureCodingPolicy();
-      } else {
-        String ecPolicyName = (String) getErasureCodingPolicyMethod(sourceFS)
-            .invoke(sourceFS,sourceStatus);
+    if (preserveEC && sourceStatus.isErasureCoded()
+        && sourceFS instanceof WithErasureCoding
+        && targetFS instanceof WithErasureCoding) {
+      String ecPolicyName =
+          ((WithErasureCoding) sourceFS).getErasureCodingPolicyName(sourceStatus);
+      if (ecPolicyName != null) {
         ecPolicy = SystemErasureCodingPolicies.getByName(ecPolicyName);
       }
     }
@@ -234,22 +232,11 @@ public class RetriableFileCopyCommand extends RetriableCommand {
             EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE), copyBufferSize,
             repl, blockSize, context, checksumOpt);
       } else {
-        if (targetFS instanceof DistributedFileSystem) {
-          DistributedFileSystem dfs = (DistributedFileSystem) targetFS;
-          DistributedFileSystem.HdfsDataOutputStreamBuilder builder =
-              dfs.createFile(targetPath).permission(permission).create()
-                  .overwrite(true).bufferSize(copyBufferSize).replication(repl)
-                  .blockSize(blockSize).progress(context).recursive()
-                  .ecPolicyName(ecPolicy.getName());
-          if (checksumOpt != null) {
-            builder.checksumOpt(checksumOpt);
-          }
+          FSDataOutputStreamBuilder<FSDataOutputStream, ?> builder =
+              ((WithErasureCoding) targetFS).createECFile(targetPath, permission,
+                  true, copyBufferSize, repl, blockSize, context, checksumOpt,
+                  ecPolicy.getName());
           out = builder.build();
-        } else {
-          out = (FSDataOutputStream) createECOutputStreamMethod(targetFS).invoke(
-              targetFS, targetPath, permission, copyBufferSize, repl, blockSize,
-              checksumOpt, ecPolicy.getName());
-        }
       }
       outStream = new BufferedOutputStream(out);
     } else {
