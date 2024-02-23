@@ -577,7 +577,6 @@ function shadedclient_rebuild
 
   extra=(
     "-Dtest=NoUnitTests"
-    "-Dsurefire.failIfNoSpecifiedTests=false"
     "-Dmaven.javadoc.skip=true"
     "-Dcheckstyle.skip=true"
     "-Dspotbugs.skip=true"
@@ -615,7 +614,7 @@ function shadedclient_rebuild
   echo_and_redirect "${logfile}" \
     "${MAVEN}" "${MAVEN_ARGS[@]}" verify -fae --batch-mode -am \
       "${modules[@]}" \
-      -DskipShade -Dtest=NoUnitTests -Dsurefire.failIfNoSpecifiedTests=false -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true \
+      -DskipShade -Dtest=NoUnitTests -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true \
       -Dspotbugs.skip=true ${extra[*]}
 
   count=$("${GREP}" -c '\[ERROR\]' "${logfile}")
