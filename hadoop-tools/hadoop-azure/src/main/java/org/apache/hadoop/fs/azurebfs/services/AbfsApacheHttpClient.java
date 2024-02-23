@@ -406,19 +406,19 @@ public class AbfsApacheHttpClient {
     public AbfsConnMgr(ConnectionSocketFactory connectionSocketFactory, AbfsConfiguration abfsConfiguration) {
       super(createSocketFactoryRegistry(connectionSocketFactory), abfsConnFactory);
       abfsConnFactory.setConnMgr(this);
-      maxConn = abfsConfiguration.getHttpClientMaxConn();
-//      maxConn = 1;
+//      maxConn = abfsConfiguration.getHttpClientMaxConn();
+      maxConn = 1;
       setDefaultMaxPerRoute(maxConn);
       setMaxTotal(maxConn);
       this.abfsConfiguration = abfsConfiguration;
     }
 
-//    @Override
-//    public ConnectionRequest requestConnection(final HttpRoute route,
-//        final Object state) {
-//      checkAvailablity();
-//      return super.requestConnection(route, state);
-//    }
+    @Override
+    public ConnectionRequest requestConnection(final HttpRoute route,
+        final Object state) {
+      checkAvailablity();
+      return super.requestConnection(route, state);
+    }
 
     @Override
     public void connect(final HttpClientConnection managedConn,
