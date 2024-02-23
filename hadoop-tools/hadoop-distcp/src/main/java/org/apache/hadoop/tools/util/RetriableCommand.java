@@ -19,11 +19,6 @@
 
 package org.apache.hadoop.tools.util;
 
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Options;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.permission.FsPermission;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.io.retry.RetryPolicy;
@@ -32,10 +27,6 @@ import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.util.ThreadUtil;
 
 import java.io.IOException;
-import java.lang.reflect.Method;
-import java.net.URL;
-import java.security.CodeSource;
-import java.security.ProtectionDomain;
 import java.util.concurrent.TimeUnit;
 
 /**
