@@ -120,30 +120,4 @@ public abstract class RetriableCommand {
     this.retryPolicy = retryHandler;
     return this;
   }
-
-  protected static Method getErasureCodingPolicyMethod(FileSystem fs)
-      throws NoSuchMethodException {
-    return fs.getClass().getMethod("getErasureCodingPolicy",
-        FileStatus.class);
-  }
-
-  protected static Method setErasureCodingPolicyMethod(FileSystem fs)
-      throws NoSuchMethodException {
-    ProtectionDomain protectionDomain = fs.getClass().getProtectionDomain();
-    CodeSource codeSource = protectionDomain.getCodeSource();
-    URL location = codeSource.getLocation();
-    System.out.println("Loaded from: " + location);
-    return fs.getClass()
-        .getMethod("setErasureCodingPolicy", Path.class, String.class,
-            int.class, int.class, int.class);
-  }
-
-  protected static Method createECOutputStreamMethod(FileSystem fs)
-      throws NoSuchMethodException {
-    return fs.getClass()
-        .getMethod("createECOutputStream", Path.class, FsPermission.class,
-            int.class, short.class, long.class, Options.ChecksumOpt.class,
-            String.class);
-  }
-
 }
