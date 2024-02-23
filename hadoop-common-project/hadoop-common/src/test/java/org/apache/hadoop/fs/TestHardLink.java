@@ -207,14 +207,7 @@ public class TestHardLink {
     return new String(result);
   }
 
-  private boolean supportsHardLink(File f) {
-    try {
-      FileStore store = Files.getFileStore(f.toPath());
-      return store.supportsFileAttributeView("unix");
-    } catch (IOException e) {
-      return false;
-    }
-  }
+
   
   /**
    * Sanity check the simplest case of HardLink.getLinkCount()

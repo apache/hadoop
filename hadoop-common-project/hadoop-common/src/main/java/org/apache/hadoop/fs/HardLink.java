@@ -209,6 +209,15 @@ public class HardLink {
                  parentDir.toPath().resolve(name));
     }
   }
+  @VisibleForTesting
+  static boolean supportsHardLink(File f) {
+    try {
+      FileStore store = Files.getFileStore(f.toPath());
+      return store.supportsFileAttributeView(FileAttributeView);
+    } catch (IOException e) {
+      return false;
+    }
+  }
 
    /**
    * Retrieves the number of links to the specified file.
@@ -226,7 +235,7 @@ public class HardLink {
       throw new FileNotFoundException(fileName + " not found.");
     }
 
-    if (Files.getFileStore(fileName.toPath()).supportsFileAttributeView(FileAttributeView)) {
+    if (supportsHardLink(fileName)) {
       return (int) Files.getAttribute(fileName.toPath(), FileAttribute);
     }
 
