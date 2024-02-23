@@ -31,6 +31,8 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
+import java.util.Arrays;
+import java.util.function.Predicate;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
@@ -1166,6 +1168,34 @@ public class TestRouterQuota {
     assertEquals(ssQuota * 2, quotaUsage.getSpaceQuota());
     assertEquals(0, quotaUsage.getFileAndDirectoryCount());
     assertEquals(0, quotaUsage.getSpaceConsumed());
+  }
+
+  @Test
+  public void testAndByStorageType() {
+    long[] typeQuota = new long[StorageType.values().length];
+    Arrays.fill(typeQuota, HdfsConstants.QUOTA_DONT_SET);
+
+    Predicate<StorageType> predicate = new Predicate<StorageType>() {
+      @Override
+      public boolean test(StorageType storageType) {
+        return typeQuota[storageType.ordinal()] == HdfsConstants.QUOTA_DONT_SET;
+      }
+    };
+
+    assertTrue(Quota.andByStorageType(predicate));
+
+    // This is a value to test for,
+    // as long as it is not equal to HdfsConstants.QUOTA_DONT_SET
+    typeQuota[0] = HdfsConstants.QUOTA_RESET;
+    assertFalse(Quota.andByStorageType(predicate));
+
+    Arrays.fill(typeQuota, HdfsConstants.QUOTA_DONT_SET);
+    typeQuota[1] = HdfsConstants.QUOTA_RESET;
+    assertFalse(Quota.andByStorageType(predicate));
+
+    Arrays.fill(typeQuota, HdfsConstants.QUOTA_DONT_SET);
+    typeQuota[typeQuota.length-1] = HdfsConstants.QUOTA_RESET;
+    assertFalse(Quota.andByStorageType(predicate));
   }
 
   /**

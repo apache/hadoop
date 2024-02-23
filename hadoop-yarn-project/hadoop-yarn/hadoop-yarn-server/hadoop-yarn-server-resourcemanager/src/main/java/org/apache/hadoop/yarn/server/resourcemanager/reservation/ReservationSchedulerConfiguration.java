@@ -23,6 +23,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.api.records.ReservationACL;
 import org.apache.hadoop.yarn.api.records.ReservationDefinition;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 
 import java.util.Map;
 
@@ -69,7 +70,7 @@ public abstract class ReservationSchedulerConfiguration extends Configuration {
    * @param queue name of the queue
    * @return true if the queue participates in reservation based scheduling
    */
-  public abstract boolean isReservable(String queue);
+  public abstract boolean isReservable(QueuePath queue);
 
   /**
    * Gets a map containing the {@link AccessControlList} of users for each
@@ -80,7 +81,7 @@ public abstract class ReservationSchedulerConfiguration extends Configuration {
    * which contains a list of users that have the specified permission level.
    */
   public abstract Map<ReservationACL, AccessControlList> getReservationAcls(
-          String queue);
+          QueuePath queue);
 
   /**
    * Gets the length of time in milliseconds for which the {@link SharingPolicy}
@@ -89,7 +90,7 @@ public abstract class ReservationSchedulerConfiguration extends Configuration {
    * @return length in time in milliseconds for which to check the
    * {@link SharingPolicy}
    */
-  public long getReservationWindow(String queue) {
+  public long getReservationWindow(QueuePath queue) {
     return DEFAULT_RESERVATION_WINDOW;
   }
 
@@ -100,7 +101,7 @@ public abstract class ReservationSchedulerConfiguration extends Configuration {
    * @param queue name of the queue
    * @return average capacity allowed by the {@link SharingPolicy}
    */
-  public float getAverageCapacity(String queue) {
+  public float getAverageCapacity(QueuePath queue) {
     return DEFAULT_CAPACITY_OVER_TIME_MULTIPLIER;
   }
 
@@ -109,7 +110,7 @@ public abstract class ReservationSchedulerConfiguration extends Configuration {
    * @param queue name of the queue
    * @return maximum allowed capacity at any time
    */
-  public float getInstantaneousMaxCapacity(String queue) {
+  public float getInstantaneousMaxCapacity(QueuePath queue) {
     return DEFAULT_CAPACITY_OVER_TIME_MULTIPLIER;
   }
 
@@ -118,7 +119,7 @@ public abstract class ReservationSchedulerConfiguration extends Configuration {
    * @param queue name of the queue
    * @return the class name of the {@link SharingPolicy}
    */
-  public String getReservationAdmissionPolicy(String queue) {
+  public String getReservationAdmissionPolicy(QueuePath queue) {
     return DEFAULT_RESERVATION_ADMISSION_POLICY;
   }
 
@@ -128,7 +129,7 @@ public abstract class ReservationSchedulerConfiguration extends Configuration {
    * @param queue name of the queue
    * @return the class name of the {@code ReservationAgent}
    */
-  public String getReservationAgent(String queue) {
+  public String getReservationAgent(QueuePath queue) {
     return DEFAULT_RESERVATION_AGENT_NAME;
   }
 
@@ -137,7 +138,7 @@ public abstract class ReservationSchedulerConfiguration extends Configuration {
    * @param queuePath name of the queue
    * @return true if reservation queues should be visible
    */
-  public boolean getShowReservationAsQueues(String queuePath) {
+  public boolean getShowReservationAsQueues(QueuePath queuePath) {
     return DEFAULT_SHOW_RESERVATIONS_AS_QUEUES;
   }
 
@@ -147,7 +148,7 @@ public abstract class ReservationSchedulerConfiguration extends Configuration {
    * @param queue name of the queue
    * @return the class name of the {@code Planner}
    */
-  public String getReplanner(String queue) {
+  public String getReplanner(QueuePath queue) {
     return DEFAULT_RESERVATION_PLANNER_NAME;
   }
 
@@ -158,7 +159,7 @@ public abstract class ReservationSchedulerConfiguration extends Configuration {
    * @return true if application should be moved, false if they need to be
    * killed
    */
-  public boolean getMoveOnExpiry(String queue) {
+  public boolean getMoveOnExpiry(QueuePath queue) {
     return DEFAULT_RESERVATION_MOVE_ON_EXPIRY;
   }
 
@@ -168,7 +169,7 @@ public abstract class ReservationSchedulerConfiguration extends Configuration {
    * @param queue name of the queue
    * @return the time in milliseconds for which to check constraints
    */
-  public long getEnforcementWindow(String queue) {
+  public long getEnforcementWindow(QueuePath queue) {
     return DEFAULT_RESERVATION_ENFORCEMENT_WINDOW;
   }
 }

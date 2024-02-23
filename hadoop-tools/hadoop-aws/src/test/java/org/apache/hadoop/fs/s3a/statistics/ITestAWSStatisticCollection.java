@@ -22,61 +22,30 @@ import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
-import org.apache.hadoop.fs.s3a.S3AFileSystem;
-import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.s3a.performance.AbstractS3ACostTest;
 
-import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_ENDPOINT;
-import static org.apache.hadoop.fs.s3a.Constants.ENDPOINT;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.getLandsatCSVPath;
+import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
 import static org.apache.hadoop.fs.s3a.Statistic.STORE_IO_REQUEST;
-import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticCounter;
 
 /**
  * Verify that AWS SDK statistics are wired up.
- * This test tries to read data from US-east-1 and us-west-2 buckets
- * so as to be confident that the nuances of region mapping
- * are handed correctly (HADOOP-13551).
- * The statistics are probed to verify that the wiring up is complete.
  */
-public class ITestAWSStatisticCollection extends AbstractS3ATestBase {
+public class ITestAWSStatisticCollection extends AbstractS3ACostTest {
 
-  private static final Path COMMON_CRAWL_PATH
-      = new Path("s3a://osm-pds/planet/planet-latest.orc");
-
-  @Test
-  public void testLandsatStatistics() throws Throwable {
-    final Configuration conf = getConfiguration();
-    // skips the tests if the landsat path isn't the default.
-    Path path = getLandsatCSVPath(conf);
-    conf.set(ENDPOINT, DEFAULT_ENDPOINT);
-    conf.unset("fs.s3a.bucket.landsat-pds.endpoint");
-
-    try (S3AFileSystem fs = (S3AFileSystem) path.getFileSystem(conf)) {
-      fs.getObjectMetadata(path);
-      IOStatistics iostats = fs.getIOStatistics();
-      assertThatStatisticCounter(iostats,
-          STORE_IO_REQUEST.getSymbol())
-          .isGreaterThanOrEqualTo(1);
-    }
+  @Override
+  public Configuration createConfiguration() {
+    final Configuration conf = super.createConfiguration();
+    conf.setBoolean(FS_S3A_CREATE_PERFORMANCE, true);
+    return conf;
   }
 
   @Test
-  public void testCommonCrawlStatistics() throws Throwable {
-    final Configuration conf = getConfiguration();
-    // skips the tests if the landsat path isn't the default.
-    getLandsatCSVPath(conf);
-
-    Path path = COMMON_CRAWL_PATH;
-    conf.set(ENDPOINT, DEFAULT_ENDPOINT);
-
-    try (S3AFileSystem fs = (S3AFileSystem) path.getFileSystem(conf)) {
-      fs.getObjectMetadata(path);
-      IOStatistics iostats = fs.getIOStatistics();
-      assertThatStatisticCounter(iostats,
-          STORE_IO_REQUEST.getSymbol())
-          .isGreaterThanOrEqualTo(1);
-    }
+  public void testSDKMetricsCostOfGetFileStatusOnFile() throws Throwable {
+    describe("performing getFileStatus on a file");
+    Path simpleFile = file(methodPath());
+    // and repeat on the file looking at AWS wired up stats
+    verifyMetrics(() -> getFileSystem().getFileStatus(simpleFile),
+        with(STORE_IO_REQUEST, 1));
   }
 
 }

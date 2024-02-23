@@ -819,7 +819,7 @@ public final class LambdaTestUtils {
     if (cause == null || !clazz.isAssignableFrom(cause.getClass())) {
       throw caught;
     } else {
-      return (E) caught;
+      return (E) cause;
     }
   }
 

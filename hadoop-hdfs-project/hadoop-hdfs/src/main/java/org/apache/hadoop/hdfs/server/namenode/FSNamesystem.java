@@ -96,12 +96,14 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DIFF_LI
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DIFF_LISTING_LIMIT_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSUtil.isParentEntry;
 
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.text.CaseUtils;
 import org.apache.hadoop.hdfs.protocol.ECTopologyVerifierResult;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsLocatedFileStatus;
+import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.server.namenode.FSDirStatAndListingOp.*;
@@ -111,6 +113,7 @@ import static org.apache.hadoop.ha.HAServiceProtocol.HAServiceState.OBSERVER;
 
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotDeletionGc;
 import org.apache.hadoop.thirdparty.protobuf.ByteString;
@@ -173,7 +176,6 @@ import java.util.TreeMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Supplier;
@@ -341,7 +343,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -660,7 +661,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   private KeyProviderCryptoExtension provider = null;
 
   private volatile boolean imageLoaded = false;
-  private final Condition cond;
 
   private final FSImage fsImage;
 
@@ -702,7 +702,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     try {
       setImageLoaded(true);
       dir.markNameCacheInitialized();
-      cond.signalAll();
     } finally {
       writeUnlock("setImageLoaded");
     }
@@ -873,7 +872,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         conf.get(HADOOP_CALLER_CONTEXT_SEPARATOR_KEY,
             HADOOP_CALLER_CONTEXT_SEPARATOR_DEFAULT);
     fsLock = new FSNamesystemLock(conf, detailedLockHoldTimeMetrics);
-    cond = fsLock.newWriteLockCondition();
     cpLock = new ReentrantLock();
 
     this.fsImage = fsImage;
@@ -1896,9 +1894,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * Version of @see #getNamespaceInfo() that is not protected by a lock.
    */
   NamespaceInfo unprotectedGetNamespaceInfo() {
-    return new NamespaceInfo(getFSImage().getStorage().getNamespaceID(),
-        getClusterId(), getBlockPoolId(),
-        getFSImage().getStorage().getCTime(), getState());
+    return new NamespaceInfo(getFSImage().getStorage(), getState());
   }
 
   /**
@@ -1946,10 +1942,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    *
    * @param datanode on which blocks are located
    * @param size total size of blocks
-   * @param minimumBlockSize
+   * @param minimumBlockSize each block should be of this minimum Block Size
+   * @param timeInterval prefer to get blocks which are belong to
+   *                     the cold files accessed before the time interval
+   * @param storageType the given storage type {@link StorageType}
    */
   public BlocksWithLocations getBlocks(DatanodeID datanode, long size, long
-      minimumBlockSize, long timeInterval) throws IOException {
+      minimumBlockSize, long timeInterval, StorageType storageType) throws IOException {
     OperationCategory checkOp =
         isGetBlocksCheckOperationEnabled ? OperationCategory.READ :
             OperationCategory.UNCHECKED;
@@ -1958,7 +1957,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     try {
       checkOperation(checkOp);
       return getBlockManager().getBlocksWithLocations(datanode, size,
-          minimumBlockSize, timeInterval);
+          minimumBlockSize, timeInterval, storageType);
     } finally {
       readUnlock("getBlocks");
     }
@@ -1979,7 +1978,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         File file = new File(System.getProperty("hadoop.log.dir"), filename);
         PrintWriter out = new PrintWriter(new BufferedWriter(
                 new OutputStreamWriter(Files.newOutputStream(file.toPath()),
-                        Charsets.UTF_8)));
+                        StandardCharsets.UTF_8)));
         metaSave(out);
         out.flush();
         out.close();
@@ -3802,16 +3801,34 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             lastBlock.getBlockType());
       }
 
-      if (uc.getNumExpectedLocations() == 0 && lastBlock.getNumBytes() == 0) {
+      int minLocationsNum = 1;
+      if (lastBlock.isStriped()) {
+        minLocationsNum = ((BlockInfoStriped) lastBlock).getRealDataBlockNum();
+      }
+      if (uc.getNumExpectedLocations() < minLocationsNum &&
+          lastBlock.getNumBytes() == 0) {
         // There is no datanode reported to this block.
         // may be client have crashed before writing data to pipeline.
         // This blocks doesn't need any recovery.
         // We can remove this block and close the file.
-        pendingFile.removeLastBlock(lastBlock);
+        BlockInfo lastBlockInfo = pendingFile.removeLastBlock(lastBlock);
+        if (lastBlockInfo != null) {
+          blockManager.removeBlock(lastBlockInfo);
+        }
         finalizeINodeFileUnderConstruction(src, pendingFile,
             iip.getLatestSnapshotId(), false);
-        NameNode.stateChangeLog.warn("BLOCK* internalReleaseLease: "
-            + "Removed empty last block and closed file " + src);
+        if (uc.getNumExpectedLocations() == 0) {
+          // If uc.getNumExpectedLocations() is 0, regardless of whether it
+          // is a striped block or not, we should consider it as an empty block.
+          NameNode.stateChangeLog.warn("BLOCK* internalReleaseLease: "
+              + "Removed empty last block and closed file " + src);
+        } else {
+          // If uc.getNumExpectedLocations() is greater than 0, it means that
+          // minLocationsNum must be greater than 1, so this must be a striped
+          // block.
+          NameNode.stateChangeLog.warn("BLOCK* internalReleaseLease: "
+              + "Removed last unrecoverable block group and closed file " + src);
+        }
         return true;
       }
       // Start recovery of the last block for this file
@@ -4199,7 +4216,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   public byte[] getSrcPathsHash(String[] srcs) {
     synchronized (digest) {
       for (String src : srcs) {
-        digest.update(src.getBytes(Charsets.UTF_8));
+        digest.update(src.getBytes(StandardCharsets.UTF_8));
       }
       byte[] result = digest.digest();
       digest.reset();
@@ -4519,6 +4536,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
               LOG.warn(lowResourcesMsg + "Already in safe mode.");
             }
             enterSafeMode(true);
+          } else {
+            if (isNoManualAndResourceLowSafeMode()) {
+              LOG.info("Namenode has sufficient available resources, exiting safe mode.");
+              leaveSafeMode(false);
+            }
           }
           try {
             Thread.sleep(resourceRecheckInterval);
@@ -4889,6 +4911,15 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   /**
+   * Get the progress of the reconstruction queues initialisation.
+   */
+  @Override // FSNamesystemMBean
+  @Metric
+  public float getReconstructionQueuesInitProgress() {
+    return blockManager.getReconstructionQueuesInitProgress();
+  }
+
+  /**
    * Returns the length of the wait Queue for the FSNameSystemLock.
    *
    * A larger number here indicates lots of threads are waiting for
@@ -5239,6 +5270,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   private synchronized boolean isInManualOrResourceLowSafeMode() {
     return manualSafeMode || resourceLowSafeMode;
+  }
+
+  /**
+   * @return true if it is not in manual safe mode and resource low safe mode.
+   */
+  private synchronized boolean isNoManualAndResourceLowSafeMode() {
+    return !manualSafeMode && resourceLowSafeMode;
   }
 
   private synchronized void setManualAndResourceLowSafeMode(boolean manual,
@@ -5941,8 +5979,26 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       block.setGenerationStamp(nextGenerationStamp(
           blockManager.isLegacyBlock(block.getLocalBlock())));
 
-      locatedBlock = BlockManager.newLocatedBlock(
-          block, file.getLastBlock(), null, -1);
+      BlockInfo lastBlockInfo = file.getLastBlock();
+      locatedBlock = BlockManager.newLocatedBlock(block, lastBlockInfo,
+          null, -1);
+      if (lastBlockInfo.isStriped() &&
+          ((BlockInfoStriped) lastBlockInfo).getTotalBlockNum() >
+              ((LocatedStripedBlock) locatedBlock).getBlockIndices().length) {
+        // The location info in BlockUnderConstructionFeature may not be
+        // complete after a failover, so we just return all block tokens for a
+        // striped block. This will disrupt the correspondence between
+        // LocatedStripedBlock.blockIndices and LocatedStripedBlock.locs,
+        // which is not used in client side. The correspondence between
+        // LocatedStripedBlock.blockIndices and LocatedBlock.blockToken is
+        // ensured.
+        byte[] indices =
+            new byte[((BlockInfoStriped) lastBlockInfo).getTotalBlockNum()];
+        for (int i = 0; i < indices.length; ++i) {
+          indices[i] = (byte) i;
+        }
+        ((LocatedStripedBlock) locatedBlock).setBlockIndices(indices);
+      }
       blockManager.setBlockToken(locatedBlock,
           BlockTokenIdentifier.AccessMode.WRITE);
     } finally {
@@ -6089,15 +6145,20 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   static class CorruptFileBlockInfo {
     final String path;
     final Block block;
+    private final int replication;
+    private final String ecPolicy;
     
-    public CorruptFileBlockInfo(String p, Block b) {
+    CorruptFileBlockInfo(String p, Block b, int r, String ec) {
       path = p;
       block = b;
+      replication = r;
+      ecPolicy = ec;
     }
     
     @Override
     public String toString() {
-      return block.getBlockName() + "\t" + path;
+      return block.getBlockName() + "\t" +
+          (replication == -1 ? ecPolicy : replication) + "\t" + path;
     }
   }
   /**
@@ -6153,7 +6214,21 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         if (inode != null) {
           String src = inode.getFullPathName();
           if (isParentEntry(src, path)) {
-            corruptFiles.add(new CorruptFileBlockInfo(src, blk));
+            int repl = -1;
+            String ecPolicyName = null;
+            if (inode.isFile()) {
+              if (inode.asFile().isStriped()) {
+                ErasureCodingPolicy ecPolicy =
+                    ErasureCodingPolicyManager.getInstance()
+                        .getByID(inode.asFile().getErasureCodingPolicyID());
+                if (ecPolicy != null) {
+                  ecPolicyName = ecPolicy.getName();
+                }
+              } else {
+                repl = inode.asFile().getFileReplication();
+              }
+            }
+            corruptFiles.add(new CorruptFileBlockInfo(src, blk, repl, ecPolicyName));
             count++;
             if (count >= maxCorruptFileBlocksReturn)
               break;
@@ -6583,6 +6658,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           .put("infoSecureAddr", node.getInfoSecureAddr())
           .put("xferaddr", node.getXferAddr())
           .put("location", node.getNetworkLocation())
+          .put("uuid", node.getDatanodeUuid())
           .put("lastContact", getLastContact(node))
           .put("usedSpace", getDfsUsed(node))
           .put("adminState", node.getAdminState().toString())
@@ -6636,6 +6712,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           .put("adminState", node.getAdminState().toString())
           .put("xferaddr", node.getXferAddr())
           .put("location", node.getNetworkLocation())
+          .put("uuid", node.getDatanodeUuid())
           .build();
       info.put(node.getXferAddrWithHostname(), innerinfo);
     }
@@ -6658,12 +6735,15 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           .<String, Object> builder()
           .put("xferaddr", node.getXferAddr())
           .put("location", node.getNetworkLocation())
+          .put("uuid", node.getDatanodeUuid())
           .put("underReplicatedBlocks",
           node.getLeavingServiceStatus().getUnderReplicatedBlocks())
           .put("decommissionOnlyReplicas",
           node.getLeavingServiceStatus().getOutOfServiceOnlyReplicas())
           .put("underReplicateInOpenFiles",
           node.getLeavingServiceStatus().getUnderReplicatedInOpenFiles())
+          .put("decommissionDuration",
+              monotonicNow() - node.getLeavingServiceStatus().getStartTime())
           .build();
       info.put(node.getXferAddrWithHostname(), innerinfo);
     }
@@ -6686,6 +6766,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           .<String, Object> builder()
           .put("xferaddr", node.getXferAddr())
           .put("location", node.getNetworkLocation())
+          .put("uuid", node.getDatanodeUuid())
           .put("underReplicatedBlocks",
               node.getLeavingServiceStatus().getUnderReplicatedBlocks())
           .put("maintenanceOnlyReplicas",
@@ -9030,5 +9111,47 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         }
       }
     }
+  }
+
+  /**
+   * Get the enclosing root  for the specified path.
+   *
+   * @param srcArg the path of a file or directory to get the EZ for.
+   * @return the enclosing root of the path or null if none.
+   */
+  Path getEnclosingRoot(final String srcArg) throws IOException {
+    EncryptionZone ez = getEZForPath(srcArg);
+    if (ez != null) {
+      return new Path(ez.getPath());
+    } else {
+      return new Path("/");
+    }
+  }
+
+  public void setMetricsEnabled(boolean metricsEnabled) {
+    this.fsLock.setMetricsEnabled(metricsEnabled);
+  }
+
+  @VisibleForTesting
+  public boolean isMetricsEnabled() {
+    return this.fsLock.isMetricsEnabled();
+  }
+
+  public void setReadLockReportingThresholdMs(long readLockReportingThresholdMs) {
+    this.fsLock.setReadLockReportingThresholdMs(readLockReportingThresholdMs);
+  }
+
+  @VisibleForTesting
+  public long getReadLockReportingThresholdMs() {
+    return this.fsLock.getReadLockReportingThresholdMs();
+  }
+
+  public void setWriteLockReportingThresholdMs(long writeLockReportingThresholdMs) {
+    this.fsLock.setWriteLockReportingThresholdMs(writeLockReportingThresholdMs);
+  }
+
+  @VisibleForTesting
+  public long getWriteLockReportingThresholdMs() {
+    return this.fsLock.getWriteLockReportingThresholdMs();
   }
 }

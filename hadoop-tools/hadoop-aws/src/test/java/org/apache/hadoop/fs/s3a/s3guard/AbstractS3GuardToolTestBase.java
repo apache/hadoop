@@ -219,8 +219,10 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
           cmdR.getName(),
           S3A_THIS_BUCKET_DOES_NOT_EXIST
       };
-      intercept(UnknownStoreException.class,
-          () -> cmdR.run(argsR));
+      intercept(UnknownStoreException.class, () -> {
+        final int e = cmdR.run(argsR);
+        return String.format("Outcome of %s on missing bucket: %d", tool, e);
+      });
     }
   }
 

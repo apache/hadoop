@@ -145,22 +145,33 @@ public class TestApplicationLimits {
     doReturn(100).when(queue).getMaxApplications();
     doReturn(25).when(queue).getMaxApplicationsPerUser();
   }
-  
+
   private static final String A = "a";
   private static final String B = "b";
+  private static final  String C = "c";
+  private static final  String D = "d";
+  private static final  String AA1 = "a1";
+  private static final  String AA2 = "a2";
+  private static final  String AA3 = "a3";
+  private static final QueuePath ROOT_QUEUE_PATH =
+      new QueuePath(CapacitySchedulerConfiguration.ROOT);
+  private static final QueuePath A_QUEUE_PATH = ROOT_QUEUE_PATH.createNewLeaf(A);
+  private static final QueuePath B_QUEUE_PATH = ROOT_QUEUE_PATH.createNewLeaf(B);
+  private static final QueuePath C_QUEUE_PATH = ROOT_QUEUE_PATH.createNewLeaf(C);
+  private static final QueuePath D_QUEUE_PATH = ROOT_QUEUE_PATH.createNewLeaf(D);
+  private static final QueuePath AA1_QUEUE_PATH = A_QUEUE_PATH.createNewLeaf(AA1);
+  private static final QueuePath AA2_QUEUE_PATH = A_QUEUE_PATH.createNewLeaf(AA2);
+  private static final QueuePath AA3_QUEUE_PATH = A_QUEUE_PATH.createNewLeaf(AA3);
   private void setupQueueConfiguration(CapacitySchedulerConfiguration conf) {
     
     // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {A, B});
+    conf.setQueues(ROOT_QUEUE_PATH, new String[] {A, B});
 
-    final String Q_A = CapacitySchedulerConfiguration.ROOT + "." + A;
-    conf.setCapacity(Q_A, 10);
+    conf.setCapacity(A_QUEUE_PATH, 10);
+    conf.setCapacity(B_QUEUE_PATH, 90);
     
-    final String Q_B = CapacitySchedulerConfiguration.ROOT + "." + B;
-    conf.setCapacity(Q_B, 90);
-    
-    conf.setUserLimit(CapacitySchedulerConfiguration.ROOT + "." + A, 50);
-    conf.setUserLimitFactor(CapacitySchedulerConfiguration.ROOT + "." + A, 5.0f);
+    conf.setUserLimit(A_QUEUE_PATH, 50);
+    conf.setUserLimitFactor(A_QUEUE_PATH, 5.0f);
     
     LOG.info("Setup top-level queues a and b");
   }
@@ -336,7 +347,7 @@ public class TestApplicationLimits {
     // should return -1 if per queue setting not set
     assertEquals(
         (int)CapacitySchedulerConfiguration.UNDEFINED, 
-        csConf.getMaximumApplicationsPerQueue(queue.getQueuePath()));
+        csConf.getMaximumApplicationsPerQueue(queue.getQueuePathObject()));
     int expectedMaxApps =  
         (int)
         (CapacitySchedulerConfiguration.DEFAULT_MAXIMUM_SYSTEM_APPLICATIIONS * 
@@ -351,7 +362,7 @@ public class TestApplicationLimits {
     // should default to global setting if per queue setting not set
     assertEquals(CapacitySchedulerConfiguration.DEFAULT_MAXIMUM_APPLICATIONMASTERS_RESOURCE_PERCENT,
         csConf.getMaximumApplicationMasterResourcePerQueuePercent(
-            queue.getQueuePath()), epsilon);
+            queue.getQueuePathObject()), epsilon);
 
     // Change the per-queue max AM resources percentage.
     csConf.setFloat(PREFIX + queue.getQueuePath()
@@ -371,7 +382,7 @@ public class TestApplicationLimits {
 
     assertEquals(0.5f,
         csConf.getMaximumApplicationMasterResourcePerQueuePercent(
-          queue.getQueuePath()), epsilon);
+          queue.getQueuePathObject()), epsilon);
 
     assertThat(queue.calculateAndGetAMResourceLimit()).isEqualTo(
         Resource.newInstance(800 * GB, 1));
@@ -391,7 +402,8 @@ public class TestApplicationLimits {
         clusterResource));
 
     queue = (LeafQueue)queues.get(A);
-    assertEquals(9999, (int)csConf.getMaximumApplicationsPerQueue(queue.getQueuePath()));
+    assertEquals(9999, (int)csConf.getMaximumApplicationsPerQueue(
+        queue.getQueuePathObject()));
     assertEquals(9999, queue.getMaxApplications());
 
     expectedMaxAppsPerUser = Math.min(9999, (int)(9999 *
@@ -576,7 +588,7 @@ public class TestApplicationLimits {
   public void testHeadroom() throws Exception {
     CapacitySchedulerConfiguration csConf = 
         new CapacitySchedulerConfiguration();
-    csConf.setUserLimit(CapacitySchedulerConfiguration.ROOT + "." + A, 25);
+    csConf.setUserLimit(A_QUEUE_PATH, 25);
     setupQueueConfiguration(csConf);
 
     // Say cluster has 100 nodes of 16G each
@@ -721,53 +733,46 @@ public class TestApplicationLimits {
     CapacitySchedulerConfiguration conf =
         new CapacitySchedulerConfiguration(config);
     // Define top-level
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT,
+    conf.setQueues(ROOT_QUEUE_PATH,
         new String[]{"a", "b", "c", "d"});
-    conf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "x", 100);
-    conf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "y", 100);
-    conf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "z", 100);
+    conf.setCapacityByLabel(ROOT_QUEUE_PATH, "x", 100);
+    conf.setCapacityByLabel(ROOT_QUEUE_PATH, "y", 100);
+    conf.setCapacityByLabel(ROOT_QUEUE_PATH, "z", 100);
 
     conf.setInt(CapacitySchedulerConfiguration.QUEUE_GLOBAL_MAX_APPLICATION,
         20);
     conf.setInt("yarn.scheduler.capacity.root.a.a1.maximum-applications", 1);
     conf.setFloat("yarn.scheduler.capacity.root.d.user-limit-factor", 0.1f);
     conf.setInt("yarn.scheduler.capacity.maximum-applications", 4);
-    final String a = CapacitySchedulerConfiguration.ROOT + ".a";
-    final String b = CapacitySchedulerConfiguration.ROOT + ".b";
-    final String c = CapacitySchedulerConfiguration.ROOT + ".c";
-    final String d = CapacitySchedulerConfiguration.ROOT + ".d";
-    final String aa1 = a + ".a1";
-    final String aa2 = a + ".a2";
-    final String aa3 = a + ".a3";
 
-    conf.setQueues(a, new String[]{"a1", "a2", "a3"});
-    conf.setCapacity(a, 50);
-    conf.setCapacity(b, 50);
-    conf.setCapacity(c, 0);
-    conf.setCapacity(d, 0);
-    conf.setCapacity(aa1, 50);
-    conf.setCapacity(aa2, 50);
-    conf.setCapacity(aa3, 0);
+    conf.setQueues(A_QUEUE_PATH, new String[]{"a1", "a2", "a3"});
+    conf.setCapacity(A_QUEUE_PATH, 50);
+    conf.setCapacity(B_QUEUE_PATH, 50);
+    conf.setCapacity(C_QUEUE_PATH, 0);
+    conf.setCapacity(D_QUEUE_PATH, 0);
+    conf.setCapacity(AA1_QUEUE_PATH, 50);
+    conf.setCapacity(AA2_QUEUE_PATH, 50);
+    conf.setCapacity(AA3_QUEUE_PATH, 0);
 
-    conf.setCapacityByLabel(a, "y", 25);
-    conf.setCapacityByLabel(b, "y", 50);
-    conf.setCapacityByLabel(c, "y", 25);
-    conf.setCapacityByLabel(d, "y", 0);
+    conf.setCapacityByLabel(A_QUEUE_PATH, "y", 25);
+    conf.setCapacityByLabel(B_QUEUE_PATH, "y", 50);
+    conf.setCapacityByLabel(C_QUEUE_PATH, "y", 25);
+    conf.setCapacityByLabel(D_QUEUE_PATH, "y", 0);
 
-    conf.setCapacityByLabel(a, "x", 50);
-    conf.setCapacityByLabel(b, "x", 50);
+    conf.setCapacityByLabel(A_QUEUE_PATH, "x", 50);
+    conf.setCapacityByLabel(B_QUEUE_PATH, "x", 50);
 
-    conf.setCapacityByLabel(a, "z", 50);
-    conf.setCapacityByLabel(b, "z", 50);
+    conf.setCapacityByLabel(A_QUEUE_PATH, "z", 50);
+    conf.setCapacityByLabel(B_QUEUE_PATH, "z", 50);
 
-    conf.setCapacityByLabel(aa1, "x", 100);
-    conf.setCapacityByLabel(aa2, "x", 0);
+    conf.setCapacityByLabel(AA1_QUEUE_PATH, "x", 100);
+    conf.setCapacityByLabel(AA2_QUEUE_PATH, "x", 0);
 
-    conf.setCapacityByLabel(aa1, "y", 25);
-    conf.setCapacityByLabel(aa2, "y", 75);
+    conf.setCapacityByLabel(AA1_QUEUE_PATH, "y", 25);
+    conf.setCapacityByLabel(AA2_QUEUE_PATH, "y", 75);
 
-    conf.setCapacityByLabel(aa2, "z", 75);
-    conf.setCapacityByLabel(aa3, "z", 25);
+    conf.setCapacityByLabel(AA2_QUEUE_PATH, "z", 75);
+    conf.setCapacityByLabel(AA3_QUEUE_PATH, "z", 25);
     return conf;
   }
 

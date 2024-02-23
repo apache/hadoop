@@ -40,25 +40,25 @@ public final class FederationPolicyInitializationContextValidator {
     if (policyContext == null) {
       throw new FederationPolicyInitializationException(
           "The FederationPolicyInitializationContext provided is null. Cannot"
-              + " reinitalize " + "successfully.");
+              + " reinitialize " + "successfully.");
     }
 
     if (policyContext.getFederationStateStoreFacade() == null) {
       throw new FederationPolicyInitializationException(
           "The FederationStateStoreFacade provided is null. Cannot"
-              + " reinitalize successfully.");
+              + " reinitialize successfully.");
     }
 
     if (policyContext.getFederationSubclusterResolver() == null) {
       throw new FederationPolicyInitializationException(
           "The FederationSubclusterResolver provided is null. Cannot"
-              + " reinitalize successfully.");
+              + " reinitialize successfully.");
     }
 
     if (policyContext.getSubClusterPolicyConfiguration() == null) {
       throw new FederationPolicyInitializationException(
           "The SubClusterPolicyConfiguration provided is null. Cannot "
-              + "reinitalize successfully.");
+              + "reinitialize successfully.");
     }
 
     String intendedType =

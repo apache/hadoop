@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemExc
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 import org.apache.hadoop.fs.azurebfs.security.AbfsDelegationTokenManager;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
+import org.apache.hadoop.fs.azurebfs.services.AbfsClientUtils;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azurebfs.services.ITestAbfsClient;
@@ -144,6 +145,9 @@ public abstract class AbstractAbfsIntegrationTest extends
     } else {
       this.isIPAddress = false;
     }
+
+    // For tests, we want to enforce checksum validation so that any regressions can be caught.
+    abfsConfig.setIsChecksumValidationEnabled(true);
   }
 
   protected boolean getIsNamespaceEnabled(AzureBlobFileSystem fs)
@@ -211,6 +215,7 @@ public abstract class AbstractAbfsIntegrationTest extends
       wasb = new NativeAzureFileSystem(azureNativeFileSystemStore);
       wasb.initialize(wasbUri, rawConfig);
     }
+    AbfsClientUtils.setIsNamespaceEnabled(abfs.getAbfsClient(), true);
   }
 
   @After

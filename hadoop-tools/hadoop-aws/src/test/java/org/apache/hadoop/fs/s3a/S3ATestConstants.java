@@ -59,6 +59,21 @@ public interface S3ATestConstants {
   String KEY_STORAGE_CLASS_TESTS_ENABLED = TEST_FS_S3A + "create.storage.class.enabled";
 
   /**
+   * A property set to true if ACL tests are enabled: {@value}.
+   */
+  String KEY_ACL_TESTS_ENABLED = TEST_FS_S3A + "create.acl.enabled";
+
+  /**
+   * A property set to true if V1 tests are enabled: {@value}.
+   */
+  String KEY_LIST_V1_ENABLED = TEST_FS_S3A + "list.v1.enabled";
+
+  /**
+   * A property set to true if content encoding tests are enabled: {@value}.
+   */
+  String KEY_CONTENT_ENCODING_ENABLED = TEST_FS_S3A + "content.encoding.enabled";
+
+  /**
    * Tell tests that they are being executed in parallel: {@value}.
    */
   String KEY_PARALLEL_TEST_EXECUTION = "test.parallel.execution";
@@ -96,14 +111,16 @@ public interface S3ATestConstants {
   String KEY_CSVTEST_FILE = S3A_SCALE_TEST + "csvfile";
 
   /**
-   * The landsat bucket: {@value}.
+   * Default path for the multi MB test file: {@value}.
+   * @deprecated retrieve via {@link PublicDatasetTestUtils}.
    */
-  String LANDSAT_BUCKET = "s3a://landsat-pds/";
+  @Deprecated
+  String DEFAULT_CSVTEST_FILE = PublicDatasetTestUtils.DEFAULT_EXTERNAL_FILE;
 
   /**
-   * Default path for the multi MB test file: {@value}.
+   * Example path for unit tests; this is never accessed: {@value}.
    */
-  String DEFAULT_CSVTEST_FILE = LANDSAT_BUCKET + "scene_list.gz";
+  String UNIT_TEST_EXAMPLE_PATH = "s3a://example/data/";
 
   /**
    * Configuration key for an existing object in a requester pays bucket: {@value}.
@@ -251,4 +268,9 @@ public interface S3ATestConstants {
    * Value: {@value}.
    */
   String PROJECT_BUILD_DIRECTORY_PROPERTY = "project.build.directory";
+
+  /**
+   * AWS ireland region.
+   */
+  String EU_WEST_1 = "eu-west-1";
 }

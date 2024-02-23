@@ -65,6 +65,7 @@ import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterInfoR
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPoliciesConfigurationsRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPolicyConfigurationRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPolicyConfigurationResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.SetSubClusterPolicyConfigurationRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClustersInfoRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.ReservationHomeSubCluster;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
@@ -82,6 +83,11 @@ import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenRespo
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterDeregisterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterDeregisterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationsHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationsHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.DeleteApplicationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.DeleteSubClusterPoliciesConfigurationsRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.DeletePoliciesConfigurationsRequest;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 import org.slf4j.Logger;
@@ -104,8 +110,7 @@ public final class FederationStateStoreFacade {
   private static final Logger LOG =
       LoggerFactory.getLogger(FederationStateStoreFacade.class);
 
-  private static final FederationStateStoreFacade FACADE =
-      new FederationStateStoreFacade();
+  private static volatile FederationStateStoreFacade facade;
 
   private static Random rand = new Random(System.currentTimeMillis());
 
@@ -114,8 +119,8 @@ public final class FederationStateStoreFacade {
   private SubClusterResolver subclusterResolver;
   private FederationCache federationCache;
 
-  private FederationStateStoreFacade() {
-    initializeFacadeInternal(new Configuration());
+  private FederationStateStoreFacade(Configuration conf) {
+    initializeFacadeInternal(conf);
   }
 
   private void initializeFacadeInternal(Configuration config) {
@@ -198,7 +203,50 @@ public final class FederationStateStoreFacade {
    * @return the singleton {@link FederationStateStoreFacade} instance
    */
   public static FederationStateStoreFacade getInstance() {
-    return FACADE;
+    return getInstanceInternal(new Configuration());
+  }
+
+  /**
+   * Returns the singleton instance of the FederationStateStoreFacade object.
+   *
+   * @param conf configuration.
+   * @return the singleton {@link FederationStateStoreFacade} instance
+   */
+  public static FederationStateStoreFacade getInstance(Configuration conf) {
+    return getInstanceInternal(conf);
+  }
+
+  /**
+   * Returns the singleton instance of the FederationStateStoreFacade object.
+   *
+   * @param conf configuration.
+   * @return the singleton {@link FederationStateStoreFacade} instance
+   */
+  private static FederationStateStoreFacade getInstanceInternal(Configuration conf){
+    if (facade != null) {
+      return facade;
+    }
+    generateStateStoreFacade(conf);
+    return facade;
+  }
+
+  /**
+   * Generate the singleton instance of the FederationStateStoreFacade object.
+   *
+   * @param conf configuration.
+   */
+  private static void generateStateStoreFacade(Configuration conf){
+    if (facade == null) {
+      synchronized (FederationStateStoreFacade.class) {
+        if (facade == null) {
+          Configuration yarnConf = new Configuration();
+          if (conf != null) {
+            yarnConf = conf;
+          }
+          facade = new FederationStateStoreFacade(yarnConf);
+        }
+      }
+    }
   }
 
   /**
@@ -309,6 +357,18 @@ public final class FederationStateStoreFacade {
         return response.getPolicyConfiguration();
       }
     }
+  }
+
+  /**
+   * Set a policy configuration into the state store.
+   *
+   * @param policyConf the policy configuration to set
+   * @throws YarnException if the request is invalid/fails
+   */
+  public void setPolicyConfiguration(SubClusterPolicyConfiguration policyConf)
+      throws YarnException {
+    stateStore.setPolicyConfiguration(
+        SetSubClusterPolicyConfigurationRequest.newInstance(policyConf));
   }
 
   /**
@@ -830,6 +890,33 @@ public final class FederationStateStoreFacade {
   }
 
   /**
+   * Get the {@code ApplicationHomeSubCluster} list representing the mapping of
+   * all submitted applications to it's home sub-cluster.
+   *
+   * @return the mapping of all submitted application to it's home sub-cluster
+   * @throws YarnException if the request is invalid/fails
+   */
+  public List<ApplicationHomeSubCluster> getApplicationsHomeSubCluster() throws YarnException {
+    GetApplicationsHomeSubClusterResponse response = stateStore.getApplicationsHomeSubCluster(
+        GetApplicationsHomeSubClusterRequest.newInstance());
+    return response.getAppsHomeSubClusters();
+  }
+
+  /**
+   * Delete the mapping of home {@code SubClusterId} of a previously submitted
+   * {@code ApplicationId}. Currently response is empty if the operation is
+   * successful, if not an exception reporting reason for a failure.
+   *
+   * @param applicationId the application to delete the home sub-cluster of
+   * @throws YarnException if the request is invalid/fails
+   */
+  public void deleteApplicationHomeSubCluster(ApplicationId applicationId)
+      throws YarnException {
+    stateStore.deleteApplicationHomeSubCluster(
+        DeleteApplicationHomeSubClusterRequest.newInstance(applicationId));
+  }
+
+  /**
    * Update ApplicationHomeSubCluster to FederationStateStore.
    *
    * @param subClusterId homeSubClusterId
@@ -1028,9 +1115,27 @@ public final class FederationStateStoreFacade {
     }
   }
 
+  public void deleteAllPoliciesConfigurations() throws Exception {
+    DeletePoliciesConfigurationsRequest request =
+        DeletePoliciesConfigurationsRequest.newInstance();
+    stateStore.deleteAllPoliciesConfigurations(request);
+  }
 
   @VisibleForTesting
   public FederationCache getFederationCache() {
     return federationCache;
+  }
+
+  public void deleteStore() throws Exception {
+    stateStore.deleteStateStore();
+  }
+
+  public void deletePolicyConfigurations(List<String> queuesList) throws YarnException {
+    if (CollectionUtils.isEmpty(queuesList)) {
+      throw new YarnException("queuesList cannot be empty!");
+    }
+    DeleteSubClusterPoliciesConfigurationsRequest request =
+        DeleteSubClusterPoliciesConfigurationsRequest.newInstance(queuesList);
+    stateStore.deletePoliciesConfigurations(request);
   }
 }

@@ -372,6 +372,10 @@ public class TestRouterMountTable {
     HdfsFileStatus dirStatus2 =
         clientProtocol.getMountPointStatus(childPath2.toString(), 0, 0);
     assertEquals(child2, dirStatus2.getLocalName());
+
+    HdfsFileStatus dirStatus3 =
+        clientProtocol.getMountPointStatus(childPath2.toString(), 0, 0, false);
+    assertTrue(dirStatus3.isEmptyLocalName());
   }
   /**
    * GetListing of testPath through router.
@@ -666,6 +670,25 @@ public class TestRouterMountTable {
     }
   }
 
+  @Test
+  public void testGetFileInfoWithMountPoint() throws IOException {
+    try {
+      // Add mount table entry
+      MountTable addEntry = MountTable.newInstance("/testgetfileinfo/ns1/dir",
+          Collections.singletonMap("ns1", "/testgetfileinfo/ns1/dir"));
+      assertTrue(addMountTable(addEntry));
+      nnFs1.mkdirs(new Path("/testgetfileinfo/ns1/dir"));
+
+      FileStatus fileStatus = routerFs.getFileStatus(new Path("/testgetfileinfo/ns1"));
+      assertEquals(fileStatus.getPath().toUri().getPath(), "/testgetfileinfo/ns1");
+
+      fileStatus = routerFs.getFileStatus(new Path("/testgetfileinfo/ns1/dir"));
+      assertEquals(fileStatus.getPath().toUri().getPath(), "/testgetfileinfo/ns1/dir");
+    } finally {
+      nnFs1.delete(new Path("/testgetfileinfo/ns1/dir"), true);
+    }
+  }
+
   /**
    * Regression test for HDFS-13255.
    * Verify that delete fails if the path is a mount point or
@@ -762,5 +785,30 @@ public class TestRouterMountTable {
     } finally {
       nnFs0.delete(new Path("/testLsMountEntryDest"), true);
     }
+  }
+
+  @Test
+  public void testGetEnclosingRoot() throws Exception {
+
+    // Add a read only entry
+    MountTable readOnlyEntry = MountTable.newInstance(
+        "/readonly", Collections.singletonMap("ns0", "/testdir"));
+    readOnlyEntry.setReadOnly(true);
+    assertTrue(addMountTable(readOnlyEntry));
+    assertEquals(routerFs.getEnclosingRoot(new Path("/readonly")), new Path("/readonly"));
+
+    assertEquals(routerFs.getEnclosingRoot(new Path("/regular")), new Path("/"));
+    assertEquals(routerFs.getEnclosingRoot(new Path("/regular")),
+        routerFs.getEnclosingRoot(routerFs.getEnclosingRoot(new Path("/regular"))));
+
+    // Add a regular entry
+    MountTable regularEntry = MountTable.newInstance(
+        "/regular", Collections.singletonMap("ns0", "/testdir"));
+    assertTrue(addMountTable(regularEntry));
+    assertEquals(routerFs.getEnclosingRoot(new Path("/regular")), new Path("/regular"));
+
+    // path does not need to exist
+    assertEquals(routerFs.getEnclosingRoot(new Path("/regular/pathDNE")), new Path("/regular"));
+
   }
 }

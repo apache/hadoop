@@ -506,10 +506,14 @@ public final class RouterWebServiceUtil {
 
     metrics.setTotalMB(metrics.getTotalMB()
         + metricsResponse.getTotalMB());
+    metrics.setUtilizedMB(metrics.getUtilizedMB()
+        + metricsResponse.getUtilizedMB());
     metrics.setTotalVirtualCores(metrics.getTotalVirtualCores()
         + metricsResponse.getTotalVirtualCores());
     metrics.setTotalNodes(metrics.getTotalNodes()
         + metricsResponse.getTotalNodes());
+    metrics.setUtilizedVirtualCores(metrics.getUtilizedVirtualCores()
+        + metricsResponse.getUtilizedVirtualCores());
     metrics.setLostNodes(metrics.getLostNodes()
         + metricsResponse.getLostNodes());
     metrics.setUnhealthyNodes(metrics.getUnhealthyNodes()
@@ -524,6 +528,14 @@ public final class RouterWebServiceUtil {
         + metricsResponse.getActiveNodes());
     metrics.setShutdownNodes(metrics.getShutdownNodes()
         + metricsResponse.getShutdownNodes());
+
+    int utilizedVirtualCoresPercent = metrics.getTotalVirtualCores() <= 0 ? 0 :
+        (int) (metrics.getUtilizedVirtualCores() * 100 / metrics.getTotalVirtualCores());
+    metrics.setUtilizedVirtualCoresPercent(utilizedVirtualCoresPercent);
+
+    int utilizedMBPercent = metrics.getTotalMB() <= 0 ? 0 :
+        (int) (metrics.getUtilizedMB() * 100 / metrics.getTotalMB());
+    metrics.setUtilizedMBPercent(utilizedMBPercent);
   }
 
   /**
@@ -751,5 +763,14 @@ public final class RouterWebServiceUtil {
 
     // return caller UGI
     return callerUGI;
+  }
+
+  public static String generateWebTitle(String title, String msg) {
+    StringBuilder stringBuilder = new StringBuilder();
+    stringBuilder.append(title);
+    stringBuilder.append(" (");
+    stringBuilder.append(msg);
+    stringBuilder.append(")");
+    return stringBuilder.toString();
   }
 }

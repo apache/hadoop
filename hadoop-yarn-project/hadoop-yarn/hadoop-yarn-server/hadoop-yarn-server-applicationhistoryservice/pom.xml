@@ -22,11 +22,11 @@
   <parent>
     <artifactId>hadoop-yarn-server</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>3.4.0-SNAPSHOT</version>
+    <version>3.5.0-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <artifactId>hadoop-yarn-server-applicationhistoryservice</artifactId>
-  <version>3.4.0-SNAPSHOT</version>
+  <version>3.5.0-SNAPSHOT</version>
   <name>Apache Hadoop YARN ApplicationHistoryService</name>
 
   <properties>
@@ -116,6 +116,10 @@
         <exclusion>
           <groupId>com.fasterxml.jackson.jaxrs</groupId>
           <artifactId>jackson-jaxrs-json-provider</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.codehaus.jettison</groupId>
+          <artifactId>jettison</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
@@ -224,6 +228,10 @@
         <exclusion>
           <groupId>org.javassist</groupId>
           <artifactId>javassist</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>com.cedarsoftware</groupId>
+          <artifactId>java-util</artifactId>
         </exclusion>
       </exclusions>
     </dependency>

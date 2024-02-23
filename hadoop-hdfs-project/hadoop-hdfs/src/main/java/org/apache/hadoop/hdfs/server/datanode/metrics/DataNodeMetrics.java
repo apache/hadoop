@@ -111,6 +111,12 @@ public class DataNodeMetrics {
   @Metric("Count of active dataNode xceivers")
   private MutableGaugeInt dataNodeActiveXceiversCount;
 
+  @Metric("Count of read active dataNode xceivers")
+  private MutableGaugeInt dataNodeReadActiveXceiversCount;
+
+  @Metric("Count of write active dataNode xceivers")
+  private MutableGaugeInt dataNodeWriteActiveXceiversCount;
+
   @Metric("Count of active DataNode packetResponder")
   private MutableGaugeInt dataNodePacketResponderCount;
 
@@ -597,6 +603,30 @@ public class DataNodeMetrics {
 
   public int getDataNodeActiveXceiverCount() {
     return dataNodeActiveXceiversCount.value();
+  }
+
+  public void incrDataNodeReadActiveXceiversCount(){
+    dataNodeReadActiveXceiversCount.incr();
+  }
+
+  public void decrDataNodeReadActiveXceiversCount(){
+    dataNodeReadActiveXceiversCount.decr();
+  }
+
+  public void setDataNodeReadActiveXceiversCount(int value){
+    dataNodeReadActiveXceiversCount.set(value);
+  }
+
+  public void incrDataNodeWriteActiveXceiversCount(){
+    dataNodeWriteActiveXceiversCount.incr();
+  }
+
+  public void decrDataNodeWriteActiveXceiversCount(){
+    dataNodeWriteActiveXceiversCount.decr();
+  }
+
+  public void setDataNodeWriteActiveXceiversCount(int value){
+    dataNodeWriteActiveXceiversCount.set(value);
   }
 
   public void incrDataNodePacketResponderCount() {

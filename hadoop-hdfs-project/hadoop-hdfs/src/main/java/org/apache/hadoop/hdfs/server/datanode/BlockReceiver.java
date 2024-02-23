@@ -38,6 +38,7 @@ import java.util.zip.Checksum;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FSOutputSummer;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.DFSPacket;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -57,6 +58,7 @@ import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
 import org.apache.hadoop.tracing.Span;
 import org.apache.hadoop.tracing.Tracer;
 
@@ -274,10 +276,9 @@ class BlockReceiver implements Closeable {
       if (isCreate) {
         BlockMetadataHeader.writeHeader(checksumOut, diskChecksum);
       } 
-    } catch (ReplicaAlreadyExistsException bae) {
-      throw bae;
-    } catch (ReplicaNotFoundException bne) {
-      throw bne;
+    } catch (ReplicaAlreadyExistsException | ReplicaNotFoundException
+        | DiskOutOfSpaceException e) {
+      throw e;
     } catch(IOException ioe) {
       if (replicaInfo != null) {
         replicaInfo.releaseAllBytesReserved();
@@ -598,7 +599,9 @@ class BlockReceiver implements Closeable {
       return 0;
     }
 
-    datanode.metrics.incrPacketsReceived();
+    if (seqno != DFSPacket.HEART_BEAT_SEQNO) {
+      datanode.metrics.incrPacketsReceived();
+    }
     //First write the packet to the mirror:
     if (mirrorOut != null && !mirrorError) {
       try {
@@ -839,7 +842,7 @@ class BlockReceiver implements Closeable {
           
           replicaInfo.setLastChecksumAndDataLen(offsetInBlock, lastCrc);
 
-          datanode.metrics.incrBytesWritten(len);
+          datanode.metrics.incrBytesWritten(numBytesToDisk);
           datanode.metrics.incrTotalWriteTime(duration);
 
           manageWriterOsCache(offsetInBlock, seqno);

@@ -839,7 +839,7 @@ public class Dispatcher {
       final long size = Math.min(getBlocksSize, blocksToReceive);
       final BlocksWithLocations newBlksLocs =
           nnc.getBlocks(getDatanodeInfo(), size, getBlocksMinBlockSize,
-              hotBlockTimeInterval);
+              hotBlockTimeInterval, storageType);
 
       if (LOG.isTraceEnabled()) {
         LOG.trace("getBlocks(" + getDatanodeInfo() + ", "

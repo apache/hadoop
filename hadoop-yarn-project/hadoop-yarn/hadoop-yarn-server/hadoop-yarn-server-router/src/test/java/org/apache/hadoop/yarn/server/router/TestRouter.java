@@ -18,6 +18,7 @@
 package org.apache.hadoop.yarn.server.router;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import org.apache.hadoop.conf.Configuration;
@@ -27,6 +28,7 @@ import org.apache.hadoop.security.HttpCrossOriginFilterInitializer;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.security.http.CrossOriginFilter;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.webapp.WebApp;
 import org.eclipse.jetty.servlet.FilterHolder;
@@ -42,7 +44,9 @@ import javax.servlet.ServletOutputStream;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.util.Collection;
 import java.util.HashMap;
@@ -142,7 +146,7 @@ public class TestRouter {
     WebAppContext webAppContext = httpServer2.getWebAppContext();
     ServletHandler servletHandler = webAppContext.getServletHandler();
     FilterHolder holder = servletHandler.getFilter("Cross Origin Filter");
-    CrossOriginFilter filter = CrossOriginFilter.class.cast(holder.getFilter());
+    CrossOriginFilter filter = (CrossOriginFilter) holder.getFilter();
 
     // 1. Simulate [example.com] for access
     HttpServletRequest mockReq = Mockito.mock(HttpServletRequest.class);
@@ -182,6 +186,18 @@ public class TestRouter {
     // CrossOriginFilter will not set any value
     Assert.assertEquals(0, mockRes2.getHeaders().size());
 
+    router.stop();
+  }
+
+  @Test
+  public void testUserProvidedUGIConf() throws Exception {
+    String errMsg = "Invalid attribute value for " +
+        CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION + " of DUMMYAUTH";
+    Configuration dummyConf = new YarnConfiguration();
+    dummyConf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION, "DUMMYAUTH");
+    Router router = new Router();
+    LambdaTestUtils.intercept(IllegalArgumentException.class, errMsg,
+        () -> router.init(dummyConf));
     router.stop();
   }
 
@@ -377,4 +393,15 @@ public class TestRouter {
     }
   }
 
+  @Test
+  public void testRouterCLI() {
+    ByteArrayOutputStream dataOut = new ByteArrayOutputStream();
+    ByteArrayOutputStream dataErr = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(dataOut));
+    System.setErr(new PrintStream(dataErr));
+    Router.main(new String[]{"-help", "-format-state-store"});
+    assertTrue(dataErr.toString().contains(
+        "Usage: yarn router [-format-state-store] | " +
+        "[-remove-application-from-state-store <appId>]"));
+  }
 }

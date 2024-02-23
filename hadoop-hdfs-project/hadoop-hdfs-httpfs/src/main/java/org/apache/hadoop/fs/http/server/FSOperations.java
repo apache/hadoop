@@ -65,6 +65,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -2367,6 +2368,60 @@ public final class FSOperations {
       }
       HttpFSServerWebApp.get().getMetrics().incrOpsAllECPolicies();
       return JsonUtil.toJsonString(ecPolicyInfos.stream().toArray(ErasureCodingPolicyInfo[]::new));
+    }
+  }
+
+  /**
+   * Executor that performs a FSGetErasureCodingCodecs operation.
+   */
+  @InterfaceAudience.Private
+  public static class FSGetErasureCodingCodecs
+      implements FileSystemAccess.FileSystemExecutor<Map> {
+
+    public FSGetErasureCodingCodecs() {
+    }
+
+    @Override
+    public Map execute(FileSystem fs) throws IOException {
+      Map<String, Map<String, String>> ecCodecs = new HashMap<>();
+      if (fs instanceof DistributedFileSystem) {
+        DistributedFileSystem dfs = (DistributedFileSystem) fs;
+        ecCodecs.put("ErasureCodingCodecs", dfs.getAllErasureCodingCodecs());
+      } else {
+        throw new UnsupportedOperationException("getErasureCodeCodecs is " +
+            "not supported for HttpFs on " + fs.getClass() +
+            ". Please check your fs.defaultFS configuration");
+      }
+      HttpFSServerWebApp.get().getMetrics().incrOpsECCodecs();
+      return ecCodecs;
+    }
+  }
+
+  /**
+   * Executor that performs a FSGetTrashRoots operation.
+   */
+  @InterfaceAudience.Private
+  public static class FSGetTrashRoots
+      implements FileSystemAccess.FileSystemExecutor<Map> {
+    final private boolean allUsers;
+
+    public FSGetTrashRoots(boolean allUsers) {
+      this.allUsers = allUsers;
+    }
+
+    @Override
+    public Map execute(FileSystem fs) throws IOException {
+      Map<String, Collection<FileStatus>> paths = new HashMap<>();
+      if (fs instanceof DistributedFileSystem) {
+        DistributedFileSystem dfs = (DistributedFileSystem) fs;
+        paths.put("Paths", dfs.getTrashRoots(allUsers));
+      } else {
+        throw new UnsupportedOperationException("getTrashRoots is " +
+            "not supported for HttpFs on " + fs.getClass() +
+            ". Please check your fs.defaultFS configuration");
+      }
+      HttpFSServerWebApp.get().getMetrics().incrOpsTrashRoots();
+      return paths;
     }
   }
 }

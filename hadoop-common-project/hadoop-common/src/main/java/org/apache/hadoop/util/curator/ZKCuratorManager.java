@@ -18,7 +18,7 @@
 package org.apache.hadoop.util.curator;
 
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -40,7 +40,6 @@ import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.client.ZKClientConfig;
-import org.apache.zookeeper.common.ClientX509Util;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Stat;
 
@@ -49,7 +48,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.util.Preconditions;
 
-import javax.naming.ConfigurationException;
+import org.apache.hadoop.security.SecurityUtil.TruststoreKeystore;
 
 /**
  * Helper class that provides utility methods specific to ZK operations.
@@ -261,7 +260,7 @@ public final class ZKCuratorManager {
   public String getStringData(final String path) throws Exception {
     byte[] bytes = getData(path);
     if (bytes != null) {
-      return new String(bytes, Charset.forName("UTF-8"));
+      return new String(bytes, StandardCharsets.UTF_8);
     }
     return null;
   }
@@ -276,7 +275,7 @@ public final class ZKCuratorManager {
   public String getStringData(final String path, Stat stat) throws Exception {
     byte[] bytes = getData(path, stat);
     if (bytes != null) {
-      return new String(bytes, Charset.forName("UTF-8"));
+      return new String(bytes, StandardCharsets.UTF_8);
     }
     return null;
   }
@@ -300,7 +299,7 @@ public final class ZKCuratorManager {
    * @throws Exception If it cannot contact Zookeeper.
    */
   public void setData(String path, String data, int version) throws Exception {
-    byte[] bytes = data.getBytes(Charset.forName("UTF-8"));
+    byte[] bytes = data.getBytes(StandardCharsets.UTF_8);
     setData(path, bytes, version);
   }
 
@@ -549,7 +548,17 @@ public final class ZKCuratorManager {
     public ZooKeeper newZooKeeper(String connectString, int sessionTimeout,
         Watcher watcher, boolean canBeReadOnly
     ) throws Exception {
-      ZKClientConfig zkClientConfig = new ZKClientConfig();
+      return this.newZooKeeper(connectString, sessionTimeout,
+      watcher, canBeReadOnly, new ZKClientConfig());
+    }
+
+    @Override
+    public ZooKeeper newZooKeeper(String connectString, int sessionTimeout,
+        Watcher watcher, boolean canBeReadOnly, ZKClientConfig zkClientConfig
+    ) throws Exception {
+      if (zkClientConfig == null) {
+        zkClientConfig = new ZKClientConfig();
+      }
       if (zkPrincipal != null) {
         LOG.info("Configuring zookeeper to use {} as the server principal",
             zkPrincipal);
@@ -560,62 +569,10 @@ public final class ZKCuratorManager {
         setJaasConfiguration(zkClientConfig);
       }
       if (sslEnabled) {
-        setSslConfiguration(zkClientConfig);
+        SecurityUtil.setSslConfiguration(zkClientConfig, truststoreKeystore);
       }
       return new ZooKeeper(connectString, sessionTimeout, watcher,
           canBeReadOnly, zkClientConfig);
-    }
-
-    /**
-     * Configure ZooKeeper Client with SSL/TLS connection.
-     * @param zkClientConfig ZooKeeper Client configuration
-     */
-    private void setSslConfiguration(ZKClientConfig zkClientConfig) throws ConfigurationException {
-      this.setSslConfiguration(zkClientConfig, new ClientX509Util());
-    }
-
-    private void setSslConfiguration(ZKClientConfig zkClientConfig, ClientX509Util x509Util)
-        throws ConfigurationException {
-      validateSslConfiguration();
-      LOG.info("Configuring the ZooKeeper client to use SSL/TLS encryption for connecting to the "
-          + "ZooKeeper server.");
-      LOG.debug("Configuring the ZooKeeper client with {} location: {}.",
-          this.truststoreKeystore.keystoreLocation,
-          CommonConfigurationKeys.ZK_SSL_KEYSTORE_LOCATION);
-      LOG.debug("Configuring the ZooKeeper client with {} location: {}.",
-          this.truststoreKeystore.truststoreLocation,
-          CommonConfigurationKeys.ZK_SSL_TRUSTSTORE_LOCATION);
-
-      zkClientConfig.setProperty(ZKClientConfig.SECURE_CLIENT, "true");
-      zkClientConfig.setProperty(ZKClientConfig.ZOOKEEPER_CLIENT_CNXN_SOCKET,
-          "org.apache.zookeeper.ClientCnxnSocketNetty");
-      zkClientConfig.setProperty(x509Util.getSslKeystoreLocationProperty(),
-          this.truststoreKeystore.keystoreLocation);
-      zkClientConfig.setProperty(x509Util.getSslKeystorePasswdProperty(),
-          this.truststoreKeystore.keystorePassword);
-      zkClientConfig.setProperty(x509Util.getSslTruststoreLocationProperty(),
-          this.truststoreKeystore.truststoreLocation);
-      zkClientConfig.setProperty(x509Util.getSslTruststorePasswdProperty(),
-          this.truststoreKeystore.truststorePassword);
-    }
-
-    private void validateSslConfiguration() throws ConfigurationException {
-      if (StringUtils.isEmpty(this.truststoreKeystore.keystoreLocation)) {
-        throw new ConfigurationException(
-            "The keystore location parameter is empty for the ZooKeeper client connection.");
-      }
-      if (StringUtils.isEmpty(this.truststoreKeystore.keystorePassword)) {
-        throw new ConfigurationException(
-            "The keystore password parameter is empty for the ZooKeeper client connection.");
-      }
-      if (StringUtils.isEmpty(this.truststoreKeystore.truststoreLocation)) {
-        throw new ConfigurationException(
-            "The truststore location parameter is empty for the ZooKeeper client connection.");
-      }
-      if (StringUtils.isEmpty(this.truststoreKeystore.truststorePassword)) {
-        throw new ConfigurationException(
-            "The truststore password parameter is empty for the ZooKeeper client connection.");
-      }
     }
 
     private boolean isJaasConfigurationSet(ZKClientConfig zkClientConfig) {
@@ -637,46 +594,6 @@ public final class ZKCuratorManager {
           kerberosKeytab);
       javax.security.auth.login.Configuration.setConfiguration(jconf);
       zkClientConfig.setProperty(ZKClientConfig.LOGIN_CONTEXT_NAME_KEY, JAAS_CLIENT_ENTRY);
-    }
-  }
-
-  /**
-   * Helper class to contain the Truststore/Keystore paths for the ZK client connection over
-   * SSL/TLS.
-   */
-  public static class TruststoreKeystore {
-    private final String keystoreLocation;
-    private final String keystorePassword;
-    private final String truststoreLocation;
-    private final String truststorePassword;
-
-    /**
-     * Configuration for the ZooKeeper connection when SSL/TLS is enabled.
-     * When a value is not configured, ensure that empty string is set instead of null.
-     *
-     * @param conf ZooKeeper Client configuration
-     */
-    public TruststoreKeystore(Configuration conf) {
-      keystoreLocation = conf.get(CommonConfigurationKeys.ZK_SSL_KEYSTORE_LOCATION, "");
-      keystorePassword = conf.get(CommonConfigurationKeys.ZK_SSL_KEYSTORE_PASSWORD, "");
-      truststoreLocation = conf.get(CommonConfigurationKeys.ZK_SSL_TRUSTSTORE_LOCATION, "");
-      truststorePassword = conf.get(CommonConfigurationKeys.ZK_SSL_TRUSTSTORE_PASSWORD, "");
-    }
-
-    public String getKeystoreLocation() {
-      return keystoreLocation;
-    }
-
-    public String getKeystorePassword() {
-      return keystorePassword;
-    }
-
-    public String getTruststoreLocation() {
-      return truststoreLocation;
-    }
-
-    public String getTruststorePassword() {
-      return truststorePassword;
     }
   }
 }

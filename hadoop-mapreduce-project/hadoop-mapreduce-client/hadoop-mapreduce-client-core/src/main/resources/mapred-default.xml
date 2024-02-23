@@ -63,6 +63,15 @@
 </property>
 
 <property>
+  <name>mapreduce.task.spill.files.count.limit</name>
+  <value>-1</value>
+  <description>Number of spill files that can be created by a MapTask.
+  After breaching this, task will fail. Default value for this config is -1
+  which indicates that there is no limit on number of spill files being
+  created</description>
+</property>
+
+<property>
   <name>mapreduce.job.local-fs.single-disk-limit.bytes</name>
   <value>-1</value>
   <description>Enable an in task monitor thread to watch for single disk
@@ -840,8 +849,11 @@
   <name>yarn.app.mapreduce.task.container.log.backups</name>
   <value>0</value>
   <description>Number of backup files for task logs when using
-    RollingFileAppender (RFA). See
-    org.apache.log4j.RollingFileAppender.maxBackupIndex.
+    ContainerRollingLogAppender (CRLA). See
+    org.apache.log4j.RollingFileAppender.maxBackupIndex. By default,
+    ContainerLogAppender (CLA) is used, and container logs are not rolled. CRLA
+    is enabled for tasks when both mapreduce.task.userlog.limit.kb and
+    yarn.app.mapreduce.task.container.log.backups are greater than zero.
   </description>
 </property>
 
@@ -849,8 +861,12 @@
   <name>yarn.app.mapreduce.am.container.log.backups</name>
   <value>0</value>
   <description>Number of backup files for the ApplicationMaster logs when using
-    RollingFileAppender (RFA). See
-    org.apache.log4j.RollingFileAppender.maxBackupIndex.
+    ContainerRollingLogAppender (CRLA). See
+    org.apache.log4j.RollingFileAppender.maxBackupIndex. By default,
+    ContainerLogAppender (CLA) is used, and container logs are not rolled. CRLA
+    is enabled for the ApplicationMaster when both
+    yarn.app.mapreduce.am.container.log.limit.kb and
+    yarn.app.mapreduce.am.container.log.backups are greater than zero.
   </description>
 </property>
 
@@ -1802,6 +1818,18 @@
    <name>mapreduce.jvm.system-properties-to-log</name>
    <value>os.name,os.version,java.home,java.runtime.version,java.vendor,java.version,java.vm.name,java.class.path,java.io.tmpdir,user.dir,user.name</value>
    <description>Comma-delimited list of system properties to log on mapreduce JVM start</description>
+</property>
+
+<property>
+  <name>mapreduce.jvm.add-opens-as-default</name>
+  <value>false</value>
+  <description>Since on JDK17 it's no longer possible to use the reflection API to
+    access non-public fields and methods add-opens flags should be added to MR AM
+    and map/reduce containers regardless of the user specified java opts. Setting
+    this to true will add the flags to the container launch commands on nodes with
+    JDK17 or higher. Defaults to false, and the setting has no effect on nodes using
+    JDK16 and before.
+  </description>
 </property>
 
 <!-- jobhistory properties -->

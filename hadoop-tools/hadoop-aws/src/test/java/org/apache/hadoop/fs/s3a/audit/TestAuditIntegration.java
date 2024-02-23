@@ -22,9 +22,12 @@ import java.io.IOException;
 import java.nio.file.AccessDeniedException;
 import java.util.List;
 
-import com.amazonaws.DefaultRequest;
-import com.amazonaws.handlers.RequestHandler2;
-import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
+import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
+import software.amazon.awssdk.core.interceptor.ExecutionInterceptor;
+import software.amazon.awssdk.core.interceptor.InterceptorContext;
+import software.amazon.awssdk.http.SdkHttpMethod;
+import software.amazon.awssdk.http.SdkHttpRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
@@ -39,13 +42,15 @@ import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
+
 import static org.apache.hadoop.fs.s3a.S3AUtils.translateException;
 import static org.apache.hadoop.fs.s3a.audit.AuditIntegration.attachSpanToRequest;
 import static org.apache.hadoop.fs.s3a.audit.AuditIntegration.retrieveAttachedSpan;
 import static org.apache.hadoop.fs.s3a.audit.AuditTestSupport.createIOStatisticsStoreForAuditing;
 import static org.apache.hadoop.fs.s3a.audit.AuditTestSupport.noopAuditConfig;
-import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_REQUEST_HANDLERS;
+import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_EXECUTION_INTERCEPTORS;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_SERVICE_CLASSNAME;
+import static org.apache.hadoop.fs.s3a.audit.impl.S3AInternalAuditConstants.AUDIT_SPAN_EXECUTION_ATTRIBUTE;
 import static org.apache.hadoop.service.ServiceAssert.assertServiceStateStarted;
 import static org.apache.hadoop.service.ServiceAssert.assertServiceStateStopped;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -159,30 +164,50 @@ public class TestAuditIntegration extends AbstractHadoopTestBase {
   }
 
   @Test
-  public void testSingleRequestHandler() throws Throwable {
+  public void testSingleExecutionInterceptor() throws Throwable {
     AuditManagerS3A manager = AuditIntegration.createAndStartAuditManager(
         noopAuditConfig(),
         ioStatistics);
-    List<RequestHandler2> handlers
-        = manager.createRequestHandlers();
-    assertThat(handlers)
+    List<ExecutionInterceptor> interceptors
+        = manager.createExecutionInterceptors();
+    assertThat(interceptors)
         .hasSize(1);
-    RequestHandler2 handler = handlers.get(0);
+    ExecutionInterceptor interceptor = interceptors.get(0);
+
     RequestFactory requestFactory = RequestFactoryImpl.builder()
         .withBucket("bucket")
         .build();
+    HeadObjectRequest.Builder requestBuilder =
+        requestFactory.newHeadObjectRequestBuilder("/");
+
+    assertThat(interceptor instanceof AWSAuditEventCallbacks).isTrue();
+    ((AWSAuditEventCallbacks)interceptor).requestCreated(requestBuilder);
+
+    HeadObjectRequest request = requestBuilder.build();
+    SdkHttpRequest httpRequest = SdkHttpRequest.builder()
+        .protocol("https")
+        .host("test")
+        .method(SdkHttpMethod.HEAD)
+        .build();
+
+    ExecutionAttributes attributes = ExecutionAttributes.builder().build();
+    InterceptorContext context = InterceptorContext.builder()
+        .request(request)
+        .httpRequest(httpRequest)
+        .build();
+
     // test the basic pre-request sequence while avoiding
     // the complexity of recreating the full sequence
     // (and probably getting it wrong)
-    GetObjectMetadataRequest r
-        = requestFactory.newGetObjectMetadataRequest("/");
-    DefaultRequest dr = new DefaultRequest(r, "S3");
-    assertThat(handler.beforeMarshalling(r))
-        .isNotNull();
-    assertThat(handler.beforeExecution(r))
-        .isNotNull();
-    handler.beforeRequest(dr);
-
+    interceptor.beforeExecution(context, attributes);
+    interceptor.modifyRequest(context, attributes);
+    interceptor.beforeMarshalling(context, attributes);
+    interceptor.afterMarshalling(context, attributes);
+    interceptor.modifyHttpRequest(context, attributes);
+    interceptor.beforeTransmission(context, attributes);
+    AuditSpanS3A span = attributes.getAttribute(AUDIT_SPAN_EXECUTION_ATTRIBUTE);
+    assertThat(span).isNotNull();
+    assertThat(span.isValidSpan()).isFalse();
   }
 
   /**
@@ -192,14 +217,14 @@ public class TestAuditIntegration extends AbstractHadoopTestBase {
   public void testRequestHandlerLoading() throws Throwable {
     Configuration conf = noopAuditConfig();
     conf.setClassLoader(this.getClass().getClassLoader());
-    conf.set(AUDIT_REQUEST_HANDLERS,
-        SimpleAWSRequestHandler.CLASS);
+    conf.set(AUDIT_EXECUTION_INTERCEPTORS,
+        SimpleAWSExecutionInterceptor.CLASS);
     AuditManagerS3A manager = AuditIntegration.createAndStartAuditManager(
         conf,
         ioStatistics);
-    assertThat(manager.createRequestHandlers())
+    assertThat(manager.createExecutionInterceptors())
         .hasSize(2)
-        .hasAtLeastOneElementOfType(SimpleAWSRequestHandler.class);
+        .hasAtLeastOneElementOfType(SimpleAWSExecutionInterceptor.class);
   }
 
   @Test
@@ -216,8 +241,8 @@ public class TestAuditIntegration extends AbstractHadoopTestBase {
   @Test
   public void testNoopAuditManager() throws Throwable {
     AuditManagerS3A manager = AuditIntegration.stubAuditManager();
-    assertThat(manager.createStateChangeListener())
-        .describedAs("transfer state change listener")
+    assertThat(manager.createTransferListener())
+        .describedAs("transfer listener")
         .isNotNull();
   }
 
@@ -226,11 +251,10 @@ public class TestAuditIntegration extends AbstractHadoopTestBase {
     AuditManagerS3A manager = AuditIntegration.stubAuditManager();
 
     AuditSpanS3A span = manager.createSpan("op", null, null);
-    GetObjectMetadataRequest request =
-        new GetObjectMetadataRequest("bucket", "key");
-    attachSpanToRequest(request, span);
-    AWSAuditEventCallbacks callbacks = retrieveAttachedSpan(request);
-    assertThat(callbacks).isSameAs(span);
+    ExecutionAttributes attributes = ExecutionAttributes.builder().build();
+    attachSpanToRequest(attributes, span);
+    AuditSpanS3A retrievedSpan = retrieveAttachedSpan(attributes);
+    assertThat(retrievedSpan).isSameAs(span);
 
   }
 }

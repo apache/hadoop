@@ -1334,6 +1334,8 @@ public class TestRPC extends TestRpcBase {
       }
       MetricsRecordBuilder rpcMetrics =
           getMetrics(server.getRpcMetrics().name());
+      assertEquals("Expected correct rpc en queue count",
+          3000, getLongCounter("RpcEnQueueTimeNumOps", rpcMetrics));
       assertEquals("Expected correct rpc queue count",
           3000, getLongCounter("RpcQueueTimeNumOps", rpcMetrics));
       assertEquals("Expected correct rpc processing count",
@@ -1344,6 +1346,8 @@ public class TestRPC extends TestRpcBase {
           3000, getLongCounter("RpcResponseTimeNumOps", rpcMetrics));
       assertEquals("Expected zero rpc lock wait time",
           0, getDoubleGauge("RpcLockWaitTimeAvgTime", rpcMetrics), 0.001);
+      MetricsAsserts.assertQuantileGauges("RpcEnQueueTime" + interval + "s",
+          rpcMetrics);
       MetricsAsserts.assertQuantileGauges("RpcQueueTime" + interval + "s",
           rpcMetrics);
       MetricsAsserts.assertQuantileGauges("RpcProcessingTime" + interval + "s",
@@ -1524,6 +1528,7 @@ public class TestRPC extends TestRpcBase {
         IOException unwrapExeption = re.unwrapRemoteException();
         if (unwrapExeption instanceof RetriableException) {
           succeeded = true;
+          assertEquals(1L, server.getRpcMetrics().getClientBackoffDisconnected());
         } else {
           lastException = unwrapExeption;
         }
@@ -2007,6 +2012,8 @@ public class TestRPC extends TestRpcBase {
           getMetrics(server.getRpcMetrics().name());
       assertEquals("Expected zero rpc lock wait time",
           0, getDoubleGauge("RpcLockWaitTimeAvgTime", rpcMetrics), 0.001);
+      MetricsAsserts.assertQuantileGauges("RpcEnQueueTime" + interval + "s",
+          rpcMetrics);
       MetricsAsserts.assertQuantileGauges("RpcQueueTime" + interval + "s",
           rpcMetrics);
       MetricsAsserts.assertQuantileGauges("RpcProcessingTime" + interval + "s",
@@ -2017,12 +2024,15 @@ public class TestRPC extends TestRpcBase {
       assertGauge("RpcLockWaitTimeAvgTime",
           (double)(server.getRpcMetrics().getMetricsTimeUnit().convert(10L,
               TimeUnit.SECONDS)), rpcMetrics);
-      LOG.info("RpcProcessingTimeAvgTime: {} , RpcQueueTimeAvgTime: {}",
+      LOG.info("RpcProcessingTimeAvgTime: {} , RpcEnQueueTimeAvgTime: {} , RpcQueueTimeAvgTime: {}",
           getDoubleGauge("RpcProcessingTimeAvgTime", rpcMetrics),
+          getDoubleGauge("RpcEnQueueTimeAvgTime", rpcMetrics),
           getDoubleGauge("RpcQueueTimeAvgTime", rpcMetrics));
 
       assertTrue(getDoubleGauge("RpcProcessingTimeAvgTime", rpcMetrics)
           > 4000000D);
+      assertTrue(getDoubleGauge("RpcEnQueueTimeAvgTime", rpcMetrics)
+          > 4000D);
       assertTrue(getDoubleGauge("RpcQueueTimeAvgTime", rpcMetrics)
           > 4000D);
     } finally {
