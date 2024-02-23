@@ -36,6 +36,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
+import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.server.common.HttpGetFailedException;
 import org.apache.hadoop.hdfs.server.namenode.FSImage;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
@@ -189,7 +190,8 @@ public class TestBootstrapStandby {
    */
   @Test
   public void testRollingUpgradeBootstrapStandby() throws Exception {
-    removeStandbyNameDirs();
+    // This node is needed to create the rollback fsimage
+    cluster.restartNameNode(1);
 
     int futureVersion = NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION - 1;
 
@@ -208,12 +210,21 @@ public class TestBootstrapStandby {
 
     // BootstrapStandby should fail if the node has a future version
     // and the cluster isn't in rolling upgrade
-    bs.setConf(cluster.getConfiguration(1));
+    bs.setConf(cluster.getConfiguration(2));
     assertEquals("BootstrapStandby should return ERR_CODE_INVALID_VERSION",
         ERR_CODE_INVALID_VERSION, bs.run(new String[]{"-force"}));
 
     // Start rolling upgrade
     fs.rollingUpgrade(RollingUpgradeAction.PREPARE);
+    RollingUpgradeInfo info = fs.rollingUpgrade(RollingUpgradeAction.QUERY);
+    while (!info.createdRollbackImages()) {
+      Thread.sleep(1000);
+      info = fs.rollingUpgrade(RollingUpgradeAction.QUERY);
+    }
+    // After the rollback image is created the standby is not needed
+    cluster.shutdownNameNode(1);
+    removeStandbyNameDirs();
+
     nn0 = spy(nn0);
 
     // Make nn0 think it is a future version
@@ -237,6 +248,9 @@ public class TestBootstrapStandby {
 
     long expectedCheckpointTxId = NameNodeAdapter.getNamesystem(nn0)
         .getFSImage().getMostRecentCheckpointTxId();
+    long expectedRollbackTxId = NameNodeAdapter.getNamesystem(nn0)
+       .getFSImage().getMostRecentNameNodeFileTxId(
+           NNStorage.NameNodeFile.IMAGE_ROLLBACK);
     assertEquals(11, expectedCheckpointTxId);
 
     for (int i = 1; i < maxNNCount; i++) {
@@ -245,6 +259,8 @@ public class TestBootstrapStandby {
       bs.run(new String[]{"-force"});
       FSImageTestUtil.assertNNHasCheckpoints(cluster, i,
           ImmutableList.of((int) expectedCheckpointTxId));
+      FSImageTestUtil.assertNNHasRollbackCheckpoints(cluster, i,
+          ImmutableList.of((int) expectedRollbackTxId));
     }
 
     // Make sure the bootstrap was successful
@@ -252,6 +268,13 @@ public class TestBootstrapStandby {
 
     // We should now be able to start the standby successfully
     restartNameNodesFromIndex(1, "-rollingUpgrade", "started");
+
+    for (int i = 1; i < maxNNCount; i++) {
+      assertTrue("NameNodes should all have the rollback FSImage",
+          cluster.getNameNode(i).getFSImage().hasRollbackFSImage());
+      assertTrue("NameNodes should all be inRollingUpgrade",
+          cluster.getNameNode(i).getNamesystem().isRollingUpgrade());
+    }
 
     // Cleanup standby dirs
     for (int i = 1; i < maxNNCount; i++) {

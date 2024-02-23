@@ -1562,4 +1562,25 @@ public class FSImage implements Closeable {
   public long getMostRecentCheckpointTxId() {
     return storage.getMostRecentCheckpointTxId();
   }
+
+  /**
+   * @return the latest txid for the NameNodeFile type, or
+   * {@link HdfsServerConstants::INVALID_TXID}if there is no FSImage file of the
+   * type requested.
+   */
+  public long getMostRecentNameNodeFileTxId(NameNodeFile nnf) throws IOException {
+    final FSImageStorageInspector inspector =
+        new FSImageTransactionalStorageInspector(EnumSet.of(nnf));
+    storage.inspectStorageDirs(inspector);
+    try {
+      List<FSImageFile> images = inspector.getLatestImages();
+      if (images != null && !images.isEmpty()) {
+        return images.get(0).getCheckpointTxId();
+      } else {
+        return HdfsServerConstants.INVALID_TXID;
+      }
+    } catch (FileNotFoundException e) {
+      return HdfsServerConstants.INVALID_TXID;
+    }
+  }
 }
