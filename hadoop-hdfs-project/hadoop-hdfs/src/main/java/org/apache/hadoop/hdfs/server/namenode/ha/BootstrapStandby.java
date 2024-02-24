@@ -358,10 +358,12 @@ public class BootstrapStandby implements Tool, Configurable {
     // (including shared edits)
     final long imageTxId = proxy.getMostRecentCheckpointTxId();
     final long curTxId = proxy.getTransactionID();
-    final long rollbackTxId =
-        proxy.getMostRecentNameNodeFileTxId(NameNodeFile.IMAGE_ROLLBACK);
 
-    if (rollbackTxId != HdfsServerConstants.INVALID_TXID || isRollingUpgrade) {
+    if (isRollingUpgrade) {
+      final long rollbackTxId =
+          proxy.getMostRecentNameNodeFileTxId(NameNodeFile.IMAGE_ROLLBACK);
+      assert rollbackTxId != HdfsServerConstants.INVALID_TXID :
+          "Expected a valid TXID for fsimage_rollback file";
       FSImage rollbackImage = new FSImage(conf);
       try {
         rollbackImage.getStorage().setStorageInfo(storage);
