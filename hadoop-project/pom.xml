@@ -930,7 +930,7 @@
       <dependency>
         <groupId>com.github.pjfanning</groupId>
         <artifactId>jersey-json</artifactId>
-        <version>1.20</version>
+        <version>1.22.0</version>
         <exclusions>
           <exclusion>
             <groupId>com.fasterxml.jackson.core</groupId>
@@ -2488,7 +2488,7 @@
                     <include>com.google.inject:guice:4.0</include>
                     <include>com.sun.jersey:jersey-core:1.19.4</include>
                     <include>com.sun.jersey:jersey-servlet:1.19.4</include>
-                    <include>com.github.pjfanning:jersey-json:1.20</include>
+                    <include>com.github.pjfanning:jersey-json:1.22.0</include>
                     <include>com.sun.jersey:jersey-server:1.19.4</include>
                     <include>com.sun.jersey:jersey-client:1.19.4</include>
                     <include>com.sun.jersey:jersey-grizzly2:1.19.4</include>
