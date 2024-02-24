@@ -129,8 +129,9 @@ public class MultiDispatcher extends AbstractService implements Dispatcher {
       try {
         handler.handle(event);
       } finally {
+        long end = clock.getTime();
         locks.unLock(event);
-        metrics.updateRate(event.getType(), clock.getTime() - start);
+        metrics.updateRate(event.getType(), end - start);
         metrics.removeEvent(event.getType());
       }
     };
