@@ -556,11 +556,11 @@ public class AbfsApacheHttpClient {
     protected HttpResponse doReceiveResponse(final HttpRequest request,
         final HttpClientConnection conn,
         final HttpContext context) throws HttpException, IOException {
-//      long start = System.currentTimeMillis();
+      long start = System.currentTimeMillis();
       final HttpResponse res = super.doReceiveResponse(request, conn, context);
-//      long elapsed = System.currentTimeMillis() - start;
+      long elapsed = System.currentTimeMillis() - start;
       if(context instanceof AbfsHttpClientContext) {
-//        ((AbfsHttpClientContext) context).readTime = elapsed;
+        ((AbfsHttpClientContext) context).readTime = elapsed;
       }
       return res;
     }
