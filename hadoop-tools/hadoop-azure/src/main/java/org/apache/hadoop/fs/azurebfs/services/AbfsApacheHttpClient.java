@@ -199,9 +199,9 @@ public class AbfsApacheHttpClient {
       }
 //      connMgr.connCount.decrementAndGet();
       if(cached) {
-//        synchronized (connMgr.kacCount) {
-//          connMgr.kacCount.decrementAndGet();
-//        }
+        synchronized (connMgr.kacCount) {
+          connMgr.kacCount.decrementAndGet();
+        }
         abfsApacheHttpConnectionMap.remove(getId());
       }
     }
@@ -380,7 +380,7 @@ public class AbfsApacheHttpClient {
      * Gives count of connections that have been cached. Increment when adding in the KAC.
      * Decrement when connection is taken from KAC, or connection from KAC is getting closed.
      */
-//    private final IntegerWrapper kacCount = new IntegerWrapper(0);
+    private final IntegerWrapper kacCount = new IntegerWrapper(0);
 
     /**
      * Gives the number of connections at a moment. Increased when a new connection
@@ -446,9 +446,9 @@ public class AbfsApacheHttpClient {
         if(connection instanceof ManagedHttpClientConnection) {
           AbfsApacheHttpConnection abfsApacheHttpConnection = abfsApacheHttpConnectionMap.get(((ManagedHttpClientConnection) connection).getId());
           if(abfsApacheHttpConnection != null && abfsApacheHttpConnection.cached) {
-//            synchronized (kacCount) {
-//              kacCount.decrementAndGet();
-//            }
+            synchronized (kacCount) {
+              kacCount.decrementAndGet();
+            }
             abfsApacheHttpConnection.cached = false;
           }
         }
@@ -482,13 +482,13 @@ public class AbfsApacheHttpClient {
         return;
       }
       boolean toBeCached = true;
-//      synchronized (kacCount) {
-//        int kacSize = kacCount.incrementAndGet();
-//        if(kacSize >5) {
-//          kacCount.decrementAndGet();
-//          toBeCached = false;
-//        }
-//      }
+      synchronized (kacCount) {
+        int kacSize = kacCount.incrementAndGet();
+        if(kacSize >5) {
+          kacCount.decrementAndGet();
+          toBeCached = false;
+        }
+      }
       if(toBeCached) {
         if(abfsApacheHttpConnection != null) {
           abfsApacheHttpConnection.cached = true;
@@ -556,12 +556,12 @@ public class AbfsApacheHttpClient {
     protected HttpResponse doReceiveResponse(final HttpRequest request,
         final HttpClientConnection conn,
         final HttpContext context) throws HttpException, IOException {
-//      long start = System.currentTimeMillis();
+      long start = System.currentTimeMillis();
       final HttpResponse res = super.doReceiveResponse(request, conn, context);
-//      long elapsed = System.currentTimeMillis() - start;
-//      if(context instanceof AbfsHttpClientContext) {
-//        ((AbfsHttpClientContext) context).readTime = elapsed;
-//      }
+      long elapsed = System.currentTimeMillis() - start;
+      if(context instanceof AbfsHttpClientContext) {
+        ((AbfsHttpClientContext) context).readTime = elapsed;
+      }
       return res;
     }
   }
