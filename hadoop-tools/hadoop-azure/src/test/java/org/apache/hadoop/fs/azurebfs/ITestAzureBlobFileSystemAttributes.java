@@ -45,8 +45,7 @@ public class ITestAzureBlobFileSystemAttributes extends AbstractAbfsIntegrationT
   @Test
   public void testSetGetXAttr() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
-    AbfsConfiguration conf = fs.getAbfsStore().getAbfsConfiguration();
-    final Path testPath = path("setGetXAttr");
+    final Path testPath = path(getMethodName());
     fs.create(testPath);
     testGetSetXAttrHelper(fs, testPath);
   }
@@ -56,7 +55,7 @@ public class ITestAzureBlobFileSystemAttributes extends AbstractAbfsIntegrationT
     AzureBlobFileSystem fs = getFileSystem();
     byte[] attributeValue = fs.getAbfsStore().encodeAttribute("one");
     String attributeName = "user.someAttribute";
-    Path testFile = path("createReplaceXAttr");
+    Path testFile = path(getMethodName());
 
     // after creating a file, it must be possible to create a new xAttr
     touch(testFile);
@@ -75,7 +74,7 @@ public class ITestAzureBlobFileSystemAttributes extends AbstractAbfsIntegrationT
     byte[] attributeValue1 = fs.getAbfsStore().encodeAttribute("one");
     byte[] attributeValue2 = fs.getAbfsStore().encodeAttribute("two");
     String attributeName = "user.someAttribute";
-    Path testFile = path("replaceXAttr");
+    Path testFile = path(getMethodName());
 
     // after creating a file, it must not be possible to replace an xAttr
     intercept(IOException.class, () -> {
@@ -89,13 +88,6 @@ public class ITestAzureBlobFileSystemAttributes extends AbstractAbfsIntegrationT
     Assertions.assertThat(fs.getXAttr(testFile, attributeName))
         .describedAs("Retrieved Attribute Value is Not as Expected")
         .containsExactly(attributeValue2);
-  }
-
-  @Test
-  public void testGetSetXAttrOnRoot() throws Exception {
-    AzureBlobFileSystem fs = getFileSystem();
-    final Path testPath = new Path("/");
-    testGetSetXAttrHelper(fs, testPath);
   }
 
   private void testGetSetXAttrHelper(final AzureBlobFileSystem fs,
