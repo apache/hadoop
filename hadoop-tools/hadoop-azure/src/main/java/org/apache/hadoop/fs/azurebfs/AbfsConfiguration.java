@@ -359,8 +359,11 @@ public class AbfsConfiguration{
           FS_AZURE_ABFS_RENAME_RESILIENCE, DefaultValue = DEFAULT_ENABLE_ABFS_RENAME_RESILIENCE)
   private boolean renameResilience;
 
-  private String clientProvidedEncryptionKey;
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, DefaultValue = DEFAULT_ENABLE_ABFS_CHECKSUM_VALIDATION)
+  private boolean isChecksumValidationEnabled;
 
+  private String clientProvidedEncryptionKey;
   private String clientProvidedEncryptionKeySHA;
 
   public AbfsConfiguration(final Configuration rawConfig, String accountName)
@@ -1239,5 +1242,14 @@ public class AbfsConfiguration{
 
   void setRenameResilience(boolean actualResilience) {
     renameResilience = actualResilience;
+  }
+
+  public boolean getIsChecksumValidationEnabled() {
+    return isChecksumValidationEnabled;
+  }
+
+  @VisibleForTesting
+  public void setIsChecksumValidationEnabled(boolean isChecksumValidationEnabled) {
+    this.isChecksumValidationEnabled = isChecksumValidationEnabled;
   }
 }
