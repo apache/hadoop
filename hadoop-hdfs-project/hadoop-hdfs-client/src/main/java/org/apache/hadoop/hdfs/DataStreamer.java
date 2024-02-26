@@ -1183,10 +1183,12 @@ class DataStreamer extends Daemon {
             if (begin != null) {
               long duration = Time.monotonicNowNanos() - begin;
               if (TimeUnit.NANOSECONDS.toMillis(duration) > dfsclientSlowLogThresholdMs) {
-                LOG.info("Slow ReadProcessor read fields for block " + block
+                final String msg = "Slow ReadProcessor read fields for block " + block
                     + " took " + TimeUnit.NANOSECONDS.toMillis(duration) + "ms (threshold="
                     + dfsclientSlowLogThresholdMs + "ms); ack: " + ack
-                    + ", targets: " + Arrays.asList(targets));
+                    + ", targets: " + Arrays.asList(targets);
+                LOG.warn(msg);
+                throw new IOException(msg);
               }
             }
           }
