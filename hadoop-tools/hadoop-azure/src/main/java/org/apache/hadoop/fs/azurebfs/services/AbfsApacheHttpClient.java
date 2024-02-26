@@ -420,6 +420,12 @@ public class AbfsApacheHttpClient {
 //      return super.requestConnection(route, state);
 //    }
 
+    public void closeAllConn() {
+      enumAvailable((entry)-> {
+        entry.close();
+      });
+    }
+
     @Override
     public void connect(final HttpClientConnection managedConn,
         final HttpRoute route,
@@ -632,5 +638,9 @@ public class AbfsApacheHttpClient {
         .register("http", PlainConnectionSocketFactory.getSocketFactory())
         .register("https", sslSocketFactory)
         .build();
+  }
+
+  public void closeAllConn() {
+    connMgr.closeAllConn();
   }
 }

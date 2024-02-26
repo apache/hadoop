@@ -10,10 +10,12 @@ import java.net.*;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.Stack;
+import java.util.UUID;
 
 import sun.net.ProgressSource;
 import sun.net.www.MessageHeader;
 import sun.net.www.http.HttpClient;
+import sun.net.www.http.KeepAliveCache;
 import sun.net.www.http.PosterOutputStream;
 import sun.net.www.protocol.http.HttpURLConnection;
 import sun.net.www.protocol.https.AbstractDelegateHttpsURLConnection;
@@ -48,6 +50,17 @@ public class AbfsHttpsUrlConnection extends
   public static class AbfsHttpClient extends HttpClient {
 
     private HttpClient httpClient;
+
+    String uuid = UUID.randomUUID().toString();
+
+    @Override
+    public int hashCode() {
+      return uuid.hashCode();
+    }
+
+    public static void removeAllFromKac() {
+      kac = new KeepAliveCache();
+    }
 
     public AbfsHttpClient(HttpClient client) {
       httpClient = client;
@@ -144,6 +157,7 @@ public class AbfsHttpsUrlConnection extends
     @Override
     public void closeServer() {
       httpClient.closeServer();
+      clients.remove(this);
     }
 
     @Override
@@ -185,7 +199,7 @@ public class AbfsHttpsUrlConnection extends
     @Override
     public void finished() {
       httpClient.finished();
-      finishedStack.push(1);
+      //finishedStack.push(1);
     }
   }
 
@@ -201,11 +215,24 @@ public class AbfsHttpsUrlConnection extends
     timeTaken = System.currentTimeMillis() - start;
     isFromCache = http.isCachedConnection();
     http = new AbfsHttpClient(http);
+    if(!isFromCache) {
+        clients.add((AbfsHttpClient) http);
+    }
 //    if(!httpClientSet.contains(http)) {
 //      isFromCache = false;
 //    }
 //    httpClientSet.add(http);
   }
+
+  public static void removeAll() {
+    for(AbfsHttpClient client : clients) {
+      client.closeServer();
+    }
+    AbfsHttpClient.removeAllFromKac();
+  }
+
+  public static final Set<AbfsHttpClient> clients = new HashSet<>();
+
 
 
 

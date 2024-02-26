@@ -17,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
+import org.apache.hadoop.fs.azurebfs.conn.AbfsHttpsUrlConnection;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsApacheHttpExpect100Exception;
@@ -60,6 +61,12 @@ public class AbfsAHCHttpOperation extends HttpOperation {
   private final AbfsApacheHttpClient.AbfsHttpClientContext abfsHttpClientContext;
 
   private final AbfsRestOperationType abfsRestOperationType;
+
+  public static void closeAllConn() {
+    for(AbfsApacheHttpClient client : abfsApacheHttpClientMap.values()) {
+      client.closeAllConn();
+    }
+  }
 
   private synchronized void setAbfsApacheHttpClient(final AbfsConfiguration abfsConfiguration, final String clientId) {
     AbfsApacheHttpClient client = abfsApacheHttpClientMap.get(clientId);
