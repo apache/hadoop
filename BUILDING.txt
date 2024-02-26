@@ -7,7 +7,7 @@ Requirements:
 * JDK 1.8
 * Maven 3.3 or later
 * Boost 1.72 (if compiling native code)
-* Protocol Buffers 3.7.1 (if compiling native code)
+* Protocol Buffers 3.21.12 (if compiling native code)
 * CMake 3.19 or newer (if compiling native code)
 * Zlib devel (if compiling native code)
 * Cyrus SASL devel (if compiling native code)
@@ -74,10 +74,10 @@ Refer to  dev-support/docker/Dockerfile):
   $ ./bootstrap
   $ make -j$(nproc)
   $ sudo make install
-* Protocol Buffers 3.7.1 (required to build native code)
-  $ curl -L -s -S https://github.com/protocolbuffers/protobuf/releases/download/v3.7.1/protobuf-java-3.7.1.tar.gz -o protobuf-3.7.1.tar.gz
-  $ mkdir protobuf-3.7-src
-  $ tar xzf protobuf-3.7.1.tar.gz --strip-components 1 -C protobuf-3.7-src && cd protobuf-3.7-src
+* Protocol Buffers 3.21.12 (required to build native code)
+  $ curl -L https://github.com/protocolbuffers/protobuf/archive/refs/tags/v3.21.12.tar.gz > protobuf-3.21.12.tar.gz
+  $ tar -zxvf protobuf-3.21.12.tar.gz && cd protobuf-3.21.12
+  $ ./autogen.sh
   $ ./configure
   $ make -j$(nproc)
   $ sudo make install
@@ -437,10 +437,10 @@ Installing required dependencies for clean install of macOS 10.14:
 * Install native libraries, only openssl is required to compile native code,
 you may optionally install zlib, lz4, etc.
   $ brew install openssl
-* Protocol Buffers 3.7.1 (required to compile native code)
-  $ wget https://github.com/protocolbuffers/protobuf/releases/download/v3.7.1/protobuf-java-3.7.1.tar.gz
-  $ mkdir -p protobuf-3.7 && tar zxvf protobuf-java-3.7.1.tar.gz --strip-components 1 -C protobuf-3.7
-  $ cd protobuf-3.7
+* Protocol Buffers 3.21.12 (required to compile native code)
+  $ curl -L https://github.com/protocolbuffers/protobuf/archive/refs/tags/v3.21.12.tar.gz > protobuf-3.21.12.tar.gz
+  $ tar -zxvf protobuf-3.21.12.tar.gz && cd protobuf-3.21.12
+  $ ./autogen.sh
   $ ./configure
   $ make
   $ make check
@@ -476,11 +476,10 @@ Building on CentOS 8
 * Install python2 for building documentation.
   $ sudo dnf install python2
 
-* Install Protocol Buffers v3.7.1.
-  $ git clone https://github.com/protocolbuffers/protobuf
-  $ cd protobuf
-  $ git checkout v3.7.1
-  $ autoreconf -i
+* Install Protocol Buffers v3.21.12.
+  $ curl -L https://github.com/protocolbuffers/protobuf/archive/refs/tags/v3.21.12.tar.gz > protobuf-3.21.12.tar.gz
+  $ tar -zxvf protobuf-3.21.12.tar.gz && cd protobuf-3.21.12
+  $ ./autogen.sh
   $ ./configure --prefix=/usr/local
   $ make
   $ sudo make install
@@ -535,7 +534,7 @@ Requirements:
 * JDK 1.8
 * Maven 3.0 or later (maven.apache.org)
 * Boost 1.72 (boost.org)
-* Protocol Buffers 3.7.1 (https://github.com/protocolbuffers/protobuf/releases)
+* Protocol Buffers 3.21.12 (https://github.com/protocolbuffers/protobuf/tags)
 * CMake 3.19 or newer (cmake.org)
 * Visual Studio 2019 (visualstudio.com)
 * Windows SDK 8.1 (optional, if building CPU rate control for the container executor. Get this from
