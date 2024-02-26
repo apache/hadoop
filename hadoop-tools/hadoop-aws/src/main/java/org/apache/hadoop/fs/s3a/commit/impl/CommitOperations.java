@@ -584,7 +584,7 @@ public class CommitOperations extends AbstractStoreOperation
               destKey,
               uploadId,
               partNumber,
-              size).build();
+              size).build();x
           // Read from the file input stream at current position.
           RequestBody body = RequestBody.fromInputStream(fileStream, size);
           UploadPartResponse response = writeOperations.uploadPart(part, body, statistics);
