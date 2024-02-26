@@ -275,10 +275,7 @@ public class TestLeaseRecoveryStriped {
       for (int pos = 0; pos < cellSize; pos++) {
         out.write(StripedFileTestUtil.getByte(pos));
       }
-      StripedDataStreamer first = stripedOut.getStripedDataStreamer(0);
-      waitStreamerAllAcked(first);
-      stopBlockStream(first);
-      for (int i = 1; i < dataBlocks + parityBlocks; i++) {
+      for (int i = 0; i < dataBlocks + parityBlocks; i++) {
         StripedDataStreamer s = stripedOut.getStripedDataStreamer(i);
         waitStreamerAllAcked(s);
         stopBlockStream(s);
