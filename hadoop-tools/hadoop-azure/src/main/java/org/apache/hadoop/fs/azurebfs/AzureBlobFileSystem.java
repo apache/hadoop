@@ -952,7 +952,7 @@ public class AzureBlobFileSystem extends FileSystem
   }
 
   /**
-   * Set the value of an attribute for a path.
+   * Set the value of an attribute for a non-root path.
    *
    * @param path The path on which to set the attribute
    * @param name The attribute to set
@@ -994,7 +994,7 @@ public class AzureBlobFileSystem extends FileSystem
   }
 
   /**
-   * Get the value of an attribute for a path.
+   * Get the value of an attribute for a non-root path.
    *
    * @param path The path on which to get the attribute
    * @param name The attribute to get
