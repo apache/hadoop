@@ -159,7 +159,7 @@ public class TestKafkaMetrics {
     String date = dateFormat.format(currDate);
     SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm:ss");
     String time = timeFormat.format(currDate);
-    String hostname = new String("null");
+    String hostname = "null";
     try {
       hostname = InetAddress.getLocalHost().getHostName();
     } catch (Exception e) {

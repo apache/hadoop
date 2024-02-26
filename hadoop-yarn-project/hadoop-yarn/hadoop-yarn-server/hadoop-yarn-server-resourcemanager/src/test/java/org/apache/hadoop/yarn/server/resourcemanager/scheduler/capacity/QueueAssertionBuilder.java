@@ -64,15 +64,15 @@ class QueueAssertionBuilder {
   }
 
   public class QueueAssertion {
-    private final String queuePath;
+    private final QueuePath queuePath;
     private final List<QueueAssertion.ValueAssertion> assertions = new ArrayList<>();
 
-    QueueAssertion(String queuePath) {
+    QueueAssertion(QueuePath queuePath) {
       this.queuePath = queuePath;
     }
 
 
-    public QueueAssertion withQueue(String queuePath) {
+    public QueueAssertion withQueue(QueuePath queuePath) {
       return QueueAssertionBuilder.this.withQueue(queuePath);
     }
 
@@ -139,7 +139,7 @@ class QueueAssertionBuilder {
 
       public void withResourceSupplier(
           BiFunction<QueueResourceQuotas, String, Resource> assertion, String messageInfo) {
-        CSQueue queue = cs.getQueue(queuePath);
+        CSQueue queue = cs.getQueue(queuePath.getFullPath());
         if (queue == null) {
           Assert.fail("Queue " + queuePath + " is not found");
         }
@@ -150,7 +150,7 @@ class QueueAssertionBuilder {
 
       public void withCapacitySupplier(
           BiFunction<QueueCapacities, String, Float> assertion, String messageInfo) {
-        CSQueue queue = cs.getQueue(queuePath);
+        CSQueue queue = cs.getQueue(queuePath.getFullPath());
         if (queue == null) {
           Assert.fail("Queue " + queuePath + " is not found");
         }
@@ -161,7 +161,7 @@ class QueueAssertionBuilder {
 
   }
 
-  private final Map<String, QueueAssertion> assertions = new LinkedHashMap<>();
+  private final Map<QueuePath, QueueAssertion> assertions = new LinkedHashMap<>();
 
   public QueueAssertionBuilder build() {
     return this;
@@ -172,7 +172,7 @@ class QueueAssertionBuilder {
    * @param queuePath path of the queue
    * @return queue assertion group
    */
-  public QueueAssertion withQueue(String queuePath) {
+  public QueueAssertion withQueue(QueuePath queuePath) {
     assertions.putIfAbsent(queuePath, new QueueAssertion(queuePath));
     return assertions.get(queuePath);
   }
@@ -181,7 +181,7 @@ class QueueAssertionBuilder {
    * Executes assertions created for all queues.
    */
   public void finishAssertion() {
-    for (Map.Entry<String, QueueAssertion> assertionEntry : assertions.entrySet()) {
+    for (Map.Entry<QueuePath, QueueAssertion> assertionEntry : assertions.entrySet()) {
       for (QueueAssertion.ValueAssertion assertion : assertionEntry.getValue().assertions) {
         if (assertion.resourceSupplier != null) {
           String errorMessage = String.format(RESOURCE_ASSERTION_ERROR_MESSAGE,
@@ -204,7 +204,7 @@ class QueueAssertionBuilder {
    * Returns all queues that have defined assertions.
    * @return queue paths
    */
-  public Set<String> getQueues() {
+  public Set<QueuePath> getQueues() {
     return assertions.keySet();
   }
 }

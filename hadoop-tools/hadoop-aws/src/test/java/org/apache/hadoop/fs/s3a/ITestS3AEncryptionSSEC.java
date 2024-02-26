@@ -49,6 +49,7 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.createTestPath;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfEncryptionTestsDisabled;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -104,7 +105,6 @@ public class ITestS3AEncryptionSSEC extends AbstractTestS3AEncryption {
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
-    disableFilesystemCaching(conf);
     String bucketName = getTestBucketName(conf);
     // directory marker options
     removeBaseAndBucketOverrides(bucketName, conf,

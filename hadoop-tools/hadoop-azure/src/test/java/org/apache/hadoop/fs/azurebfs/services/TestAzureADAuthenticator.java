@@ -60,7 +60,7 @@ public class TestAzureADAuthenticator extends AbstractAbfsIntegrationTest {
     ExponentialRetryPolicy retryPolicy = abfsConfig
         .getOauthTokenFetchRetryPolicy();
 
-    Assertions.assertThat(retryPolicy.getRetryCount()).describedAs(
+    Assertions.assertThat(retryPolicy.getMaxRetryCount()).describedAs(
         "retryCount should be the default value {} as the same "
             + "is not configured",
         DEFAULT_AZURE_OAUTH_TOKEN_FETCH_RETRY_MAX_ATTEMPTS)
@@ -103,7 +103,7 @@ public class TestAzureADAuthenticator extends AbstractAbfsIntegrationTest {
     ExponentialRetryPolicy retryPolicy = abfsConfig
         .getOauthTokenFetchRetryPolicy();
 
-    Assertions.assertThat(retryPolicy.getRetryCount())
+    Assertions.assertThat(retryPolicy.getMaxRetryCount())
         .describedAs("retryCount should be {}", TEST_RETRY_COUNT)
         .isEqualTo(TEST_RETRY_COUNT);
     Assertions.assertThat(retryPolicy.getMinBackoff())

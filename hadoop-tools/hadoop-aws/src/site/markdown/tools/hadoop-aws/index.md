@@ -33,6 +33,7 @@ full details.
 
 ## <a name="documents"></a> Documents
 
+* [Connecting](./connecting.html)
 * [Encryption](./encryption.html)
 * [Performance](./performance.html)
 * [The upgrade to AWS Java SDK V2](./aws_sdk_upgrade.html)
@@ -223,6 +224,12 @@ Do not inadvertently share these credentials through means such as:
 If you do any of these: change your credentials immediately!
 
 
+## Connecting to Amazon S3 or a third-party store
+
+See [Connecting to an Amazon S3 Bucket through the S3A Connector](connecting.html).
+
+Also, please check [S3 endpoint and region settings in detail](connecting.html#s3_endpoint_region_details).
+
 ## <a name="authenticating"></a> Authenticating with S3
 
 Except when interacting with public S3 buckets, the S3A client
@@ -273,6 +280,28 @@ For more information see [Upcoming upgrade to AWS Java SDK V2](./aws_sdk_upgrade
     token binding it may be used
     to communicate wih the STS endpoint to request session/role
     credentials.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.aws.credentials.provider.mapping</name>
+  <description>
+    Comma-separated key-value pairs of mapped credential providers that are
+    separated by equal operator (=). The key can be used by
+    fs.s3a.aws.credentials.provider config, and it will be translated into
+    the specified value of credential provider class based on the key-value
+    pair provided by this config.
+
+    Example:
+    com.amazonaws.auth.AnonymousAWSCredentials=org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider,
+    com.amazonaws.auth.EC2ContainerCredentialsProviderWrapper=org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider,
+    com.amazonaws.auth.InstanceProfileCredentialsProvider=org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider
+
+    With the above key-value pairs, if fs.s3a.aws.credentials.provider specifies
+    com.amazonaws.auth.AnonymousAWSCredentials, it will be remapped to
+    org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider by S3A while
+    preparing AWS credential provider list for any S3 access.
+    We can use the same credentials provider list for both v1 and v2 SDK clients.
   </description>
 </property>
 ```
@@ -474,7 +503,7 @@ explicitly opened up for broader access.
 ```bash
 hadoop fs -ls \
  -D fs.s3a.aws.credentials.provider=org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider \
- s3a://landsat-pds/
+ s3a://noaa-isd-pds/
 ```
 
 1. Allowing anonymous access to an S3 bucket compromises
@@ -560,6 +589,30 @@ When running in EC2, the IAM EC2 instance credential provider will automatically
 obtain the credentials needed to access AWS services in the role the EC2 VM
 was deployed as.
 This AWS credential provider is enabled in S3A by default.
+
+## Custom AWS Credential Providers and Apache Spark
+
+Apache Spark employs two class loaders, one that loads "distribution" (Spark + Hadoop) classes and one that
+loads custom user classes. If the user wants to load custom implementations of AWS credential providers,
+custom signers, delegation token providers or any other dynamically loaded extension class
+through user provided jars she will need to set the following configuration:
+
+```xml
+<property>
+  <name>fs.s3a.classloader.isolation</name>
+  <value>false</value>
+</property>
+<property>
+  <name>fs.s3a.aws.credentials.provider</name>
+  <value>CustomCredentialsProvider</value>
+</property>
+```
+
+If the following property is not set or set to `true`, the following exception will be thrown:
+
+```
+java.io.IOException: From option fs.s3a.aws.credentials.provider java.lang.ClassNotFoundException: Class CustomCredentialsProvider not found
+```
 
 
 ## <a name="hadoop_credential_providers"></a>Storing secrets with Hadoop Credential Providers
@@ -703,8 +756,12 @@ to allow different buckets to override the shared settings. This is commonly
 used to change the endpoint, encryption and authentication mechanisms of buckets.
 and various minor options.
 
-Here are the S3A properties for use in production; some testing-related
-options are covered in [Testing](./testing.md).
+Here are some the S3A properties for use in production.
+
+* See [Performance](./performance.html) for performance related settings including
+  thread and network pool options.
+* Testing-related options are covered in [Testing](./testing.md).
+
 
 ```xml
 
@@ -841,62 +898,6 @@ options are covered in [Testing](./testing.md).
 </property>
 
 <property>
-  <name>fs.s3a.connection.ssl.enabled</name>
-  <value>true</value>
-  <description>Enables or disables SSL connections to AWS services.
-    Also sets the default port to use for the s3a proxy settings,
-    when not explicitly set in fs.s3a.proxy.port.</description>
-</property>
-
-<property>
-  <name>fs.s3a.endpoint</name>
-  <description>AWS S3 endpoint to connect to. An up-to-date list is
-    provided in the AWS Documentation: regions and endpoints. Without this
-    property, the standard region (s3.amazonaws.com) is assumed.
-  </description>
-</property>
-
-<property>
-  <name>fs.s3a.path.style.access</name>
-  <value>false</value>
-  <description>Enable S3 path style access ie disabling the default virtual hosting behaviour.
-    Useful for S3A-compliant storage providers as it removes the need to set up DNS for virtual hosting.
-  </description>
-</property>
-
-<property>
-  <name>fs.s3a.proxy.host</name>
-  <description>Hostname of the (optional) proxy server for S3 connections.</description>
-</property>
-
-<property>
-  <name>fs.s3a.proxy.port</name>
-  <description>Proxy server port. If this property is not set
-    but fs.s3a.proxy.host is, port 80 or 443 is assumed (consistent with
-    the value of fs.s3a.connection.ssl.enabled).</description>
-</property>
-
-<property>
-  <name>fs.s3a.proxy.username</name>
-  <description>Username for authenticating with proxy server.</description>
-</property>
-
-<property>
-  <name>fs.s3a.proxy.password</name>
-  <description>Password for authenticating with proxy server.</description>
-</property>
-
-<property>
-  <name>fs.s3a.proxy.domain</name>
-  <description>Domain for authenticating with proxy server.</description>
-</property>
-
-<property>
-  <name>fs.s3a.proxy.workstation</name>
-  <description>Workstation for authenticating with proxy server.</description>
-</property>
-
-<property>
   <name>fs.s3a.attempts.maximum</name>
   <value>5</value>
   <description>
@@ -906,18 +907,6 @@ options are covered in [Testing](./testing.md).
     SDK operations are not wrapped is during multipart copy via the AWS SDK
     transfer manager.
   </description>
-</property>
-
-<property>
-  <name>fs.s3a.connection.establish.timeout</name>
-  <value>5000</value>
-  <description>Socket connection setup timeout in milliseconds.</description>
-</property>
-
-<property>
-  <name>fs.s3a.connection.timeout</name>
-  <value>200000</value>
-  <description>Socket connection timeout in milliseconds.</description>
 </property>
 
 <property>
@@ -937,43 +926,6 @@ options are covered in [Testing](./testing.md).
   <value>5000</value>
   <description>How many keys to request from S3 when doing
      directory listings at a time.</description>
-</property>
-
-<property>
-  <name>fs.s3a.threads.max</name>
-  <value>64</value>
-  <description>The total number of threads available in the filesystem for data
-    uploads *or any other queued filesystem operation*.</description>
-</property>
-
-<property>
-  <name>fs.s3a.threads.keepalivetime</name>
-  <value>60</value>
-  <description>Number of seconds a thread can be idle before being
-    terminated.</description>
-</property>
-
-<property>
-  <name>fs.s3a.max.total.tasks</name>
-  <value>32</value>
-  <description>The number of operations which can be queued for execution.
-  This is in addition to the number of active threads in fs.s3a.threads.max.
-  </description>
-</property>
-
-<property>
-  <name>fs.s3a.executor.capacity</name>
-  <value>16</value>
-  <description>The maximum number of submitted tasks which is a single
-    operation (e.g. rename(), delete()) may submit simultaneously for
-    execution -excluding the IO-heavy block uploads, whose capacity
-    is set in "fs.s3a.fast.upload.active.blocks"
-
-    All tasks are submitted to the shared thread pool whose size is
-    set in "fs.s3a.threads.max"; the value of capacity should be less than that
-    of the thread pool itself, as the goal is to stop a single operation
-    from overloading that thread pool.
-  </description>
 </property>
 
 <property>
@@ -1058,14 +1010,6 @@ options are covered in [Testing](./testing.md).
   <name>fs.s3a.signing-algorithm</name>
   <description>Override the default signing algorithm so legacy
     implementations can still be used</description>
-</property>
-
-<property>
-  <name>fs.s3a.accesspoint.required</name>
-  <value>false</value>
-  <description>Require that all S3 access is made through Access Points and not through
-  buckets directly. If enabled, use per-bucket overrides to allow bucket access to a specific set
-  of buckets.</description>
 </property>
 
 <property>
@@ -1270,23 +1214,6 @@ options are covered in [Testing](./testing.md).
   <description>
     Select which version of the S3 SDK's List Objects API to use.  Currently
     support 2 (default) and 1 (older API).
-  </description>
-</property>
-
-<property>
-  <name>fs.s3a.connection.request.timeout</name>
-  <value>0</value>
-  <description>
-    Time out on HTTP requests to the AWS service; 0 means no timeout.
-    Measured in seconds; the usual time suffixes are all supported
-
-    Important: this is the maximum duration of any AWS service call,
-    including upload and copy operations. If non-zero, it must be larger
-    than the time to upload multi-megabyte blocks to S3 from the client,
-    and to rename many-GB files. Use with care.
-
-    Values that are larger than Integer.MAX_VALUE milliseconds are
-    converged to Integer.MAX_VALUE milliseconds
   </description>
 </property>
 
@@ -1703,11 +1630,11 @@ a session key:
 </property>
 ```
 
-Finally, the public `s3a://landsat-pds/` bucket can be accessed anonymously:
+Finally, the public `s3a://noaa-isd-pds/` bucket can be accessed anonymously:
 
 ```xml
 <property>
-  <name>fs.s3a.bucket.landsat-pds.aws.credentials.provider</name>
+  <name>fs.s3a.bucket.noaa-isd-pds.aws.credentials.provider</name>
   <value>org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider</value>
 </property>
 ```
@@ -1753,179 +1680,6 @@ For a site configuration of:
 
 The bucket "nightly" will be encrypted with SSE-KMS using the KMS key
 `arn:aws:kms:eu-west-2:1528130000000:key/753778e4-2d0f-42e6-b894-6a3ae4ea4e5f`
-
-###  <a name="per_bucket_endpoints"></a>Using Per-Bucket Configuration to access data round the world
-
-S3 Buckets are hosted in different "regions", the default being "US-East".
-The S3A client talks to this region by default, issuing HTTP requests
-to the server `s3.amazonaws.com`.
-
-S3A can work with buckets from any region. Each region has its own
-S3 endpoint, documented [by Amazon](http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region).
-
-1. Applications running in EC2 infrastructure do not pay for IO to/from
-*local S3 buckets*. They will be billed for access to remote buckets. Always
-use local buckets and local copies of data, wherever possible.
-1. The default S3 endpoint can support data IO with any bucket when the V1 request
-signing protocol is used.
-1. When the V4 signing protocol is used, AWS requires the explicit region endpoint
-to be used —hence S3A must be configured to use the specific endpoint. This
-is done in the configuration option `fs.s3a.endpoint`.
-1. All endpoints other than the default endpoint only support interaction
-with buckets local to that S3 instance.
-
-While it is generally simpler to use the default endpoint, working with
-V4-signing-only regions (Frankfurt, Seoul) requires the endpoint to be identified.
-Expect better performance from direct connections —traceroute will give you some insight.
-
-If the wrong endpoint is used, the request may fail. This may be reported as a 301/redirect error,
-or as a 400 Bad Request: take these as cues to check the endpoint setting of
-a bucket.
-
-Here is a list of properties defining all AWS S3 regions, current as of June 2017:
-
-```xml
-<!--
- This is the default endpoint, which can be used to interact
- with any v2 region.
- -->
-<property>
-  <name>central.endpoint</name>
-  <value>s3.amazonaws.com</value>
-</property>
-
-<property>
-  <name>canada.endpoint</name>
-  <value>s3.ca-central-1.amazonaws.com</value>
-</property>
-
-<property>
-  <name>frankfurt.endpoint</name>
-  <value>s3.eu-central-1.amazonaws.com</value>
-</property>
-
-<property>
-  <name>ireland.endpoint</name>
-  <value>s3-eu-west-1.amazonaws.com</value>
-</property>
-
-<property>
-  <name>london.endpoint</name>
-  <value>s3.eu-west-2.amazonaws.com</value>
-</property>
-
-<property>
-  <name>mumbai.endpoint</name>
-  <value>s3.ap-south-1.amazonaws.com</value>
-</property>
-
-<property>
-  <name>ohio.endpoint</name>
-  <value>s3.us-east-2.amazonaws.com</value>
-</property>
-
-<property>
-  <name>oregon.endpoint</name>
-  <value>s3-us-west-2.amazonaws.com</value>
-</property>
-
-<property>
-  <name>sao-paolo.endpoint</name>
-  <value>s3-sa-east-1.amazonaws.com</value>
-</property>
-
-<property>
-  <name>seoul.endpoint</name>
-  <value>s3.ap-northeast-2.amazonaws.com</value>
-</property>
-
-<property>
-  <name>singapore.endpoint</name>
-  <value>s3-ap-southeast-1.amazonaws.com</value>
-</property>
-
-<property>
-  <name>sydney.endpoint</name>
-  <value>s3-ap-southeast-2.amazonaws.com</value>
-</property>
-
-<property>
-  <name>tokyo.endpoint</name>
-  <value>s3-ap-northeast-1.amazonaws.com</value>
-</property>
-
-<property>
-  <name>virginia.endpoint</name>
-  <value>${central.endpoint}</value>
-</property>
-```
-
-This list can be used to specify the endpoint of individual buckets, for example
-for buckets in the central and EU/Ireland endpoints.
-
-```xml
-<property>
-  <name>fs.s3a.bucket.landsat-pds.endpoint</name>
-  <value>${central.endpoint}</value>
-  <description>The endpoint for s3a://landsat-pds URLs</description>
-</property>
-
-<property>
-  <name>fs.s3a.bucket.eu-dataset.endpoint</name>
-  <value>${ireland.endpoint}</value>
-  <description>The endpoint for s3a://eu-dataset URLs</description>
-</property>
-```
-
-Why explicitly declare a bucket bound to the central endpoint? It ensures
-that if the default endpoint is changed to a new region, data store in
-US-east is still reachable.
-
-## <a name="accesspoints"></a>Configuring S3 AccessPoints usage with S3A
-S3a now supports [S3 Access Point](https://aws.amazon.com/s3/features/access-points/) usage which
-improves VPC integration with S3 and simplifies your data's permission model because different
-policies can be applied now on the Access Point level. For more information about why to use and
-how to create them make sure to read the official documentation.
-
-Accessing data through an access point, is done by using its ARN, as opposed to just the bucket name.
-You can set the Access Point ARN property using the following per bucket configuration property:
-```xml
-<property>
-    <name>fs.s3a.bucket.sample-bucket.accesspoint.arn</name>
-    <value> {ACCESSPOINT_ARN_HERE} </value>
-    <description>Configure S3a traffic to use this AccessPoint</description>
-</property>
-```
-
-This configures access to the `sample-bucket` bucket for S3A, to go through the
-new Access Point ARN. So, for example `s3a://sample-bucket/key` will now use your
-configured ARN when getting data from S3 instead of your bucket.
-
-The `fs.s3a.accesspoint.required` property can also require all access to S3 to go through Access
-Points. This has the advantage of increasing security inside a VPN / VPC as you only allow access
-to known sources of data defined through Access Points. In case there is a need to access a bucket
-directly (without Access Points) then you can use per bucket overrides to disable this setting on a
-bucket by bucket basis i.e. `fs.s3a.bucket.{YOUR-BUCKET}.accesspoint.required`.
-
-```xml
-<!-- Require access point only access -->
-<property>
-    <name>fs.s3a.accesspoint.required</name>
-    <value>true</value>
-</property>
-<!-- Disable it on a per-bucket basis if needed -->
-<property>
-    <name>fs.s3a.bucket.example-bucket.accesspoint.required</name>
-    <value>false</value>
-</property>
-```
-
-Before using Access Points make sure you're not impacted by the following:
-- `ListObjectsV1` is not supported, this is also deprecated on AWS S3 for performance reasons;
-- The endpoint for S3 requests will automatically change from `s3.amazonaws.com` to use
-`s3-accesspoint.REGION.amazonaws.{com | com.cn}` depending on the Access Point ARN. While
-considering endpoints, if you have any custom signers that use the host endpoint property make
-sure to update them if needed;
 
 ## <a name="requester_pays"></a>Requester Pays buckets
 
@@ -2232,43 +1986,33 @@ from VMs running on EC2.
   </description>
 </property>
 
-<property>
-  <name>fs.s3a.threads.max</name>
-  <value>10</value>
-  <description>The total number of threads available in the filesystem for data
-    uploads *or any other queued filesystem operation*.</description>
-</property>
-
-<property>
-  <name>fs.s3a.max.total.tasks</name>
-  <value>5</value>
-  <description>The number of operations which can be queued for execution</description>
-</property>
-
-<property>
-  <name>fs.s3a.threads.keepalivetime</name>
-  <value>60</value>
-  <description>Number of seconds a thread can be idle before being
-    terminated.</description>
-</property>
 ```
 
 ### <a name="multipart_purge"></a>Cleaning up after partial Upload Failures
 
-There are two mechanisms for cleaning up after leftover multipart
+There are four mechanisms for cleaning up after leftover multipart
 uploads:
+- AWS Lifecycle rules. This is the simplest and SHOULD be used unless there
+  are are good reasons, such as the store not supporting lifecycle rules.
 - Hadoop s3guard CLI commands for listing and deleting uploads by their
 age. Documented in the [S3Guard](./s3guard.html) section.
+- Setting `fs.s3a.directory.operations.purge.uploads` to `true` for automatic
+  scan and delete during directory rename and delete
 - The configuration parameter `fs.s3a.multipart.purge`, covered below.
 
 If a large stream write operation is interrupted, there may be
 intermediate partitions uploaded to S3 —data which will be billed for.
+If an S3A committer job is halted partway through, again, there may be
+many incomplete multipart uploads in the output directory.
 
 These charges can be reduced by enabling `fs.s3a.multipart.purge`,
-and setting a purge time in seconds, such as 86400 seconds —24 hours.
+and setting a purge time in seconds, such as 24 hours.
 When an S3A FileSystem instance is instantiated with the purge time greater
 than zero, it will, on startup, delete all outstanding partition requests
-older than this time.
+older than this time. However, this makes filesystem instantiate slow, especially
+against very large buckets, as a full scan is made.
+
+Consider avoiding this in future.
 
 ```xml
 <property>
@@ -2280,7 +2024,7 @@ older than this time.
 
 <property>
   <name>fs.s3a.multipart.purge.age</name>
-  <value>86400</value>
+  <value>24h</value>
   <description>Minimum age in seconds of multipart uploads to purge</description>
 </property>
 ```

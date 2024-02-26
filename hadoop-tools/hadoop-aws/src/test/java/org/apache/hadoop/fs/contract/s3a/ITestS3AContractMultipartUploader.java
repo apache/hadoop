@@ -29,6 +29,7 @@ import static org.apache.hadoop.fs.s3a.S3ATestConstants.KEY_HUGE_PARTITION_SIZE;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.KEY_SCALE_TESTS_ENABLED;
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.SCALE_TEST_TIMEOUT_MILLIS;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeNotS3ExpressFileSystem;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestPropertyBool;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestPropertyBytes;
 import static org.apache.hadoop.fs.s3a.scale.AbstractSTestS3AHugeFiles.DEFAULT_HUGE_PARTITION_SIZE;
@@ -115,5 +116,17 @@ public class ITestS3AContractMultipartUploader extends
   @Override
   public void testMultipartUploadReverseOrder() throws Exception {
     skip("skipped for speed");
+  }
+
+  @Override
+  public void testMultipartUploadReverseOrderNonContiguousPartNumbers() throws Exception {
+    assumeNotS3ExpressFileSystem(getFileSystem());
+    super.testMultipartUploadReverseOrderNonContiguousPartNumbers();
+  }
+
+  @Override
+  public void testConcurrentUploads() throws Throwable {
+    assumeNotS3ExpressFileSystem(getFileSystem());
+    super.testConcurrentUploads();
   }
 }

@@ -37,6 +37,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.s3a.statistics.StatisticsFromAwsSdk;
 
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_ENDPOINT;
+import static org.apache.hadoop.fs.s3a.Constants.S3EXPRESS_CREATE_SESSION_DEFAULT;
 
 /**
  * Factory for creation of {@link S3Client} client instances.
@@ -170,6 +171,20 @@ public interface S3ClientFactory {
      */
     private String region;
 
+    /**
+     * Enable S3Express create session.
+     */
+    private boolean expressCreateSession = S3EXPRESS_CREATE_SESSION_DEFAULT;
+
+    /**
+     * Enable checksum validation.
+     */
+    private boolean checksumValidationEnabled;
+
+    /**
+     * Is FIPS enabled?
+     */
+    private boolean fipsEnabled;
 
     /**
      * List of execution interceptors to include in the chain
@@ -421,6 +436,73 @@ public interface S3ClientFactory {
      */
     public String getRegion() {
       return region;
+    }
+
+    /**
+     * Should s3express createSession be called?
+     * @return true if the client should enable createSession.
+     */
+    public boolean isExpressCreateSession() {
+      return expressCreateSession;
+    }
+
+    /**
+     * Set builder value.
+     * @param value new value
+     * @return the builder
+     */
+    public S3ClientCreationParameters withExpressCreateSession(final boolean value) {
+      expressCreateSession = value;
+      return this;
+    }
+
+    /**
+     * Set builder value.
+     * @param value new value
+     * @return the builder
+     */
+    public S3ClientCreationParameters withChecksumValidationEnabled(final boolean value) {
+      checksumValidationEnabled = value;
+      return this;
+    }
+
+    public boolean isChecksumValidationEnabled() {
+      return checksumValidationEnabled;
+    }
+
+    @Override
+    public String toString() {
+      return "S3ClientCreationParameters{" +
+          "endpoint='" + endpoint + '\'' +
+          ", pathStyleAccess=" + pathStyleAccess +
+          ", requesterPays=" + requesterPays +
+          ", userAgentSuffix='" + userAgentSuffix + '\'' +
+          ", pathUri=" + pathUri +
+          ", minimumPartSize=" + minimumPartSize +
+          ", multiPartThreshold=" + multiPartThreshold +
+          ", multipartCopy=" + multipartCopy +
+          ", region='" + region + '\'' +
+          ", expressCreateSession=" + expressCreateSession +
+          ", checksumValidationEnabled=" + checksumValidationEnabled +
+          '}';
+    }
+
+    /**
+     * Get the FIPS flag.
+     * @return is fips enabled
+     */
+    public boolean isFipsEnabled() {
+      return fipsEnabled;
+    }
+
+    /**
+     * Set builder value.
+     * @param value new value
+     * @return the builder
+     */
+    public S3ClientCreationParameters withFipsEnabled(final boolean value) {
+      fipsEnabled = value;
+      return this;
     }
   }
 }

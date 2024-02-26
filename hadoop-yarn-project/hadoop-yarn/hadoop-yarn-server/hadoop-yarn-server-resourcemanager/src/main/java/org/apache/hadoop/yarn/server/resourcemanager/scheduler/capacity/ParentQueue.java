@@ -75,7 +75,7 @@ public class ParentQueue extends AbstractParentQueue {
 
       // Check if the max queue limit is exceeded.
       int maxQueues = queueContext.getConfiguration().
-          getAutoCreatedQueuesV2MaxChildQueuesLimit(getQueuePath());
+          getAutoCreatedQueuesV2MaxChildQueuesLimit(getQueuePathObject());
       if (childQueues.size() >= maxQueues) {
         throw new SchedulerDynamicEditException(
             "Cannot auto create queue " + childQueuePath + ". Max Child "

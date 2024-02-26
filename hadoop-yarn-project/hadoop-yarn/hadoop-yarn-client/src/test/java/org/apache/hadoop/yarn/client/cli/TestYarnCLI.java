@@ -133,17 +133,17 @@ public class TestYarnCLI {
       ApplicationCLI cli = createAndGetAppCLI();
       ApplicationId applicationId = ApplicationId.newInstance(1234, 5);
       Map<String, Long> resourceSecondsMap = new HashMap<>();
-      Map<String, Long> preemptedResoureSecondsMap = new HashMap<>();
+      Map<String, Long> preemptedResourceSecondsMap = new HashMap<>();
       resourceSecondsMap.put(ResourceInformation.MEMORY_MB.getName(), 123456L);
       resourceSecondsMap.put(ResourceInformation.VCORES.getName(), 4567L);
-      preemptedResoureSecondsMap
+      preemptedResourceSecondsMap
           .put(ResourceInformation.MEMORY_MB.getName(), 1111L);
-      preemptedResoureSecondsMap
+      preemptedResourceSecondsMap
           .put(ResourceInformation.VCORES.getName(), 2222L);
       ApplicationResourceUsageReport usageReport = i == 0 ? null :
           ApplicationResourceUsageReport
               .newInstance(2, 0, null, null, null, resourceSecondsMap, 0, 0,
-                  preemptedResoureSecondsMap);
+                  preemptedResourceSecondsMap);
       ApplicationReport newApplicationReport = ApplicationReport.newInstance(
           applicationId, ApplicationAttemptId.newInstance(applicationId, 1),
           "user", "queue", "appname", "host", 124, null,

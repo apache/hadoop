@@ -22,6 +22,7 @@ import java.nio.ByteBuffer;
 import java.sql.SQLException;
 import java.util.Calendar;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.TimeZone;
@@ -75,8 +76,11 @@ import org.apache.hadoop.yarn.server.federation.store.records.GetReservationHome
 import org.apache.hadoop.yarn.server.federation.store.records.GetReservationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.DeletePoliciesConfigurationsRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.DeletePoliciesConfigurationsResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.DeleteSubClusterPoliciesConfigurationsRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKey;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyResponse;
@@ -122,6 +126,7 @@ public abstract class FederationStateStoreBaseTest {
   @After
   public void after() throws Exception {
     testDeleteStateStore();
+    testDeletePolicyStore();
     stateStore.close();
   }
 
@@ -1135,5 +1140,74 @@ public abstract class FederationStateStoreBaseTest {
     List<ApplicationHomeSubCluster> appsHomeSubClusters = result.getAppsHomeSubClusters();
     assertNotNull(appsHomeSubClusters);
     assertEquals(0, appsHomeSubClusters.size());
+  }
+
+  @Test
+  public void testDeletePoliciesConfigurations() throws Exception {
+
+    // Step1. We initialize the policy of the queue
+    FederationStateStore federationStateStore = this.getStateStore();
+    setPolicyConf("Queue1", "PolicyType1");
+    setPolicyConf("Queue2", "PolicyType2");
+    setPolicyConf("Queue3", "PolicyType3");
+
+    List<String> queues = new ArrayList<>();
+    queues.add("Queue1");
+    queues.add("Queue2");
+    queues.add("Queue3");
+
+    GetSubClusterPoliciesConfigurationsRequest policyRequest =
+        GetSubClusterPoliciesConfigurationsRequest.newInstance();
+    GetSubClusterPoliciesConfigurationsResponse response =
+        stateStore.getPoliciesConfigurations(policyRequest);
+
+    // Step2. Confirm that the initialized queue policy meets expectations.
+    Assert.assertNotNull(response);
+    List<SubClusterPolicyConfiguration> policiesConfigs = response.getPoliciesConfigs();
+    for (SubClusterPolicyConfiguration policyConfig : policiesConfigs) {
+      Assert.assertTrue(queues.contains(policyConfig.getQueue()));
+    }
+
+    // Step3. Delete the policy of queue (Queue1, Queue2).
+    List<String> deleteQueues = new ArrayList<>();
+    deleteQueues.add("Queue1");
+    deleteQueues.add("Queue2");
+    DeleteSubClusterPoliciesConfigurationsRequest deleteRequest =
+        DeleteSubClusterPoliciesConfigurationsRequest.newInstance(deleteQueues);
+    federationStateStore.deletePoliciesConfigurations(deleteRequest);
+
+    // Step4. Confirm that the queue has been deleted,
+    // that is, all currently returned queues do not exist in the deletion list.
+    GetSubClusterPoliciesConfigurationsRequest policyRequest2 =
+        GetSubClusterPoliciesConfigurationsRequest.newInstance();
+    GetSubClusterPoliciesConfigurationsResponse response2 =
+        stateStore.getPoliciesConfigurations(policyRequest2);
+    Assert.assertNotNull(response2);
+    List<SubClusterPolicyConfiguration> policiesConfigs2 = response2.getPoliciesConfigs();
+    for (SubClusterPolicyConfiguration policyConfig : policiesConfigs2) {
+      Assert.assertFalse(deleteQueues.contains(policyConfig.getQueue()));
+    }
+  }
+
+  @Test
+  public void testDeletePolicyStore() throws Exception {
+    // Step1. We delete all Policies Configurations.
+    FederationStateStore federationStateStore = this.getStateStore();
+    DeletePoliciesConfigurationsRequest request =
+        DeletePoliciesConfigurationsRequest.newInstance();
+    DeletePoliciesConfigurationsResponse response =
+        federationStateStore.deleteAllPoliciesConfigurations(request);
+    assertNotNull(response);
+
+    // Step2. We check the Policies size, the size should be 0 at this time.
+    GetSubClusterPoliciesConfigurationsRequest request1 =
+         GetSubClusterPoliciesConfigurationsRequest.newInstance();
+    GetSubClusterPoliciesConfigurationsResponse response1 =
+        stateStore.getPoliciesConfigurations(request1);
+    assertNotNull(response1);
+    List<SubClusterPolicyConfiguration> policiesConfigs =
+        response1.getPoliciesConfigs();
+    assertNotNull(policiesConfigs);
+    assertEquals(0, policiesConfigs.size());
   }
 }

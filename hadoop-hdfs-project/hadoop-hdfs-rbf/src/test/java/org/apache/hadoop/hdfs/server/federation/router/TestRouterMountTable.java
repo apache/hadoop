@@ -372,6 +372,10 @@ public class TestRouterMountTable {
     HdfsFileStatus dirStatus2 =
         clientProtocol.getMountPointStatus(childPath2.toString(), 0, 0);
     assertEquals(child2, dirStatus2.getLocalName());
+
+    HdfsFileStatus dirStatus3 =
+        clientProtocol.getMountPointStatus(childPath2.toString(), 0, 0, false);
+    assertTrue(dirStatus3.isEmptyLocalName());
   }
   /**
    * GetListing of testPath through router.
@@ -663,6 +667,25 @@ public class TestRouterMountTable {
     } finally {
       nnFs0.delete(new Path("/testlist/tmp0"), true);
       nnFs1.delete(new Path("/testlist/tmp1"), true);
+    }
+  }
+
+  @Test
+  public void testGetFileInfoWithMountPoint() throws IOException {
+    try {
+      // Add mount table entry
+      MountTable addEntry = MountTable.newInstance("/testgetfileinfo/ns1/dir",
+          Collections.singletonMap("ns1", "/testgetfileinfo/ns1/dir"));
+      assertTrue(addMountTable(addEntry));
+      nnFs1.mkdirs(new Path("/testgetfileinfo/ns1/dir"));
+
+      FileStatus fileStatus = routerFs.getFileStatus(new Path("/testgetfileinfo/ns1"));
+      assertEquals(fileStatus.getPath().toUri().getPath(), "/testgetfileinfo/ns1");
+
+      fileStatus = routerFs.getFileStatus(new Path("/testgetfileinfo/ns1/dir"));
+      assertEquals(fileStatus.getPath().toUri().getPath(), "/testgetfileinfo/ns1/dir");
+    } finally {
+      nnFs1.delete(new Path("/testgetfileinfo/ns1/dir"), true);
     }
   }
 

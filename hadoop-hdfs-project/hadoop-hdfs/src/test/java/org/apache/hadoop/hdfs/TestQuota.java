@@ -32,6 +32,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.util.List;
 import java.util.Scanner;
@@ -66,7 +67,6 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.event.Level;
@@ -1216,7 +1216,7 @@ public class TestQuota {
       String[] args =
           { "-setSpaceQuota", "100", "-storageType", "COLD", "/testDir" };
       admin.run(args);
-      String errOutput = new String(err.toByteArray(), Charsets.UTF_8);
+      String errOutput = new String(err.toByteArray(), StandardCharsets.UTF_8);
       assertTrue(
           errOutput.contains(StorageType.getTypesSupportingQuota().toString()));
     } finally {

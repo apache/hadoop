@@ -194,8 +194,8 @@ public class TestCapacitySchedulerNodes {
     CapacityScheduler cs = new CapacityScheduler();
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
     setupQueueConfiguration(conf);
-    conf.setDefaultNodeLabelExpression("root.a", " x");
-    conf.setDefaultNodeLabelExpression("root.b", " y ");
+    conf.setDefaultNodeLabelExpression(new QueuePath("root.a"), " x");
+    conf.setDefaultNodeLabelExpression(new QueuePath("root.b"), " y ");
     cs.setConf(new YarnConfiguration());
     cs.setRMContext(resourceManager.getRMContext());
     cs.init(conf);
