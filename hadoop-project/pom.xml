@@ -136,7 +136,6 @@
     <cache.api.version>1.1.1</cache.api.version>
     <hikari.version>4.0.3</hikari.version>
     <derby.version>10.14.2.0</derby.version>
-    <mssql.version>6.2.1.jre7</mssql.version>
     <okhttp3.version>4.11.0</okhttp3.version>
     <kotlin-stdlib.version>1.6.20</kotlin-stdlib.version>
     <jdom2.version>2.0.6.1</jdom2.version>
@@ -2024,11 +2023,6 @@
           <groupId>org.apache.derby</groupId>
           <artifactId>derby</artifactId>
           <version>${derby.version}</version>
-        </dependency>
-        <dependency>
-          <groupId>com.microsoft.sqlserver</groupId>
-          <artifactId>mssql-jdbc</artifactId>
-          <version>${mssql.version}</version>
         </dependency>
         <dependency>
           <groupId>io.swagger</groupId>

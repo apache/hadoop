@@ -882,13 +882,6 @@
 
                   <!-- relocate classes from mssql-jdbc -->
                   <relocations>
-                    <relocation>
-                      <pattern>microsoft/</pattern>
-                      <shadedPattern>${shaded.dependency.prefix}.microsoft.</shadedPattern>
-                      <excludes>
-                        <exclude>**/pom.xml</exclude>
-                      </excludes>
-                    </relocation>
 
                     <relocation>
                       <pattern>org/</pattern>
