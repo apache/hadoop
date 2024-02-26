@@ -58,6 +58,13 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
       <url>${distMgmtSnapshotsUrl}</url>
     </repository>
     <repository>
+      <id>Apache Nexus Snapshots</id>
+      <url>https://repository.apache.org/content/groups/snapshots/</url>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+    </repository>
+    <repository>
       <id>repository.jboss.org</id>
       <url>https://repository.jboss.org/nexus/content/groups/public/</url>
       <snapshots>
