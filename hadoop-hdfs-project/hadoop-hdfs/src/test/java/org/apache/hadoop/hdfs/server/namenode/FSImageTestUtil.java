@@ -523,11 +523,11 @@ public abstract class FSImageTestUtil {
       int nnIdx, List<Integer> txids) {
 
     for (File nameDir : getNameNodeCurrentDirs(cluster, nnIdx)) {
-      LOG.info("examining name dir with files: " +
+      LOG.info("examining name dir with files: {}",
                    Joiner.on(",").join(nameDir.listFiles()));
       // Should have fsimage_N for the three checkpoints
-      LOG.info("Examining storage dir " + nameDir + " with contents: "
-                   + StringUtils.join(nameDir.listFiles(), ", "));
+      LOG.info("Examining storage dir {} with contents: {}", nameDir,
+                   StringUtils.join(nameDir.listFiles(), ", "));
       for (long checkpointTxId : txids) {
         File image = new File(nameDir,
             NNStorage.getRollbackImageFileName(checkpointTxId));

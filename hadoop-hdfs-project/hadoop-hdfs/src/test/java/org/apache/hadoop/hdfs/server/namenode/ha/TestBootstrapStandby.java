@@ -41,6 +41,7 @@ import org.apache.hadoop.hdfs.server.common.HttpGetFailedException;
 import org.apache.hadoop.hdfs.server.namenode.FSImage;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -216,11 +217,8 @@ public class TestBootstrapStandby {
 
     // Start rolling upgrade
     fs.rollingUpgrade(RollingUpgradeAction.PREPARE);
-    RollingUpgradeInfo info = fs.rollingUpgrade(RollingUpgradeAction.QUERY);
-    while (!info.createdRollbackImages()) {
-      Thread.sleep(1000);
-      info = fs.rollingUpgrade(RollingUpgradeAction.QUERY);
-    }
+    LambdaTestUtils.await(60000, 1000, () ->
+       fs.rollingUpgrade(RollingUpgradeAction.QUERY).createdRollbackImages());
     // After the rollback image is created the standby is not needed
     cluster.shutdownNameNode(1);
     removeStandbyNameDirs();
@@ -270,10 +268,11 @@ public class TestBootstrapStandby {
     restartNameNodesFromIndex(1, "-rollingUpgrade", "started");
 
     for (int i = 1; i < maxNNCount; i++) {
+      NameNode nn = cluster.getNameNode(i);
       assertTrue("NameNodes should all have the rollback FSImage",
-          cluster.getNameNode(i).getFSImage().hasRollbackFSImage());
+          nn.getFSImage().hasRollbackFSImage());
       assertTrue("NameNodes should all be inRollingUpgrade",
-          cluster.getNameNode(i).getNamesystem().isRollingUpgrade());
+          nn.getNamesystem().isRollingUpgrade());
     }
 
     // Cleanup standby dirs
