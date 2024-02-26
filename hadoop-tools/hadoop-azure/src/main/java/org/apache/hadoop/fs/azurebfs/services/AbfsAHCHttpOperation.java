@@ -36,6 +36,7 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.entity.ByteArrayEntity;
+import org.apache.http.util.EntityUtils;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_DELETE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_GET;
@@ -237,6 +238,7 @@ public class AbfsAHCHttpOperation extends HttpOperation {
       readLatencyCaptureInfo.status = statusCode;
       READ_INFO_STACK.push(readLatencyCaptureInfo);
     } finally {
+      EntityUtils.consume(httpResponse.getEntity());
       if(httpResponse != null && httpResponse instanceof CloseableHttpResponse) {
         ((CloseableHttpResponse) httpResponse).close();
       }
