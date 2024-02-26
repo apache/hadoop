@@ -22,6 +22,9 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.FileStore;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Arrays;
 
 import org.apache.hadoop.test.GenericTestUtils;
@@ -30,6 +33,7 @@ import static org.junit.Assert.*;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import static org.apache.hadoop.fs.HardLink.*;
 
@@ -216,6 +220,16 @@ public class TestHardLink {
     //since they haven't been hardlinked yet
     assertEquals(1, getLinkCount(x1));
     assertEquals(1, getLinkCount(x2));
+    assertEquals(1, getLinkCount(x3));
+  }
+
+  @Test
+  public void testGetLinkCountFromFileAttribute() throws IOException {
+    assertTrue(supportsHardLink(x1));
+    assertEquals(1, getLinkCount(x1));
+    assertTrue(supportsHardLink(x2));
+    assertEquals(1, getLinkCount(x2));
+    assertTrue(supportsHardLink(x3));
     assertEquals(1, getLinkCount(x3));
   }
 

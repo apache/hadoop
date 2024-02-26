@@ -23,6 +23,8 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.StringReader;
+import java.nio.file.FileStore;
+import java.nio.file.Files;
 
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Shell;
@@ -50,6 +52,9 @@ public class HardLink {
   private static HardLinkCommandGetter getHardLinkCommand;
   
   public final LinkStats linkStats; //not static
+
+  private static final String FileAttributeView = "unix";
+  private static final String FileAttribute = "unix:nlink";
   
   //initialize the command "getters" statically, so can use their 
   //methods without instantiating the HardLink object
@@ -204,6 +209,16 @@ public class HardLink {
     }
   }
 
+  @VisibleForTesting
+  static boolean supportsHardLink(File f) {
+    try {
+      FileStore store = Files.getFileStore(f.toPath());
+      return store.supportsFileAttributeView(FileAttributeView);
+    } catch (IOException e) {
+      return false;
+    }
+  }
+
    /**
    * Retrieves the number of links to the specified file.
     *
@@ -218,6 +233,10 @@ public class HardLink {
     }
     if (!fileName.exists()) {
       throw new FileNotFoundException(fileName + " not found.");
+    }
+
+    if (supportsHardLink(fileName)) {
+      return (int) Files.getAttribute(fileName.toPath(), FileAttribute);
     }
 
     // construct and execute shell command
