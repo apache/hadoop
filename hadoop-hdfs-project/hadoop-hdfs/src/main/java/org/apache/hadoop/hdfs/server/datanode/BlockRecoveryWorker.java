@@ -553,7 +553,7 @@ public class BlockRecoveryWorker {
     private void checkLocations(int locationCount)
         throws IOException {
       if (locationCount < ecPolicy.getNumDataUnits()) {
-        throw new IOException(block + " has no enough internal blocks(current:" + locationCount +
+        throw new IOException(block + " has no enough internal blocks(current: " + locationCount +
             "), unable to start recovery. Locations=" + Arrays.asList(locs));
       }
     }

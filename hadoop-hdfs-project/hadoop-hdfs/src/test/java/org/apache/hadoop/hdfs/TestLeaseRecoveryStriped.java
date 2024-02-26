@@ -267,12 +267,12 @@ public class TestLeaseRecoveryStriped {
    */
   @Test
   public void testLeaseRecoveryWithManyZeroLengthReplica() {
-    int cellSize = (int)1024 * 1024;
+    int curCellSize = (int)1024 * 1024;
     try {
       final FSDataOutputStream out = dfs.create(p);
       final DFSStripedOutputStream stripedOut = (DFSStripedOutputStream) out
           .getWrappedStream();
-      for (int pos = 0; pos < cellSize; pos++) {
+      for (int pos = 0; pos < curCellSize; pos++) {
         out.write(StripedFileTestUtil.getByte(pos));
       }
       for (int i = 0; i < dataBlocks + parityBlocks; i++) {
