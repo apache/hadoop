@@ -238,7 +238,9 @@ public class AbfsAHCHttpOperation extends HttpOperation {
       readLatencyCaptureInfo.status = statusCode;
       READ_INFO_STACK.push(readLatencyCaptureInfo);
     } finally {
-      EntityUtils.consume(httpResponse.getEntity());
+      if(httpResponse != null) {
+        EntityUtils.consume(httpResponse.getEntity());
+      }
       if(httpResponse != null && httpResponse instanceof CloseableHttpResponse) {
         ((CloseableHttpResponse) httpResponse).close();
       }
