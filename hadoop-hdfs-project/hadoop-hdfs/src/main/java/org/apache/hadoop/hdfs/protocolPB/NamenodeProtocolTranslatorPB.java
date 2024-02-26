@@ -138,9 +138,9 @@ public class NamenodeProtocolTranslatorPB implements NamenodeProtocol,
 
   @Override
   public long getMostRecentNameNodeFileTxId(NNStorage.NameNodeFile nnf) throws IOException {
-    return rpcProxy.getMostRecentNameNodeFileTxId(NULL_CONTROLLER,
+    return ipc(() -> rpcProxy.getMostRecentNameNodeFileTxId(NULL_CONTROLLER,
         GetMostRecentNameNodeFileTxIdRequestProto.newBuilder()
-            .setNameNodeFile(nnf.toString()).build()).getTxId();
+            .setNameNodeFile(nnf.toString()).build()).getTxId());
 
   }
 
