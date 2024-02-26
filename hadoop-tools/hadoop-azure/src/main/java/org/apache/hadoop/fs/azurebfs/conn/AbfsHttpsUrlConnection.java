@@ -225,7 +225,7 @@ public class AbfsHttpsUrlConnection extends
   }
 
   public static void removeAll() {
-    for(AbfsHttpClient client : clients) {
+    for(AbfsHttpClient client : new HashSet<>(clients)) {
       client.closeServer();
     }
     AbfsHttpClient.removeAllFromKac();
