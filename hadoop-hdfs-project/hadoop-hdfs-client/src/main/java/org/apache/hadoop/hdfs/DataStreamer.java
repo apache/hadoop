@@ -432,7 +432,6 @@ class DataStreamer extends Daemon {
               + " = restartingNodeIndex = " + restartingNodeIndex);
         }
       }
-
       if (!isRestartingNode()) {
         error = ErrorType.NONE;
       }
