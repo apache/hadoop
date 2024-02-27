@@ -22,9 +22,6 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.nio.file.FileStore;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Arrays;
 
 import org.apache.hadoop.test.GenericTestUtils;
@@ -33,7 +30,6 @@ import static org.junit.Assert.*;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.mockito.Mockito;
 
 import static org.apache.hadoop.fs.HardLink.*;
 

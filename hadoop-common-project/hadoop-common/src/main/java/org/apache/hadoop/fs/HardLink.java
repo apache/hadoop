@@ -209,8 +209,12 @@ public class HardLink {
     }
   }
 
-  @VisibleForTesting
-  static boolean supportsHardLink(File f) {
+    /**
+     * Determines whether the system supports hardlinks.
+     * @param f - file to examine
+     * @return true if hardlinks are supported, false otherwise
+     */
+  public static boolean supportsHardLink(File f) {
     try {
       FileStore store = Files.getFileStore(f.toPath());
       return store.supportsFileAttributeView(FileAttributeView);
