@@ -746,7 +746,7 @@ class BPServiceActor implements Runnable {
               int length = cmds.length;
               int iter = 0;
               for (iter = length - 1; iter >= 0 && !isContaisHighPriorityCmd; iter--) {
-                isContaisHighPriorityCmd = isContaisHighPriorityCmd || 
+                isContaisHighPriorityCmd = isContaisHighPriorityCmd ||
                     cmds[iter] instanceof KeyUpdateCommand;
               }
               if (isContaisHighPriorityCmd) {
@@ -1506,7 +1506,8 @@ class BPServiceActor implements Runnable {
       if (cmd == null) {
         return;
       }
-      ((LinkedBlockingDeque<Runnable>) queue).putFirst(() -> processCommand(new DatanodeCommand[]{cmd}));
+      ((LinkedBlockingDeque<Runnable>) queue).putFirst(
+          () -> processCommand(new DatanodeCommand[]{cmd}));
       dn.getMetrics().incrActorCmdQueueLength(1);
     }
 
