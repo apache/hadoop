@@ -4,6 +4,7 @@ import javax.net.ssl.SSLSession;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.util.Stack;
 
 import org.apache.http.HttpConnectionMetrics;
 import org.apache.http.HttpEntityEnclosingRequest;
@@ -28,6 +29,22 @@ public class AbfsConnFactory extends ManagedHttpClientConnectionFactory {
     private final ManagedHttpClientConnection httpClientConnection;
     public final HttpRoute httpRoute;
 
+    private final static Stack<ManagedHttpClientConnection> stack = new Stack<>();
+    private final static Thread thread;
+
+    static {
+      thread = new Thread(() -> {
+        while(true) {
+          if(!stack.empty()) {
+            try {
+              stack.pop().close();
+            } catch (IOException ex) {}
+          }
+        }
+      });
+      thread.start();
+    }
+
     public AbfsApacheHttpConnection(ManagedHttpClientConnection conn,
         final HttpRoute route) {
       this.httpClientConnection = conn;
@@ -36,7 +53,7 @@ public class AbfsConnFactory extends ManagedHttpClientConnectionFactory {
 
     @Override
     public void close() throws IOException {
-      httpClientConnection.close();
+      stack.push(httpClientConnection);
     }
 
     @Override
