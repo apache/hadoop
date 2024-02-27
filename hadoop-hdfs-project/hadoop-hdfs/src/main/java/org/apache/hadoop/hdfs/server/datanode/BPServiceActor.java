@@ -1490,6 +1490,21 @@ class BPServiceActor implements Runnable {
       dn.getMetrics().incrActorCmdQueueLength(1);
     }
 
+    /**
+     * Enqueue DatanodeCommand to the head of queue.
+     * @param cmd
+     * @throws InterruptedException
+     */
+    void enqueueFirst(DatanodeCommand cmd) throws InterruptedException {
+      if (cmd == null) {
+        return;
+      }
+      ((LinkedBlockingDeque<Runnable>) queue).putFirst(
+          () -> processCommand(new DatanodeCommand[]{cmd}));
+      LOG.info("Enque command: {} to the head of queue", cmd);
+      dn.getMetrics().incrActorCmdQueueLength(1);
+    }
+
     void enqueue(List<DatanodeCommand> cmds) throws InterruptedException {
       if (cmds == null) {
         return;
@@ -1504,21 +1519,6 @@ class BPServiceActor implements Runnable {
         queue.put(() -> processCommand(cmds));
         dn.getMetrics().incrActorCmdQueueLength(1);
       }
-    }
-
-    /**
-     * Enqueue DatanodeCommand to the head of queue.
-     * @param cmd
-     * @throws InterruptedException
-     */
-    void enqueueFirst(DatanodeCommand cmd) throws InterruptedException {
-      if (cmd == null) {
-        return;
-      }
-      ((LinkedBlockingDeque<Runnable>) queue).putFirst(
-          () -> processCommand(new DatanodeCommand[]{cmd}));
-      LOG.info("Enque command: {} to the head of queue", cmd);
-      dn.getMetrics().incrActorCmdQueueLength(1);
     }
   }
 
