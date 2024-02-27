@@ -12,6 +12,8 @@ public class KeepAliveCache extends HashMap<KeepAliveCache.KeepAliveKey, KeepAli
     implements Runnable{
 
   private Thread thread;
+
+  private boolean run = true;
   private KeepAliveCache() {
     thread = new Thread(this);
     thread.start();
@@ -20,13 +22,21 @@ public class KeepAliveCache extends HashMap<KeepAliveCache.KeepAliveKey, KeepAli
   public static KeepAliveCache INSTANCE = new KeepAliveCache();
 
   public static void restart()  {
-    INSTANCE.thread.suspend();
+    INSTANCE.run = false;
     INSTANCE = new KeepAliveCache();
+  }
+
+  public static void kill() {
+    if(INSTANCE == null) {
+      return;
+    }
+    INSTANCE.run = false;
+    INSTANCE = null;
   }
 
   @Override
   public void run() {
-    while(true) {
+    while(run) {
       try {
         Thread.sleep(5_000L);
         synchronized (this) {

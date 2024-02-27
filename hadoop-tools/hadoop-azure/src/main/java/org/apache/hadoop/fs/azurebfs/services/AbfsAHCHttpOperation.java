@@ -21,6 +21,7 @@ import org.apache.hadoop.fs.azurebfs.conn.AbfsHttpsUrlConnection;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsApacheHttpExpect100Exception;
+import org.apache.hadoop.fs.azurebfs.services.kac.KeepAliveCache;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.http.Header;
 import org.apache.http.HttpClientConnection;
@@ -83,6 +84,7 @@ public class AbfsAHCHttpOperation extends HttpOperation {
     if(client != null) {
       client.close();
     }
+    KeepAliveCache.kill();
   }
 
   private AbfsAHCHttpOperation(final URL url, final String method, final List<AbfsHttpHeader> requestHeaders,
