@@ -739,19 +739,22 @@ class BPServiceActor implements Runnable {
             if (state == HAServiceState.ACTIVE) {
               handleRollingUpgradeStatus(resp);
             }
-            // Note: effect only when the KeyUpdateCommand was the last
-            // or penultimate command in DatanodeCommand[].
+
             DatanodeCommand[] cmds = resp.getCommands();
             boolean isContaisHighPriorityCmd = false;
             if (cmds != null) {
               int length = cmds.length;
-              for (int iter = length - 1; iter >= 0 && !isContaisHighPriorityCmd; iter--) {
+              int iter = 0;
+              for (iter = length - 1; iter >= 0 && !isContaisHighPriorityCmd; iter--) {
                 isContaisHighPriorityCmd = isContaisHighPriorityCmd || 
                     cmds[iter] instanceof KeyUpdateCommand;
               }
+              if (isContaisHighPriorityCmd) {
+                commandProcessingThread.enqueueFirst(cmds[iter]);
+                cmds[iter] = null;
+              }
             }
-            commandProcessingThread.enqueue(cmds,
-                isContaisHighPriorityCmd);
+            commandProcessingThread.enqueue(cmds);
             isSlownode = resp.getIsSlownode();
           }
         }
@@ -1495,6 +1498,19 @@ class BPServiceActor implements Runnable {
     }
 
     /**
+     * Enqueue DatanodeCommand to the head of queue.
+     * @param cmd
+     * @throws InterruptedException
+     */
+    void enqueueFirst(DatanodeCommand cmd) throws InterruptedException {
+      if (cmd == null) {
+        return;
+      }
+      ((LinkedBlockingDeque<Runnable>) queue).putFirst(() -> processCommand(new DatanodeCommand[]{cmd}));
+      dn.getMetrics().incrActorCmdQueueLength(1);
+    }
+
+    /**
      * Used for full block report.
      * @param cmds
      * @throws InterruptedException
@@ -1513,13 +1529,8 @@ class BPServiceActor implements Runnable {
      * @param cmds
      * @throws InterruptedException
      */
-    void enqueue(DatanodeCommand[] cmds,
-        boolean containsHighPriorityCmds) throws InterruptedException {
-      if (containsHighPriorityCmds) {
-        ((LinkedBlockingDeque<Runnable>) queue).putFirst(() -> processCommand(cmds));
-      } else {
-        queue.put(() -> processCommand(cmds));
-      }
+    void enqueue(DatanodeCommand[] cmds) throws InterruptedException {
+      queue.put(() -> processCommand(cmds));
       dn.getMetrics().incrActorCmdQueueLength(1);
     }
   }
