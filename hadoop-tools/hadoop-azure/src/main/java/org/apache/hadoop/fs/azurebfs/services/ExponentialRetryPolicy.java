@@ -19,17 +19,14 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.util.Random;
-import java.net.HttpURLConnection;
 
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.classification.VisibleForTesting;
 
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_CONTINUE;
-
 /**
  * Retry policy used by AbfsClient.
  * */
-public class ExponentialRetryPolicy {
+public class ExponentialRetryPolicy extends AbfsRetryPolicy {
   /**
    * Represents the default amount of time used when calculating a random delta in the exponential
    * delay between retries.
@@ -79,11 +76,6 @@ public class ExponentialRetryPolicy {
   private final int minBackoff;
 
   /**
-   * The maximum number of retry attempts.
-   */
-  private final int retryCount;
-
-  /**
    * Initializes a new instance of the {@link ExponentialRetryPolicy} class.
    */
   public ExponentialRetryPolicy(final int maxIoRetries) {
@@ -105,36 +97,17 @@ public class ExponentialRetryPolicy {
   /**
    * Initializes a new instance of the {@link ExponentialRetryPolicy} class.
    *
-   * @param retryCount The maximum number of retry attempts.
+   * @param maxRetryCount The maximum number of retry attempts.
    * @param minBackoff The minimum backoff time.
    * @param maxBackoff The maximum backoff time.
    * @param deltaBackoff The value that will be used to calculate a random delta in the exponential delay
    *                     between retries.
    */
-  public ExponentialRetryPolicy(final int retryCount, final int minBackoff, final int maxBackoff, final int deltaBackoff) {
-    this.retryCount = retryCount;
+  public ExponentialRetryPolicy(final int maxRetryCount, final int minBackoff, final int maxBackoff, final int deltaBackoff) {
+    super(maxRetryCount, RetryPolicyConstants.EXPONENTIAL_RETRY_POLICY_ABBREVIATION);
     this.minBackoff = minBackoff;
     this.maxBackoff = maxBackoff;
     this.deltaBackoff = deltaBackoff;
-  }
-
-  /**
-   * Returns if a request should be retried based on the retry count, current response,
-   * and the current strategy. The valid http status code lies in the range of 1xx-5xx.
-   * But an invalid status code might be set due to network or timeout kind of issues.
-   * Such invalid status code also qualify for retry.
-   *
-   * @param retryCount The current retry attempt count.
-   * @param statusCode The status code of the response, or -1 for socket error.
-   * @return true if the request should be retried; false otherwise.
-   */
-  public boolean shouldRetry(final int retryCount, final int statusCode) {
-    return retryCount < this.retryCount
-        && (statusCode < HTTP_CONTINUE
-        || statusCode == HttpURLConnection.HTTP_CLIENT_TIMEOUT
-        || (statusCode >= HttpURLConnection.HTTP_INTERNAL_ERROR
-            && statusCode != HttpURLConnection.HTTP_NOT_IMPLEMENTED
-            && statusCode != HttpURLConnection.HTTP_VERSION));
   }
 
   /**
@@ -144,6 +117,7 @@ public class ExponentialRetryPolicy {
    * @param retryCount The current retry attempt count.
    * @return backoff Interval time
    */
+  @Override
   public long getRetryInterval(final int retryCount) {
     final long boundedRandDelta = (int) (this.deltaBackoff * MIN_RANDOM_RATIO)
         + this.randRef.nextInt((int) (this.deltaBackoff * MAX_RANDOM_RATIO)
@@ -151,14 +125,10 @@ public class ExponentialRetryPolicy {
 
     final double incrementDelta = (Math.pow(2, retryCount - 1)) * boundedRandDelta;
 
-    final long retryInterval = (int) Math.round(Math.min(this.minBackoff + incrementDelta, maxBackoff));
+    final long retryInterval = (int) Math.round(Math.min(
+            this.minBackoff + incrementDelta, maxBackoff));
 
     return retryInterval;
-  }
-
-  @VisibleForTesting
-  int getRetryCount() {
-    return this.retryCount;
   }
 
   @VisibleForTesting

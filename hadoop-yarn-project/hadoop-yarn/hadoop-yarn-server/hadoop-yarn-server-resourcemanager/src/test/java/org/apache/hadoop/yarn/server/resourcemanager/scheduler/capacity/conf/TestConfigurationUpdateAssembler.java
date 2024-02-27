@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.conf;
 
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.webapp.dao.QueueConfigInfo;
 import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 import org.junit.Before;
@@ -163,7 +164,7 @@ public class TestConfigurationUpdateAssembler {
 
   private CapacitySchedulerConfiguration crateInitialCSConfig() {
     CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration();
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {"a, b"});
+    csConf.setQueues(new QueuePath(CapacitySchedulerConfiguration.ROOT), new String[] {"a, b"});
 
     csConf.set(A_CONFIG_PATH, A_INIT_CONFIG_VALUE);
     csConf.set(B_CONFIG_PATH, B_INIT_CONFIG_VALUE);

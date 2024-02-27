@@ -231,7 +231,7 @@ The choice is yours. Generally recovery is better, but sometimes fail-fast is mo
 | `fs.s3a.connection.acquisition.timeout` | `60s`   | `*` | Timeout for waiting for a connection from the pool.   |
 | `fs.s3a.connection.establish.timeout`   | `30s`   |     | Time to establish the TCP/TLS connection              |
 | `fs.s3a.connection.idle.time`           | `60s`   | `*` | Maximum time for idle HTTP connections in the pool    |
-| `fs.s3a.connection.request.timeout`     | `0`     |     | If greater than zero, maximum duration of any request |
+| `fs.s3a.connection.request.timeout`     | `60s`   |     | If greater than zero, maximum time for a response     |
 | `fs.s3a.connection.timeout`             | `200s`  |     | Timeout for socket problems on a TCP channel          |
 | `fs.s3a.connection.ttl`                 | `5m`    |     | Lifetime of HTTP connections from the pool            |
 
@@ -447,7 +447,8 @@ An example of this is covered in [HADOOP-13871](https://issues.apache.org/jira/b
 
 1. For public data, use `curl`:
 
-        curl -O https://landsat-pds.s3.amazonaws.com/scene_list.gz
+        curl -O https://noaa-cors-pds.s3.amazonaws.com/raw/2023/001/akse/AKSE001a.23_.gz
+
 1. Use `nettop` to monitor a processes connections.
 
 
@@ -696,7 +697,7 @@ via `FileSystem.get()` or `Path.getFileSystem()`.
 The cache, `FileSystem.CACHE` will, for each user, cachec one instance of a filesystem
 for a given URI.
 All calls to `FileSystem.get` for a cached FS for a URI such
-as `s3a://landsat-pds/` will return that singe single instance.
+as `s3a://noaa-isd-pds/` will return that singe single instance.
 
 FileSystem instances are created on-demand for the cache,
 and will be done in each thread which requests an instance.
@@ -720,7 +721,7 @@ can be created simultaneously for different object stores/distributed
 filesystems.
 
 For example, a value of four would put an upper limit on the number
-of wasted instantiations of a connector for the `s3a://landsat-pds/`
+of wasted instantiations of a connector for the `s3a://noaa-isd-pds/`
 bucket.
 
 ```xml

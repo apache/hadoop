@@ -585,7 +585,7 @@ If an operation fails with an `AccessDeniedException`, then the role does not ha
 the permission for the S3 Operation invoked during the call.
 
 ```
-> hadoop fs -touch  s3a://landsat-pds/a
+> hadoop fs -touch  s3a://noaa-isd-pds/a
 
 java.nio.file.AccessDeniedException: a: Writing Object on a:
  software.amazon.awssdk.services.s3.model.S3Exception: Access Denied
