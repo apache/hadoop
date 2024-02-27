@@ -284,16 +284,6 @@ public class FSDirectory implements Closeable {
     return namesystem.hasReadLock();
   }
 
-  @Deprecated // dirLock is obsolete, use namesystem.fsLock instead
-  public int getReadHoldCount() {
-    return namesystem.getReadHoldCount();
-  }
-
-  @Deprecated // dirLock is obsolete, use namesystem.fsLock instead
-  public int getWriteHoldCount() {
-    return namesystem.getWriteHoldCount();
-  }
-
   public int getListLimit() {
     return lsLimit;
   }

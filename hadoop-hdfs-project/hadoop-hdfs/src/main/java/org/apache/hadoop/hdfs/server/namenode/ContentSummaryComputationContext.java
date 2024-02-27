@@ -123,8 +123,7 @@ public class ContentSummaryComputationContext {
 
     // sanity check.
     if (!hadDirReadLock || !hadFsnReadLock || hadDirWriteLock ||
-        hadFsnWriteLock || dir.getReadHoldCount() != 1 ||
-        fsn.getReadHoldCount() != 1) {
+        hadFsnWriteLock || fsn.getReadHoldCount() != 1) {
       // cannot relinquish
       return false;
     }
