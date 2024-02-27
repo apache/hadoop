@@ -144,7 +144,12 @@ public class KeepAliveCache extends HashMap<KeepAliveCache.KeepAliveKey, KeepAli
 
     /* return a still valid, unused HttpClient */
     synchronized void put(HttpClientConnection h) {
-        push(new KeepAliveEntry(h, System.currentTimeMillis()));
+      if (size() >= 5) {
+        try {h.close();} catch (Exception e) {}
+        ;
+        return;
+      }
+      push(new KeepAliveEntry(h, System.currentTimeMillis()));
     }
 
     /*
