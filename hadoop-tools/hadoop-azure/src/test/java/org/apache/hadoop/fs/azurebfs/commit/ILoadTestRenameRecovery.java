@@ -68,12 +68,12 @@ public class ILoadTestRenameRecovery extends AbstractAbfsIntegrationTest {
   /**
    * Number of threads to use.
    */
-  private final int threadCount = 5;
+  private final int threadCount = 100;
 
   /**
    * Number of renames to attempt per thread: {@value}.
    */
-  public static final int RENAMES = 10;
+  public static final int RENAMES = 100;
 
   /**
    * Thread number; used for paths and messages.
@@ -115,11 +115,6 @@ public class ILoadTestRenameRecovery extends AbstractAbfsIntegrationTest {
    * Uses a long over duration for atomic increments.
    */
   private final AtomicLong rateLimitingTime = new AtomicLong(0);
-
-  /**
-   * Object to block all threads on.
-   */
-  private static final Object begin = new Object();
 
   public ILoadTestRenameRecovery() throws Exception {
   }
@@ -175,11 +170,6 @@ public class ILoadTestRenameRecovery extends AbstractAbfsIntegrationTest {
         renameWorker(id, fs, source, dest)));
     }
 
-    // start the work
-    synchronized (begin) {
-      begin.notifyAll();
-    }
-
     // now wait for the futures
     awaitAllFutures(futures, SLEEP_INTERVAL);
     LOG.info("Rate limiting time: {}", Duration.ofMillis(rateLimitingTime.get()));
@@ -208,9 +198,6 @@ public class ILoadTestRenameRecovery extends AbstractAbfsIntegrationTest {
     int recoveries = 0;
     Duration totalWaitTime = Duration.ZERO;
     try {
-      synchronized (begin) {
-        begin.wait();
-      }
       LOG.info("Starting thread {}", id);
 
       int limit = RENAMES;
