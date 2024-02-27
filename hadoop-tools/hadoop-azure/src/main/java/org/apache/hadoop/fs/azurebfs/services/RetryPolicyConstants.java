@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,25 +16,20 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.util;
+package org.apache.hadoop.fs.azurebfs.services;
 
-import java.io.File;
+public final class RetryPolicyConstants {
 
-import org.junit.Assert;
+  private RetryPolicyConstants() {
 
-import org.apache.log4j.Logger;
-import org.junit.Test;
-
-public class TestClassUtil {
-  @Test(timeout=10000)
-  public void testFindContainingJar() {
-    String containingJar = ClassUtil.findContainingJar(Logger.class);
-    Assert.assertNotNull("Containing jar not found for Logger", 
-        containingJar);
-    File jarFile = new File(containingJar);
-    Assert.assertTrue("Containing jar does not exist on file system ",
-        jarFile.exists());
-    Assert.assertTrue("Incorrect jar file " + containingJar,
-        jarFile.getName().matches("reload4j.*[.]jar"));
   }
+
+  /**
+   * Constant for Exponential Retry Policy Abbreviation. {@value}
+   */
+  public static final String EXPONENTIAL_RETRY_POLICY_ABBREVIATION= "E";
+  /**
+   * Constant for Static Retry Policy Abbreviation. {@value}
+   */
+  public static final String STATIC_RETRY_POLICY_ABBREVIATION = "S";
 }

@@ -35,14 +35,27 @@ public final class FileSystemConfigurations {
   public static final boolean DEFAULT_FS_AZURE_ACCOUNT_IS_EXPECT_HEADER_ENABLED = true;
   public static final String USER_HOME_DIRECTORY_PREFIX = "/user";
 
-  private static final int SIXTY_SECONDS = 60 * 1000;
+  private static final int SIXTY_SECONDS = 60_000;
 
   // Retry parameter defaults.
-  public static final int DEFAULT_MIN_BACKOFF_INTERVAL = 3 * 1000;  // 3s
-  public static final int DEFAULT_MAX_BACKOFF_INTERVAL = 30 * 1000;  // 30s
-  public static final int DEFAULT_BACKOFF_INTERVAL = 3 * 1000;  // 3s
+  public static final int DEFAULT_MIN_BACKOFF_INTERVAL = 3_000;  // 3s
+  public static final int DEFAULT_MAX_BACKOFF_INTERVAL = 30_000;  // 30s
+  public static final boolean DEFAULT_STATIC_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED = true;
+  public static final int DEFAULT_STATIC_RETRY_INTERVAL = 1_000; // 1s
+  public static final int DEFAULT_BACKOFF_INTERVAL = 3_000;  // 3s
   public static final int DEFAULT_MAX_RETRY_ATTEMPTS = 30;
   public static final int DEFAULT_CUSTOM_TOKEN_FETCH_RETRY_COUNT = 3;
+
+  /**
+   * Default value of connection timeout to be used while setting up HTTP Connection.
+   * Value: {@value}.
+   */
+  public static final int DEFAULT_HTTP_CONNECTION_TIMEOUT = 2_000; // 2s
+  /**
+   * Default value of read timeout to be used while setting up HTTP Connection.
+   * Value: {@value}.
+   */
+  public static final int DEFAULT_HTTP_READ_TIMEOUT = 30_000; // 30 secs
 
   // Retry parameter defaults.
   public static final int DEFAULT_AZURE_OAUTH_TOKEN_FETCH_RETRY_MAX_ATTEMPTS = 5;
@@ -120,6 +133,7 @@ public final class FileSystemConfigurations {
   public static final int STREAM_ID_LEN = 12;
   public static final boolean DEFAULT_ENABLE_ABFS_LIST_ITERATOR = true;
   public static final boolean DEFAULT_ENABLE_ABFS_RENAME_RESILIENCE = true;
+  public static final boolean DEFAULT_ENABLE_ABFS_CHECKSUM_VALIDATION = false;
 
   /**
    * Limit of queued block upload operations before writes
