@@ -120,6 +120,7 @@ public class AbfsConnectionManager implements HttpClientConnectionManager {
   }
 
   public void closeAllConn() {
+    KeepAliveCache.restart();
 
   }
 }
