@@ -1353,7 +1353,7 @@ public class TestDFSAdmin {
           decommissioningNode1.getIpcPort();
       String node2Addr = decommissioningNode2.getIpAddr() + ":" +
           decommissioningNode2.getIpcPort();
-      assertTrue(outsForFinishReconf.get(0).contains(node1Addr)
+      Assertions.assertThat(outsForFinishReconf.get(0).contains(node1Addr)
           && outsForFinishReconf.get(0).contains(node2Addr));
     }
   }
@@ -1366,7 +1366,6 @@ public class TestDFSAdmin {
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override
       public Boolean get() {
-        LocatedBlocks blocks = null;
         try {
           dfsAdmin.getReconfigurationStatusUtil("datanode", "decomnodes",
               outStream, errStream);
@@ -1377,7 +1376,8 @@ public class TestDFSAdmin {
         }
         scanIntoList(out, outs);
         scanIntoList(err, errs);
-        return !outs.isEmpty() && outs.get(0).contains("finished");
+        return !outs.isEmpty() && outs.stream().filter(line ->
+            line.contains("finished")).count() == 2;
       }
     }, 100, 100 * 100);
   }
