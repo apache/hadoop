@@ -231,46 +231,53 @@ public abstract class HttpOperation implements AbfsPerfLoggable {
       // consume the input stream to release resources
       int totalBytesRead = 0;
 
-      try (InputStream stream = getContentInputStream()) {
-        if (isNullInputStream(stream)) {
-          return;
-        }
-        boolean endOfStream = false;
-
-        // this is a list operation and need to retrieve the data
-        // need a better solution
-        if (AbfsHttpConstants.HTTP_METHOD_GET.equals(this.method) && buffer == null) {
-          parseListFilesResponse(stream);
-        } else {
-          if (buffer != null) {
-            while (totalBytesRead < length) {
-              int bytesRead = stream.read(buffer, offset + totalBytesRead, length
-                  - totalBytesRead);
-              if (bytesRead == -1) {
-                endOfStream = true;
-                break;
-              }
-              totalBytesRead += bytesRead;
-            }
-          }
-          if (!endOfStream && stream.read() != -1) {
-            // read and discard
-            int bytesRead = 0;
-            byte[] b = new byte[CLEAN_UP_BUFFER_SIZE];
-            while ((bytesRead = stream.read(b)) >= 0) {
-              totalBytesRead += bytesRead;
-            }
-          }
-        }
-      } catch (IOException ex) {
-        LOG.warn("IO/Network error: {} {}: {}",
-            method, getMaskedUrl(), ex.getMessage());
-        LOG.debug("IO Error: ", ex);
-        throw ex;
-      } finally {
-        this.recvResponseTimeMs += elapsedTimeMs(startTime);
-        this.bytesReceived = totalBytesRead;
+      InputStream is = getContentInputStream();
+      if(isNullInputStream(is)) {
+        return;
       }
+      bytesReceived = length;
+      is.close();
+
+//      try (InputStream stream = getContentInputStream()) {
+//        if (isNullInputStream(stream)) {
+//          return;
+//        }
+//        boolean endOfStream = false;
+//
+//        // this is a list operation and need to retrieve the data
+//        // need a better solution
+//        if (AbfsHttpConstants.HTTP_METHOD_GET.equals(this.method) && buffer == null) {
+//          parseListFilesResponse(stream);
+//        } else {
+//          if (buffer != null) {
+//            while (totalBytesRead < length) {
+//              int bytesRead = stream.read(buffer, offset + totalBytesRead, length
+//                  - totalBytesRead);
+//              if (bytesRead == -1) {
+//                endOfStream = true;
+//                break;
+//              }
+//              totalBytesRead += bytesRead;
+//            }
+//          }
+//          if (!endOfStream && stream.read() != -1) {
+//            // read and discard
+//            int bytesRead = 0;
+//            byte[] b = new byte[CLEAN_UP_BUFFER_SIZE];
+//            while ((bytesRead = stream.read(b)) >= 0) {
+//              totalBytesRead += bytesRead;
+//            }
+//          }
+//        }
+//      } catch (IOException ex) {
+//        LOG.warn("IO/Network error: {} {}: {}",
+//            method, getMaskedUrl(), ex.getMessage());
+//        LOG.debug("IO Error: ", ex);
+//        throw ex;
+//      } finally {
+//        this.recvResponseTimeMs += elapsedTimeMs(startTime);
+//        this.bytesReceived = totalBytesRead;
+//      }
     }
   }
 
