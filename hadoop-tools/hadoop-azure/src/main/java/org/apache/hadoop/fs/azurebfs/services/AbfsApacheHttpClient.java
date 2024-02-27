@@ -59,9 +59,9 @@ public class AbfsApacheHttpClient {
     if(httpClient != null) {
       httpClient.close();
     }
-    if(connMgr != null) {
-      connMgr.close();
-    }
+//    if(connMgr != null) {
+//      connMgr.close();
+//    }
   }
 
 
@@ -574,21 +574,22 @@ public class AbfsApacheHttpClient {
 
   final CloseableHttpClient httpClient;
 
-  private final AbfsConnMgr connMgr;
+  private final AbfsConnectionManager connMgr;
 
   public AbfsApacheHttpClient(DelegatingSSLSocketFactory delegatingSSLSocketFactory,
       final AbfsConfiguration abfsConfiguration) {
-    if(delegatingSSLSocketFactory == null) {
-      connMgr = new AbfsConnMgr(null, abfsConfiguration);
-    } else {
-      connMgr = new AbfsConnMgr(
-          new SSLConnectionSocketFactory(delegatingSSLSocketFactory, null), abfsConfiguration);
-    }
+//    if(delegatingSSLSocketFactory == null) {
+//      connMgr = new AbfsConnMgr(null, abfsConfiguration);
+//    } else {
+//      connMgr = new AbfsConnMgr(
+//          new SSLConnectionSocketFactory(delegatingSSLSocketFactory, null), abfsConfiguration);
+//    }
+    connMgr = new AbfsConnectionManager(createSocketFactoryRegistry(new SSLConnectionSocketFactory(delegatingSSLSocketFactory, null)), new org.apache.hadoop.fs.azurebfs.services.AbfsConnFactory());
     final HttpClientBuilder builder = HttpClients.custom();
     builder.setConnectionManager(connMgr)
         .setRequestExecutor(new AbfsHttpRequestExecutor())
-        .setConnectionReuseStrategy(new AhcConnReuseStrategy(connMgr))
-        .setKeepAliveStrategy(new AbfsKeepAliveStrategy(abfsConfiguration))
+//        .setConnectionReuseStrategy(new AhcConnReuseStrategy(connMgr))
+//        .setKeepAliveStrategy(new AbfsKeepAliveStrategy(abfsConfiguration))
         .disableContentCompression()
         .disableRedirectHandling()
         .disableAutomaticRetries()
