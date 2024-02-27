@@ -40,7 +40,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -199,7 +199,7 @@ public class TestLogInfo {
     try {
       String broken = "{ broken { [[]} broken";
       out = PluginStoreTestUtils.createLogFile(logPath, fs);
-      out.write(broken.getBytes(Charset.forName("UTF-8")));
+      out.write(broken.getBytes(StandardCharsets.UTF_8));
       out.close();
       out = null;
     } finally {

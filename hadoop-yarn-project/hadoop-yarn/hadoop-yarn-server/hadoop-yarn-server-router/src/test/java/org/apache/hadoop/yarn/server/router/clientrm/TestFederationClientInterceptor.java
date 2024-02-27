@@ -29,15 +29,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Set;
+import java.util.HashSet;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 import java.util.Arrays;
 import java.util.Collection;
 
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.MockApps;
+import org.apache.hadoop.yarn.api.ApplicationClientProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationAttemptReportResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
@@ -132,6 +136,7 @@ import org.apache.hadoop.yarn.api.records.ReservationDefinition;
 import org.apache.hadoop.yarn.api.records.ReservationRequestInterpreter;
 import org.apache.hadoop.yarn.api.records.ReservationRequests;
 import org.apache.hadoop.yarn.api.records.Token;
+import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
@@ -191,7 +196,7 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
     stateStore = new MemoryFederationStateStore();
     stateStore.init(this.getConf());
-    FederationStateStoreFacade.getInstance().reinitialize(stateStore, getConf());
+    FederationStateStoreFacade.getInstance(getConf()).reinitialize(stateStore, getConf());
     stateStoreUtil = new FederationStateStoreTestUtil(stateStore);
 
     interceptor.setConf(this.getConf());
@@ -385,6 +390,66 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
     KillApplicationRequest requestKill = KillApplicationRequest.newInstance(appId);
     KillApplicationResponse responseKill = interceptor.forceKillApplication(requestKill);
     Assert.assertNotNull(responseKill);
+  }
+
+  @Test
+  public void testForceKillApplicationAllSubClusters()
+      throws IOException, YarnException, InterruptedException, TimeoutException {
+
+    // We will design a unit test. In this unit test,
+    // we will submit the same application to all sub-clusters.
+    // Then we use interceptor kill application,
+    // the application should be cleared from all sub-clusters.
+
+    Set<SubClusterId> subClusterSet = new HashSet<>();
+    for (SubClusterId subCluster : subClusters) {
+      subClusterSet.add(subCluster);
+    }
+
+    ApplicationId appId =
+        ApplicationId.newInstance(System.currentTimeMillis(), 2);
+    SubmitApplicationRequest request = mockSubmitApplicationRequest(appId);
+
+    // Submit the application we are going to kill later
+    SubmitApplicationResponse response = interceptor.submitApplication(request);
+
+    Assert.assertNotNull(response);
+    SubClusterId subClusterId = stateStoreUtil.queryApplicationHomeSC(appId);
+    Assert.assertNotNull(stateStoreUtil.queryApplicationHomeSC(appId));
+
+    subClusterSet.remove(subClusterId);
+
+    for (SubClusterId subCluster : subClusterSet) {
+      LOG.info("SubCluster : {}.", subCluster);
+      ApplicationClientProtocol clientRMProxyForSubCluster =
+          interceptor.getClientRMProxyForSubCluster(subCluster);
+      clientRMProxyForSubCluster.submitApplication(request);
+    }
+
+    KillApplicationRequest requestKill = KillApplicationRequest.newInstance(appId);
+    GenericTestUtils.waitFor(() -> {
+      KillApplicationResponse responseKill;
+      try {
+        responseKill = interceptor.forceKillApplication(requestKill);
+      } catch (Exception e) {
+        throw new RuntimeException(e);
+      }
+      return (responseKill.getIsKillCompleted());
+    }, 100, 2000);
+
+    for (SubClusterId subCluster : subClusters) {
+      ApplicationClientProtocol clientRMProxyForSubCluster =
+          interceptor.getClientRMProxyForSubCluster(subCluster);
+      GetApplicationReportRequest requestGet = GetApplicationReportRequest.newInstance(appId);
+      GetApplicationReportResponse responseGet =
+          clientRMProxyForSubCluster.getApplicationReport(requestGet);
+      Assert.assertNotNull(responseGet);
+      ApplicationReport applicationReport = responseGet.getApplicationReport();
+      Assert.assertNotNull(applicationReport);
+      YarnApplicationState yarnApplicationState = applicationReport.getYarnApplicationState();
+      Assert.assertNotNull(yarnApplicationState);
+      Assert.assertEquals(YarnApplicationState.KILLED, yarnApplicationState);
+    }
   }
 
   /**
@@ -1167,11 +1232,27 @@ public class TestFederationClientInterceptor extends BaseRouterClientRMTest {
 
     QueueInfo queueInfo = response.getQueueInfo();
     Assert.assertNotNull(queueInfo);
-    Assert.assertEquals(queueInfo.getQueueName(),  "root");
-    Assert.assertEquals(queueInfo.getCapacity(), 4.0, 0);
-    Assert.assertEquals(queueInfo.getCurrentCapacity(), 0.0, 0);
-    Assert.assertEquals(queueInfo.getChildQueues().size(), 12, 0);
-    Assert.assertEquals(queueInfo.getAccessibleNodeLabels().size(), 1);
+    Assert.assertEquals("root", queueInfo.getQueueName());
+    Assert.assertEquals(4.0, queueInfo.getCapacity(), 0);
+    Assert.assertEquals(0.0, queueInfo.getCurrentCapacity(), 0);
+    Assert.assertEquals(12, queueInfo.getChildQueues().size(), 0);
+    Assert.assertEquals(1, queueInfo.getAccessibleNodeLabels().size());
+  }
+
+  @Test
+  public void testSubClusterGetQueueInfo() throws IOException, YarnException {
+    // We have set up a unit test where we access queue information for subcluster1.
+    GetQueueInfoResponse response = interceptor.getQueueInfo(
+        GetQueueInfoRequest.newInstance("root", true, true, true, "1"));
+    Assert.assertNotNull(response);
+
+    QueueInfo queueInfo = response.getQueueInfo();
+    Assert.assertNotNull(queueInfo);
+    Assert.assertEquals("root", queueInfo.getQueueName());
+    Assert.assertEquals(1.0, queueInfo.getCapacity(), 0);
+    Assert.assertEquals(0.0, queueInfo.getCurrentCapacity(), 0);
+    Assert.assertEquals(3, queueInfo.getChildQueues().size(), 0);
+    Assert.assertEquals(1, queueInfo.getAccessibleNodeLabels().size());
   }
 
   @Test

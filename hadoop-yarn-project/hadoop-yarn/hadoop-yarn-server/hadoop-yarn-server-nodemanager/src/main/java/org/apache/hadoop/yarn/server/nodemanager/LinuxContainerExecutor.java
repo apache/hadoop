@@ -48,7 +48,9 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -787,9 +789,18 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       LOG.warn("Error in signalling container {} with {}; exit = {}",
           pid, signal, retCode, e);
       logOutput(e.getOutput());
-      throw new IOException("Problem signalling container " + pid + " with "
-          + signal + "; output: " + e.getOutput() + " and exitCode: "
-          + retCode, e);
+
+      // In ContainerExecutionException -1 is the default value for the exit code.
+      // If it remained unset, we can treat the signalling as interrupted.
+      if (retCode == ContainerExecutionException.getDefaultExitCode()) {
+        throw new InterruptedIOException("Signalling container " + pid + " with "
+            + signal + " is interrupted; output: " + e.getOutput() + " and exitCode: "
+            + retCode);
+      } else {
+        throw new IOException("Problem signalling container " + pid + " with "
+            + signal + "; output: " + e.getOutput() + " and exitCode: "
+            + retCode, e);
+      }
     }
     return true;
   }
@@ -1054,7 +1065,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
     if (file.createNewFile()) {
       FileOutputStream output = new FileOutputStream(file);
       try {
-        output.write(spec.getBytes("UTF-8"));
+        output.write(spec.getBytes(StandardCharsets.UTF_8));
       } finally {
         output.close();
       }

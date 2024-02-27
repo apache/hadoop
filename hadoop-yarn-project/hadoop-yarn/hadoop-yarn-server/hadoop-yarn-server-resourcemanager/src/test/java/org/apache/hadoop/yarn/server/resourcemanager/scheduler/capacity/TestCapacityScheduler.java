@@ -31,12 +31,17 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.A;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.A1;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.A2;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.A3;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.A_CAPACITY;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B1;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B1_CAPACITY;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B2;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B2_PATH;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B_CAPACITY;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.B_PATH;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.DEFAULT;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueHelpers.ROOT;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.GB;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.appHelper;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.checkApplicationResourceUsage;
@@ -587,15 +592,14 @@ public class TestCapacityScheduler {
   @Test
   public void testMaximumCapacitySetup() {
     float delta = 0.0000001f;
-    QueuePath queuePathA = new QueuePath(A);
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
     assertEquals(CapacitySchedulerConfiguration.MAXIMUM_CAPACITY_VALUE,
-            conf.getNonLabeledQueueMaximumCapacity(queuePathA), delta);
+            conf.getNonLabeledQueueMaximumCapacity(A), delta);
     conf.setMaximumCapacity(A, 50.0f);
-    assertEquals(50.0f, conf.getNonLabeledQueueMaximumCapacity(queuePathA), delta);
+    assertEquals(50.0f, conf.getNonLabeledQueueMaximumCapacity(A), delta);
     conf.setMaximumCapacity(A, -1);
     assertEquals(CapacitySchedulerConfiguration.MAXIMUM_CAPACITY_VALUE,
-            conf.getNonLabeledQueueMaximumCapacity(queuePathA), delta);
+            conf.getNonLabeledQueueMaximumCapacity(A), delta);
   }
 
   @Test
@@ -636,18 +640,19 @@ public class TestCapacityScheduler {
   public void testParseQueueWithAbsoluteResource() {
     String childQueue = "testQueue";
     String labelName = "testLabel";
+    QueuePath childQueuePath = new QueuePath("root." + childQueue);
 
     CapacityScheduler cs = new CapacityScheduler();
     cs.setConf(new YarnConfiguration());
     cs.setRMContext(resourceManager.getRMContext());
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
 
-    conf.setQueues("root", new String[] {childQueue});
-    conf.setCapacity("root." + childQueue, "[memory=20480,vcores=200]");
-    conf.setAccessibleNodeLabels("root." + childQueue,
+    conf.setQueues(ROOT, new String[] {childQueue});
+    conf.setCapacity(childQueuePath, "[memory=20480,vcores=200]");
+    conf.setAccessibleNodeLabels(childQueuePath,
         Sets.newHashSet(labelName));
-    conf.setCapacityByLabel("root", labelName, "[memory=10240,vcores=100]");
-    conf.setCapacityByLabel("root." + childQueue, labelName,
+    conf.setCapacityByLabel(ROOT, labelName, "[memory=10240,vcores=100]");
+    conf.setCapacityByLabel(childQueuePath, labelName,
         "[memory=4096,vcores=10]");
 
     cs.init(conf);
@@ -1238,8 +1243,8 @@ public class TestCapacityScheduler {
     cs.reinitialize(conf, rmContext);
 
     CSQueue rootQueue = cs.getRootQueue();
-    CSQueue queueB = findQueue(rootQueue, B);
-    CSQueue queueB2 = findQueue(queueB, B2);
+    CSQueue queueB = findQueue(rootQueue, B_PATH);
+    CSQueue queueB2 = findQueue(queueB, B2_PATH);
 
     // When preemption turned on for the whole system
     // (yarn.resourcemanager.scheduler.monitor.enable=true), and with no other
@@ -1250,7 +1255,7 @@ public class TestCapacityScheduler {
     // Disable preemption at the root queue level.
     // The preemption property should be inherited from root all the
     // way down so that root.b.b2 should NOT be preemptable.
-    conf.setPreemptionDisabled(rootQueue.getQueuePath(), true);
+    conf.setPreemptionDisabled(rootQueue.getQueuePathObject(), true);
     cs.reinitialize(conf, rmContext);
     assertTrue(
         "queue " + B2 + " should have inherited non-preemptability from root",
@@ -1258,8 +1263,8 @@ public class TestCapacityScheduler {
 
     // Enable preemption for root (grandparent) but disable for root.b (parent).
     // root.b.b2 should inherit property from parent and NOT be preemptable
-    conf.setPreemptionDisabled(rootQueue.getQueuePath(), false);
-    conf.setPreemptionDisabled(queueB.getQueuePath(), true);
+    conf.setPreemptionDisabled(rootQueue.getQueuePathObject(), false);
+    conf.setPreemptionDisabled(queueB.getQueuePathObject(), true);
     cs.reinitialize(conf, rmContext);
     assertTrue(
         "queue " + B2 + " should have inherited non-preemptability from parent",
@@ -1267,7 +1272,7 @@ public class TestCapacityScheduler {
 
     // When preemption is turned on for root.b.b2, it should be preemptable
     // even though preemption is disabled on root.b (parent).
-    conf.setPreemptionDisabled(queueB2.getQueuePath(), false);
+    conf.setPreemptionDisabled(queueB2.getQueuePathObject(), false);
     cs.reinitialize(conf, rmContext);
     assertFalse("queue " + B2 + " should have been preemptable",
         queueB2.getPreemptionDisabled());
@@ -1481,7 +1486,7 @@ public class TestCapacityScheduler {
 
     waitContainerAllocated(am1, 1 * GB, 1, 2, rm1, nm1);
 
-    // Maximum resoure of b1 is 100 * 0.895 * 0.792 = 71 GB
+    // Maximum resource of b1 is 100 * 0.895 * 0.792 = 71 GB
     // 2 GBs used by am, so it's 71 - 2 = 69G.
     Assert.assertEquals(69 * GB,
         am1.doHeartbeat().getAvailableResources().getMemorySize());
@@ -1550,7 +1555,7 @@ public class TestCapacityScheduler {
      *     A1 A2 
      */
     CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration();
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {"a", "b"});
+    csConf.setQueues(ROOT, new String[] {"a", "b"});
     csConf.setCapacity(A, 50);
     csConf.setMaximumCapacity(A, 50);
     csConf.setCapacity(B, 50);
@@ -2554,13 +2559,11 @@ public class TestCapacityScheduler {
       long defaultLifetime) {
     CapacitySchedulerConfiguration csConf =
         new CapacitySchedulerConfiguration();
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
+    csConf.setQueues(ROOT,
         new String[] {"default"});
-    csConf.setCapacity(CapacitySchedulerConfiguration.ROOT + ".default", 100);
-    csConf.setMaximumLifetimePerQueue(
-        CapacitySchedulerConfiguration.ROOT + ".default", maxLifetime);
-    csConf.setDefaultLifetimePerQueue(
-        CapacitySchedulerConfiguration.ROOT + ".default", defaultLifetime);
+    csConf.setCapacity(DEFAULT, 100);
+    csConf.setMaximumLifetimePerQueue(DEFAULT, maxLifetime);
+    csConf.setDefaultLifetimePerQueue(DEFAULT, defaultLifetime);
 
     YarnConfiguration conf = new YarnConfiguration(csConf);
     CapacityScheduler cs = new CapacityScheduler();
@@ -2896,11 +2899,11 @@ public class TestCapacityScheduler {
         .getMaxAbsoluteCapacity(), DELTA);
 
     // Add child queue to a, and reinitialize. Metrics should be updated
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT + ".a",
+    csConf.setQueues(A,
         new String[] {"a1", "a2", "a3"});
-    csConf.setCapacity(CapacitySchedulerConfiguration.ROOT + ".a.a2", 29.5f);
-    csConf.setCapacity(CapacitySchedulerConfiguration.ROOT + ".a.a3", 40.5f);
-    csConf.setMaximumCapacity(CapacitySchedulerConfiguration.ROOT + ".a.a3",
+    csConf.setCapacity(A2, 29.5f);
+    csConf.setCapacity(A3, 40.5f);
+    csConf.setMaximumCapacity(A3,
         50.0f);
 
     cs.reinitialize(csConf, new RMContextImpl(null, null, null, null, null,
@@ -2945,14 +2948,14 @@ public class TestCapacityScheduler {
   public void testReservedContainerLeakWhenMoveApplication() throws Exception {
     CapacitySchedulerConfiguration csConf
         = new CapacitySchedulerConfiguration();
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
+    csConf.setQueues(ROOT,
         new String[] {"a", "b"});
-    csConf.setCapacity("root.a", 50);
-    csConf.setMaximumCapacity("root.a", 100);
-    csConf.setUserLimitFactor("root.a", 100);
-    csConf.setCapacity("root.b", 50);
-    csConf.setMaximumCapacity("root.b", 100);
-    csConf.setUserLimitFactor("root.b", 100);
+    csConf.setCapacity(A, 50);
+    csConf.setMaximumCapacity(A, 100);
+    csConf.setUserLimitFactor(A, 100);
+    csConf.setCapacity(B, 50);
+    csConf.setMaximumCapacity(B, 100);
+    csConf.setUserLimitFactor(B, 100);
 
     YarnConfiguration conf=new YarnConfiguration(csConf);
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,

@@ -20,7 +20,7 @@ package org.apache.hadoop.fs.s3a;
 
 import java.io.IOException;
 
-import com.amazonaws.services.s3.model.ObjectMetadata;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.net.util.Base64;
@@ -28,8 +28,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
 import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_KEY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public final class EncryptionTestUtils {
 
@@ -38,6 +37,8 @@ public final class EncryptionTestUtils {
   }
 
   public static final String AWS_KMS_SSE_ALGORITHM = "aws:kms";
+
+  public static final String AWS_KMS_DSSE_ALGORITHM = "aws:kms:dsse";
 
   public static final String SSE_C_ALGORITHM = "AES256";
 
@@ -69,33 +70,44 @@ public final class EncryptionTestUtils {
                                      final S3AEncryptionMethods algorithm,
                                      final String kmsKeyArn)
           throws IOException {
-    ObjectMetadata md = fs.getObjectMetadata(path);
+    HeadObjectResponse md = fs.getS3AInternals().getObjectMetadata(path);
     String details = String.format(
             "file %s with encryption algorithm %s and key %s",
             path,
-            md.getSSEAlgorithm(),
-            md.getSSEAwsKmsKeyId());
+            md.serverSideEncryptionAsString(),
+            md.ssekmsKeyId());
     switch(algorithm) {
     case SSE_C:
-      assertNull("Metadata algorithm should have been null in "
-                      + details,
-              md.getSSEAlgorithm());
-      assertEquals("Wrong SSE-C algorithm in "
-                      + details,
-              SSE_C_ALGORITHM, md.getSSECustomerAlgorithm());
+      assertThat(md.serverSideEncryptionAsString())
+          .describedAs("Details of the server-side encryption algorithm used: %s", details)
+          .isNull();
+      assertThat(md.sseCustomerAlgorithm())
+          .describedAs("Details of SSE-C algorithm: %s", details)
+          .isEqualTo(SSE_C_ALGORITHM);
       String md5Key = convertKeyToMd5(fs);
-      assertEquals("getSSECustomerKeyMd5() wrong in " + details,
-              md5Key, md.getSSECustomerKeyMd5());
+      assertThat(md.sseCustomerKeyMD5())
+          .describedAs("Details of the customer provided encryption key: %s", details)
+          .isEqualTo(md5Key);
       break;
     case SSE_KMS:
-      assertEquals("Wrong algorithm in " + details,
-              AWS_KMS_SSE_ALGORITHM, md.getSSEAlgorithm());
-      assertEquals("Wrong KMS key in " + details,
-              kmsKeyArn,
-              md.getSSEAwsKmsKeyId());
+      assertThat(md.serverSideEncryptionAsString())
+          .describedAs("Details of the server-side encryption algorithm used: %s", details)
+          .isEqualTo(AWS_KMS_SSE_ALGORITHM);
+      assertThat(md.ssekmsKeyId())
+          .describedAs("Details of the KMS key: %s", details)
+          .isEqualTo(kmsKeyArn);
+      break;
+    case DSSE_KMS:
+      assertThat(md.serverSideEncryptionAsString())
+          .describedAs("Details of the server-side encryption algorithm used: %s", details)
+          .isEqualTo(AWS_KMS_DSSE_ALGORITHM);
+      assertThat(md.ssekmsKeyId())
+          .describedAs("Details of the KMS key: %s", details)
+          .isEqualTo(kmsKeyArn);
       break;
     default:
-      assertEquals("AES256", md.getSSEAlgorithm());
+      assertThat(md.serverSideEncryptionAsString())
+          .isEqualTo("AES256");
     }
   }
 

@@ -29,6 +29,7 @@ import java.sql.Blob;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
 import java.util.TimeZone;
@@ -88,6 +89,8 @@ import org.apache.hadoop.yarn.server.federation.store.records.GetReservationsHom
 import org.apache.hadoop.yarn.server.federation.store.records.GetReservationsHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.DeletePoliciesConfigurationsRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.DeletePoliciesConfigurationsResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationHomeSubClusterResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.ReservationHomeSubCluster;
@@ -97,6 +100,8 @@ import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenReque
 import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKey;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreToken;
+import org.apache.hadoop.yarn.server.federation.store.records.DeleteSubClusterPoliciesConfigurationsRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.DeleteSubClusterPoliciesConfigurationsResponse;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationApplicationHomeSubClusterStoreInputValidator;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationMembershipStateStoreInputValidator;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationPolicyStoreInputValidator;
@@ -215,6 +220,10 @@ public class SQLFederationStateStore implements FederationStateStore {
 
   private static final String CALL_SP_LOAD_VERSION =
       "{call sp_getVersion(?, ?)}";
+
+  private static final List<String> TABLES = new ArrayList<>(
+      Arrays.asList("applicationsHomeSubCluster", "membership", "policies", "versions",
+      "reservationsHomeSubCluster", "masterKeys", "delegationTokens", "sequenceTable"));
 
   private Calendar utcCalendar =
       Calendar.getInstance(TimeZone.getTimeZone("UTC"));
@@ -1067,6 +1076,57 @@ public class SQLFederationStateStore implements FederationStateStore {
   }
 
   @Override
+  public DeleteSubClusterPoliciesConfigurationsResponse deletePoliciesConfigurations(
+      DeleteSubClusterPoliciesConfigurationsRequest request) throws YarnException {
+    FederationPolicyStoreInputValidator.validate(request);
+    Connection connection = null;
+    try {
+      connection = getConnection(false);
+      FederationQueryRunner runner = new FederationQueryRunner();
+      for (String queue : request.getQueues()) {
+        LOG.info("delete queue = {} policy start.", queue);
+        runner.deletePolicyByQueue(connection, queue);
+        LOG.info("delete queue = {} policy finished.", queue);
+      }
+      return DeleteSubClusterPoliciesConfigurationsResponse.newInstance();
+    } catch (Exception e) {
+      FederationStateStoreUtils.logAndThrowRetriableException(LOG,
+          "Could not delete queue policy!", e);
+    } finally {
+      // Return to the pool the CallableStatement
+      try {
+        FederationStateStoreUtils.returnToPool(LOG, null, connection);
+      } catch (YarnException e) {
+        LOG.error("close connection error.", e);
+      }
+    }
+    return null;
+  }
+
+  @Override
+  public DeletePoliciesConfigurationsResponse deleteAllPoliciesConfigurations(
+      DeletePoliciesConfigurationsRequest request) throws Exception {
+    Connection connection = null;
+    try {
+      connection = getConnection(false);
+      FederationQueryRunner runner = new FederationQueryRunner();
+      LOG.info("delete table = policies start.");
+      runner.truncateTable(connection, "policies");
+      LOG.info("delete table = policies finished.");
+    } catch (Exception e) {
+      throw new RuntimeException("Could not delete table (policies)!", e);
+    } finally {
+      // Return to the pool the CallableStatement
+      try {
+        FederationStateStoreUtils.returnToPool(LOG, null, connection);
+      } catch (YarnException e) {
+        LOG.error("close connection error.", e);
+      }
+    }
+    return DeletePoliciesConfigurationsResponse.newInstance();
+  }
+
+  @Override
   public Version getCurrentVersion() {
     return CURRENT_VERSION_INFO;
   }
@@ -1120,6 +1180,11 @@ public class SQLFederationStateStore implements FederationStateStore {
     byte[] fedVersion = ((VersionPBImpl) CURRENT_VERSION_INFO).getProto().toByteArray();
     String versionComment = CURRENT_VERSION_INFO.toString();
     storeVersion(fedVersion, versionComment);
+  }
+
+  @Override
+  public void deleteStateStore() throws Exception {
+    truncateTable();
   }
 
   /**
@@ -2067,6 +2132,32 @@ public class SQLFederationStateStore implements FederationStateStore {
       return runner.selectOrUpdateSequenceTable(connection, sequenceName, isUpdate);
     } catch (Exception e) {
       throw new RuntimeException("Could not query sequence table!!", e);
+    } finally {
+      // Return to the pool the CallableStatement
+      try {
+        FederationStateStoreUtils.returnToPool(LOG, null, connection);
+      } catch (YarnException e) {
+        LOG.error("close connection error.", e);
+      }
+    }
+  }
+
+  /**
+   * We will truncate the tables, iterate through each table individually,
+   * and then clean the tables.
+   */
+  private void truncateTable() {
+    Connection connection = null;
+    try {
+      connection = getConnection(false);
+      FederationQueryRunner runner = new FederationQueryRunner();
+      for (String table : TABLES) {
+        LOG.info("truncate table = {} start.", table);
+        runner.truncateTable(connection, table);
+        LOG.info("truncate table = {} finished.", table);
+      }
+    } catch (Exception e) {
+      throw new RuntimeException("Could not truncate table!", e);
     } finally {
       // Return to the pool the CallableStatement
       try {

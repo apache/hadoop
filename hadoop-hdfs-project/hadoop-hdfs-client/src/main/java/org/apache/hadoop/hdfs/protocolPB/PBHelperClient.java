@@ -209,7 +209,7 @@ import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitShm.SlotId;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.erasurecode.ECSchema;
-import org.apache.hadoop.ipc.ProtobufHelper;
+import org.apache.hadoop.ipc.internal.ShadedProtobufHelper;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ChunkedArrayList;
@@ -237,7 +237,7 @@ public class PBHelperClient {
       FsAction.values();
 
   private static ByteString getFixedByteString(String key) {
-    return ProtobufHelper.getFixedByteString(key);
+    return ShadedProtobufHelper.getFixedByteString(key);
   }
 
   /**
@@ -260,7 +260,8 @@ public class PBHelperClient {
 
   public static ByteString getByteString(byte[] bytes) {
     // return singleton to reduce object allocation
-    return ProtobufHelper.getByteString(bytes);
+    // return singleton to reduce object allocation
+    return ShadedProtobufHelper.getByteString(bytes);
   }
 
   public static ShmId convert(ShortCircuitShmIdProto shmId) {
@@ -328,7 +329,7 @@ public class PBHelperClient {
   }
 
   public static TokenProto convert(Token<?> tok) {
-    return ProtobufHelper.protoFromToken(tok);
+    return ShadedProtobufHelper.protoFromToken(tok);
   }
 
   public static ShortCircuitShmIdProto convert(ShmId shmId) {
@@ -383,6 +384,9 @@ public class PBHelperClient {
     }
     if (info.getUpgradeDomain() != null) {
       builder.setUpgradeDomain(info.getUpgradeDomain());
+    }
+    if (info.getSoftwareVersion() != null) {
+      builder.setSoftwareVersion(info.getSoftwareVersion());
     }
     builder
         .setId(convert((DatanodeID) info))
@@ -785,7 +789,8 @@ public class PBHelperClient {
                 di.getLastBlockReportTime() : 0)
             .setLastBlockReportMonotonic(di.hasLastBlockReportMonotonic() ?
                 di.getLastBlockReportMonotonic() : 0)
-            .setNumBlocks(di.getNumBlocks());
+            .setNumBlocks(di.getNumBlocks())
+            .setSoftwareVersion(di.getSoftwareVersion());
 
     if (di.hasNonDfsUsed()) {
       dinfo.setNonDfsUsed(di.getNonDfsUsed());
@@ -814,8 +819,8 @@ public class PBHelperClient {
 
   public static Token<BlockTokenIdentifier> convert(
       TokenProto blockToken) {
-    return (Token<BlockTokenIdentifier>) ProtobufHelper
-        .tokenFromProto(blockToken);
+    return (Token<BlockTokenIdentifier>) ShadedProtobufHelper.tokenFromProto(
+        blockToken);
   }
 
   // DatanodeId

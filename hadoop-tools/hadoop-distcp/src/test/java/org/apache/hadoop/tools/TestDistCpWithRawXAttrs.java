@@ -62,6 +62,7 @@ public class TestDistCpWithRawXAttrs {
   private static final Path dir1 = new Path("/src/dir1");
   private static final Path subDir1 = new Path(dir1, "subdir1");
   private static final Path file1 = new Path("/src/file1");
+  private static final Path FILE_2 = new Path("/src/dir1/file2");
   private static final String rawRootName = "/.reserved/raw";
   private static final String rootedDestName = "/dest";
   private static final String rootedSrcName = "/src";
@@ -73,7 +74,7 @@ public class TestDistCpWithRawXAttrs {
     conf = new Configuration();
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_XATTRS_ENABLED_KEY, true);
     conf.setInt(DFSConfigKeys.DFS_LIST_LIMIT, 2);
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).format(true)
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).format(true)
             .build();
     cluster.waitActive();
     fs = cluster.getFileSystem();
@@ -178,7 +179,7 @@ public class TestDistCpWithRawXAttrs {
   }
 
   @Test
-  public void testPreserveEC() throws Exception {
+  public void testPreserveAndNoPreserveEC() throws Exception {
     final String src = "/src";
     final String dest = "/dest";
 
@@ -190,9 +191,11 @@ public class TestDistCpWithRawXAttrs {
 
     fs.delete(new Path("/dest"), true);
     fs.mkdirs(subDir1);
-    fs.create(file1).close();
     DistributedFileSystem dfs = (DistributedFileSystem) fs;
     dfs.enableErasureCodingPolicy("XOR-2-1-1024k");
+    dfs.setErasureCodingPolicy(dir1, "XOR-2-1-1024k");
+    fs.create(file1).close();
+    fs.create(FILE_2).close();
     int res = ToolRunner.run(conf, new ECAdmin(conf), args);
     assertEquals("Unable to set EC policy on " + subDir1.toString(), res, 0);
 
@@ -203,6 +206,7 @@ public class TestDistCpWithRawXAttrs {
     FileStatus srcStatus = fs.getFileStatus(new Path(src));
     FileStatus srcDir1Status = fs.getFileStatus(dir1);
     FileStatus srcSubDir1Status = fs.getFileStatus(subDir1);
+    FileStatus srcFile2Status = fs.getFileStatus(FILE_2);
 
     FileStatus destStatus = fs.getFileStatus(new Path(dest));
     FileStatus destDir1Status = fs.getFileStatus(destDir1);
@@ -214,12 +218,26 @@ public class TestDistCpWithRawXAttrs {
         destStatus.isErasureCoded());
     assertTrue("/src/dir1 is not erasure coded!",
         srcDir1Status.isErasureCoded());
+    assertTrue("/src/dir1/file2 is not erasure coded",
+        srcFile2Status.isErasureCoded());
     assertTrue("/dest/dir1 is not erasure coded!",
         destDir1Status.isErasureCoded());
     assertTrue("/src/dir1/subdir1 is not erasure coded!",
         srcSubDir1Status.isErasureCoded());
     assertTrue("/dest/dir1/subdir1 is not erasure coded!",
         destSubDir1Status.isErasureCoded());
+
+    // test without -p to check if src is EC then target FS default replication
+    // is obeyed on the target file.
+
+    fs.delete(new Path(dest), true);
+    DistCpTestUtils.assertRunDistCp(DistCpConstants.SUCCESS, src, dest, null,
+        conf);
+    FileStatus destFileStatus = fs.getFileStatus(new Path(destDir1, "file2"));
+    assertFalse(destFileStatus.isErasureCoded());
+    assertEquals(fs.getDefaultReplication(new Path(destDir1, "file2")),
+        destFileStatus.getReplication());
+    dfs.unsetErasureCodingPolicy(dir1);
   }
 
   @Test

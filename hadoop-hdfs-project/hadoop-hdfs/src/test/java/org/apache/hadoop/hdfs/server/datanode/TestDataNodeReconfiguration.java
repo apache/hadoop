@@ -31,6 +31,9 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CACHEREPORT_INTERVAL_MSEC
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CACHEREPORT_INTERVAL_MSEC_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_READ_BANDWIDTHPERSEC_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_TRANSFER_BANDWIDTHPERSEC_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_WRITE_BANDWIDTHPERSEC_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_RECEIVER_THREADS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MIN_OUTLIER_DETECTION_DISKS_DEFAULT;
@@ -46,6 +49,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MIN_OUTLIER_DETE
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SLOWDISK_LOW_THRESHOLD_MS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_SLOWDISKS_TO_EXCLUDE_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DISK_BALANCER_ENABLED;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DISK_BALANCER_ENABLED_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DISK_BALANCER_PLAN_VALID_INTERVAL;
@@ -443,20 +448,82 @@ public class TestDataNodeReconfiguration {
         assertTrue("expecting IllegalArgumentException",
             expected.getCause() instanceof IllegalArgumentException);
       }
+      try {
+        dn.reconfigureProperty(DFS_DATANODE_DATA_TRANSFER_BANDWIDTHPERSEC_KEY, "text");
+        fail("ReconfigurationException expected");
+      } catch (ReconfigurationException expected) {
+        assertTrue("expecting NumberFormatException",
+            expected.getCause() instanceof NumberFormatException);
+      }
+      try {
+        dn.reconfigureProperty(DFS_DATANODE_DATA_WRITE_BANDWIDTHPERSEC_KEY, "text");
+        fail("ReconfigurationException expected");
+      } catch (ReconfigurationException expected) {
+        assertTrue("expecting NumberFormatException",
+            expected.getCause() instanceof NumberFormatException);
+      }
+      try {
+        dn.reconfigureProperty(DFS_DATANODE_DATA_READ_BANDWIDTHPERSEC_KEY, "text");
+        fail("ReconfigurationException expected");
+      } catch (ReconfigurationException expected) {
+        assertTrue("expecting NumberFormatException",
+            expected.getCause() instanceof NumberFormatException);
+      }
 
       // Change properties and verify change.
       dn.reconfigureProperty(DFS_DATANODE_MAX_RECEIVER_THREADS_KEY, String.valueOf(123));
       assertEquals(String.format("%s has wrong value", DFS_DATANODE_MAX_RECEIVER_THREADS_KEY),
           123, dn.getXferServer().getMaxXceiverCount());
 
+      dn.reconfigureProperty(DFS_DATANODE_DATA_TRANSFER_BANDWIDTHPERSEC_KEY,
+          String.valueOf(1000));
+      assertEquals(String.format("%s has wrong value",
+              DFS_DATANODE_DATA_TRANSFER_BANDWIDTHPERSEC_KEY),
+          1000, dn.getXferServer().getTransferThrottler().getBandwidth());
+
+      dn.reconfigureProperty(DFS_DATANODE_DATA_WRITE_BANDWIDTHPERSEC_KEY,
+          String.valueOf(1000));
+      assertEquals(String.format("%s has wrong value",
+              DFS_DATANODE_DATA_WRITE_BANDWIDTHPERSEC_KEY),
+          1000, dn.getXferServer().getWriteThrottler().getBandwidth());
+
+      dn.reconfigureProperty(DFS_DATANODE_DATA_READ_BANDWIDTHPERSEC_KEY,
+          String.valueOf(1000));
+      assertEquals(String.format("%s has wrong value",
+              DFS_DATANODE_DATA_READ_BANDWIDTHPERSEC_KEY),
+          1000, dn.getXferServer().getReadThrottler().getBandwidth());
+
       // Revert to default.
       dn.reconfigureProperty(DFS_DATANODE_MAX_RECEIVER_THREADS_KEY, null);
       assertEquals(String.format("%s has wrong value", DFS_DATANODE_MAX_RECEIVER_THREADS_KEY),
           DFS_DATANODE_MAX_RECEIVER_THREADS_DEFAULT, dn.getXferServer().getMaxXceiverCount());
-
       assertNull(String.format("expect %s is not configured",
           DFS_DATANODE_MAX_RECEIVER_THREADS_KEY),
           dn.getConf().get(DFS_DATANODE_MAX_RECEIVER_THREADS_KEY));
+
+      dn.reconfigureProperty(DFS_DATANODE_DATA_TRANSFER_BANDWIDTHPERSEC_KEY, null);
+      assertEquals(String.format("%s has wrong value",
+              DFS_DATANODE_DATA_TRANSFER_BANDWIDTHPERSEC_KEY),
+          null, dn.getXferServer().getTransferThrottler());
+      assertNull(String.format("expect %s is not configured",
+              DFS_DATANODE_DATA_TRANSFER_BANDWIDTHPERSEC_KEY),
+          dn.getConf().get(DFS_DATANODE_DATA_TRANSFER_BANDWIDTHPERSEC_KEY));
+
+      dn.reconfigureProperty(DFS_DATANODE_DATA_WRITE_BANDWIDTHPERSEC_KEY, null);
+      assertEquals(String.format("%s has wrong value",
+              DFS_DATANODE_DATA_WRITE_BANDWIDTHPERSEC_KEY),
+          null, dn.getXferServer().getWriteThrottler());
+      assertNull(String.format("expect %s is not configured",
+              DFS_DATANODE_DATA_WRITE_BANDWIDTHPERSEC_KEY),
+          dn.getConf().get(DFS_DATANODE_DATA_WRITE_BANDWIDTHPERSEC_KEY));
+
+      dn.reconfigureProperty(DFS_DATANODE_DATA_READ_BANDWIDTHPERSEC_KEY, null);
+      assertEquals(String.format("%s has wrong value",
+              DFS_DATANODE_DATA_READ_BANDWIDTHPERSEC_KEY),
+          null, dn.getXferServer().getReadThrottler());
+      assertNull(String.format("expect %s is not configured",
+              DFS_DATANODE_DATA_READ_BANDWIDTHPERSEC_KEY),
+          dn.getConf().get(DFS_DATANODE_DATA_READ_BANDWIDTHPERSEC_KEY));
     }
   }
 
@@ -851,4 +918,34 @@ public class TestDataNodeReconfiguration {
       assertEquals(60000, dn.getDiskBalancer().getPlanValidityIntervalInConfig());
     }
   }
+
+  @Test
+  public void testSlowIoWarningThresholdReconfiguration() throws Exception {
+    int slowIoWarningThreshold = 500;
+    for (int i = 0; i < NUM_DATA_NODE; i++) {
+      DataNode dn = cluster.getDataNodes().get(i);
+
+      // Verify DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_KEY.
+      // Try invalid values.
+      LambdaTestUtils.intercept(ReconfigurationException.class,
+          "Could not change property dfs.datanode.slow.io.warning.threshold.ms from "
+              + "'300' to 'text'",
+          () -> dn.reconfigureProperty(DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_KEY, "text"));
+      LambdaTestUtils.intercept(ReconfigurationException.class,
+          "Could not change property dfs.datanode.slow.io.warning.threshold.ms from "
+              + "'300' to '-1'",
+          () -> dn.reconfigureProperty(DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_KEY, "-1"));
+
+      // Set value is 500.
+      dn.reconfigureProperty(DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_KEY,
+          String.valueOf(slowIoWarningThreshold));
+      assertEquals(slowIoWarningThreshold, dn.getDnConf().getSlowIoWarningThresholdMs());
+
+      // Set default value.
+      dn.reconfigureProperty(DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_KEY, null);
+      assertEquals(DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_DEFAULT,
+          dn.getDnConf().getSlowIoWarningThresholdMs());
+    }
+  }
+
 }

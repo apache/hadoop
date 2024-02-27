@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs;
 
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -287,7 +288,7 @@ public class TestMultipleNNPortQOP extends SaslDataTransferTestCase {
   private void doTest(FileSystem fs, Path path) throws Exception {
     FileSystemTestHelper.createFile(fs, path, NUM_BLOCKS, BLOCK_SIZE);
     assertArrayEquals(FileSystemTestHelper.getFileData(NUM_BLOCKS, BLOCK_SIZE),
-        DFSTestUtil.readFile(fs, path).getBytes("UTF-8"));
+        DFSTestUtil.readFile(fs, path).getBytes(StandardCharsets.UTF_8));
     BlockLocation[] blockLocations = fs.getFileBlockLocations(path, 0,
         Long.MAX_VALUE);
     assertNotNull(blockLocations);

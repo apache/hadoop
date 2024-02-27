@@ -22,6 +22,7 @@ import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.EOFException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InterruptedIOException;
 import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
@@ -31,9 +32,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.IntFunction;
 
-import com.amazonaws.services.s3.model.GetObjectRequest;
-import com.amazonaws.services.s3.model.S3Object;
-import com.amazonaws.services.s3.model.S3ObjectInputStream;
+import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,7 +47,6 @@ import org.apache.hadoop.fs.CanUnbuffer;
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.FileRange;
-import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.impl.CombinedFileRange;
 import org.apache.hadoop.fs.VectoredReadUtils;
@@ -60,6 +60,7 @@ import org.apache.hadoop.fs.statistics.IOStatisticsAggregator;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
+
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
@@ -99,6 +100,14 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   public static final String OPERATION_REOPEN = "re-open";
 
   /**
+   * Switch for behavior on when wrappedStream.read()
+   * returns -1 or raises an EOF; the original semantics
+   * are that the stream is kept open.
+   * Value {@value}.
+   */
+  private static final boolean CLOSE_WRAPPED_STREAM_ON_NEGATIVE_READ = true;
+
+  /**
    * This is the maximum temporary buffer size we use while
    * populating the data in direct byte buffers during a vectored IO
    * operation. This is to ensure that when a big range of data is
@@ -125,14 +134,9 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    */
   private volatile boolean closed;
   /**
-   * wrappedStream is associated with an object (instance of S3Object). When
-   * the object is garbage collected, the associated wrappedStream will be
-   * closed. Keep a reference to this object to prevent the wrapperStream
-   * still in use from being closed unexpectedly due to garbage collection.
-   * See HADOOP-17338 for details.
+   * Input stream returned by a getObject call.
    */
-  private S3Object object;
-  private S3ObjectInputStream wrappedStream;
+  private ResponseInputStream<GetObjectResponse> wrappedStream;
   private final S3AReadOpContext context;
   private final InputStreamCallbacks client;
 
@@ -271,28 +275,22 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
         uri, reason, targetPos, contentRangeFinish, length,  pos, nextReadPos,
         inputPolicy);
 
+    GetObjectRequest request = client.newGetRequestBuilder(key)
+        .range(S3AUtils.formatRange(targetPos, contentRangeFinish - 1))
+        .applyMutation(changeTracker::maybeApplyConstraint)
+        .build();
     long opencount = streamStatistics.streamOpened();
-    GetObjectRequest request = client.newGetRequest(key)
-        .withRange(targetPos, contentRangeFinish - 1);
     String operation = opencount == 0 ? OPERATION_OPEN : OPERATION_REOPEN;
     String text = String.format("%s %s at %d",
         operation, uri, targetPos);
-    changeTracker.maybeApplyConstraint(request);
-
-    object = onceTrackingDuration(text, uri,
+    wrappedStream = onceTrackingDuration(text, uri,
         streamStatistics.initiateGetRequest(), () ->
             client.getObject(request));
 
-
-    changeTracker.processResponse(object, operation,
+    changeTracker.processResponse(wrappedStream.response(), operation,
         targetPos);
-    wrappedStream = object.getObjectContent();
-    contentRangeStart = targetPos;
-    if (wrappedStream == null) {
-      throw new PathIOException(uri,
-          "Null IO stream from " + operation + " of (" + reason +  ") ");
-    }
 
+    contentRangeStart = targetPos;
     this.pos = targetPos;
   }
 
@@ -343,7 +341,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   @Retries.OnceTranslated
   private void seekInStream(long targetPos, long length) throws IOException {
     checkNotClosed();
-    if (wrappedStream == null) {
+    if (!isObjectStreamOpen()) {
       return;
     }
     // compute how much more to skip
@@ -416,22 +414,29 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
 
   /**
    * Perform lazy seek and adjust stream to correct position for reading.
-   *
+   * If an EOF Exception is raised there are two possibilities
+   * <ol>
+   *   <li>the stream is at the end of the file</li>
+   *   <li>something went wrong with the network connection</li>
+   * </ol>
+   * This method does not attempt to distinguish; it assumes that an EOF
+   * exception is always "end of file".
    * @param targetPos position from where data should be read
    * @param len length of the content that needs to be read
+   * @throws RangeNotSatisfiableEOFException GET is out of range
+   * @throws IOException anything else.
    */
   @Retries.RetryTranslated
   private void lazySeek(long targetPos, long len) throws IOException {
 
     Invoker invoker = context.getReadInvoker();
-    invoker.maybeRetry(streamStatistics.getOpenOperations() == 0,
-        "lazySeek", pathStr, true,
+    invoker.retry("lazySeek to " + targetPos, pathStr, true,
         () -> {
           //For lazy seek
           seekInStream(targetPos, len);
 
           //re-open at specific location if needed
-          if (wrappedStream == null) {
+          if (!isObjectStreamOpen()) {
             reopen("read from new offset", targetPos, len, false);
           }
         });
@@ -459,7 +464,9 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
 
     try {
       lazySeek(nextReadPos, 1);
-    } catch (EOFException e) {
+    } catch (RangeNotSatisfiableEOFException e) {
+      // attempt to GET beyond the end of the object
+      LOG.debug("Downgrading 416 response attempt to read at {} to -1 response", nextReadPos);
       return -1;
     }
 
@@ -470,14 +477,12 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
           // When exception happens before re-setting wrappedStream in "reopen" called
           // by onReadFailure, then wrappedStream will be null. But the **retry** may
           // re-execute this block and cause NPE if we don't check wrappedStream
-          if (wrappedStream == null) {
+          if (!isObjectStreamOpen()) {
             reopen("failure recovery", getPos(), 1, false);
           }
           try {
             b = wrappedStream.read();
-          } catch (EOFException e) {
-            return -1;
-          } catch (SocketTimeoutException e) {
+          } catch (HttpChannelEOFException | SocketTimeoutException e) {
             onReadFailure(e, true);
             throw e;
           } catch (IOException e) {
@@ -490,10 +495,9 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     if (byteRead >= 0) {
       pos++;
       nextReadPos++;
-    }
-
-    if (byteRead >= 0) {
       incrementBytesRead(1);
+    } else {
+      streamReadResultNegative();
     }
     return byteRead;
   }
@@ -505,17 +509,30 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    */
   @Retries.OnceTranslated
   private void onReadFailure(IOException ioe, boolean forceAbort) {
+    GetObjectResponse objectResponse = wrappedStream == null ? null : wrappedStream.response();
     if (LOG.isDebugEnabled()) {
       LOG.debug("Got exception while trying to read from stream {}, " +
           "client: {} object: {}, trying to recover: ",
-          uri, client, object, ioe);
+          uri, client, objectResponse, ioe);
     } else {
       LOG.info("Got exception while trying to read from stream {}, " +
           "client: {} object: {}, trying to recover: " + ioe,
-          uri, client, object);
+          uri, client, objectResponse);
     }
     streamStatistics.readException();
     closeStream("failure recovery", forceAbort, false);
+  }
+
+  /**
+   * the read() call returned -1.
+   * this means "the connection has gone past the end of the object" or
+   * the stream has broken for some reason.
+   * so close stream (without an abort).
+   */
+  private void streamReadResultNegative() {
+    if (CLOSE_WRAPPED_STREAM_ON_NEGATIVE_READ) {
+      closeStream("wrappedStream.read() returned -1", false, false);
+    }
   }
 
   /**
@@ -543,8 +560,8 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
 
     try {
       lazySeek(nextReadPos, len);
-    } catch (EOFException e) {
-      // the end of the file has moved
+    } catch (RangeNotSatisfiableEOFException e) {
+      // attempt to GET beyond the end of the object
       return -1;
     }
 
@@ -557,17 +574,19 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
           // When exception happens before re-setting wrappedStream in "reopen" called
           // by onReadFailure, then wrappedStream will be null. But the **retry** may
           // re-execute this block and cause NPE if we don't check wrappedStream
-          if (wrappedStream == null) {
+          if (!isObjectStreamOpen()) {
             reopen("failure recovery", getPos(), 1, false);
           }
           try {
+            // read data; will block until there is data or the end of the stream is reached.
+            // returns 0 for "stream is open but no data yet" and -1 for "end of stream".
             bytes = wrappedStream.read(buf, off, len);
-          } catch (EOFException e) {
-            // the base implementation swallows EOFs.
-            return -1;
-          } catch (SocketTimeoutException e) {
+          } catch (HttpChannelEOFException | SocketTimeoutException e) {
             onReadFailure(e, true);
             throw e;
+          } catch (EOFException e) {
+            LOG.debug("EOFException raised by http stream read(); downgrading to a -1 response", e);
+            return -1;
           } catch (IOException e) {
             onReadFailure(e, false);
             throw e;
@@ -578,8 +597,10 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     if (bytesRead > 0) {
       pos += bytesRead;
       nextReadPos += bytesRead;
+      incrementBytesRead(bytesRead);
+    } else {
+      streamReadResultNegative();
     }
-    incrementBytesRead(bytesRead);
     streamStatistics.readOperationCompleted(len, bytesRead);
     return bytesRead;
   }
@@ -672,7 +693,6 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     CompletableFuture<Boolean> operation;
     SDKStreamDrainer drainer = new SDKStreamDrainer(
         uri,
-        object,
         wrappedStream,
         shouldAbort,
         (int) remaining,
@@ -694,7 +714,6 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     // either the stream is closed in the blocking call or the async call is
     // submitted with its own copy of the references
     wrappedStream = null;
-    object = null;
     return operation;
   }
 
@@ -829,6 +848,9 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
         while (nread < length) {
           int nbytes = read(buffer, offset + nread, length - nread);
           if (nbytes < 0) {
+            // no attempt is currently made to recover from stream read problems;
+            // a lazy seek to the offset is probably the solution.
+            // but it will need more qualification against failure handling
             throw new EOFException(FSExceptionMessages.EOF_IN_READ_FULLY);
           }
           nread += nbytes;
@@ -910,23 +932,19 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   private void readCombinedRangeAndUpdateChildren(CombinedFileRange combinedFileRange,
                                                   IntFunction<ByteBuffer> allocate) {
     LOG.debug("Start reading combined range {} from path {} ", combinedFileRange, pathStr);
-    // This reference must be kept till all buffers are populated as this is a
-    // finalizable object which closes the internal stream when gc triggers.
-    S3Object objectRange = null;
-    S3ObjectInputStream objectContent = null;
+    ResponseInputStream<GetObjectResponse> rangeContent = null;
     try {
-      objectRange = getS3ObjectAndValidateNotNull("readCombinedFileRange",
+      rangeContent = getS3ObjectInputStream("readCombinedFileRange",
               combinedFileRange.getOffset(),
               combinedFileRange.getLength());
-      objectContent = objectRange.getObjectContent();
-      populateChildBuffers(combinedFileRange, objectContent, allocate);
+      populateChildBuffers(combinedFileRange, rangeContent, allocate);
     } catch (Exception ex) {
       LOG.debug("Exception while reading a range {} from path {} ", combinedFileRange, pathStr, ex);
       for(FileRange child : combinedFileRange.getUnderlying()) {
         child.getData().completeExceptionally(ex);
       }
     } finally {
-      IOUtils.cleanupWithLogger(LOG, objectRange, objectContent);
+      IOUtils.cleanupWithLogger(LOG, rangeContent);
     }
     LOG.debug("Finished reading range {} from path {} ", combinedFileRange, pathStr);
   }
@@ -939,7 +957,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    * @throws IOException any IOE.
    */
   private void populateChildBuffers(CombinedFileRange combinedFileRange,
-                                    S3ObjectInputStream objectContent,
+                                    InputStream objectContent,
                                     IntFunction<ByteBuffer> allocate) throws IOException {
     // If the combined file range just contains a single child
     // range, we only have to fill that one child buffer else
@@ -971,7 +989,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    * @param drainQuantity how many bytes to drain.
    * @throws IOException any IOE.
    */
-  private void drainUnnecessaryData(S3ObjectInputStream objectContent, long drainQuantity)
+  private void drainUnnecessaryData(InputStream objectContent, long drainQuantity)
           throws IOException {
     int drainBytes = 0;
     int readCount;
@@ -1002,7 +1020,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
       final String errMsg = String.format("Requested range [%d, %d) is beyond EOF for path %s",
               range.getOffset(), range.getLength(), pathStr);
       LOG.warn(errMsg);
-      throw new EOFException(errMsg);
+      throw new RangeNotSatisfiableEOFException(errMsg, null);
     }
   }
 
@@ -1013,28 +1031,24 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    */
   private void readSingleRange(FileRange range, ByteBuffer buffer) {
     LOG.debug("Start reading range {} from path {} ", range, pathStr);
-    // This reference must be kept till all buffers are populated as this is a
-    // finalizable object which closes the internal stream when gc triggers.
-    S3Object objectRange = null;
-    S3ObjectInputStream objectContent = null;
+    ResponseInputStream<GetObjectResponse> objectRange = null;
     try {
       long position = range.getOffset();
       int length = range.getLength();
-      objectRange = getS3ObjectAndValidateNotNull("readSingleRange", position, length);
-      objectContent = objectRange.getObjectContent();
-      populateBuffer(length, buffer, objectContent);
+      objectRange = getS3ObjectInputStream("readSingleRange", position, length);
+      populateBuffer(length, buffer, objectRange);
       range.getData().complete(buffer);
     } catch (Exception ex) {
       LOG.warn("Exception while reading a range {} from path {} ", range, pathStr, ex);
       range.getData().completeExceptionally(ex);
     } finally {
-      IOUtils.cleanupWithLogger(LOG, objectRange, objectContent);
+      IOUtils.cleanupWithLogger(LOG, objectRange);
     }
     LOG.debug("Finished reading range {} from path {} ", range, pathStr);
   }
 
   /**
-   * Get the s3 object for S3 server for a specified range.
+   * Get the s3 object input stream for S3 server for a specified range.
    * Also checks if the vectored io operation has been stopped before and after
    * the http get request such that we don't waste time populating the buffers.
    * @param operationName name of the operation for which get object on S3 is called.
@@ -1043,15 +1057,11 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    * @return result s3 object.
    * @throws IOException exception if any.
    */
-  private S3Object getS3ObjectAndValidateNotNull(final String operationName,
-                                                 final long position,
-                                                 final int length) throws IOException {
+  private ResponseInputStream<GetObjectResponse> getS3ObjectInputStream(
+      final String operationName, final long position, final int length) throws IOException {
     checkIfVectoredIOStopped();
-    S3Object objectRange = getS3Object(operationName, position, length);
-    if (objectRange.getObjectContent() == null) {
-      throw new PathIOException(uri,
-              "Null IO stream received during " + operationName);
-    }
+    ResponseInputStream<GetObjectResponse> objectRange =
+        getS3Object(operationName, position, length);
     checkIfVectoredIOStopped();
     return objectRange;
   }
@@ -1066,7 +1076,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    */
   private void populateBuffer(int length,
                               ByteBuffer buffer,
-                              S3ObjectInputStream objectContent) throws IOException {
+                              InputStream objectContent) throws IOException {
 
     if (buffer.isDirect()) {
       VectoredReadUtils.readInDirectBuffer(length, buffer,
@@ -1091,7 +1101,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    * @param length number of bytes to fill in dest.
    * @throws IOException any IOE.
    */
-  private void readByteArray(S3ObjectInputStream objectContent,
+  private void readByteArray(InputStream objectContent,
                             byte[] dest,
                             int offset,
                             int length) throws IOException {
@@ -1118,13 +1128,16 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    * @return S3Object result s3 object.
    * @throws IOException exception if any.
    */
-  private S3Object getS3Object(String operationName, long position,
-                               int length) throws IOException {
-    final GetObjectRequest request = client.newGetRequest(key)
-            .withRange(position, position + length - 1);
-    changeTracker.maybeApplyConstraint(request);
+  private ResponseInputStream<GetObjectResponse> getS3Object(String operationName,
+                                                             long position,
+                                                             int length)
+      throws IOException {
+    final GetObjectRequest request = client.newGetRequestBuilder(key)
+        .range(S3AUtils.formatRange(position, position + length - 1))
+        .applyMutation(changeTracker::maybeApplyConstraint)
+        .build();
     DurationTracker tracker = streamStatistics.initiateGetRequest();
-    S3Object objectRange;
+    ResponseInputStream<GetObjectResponse> objectRange;
     Invoker invoker = context.getReadInvoker();
     try {
       objectRange = invoker.retry(operationName, pathStr, true,
@@ -1139,7 +1152,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     } finally {
       tracker.close();
     }
-    changeTracker.processResponse(objectRange, operationName,
+    changeTracker.processResponse(objectRange.response(), operationName,
             position);
     return objectRange;
   }
@@ -1277,8 +1290,12 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     }
   }
 
+  /**
+   * Is the inner object stream open?
+   * @return true if there is an active HTTP request to S3.
+   */
   @VisibleForTesting
-  boolean isObjectStreamOpen() {
+  public boolean isObjectStreamOpen() {
     return wrappedStream != null;
   }
 
@@ -1288,16 +1305,27 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   }
 
   /**
+   * Get the wrapped stream.
+   * This is for testing only.
+   *
+   * @return the wrapped stream, or null if there is none.
+   */
+  @VisibleForTesting
+  public ResponseInputStream<GetObjectResponse> getWrappedStream() {
+    return wrappedStream;
+  }
+
+  /**
    * Callbacks for input stream IO.
    */
   public interface InputStreamCallbacks extends Closeable {
 
     /**
-     * Create a GET request.
+     * Create a GET request builder.
      * @param key object key
-     * @return the request
+     * @return the request builder
      */
-    GetObjectRequest newGetRequest(String key);
+    GetObjectRequest.Builder newGetRequestBuilder(String key);
 
     /**
      * Execute the request.
@@ -1305,7 +1333,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
      * @return the response
      */
     @Retries.OnceRaw
-    S3Object getObject(GetObjectRequest request);
+    ResponseInputStream<GetObjectResponse> getObject(GetObjectRequest request);
 
     /**
      * Submit some asynchronous work, for example, draining a stream.

@@ -116,7 +116,8 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.A
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AutoCreatedQueueTemplate.AUTO_QUEUE_PARENT_TEMPLATE_PREFIX;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AutoCreatedQueueTemplate.AUTO_QUEUE_TEMPLATE_PREFIX;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.getQueuePrefix;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePrefixes.getAutoCreatedQueueTemplateConfPrefix;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePrefixes.getQueuePrefix;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
@@ -149,7 +150,12 @@ public class TestAppManager extends AppManagerTestBase{
   private ResourceScheduler scheduler;
 
   private static final String USER_ID_PREFIX = "userid=";
-  private static final String ROOT_PARENT =  PREFIX + "root.parent.";
+  private static final String ROOT_PARENT_PATH =  PREFIX + "root.parent.";
+  private static final QueuePath ROOT =  new QueuePath("root");
+  private static final QueuePath DEFAULT =  new QueuePath("root.default");
+  private static final QueuePath TEST =  new QueuePath("root.test");
+  private static final QueuePath PARENT =  new QueuePath("root.parent");
+  private static final QueuePath MANAGED_PARENT =  new QueuePath("root.managedparent");
 
   public synchronized RMAppEventType getAppEventType() {
     return appEventType;
@@ -321,11 +327,11 @@ public class TestAppManager extends AppManagerTestBase{
         CapacitySchedulerConfiguration(conf, false);
     csConf.set(PREFIX + "root.queues", "default,test");
 
-    csConf.setCapacity("root.default", 50.0f);
-    csConf.setMaximumCapacity("root.default", 100.0f);
+    csConf.setCapacity(DEFAULT, 50.0f);
+    csConf.setMaximumCapacity(DEFAULT, 100.0f);
 
-    csConf.setCapacity("root.test", 50.0f);
-    csConf.setMaximumCapacity("root.test", 100.0f);
+    csConf.setCapacity(TEST, 50.0f);
+    csConf.setMaximumCapacity(TEST, 100.0f);
 
     csConf.set(PREFIX + "root.acl_submit_applications", " ");
     csConf.set(PREFIX + "root.acl_administer_queue", " ");
@@ -356,6 +362,33 @@ public class TestAppManager extends AppManagerTestBase{
   }
 
   @Test
+  public void testQueueSubmitWithLeafQueueName()
+      throws YarnException {
+    YarnConfiguration conf = createYarnACLEnabledConfiguration();
+    CapacitySchedulerConfiguration csConf = new
+        CapacitySchedulerConfiguration(conf, false);
+    csConf.set(PREFIX + "root.queues", "default,test");
+
+    csConf.setCapacity(DEFAULT, 50.0f);
+    csConf.setMaximumCapacity(DEFAULT, 100.0f);
+
+    csConf.setCapacity(TEST, 50.0f);
+    csConf.setMaximumCapacity(TEST, 100.0f);
+
+    MockRM newMockRM = new MockRM(csConf);
+    RMContext newMockRMContext = newMockRM.getRMContext();
+    TestRMAppManager newAppMonitor = createAppManager(newMockRMContext, conf);
+
+    ApplicationSubmissionContext submission = createAppSubmissionContext(MockApps.newAppID(1));
+    submission.setQueue("test");
+    verifyAppSubmission(submission,
+        newAppMonitor,
+        newMockRMContext,
+        "test",
+        "root.test");
+  }
+
+  @Test
   public void testQueueSubmitWithACLsEnabledWithQueueMappingForLegacyAutoCreatedQueue()
       throws IOException, YarnException {
     YarnConfiguration conf = createYarnACLEnabledConfiguration();
@@ -363,11 +396,11 @@ public class TestAppManager extends AppManagerTestBase{
         conf, false);
     csConf.set(PREFIX + "root.queues", "default,managedparent");
 
-    csConf.setCapacity("root.default", 50.0f);
-    csConf.setMaximumCapacity("root.default", 100.0f);
+    csConf.setCapacity(DEFAULT, 50.0f);
+    csConf.setMaximumCapacity(DEFAULT, 100.0f);
 
-    csConf.setCapacity("root.managedparent", 50.0f);
-    csConf.setMaximumCapacity("root.managedparent", 100.0f);
+    csConf.setCapacity(MANAGED_PARENT, 50.0f);
+    csConf.setMaximumCapacity(MANAGED_PARENT, 100.0f);
 
     csConf.set(PREFIX + "root.acl_submit_applications", " ");
     csConf.set(PREFIX + "root.acl_administer_queue", " ");
@@ -378,9 +411,9 @@ public class TestAppManager extends AppManagerTestBase{
     csConf.set(PREFIX + "root.managedparent.acl_administer_queue", "admin");
     csConf.set(PREFIX + "root.managedparent.acl_submit_applications", "user1");
 
-    csConf.setAutoCreateChildQueueEnabled("root.managedparent", true);
-    csConf.setAutoCreatedLeafQueueConfigCapacity("root.managedparent", 30f);
-    csConf.setAutoCreatedLeafQueueConfigMaxCapacity("root.managedparent", 100f);
+    csConf.setAutoCreateChildQueueEnabled(MANAGED_PARENT, true);
+    csConf.setAutoCreatedLeafQueueConfigCapacity(MANAGED_PARENT, 30f);
+    csConf.setAutoCreatedLeafQueueConfigMaxCapacity(MANAGED_PARENT, 100f);
 
     MockRM newMockRM = new MockRM(csConf);
     CapacityScheduler cs =
@@ -414,21 +447,27 @@ public class TestAppManager extends AppManagerTestBase{
     YarnConfiguration conf = createYarnACLEnabledConfiguration();
     CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration(
         conf, false);
+
+    QueuePath parentQueuePath = new QueuePath("root.parent");
+    QueuePath user1QueuePath = new QueuePath("root.parent.user1");
+    QueuePath user2QueuePath = new QueuePath("root.parent.user2");
+
     csConf.set(PREFIX + "root.queues", "parent");
     csConf.set(PREFIX + "root.acl_submit_applications", " ");
     csConf.set(PREFIX + "root.acl_administer_queue", " ");
 
-    csConf.setCapacity("root.parent", 100.0f);
+    csConf.setCapacity(parentQueuePath, 100.0f);
     csConf.set(PREFIX + "root.parent.acl_administer_queue", "user1,user4");
     csConf.set(PREFIX + "root.parent.acl_submit_applications", "user1,user4");
 
-    csConf.setAutoCreateChildQueueEnabled("root.parent", true);
-    csConf.setAutoCreatedLeafQueueConfigCapacity("root.parent", 50f);
-    csConf.setAutoCreatedLeafQueueConfigMaxCapacity("root.parent", 100f);
-    csConf.set(getQueuePrefix(csConf.getAutoCreatedQueueTemplateConfPrefix("root.parent")) +
-        "acl_administer_queue", "user2,user4");
-    csConf.set(getQueuePrefix(csConf.getAutoCreatedQueueTemplateConfPrefix("root.parent")) +
-        "acl_submit_applications", "user2,user4");
+    csConf.setAutoCreateChildQueueEnabled(parentQueuePath, true);
+    csConf.setAutoCreatedLeafQueueConfigCapacity(parentQueuePath, 50f);
+    csConf.setAutoCreatedLeafQueueConfigMaxCapacity(parentQueuePath, 100f);
+    String autoCreatedQueuePrefix =
+            getAutoCreatedQueueTemplateConfPrefix(parentQueuePath);
+    QueuePath autoCreatedQueuePath = new QueuePath(autoCreatedQueuePrefix);
+    csConf.set(getQueuePrefix(autoCreatedQueuePath) + "acl_administer_queue", "user2,user4");
+    csConf.set(getQueuePrefix(autoCreatedQueuePath) + "acl_submit_applications", "user2,user4");
 
     MockRM newMockRM = new MockRM(csConf);
 
@@ -437,22 +476,22 @@ public class TestAppManager extends AppManagerTestBase{
 
     // user1 has permission on root.parent so a queue would be created
     newMockRMContext.setQueuePlacementManager(createMockPlacementManager(
-        "user1", "user1", "root.parent"));
+        "user1", "user1", parentQueuePath.getFullPath()));
     verifyAppSubmission(createAppSubmissionContext(MockApps.newAppID(1)),
         newAppMonitor,
         newMockRMContext,
         "user1",
-        "root.parent.user1");
+        user1QueuePath.getFullPath());
 
     newMockRMContext.setQueuePlacementManager(createMockPlacementManager(
-        "user1|user2|user3|user4", "user2", "root.parent"));
+        "user1|user2|user3|user4", "user2", parentQueuePath.getFullPath()));
 
     // user2 has permission (due to ACL templates)
     verifyAppSubmission(createAppSubmissionContext(MockApps.newAppID(2)),
         newAppMonitor,
         newMockRMContext,
         "user2",
-        "root.parent.user2");
+        user2QueuePath.getFullPath());
 
     // user3 doesn't have permission
     verifyAppSubmissionFailure(newAppMonitor,
@@ -464,12 +503,12 @@ public class TestAppManager extends AppManagerTestBase{
         newAppMonitor,
         newMockRMContext,
         "user4",
-        "root.parent.user2");
+        user2QueuePath.getFullPath());
 
     // create the root.parent.user2 manually
     CapacityScheduler cs =
         ((CapacityScheduler) newMockRM.getResourceScheduler());
-    cs.getCapacitySchedulerQueueManager().createQueue(new QueuePath("root.parent.user2"));
+    cs.getCapacitySchedulerQueueManager().createQueue(user2QueuePath);
     AutoCreatedLeafQueue autoCreatedLeafQueue = (AutoCreatedLeafQueue) cs.getQueue("user2");
     Assert.assertNotNull("Auto Creation of Queue failed", autoCreatedLeafQueue);
     ManagedParentQueue parentQueue = (ManagedParentQueue) cs.getQueue("parent");
@@ -482,7 +521,7 @@ public class TestAppManager extends AppManagerTestBase{
         newAppMonitor,
         newMockRMContext,
         "user2",
-        "root.parent.user2");
+        user2QueuePath.getFullPath());
 
     // user3 doesn't have permission for root.parent.user2 queue
     verifyAppSubmissionFailure(newAppMonitor,
@@ -494,7 +533,7 @@ public class TestAppManager extends AppManagerTestBase{
         newAppMonitor,
         newMockRMContext,
         "user1",
-        "root.parent.user2");
+        user2QueuePath.getFullPath());
   }
 
   @Test
@@ -503,19 +542,19 @@ public class TestAppManager extends AppManagerTestBase{
     YarnConfiguration conf = createYarnACLEnabledConfiguration();
     CapacitySchedulerConfiguration csConf = createFlexibleAQCBaseACLConfiguration(conf);
 
-    csConf.set(ROOT_PARENT + AUTO_QUEUE_PARENT_TEMPLATE_PREFIX + "capacity",
+    csConf.set(ROOT_PARENT_PATH + AUTO_QUEUE_PARENT_TEMPLATE_PREFIX + "capacity",
         "1w");
-    csConf.set(ROOT_PARENT + AUTO_QUEUE_PARENT_TEMPLATE_PREFIX + "acl_administer_queue",
+    csConf.set(ROOT_PARENT_PATH + AUTO_QUEUE_PARENT_TEMPLATE_PREFIX + "acl_administer_queue",
         "user2");
-    csConf.set(ROOT_PARENT + AUTO_QUEUE_PARENT_TEMPLATE_PREFIX + "acl_submit_applications",
+    csConf.set(ROOT_PARENT_PATH + AUTO_QUEUE_PARENT_TEMPLATE_PREFIX + "acl_submit_applications",
         "user2");
 
-    csConf.set(ROOT_PARENT + "*." + AUTO_QUEUE_LEAF_TEMPLATE_PREFIX + "capacity",
+    csConf.set(ROOT_PARENT_PATH + "*." + AUTO_QUEUE_LEAF_TEMPLATE_PREFIX + "capacity",
         "1w");
-    csConf.set(ROOT_PARENT + "*." + AUTO_QUEUE_LEAF_TEMPLATE_PREFIX + "acl_administer_queue",
+    csConf.set(ROOT_PARENT_PATH + "*." + AUTO_QUEUE_LEAF_TEMPLATE_PREFIX + "acl_administer_queue",
         "user3");
-    csConf.set(ROOT_PARENT + "*." + AUTO_QUEUE_LEAF_TEMPLATE_PREFIX + "acl_submit_applications",
-        "user3");
+    csConf.set(ROOT_PARENT_PATH + "*." + AUTO_QUEUE_LEAF_TEMPLATE_PREFIX
+        + "acl_submit_applications", "user3");
 
     MockRM newMockRM = new MockRM(csConf);
 
@@ -594,19 +633,19 @@ public class TestAppManager extends AppManagerTestBase{
     YarnConfiguration conf = createYarnACLEnabledConfiguration();
     CapacitySchedulerConfiguration csConf = createFlexibleAQCBaseACLConfiguration(conf);
 
-    csConf.set(ROOT_PARENT + AUTO_QUEUE_TEMPLATE_PREFIX + "capacity",
+    csConf.set(ROOT_PARENT_PATH + AUTO_QUEUE_TEMPLATE_PREFIX + "capacity",
         "1w");
-    csConf.set(ROOT_PARENT + AUTO_QUEUE_TEMPLATE_PREFIX + "acl_administer_queue",
+    csConf.set(ROOT_PARENT_PATH + AUTO_QUEUE_TEMPLATE_PREFIX + "acl_administer_queue",
         "user2");
-    csConf.set(ROOT_PARENT + AUTO_QUEUE_TEMPLATE_PREFIX + "acl_submit_applications",
+    csConf.set(ROOT_PARENT_PATH + AUTO_QUEUE_TEMPLATE_PREFIX + "acl_submit_applications",
         "user2");
 
-    csConf.set(ROOT_PARENT + "*." + AUTO_QUEUE_LEAF_TEMPLATE_PREFIX + "capacity",
+    csConf.set(ROOT_PARENT_PATH + "*." + AUTO_QUEUE_LEAF_TEMPLATE_PREFIX + "capacity",
         "1w");
-    csConf.set(ROOT_PARENT + "*." + AUTO_QUEUE_LEAF_TEMPLATE_PREFIX + "acl_administer_queue",
+    csConf.set(ROOT_PARENT_PATH + "*." + AUTO_QUEUE_LEAF_TEMPLATE_PREFIX + "acl_administer_queue",
         "user3");
-    csConf.set(ROOT_PARENT + "*." + AUTO_QUEUE_LEAF_TEMPLATE_PREFIX + "acl_submit_applications",
-        "user3");
+    csConf.set(ROOT_PARENT_PATH + "*." + AUTO_QUEUE_LEAF_TEMPLATE_PREFIX
+        + "acl_submit_applications", "user3");
 
     testFlexibleAQCDWithMixedTemplatesDynamicParentACLScenario(conf, csConf);
   }
@@ -617,18 +656,18 @@ public class TestAppManager extends AppManagerTestBase{
     YarnConfiguration conf = createYarnACLEnabledConfiguration();
     CapacitySchedulerConfiguration csConf = createFlexibleAQCBaseACLConfiguration(conf);
 
-    csConf.set(ROOT_PARENT + AUTO_QUEUE_TEMPLATE_PREFIX + "capacity",
+    csConf.set(ROOT_PARENT_PATH + AUTO_QUEUE_TEMPLATE_PREFIX + "capacity",
         "1w");
-    csConf.set(ROOT_PARENT + AUTO_QUEUE_TEMPLATE_PREFIX + "acl_administer_queue",
+    csConf.set(ROOT_PARENT_PATH + AUTO_QUEUE_TEMPLATE_PREFIX + "acl_administer_queue",
         "user2");
-    csConf.set(ROOT_PARENT + AUTO_QUEUE_TEMPLATE_PREFIX + "acl_submit_applications",
+    csConf.set(ROOT_PARENT_PATH + AUTO_QUEUE_TEMPLATE_PREFIX + "acl_submit_applications",
         "user2");
 
-    csConf.set(ROOT_PARENT + "*." + AUTO_QUEUE_TEMPLATE_PREFIX + "capacity",
+    csConf.set(ROOT_PARENT_PATH + "*." + AUTO_QUEUE_TEMPLATE_PREFIX + "capacity",
         "1w");
-    csConf.set(ROOT_PARENT + "*." + AUTO_QUEUE_TEMPLATE_PREFIX + "acl_administer_queue",
+    csConf.set(ROOT_PARENT_PATH + "*." + AUTO_QUEUE_TEMPLATE_PREFIX + "acl_administer_queue",
         "user3");
-    csConf.set(ROOT_PARENT + "*." + AUTO_QUEUE_TEMPLATE_PREFIX + "acl_submit_applications",
+    csConf.set(ROOT_PARENT_PATH + "*." + AUTO_QUEUE_TEMPLATE_PREFIX + "acl_submit_applications",
         "user3");
 
     testFlexibleAQCDWithMixedTemplatesDynamicParentACLScenario(conf, csConf);
@@ -717,11 +756,11 @@ public class TestAppManager extends AppManagerTestBase{
     YarnConfiguration conf = createYarnACLEnabledConfiguration();
     CapacitySchedulerConfiguration csConf = createFlexibleAQCBaseACLConfiguration(conf);
 
-    csConf.set(ROOT_PARENT + AUTO_QUEUE_TEMPLATE_PREFIX + "capacity",
+    csConf.set(ROOT_PARENT_PATH + AUTO_QUEUE_TEMPLATE_PREFIX + "capacity",
         "1w");
-    csConf.set(ROOT_PARENT + AUTO_QUEUE_TEMPLATE_PREFIX + "acl_administer_queue",
+    csConf.set(ROOT_PARENT_PATH + AUTO_QUEUE_TEMPLATE_PREFIX + "acl_administer_queue",
         "user2");
-    csConf.set(ROOT_PARENT + AUTO_QUEUE_TEMPLATE_PREFIX + "acl_submit_applications",
+    csConf.set(ROOT_PARENT_PATH + AUTO_QUEUE_TEMPLATE_PREFIX + "acl_submit_applications",
         "user2");
 
     testFlexibleAQCLeafOnly(conf, csConf);
@@ -733,11 +772,11 @@ public class TestAppManager extends AppManagerTestBase{
     YarnConfiguration conf = createYarnACLEnabledConfiguration();
     CapacitySchedulerConfiguration csConf = createFlexibleAQCBaseACLConfiguration(conf);
 
-    csConf.set(ROOT_PARENT + AUTO_QUEUE_LEAF_TEMPLATE_PREFIX + "capacity",
+    csConf.set(ROOT_PARENT_PATH + AUTO_QUEUE_LEAF_TEMPLATE_PREFIX + "capacity",
         "1w");
-    csConf.set(ROOT_PARENT + AUTO_QUEUE_LEAF_TEMPLATE_PREFIX + "acl_administer_queue",
+    csConf.set(ROOT_PARENT_PATH + AUTO_QUEUE_LEAF_TEMPLATE_PREFIX + "acl_administer_queue",
         "user2");
-    csConf.set(ROOT_PARENT + AUTO_QUEUE_LEAF_TEMPLATE_PREFIX + "acl_submit_applications",
+    csConf.set(ROOT_PARENT_PATH + AUTO_QUEUE_LEAF_TEMPLATE_PREFIX + "acl_submit_applications",
         "user2");
 
     testFlexibleAQCLeafOnly(conf, csConf);
@@ -817,7 +856,7 @@ public class TestAppManager extends AppManagerTestBase{
     csConf.set(PREFIX + "root.acl_submit_applications", "user1");
     csConf.set(PREFIX + "root.acl_administer_queue", "admin1");
 
-    csConf.setAutoQueueCreationV2Enabled("root", true);
+    csConf.setAutoQueueCreationV2Enabled(ROOT, true);
 
     csConf.set(PREFIX + "root." + AUTO_QUEUE_PARENT_TEMPLATE_PREFIX + "capacity",
         "1w");
@@ -916,7 +955,7 @@ public class TestAppManager extends AppManagerTestBase{
     csConf.set(PREFIX + "root.acl_submit_applications", "user1");
     csConf.set(PREFIX + "root.acl_administer_queue", "admin1");
 
-    csConf.setAutoQueueCreationV2Enabled("root", true);
+    csConf.setAutoQueueCreationV2Enabled(ROOT, true);
 
     csConf.set(PREFIX + "root." + AUTO_QUEUE_PARENT_TEMPLATE_PREFIX + "capacity",
         "1w");
@@ -994,11 +1033,11 @@ public class TestAppManager extends AppManagerTestBase{
     csConf.set(PREFIX + "root.acl_submit_applications", " ");
     csConf.set(PREFIX + "root.acl_administer_queue", " ");
 
-    csConf.setCapacity("root.parent", "1w");
+    csConf.setCapacity(PARENT, "1w");
     csConf.set(PREFIX + "root.parent.acl_administer_queue", "user1");
     csConf.set(PREFIX + "root.parent.acl_submit_applications", "user1");
 
-    csConf.setAutoQueueCreationV2Enabled("root.parent", true);
+    csConf.setAutoQueueCreationV2Enabled(PARENT, true);
     return csConf;
   }
 

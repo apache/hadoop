@@ -26,6 +26,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,7 +49,6 @@ import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 
 public class TestDFSHAAdmin {
@@ -435,8 +435,8 @@ public class TestDFSHAAdmin {
     outBytes.reset();
     LOG.info("Running: DFSHAAdmin " + Joiner.on(" ").join(args));
     int ret = tool.run(args);
-    errOutput = new String(errOutBytes.toByteArray(), Charsets.UTF_8);
-    output = new String(outBytes.toByteArray(), Charsets.UTF_8);
+    errOutput = new String(errOutBytes.toByteArray(), StandardCharsets.UTF_8);
+    output = new String(outBytes.toByteArray(), StandardCharsets.UTF_8);
     LOG.info("Err_output:\n" + errOutput + "\nOutput:\n" + output);
     return ret;
   }

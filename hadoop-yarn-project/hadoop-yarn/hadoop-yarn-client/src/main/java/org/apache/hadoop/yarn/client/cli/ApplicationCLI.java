@@ -22,7 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
 import java.util.*;
 
@@ -357,7 +357,7 @@ public class ApplicationCLI extends YarnCLI {
     // Use PrintWriter.println, which uses correct platform line ending.
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     PrintWriter appAttemptReportStr = new PrintWriter(
-        new OutputStreamWriter(baos, Charset.forName("UTF-8")));
+        new OutputStreamWriter(baos, StandardCharsets.UTF_8));
     if (appAttemptReport != null) {
       appAttemptReportStr.println("Application Attempt Report : ");
       appAttemptReportStr.print("\tApplicationAttempt-Id : ");
@@ -381,11 +381,11 @@ public class ApplicationCLI extends YarnCLI {
       appAttemptReportStr.print("Application Attempt with id '"
           + applicationAttemptId + "' doesn't exist in Timeline Server.");
       appAttemptReportStr.close();
-      sysout.println(baos.toString("UTF-8"));
+      sysout.println(new String(baos.toByteArray(), StandardCharsets.UTF_8));
       return -1;
     }
     appAttemptReportStr.close();
-    sysout.println(baos.toString("UTF-8"));
+    sysout.println(new String(baos.toByteArray(), StandardCharsets.UTF_8));
     return 0;
   }
 
@@ -417,7 +417,7 @@ public class ApplicationCLI extends YarnCLI {
     // Use PrintWriter.println, which uses correct platform line ending.
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     PrintWriter containerReportStr = new PrintWriter(
-        new OutputStreamWriter(baos, Charset.forName("UTF-8")));
+        new OutputStreamWriter(baos, StandardCharsets.UTF_8));
     if (containerReport != null) {
       containerReportStr.println("Container Report : ");
       containerReportStr.print("\tContainer-Id : ");
@@ -446,11 +446,11 @@ public class ApplicationCLI extends YarnCLI {
       containerReportStr.print("Container with id '" + containerId
           + "' doesn't exist in Timeline Server.");
       containerReportStr.close();
-      sysout.println(baos.toString("UTF-8"));
+      sysout.println(new String(baos.toByteArray(), StandardCharsets.UTF_8));
       return -1;
     }
     containerReportStr.close();
-    sysout.println(baos.toString("UTF-8"));
+    sysout.println(new String(baos.toByteArray(), StandardCharsets.UTF_8));
     return 0;
   }
 
@@ -468,7 +468,7 @@ public class ApplicationCLI extends YarnCLI {
       EnumSet<YarnApplicationState> appStates, Set<String> appTags)
       throws YarnException, IOException {
     PrintWriter writer = new PrintWriter(
-        new OutputStreamWriter(sysout, Charset.forName("UTF-8")));
+        new OutputStreamWriter(sysout, StandardCharsets.UTF_8));
     if (allAppStates) {
       for (YarnApplicationState appState : YarnApplicationState.values()) {
         appStates.add(appState);
@@ -610,7 +610,7 @@ public class ApplicationCLI extends YarnCLI {
     // Use PrintWriter.println, which uses correct platform line ending.
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     PrintWriter appReportStr = new PrintWriter(
-        new OutputStreamWriter(baos, Charset.forName("UTF-8")));
+        new OutputStreamWriter(baos, StandardCharsets.UTF_8));
     if (appReport != null) {
       appReportStr.println("Application Report : ");
       appReportStr.print("\tApplication-Id : ");
@@ -673,11 +673,11 @@ public class ApplicationCLI extends YarnCLI {
       appReportStr.print("Application with id '" + applicationId
           + "' doesn't exist in RM.");
       appReportStr.close();
-      sysout.println(baos.toString("UTF-8"));
+      sysout.println(new String(baos.toByteArray(), StandardCharsets.UTF_8));
       return -1;
     }
     appReportStr.close();
-    sysout.println(baos.toString("UTF-8"));
+    sysout.println(new String(baos.toByteArray(), StandardCharsets.UTF_8));
     return 0;
   }
 
@@ -718,7 +718,7 @@ public class ApplicationCLI extends YarnCLI {
   private void listApplicationAttempts(String applicationId) throws YarnException,
       IOException {
     PrintWriter writer = new PrintWriter(
-        new OutputStreamWriter(sysout, Charset.forName("UTF-8")));
+        new OutputStreamWriter(sysout, StandardCharsets.UTF_8));
 
     List<ApplicationAttemptReport> appAttemptsReport = client
         .getApplicationAttempts(ApplicationId.fromString(applicationId));
@@ -746,7 +746,7 @@ public class ApplicationCLI extends YarnCLI {
   private void listContainers(String appAttemptId) throws YarnException,
       IOException {
     PrintWriter writer = new PrintWriter(
-        new OutputStreamWriter(sysout, Charset.forName("UTF-8")));
+        new OutputStreamWriter(sysout, StandardCharsets.UTF_8));
 
     List<ContainerReport> appsReport = client.getContainers(
         ApplicationAttemptId.fromString(appAttemptId));

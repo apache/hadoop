@@ -64,13 +64,13 @@ a protected directory, result in such an exception being raised.
 
 ### `boolean isDirectory(Path p)`
 
-    def isDirectory(FS, p)= p in directories(FS)
+    def isDir(FS, p) = p in directories(FS)
 
 
 ### `boolean isFile(Path p)`
 
 
-    def isFile(FS, p) = p in files(FS)
+    def isFile(FS, p) = p in filenames(FS)
 
 
 ### `FileStatus getFileStatus(Path p)`
@@ -250,7 +250,7 @@ process.
  changes are made to the filesystem, the result of `listStatus(parent(P))` SHOULD
  include the value of `getFileStatus(P)`.
 
-* After an entry at path `P` is created, and before any other
+* After an entry at path `P` is deleted, and before any other
  changes are made to the filesystem, the result of `listStatus(parent(P))` SHOULD
  NOT include the value of `getFileStatus(P)`.
 
@@ -305,7 +305,7 @@ that they must all be listed, and, at the time of listing, exist.
 All paths must exist. There is no requirement for uniqueness.
 
     forall p in paths :
-      exists(fs, p) else raise FileNotFoundException
+      exists(FS, p) else raise FileNotFoundException
 
 #### Postconditions
 
@@ -381,7 +381,7 @@ being completely performed.
 
 Path `path` must exist:
 
-    exists(FS, path) : raise FileNotFoundException
+    if not exists(FS, path) : raise FileNotFoundException
 
 #### Postconditions
 
@@ -432,7 +432,7 @@ of data which must be collected in a single RPC call.
 
 #### Preconditions
 
-    exists(FS, path) else raise FileNotFoundException
+    if not exists(FS, path) : raise FileNotFoundException
 
 ### Postconditions
 
@@ -463,7 +463,7 @@ and 1 for file count.
 
 #### Preconditions
 
-    exists(FS, path) else raise FileNotFoundException
+    if not exists(FS, path) : raise FileNotFoundException
 
 #### Postconditions
 
@@ -567,7 +567,7 @@ when writing objects to a path in the filesystem.
 #### Postconditions
 
 
-    result = integer  >= 0
+    result = integer >= 0
 
 The outcome of this operation is usually identical to `getDefaultBlockSize()`,
 with no checks for the existence of the given path.
@@ -591,17 +591,50 @@ on the filesystem.
 
 #### Preconditions
 
-    if not exists(FS, p) :  raise FileNotFoundException
+    if not exists(FS, p) : raise FileNotFoundException
 
 
 #### Postconditions
 
-    if len(FS, P) > 0:  getFileStatus(P).getBlockSize() > 0
+    if len(FS, P) > 0 :  getFileStatus(P).getBlockSize() > 0
     result == getFileStatus(P).getBlockSize()
 
 1. The outcome of this operation MUST be identical to the value of
    `getFileStatus(P).getBlockSize()`.
-1. By inference, it MUST be > 0 for any file of length > 0.
+2. By inference, it MUST be > 0 for any file of length > 0.
+
+###  `Path getEnclosingRoot(Path p)`
+
+This method is used to find a root directory for a path given. This is useful for creating
+staging and temp directories in the same enclosing root directory. There are constraints around how
+renames are allowed to atomically occur (ex. across hdfs volumes or across encryption zones).
+
+For any two paths p1 and p2 that do not have the same enclosing root, `rename(p1, p2)` is expected to fail or will not
+be atomic.
+
+For object stores, even with the same enclosing root, there is no guarantee file or directory rename is atomic
+
+The following statement is always true:
+`getEnclosingRoot(p) == getEnclosingRoot(getEnclosingRoot(p))`
+
+
+```python
+path in ancestors(FS, p) or path == p:
+isDir(FS, p)
+```
+
+#### Preconditions
+
+The path does not have to exist, but the path does need to be valid and reconcilable by the filesystem
+* if a linkfallback is used all paths are reconcilable
+* if a linkfallback is not used there must be a mount point covering the path
+
+
+#### Postconditions
+
+* The path returned will not be null, if there is no deeper enclosing root, the root path ("/") will be returned.
+* The path returned is a directory
+
 
 ## <a name="state_changing_operations"></a> State Changing Operations
 
@@ -621,12 +654,12 @@ No ancestor may be a file
 
     forall d = ancestors(FS, p) : 
         if exists(FS, d) and not isDir(FS, d) :
-            raise [ParentNotDirectoryException, FileAlreadyExistsException, IOException]
+            raise {ParentNotDirectoryException, FileAlreadyExistsException, IOException}
 
 #### Postconditions
 
 
-    FS' where FS'.Directories' = FS.Directories + [p] + ancestors(FS, p)
+    FS' where FS'.Directories = FS.Directories + [p] + ancestors(FS, p)
     result = True
 
 
@@ -655,7 +688,7 @@ The return value is always true&mdash;even if a new directory is not created
 
 The file must not exist for a no-overwrite create:
 
-    if not overwrite and isFile(FS, p)  : raise FileAlreadyExistsException
+    if not overwrite and isFile(FS, p) : raise FileAlreadyExistsException
 
 Writing to or overwriting a directory must fail.
 
@@ -665,7 +698,7 @@ No ancestor may be a file
 
     forall d = ancestors(FS, p) : 
         if exists(FS, d) and not isDir(FS, d) :
-            raise [ParentNotDirectoryException, FileAlreadyExistsException, IOException]
+            raise {ParentNotDirectoryException, FileAlreadyExistsException, IOException}
 
 FileSystems may reject the request for other
 reasons, such as the FS being read-only  (HDFS),
@@ -679,8 +712,8 @@ For instance, HDFS may raise an `InvalidPathException`.
 #### Postconditions
 
     FS' where :
-       FS'.Files'[p] == []
-       ancestors(p) is-subset-of FS'.Directories'
+       FS'.Files[p] == []
+       ancestors(p) subset-of FS'.Directories
 
     result = FSDataOutputStream
 
@@ -701,7 +734,7 @@ The behavior of the returned stream is covered in [Output](outputstream.html).
  clients creating files with `overwrite==true` to fail if the file is created
  by another client between the two tests.
 
-* The S3A and potentially other Object Stores connectors not currently change the `FS` state
+* The S3A and potentially other Object Stores connectors currently don't change the `FS` state
 until the output stream `close()` operation is completed.
 This is a significant difference between the behavior of object stores
 and that of filesystems, as it allows &gt;1 client to create a file with `overwrite=false`,
@@ -729,15 +762,15 @@ The behavior of the returned stream is covered in [Output](outputstream.html).
 #### Implementation Notes
 
 `createFile(p)` returns a `FSDataOutputStreamBuilder` only and does not make
-change on filesystem immediately. When `build()` is invoked on the `FSDataOutputStreamBuilder`,
+changes on the filesystem immediately. When `build()` is invoked on the `FSDataOutputStreamBuilder`,
 the builder parameters are verified and [`create(Path p)`](#FileSystem.create)
 is invoked on the underlying filesystem. `build()` has the same preconditions
 and postconditions as [`create(Path p)`](#FileSystem.create).
 
 * Similar to [`create(Path p)`](#FileSystem.create), files are overwritten
-by default, unless specify `builder.overwrite(false)`.
+by default, unless specified by `builder.overwrite(false)`.
 * Unlike [`create(Path p)`](#FileSystem.create), missing parent directories are
-not created by default, unless specify `builder.recursive()`.
+not created by default, unless specified by `builder.recursive()`.
 
 ### <a name='FileSystem.append'></a> `FSDataOutputStream append(Path p, int bufferSize, Progressable progress)`
 
@@ -747,14 +780,14 @@ Implementations without a compliant call SHOULD throw `UnsupportedOperationExcep
 
     if not exists(FS, p) : raise FileNotFoundException
 
-    if not isFile(FS, p) : raise [FileAlreadyExistsException, FileNotFoundException, IOException]
+    if not isFile(FS, p) : raise {FileAlreadyExistsException, FileNotFoundException, IOException}
 
 #### Postconditions
 
     FS' = FS
     result = FSDataOutputStream
 
-Return: `FSDataOutputStream`, which can update the entry `FS.Files[p]`
+Return: `FSDataOutputStream`, which can update the entry `FS'.Files[p]`
 by appending data to the existing list.
 
 The behavior of the returned stream is covered in [Output](outputstream.html).
@@ -780,7 +813,7 @@ Implementations without a compliant call SHOULD throw `UnsupportedOperationExcep
 
 #### Preconditions
 
-    if not isFile(FS, p)) : raise [FileNotFoundException, IOException]
+    if not isFile(FS, p)) : raise {FileNotFoundException, IOException}
 
 This is a critical precondition. Implementations of some FileSystems (e.g.
 Object stores) could shortcut one round trip by postponing their HTTP GET
@@ -809,7 +842,7 @@ The result MUST be the same for local and remote callers of the operation.
 symbolic links
 
 1. HDFS throws `IOException("Cannot open filename " + src)` if the path
-exists in the metadata, but no copies of any its blocks can be located;
+exists in the metadata, but no copies of its blocks can be located;
 -`FileNotFoundException` would seem more accurate and useful.
 
 ### `FSDataInputStreamBuilder openFile(Path path)`
@@ -828,7 +861,7 @@ Implementations without a compliant call MUST throw `UnsupportedOperationExcepti
 
     let stat = getFileStatus(Path p)
     let FS' where:
-      (FS.Directories', FS.Files', FS.Symlinks')
+      (FS'.Directories, FS.Files', FS'.Symlinks)
       p' in paths(FS') where:
         exists(FS, stat.path) implies exists(FS', p')
 
@@ -898,16 +931,16 @@ metadata in the `PathHandle` to detect references from other namespaces.
 
 ### `FSDataInputStream open(PathHandle handle, int bufferSize)`
 
-Implementaions without a compliant call MUST throw `UnsupportedOperationException`
+Implementations without a compliant call MUST throw `UnsupportedOperationException`
 
 #### Preconditions
 
     let fd = getPathHandle(FileStatus stat)
     if stat.isdir : raise IOException
     let FS' where:
-      (FS.Directories', FS.Files', FS.Symlinks')
-      p' in FS.Files' where:
-        FS.Files'[p'] = fd
+      (FS'.Directories, FS.Files', FS'.Symlinks)
+      p' in FS'.Files where:
+        FS'.Files[p'] = fd
     if not exists(FS', p') : raise InvalidPathHandleException
 
 The implementation MUST resolve the referent of the `PathHandle` following
@@ -918,7 +951,7 @@ encoded in the `PathHandle`.
 
 #### Postconditions
 
-    result = FSDataInputStream(0, FS.Files'[p'])
+    result = FSDataInputStream(0, FS'.Files[p'])
 
 The stream returned is subject to the constraints of a stream returned by
 `open(Path)`. Constraints checked on open MAY hold to hold for the stream, but
@@ -973,7 +1006,7 @@ A directory with children and `recursive == False` cannot be deleted
 
 If the file does not exist the filesystem state does not change
 
-    if not exists(FS, p):
+    if not exists(FS, p) :
         FS' = FS
         result = False
 
@@ -1056,7 +1089,7 @@ Some of the object store based filesystem implementations always return
 false when deleting the root, leaving the state of the store unchanged.
 
     if isRoot(p) :
-        FS ' = FS
+        FS' = FS
         result = False
 
 This is irrespective of the recursive flag status or the state of the directory.
@@ -1119,7 +1152,7 @@ has been calculated.
 
 Source `src` must exist:
 
-    exists(FS, src) else raise FileNotFoundException
+    if not exists(FS, src) : raise FileNotFoundException
 
 `dest` cannot be a descendant of `src`:
 
@@ -1129,7 +1162,7 @@ This implicitly covers the special case of `isRoot(FS, src)`.
 
 `dest` must be root, or have a parent that exists:
 
-    isRoot(FS, dest) or exists(FS, parent(dest)) else raise IOException
+    if not (isRoot(FS, dest) or exists(FS, parent(dest))) : raise IOException
 
 The parent path of a destination must not be a file:
 
@@ -1207,7 +1240,8 @@ There is no consistent behavior here.
 
 The outcome is no change to FileSystem state, with a return value of false.
 
-    FS' = FS; result = False
+    FS' = FS
+    result = False
 
 *Local Filesystem*
 
@@ -1286,28 +1320,31 @@ Implementations without a compliant call SHOULD throw `UnsupportedOperationExcep
 
 All sources MUST be in the same directory:
 
-    for s in sources: if parent(S) != parent(p) raise IllegalArgumentException
+    for s in sources:
+        if parent(s) != parent(p) : raise IllegalArgumentException
 
 All block sizes must match that of the target:
 
-    for s in sources: getBlockSize(FS, S) == getBlockSize(FS, p)
+    for s in sources:
+        getBlockSize(FS, s) == getBlockSize(FS, p)
 
 No duplicate paths:
 
-    not (exists p1, p2 in (sources + [p]) where p1 == p2)
+    let input = sources + [p]
+    not (exists i, j: i != j and input[i] == input[j])
 
 HDFS: All source files except the final one MUST be a complete block:
 
     for s in (sources[0:length(sources)-1] + [p]):
-      (length(FS, s) mod getBlockSize(FS, p)) == 0
+        (length(FS, s) mod getBlockSize(FS, p)) == 0
 
 
 #### Postconditions
 
 
     FS' where:
-     (data(FS', T) = data(FS, T) + data(FS, sources[0]) + ... + data(FS, srcs[length(srcs)-1]))
-     and for s in srcs: not exists(FS', S)
+        (data(FS', p) = data(FS, p) + data(FS, sources[0]) + ... + data(FS, sources[length(sources)-1]))
+        for s in sources: not exists(FS', s)
 
 
 HDFS's restrictions may be an implementation detail of how it implements
@@ -1327,7 +1364,7 @@ Implementations without a compliant call SHOULD throw `UnsupportedOperationExcep
 
     if not exists(FS, p) : raise FileNotFoundException
 
-    if isDir(FS, p) : raise [FileNotFoundException, IOException]
+    if isDir(FS, p) : raise {FileNotFoundException, IOException}
 
     if newLength < 0 || newLength > len(FS.Files[p]) : raise HadoopIllegalArgumentException
 
@@ -1336,8 +1373,7 @@ Truncate cannot be performed on a file, which is open for writing or appending.
 
 #### Postconditions
 
-    FS' where:
-        len(FS.Files[p]) = newLength
+    len(FS'.Files[p]) = newLength
 
 Return: `true`, if truncation is finished and the file can be immediately
 opened for appending, or `false` otherwise.
@@ -1366,7 +1402,7 @@ Source and destination must be different
 if src = dest : raise FileExistsException
 ```
 
-Destination and source must not be descendants one another
+Destination and source must not be descendants of one another
 ```python
 if isDescendant(src, dest) or isDescendant(dest, src) : raise IOException
 ```
@@ -1396,7 +1432,7 @@ Given a base path on the source `base` and a child path `child` where `base` is 
 
 ```python
 def final_name(base, child, dest):
-    is base = child:
+    if base == child:
         return dest
     else:
         return dest + childElements(base, child)
@@ -1524,7 +1560,7 @@ while (iterator.hasNext()) {
 
 As raising exceptions is an expensive operation in JVMs, the `while(hasNext())`
 loop option is more efficient. (see also [Concurrency and the Remote Iterator](#RemoteIteratorConcurrency)
-for a dicussion on this topic).
+for a discussion on this topic).
 
 Implementors of the interface MUST support both forms of iterations; authors
 of tests SHOULD verify that both iteration mechanisms work.

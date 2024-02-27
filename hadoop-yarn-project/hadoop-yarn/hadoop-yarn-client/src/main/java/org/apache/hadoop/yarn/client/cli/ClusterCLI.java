@@ -23,7 +23,7 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -123,12 +123,12 @@ public class ClusterCLI extends YarnCLI {
   private void printClusterNodeAttributes() throws IOException, YarnException {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     PrintWriter pw = new PrintWriter(
-        new OutputStreamWriter(baos, Charset.forName("UTF-8")));
+        new OutputStreamWriter(baos, StandardCharsets.UTF_8));
     for (NodeAttributeInfo attribute : client.getClusterAttributes()) {
       pw.println(attribute.toString());
     }
     pw.close();
-    sysout.println(baos.toString("UTF-8"));
+    sysout.println(new String(baos.toByteArray(), StandardCharsets.UTF_8));
   }
 
   void printClusterNodeLabels() throws YarnException, IOException {
@@ -158,11 +158,11 @@ public class ClusterCLI extends YarnCLI {
   void printUsage(Options opts) throws UnsupportedEncodingException {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     PrintWriter pw =
-        new PrintWriter(new OutputStreamWriter(baos, Charset.forName("UTF-8")));
+        new PrintWriter(new OutputStreamWriter(baos, StandardCharsets.UTF_8));
     new HelpFormatter().printHelp(pw, HelpFormatter.DEFAULT_WIDTH, TITLE, null,
         opts, HelpFormatter.DEFAULT_LEFT_PAD, HelpFormatter.DEFAULT_DESC_PAD,
         null);
     pw.close();
-    sysout.println(baos.toString("UTF-8"));
+    sysout.println(new String(baos.toByteArray(), StandardCharsets.UTF_8));
   }
 }

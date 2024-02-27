@@ -68,7 +68,7 @@ class FSNamesystemLock {
   @VisibleForTesting
   protected ReentrantReadWriteLock coarseLock;
 
-  private final boolean metricsEnabled;
+  private volatile boolean metricsEnabled;
   private final MutableRatesWithAggregation detailedHoldTimeMetrics;
   private final Timer timer;
 
@@ -79,14 +79,14 @@ class FSNamesystemLock {
   private final long lockSuppressWarningIntervalMs;
 
   /** Threshold (ms) for long holding write lock report. */
-  private final long writeLockReportingThresholdMs;
+  private volatile long writeLockReportingThresholdMs;
   /** Last time stamp for write lock. Keep the longest one for multi-entrance.*/
   private long writeLockHeldTimeStampNanos;
   /** Frequency limiter used for reporting long write lock hold times. */
   private final LogThrottlingHelper writeLockReportLogger;
 
   /** Threshold (ms) for long holding read lock report. */
-  private final long readLockReportingThresholdMs;
+  private volatile long readLockReportingThresholdMs;
   /**
    * Last time stamp for read lock. Keep the longest one for
    * multi-entrance. This is ThreadLocal since there could be
@@ -460,6 +460,33 @@ class FSNamesystemLock {
     return (isWrite ? WRITE_LOCK_METRIC_PREFIX : READ_LOCK_METRIC_PREFIX) +
         org.apache.commons.lang3.StringUtils.capitalize(operationName) +
         LOCK_METRIC_SUFFIX;
+  }
+
+  @VisibleForTesting
+  public void setMetricsEnabled(boolean metricsEnabled) {
+    this.metricsEnabled = metricsEnabled;
+  }
+
+  public boolean isMetricsEnabled() {
+    return metricsEnabled;
+  }
+
+  public void setReadLockReportingThresholdMs(long readLockReportingThresholdMs) {
+    this.readLockReportingThresholdMs = readLockReportingThresholdMs;
+  }
+
+  @VisibleForTesting
+  public long getReadLockReportingThresholdMs() {
+    return readLockReportingThresholdMs;
+  }
+
+  public void setWriteLockReportingThresholdMs(long writeLockReportingThresholdMs) {
+    this.writeLockReportingThresholdMs = writeLockReportingThresholdMs;
+  }
+
+  @VisibleForTesting
+  public long getWriteLockReportingThresholdMs() {
+    return writeLockReportingThresholdMs;
   }
 
   /**

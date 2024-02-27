@@ -25,6 +25,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -116,7 +117,7 @@ public class MapReduceTestUtil {
     FSDataOutputStream out = fs.create(new Path(dirPath, "data.txt"));
     for (int i = 0; i < 10000; i++) {
       String line = generateRandomLine();
-      out.write(line.getBytes("UTF-8"));
+      out.write(line.getBytes(StandardCharsets.UTF_8));
     }
     out.close();
   }
