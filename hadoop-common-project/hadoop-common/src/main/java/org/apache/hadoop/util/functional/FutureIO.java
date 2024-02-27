@@ -21,6 +21,8 @@ package org.apache.hadoop.util.functional;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.UncheckedIOException;
+import java.time.Duration;
+import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -274,5 +276,15 @@ public final class FutureIO {
       result.completeExceptionally(tx);
     }
     return result;
+  }
+
+  /**
+   * Wait for all the futures to complete; there's a small sleep between
+   * each iteration; enough to yield the CPU.
+   * @param futures futures.
+   * @param sleepInterval Interval to await completion.
+   */
+  public static void awaitAllFutures(Collection<Future<?>> futures, Duration sleepInterval) {
+    TaskPool.waitFor(futures, (int)sleepInterval.toMillis());
   }
 }

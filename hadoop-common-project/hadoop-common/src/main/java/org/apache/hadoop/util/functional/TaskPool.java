@@ -545,7 +545,8 @@ public final class TaskPool {
    * @param futures futures.
    * @param sleepInterval Interval in milliseconds to await completion.
    */
-  private static void waitFor(Collection<Future<?>> futures, int sleepInterval) {
+  @InterfaceAudience.Private
+  public static void waitFor(Collection<Future<?>> futures, int sleepInterval) {
     int size = futures.size();
     LOG.debug("Waiting for {} tasks to complete", size);
     int oldNumFinished = 0;
