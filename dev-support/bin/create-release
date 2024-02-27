@@ -504,9 +504,9 @@ function dockermode
     echo "LABEL org.apache.hadoop.create-release=\"cr-${RANDOM}\""
 
     # setup ownerships, etc
-    echo "RUN groupadd --non-unique -g ${group_id} ${user_name}"
-    echo "RUN useradd -g ${group_id} -u ${user_id} -m ${user_name}"
-    echo "RUN chown -R ${user_name} /home/${user_name}"
+    echo "RUN groupadd --non-unique -g ${group_id} ${user_name}; exit 0;"
+    echo "RUN useradd -g ${group_id} -u ${user_id} -m ${user_name}; exit 0;"
+    echo "RUN chown -R ${user_name} /home/${user_name}; exit 0;"
     echo "ENV HOME /home/${user_name}"
     echo "RUN mkdir -p /maven"
     echo "RUN chown -R ${user_name} /maven"

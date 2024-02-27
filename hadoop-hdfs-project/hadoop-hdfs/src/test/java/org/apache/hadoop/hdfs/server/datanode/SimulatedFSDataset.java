@@ -944,6 +944,11 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
     return 0L;
   }
 
+  @Override
+  public long getPendingAsyncDeletions() {
+    return 0;
+  }
+
   /**
    * Get metrics from the metrics source
    *

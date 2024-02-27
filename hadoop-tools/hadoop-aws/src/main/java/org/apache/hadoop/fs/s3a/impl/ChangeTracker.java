@@ -18,14 +18,14 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
-import com.amazonaws.AmazonServiceException;
-import com.amazonaws.SdkBaseException;
-import com.amazonaws.services.s3.model.CopyObjectRequest;
-import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
-import com.amazonaws.services.s3.model.GetObjectRequest;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.S3Object;
-import com.amazonaws.services.s3.transfer.model.CopyResult;
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
+import software.amazon.awssdk.core.exception.SdkException;
+import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
+import software.amazon.awssdk.services.s3.model.CopyObjectResponse;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.s3a.RemoteFileChangedException;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
 import org.apache.hadoop.fs.s3a.statistics.ChangeTrackerStatistics;
 
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_412_PRECONDITION_FAILED;
 import static org.apache.hadoop.util.Preconditions.checkNotNull;
 
 /**
@@ -55,8 +56,6 @@ public class ChangeTracker {
   private static final Logger LOG =
       LoggerFactory.getLogger(ChangeTracker.class);
 
-  /** {@code 412 Precondition Failed} (HTTP/1.1 - RFC 2616) */
-  public static final int SC_PRECONDITION_FAILED = 412;
   public static final String CHANGE_REPORTED_BY_S3 = "Change reported by S3";
 
   /** Policy to use. */
@@ -117,15 +116,15 @@ public class ChangeTracker {
   /**
    * Apply any revision control set by the policy if it is to be
    * enforced on the server.
-   * @param request request to modify
+   * @param builder request builder to modify
    * @return true iff a constraint was added.
    */
   public boolean maybeApplyConstraint(
-      final GetObjectRequest request) {
+      final GetObjectRequest.Builder builder) {
 
     if (policy.getMode() == ChangeDetectionPolicy.Mode.Server
         && revisionId != null) {
-      policy.applyRevisionConstraint(request, revisionId);
+      policy.applyRevisionConstraint(builder, revisionId);
       return true;
     }
     return false;
@@ -134,26 +133,26 @@ public class ChangeTracker {
   /**
    * Apply any revision control set by the policy if it is to be
    * enforced on the server.
-   * @param request request to modify
+   * @param requestBuilder copy object request builder to modify
    * @return true iff a constraint was added.
    */
   public boolean maybeApplyConstraint(
-      final CopyObjectRequest request) {
+      final CopyObjectRequest.Builder requestBuilder) {
 
     if (policy.getMode() == ChangeDetectionPolicy.Mode.Server
         && revisionId != null) {
-      policy.applyRevisionConstraint(request, revisionId);
+      policy.applyRevisionConstraint(requestBuilder, revisionId);
       return true;
     }
     return false;
   }
 
   public boolean maybeApplyConstraint(
-      final GetObjectMetadataRequest request) {
+      final HeadObjectRequest.Builder requestBuilder) {
 
     if (policy.getMode() == ChangeDetectionPolicy.Mode.Server
         && revisionId != null) {
-      policy.applyRevisionConstraint(request, revisionId);
+      policy.applyRevisionConstraint(requestBuilder, revisionId);
       return true;
     }
     return false;
@@ -168,7 +167,7 @@ public class ChangeTracker {
    * @throws PathIOException raised on failure
    * @throws RemoteFileChangedException if the remote file has changed.
    */
-  public void processResponse(final S3Object object,
+  public void processResponse(final GetObjectResponse object,
       final String operation,
       final long pos) throws PathIOException {
     if (object == null) {
@@ -191,24 +190,24 @@ public class ChangeTracker {
       }
     }
 
-    processMetadata(object.getObjectMetadata(), operation);
+    processMetadata(object, operation);
   }
 
   /**
    * Process the response from the server for validation against the
    * change policy.
-   * @param copyResult result of a copy operation
+   * @param copyObjectResponse response of a copy operation
    * @throws PathIOException raised on failure
    * @throws RemoteFileChangedException if the remote file has changed.
    */
-  public void processResponse(final CopyResult copyResult)
+  public void processResponse(final CopyObjectResponse copyObjectResponse)
       throws PathIOException {
     // ETag (sometimes, depending on encryption and/or multipart) is not the
     // same on the copied object as the original.  Version Id seems to never
     // be the same on the copy.  As such, there isn't really anything that
     // can be verified on the response, except that a revision ID is present
     // if required.
-    String newRevisionId = policy.getRevisionId(copyResult);
+    String newRevisionId = policy.getRevisionId(copyObjectResponse);
     LOG.debug("Copy result {}: {}", policy.getSource(), newRevisionId);
     if (newRevisionId == null && policy.isRequireVersion()) {
       throw new NoVersionAttributeException(uri, String.format(
@@ -224,16 +223,14 @@ public class ChangeTracker {
    * cause.
    * @param e the exception
    * @param operation the operation performed when the exception was
-   * generated (e.g. "copy", "read", "select").
+   * generated (e.g. "copy", "read").
    * @throws RemoteFileChangedException if the remote file has changed.
    */
-  public void processException(SdkBaseException e, String operation) throws
+  public void processException(SdkException e, String operation) throws
       RemoteFileChangedException {
-    if (e instanceof AmazonServiceException) {
-      AmazonServiceException serviceException = (AmazonServiceException) e;
-      // This isn't really going to be hit due to
-      // https://github.com/aws/aws-sdk-java/issues/1644
-      if (serviceException.getStatusCode() == SC_PRECONDITION_FAILED) {
+    if (e instanceof AwsServiceException) {
+      AwsServiceException serviceException = (AwsServiceException)e;
+      if (serviceException.statusCode() == SC_412_PRECONDITION_FAILED) {
         versionMismatches.versionMismatchError();
         throw new RemoteFileChangedException(uri, operation, String.format(
             RemoteFileChangedException.PRECONDITIONS_FAILED
@@ -254,9 +251,23 @@ public class ChangeTracker {
    * @throws PathIOException raised on failure
    * @throws RemoteFileChangedException if the remote file has changed.
    */
-  public void processMetadata(final ObjectMetadata metadata,
+  public void processMetadata(final HeadObjectResponse metadata,
       final String operation) throws PathIOException {
     final String newRevisionId = policy.getRevisionId(metadata, uri);
+    processNewRevision(newRevisionId, operation, -1);
+  }
+
+  /**
+   * Process the response from server for validation against the change
+   * policy.
+   * @param getObjectResponse response returned from server
+   * @param operation operation in progress
+   * @throws PathIOException raised on failure
+   * @throws RemoteFileChangedException if the remote file has changed.
+   */
+  public void processMetadata(final GetObjectResponse getObjectResponse,
+      final String operation) throws PathIOException {
+    final String newRevisionId = policy.getRevisionId(getObjectResponse, uri);
     processNewRevision(newRevisionId, operation, -1);
   }
 

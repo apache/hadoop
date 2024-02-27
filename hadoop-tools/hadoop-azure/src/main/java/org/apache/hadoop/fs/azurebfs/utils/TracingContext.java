@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_TIMEOUT_ABBREVIATION;
 
 /**
  * The TracingContext class to correlate Store requests using unique
@@ -66,7 +67,7 @@ public class TracingContext {
   /**
    * If {@link #primaryRequestId} is null, this field shall be set equal
    * to the last part of the {@link #clientRequestId}'s UUID
-   * in {@link #constructHeader(AbfsHttpOperation, String)} only on the
+   * in {@link #constructHeader(AbfsHttpOperation, String, String)} only on the
    * first API call for an operation. Subsequent retries for that operation
    * will not change this field. In case {@link  #primaryRequestId} is non-null,
    * this field shall not be set.
@@ -168,8 +169,10 @@ public class TracingContext {
    *                      connection
    * @param previousFailure Failure seen before this API trigger on same operation
    * from AbfsClient.
+   * @param retryPolicyAbbreviation Retry policy used to get retry interval before this
+   * API trigger on same operation from AbfsClient
    */
-  public void constructHeader(AbfsHttpOperation httpOperation, String previousFailure) {
+  public void constructHeader(AbfsHttpOperation httpOperation, String previousFailure, String retryPolicyAbbreviation) {
     clientRequestId = UUID.randomUUID().toString();
     switch (format) {
     case ALL_ID_FORMAT: // Optional IDs (e.g. streamId) may be empty
@@ -177,7 +180,7 @@ public class TracingContext {
           clientCorrelationID + ":" + clientRequestId + ":" + fileSystemID + ":"
               + getPrimaryRequestIdForHeader(retryCount > 0) + ":" + streamID
               + ":" + opType + ":" + retryCount;
-      header = addFailureReasons(header, previousFailure);
+      header = addFailureReasons(header, previousFailure, retryPolicyAbbreviation);
       break;
     case TWO_ID_FORMAT:
       header = clientCorrelationID + ":" + clientRequestId;
@@ -217,9 +220,12 @@ public class TracingContext {
   }
 
   private String addFailureReasons(final String header,
-      final String previousFailure) {
+      final String previousFailure, String retryPolicyAbbreviation) {
     if (previousFailure == null) {
       return header;
+    }
+    if (CONNECTION_TIMEOUT_ABBREVIATION.equals(previousFailure) && retryPolicyAbbreviation != null) {
+      return String.format("%s_%s_%s", header, previousFailure, retryPolicyAbbreviation);
     }
     return String.format("%s_%s", header, previousFailure);
   }

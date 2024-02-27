@@ -19,7 +19,7 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-yarn-services</artifactId>
-    <version>3.4.0-SNAPSHOT</version>
+    <version>3.5.0-SNAPSHOT</version>
   </parent>
   <artifactId>hadoop-yarn-services-core</artifactId>
   <packaging>jar</packaging>
@@ -118,8 +118,8 @@
     </dependency>
 
     <dependency>
-      <groupId>log4j</groupId>
-      <artifactId>log4j</artifactId>
+      <groupId>ch.qos.reload4j</groupId>
+      <artifactId>reload4j</artifactId>
       <scope>runtime</scope>
     </dependency>
 
@@ -191,6 +191,7 @@
     <dependency>
       <groupId>com.google.protobuf</groupId>
       <artifactId>protobuf-java</artifactId>
+      <scope>${transient.protobuf2.scope}</scope>
     </dependency>
 
     <dependency>

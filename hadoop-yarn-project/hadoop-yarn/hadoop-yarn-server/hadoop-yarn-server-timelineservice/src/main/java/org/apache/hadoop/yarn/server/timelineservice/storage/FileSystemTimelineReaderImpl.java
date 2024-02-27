@@ -23,7 +23,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -164,7 +164,7 @@ public class FileSystemTimelineReaderImpl extends AbstractService
   private String getFlowRunPath(String userId, String clusterId,
       String flowName, Long flowRunId, String appId) throws IOException {
     if (userId != null && flowName != null && flowRunId != null) {
-      return userId + File.separator + flowName + File.separator + flowRunId;
+      return userId + File.separator + flowName + File.separator + "*" + File.separator + flowRunId;
     }
     if (clusterId == null || appId == null) {
       throw new IOException("Unable to get flow info");
@@ -174,7 +174,7 @@ public class FileSystemTimelineReaderImpl extends AbstractService
             APP_FLOW_MAPPING_FILE);
     try (BufferedReader reader =
              new BufferedReader(new InputStreamReader(
-                 fs.open(appFlowMappingFilePath), Charset.forName("UTF-8")));
+                 fs.open(appFlowMappingFilePath), StandardCharsets.UTF_8));
          CSVParser parser = new CSVParser(reader, csvFormat)) {
       for (CSVRecord record : parser.getRecords()) {
         if (record.size() < 4) {
@@ -186,7 +186,7 @@ public class FileSystemTimelineReaderImpl extends AbstractService
           continue;
         }
         return record.get(1).trim() + File.separator + record.get(2).trim() +
-            File.separator + record.get(3).trim();
+            File.separator + "*" + File.separator + record.get(3).trim();
       }
       parser.close();
     }
@@ -286,6 +286,7 @@ public class FileSystemTimelineReaderImpl extends AbstractService
             }
           }
         );
+    dir = getNormalPath(dir);
     if (dir != null) {
       RemoteIterator<LocatedFileStatus> fileStatuses = fs.listFiles(dir,
               false);
@@ -299,7 +300,7 @@ public class FileSystemTimelineReaderImpl extends AbstractService
           }
           try (BufferedReader reader = new BufferedReader(
               new InputStreamReader(fs.open(entityFile),
-                  Charset.forName("UTF-8")))) {
+                  StandardCharsets.UTF_8))) {
             TimelineEntity entity = readEntityFromFile(reader);
             if (!entity.getType().equals(entityType)) {
               continue;
@@ -394,12 +395,14 @@ public class FileSystemTimelineReaderImpl extends AbstractService
     Path flowRunPath = new Path(clusterIdPath, flowRunPathStr);
     Path appIdPath = new Path(flowRunPath, context.getAppId());
     Path entityTypePath = new Path(appIdPath, context.getEntityType());
-    Path entityFilePath = new Path(entityTypePath,
-            context.getEntityId() + TIMELINE_SERVICE_STORAGE_EXTENSION);
-
+    Path entityFilePath = getNormalPath(new Path(entityTypePath,
+        context.getEntityId() + TIMELINE_SERVICE_STORAGE_EXTENSION));
+    if (entityFilePath == null) {
+      return null;
+    }
     try (BufferedReader reader =
              new BufferedReader(new InputStreamReader(
-                 fs.open(entityFilePath), Charset.forName("UTF-8")))) {
+                 fs.open(entityFilePath), StandardCharsets.UTF_8))) {
       TimelineEntity entity = readEntityFromFile(reader);
       return createEntityToBeReturned(
           entity, dataToRetrieve.getFieldsToRetrieve());
@@ -410,6 +413,14 @@ public class FileSystemTimelineReaderImpl extends AbstractService
     }
   }
 
+  private Path getNormalPath(Path globPath) throws IOException {
+    FileStatus[] status = fs.globStatus(globPath);
+    if (status == null || status.length < 1) {
+      LOG.info("{} do not exist.", globPath);
+      return null;
+    }
+    return status[0].getPath();
+  }
   @Override
   public Set<TimelineEntity> getEntities(TimelineReaderContext context,
       TimelineEntityFilters filters, TimelineDataToRetrieve dataToRetrieve)
@@ -433,13 +444,13 @@ public class FileSystemTimelineReaderImpl extends AbstractService
         context.getClusterId(), context.getFlowName(), context.getFlowRunId(),
         context.getAppId());
     if (context.getUserId() == null) {
-      context.setUserId(new Path(flowRunPathStr).getParent().getParent().
+      context.setUserId(new Path(flowRunPathStr).getParent().getParent().getParent().
           getName());
     }
     Path clusterIdPath = new Path(entitiesPath, context.getClusterId());
     Path flowRunPath = new Path(clusterIdPath, flowRunPathStr);
     Path appIdPath = new Path(flowRunPath, context.getAppId());
-    FileStatus[] fileStatuses = fs.listStatus(appIdPath);
+    FileStatus[] fileStatuses = fs.listStatus(getNormalPath(appIdPath));
     for (FileStatus fileStatus : fileStatuses) {
       if (fileStatus.isDirectory()) {
         result.add(fileStatus.getPath().getName());

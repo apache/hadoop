@@ -380,7 +380,7 @@ Usage:
         hdfs dfsadmin [-refreshSuperUserGroupsConfiguration]
         hdfs dfsadmin [-refreshCallQueue]
         hdfs dfsadmin [-refresh <host:ipc_port> <key> [arg1..argn]]
-        hdfs dfsadmin [-reconfig <namenode|datanode> <host:ipc_port|livenodes> <start |status |properties>]
+        hdfs dfsadmin [-reconfig <namenode|datanode> <host:ipc_port|livenodes|decomnodes> <start |status |properties>]
         hdfs dfsadmin [-printTopology]
         hdfs dfsadmin [-refreshNamenodes datanodehost:port]
         hdfs dfsadmin [-getVolumeReport datanodehost:port]
@@ -419,7 +419,7 @@ Usage:
 | `-refreshSuperUserGroupsConfiguration` | Refresh superuser proxy groups mappings |
 | `-refreshCallQueue` | Reload the call queue from config. |
 | `-refresh` \<host:ipc\_port\> \<key\> [arg1..argn] | Triggers a runtime-refresh of the resource specified by \<key\> on \<host:ipc\_port\>. All other args after are sent to the host. |
-| `-reconfig` \<datanode \|namenode\> \<host:ipc\_port\|livenodes> \<start\|status\|properties\> | Starts reconfiguration or gets the status of an ongoing reconfiguration, or gets a list of reconfigurable properties. The second parameter specifies the node type. The third parameter specifies host address. For start or status, datanode supports livenodes as third parameter, which will start or retrieve reconfiguration on all live datanodes. |
+| `-reconfig` \<datanode \|namenode\> \<host:ipc\_port\|livenodes\|decomnodes\> \<start\|status\|properties\> | Starts reconfiguration or gets the status of an ongoing reconfiguration, or gets a list of reconfigurable properties. The second parameter specifies the node type. The third parameter specifies host address. For start or status, datanode supports livenodes and decomnodes as the third parameter, which will start or retrieve reconfiguration on all live or decommissioning datanodes. |
 | `-printTopology` | Print a tree of the racks and their nodes as reported by the Namenode |
 | `-refreshNamenodes` datanodehost:port | For the given datanode, reloads the configuration files, stops serving the removed block-pools and starts serving new block-pools. |
 | `-getVolumeReport` datanodehost:port | For the given datanode, get the volume report. |
@@ -452,6 +452,7 @@ Usage:
 
       hdfs dfsrouteradmin
           [-add <source> <nameservice1, nameservice2, ...> <destination> [-readonly] [-faulttolerant] [-order HASH|LOCAL|RANDOM|HASH_ALL] -owner <owner> -group <group> -mode <mode>]
+          [-addAll <source1> <nameservice1,nameservice2,...> <destination1> [-readonly] [-faulttolerant][-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] -owner <owner1> -group <group1> -mode <mode1> , <source2> <nameservice1,nameservice2,...> <destination2> [-readonly] [-faulttolerant] [-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] -owner <owner2> -group <group2> -mode <mode2> , ...]
           [-update <source> [<nameservice1, nameservice2, ...> <destination>] [-readonly true|false] [-faulttolerant true|false] [-order HASH|LOCAL|RANDOM|HASH_ALL] -owner <owner> -group <group> -mode <mode>]
           [-rm <source>]
           [-ls [-d] <path>]
@@ -460,6 +461,7 @@ Usage:
           [-setStorageTypeQuota <path> -storageType <storage type> <quota in bytes or quota size string>]
           [-clrQuota <path>]
           [-clrStorageTypeQuota <path>]
+          [-dumpState]
           [-safemode enter | leave | get]
           [-nameservice disable | enable <nameservice>]
           [-getDisabledNameservices]
@@ -517,7 +519,7 @@ Runs the diskbalancer CLI. See [HDFS Diskbalancer](./HDFSDiskbalancer.html) for 
 Usage:
 
        hdfs ec [generic options]
-         [-setPolicy -policy <policyName> -path <path>]
+         [-setPolicy -policy <policyName> -path <path> [-replicate]]
          [-getPolicy -path <path>]
          [-unsetPolicy -path <path>]
          [-listPolicies]
@@ -718,11 +720,13 @@ Recover the lease on the specified path. The path must reside on an HDFS file sy
 
 ### `verifyEC`
 
-Usage: `hdfs debug verifyEC -file <file>`
+Usage: `hdfs debug verifyEC -file <file> [-blockId <blk_Id>] [-skipFailureBlocks]`
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
 | [`-file` *EC-file*] | HDFS EC file to be verified. |
+| [`-blockId` *blk_Id*] | Specify the blk_Id to verify a block group of the file. |
+| [`-skipFailureBlocks`] | Specify will skip any block group failures during verify and continues verify all block groups of the file, the default is not to skip failure blocks . |
 
 Verify the correctness of erasure coding on an erasure coded file.
 

@@ -19,6 +19,7 @@
 package org.apache.hadoop.ipc;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -516,5 +517,30 @@ public class TestCallQueueManager {
     }
     verify(queue, times(0)).put(call);
     verify(queue, times(0)).add(call);
+  }
+
+  @Test
+  public void testCallQueueOverEnabled() {
+    // default ipc.callqueue.overflow.trigger.failover' configure false.
+    String ns = "ipc.8888";
+    conf.setBoolean("ipc.callqueue.overflow.trigger.failover", false);
+    manager = new CallQueueManager<>(fcqueueClass, rpcSchedulerClass, false,
+        10, ns, conf);
+    assertFalse(manager.isServerFailOverEnabled());
+    assertFalse(manager.isServerFailOverEnabledByQueue());
+
+    // set ipc.8888.callqueue.overflow.trigger.failover configure true.
+    conf.setBoolean("ipc.8888.callqueue.overflow.trigger.failover", true);
+    manager = new CallQueueManager<>(fcqueueClass, rpcSchedulerClass, false,
+        10, ns, conf);
+    assertTrue(manager.isServerFailOverEnabled());
+    assertTrue(manager.isServerFailOverEnabledByQueue());
+
+    // set ipc.callqueue.overflow.trigger.failover' configure true.
+    conf.setBoolean("ipc.callqueue.overflow.trigger.failover", true);
+    manager = new CallQueueManager<>(fcqueueClass, rpcSchedulerClass, false,
+        10, ns, conf);
+    assertTrue(manager.isServerFailOverEnabled());
+    assertTrue(manager.isServerFailOverEnabledByQueue());
   }
 }

@@ -60,6 +60,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
 
+import java.util.concurrent.TimeUnit;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.Option;
@@ -67,6 +68,7 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
@@ -139,10 +141,17 @@ public class DFSUtil {
   public static class ServiceComparator implements Comparator<DatanodeInfo> {
     @Override
     public int compare(DatanodeInfo a, DatanodeInfo b) {
-      // Decommissioned nodes will still be moved to the end of the list
+      // Decommissioned nodes will be moved to the end of the list.
       if (a.isDecommissioned()) {
         return b.isDecommissioned() ? 0 : 1;
       } else if (b.isDecommissioned()) {
+        return -1;
+      }
+
+      // Decommissioning nodes will be placed before decommissioned nodes.
+      if (a.isDecommissionInProgress()) {
+        return b.isDecommissionInProgress() ? 0 : 1;
+      } else if (b.isDecommissionInProgress()) {
         return -1;
       }
 
@@ -159,9 +168,9 @@ public class DFSUtil {
 
   /**
    * Comparator for sorting DataNodeInfo[] based on
-   * slow, stale, entering_maintenance and decommissioned states.
+   * slow, stale, entering_maintenance, decommissioning and decommissioned states.
    * Order: live {@literal ->} slow {@literal ->} stale {@literal ->}
-   * entering_maintenance {@literal ->} decommissioned
+   * entering_maintenance {@literal ->} decommissioning {@literal ->} decommissioned
    */
   @InterfaceAudience.Private 
   public static class StaleAndSlowComparator extends ServiceComparator {
@@ -1354,7 +1363,30 @@ public class DFSUtil {
   }
 
   /**
-   * Add protobuf based protocol to the {@link org.apache.hadoop.ipc.RPC.Server}
+   * Add protobuf based protocol to the {@link org.apache.hadoop.ipc.RPC.Server}.
+   * This method is for exclusive use by the hadoop libraries, as its signature
+   * changes with the version of the shaded protobuf library it has been built with.
+   * @param conf configuration
+   * @param protocol Protocol interface
+   * @param service service that implements the protocol
+   * @param server RPC server to which the protocol &amp; implementation is
+   *               added to
+   * @throws IOException failure
+   */
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
+  public static void addInternalPBProtocol(Configuration conf,
+      Class<?> protocol,
+      BlockingService service,
+      RPC.Server server) throws IOException {
+    RPC.setProtocolEngine(conf, protocol, ProtobufRpcEngine2.class);
+    server.addProtocol(RPC.RpcKind.RPC_PROTOCOL_BUFFER, protocol, service);
+  }
+
+  /**
+   * Add protobuf based protocol to the {@link org.apache.hadoop.ipc.RPC.Server}.
+   * Deprecated as it will only reliably compile if an unshaded protobuf library
+   * is also on the classpath.
    * @param conf configuration
    * @param protocol Protocol interface
    * @param service service that implements the protocol
@@ -1362,17 +1394,17 @@ public class DFSUtil {
    *               added to
    * @throws IOException
    */
+  @Deprecated
   public static void addPBProtocol(Configuration conf, Class<?> protocol,
       BlockingService service, RPC.Server server) throws IOException {
-    RPC.setProtocolEngine(conf, protocol, ProtobufRpcEngine2.class);
-    server.addProtocol(RPC.RpcKind.RPC_PROTOCOL_BUFFER, protocol, service);
+    addInternalPBProtocol(conf, protocol, service, server);
   }
 
   /**
    * Add protobuf based protocol to the {@link RPC.Server}.
    * This engine uses Protobuf 2.5.0. Recommended to upgrade to
    * Protobuf 3.x from hadoop-thirdparty and use
-   * {@link DFSUtil#addPBProtocol(Configuration, Class, BlockingService,
+   * {@link DFSUtil#addInternalPBProtocol(Configuration, Class, BlockingService,
    * RPC.Server)}.
    * @param conf configuration
    * @param protocol Protocol interface
@@ -1939,16 +1971,36 @@ public class DFSUtil {
   }
 
   /**
-   * Add transfer rate metrics for valid data read and duration values.
+   * Add transfer rate metrics in bytes per second.
    * @param metrics metrics for datanodes
    * @param read bytes read
-   * @param duration read duration
+   * @param durationInNS read duration in nanoseconds
    */
-  public static void addTransferRateMetric(final DataNodeMetrics metrics, final long read, final long duration) {
-    if (read >= 0 && duration > 0) {
-        metrics.addReadTransferRate(read * 1000 / duration);
-    } else {
-      LOG.warn("Unexpected value for data transfer bytes={} duration={}", read, duration);
-    }
+  public static void addTransferRateMetric(final DataNodeMetrics metrics, final long read,
+      final long durationInNS) {
+    metrics.addReadTransferRate(getTransferRateInBytesPerSecond(read, durationInNS));
+  }
+
+  /**
+   * Calculate the transfer rate in bytes per second.
+   *
+   * We have the read duration in nanoseconds for precision for transfers taking a few nanoseconds.
+   * We treat shorter durations below 1 ns as 1 ns as we also want to capture reads taking less
+   * than a nanosecond. To calculate transferRate in bytes per second, we avoid multiplying bytes
+   * read by 10^9 to avoid overflow. Instead, we first calculate the duration in seconds in double
+   * to keep the decimal values for smaller durations. We then divide bytes read by
+   * durationInSeconds to get the transferRate in bytes per second.
+   *
+   * We also replace a negative value for transferred bytes with 0 byte.
+   *
+   * @param bytes bytes read
+   * @param durationInNS read duration in nanoseconds
+   * @return bytes per second
+   */
+  public static long getTransferRateInBytesPerSecond(long bytes, long durationInNS) {
+    bytes = Math.max(bytes, 0);
+    durationInNS = Math.max(durationInNS, 1);
+    double durationInSeconds = (double) durationInNS / TimeUnit.SECONDS.toNanos(1);
+    return (long) (bytes / durationInSeconds);
   }
 }

@@ -440,6 +440,20 @@ message DeregisterSubClustersProto {
   optional string subClusterState = 5;
 }
 
+message FederationQueueWeightProto {
+  optional string routerWeight = 1;
+  optional string amrmWeight = 2;
+  optional string headRoomAlpha = 3;
+  optional string queue = 4;
+  optional string policyManagerClassName = 5;
+}
+
+message FederationSubClusterProto {
+  optional string subClusterId = 1;
+  optional string lastHeartBeatTime = 2;
+  optional string subClusterState = 3;
+}
+
 ////////////////////////////////////////////////////////////////////////
 ////// From AM_RM_Protocol /////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////
@@ -628,6 +642,17 @@ message QueueInfoProto {
   optional float weight = 14;
   optional string queuePath = 15;
   optional int32 maxParallelApps = 16;
+  optional string schedulerType = 17;
+  optional int32 minResourceVCore = 18;
+  optional int64 minResourceMemory = 19;
+  optional int32 maxResourceVCore = 20;
+  optional int64 maxResourceMemory = 21;
+  optional int32 reservedResourceVCore = 22;
+  optional int64 reservedResourceMemory = 23;
+  optional int32 steadyFairShareVCore = 24;
+  optional int64 steadyFairShareMemory = 25;
+  optional string subClusterId = 26;
+  optional int32 maxRunningApp = 27;
 }
 
 message QueueConfigurationsProto {

@@ -19,11 +19,13 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import org.apache.commons.lang3.math.NumberUtils;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.classification.VisibleForTesting;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
 
 import org.apache.hadoop.yarn.metrics.GenericEventTypeMetrics;
+import org.apache.hadoop.yarn.server.webproxy.DefaultAppReportFetcher;
 import org.apache.hadoop.yarn.webapp.WebAppException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -147,7 +149,7 @@ import java.lang.management.ThreadMXBean;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URL;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.security.SecureRandom;
 import java.util.ArrayList;
@@ -420,13 +422,17 @@ public class ResourceManager extends CompositeService
       String defaultFencingAuth =
           zkRootNodeUsername + ":" + zkRootNodePassword;
       byte[] defaultFencingAuthData =
-          defaultFencingAuth.getBytes(Charset.forName("UTF-8"));
+          defaultFencingAuth.getBytes(StandardCharsets.UTF_8);
       String scheme = new DigestAuthenticationProvider().getScheme();
       AuthInfo authInfo = new AuthInfo(scheme, defaultFencingAuthData);
       authInfos.add(authInfo);
     }
 
-    manager.start(authInfos);
+    boolean isSSLEnabled =
+        config.getBoolean(CommonConfigurationKeys.ZK_CLIENT_SSL_ENABLED,
+            config.getBoolean(YarnConfiguration.RM_ZK_CLIENT_SSL_ENABLED,
+                YarnConfiguration.DEFAULT_RM_ZK_CLIENT_SSL_ENABLED));
+    manager.start(authInfos, isSSLEnabled);
     return manager;
   }
 
@@ -1426,9 +1432,9 @@ public class ResourceManager extends CompositeService
     if(WebAppUtils.getResolvedRMWebAppURLWithoutScheme(conf).
         equals(proxyHostAndPort)) {
       if (HAUtil.isHAEnabled(conf)) {
-        fetcher = new AppReportFetcher(conf);
+        fetcher = new DefaultAppReportFetcher(conf);
       } else {
-        fetcher = new AppReportFetcher(conf, getClientRMService());
+        fetcher = new DefaultAppReportFetcher(conf, getClientRMService());
       }
       builder.withServlet(ProxyUriUtils.PROXY_SERVLET_NAME,
           ProxyUriUtils.PROXY_PATH_SPEC, WebAppProxyServlet.class);
@@ -1901,10 +1907,11 @@ public class ResourceManager extends CompositeService
     }
 
     if (scheduler instanceof MutableConfScheduler && isConfigurationMutable) {
-      YarnConfigurationStore confStore = YarnConfigurationStoreFactory
-          .getStore(conf);
-      confStore.initialize(conf, conf, rmContext);
-      confStore.format();
+      try (YarnConfigurationStore confStore = YarnConfigurationStoreFactory
+          .getStore(conf)) {
+        confStore.initialize(conf, conf, rmContext);
+        confStore.format();
+      }
     } else {
       System.out.println(String.format("Scheduler Configuration format only " +
           "supported by %s.", MutableConfScheduler.class.getSimpleName()));

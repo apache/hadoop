@@ -20,8 +20,9 @@ package org.apache.hadoop.fs.s3a;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
 
-import com.amazonaws.AmazonServiceException;
-import com.amazonaws.services.s3.AmazonS3;
+import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
+import software.amazon.awssdk.services.s3.S3Client;
 
 import java.net.URI;
 
@@ -32,6 +33,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.rules.ExpectedException;
 
+
 /**
  * Abstract base class for S3A unit tests using a mock S3 client and a null
  * metadata store.
@@ -39,17 +41,20 @@ import org.junit.rules.ExpectedException;
 public abstract class AbstractS3AMockTest {
 
   protected static final String BUCKET = "mock-bucket";
-  protected static final AmazonServiceException NOT_FOUND;
-  static {
-    NOT_FOUND = new AmazonServiceException("Not Found");
-    NOT_FOUND.setStatusCode(404);
-  }
+  protected static final AwsServiceException NOT_FOUND =
+      AwsServiceException.builder()
+          .message("Not Found")
+          .statusCode(404)
+          .awsErrorDetails(AwsErrorDetails.builder()
+              .errorCode("")
+              .build())
+          .build();
 
   @Rule
   public ExpectedException exception = ExpectedException.none();
 
   protected S3AFileSystem fs;
-  protected AmazonS3 s3;
+  protected S3Client s3;
 
   @Before
   public void setup() throws Exception {
@@ -59,10 +64,9 @@ public abstract class AbstractS3AMockTest {
     // unset S3CSE property from config to avoid pathIOE.
     conf.unset(Constants.S3_ENCRYPTION_ALGORITHM);
     fs.initialize(uri, conf);
-    s3 = fs.getAmazonS3ClientForTesting("mocking");
+    s3 = fs.getS3AInternals().getAmazonS3Client("mocking");
   }
 
-  @SuppressWarnings("deprecation")
   public Configuration createConfiguration() {
     Configuration conf = new Configuration();
     conf.setClass(S3_CLIENT_FACTORY_IMPL, MockS3ClientFactory.class,
@@ -75,7 +79,13 @@ public abstract class AbstractS3AMockTest {
     // assertions to be safely made without worrying
     // about any race conditions
     conf.setInt(ASYNC_DRAIN_THRESHOLD, Integer.MAX_VALUE);
+    // set the region to avoid the getBucketLocation on FS init.
+    conf.set(AWS_REGION, "eu-west-1");
     return conf;
+  }
+
+  public S3Client getS3Client() {
+    return s3;
   }
 
   @After

@@ -25,7 +25,7 @@ import java.io.PrintStream;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.nio.channels.WritableByteChannel;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
@@ -68,7 +68,7 @@ public final class LogToolUtils {
         .append("LogLastModifiedTime:" + lastModifiedTime + "\n")
         .append("LogLength:" + fileLength + "\n")
         .append("LogContents:\n");
-    return sb.toString().getBytes(Charset.forName("UTF-8"));
+    return sb.toString().getBytes(StandardCharsets.UTF_8);
   }
 
   /**

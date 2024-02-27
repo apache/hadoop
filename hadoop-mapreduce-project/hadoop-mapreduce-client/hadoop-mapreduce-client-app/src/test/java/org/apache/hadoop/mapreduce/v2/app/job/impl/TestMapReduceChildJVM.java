@@ -108,6 +108,7 @@ public class TestMapReduceChildJVM {
 
     MyMRApp app = new MyMRApp(0, 1, true, this.getClass().getName(), true);
     conf.setBoolean(MRConfig.MAPREDUCE_APP_SUBMISSION_CROSS_PLATFORM, true);
+    conf.setBoolean(MRJobConfig.MAPREDUCE_JVM_ADD_OPENS_JAVA_OPT, true);
     Job job = app.submit(conf);
     app.waitForState(job, JobState.SUCCEEDED);
     app.verifyCompleted();
@@ -123,7 +124,7 @@ public class TestMapReduceChildJVM {
         "[" + MRApps.crossPlatformify("JAVA_HOME") + "/bin/java" +
             " -Djava.net.preferIPv4Stack=true" +
             " -Dhadoop.metrics.log.level=WARN " +
-            "  -Xmx820m -Djava.io.tmpdir=" + MRApps.crossPlatformify("PWD") + "/tmp" +
+            "  -Xmx820m <ADD_OPENS> -Djava.io.tmpdir=" + MRApps.crossPlatformify("PWD") + "/tmp" +
             " -Dlog4j.configuration=container-log4j.properties" +
             " -Dyarn.app.container.log.dir=<LOG_DIR>" +
             " -Dyarn.app.container.log.filesize=0" +
@@ -149,7 +150,7 @@ public class TestMapReduceChildJVM {
   }
   
   @Test (timeout = 30000)
-  public void testCommandLineWithLog4JConifg() throws Exception {
+  public void testCommandLineWithLog4JConfig() throws Exception {
 
     MyMRApp app = new MyMRApp(1, 0, true, this.getClass().getName(), true);
     Configuration conf = new Configuration();

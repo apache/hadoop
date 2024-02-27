@@ -18,11 +18,16 @@
 
 package org.apache.hadoop.yarn.server.scheduler;
 
+import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.Set;
 
 /**
  * The scheduler key for a group of {@link ResourceRequest}.
@@ -31,6 +36,9 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
  * SchedulerRequestKey, then we can directly use that.
  */
 public class ResourceRequestSetKey extends SchedulerRequestKey {
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ResourceRequestSetKey.class);
 
   // More ResourceRequest key fields on top of SchedulerRequestKey
   private final Resource resource;
@@ -121,6 +129,46 @@ public class ResourceRequestSetKey extends SchedulerRequestKey {
       return ret;
     }
     return this.execType.compareTo(otherKey.execType);
+  }
+
+  /**
+   * Extract the corresponding ResourceRequestSetKey for an allocated container
+   * from a given set. Return null if not found.
+   *
+   * @param container the allocated container
+   * @param keys the set of keys to look from
+   * @return ResourceRequestSetKey
+   */
+  public static ResourceRequestSetKey extractMatchingKey(Container container,
+      Set<ResourceRequestSetKey> keys) {
+    ResourceRequestSetKey resourceRequestSetKey = new ResourceRequestSetKey(
+        container.getAllocationRequestId(), container.getPriority(),
+        container.getResource(), container.getExecutionType());
+    if (keys.contains(resourceRequestSetKey)) {
+      return resourceRequestSetKey;
+    }
+
+    if (container.getAllocationRequestId() > 0) {
+      // If no exact match, look for the one with the same (non-zero)
+      // allocationRequestId
+      for (ResourceRequestSetKey candidate : keys) {
+        if (candidate.getAllocationRequestId() == container.getAllocationRequestId()) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Using possible match for {} : {}", resourceRequestSetKey, candidate);
+          }
+          return candidate;
+        }
+      }
+    }
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("not match found for container {}.", container.getId());
+      for (ResourceRequestSetKey candidate : keys) {
+        LOG.debug("candidate set keys: {}.", candidate.toString());
+      }
+    }
+
+    return null;
   }
 
   @Override

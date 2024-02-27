@@ -105,6 +105,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -1218,9 +1219,9 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     FILE_STATUS_ATTR, GET_SNAPSHOT_DIFF, GET_SNAPSHOTTABLE_DIRECTORY_LIST,
     GET_SNAPSHOT_LIST, GET_SERVERDEFAULTS, CHECKACCESS, SETECPOLICY,
     SATISFYSTORAGEPOLICY, GET_SNAPSHOT_DIFF_LISTING, GETFILEBLOCKLOCATIONS,
-    GETFILELINKSTATUS, GETSTATUS, GETECPOLICIES
+    GETFILELINKSTATUS, GETSTATUS, GETECPOLICIES, GETECCODECS, GETTRASHROOTS
   }
-
+  @SuppressWarnings("methodlength")
   private void operation(Operation op) throws Exception {
     switch (op) {
     case GET:
@@ -1369,6 +1370,12 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       break;
     case GETECPOLICIES:
       testGetAllEEPolicies();
+      break;
+    case GETECCODECS:
+      testGetECCodecs();
+      break;
+    case GETTRASHROOTS:
+      testGetTrashRoots();
       break;
     }
   }
@@ -2144,6 +2151,93 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       //Validate erasureCodingPolicyInfos are the same as DistributedFileSystem
       assertEquals(dfsAllErasureCodingPolicies.size(), diffErasureCodingPolicies.size());
       assertTrue(dfsAllErasureCodingPolicies.containsAll(diffErasureCodingPolicies));
+    } else {
+      Assert.fail(fs.getClass().getSimpleName() + " is not of type DistributedFileSystem.");
+    }
+  }
+
+  private void testGetECCodecs() throws Exception {
+    if (isLocalFS()) {
+      // do not test the testGetECCodecs for local FS.
+      return;
+    }
+    final Path path = new Path("/foo");
+
+    FileSystem fs = FileSystem.get(path.toUri(), this.getProxiedFSConf());
+    LambdaTestUtils.intercept(AssertionError.class, () -> {
+      if (!(fs instanceof DistributedFileSystem)) {
+        throw new AssertionError(fs.getClass().getSimpleName() +
+            " is not of type DistributedFileSystem.");
+      }
+    });
+
+    DistributedFileSystem dfs =
+        (DistributedFileSystem) FileSystem.get(path.toUri(), this.getProxiedFSConf());
+    FileSystem httpFs = this.getHttpFSFileSystem();
+
+    Map<String, String> dfsErasureCodingCodecs = dfs.getAllErasureCodingCodecs();
+
+    final AtomicReference<Map<String, String>> diffErasureCodingCodecsRef =
+        new AtomicReference<>();
+    LambdaTestUtils.intercept(AssertionError.class, () -> {
+      if (httpFs instanceof HttpFSFileSystem) {
+        HttpFSFileSystem httpFSFileSystem = (HttpFSFileSystem) httpFs;
+        diffErasureCodingCodecsRef.set(httpFSFileSystem.getAllErasureCodingCodecs());
+      } else if (httpFs instanceof WebHdfsFileSystem) {
+        WebHdfsFileSystem webHdfsFileSystem = (WebHdfsFileSystem) httpFs;
+        diffErasureCodingCodecsRef.set(webHdfsFileSystem.getAllErasureCodingCodecs());
+      } else {
+        throw new AssertionError(httpFs.getClass().getSimpleName() +
+            " is not of type HttpFSFileSystem or WebHdfsFileSystem");
+      }
+    });
+    Map<String, String> diffErasureCodingCodecs = diffErasureCodingCodecsRef.get();
+
+    //Validate testGetECCodecs are the same as DistributedFileSystem
+    Assert.assertEquals(dfsErasureCodingCodecs.size(), diffErasureCodingCodecs.size());
+
+    for (Map.Entry<String, String> entry : dfsErasureCodingCodecs.entrySet()) {
+      String key = entry.getKey();
+      String value = entry.getValue();
+      Assert.assertTrue(diffErasureCodingCodecs.containsKey(key));
+      Assert.assertEquals(value, diffErasureCodingCodecs.get(key));
+    }
+  }
+
+  private void testGetTrashRoots() throws Exception {
+    if (isLocalFS()) {
+      // do not test the getAllEEPolicies for local FS.
+      return;
+    }
+    final Path path = new Path("/");
+    FileSystem fs = FileSystem.get(path.toUri(), this.getProxiedFSConf());
+    if (fs instanceof DistributedFileSystem) {
+      DistributedFileSystem dfs =
+          (DistributedFileSystem) FileSystem.get(path.toUri(), this.getProxiedFSConf());
+      FileSystem httpFs = this.getHttpFSFileSystem();
+
+      // Create trash root for user0
+      UserGroupInformation ugi = UserGroupInformation.createRemoteUser("user0");
+      String user0HomeStr = DFSUtilClient.getHomeDirectory(this.getProxiedFSConf(), ugi);
+      Path user0Trash = new Path(user0HomeStr, FileSystem.TRASH_PREFIX);
+      dfs.mkdirs(user0Trash);
+
+      Collection<FileStatus> dfsTrashRoots = dfs.getTrashRoots(true);
+      Collection<FileStatus> diffTrashRoots = null;
+
+      if (httpFs instanceof HttpFSFileSystem) {
+        HttpFSFileSystem httpFS = (HttpFSFileSystem) httpFs;
+        diffTrashRoots = httpFS.getTrashRoots(true);
+      } else if (httpFs instanceof WebHdfsFileSystem) {
+        WebHdfsFileSystem webHdfsFileSystem = (WebHdfsFileSystem) httpFs;
+        diffTrashRoots = webHdfsFileSystem.getTrashRoots(true);
+      } else {
+        Assert.fail(fs.getClass().getSimpleName() +
+            " is not of type HttpFSFileSystem or WebHdfsFileSystem");
+      }
+
+      // Validate getTrashRoots are the same as DistributedFileSystem
+      assertEquals(dfsTrashRoots.size(), diffTrashRoots.size());
     } else {
       Assert.fail(fs.getClass().getSimpleName() + " is not of type DistributedFileSystem.");
     }

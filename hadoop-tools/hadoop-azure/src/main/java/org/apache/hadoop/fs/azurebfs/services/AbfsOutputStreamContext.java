@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.util.concurrent.ExecutorService;
 
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.impl.BackReference;
 import org.apache.hadoop.fs.store.DataBlocks;
@@ -49,6 +50,8 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
   private int maxWriteRequestsToQueue;
 
   private AbfsLease lease;
+
+  private ContextEncryptionAdapter contextEncryptionAdapter;
 
   private DataBlocks.BlockFactory blockFactory;
 
@@ -193,6 +196,12 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
     return this;
   }
 
+  public AbfsOutputStreamContext withEncryptionAdapter(
+      final ContextEncryptionAdapter contextEncryptionAdapter) {
+    this.contextEncryptionAdapter = contextEncryptionAdapter;
+    return this;
+  }
+
   public int getWriteBufferSize() {
     return writeBufferSize;
   }
@@ -238,6 +247,10 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
       return null;
     }
     return this.lease.getLeaseID();
+  }
+
+  public ContextEncryptionAdapter getEncryptionAdapter() {
+    return contextEncryptionAdapter;
   }
 
   public DataBlocks.BlockFactory getBlockFactory() {
