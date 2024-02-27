@@ -745,7 +745,7 @@ class BPServiceActor implements Runnable {
             boolean isContaisHighPriorityCmd = false;
             if (cmds != null) {
               int length = cmds.length;
-              for (int iter = length - 1; iter >= 0 && iter >= length - 2; iter--) {
+              for (int iter = length - 1; iter >= 0 && !isContaisHighPriorityCmd; iter--) {
                 isContaisHighPriorityCmd = isContaisHighPriorityCmd || 
                     cmds[iter] instanceof KeyUpdateCommand;
               }
