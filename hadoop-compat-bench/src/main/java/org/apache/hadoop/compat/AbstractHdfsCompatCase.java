@@ -28,6 +28,7 @@ public abstract class AbstractHdfsCompatCase {
   private FileSystem fs;
   private HdfsCompatEnvironment env;
   private Path localPath;
+  private static final Random random = new Random();
 
   public AbstractHdfsCompatCase() {
   }
@@ -57,7 +58,7 @@ public abstract class AbstractHdfsCompatCase {
 
   public static Path getUniquePath(Path basePath) {
     return new Path(basePath, System.currentTimeMillis()
-        + "_" + new Random().nextLong());
+        + "_" + random.nextLong());
   }
 
   public Path makePath(String name) {

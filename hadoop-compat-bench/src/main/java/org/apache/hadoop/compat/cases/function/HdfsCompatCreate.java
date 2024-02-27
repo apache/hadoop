@@ -23,6 +23,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.junit.Assert;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
 
 @HdfsCompatCaseGroup(name = "Create")
@@ -97,7 +98,7 @@ public class HdfsCompatCreate extends AbstractHdfsCompatCase {
     try {
       FSDataOutputStreamBuilder builder = fs().createFile(file);
       out = builder.blockSize(1048576 * 2).build();
-      out.write("Hello World!".getBytes());
+      out.write("Hello World!".getBytes(StandardCharsets.UTF_8));
       out.close();
       out = null;
       Assert.assertTrue(fs().exists(file));

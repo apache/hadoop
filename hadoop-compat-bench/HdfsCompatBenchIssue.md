@@ -44,7 +44,7 @@ Accordingly, we propose to define a formal HCFS compatibility benchmark and prov
 to do the compatibility assessment for an HCFS storage system.
 The benchmark and tool should consider both HCFS interfaces and hdfs shell commands.
 Different scenarios require different kinds of compatibilities.
-For such consideration, we could define different suites in the benchmark. 
+For such consideration, we could define different suites in the benchmark.
 
 ## <a name="Benefits"></a> Benefits
 

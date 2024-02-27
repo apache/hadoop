@@ -1,5 +1,20 @@
 #!/bin/sh
 
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 ntest=1
 fname="$0"
 
@@ -13,10 +28,10 @@ prepare() {
     FAIL_FILE="${HADOOP_COMPAT_FAIL_FILE}"
     SKIP_FILE="${HADOOP_COMPAT_SKIP_FILE}"
 
-    baseDir="${BASE_URI}/${fname}"
-    localDir="${LOCAL_URI}/${fname}"
-    snapshotDir="${SNAPSHOT_URI}"
-    storagePolicy="${STORAGE_POLICY}"
+    export baseDir="${BASE_URI}/${fname}"
+    export localDir="${LOCAL_URI}/${fname}"
+    export snapshotDir="${SNAPSHOT_URI}"
+    export storagePolicy="${STORAGE_POLICY}"
     stdoutDir="${STDOUT_DIR}/${fname}/stdout"
     stderrDir="${STDOUT_DIR}/${fname}/stderr"
     mkdir -p "${stdoutDir}"
@@ -87,7 +102,6 @@ expect_lines() { (
     if should_skip "${stderr}"; then
         skip_case "${cname}"
     else
-        set -- ${lines}
         lineCount="0"
         while read -r line; do
             case "${line}" in
@@ -95,7 +109,8 @@ expect_lines() { (
                     continue
                     ;;
             esac
-            if ! echo "${line}" | grep -Eq '^'"${1}"'$'; then
+            selectedLine=$(expect_lines_select "${lines}" "${lineCount}")
+            if ! echo "${line}" | grep -Eq '^'"${selectedLine}"'$'; then
                 lineCount="-1"
                 break
             else
@@ -118,6 +133,18 @@ expect_lines_parse() {
         shift
         echo "${1}"
     done
+}
+
+expect_lines_select() {
+    lineSelector="0"
+    echo "${1}" | while read -r splittedLine; do
+        if [ "${lineSelector}" -eq "${2}" ]; then
+            echo "${splittedLine}"
+            return
+        fi
+        lineSelector=$((lineSelector + 1))
+    done
+    echo ""
 }
 
 is_hadoop_shell() {

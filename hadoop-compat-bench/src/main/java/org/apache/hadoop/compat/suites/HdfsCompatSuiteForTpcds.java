@@ -23,10 +23,6 @@ import org.apache.hadoop.compat.HdfsCompatSuite;
 import org.apache.hadoop.compat.cases.function.*;
 
 public class HdfsCompatSuiteForTpcds implements HdfsCompatSuite {
-  private static final Class<? extends AbstractHdfsCompatCase>[] API_CASES = new Class[]{
-      HdfsCompatTpcds.class
-  };
-
   @Override
   public String getSuiteName() {
     return "TPCDS";
@@ -34,7 +30,9 @@ public class HdfsCompatSuiteForTpcds implements HdfsCompatSuite {
 
   @Override
   public Class<? extends AbstractHdfsCompatCase>[] getApiCases() {
-    return API_CASES;
+    return new Class[]{
+        HdfsCompatTpcds.class
+    };
   }
 
   @Override

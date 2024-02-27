@@ -29,6 +29,7 @@ import java.util.Random;
 @HdfsCompatCaseGroup(name = "TPCDS")
 public class HdfsCompatTpcds extends AbstractHdfsCompatCase {
   private static final int fileLen = 8;
+  private static final Random random = new Random();
   private Path path = null;
 
   @HdfsCompatCasePrepare
@@ -53,7 +54,7 @@ public class HdfsCompatTpcds extends AbstractHdfsCompatCase {
   @HdfsCompatCase
   public void create() throws IOException {
     byte[] data = new byte[fileLen];
-    new Random().nextBytes(data);
+    random.nextBytes(data);
     try (FSDataOutputStream out = fs().create(path, true)) {
       out.write(data);
     }

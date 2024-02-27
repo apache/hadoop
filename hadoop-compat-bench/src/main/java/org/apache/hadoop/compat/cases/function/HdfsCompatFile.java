@@ -35,6 +35,7 @@ public class HdfsCompatFile extends AbstractHdfsCompatCase {
   private static final int fileLen = 128;
   private static final long blockSize = 1048576;
   private static final short replication = 1;
+  private static final Random random = new Random();
   private Path file = null;
 
   @HdfsCompatCasePrepare
@@ -109,7 +110,7 @@ public class HdfsCompatFile extends AbstractHdfsCompatCase {
 
   @HdfsCompatCase
   public void truncate() throws IOException, InterruptedException {
-    int newLen = new Random().nextInt(fileLen);
+    int newLen = random.nextInt(fileLen);
     boolean finished = fs().truncate(file, newLen);
     while (!finished) {
       Thread.sleep(1000);
@@ -121,8 +122,8 @@ public class HdfsCompatFile extends AbstractHdfsCompatCase {
 
   @HdfsCompatCase
   public void setOwner() throws Exception {
-    final String owner = "test_" + new Random().nextInt(1024);
-    final String group = "test_" + new Random().nextInt(1024);
+    final String owner = "test_" + random.nextInt(1024);
+    final String group = "test_" + random.nextInt(1024);
     final String privileged = getPrivilegedUser();
     UserGroupInformation.createRemoteUser(privileged).doAs(
         (PrivilegedExceptionAction<Void>) () -> {

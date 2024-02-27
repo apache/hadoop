@@ -1,3 +1,20 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.hadoop.compat;
 
 
@@ -11,8 +28,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -33,6 +50,7 @@ import java.util.Set;
 public class HdfsCompatShellScope {
   private static final Logger LOG =
       LoggerFactory.getLogger(HdfsCompatShellScope.class);
+  private static final Random random = new Random();
   private final HdfsCompatEnvironment env;
   private final HdfsCompatSuite suite;
   private File stdoutDir = null;
@@ -225,7 +243,7 @@ public class HdfsCompatShellScope {
       return defPolicyName;
     } else {
       return differentPolicies.get(
-          new Random().nextInt(differentPolicies.size()));
+          random.nextInt(differentPolicies.size()));
     }
   }
 
@@ -353,8 +371,8 @@ public class HdfsCompatShellScope {
 
   private List<String> readLines(File file) throws IOException {
     List<String> lines = new ArrayList<>();
-    try (BufferedReader br = new BufferedReader(
-        new FileReader(file))) {
+    try (BufferedReader br = new BufferedReader(new InputStreamReader(
+        new FileInputStream(file), StandardCharsets.UTF_8))) {
       String line = br.readLine();
       while (line != null) {
         lines.add(line);

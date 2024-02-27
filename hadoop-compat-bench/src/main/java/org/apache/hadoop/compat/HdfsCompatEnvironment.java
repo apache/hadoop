@@ -39,10 +39,10 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 public class HdfsCompatEnvironment {
-  private static final SimpleDateFormat dateFormat =
-      new SimpleDateFormat("yyyy_MM_dd_HH_mm_ss");
   private static final Logger LOG =
       LoggerFactory.getLogger(HdfsCompatEnvironment.class);
+  private static final String dateFormat = "yyyy_MM_dd_HH_mm_ss";
+  private static final Random random = new Random();
   private final Path uri;
   private final Configuration conf;
   private FileSystem fs;
@@ -61,7 +61,7 @@ public class HdfsCompatEnvironment {
     Date now = new Date();
     String uuid = UUID.randomUUID().toString();
     String uniqueDir = "hadoop-compatibility-benchmark/" +
-        dateFormat.format(now) + "/" + uuid;
+        new SimpleDateFormat(dateFormat).format(now) + "/" + uuid;
 
     this.fs = uri.getFileSystem(conf);
     this.localFs = FileSystem.getLocal(conf);
@@ -113,7 +113,7 @@ public class HdfsCompatEnvironment {
     final String key = "fs." + scheme + ".compatibility.storage.policies";
     final String storagePolicies = conf.get(key, null);
     return (storagePolicies != null) ? storagePolicies.split(",") :
-        defaultStoragePolicyNames;
+        defaultStoragePolicyNames.clone();
   }
 
   public String getDelegationTokenRenewer() {
@@ -135,7 +135,7 @@ public class HdfsCompatEnvironment {
       return null;
     }
     final String tmpDir = validDirs.get(
-        new Random().nextInt(validDirs.size()));
+        random.nextInt(validDirs.size()));
     return new File(tmpDir).getAbsolutePath();
   }
 

@@ -33,6 +33,7 @@ import java.util.Random;
 public class HdfsCompatUtil {
   private static final Logger LOG =
       LoggerFactory.getLogger(HdfsCompatUtil.class);
+  private static final Random random = new Random();
 
   public static void checkImplementation(ImplementationFunction func) {
     try {
@@ -67,10 +68,9 @@ public class HdfsCompatUtil {
         bufferSize, replication, blockSize)) {
       if (fileLen > 0) {
         byte[] toWrite = new byte[bufferSize];
-        Random rb = new Random();
         long bytesToWrite = fileLen;
         while (bytesToWrite > 0) {
-          rb.nextBytes(toWrite);
+          random.nextBytes(toWrite);
           int bytesToWriteNext = (bufferSize < bytesToWrite) ?
               bufferSize : (int) bytesToWrite;
           out.write(toWrite, 0, bytesToWriteNext);

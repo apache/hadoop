@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.Path;
 import org.junit.Assert;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -45,7 +46,7 @@ public class HdfsCompatXAttr extends AbstractHdfsCompatCase {
   @HdfsCompatCase
   public void setXAttr() throws IOException {
     final String key = "user.key";
-    final byte[] value = "value".getBytes();
+    final byte[] value = "value".getBytes(StandardCharsets.UTF_8);
     fs().setXAttr(file, key, value);
     Map<String, byte[]> attrs = fs().getXAttrs(file);
     Assert.assertArrayEquals(value, attrs.getOrDefault(key, new byte[0]));
@@ -54,7 +55,7 @@ public class HdfsCompatXAttr extends AbstractHdfsCompatCase {
   @HdfsCompatCase
   public void getXAttr() throws IOException {
     final String key = "user.key";
-    final byte[] value = "value".getBytes();
+    final byte[] value = "value".getBytes(StandardCharsets.UTF_8);
     fs().setXAttr(file, key, value);
     byte[] attr = fs().getXAttr(file, key);
     Assert.assertArrayEquals(value, attr);
@@ -62,20 +63,24 @@ public class HdfsCompatXAttr extends AbstractHdfsCompatCase {
 
   @HdfsCompatCase
   public void getXAttrs() throws IOException {
-    fs().setXAttr(file, "user.key1", "value1".getBytes());
-    fs().setXAttr(file, "user.key2", "value2".getBytes());
+    fs().setXAttr(file, "user.key1",
+        "value1".getBytes(StandardCharsets.UTF_8));
+    fs().setXAttr(file, "user.key2",
+        "value2".getBytes(StandardCharsets.UTF_8));
     List<String> keys = new ArrayList<>();
     keys.add("user.key1");
     Map<String, byte[]> attrs = fs().getXAttrs(file, keys);
     Assert.assertEquals(1, attrs.size());
     byte[] attr = attrs.getOrDefault("user.key1", new byte[0]);
-    Assert.assertArrayEquals("value1".getBytes(), attr);
+    Assert.assertArrayEquals("value1".getBytes(StandardCharsets.UTF_8), attr);
   }
 
   @HdfsCompatCase
   public void listXAttrs() throws IOException {
-    fs().setXAttr(file, "user.key1", "value1".getBytes());
-    fs().setXAttr(file, "user.key2", "value2".getBytes());
+    fs().setXAttr(file, "user.key1",
+        "value1".getBytes(StandardCharsets.UTF_8));
+    fs().setXAttr(file, "user.key2",
+        "value2".getBytes(StandardCharsets.UTF_8));
     List<String> names = fs().listXAttrs(file);
     Assert.assertEquals(2, names.size());
     Assert.assertTrue(names.contains("user.key1"));
@@ -84,8 +89,10 @@ public class HdfsCompatXAttr extends AbstractHdfsCompatCase {
 
   @HdfsCompatCase
   public void removeXAttr() throws IOException {
-    fs().setXAttr(file, "user.key1", "value1".getBytes());
-    fs().setXAttr(file, "user.key2", "value2".getBytes());
+    fs().setXAttr(file, "user.key1",
+        "value1".getBytes(StandardCharsets.UTF_8));
+    fs().setXAttr(file, "user.key2",
+        "value2".getBytes(StandardCharsets.UTF_8));
     fs().removeXAttr(file, "user.key1");
     List<String> names = fs().listXAttrs(file);
     Assert.assertEquals(1, names.size());

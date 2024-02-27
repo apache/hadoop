@@ -24,33 +24,6 @@ import org.apache.hadoop.compat.cases.implement.*;
 import org.apache.hadoop.compat.cases.function.*;
 
 public class HdfsCompatSuiteForAll implements HdfsCompatSuite {
-  private static final Class<? extends AbstractHdfsCompatCase>[] API_CASES = new Class[]{
-      HdfsCompatFileSystemImpl.class,
-      HdfsCompatAcl.class,
-      HdfsCompatCreate.class,
-      HdfsCompatDirectory.class,
-      HdfsCompatFile.class,
-      HdfsCompatLocal.class,
-      HdfsCompatServer.class,
-      HdfsCompatSnapshot.class,
-      HdfsCompatStoragePolicy.class,
-      HdfsCompatSymlink.class,
-      HdfsCompatXAttr.class,
-  };
-
-  private static final String[] SHELL_CASES = new String[]{
-      "modification.t",
-      "fileinfo.t",
-      "read.t",
-      "remove.t",
-      "attr.t",
-      "copy.t",
-      "move.t",
-      "concat.t",
-      "snapshot.t",
-      "storagePolicy.t",
-  };
-
   @Override
   public String getSuiteName() {
     return "ALL";
@@ -58,11 +31,34 @@ public class HdfsCompatSuiteForAll implements HdfsCompatSuite {
 
   @Override
   public Class<? extends AbstractHdfsCompatCase>[] getApiCases() {
-    return API_CASES;
+    return new Class[]{
+        HdfsCompatFileSystemImpl.class,
+        HdfsCompatAcl.class,
+        HdfsCompatCreate.class,
+        HdfsCompatDirectory.class,
+        HdfsCompatFile.class,
+        HdfsCompatLocal.class,
+        HdfsCompatServer.class,
+        HdfsCompatSnapshot.class,
+        HdfsCompatStoragePolicy.class,
+        HdfsCompatSymlink.class,
+        HdfsCompatXAttr.class,
+    };
   }
 
   @Override
   public String[] getShellCases() {
-    return SHELL_CASES;
+    return new String[]{
+        "modification.t",
+        "fileinfo.t",
+        "read.t",
+        "remove.t",
+        "attr.t",
+        "copy.t",
+        "move.t",
+        "concat.t",
+        "snapshot.t",
+        "storagePolicy.t",
+    };
   }
 }

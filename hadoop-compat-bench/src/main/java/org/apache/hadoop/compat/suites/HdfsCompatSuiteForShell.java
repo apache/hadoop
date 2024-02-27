@@ -22,19 +22,6 @@ import org.apache.hadoop.compat.AbstractHdfsCompatCase;
 import org.apache.hadoop.compat.HdfsCompatSuite;
 
 public class HdfsCompatSuiteForShell implements HdfsCompatSuite {
-  private static final String[] SHELL_CASES = new String[]{
-      "modification.t",
-      "fileinfo.t",
-      "read.t",
-      "remove.t",
-      "attr.t",
-      "copy.t",
-      "move.t",
-      "concat.t",
-      "snapshot.t",
-      "storagePolicy.t",
-  };
-
   @Override
   public String getSuiteName() {
     return "Shell";
@@ -47,6 +34,17 @@ public class HdfsCompatSuiteForShell implements HdfsCompatSuite {
 
   @Override
   public String[] getShellCases() {
-    return SHELL_CASES;
+    return new String[]{
+        "modification.t",
+        "fileinfo.t",
+        "read.t",
+        "remove.t",
+        "attr.t",
+        "copy.t",
+        "move.t",
+        "concat.t",
+        "snapshot.t",
+        "storagePolicy.t",
+    };
   }
 }

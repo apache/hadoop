@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
 
@@ -205,8 +206,9 @@ public class HdfsCompatibility extends Configured implements Tool {
     printOut(shortMessage);
 
     if (out != null) {
-      out.write(shortMessage.getBytes());
-      BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(out));
+      out.write(shortMessage.getBytes(StandardCharsets.UTF_8));
+      BufferedWriter writer = new BufferedWriter(
+          new OutputStreamWriter(out, StandardCharsets.UTF_8));
       writer.newLine();
       writer.write("PASSED CASES:");
       writer.newLine();

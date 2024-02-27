@@ -34,6 +34,7 @@ import java.util.Random;
 public class HdfsCompatStoragePolicy extends AbstractHdfsCompatCase {
   private static final Logger LOG =
       LoggerFactory.getLogger(HdfsCompatStoragePolicy.class);
+  private static final Random random = new Random();
   private Path dir;
   private Path file;
   private String[] policies;
@@ -66,7 +67,7 @@ public class HdfsCompatStoragePolicy extends AbstractHdfsCompatCase {
       this.policyName = defaultPolicyName;
     } else {
       this.policyName = differentPolicies.get(
-          new Random().nextInt(differentPolicies.size()));
+          random.nextInt(differentPolicies.size()));
     }
   }
 

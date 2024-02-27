@@ -30,6 +30,7 @@ import java.util.Random;
 @HdfsCompatCaseGroup(name = "Local")
 public class HdfsCompatLocal extends AbstractHdfsCompatCase {
   private static final int fileLen = 128;
+  private static final Random random = new Random();
   private LocalFileSystem localFs;
   private Path localBasePath;
   private Path localSrc;
@@ -51,7 +52,7 @@ public class HdfsCompatLocal extends AbstractHdfsCompatCase {
   @HdfsCompatCasePrepare
   public void prepare() throws IOException {
     final String unique = System.currentTimeMillis()
-        + "_" + new Random().nextLong() + "/";
+        + "_" + random.nextLong() + "/";
     this.localSrc = new Path(localBasePath, unique + "src");
     this.localDst = new Path(localBasePath, unique + "dst");
     this.src = new Path(getBasePath(), unique + "src");

@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 
 import java.io.IOException;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -608,7 +609,8 @@ public class HdfsCompatFileSystemImpl extends AbstractHdfsCompatCase {
   @HdfsCompatCase
   public void setXAttr() {
     HdfsCompatUtil.checkImplementation(() ->
-        fs().setXAttr(makePath("file"), "test-xattr", "test-value".getBytes())
+        fs().setXAttr(makePath("file"), "test-xattr",
+            "test-value".getBytes(StandardCharsets.UTF_8))
     );
   }
 
