@@ -1859,10 +1859,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return this.fsLock.getReadHoldCount();
   }
 
-  public int getWriteHoldCount() {
-    return this.fsLock.getWriteHoldCount();
-  }
-
   /** Lock the checkpoint lock */
   public void cpLock() {
     this.cpLock.lock();
