@@ -72,6 +72,9 @@ public class AbfsConnectionManager implements HttpClientConnectionManager {
       final Object newState,
       final long validDuration,
       final TimeUnit timeUnit) {
+    if(validDuration == 0) {
+      return;
+    }
     if(conn.isOpen() && conn instanceof AbfsConnFactory.AbfsApacheHttpConnection) {
       HttpRoute route = ((AbfsConnFactory.AbfsApacheHttpConnection) conn).httpRoute;
       if(route != null) {
