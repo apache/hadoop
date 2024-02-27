@@ -1501,7 +1501,8 @@ class BPServiceActor implements Runnable {
       }
       ((LinkedBlockingDeque<Runnable>) queue).putFirst(
           () -> processCommand(new DatanodeCommand[]{cmd}));
-      LOG.info("Enque command: {} to the head of queue", cmd);
+
+      LOG.info("Enqueue command: {} to the head of queue", cmd);
       dn.getMetrics().incrActorCmdQueueLength(1);
     }
 
