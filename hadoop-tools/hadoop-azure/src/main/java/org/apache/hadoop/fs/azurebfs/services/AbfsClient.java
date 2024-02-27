@@ -311,8 +311,6 @@ public class AbfsClient implements Closeable {
     final AbfsUriQueryBuilder abfsUriQueryBuilder = new AbfsUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE, FILESYSTEM);
 
-    appendSASTokenToQuery(ROOT_PATH, SASTokenProvider.CREATE_FILESYSTEM_OPERATION, abfsUriQueryBuilder);
-
     final URL url = createRequestUrl(abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = getAbfsRestOperation(
         AbfsRestOperationType.CreateFileSystem,
@@ -334,8 +332,6 @@ public class AbfsClient implements Closeable {
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE, FILESYSTEM);
-
-    appendSASTokenToQuery(ROOT_PATH, SASTokenProvider.SET_FILESYSTEM_PROPERTIES_OPERATIONS, abfsUriQueryBuilder);
 
     final URL url = createRequestUrl(abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = getAbfsRestOperation(
@@ -377,8 +373,6 @@ public class AbfsClient implements Closeable {
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE, FILESYSTEM);
 
-    appendSASTokenToQuery(ROOT_PATH, SASTokenProvider.GET_FILESYSTEM_PROPERTIES_OPERATIONS, abfsUriQueryBuilder);
-
     final URL url = createRequestUrl(abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = getAbfsRestOperation(
             AbfsRestOperationType.GetFileSystemProperties,
@@ -394,8 +388,6 @@ public class AbfsClient implements Closeable {
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE, FILESYSTEM);
-
-    appendSASTokenToQuery(ROOT_PATH, SASTokenProvider.DELETE_FILESYSTEM_OPERATION, abfsUriQueryBuilder);
 
     final URL url = createRequestUrl(abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = getAbfsRestOperation(
@@ -1297,22 +1289,6 @@ public class AbfsClient implements Closeable {
   }
 
   /**
-   * Chooses between the SAS token provided by SASTokeProvider class and the configured fixed SAS token.
-   * Preference given to SASTokenProvider implementation to generate the SAS.
-   * If SASTokenProvider is null, returns the fixed SAS Token configured.
-   * @param operation
-   * @param path
-   * @return sasToken
-   * @throws IOException
-   */
-  private String chooseSASToken(String operation, String path) throws IOException {
-    if (sasTokenProvider == null) {
-      return abfsConfiguration.get(ConfigurationKeys.FS_AZURE_SAS_FIXED_TOKEN);
-    }
-    return sasTokenProvider.getSASToken(this.accountName, this.filesystem, path, operation);
-  }
-
-  /**
    * If configured for SAS AuthType, appends SAS token to queryBuilder.
    * @param path
    * @param operation
@@ -1343,7 +1319,8 @@ public class AbfsClient implements Closeable {
       try {
         LOG.trace("Fetch SAS token for {} on {}", operation, path);
         if (cachedSasToken == null) {
-          sasToken = chooseSASToken(operation, path);
+          sasToken = sasTokenProvider.getSASToken(this.accountName,
+              this.filesystem, path, operation);
           if ((sasToken == null) || sasToken.isEmpty()) {
             throw new UnsupportedOperationException("SASToken received is empty or null");
           }

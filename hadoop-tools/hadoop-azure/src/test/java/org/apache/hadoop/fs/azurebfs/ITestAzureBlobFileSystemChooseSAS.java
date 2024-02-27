@@ -18,7 +18,9 @@
 package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
+import java.nio.file.AccessDeniedException;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
 
@@ -29,29 +31,29 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.SASTokenProviderExcept
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.TokenAccessProviderException;
 import org.apache.hadoop.fs.azurebfs.extensions.MockDelegationSASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
+import org.apache.hadoop.fs.azurebfs.services.FixedSASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.utils.AccountSASGenerator;
 import org.apache.hadoop.fs.azurebfs.utils.Base64;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PATH;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_SAS_FIXED_TOKEN;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_SAS_TOKEN_PROVIDER_TYPE;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
- * Tests to validate the choice between using a SASTokenProvider to generate
- * a SAS or using a Fixed SAS Token configured by user.
+ * Tests to validate the choice between using a custom SASTokenProvider
+ * implementation and FixedSASTokenProvider.
  */
 public class ITestAzureBlobFileSystemChooseSAS extends AbstractAbfsIntegrationTest{
 
   private String accountSAS = null;
 
-
   /**
-   * To differentiate which config was used we will use different type of SAS Tokens.
-   * For Fixed SAS Token we will use an Account SAS with permissions to do File system level operations.
-   * For SASTokenProvider we will use a User Delegation SAS Token Provider
-   * such that File System level operations are not permitted.
-   */
+   * To differentiate which SASTokenProvider was used we will use different type of SAS Tokens.
+   * FixedSASTokenProvider will return an Account SAS with only read permissions.
+   * SASTokenProvider will return a User Delegation SAS Token with both read and write permissions.
+=   */
   public ITestAzureBlobFileSystemChooseSAS() throws Exception {
     // SAS Token configured might not have permissions for creating file system.
     // Shared Key must be configured to create one. Once created, a new instance
@@ -66,7 +68,7 @@ public class ITestAzureBlobFileSystemChooseSAS extends AbstractAbfsIntegrationTe
     generateAccountSAS();  }
 
   /**
-   * Generates a Account SAS Token using the Account Shared Key to be used as a fixed SAS Token.
+   * Generates an Account SAS Token using the Account Shared Key to be used as a fixed SAS Token.
    * This will be used by individual tests to set in the configurations.
    * @throws AzureBlobFileSystemException
    */
@@ -77,8 +79,8 @@ public class ITestAzureBlobFileSystemChooseSAS extends AbstractAbfsIntegrationTe
   }
 
   /**
-   * Tests the scenario where both the SASTokenProvider and a fixed SAS token are configured.
-   * SASTokenProvider class should be chosen and User Delegation SAS should be used.
+   * Tests the scenario where both the custom SASTokenProvider and a fixed SAS token are configured.
+   * Custom implementation of SASTokenProvider class should be chosen and User Delegation SAS should be used.
    * @throws Exception
    */
   @Test
@@ -97,16 +99,16 @@ public class ITestAzureBlobFileSystemChooseSAS extends AbstractAbfsIntegrationTe
     // Creating a new file system with updated configs.
     try (AzureBlobFileSystem newTestFs = (AzureBlobFileSystem)
         FileSystem.newInstance(testAbfsConfig.getRawConfiguration())) {
-      TracingContext tracingContext = getTestTracingContext(newTestFs, true);
 
-      // Asserting that filesystem level operations fails with User Delegation SAS.
-      intercept(SASTokenProviderException.class, () -> {
-            newTestFs.getAbfsStore().getFilesystemProperties(tracingContext);
-          });
+      // Asserting that MockDelegationSASTokenProvider is used.
+      Assertions.assertThat(testAbfsConfig.getSASTokenProvider())
+          .describedAs("Custom SASTokenProvider Class must be used")
+          .isInstanceOf(MockDelegationSASTokenProvider.class);
 
-      // Asserting that User delegation SAS token is otherwise valid and blob level operations succeed.
-      Path testPath = new Path("/testCorrectSASToken");
+      // Assert that User Delegation SAS is used and both read and write operations are permitted.
+      Path testPath = path(getMethodName());
       newTestFs.create(testPath).close();
+      newTestFs.open(testPath).close();
     }
   }
 
@@ -128,11 +130,18 @@ public class ITestAzureBlobFileSystemChooseSAS extends AbstractAbfsIntegrationTe
     try (AzureBlobFileSystem newTestFs = (AzureBlobFileSystem)
         FileSystem.newInstance(testAbfsConfig.getRawConfiguration())) {
 
-      // Asserting that account SAS is used as both filesystem and blob level operations succeed.
-      newTestFs.getFileStatus(new Path("/"));
-      Path testPath = new Path("/testCorrectSASToken");
-      newTestFs.create(testPath).close();
-      newTestFs.delete(new Path("/"), true);
+      // Asserting that FixedSASTokenProvider is used.
+      Assertions.assertThat(testAbfsConfig.getSASTokenProvider())
+          .describedAs("Custom SASTokenProvider Class must be used")
+          .isInstanceOf(FixedSASTokenProvider.class);
+
+      // Assert that Account SAS is used and only read operations are permitted.
+      Path testPath = path(getMethodName());
+      intercept(AccessDeniedException.class, () -> {
+        newTestFs.create(testPath);
+      });
+      // Read Operation is permitted
+      newTestFs.getFileStatus(new Path(ROOT_PATH));
     }
   }
 

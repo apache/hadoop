@@ -315,6 +315,8 @@ driven by them.
 4. Using Shared Access Signature (SAS) tokens provided by a custom implementation of the SASTokenProvider interface.
 5. By directly configuring a fixed Shared Access Signature (SAS) token in the account configuration settings files.
 
+SAS Based Authentication should be used only with HNS Enabled accounts. Non-HNS Accounts, Does not work with any of the SAS Based Authentications.
+
 What can be changed is what secrets/credentials are used to authenticate the caller.
 
 The authentication mechanism is set in `fs.azure.account.auth.type` (or the
@@ -624,7 +626,8 @@ tokens by implementing the SASTokenProvider interface.
 
 The declared class must implement `org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider`.
 
-*Note:* When using a token provider implementation that provides a User Delegation SAS Token or Service SAS Token, some operations may be out of scope and may fail.
+*Note:* When using a token provider implementation that provides a User Delegation SAS Token or Service SAS Token, some operations may be out of scope and may fail.<br>
+Also, SAS Token Based Authentication is recommended to be used only for HNS-Enabled Accounts. Some operations might fail for Non-HNS Accounts.
 
 ### Fixed Shared Access Signature (SAS) Token
 

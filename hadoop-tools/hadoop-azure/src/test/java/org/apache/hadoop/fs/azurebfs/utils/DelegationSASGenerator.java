@@ -93,11 +93,6 @@ public class DelegationSASGenerator extends SASGenerator {
       case SASTokenProvider.SET_OWNER_OPERATION:
         sp = "o";
         break;
-      // File System Level Operations are not permitted by this user delegation SAS
-      case SASTokenProvider.CREATE_FILESYSTEM_OPERATION:
-      case SASTokenProvider.GET_FILESYSTEM_PROPERTIES_OPERATIONS:
-      case SASTokenProvider.SET_FILESYSTEM_PROPERTIES_OPERATIONS:
-      case SASTokenProvider.DELETE_FILESYSTEM_OPERATION:
       default:
         throw new IllegalArgumentException(operation);
     }
