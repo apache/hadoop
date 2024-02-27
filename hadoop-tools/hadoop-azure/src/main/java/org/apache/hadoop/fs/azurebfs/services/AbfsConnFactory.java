@@ -29,22 +29,6 @@ public class AbfsConnFactory extends ManagedHttpClientConnectionFactory {
     private final ManagedHttpClientConnection httpClientConnection;
     public final HttpRoute httpRoute;
 
-    private final static Stack<ManagedHttpClientConnection> stack = new Stack<>();
-    private final static Thread thread;
-
-    static {
-      thread = new Thread(() -> {
-        while(true) {
-          if(!stack.empty()) {
-            try {
-              stack.pop().close();
-            } catch (IOException ex) {}
-          }
-        }
-      });
-      thread.start();
-    }
-
     public AbfsApacheHttpConnection(ManagedHttpClientConnection conn,
         final HttpRoute route) {
       this.httpClientConnection = conn;
@@ -53,7 +37,7 @@ public class AbfsConnFactory extends ManagedHttpClientConnectionFactory {
 
     @Override
     public void close() throws IOException {
-      stack.push(httpClientConnection);
+      httpClientConnection.close();
     }
 
     @Override
