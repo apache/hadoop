@@ -85,8 +85,12 @@ public class AbfsConnectionManager implements HttpClientConnectionManager {
       final HttpRoute route,
       final int connectTimeout,
       final HttpContext context) throws IOException {
+    long start = System.currentTimeMillis();
     connectionOperator.connect((ManagedHttpClientConnection) conn, route.getTargetHost(), route.getLocalSocketAddress(),
         connectTimeout, SocketConfig.DEFAULT, context);
+    if(context instanceof AbfsApacheHttpClient.AbfsHttpClientContext) {
+      ((AbfsApacheHttpClient.AbfsHttpClientContext)context).connectTime = (System.currentTimeMillis() - start);
+    }
   }
 
   @Override
