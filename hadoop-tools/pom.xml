@@ -52,6 +52,7 @@
     <module>hadoop-aliyun</module>
     <module>hadoop-fs2img</module>
     <module>hadoop-benchmark</module>
+    <module>hadoop-compat-bench</module>
   </modules>
 
   <build>
