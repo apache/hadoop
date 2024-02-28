@@ -36,7 +36,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
-import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.server.common.HttpGetFailedException;
 import org.apache.hadoop.hdfs.server.namenode.FSImage;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
@@ -218,7 +217,7 @@ public class TestBootstrapStandby {
     // Start rolling upgrade
     fs.rollingUpgrade(RollingUpgradeAction.PREPARE);
     LambdaTestUtils.await(60000, 1000, () ->
-       fs.rollingUpgrade(RollingUpgradeAction.QUERY).createdRollbackImages());
+        fs.rollingUpgrade(RollingUpgradeAction.QUERY).createdRollbackImages());
     // After the rollback image is created the standby is not needed
     cluster.shutdownNameNode(1);
     removeStandbyNameDirs();
@@ -247,8 +246,8 @@ public class TestBootstrapStandby {
     long expectedCheckpointTxId = NameNodeAdapter.getNamesystem(nn0)
         .getFSImage().getMostRecentCheckpointTxId();
     long expectedRollbackTxId = NameNodeAdapter.getNamesystem(nn0)
-       .getFSImage().getMostRecentNameNodeFileTxId(
-           NNStorage.NameNodeFile.IMAGE_ROLLBACK);
+        .getFSImage().getMostRecentNameNodeFileTxId(
+            NNStorage.NameNodeFile.IMAGE_ROLLBACK);
     assertEquals(11, expectedCheckpointTxId);
 
     for (int i = 1; i < maxNNCount; i++) {
