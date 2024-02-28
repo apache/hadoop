@@ -81,6 +81,7 @@ public class BlockTokenSecretManager extends
   private final Map<Integer, BlockKey> allKeys;
   private String blockPoolId;
   private final String encryptionAlgorithm;
+  private final int nnIndex;
 
   private final int intRange;
   private final int nnRangeStart;
@@ -148,6 +149,7 @@ public class BlockTokenSecretManager extends
     this.allKeys = new HashMap<Integer, BlockKey>();
     this.blockPoolId = blockPoolId;
     this.encryptionAlgorithm = encryptionAlgorithm;
+    this.nnIndex = nnIndex;
     this.useProto = useProto;
     this.shouldWrapQOP = shouldWrapQOP;
     this.timer = new Timer();
@@ -226,7 +228,7 @@ public class BlockTokenSecretManager extends
     if (isMaster || exportedKeys == null) {
       return;
     }
-    LOG.info("Setting block keys. BlockPool = {} .", blockPoolId);
+    LOG.info("Setting block keys. BlockPool = {} . NamenodeIndex = {} .", blockPoolId, nnIndex);
     removeExpiredKeys();
     this.currentKey = exportedKeys.getCurrentKey();
     BlockKey[] receivedKeys = exportedKeys.getAllKeys();
