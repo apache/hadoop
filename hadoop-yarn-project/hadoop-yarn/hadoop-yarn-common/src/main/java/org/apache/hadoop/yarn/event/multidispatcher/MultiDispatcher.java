@@ -18,11 +18,10 @@
 
 package org.apache.hadoop.yarn.event.multidispatcher;
 
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.List;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,80 +34,73 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.Event;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.metrics.DispatcherEventMetrics;
+import org.apache.hadoop.yarn.metrics.DispatcherEventMetricsImpl;
+import org.apache.hadoop.yarn.metrics.DispatcherEventMetricsNoOps;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.MonotonicClock;
 
 /**
  * Dispatches {@link Event}s in a parallel thread.
  * The {@link Dispatcher#getEventHandler()} method can be used to post an event to the dispatcher.
- * The posted event will be added to the event queue what is polled by many thread,
- * based on the config values in the {@link MultiDispatcherConfig}.
- * The posted events can be parallel executed,
- * if the result of the {@link Event#getLockKey()} is different between 2 event.
- * If the method return with null, then a global semaphore will be used for these events.
- * The method usually returns with the applicationId based on the concept
- * parallel apps should not affect each others.
- * The locking logic is implemented in {@link MultiDispatcherLocks}.
- * The Dispatcher provides metric data using the {@link DispatcherEventMetrics}
+ * The posted event will be separated based on the hashcode of the {@link Event#getLockKey()}.
+ * The {@link MultiDispatcherConfig} contains the information,
+ * how many thread will be used, for parallel execution.
+ * The {@link MultiDispatcherExecutor} contains the worker threads, which handle the events.
+ * The {@link MultiDispatcherLibrary} contains the information,
+ * how to pair event types with {@link EventHandler}s
+ * The Dispatcher provides metric data using the {@link DispatcherEventMetricsImpl}.
  */
 public class MultiDispatcher extends AbstractService implements Dispatcher {
 
-  private final Logger LOG;
+  private final Logger log;
   private final String dispatcherName;
-  private final DispatcherEventMetrics metrics;
-  private final MultiDispatcherLocks locks;
   private final MultiDispatcherLibrary library;
   private final Clock clock = new MonotonicClock();
 
-  private MultiDispatcherConfig config;
-  private BlockingQueue<Runnable> eventQueue;
-  private ThreadPoolExecutor threadPoolExecutor;
+  private MultiDispatcherExecutor workerExecutor;
   private ScheduledThreadPoolExecutor monitorExecutor;
+  private DispatcherEventMetrics metrics;
 
   public MultiDispatcher(String dispatcherName) {
     super("Dispatcher");
     this.dispatcherName = dispatcherName.replaceAll(" ", "-").toLowerCase();
-    this.LOG = LoggerFactory.getLogger(MultiDispatcher.class.getCanonicalName() + "." + this.dispatcherName);
-    this.metrics = new DispatcherEventMetrics(this.dispatcherName);
-    this.locks = new MultiDispatcherLocks(this.LOG);
+    this.log = LoggerFactory.getLogger(MultiDispatcher.class.getCanonicalName() + "." + this.dispatcherName);
+    this.metrics = new DispatcherEventMetricsImpl(this.dispatcherName);
     this.library = new MultiDispatcherLibrary();
   }
 
   @Override
   protected void serviceInit(Configuration conf) throws Exception{
     super.serviceInit(conf);
-    this.config = new MultiDispatcherConfig(getConfig(), dispatcherName);
-    this.eventQueue = new LinkedBlockingQueue<>(config.getQueueSize());
-    createWorkerPool();
-    createMonitorThread();
-    DefaultMetricsSystem.instance().register(
-        "Event metrics for " +  dispatcherName,
-        "Event metrics for " +  dispatcherName,
-        metrics
-    );
+    MultiDispatcherConfig config = new MultiDispatcherConfig(getConfig(), dispatcherName);
+    workerExecutor = new MultiDispatcherExecutor(log, config, dispatcherName);
+    createMonitorThread(config);
+    if (config.getMetricsEnabled()) {
+      metrics = new DispatcherEventMetricsImpl(dispatcherName);
+      DefaultMetricsSystem.instance().register(
+          "Event metrics for " +  dispatcherName,
+          "Event metrics for " +  dispatcherName,
+          metrics
+      );
+    } else {
+      metrics = new DispatcherEventMetricsNoOps(log);
+    }
   }
 
   @Override
   protected void serviceStop() throws Exception {
-    if (monitorExecutor != null) {
-      monitorExecutor.shutdownNow();
-    }
-    threadPoolExecutor.shutdown();
-    threadPoolExecutor.awaitTermination(config.getGracefulStopSeconds(), TimeUnit.SECONDS);
-    int terminatedSize = threadPoolExecutor.shutdownNow().size();
-    if (0 < terminatedSize) {
-      LOG.error("{} tasks not finished in time, so they were terminated", terminatedSize);
-    }
+    workerExecutor.stop();
   }
 
   @Override
   public EventHandler getEventHandler() {
     return event -> {
       if (isInState(STATE.STOPPED)) {
-        LOG.warn("Discard event {} because stopped state", event);
+        log.warn("Discard event {} because stopped state", event);
       } else {
         EventHandler handler = library.getEventHandler(event);
-        threadPoolExecutor.execute(createRunnable(event, handler));
+        Runnable runnable = createRunnable(event, handler);
+        workerExecutor.execute(event, runnable);
         metrics.addEvent(event.getType());
       }
     };
@@ -122,35 +114,17 @@ public class MultiDispatcher extends AbstractService implements Dispatcher {
 
   private Runnable createRunnable(Event event, EventHandler handler) {
     return () -> {
-      LOG.debug("{} handle {}, queue size: {}",
-          Thread.currentThread().getName(), event.getClass().getSimpleName(), eventQueue.size());
-      locks.lock(event);
       long start = clock.getTime();
       try {
         handler.handle(event);
       } finally {
-        long end = clock.getTime();
-        locks.unLock(event);
-        metrics.updateRate(event.getType(), end - start);
+        metrics.updateRate(event.getType(), clock.getTime() - start);
         metrics.removeEvent(event.getType());
       }
     };
   }
 
-  private void createWorkerPool() {
-    this.threadPoolExecutor = new ThreadPoolExecutor(
-        config.getDefaultPoolSize(),
-        config.getMaxPoolSize(),
-        config.getKeepAliveSeconds(),
-        TimeUnit.SECONDS,
-        eventQueue,
-        new BasicThreadFactory.Builder()
-            .namingPattern(this.dispatcherName + "-worker-%d")
-            .build()
-    );
-  }
-
-  private void createMonitorThread() {
+  private void createMonitorThread(MultiDispatcherConfig config) {
     int interval = config.getMonitorSeconds();
     if (interval < 1) {
       return;
@@ -161,11 +135,14 @@ public class MultiDispatcher extends AbstractService implements Dispatcher {
             .namingPattern(this.dispatcherName + "-monitor-%d")
             .build());
     monitorExecutor.scheduleAtFixedRate(() -> {
-      int size = eventQueue.size();
-      if (0 < size) {
-        LOG.info("Event queue size is {}", size);
-        LOG.debug("Metrics: {}", metrics);
+      List<String> notEmptyQueues = workerExecutor.getQueueSize().entrySet().stream()
+          .filter(e -> 0 < e.getValue())
+          .map(e -> String.format("%s has queue size %d", e.getKey(), e.getValue()))
+          .collect(Collectors.toList());
+      if (!notEmptyQueues.isEmpty()) {
+        log.info("Event queue sizes: {}", notEmptyQueues);
       }
+      log.debug("Metrics: {}", metrics);
     },10, interval, TimeUnit.SECONDS);
   }
 }

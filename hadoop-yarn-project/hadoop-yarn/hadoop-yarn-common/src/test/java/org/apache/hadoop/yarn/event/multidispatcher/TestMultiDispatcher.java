@@ -31,7 +31,7 @@ import static org.junit.Assert.assertEquals;
 public class TestMultiDispatcher {
 
   @Test(timeout = 5_000)
-  public void testHandle() throws Exception {
+  public void testHandle() {
     MultiDispatcher dispatcher = new MultiDispatcher("Test");
     assertEquals(Service.STATE.NOTINITED, dispatcher.getServiceState());
     dispatcher.init(new Configuration());

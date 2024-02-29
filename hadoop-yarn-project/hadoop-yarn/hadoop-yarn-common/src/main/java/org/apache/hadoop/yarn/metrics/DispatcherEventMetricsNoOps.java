@@ -17,15 +17,40 @@
  */
 package org.apache.hadoop.yarn.metrics;
 
-import org.apache.hadoop.metrics2.MetricsSource;
+import org.slf4j.Logger;
 
-public interface DispatcherEventMetrics extends MetricsSource {
+import org.apache.hadoop.metrics2.MetricsCollector;
 
-  void init(Class<? extends Enum> typeClass);
+public class DispatcherEventMetricsNoOps implements DispatcherEventMetrics {
 
-  void addEvent(Object type);
+  private final Logger log;
 
-  void removeEvent(Object type);
+  public DispatcherEventMetricsNoOps(Logger log) {
+    this.log = log;
+  }
 
-  void updateRate(Object type, long millisecond);
+  @Override
+  public void getMetrics(MetricsCollector collector, boolean all) {
+    log.debug("called getMetrics");
+  }
+
+  @Override
+  public void init(Class<? extends Enum> typeClass) {
+    log.debug("called init");
+  }
+
+  @Override
+  public void addEvent(Object type) {
+    log.debug("called addEvent");
+  }
+
+  @Override
+  public void removeEvent(Object type) {
+    log.debug("called removeEvent");
+  }
+
+  @Override
+  public void updateRate(Object type, long millisecond) {
+    log.debug("called updateRate");
+  }
 }

@@ -36,16 +36,8 @@ class MultiDispatcherConfig extends Configuration {
     return super.getInt(prefix + "default-pool-size", 4);
   }
 
-  public int getMaxPoolSize() {
-    return super.getInt(prefix + "max-pool-size", 8);
-  }
-
-  public int getKeepAliveSeconds() {
-    return super.getInt(prefix + "keep-alive-seconds", 10);
-  }
-
   public int getQueueSize() {
-    return super.getInt(prefix + "queue-size", 1_000_000);
+    return super.getInt(prefix + "queue-size", 10_000_000);
   }
 
   public int getMonitorSeconds() {
@@ -54,5 +46,9 @@ class MultiDispatcherConfig extends Configuration {
 
   public int getGracefulStopSeconds() {
     return super.getInt(prefix + "graceful-stop-seconds", 60);
+  }
+
+  public boolean getMetricsEnabled() {
+    return super.getBoolean(prefix + "metrics-enabled", false);
   }
 }
