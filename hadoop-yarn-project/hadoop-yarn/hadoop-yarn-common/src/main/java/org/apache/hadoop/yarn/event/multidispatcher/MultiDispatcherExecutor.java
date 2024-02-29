@@ -67,7 +67,7 @@ public class MultiDispatcherExecutor {
   public void stop() throws InterruptedException {
     long timeOut = clock.getTime() + config.getGracefulStopSeconds() * 1_000L;
     // if not all queue is empty
-    if (!Arrays.stream(threads).allMatch(t -> t.queue.isEmpty())
+    if (Arrays.stream(threads).anyMatch(t -> 0 < t.queueSize())
         // and not timeout yet
       && clock.getTime() < timeOut) {
       LOG.debug("Not all event queue is empty, waiting to drain ...");
