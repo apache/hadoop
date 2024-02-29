@@ -1232,7 +1232,7 @@ Once the above properties are configured, `hdfs dfs -ls abfs://container1@abfswa
 ## <a name="KnownIssues"></a> Known Issues
 
 Following failures are known and expected to fail as of now.
-1. AzureBlobFileSystem.setXAttr() and AzureBlobFileSystem.getXAttr() will fail when attempted on root ("/") path.
+1. AzureBlobFileSystem.setXAttr() and AzureBlobFileSystem.getXAttr() will fail when attempted on root ("/") path with `Operation failed: "The request URI is invalid.", HTTP 400 Bad Request`
 
 ## <a name="testing"></a> Testing ABFS
 

@@ -27,8 +27,11 @@ import org.junit.Test;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 
+import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PATH;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -145,5 +148,25 @@ public class ITestAzureBlobFileSystemAttributes extends AbstractAbfsIntegrationT
     Assertions.assertThat(fs.getAbfsStore().decodeAttribute(rv))
         .describedAs("Retrieved Attribute Does not Matches in Decoded Form")
         .isEqualTo(decodedAttributeValue2);
+  }
+
+  @Test
+  public void testGetSetXAttrOnRoot() throws Exception {
+    AzureBlobFileSystem fs = getFileSystem();
+    String attributeName = "user.attribute1";
+    byte[] attributeValue = fs.getAbfsStore().encodeAttribute("hi");
+    final Path testPath = new Path(ROOT_PATH);
+
+    try {
+      fs.getXAttr(testPath, attributeName);
+    } catch (AbfsRestOperationException e) {
+      Assertions.assertThat(e.getStatusCode()).isEqualTo(HTTP_BAD_REQUEST);
+    }
+
+    try {
+      fs.setXAttr(testPath, attributeName, attributeValue, CREATE_FLAG);
+    } catch (AbfsRestOperationException e) {
+      Assertions.assertThat(e.getStatusCode()).isEqualTo(HTTP_BAD_REQUEST);
+    }
   }
 }
