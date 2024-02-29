@@ -57,7 +57,7 @@ public class MultiDispatcherExecutor {
 
   public void execute(Event event, Runnable runnable) {
     String lockKey = event.getLockKey();
-    int threadIndex = lockKey == null ? 0 : lockKey.hashCode() % threads.length;
+    int threadIndex = lockKey == null ? 0 : Math.abs(lockKey.hashCode()) % threads.length;
     MultiDispatcherExecutorThread thread = threads[threadIndex];
     thread.add(runnable);
     LOG.debug("The {} with lock key {} will be handled by {}",
