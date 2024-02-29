@@ -284,12 +284,12 @@ public class TestCrcUtil {
    */
   private static int getCrcPolynomialForType(DataChecksum.Type type) {
     switch (type) {
-      case CRC32:
-        return CrcUtil.GZIP_POLYNOMIAL;
-      case CRC32C:
-        return CrcUtil.CASTAGNOLI_POLYNOMIAL;
-      default:
-        throw new IllegalArgumentException("Unexpected type: " + type);
+    case CRC32:
+      return CrcUtil.GZIP_POLYNOMIAL;
+    case CRC32C:
+      return CrcUtil.CASTAGNOLI_POLYNOMIAL;
+    default:
+      throw new IllegalArgumentException("Unexpected type: " + type);
     }
   }
 

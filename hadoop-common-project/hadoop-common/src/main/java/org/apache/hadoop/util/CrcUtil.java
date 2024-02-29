@@ -44,7 +44,7 @@ public final class CrcUtil {
     final long right = ((long)b) << 32;
 
     final long product
-        = ((((((left & (UNIT       )) == 0L? 0L : right)
+        = ((((((left & (UNIT /*  */)) == 0L? 0L : right)
         ^     ((left & (UNIT >>>  1)) == 0L? 0L : right >>>  1))
         ^    (((left & (UNIT >>>  2)) == 0L? 0L : right >>>  2)
         ^     ((left & (UNIT >>>  3)) == 0L? 0L : right >>>  3)))
@@ -78,8 +78,7 @@ public final class CrcUtil {
         ^   ((((left & (UNIT >>> 28)) == 0L? 0L : right >>> 28)
         ^     ((left & (UNIT >>> 29)) == 0L? 0L : right >>> 29))
         ^    (((left & (UNIT >>> 30)) == 0L? 0L : right >>> 30)
-        ^     ((left & (UNIT >>> 31)) == 0L? 0L : right >>> 31)))))
-        ;
+        ^     ((left & (UNIT >>> 31)) == 0L? 0L : right >>> 31)))));
 
     return mod.applyAsInt(product);
   }

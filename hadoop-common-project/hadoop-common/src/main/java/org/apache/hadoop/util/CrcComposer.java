@@ -36,7 +36,7 @@ import java.util.function.ToIntFunction;
  */
 @InterfaceAudience.LimitedPrivate({"Common", "HDFS", "MapReduce", "Yarn"})
 @InterfaceStability.Unstable
-public class CrcComposer {
+public final class CrcComposer {
   private static final int CRC_SIZE_BYTES = 4;
   private static final Logger LOG = LoggerFactory.getLogger(CrcComposer.class);
 

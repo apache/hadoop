@@ -90,12 +90,16 @@ public class PureJavaCrc32 implements Checksum {
     crc = localCrc;
   }
 
-  /** @return x mod p, where p is the CRC32 polynomial. */
+  /**
+   * Compute x mod p, where p is the CRC32 polynomial.
+   * @param x the input value
+   * @return x mod p
+   */
   public static int mod(long x) {
     final int y = (int)(x);
     return (int)(x >> 32)
            ^ ((T[((y << 24) >>> 24) + 0x300] ^ T[((y << 16) >>> 24) + 0x200])
-           ^  (T[((y <<  8) >>> 24) + 0x100] ^ T[((y      ) >>> 24)        ]));
+           ^  (T[((y <<  8) >>> 24) + 0x100] ^ T[((y /* */) >>> 24) /*   */]));
   }
 
   @Override
