@@ -226,7 +226,9 @@ If you do any of these: change your credentials immediately!
 
 ## Connecting to Amazon S3 or a third-party store
 
-See [Connecting to an Amazon S3 Bucket through the S3A Connector](connecting.md).
+See [Connecting to an Amazon S3 Bucket through the S3A Connector](connecting.html).
+
+Also, please check [S3 endpoint and region settings in detail](connecting.html#s3_endpoint_region_details).
 
 ## <a name="authenticating"></a> Authenticating with S3
 
@@ -278,6 +280,28 @@ For more information see [Upcoming upgrade to AWS Java SDK V2](./aws_sdk_upgrade
     token binding it may be used
     to communicate wih the STS endpoint to request session/role
     credentials.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3a.aws.credentials.provider.mapping</name>
+  <description>
+    Comma-separated key-value pairs of mapped credential providers that are
+    separated by equal operator (=). The key can be used by
+    fs.s3a.aws.credentials.provider config, and it will be translated into
+    the specified value of credential provider class based on the key-value
+    pair provided by this config.
+
+    Example:
+    com.amazonaws.auth.AnonymousAWSCredentials=org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider,
+    com.amazonaws.auth.EC2ContainerCredentialsProviderWrapper=org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider,
+    com.amazonaws.auth.InstanceProfileCredentialsProvider=org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider
+
+    With the above key-value pairs, if fs.s3a.aws.credentials.provider specifies
+    com.amazonaws.auth.AnonymousAWSCredentials, it will be remapped to
+    org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider by S3A while
+    preparing AWS credential provider list for any S3 access.
+    We can use the same credentials provider list for both v1 and v2 SDK clients.
   </description>
 </property>
 ```
@@ -479,7 +503,7 @@ explicitly opened up for broader access.
 ```bash
 hadoop fs -ls \
  -D fs.s3a.aws.credentials.provider=org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider \
- s3a://landsat-pds/
+ s3a://noaa-isd-pds/
 ```
 
 1. Allowing anonymous access to an S3 bucket compromises
@@ -565,6 +589,30 @@ When running in EC2, the IAM EC2 instance credential provider will automatically
 obtain the credentials needed to access AWS services in the role the EC2 VM
 was deployed as.
 This AWS credential provider is enabled in S3A by default.
+
+## Custom AWS Credential Providers and Apache Spark
+
+Apache Spark employs two class loaders, one that loads "distribution" (Spark + Hadoop) classes and one that
+loads custom user classes. If the user wants to load custom implementations of AWS credential providers,
+custom signers, delegation token providers or any other dynamically loaded extension class
+through user provided jars she will need to set the following configuration:
+
+```xml
+<property>
+  <name>fs.s3a.classloader.isolation</name>
+  <value>false</value>
+</property>
+<property>
+  <name>fs.s3a.aws.credentials.provider</name>
+  <value>CustomCredentialsProvider</value>
+</property>
+```
+
+If the following property is not set or set to `true`, the following exception will be thrown:
+
+```
+java.io.IOException: From option fs.s3a.aws.credentials.provider java.lang.ClassNotFoundException: Class CustomCredentialsProvider not found
+```
 
 
 ## <a name="hadoop_credential_providers"></a>Storing secrets with Hadoop Credential Providers
@@ -1582,11 +1630,11 @@ a session key:
 </property>
 ```
 
-Finally, the public `s3a://landsat-pds/` bucket can be accessed anonymously:
+Finally, the public `s3a://noaa-isd-pds/` bucket can be accessed anonymously:
 
 ```xml
 <property>
-  <name>fs.s3a.bucket.landsat-pds.aws.credentials.provider</name>
+  <name>fs.s3a.bucket.noaa-isd-pds.aws.credentials.provider</name>
   <value>org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider</value>
 </property>
 ```

@@ -113,8 +113,6 @@ public final class InternalConstants {
 
   /**
    * The known keys used in a standard openFile call.
-   * if there's a select marker in there then the keyset
-   * used becomes that of the select operation.
    */
   @InterfaceStability.Unstable
   public static final Set<String> S3A_OPENFILE_KEYS;

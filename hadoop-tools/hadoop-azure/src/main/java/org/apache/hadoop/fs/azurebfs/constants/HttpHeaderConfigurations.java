@@ -72,6 +72,7 @@ public final class HttpHeaderConfigurations {
   public static final String X_MS_PROPOSED_LEASE_ID = "x-ms-proposed-lease-id";
   public static final String X_MS_LEASE_BREAK_PERIOD = "x-ms-lease-break-period";
   public static final String EXPECT = "Expect";
+  public static final String X_MS_RANGE_GET_CONTENT_MD5 = "x-ms-range-get-content-md5";
 
   private HttpHeaderConfigurations() {}
 }
