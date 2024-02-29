@@ -478,7 +478,7 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
   boolean isValidRbw(ExtendedBlock b);
 
   /**
-   * Invalidates the specified blocks
+   * Invalidates the specified blocks.
    * @param bpid Block pool Id
    * @param invalidBlks - the blocks to be invalidated
    * @throws IOException

@@ -2656,7 +2656,9 @@ public class TestDistributedFileSystem {
   @Test
   public void testSingleRackFailureDuringPipelineSetupMinReplicationPossible() throws Exception {
     Configuration conf = getTestConfiguration();
-    conf.setClass(DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_KEY, BlockPlacementPolicyRackFaultTolerant.class,
+    conf.setClass(
+        DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_KEY,
+        BlockPlacementPolicyRackFaultTolerant.class,
         BlockPlacementPolicy.class);
     conf.setBoolean(
         HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.ENABLE_KEY,
@@ -2670,7 +2672,8 @@ public class TestDistributedFileSystem {
       DistributedFileSystem fs = cluster.getFileSystem();
       // kill one DN, so only 2 racks stays with active DN
       cluster.stopDataNode(0);
-      // create a file with replication 3, for rack fault tolerant BPP, it should allocate nodes in all 3 racks.
+      // create a file with replication 3, for rack fault tolerant BPP,
+      // it should allocate nodes in all 3 racks.
       DFSTestUtil.createFile(fs, new Path("/testFile"), 1024L, (short) 3, 1024L);
       cluster.shutdown(true);
     }
@@ -2679,7 +2682,9 @@ public class TestDistributedFileSystem {
   @Test
   public void testSingleRackFailureDuringPipelineSetupMinReplicationImpossible() throws Exception {
     Configuration conf = getTestConfiguration();
-    conf.setClass(DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_KEY, BlockPlacementPolicyRackFaultTolerant.class,
+    conf.setClass(
+        DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_KEY,
+        BlockPlacementPolicyRackFaultTolerant.class,
         BlockPlacementPolicy.class);
     conf.setBoolean(
         HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.ENABLE_KEY,
@@ -2702,14 +2707,17 @@ public class TestDistributedFileSystem {
       } finally {
         cluster.shutdown(true);
       }
-      assertTrue("Failed to throw IOE when creating a file with less DNs than required for min replication", threw);
+      assertTrue("Failed to throw IOE when creating a file with less "
+              + "DNs than required for min replication", threw);
     }
   }
 
   @Test
   public void testMultipleRackFailureDuringPipelineSetupMinReplicationPossible() throws Exception {
     Configuration conf = getTestConfiguration();
-    conf.setClass(DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_KEY, BlockPlacementPolicyRackFaultTolerant.class,
+    conf.setClass(
+        DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_KEY,
+        BlockPlacementPolicyRackFaultTolerant.class,
         BlockPlacementPolicy.class);
     conf.setBoolean(
         HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.ENABLE_KEY,
@@ -2724,14 +2732,16 @@ public class TestDistributedFileSystem {
       // kill 2 DN, so only 1 racks stays with active DN
       cluster.stopDataNode(0);
       cluster.stopDataNode(1);
-      // create a file with replication 3, for rack fault tolerant BPP, it should allocate nodes in all 3 racks.
+      // create a file with replication 3, for rack fault tolerant BPP,
+      // it should allocate nodes in all 3 racks.
       DFSTestUtil.createFile(fs, new Path("/testFile"), 1024L, (short) 3, 1024L);
       cluster.shutdown(true);
     }
   }
 
   @Test
-  public void testMultipleRackFailureDuringPipelineSetupMinReplicationImpossible() throws Exception {
+  public void testMultipleRackFailureDuringPipelineSetupMinReplicationImpossible()
+      throws Exception {
     Configuration conf = getTestConfiguration();
     conf.setClass(DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_KEY, BlockPlacementPolicyRackFaultTolerant.class,
         BlockPlacementPolicy.class);
@@ -2756,14 +2766,17 @@ public class TestDistributedFileSystem {
         threw = true;
       }
       cluster.shutdown(true);
-      assertTrue("Failed to throw IOE when creating a file with less DNs than required for min replication", threw);
+      assertTrue("Failed to throw IOE when creating a file with less "
+          + "DNs than required for min replication", threw);
     }
   }
 
   @Test
   public void testAllRackFailureDuringPipelineSetup() throws Exception {
     Configuration conf = getTestConfiguration();
-    conf.setClass(DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_KEY, BlockPlacementPolicyRackFaultTolerant.class,
+    conf.setClass(
+        DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_KEY,
+        BlockPlacementPolicyRackFaultTolerant.class,
         BlockPlacementPolicy.class);
     conf.setBoolean(
         HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.ENABLE_KEY,
@@ -2775,8 +2788,8 @@ public class TestDistributedFileSystem {
       DistributedFileSystem fs = cluster.getFileSystem();
       // shutdown all DNs
       cluster.shutdownDataNodes();
-      // create a file with replication 3, for rack fault tolerant BPP, it should allocate nodes in all 3 racks
-      // but fail because no DNs are present.
+      // create a file with replication 3, for rack fault tolerant BPP,
+      // it should allocate nodes in all 3 rack but fail because no DNs are present.
       boolean threw = false;
       try {
         DFSTestUtil.createFile(fs, new Path("/testFile"), 1024L, (short) 3, 1024L);
