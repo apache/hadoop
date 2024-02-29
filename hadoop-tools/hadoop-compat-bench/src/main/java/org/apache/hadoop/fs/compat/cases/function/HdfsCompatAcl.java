@@ -31,9 +31,9 @@ import java.util.List;
 
 @HdfsCompatCaseGroup(name = "ACL")
 public class HdfsCompatAcl extends AbstractHdfsCompatCase {
-  private static final String initFileAcl =
+  private static final String INIT_FILE_ACL =
       "user::rwx,group::rwx,other::rwx,user:foo:rwx";
-  private static final String initDirAcl =
+  private static final String INIT_DIR_ACL =
       "default:user::rwx,default:group::rwx,default:other::rwx";
   private Path dir;
   private Path file;
@@ -43,9 +43,9 @@ public class HdfsCompatAcl extends AbstractHdfsCompatCase {
     this.dir = makePath("dir");
     this.file = new Path(this.dir, "file");
     HdfsCompatUtil.createFile(fs(), this.file, 0);
-    List<AclEntry> entries = AclEntry.parseAclSpec(initDirAcl, true);
+    List<AclEntry> entries = AclEntry.parseAclSpec(INIT_DIR_ACL, true);
     fs().setAcl(dir, entries);
-    entries = AclEntry.parseAclSpec(initFileAcl, true);
+    entries = AclEntry.parseAclSpec(INIT_FILE_ACL, true);
     fs().setAcl(file, entries);
   }
 

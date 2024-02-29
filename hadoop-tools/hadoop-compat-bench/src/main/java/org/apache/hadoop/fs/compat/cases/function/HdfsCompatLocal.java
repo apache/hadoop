@@ -28,8 +28,8 @@ import java.util.Random;
 
 @HdfsCompatCaseGroup(name = "Local")
 public class HdfsCompatLocal extends AbstractHdfsCompatCase {
-  private static final int fileLen = 128;
-  private static final Random random = new Random();
+  private static final int FILE_LEN = 128;
+  private static final Random RANDOM = new Random();
   private LocalFileSystem localFs;
   private Path localBasePath;
   private Path localSrc;
@@ -51,13 +51,13 @@ public class HdfsCompatLocal extends AbstractHdfsCompatCase {
   @HdfsCompatCasePrepare
   public void prepare() throws IOException {
     final String unique = System.currentTimeMillis()
-        + "_" + random.nextLong() + "/";
+        + "_" + RANDOM.nextLong() + "/";
     this.localSrc = new Path(localBasePath, unique + "src");
     this.localDst = new Path(localBasePath, unique + "dst");
     this.src = new Path(getBasePath(), unique + "src");
     this.dst = new Path(getBasePath(), unique + "dst");
-    HdfsCompatUtil.createFile(localFs, this.localSrc, fileLen);
-    HdfsCompatUtil.createFile(fs(), this.src, fileLen);
+    HdfsCompatUtil.createFile(localFs, this.localSrc, FILE_LEN);
+    HdfsCompatUtil.createFile(fs(), this.src, FILE_LEN);
   }
 
   @HdfsCompatCaseCleanup

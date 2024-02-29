@@ -25,17 +25,18 @@ import org.apache.hadoop.fs.Path;
 import java.util.Random;
 
 public abstract class AbstractHdfsCompatCase {
+  private static final Random RANDOM = new Random();
+
   private FileSystem fs;
   private HdfsCompatEnvironment env;
   private Path localPath;
-  private static final Random random = new Random();
 
   public AbstractHdfsCompatCase() {
   }
 
-  public void init(HdfsCompatEnvironment env) {
+  public void init(HdfsCompatEnvironment environment) {
+    this.env = environment;
     this.fs = env.getFileSystem();
-    this.env = env;
     LocalFileSystem localFs = env.getLocalFileSystem();
     this.localPath = localFs.makeQualified(new Path(env.getLocalTmpDir()));
   }
@@ -58,7 +59,7 @@ public abstract class AbstractHdfsCompatCase {
 
   public static Path getUniquePath(Path basePath) {
     return new Path(basePath, System.currentTimeMillis()
-        + "_" + random.nextLong());
+        + "_" + RANDOM.nextLong());
   }
 
   public Path makePath(String name) {

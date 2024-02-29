@@ -75,7 +75,7 @@ public class TestHdfsCompatShellCommand {
     new HdfsCompatibility(conf).printReport(report, System.out);
   }
 
-  private static class TestCommand extends HdfsCompatTestCommand {
+  private static final class TestCommand extends HdfsCompatTestCommand {
     private TestCommand(String uri, Configuration conf) {
       super(uri, "shell", conf);
     }
@@ -86,7 +86,7 @@ public class TestHdfsCompatShellCommand {
     }
   }
 
-  private static class TestSkipCommand extends HdfsCompatTestCommand {
+  private static final class TestSkipCommand extends HdfsCompatTestCommand {
     private TestSkipCommand(String uri, Configuration conf) {
       super(uri, "shell", conf);
     }
@@ -98,7 +98,7 @@ public class TestHdfsCompatShellCommand {
   }
 
   private static class TestShellScope extends HdfsCompatTestShellScope {
-    public TestShellScope(HdfsCompatEnvironment env, HdfsCompatSuite suite) {
+    private TestShellScope(HdfsCompatEnvironment env, HdfsCompatSuite suite) {
       super(env, suite);
     }
 
@@ -112,7 +112,7 @@ public class TestHdfsCompatShellCommand {
   }
 
   private static class TestShellScopeForSkip extends HdfsCompatTestShellScope {
-    public TestShellScopeForSkip(HdfsCompatEnvironment env, HdfsCompatSuite suite) {
+    private TestShellScopeForSkip(HdfsCompatEnvironment env, HdfsCompatSuite suite) {
       super(env, suite);
     }
 

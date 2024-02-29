@@ -30,10 +30,13 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Random;
 
-public class HdfsCompatUtil {
+public final class HdfsCompatUtil {
   private static final Logger LOG =
       LoggerFactory.getLogger(HdfsCompatUtil.class);
-  private static final Random random = new Random();
+  private static final Random RANDOM = new Random();
+
+  private HdfsCompatUtil() {
+  }
 
   public static void checkImplementation(ImplementationFunction func) {
     try {
@@ -41,7 +44,7 @@ public class HdfsCompatUtil {
     } catch (UnsupportedOperationException e) {
       throw e;
     } catch (NoSuchMethodError e) {
-      if (HdfsCompatApiScope.skipNoSuchMethodError) {
+      if (HdfsCompatApiScope.SKIP_NO_SUCH_METHOD_ERROR) {
         throw e;
       } else {
         throw new UnsupportedOperationException(e);
@@ -70,7 +73,7 @@ public class HdfsCompatUtil {
         byte[] toWrite = new byte[bufferSize];
         long bytesToWrite = fileLen;
         while (bytesToWrite > 0) {
-          random.nextBytes(toWrite);
+          RANDOM.nextBytes(toWrite);
           int bytesToWriteNext = (bufferSize < bytesToWrite) ?
               bufferSize : (int) bytesToWrite;
           out.write(toWrite, 0, bytesToWriteNext);

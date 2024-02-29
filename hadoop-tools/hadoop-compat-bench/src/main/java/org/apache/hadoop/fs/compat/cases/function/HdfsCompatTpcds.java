@@ -28,8 +28,8 @@ import java.util.Random;
 
 @HdfsCompatCaseGroup(name = "TPCDS")
 public class HdfsCompatTpcds extends AbstractHdfsCompatCase {
-  private static final int fileLen = 8;
-  private static final Random random = new Random();
+  private static final int FILE_LEN = 8;
+  private static final Random RANDOM = new Random();
   private Path path = null;
 
   @HdfsCompatCasePrepare
@@ -44,8 +44,8 @@ public class HdfsCompatTpcds extends AbstractHdfsCompatCase {
 
   @HdfsCompatCase
   public void open() throws IOException {
-    HdfsCompatUtil.createFile(fs(), path, fileLen);
-    byte[] data = new byte[fileLen];
+    HdfsCompatUtil.createFile(fs(), path, FILE_LEN);
+    byte[] data = new byte[FILE_LEN];
     try (FSDataInputStream in = fs().open(path)) {
       in.readFully(data);
     }
@@ -53,8 +53,8 @@ public class HdfsCompatTpcds extends AbstractHdfsCompatCase {
 
   @HdfsCompatCase
   public void create() throws IOException {
-    byte[] data = new byte[fileLen];
-    random.nextBytes(data);
+    byte[] data = new byte[FILE_LEN];
+    RANDOM.nextBytes(data);
     try (FSDataOutputStream out = fs().create(path, true)) {
       out.write(data);
     }
@@ -67,40 +67,40 @@ public class HdfsCompatTpcds extends AbstractHdfsCompatCase {
 
   @HdfsCompatCase
   public void getFileStatus() throws IOException {
-    HdfsCompatUtil.createFile(fs(), path, fileLen);
+    HdfsCompatUtil.createFile(fs(), path, FILE_LEN);
     FileStatus fileStatus = fs().getFileStatus(path);
-    Assert.assertEquals(fileLen, fileStatus.getLen());
+    Assert.assertEquals(FILE_LEN, fileStatus.getLen());
   }
 
   @HdfsCompatCase
   public void listStatus() throws IOException {
-    HdfsCompatUtil.createFile(fs(), new Path(path, "file"), fileLen);
+    HdfsCompatUtil.createFile(fs(), new Path(path, "file"), FILE_LEN);
     FileStatus[] files = fs().listStatus(path);
     Assert.assertEquals(1, files.length);
-    Assert.assertEquals(fileLen, files[0].getLen());
+    Assert.assertEquals(FILE_LEN, files[0].getLen());
   }
 
   @HdfsCompatCase
   public void listLocatedStatus() throws IOException {
-    HdfsCompatUtil.createFile(fs(), new Path(path, "file"), fileLen);
+    HdfsCompatUtil.createFile(fs(), new Path(path, "file"), FILE_LEN);
     RemoteIterator<LocatedFileStatus> it = fs().listLocatedStatus(path);
     List<LocatedFileStatus> files = new ArrayList<>();
     while (it.hasNext()) {
       files.add(it.next());
     }
     Assert.assertEquals(1, files.size());
-    Assert.assertEquals(fileLen, files.get(0).getLen());
+    Assert.assertEquals(FILE_LEN, files.get(0).getLen());
   }
 
   @HdfsCompatCase
   public void rename() throws IOException {
-    HdfsCompatUtil.createFile(fs(), new Path(path, "file"), fileLen);
+    HdfsCompatUtil.createFile(fs(), new Path(path, "file"), FILE_LEN);
     fs().rename(path, new Path(path.getParent(), path.getName() + "_dst"));
   }
 
   @HdfsCompatCase
   public void delete() throws IOException {
-    HdfsCompatUtil.createFile(fs(), new Path(path, "file"), fileLen);
+    HdfsCompatUtil.createFile(fs(), new Path(path, "file"), FILE_LEN);
     fs().delete(path, true);
   }
 

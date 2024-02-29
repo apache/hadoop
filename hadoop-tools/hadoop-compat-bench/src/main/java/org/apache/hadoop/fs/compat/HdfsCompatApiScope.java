@@ -38,7 +38,7 @@ import java.util.stream.Collectors;
 
 
 public class HdfsCompatApiScope {
-  static final boolean skipNoSuchMethodError = true;
+  static final boolean SKIP_NO_SUCH_METHOD_ERROR = true;
   private static final Logger LOG =
       LoggerFactory.getLogger(HdfsCompatApiScope.class);
 
@@ -60,27 +60,30 @@ public class HdfsCompatApiScope {
       final AbstractHdfsCompatCase obj = group.obj;
       GroupedResult groupedResult = new GroupedResult(obj, group.methods);
 
-      {  // SetUp
-        groupedResult.setUp = test(group.setUp, obj);
-      }
+      // SetUp
+      groupedResult.setUp = test(group.setUp, obj);
+
       if (groupedResult.setUp == Result.OK) {
         for (Method method : group.methods) {
           CaseResult caseResult = new CaseResult();
-          {  // Prepare
-            caseResult.prepareResult = test(group.prepare, obj);
-          }
+
+          // Prepare
+          caseResult.prepareResult = test(group.prepare, obj);
+
           if (caseResult.prepareResult == Result.OK) {  // Case
             caseResult.methodResult = test(method, obj);
           }
-          {  // Cleanup
-            caseResult.cleanupResult = test(group.cleanup, obj);
-          }
+
+          // Cleanup
+          caseResult.cleanupResult = test(group.cleanup, obj);
+
           groupedResult.results.put(getCaseName(method), caseResult);
         }
       }
-      {  // TearDown
-        groupedResult.tearDown = test(group.tearDown, obj);
-      }
+
+      // TearDown
+      groupedResult.tearDown = test(group.tearDown, obj);
+
       groupedResult.exportTo(report);
     }
     return report;
@@ -95,7 +98,7 @@ public class HdfsCompatApiScope {
       return Result.OK;
     } catch (InvocationTargetException t) {
       Throwable e = t.getCause();
-      if (skipNoSuchMethodError && (e instanceof NoSuchMethodError)) {
+      if (SKIP_NO_SUCH_METHOD_ERROR && (e instanceof NoSuchMethodError)) {
         LOG.warn("Case skipped with method " + method.getName()
             + " of class " + obj.getClass(), e);
         return Result.SKIP;
@@ -150,8 +153,9 @@ public class HdfsCompatApiScope {
     return publicMethodNames;
   }
 
-  private static class GroupedCase {
-    private static final Map<String, Set<String>> definedMethods = new HashMap<>();
+  private static final class GroupedCase {
+    private static final Map<String, Set<String>> DEFINED_METHODS =
+        new HashMap<>();
     private final AbstractHdfsCompatCase obj;
     private final List<Method> methods;
     private final Method setUp;
@@ -240,11 +244,12 @@ public class HdfsCompatApiScope {
     private static synchronized boolean checkDefined(String ifDef) {
       String[] classAndMethod = ifDef.split("#", 2);
       if (classAndMethod.length < 2) {
-        throw new HdfsCompatIllegalCaseException("ifDef must be with format className#methodName");
+        throw new HdfsCompatIllegalCaseException(
+            "ifDef must be with format className#methodName");
       }
       final String className = classAndMethod[0];
       final String methodName = classAndMethod[1];
-      Set<String> methods = definedMethods.getOrDefault(className, null);
+      Set<String> methods = DEFINED_METHODS.getOrDefault(className, null);
       if (methods != null) {
         return methods.contains(methodName);
       }
@@ -255,13 +260,13 @@ public class HdfsCompatApiScope {
         throw new HdfsCompatIllegalCaseException(e.getMessage());
       }
       methods = getPublicInterfaces(cls);
-      definedMethods.put(className, methods);
+      DEFINED_METHODS.put(className, methods);
       return methods.contains(methodName);
     }
   }
 
-  private static class GroupedResult {
-    private static final int commonPrefixLength = AbstractHdfsCompatCase.class
+  private static final class GroupedResult {
+    private static final int COMMON_PREFIX_LEN = AbstractHdfsCompatCase.class
         .getPackage().getName().length() + ".cases.".length();
     private final String prefix;
     private Result setUp;
@@ -323,7 +328,7 @@ public class HdfsCompatApiScope {
     }
 
     private static String getNamePrefix(Class<? extends AbstractHdfsCompatCase> cls) {
-      return (cls.getPackage().getName() + ".").substring(commonPrefixLength) +
+      return (cls.getPackage().getName() + ".").substring(COMMON_PREFIX_LEN) +
           getGroupName(cls) + ".";
     }
 

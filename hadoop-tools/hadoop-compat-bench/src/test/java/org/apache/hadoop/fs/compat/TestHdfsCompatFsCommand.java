@@ -94,7 +94,7 @@ public class TestHdfsCompatFsCommand {
     fs.delete(basePath, true);
   }
 
-  private static class TestCommand extends HdfsCompatCommand {
+  private static final class TestCommand extends HdfsCompatCommand {
     private TestCommand(String uri, String suiteName, Configuration conf) {
       super(uri, suiteName, conf);
     }

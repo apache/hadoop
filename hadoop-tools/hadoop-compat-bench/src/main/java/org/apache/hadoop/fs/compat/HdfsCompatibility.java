@@ -113,29 +113,29 @@ public class HdfsCompatibility extends Configured implements Tool {
     HdfsCompatCommand cmd = new HdfsCompatCommand(uri, suite, getConf());
     cmd.initialize();
     HdfsCompatReport report = cmd.apply();
-    OutputStream out = null;
+    OutputStream outputFile = null;
     try {
       if (this.output != null) {
-        out = new FileOutputStream(new File(this.output));
+        outputFile = new FileOutputStream(new File(this.output));
       }
     } catch (Exception e) {
       LOG.error("Create output file failed", e);
-      out = null;
+      outputFile = null;
     }
     try {
-      printReport(report, out);
+      printReport(report, outputFile);
     } finally {
-      IOUtils.closeStream(out);
+      IOUtils.closeStream(outputFile);
     }
     return 0;
   }
 
   private boolean isHelp(String[] args) {
-    return (args == null) || (args.length == 0) || (
-        (args.length == 1) && (
-            args[0].equalsIgnoreCase("-h") ||
-                args[0].equalsIgnoreCase("--help"))
-    );
+    if ((args == null) || (args.length == 0)) {
+      return true;
+    }
+    return (args.length == 1) && (args[0].equalsIgnoreCase("-h") ||
+        args[0].equalsIgnoreCase("--help"));
   }
 
   private void parseArgs(String[] args) {
@@ -167,48 +167,49 @@ public class HdfsCompatibility extends Configured implements Tool {
     out.println(message);
   }
 
-  void printReport(HdfsCompatReport report, OutputStream out)
+  void printReport(HdfsCompatReport report, OutputStream detailStream)
       throws IOException {
     StringBuilder buffer = new StringBuilder();
-    {  // Line 1:
-      buffer.append("Hadoop Compatibility Report for ");
-      buffer.append(report.getSuite().getSuiteName());
-      buffer.append(":\n");
+
+    // Line 1:
+    buffer.append("Hadoop Compatibility Report for ");
+    buffer.append(report.getSuite().getSuiteName());
+    buffer.append(":\n");
+
+    // Line 2:
+    long passed = report.getPassedCase().size();
+    long failed = report.getFailedCase().size();
+    String percent = (failed == 0) ? "100" : String.format("%.2f",
+        ((double) passed) / ((double) (passed + failed)) * 100);
+    buffer.append("\t");
+    buffer.append(percent);
+    buffer.append("%, PASSED ");
+    buffer.append(passed);
+    buffer.append(" OVER ");
+    buffer.append(passed + failed);
+    buffer.append("\n");
+
+    // Line 3:
+    buffer.append("\tURI: ");
+    buffer.append(report.getUri());
+    if (report.getSuite() != null) {
+      buffer.append(" (suite: ");
+      buffer.append(report.getSuite().getClass().getName());
+      buffer.append(")");
     }
-    {  // Line 2:
-      long passed = report.getPassedCase().size();
-      long failed = report.getFailedCase().size();
-      String percent = (failed == 0) ? "100" : String.format("%.2f",
-          ((double) passed) / ((double) (passed + failed)) * 100);
-      buffer.append("\t");
-      buffer.append(percent);
-      buffer.append("%, PASSED ");
-      buffer.append(passed);
-      buffer.append(" OVER ");
-      buffer.append(passed + failed);
-      buffer.append("\n");
-    }
-    {  // Line 3:
-      buffer.append("\tURI: ");
-      buffer.append(report.getUri());
-      if (report.getSuite() != null) {
-        buffer.append(" (suite: ");
-        buffer.append(report.getSuite().getClass().getName());
-        buffer.append(")");
-      }
-      buffer.append("\n");
-    }
-    {  // Line 4:
-      buffer.append("\tHadoop Version as Baseline: ");
-      buffer.append(VersionInfo.getVersion());
-    }
+    buffer.append("\n");
+
+    // Line 4:
+    buffer.append("\tHadoop Version as Baseline: ");
+    buffer.append(VersionInfo.getVersion());
+
     final String shortMessage = buffer.toString();
     printOut(shortMessage);
 
-    if (out != null) {
-      out.write(shortMessage.getBytes(StandardCharsets.UTF_8));
+    if (detailStream != null) {
+      detailStream.write(shortMessage.getBytes(StandardCharsets.UTF_8));
       BufferedWriter writer = new BufferedWriter(
-          new OutputStreamWriter(out, StandardCharsets.UTF_8));
+          new OutputStreamWriter(detailStream, StandardCharsets.UTF_8));
       writer.newLine();
       writer.write("PASSED CASES:");
       writer.newLine();

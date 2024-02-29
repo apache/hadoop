@@ -41,8 +41,8 @@ import java.util.stream.Collectors;
 public class HdfsCompatEnvironment {
   private static final Logger LOG =
       LoggerFactory.getLogger(HdfsCompatEnvironment.class);
-  private static final String dateFormat = "yyyy_MM_dd_HH_mm_ss";
-  private static final Random random = new Random();
+  private static final String DATE_FORMAT = "yyyy_MM_dd_HH_mm_ss";
+  private static final Random RANDOM = new Random();
   private final Path uri;
   private final Configuration conf;
   private FileSystem fs;
@@ -61,7 +61,7 @@ public class HdfsCompatEnvironment {
     Date now = new Date();
     String uuid = UUID.randomUUID().toString();
     String uniqueDir = "hadoop-compatibility-benchmark/" +
-        new SimpleDateFormat(dateFormat).format(now) + "/" + uuid;
+        new SimpleDateFormat(DATE_FORMAT).format(now) + "/" + uuid;
 
     this.fs = uri.getFileSystem(conf);
     this.localFs = FileSystem.getLocal(conf);
@@ -135,7 +135,7 @@ public class HdfsCompatEnvironment {
       return null;
     }
     final String tmpDir = validDirs.get(
-        random.nextInt(validDirs.size()));
+        RANDOM.nextInt(validDirs.size()));
     return new File(tmpDir).getAbsolutePath();
   }
 

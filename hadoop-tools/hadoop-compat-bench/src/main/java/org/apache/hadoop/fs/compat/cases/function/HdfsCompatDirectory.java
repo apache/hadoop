@@ -27,7 +27,7 @@ import java.util.List;
 
 @HdfsCompatCaseGroup(name = "Directory")
 public class HdfsCompatDirectory extends AbstractHdfsCompatCase {
-  private static final int fileLen = 128;
+  private static final int FILE_LEN = 128;
   private Path dir = null;
   private Path file = null;
 
@@ -35,7 +35,7 @@ public class HdfsCompatDirectory extends AbstractHdfsCompatCase {
   public void prepare() throws IOException {
     this.dir = makePath("dir");
     this.file = new Path(this.dir, "file");
-    HdfsCompatUtil.createFile(fs(), file, fileLen);
+    HdfsCompatUtil.createFile(fs(), file, FILE_LEN);
   }
 
   @HdfsCompatCaseCleanup
@@ -114,13 +114,13 @@ public class HdfsCompatDirectory extends AbstractHdfsCompatCase {
     ContentSummary summary = fs().getContentSummary(dir);
     Assert.assertEquals(1, summary.getFileCount());
     Assert.assertEquals(1, summary.getDirectoryCount());
-    Assert.assertEquals(fileLen, summary.getLength());
+    Assert.assertEquals(FILE_LEN, summary.getLength());
   }
 
   @HdfsCompatCase
   public void getUsed() throws IOException {
     long used = fs().getUsed(dir);
-    Assert.assertTrue(used >= fileLen);
+    Assert.assertTrue(used >= FILE_LEN);
   }
 
   @HdfsCompatCase

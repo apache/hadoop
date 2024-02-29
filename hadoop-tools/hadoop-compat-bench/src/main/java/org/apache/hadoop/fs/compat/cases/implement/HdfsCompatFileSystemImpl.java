@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.fs.compat.cases.implement;
 
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.compat.AbstractHdfsCompatCase;
 import org.apache.hadoop.fs.compat.HdfsCompatCase;

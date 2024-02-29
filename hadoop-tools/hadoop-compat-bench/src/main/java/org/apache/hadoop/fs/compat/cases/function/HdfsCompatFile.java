@@ -32,17 +32,17 @@ import java.util.Random;
 
 @HdfsCompatCaseGroup(name = "File")
 public class HdfsCompatFile extends AbstractHdfsCompatCase {
-  private static final int fileLen = 128;
-  private static final long blockSize = 1048576;
-  private static final short replication = 1;
-  private static final Random random = new Random();
+  private static final int FILE_LEN = 128;
+  private static final long BLOCK_SIZE = 1048576;
+  private static final short REPLICATION = 1;
+  private static final Random RANDOM = new Random();
   private Path file = null;
 
   @HdfsCompatCasePrepare
   public void prepare() throws IOException {
     this.file = makePath("file");
     HdfsCompatUtil.createFile(fs(), this.file, true,
-        1024, fileLen, blockSize, replication);
+        1024, FILE_LEN, BLOCK_SIZE, REPLICATION);
   }
 
   @HdfsCompatCaseCleanup
@@ -69,12 +69,12 @@ public class HdfsCompatFile extends AbstractHdfsCompatCase {
 
   @HdfsCompatCase
   public void getLength() throws IOException {
-    Assert.assertEquals(fileLen, fs().getLength(file));
+    Assert.assertEquals(FILE_LEN, fs().getLength(file));
   }
 
   @HdfsCompatCase(brief = "arbitrary blockSize")
   public void getBlockSize() throws IOException {
-    Assert.assertEquals(blockSize, fs().getBlockSize(file));
+    Assert.assertEquals(BLOCK_SIZE, fs().getBlockSize(file));
   }
 
   @HdfsCompatCase
@@ -110,7 +110,7 @@ public class HdfsCompatFile extends AbstractHdfsCompatCase {
 
   @HdfsCompatCase
   public void truncate() throws IOException, InterruptedException {
-    int newLen = random.nextInt(fileLen);
+    int newLen = RANDOM.nextInt(FILE_LEN);
     boolean finished = fs().truncate(file, newLen);
     while (!finished) {
       Thread.sleep(1000);
@@ -122,8 +122,8 @@ public class HdfsCompatFile extends AbstractHdfsCompatCase {
 
   @HdfsCompatCase
   public void setOwner() throws Exception {
-    final String owner = "test_" + random.nextInt(1024);
-    final String group = "test_" + random.nextInt(1024);
+    final String owner = "test_" + RANDOM.nextInt(1024);
+    final String group = "test_" + RANDOM.nextInt(1024);
     final String privileged = getPrivilegedUser();
     UserGroupInformation.createRemoteUser(privileged).doAs(
         (PrivilegedExceptionAction<Void>) () -> {
@@ -174,7 +174,7 @@ public class HdfsCompatFile extends AbstractHdfsCompatCase {
 
   @HdfsCompatCase
   public void getFileBlockLocations() throws IOException {
-    BlockLocation[] locations = fs().getFileBlockLocations(file, 0, fileLen);
+    BlockLocation[] locations = fs().getFileBlockLocations(file, 0, FILE_LEN);
     Assert.assertTrue(locations.length >= 1);
     BlockLocation location = locations[0];
     Assert.assertTrue(location.getLength() > 0);
@@ -182,7 +182,7 @@ public class HdfsCompatFile extends AbstractHdfsCompatCase {
 
   @HdfsCompatCase
   public void getReplication() throws IOException {
-    Assert.assertEquals(replication, fs().getReplication(file));
+    Assert.assertEquals(REPLICATION, fs().getReplication(file));
   }
 
   @HdfsCompatCase(brief = "arbitrary replication")
@@ -195,7 +195,7 @@ public class HdfsCompatFile extends AbstractHdfsCompatCase {
   public void getPathHandle() throws IOException {
     FileStatus status = fs().getFileStatus(file);
     PathHandle handle = fs().getPathHandle(status, Options.HandleOpt.path());
-    final int maxReadLen = Math.min(fileLen, 4096);
+    final int maxReadLen = Math.min(FILE_LEN, 4096);
     byte[] data = new byte[maxReadLen];
     try (FSDataInputStream in = fs().open(handle, 1024)) {
       in.readFully(data);

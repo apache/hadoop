@@ -27,7 +27,7 @@ import java.io.IOException;
 
 @HdfsCompatCaseGroup(name = "Symlink")
 public class HdfsCompatSymlink extends AbstractHdfsCompatCase {
-  private static final int fileLen = 128;
+  private static final int FILE_LEN = 128;
   private Path target = null;
   private Path link = null;
 
@@ -40,7 +40,7 @@ public class HdfsCompatSymlink extends AbstractHdfsCompatCase {
   public void prepare() throws IOException {
     this.target = makePath("target");
     this.link = new Path(this.target.getParent(), "link");
-    HdfsCompatUtil.createFile(fs(), this.target, fileLen);
+    HdfsCompatUtil.createFile(fs(), this.target, FILE_LEN);
     fs().createSymlink(this.target, this.link, true);
   }
 

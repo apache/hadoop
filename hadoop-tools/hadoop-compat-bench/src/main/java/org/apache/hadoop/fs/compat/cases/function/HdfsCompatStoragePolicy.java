@@ -33,7 +33,7 @@ import java.util.Random;
 public class HdfsCompatStoragePolicy extends AbstractHdfsCompatCase {
   private static final Logger LOG =
       LoggerFactory.getLogger(HdfsCompatStoragePolicy.class);
-  private static final Random random = new Random();
+  private static final Random RANDOM = new Random();
   private Path dir;
   private Path file;
   private String[] policies;
@@ -66,7 +66,7 @@ public class HdfsCompatStoragePolicy extends AbstractHdfsCompatCase {
       this.policyName = defaultPolicyName;
     } else {
       this.policyName = differentPolicies.get(
-          random.nextInt(differentPolicies.size()));
+          RANDOM.nextInt(differentPolicies.size()));
     }
   }
 
@@ -87,8 +87,8 @@ public class HdfsCompatStoragePolicy extends AbstractHdfsCompatCase {
     fs().setStoragePolicy(dir, policyName);
     fs().unsetStoragePolicy(dir);
     BlockStoragePolicySpi policy = fs().getStoragePolicy(dir);
-    String policyName = (policy == null) ? null : policy.getName();
-    Assert.assertEquals(defaultPolicyName, policyName);
+    String policyNameAfterUnset = (policy == null) ? null : policy.getName();
+    Assert.assertEquals(defaultPolicyName, policyNameAfterUnset);
   }
 
   @HdfsCompatCase(ifDef = "org.apache.hadoop.fs.FileSystem#satisfyStoragePolicy")
@@ -100,7 +100,7 @@ public class HdfsCompatStoragePolicy extends AbstractHdfsCompatCase {
   @HdfsCompatCase
   public void getStoragePolicy() throws IOException {
     BlockStoragePolicySpi policy = fs().getStoragePolicy(file);
-    String policyName = (policy == null) ? null : policy.getName();
-    Assert.assertEquals(defaultPolicyName, policyName);
+    String initialPolicyName = (policy == null) ? null : policy.getName();
+    Assert.assertEquals(defaultPolicyName, initialPolicyName);
   }
 }

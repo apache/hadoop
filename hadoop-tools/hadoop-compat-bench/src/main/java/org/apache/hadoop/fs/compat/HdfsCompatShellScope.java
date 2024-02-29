@@ -50,7 +50,7 @@ import java.util.Set;
 public class HdfsCompatShellScope {
   private static final Logger LOG =
       LoggerFactory.getLogger(HdfsCompatShellScope.class);
-  private static final Random random = new Random();
+  private static final Random RANDOM = new Random();
   private final HdfsCompatEnvironment env;
   private final HdfsCompatSuite suite;
   private File stdoutDir = null;
@@ -243,7 +243,7 @@ public class HdfsCompatShellScope {
       return defPolicyName;
     } else {
       return differentPolicies.get(
-          random.nextInt(differentPolicies.size()));
+          RANDOM.nextInt(differentPolicies.size()));
     }
   }
 
@@ -382,7 +382,7 @@ public class HdfsCompatShellScope {
     return lines;
   }
 
-  private static class StreamPrinter extends Thread {
+  private static final class StreamPrinter extends Thread {
     private final InputStream in;
     private final List<String> lines;
 
@@ -406,7 +406,7 @@ public class HdfsCompatShellScope {
     }
   }
 
-  private static class ExecResult {
+  private static final class ExecResult {
     private final int code;
     private final List<String> out;
     private final List<String> err;
