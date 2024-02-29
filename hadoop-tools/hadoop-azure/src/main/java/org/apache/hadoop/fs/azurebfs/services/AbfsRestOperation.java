@@ -39,7 +39,6 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_CONTINUE;
-import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_TIMEOUT_ABBREVIATION;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.EGRESS_LIMIT_BREACH_ABBREVIATION;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.INGRESS_LIMIT_BREACH_ABBREVIATION;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.OPERATION_LIMIT_BREACH_ABBREVIATION;
@@ -325,14 +324,18 @@ public class AbfsRestOperation {
         incrementCounter(AbfsStatistic.SERVER_UNAVAILABLE, 1);
       }
 
-      // If no exception occurred here it means http operation was successfully complete and
+      // If no exception occurred till here it means http operation was successfully complete and
       // a response from server has been received which might be failure or success.
+      // If any kind of exception has occurred it will be caught below.
+      // If request failed determine failure reason and retry policy here.
+      // else simply return with success after saving the result.
       LOG.debug("HttpRequest: {}: {}", operationType, httpOperation);
 
-      // If request failed at server and should be retried, we will determine failure reason and retry policy here
+      int status = httpOperation.getStatusCode();
+      failureReason = RetryReason.getAbbreviation(null, status, httpOperation.getStorageErrorMessage());
+      retryPolicy = client.getRetryPolicy(failureReason);
+
       if (retryPolicy.shouldRetry(retryCount, httpOperation.getStatusCode())) {
-        int status = httpOperation.getStatusCode();
-        failureReason = RetryReason.getAbbreviation(null, status, httpOperation.getStorageErrorMessage());
         return false;
       }
 
@@ -370,7 +373,7 @@ public class AbfsRestOperation {
         1. Status code in 2xx range: Successful Operations should contribute
         2. Status code in 3xx range: Redirection Operations should not contribute
         3. Status code in 4xx range: User Errors should not contribute
-        4. Status code in 503 range: Server Error should contribute as following:
+        4. Status code is 503: Throttling Error should contribute as following:
           a. 503, Ingress Over Account Limit: Should Contribute
           b. 503, Egress Over Account Limit: Should Contribute
           c. 503, TPS Over Account Limit: Should Contribute

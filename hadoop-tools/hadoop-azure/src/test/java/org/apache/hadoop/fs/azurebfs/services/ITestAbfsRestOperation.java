@@ -61,6 +61,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARA
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_POSITION;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ABFS_ACCOUNT_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_CONFIGURATION_FILE_NAME;
+import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.EGRESS_OVER_ACCOUNT_LIMIT;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -233,6 +234,11 @@ public class ITestAbfsRestOperation extends AbstractAbfsIntegrationTest {
       // mocked the response code and the response message to check different
       // behaviour based on response code.
       Mockito.doReturn(responseCode).when(abfsHttpOperation).getConnResponseCode();
+      if (responseCode == HTTP_UNAVAILABLE) {
+        Mockito.doReturn(EGRESS_OVER_ACCOUNT_LIMIT.getErrorMessage())
+            .when(abfsHttpOperation)
+            .getStorageErrorMessage();
+      }
       Mockito.doReturn(responseMessage)
           .when(abfsHttpOperation)
           .getConnResponseMessage();
