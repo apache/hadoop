@@ -135,9 +135,10 @@ public class MultiDispatcher extends AbstractService implements Dispatcher {
             .namingPattern(this.dispatcherName + "-monitor-%d")
             .build());
     monitorExecutor.scheduleAtFixedRate(() -> {
-      List<String> notEmptyQueues = workerExecutor.getQueueSize().entrySet().stream()
+      List<String> notEmptyQueues = workerExecutor.getQueuesSize().entrySet().stream()
           .filter(e -> 0 < e.getValue())
           .map(e -> String.format("%s has queue size %d", e.getKey(), e.getValue()))
+          .sorted()
           .collect(Collectors.toList());
       if (!notEmptyQueues.isEmpty()) {
         log.info("Event queue sizes: {}", notEmptyQueues);

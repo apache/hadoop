@@ -78,7 +78,7 @@ public class MultiDispatcherExecutor {
     }
   }
 
-  public Map<String, Long> getQueueSize() {
+  public Map<String, Long> getQueuesSize() {
     return Arrays.stream(threads).collect(Collectors.toMap(
         MultiDispatcherExecutorThread::getName,
         MultiDispatcherExecutorThread::queueSize
@@ -89,7 +89,7 @@ public class MultiDispatcherExecutor {
     private final BlockingQueue<Runnable> queue;
 
     MultiDispatcherExecutorThread(ThreadGroup group, int index, int queueSize) {
-      super(group, String.format("Thread-%d", index));
+      super(group, String.format("%s-worker-%d", group.getName(), index));
       this.queue = new LinkedBlockingQueue<>(queueSize);
     }
 
