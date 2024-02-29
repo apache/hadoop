@@ -147,5 +147,9 @@ public final class FileSystemConfigurations {
    */
   public static final int RATE_LIMIT_DEFAULT = 10_000;
 
+  public static final int ZERO = 0;
+  public static final int HUNDRED = 100;
+  public static final long THOUSAND = 1000L;
+
   private FileSystemConfigurations() {}
 }

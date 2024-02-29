@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import java.util.Map;
 import org.apache.hadoop.fs.azurebfs.AbfsBackoffMetrics;
 
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ZERO;
 import static org.apache.hadoop.util.Time.now;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_CONTINUE;
@@ -127,6 +128,11 @@ public class AbfsRestOperation {
   String getSasToken() {
     return sasToken;
   }
+
+  private static final int MIN_FIRST_RANGE = 1;
+  private static final int MAX_FIRST_RANGE = 5;
+  private static final int MAX_SECOND_RANGE = 15;
+  private static final int MAX_THIRD_RANGE = 25;
 
   /**
    * Initializes a new REST operation.
@@ -296,7 +302,7 @@ public class AbfsRestOperation {
         abfsBackoffMetrics.getNumberOfRequestsFailed().getAndIncrement();
       }
     } else {
-      if (retryCount > 0 && retryCount <= maxIoRetries) {
+      if (retryCount > ZERO && retryCount <= maxIoRetries) {
         maxRetryCount = Math.max(abfsBackoffMetrics.getMaxRetryCount().get(), retryCount);
         abfsBackoffMetrics.getMaxRetryCount().set(maxRetryCount);
         updateCount(retryCount);
@@ -535,11 +541,11 @@ public class AbfsRestOperation {
    * This method categorizes retry counts into different ranges and assigns a corresponding key.
    */
   private String getKey(int retryCount) {
-    if (retryCount >= 1 && retryCount <= 4) {
+    if (retryCount >= MIN_FIRST_RANGE && retryCount < MAX_FIRST_RANGE) {
       return Integer.toString(retryCount);
-    } else if (retryCount >= 5 && retryCount < 15) {
+    } else if (retryCount >= MAX_FIRST_RANGE && retryCount < MAX_SECOND_RANGE) {
       return "5_15";
-    } else if (retryCount >= 15 && retryCount < 25) {
+    } else if (retryCount >= MAX_SECOND_RANGE && retryCount < MAX_THIRD_RANGE) {
       return "15_25";
     } else {
       return "25AndAbove";

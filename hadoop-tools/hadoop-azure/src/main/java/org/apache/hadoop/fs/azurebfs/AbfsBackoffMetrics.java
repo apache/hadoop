@@ -24,6 +24,9 @@ import java.util.Map;
 import java.util.ArrayList;
 import java.util.Arrays;
 
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.HUNDRED;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.THOUSAND;
+
 public class AbfsBackoffMetrics {
 
   private AtomicLong numberOfRequestsSucceeded;
@@ -168,7 +171,7 @@ public class AbfsBackoffMetrics {
         + numberOfIOPSThrottledRequests.get()
         + numberOfOtherThrottledRequests.get();
     double percentageOfRequestsThrottled =
-        ((double) totalRequestsThrottled / totalNumberOfRequests.get()) * 100;
+        ((double) totalRequestsThrottled / totalNumberOfRequests.get()) * HUNDRED;
     for (Map.Entry<String, AbfsBackoffMetrics> entry : metricsMap.entrySet()) {
       metricString.append("$RCTSI$_").append(entry.getKey())
           .append("R_").append("=")
@@ -178,14 +181,14 @@ public class AbfsBackoffMetrics {
         metricString.append("$MMA$_").append(entry.getKey())
             .append("R_").append("=")
             .append(String.format("%.3f",
-                (double) entry.getValue().getMinBackoff().get() / 1000L))
+                (double) entry.getValue().getMinBackoff().get() / THOUSAND))
             .append("s")
             .append(String.format("%.3f",
-                (double) entry.getValue().getMaxBackoff().get() / 1000L))
+                (double) entry.getValue().getMaxBackoff().get() / THOUSAND))
             .append("s")
             .append(String.format("%.3f",
                 ((double) entry.getValue().getTotalBackoff().get() / totalRequests)
-                    / 1000L))
+                    / THOUSAND))
             .append("s");
       } else {
         metricString.append("$MMA$_").append(entry.getKey())
