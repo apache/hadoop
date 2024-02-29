@@ -2675,7 +2675,6 @@ public class TestDistributedFileSystem {
       // create a file with replication 3, for rack fault tolerant BPP,
       // it should allocate nodes in all 3 racks.
       DFSTestUtil.createFile(fs, new Path("/testFile"), 1024L, (short) 3, 1024L);
-      cluster.shutdown(true);
     }
   }
 
@@ -2704,8 +2703,6 @@ public class TestDistributedFileSystem {
       } catch (IOException e) {
         // success
         threw = true;
-      } finally {
-        cluster.shutdown(true);
       }
       assertTrue("Failed to throw IOE when creating a file with less "
               + "DNs than required for min replication", threw);
@@ -2735,7 +2732,6 @@ public class TestDistributedFileSystem {
       // create a file with replication 3, for rack fault tolerant BPP,
       // it should allocate nodes in all 3 racks.
       DFSTestUtil.createFile(fs, new Path("/testFile"), 1024L, (short) 3, 1024L);
-      cluster.shutdown(true);
     }
   }
 
@@ -2765,7 +2761,6 @@ public class TestDistributedFileSystem {
         // success
         threw = true;
       }
-      cluster.shutdown(true);
       assertTrue("Failed to throw IOE when creating a file with less "
           + "DNs than required for min replication", threw);
     }
@@ -2796,8 +2791,6 @@ public class TestDistributedFileSystem {
       } catch (IOException e) {
         // success
         threw = true;
-      } finally {
-        cluster.shutdown(true);
       }
       assertTrue("Failed to throw IOE when creating a file with no DNs", threw);
     }

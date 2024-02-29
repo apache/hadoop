@@ -1650,8 +1650,7 @@ class DataStreamer extends Daemon {
 
       handleDatanodeReplacement();
 
-      // During create stage, if we remove a node (nodes.length - 1)
-      //  min replication should still be satisfied.
+      // During create stage, min replication should still be satisfied.
       if (isCreateStage && !(dfsClient.dtpReplaceDatanodeOnFailureReplication > 0 &&
           nodes.length  >= dfsClient.dtpReplaceDatanodeOnFailureReplication)) {
         return false;
