@@ -69,6 +69,7 @@ public final class AbfsHttpConstants {
    * and should qualify for retry.
    */
   public static final int HTTP_CONTINUE = 100;
+  public static final String EXPECT_100_JDK_ERROR = "Server rejected operation";
 
   // Abfs generic constants
   public static final String SINGLE_WHITE_SPACE = " ";
@@ -92,6 +93,7 @@ public final class AbfsHttpConstants {
   public static final String FORWARD_SLASH_ENCODE = "%2F";
   public static final String AZURE_DISTRIBUTED_FILE_SYSTEM_AUTHORITY_DELIMITER = "@";
   public static final String UTF_8 = "utf-8";
+  public static final String MD5 = "MD5";
   public static final String GMT_TIMEZONE = "GMT";
   public static final String APPLICATION_JSON = "application/json";
   public static final String APPLICATION_OCTET_STREAM = "application/octet-stream";

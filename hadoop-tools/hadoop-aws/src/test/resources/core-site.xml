@@ -30,33 +30,66 @@
     <final>false</final>
   </property>
 
-  <!-- Per-bucket configurations: landsat-pds -->
+  <!--
+    Test file for some scale tests.
+
+    A CSV file in this bucket was used for testing S3 select.
+    Although this feature has been removed, (HADOOP-18830)
+    it is still used in some tests as a large file to read
+    and as a file in a bucket without write permissions.
+    The original file s3a://landsat-pds/scene_list.gz is
+    on a now-inaccessible bucket.
+  -->
+<!--
+  This is defined in PublicDatasetTestUtils;
+  if needed for older builds, this can copied into
+  auth-keys along with the other bucket binding information,
+  which is all exclusively defined here.
+
   <property>
-    <name>fs.s3a.bucket.landsat-pds.endpoint.region</name>
-    <value>us-west-2</value>
-    <description>The region for s3a://landsat-pds</description>
+    <name>fs.s3a.scale.test.csvfile</name>
+    <value>s3a://noaa-cors-pds/raw/2024/001/akse/AKSE001x.24_.gz</value>
+    <description>file used in scale tests</description>
+  </property>
+-->
+
+  <property>
+    <name>fs.s3a.bucket.noaa-cors-pds.endpoint.region</name>
+    <value>us-east-1</value>
   </property>
 
   <property>
-    <name>fs.s3a.bucket.landsat-pds.multipart.purge</name>
+    <name>fs.s3a.bucket.noaa-isd-pds.multipart.purge</name>
     <value>false</value>
     <description>Don't try to purge uploads in the read-only bucket, as
     it will only create log noise.</description>
   </property>
 
   <property>
-    <name>fs.s3a.bucket.landsat-pds.probe</name>
+    <name>fs.s3a.bucket.noaa-isd-pds.probe</name>
     <value>0</value>
     <description>Let's postpone existence checks to the first IO operation </description>
   </property>
 
   <property>
-    <name>fs.s3a.bucket.landsat-pds.audit.add.referrer.header</name>
+    <name>fs.s3a.bucket.noaa-isd-pds.audit.add.referrer.header</name>
     <value>false</value>
-    <description>Do not add the referrer header to landsat operations</description>
+    <description>Do not add the referrer header</description>
+  </property>
+
+  <property>
+    <name>fs.s3a.bucket.noaa-isd-pds.prefetch.block.size</name>
+    <value>128k</value>
+    <description>Use a small prefetch size so tests fetch multiple blocks</description>
   </property>
 
   <!-- Per-bucket configurations: usgs-landsat -->
+  <!--
+    This is a requester-pays bucket (so validates that feature)
+    and, because it has many files, is used to validate paged file
+    listing without needing to create thousands of files.
+  -->
+
   <property>
     <name>fs.s3a.bucket.usgs-landsat.endpoint.region</name>
     <value>us-west-2</value>
@@ -186,11 +219,6 @@
   <property>
     <name>fs.iostatistics.thread.level.enabled</name>
     <value>true</value>
-  </property>
-
-  <property>
-    <name>fs.s3a.connection.request.timeout</name>
-    <value>10s</value>
   </property>
 
   <property>

@@ -259,6 +259,35 @@ public class TestLeaseRecoveryStriped {
     checkSafeLength(1024 * 1024 * 1024, 6442450944L); // Length of: 1 GiB
   }
 
+  /**
+   * 1. Write 1MB data, then flush it.
+   * 2. Mock client quiet exceptionally.
+   * 3. Trigger lease recovery.
+   * 4. Lease recovery successfully.
+   */
+  @Test
+  public void testLeaseRecoveryWithManyZeroLengthReplica() {
+    int curCellSize = (int)1024 * 1024;
+    try {
+      final FSDataOutputStream out = dfs.create(p);
+      final DFSStripedOutputStream stripedOut = (DFSStripedOutputStream) out
+          .getWrappedStream();
+      for (int pos = 0; pos < curCellSize; pos++) {
+        out.write(StripedFileTestUtil.getByte(pos));
+      }
+      for (int i = 0; i < dataBlocks + parityBlocks; i++) {
+        StripedDataStreamer s = stripedOut.getStripedDataStreamer(i);
+        waitStreamerAllAcked(s);
+        stopBlockStream(s);
+      }
+      recoverLease();
+      LOG.info("Trigger recover lease manually successfully.");
+    } catch (Throwable e) {
+      String msg = "failed testCase" + StringUtils.stringifyException(e);
+      Assert.fail(msg);
+    }
+  }
+
   private void checkSafeLength(int blockLength, long expectedSafeLength) {
     int[] blockLengths = new int[]{blockLength, blockLength, blockLength, blockLength,
         blockLength, blockLength};
