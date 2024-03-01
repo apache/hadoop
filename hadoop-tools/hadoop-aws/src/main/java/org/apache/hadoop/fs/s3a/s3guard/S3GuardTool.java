@@ -57,7 +57,7 @@ import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants;
 import org.apache.hadoop.fs.s3a.impl.DirectoryPolicy;
 import org.apache.hadoop.fs.s3a.impl.DirectoryPolicyImpl;
-import org.apache.hadoop.fs.s3a.select.SelectTool;
+import org.apache.hadoop.fs.s3a.select.SelectConstants;
 import org.apache.hadoop.fs.s3a.tools.BucketTool;
 import org.apache.hadoop.fs.s3a.tools.MarkerTool;
 import org.apache.hadoop.fs.shell.CommandFormat;
@@ -76,6 +76,7 @@ import static org.apache.hadoop.fs.s3a.Invoker.LOG_EVENT;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 import static org.apache.hadoop.fs.s3a.commit.staging.StagingCommitterConstants.FILESYSTEM_TEMP_PATH;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.S3A_DYNAMIC_CAPABILITIES;
+import static org.apache.hadoop.fs.s3a.select.SelectConstants.SELECT_UNSUPPORTED;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.retrieveIOStatistics;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.MULTIPART_UPLOAD_ABORTED;
@@ -121,7 +122,6 @@ public abstract class S3GuardTool extends Configured implements Tool,
       "\t" + BucketInfo.NAME + " - " + BucketInfo.PURPOSE + "\n" +
       "\t" + BucketTool.NAME + " - " + BucketTool.PURPOSE + "\n" +
       "\t" + MarkerTool.MARKERS + " - " + MarkerTool.PURPOSE + "\n" +
-      "\t" + SelectTool.NAME + " - " + SelectTool.PURPOSE + "\n" +
       "\t" + Uploads.NAME + " - " + Uploads.PURPOSE + "\n";
 
   private static final String E_UNSUPPORTED = "This command is no longer supported";
@@ -357,12 +357,11 @@ public abstract class S3GuardTool extends Configured implements Tool,
     public static final String NAME = BUCKET_INFO;
     public static final String GUARDED_FLAG = "guarded";
     public static final String UNGUARDED_FLAG = "unguarded";
-    public static final String AUTH_FLAG = "auth";
-    public static final String NONAUTH_FLAG = "nonauth";
     public static final String ENCRYPTION_FLAG = "encryption";
     public static final String MAGIC_FLAG = "magic";
     public static final String MARKERS_FLAG = "markers";
     public static final String MARKERS_AWARE = "aware";
+    public static final String FIPS_FLAG = "fips";
 
     public static final String PURPOSE = "provide/check information"
         + " about a specific bucket";
@@ -370,8 +369,7 @@ public abstract class S3GuardTool extends Configured implements Tool,
     private static final String USAGE = NAME + " [OPTIONS] s3a://BUCKET\n"
         + "\t" + PURPOSE + "\n\n"
         + "Common options:\n"
-        + "  -" + AUTH_FLAG + " - Require the S3Guard mode to be \"authoritative\"\n"
-        + "  -" + NONAUTH_FLAG + " - Require the S3Guard mode to be \"non-authoritative\"\n"
+        + "  -" + FIPS_FLAG + " - Require the client is using a FIPS endpoint\n"
         + "  -" + MAGIC_FLAG +
         " - Require the S3 filesystem to be support the \"magic\" committer\n"
         + "  -" + ENCRYPTION_FLAG
@@ -395,7 +393,7 @@ public abstract class S3GuardTool extends Configured implements Tool,
             + " directory markers are not deleted";
 
     public BucketInfo(Configuration conf) {
-      super(conf, GUARDED_FLAG, UNGUARDED_FLAG, AUTH_FLAG, NONAUTH_FLAG, MAGIC_FLAG);
+      super(conf, GUARDED_FLAG, UNGUARDED_FLAG, FIPS_FLAG, MAGIC_FLAG);
       CommandFormat format = getCommandFormat();
       format.addOptionWithValue(ENCRYPTION_FLAG);
       format.addOptionWithValue(MARKERS_FLAG);
@@ -462,6 +460,10 @@ public abstract class S3GuardTool extends Configured implements Tool,
       println(out, "\tEndpoint: %s=%s",
           ENDPOINT,
           StringUtils.isNotEmpty(endpoint) ? endpoint : "(unset)");
+      String region = conf.getTrimmed(AWS_REGION, "");
+      println(out, "\tRegion: %s=%s", AWS_REGION,
+          StringUtils.isNotEmpty(region) ? region : "(unset)");
+
       String encryption =
           printOption(out, "\tEncryption", Constants.S3_ENCRYPTION_ALGORITHM,
               "none");
@@ -487,12 +489,12 @@ public abstract class S3GuardTool extends Configured implements Tool,
           FS_S3A_COMMITTER_NAME, COMMITTER_NAME_FILE);
       switch (committer) {
       case COMMITTER_NAME_FILE:
-        println(out, "The original 'file' commmitter is active"
+        println(out, "The original 'file' committer is active"
             + " -this is slow and potentially unsafe");
         break;
       case InternalCommitterConstants.COMMITTER_NAME_STAGING:
         println(out, "The 'staging' committer is used "
-            + "-prefer the 'directory' committer");
+            + "-prefer the 'magic' committer");
         // fall through
       case COMMITTER_NAME_DIRECTORY:
         // fall through
@@ -555,13 +557,17 @@ public abstract class S3GuardTool extends Configured implements Tool,
       processMarkerOption(out, fs,
           getCommandFormat().getOptValue(MARKERS_FLAG));
 
-      // and check for capabilitities
+      // and check for capabilities
       println(out, "%nStore Capabilities");
       for (String capability : S3A_DYNAMIC_CAPABILITIES) {
         out.printf("\t%s %s%n", capability,
             fs.hasPathCapability(root, capability));
       }
       println(out, "");
+
+      if (commands.getOpt(FIPS_FLAG) && !fs.hasPathCapability(root, FIPS_ENDPOINT)) {
+        throw badState("FIPS endpoint was required but the filesystem is not using it");
+      }
       // and finally flush the output and report a success.
       out.flush();
       return SUCCESS;
@@ -998,11 +1004,9 @@ public abstract class S3GuardTool extends Configured implements Tool,
     case Uploads.NAME:
       command = new Uploads(conf);
       break;
-    case SelectTool.NAME:
-      // the select tool is not technically a S3Guard tool, but it's on the CLI
-      // because this is the defacto S3 CLI.
-      command = new SelectTool(conf);
-      break;
+    case SelectConstants.NAME:
+      throw new ExitUtil.ExitException(
+          EXIT_UNSUPPORTED_VERSION, SELECT_UNSUPPORTED);
     default:
       printHelp();
       throw new ExitUtil.ExitException(E_USAGE,

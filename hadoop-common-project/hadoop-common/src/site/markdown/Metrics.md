@@ -87,6 +87,7 @@ The default timeunit used for RPC metrics is milliseconds (as per the below desc
 | `RpcAuthorizationFailures` | Total number of authorization failures |
 | `RpcAuthorizationSuccesses` | Total number of authorization successes |
 | `RpcClientBackoff` | Total number of client backoff requests |
+| `RpcClientBackoffDisconnected` | Total number of client backoff requests that are disconnected. This is a subset of RpcClientBackoff |
 | `RpcSlowCalls` | Total number of slow RPC calls |
 | `RpcRequeueCalls` | Total number of requeue RPC calls |
 | `RpcCallsSuccesses` | Total number of RPC calls that are successfully processed |

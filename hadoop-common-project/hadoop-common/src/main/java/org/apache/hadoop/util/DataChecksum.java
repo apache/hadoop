@@ -117,17 +117,15 @@ public class DataChecksum implements Checksum {
    * @param type type.
    * @return the int representation of the polynomial associated with the
    *     CRC {@code type}, suitable for use with further CRC arithmetic.
-   * @throws IOException if there is no CRC polynomial applicable
-   *     to the given {@code type}.
    */
-  public static int getCrcPolynomialForType(Type type) throws IOException {
+  public static int getCrcPolynomialForType(Type type) {
     switch (type) {
     case CRC32:
       return CrcUtil.GZIP_POLYNOMIAL;
     case CRC32C:
       return CrcUtil.CASTAGNOLI_POLYNOMIAL;
     default:
-      throw new IOException(
+      throw new IllegalArgumentException(
           "No CRC polynomial could be associated with type: " + type);
     }
   }
@@ -155,10 +153,10 @@ public class DataChecksum implements Checksum {
    * @param bytes bytes.
    * @param offset offset.
    * @return DataChecksum of the type in the array or null in case of an error.
-   * @throws IOException raised on errors performing I/O.
+   * @throws InvalidChecksumSizeException when the stored checksum is invalid.
    */
   public static DataChecksum newDataChecksum(byte[] bytes, int offset)
-      throws IOException {
+      throws InvalidChecksumSizeException {
     if (offset < 0 || bytes.length < offset + getChecksumHeaderSize()) {
       throw new InvalidChecksumSizeException("Could not create DataChecksum "
           + " from the byte array of length " + bytes.length
