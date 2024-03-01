@@ -110,7 +110,7 @@ public interface NamenodeProtocol {
    * Get the transaction ID of the most recent checkpoint.
    */
   @Idempotent
-  public long getMostRecentCheckpointTxId() throws IOException;
+  long getMostRecentCheckpointTxId() throws IOException;
 
   /**
    * Get the transaction ID of the most recent checkpoint for the given NameNodeFile.

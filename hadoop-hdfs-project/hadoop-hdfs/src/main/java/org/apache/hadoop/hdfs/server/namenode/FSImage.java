@@ -1564,13 +1564,13 @@ public class FSImage implements Closeable {
   }
 
   /**
-   * Given a NameNodeFile type, retrieve the latest txid for that file or
-   * {@link HdfsServerConstants::INVALID_TXID} if the file does not exist
+   * Given a NameNodeFile type, retrieve the latest txid for that file or {@link
+   * HdfsServerConstants::INVALID_TXID} if the file does not exist.
    *
    * @param nnf The NameNodeFile type to retrieve the latest txid from.
-   * @return the latest txid for the NameNodeFile type, or
-   * {@link HdfsServerConstants::INVALID_TXID} if there is no FSImage file of
-   * the type requested
+   * @return the latest txid for the NameNodeFile type, or {@link
+   * HdfsServerConstants::INVALID_TXID} if there is no FSImage file of the type
+   * requested.
    * @throws IOException
    */
   public long getMostRecentNameNodeFileTxId(NameNodeFile nnf)
