@@ -157,16 +157,20 @@ public class ITestAzureBlobFileSystemAttributes extends AbstractAbfsIntegrationT
     byte[] attributeValue = fs.getAbfsStore().encodeAttribute("hi");
     final Path testPath = new Path(ROOT_PATH);
 
-    try {
+    AbfsRestOperationException ex = intercept(AbfsRestOperationException.class, () -> {
       fs.getXAttr(testPath, attributeName);
-    } catch (AbfsRestOperationException e) {
-      Assertions.assertThat(e.getStatusCode()).isEqualTo(HTTP_BAD_REQUEST);
-    }
+    });
 
-    try {
+    Assertions.assertThat(ex.getStatusCode())
+        .describedAs("GetXAttr() on root should fail with Bad Request")
+        .isEqualTo(HTTP_BAD_REQUEST);
+
+    ex = intercept(AbfsRestOperationException.class, () -> {
       fs.setXAttr(testPath, attributeName, attributeValue, CREATE_FLAG);
-    } catch (AbfsRestOperationException e) {
-      Assertions.assertThat(e.getStatusCode()).isEqualTo(HTTP_BAD_REQUEST);
-    }
+    });
+
+    Assertions.assertThat(ex.getStatusCode())
+        .describedAs("SetXAttr() on root should fail with Bad Request")
+        .isEqualTo(HTTP_BAD_REQUEST);
   }
 }
