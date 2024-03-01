@@ -81,6 +81,7 @@ public interface HdfsClientConfigKeys {
   String DFS_RBF_OBSERVER_READ_ENABLE = "dfs.client.rbf.observer.read.enable";
   boolean DFS_RBF_OBSERVER_READ_ENABLE_DEFAULT = false;
   int DFS_NAMENODE_RPC_PORT_DEFAULT = 8020;
+  String DFS_HA_OBSERVER_NAMENODES_KEY_SUFFIX = "observers";
   String DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY =
       "dfs.namenode.kerberos.principal";
   String  DFS_CLIENT_WRITE_PACKET_SIZE_KEY = "dfs.client-write-packet-size";

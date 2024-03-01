@@ -167,10 +167,15 @@ public abstract class AbstractNNFailoverProxyProvider<T> implements
    * Get list of configured NameNode proxy addresses.
    * Randomize the list if requested.
    */
-  protected List<NNProxyInfo<T>> getProxyAddresses(URI uri, String addressKey) {
+  protected List<NNProxyInfo<T>> getProxyAddresses(URI uri, String addressKey,
+      boolean forOnnFailover2Ann) {
     final List<NNProxyInfo<T>> proxies = new ArrayList<NNProxyInfo<T>>();
-    Map<String, Map<String, InetSocketAddress>> map =
-        DFSUtilClient.getAddresses(conf, null, addressKey);
+    Map<String, Map<String, InetSocketAddress>> map;
+    if (forOnnFailover2Ann) {
+      map = DFSUtilClient.getAddresses(conf, null, true, addressKey);
+    } else {
+      map = DFSUtilClient.getAddresses(conf, null, addressKey);
+    }
     Map<String, InetSocketAddress> addressesInNN = map.get(uri.getHost());
 
     if (addressesInNN == null || addressesInNN.size() == 0) {

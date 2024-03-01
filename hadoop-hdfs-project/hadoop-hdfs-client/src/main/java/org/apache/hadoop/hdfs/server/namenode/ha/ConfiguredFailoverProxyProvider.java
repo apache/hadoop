@@ -48,7 +48,18 @@ public class ConfiguredFailoverProxyProvider<T> extends
   public ConfiguredFailoverProxyProvider(Configuration conf, URI uri,
       Class<T> xface, HAProxyFactory<T> factory, String addressKey) {
     super(conf, uri, xface, factory);
-    this.proxies = getProxyAddresses(uri, addressKey);
+    this.proxies = getProxyAddresses(uri, addressKey, false);
+  }
+
+  public ConfiguredFailoverProxyProvider(Configuration conf, URI uri,
+      Class<T> xface, HAProxyFactory<T> factory, boolean forOnnFailover2Ann) {
+    this(conf, uri, xface, factory, DFS_NAMENODE_RPC_ADDRESS_KEY, forOnnFailover2Ann);
+  }
+
+  public ConfiguredFailoverProxyProvider(Configuration conf, URI uri,
+      Class<T> xface, HAProxyFactory<T> factory, String addressKey, boolean forOnnFailover2Ann) {
+    super(conf, uri, xface, factory);
+    this.proxies = getProxyAddresses(uri, addressKey, forOnnFailover2Ann);
   }
 
   /**
