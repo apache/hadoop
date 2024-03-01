@@ -57,6 +57,7 @@ import java.util.stream.Collectors;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.HAUtil;
+import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheLoader;
 import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
@@ -369,7 +370,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
         RetriableException.class);
 
     this.rpcServer.addSuppressedLoggingExceptions(
-        StandbyException.class);
+        StandbyException.class, UnresolvedPathException.class);
 
     // The RPC-server port can be ephemeral... ensure we have the correct info
     InetSocketAddress listenAddress = this.rpcServer.getListenerAddress();
