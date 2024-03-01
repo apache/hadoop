@@ -68,6 +68,7 @@ import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 
+import static org.apache.hadoop.fs.VectoredReadUtils.validateNonOverlappingAndReturnSortedRanges;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 import static org.apache.hadoop.fs.VectoredReadUtils.sortRanges;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_BYTES;
@@ -319,10 +320,9 @@ public class RawLocalFileSystem extends FileSystem {
     public void readVectored(List<? extends FileRange> ranges,
                              IntFunction<ByteBuffer> allocate) throws IOException {
 
-      List<? extends FileRange> sortedRanges = Arrays.asList(sortRanges(ranges));
+      List<? extends FileRange> sortedRanges = validateNonOverlappingAndReturnSortedRanges(ranges);
       // Set up all of the futures, so that we can use them if things fail
       for(FileRange range: sortedRanges) {
-        VectoredReadUtils.validateRangeRequest(range);
         range.setData(new CompletableFuture<>());
       }
       try {

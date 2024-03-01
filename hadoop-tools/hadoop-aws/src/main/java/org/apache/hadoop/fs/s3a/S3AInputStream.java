@@ -892,7 +892,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     if (stopVectoredIOOperations.getAndSet(false)) {
       LOG.debug("Reinstating vectored read operation for path {} ", pathStr);
     }
-    List<? extends FileRange> sortedRanges = validateNonOverlappingAndReturnSortedRanges(ranges);
+    List<FileRange> sortedRanges = validateNonOverlappingAndReturnSortedRanges(ranges);
     for (FileRange range : ranges) {
       validateRangeRequest(range);
       CompletableFuture<ByteBuffer> result = new CompletableFuture<>();

@@ -57,7 +57,7 @@ public class TestLocalFSContractVectoredRead extends AbstractContractVectoredRea
     Path testPath = path("big_range_checksum_file");
     List<FileRange> someRandomRanges = new ArrayList<>();
     someRandomRanges.add(FileRange.createFileRange(10, 1024));
-    someRandomRanges.add(FileRange.createFileRange(1025, 1024));
+    someRandomRanges.add(FileRange.createFileRange(1040, 1024));
     validateCheckReadException(testPath, DATASET_LEN, someRandomRanges);
   }
 
@@ -138,6 +138,6 @@ public class TestLocalFSContractVectoredRead extends AbstractContractVectoredRea
     FileSystem fs = getFileSystem();
     List<FileRange> fileRanges = new ArrayList<>();
     fileRanges.add(FileRange.createFileRange(DATASET_LEN, 100));
-    verifyExceptionalVectoredRead(fs, fileRanges, EOFException.class);
+    verifyExceptionalVectoredRead(fileRanges, EOFException.class);
   }
 }

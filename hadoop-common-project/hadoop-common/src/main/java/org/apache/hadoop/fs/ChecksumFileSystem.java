@@ -52,6 +52,7 @@ import org.apache.hadoop.util.LambdaUtils;
 import org.apache.hadoop.util.Progressable;
 
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_STANDARD_OPTIONS;
+import static org.apache.hadoop.fs.VectoredReadUtils.validateNonOverlappingAndReturnSortedRanges;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 import static org.apache.hadoop.fs.impl.StoreImplementationUtils.isProbeForSyncable;
 import static org.apache.hadoop.fs.VectoredReadUtils.sortRanges;
@@ -458,8 +459,9 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
       }
       int minSeek = minSeekForVectorReads();
       int maxSize = maxReadSizeForVectorReads();
+      final List<FileRange> sorted = validateNonOverlappingAndReturnSortedRanges(ranges);
       List<CombinedFileRange> dataRanges =
-          VectoredReadUtils.mergeSortedRanges(Arrays.asList(sortRanges(ranges)), bytesPerSum,
+          VectoredReadUtils.mergeSortedRanges(sorted, bytesPerSum,
               minSeek, maxReadSizeForVectorReads());
       // While merging the ranges above, they are rounded up based on the value of bytesPerSum
       // which leads to some ranges crossing the EOF thus they need to be fixed else it will

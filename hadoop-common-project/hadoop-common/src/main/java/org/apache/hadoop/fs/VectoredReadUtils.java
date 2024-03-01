@@ -28,14 +28,17 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.IntFunction;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.impl.CombinedFileRange;
-import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.functional.Function4RaisingIOE;
+
+import static org.apache.hadoop.util.Preconditions.checkArgument;
 
 /**
  * Utility class which implements helper methods used
  * in vectored IO implementation.
  */
+@InterfaceAudience.LimitedPrivate("Filesystems")
 public final class VectoredReadUtils {
 
   private static final int TMP_BUFFER_MAX_SIZE = 64 * 1024;
@@ -43,12 +46,13 @@ public final class VectoredReadUtils {
   /**
    * Validate a single range.
    * @param range file range.
-   * @throws EOFException any EOF Exception.
+   * @throws IllegalArgumentException the range length is negative.
+   * @throws EOFException the range offset is negative
    */
   public static void validateRangeRequest(FileRange range)
           throws EOFException {
 
-    Preconditions.checkArgument(range.getLength() >= 0, "length is negative");
+    checkArgument(range.getLength() >= 0, "length is negative");
     if (range.getOffset() < 0) {
       throw new EOFException("position is negative");
     }
@@ -66,8 +70,6 @@ public final class VectoredReadUtils {
     }
   }
 
-
-
   /**
    * This is the default implementation which iterates through the ranges
    * to read each synchronously, but the intent is that subclasses
@@ -76,11 +78,13 @@ public final class VectoredReadUtils {
    * @param stream the stream to read the data from
    * @param ranges the byte ranges to read
    * @param allocate the byte buffer allocation
+   * @throws IllegalArgumentException if there are overlapping ranges or the range length is negative.
+   * @throws EOFException the range offset is negative
    */
   public static void readVectored(PositionedReadable stream,
                                   List<? extends FileRange> ranges,
-                                  IntFunction<ByteBuffer> allocate) {
-    for (FileRange range: ranges) {
+                                  IntFunction<ByteBuffer> allocate) throws EOFException {
+    for (FileRange range: validateNonOverlappingAndReturnSortedRanges(ranges)) {
       range.setData(readRangeFrom(stream, range, allocate));
     }
   }
@@ -220,26 +224,32 @@ public final class VectoredReadUtils {
   }
 
   /**
-   * Check if the input ranges are overlapping in nature.
-   * We call two ranges to be overlapping when start offset
+   * Validate a list of ranges (including overlapping checks) and
+   * return the sorted list.
+   * Two ranges overlapping when the start offset
    * of second is less than the end offset of first.
    * End offset is calculated as start offset + length.
-   * @param input list if input ranges.
-   * @return true/false based on logic explained above.
+   * @param input input list
+   * @return a new sorted list.
+   * @throws IllegalArgumentException if there are overlapping ranges or the range length is negative.
+   * @throws EOFException the range offset is negative
    */
-  public static List<? extends FileRange> validateNonOverlappingAndReturnSortedRanges(
-          List<? extends FileRange> input) {
+  public static List<FileRange> validateNonOverlappingAndReturnSortedRanges(
+          List<? extends FileRange> input) throws EOFException {
 
     if (input.size() <= 1) {
-      return input;
+      validateRangeRequest(input.get(0));
+      //noinspection unchecked
+      return (List<FileRange>) input;
     }
     FileRange[] sortedRanges = sortRanges(input);
     FileRange prev = sortedRanges[0];
-    for (int i=1; i<sortedRanges.length; i++) {
-      if (sortedRanges[i].getOffset() < prev.getOffset() + prev.getLength()) {
-        throw new UnsupportedOperationException("Overlapping ranges are not supported");
-      }
-      prev = sortedRanges[i];
+    for (int i = 1; i < sortedRanges.length; i++) {
+      final FileRange current = sortedRanges[i];
+      validateRangeRequest(current);
+      checkArgument(current.getOffset() >= prev.getOffset() + prev.getLength(),
+          "Overlapping ranges %s and %s", prev, current);
+      prev = current;
     }
     return Arrays.asList(sortedRanges);
   }

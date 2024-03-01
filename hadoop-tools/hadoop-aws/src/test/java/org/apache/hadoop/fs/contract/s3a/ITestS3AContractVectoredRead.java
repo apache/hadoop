@@ -77,10 +77,9 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
    */
   @Override
   public void testEOFRanges() throws Exception {
-    FileSystem fs = getFileSystem();
     List<FileRange> fileRanges = new ArrayList<>();
     fileRanges.add(FileRange.createFileRange(DATASET_LEN, 100));
-    verifyExceptionalVectoredRead(fs, fileRanges, RangeNotSatisfiableEOFException.class);
+    verifyExceptionalVectoredRead(fileRanges, RangeNotSatisfiableEOFException.class);
   }
 
   /**
@@ -173,16 +172,16 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
 
   @Test
   public void testStopVectoredIoOperationsCloseStream() throws Exception {
-    FileSystem fs = getFileSystem();
+
     List<FileRange> fileRanges = createSampleNonOverlappingRanges();
-    try (FSDataInputStream in = fs.open(path(VECTORED_READ_FILE_NAME))){
+    try (FSDataInputStream in = openVectorFile()){
       in.readVectored(fileRanges, getAllocate());
       in.close();
       LambdaTestUtils.intercept(InterruptedIOException.class,
           () -> validateVectoredReadResult(fileRanges, DATASET));
     }
     // reopening the stream should succeed.
-    try (FSDataInputStream in = fs.open(path(VECTORED_READ_FILE_NAME))){
+    try (FSDataInputStream in = openVectorFile()){
       in.readVectored(fileRanges, getAllocate());
       validateVectoredReadResult(fileRanges, DATASET);
     }
@@ -190,9 +189,9 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
 
   @Test
   public void testStopVectoredIoOperationsUnbuffer() throws Exception {
-    FileSystem fs = getFileSystem();
+
     List<FileRange> fileRanges = createSampleNonOverlappingRanges();
-    try (FSDataInputStream in = fs.open(path(VECTORED_READ_FILE_NAME))){
+    try (FSDataInputStream in = openVectorFile()){
       in.readVectored(fileRanges, getAllocate());
       in.unbuffer();
       LambdaTestUtils.intercept(InterruptedIOException.class,
@@ -202,27 +201,6 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
       validateVectoredReadResult(fileRanges, DATASET);
     }
 
-  }
-
-  /**
-   * S3 vectored IO doesn't support overlapping ranges.
-   */
-  @Override
-  public void testOverlappingRanges() throws Exception {
-    FileSystem fs = getFileSystem();
-    List<FileRange> fileRanges = getSampleOverlappingRanges();
-    verifyExceptionalVectoredRead(fs, fileRanges, UnsupportedOperationException.class);
-  }
-
-  /**
-   * S3 vectored IO doesn't support overlapping ranges.
-   */
-  @Override
-  public void testSameRanges() throws Exception {
-    // Same ranges are special case of overlapping only.
-    FileSystem fs = getFileSystem();
-    List<FileRange> fileRanges = getSampleSameRanges();
-    verifyExceptionalVectoredRead(fs, fileRanges, UnsupportedOperationException.class);
   }
 
   /**

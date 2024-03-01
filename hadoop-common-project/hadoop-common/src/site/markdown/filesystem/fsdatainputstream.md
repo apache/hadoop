@@ -467,17 +467,34 @@ lead to memory fragmentation explained in HADOOP-18296.
 
 #### Preconditions
 
-For each requested range:
+For each requested range `range[i]` in the list of ranges `range[0..i]` sorted such that
+for all `i where i > 0`:
 
-    range.getOffset >= 0 else raise IllegalArgumentException
-    range.getLength >= 0 else raise EOFException
+    range[i].getOffset() > range[i-1} 
+
+For all ranges `0..i` the preconditions are
+
+```python
+range[i].getOffset >= 0 else raise EOFException
+range[i].getLength >= 0 else raise IllegalArgumentException
+if i > 0 and range[i].getOffset() < (range[i-1].getOffset() + range[i-1].getLength) :
+   raise IllegalArgumentException
+```
 
 #### Postconditions
 
-For each requested range:
+For each requested range `range[i]` in the list of ranges `range[0..i]`
 
-    range.getData() returns CompletableFuture<ByteBuffer> which will have data
-    from range.getOffset to range.getLength.
+```
+range[i]'.getData() = CompletableFuture<buffer: ByteBuffer> where, when `getData().get()` completes:
+  len := range[i].getLength()
+  d := new byte[len]
+  (buffer.position() - buffer.limit) = len
+  buffer.get(d, 0, len) = readFully(range[i].getOffset(), d, 0, len) 
+```
+ 
+That is: the result of every ranged read is the result of the (possibly asynchronous)
+call to `PositionedReadable.readFully()` for the same offset and length
 
 ### `minSeekForVectorReads()`
 
@@ -489,6 +506,12 @@ end of first and start of next range is more than this value.
 Maximum number of bytes which can be read in one go after merging the ranges.
 Two ranges won't be merged if the combined data to be read is more than this value.
 Essentially setting this to 0 will disable the merging of ranges.
+
+## Handling of zero length ranges
+
+Implementations MAY short-circuit reads for any range where `range.getLength() = 0`
+and return an empty buffer. 
+
 
 ## Consistency
 
