@@ -18,11 +18,16 @@
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
 import java.io.Closeable;
+import java.io.File;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.net.URI;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.ipc.RPC;
 
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
@@ -39,6 +44,8 @@ public class ConfiguredFailoverProxyProvider<T> extends
   protected final List<NNProxyInfo<T>> proxies;
 
   private int currentProxyIndex = 0;
+  private boolean cacheActiveEnabled;
+  private File cacheActiveFile;
 
   public ConfiguredFailoverProxyProvider(Configuration conf, URI uri,
       Class<T> xface, HAProxyFactory<T> factory) {
@@ -49,6 +56,14 @@ public class ConfiguredFailoverProxyProvider<T> extends
       Class<T> xface, HAProxyFactory<T> factory, String addressKey) {
     super(conf, uri, xface, factory);
     this.proxies = getProxyAddresses(uri, addressKey);
+    this.cacheActiveEnabled = this.conf.getBoolean(
+        HdfsClientConfigKeys.Failover.CACHE_ACTIVE_ENABLED_KEY,
+        HdfsClientConfigKeys.Failover.CACHE_ACTIVE_ENABLED_DEFAULT);
+    String cacheActiveDir = this.conf.get(
+        HdfsClientConfigKeys.Failover.CACHE_ACTIVE_DIR_KEY,
+        HdfsClientConfigKeys.Failover.CACHE_ACTIVE_DIR_DEFAULT);
+    this.cacheActiveFile = new File(cacheActiveDir, uri.getHost());
+    this.currentProxyIndex = readActiveCache();
   }
 
   /**
@@ -63,6 +78,7 @@ public class ConfiguredFailoverProxyProvider<T> extends
   @Override
   public  void performFailover(T currentProxy) {
     incrementProxyIndex();
+    writeActiveCache(currentProxyIndex);
   }
 
   synchronized void incrementProxyIndex() {
@@ -92,5 +108,71 @@ public class ConfiguredFailoverProxyProvider<T> extends
   @Override
   public boolean useLogicalURI() {
     return true;
+  }
+
+  /**
+   * Write active NameNode index to cache file.
+   */
+  private void writeActiveCache(int index) {
+    if (!cacheActiveEnabled) {
+      return;
+    }
+
+    synchronized (cacheActiveFile) {
+      try (RandomAccessFile raf = new RandomAccessFile(cacheActiveFile, "rw");
+          FileChannel fc = raf.getChannel();
+          FileLock lock = fc.tryLock(0, Long.MAX_VALUE, false)) {
+        if (lock != null) {
+          raf.setLength(0);
+          raf.writeBytes(String.valueOf(index));
+          boolean ret = cacheActiveFile.setWritable(true, false)
+                        && cacheActiveFile.setReadable(true, false);
+          if (!ret) {
+            throw new IOException("Cannot set file rw mode.");
+          }
+          LOG.debug("Succeed in writing active index " + index
+              + " to cache file " + cacheActiveFile);
+        }
+      } catch (Throwable e) {
+        LOG.warn("Failed to write active index " + index + " to cache file "
+            + cacheActiveFile + ", It may be due to permission issues, the "
+            + "dfs.client.failover.cache-active.dir must be properly "
+            + "configured!", e);
+      }
+    }
+  }
+
+  /**
+   * Read active NameNode index from cache file.
+   */
+  private int readActiveCache() {
+    if (!cacheActiveEnabled) {
+      return 0;
+    }
+
+    int index = 0;
+    synchronized (cacheActiveFile) {
+      if (!cacheActiveFile.exists()) {
+        return 0;
+      }
+
+      try (RandomAccessFile raf = new RandomAccessFile(cacheActiveFile, "rw");
+          FileChannel fc = raf.getChannel();
+          FileLock lock = fc.tryLock(0, Long.MAX_VALUE, true)) {
+        if (lock != null) {
+          index = Integer.parseInt(raf.readLine()) % proxies.size();
+          // sanity check
+          if (index < 0) {
+            return 0;
+          }
+        }
+      } catch (Throwable e) {
+        LOG.warn("Failed to read active index from cache file "
+            + cacheActiveFile + ", It may be due to permission issues, the "
+            + "dfs.client.failover.cache-active.dir must be properly "
+            + "configured! Now we will begin from index 0.", e);
+      }
+    }
+    return index;
   }
 }
