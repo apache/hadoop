@@ -305,7 +305,7 @@ public class FsImageValidation {
       final INodeMap map = fsdir.getINodeMap();
       final int oldSize = map.size();
       println("%s INodeMap old size: %d", name, oldSize);
-      for (final Iterator<INodeWithAdditionalFields> j = map.getMapIterator(); j.hasNext(); ) {
+      for (final Iterator<INodeWithAdditionalFields> j = map.getMapIterator(); j.hasNext();) {
         final INodeWithAdditionalFields i = j.next();
         if (counts.getCount(i) == 0) {
           j.remove();
