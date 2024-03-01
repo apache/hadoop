@@ -84,11 +84,6 @@ public class GlobalFSNamesystemLock implements FSNLockManager {
   }
 
   @Override
-  public int getWriteHoldCount(FSNamesystemLockMode lockMode) {
-    return this.lock.getWriteHoldCount();
-  }
-
-  @Override
   public boolean hasReadLock(FSNamesystemLockMode lockMode) {
     return this.lock.getReadHoldCount() > 0 || hasWriteLock(lockMode);
   }
@@ -143,8 +138,8 @@ public class GlobalFSNamesystemLock implements FSNLockManager {
   }
 
   @Override
-  public void setLockForTests(ReentrantReadWriteLock lock) {
-    this.lock.setLockForTests(lock);
+  public void setLockForTests(ReentrantReadWriteLock testLock) {
+    this.lock.setLockForTests(testLock);
   }
 
   @Override

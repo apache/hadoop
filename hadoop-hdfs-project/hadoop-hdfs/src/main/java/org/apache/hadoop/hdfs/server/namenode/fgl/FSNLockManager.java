@@ -28,20 +28,20 @@ public interface FSNLockManager {
    * Acquire read lock for an operation according to the lock mode.
    * @param lockMode locking mode
    */
-  public void readLock(FSNamesystemLockMode lockMode);
+  void readLock(FSNamesystemLockMode lockMode);
 
   /**
-   * Acquire read lock according to the lock mode, unless interrupted while waiting
+   * Acquire read lock according to the lock mode, unless interrupted while waiting.
    * @param lockMode locking mode
    */
-  public void readLockInterruptibly(FSNamesystemLockMode lockMode) throws InterruptedException;
+  void readLockInterruptibly(FSNamesystemLockMode lockMode) throws InterruptedException;
 
   /**
    * Release read lock for the operation according to the lock mode.
    * @param lockMode locking mode
    * @param opName operation name
    */
-  public void readUnlock(FSNamesystemLockMode lockMode, String opName);
+  void readUnlock(FSNamesystemLockMode lockMode, String opName);
 
   /**
    * Release read lock for the operation according to the lock mode.
@@ -49,21 +49,21 @@ public interface FSNLockManager {
    * @param opName operation name
    * @param lockReportInfoSupplier supplier used to report some information for this lock.
    */
-  public void readUnlock(FSNamesystemLockMode lockMode, String opName,
+  void readUnlock(FSNamesystemLockMode lockMode, String opName,
       Supplier<String> lockReportInfoSupplier);
 
   /**
    * Acquire write lock for an operation according to the lock mode.
    * @param lockMode locking mode
    */
-  public void writeLock(FSNamesystemLockMode lockMode);
+  void writeLock(FSNamesystemLockMode lockMode);
 
   /**
    * Release write lock for the operation according to the lock mode.
    * @param lockMode locking mode
    * @param opName operation name
    */
-  public void writeUnlock(FSNamesystemLockMode lockMode, String opName);
+  void writeUnlock(FSNamesystemLockMode lockMode, String opName);
 
   /**
    * Release write lock for the operation according to the lock mode.
@@ -72,7 +72,7 @@ public interface FSNLockManager {
    * @param suppressWriteLockReport When false, event of write lock being held
    * for long time will be logged in logs and metrics.
    */
-  public void writeUnlock(FSNamesystemLockMode lockMode, String opName,
+  void writeUnlock(FSNamesystemLockMode lockMode, String opName,
       boolean suppressWriteLockReport);
 
   /**
@@ -81,34 +81,24 @@ public interface FSNLockManager {
    * @param opName operation name
    * @param lockReportInfoSupplier supplier used to report information for this lock.
    */
-  public void writeUnlock(FSNamesystemLockMode lockMode, String opName,
+  void writeUnlock(FSNamesystemLockMode lockMode, String opName,
       Supplier<String> lockReportInfoSupplier);
 
-  public void writeLockInterruptibly(FSNamesystemLockMode lockMode) throws InterruptedException;
+  void writeLockInterruptibly(FSNamesystemLockMode lockMode) throws InterruptedException;
 
   /**
    * Check if the current thread holds write lock according to the lock mode.
    * @param lockMode locking mode
    * @return true if the current thread is holding the write-lock, else false.
    */
-  public boolean hasWriteLock(FSNamesystemLockMode lockMode);
-
-  /**
-   * Queries the number of reentrant write holds on this lock by the
-   * current thread.  A writer thread has a hold on a lock for
-   * each lock action that is not matched by an unlock action.
-   * @param lockMode locking mode
-   * @return the number of holds on the write lock by the current thread,
-   *         or zero if the write lock is not held by the current thread
-   */
-  public int getWriteHoldCount(FSNamesystemLockMode lockMode);
+  boolean hasWriteLock(FSNamesystemLockMode lockMode);
 
   /**
    * Check if the current thread holds read lock according to the lock mode.
    * @param lockMode locking mode
    * @return true if the current thread is holding the read-lock, else false.
    */
-  public boolean hasReadLock(FSNamesystemLockMode lockMode);
+  boolean hasReadLock(FSNamesystemLockMode lockMode);
 
   /**
    * Queries the number of reentrant read holds on this lock by the
@@ -119,7 +109,7 @@ public interface FSNLockManager {
    * @return the number of holds on the read lock by the current thread,
    *         or zero if the read lock is not held by the current thread
    */
-  public int getReadHoldCount(FSNamesystemLockMode lockMode);
+  int getReadHoldCount(FSNamesystemLockMode lockMode);
 
   /**
    * Returns the QueueLength of waiting threads.
@@ -128,7 +118,7 @@ public interface FSNLockManager {
    * @param lockMode locking mode
    * @return int - Number of threads waiting on this lock
    */
-  public int getQueueLength(FSNamesystemLockMode lockMode);
+  int getQueueLength(FSNamesystemLockMode lockMode);
 
   /**
    * Returns the number of time the read lock
@@ -138,7 +128,7 @@ public interface FSNLockManager {
    * @return long - Number of time the read lock
    * has been held longer than the threshold
    */
-  public long getNumOfReadLockLongHold(FSNamesystemLockMode lockMode);
+  long getNumOfReadLockLongHold(FSNamesystemLockMode lockMode);
 
   /**
    * Returns the number of time the write-lock
@@ -148,47 +138,47 @@ public interface FSNLockManager {
    * @return long - Number of time the write-lock
    * has been held longer than the threshold.
    */
-  public long getNumOfWriteLockLongHold(FSNamesystemLockMode lockMode);
+  long getNumOfWriteLockLongHold(FSNamesystemLockMode lockMode);
 
   /**
-   * Check if the metrics is enabled
+   * Check if the metrics is enabled.
    * @return true if the metrics is enabled, else false.
    */
-  public boolean isMetricsEnabled();
+  boolean isMetricsEnabled();
 
   /**
    * Reset the metricsEnabled according to the lock mode.
    * @param metricsEnabled the new metricsEnabled
    */
-  public void setMetricsEnabled(boolean metricsEnabled);
+  void setMetricsEnabled(boolean metricsEnabled);
 
   /**
    * Try to set the reporting threshold of the read lock.
    * @param readLockReportingThresholdMs reporting threshold
    */
-  public void setReadLockReportingThresholdMs(long readLockReportingThresholdMs);
+  void setReadLockReportingThresholdMs(long readLockReportingThresholdMs);
 
   /**
    * Try to get the reporting threshold of the read lock.
    * @return the reporting threshold.
    */
-  public long getReadLockReportingThresholdMs();
+  long getReadLockReportingThresholdMs();
 
   /**
    * Try to set the reporting threshold for the write lock.
    * @param writeLockReportingThresholdMs reporting threshold.
    */
-  public void setWriteLockReportingThresholdMs(long writeLockReportingThresholdMs);
+  void setWriteLockReportingThresholdMs(long writeLockReportingThresholdMs);
 
   /**
    * Try to get the reporting threshold for the write lock.
    * @return reporting threshold.
    */
-  public long getWriteLockReportingThresholdMs();
+  long getWriteLockReportingThresholdMs();
 
   @VisibleForTesting
-  public void setLockForTests(ReentrantReadWriteLock lock);
+  void setLockForTests(ReentrantReadWriteLock lock);
 
   @VisibleForTesting
-  public ReentrantReadWriteLock getLockForTests();
+  ReentrantReadWriteLock getLockForTests();
 }

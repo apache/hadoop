@@ -1086,12 +1086,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   private <T> T createLock(Class<T> theClass, Configuration conf,
-      MutableRatesWithAggregation detailedLockHoldTimeMetrics) {
+      MutableRatesWithAggregation mutableRatesMetrics) {
     try {
       Constructor<T> meth = theClass.getDeclaredConstructor(
           Configuration.class, MutableRatesWithAggregation.class);
       meth.setAccessible(true);
-      return meth.newInstance(conf, detailedLockHoldTimeMetrics);
+      return meth.newInstance(conf, mutableRatesMetrics);
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
