@@ -414,10 +414,6 @@ class DataStreamer extends Daemon {
     }
 
     synchronized void adjustState4RestartingNode() {
-      if (restartingNodeIndex == -1) {
-        return;
-      }
-
       // Just took care of a node error while waiting for a node restart
       if (restartingNodeIndex >= 0) {
         // If the error came from a node further away than the restarting
