@@ -261,7 +261,7 @@ public class ITestAbfsPaginatedDelete extends AbstractAbfsIntegrationTest {
     conf.set(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.OAuth.name());
     conf.set(FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME,
         ClientCredsTokenProvider.class.getName());
-    conf.setBoolean(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION,false);
+    conf.setBoolean(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION, false);
     this.firstTestUserFs = (AzureBlobFileSystem) FileSystem.newInstance(getRawConfiguration());
   }
 
