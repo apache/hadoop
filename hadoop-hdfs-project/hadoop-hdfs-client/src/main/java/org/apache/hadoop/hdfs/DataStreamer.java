@@ -87,6 +87,7 @@ import org.apache.hadoop.thirdparty.com.google.common.cache.CacheLoader;
 import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
 import org.apache.hadoop.thirdparty.com.google.common.cache.RemovalListener;
 import org.apache.hadoop.thirdparty.com.google.common.cache.RemovalNotification;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Iterables;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1845,7 +1846,7 @@ class DataStreamer extends Daemon {
         dfsClient.namenode.abandonBlock(block.getCurrentBlock(),
             stat.getFileId(), src, dfsClient.clientName);
         block.setCurrentBlock(null);
-        final DatanodeInfo badNode = nodes[errorState.getBadNodeIndex()];
+        final DatanodeInfo badNode = Iterables.getLast(failed);
         LOG.warn("Excluding datanode " + badNode);
         excludedNodes.put(badNode, badNode);
         setPipeline(null, null, null);

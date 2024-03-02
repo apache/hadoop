@@ -101,7 +101,6 @@ public class StripedDataStreamer extends DataStreamer {
     DatanodeInfo[] nodes = lb.getLocations();
     StorageType[] storageTypes = lb.getStorageTypes();
     String[] storageIDs = lb.getStorageIDs();
-    setPipeline(lb);
     // Connect to the DataNode. If fail the internal error state will be set.
     success = createBlockOutputStream(nodes, storageTypes, storageIDs, 0L,
         false);
@@ -111,9 +110,9 @@ public class StripedDataStreamer extends DataStreamer {
       final DatanodeInfo badNode = nodes[getErrorState().getBadNodeIndex()];
       LOG.warn("Excluding datanode " + badNode);
       excludedNodes.put(badNode, badNode);
-      setPipeline(null, null, null);
       throw new IOException("Unable to create new block." + this);
     }
+    setPipeline(lb);
     return lb;
   }
 
