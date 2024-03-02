@@ -163,6 +163,10 @@ public class NetUtils {
     return createSocketAddr(target, -1);
   }
 
+  public static InetSocketAddress createSocketAddrUnresolved(String target) {
+    return createSocketAddr(target, -1, null, false, false);
+  }
+
   /**
    * Util method to build socket addr from either.
    *   {@literal <host>}
@@ -219,6 +223,12 @@ public class NetUtils {
                                                    int defaultPort,
                                                    String configName,
                                                    boolean useCacheIfPresent) {
+    return createSocketAddr(target, defaultPort, configName, useCacheIfPresent, true);
+  }
+
+  public static InetSocketAddress createSocketAddr(
+      String target, int defaultPort, String configName,
+      boolean useCacheIfPresent, boolean isResolved) {
     String helpText = "";
     if (configName != null) {
       helpText = " (configuration property '" + configName + "')";
@@ -244,7 +254,10 @@ public class NetUtils {
           "Does not contain a valid host:port authority: " + target + helpText
       );
     }
-    return createSocketAddrForHost(host, port);
+    if (isResolved) {
+      return createSocketAddrForHost(host, port);
+    }
+    return InetSocketAddress.createUnresolved(host, port);
   }
 
   private static final long URI_CACHE_SIZE_DEFAULT = 1000;
