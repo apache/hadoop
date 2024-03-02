@@ -967,8 +967,8 @@ class DataStreamer extends Daemon {
               long duration = Time.monotonicNowNanos() - begin;
               if (TimeUnit.NANOSECONDS.toMillis(duration) > writeTimeout) {
                 LOG.error("No ack received, took {}ms (threshold={}ms). "
-                        + "File being written: {}, block: {}, "
-                        + "Write pipeline datanodes: {}.",
+                    + "File being written: {}, block: {}, "
+                    + "Write pipeline datanodes: {}.",
                     TimeUnit.NANOSECONDS.toMillis(duration), writeTimeout, src, block, nodes);
                 throw new InterruptedIOException("No ack received after " +
                     TimeUnit.NANOSECONDS.toSeconds(duration) + "s and a timeout of " +
@@ -1526,8 +1526,8 @@ class DataStreamer extends Daemon {
         // MIN_REPLICATION is set to 0 or less than zero, an exception will be
         // thrown if a replacement could not be found.
 
-        if (dfsClient.dtpReplaceDatanodeOnFailureReplication > 0 &&
-            nodes.length >= dfsClient.dtpReplaceDatanodeOnFailureReplication) {
+        if (dfsClient.dtpReplaceDatanodeOnFailureReplication > 0 && nodes.length
+            >= dfsClient.dtpReplaceDatanodeOnFailureReplication) {
           DFSClient.LOG.warn(
               "Failed to find a new datanode to add to the write pipeline,"
                   + " continue to write to the pipeline with " + nodes.length
