@@ -2679,17 +2679,13 @@ public class TestDistributedFileSystem {
   }
 
   @Test
-  public void testSingleRackFailureDuringPipelineSetupMinReplicationImpossible() throws Exception {
+  public void testSingleRackFailureDuringPipelineSetupMinReplicationImpossible()
+    throws Exception {
     Configuration conf = getTestConfiguration();
-    conf.setClass(
-        DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_KEY,
-        BlockPlacementPolicyRackFaultTolerant.class,
-        BlockPlacementPolicy.class);
-    conf.setBoolean(
-        HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.ENABLE_KEY,
-        false);
-    conf.setInt(HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.
-        MIN_REPLICATION, 3);
+    conf.setClass(DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_KEY,
+        BlockPlacementPolicyRackFaultTolerant.class, BlockPlacementPolicy.class);
+    conf.setBoolean(HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.ENABLE_KEY, false);
+    conf.setInt(HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.MIN_REPLICATION, 3);
     // 3 racks & 3 nodes. 1 per rack
     try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3)
         .racks(new String[] {"/rack1", "/rack2", "/rack3"}).build()) {
@@ -2697,15 +2693,10 @@ public class TestDistributedFileSystem {
       DistributedFileSystem fs = cluster.getFileSystem();
       // kill one DN, so only 2 racks stays with active DN
       cluster.stopDataNode(0);
-      boolean threw = false;
-      try {
-        DFSTestUtil.createFile(fs, new Path("/testFile"), 1024L, (short) 3, 1024L);
-      } catch (IOException e) {
-        // success
-        threw = true;
-      }
-      assertTrue("Failed to throw IOE when creating a file with less "
-              + "DNs than required for min replication", threw);
+      LambdaTestUtils.intercept(IOException.class,
+          () ->
+              DFSTestUtil.createFile(fs, new Path("/testFile"),
+                  1024L, (short) 3, 1024L));
     }
   }
 
@@ -2754,15 +2745,10 @@ public class TestDistributedFileSystem {
       // kill 2 DN, so only 1 rack stays with active DN
       cluster.stopDataNode(0);
       cluster.stopDataNode(1);
-      boolean threw = false;
-      try {
-        DFSTestUtil.createFile(fs, new Path("/testFile"), 1024L, (short) 3, 1024L);
-      } catch (IOException e) {
-        // success
-        threw = true;
-      }
-      assertTrue("Failed to throw IOE when creating a file with less "
-          + "DNs than required for min replication", threw);
+      LambdaTestUtils.intercept(IOException.class,
+          () ->
+              DFSTestUtil.createFile(fs, new Path("/testFile"),
+                  1024L, (short) 3, 1024L));
     }
   }
 
@@ -2785,14 +2771,10 @@ public class TestDistributedFileSystem {
       cluster.shutdownDataNodes();
       // create a file with replication 3, for rack fault tolerant BPP,
       // it should allocate nodes in all 3 rack but fail because no DNs are present.
-      boolean threw = false;
-      try {
-        DFSTestUtil.createFile(fs, new Path("/testFile"), 1024L, (short) 3, 1024L);
-      } catch (IOException e) {
-        // success
-        threw = true;
-      }
-      assertTrue("Failed to throw IOE when creating a file with no DNs", threw);
+      LambdaTestUtils.intercept(IOException.class,
+        () ->
+          DFSTestUtil.createFile(fs, new Path("/testFile"),
+              1024L, (short) 3, 1024L));
     }
   }
 
