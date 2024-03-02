@@ -90,7 +90,7 @@ public class StripedDataStreamer extends DataStreamer {
   }
 
   @Override
-  protected LocatedBlock setupPipelineForCreate() throws IOException {
+  protected void setupPipelineForCreate() throws IOException {
     boolean success;
     LocatedBlock lb = getFollowingBlock();
     block.setCurrentBlock(lb.getBlock());
@@ -113,7 +113,6 @@ public class StripedDataStreamer extends DataStreamer {
       throw new IOException("Unable to create new block." + this);
     }
     setPipeline(lb);
-    return lb;
   }
 
   @VisibleForTesting
