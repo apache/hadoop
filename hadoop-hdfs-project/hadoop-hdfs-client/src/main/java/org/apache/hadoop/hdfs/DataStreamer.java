@@ -1846,7 +1846,8 @@ class DataStreamer extends Daemon {
         dfsClient.namenode.abandonBlock(block.getCurrentBlock(),
             stat.getFileId(), src, dfsClient.clientName);
         block.setCurrentBlock(null);
-        final DatanodeInfo badNode = Iterables.getLast(failed);
+        final DatanodeInfo badNode =
+            errorState.getBadNodeIndex() == -1 ? Iterables.getLast(failed) : nodes[errorState.getBadNodeIndex()];
         LOG.warn("Excluding datanode " + badNode);
         excludedNodes.put(badNode, badNode);
         setPipeline(null, null, null);
