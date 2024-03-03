@@ -87,6 +87,7 @@ import org.apache.hadoop.thirdparty.com.google.common.cache.CacheLoader;
 import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
 import org.apache.hadoop.thirdparty.com.google.common.cache.RemovalListener;
 import org.apache.hadoop.thirdparty.com.google.common.cache.RemovalNotification;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Iterables;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -414,10 +415,6 @@ class DataStreamer extends Daemon {
     }
 
     synchronized void adjustState4RestartingNode() {
-      if (restartingNodeIndex == -1) {
-        return;
-      }
-
       // Just took care of a node error while waiting for a node restart
       if (restartingNodeIndex >= 0) {
         // If the error came from a node further away than the restarting
@@ -1816,7 +1813,7 @@ class DataStreamer extends Daemon {
    * Must get block ID and the IDs of the destinations from the namenode.
    * Returns the list of target datanodes.
    */
-  protected LocatedBlock setupPipelineForCreate() throws IOException {
+  protected void setupPipelineForCreate() throws IOException {
     LocatedBlock lb;
     DatanodeInfo[] nodes;
     StorageType[] nextStorageTypes;
@@ -1849,7 +1846,8 @@ class DataStreamer extends Daemon {
         dfsClient.namenode.abandonBlock(block.getCurrentBlock(),
             stat.getFileId(), src, dfsClient.clientName);
         block.setCurrentBlock(null);
-        final DatanodeInfo badNode = nodes[errorState.getBadNodeIndex()];
+        final DatanodeInfo badNode =
+            errorState.getBadNodeIndex() == -1 ? Iterables.getLast(failed) : nodes[errorState.getBadNodeIndex()];
         LOG.warn("Excluding datanode " + badNode);
         excludedNodes.put(badNode, badNode);
         setPipeline(null, null, null);
@@ -1859,7 +1857,6 @@ class DataStreamer extends Daemon {
     if (!success) {
       throw new IOException("Unable to create new block.");
     }
-    return lb;
   }
 
   // connects to the first datanode in the pipeline
