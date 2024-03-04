@@ -1442,11 +1442,11 @@ public class AbfsClient implements Closeable {
   @VisibleForTesting
   protected URL createRequestUrl(final String path, final String query)
           throws AzureBlobFileSystemException {
-    return createRequestUrl(baseUrl.toString(), path, query);
+    return createRequestUrl(baseUrl, path, query);
   }
 
   @VisibleForTesting
-  protected URL createRequestUrl(final String baseUrl, final String path, final String query)
+  protected URL createRequestUrl(final URL baseUrl, final String path, final String query)
           throws AzureBlobFileSystemException {
     String encodedPath = path;
     try {
@@ -1460,7 +1460,7 @@ public class AbfsClient implements Closeable {
     if (baseUrl == null) {
       throw new InvalidUriException("URL provided is null");
     }
-    sb.append(baseUrl);
+    sb.append(baseUrl.toString());
     sb.append(encodedPath);
     sb.append(query);
 
@@ -1806,7 +1806,7 @@ public class AbfsClient implements Closeable {
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE, FILESYSTEM);
 
-    final URL url = createRequestUrl(getMetricUrl(), abfsUriQueryBuilder.toString());
+    final URL url = createRequestUrl(new URL(getMetricUrl()), EMPTY_STRING, abfsUriQueryBuilder.toString());
 
     final AbfsRestOperation op = getAbfsRestOperation(
             AbfsRestOperationType.GetFileSystemProperties,

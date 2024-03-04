@@ -54,6 +54,9 @@ public class TestAbfsRestOperation extends
     }
     //For retry count greater than max configured value, the request should fail
     Assert.assertEquals(testClient.getAbfsCounters().getAbfsBackoffMetrics().getNumberOfRequestsFailed().toString(), "3");
-    fs.close();
+    try {
+      fs.close();
+    } catch (Exception e) {
+    }
   }
 }
