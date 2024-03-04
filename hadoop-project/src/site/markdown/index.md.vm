@@ -242,6 +242,16 @@ you want to remain exclusively *your cluster*.
 Finally, if you are using Hadoop as a service deployed/managed by someone else,
 do determine what security their products offer and make sure it meets your requirements.
 
+Protobuf Compatibility
+===============
+
+In HADOOP-18197, we upgraded the Protobuf in hadoop-thirdparty to version 3.21.12.
+This version may have compatibility issues with certain versions of JDK8,
+and you may encounter some errors (please refer to the discussion in HADOOP-18197 for specific details).
+
+To address this issue, we recommend upgrading the JDK version in your production environment to a higher version (> JDK8).
+We will resolve this issue by upgrading hadoop-thirdparty's Protobuf to a higher version in a future release of 3.4.x.
+Please note that we will discontinue support for JDK8 in future releases of 3.4.x.
 
 Getting Started
 ===============
