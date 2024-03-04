@@ -4470,6 +4470,15 @@
 </property>
 
 <property>
+  <name>dfs.client.failover.lazy.resolved</name>
+  <value>false</value>
+  <description>
+    Used to enable lazy resolution of host->ip. If the value is true,
+    the host will only be resolved only before Dfsclient needs to request the host.
+  </description>
+</property>
+
+<property>
   <name>dfs.client.key.provider.cache.expiry</name>
   <value>864000000</value>
   <description>
