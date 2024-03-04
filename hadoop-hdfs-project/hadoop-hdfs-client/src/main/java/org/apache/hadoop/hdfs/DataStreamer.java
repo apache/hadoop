@@ -1837,10 +1837,13 @@ class DataStreamer extends Daemon {
       nextStorageTypes = lb.getStorageTypes();
       nextStorageIDs = lb.getStorageIDs();
       setPipeline(lb);
-      // Connect to first DataNode in the list.
-      success = createBlockOutputStream(nodes, nextStorageTypes, nextStorageIDs,
-          0L, false) || setupPipelineForAppendOrRecovery();
-
+      try {
+        // Connect to first DataNode in the list.
+        success = createBlockOutputStream(nodes, nextStorageTypes, nextStorageIDs, 0L, false) || setupPipelineForAppendOrRecovery();
+      } catch(IOException ie) {
+        LOG.warn("Exception in setupPipelineForCreate " + this, ie);
+        success = false;
+      }
       if (!success) {
         LOG.warn("Abandoning " + block);
         dfsClient.namenode.abandonBlock(block.getCurrentBlock(),

@@ -89,10 +89,6 @@ public class TestDFSClientExcludedNodes {
     conf.setLong(
         HdfsClientConfigKeys.Write.EXCLUDE_NODES_CACHE_EXPIRY_INTERVAL_KEY,
         2500);
-    // Set min replication for blocks to be written as 1.
-    conf.setInt(
-        HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.MIN_REPLICATION,
-        1);
     // We'll be using a 512 bytes block size just for tests
     // so making sure the checksum bytes too match it.
     conf.setInt("io.bytes.per.checksum", 512);
