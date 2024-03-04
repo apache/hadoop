@@ -3957,6 +3957,15 @@
 </property>
 
 <property>
+  <name>dfs.namenode.lock.model.provider.class</name>
+  <value>org.apache.hadoop.hdfs.server.namenode.fgl.GlobalFSNamesystemLock</value>
+  <description>
+    An implementation class of FSNamesystem lock.
+    Defaults to GlobalFSNamesystemLock.class
+  </description>
+</property>
+
+<property>
   <name>dfs.datanode.bp-ready.timeout</name>
   <value>20</value>
   <description>
