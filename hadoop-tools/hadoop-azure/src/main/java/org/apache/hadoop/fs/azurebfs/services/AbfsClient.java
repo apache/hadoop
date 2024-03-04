@@ -24,8 +24,6 @@ import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.InetAddress;
 import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.net.UnknownHostException;
@@ -45,10 +43,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
-import org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes;
 import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsInvalidChecksumException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsDriverException;
@@ -94,9 +89,6 @@ import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.RENAME_PATH_ATTEMPTS;
 import static org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.extractEtagHeader;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.*;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_ACCOUNT_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_URI;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_DELETE_CONSIDERED_IDEMPOTENT;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
@@ -133,7 +125,8 @@ public class AbfsClient implements Closeable {
   private SASTokenProvider sasTokenProvider;
   private final AbfsCounters abfsCounters;
   private final Timer timer;
-  private AzureBlobFileSystem metricFs = null;
+  private String abfsMetricUrl = null;
+  private boolean isMetricConfigurationChecked = false;
   private boolean metricCollectionEnabled = false;
   private final MetricFormat metricFormat;
   private final AtomicBoolean metricCollectionStopped;
@@ -252,7 +245,6 @@ public class AbfsClient implements Closeable {
           (Closeable) tokenProvider);
     }
     HadoopExecutors.shutdown(executorService, LOG, 0, TimeUnit.SECONDS);
-    metricFs.close();
   }
 
   public String getFileSystem() {
@@ -1450,7 +1442,12 @@ public class AbfsClient implements Closeable {
   @VisibleForTesting
   protected URL createRequestUrl(final String path, final String query)
           throws AzureBlobFileSystemException {
-    final String base = baseUrl.toString();
+    return createRequestUrl(baseUrl.toString(), path, query);
+  }
+
+  @VisibleForTesting
+  protected URL createRequestUrl(final String baseUrl, final String path, final String query)
+          throws AzureBlobFileSystemException {
     String encodedPath = path;
     try {
       encodedPath = urlEncode(path);
@@ -1460,7 +1457,10 @@ public class AbfsClient implements Closeable {
     }
 
     final StringBuilder sb = new StringBuilder();
-    sb.append(base);
+    if (baseUrl == null) {
+      throw new InvalidUriException("URL provided is null");
+    }
+    sb.append(baseUrl);
     sb.append(encodedPath);
     sb.append(query);
 
@@ -1732,38 +1732,6 @@ public class AbfsClient implements Closeable {
   }
 
   /**
-   * Retrieves an instance of AzureBlobFileSystem configured for metric tracking.
-   * This method checks if an instance of AzureBlobFileSystem for metric tracking
-   * has already been created. If not, it initializes a new AzureBlobFileSystem
-   * using the provided metric configuration parameters, including the account key and URI.
-   * If the metric URI is not provided, or an exception occurs during initialization,
-   * the method returns null.
-   *
-   * @return An instance of AzureBlobFileSystem configured for metric tracking, or null if the metric URI is not provided or initialization fails.
-   * @throws IOException If an I/O error occurs during filesystem creation.
-   */
-  public AzureBlobFileSystem getMetricFilesystem() throws IOException {
-    if (metricFs == null) {
-      try {
-        Configuration metricConfig = abfsConfiguration.getRawConfiguration();
-        String metricAccountKey = metricConfig.get(FS_AZURE_METRIC_ACCOUNT_KEY);
-        final String abfsMetricUrl = metricConfig.get(FS_AZURE_METRIC_URI);
-        if (abfsMetricUrl == null) {
-          return null;
-        }
-        metricConfig.set(FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME, metricAccountKey);
-        metricConfig.set(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION, "false");
-        URI metricUri;
-        metricUri = new URI(FileSystemUriSchemes.ABFS_SCHEME, abfsMetricUrl, null, null, null);
-        metricFs = (AzureBlobFileSystem) FileSystem.newInstance(metricUri, metricConfig);
-      } catch (AzureBlobFileSystemException | URISyntaxException ex) {
-        throw new IOException(ex);
-      }
-    }
-    return metricFs;
-  }
-
-  /**
    * Retrieves a TracingContext object configured for metric tracking.
    * This method creates a TracingContext object with the validated client correlation ID,
    * the host name of the local machine (or "UnknownHost" if unable to determine),
@@ -1824,19 +1792,40 @@ public class AbfsClient implements Closeable {
         metricIdlePeriod);
   }
 
+  private String getMetricUrl() {
+    if (abfsMetricUrl == null && !isMetricConfigurationChecked) {
+      Configuration metricConfig = getAbfsConfiguration().getRawConfiguration();
+      abfsMetricUrl = metricConfig.get(FS_AZURE_METRIC_URI);
+      isMetricConfigurationChecked = true;
+    }
+    return abfsMetricUrl;
+  }
+
+  public void getMetricCall(TracingContext tracingContext) throws IOException {
+    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
+    final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
+    abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE, FILESYSTEM);
+
+    final URL url = createRequestUrl(getMetricUrl(), abfsUriQueryBuilder.toString());
+
+    final AbfsRestOperation op = getAbfsRestOperation(
+            AbfsRestOperationType.GetFileSystemProperties,
+            HTTP_METHOD_HEAD,
+            url,
+            requestHeaders);
+    op.execute(tracingContext);
+  }
+
   class TimerTaskImpl extends TimerTask {
     @Override
     public void run() {
       try {
         if (timerOrchestrator(TimerFunctionality.SUSPEND, this)) {
-          AzureBlobFileSystem metricFileSystem = getMetricFilesystem();
-          if (metricFileSystem != null) {
             try {
-              metricFileSystem.sendMetric(getMetricTracingContext());
+              getMetricCall(getMetricTracingContext());
             } finally {
               abfsCounters.initializeMetrics(metricFormat);
             }
-          }
         }
       } catch (IOException e) {
       }
