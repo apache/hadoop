@@ -28,10 +28,15 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.IntFunction;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.impl.CombinedFileRange;
 import org.apache.hadoop.util.functional.Function4RaisingIOE;
 
+import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.util.Preconditions.checkArgument;
 
 /**
@@ -39,19 +44,25 @@ import static org.apache.hadoop.util.Preconditions.checkArgument;
  * in vectored IO implementation.
  */
 @InterfaceAudience.LimitedPrivate("Filesystems")
+@InterfaceStability.Unstable
 public final class VectoredReadUtils {
 
   private static final int TMP_BUFFER_MAX_SIZE = 64 * 1024;
+
+  private static final Logger LOG =
+        LoggerFactory.getLogger(VectoredReadUtils.class);
 
   /**
    * Validate a single range.
    * @param range file range.
    * @throws IllegalArgumentException the range length is negative.
    * @throws EOFException the range offset is negative
+   * @throws NullPointerException if the range is null.
    */
   public static void validateRangeRequest(FileRange range)
           throws EOFException {
 
+    requireNonNull(range, "range is null");
     checkArgument(range.getLength() >= 0, "length is negative");
     if (range.getOffset() < 0) {
       throw new EOFException("position is negative");
@@ -71,6 +82,18 @@ public final class VectoredReadUtils {
   }
 
   /**
+   * Validate a range argument, raising IllegalArgumentException for all invalid
+   * ranges.
+   * @param range range to validate.
+   * @throws IllegalArgumentException if the range is invalid.
+   */
+  private static void validateRangeArgument(final FileRange range) {
+    checkArgument(range != null, "range is null");
+    checkArgument(range.getLength() >= 0, "length is negative in %s", range);
+    checkArgument(range.getOffset() >= 0, "offset is negative in %s", range);
+  }
+
+  /**
    * This is the default implementation which iterates through the ranges
    * to read each synchronously, but the intent is that subclasses
    * can make more efficient readers.
@@ -78,7 +101,8 @@ public final class VectoredReadUtils {
    * @param stream the stream to read the data from
    * @param ranges the byte ranges to read
    * @param allocate the byte buffer allocation
-   * @throws IllegalArgumentException if there are overlapping ranges or the range length is negative.
+   * @throws IllegalArgumentException if there are overlapping ranges or the range
+   *                                        length is negative.
    * @throws EOFException the range offset is negative
    */
   public static void readVectored(PositionedReadable stream,
@@ -95,33 +119,49 @@ public final class VectoredReadUtils {
    * @param stream the stream to read from
    * @param range the range to read
    * @param allocate the function to allocate ByteBuffers
-   * @return the CompletableFuture that contains the read data
+   * @return the CompletableFuture that contains the read data or an exception.
    */
-  public static CompletableFuture<ByteBuffer> readRangeFrom(PositionedReadable stream,
-                                                            FileRange range,
-                                                            IntFunction<ByteBuffer> allocate) {
+  public static CompletableFuture<ByteBuffer> readRangeFrom(
+      PositionedReadable stream,
+      FileRange range,
+      IntFunction<ByteBuffer> allocate) {
+    validateRangeArgument(range);
+
     CompletableFuture<ByteBuffer> result = new CompletableFuture<>();
     try {
       ByteBuffer buffer = allocate.apply(range.getLength());
       if (stream instanceof ByteBufferPositionedReadable) {
+        LOG.debug("ByteBufferPositionedReadable.readFully of {}", range);
         ((ByteBufferPositionedReadable) stream).readFully(range.getOffset(),
             buffer);
         buffer.flip();
       } else {
+        // no positioned readable support; fall back to
+        // PositionedReadable methods
         readNonByteBufferPositionedReadable(stream, range, buffer);
       }
       result.complete(buffer);
     } catch (IOException ioe) {
+      LOG.debug("Failed to read {}", range, ioe);
       result.completeExceptionally(ioe);
     }
     return result;
   }
 
-  private static void readNonByteBufferPositionedReadable(PositionedReadable stream,
-                                                          FileRange range,
-                                                          ByteBuffer buffer) throws IOException {
+  /**
+   * Read into a direct tor indirect buffer using {@code PositionedReadable.readFully()}.
+   * @param stream stream
+   * @param range file range
+   * @param buffer destination buffer
+   * @throws IOException IO problems.
+   */
+  private static void readNonByteBufferPositionedReadable(
+      PositionedReadable stream,
+      FileRange range,
+      ByteBuffer buffer) throws IOException {
     if (buffer.isDirect()) {
-      readInDirectBuffer(range.getLength(),
+      LOG.debug("Reading {} into a direct byte buffer from {}", range, stream);
+      readInDirectBuffer(range,
           buffer,
           (position, buffer1, offset, length) -> {
             stream.readFully(position, buffer1, offset, length);
@@ -129,6 +169,8 @@ public final class VectoredReadUtils {
           });
       buffer.flip();
     } else {
+      // not a direct buffer, so read straight into the array
+      LOG.debug("Reading {} into a byte buffer from {}", range, stream);
       stream.readFully(range.getOffset(), buffer.array(),
               buffer.arrayOffset(), range.getLength());
     }
@@ -137,26 +179,44 @@ public final class VectoredReadUtils {
   /**
    * Read bytes from stream into a byte buffer using an
    * intermediate byte array.
-   * @param length number of bytes to read.
+   * <p>
+   *   <pre>
+   *     (position, buffer, buffer-offset, length) -> Void
+   *     position:= the position within the file to read data.
+   *     buffer := a buffer to read fully `length` bytes into.
+   *     buffer-offset := the offset within the buffer to write data
+   *     length := the number of bytes to read.
+   *   </pre>
+   *  <p>
+   * The passed in function MUST block until the required length of
+   * data is read, or an exception is thrown.
+   * @param range range to read
    * @param buffer buffer to fill.
    * @param operation operation to use for reading data.
    * @throws IOException any IOE.
    */
-  public static void readInDirectBuffer(int length,
-                                        ByteBuffer buffer,
-                                        Function4RaisingIOE<Integer, byte[], Integer,
-                                                Integer, Void> operation) throws IOException {
+  public static void readInDirectBuffer(FileRange range,
+      ByteBuffer buffer,
+      Function4RaisingIOE<Long, byte[], Integer, Integer, Void> operation)
+      throws IOException {
+
+    LOG.debug("Reading {} into a direct buffer", range);
+    validateRangeArgument(range);
+    int length = range.getLength();
     if (length == 0) {
+      // no-op
       return;
     }
     int readBytes = 0;
-    int position = 0;
+    long position = range.getOffset();
     int tmpBufferMaxSize = Math.min(TMP_BUFFER_MAX_SIZE, length);
     byte[] tmp = new byte[tmpBufferMaxSize];
     while (readBytes < length) {
       int currentLength = (readBytes + tmpBufferMaxSize) < length ?
               tmpBufferMaxSize
               : (length - readBytes);
+      LOG.debug("Reading {} bytes from position {} (bytes read={}",
+          currentLength, position, readBytes);
       operation.apply(position, tmp, 0, currentLength);
       buffer.put(tmp, 0, currentLength);
       position = position + currentLength;
@@ -231,7 +291,8 @@ public final class VectoredReadUtils {
    * End offset is calculated as start offset + length.
    * @param input input list
    * @return a new sorted list.
-   * @throws IllegalArgumentException if there are overlapping ranges or the range length is negative.
+   * @throws IllegalArgumentException if there are overlapping ranges or
+   *                                        the range length is negative.
    * @throws EOFException the range offset is negative
    */
   public static List<FileRange> validateNonOverlappingAndReturnSortedRanges(
@@ -242,6 +303,7 @@ public final class VectoredReadUtils {
       //noinspection unchecked
       return (List<FileRange>) input;
     }
+
     FileRange[] sortedRanges = sortRanges(input);
     FileRange prev = sortedRanges[0];
     for (int i = 1; i < sortedRanges.length; i++) {

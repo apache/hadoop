@@ -42,7 +42,6 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileRange;
 import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.WeakReferencedElasticByteBufferPool;
@@ -53,7 +52,6 @@ import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_LE
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_VECTOR;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS;
-import static org.apache.hadoop.fs.contract.ContractTestUtils.assertCapabilities;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertDatasetEquals;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.returnBuffersToPoolPostRead;
@@ -140,14 +138,6 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
             .opt(FS_OPTION_OPENFILE_READ_POLICY,
                 FS_OPTION_OPENFILE_READ_POLICY_VECTOR)
             .build());
-  }
-
-  @Test
-  public void testVectoredReadCapability() throws Exception {
-    String[] vectoredReadCapability = new String[]{StreamCapabilities.VECTOREDIO};
-    try (FSDataInputStream in = openVectorFile()) {
-      assertCapabilities(in, vectoredReadCapability, null);
-    }
   }
 
   @Test

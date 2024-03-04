@@ -470,9 +470,9 @@ lead to memory fragmentation explained in HADOOP-18296.
 For each requested range `range[i]` in the list of ranges `range[0..i]` sorted such that
 for all `i where i > 0`:
 
-    range[i].getOffset() > range[i-1} 
+    range[i].getOffset() > range[i-1}
 
-For all ranges `0..i` the preconditions are
+For all ranges `0..i` the preconditions are:
 
 ```python
 range[i].getOffset >= 0 else raise EOFException
@@ -486,47 +486,46 @@ if i > 0 and range[i].getOffset() < (range[i-1].getOffset() + range[i-1].getLeng
 For each requested range `range[i]` in the list of ranges `range[0..i]`
 
 ```
-range[i]'.getData() = CompletableFuture<buffer: ByteBuffer> where, when `getData().get()` completes:
+range[i]'.getData() = CompletableFuture<buffer: ByteBuffer> and when `getData().get()` completes:
   len := range[i].getLength()
   d := new byte[len]
   (buffer.position() - buffer.limit) = len
-  buffer.get(d, 0, len) = readFully(range[i].getOffset(), d, 0, len) 
+  buffer.get(d, 0, len) = readFully(range[i].getOffset(), d, 0, len)
 ```
- 
+
 That is: the result of every ranged read is the result of the (possibly asynchronous)
 call to `PositionedReadable.readFully()` for the same offset and length
 
-### `minSeekForVectorReads()`
+#### `minSeekForVectorReads()`
 
 The smallest reasonable seek. Two ranges won't be merged together if the difference between
 end of first and start of next range is more than this value.
 
-### `maxReadSizeForVectorReads()`
+#### `maxReadSizeForVectorReads()`
 
 Maximum number of bytes which can be read in one go after merging the ranges.
 Two ranges won't be merged if the combined data to be read is more than this value.
 Essentially setting this to 0 will disable the merging of ranges.
 
-## Handling of zero length ranges
+#### Handling of zero length ranges
 
 Implementations MAY short-circuit reads for any range where `range.getLength() = 0`
-and return an empty buffer. 
+and return an empty buffer.
 
+#### Consistency
 
-## Consistency
-
-* All readers, local and remote, of a data stream FSDIS provided from a `FileSystem.open(p)`
+* All readers, local and remote, of a data stream `FSDIS` provided from a `FileSystem.open(p)`
 are expected to receive access to the data of `FS.Files[p]` at the time of opening.
 * If the underlying data is changed during the read process, these changes MAY or
 MAY NOT be visible.
 * Such changes that are visible MAY be partially visible.
 
 
-At time t0
+At time `t0`
 
     FSDIS0 = FS'read(p) = (0, data0[])
 
-At time t1
+At time `t1`
 
     FS' = FS' where FS'.Files[p] = data1
 
@@ -570,3 +569,20 @@ and on a subsequent read, a different version of the file's contents are returne
 
 Similarly, if the data at the path `p`, is deleted, this change MAY or MAY
 not be visible during read operations performed on `FSDIS0`.
+
+#### API Stabilization Notes
+
+The `readVectored()` API was shipped in Hadoop 3.3.5, with explicit local, raw local and S3A
+support -and fallback everywhere else.
+
+*Overlapping ranges*
+
+The restriction "no overlapping ranges" was only initially enforced in
+the S3A connector, which would raise `UnsupportedOperationException`.
+Adding the range check as a precondition for all implementations guarantees
+consistent behavior everywhere.
+For reliable use with older hadoop releases with the API: sort the list of ranges
+and check for overlaps before calling `readVectored()`. 
+
+*Direct Buffer Reads*
+

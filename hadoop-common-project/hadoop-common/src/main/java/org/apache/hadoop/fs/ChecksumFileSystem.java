@@ -55,7 +55,6 @@ import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_ST
 import static org.apache.hadoop.fs.VectoredReadUtils.validateNonOverlappingAndReturnSortedRanges;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 import static org.apache.hadoop.fs.impl.StoreImplementationUtils.isProbeForSyncable;
-import static org.apache.hadoop.fs.VectoredReadUtils.sortRanges;
 
 /****************************************************************
  * Abstract Checksumed FileSystem.

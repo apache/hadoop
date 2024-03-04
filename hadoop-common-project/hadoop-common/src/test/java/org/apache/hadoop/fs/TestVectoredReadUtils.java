@@ -111,8 +111,9 @@ public class TestVectoredReadUtils extends HadoopTestBase {
     // test when the gap between is too big
     assertFalse("Large gap ranges shouldn't get merged", mergeBase.merge(5000, 6000,
         FileRange.createFileRange(5000, 1000), 2000, 4000));
-    assertEquals("Number of ranges in merged range shouldn't increase",
-            1, mergeBase.getUnderlying().size());
+    assertUnderlyingSize(mergeBase,
+        "Number of ranges in merged range shouldn't increase",
+        1);
     assertFileRange(mergeBase, 2000, 1000);
 
     // test when the total size gets exceeded
@@ -126,7 +127,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
     assertTrue("ranges should get merged ", mergeBase.merge(5000, 6000,
         FileRange.createFileRange(5000, 1000, tracker2),
         2001, 4000));
-    assertEquals("post merge size", 2, mergeBase.getUnderlying().size());
+    assertUnderlyingSize(mergeBase, "merge list after merge", 2);
     assertFileRange(mergeBase, 2000, 4000);
 
     Assertions.assertThat(mergeBase.getUnderlying().get(0).getReference())
@@ -142,8 +143,22 @@ public class TestVectoredReadUtils extends HadoopTestBase {
 
     assertTrue("ranges should get merged ", mergeBase.merge(500, 600,
         FileRange.createFileRange(5000, 1000), 201, 400));
-    assertEquals("post merge size", 2, mergeBase.getUnderlying().size());
+    assertUnderlyingSize(mergeBase, "merge list after merge", 2);
     assertFileRange(mergeBase, 200, 400);
+  }
+
+  /**
+   * Assert that a combined file range has a specific number of underlying ranges.
+   * @param combinedFileRange file range
+   * @param description text for errors
+   * @param expected expected value.
+   */
+  private static void assertUnderlyingSize(final CombinedFileRange combinedFileRange,
+      final String description,
+      final int expected) {
+    Assertions.assertThat(combinedFileRange.getUnderlying())
+        .describedAs(description)
+        .hasSize(expected);
   }
 
   @Test
@@ -160,9 +175,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
             .describedAs("merged range size")
             .hasSize(1);
     CombinedFileRange output = outputList.get(0);
-    Assertions.assertThat(output.getUnderlying())
-            .describedAs("merged range underlying size")
-            .hasSize(3);
+    assertUnderlyingSize(output, "merged range underlying size", 3);
     // range[1000,3100)
     assertFileRange(output, 1000, 2100);
     assertTrue("merged output ranges are disjoint",
@@ -278,9 +291,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
             .describedAs("merged range size")
             .hasSize(1);
     CombinedFileRange output = outputList.get(0);
-    Assertions.assertThat(output.getUnderlying())
-            .describedAs("merged range underlying size")
-            .hasSize(4);
+    assertUnderlyingSize(output, "merged range underlying size", 4);
 
     assertFileRange(output, 1000, 2110);
 
@@ -293,9 +304,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
             .describedAs("merged range size")
             .hasSize(1);
     output = outputList.get(0);
-    Assertions.assertThat(output.getUnderlying())
-            .describedAs("merged range underlying size")
-            .hasSize(4);
+    assertUnderlyingSize(output, "merged range underlying size", 4);
     assertFileRange(output, 1000, 2200);
 
     assertTrue("merged output ranges are disjoint",
@@ -311,7 +320,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
             FileRange.createFileRange(250, 100)
     );
 
-    intercept(UnsupportedOperationException.class,
+    intercept(IllegalArgumentException.class,
         () -> validateNonOverlappingAndReturnSortedRanges(input));
 
     List<FileRange> input1 = Arrays.asList(
@@ -321,7 +330,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
             FileRange.createFileRange(1000, 100)
     );
 
-    intercept(UnsupportedOperationException.class,
+    intercept(IllegalArgumentException.class,
         () -> validateNonOverlappingAndReturnSortedRanges(input1));
 
     List<FileRange> input2 = Arrays.asList(
@@ -329,7 +338,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
             FileRange.createFileRange(200, 100),
             FileRange.createFileRange(300, 100)
     );
-    // consecutive ranges should pass.
+    // consecutive ranges MUST pass.
     validateNonOverlappingAndReturnSortedRanges(input2);
   }
 
@@ -443,11 +452,21 @@ public class TestVectoredReadUtils extends HadoopTestBase {
     runReadRangeFromPositionedReadable(ByteBuffer::allocateDirect);
   }
 
-  static void validateBuffer(String message, ByteBuffer buffer, int start) {
+  /**
+   * Validate a buffer where the first byte value is {@code start}
+   * and the subsequent bytes are from that value incremented by one, wrapping
+   * at 256
+   * @param message error message.
+   * @param buffer buffer
+   * @param start first byte of the buffer.
+   */
+  private static void validateBuffer(String message, ByteBuffer buffer, int start) {
     byte expected = (byte) start;
     while (buffer.remaining() > 0) {
-      assertEquals(message + " remain: " + buffer.remaining(), expected++,
+      assertEquals(message + " remain: " + buffer.remaining(), expected,
           buffer.get());
+      // increment with wrapping.
+      expected = (byte) (expected + 1);
     }
   }
 
@@ -483,5 +502,10 @@ public class TestVectoredReadUtils extends HadoopTestBase {
     for (int b = 0; b < input.size(); ++b) {
       validateBuffer("buffer " + b, input.get(b).getData().get(), 0);
     }
+  }
+
+  @Test
+  public void testArgValidation() throws Throwable {
+
   }
 }
