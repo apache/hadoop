@@ -252,6 +252,7 @@ public class AbfsClient implements Closeable {
           (Closeable) tokenProvider);
     }
     HadoopExecutors.shutdown(executorService, LOG, 0, TimeUnit.SECONDS);
+    metricFs.close();
   }
 
   public String getFileSystem() {
@@ -1730,6 +1731,17 @@ public class AbfsClient implements Closeable {
     return tokenProvider;
   }
 
+  /**
+   * Retrieves an instance of AzureBlobFileSystem configured for metric tracking.
+   * This method checks if an instance of AzureBlobFileSystem for metric tracking
+   * has already been created. If not, it initializes a new AzureBlobFileSystem
+   * using the provided metric configuration parameters, including the account key and URI.
+   * If the metric URI is not provided, or an exception occurs during initialization,
+   * the method returns null.
+   *
+   * @return An instance of AzureBlobFileSystem configured for metric tracking, or null if the metric URI is not provided or initialization fails.
+   * @throws IOException If an I/O error occurs during filesystem creation.
+   */
   public AzureBlobFileSystem getMetricFilesystem() throws IOException {
     if (metricFs == null) {
       try {
@@ -1745,12 +1757,22 @@ public class AbfsClient implements Closeable {
         metricUri = new URI(FileSystemUriSchemes.ABFS_SCHEME, abfsMetricUrl, null, null, null);
         metricFs = (AzureBlobFileSystem) FileSystem.newInstance(metricUri, metricConfig);
       } catch (AzureBlobFileSystemException | URISyntaxException ex) {
-        //do nothing
+        throw new IOException(ex);
       }
     }
     return metricFs;
   }
 
+  /**
+   * Retrieves a TracingContext object configured for metric tracking.
+   * This method creates a TracingContext object with the validated client correlation ID,
+   * the host name of the local machine (or "UnknownHost" if unable to determine),
+   * the file system operation type set to GET_ATTR, and additional configuration parameters
+   * for metric tracking.
+   * The TracingContext is intended for use in tracking metrics related to Azure Blob FileSystem (ABFS) operations.
+   *
+   * @return A TracingContext object configured for metric tracking.
+   */
   private TracingContext getMetricTracingContext() {
     String hostName;
     try {
