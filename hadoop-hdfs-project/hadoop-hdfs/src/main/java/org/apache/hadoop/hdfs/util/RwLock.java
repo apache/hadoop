@@ -34,7 +34,7 @@ public interface RwLock {
     readLockInterruptibly(FSNamesystemLockMode.GLOBAL);
   }
 
-  /** Acquire read lock, unless interrupted while waiting  */
+  /** Acquire read lock, unless interrupted while waiting.  */
   void readLockInterruptibly(FSNamesystemLockMode lockMode) throws InterruptedException;
 
   /** Release read lock. */
@@ -72,12 +72,12 @@ public interface RwLock {
   /** Acquire write lock. */
   void writeLock(FSNamesystemLockMode lockMode);
   
-  /** Acquire write lock, unless interrupted while waiting  */
+  /** Acquire write lock, unless interrupted while waiting.  */
   default void writeLockInterruptibly() throws InterruptedException {
     writeLockInterruptibly(FSNamesystemLockMode.GLOBAL);
   }
 
-  /** Acquire write lock, unless interrupted while waiting  */
+  /** Acquire write lock, unless interrupted while waiting.  */
   void writeLockInterruptibly(FSNamesystemLockMode lockMode) throws InterruptedException;
 
   /** Release write lock. */
