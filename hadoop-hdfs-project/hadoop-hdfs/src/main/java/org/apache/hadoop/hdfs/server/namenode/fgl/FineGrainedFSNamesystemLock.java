@@ -28,7 +28,7 @@ import java.util.function.Supplier;
  * Splitting the global FSN lock into FSLock and BMLock.
  * FSLock is used to protect directory tree-related operations.
  * BMLock is used to protect block-related and dn-related operations.
- * The lock order should be: FSLock -> BMLock.
+ * The lock order should be: FSLock,BMLock.
  */
 public class FineGrainedFSNamesystemLock implements FSNLockManager {
   private final FSNamesystemLock fsLock;

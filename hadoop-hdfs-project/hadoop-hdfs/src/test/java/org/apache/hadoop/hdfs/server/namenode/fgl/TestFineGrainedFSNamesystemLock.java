@@ -34,7 +34,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class TestFineGrainedFSNamesystemLock {
 
-  private final Logger LOG = LoggerFactory.getLogger(TestFineGrainedFSNamesystemLock.class);
+  private final Logger log = LoggerFactory.getLogger(TestFineGrainedFSNamesystemLock.class);
 
   private int getLoopNumber() {
     return ThreadLocalRandom.current().nextInt(2000, 3000);
@@ -55,23 +55,12 @@ public class TestFineGrainedFSNamesystemLock {
 
     List<Callable<Boolean>> callableList = new ArrayList<>(1000);
     for (int i = 0; i < 1000; i++) {
-      int finalI = i;
-      int index = finalI % 12;
+      int index = i % 12;
+      String opName = Integer.toString(i);
       if (index == 0) {
         callableList.add(() -> {
           for (int startIndex = 0; startIndex < getLoopNumber(); startIndex++) {
-            fsn.writeLock(FSNamesystemLockMode.GLOBAL);
-            try {
-              globalCount.incrementAndGet();
-            } finally {
-              fsn.writeUnlock(FSNamesystemLockMode.GLOBAL, Integer.toString(finalI));
-            }
-            fsn.writeLock(FSNamesystemLockMode.GLOBAL);
-            try {
-              globalCount.decrementAndGet();
-            } finally {
-              fsn.writeUnlock(FSNamesystemLockMode.GLOBAL, Integer.toString(finalI));
-            }
+            writeLock(fsn, FSNamesystemLockMode.GLOBAL, opName, globalCount);
             globalNumber.incrementAndGet();
           }
           return true;
@@ -79,18 +68,7 @@ public class TestFineGrainedFSNamesystemLock {
       } else if (index == 1) {
         callableList.add(() -> {
           for (int startIndex = 0; startIndex < getLoopNumber(); startIndex++) {
-            fsn.writeLock(FSNamesystemLockMode.FS);
-            try {
-              fsCount.incrementAndGet();
-            } finally {
-              fsn.writeUnlock(FSNamesystemLockMode.FS, Integer.toString(finalI));
-            }
-            fsn.writeLock(FSNamesystemLockMode.FS);
-            try {
-              fsCount.decrementAndGet();
-            } finally {
-              fsn.writeUnlock(FSNamesystemLockMode.FS, Integer.toString(finalI));
-            }
+            writeLock(fsn, FSNamesystemLockMode.FS, opName, fsCount);
             fsNumber.incrementAndGet();
           }
           return true;
@@ -98,18 +76,7 @@ public class TestFineGrainedFSNamesystemLock {
       } else if (index == 2) {
         callableList.add(() -> {
           for (int startIndex = 0; startIndex < getLoopNumber(); startIndex++) {
-            fsn.writeLock(FSNamesystemLockMode.BM);
-            try {
-              bmCount.incrementAndGet();
-            } finally {
-              fsn.writeUnlock(FSNamesystemLockMode.BM, Integer.toString(finalI));
-            }
-            fsn.writeLock(FSNamesystemLockMode.BM);
-            try {
-              bmCount.decrementAndGet();
-            } finally {
-              fsn.writeUnlock(FSNamesystemLockMode.BM, Integer.toString(finalI));
-            }
+            writeLock(fsn, FSNamesystemLockMode.BM, opName, bmCount);
             bmNumber.incrementAndGet();
           }
           return true;
@@ -117,12 +84,7 @@ public class TestFineGrainedFSNamesystemLock {
       } else if (index == 3) {
         callableList.add(() -> {
           for (int startIndex = 0; startIndex < getLoopNumber(); startIndex++) {
-            fsn.readLock(FSNamesystemLockMode.BM);
-            try {
-              bmCount.get();
-            } finally {
-              fsn.readUnlock(FSNamesystemLockMode.BM, Integer.toString(finalI));
-            }
+            readLock(fsn, FSNamesystemLockMode.BM, opName, bmCount);
             bmNumber.incrementAndGet();
           }
           return true;
@@ -130,12 +92,7 @@ public class TestFineGrainedFSNamesystemLock {
       } else if (index == 4) {
         callableList.add(() -> {
           for (int startIndex = 0; startIndex < getLoopNumber(); startIndex++) {
-            fsn.readLock(FSNamesystemLockMode.FS);
-            try {
-              fsCount.get();
-            } finally {
-              fsn.readUnlock(FSNamesystemLockMode.FS, Integer.toString(finalI));
-            }
+            readLock(fsn, FSNamesystemLockMode.FS, opName, fsCount);
             fsNumber.incrementAndGet();
           }
           return true;
@@ -143,12 +100,7 @@ public class TestFineGrainedFSNamesystemLock {
       } else if (index == 5) {
         callableList.add(() -> {
           for (int startIndex = 0; startIndex < getLoopNumber(); startIndex++) {
-            fsn.readLock(FSNamesystemLockMode.GLOBAL);
-            try {
-              globalCount.get();
-            } finally {
-              fsn.readUnlock(FSNamesystemLockMode.GLOBAL, Integer.toString(finalI));
-            }
+            readLock(fsn, FSNamesystemLockMode.GLOBAL, opName, globalCount);
             globalNumber.incrementAndGet();
           }
           return true;
@@ -156,35 +108,7 @@ public class TestFineGrainedFSNamesystemLock {
       } else if (index == 6) {
         callableList.add(() -> {
           for (int startIndex = 0; startIndex < getLoopNumber(); startIndex++) {
-            boolean success = false;
-            try {
-              fsn.writeLockInterruptibly(FSNamesystemLockMode.GLOBAL);
-              try {
-                globalCount.incrementAndGet();
-                success = true;
-              } finally {
-                fsn.writeUnlock(FSNamesystemLockMode.GLOBAL, Integer.toString(finalI));
-              }
-            } catch (InterruptedException e) {
-              LOG.info("InterruptedException happens in thread {}" +
-                  " during increasing the globalCount.", finalI);
-              // ignore;
-            }
-            while (success) {
-              try {
-                fsn.writeLockInterruptibly(FSNamesystemLockMode.GLOBAL);
-                try {
-                  globalCount.decrementAndGet();
-                  success = false;
-                } finally {
-                  fsn.writeUnlock(FSNamesystemLockMode.GLOBAL, Integer.toString(finalI));
-                }
-              } catch (InterruptedException e) {
-                LOG.info("InterruptedException happens in thread {}" +
-                    " during decreasing the globalCount.", finalI);
-                // ignore.
-              }
-            }
+            writeLockInterruptibly(fsn, FSNamesystemLockMode.GLOBAL, opName, globalCount);
             globalNumber.incrementAndGet();
           }
           return true;
@@ -192,35 +116,7 @@ public class TestFineGrainedFSNamesystemLock {
       } else if (index == 7) {
         callableList.add(() -> {
           for (int startIndex = 0; startIndex < getLoopNumber(); startIndex++) {
-            boolean success = false;
-            try {
-              fsn.writeLockInterruptibly(FSNamesystemLockMode.FS);
-              try {
-                fsCount.incrementAndGet();
-                success = true;
-              } finally {
-                fsn.writeUnlock(FSNamesystemLockMode.FS, Integer.toString(finalI));
-              }
-            } catch (InterruptedException e) {
-              LOG.info("InterruptedException happens in thread {}" +
-                  " during increasing the fsCount.", finalI);
-              // ignore;
-            }
-            while (success) {
-              try {
-                fsn.writeLockInterruptibly(FSNamesystemLockMode.FS);
-                try {
-                  fsCount.decrementAndGet();
-                  success = false;
-                } finally {
-                  fsn.writeUnlock(FSNamesystemLockMode.FS, Integer.toString(finalI));
-                }
-              } catch (InterruptedException e) {
-                LOG.info("InterruptedException happens in thread {}" +
-                    " during decreasing the fsCount.", finalI);
-                // ignore.
-              }
-            }
+            writeLockInterruptibly(fsn, FSNamesystemLockMode.FS, opName, fsCount);
             fsNumber.incrementAndGet();
           }
           return true;
@@ -228,36 +124,7 @@ public class TestFineGrainedFSNamesystemLock {
       } else if (index == 8) {
         callableList.add(() -> {
           for (int startIndex = 0; startIndex < getLoopNumber(); startIndex++) {
-            boolean success = false;
-            try {
-              fsn.writeLockInterruptibly(FSNamesystemLockMode.BM);
-              try {
-                bmCount.incrementAndGet();
-                success = true;
-              } finally {
-                fsn.writeUnlock(FSNamesystemLockMode.BM, Integer.toString(finalI));
-              }
-            } catch (InterruptedException e) {
-              LOG.info("InterruptedException happens in thread {}" +
-                  " during increasing the bmCount.", finalI);
-              // ignore;
-            }
-
-            while (success) {
-              try {
-                fsn.writeLockInterruptibly(FSNamesystemLockMode.BM);
-                try {
-                  bmCount.decrementAndGet();
-                  success = false;
-                } finally {
-                  fsn.writeUnlock(FSNamesystemLockMode.BM, Integer.toString(finalI));
-                }
-              } catch (InterruptedException e) {
-                LOG.info("InterruptedException happens in thread {}" +
-                    " during decreasing the bmCount.", finalI);
-                // ignore.
-              }
-            }
+            writeLockInterruptibly(fsn, FSNamesystemLockMode.BM, opName, bmCount);
             bmNumber.incrementAndGet();
           }
           return true;
@@ -265,18 +132,7 @@ public class TestFineGrainedFSNamesystemLock {
       } else if (index == 9) {
         callableList.add(() -> {
           for (int startIndex = 0; startIndex < getLoopNumber(); startIndex++) {
-            try {
-              fsn.readLockInterruptibly(FSNamesystemLockMode.BM);
-              try {
-                bmCount.get();
-              } finally {
-                fsn.readUnlock(FSNamesystemLockMode.BM, Integer.toString(finalI));
-              }
-            } catch (InterruptedException e) {
-              LOG.info("InterruptedException happens in thread {}" +
-                  " during getting the globalCount.", finalI);
-              // ignore
-            }
+            readLockInterruptibly(fsn, FSNamesystemLockMode.BM, opName, bmCount);
             bmNumber.incrementAndGet();
           }
           return true;
@@ -284,18 +140,7 @@ public class TestFineGrainedFSNamesystemLock {
       } else if (index == 10) {
         callableList.add(() -> {
           for (int startIndex = 0; startIndex < getLoopNumber(); startIndex++) {
-            try {
-              fsn.readLockInterruptibly(FSNamesystemLockMode.FS);
-              try {
-                fsCount.get();
-              } finally {
-                fsn.readUnlock(FSNamesystemLockMode.FS, Integer.toString(finalI));
-              }
-            } catch (InterruptedException e) {
-              LOG.info("InterruptedException happens in thread {}" +
-                  " during getting the fsCount.", finalI);
-              // ignore
-            }
+            readLockInterruptibly(fsn, FSNamesystemLockMode.FS, opName, fsCount);
             fsNumber.incrementAndGet();
           }
           return true;
@@ -303,18 +148,7 @@ public class TestFineGrainedFSNamesystemLock {
       } else {
         callableList.add(() -> {
           for (int startIndex = 0; startIndex < getLoopNumber(); startIndex++) {
-            try {
-              fsn.readLockInterruptibly(FSNamesystemLockMode.GLOBAL);
-              try {
-                globalCount.get();
-              } finally {
-                fsn.readUnlock(FSNamesystemLockMode.GLOBAL, Integer.toString(finalI));
-              }
-            } catch (InterruptedException e) {
-              LOG.info("InterruptedException happens in thread {}" +
-                  " during getting the bmCount.", finalI);
-              // ignore
-            }
+            readLockInterruptibly(fsn, FSNamesystemLockMode.GLOBAL, opName, globalCount);
             globalNumber.incrementAndGet();
           }
           return true;
@@ -326,10 +160,113 @@ public class TestFineGrainedFSNamesystemLock {
     for (Future<Boolean> f : futures) {
       f.get();
     }
-    LOG.info("Global executed {} times, FS executed {} times, BM executed {} times.",
+    log.info("Global executed {} times, FS executed {} times, BM executed {} times.",
         globalNumber.get(), fsNumber.get(), bmNumber.get());
     assert globalCount.get() == 0;
     assert fsCount.get() == 0;
     assert bmCount.get() == 0;
+  }
+
+  /**
+   * Test write lock for the input lock mode.
+   * @param fsn FSNLockManager
+   * @param mode LockMode
+   * @param opName operation name
+   * @param counter counter to trace this lock mode
+   */
+  private void writeLock(FSNLockManager fsn, FSNamesystemLockMode mode,
+      String opName, AtomicLong counter)  {
+    fsn.writeLock(mode);
+    try {
+      counter.incrementAndGet();
+    } finally {
+      fsn.writeUnlock(mode, opName);
+    }
+    fsn.writeLock(mode);
+    try {
+      counter.decrementAndGet();
+    } finally {
+      fsn.writeUnlock(mode, opName);
+    }
+  }
+
+  /**
+   * Test read lock for the input lock mode.
+   * @param fsn FSNLockManager
+   * @param mode LockMode
+   * @param opName operation name
+   * @param counter counter to trace this lock mode
+   */
+  private void readLock(FSNLockManager fsn, FSNamesystemLockMode mode,
+      String opName, AtomicLong counter)  {
+    fsn.readLock(mode);
+    try {
+      counter.get();
+    } finally {
+      fsn.readUnlock(mode, opName);
+    }
+  }
+
+  /**
+   * Test write lock for the input lock mode.
+   * @param fsn FSNLockManager
+   * @param mode LockMode
+   * @param opName operation name
+   * @param counter counter to trace this lock mode
+   */
+  private void writeLockInterruptibly(FSNLockManager fsn, FSNamesystemLockMode mode,
+      String opName, AtomicLong counter)  {
+    boolean success = false;
+    try {
+      fsn.writeLockInterruptibly(mode);
+      try {
+        counter.incrementAndGet();
+        success = true;
+      } finally {
+        fsn.writeUnlock(mode, opName);
+      }
+    } catch (InterruptedException e) {
+      log.info("InterruptedException happens in thread {}" +
+          " during increasing the Count.", opName);
+      // ignore;
+    }
+    while (success) {
+      try {
+        fsn.writeLockInterruptibly(mode);
+        try {
+          counter.decrementAndGet();
+          success = false;
+        } finally {
+          fsn.writeUnlock(mode, opName);
+        }
+      } catch (InterruptedException e) {
+        log.info("InterruptedException happens in thread {}" +
+            " during decreasing the Count.", opName);
+        // ignore.
+      }
+    }
+  }
+
+  /**
+   * Test read lock for the input lock mode.
+   * @param fsn FSNLockManager
+   * @param mode LockMode
+   * @param opName operation name
+   * @param counter counter to trace this lock mode
+   */
+  private void readLockInterruptibly(FSNLockManager fsn, FSNamesystemLockMode mode,
+      String opName, AtomicLong counter)  {
+    try {
+      fsn.readLockInterruptibly(mode);
+      try {
+        counter.get();
+      } finally {
+        fsn.readUnlock(mode, opName);
+      }
+    } catch (InterruptedException e) {
+      log.info("InterruptedException happens in thread {}" +
+          " during getting the Count.", opName);
+      // ignore
+    }
   }
 }
