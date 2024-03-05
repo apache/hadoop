@@ -110,13 +110,13 @@ public interface NamenodeProtocol {
    * Get the transaction ID of the most recent checkpoint.
    */
   @Idempotent
-  long getMostRecentCheckpointTxId() throws IOException;
+  public long getMostRecentCheckpointTxId() throws IOException;
 
   /**
    * Get the transaction ID of the most recent checkpoint for the given NameNodeFile.
    */
   @Idempotent
-  public long getMostRecentNameNodeFileTxId(NNStorage.NameNodeFile nnf) throws IOException;
+  long getMostRecentNameNodeFileTxId(NNStorage.NameNodeFile nnf) throws IOException;
 
   /**
    * Closes the current edit log and opens a new one. The 
