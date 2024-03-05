@@ -89,20 +89,44 @@ public class AbfsBackoffMetrics {
     }
   }
 
-  public AtomicLong getNumberOfRequestsSucceeded() {
-    return numberOfRequestsSucceeded;
+  public long getNumberOfRequestsSucceeded() {
+    return numberOfRequestsSucceeded.get();
   }
 
-  public AtomicLong getMinBackoff() {
-    return minBackoff;
+  public void setNumberOfRequestsSucceeded(long numberOfRequestsSucceeded) {
+    this.numberOfRequestsSucceeded.set(numberOfRequestsSucceeded);
   }
 
-  public AtomicLong getMaxBackoff() {
-    return maxBackoff;
+  public void incrementNumberOfRequestsSucceeded() {
+    this.numberOfRequestsSucceeded.getAndIncrement();
   }
 
-  public AtomicLong getTotalRequests() {
-    return totalRequests;
+  public long getMinBackoff() {
+    return minBackoff.get();
+  }
+
+  public void setMinBackoff(long minBackoff) {
+    this.minBackoff.set(minBackoff);
+  }
+
+  public long getMaxBackoff() {
+    return maxBackoff.get();
+  }
+
+  public void setMaxBackoff(long maxBackoff) {
+    this.maxBackoff.set(maxBackoff);
+  }
+
+  public long getTotalRequests() {
+    return totalRequests.get();
+  }
+
+  public void incrementTotalRequests() {
+    this.totalRequests.incrementAndGet();
+  }
+
+  public void setTotalRequests(long totalRequests) {
+    this.totalRequests.set(totalRequests);
   }
 
   public AtomicLong getTotalBackoff() {
@@ -149,21 +173,22 @@ public class AbfsBackoffMetrics {
     return numberOfNetworkFailedRequests;
   }
 
+
   /*
-    Acronyms :-
-    1.RCTSI :- Request count that succeeded in x retries
-    2.MMA :- Min Max Average (This refers to the backoff or sleep time between 2 requests)
-    3.s :- seconds
-    4.BWT :- Number of Bandwidth throttled requests
-    5.IT :- Number of IOPS throttled requests
-    6.OT :- Number of Other throttled requests
-    7.NFR :- Number of requests which failed due to network errors
-    8.%RT :- Percentage of requests that are throttled
-    9.TRNR :- Total number of requests which succeeded without retrying
-    10.TRF :- Total number of requests which failed
-    11.TR :- Total number of requests which were made
-    12.MRC :- Max retry count across all requests
-     */
+        Acronyms :-
+        1.RCTSI :- Request count that succeeded in x retries
+        2.MMA :- Min Max Average (This refers to the backoff or sleep time between 2 requests)
+        3.s :- seconds
+        4.BWT :- Number of Bandwidth throttled requests
+        5.IT :- Number of IOPS throttled requests
+        6.OT :- Number of Other throttled requests
+        7.NFR :- Number of requests which failed due to network errors
+        8.%RT :- Percentage of requests that are throttled
+        9.TRNR :- Total number of requests which succeeded without retrying
+        10.TRF :- Total number of requests which failed
+        11.TR :- Total number of requests which were made
+        12.MRC :- Max retry count across all requests
+         */
   @Override
   public String toString() {
     StringBuilder metricString = new StringBuilder();
@@ -176,15 +201,15 @@ public class AbfsBackoffMetrics {
       metricString.append("$RCTSI$_").append(entry.getKey())
           .append("R_").append("=")
           .append(entry.getValue().getNumberOfRequestsSucceeded());
-      long totalRequests = entry.getValue().getTotalRequests().get();
+      long totalRequests = entry.getValue().getTotalRequests();
       if (totalRequests > 0) {
         metricString.append("$MMA$_").append(entry.getKey())
             .append("R_").append("=")
             .append(String.format("%.3f",
-                (double) entry.getValue().getMinBackoff().get() / THOUSAND))
+                (double) entry.getValue().getMinBackoff() / THOUSAND))
             .append("s")
             .append(String.format("%.3f",
-                (double) entry.getValue().getMaxBackoff().get() / THOUSAND))
+                (double) entry.getValue().getMaxBackoff() / THOUSAND))
             .append("s")
             .append(String.format("%.3f",
                 ((double) entry.getValue().getTotalBackoff().get() / totalRequests)

@@ -343,7 +343,23 @@ public class AbfsReadFooterMetrics {
         mapToDouble(Double::doubleValue).average().orElse(0.0));
   }
 
-  private void getNonParquetReadFooterMetricsAverage(List<AbfsReadFooterMetrics> isNonParquetList, AbfsReadFooterMetrics avgNonParquetReadFooterMetrics) {
+  /**
+   * Calculates the average metrics from a list of non-Parquet AbfsReadFooterMetrics instances.
+   *
+   * This method takes a list of AbfsReadFooterMetrics representing non-Parquet reads and calculates
+   * the average values for the size read by the first read and the offset difference between the first
+   * and second read. The averages are then set in the provided AbfsReadFooterMetrics instance.
+   *
+   * @param isNonParquetList A list of AbfsReadFooterMetrics instances representing non-Parquet reads.
+   * @param avgNonParquetReadFooterMetrics The AbfsReadFooterMetrics instance to store the calculated averages.
+   *                                      It is assumed that the size of the list is at least 1, and the first
+   *                                      element of the list is used to determine the size of arrays.
+   *                                      The instance is modified in-place with the calculated averages.
+   *
+   *
+   **/
+  private void getNonParquetReadFooterMetricsAverage(List<AbfsReadFooterMetrics> isNonParquetList,
+                                                     AbfsReadFooterMetrics avgNonParquetReadFooterMetrics) {
     int size = isNonParquetList.get(0).getSizeReadByFirstRead().split("_").length;
     double[] store = new double[2 * size];
     // Calculating sum of individual values
@@ -403,6 +419,20 @@ public class AbfsReadFooterMetrics {
     return readFooterMetric;
   }
 
+/**
+ * Retrieves and aggregates read footer metrics for both Parquet and non-Parquet files from a list
+ * of AbfsReadFooterMetrics instances. The function calculates the average metrics separately for
+ * Parquet and non-Parquet files and returns a formatted string containing the aggregated metrics.
+ *
+ * @param readFooterMetricsList A list of AbfsReadFooterMetrics instances containing read footer metrics
+ *                              for both Parquet and non-Parquet files.
+ * @param readFooterMetric A string representing the aggregated read footer metrics. It is initialized
+ *                         externally and appended with formatted average metrics for Parquet and non-Parquet files.
+ *                         The final string is returned.
+ *
+ * @return A formatted string containing the aggregated read footer metrics for both Parquet and non-Parquet files.
+ *
+ **/
   private String getFooterMetrics(List<AbfsReadFooterMetrics> readFooterMetricsList, String readFooterMetric){
     List<AbfsReadFooterMetrics> isParquetList = new ArrayList<>();
     List<AbfsReadFooterMetrics> isNonParquetList = new ArrayList<>();

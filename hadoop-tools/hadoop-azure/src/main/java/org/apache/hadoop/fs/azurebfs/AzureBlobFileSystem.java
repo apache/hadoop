@@ -742,7 +742,10 @@ public class AzureBlobFileSystem extends FileSystem
         fileSystemId, FSOperationType.GET_ATTR, true,
         tracingHeaderFormat,
         listener, abfsCounters.toString());
-   getAbfsClient().getMetricCall(tracingMetricContext);
+    try {
+      getAbfsClient().getMetricCall(tracingMetricContext);
+    } catch (Exception e) {
+    }
     // does all the delete-on-exit calls, and may be slow.
     super.close();
     LOG.debug("AzureBlobFileSystem.close");

@@ -533,7 +533,7 @@ public class AbfsRestOperation {
    */
   private void updateCount(int retryCount){
       String retryCounter = getKey(retryCount);
-      metricsMap.get(retryCounter).getNumberOfRequestsSucceeded().getAndIncrement();
+      metricsMap.get(retryCounter).incrementNumberOfRequestsSucceeded();
   }
 
   /**
@@ -544,17 +544,20 @@ public class AbfsRestOperation {
    * This method calculates and updates various backoff time metrics, including minimum, maximum,
    * and total backoff time, as well as the total number of requests for the specified retry count.
    */
-  private void updateBackoffTimeMetrics(int retryCount, long sleepDuration){
+  private void updateBackoffTimeMetrics(int retryCount, long sleepDuration) {
+    synchronized (this) {
       String retryCounter = getKey(retryCount);
-      long minBackoffTime = Math.min(metricsMap.get(retryCounter).getMinBackoff().get(), sleepDuration);
-      long maxBackoffForTime = Math.max(metricsMap.get(retryCounter).getMaxBackoff().get(), sleepDuration);
-      long totalBackoffTime = metricsMap.get(retryCounter).getTotalBackoff().get() + sleepDuration;
-      long totalRequests = metricsMap.get(retryCounter).getTotalRequests().incrementAndGet();
-      metricsMap.get(retryCounter).getMinBackoff().set(minBackoffTime);
-      metricsMap.get(retryCounter).getMaxBackoff().set(maxBackoffForTime);
-      metricsMap.get(retryCounter).getTotalBackoff().set(totalBackoffTime);
-      metricsMap.get(retryCounter).getTotalRequests().set(totalRequests);
+      AbfsBackoffMetrics abfsBackoffMetrics = metricsMap.get(retryCounter);
+      long minBackoffTime = Math.min(abfsBackoffMetrics.getMinBackoff(), sleepDuration);
+      long maxBackoffForTime = Math.max(abfsBackoffMetrics.getMaxBackoff(), sleepDuration);
+      long totalBackoffTime = abfsBackoffMetrics.getTotalBackoff().get() + sleepDuration;
+      abfsBackoffMetrics.incrementTotalRequests();
+      abfsBackoffMetrics.setMinBackoff(minBackoffTime);
+      abfsBackoffMetrics.setMaxBackoff(maxBackoffForTime);
+      abfsBackoffMetrics.getTotalBackoff().set(totalBackoffTime);
+      metricsMap.put(retryCounter, abfsBackoffMetrics);
     }
+  }
 
   /**
    * Generates a key based on the provided retry count to categorize metrics.
