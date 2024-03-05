@@ -57,7 +57,8 @@ public class FineGrainedFSNamesystemLock implements FSNLockManager {
       try {
         this.bmLock.readLockInterruptibly();
       } catch (InterruptedException e) {
-        // release the holding FSLock
+        // The held FSLock should be released if the current thread is interrupted
+        // while acquiring the BMLock.
         this.fsLock.readUnlock("BMReadLockInterruptiblyFailed");
         throw e;
       }
@@ -149,6 +150,8 @@ public class FineGrainedFSNamesystemLock implements FSNLockManager {
       try {
         this.bmLock.writeLockInterruptibly();
       } catch (InterruptedException e) {
+        // The held FSLock should be released if the current thread is interrupted
+        // while acquiring the BMLock.
         this.fsLock.writeUnlock("BMWriteLockInterruptiblyFailed");
         throw e;
       }
@@ -163,9 +166,11 @@ public class FineGrainedFSNamesystemLock implements FSNLockManager {
   public boolean hasWriteLock(FSNamesystemLockMode lockMode) {
     if (lockMode.equals(FSNamesystemLockMode.GLOBAL)) {
       if (this.fsLock.isWriteLockedByCurrentThread()) {
+        // The bm writeLock should be held by the current thread.
         assert this.bmLock.isWriteLockedByCurrentThread();
         return true;
       } else {
+        // The bm writeLock should not be held by the current thread.
         assert !this.bmLock.isWriteLockedByCurrentThread();
         return false;
       }
@@ -183,9 +188,11 @@ public class FineGrainedFSNamesystemLock implements FSNLockManager {
       if (hasWriteLock(FSNamesystemLockMode.GLOBAL)) {
         return true;
       } else if (this.fsLock.getReadHoldCount() > 0) {
+        // The bm readLock should be held by the current thread.
         assert this.bmLock.getReadHoldCount() > 0;
         return true;
       } else {
+        // The bm readLock should not be held by the current thread.
         assert this.bmLock.getReadHoldCount() <= 0;
         return false;
       }
