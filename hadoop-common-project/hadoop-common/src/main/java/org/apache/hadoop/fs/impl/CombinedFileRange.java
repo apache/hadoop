@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.impl;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileRange;
 
 import java.util.ArrayList;
@@ -27,9 +28,13 @@ import java.util.List;
  * A file range that represents a set of underlying file ranges.
  * This is used when we combine the user's FileRange objects
  * together into a single read for efficiency.
+ * This class is not part of the public API; instances MUST NOT be
+ * passed down into vectored read operations.
+ * Argument validation SHALL reject this.
  */
+@InterfaceAudience.Private
 public class CombinedFileRange extends FileRangeImpl {
-  private List<FileRange> underlying = new ArrayList<>();
+  private final List<FileRange> underlying = new ArrayList<>();
 
   public CombinedFileRange(long offset, long end, FileRange original) {
     super(offset, (int) (end - offset), null);

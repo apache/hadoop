@@ -22,9 +22,10 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.IntFunction;
 
@@ -59,13 +60,13 @@ public final class VectoredReadUtils {
    * @throws EOFException the range offset is negative
    * @throws NullPointerException if the range is null.
    */
-  public static void validateRangeRequest(FileRange range)
+  public static <T extends FileRange> void validateRangeRequest(T range)
           throws EOFException {
 
     requireNonNull(range, "range is null");
-    checkArgument(range.getLength() >= 0, "length is negative");
+    checkArgument(range.getLength() >= 0, "length is negative in range %s", range);
     if (range.getOffset() < 0) {
-      throw new EOFException("position is negative");
+      throw new EOFException("position is negative in range " + range);
     }
   }
 
@@ -87,8 +88,12 @@ public final class VectoredReadUtils {
    * @param range range to validate.
    * @throws IllegalArgumentException if the range is invalid.
    */
-  private static void validateRangeArgument(final FileRange range) {
+  public static <T extends FileRange> void validateRangeArgument(final T range) {
     checkArgument(range != null, "range is null");
+
+    // this check prevents complex recursion situations
+    checkArgument(!(range instanceof CombinedFileRange),
+        "CombinedFileRange not supported: %s", range);
     checkArgument(range.getLength() >= 0, "length is negative in %s", range);
     checkArgument(range.getOffset() >= 0, "offset is negative in %s", range);
   }
@@ -101,14 +106,13 @@ public final class VectoredReadUtils {
    * @param stream the stream to read the data from
    * @param ranges the byte ranges to read
    * @param allocate the byte buffer allocation
-   * @throws IllegalArgumentException if there are overlapping ranges or the range
-   *                                        length is negative.
+   * @throws IllegalArgumentException if there are overlapping ranges or a range is invalid
    * @throws EOFException the range offset is negative
    */
   public static void readVectored(PositionedReadable stream,
                                   List<? extends FileRange> ranges,
                                   IntFunction<ByteBuffer> allocate) throws EOFException {
-    for (FileRange range: validateNonOverlappingAndReturnSortedRanges(ranges)) {
+    for (FileRange range: validateAndSortRanges(ranges, Optional.empty())) {
       range.setData(readRangeFrom(stream, range, allocate));
     }
   }
@@ -242,6 +246,7 @@ public final class VectoredReadUtils {
                                           int minimumSeek) {
     long previous = -minimumSeek;
     for (FileRange range: input) {
+      // TODO: reject CombinedFileRange
       long offset = range.getOffset();
       long end = range.getOffset() + range.getLength();
       if (offset % chunkSize != 0 ||
@@ -290,41 +295,56 @@ public final class VectoredReadUtils {
    * of second is less than the end offset of first.
    * End offset is calculated as start offset + length.
    * @param input input list
+   * @param fileLength file lenth if known
    * @return a new sorted list.
    * @throws IllegalArgumentException if there are overlapping ranges or
-   *                                        the range length is negative.
-   * @throws EOFException the range offset is negative
+   * a range element is invalid
+   * @throws EOFException if the last range extends beyond the end of the file supplied
    */
-  public static List<FileRange> validateNonOverlappingAndReturnSortedRanges(
-          List<? extends FileRange> input) throws EOFException {
+  public static List<? extends FileRange> validateAndSortRanges(
+      final List<? extends FileRange> input,
+      final Optional<Long> fileLength) throws EOFException {
 
-    if (input.size() <= 1) {
-      validateRangeRequest(input.get(0));
-      //noinspection unchecked
-      return (List<FileRange>) input;
-    }
 
-    FileRange[] sortedRanges = sortRanges(input);
-    FileRange prev = sortedRanges[0];
-    for (int i = 1; i < sortedRanges.length; i++) {
-      final FileRange current = sortedRanges[i];
-      validateRangeRequest(current);
-      checkArgument(current.getOffset() >= prev.getOffset() + prev.getLength(),
-          "Overlapping ranges %s and %s", prev, current);
-      prev = current;
+    checkArgument(input != null, "Null input list");
+    checkArgument(input.isEmpty(), "Empty input list");
+    final List<? extends FileRange> sortedRanges;
+
+    if (input.size() == 1) {
+      validateRangeArgument(input.get(0));
+      sortedRanges = input;
+    } else {
+      sortedRanges = sortRanges(input);
+      FileRange prev = null;
+      for (final FileRange current : sortedRanges) {
+        validateRangeArgument(current);
+        if (prev != null) {
+          checkArgument(current.getOffset() >= prev.getOffset() + prev.getLength(),
+              "Overlapping ranges %s and %s", prev, current);
+        }
+        prev = current;
+      }
     }
-    return Arrays.asList(sortedRanges);
+    // at this point the final element in the list is the last range
+    // so make sure it is not beyond the end of the file, if passed in.
+    if (fileLength.isPresent()) {
+      final FileRange last = sortedRanges.get(sortedRanges.size() - 1);
+      if (last.getOffset() + last.getLength() > fileLength.get()) {
+        throw new EOFException("Last range extends beyond the end of the file: " + last);
+      }
+    }
+    return sortedRanges;
   }
 
   /**
    * Sort the input ranges by offset.
    * @param input input ranges.
-   * @return sorted ranges.
+   * @return a new list of the ranges, sorted by offset.
    */
-  public static FileRange[] sortRanges(List<? extends FileRange> input) {
-    FileRange[] sortedRanges = input.toArray(new FileRange[0]);
-    Arrays.sort(sortedRanges, Comparator.comparingLong(FileRange::getOffset));
-    return sortedRanges;
+  public static List<? extends FileRange> sortRanges(List<? extends FileRange> input) {
+    final List<? extends FileRange> l = new ArrayList<>(input);
+    Collections.sort(l, Comparator.comparingLong(FileRange::getOffset));
+    return l;
   }
 
   /**
@@ -354,6 +374,14 @@ public final class VectoredReadUtils {
 
     // now merge together the ones that merge
     for (FileRange range: sortedRanges) {
+      if (range instanceof CombinedFileRange) {
+        // a combined range is already passed in, so do not attempt to merge.
+        // this shouldn't be done as it is possible then pass in ranges which only
+        // overlap within the discard range -which is then interpreted as invalid.
+        // but if it does happen, cope with it.
+        result.add((CombinedFileRange) range);
+        continue;
+      }
       long start = roundDown(range.getOffset(), chunkSize);
       long end = roundUp(range.getOffset() + range.getLength(), chunkSize);
       if (current == null || !current.merge(start, end, range, minimumSeek, maxSize)) {

@@ -467,10 +467,16 @@ lead to memory fragmentation explained in HADOOP-18296.
 
 #### Preconditions
 
+No empty lists.
+
+```python
+ranges.len() > 0
+```
+
 For each requested range `range[i]` in the list of ranges `range[0..i]` sorted such that
 for all `i where i > 0`:
 
-    range[i].getOffset() > range[i-1}
+    range[i].getOffset() > range[i-1]
 
 For all ranges `0..i` the preconditions are:
 
@@ -480,6 +486,13 @@ range[i].getLength >= 0 else raise IllegalArgumentException
 if i > 0 and range[i].getOffset() < (range[i-1].getOffset() + range[i-1].getLength) :
    raise IllegalArgumentException
 ```
+If the length of the file is known during the validation phase:
+
+```python
+range[i].getOffset + range[i].getLength >= data.length() raise EOFException
+```
+
+(When would it be unknown? when reading raw local filesystem, HDFS or any other FS where data may change during the read)
 
 #### Postconditions
 

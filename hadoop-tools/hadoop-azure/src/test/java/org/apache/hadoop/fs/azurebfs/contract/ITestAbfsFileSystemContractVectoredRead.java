@@ -18,14 +18,15 @@
 package org.apache.hadoop.fs.azurebfs.contract;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.contract.AbstractContractGetFileStatusTest;
 import org.apache.hadoop.fs.contract.AbstractContractVectoredReadTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 
 /**
- * Contract test for vectored reads.
+ * Contract test for vectored reads through ABFS connector.
  */
-public class ITestAbfsFileSystemContractVectoredRead extends AbstractContractVectoredReadTest {
+public class ITestAbfsFileSystemContractVectoredRead
+    extends AbstractContractVectoredReadTest {
+
   private final boolean isSecure;
   private final ABFSContractTestBinding binding;
 

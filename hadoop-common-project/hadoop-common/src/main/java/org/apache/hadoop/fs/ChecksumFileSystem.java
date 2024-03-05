@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.function.IntFunction;
@@ -52,7 +53,7 @@ import org.apache.hadoop.util.LambdaUtils;
 import org.apache.hadoop.util.Progressable;
 
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_STANDARD_OPTIONS;
-import static org.apache.hadoop.fs.VectoredReadUtils.validateNonOverlappingAndReturnSortedRanges;
+import static org.apache.hadoop.fs.VectoredReadUtils.validateAndSortRanges;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 import static org.apache.hadoop.fs.impl.StoreImplementationUtils.isProbeForSyncable;
 
@@ -435,7 +436,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     private void validateRangeRequest(List<? extends FileRange> ranges,
                                       final long fileLength) throws EOFException {
       for (FileRange range : ranges) {
-        VectoredReadUtils.validateRangeRequest(range);
+        VectoredReadUtils.validateRangeArgument(range);
         if (range.getOffset() + range.getLength() > fileLength) {
           final String errMsg = String.format("Requested range [%d, %d) is beyond EOF for path %s",
                   range.getOffset(), range.getLength(), file);
@@ -458,7 +459,8 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
       }
       int minSeek = minSeekForVectorReads();
       int maxSize = maxReadSizeForVectorReads();
-      final List<FileRange> sorted = validateNonOverlappingAndReturnSortedRanges(ranges);
+      final List<? extends FileRange> sorted = validateAndSortRanges(ranges,
+          Optional.of(length));
       List<CombinedFileRange> dataRanges =
           VectoredReadUtils.mergeSortedRanges(sorted, bytesPerSum,
               minSeek, maxReadSizeForVectorReads());

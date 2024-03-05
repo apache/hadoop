@@ -16,13 +16,14 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs;
+package org.apache.hadoop.fs.impl;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.IntFunction;
 
@@ -31,11 +32,17 @@ import org.junit.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
-import org.apache.hadoop.fs.impl.CombinedFileRange;
+import org.apache.hadoop.fs.ByteBufferPositionedReadable;
+import org.apache.hadoop.fs.FileRange;
+import org.apache.hadoop.fs.PositionedReadable;
+import org.apache.hadoop.fs.VectoredReadUtils;
 import org.apache.hadoop.test.HadoopTestBase;
 
+import static org.apache.hadoop.fs.FileRange.createFileRange;
+import static org.apache.hadoop.fs.VectoredReadUtils.isOrderedDisjoint;
+import static org.apache.hadoop.fs.VectoredReadUtils.mergeSortedRanges;
 import static org.apache.hadoop.fs.VectoredReadUtils.sortRanges;
-import static org.apache.hadoop.fs.VectoredReadUtils.validateNonOverlappingAndReturnSortedRanges;
+import static org.apache.hadoop.fs.VectoredReadUtils.validateAndSortRanges;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.test.MoreAsserts.assertFutureCompletedSuccessfully;
 import static org.apache.hadoop.test.MoreAsserts.assertFutureFailedExceptionally;
@@ -56,7 +63,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
     }
     // ensure we don't make unnecessary slices
     ByteBuffer slice = VectoredReadUtils.sliceTo(buffer, 100,
-        FileRange.createFileRange(100, size));
+        createFileRange(100, size));
     Assertions.assertThat(buffer)
             .describedAs("Slicing on the same offset shouldn't " +
                     "create a new buffer")
@@ -70,7 +77,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
     final int sliceStart = 1024;
     final int sliceLength = 16 * 1024;
     slice = VectoredReadUtils.sliceTo(buffer, offset,
-        FileRange.createFileRange(offset + sliceStart, sliceLength));
+        createFileRange(offset + sliceStart, sliceLength));
     // make sure they aren't the same, but use the same backing data
     Assertions.assertThat(buffer)
             .describedAs("Slicing on new offset should " +
@@ -105,12 +112,12 @@ public class TestVectoredReadUtils extends HadoopTestBase {
     // a reference to use for tracking
     Object tracker1 = "one";
     Object tracker2 = "two";
-    FileRange base = FileRange.createFileRange(2000, 1000, tracker1);
+    FileRange base = createFileRange(2000, 1000, tracker1);
     CombinedFileRange mergeBase = new CombinedFileRange(2000, 3000, base);
 
     // test when the gap between is too big
     assertFalse("Large gap ranges shouldn't get merged", mergeBase.merge(5000, 6000,
-        FileRange.createFileRange(5000, 1000), 2000, 4000));
+        createFileRange(5000, 1000), 2000, 4000));
     assertUnderlyingSize(mergeBase,
         "Number of ranges in merged range shouldn't increase",
         1);
@@ -118,14 +125,14 @@ public class TestVectoredReadUtils extends HadoopTestBase {
 
     // test when the total size gets exceeded
     assertFalse("Large size ranges shouldn't get merged", mergeBase.merge(5000, 6000,
-        FileRange.createFileRange(5000, 1000), 2001, 3999));
+        createFileRange(5000, 1000), 2001, 3999));
     assertEquals("Number of ranges in merged range shouldn't increase",
             1, mergeBase.getUnderlying().size());
     assertFileRange(mergeBase, 2000, 1000);
 
     // test when the merge works
     assertTrue("ranges should get merged ", mergeBase.merge(5000, 6000,
-        FileRange.createFileRange(5000, 1000, tracker2),
+        createFileRange(5000, 1000, tracker2),
         2001, 4000));
     assertUnderlyingSize(mergeBase, "merge list after merge", 2);
     assertFileRange(mergeBase, 2000, 4000);
@@ -142,7 +149,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
     assertFileRange(mergeBase, 200, 100);
 
     assertTrue("ranges should get merged ", mergeBase.merge(500, 600,
-        FileRange.createFileRange(5000, 1000), 201, 400));
+        createFileRange(5000, 1000), 201, 400));
     assertUnderlyingSize(mergeBase, "merge list after merge", 2);
     assertFileRange(mergeBase, 200, 400);
   }
@@ -164,13 +171,13 @@ public class TestVectoredReadUtils extends HadoopTestBase {
   @Test
   public void testSortAndMerge() {
     List<FileRange> input = Arrays.asList(
-        FileRange.createFileRange(3000, 100, "1"),
-        FileRange.createFileRange(2100, 100, null),
-        FileRange.createFileRange(1000, 100, "3")
+        createFileRange(3000, 100, "1"),
+        createFileRange(2100, 100, null),
+        createFileRange(1000, 100, "3")
         );
-    assertFalse("Ranges are non disjoint", VectoredReadUtils.isOrderedDisjoint(input, 100, 800));
-    final List<CombinedFileRange> outputList = VectoredReadUtils.mergeSortedRanges(
-            Arrays.asList(sortRanges(input)), 100, 1001, 2500);
+    assertIsNotOrderedDisjoint(input, 100, 800);
+    final List<CombinedFileRange> outputList = mergeSortedRanges(
+            sortRanges(input), 100, 1001, 2500);
     Assertions.assertThat(outputList)
             .describedAs("merged range size")
             .hasSize(1);
@@ -178,14 +185,12 @@ public class TestVectoredReadUtils extends HadoopTestBase {
     assertUnderlyingSize(output, "merged range underlying size", 3);
     // range[1000,3100)
     assertFileRange(output, 1000, 2100);
-    assertTrue("merged output ranges are disjoint",
-            VectoredReadUtils.isOrderedDisjoint(outputList, 100, 800));
+    assertOrderedDisjoint(outputList, 100, 800);
 
     // the minSeek doesn't allow the first two to merge
-    assertFalse("Ranges are non disjoint",
-            VectoredReadUtils.isOrderedDisjoint(input, 100, 1000));
-    final List<CombinedFileRange> list2 = VectoredReadUtils.mergeSortedRanges(
-        Arrays.asList(sortRanges(input)),
+    assertIsNotOrderedDisjoint(input, 100, 100);
+    final List<CombinedFileRange> list2 = mergeSortedRanges(
+        sortRanges(input),
             100, 1000, 2100);
     Assertions.assertThat(list2)
             .describedAs("merged range size")
@@ -195,14 +200,12 @@ public class TestVectoredReadUtils extends HadoopTestBase {
     // range[2100,3100)
     assertFileRange(list2.get(1), 2100, 1000);
 
-    assertTrue("merged output ranges are disjoint",
-            VectoredReadUtils.isOrderedDisjoint(list2, 100, 1000));
+    assertOrderedDisjoint(list2, 100, 1000);
 
     // the maxSize doesn't allow the third range to merge
-    assertFalse("Ranges are non disjoint",
-            VectoredReadUtils.isOrderedDisjoint(input, 100, 800));
-    final List<CombinedFileRange> list3 = VectoredReadUtils.mergeSortedRanges(
-        Arrays.asList(sortRanges(input)),
+    assertIsNotOrderedDisjoint(input, 100, 800);
+    final List<CombinedFileRange> list3 = mergeSortedRanges(
+        sortRanges(input),
             100, 1001, 2099);
     Assertions.assertThat(list3)
             .describedAs("merged range size")
@@ -220,15 +223,13 @@ public class TestVectoredReadUtils extends HadoopTestBase {
     assertFileRange(range1.getUnderlying().get(0),
         3000, 100, "1");
 
-    assertTrue("merged output ranges are disjoint",
-            VectoredReadUtils.isOrderedDisjoint(list3, 100, 800));
+    assertOrderedDisjoint(list3, 100, 800);
 
     // test the round up and round down (the maxSize doesn't allow any merges)
-    assertFalse("Ranges are non disjoint",
-            VectoredReadUtils.isOrderedDisjoint(input, 16, 700));
-    final List<CombinedFileRange> list4 = VectoredReadUtils.mergeSortedRanges(
-        Arrays.asList(sortRanges(input)),
-            16, 1001, 100);
+    assertIsNotOrderedDisjoint(input, 16, 700);
+    final List<CombinedFileRange> list4 = mergeSortedRanges(
+        sortRanges(input),
+        16, 1001, 100);
     Assertions.assertThat(list4)
             .describedAs("merged range size")
             .hasSize(3);
@@ -238,8 +239,12 @@ public class TestVectoredReadUtils extends HadoopTestBase {
     assertFileRange(list4.get(1), 2096, 112);
     // range[2992,3104)
     assertFileRange(list4.get(2), 2992, 112);
-    assertTrue("merged output ranges are disjoint",
-            VectoredReadUtils.isOrderedDisjoint(list4, 16, 700));
+    assertOrderedDisjoint(list4, 16, 700);
+  }
+
+  @Test
+  public void testMergeCombinedRanges() throws Throwable {
+    // verify that a combined range is already merged
   }
 
   /**
@@ -278,15 +283,14 @@ public class TestVectoredReadUtils extends HadoopTestBase {
   @Test
   public void testSortAndMergeMoreCases() throws Exception {
     List<FileRange> input = Arrays.asList(
-            FileRange.createFileRange(3000, 110),
-            FileRange.createFileRange(3000, 100),
-            FileRange.createFileRange(2100, 100),
-            FileRange.createFileRange(1000, 100)
+            createFileRange(3000, 110),
+            createFileRange(3000, 100),
+            createFileRange(2100, 100),
+            createFileRange(1000, 100)
     );
-    assertFalse("Ranges are non disjoint",
-            VectoredReadUtils.isOrderedDisjoint(input, 100, 800));
-    List<CombinedFileRange> outputList = VectoredReadUtils.mergeSortedRanges(
-            Arrays.asList(sortRanges(input)), 1, 1001, 2500);
+    assertIsNotOrderedDisjoint(input, 100, 800);
+    List<CombinedFileRange> outputList = mergeSortedRanges(
+            sortRanges(input), 1, 1001, 2500);
     Assertions.assertThat(outputList)
             .describedAs("merged range size")
             .hasSize(1);
@@ -295,11 +299,10 @@ public class TestVectoredReadUtils extends HadoopTestBase {
 
     assertFileRange(output, 1000, 2110);
 
-    assertTrue("merged output ranges are disjoint",
-            VectoredReadUtils.isOrderedDisjoint(outputList, 1, 800));
+    assertOrderedDisjoint(outputList, 1, 800);
 
-    outputList = VectoredReadUtils.mergeSortedRanges(
-            Arrays.asList(sortRanges(input)), 100, 1001, 2500);
+    outputList = mergeSortedRanges(
+            sortRanges(input), 100, 1001, 2500);
     Assertions.assertThat(outputList)
             .describedAs("merged range size")
             .hasSize(1);
@@ -307,47 +310,73 @@ public class TestVectoredReadUtils extends HadoopTestBase {
     assertUnderlyingSize(output, "merged range underlying size", 4);
     assertFileRange(output, 1000, 2200);
 
-    assertTrue("merged output ranges are disjoint",
-            VectoredReadUtils.isOrderedDisjoint(outputList, 1, 800));
+    assertOrderedDisjoint(outputList, 1, 800);
+  }
 
+  /**
+   * Assert that a file range is ordered and disjoint.
+   * @param input the list of input ranges.
+   * @param chunkSize the size of the chunks that the offset and end must align to.
+   * @param minimumSeek the minimum distance between ranges.
+   */
+  private static void assertOrderedDisjoint(List<? extends FileRange> input,
+      int chunkSize,
+      int minimumSeek) {
+    Assertions.assertThat(isOrderedDisjoint(input, chunkSize, minimumSeek))
+        .describedAs("ranges are ordered and disjoint")
+        .isTrue();
+  }
+
+  /**
+   * Assert that a file range is not ordered or not disjoint.
+   * @param input the list of input ranges.
+   * @param chunkSize the size of the chunks that the offset and end must align to.
+   * @param minimumSeek the minimum distance between ranges.
+   */
+  private static void assertIsNotOrderedDisjoint(List<? extends FileRange> input,
+      int chunkSize,
+      int minimumSeek) {
+    Assertions.assertThat(isOrderedDisjoint(input, chunkSize, minimumSeek))
+        .describedAs("Ranges are non disjoint/ordered")
+        .isFalse();
   }
 
   @Test
   public void testValidateOverlappingRanges()  throws Exception {
     List<FileRange> input = Arrays.asList(
-            FileRange.createFileRange(100, 100),
-            FileRange.createFileRange(200, 100),
-            FileRange.createFileRange(250, 100)
+            createFileRange(100, 100),
+            createFileRange(200, 100),
+            createFileRange(250, 100)
     );
 
     intercept(IllegalArgumentException.class,
-        () -> validateNonOverlappingAndReturnSortedRanges(input));
+        () -> validateAndSortRanges(input, Optional.empty()));
 
     List<FileRange> input1 = Arrays.asList(
-            FileRange.createFileRange(100, 100),
-            FileRange.createFileRange(500, 100),
-            FileRange.createFileRange(1000, 100),
-            FileRange.createFileRange(1000, 100)
+            createFileRange(100, 100),
+            createFileRange(500, 100),
+            createFileRange(1000, 100),
+            createFileRange(1000, 100)
     );
 
     intercept(IllegalArgumentException.class,
-        () -> validateNonOverlappingAndReturnSortedRanges(input1));
+        () -> validateAndSortRanges(input1, Optional.empty()));
 
     List<FileRange> input2 = Arrays.asList(
-            FileRange.createFileRange(100, 100),
-            FileRange.createFileRange(200, 100),
-            FileRange.createFileRange(300, 100)
+            createFileRange(100, 100),
+            createFileRange(200, 100),
+            createFileRange(300, 100)
     );
     // consecutive ranges MUST pass.
-    validateNonOverlappingAndReturnSortedRanges(input2);
+    validateAndSortRanges(input2, Optional.empty());
   }
 
   @Test
   public void testMaxSizeZeroDisablesMering() throws Exception {
     List<FileRange> randomRanges = Arrays.asList(
-            FileRange.createFileRange(3000, 110),
-            FileRange.createFileRange(3000, 100),
-            FileRange.createFileRange(2100, 100)
+            createFileRange(3000, 110),
+            createFileRange(3000, 100),
+            createFileRange(2100, 100)
     );
     assertEqualRangeCountsAfterMerging(randomRanges, 1, 1, 0);
     assertEqualRangeCountsAfterMerging(randomRanges, 1, 0, 0);
@@ -358,8 +387,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
                                                   int chunkSize,
                                                   int minimumSeek,
                                                   int maxSize) {
-    List<CombinedFileRange> combinedFileRanges = VectoredReadUtils
-            .mergeSortedRanges(inputRanges, chunkSize, minimumSeek, maxSize);
+    List<CombinedFileRange> combinedFileRanges = mergeSortedRanges(inputRanges, chunkSize, minimumSeek, maxSize);
     Assertions.assertThat(combinedFileRanges)
             .describedAs("Mismatch in number of ranges post merging")
             .hasSize(inputRanges.size());
@@ -385,7 +413,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
     }).when(stream).readFully(ArgumentMatchers.anyLong(),
                               ArgumentMatchers.any(ByteBuffer.class));
     CompletableFuture<ByteBuffer> result =
-        VectoredReadUtils.readRangeFrom(stream, FileRange.createFileRange(1000, 100),
+        VectoredReadUtils.readRangeFrom(stream, createFileRange(1000, 100),
         ByteBuffer::allocate);
     assertFutureCompletedSuccessfully(result);
     ByteBuffer buffer = result.get();
@@ -401,7 +429,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
         .when(stream).readFully(ArgumentMatchers.anyLong(),
                                 ArgumentMatchers.any(ByteBuffer.class));
     result =
-        VectoredReadUtils.readRangeFrom(stream, FileRange.createFileRange(1000, 100),
+        VectoredReadUtils.readRangeFrom(stream, createFileRange(1000, 100),
             ByteBuffer::allocate);
     assertFutureFailedExceptionally(result);
   }
@@ -420,7 +448,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
         ArgumentMatchers.any(), ArgumentMatchers.anyInt(),
         ArgumentMatchers.anyInt());
     CompletableFuture<ByteBuffer> result =
-        VectoredReadUtils.readRangeFrom(stream, FileRange.createFileRange(1000, 100),
+        VectoredReadUtils.readRangeFrom(stream, createFileRange(1000, 100),
             allocate);
     assertFutureCompletedSuccessfully(result);
     ByteBuffer buffer = result.get();
@@ -437,7 +465,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
         ArgumentMatchers.any(), ArgumentMatchers.anyInt(),
         ArgumentMatchers.anyInt());
     result =
-        VectoredReadUtils.readRangeFrom(stream, FileRange.createFileRange(1000, 100),
+        VectoredReadUtils.readRangeFrom(stream, createFileRange(1000, 100),
             ByteBuffer::allocate);
     assertFutureFailedExceptionally(result);
   }
@@ -472,17 +500,17 @@ public class TestVectoredReadUtils extends HadoopTestBase {
 
   @Test
   public void testReadVectored() throws Exception {
-    List<FileRange> input = Arrays.asList(FileRange.createFileRange(0, 100),
-        FileRange.createFileRange(100_000, 100),
-        FileRange.createFileRange(200_000, 100));
+    List<FileRange> input = Arrays.asList(createFileRange(0, 100),
+        createFileRange(100_000, 100),
+        createFileRange(200_000, 100));
     runAndValidateVectoredRead(input);
   }
 
   @Test
   public void testReadVectoredZeroBytes() throws Exception {
-    List<FileRange> input = Arrays.asList(FileRange.createFileRange(0, 0),
-            FileRange.createFileRange(100_000, 100),
-            FileRange.createFileRange(200_000, 0));
+    List<FileRange> input = Arrays.asList(createFileRange(0, 0),
+            createFileRange(100_000, 100),
+            createFileRange(200_000, 0));
     runAndValidateVectoredRead(input);
   }
 
