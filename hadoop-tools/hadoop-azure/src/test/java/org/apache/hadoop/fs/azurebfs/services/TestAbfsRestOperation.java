@@ -53,10 +53,7 @@ public class TestAbfsRestOperation extends
       getMetrics.invoke(op, retryCount, statusCode);
     }
     //For retry count greater than max configured value, the request should fail
-    Assert.assertEquals(testClient.getAbfsCounters().getAbfsBackoffMetrics().getNumberOfRequestsFailed().toString(), "3");
-    try {
-      fs.close();
-    } catch (Exception e) {
-    }
+    Assert.assertEquals(String.valueOf(testClient.getAbfsCounters().getAbfsBackoffMetrics().getNumberOfRequestsFailed()), "3");
+    fs.close();
   }
 }

@@ -262,7 +262,9 @@ public class AbfsRestOperation {
     LOG.debug("First execution of REST operation - {}", operationType);
     long sleepDuration = 0L;
     if (abfsBackoffMetrics != null) {
-      abfsBackoffMetrics.getTotalNumberOfRequests().getAndIncrement();
+      synchronized (this) {
+        abfsBackoffMetrics.incrementTotalRequests();
+      }
     }
     while (!executeHttpOperation(retryCount, tracingContext)) {
       try {
@@ -300,19 +302,23 @@ public class AbfsRestOperation {
     LOG.trace("{} REST operation complete", operationType);
   }
 
-  private synchronized void updateBackoffMetrics(int retryCount, int statusCode) {
+  private void updateBackoffMetrics(int retryCount, int statusCode) {
     if (statusCode < HttpURLConnection.HTTP_OK
             || statusCode >= HttpURLConnection.HTTP_INTERNAL_ERROR) {
-      if (retryCount >= maxIoRetries) {
-        abfsBackoffMetrics.getNumberOfRequestsFailed().getAndIncrement();
+      synchronized (this) {
+        if (retryCount >= maxIoRetries) {
+          abfsBackoffMetrics.incrementNumberOfRequestsFailed();
+        }
       }
     } else {
-      if (retryCount > ZERO && retryCount <= maxIoRetries) {
-        maxRetryCount = Math.max(abfsBackoffMetrics.getMaxRetryCount().get(), retryCount);
-        abfsBackoffMetrics.getMaxRetryCount().set(maxRetryCount);
-        updateCount(retryCount);
-      } else {
-        abfsBackoffMetrics.getNumberOfRequestsSucceededWithoutRetrying().getAndIncrement();
+      synchronized (this) {
+        if (retryCount > ZERO && retryCount <= maxIoRetries) {
+          maxRetryCount = Math.max(abfsBackoffMetrics.getMaxRetryCount(), retryCount);
+          abfsBackoffMetrics.setMaxRetryCount(maxRetryCount);
+          updateCount(retryCount);
+        } else {
+          abfsBackoffMetrics.incrementNumberOfRequestsSucceededWithoutRetrying();
+        }
       }
     }
   }
@@ -372,19 +378,18 @@ public class AbfsRestOperation {
             + httpOperation.getStorageErrorCode()
             + " error message is " + httpOperation.getStorageErrorMessage());
         if (abfsBackoffMetrics != null) {
-          if (serviceErrorCode.equals(
-              AzureServiceErrorCode.INGRESS_OVER_ACCOUNT_LIMIT)
-              || serviceErrorCode.equals(
-              AzureServiceErrorCode.EGRESS_OVER_ACCOUNT_LIMIT)) {
-            abfsBackoffMetrics.getNumberOfBandwidthThrottledRequests()
-                .getAndIncrement();
-          } else if (serviceErrorCode.equals(
-              AzureServiceErrorCode.REQUEST_OVER_ACCOUNT_LIMIT)) {
-            abfsBackoffMetrics.getNumberOfIOPSThrottledRequests()
-                .getAndIncrement();
-          } else {
-            abfsBackoffMetrics.getNumberOfOtherThrottledRequests()
-                .getAndIncrement();
+          synchronized (this) {
+            if (serviceErrorCode.equals(
+                    AzureServiceErrorCode.INGRESS_OVER_ACCOUNT_LIMIT)
+                    || serviceErrorCode.equals(
+                    AzureServiceErrorCode.EGRESS_OVER_ACCOUNT_LIMIT)) {
+              abfsBackoffMetrics.incrementNumberOfBandwidthThrottledRequests();
+            } else if (serviceErrorCode.equals(
+                    AzureServiceErrorCode.REQUEST_OVER_ACCOUNT_LIMIT)) {
+              abfsBackoffMetrics.incrementNumberOfIOPSThrottledRequests();
+            } else {
+              abfsBackoffMetrics.incrementNumberOfOtherThrottledRequests();
+            }
           }
         }
       }
@@ -405,7 +410,9 @@ public class AbfsRestOperation {
       LOG.warn("Unknown host name: {}. Retrying to resolve the host name...",
           hostname);
       if (abfsBackoffMetrics != null) {
-        abfsBackoffMetrics.getNumberOfNetworkFailedRequests().getAndIncrement();
+        synchronized (this) {
+          abfsBackoffMetrics.incrementNumberOfNetworkFailedRequests();
+        }
       }
       if (!retryPolicy.shouldRetry(retryCount, -1)) {
         updateBackoffMetrics(retryCount, httpOperation.getStatusCode());
@@ -417,7 +424,9 @@ public class AbfsRestOperation {
         LOG.debug("HttpRequestFailure: {}, {}", httpOperation, ex);
       }
       if (abfsBackoffMetrics != null) {
-        abfsBackoffMetrics.getNumberOfNetworkFailedRequests().getAndIncrement();
+        synchronized (this) {
+          abfsBackoffMetrics.incrementNumberOfNetworkFailedRequests();
+        }
       }
       failureReason = RetryReason.getAbbreviation(ex, -1, "");
       retryPolicy = client.getRetryPolicy(failureReason);
@@ -550,11 +559,11 @@ public class AbfsRestOperation {
       AbfsBackoffMetrics abfsBackoffMetrics = metricsMap.get(retryCounter);
       long minBackoffTime = Math.min(abfsBackoffMetrics.getMinBackoff(), sleepDuration);
       long maxBackoffForTime = Math.max(abfsBackoffMetrics.getMaxBackoff(), sleepDuration);
-      long totalBackoffTime = abfsBackoffMetrics.getTotalBackoff().get() + sleepDuration;
+      long totalBackoffTime = abfsBackoffMetrics.getTotalBackoff() + sleepDuration;
       abfsBackoffMetrics.incrementTotalRequests();
       abfsBackoffMetrics.setMinBackoff(minBackoffTime);
       abfsBackoffMetrics.setMaxBackoff(maxBackoffForTime);
-      abfsBackoffMetrics.getTotalBackoff().set(totalBackoffTime);
+      abfsBackoffMetrics.setTotalBackoff(totalBackoffTime);
       metricsMap.put(retryCounter, abfsBackoffMetrics);
     }
   }

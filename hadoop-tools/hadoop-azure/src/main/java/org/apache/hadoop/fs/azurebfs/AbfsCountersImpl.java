@@ -292,8 +292,8 @@ public class AbfsCountersImpl implements AbfsCounters {
   public String toString() {
     String metric = "";
     if (abfsBackoffMetrics != null) {
-      AtomicLong totalNoRequests = getAbfsBackoffMetrics().getTotalNumberOfRequests();
-      if (totalNoRequests.get() > 0) {
+      long totalNoRequests = getAbfsBackoffMetrics().getTotalNumberOfRequests();
+      if (totalNoRequests > 0) {
         metric += "#BO:" + getAbfsBackoffMetrics().toString();
       }
     }
