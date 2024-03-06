@@ -163,7 +163,9 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     readAheadBlockSize = abfsInputStreamContext.getReadAheadBlockSize();
     if (abfsReadFooterMetrics != null) {
       this.filePathIdentifier = eTag + path;
-      abfsReadFooterMetrics.updateMap(filePathIdentifier);
+      synchronized (this) {
+        abfsReadFooterMetrics.updateMap(filePathIdentifier);
+      }
     }
     this.fsBackRef = abfsInputStreamContext.getFsBackRef();
     contextEncryptionAdapter = abfsInputStreamContext.getEncryptionAdapter();

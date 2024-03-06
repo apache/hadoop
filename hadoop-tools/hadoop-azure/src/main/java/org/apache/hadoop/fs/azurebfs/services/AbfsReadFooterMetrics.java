@@ -235,15 +235,20 @@ public class AbfsReadFooterMetrics {
       metricsMap.put(filePathIdentifier, readFooterMetrics);
     }
 
-    int readCount = readFooterMetrics.incrementReadCount();
+    int readCount;
+    synchronized (this) {
+      readCount = readFooterMetrics.incrementReadCount();
+    }
 
     if (readCount == 1) {
       // Update metrics for the first read.
       updateMetricsOnFirstRead(readFooterMetrics, nextReadPos, len, contentLength);
     }
 
-    if (readFooterMetrics.getCollectLenMetrics()) {
-      readFooterMetrics.updateDataLenRequested(len);
+    synchronized (this) {
+      if (readFooterMetrics.getCollectLenMetrics()) {
+        readFooterMetrics.updateDataLenRequested(len);
+      }
     }
 
     if (readCount == 2) {
@@ -287,10 +292,10 @@ public class AbfsReadFooterMetrics {
 
 
   /**
-   * Check if the given metrics should be marked as a Parquet file.
+   * Check if the given file should be marked as a Parquet file.
    *
    * @param metrics The metrics to evaluate.
-   * @return True if the metrics meet the criteria for being marked as a Parquet file, false otherwise.
+   * @return True if the file meet the criteria for being marked as a Parquet file, false otherwise.
    */
   private boolean shouldMarkAsParquet(AbfsReadFooterMetrics metrics) {
     return metrics.getCollectMetrics()
@@ -347,19 +352,31 @@ public class AbfsReadFooterMetrics {
    * @param metricsMap A map containing metrics for different files with unique identifiers.
    */
   private void updateLenRequested(Map<String, AbfsReadFooterMetrics> metricsMap) {
-    for (Map.Entry<String, AbfsReadFooterMetrics> entry : metricsMap.entrySet()) {
-      AbfsReadFooterMetrics readFooterMetrics = entry.getValue();
-      if (readFooterMetrics.getCollectMetrics() && readFooterMetrics.getReadCount() > 2) {
-        if (!readFooterMetrics.getIsLenUpdated()) {
-          int readReqCount = readFooterMetrics.getReadCount() - 2;
-          readFooterMetrics.setAvgReadLenRequested(
-                  (double) readFooterMetrics.getDataLenRequested()
-                          / readReqCount);
-        }
+    for (AbfsReadFooterMetrics readFooterMetrics : metricsMap.values()) {
+      if (shouldUpdateLenRequested(readFooterMetrics)) {
+        int readReqCount = readFooterMetrics.getReadCount() - 2;
+        readFooterMetrics.setAvgReadLenRequested(
+                (double) readFooterMetrics.getDataLenRequested() / readReqCount);
         readFooterMetrics.setIsLenUpdated(true);
-        metricsMap.replace(entry.getKey(), readFooterMetrics);
       }
     }
+  }
+
+  /**
+   * Checks whether the average read length requested should be updated for the given metrics.
+   *
+   * The method returns true if the following conditions are met:
+   * - Metrics collection is enabled.
+   * - The number of read counts is greater than 2.
+   * - The average read length has not been updated previously.
+   *
+   * @param readFooterMetrics The metrics object to evaluate.
+   * @return True if the average read length should be updated, false otherwise.
+   */
+  private boolean shouldUpdateLenRequested(AbfsReadFooterMetrics readFooterMetrics) {
+    return readFooterMetrics.getCollectMetrics()
+            && readFooterMetrics.getReadCount() > 2
+            && !readFooterMetrics.getIsLenUpdated();
   }
 
   /**
