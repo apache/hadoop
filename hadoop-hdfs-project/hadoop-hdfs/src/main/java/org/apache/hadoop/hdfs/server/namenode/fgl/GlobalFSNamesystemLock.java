@@ -29,7 +29,7 @@ public class GlobalFSNamesystemLock implements FSNLockManager {
   private final FSNamesystemLock lock;
 
   public GlobalFSNamesystemLock(Configuration conf, MutableRatesWithAggregation aggregation) {
-    this.lock = new FSNamesystemLock(conf, aggregation);
+    this.lock = new FSNamesystemLock(conf, "FSN", aggregation);
   }
 
   @Override
