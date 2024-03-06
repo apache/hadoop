@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.util.StringUtils;
 
@@ -261,27 +262,31 @@ public class FSDirectory implements Closeable {
    * remain as placeholders only
    */
   void readLock() {
-    assert namesystem.hasReadLock() : "Should hold namesystem read lock";
+    assert namesystem.hasReadLock(FSNamesystemLockMode.FS) :
+        "Should hold read lock of namesystem FSLock";
   }
 
   void readUnlock() {
-    assert namesystem.hasReadLock() : "Should hold namesystem read lock";
+    assert namesystem.hasReadLock(FSNamesystemLockMode.FS) :
+        "Should hold read lock of namesystem FSLock";
   }
 
   void writeLock() {
-    assert namesystem.hasWriteLock() : "Should hold namesystem write lock";
+    assert namesystem.hasWriteLock(FSNamesystemLockMode.FS) :
+        "Should hold write lock of namesystem FSLock";
   }
 
   void writeUnlock() {
-    assert namesystem.hasWriteLock() : "Should hold namesystem write lock";
+    assert namesystem.hasWriteLock(FSNamesystemLockMode.FS) :
+        "Should hold write lock of namesystem FSLock";
   }
 
   boolean hasWriteLock() {
-    return namesystem.hasWriteLock();
+    return namesystem.hasWriteLock(FSNamesystemLockMode.FS);
   }
 
   boolean hasReadLock() {
-    return namesystem.hasReadLock();
+    return namesystem.hasReadLock(FSNamesystemLockMode.FS);
   }
 
   public int getListLimit() {
