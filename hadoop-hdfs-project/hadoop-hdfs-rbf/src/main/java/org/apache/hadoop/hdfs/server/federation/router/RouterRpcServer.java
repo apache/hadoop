@@ -146,6 +146,7 @@ import org.apache.hadoop.hdfs.server.federation.router.security.RouterSecurityMa
 import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
 import org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException;
 import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
+import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.hdfs.server.namenode.NotReplicatedYetException;
 import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
@@ -1639,6 +1640,12 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   @Override // NamenodeProtocol
   public long getMostRecentCheckpointTxId() throws IOException {
     return nnProto.getMostRecentCheckpointTxId();
+  }
+
+  @Override // NamenodeProtocol
+  public long getMostRecentNameNodeFileTxId(NNStorage.NameNodeFile nnf)
+      throws IOException {
+    return nnProto.getMostRecentNameNodeFileTxId(nnf);
   }
 
   @Override // NamenodeProtocol
