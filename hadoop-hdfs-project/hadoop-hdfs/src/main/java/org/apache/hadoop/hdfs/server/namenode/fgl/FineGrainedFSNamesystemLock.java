@@ -35,8 +35,8 @@ public class FineGrainedFSNamesystemLock implements FSNLockManager {
   private final FSNamesystemLock bmLock;
 
   public FineGrainedFSNamesystemLock(Configuration conf, MutableRatesWithAggregation aggregation) {
-    this.fsLock = new FSNamesystemLock(conf, aggregation);
-    this.bmLock = new FSNamesystemLock(conf, aggregation);
+    this.fsLock = new FSNamesystemLock(conf, "FS", aggregation);
+    this.bmLock = new FSNamesystemLock(conf, "BM", aggregation);
   }
 
   @Override
