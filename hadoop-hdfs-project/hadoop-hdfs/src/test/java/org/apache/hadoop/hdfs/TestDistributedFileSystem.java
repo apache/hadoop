@@ -2680,7 +2680,7 @@ public class TestDistributedFileSystem {
 
   @Test
   public void testSingleRackFailureDuringPipelineSetupMinReplicationImpossible()
-    throws Exception {
+      throws Exception {
     Configuration conf = getTestConfiguration();
     conf.setClass(DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_KEY,
         BlockPlacementPolicyRackFaultTolerant.class, BlockPlacementPolicy.class);
@@ -2730,7 +2730,8 @@ public class TestDistributedFileSystem {
   public void testMultipleRackFailureDuringPipelineSetupMinReplicationImpossible()
       throws Exception {
     Configuration conf = getTestConfiguration();
-    conf.setClass(DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_KEY, BlockPlacementPolicyRackFaultTolerant.class,
+    conf.setClass(DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_KEY,
+        BlockPlacementPolicyRackFaultTolerant.class,
         BlockPlacementPolicy.class);
     conf.setBoolean(
         HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.ENABLE_KEY,
@@ -2772,7 +2773,7 @@ public class TestDistributedFileSystem {
       // create a file with replication 3, for rack fault tolerant BPP,
       // it should allocate nodes in all 3 rack but fail because no DNs are present.
       LambdaTestUtils.intercept(IOException.class,
-        () ->
+          () ->
           DFSTestUtil.createFile(fs, new Path("/testFile"),
               1024L, (short) 3, 1024L));
     }

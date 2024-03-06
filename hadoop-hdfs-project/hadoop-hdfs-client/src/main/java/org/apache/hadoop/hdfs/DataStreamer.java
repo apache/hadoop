@@ -648,13 +648,13 @@ class DataStreamer extends Daemon {
     setPipeline(lb.getLocations(), lb.getStorageTypes(), lb.getStorageIDs());
   }
 
-  protected void setPipeline(DatanodeInfo[] nodes, StorageType[] storageTypes,
-                           String[] storageIDs) {
+  protected void setPipeline(DatanodeInfo[] newNodes, StorageType[] newStorageTypes,
+                           String[] newStorageIDs) {
     synchronized (nodesLock) {
-      this.nodes = nodes;
+      this.nodes = newNodes;
     }
-    this.storageTypes = storageTypes;
-    this.storageIDs = storageIDs;
+    this.storageTypes = newStorageTypes;
+    this.storageIDs = newStorageIDs;
   }
 
   /**
