@@ -263,7 +263,7 @@ public class AbfsRestOperation {
     long sleepDuration = 0L;
     if (abfsBackoffMetrics != null) {
       synchronized (this) {
-        abfsBackoffMetrics.incrementTotalRequests();
+        abfsBackoffMetrics.incrementTotalNumberOfRequests();
       }
     }
     while (!executeHttpOperation(retryCount, tracingContext)) {
