@@ -302,7 +302,8 @@ public class AbfsRestOperation {
     LOG.trace("{} REST operation complete", operationType);
   }
 
-  private void updateBackoffMetrics(int retryCount, int statusCode) {
+  @VisibleForTesting
+  void updateBackoffMetrics(int retryCount, int statusCode) {
     if (statusCode < HttpURLConnection.HTTP_OK
             || statusCode >= HttpURLConnection.HTTP_INTERNAL_ERROR) {
       synchronized (this) {

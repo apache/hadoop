@@ -47,10 +47,8 @@ public class TestAbfsRestOperation extends
 
     ArrayList<Integer> retryCounts = new ArrayList<>(Arrays.asList(35, 28, 31, 45, 10, 2, 9));
     int statusCode = HttpURLConnection.HTTP_UNAVAILABLE;
-    Method getMetrics = AbfsRestOperation.class.getDeclaredMethod("updateBackoffMetrics", int.class, int.class);
-    getMetrics.setAccessible(true);
     for (int retryCount : retryCounts) {
-      getMetrics.invoke(op, retryCount, statusCode);
+      op.updateBackoffMetrics(retryCount, statusCode);
     }
     //For retry count greater than max configured value, the request should fail
     Assert.assertEquals(String.valueOf(testClient.getAbfsCounters().getAbfsBackoffMetrics().getNumberOfRequestsFailed()), "3");
