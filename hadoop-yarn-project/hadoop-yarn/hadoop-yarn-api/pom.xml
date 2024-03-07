@@ -51,7 +51,7 @@
       <exclusions>
         <exclusion>
           <groupId>org.apache.hadoop.thirdparty</groupId>
-          <artifactId>hadoop-shaded-protobuf_3_21</artifactId>
+          <artifactId>hadoop-shaded-protobuf_3_23</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
@@ -69,7 +69,7 @@
 
     <dependency>
       <groupId>org.apache.hadoop.thirdparty</groupId>
-      <artifactId>hadoop-shaded-protobuf_3_21</artifactId>
+      <artifactId>hadoop-shaded-protobuf_3_23</artifactId>
     </dependency>
 
     <dependency>
@@ -80,7 +80,7 @@
       <exclusions>
         <exclusion>
           <groupId>org.apache.hadoop.thirdparty</groupId>
-          <artifactId>hadoop-shaded-protobuf_3_21</artifactId>
+          <artifactId>hadoop-shaded-protobuf_3_23</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
