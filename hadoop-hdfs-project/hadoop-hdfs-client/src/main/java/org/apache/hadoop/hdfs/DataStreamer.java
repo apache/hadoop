@@ -608,10 +608,6 @@ class DataStreamer extends Daemon {
     this.storageIDs = storageIDs;
   }
 
-  void setAccessToken(Token<BlockTokenIdentifier> t) {
-    this.accessToken = t;
-  }
-
   /**
    * Initialize for data streaming
    */
