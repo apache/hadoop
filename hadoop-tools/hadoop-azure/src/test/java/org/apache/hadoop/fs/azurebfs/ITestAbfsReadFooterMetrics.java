@@ -103,7 +103,7 @@ public class ITestAbfsReadFooterMetrics extends AbstractAbfsScaleTest {
   }
 
   /**
-   * Integration test for reading footer metrics with a non-Parquet file.
+   * Test for reading footer metrics with a non-Parquet file.
    */
   @Test
   public void testReadFooterMetrics() throws Exception {
@@ -197,7 +197,7 @@ public class ITestAbfsReadFooterMetrics extends AbstractAbfsScaleTest {
   }
 
   /**
-   * Integration test for reading, writing, and seeking with footer metrics.
+   * Test for reading, writing, and seeking with footer metrics.
    *
    * This method performs the integration test for reading, writing, and seeking operations
    * with footer metrics. It creates an AzureBlobFileSystem, configures it, writes random data
@@ -315,7 +315,7 @@ public class ITestAbfsReadFooterMetrics extends AbstractAbfsScaleTest {
   }
 
   /**
-   * Integration test for reading footer metrics with an idle period.
+   * Test for reading footer metrics with an idle period.
    *
    * This method tests reading footer metrics with an idle period. It creates an AzureBlobFileSystem,
    * configures it, writes random data to a test file, performs read operations, introduces an idle

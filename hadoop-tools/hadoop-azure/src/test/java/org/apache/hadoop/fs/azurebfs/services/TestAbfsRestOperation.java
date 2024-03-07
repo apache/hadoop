@@ -35,23 +35,40 @@ public class TestAbfsRestOperation extends
   public TestAbfsRestOperation() throws Exception {
   }
 
+  /**
+   * Test for backoff retry metrics.
+   *
+   * This method tests backoff retry metrics by creating an AzureBlobFileSystem, initializing an
+   * AbfsClient, and performing mock operations on an AbfsRestOperation. The method then updates
+   * backoff metrics using the AbfsRestOperation.
+   *
+   */
   @Test
   public void testBackoffRetryMetrics() throws Exception {
+    // Create an AzureBlobFileSystem instance.
     final AzureBlobFileSystem fs = getFileSystem();
+
+    // Get an instance of AbfsClient and AbfsRestOperation.
     AbfsClient testClient = super.getAbfsClient(super.getAbfsStore(getFileSystem()));
-
-    // Mock instance of AbfsRestOperation
     AbfsRestOperation op = ITestAbfsClient.getRestOp(
-        DeletePath, testClient, HTTP_METHOD_DELETE,
-       ITestAbfsClient.getTestUrl(testClient, "/NonExistingPath"), ITestAbfsClient.getTestRequestHeaders(testClient));
+            DeletePath, testClient, HTTP_METHOD_DELETE,
+            ITestAbfsClient.getTestUrl(testClient, "/NonExistingPath"), ITestAbfsClient.getTestRequestHeaders(testClient));
 
+    // Mock retry counts and status code.
     ArrayList<Integer> retryCounts = new ArrayList<>(Arrays.asList(35, 28, 31, 45, 10, 2, 9));
     int statusCode = HttpURLConnection.HTTP_UNAVAILABLE;
+
+    // Update backoff metrics.
     for (int retryCount : retryCounts) {
       op.updateBackoffMetrics(retryCount, statusCode);
     }
-    //For retry count greater than max configured value, the request should fail
-    Assert.assertEquals(String.valueOf(testClient.getAbfsCounters().getAbfsBackoffMetrics().getNumberOfRequestsFailed()), "3");
+
+    // For retry count greater than the max configured value, the request should fail.
+    Assert.assertEquals("Number of failed requests does not match expected value.",
+            "3", String.valueOf(testClient.getAbfsCounters().getAbfsBackoffMetrics().getNumberOfRequestsFailed()));
+
+    // Close the AzureBlobFileSystem.
     fs.close();
   }
+
 }
