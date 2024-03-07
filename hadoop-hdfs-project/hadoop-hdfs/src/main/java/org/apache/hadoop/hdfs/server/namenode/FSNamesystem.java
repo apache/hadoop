@@ -8322,7 +8322,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     FileStatus resultingStat = null;
     final FSPermissionChecker pc = getPermissionChecker();
     FSPermissionChecker.setOperationType(operationName);
-    writeLock();
+    writeLock(FSNamesystemLockMode.FS);
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot set erasure coding policy on " + srcArg);
@@ -8332,7 +8332,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       logAuditEvent(false, operationName, srcArg);
       throw ace;
     } finally {
-      writeUnlock(operationName,
+      writeUnlock(FSNamesystemLockMode.FS, operationName,
           getLockReportInfoSupplier(srcArg, null, resultingStat));
     }
     getEditLog().logSync();
@@ -8355,7 +8355,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     checkErasureCodingSupported(operationName);
     List<AddErasureCodingPolicyResponse> responses =
         new ArrayList<>(policies.length);
-    writeLock();
+    writeLock(FSNamesystemLockMode.FS);
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot add erasure coding policy");
@@ -8371,7 +8371,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         }
       }
     } finally {
-      writeUnlock(operationName,
+      writeUnlock(FSNamesystemLockMode.FS, operationName,
           getLockReportInfoSupplier(addECPolicyNames.toString()));
     }
     getEditLog().logSync();
@@ -8391,7 +8391,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     final String operationName = "removeErasureCodingPolicy";
     checkOperation(OperationCategory.WRITE);
     checkErasureCodingSupported(operationName);
-    writeLock();
+    writeLock(FSNamesystemLockMode.FS);
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot remove erasure coding policy "
@@ -8399,7 +8399,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       FSDirErasureCodingOp.removeErasureCodingPolicy(this, ecPolicyName,
           logRetryCache);
     } finally {
-      writeUnlock(operationName, getLockReportInfoSupplier(ecPolicyName));
+      writeUnlock(FSNamesystemLockMode.FS, operationName, getLockReportInfoSupplier(ecPolicyName));
     }
     getEditLog().logSync();
     logAuditEvent(true, operationName, ecPolicyName, null, null);
@@ -8420,7 +8420,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     checkErasureCodingSupported(operationName);
     boolean success = false;
     try {
-      writeLock();
+      writeLock(FSNamesystemLockMode.FS);
       try {
         checkOperation(OperationCategory.WRITE);
         checkNameNodeSafeMode("Cannot enable erasure coding policy "
@@ -8428,7 +8428,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         success = FSDirErasureCodingOp.enableErasureCodingPolicy(this,
             ecPolicyName, logRetryCache);
       } finally {
-        writeUnlock(operationName, getLockReportInfoSupplier(ecPolicyName));
+        writeUnlock(FSNamesystemLockMode.FS, operationName,
+            getLockReportInfoSupplier(ecPolicyName));
       }
     } catch (AccessControlException ace) {
       logAuditEvent(false, operationName, ecPolicyName);
@@ -8455,7 +8456,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     checkErasureCodingSupported(operationName);
     boolean success = false;
     try {
-      writeLock();
+      writeLock(FSNamesystemLockMode.FS);
       try {
         checkOperation(OperationCategory.WRITE);
         checkNameNodeSafeMode("Cannot disable erasure coding policy "
@@ -8463,7 +8464,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         success = FSDirErasureCodingOp.disableErasureCodingPolicy(this,
             ecPolicyName, logRetryCache);
       } finally {
-        writeUnlock(operationName, getLockReportInfoSupplier(ecPolicyName));
+        writeUnlock(FSNamesystemLockMode.FS, operationName,
+            getLockReportInfoSupplier(ecPolicyName));
       }
     } catch (AccessControlException ace) {
       logAuditEvent(false, operationName, ecPolicyName);
@@ -8492,14 +8494,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     FileStatus resultingStat = null;
     final FSPermissionChecker pc = getPermissionChecker();
     FSPermissionChecker.setOperationType(operationName);
-    writeLock();
+    writeLock(FSNamesystemLockMode.FS);
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot unset erasure coding policy on " + srcArg);
       resultingStat = FSDirErasureCodingOp.unsetErasureCodingPolicy(this,
           srcArg, pc, logRetryCache);
     } finally {
-      writeUnlock(operationName,
+      writeUnlock(FSNamesystemLockMode.FS, operationName,
           getLockReportInfoSupplier(srcArg, null, resultingStat));
     }
     getEditLog().logSync();
@@ -8519,7 +8521,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     checkSuperuserPrivilege(operationName);
     checkOperation(OperationCategory.UNCHECKED);
     ECTopologyVerifierResult result;
-    readLock();
+    readLock(FSNamesystemLockMode.FS);
     try {
       checkOperation(OperationCategory.UNCHECKED);
       // If no policy name is specified return the result
@@ -8542,7 +8544,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             .getECTopologyVerifierResult(numOfRacks, numOfDataNodes, policies);
       }
     } finally {
-      readUnlock(operationName, getLockReportInfoSupplier(null));
+      readUnlock(FSNamesystemLockMode.FS, operationName, getLockReportInfoSupplier(null));
     }
     logAuditEvent(true, operationName, null);
     return result;
@@ -8559,7 +8561,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     checkErasureCodingSupported(operationName);
     final FSPermissionChecker pc = getPermissionChecker();
     FSPermissionChecker.setOperationType(operationName);
-    readLock();
+    readLock(FSNamesystemLockMode.FS);
     try {
       checkOperation(OperationCategory.READ);
       final ErasureCodingPolicy ret =
@@ -8567,7 +8569,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       success = true;
       return ret;
     } finally {
-      readUnlock(operationName, getLockReportInfoSupplier(src));
+      readUnlock(FSNamesystemLockMode.FS, operationName, getLockReportInfoSupplier(src));
       logAuditEvent(success, operationName, src);
     }
   }
@@ -8580,7 +8582,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     boolean success = false;
     checkOperation(OperationCategory.READ);
     checkErasureCodingSupported(operationName);
-    readLock();
+    readLock(FSNamesystemLockMode.FS);
     try {
       checkOperation(OperationCategory.READ);
       final ErasureCodingPolicyInfo[] ret =
@@ -8588,7 +8590,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       success = true;
       return ret;
     } finally {
-      readUnlock(operationName, getLockReportInfoSupplier(null));
+      readUnlock(FSNamesystemLockMode.FS, operationName, getLockReportInfoSupplier(null));
       logAuditEvent(success, operationName, null);
     }
   }
@@ -8601,7 +8603,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     boolean success = false;
     checkOperation(OperationCategory.READ);
     checkErasureCodingSupported(operationName);
-    readLock();
+    readLock(FSNamesystemLockMode.FS);
     try {
       checkOperation(OperationCategory.READ);
       final Map<String, String> ret =
@@ -8609,7 +8611,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       success = true;
       return ret;
     } finally {
-      readUnlock(operationName, getLockReportInfoSupplier(null));
+      readUnlock(FSNamesystemLockMode.FS, operationName, getLockReportInfoSupplier(null));
       logAuditEvent(success, operationName, null);
     }
   }
