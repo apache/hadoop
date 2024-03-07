@@ -125,6 +125,14 @@ public class STSClientFactory {
   public static StsClientBuilder builder(final AwsCredentialsProvider credentials,
       final Configuration conf, final String stsEndpoint, final String stsRegion,
       final String bucket) throws IOException {
+    // If an STS endpoint is provided and if it is not STS_STANDARD (sts.amazonaws.com)
+    // it should match E_INVALID_STS_ENDPOINT_PATTERN.
+    if (!isEmpty(stsEndpoint) &&
+        !STS_STANDARD.equals(stsEndpoint) &&
+        !stsEndpoint.matches(STS_ENDPOINT_URI_PATTERN)) {
+      throw new IOException(String.format(E_INVALID_STS_ENDPOINT_PATTERN,stsEndpoint));
+    }
+
     final StsClientBuilder stsClientBuilder = StsClient.builder();
 
     Preconditions.checkArgument(credentials != null, "No credentials");
