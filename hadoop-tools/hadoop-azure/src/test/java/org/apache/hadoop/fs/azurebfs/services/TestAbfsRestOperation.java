@@ -21,7 +21,6 @@ package org.apache.hadoop.fs.azurebfs.services;
 import org.junit.Test;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_DELETE;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationType.DeletePath;
-import java.lang.reflect.Method;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import java.util.ArrayList;
@@ -55,12 +54,12 @@ public class TestAbfsRestOperation extends
             ITestAbfsClient.getTestUrl(testClient, "/NonExistingPath"), ITestAbfsClient.getTestRequestHeaders(testClient));
 
     // Mock retry counts and status code.
-    ArrayList<Integer> retryCounts = new ArrayList<>(Arrays.asList(35, 28, 31, 45, 10, 2, 9));
+    ArrayList<String> retryCounts = new ArrayList<>(Arrays.asList("35", "28", "31", "45", "10", "2", "9"));
     int statusCode = HttpURLConnection.HTTP_UNAVAILABLE;
 
     // Update backoff metrics.
-    for (int retryCount : retryCounts) {
-      op.updateBackoffMetrics(retryCount, statusCode);
+    for (String retryCount : retryCounts) {
+      op.updateBackoffMetrics(Integer.parseInt(retryCount), statusCode);
     }
 
     // For retry count greater than the max configured value, the request should fail.

@@ -19,7 +19,6 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.util.Map;
 import java.util.StringJoiner;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -27,7 +26,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.List;
 import java.util.ArrayList;
 
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_KB;
 
 public class AbfsReadFooterMetrics {
@@ -46,6 +44,7 @@ public class AbfsReadFooterMetrics {
   private final AtomicLong offsetOfFirstRead;
   private final AtomicInteger readCount;
   private final ConcurrentSkipListMap<String, AbfsReadFooterMetrics> metricsMap;
+  private final String FOOTER_LENGTH = "20";
 
   public AbfsReadFooterMetrics() {
     this.isParquetFile = new AtomicBoolean(false);
@@ -267,7 +266,7 @@ public class AbfsReadFooterMetrics {
    * @param contentLength     The total content length of the file.
    */
   private void updateMetricsOnFirstRead(AbfsReadFooterMetrics readFooterMetrics, long nextReadPos, int len, long contentLength) {
-    if (nextReadPos >= contentLength - 20 * ONE_KB) {
+    if (nextReadPos >= contentLength - (long) Integer.parseInt(FOOTER_LENGTH) * ONE_KB) {
       readFooterMetrics.setCollectMetrics(true);
       readFooterMetrics.setCollectMetricsForNextRead(true);
       readFooterMetrics.setOffsetOfFirstRead(nextReadPos);

@@ -1435,8 +1435,14 @@ public class AbfsClient implements Closeable {
     return sasToken;
   }
 
+  @VisibleForTesting
   private URL createRequestUrl(final String query) throws AzureBlobFileSystemException {
     return createRequestUrl(EMPTY_STRING, query);
+  }
+
+  @VisibleForTesting
+  private URL createRequestUrl(final URL baseUrl, final String query) throws AzureBlobFileSystemException {
+    return createRequestUrl(baseUrl, EMPTY_STRING, query);
   }
 
   @VisibleForTesting
@@ -1792,6 +1798,13 @@ public class AbfsClient implements Closeable {
         metricIdlePeriod);
   }
 
+  /**
+   * Retrieves the metric URL for the Azure Blob FileSystem (ABFS) instance. If the metric URL is not
+   * already set and metric configuration has not been checked, it checks the configuration settings
+   * to fetch the metric URL.
+   *
+   * @return The metric URL for ABFS.
+   */
   private String getMetricUrl() {
     if (abfsMetricUrl == null && !isMetricConfigurationChecked) {
       Configuration metricConfig = getAbfsConfiguration().getRawConfiguration();
@@ -1801,6 +1814,12 @@ public class AbfsClient implements Closeable {
     return abfsMetricUrl;
   }
 
+  /**
+   * Initiates a metric call to the Azure Blob FileSystem (ABFS) for retrieving file system properties.
+   * This method performs a HEAD request to the specified metric URL, using default headers and query parameters.
+   *
+   * @param tracingContext The tracing context to be used for capturing tracing information.
+   */
   public void getMetricCall(TracingContext tracingContext) throws IOException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();

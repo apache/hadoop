@@ -48,6 +48,7 @@ public class ITestAbfsReadFooterMetrics extends AbstractAbfsScaleTest {
   }
 
   private static final String TEST_PATH = "/testfile";
+  private static final String SLEEP_PERIOD = "90000";
 
   /**
    * Integration test for reading footer metrics with both Parquet and non-Parquet reads.
@@ -363,7 +364,7 @@ public class ITestAbfsReadFooterMetrics extends AbstractAbfsScaleTest {
       inputStream.read(readBuffer, bufferSize, bufferSize);
 
       // Introduce an idle period by sleeping.
-      int sleepPeriod = 90000;
+      int sleepPeriod = Integer.parseInt(SLEEP_PERIOD);
       Thread.sleep(sleepPeriod);
 
       // To test tracingHeader for case with bypassReadAhead == true.
