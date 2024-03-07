@@ -132,6 +132,7 @@ public class DataNodeMetrics {
   @Metric MutableRate heartbeatsTotal;
   @Metric MutableRate lifelines;
   @Metric MutableRate blockReports;
+  @Metric private MutableRate blockReportsCreateCostMills;
   @Metric MutableRate incrementalBlockReports;
   @Metric MutableRate cacheReports;
   @Metric MutableRate packetAckRoundTripTimeNanos;
@@ -319,6 +320,10 @@ public class DataNodeMetrics {
     if (rpcMetricSuffix != null) {
       nnRpcLatency.add("BlockReportsFor" + rpcMetricSuffix, latency);
     }
+  }
+
+  public void addBlockReportCreateCost(long latency) {
+    blockReportsCreateCostMills.add(latency);
   }
 
   public void addIncrementalBlockReport(long latency,
