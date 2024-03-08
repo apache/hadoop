@@ -98,11 +98,6 @@ public class DefaultS3ClientFactory extends Configured
       new LogExactlyOnce(LOG);
 
   /**
-   * A one-off logger of S3 Access Grants usage and attachment status to the S3 client.
-   */
-  private static final LogExactlyOnce LOG_S3AG_ENABLED = new LogExactlyOnce(LOG);
-
-  /**
    * Warning message printed when the SDK Region chain is in use.
    */
   private static final String SDK_REGION_CHAIN_IN_USE =
@@ -414,18 +409,20 @@ public class DefaultS3ClientFactory extends Configured
 
   private static <BuilderT extends S3BaseClientBuilder<BuilderT, ClientT>, ClientT> void
       applyS3AccessGrantsConfigurations(BuilderT builder, Configuration conf) {
-    if (!conf.getBoolean(AWS_S3_ACCESS_GRANTS_ENABLED, false)){
-      LOG_S3AG_ENABLED.debug("S3 Access Grants plugin is not enabled.");
+    boolean isS3AccessGrantsEnabled = conf.getBoolean(AWS_S3_ACCESS_GRANTS_ENABLED, false);
+    if (!isS3AccessGrantsEnabled){
+      LOG.debug("S3 Access Grants plugin is not enabled.");
       return;
     }
 
     boolean isFallbackEnabled =
         conf.getBoolean(AWS_S3_ACCESS_GRANTS_FALLBACK_TO_IAM_ENABLED, false);
     S3AccessGrantsPlugin accessGrantsPlugin =
-        S3AccessGrantsPlugin.builder().enableFallback(isFallbackEnabled).build();
+        S3AccessGrantsPlugin.builder()
+            .enableFallback(isFallbackEnabled)
+            .build();
     builder.addPlugin(accessGrantsPlugin);
-    LOG_S3AG_ENABLED.info(
-        "S3 Access Grants plugin is enabled with IAM fallback set to {}", isFallbackEnabled);
+    LOG.info("S3 Access Grants plugin is enabled with IAM fallback set to {}", isFallbackEnabled);
   }
 
 }

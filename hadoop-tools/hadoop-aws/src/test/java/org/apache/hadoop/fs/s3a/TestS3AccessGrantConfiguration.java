@@ -18,17 +18,18 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.test.AbstractHadoopTestBase;
-import org.junit.Assert;
-import org.junit.Test;
-
-import software.amazon.awssdk.awscore.AwsClient;
-import software.amazon.awssdk.s3accessgrants.plugin.S3AccessGrantsIdentityProvider;
-
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+
+import org.assertj.core.api.AbstractStringAssert;
+import org.assertj.core.api.Assertions;
+import org.junit.Test;
+import software.amazon.awssdk.awscore.AwsClient;
+import software.amazon.awssdk.s3accessgrants.plugin.S3AccessGrantsIdentityProvider;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.test.AbstractHadoopTestBase;
 
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_ACCESS_GRANTS_ENABLED;
 
@@ -47,41 +48,44 @@ public class TestS3AccessGrantConfiguration extends AbstractHadoopTestBase {
 
   @Test
   public void testS3AccessGrantsEnabled() throws IOException, URISyntaxException {
-    // Feature is explicitly enabled
-    AwsClient s3AsyncClient = getAwsClient(createConfig(true), true);
-    Assert.assertEquals(
-        S3_ACCESS_GRANTS_EXPECTED_CREDENTIAL_PROVIDER_CLASS,
-        getCredentialProviderName(s3AsyncClient));
+    assertCredentialProviderClass(
+        createConfig(true),
+        true,
+        "S3 Access Grants is explicitly enabled on an S3 Async Client",
+        true);
 
-    AwsClient s3Client = getAwsClient(createConfig(true), false);
-    Assert.assertEquals(
-        S3_ACCESS_GRANTS_EXPECTED_CREDENTIAL_PROVIDER_CLASS,
-        getCredentialProviderName(s3Client));
+    assertCredentialProviderClass(
+        createConfig(true),
+        false,
+        "S3 Access Grants is explicitly enabled on an S3 Non-Async Client",
+        true);
   }
 
   @Test
   public void testS3AccessGrantsDisabled() throws IOException, URISyntaxException {
-    // Disabled by default
-    AwsClient s3AsyncDefaultClient = getAwsClient(new Configuration(), true);
-    Assert.assertNotEquals(
-        S3_ACCESS_GRANTS_EXPECTED_CREDENTIAL_PROVIDER_CLASS,
-        getCredentialProviderName(s3AsyncDefaultClient));
+    assertCredentialProviderClass(
+        new Configuration(),
+        true,
+        "S3 Access Grants is implicitly disabled (default behavior) on an S3 Async Client",
+        false);
 
-    AwsClient s3DefaultClient = getAwsClient(new Configuration(), true);
-    Assert.assertNotEquals(
-        S3_ACCESS_GRANTS_EXPECTED_CREDENTIAL_PROVIDER_CLASS,
-        getCredentialProviderName(s3DefaultClient));
+    assertCredentialProviderClass(
+        new Configuration(),
+        false,
+        "S3 Access Grants is implicitly disabled (default behavior) on an S3 Non-Async Client",
+        false);
 
-    // Disabled if explicitly set
-    AwsClient s3AsyncExplicitlyDisabledClient = getAwsClient(createConfig(false), true);
-    Assert.assertNotEquals(
-        S3_ACCESS_GRANTS_EXPECTED_CREDENTIAL_PROVIDER_CLASS,
-        getCredentialProviderName(s3AsyncExplicitlyDisabledClient));
+    assertCredentialProviderClass(
+        createConfig(false),
+        true,
+        "S3 Access Grants is explicitly disabled on an S3 Async Client",
+        false);
 
-    AwsClient s3ExplicitlyDisabledClient = getAwsClient(createConfig(false), true);
-    Assert.assertNotEquals(
-        S3_ACCESS_GRANTS_EXPECTED_CREDENTIAL_PROVIDER_CLASS,
-        getCredentialProviderName(s3ExplicitlyDisabledClient));
+    assertCredentialProviderClass(
+        createConfig(false),
+        false,
+        "S3 Access Grants is explicitly disabled on an S3 Non-Async Client",
+        false);
   }
 
   private Configuration createConfig(boolean s3agEnabled) {
@@ -103,5 +107,20 @@ public class TestS3AccessGrantConfiguration extends AbstractHadoopTestBase {
     URI uri = new URI("any-uri");
     return asyncClient ?
         factory.createS3AsyncClient(uri, parameters): factory.createS3Client(uri, parameters);
+  }
+
+  private void assertCredentialProviderClass(
+      Configuration configuration, boolean asyncClient, String message, boolean shouldMatch)
+      throws IOException, URISyntaxException {
+    AwsClient awsClient = getAwsClient(configuration, asyncClient);
+    AbstractStringAssert<?> assertion =
+        Assertions
+            .assertThat(S3_ACCESS_GRANTS_EXPECTED_CREDENTIAL_PROVIDER_CLASS)
+            .describedAs(message);
+    if (shouldMatch) {
+      assertion.isEqualTo(getCredentialProviderName(awsClient));
+    } else {
+      assertion.isNotEqualTo(getCredentialProviderName(awsClient));
+    }
   }
 }

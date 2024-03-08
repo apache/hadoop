@@ -1632,7 +1632,7 @@ public final class Constants {
    * and
    * https://github.com/aws/aws-s3-accessgrants-plugin-java-v2/
    */
-  public static final String AWS_S3_ACCESS_GRANTS_ENABLED = "fs.s3a.s3accessgrants.enabled";
+  public static final String AWS_S3_ACCESS_GRANTS_ENABLED = "fs.s3a.access.grants.enabled";
 
   /**
    * Flag {@value} to enable jobs fall back to the Job Execution IAM role in
@@ -1640,5 +1640,5 @@ public final class Constants {
    * https://github.com/aws/aws-s3-accessgrants-plugin-java-v2/
    */
   public static final String AWS_S3_ACCESS_GRANTS_FALLBACK_TO_IAM_ENABLED =
-          "fs.s3a.s3accessgrants.fallback.to.iam";
+          "fs.s3a.access.grants.fallback.to.iam";
 }
