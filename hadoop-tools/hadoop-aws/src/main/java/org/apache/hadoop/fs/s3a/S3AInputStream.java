@@ -1152,7 +1152,9 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
               length - readBytes);
       LOG.debug("read {} bytes from stream", readBytesCurr);
       if (readBytesCurr < 0) {
-        throw new EOFException(FSExceptionMessages.EOF_IN_READ_FULLY);
+        throw new EOFException(
+            String.format("HTTP stream closed before all bytes were read."
+                + " Expected %,d but only read %,d", length, readBytes));
       }
       readBytes += readBytesCurr;
     }
