@@ -250,6 +250,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    * @param inputPolicy new input policy.
    */
   private void setInputPolicy(S3AInputPolicy inputPolicy) {
+    LOG.debug("Switching to input policy {}", inputPolicy);
     this.inputPolicy = inputPolicy;
     streamStatistics.inputPolicySet(inputPolicy.ordinal());
   }
@@ -261,6 +262,16 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   @VisibleForTesting
   public S3AInputPolicy getInputPolicy() {
     return inputPolicy;
+  }
+
+  /**
+   * If the stream is in Adaptive mode, switch to random IO at this
+   * point. Unsynchronized.
+   */
+  private void maybeSwitchToRandomIO() {
+    if (inputPolicy.isAdaptive()) {
+      setInputPolicy(S3AInputPolicy.Random);
+    }
   }
 
   /**
@@ -399,10 +410,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
       streamStatistics.seekBackwards(diff);
       // if the stream is in "Normal" mode, switch to random IO at this
       // point, as it is indicative of columnar format IO
-      if (inputPolicy.isAdaptive()) {
-        LOG.info("Switching to Random IO seek policy");
-        setInputPolicy(S3AInputPolicy.Random);
-      }
+      maybeSwitchToRandomIO();
     } else {
       // targetPos == pos
       if (remainingInCurrentRequest() > 0) {
@@ -896,20 +904,26 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    * @throws IOException IOE if any.
    */
   @Override
-  public void readVectored(List<? extends FileRange> ranges,
+  public synchronized void readVectored(List<? extends FileRange> ranges,
                            IntFunction<ByteBuffer> allocate) throws IOException {
     LOG.debug("Starting vectored read on path {} for ranges {} ", pathStr, ranges);
     checkNotClosed();
     if (stopVectoredIOOperations.getAndSet(false)) {
       LOG.debug("Reinstating vectored read operation for path {} ", pathStr);
     }
+
+    // prepare to read
     List<? extends FileRange> sortedRanges = validateAndSortRanges(ranges,
         fileLength);
     for (FileRange range : ranges) {
-      validateRangeRequest(range);
       CompletableFuture<ByteBuffer> result = new CompletableFuture<>();
       range.setData(result);
     }
+    // switch to random IO and close any open stream.
+    // what happens if a read is in progress? bad things.
+    // ...which is why this method is synchronized
+    closeStream("readVectored()", false, false);
+    maybeSwitchToRandomIO();
 
     if (isOrderedDisjoint(sortedRanges, 1, minSeekForVectorReads())) {
       LOG.debug("Not merging the ranges as they are disjoint");
@@ -986,7 +1000,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
       for (FileRange child : combinedFileRange.getUnderlying()) {
         checkIfVectoredIOStopped();
         if (prev != null && prev.getOffset() + prev.getLength() < child.getOffset()) {
-          // there's data to train between the requests.
+          // there's data to drain between the requests.
           // work out how much
           long drainQuantity = child.getOffset() - prev.getOffset() - prev.getLength();
           // and drain it.
@@ -1014,34 +1028,24 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     byte[] drainBuffer;
     int size = Math.min(InternalConstants.DRAIN_BUFFER_SIZE, (int) drainQuantity);
     drainBuffer = new byte[size];
-    while (drainBytes < drainQuantity) {
-      checkIfVectoredIOStopped();
-      readCount = objectContent.read(drainBuffer);
-      if (readCount < 0) {
-        // read request failed; often network issues.
-        // no attempt is made to recover at this point.
-        throw new EOFException("End of stream reached draining data between ranges");
+    try {
+      while (drainBytes < drainQuantity) {
+        checkIfVectoredIOStopped();
+        readCount = objectContent.read(drainBuffer);
+        if (readCount < 0) {
+          // read request failed; often network issues.
+          // no attempt is made to recover at this point.
+          final String s = String.format(
+              "End of stream reached draining data between ranges; expected %,d bytes, drained %,d bytes. ",
+              drainQuantity, drainBytes);
+          throw new EOFException(s
+          );
+        }
+        drainBytes += readCount;
       }
-      drainBytes += readCount;
-    }
-    streamStatistics.readVectoredBytesDiscarded(drainBytes);
-    LOG.debug("{} bytes drained from stream ", drainBytes);
-  }
-
-  /**
-   * Validates range parameters.
-   * In case of S3 we already have contentLength from the first GET request
-   * during an open file operation so failing fast here.
-   * @param range requested range.
-   * @throws EOFException end of file exception.
-   */
-  private void validateRangeRequest(FileRange range) throws EOFException {
-    VectoredReadUtils.validateRangeRequest(range);
-    if(range.getOffset() + range.getLength() > contentLength) {
-      final String errMsg = String.format("Requested range [%d, %d) is beyond EOF for path %s",
-              range.getOffset(), range.getLength(), pathStr);
-      LOG.warn(errMsg);
-      throw new RangeNotSatisfiableEOFException(errMsg, null);
+    } finally {
+      streamStatistics.readVectoredBytesDiscarded(drainBytes);
+      LOG.debug("{} bytes drained from stream ", drainBytes);
     }
   }
 
@@ -1052,6 +1056,12 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    */
   private void readSingleRange(FileRange range, ByteBuffer buffer) {
     LOG.debug("Start reading range {} from path {} ", range, pathStr);
+    if (range.getLength() == 0) {
+      // a zero byte read.
+      buffer.flip();
+      range.getData().complete(buffer);
+      return;
+    }
     ResponseInputStream<GetObjectResponse> objectRange = null;
     try {
       long position = range.getOffset();
@@ -1090,6 +1100,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   /**
    * Populates the buffer with data from objectContent
    * till length. Handles both direct and heap byte buffers.
+   * calls {@code buffer.flip()} on the buffer afterwards.
    * @param range vector range to populate.
    * @param buffer buffer to fill.
    * @param objectContent result retrieved from S3 store.
@@ -1108,8 +1119,11 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
           });
       buffer.flip();
     } else {
+      // there is no use of a temp byte buffer, or buffer.put() calls,
+      // so flip() is not needed.
       readByteArray(objectContent, buffer.array(), 0, length);
     }
+
     // update io stats.
     incrementBytesRead(length);
   }
@@ -1297,7 +1311,6 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
       streamStatistics.unbuffered();
       if (inputPolicy.isAdaptive()) {
         S3AInputPolicy policy = S3AInputPolicy.Random;
-        LOG.debug("Switching to seek policy {} after unbuffer() invoked", policy);
         setInputPolicy(policy);
       }
     }

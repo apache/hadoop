@@ -55,19 +55,37 @@ public final class VectoredReadUtils {
 
   /**
    * Validate a single range.
-   * @param range file range.
-   * @throws IllegalArgumentException the range length is negative.
+   * @param range range to validate.
+   * @return the range.
+   * @param <T> range type
+   * @throws IllegalArgumentException the range length is negative or other invalid condition
+   * is met other than the those which raise EOFException or NullPointerException.
    * @throws EOFException the range offset is negative
    * @throws NullPointerException if the range is null.
    */
-  public static <T extends FileRange> void validateRangeRequest(T range)
+  public static <T extends FileRange> T validateRangeRequest(T range)
           throws EOFException {
 
     requireNonNull(range, "range is null");
-    checkArgument(range.getLength() >= 0, "length is negative in range %s", range);
+
+    // this check prevents complex recursion situations
+    rejectCombinedFileRange(range);
+    checkArgument(range.getLength() >= 0, "length is negative in %s", range);
     if (range.getOffset() < 0) {
       throw new EOFException("position is negative in range " + range);
     }
+    return range;
+  }
+
+  /**
+   * Verify that a range is not an instance of {@link CombinedFileRange}.
+   * @param range range
+   * @param <T> range type
+   * @throws IllegalArgumentException the range length is a CombinedFileRange instance.
+   */
+  private static <T extends FileRange> void rejectCombinedFileRange(final T range) {
+    checkArgument(!(range instanceof CombinedFileRange),
+        "CombinedFileRange not supported: %s", range);
   }
 
   /**
@@ -77,25 +95,7 @@ public final class VectoredReadUtils {
    */
   public static void validateVectoredReadRanges(List<? extends FileRange> ranges)
           throws EOFException {
-    for (FileRange range : ranges) {
-      validateRangeRequest(range);
-    }
-  }
-
-  /**
-   * Validate a range argument, raising IllegalArgumentException for all invalid
-   * ranges.
-   * @param range range to validate.
-   * @throws IllegalArgumentException if the range is invalid.
-   */
-  public static <T extends FileRange> void validateRangeArgument(final T range) {
-    checkArgument(range != null, "range is null");
-
-    // this check prevents complex recursion situations
-    checkArgument(!(range instanceof CombinedFileRange),
-        "CombinedFileRange not supported: %s", range);
-    checkArgument(range.getLength() >= 0, "length is negative in %s", range);
-    checkArgument(range.getOffset() >= 0, "offset is negative in %s", range);
+    validateAndSortRanges(ranges, Optional.empty());
   }
 
   /**
@@ -124,13 +124,16 @@ public final class VectoredReadUtils {
    * @param range the range to read
    * @param allocate the function to allocate ByteBuffers
    * @return the CompletableFuture that contains the read data or an exception.
+   * @throws IllegalArgumentException the range is invalid other than by offset or being null.
+   * @throws EOFException the range offset is negative
+   * @throws NullPointerException if the range is null.
    */
   public static CompletableFuture<ByteBuffer> readRangeFrom(
       PositionedReadable stream,
       FileRange range,
-      IntFunction<ByteBuffer> allocate) {
-    validateRangeArgument(range);
+      IntFunction<ByteBuffer> allocate) throws EOFException {
 
+    validateRangeRequest(range);
     CompletableFuture<ByteBuffer> result = new CompletableFuture<>();
     try {
       ByteBuffer buffer = allocate.apply(range.getLength());
@@ -205,7 +208,7 @@ public final class VectoredReadUtils {
       throws IOException {
 
     LOG.debug("Reading {} into a direct buffer", range);
-    validateRangeArgument(range);
+    validateRangeRequest(range);
     int length = range.getLength();
     if (length == 0) {
       // no-op
@@ -274,7 +277,7 @@ public final class VectoredReadUtils {
   }
 
   /**
-   * Calculates the ceil value of offset based on chunk size.
+   * Calculates the ceiling value of offset based on chunk size.
    * @param offset file offset.
    * @param chunkSize file chunk size.
    * @return ceil value.
@@ -305,19 +308,18 @@ public final class VectoredReadUtils {
       final List<? extends FileRange> input,
       final Optional<Long> fileLength) throws EOFException {
 
-
-    checkArgument(input != null, "Null input list");
-    checkArgument(input.isEmpty(), "Empty input list");
+    requireNonNull(input, "Null input list");
+    checkArgument(!input.isEmpty(), "Empty input list");
     final List<? extends FileRange> sortedRanges;
 
     if (input.size() == 1) {
-      validateRangeArgument(input.get(0));
+      validateRangeRequest(input.get(0));
       sortedRanges = input;
     } else {
       sortedRanges = sortRanges(input);
       FileRange prev = null;
       for (final FileRange current : sortedRanges) {
-        validateRangeArgument(current);
+        validateRangeRequest(current);
         if (prev != null) {
           checkArgument(current.getOffset() >= prev.getOffset() + prev.getLength(),
               "Overlapping ranges %s and %s", prev, current);
@@ -337,13 +339,13 @@ public final class VectoredReadUtils {
   }
 
   /**
-   * Sort the input ranges by offset.
+   * Sort the input ranges by offset; no validation is done.
    * @param input input ranges.
    * @return a new list of the ranges, sorted by offset.
    */
   public static List<? extends FileRange> sortRanges(List<? extends FileRange> input) {
     final List<? extends FileRange> l = new ArrayList<>(input);
-    Collections.sort(l, Comparator.comparingLong(FileRange::getOffset));
+    l.sort(Comparator.comparingLong(FileRange::getOffset));
     return l;
   }
 
@@ -374,14 +376,7 @@ public final class VectoredReadUtils {
 
     // now merge together the ones that merge
     for (FileRange range: sortedRanges) {
-      if (range instanceof CombinedFileRange) {
-        // a combined range is already passed in, so do not attempt to merge.
-        // this shouldn't be done as it is possible then pass in ranges which only
-        // overlap within the discard range -which is then interpreted as invalid.
-        // but if it does happen, cope with it.
-        result.add((CombinedFileRange) range);
-        continue;
-      }
+      rejectCombinedFileRange(range);
       long start = roundDown(range.getOffset(), chunkSize);
       long end = roundUp(range.getOffset() + range.getLength(), chunkSize);
       if (current == null || !current.merge(start, end, range, minimumSeek, maxSize)) {

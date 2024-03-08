@@ -441,9 +441,9 @@ The semantics of this are exactly equivalent to
     readFully(position, buffer, 0, len(buffer))
 
 That is, the buffer is filled entirely with the contents of the input source
-from position `position`
+from position `position`.
 
-### `default void readVectored(List<? extends FileRange> ranges, IntFunction<ByteBuffer> allocate)`
+### `void readVectored(List<? extends FileRange> ranges, IntFunction<ByteBuffer> allocate)`
 
 Read fully data for a list of ranges asynchronously. The default implementation
 iterates through the ranges, tries to coalesce the ranges based on values of
@@ -462,15 +462,18 @@ undefined. Some ranges may have old data, some may have new, and some may have b
 While a `readVectored()` operation is in progress, normal read api calls may block.
 
 Note: Don't use direct buffers for reading from ChecksumFileSystem as that may
-lead to memory fragmentation explained in HADOOP-18296.
-
+lead to memory fragmentation explained in
+[HADOOP-18296](https://issues.apache.org/jira/browse/HADOOP-18296)
+_Memory fragmentation in ChecksumFileSystem Vectored IO implementation_
 
 #### Preconditions
 
 No empty lists.
 
 ```python
-ranges.len() > 0
+if ranges = null raise NullPointereException
+if ranges.len() = 0 raise IllegalArgumentException
+if allocate = null raise NullPointereException
 ```
 
 For each requested range `range[i]` in the list of ranges `range[0..i]` sorted such that
@@ -481,9 +484,10 @@ for all `i where i > 0`:
 For all ranges `0..i` the preconditions are:
 
 ```python
-range[i].getOffset >= 0 else raise EOFException
-range[i].getLength >= 0 else raise IllegalArgumentException
-if i > 0 and range[i].getOffset() < (range[i-1].getOffset() + range[i-1].getLength) :
+ranges[i] != null else raise IllegalArgumentException
+ranges[i].getOffset >= 0 else raise EOFException
+ranges[i].getLength >= 0 else raise IllegalArgumentException
+if i > 0 and ranges[i].getOffset() < (ranges[i-1].getOffset() + ranges[i-1].getLength) :
    raise IllegalArgumentException
 ```
 If the length of the file is known during the validation phase:
@@ -492,18 +496,24 @@ If the length of the file is known during the validation phase:
 range[i].getOffset + range[i].getLength >= data.length() raise EOFException
 ```
 
-(When would it be unknown? when reading raw local filesystem, HDFS or any other FS where data may change during the read)
+The implementation class `org.apache.hadoop.fs.impl.CombinedFileRange` is not permitted as an element in the list
+the list
+```python
+if type(range[i]) is CombinedFileRange raise IllegalArgumentException
+```
+This in aggregate range representing multiple caller-supplied ranges; excluding
+as a valid argument to the API avoid problems relating to merging/coalescing this.
 
 #### Postconditions
 
 For each requested range `range[i]` in the list of ranges `range[0..i]`
 
 ```
-range[i]'.getData() = CompletableFuture<buffer: ByteBuffer> and when `getData().get()` completes:
-  len := range[i].getLength()
+ranges[i]'.getData() = CompletableFuture<buffer: ByteBuffer> and when `getData().get()` completes:
+  len := ranges[i].getLength()
   d := new byte[len]
   (buffer.position() - buffer.limit) = len
-  buffer.get(d, 0, len) = readFully(range[i].getOffset(), d, 0, len)
+  buffer.get(d, 0, len) = readFully(ranges[i].getOffset(), d, 0, len)
 ```
 
 That is: the result of every ranged read is the result of the (possibly asynchronous)
@@ -520,10 +530,33 @@ Maximum number of bytes which can be read in one go after merging the ranges.
 Two ranges won't be merged if the combined data to be read is more than this value.
 Essentially setting this to 0 will disable the merging of ranges.
 
-#### Handling of zero length ranges
+#### Concurrency
+
+* When calling `readVectored()` while a separate thread is trying
+  to read data through `read()`/`readFully()`, all operations MUST
+  complete successfully.
+* Invoking a vector read while an existing set of pending vector reads
+  are in progress MUST be supported. The order of which ranges across
+  the multiple requests complete is undefined.
+* Invoking `read()`/`readFully()` while a vector API call is in progress
+  MUST be supported. The order of which calls return data is undefined.
+
+The S3A connector closes any open stream when its `synchronized readVectored()`
+method is invoked;
+It will then switch the read policy from normal to random
+so that any future invocations will be for limited ranges.
+This is because the expectation is that vector IO and large sequential
+reads are not mixed and that holding on to any open HTTP connection is wasteful.
+
+#### Handling of zero-length ranges
 
 Implementations MAY short-circuit reads for any range where `range.getLength() = 0`
 and return an empty buffer.
+
+In such circumstances, other validation checks MAY be omitted.
+
+There are no guarantees that such optimizations take place; callers SHOULD NOT
+include empty ranges for this reason.
 
 #### Consistency
 
@@ -532,7 +565,6 @@ are expected to receive access to the data of `FS.Files[p]` at the time of openi
 * If the underlying data is changed during the read process, these changes MAY or
 MAY NOT be visible.
 * Such changes that are visible MAY be partially visible.
-
 
 At time `t0`
 
@@ -579,7 +611,6 @@ While at time `t3 > t2`:
 It may be that `r3 != r2`. (That is, some of the data my be cached or replicated,
 and on a subsequent read, a different version of the file's contents are returned).
 
-
 Similarly, if the data at the path `p`, is deleted, this change MAY or MAY
 not be visible during read operations performed on `FSDIS0`.
 
@@ -598,4 +629,23 @@ For reliable use with older hadoop releases with the API: sort the list of range
 and check for overlaps before calling `readVectored()`. 
 
 *Direct Buffer Reads*
+
+Releases without [HADOOP-19101](https://issues.apache.org/jira/browse/HADOOP-19101)
+_Vectored Read into off-heap buffer broken in fallback implementation_ can read data
+from the wrong offset with the default "fallback" implementation if the buffer allocator
+function returns off heap "direct" buffers.
+
+The custom implementations in local filesystem and S3A's non-prefetching stream are safe.
+
+Anyone implementing support for the API, unless confident they only run
+against releases with the fixed implementation, SHOULD NOT use the API
+if the allocator is direct and the input stream does not explicitly declare
+support through an explicit `hasCapability()` probe:
+
+```java
+Stream.hasCapability("in:readvectored")
+```
+
+Given the HADOOP-18296 with ChecksumFileSystem and direct buffers, across all releases,
+it is simplest to avoid using this API in production with direct buffers.
 

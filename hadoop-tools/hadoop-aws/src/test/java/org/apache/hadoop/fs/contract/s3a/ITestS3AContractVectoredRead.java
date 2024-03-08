@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.contract.s3a;
 
 import java.io.EOFException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InterruptedIOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -28,6 +29,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,6 +45,8 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.RangeNotSatisfiableEOFException;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.s3a.S3AInputPolicy;
+import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.StoreStatisticNames;
@@ -51,6 +55,9 @@ import org.apache.hadoop.test.LambdaTestUtils;
 
 import static org.apache.hadoop.fs.FSExceptionMessages.EOF_IN_READ_FULLY;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_LENGTH;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_ADAPTIVE;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_VECTOR;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.returnBuffersToPoolPostRead;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.validateVectoredReadResult;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
@@ -77,9 +84,8 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
    */
   @Override
   public void testEOFRanges() throws Exception {
-    List<FileRange> fileRanges = new ArrayList<>();
-    fileRanges.add(FileRange.createFileRange(DATASET_LEN, 100));
-    verifyExceptionalVectoredRead(fileRanges, RangeNotSatisfiableEOFException.class);
+    verifyExceptionalVectoredRead(range(new ArrayList<>(), DATASET_LEN, 100),
+        EOFException.class);
   }
 
   /**
@@ -97,9 +103,10 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
     CompletableFuture<FSDataInputStream> builder =
         fs.openFile(path(VECTORED_READ_FILE_NAME))
             .mustLong(FS_OPTION_OPENFILE_LENGTH, extendedLen)
+            .opt(FS_OPTION_OPENFILE_READ_POLICY,
+                FS_OPTION_OPENFILE_READ_POLICY_ADAPTIVE)
             .build();
-    List<FileRange> fileRanges = new ArrayList<>();
-    fileRanges.add(FileRange.createFileRange(DATASET_LEN, 100));
+    List<FileRange> fileRanges = range(new ArrayList<>(), DATASET_LEN, 100);
 
     describe("Read starting from past EOF");
     try (FSDataInputStream in = builder.get()) {
@@ -141,7 +148,7 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
     conf.set(Constants.AWS_S3_VECTOR_READS_MIN_SEEK_SIZE, "2K");
     conf.set(Constants.AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE, "10M");
     try (S3AFileSystem fs = S3ATestUtils.createTestFileSystem(conf)) {
-      try (FSDataInputStream fis = fs.open(path(VECTORED_READ_FILE_NAME))) {
+      try (FSDataInputStream fis = openVectorFile(fs)) {
         int newMinSeek = fis.minSeekForVectorReads();
         int newMaxSize = fis.maxReadSizeForVectorReads();
         assertEqual(newMinSeek, configuredMinSeek,
@@ -159,7 +166,7 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
             Constants.AWS_S3_VECTOR_READS_MIN_SEEK_SIZE,
             Constants.AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE);
     try (S3AFileSystem fs = S3ATestUtils.createTestFileSystem(conf)) {
-      try (FSDataInputStream fis = fs.open(path(VECTORED_READ_FILE_NAME))) {
+      try (FSDataInputStream fis = openVectorFile(fs)) {
         int minSeek = fis.minSeekForVectorReads();
         int maxSize = fis.maxReadSizeForVectorReads();
         assertEqual(minSeek, Constants.DEFAULT_AWS_S3_VECTOR_READS_MIN_SEEK_SIZE,
@@ -187,6 +194,11 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
     }
   }
 
+  /**
+   * Verify that unbuffer() stops vectored IO operations.
+   * There's a small risk of a race condition where the unbuffer() call
+   * is made after the vector reads have completed.
+   */
   @Test
   public void testStopVectoredIoOperationsUnbuffer() throws Exception {
 
@@ -212,21 +224,35 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
 
     try (S3AFileSystem fs = getTestFileSystemWithReadAheadDisabled()) {
       List<FileRange> fileRanges = new ArrayList<>();
-      fileRanges.add(FileRange.createFileRange(10 * 1024, 100));
-      fileRanges.add(FileRange.createFileRange(8 * 1024, 100));
-      fileRanges.add(FileRange.createFileRange(14 * 1024, 100));
-      fileRanges.add(FileRange.createFileRange(2 * 1024 - 101, 100));
-      fileRanges.add(FileRange.createFileRange(40 * 1024, 1024));
+      range(fileRanges,10 * 1024, 100);
+      range(fileRanges,8 * 1024, 100);
+      range(fileRanges,14 * 1024, 100);
+      range(fileRanges,2 * 1024 - 101, 100);
+      range(fileRanges,40 * 1024, 1024);
 
       FileStatus fileStatus = fs.getFileStatus(path(VECTORED_READ_FILE_NAME));
       CompletableFuture<FSDataInputStream> builder =
               fs.openFile(path(VECTORED_READ_FILE_NAME))
-                      .withFileStatus(fileStatus)
-                      .build();
+                  .withFileStatus(fileStatus)
+                  .opt(FS_OPTION_OPENFILE_READ_POLICY,
+                      FS_OPTION_OPENFILE_READ_POLICY_VECTOR)
+                  .build();
       try (FSDataInputStream in = builder.get()) {
         in.readVectored(fileRanges, getAllocate());
         validateVectoredReadResult(fileRanges, DATASET);
         returnBuffersToPoolPostRead(fileRanges, getPool());
+        final InputStream wrappedStream = in.getWrappedStream();
+
+        // policy will be random.
+        if (wrappedStream instanceof S3AInputStream) {
+          S3AInputStream inner = (S3AInputStream) wrappedStream;
+          Assertions.assertThat(inner.getInputPolicy())
+              .describedAs("Input policy of %s", inner)
+              .isEqualTo(S3AInputPolicy.Random);
+          Assertions.assertThat(inner.isObjectStreamOpen())
+              .describedAs("Object stream open in %s", inner)
+              .isFalse();
+        }
 
         // audit the io statistics for this stream
         IOStatistics st = in.getIOStatistics();

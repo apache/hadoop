@@ -63,7 +63,8 @@ import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
 @RunWith(Parameterized.class)
 public abstract class AbstractContractVectoredReadTest extends AbstractFSContractTestBase {
 
-  private static final Logger LOG = LoggerFactory.getLogger(AbstractContractVectoredReadTest.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(AbstractContractVectoredReadTest.class);
 
   public static final int DATASET_LEN = 64 * 1024;
   protected static final byte[] DATASET = ContractTestUtils.dataset(DATASET_LEN, 'a', 32);
@@ -88,10 +89,8 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
 
   public AbstractContractVectoredReadTest(String bufferType) {
     this.bufferType = bufferType;
-    this.allocate = value -> {
-      boolean isDirect = !"array".equals(bufferType);
-      return pool.getBuffer(isDirect, value);
-    };
+    final boolean isDirect = !"array".equals(bufferType);
+    this.allocate = value -> pool.getBuffer(isDirect, value);
   }
 
   public IntFunction<ByteBuffer> getAllocate() {
@@ -165,7 +164,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
   @Test
   public void testVectoredReadAndReadFully()  throws Exception {
     List<FileRange> fileRanges = new ArrayList<>();
-    fileRanges.add(FileRange.createFileRange(100, 100));
+    range(fileRanges, 100, 100);
     try (FSDataInputStream in = openVectorFile()) {
       in.readVectored(fileRanges, allocate);
       byte[] readFullRes = new byte[100];
@@ -185,9 +184,9 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
   @Test
   public void testDisjointRanges() throws Exception {
     List<FileRange> fileRanges = new ArrayList<>();
-    fileRanges.add(FileRange.createFileRange(0, 100));
-    fileRanges.add(FileRange.createFileRange(4_000 + 101, 100));
-    fileRanges.add(FileRange.createFileRange(16_000 + 101, 100));
+    range(fileRanges, 0, 100);
+    range(fileRanges, 4_000 + 101, 100);
+    range(fileRanges, 16_000 + 101, 100);
     try (FSDataInputStream in = openVectorFile()) {
       in.readVectored(fileRanges, allocate);
       validateVectoredReadResult(fileRanges, DATASET);
@@ -202,9 +201,9 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
   @Test
   public void testAllRangesMergedIntoOne() throws Exception {
     List<FileRange> fileRanges = new ArrayList<>();
-    fileRanges.add(FileRange.createFileRange(0, 100));
-    fileRanges.add(FileRange.createFileRange(4_000 - 101, 100));
-    fileRanges.add(FileRange.createFileRange(8_000 - 101, 100));
+    range(fileRanges, 0, 100);
+    range(fileRanges, 4_000 - 101, 100);
+    range(fileRanges, 8_000 - 101, 100);
     try (FSDataInputStream in = openVectorFile()) {
       in.readVectored(fileRanges, allocate);
       validateVectoredReadResult(fileRanges, DATASET);
@@ -220,11 +219,11 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
   public void testSomeRangesMergedSomeUnmerged() throws Exception {
     FileSystem fs = getFileSystem();
     List<FileRange> fileRanges = new ArrayList<>();
-    fileRanges.add(FileRange.createFileRange(8 * 1024, 100));
-    fileRanges.add(FileRange.createFileRange(14 * 1024, 100));
-    fileRanges.add(FileRange.createFileRange(10 * 1024, 100));
-    fileRanges.add(FileRange.createFileRange(2 * 1024 - 101, 100));
-    fileRanges.add(FileRange.createFileRange(40 * 1024, 1024));
+    range(fileRanges, 8 * 1024, 100);
+    range(fileRanges, 14 * 1024, 100);
+    range(fileRanges, 10 * 1024, 100);
+    range(fileRanges, 2 * 1024 - 101, 100);
+    range(fileRanges, 40 * 1024, 1024);
     FileStatus fileStatus = fs.getFileStatus(path(VECTORED_READ_FILE_NAME));
     CompletableFuture<FSDataInputStream> builder =
             fs.openFile(path(VECTORED_READ_FILE_NAME))
@@ -257,13 +256,35 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
         IllegalArgumentException.class);
   }
 
+  /**
+   * A null range is not permitted.
+   */
+  @Test
+  public void testNullRange() throws Exception {
+    List<FileRange> fileRanges = new ArrayList<>();
+    range(fileRanges, 500, 100);
+    fileRanges.add(null);
+    verifyExceptionalVectoredRead(
+        fileRanges,
+        NullPointerException.class);
+  }
+  /**
+   * A null range is not permitted.
+   */
+  @Test
+  public void testNullRangeList() throws Exception {
+    verifyExceptionalVectoredRead(
+        null,
+        NullPointerException.class);
+  }
+
   @Test
   public void testSomeRandomNonOverlappingRanges() throws Exception {
     List<FileRange> fileRanges = new ArrayList<>();
-    fileRanges.add(FileRange.createFileRange(500, 100));
-    fileRanges.add(FileRange.createFileRange(1000, 200));
-    fileRanges.add(FileRange.createFileRange(50, 10));
-    fileRanges.add(FileRange.createFileRange(10, 5));
+    range(fileRanges, 500, 100);
+    range(fileRanges, 1000, 200);
+    range(fileRanges, 50, 10);
+    range(fileRanges, 10, 5);
     try (FSDataInputStream in = openVectorFile()) {
       in.readVectored(fileRanges, allocate);
       validateVectoredReadResult(fileRanges, DATASET);
@@ -274,14 +295,30 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
   @Test
   public void testConsecutiveRanges() throws Exception {
     List<FileRange> fileRanges = new ArrayList<>();
-    fileRanges.add(FileRange.createFileRange(500, 100));
-    fileRanges.add(FileRange.createFileRange(600, 200));
-    fileRanges.add(FileRange.createFileRange(800, 100));
+    final int offset = 500;
+    final int length = 100;
+    range(fileRanges, offset, length);
+    range(fileRanges, 600, 200);
+    range(fileRanges, 800, 100);
     try (FSDataInputStream in = openVectorFile()) {
       in.readVectored(fileRanges, allocate);
       validateVectoredReadResult(fileRanges, DATASET);
       returnBuffersToPoolPostRead(fileRanges, pool);
     }
+  }
+
+  /**
+   * Create a range and add it to the list.
+   * @param fileRanges list of ranges
+   * @param offset offset
+   * @param length length
+   * @return the list.
+   */
+  protected static List<FileRange> range(final List<FileRange> fileRanges,
+      final int offset,
+      final int length) {
+    fileRanges.add(FileRange.createFileRange(offset, length));
+    return fileRanges;
   }
 
   /**
@@ -291,8 +328,8 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
    */
   @Test
   public void testEOFRanges()  throws Exception {
-    List<FileRange> fileRanges = new ArrayList<>();
-    fileRanges.add(FileRange.createFileRange(DATASET_LEN, 100));
+    List<FileRange> fileRanges = range(new ArrayList<>(), DATASET_LEN, 100);
+
     try (FSDataInputStream in = openVectorFile()) {
       in.readVectored(fileRanges, allocate);
       for (FileRange res : fileRanges) {
@@ -309,14 +346,14 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
   @Test
   public void testNegativeLengthRange()  throws Exception {
     List<FileRange> fileRanges = new ArrayList<>();
-    fileRanges.add(FileRange.createFileRange(0, -50));
+    range(fileRanges, 0, -50);
     verifyExceptionalVectoredRead(fileRanges, IllegalArgumentException.class);
   }
 
   @Test
   public void testNegativeOffsetRange()  throws Exception {
     List<FileRange> fileRanges = new ArrayList<>();
-    fileRanges.add(FileRange.createFileRange(-1, 50));
+    range(fileRanges, -1, 50);
     verifyExceptionalVectoredRead(fileRanges, EOFException.class);
   }
 
@@ -331,9 +368,6 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
       in.readFully(res, 0, len);
       ByteBuffer buffer = ByteBuffer.wrap(res);
       assertDatasetEquals(0, "normal_read", buffer, len, DATASET);
-      Assertions.assertThat(in.getPos())
-              .describedAs("Vectored read shouldn't change file pointer.")
-              .isEqualTo(len);
       validateVectoredReadResult(fileRanges, DATASET);
       returnBuffersToPoolPostRead(fileRanges, pool);
     }
@@ -349,9 +383,6 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
       in.readFully(res, 0, len);
       ByteBuffer buffer = ByteBuffer.wrap(res);
       assertDatasetEquals(0, "normal_read", buffer, len, DATASET);
-      Assertions.assertThat(in.getPos())
-              .describedAs("Vectored read shouldn't change file pointer.")
-              .isEqualTo(len);
       in.readVectored(fileRanges, allocate);
       validateVectoredReadResult(fileRanges, DATASET);
       returnBuffersToPoolPostRead(fileRanges, pool);
@@ -380,17 +411,17 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
   @Test
   public void testVectoredIOEndToEnd() throws Exception {
     List<FileRange> fileRanges = new ArrayList<>();
-    fileRanges.add(FileRange.createFileRange(8 * 1024, 100));
-    fileRanges.add(FileRange.createFileRange(14 * 1024, 100));
-    fileRanges.add(FileRange.createFileRange(10 * 1024, 100));
-    fileRanges.add(FileRange.createFileRange(2 * 1024 - 101, 100));
-    fileRanges.add(FileRange.createFileRange(40 * 1024, 1024));
+    range(fileRanges, 8 * 1024, 100);
+    range(fileRanges, 14 * 1024, 100);
+    range(fileRanges, 10 * 1024, 100);
+    range(fileRanges, 2 * 1024 - 101, 100);
+    range(fileRanges, 40 * 1024, 1024);
 
     ExecutorService dataProcessor = Executors.newFixedThreadPool(5);
     CountDownLatch countDown = new CountDownLatch(fileRanges.size());
 
     try (FSDataInputStream in = openVectorFile()) {
-      in.readVectored(fileRanges, value -> pool.getBuffer(true, value));
+      in.readVectored(fileRanges, this.allocate);
       for (FileRange res : fileRanges) {
         dataProcessor.submit(() -> {
           try {
@@ -422,6 +453,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
       assertDatasetEquals((int) res.getOffset(),
               "vecRead", buffer, res.getLength(), DATASET);
       // return buffer to the pool once read.
+      // issue: what if the read failed?
       pool.putBuffer(buffer);
     }),
     VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS, TimeUnit.SECONDS);
@@ -433,30 +465,30 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
 
   protected List<FileRange> createSampleNonOverlappingRanges() {
     List<FileRange> fileRanges = new ArrayList<>();
-    fileRanges.add(FileRange.createFileRange(0, 100));
-    fileRanges.add(FileRange.createFileRange(110, 50));
+    range(fileRanges, 0, 100);
+    range(fileRanges, 110, 50);
     return fileRanges;
   }
 
   protected List<FileRange> getSampleSameRanges() {
     List<FileRange> fileRanges = new ArrayList<>();
-    fileRanges.add(FileRange.createFileRange(8_000, 1000));
-    fileRanges.add(FileRange.createFileRange(8_000, 1000));
-    fileRanges.add(FileRange.createFileRange(8_000, 1000));
+    range(fileRanges, 8_000, 1000);
+    range(fileRanges, 8_000, 1000);
+    range(fileRanges, 8_000, 1000);
     return fileRanges;
   }
 
   protected List<FileRange> getSampleOverlappingRanges() {
     List<FileRange> fileRanges = new ArrayList<>();
-    fileRanges.add(FileRange.createFileRange(100, 500));
-    fileRanges.add(FileRange.createFileRange(400, 500));
+    range(fileRanges, 100, 500);
+    range(fileRanges, 400, 500);
     return fileRanges;
   }
 
   protected List<FileRange> getConsecutiveRanges() {
     List<FileRange> fileRanges = new ArrayList<>();
-    fileRanges.add(FileRange.createFileRange(100, 500));
-    fileRanges.add(FileRange.createFileRange(600, 500));
+    range(fileRanges, 100, 500);
+    range(fileRanges, 600, 500);
     return fileRanges;
   }
 

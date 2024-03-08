@@ -53,7 +53,7 @@ public class FileRangeImpl implements FileRange {
 
   @Override
   public String toString() {
-    return "range[" + offset + "," + (offset + length) + ")";
+    return String.format("range[%,d, %,d]", offset, offset + length);
   }
 
   @Override

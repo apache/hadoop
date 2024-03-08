@@ -426,41 +426,29 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
     }
 
     /**
-     * Validates range parameters.
-     * In case of CheckSum FS, we already have calculated
-     * fileLength so failing fast here.
-     * @param ranges requested ranges.
-     * @param fileLength length of file.
-     * @throws EOFException end of file exception.
+     * Vectored read.
+     * If the file has no checksums: delegate to the underlying stream.
+     * If the file is checksummed: calculate the checksum ranges as
+     * well as the data ranges, read both, and validate the checksums
+     * as well as returning the data.
+     * @param ranges the byte ranges to read
+     * @param allocate the function to allocate ByteBuffer
+     * @throws IOException
      */
-    private void validateRangeRequest(List<? extends FileRange> ranges,
-                                      final long fileLength) throws EOFException {
-      for (FileRange range : ranges) {
-        VectoredReadUtils.validateRangeArgument(range);
-        if (range.getOffset() + range.getLength() > fileLength) {
-          final String errMsg = String.format("Requested range [%d, %d) is beyond EOF for path %s",
-                  range.getOffset(), range.getLength(), file);
-          LOG.warn(errMsg);
-          throw new EOFException(errMsg);
-        }
-      }
-    }
-
     @Override
     public void readVectored(List<? extends FileRange> ranges,
                              IntFunction<ByteBuffer> allocate) throws IOException {
-      final long length = getFileLength();
-      validateRangeRequest(ranges, length);
 
       // If the stream doesn't have checksums, just delegate.
       if (sums == null) {
         datas.readVectored(ranges, allocate);
         return;
       }
-      int minSeek = minSeekForVectorReads();
-      int maxSize = maxReadSizeForVectorReads();
+      final long length = getFileLength();
       final List<? extends FileRange> sorted = validateAndSortRanges(ranges,
           Optional.of(length));
+      int minSeek = minSeekForVectorReads();
+      int maxSize = maxReadSizeForVectorReads();
       List<CombinedFileRange> dataRanges =
           VectoredReadUtils.mergeSortedRanges(sorted, bytesPerSum,
               minSeek, maxReadSizeForVectorReads());
