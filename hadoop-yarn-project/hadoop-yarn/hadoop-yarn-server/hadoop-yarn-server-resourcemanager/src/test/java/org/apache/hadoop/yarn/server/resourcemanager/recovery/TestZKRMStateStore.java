@@ -536,6 +536,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     RMApp mockApp = mock(RMApp.class);
     ApplicationSubmissionContext context =
       new ApplicationSubmissionContextPBImpl();
+    context.setApplicationId(mock(ApplicationId.class));
     when(mockApp.getSubmitTime()).thenReturn(submitTime);
     when(mockApp.getStartTime()).thenReturn(startTime);
     when(mockApp.getApplicationSubmissionContext()).thenReturn(context);
@@ -875,7 +876,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
       appStateNew.attempts.putAll(appState.attempts);
     }
     store.updateApplicationState(appStateNew);
-    waitNotify(dispatcher);
+    dispatcher.waitNotify(appId);
     Container container = new ContainerPBImpl();
     container.setId(ContainerId.newContainerId(attemptId, 1));
     ApplicationAttemptStateData newAttemptState =
@@ -893,7 +894,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
   private void storeApp(RMStateStore store, TestDispatcher dispatcher,
       ApplicationId appId, long submitTime, long startTime) throws Exception {
     storeApp(store, appId, submitTime, startTime);
-    waitNotify(dispatcher);
+    dispatcher.waitNotify(appId);
   }
 
   private void storeAppWithAttempts(RMStateStore store,
@@ -1000,7 +1001,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     // Store app2 with app id application_1352994193343_120213.
     ApplicationId appId21 = ApplicationId.newInstance(1352994193343L, 120213);
     storeApp(store, appId21, submitTime, startTime);
-    waitNotify(dispatcher);
+    dispatcher.waitNotify(appId21);
 
     // Store another app which will be removed.
     ApplicationId appIdRemoved = ApplicationId.newInstance(1352994193343L, 2);
@@ -1170,7 +1171,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     ApplicationId appId71 = ApplicationId.newInstance(1442994195087L, 7);
     //storeApp(store, dispatcher, appId71, submitTime, startTime);
     storeApp(store, appId71, submitTime, startTime);
-    waitNotify(dispatcher);
+    dispatcher.waitNotify(appId71);
     ApplicationAttemptId attemptId71 =
         ApplicationAttemptId.newInstance(appId71, 1);
     storeAttempt(store, ApplicationAttemptId.newInstance(appId71, 1),
