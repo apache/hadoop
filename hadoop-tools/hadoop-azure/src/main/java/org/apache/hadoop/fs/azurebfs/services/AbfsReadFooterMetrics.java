@@ -44,7 +44,7 @@ public class AbfsReadFooterMetrics {
   private final AtomicLong offsetOfFirstRead;
   private final AtomicInteger readCount;
   private final ConcurrentSkipListMap<String, AbfsReadFooterMetrics> metricsMap;
-  private final String FOOTER_LENGTH = "20";
+  private static final String FOOTER_LENGTH = "20";
 
   public AbfsReadFooterMetrics() {
     this.isParquetFile = new AtomicBoolean(false);
@@ -530,8 +530,7 @@ private String getFooterMetrics(List<AbfsReadFooterMetrics> readFooterMetricsLis
     if (metricsMap != null && !(metricsMap.isEmpty())) {
       checkIsParquet(metricsMap);
       updateLenRequested(metricsMap);
-      for (Map.Entry<String, AbfsReadFooterMetrics> entry : metricsMap.entrySet()) //using map.entrySet() for iteration
-      {
+      for (Map.Entry<String, AbfsReadFooterMetrics> entry : metricsMap.entrySet()) {
         AbfsReadFooterMetrics abfsReadFooterMetrics = entry.getValue();
         if (abfsReadFooterMetrics.getCollectMetrics()) {
           readFooterMetricsList.add(entry.getValue());

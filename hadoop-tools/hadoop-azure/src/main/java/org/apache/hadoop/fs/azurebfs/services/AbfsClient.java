@@ -1441,11 +1441,6 @@ public class AbfsClient implements Closeable {
   }
 
   @VisibleForTesting
-  private URL createRequestUrl(final URL baseUrl, final String query) throws AzureBlobFileSystemException {
-    return createRequestUrl(baseUrl, EMPTY_STRING, query);
-  }
-
-  @VisibleForTesting
   protected URL createRequestUrl(final String path, final String query)
           throws AzureBlobFileSystemException {
     return createRequestUrl(baseUrl, path, query);
@@ -1819,6 +1814,7 @@ public class AbfsClient implements Closeable {
    * This method performs a HEAD request to the specified metric URL, using default headers and query parameters.
    *
    * @param tracingContext The tracing context to be used for capturing tracing information.
+   * @throws IOException throws IOException.
    */
   public void getMetricCall(TracingContext tracingContext) throws IOException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();

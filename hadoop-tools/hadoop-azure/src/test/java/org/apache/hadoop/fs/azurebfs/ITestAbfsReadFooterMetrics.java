@@ -179,8 +179,8 @@ public class ITestAbfsReadFooterMetrics extends AbstractAbfsScaleTest {
     nonParquetMetrics.setIsParquetFile(false);
     nonParquetMetrics.setSizeReadByFirstRead("16384.000_16384.000");
     nonParquetMetrics.setOffsetDiffBetweenFirstAndSecondRead("1.000_16384.000");
-    nonParquetMetrics.setAvgFileLength(32768.000);
-    nonParquetMetrics.setAvgReadLenRequested(16384.000);
+    nonParquetMetrics.setAvgFileLength(Double.parseDouble("32768.000"));
+    nonParquetMetrics.setAvgReadLenRequested(Double.parseDouble("16384.000"));
     return nonParquetMetrics;
   }
 
@@ -192,7 +192,7 @@ public class ITestAbfsReadFooterMetrics extends AbstractAbfsScaleTest {
     parquetMetrics.setIsParquetFile(true);
     parquetMetrics.setSizeReadByFirstRead("1024.000");
     parquetMetrics.setOffsetDiffBetweenFirstAndSecondRead("4096.000");
-    parquetMetrics.setAvgFileLength(8388608.000);
+    parquetMetrics.setAvgFileLength(Double.parseDouble("8388608.000"));
     parquetMetrics.setAvgReadLenRequested(0.000);
     return parquetMetrics;
   }
