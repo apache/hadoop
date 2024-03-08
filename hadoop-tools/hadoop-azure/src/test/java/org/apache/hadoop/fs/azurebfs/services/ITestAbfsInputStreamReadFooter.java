@@ -68,13 +68,13 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
 
   @Test
   public void testOnlyOneServerCallIsMadeWhenTheConfIsTrue() throws Exception {
-      testNumBackendCalls(true);
+    testNumBackendCalls(true);
   }
 
   @Test
   public void testMultipleServerCallsAreMadeWhenTheConfIsFalse()
       throws Exception {
-      testNumBackendCalls(false);
+    testNumBackendCalls(false);
   }
 
   private void testNumBackendCalls(boolean optimizeFooterRead)
