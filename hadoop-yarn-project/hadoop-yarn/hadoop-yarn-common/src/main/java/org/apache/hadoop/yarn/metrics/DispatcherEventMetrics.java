@@ -19,13 +19,34 @@ package org.apache.hadoop.yarn.metrics;
 
 import org.apache.hadoop.metrics2.MetricsSource;
 
+/**
+ * Interface for {@link org.apache.hadoop.yarn.event.Dispatcher}
+ * can be used to publish {@link org.apache.hadoop.yarn.event.Event} related metrics
+ */
 public interface DispatcherEventMetrics extends MetricsSource {
 
+  /**
+   * Class of the event type what can be handled by the DispatcherEventMetrics
+   * @param typeClass the event type
+   */
   void init(Class<? extends Enum> typeClass);
 
+  /**
+   * Call if Event added for dispatching
+   * @param type type of the event
+   */
   void addEvent(Object type);
 
+  /**
+   * Call if Event handled
+   * @param type type of the event
+   */
   void removeEvent(Object type);
 
+  /**
+   * Call with how much time was required to handle the event
+   * @param type type of the event
+   * @param millisecond time interval
+   */
   void updateRate(Object type, long millisecond);
 }

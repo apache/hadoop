@@ -43,6 +43,8 @@ import org.apache.hadoop.yarn.util.MonotonicClock;
  * Dispatches {@link Event}s in a parallel thread.
  * The {@link Dispatcher#getEventHandler()} method can be used to post an event to the dispatcher.
  * The posted event will be separated based on the hashcode of the {@link Event#getLockKey()}.
+ * If the getLockKey() method returns with null,
+ * then the first executor thread will be used as default worker
  * The {@link MultiDispatcherConfig} contains the information,
  * how many thread will be used, for parallel execution.
  * The {@link MultiDispatcherExecutor} contains the worker threads, which handle the events.
@@ -65,7 +67,6 @@ public class MultiDispatcher extends AbstractService implements Dispatcher {
     super("Dispatcher");
     this.dispatcherName = dispatcherName.replaceAll(" ", "-").toLowerCase();
     this.log = LoggerFactory.getLogger(MultiDispatcher.class.getCanonicalName() + "." + this.dispatcherName);
-    this.metrics = new DispatcherEventMetricsImpl(this.dispatcherName);
     this.library = new MultiDispatcherLibrary();
   }
 
@@ -74,6 +75,7 @@ public class MultiDispatcher extends AbstractService implements Dispatcher {
     super.serviceInit(conf);
     MultiDispatcherConfig config = new MultiDispatcherConfig(getConfig(), dispatcherName);
     workerExecutor = new MultiDispatcherExecutor(log, config, dispatcherName);
+    workerExecutor.start();
     createMonitorThread(config);
     if (config.getMetricsEnabled()) {
       metrics = new DispatcherEventMetricsImpl(dispatcherName);
@@ -89,6 +91,9 @@ public class MultiDispatcher extends AbstractService implements Dispatcher {
 
   @Override
   protected void serviceStop() throws Exception {
+    if (monitorExecutor != null) {
+      monitorExecutor.shutdown();
+    }
     workerExecutor.stop();
   }
 

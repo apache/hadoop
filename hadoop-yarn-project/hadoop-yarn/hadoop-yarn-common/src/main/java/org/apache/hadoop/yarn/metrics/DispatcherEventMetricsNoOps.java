@@ -21,6 +21,9 @@ import org.slf4j.Logger;
 
 import org.apache.hadoop.metrics2.MetricsCollector;
 
+/**
+ * Used if metric publication should be disabled
+ */
 public class DispatcherEventMetricsNoOps implements DispatcherEventMetrics {
 
   private final Logger log;
@@ -31,26 +34,26 @@ public class DispatcherEventMetricsNoOps implements DispatcherEventMetrics {
 
   @Override
   public void getMetrics(MetricsCollector collector, boolean all) {
-    log.debug("called getMetrics");
+    log.trace("called getMetrics");
   }
 
   @Override
   public void init(Class<? extends Enum> typeClass) {
-    log.debug("called init");
+    log.trace("called init");
   }
 
   @Override
   public void addEvent(Object type) {
-    log.debug("called addEvent");
+    log.trace("called addEvent");
   }
 
   @Override
   public void removeEvent(Object type) {
-    log.debug("called removeEvent");
+    log.trace("called removeEvent");
   }
 
   @Override
   public void updateRate(Object type, long millisecond) {
-    log.debug("called updateRate");
+    log.trace("called updateRate");
   }
 }

@@ -29,6 +29,9 @@ import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 import org.apache.hadoop.metrics2.lib.MutableRate;
 
+/**
+ * Metric object for {@link org.apache.hadoop.yarn.event.multidispatcher.MultiDispatcher}
+ */
 @InterfaceAudience.Private
 @Metrics(context="yarn")
 public class DispatcherEventMetricsImpl implements DispatcherEventMetrics {
@@ -53,11 +56,12 @@ public class DispatcherEventMetricsImpl implements DispatcherEventMetrics {
 
   @Override
   public void init(Class<? extends Enum> typeClass) {
-    for(Object c : typeClass.getEnumConstants()) {
-      String key = createKey(c);
-      currentEventCountMetrics.put(key, this.registry.newGauge(
-          key + "_Current", key + "_Current", 0L));
-      processingTimeMetrics.put(key, this.registry.newRate(key + "_", key+ "_"));
+    for(Object constant : typeClass.getEnumConstants()) {
+      String key = createKey(constant);
+      currentEventCountMetrics.put(key,
+          registry.newGauge(key + "_Current", key + "_Current", 0L));
+      processingTimeMetrics.put(key,
+          registry.newRate(key + "_", key + "_"));
     }
   }
 
@@ -87,5 +91,4 @@ public class DispatcherEventMetricsImpl implements DispatcherEventMetrics {
         .add("processingTimeMetrics=" + processingTimeMetrics)
         .toString();
   }
-
 }

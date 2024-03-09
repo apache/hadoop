@@ -35,32 +35,39 @@ import org.apache.hadoop.yarn.util.MonotonicClock;
  */
 public class MultiDispatcherExecutor {
 
-  private final Logger LOG;
+  private final Logger log;
   private final MultiDispatcherConfig config;
   private final MultiDispatcherExecutorThread[] threads;
   private final Clock clock = new MonotonicClock();
 
   public MultiDispatcherExecutor(
-      Logger LOG,
+      Logger log,
       MultiDispatcherConfig config,
       String dispatcherName
   ) {
-    this.LOG = LOG;
+    this.log = log;
     this.config = config;
     this.threads = new MultiDispatcherExecutorThread[config.getDefaultPoolSize()];
     ThreadGroup group = new ThreadGroup(dispatcherName);
-    for (int i=0; i < threads.length; ++i) {
+    for (int i = 0; i < threads.length; ++i) {
       threads[i] = new MultiDispatcherExecutorThread(group, i, config.getQueueSize());
-      threads[i].start();
+    }
+  }
+
+  public void start() {
+    for(Thread t : threads) {
+      t.start();
     }
   }
 
   public void execute(Event event, Runnable runnable) {
     String lockKey = event.getLockKey();
-    int threadIndex = lockKey == null ? 0 : Math.abs(lockKey.hashCode()) % threads.length;
+    // abs of Integer.MIN_VALUE is Integer.MIN_VALUE
+    int threadIndex = lockKey == null  || lockKey.hashCode() == Integer.MIN_VALUE ?
+        0 : Math.abs(lockKey.hashCode() % threads.length);
     MultiDispatcherExecutorThread thread = threads[threadIndex];
     thread.add(runnable);
-    LOG.debug("The {} with lock key {} will be handled by {}",
+    log.trace("The {} with lock key {} will be handled by {}",
         event.getType(), lockKey, thread.getName());
   }
 
@@ -70,7 +77,7 @@ public class MultiDispatcherExecutor {
     if (Arrays.stream(threads).anyMatch(t -> 0 < t.queueSize())
         // and not timeout yet
       && clock.getTime() < timeOut) {
-      LOG.debug("Not all event queue is empty, waiting to drain ...");
+      log.debug("Not all event queue is empty, waiting to drain ...");
       Thread.sleep(1_000);
     }
     for (MultiDispatcherExecutorThread thread : threads) {
@@ -108,7 +115,7 @@ public class MultiDispatcherExecutor {
           queue.take().run();
         }
       } catch (InterruptedException e) {
-        LOG.warn("{} get interrupted", getName());
+        log.warn("{} get interrupted", getName());
       }
     }
   }
