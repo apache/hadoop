@@ -603,9 +603,7 @@ public class TestReconstructStripedBlocks {
       fs.setStoragePolicy(dirPath, HdfsConstants.ALLSSD_STORAGE_POLICY_NAME);
       DFSTestUtil.createFile(fs, filePath,
               cellSize * dataBlocks * 2, (short) 1, 0L);
-      FSNamesystem fsn3 = cluster.getNamesystem();
-      BlockManager bm3 = fsn3.getBlockManager();
-      // stop a dn
+      // Stop a dn
       LocatedBlocks blks = fs.getClient().getLocatedBlocks(filePath.toString(), 0);
       LocatedStripedBlock block = (LocatedStripedBlock) blks.getLastLocatedBlock();
       DatanodeInfo dnToStop = block.getLocations()[0];
@@ -614,28 +612,26 @@ public class TestReconstructStripedBlocks {
               cluster.stopDataNode(dnToStop.getXferAddr());
       cluster.setDataNodeDead(dnToStop);
 
-      // wait for reconstruction to happen
+      // Wait for reconstruction to happen
       DFSTestUtil.waitForReplication(fs, filePath, groupSize, 15 * 1000);
 
       DatanodeInfo dnToStop2 = block.getLocations()[1];
-      MiniDFSCluster.DataNodeProperties dnProp2 =
-              cluster.stopDataNode(dnToStop2.getXferAddr());
       cluster.setDataNodeDead(dnToStop2);
       DFSTestUtil.waitForReplication(fs, filePath, groupSize, 15 * 1000);
 
-      // bring the dn back: 10 internal blocks now
+      // Bring the dn back: 10 internal blocks now
       cluster.restartDataNode(dnProp);
       cluster.waitActive();
       DFSTestUtil.verifyClientStats(conf, cluster);
 
-      // currently namenode is able to track the missing block. but restart NN
+      // Currently namenode is able to track the missing block. And restart NN
       cluster.restartNameNode(true);
 
       for (DataNode dn : cluster.getDataNodes()) {
         DataNodeTestUtils.triggerBlockReport(dn);
       }
 
-      Thread.sleep(3000); // wait 3 running cycles of redundancy monitor
+      Thread.sleep(3000); // Wait 3 running cycles of redundancy monitor
       for (DataNode dn : cluster.getDataNodes()) {
         DataNodeTestUtils.triggerHeartbeat(dn);
       }
