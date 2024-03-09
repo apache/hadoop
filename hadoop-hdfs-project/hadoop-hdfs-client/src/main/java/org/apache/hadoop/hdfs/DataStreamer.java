@@ -1769,7 +1769,6 @@ class DataStreamer extends Daemon {
 
     // persist blocks on namenode on next flush
     persistBlocks.set(true);
-
     int refetchEncryptionKey = 1;
     while (true) {
       boolean result = false;
