@@ -1609,7 +1609,7 @@
 
 <property>
   <name>fs.s3a.connection.establish.timeout</name>
-  <value>5s</value>
+  <value>30s</value>
   <description>Socket connection setup timeout in milliseconds; this will be retried
     more than once.</description>
 </property>
