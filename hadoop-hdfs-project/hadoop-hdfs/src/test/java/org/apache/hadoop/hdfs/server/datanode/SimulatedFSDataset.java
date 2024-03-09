@@ -266,7 +266,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
       long extraLen = finalSize - theBlock.getNumBytes();
       if (extraLen > 0L) {
         if (!getStorage(theBlock).alloc(bpid, extraLen)) {
-          DataNode.LOG.warn("Lack of free storage on a block alloc");
+          DataNode.LOG.warn("Lack of free storage on a block alloc test");
           throw new IOException("Creating block, no free space available");
         }
       } else {

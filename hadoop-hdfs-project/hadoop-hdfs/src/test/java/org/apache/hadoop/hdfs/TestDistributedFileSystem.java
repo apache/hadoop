@@ -101,6 +101,8 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
 import org.apache.hadoop.hdfs.protocol.OpenFilesIterator;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicy;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyRackFaultTolerant;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
@@ -2162,6 +2164,31 @@ public class TestDistributedFileSystem {
       dfs.enableErasureCodingPolicy("RS-10-4-1024k");
       result = dfs.getECTopologyResultForPolicies();
       assertFalse(result.isSupported());
+    }
+  }
+
+  @Test
+  public void testSingleRackFailureDuringPipelineSetupMinReplicationPossible() throws Exception {
+    Configuration conf = getTestConfiguration();
+    conf.setClass(
+        DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_KEY,
+        BlockPlacementPolicyRackFaultTolerant.class,
+        BlockPlacementPolicy.class);
+    conf.setBoolean(
+        HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.ENABLE_KEY,
+        false);
+    conf.setInt(HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.
+        MIN_REPLICATION, 2);
+    // 3 racks & 3 nodes. 1 per rack
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3)
+        .racks(new String[] {"/rack1", "/rack2", "/rack3"}).build()) {
+      cluster.waitClusterUp();
+      DistributedFileSystem fs = cluster.getFileSystem();
+      // kill one DN, so only 2 racks stays with active DN
+      cluster.stopDataNode(0);
+      // create a file with replication 3, for rack fault tolerant BPP,
+      // it should allocate nodes in all 3 racks.
+      DFSTestUtil.createFile(fs, new Path("/testFile"), 1024L, (short) 3, 1024L);
     }
   }
 }

@@ -133,7 +133,7 @@ class DataStreamer extends Daemon {
       // Don't exclude this node just yet.
       // Try again with a new encryption key.
       LOG.info("Will fetch a new encryption key and retry, "
-          + "encryption key was invalid when connecting to "
+          + "encryption key was invalid when connecting to test "
           + this.src + ": ", lastException);
       // The encryption key used is invalid.
       dfsClient.clearDataEncryptionKey();
@@ -185,7 +185,7 @@ class DataStreamer extends Daemon {
       BlockOpResponseProto transferResponse = BlockOpResponseProto
           .parseFrom(PBHelperClient.vintPrefixed(in));
       if (SUCCESS != transferResponse.getStatus()) {
-        throw new IOException("Failed to add a datanode. Response status: "
+        throw new IOException("Failed to add a datanode. Test Response status: "
             + transferResponse.getStatus());
       }
     }

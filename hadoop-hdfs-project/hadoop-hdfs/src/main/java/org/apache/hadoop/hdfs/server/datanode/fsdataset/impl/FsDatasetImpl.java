@@ -140,7 +140,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     isNativeIOAvailable = NativeIO.isAvailable();
     if (Path.WINDOWS && !isNativeIOAvailable) {
       LOG.warn("Data node cannot fully support concurrent reading"
-          + " and writing without native code extensions on Windows.");
+          + " and writing without native code extensions on Test Windows.");
     }
   }
 

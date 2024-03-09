@@ -203,7 +203,7 @@ class BlockReceiver implements Closeable {
             + "\n allowLazyPersist=" + allowLazyPersist + ", pinning=" + pinning
             + ", isClient=" + isClient + ", isDatanode=" + isDatanode
             + ", responseInterval=" + responseInterval
-            + ", storageID=" + (storageId != null ? storageId : "null")
+            + ", storageID=" + (storageId != null ? storageId : "null test")
         );
       }
 
