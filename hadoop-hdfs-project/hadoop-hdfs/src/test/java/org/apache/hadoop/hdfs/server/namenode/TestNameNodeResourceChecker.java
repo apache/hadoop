@@ -31,9 +31,11 @@ import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem.NameNodeResourceMonitor;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeResourceChecker.CheckedVolume;
 import org.apache.hadoop.test.PathUtils;
+import org.apache.hadoop.test.Whitebox;
 import org.apache.hadoop.util.Time;
 import org.junit.Before;
 import org.junit.Test;
@@ -251,5 +253,55 @@ public class TestNameNodeResourceChecker {
     Mockito.when(volume3.isResourceAvailable()).thenReturn(true);
     Mockito.when(volume4.isResourceAvailable()).thenReturn(false);
     assertFalse(nnrc.hasAvailableDiskSpace());
+  }
+
+  @Test
+  public void testStartupSafeModeWhenExitResourceLowSafeMode() throws Exception {
+    MiniDFSCluster cluster = null;
+    try {
+      conf.set(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY, nameDir.getAbsolutePath());
+      conf.setLong(DFSConfigKeys.DFS_NAMENODE_RESOURCE_CHECK_INTERVAL_KEY, 1);
+
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+
+      MockNameNodeResourceChecker mockResourceChecker  = new MockNameNodeResourceChecker(conf);
+      cluster.getNameNode().getNamesystem().nnResourceChecker = mockResourceChecker;
+
+      cluster.waitActive();
+
+      NameNode nn = cluster.getNameNode();
+
+      // Enter StartupSafeMode
+      NameNodeAdapter.enterSafeMode(nn, false);
+      Whitebox.setInternalState(nn.getNamesystem(), "manualSafeMode", false);
+      BlockManagerTestUtil.setStartupSafeModeForTest(nn.getNamesystem().getBlockManager());
+      assertTrue(nn.getNamesystem().isInStartupSafeMode());
+
+      // Enter ResourceLowSafeMode
+      mockResourceChecker.setResourcesAvailable(false);
+
+      // Make sure the NNRM thread has a chance to run.
+      long startMills = Time.now();
+      while (nn.getNamesystem().isInStartupSafeMode() && Time.now() < startMills + (60 * 1000)) {
+        Thread.sleep(1000);
+      }
+
+      assertTrue("NN should not be in startup safe mode but in resource low safe mode",
+          !nn.getNamesystem().isInStartupSafeMode() && nn.getNamesystem().isInSafeMode());
+      // Exit ResourceLowSafeMode
+      mockResourceChecker.setResourcesAvailable(true);
+
+      // Make sure the NNRM thread has a chance to run.
+      while (!nn.getNamesystem().isInStartupSafeMode() && nn.getNamesystem().isInSafeMode()
+          && Time.now() < startMills + (60 * 1000)) {
+        Thread.sleep(1000);
+      }
+      assertTrue("NN should leave resource low safe mode but in startup safe mode",
+          nn.getNamesystem().isInStartupSafeMode());
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
   }
 }
