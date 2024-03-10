@@ -583,7 +583,7 @@ public class TestReconstructStripedBlocks {
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_KEY,
             false);
     StorageType[][] st = new StorageType[groupSize + 2][1];
-    for (int i = 0;i < st.length-1;i++){
+    for (int i = 0; i < st.length-1; i++){
       st[i] = new StorageType[]{StorageType.SSD};
     }
     st[st.length -1] = new StorageType[]{StorageType.DISK};
