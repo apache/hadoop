@@ -70,6 +70,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.rules.TestName;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -81,6 +82,8 @@ public class TestMerger {
   private File unitTestDir;
   private JobConf jobConf;
   private FileSystem fs;
+  @Rule
+  public ExpectedException thrown = ExpectedException.none();
 
   @BeforeClass
   public static void setupClass() throws Exception {
@@ -229,6 +232,14 @@ public class TestMerger {
     Assert.assertEquals(0, mergeManager.inMemoryMapOutputs.size());
     Assert.assertEquals(0, mergeManager.inMemoryMergedMapOutputs.size());
     Assert.assertEquals(0, mergeManager.onDiskMapOutputs.size());
+
+    jobConf.set("mapreduce.task.io.sort.factor", "1");
+    thrown.expectMessage("Invalid value for mapreduce.task.io.sort.factor: 1," +
+        " please set it to a number greater than 1");
+    thrown.expect(IllegalArgumentException.class);
+    new MergeManagerImpl<Text, Text>(reduceId2, jobConf, fs, lda, Reporter.NULL, null,
+        null, null, null, null,
+        null, null, new Progress(), new MROutputFiles());
   }
 
   private byte[] writeMapOutput(Configuration conf, Map<String, String> keysToValues)
