@@ -65,23 +65,23 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
 
   private static ExecutorService executorService;
 
-  private final int SIZE_256_KB = 256 * ONE_KB;
+  private static final int SIZE_256_KB = 256 * ONE_KB;
 
-  private final Integer[] FILE_SIZES = {
+  private static final Integer[] FILE_SIZES = {
       SIZE_256_KB,
       2 * SIZE_256_KB,
       ONE_MB,
       4 * ONE_MB
   };
 
-  private final Integer[] READ_BUFFER_SIZE = {
+  private static final Integer[] READ_BUFFER_SIZE = {
       SIZE_256_KB,
       2 * SIZE_256_KB,
       ONE_MB,
       4 * ONE_MB
   };
 
-  private final Integer[] FOOTER_READ_BUFFER_SIZE = {
+  private static final Integer[] FOOTER_READ_BUFFER_SIZE = {
       SIZE_256_KB,
       2 * SIZE_256_KB,
       ONE_MB
