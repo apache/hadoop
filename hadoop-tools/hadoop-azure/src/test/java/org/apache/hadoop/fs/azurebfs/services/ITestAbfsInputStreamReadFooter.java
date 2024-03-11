@@ -48,6 +48,7 @@ import static java.lang.Math.min;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_FOOTER_READ_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_FOOTER_READ_BUFFER_SIZE;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -65,6 +66,26 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
   private static ExecutorService executorService;
 
   private final int SIZE_256_KB = 256 * ONE_KB;
+
+  private final Integer[] FILE_SIZES = {
+      SIZE_256_KB,
+      2 * SIZE_256_KB,
+      ONE_MB,
+      4 * ONE_MB
+  };
+
+  private final Integer[] READ_BUFFER_SIZE = {
+      SIZE_256_KB,
+      2 * SIZE_256_KB,
+      ONE_MB,
+      4 * ONE_MB
+  };
+
+  private final Integer[] FOOTER_READ_BUFFER_SIZE = {
+      SIZE_256_KB,
+      2 * SIZE_256_KB,
+      ONE_MB
+  };
 
   public ITestAbfsInputStreamReadFooter() throws Exception {
   }
@@ -95,18 +116,15 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
       throws Exception {
     int fileIdx = 0;
     final List<Future> futureList = new ArrayList<>();
-    for (int i = 0; i <= 4; i++) {
-      final int fileSize = (int) Math.pow(2, i) * SIZE_256_KB;
+    for (int fileSize : FILE_SIZES) {
       final int fileId = fileIdx++;
       Future future = executorService.submit(() -> {
-        try {
-          try (AzureBlobFileSystem spiedFs = createSpiedFs(
-              getRawConfiguration())) {
-            Path testPath = createPathAndFileWithContent(
-                spiedFs, fileId, fileSize);
-            testNumBackendCalls(spiedFs, optimizeFooterRead, fileSize,
-                testPath);
-          }
+        try (AzureBlobFileSystem spiedFs = createSpiedFs(
+            getRawConfiguration())) {
+          Path testPath = createPathAndFileWithContent(
+              spiedFs, fileId, fileSize);
+          testNumBackendCalls(spiedFs, optimizeFooterRead, fileSize,
+              testPath);
         } catch (Exception ex) {
           throw new RuntimeException(ex);
         }
@@ -120,11 +138,8 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
 
   private void testNumBackendCalls(final AzureBlobFileSystem spiedFs,
       final boolean optimizeFooterRead, final int fileSize, final Path testFilePath) throws Exception {
-    for (int i = 0; i <= 4; i++) {
-      for (int j = 0; j <= 2; j++) {
-        int readBufferSize = (int) Math.pow(2, i) * SIZE_256_KB;
-        int footerReadBufferSize = (int) Math.pow(2, j) * SIZE_256_KB;
-
+    for (int readBufferSize : READ_BUFFER_SIZE) {
+      for (int footerReadBufferSize : FOOTER_READ_BUFFER_SIZE) {
         changeFooterConfigs(spiedFs, optimizeFooterRead, fileSize, readBufferSize);
         int length = AbfsInputStream.FOOTER_SIZE;
         FutureDataInputStreamBuilder builder = getParameterizedBuilder(
@@ -216,22 +231,18 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
       SeekTo seekTo) throws Exception {
     int fileIdx = 0;
     List<Future> futureList = new ArrayList<>();
-    for (int j = 0; j <= 4; j++) {
-      final int fileSize = (int) Math.pow(2, j) * SIZE_256_KB;
+    for (int fileSize : FILE_SIZES) {
       final int fileId = fileIdx++;
       futureList.add(executorService.submit(() -> {
-        try {
-          try (AzureBlobFileSystem spiedFs = createSpiedFs(
-              getRawConfiguration())) {
-            String fileName = methodName.getMethodName() + fileId;
-            byte[] fileContent = getRandomBytesArray(fileSize);
-            Path testFilePath = createFileWithContent(spiedFs, fileName,
-                fileContent);
-            for (int i = 0; i <= 4; i++) {
-              int readBufferSize = (int) Math.pow(2, i) * SIZE_256_KB;
-              testSeekAndReadWithConf(spiedFs, optimizeFooterRead, seekTo,
-                  readBufferSize, fileSize, testFilePath, fileContent);
-            }
+        try (AzureBlobFileSystem spiedFs = createSpiedFs(
+            getRawConfiguration())) {
+          String fileName = methodName.getMethodName() + fileId;
+          byte[] fileContent = getRandomBytesArray(fileSize);
+          Path testFilePath = createFileWithContent(spiedFs, fileName,
+              fileContent);
+          for (int readBufferSize : READ_BUFFER_SIZE) {
+            testSeekAndReadWithConf(spiedFs, optimizeFooterRead, seekTo,
+                readBufferSize, fileSize, testFilePath, fileContent);
           }
         } catch (Exception ex) {
           throw new RuntimeException(ex);
@@ -256,8 +267,7 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
     // This will cover files less than footer read buffer size,
     // Files between footer read buffer and read buffer size
     // Files bigger than read buffer size
-    for (int j = 0; j <= 2; j++) {
-      int footerReadBufferSize = (int) Math.pow(2, j) * SIZE_256_KB;
+    for (int footerReadBufferSize : FOOTER_READ_BUFFER_SIZE) {
       changeFooterConfigs(spiedFs, optimizeFooterRead, fileSize,
           readBufferSize);
 
@@ -353,14 +363,12 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
   public void testPartialReadWithNoData() throws Exception {
     int fileIdx = 0;
     List<Future> futureList = new ArrayList<>();
-    for (int i = 0; i <= 4; i++) {
-      final int fileSize = (int) Math.pow(2, i) * SIZE_256_KB;
+    for (int fileSize : FILE_SIZES) {
       final int fileId = fileIdx++;
       final String fileName = methodName.getMethodName() + fileId;
       futureList.add(executorService.submit(() -> {
         try (AzureBlobFileSystem spiedFs = createSpiedFs(
             getRawConfiguration())) {
-
           byte[] fileContent = getRandomBytesArray(fileSize);
           Path testFilePath = createFileWithContent(spiedFs, fileName,
               fileContent);
@@ -380,10 +388,8 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
       final int fileSize,
       final byte[] fileContent,
       Path testFilePath) throws IOException {
-    for (int i = 0; i <= 4; i++) {
-      for (int j = 0; j <= 2; j++) {
-        int readBufferSize = (int) Math.pow(2, i) * SIZE_256_KB;
-        int footerReadBufferSize = (int) Math.pow(2, j) * SIZE_256_KB;
+    for (int readBufferSize : READ_BUFFER_SIZE) {
+      for (int footerReadBufferSize : FOOTER_READ_BUFFER_SIZE) {
         changeFooterConfigs(spiedFs, true, fileSize,
             footerReadBufferSize, readBufferSize);
 
@@ -430,9 +436,8 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
   public void testPartialReadWithSomeData() throws Exception {
     int fileIdx = 0;
     List<Future> futureList = new ArrayList<>();
-    for (int i = 0; i <= 4; i++) {
+    for (int fileSize : FILE_SIZES) {
       final int fileId = fileIdx++;
-      final int fileSize = (int) Math.pow(2, i) * SIZE_256_KB;
       futureList.add(executorService.submit(() -> {
         try (AzureBlobFileSystem spiedFs = createSpiedFs(
             getRawConfiguration())) {
@@ -442,7 +447,6 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
               fileContent);
           testParialReadWithSomeData(spiedFs, fileSize, testFilePath,
               fileContent);
-
         } catch (Exception ex) {
           throw new RuntimeException(ex);
         }
@@ -456,10 +460,8 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
   private void testParialReadWithSomeData(final AzureBlobFileSystem spiedFs,
       final int fileSize, final Path testFilePath, final byte[] fileContent)
       throws IOException {
-    for (int i = 0; i <= 4; i++) {
-      for (int j = 0; j <= 2; j++) {
-        int readBufferSize = (int) Math.pow(2, i) * SIZE_256_KB;
-        int footerReadBufferSize = (int) Math.pow(2, j) * SIZE_256_KB;
+    for (int readBufferSize : READ_BUFFER_SIZE) {
+      for (int footerReadBufferSize : FOOTER_READ_BUFFER_SIZE) {
         changeFooterConfigs(spiedFs, true,
             fileSize, footerReadBufferSize, readBufferSize);
 
@@ -577,16 +579,21 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
 
   private void changeFooterConfigs(final AzureBlobFileSystem spiedFs,
       final boolean optimizeFooterRead, final int fileSize,
-      final int readBufferSize) throws IOException {
-    AbfsConfiguration configuration = spiedFs.getAbfsStore().getAbfsConfiguration();
-    Mockito.doReturn(optimizeFooterRead).when(configuration).optimizeFooterRead();
+      final int readBufferSize) {
+    AbfsConfiguration configuration = spiedFs.getAbfsStore()
+        .getAbfsConfiguration();
+    Mockito.doReturn(optimizeFooterRead)
+        .when(configuration)
+        .optimizeFooterRead();
     if (fileSize <= readBufferSize) {
       Mockito.doReturn(false).when(configuration).readSmallFilesCompletely();
     }
   }
 
-  private AzureBlobFileSystem createSpiedFs(Configuration configuration) throws IOException {
-    AzureBlobFileSystem spiedFs = Mockito.spy((AzureBlobFileSystem) FileSystem.newInstance(configuration));
+  private AzureBlobFileSystem createSpiedFs(Configuration configuration)
+      throws IOException {
+    AzureBlobFileSystem spiedFs = Mockito.spy(
+        (AzureBlobFileSystem) FileSystem.newInstance(configuration));
     AzureBlobFileSystemStore store = Mockito.spy(spiedFs.getAbfsStore());
     Mockito.doReturn(store).when(spiedFs).getAbfsStore();
     AbfsConfiguration spiedConfig = Mockito.spy(store.getAbfsConfiguration());
@@ -596,10 +603,15 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
 
   private void changeFooterConfigs(final AzureBlobFileSystem spiedFs,
       final boolean optimizeFooterRead, final int fileSize,
-      final int footerReadBufferSize, final int readBufferSize) throws IOException {
-    AbfsConfiguration configuration = spiedFs.getAbfsStore().getAbfsConfiguration();
-    Mockito.doReturn(optimizeFooterRead).when(configuration).optimizeFooterRead();
-    Mockito.doReturn(footerReadBufferSize).when(configuration).getFooterReadBufferSize();
+      final int footerReadBufferSize, final int readBufferSize) {
+    AbfsConfiguration configuration = spiedFs.getAbfsStore()
+        .getAbfsConfiguration();
+    Mockito.doReturn(optimizeFooterRead)
+        .when(configuration)
+        .optimizeFooterRead();
+    Mockito.doReturn(footerReadBufferSize)
+        .when(configuration)
+        .getFooterReadBufferSize();
     Mockito.doReturn(readBufferSize).when(configuration).getReadBufferSize();
     if (fileSize <= readBufferSize) {
       Mockito.doReturn(false).when(configuration).readSmallFilesCompletely();
