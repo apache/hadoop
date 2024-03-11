@@ -341,9 +341,6 @@ public class AbfsRestOperation {
         ((AbfsHttpOperation) httpOperation).setOperationType(operationType);
       }
       httpOperation.processResponse(buffer, bufferOffset, bufferLength);
-      if(httpOperation instanceof AbfsHttpOperation) {
-        ((AbfsHttpOperation)httpOperation).addConnInfo(operationType);
-      }
       incrementCounter(AbfsStatistic.GET_RESPONSES, 1);
       //Only increment bytesReceived counter when the status code is 2XX.
       if (httpOperation.getStatusCode() >= HttpURLConnection.HTTP_OK

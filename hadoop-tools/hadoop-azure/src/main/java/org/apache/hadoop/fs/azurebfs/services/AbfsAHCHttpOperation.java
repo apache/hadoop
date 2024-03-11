@@ -17,7 +17,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
-import org.apache.hadoop.fs.azurebfs.conn.AbfsHttpsUrlConnection;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsApacheHttpExpect100Exception;
@@ -184,33 +183,17 @@ public class AbfsAHCHttpOperation extends HttpOperation {
   public void processResponse(final byte[] buffer,
       final int offset,
       final int length) throws IOException {
-    Boolean isExpect100Error = false;
-    Boolean toBeClosedLater = true;
     try {
       try {
-        long startTime = 0;
-        startTime = System.nanoTime();
         httpResponse = abfsApacheHttpClient.execute(httpRequestBase, abfsHttpClientContext);
-        if(httpResponse.getEntity() == null || !httpResponse.getEntity().isStreaming()) {
-          toBeClosedLater = false;
-        }
         sendRequestTimeMs = abfsHttpClientContext.sendTime;
         recvResponseTimeMs = abfsHttpClientContext.readTime;
-
-//        MetricPercentile.addSendDataPoint(abfsRestOperationType, sendRequestTimeMs);
-//        MetricPercentile.addRcvDataPoint(abfsRestOperationType, recvResponseTimeMs);
-//        MetricPercentile.addTotalDataPoint(abfsRestOperationType, sendRequestTimeMs + recvResponseTimeMs);
-
       } catch (AbfsApacheHttpExpect100Exception ex) {
         LOG.debug(
             "Getting output stream failed with expect header enabled, returning back ",
             ex);
-        isExpect100Error = true;
         httpResponse = ex.getHttpResponse();
       }
-      // get the response
-      long startTime = 0;
-      startTime = System.nanoTime();
 
       this.statusCode = httpResponse.getStatusLine().getStatusCode();
 
@@ -223,8 +206,6 @@ public class AbfsAHCHttpOperation extends HttpOperation {
       // dump the headers
       AbfsIoUtils.dumpHeadersToDebugLog("Response Headers",
           getResponseHeaders(httpResponse));
-
-//      connThatCantBeClosed.add(abfsHttpClientContext.httpClientConnection);
       parseResponse(buffer, offset, length);
       abfsHttpClientContext.isBeingRead = false;
 
@@ -246,18 +227,6 @@ public class AbfsAHCHttpOperation extends HttpOperation {
       if(httpResponse != null && httpResponse instanceof CloseableHttpResponse) {
         ((CloseableHttpResponse) httpResponse).close();
       }
-//      connThatCantBeClosed.remove(abfsHttpClientContext.httpClientConnection);
-//      if(isExpect100Error || !toBeClosedLater) {
-//        return;
-//      }
-//
-//      if(abfsHttpClientContext.shouldKillConn()) {
-//        abfsApacheHttpClient.destroyConn(
-//            abfsHttpClientContext.httpClientConnection);
-//      } else {
-//        abfsApacheHttpClient.releaseConn(
-//            abfsHttpClientContext.httpClientConnection, abfsHttpClientContext);
-//      }
     }
   }
 
@@ -275,34 +244,7 @@ public class AbfsAHCHttpOperation extends HttpOperation {
 
   @Override
   public void setRequestProperty(final String key, final String value) {
-    StringBuilder stringBuilder = new StringBuilder(value);
-    if (X_MS_CLIENT_REQUEST_ID.equals(key)) {
-      try {
-        ConnInfo connInfo = connInfoStack.pop();
-        stringBuilder.append(":Conn_").append(
-            connInfo.operationType).append("_").append(connInfo.connTime);
-      } catch (EmptyStackException ignored) {}
-      try {
-        LatencyCaptureInfo readLatencyCaptureInfo = READ_INFO_STACK.pop();
-        stringBuilder.append(":Read_")
-            .append(readLatencyCaptureInfo.operationType)
-            .append("_")
-            .append(readLatencyCaptureInfo.latencyCapture)
-            .append("_")
-            .append(readLatencyCaptureInfo.status);
-      } catch (EmptyStackException ignored) {}
-      try {
-        int reuse = AbfsApacheHttpClient.connectionReuseCount.pop();
-        stringBuilder.append(":Reuse_").append(reuse);
-      } catch (EmptyStackException ignored) {}
-      try {
-        int kac = AbfsApacheHttpClient.kacSizeStack.pop();
-        stringBuilder.append(":Kac_").append(kac);
-      } catch (EmptyStackException ignored) {}
-      stringBuilder.append(":TotalConn_").append(abfsApacheHttpClient.getParallelConnAtMoment());
-
-    }
-    setHeader(key, stringBuilder.toString());
+    setHeader(key, value);
   }
 
   @Override

@@ -34,8 +34,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
 
-import org.apache.hadoop.fs.azurebfs.conn.AbfsHttpUrlConnection;
-import org.apache.hadoop.fs.azurebfs.conn.AbfsHttpsUrlConnection;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
@@ -68,40 +66,7 @@ public class AbfsHttpOperation extends HttpOperation {
   private AbfsRestOperationType operationType;
   private static final int CLEAN_UP_BUFFER_SIZE = 64 * 1024;
 
-  private final static Stack<LatencyCaptureInfo> readLatencyInfos = new Stack<>();
-
-  private final static Stack<LatencyCaptureInfo> connLatencyInfos = new Stack<>();
-
   private boolean connectionDisconnectedOnError = false;
-
-  private static class LatencyCaptureInfo {
-
-    long latencyCapture;
-
-    AbfsRestOperationType operationType;
-
-    int status;
-  }
-
-  public void  addConnInfo(AbfsRestOperationType operationType) {
-    AbfsHttpsUrlConnection conn = ((AbfsHttpsUrlConnection) connection);
-    LatencyCaptureInfo latencyCaptureInfo = new LatencyCaptureInfo();
-    latencyCaptureInfo.operationType = operationType;
-    latencyCaptureInfo.latencyCapture = conn.timeTaken;
-    if(!conn.isFromCache) {
-      connLatencyInfos.add(latencyCaptureInfo);
-    }
-    return;
-  }
-
-  private void captureReadLatency() {
-    LatencyCaptureInfo latencyCaptureInfo = new LatencyCaptureInfo();
-    latencyCaptureInfo.status = statusCode;
-    latencyCaptureInfo.latencyCapture = recvResponseTimeMs;
-    latencyCaptureInfo.operationType =  operationType;
-
-    readLatencyInfos.add(latencyCaptureInfo);
-  }
 
   public void setOperationType(AbfsRestOperationType operationType) {
     this.operationType = operationType;
@@ -214,13 +179,13 @@ public class AbfsHttpOperation extends HttpOperation {
     this.method = method;
 
     this.connection = openConnection();
-//    if (this.connection instanceof HttpsURLConnection) {
-//      HttpsURLConnection secureConn = (HttpsURLConnection) this.connection;
-//      SSLSocketFactory sslSocketFactory = DelegatingSSLSocketFactory.getDefaultFactory();
-//      if (sslSocketFactory != null) {
-//        secureConn.setSSLSocketFactory(sslSocketFactory);
-//      }
-//    }
+    if (this.connection instanceof HttpsURLConnection) {
+      HttpsURLConnection secureConn = (HttpsURLConnection) this.connection;
+      SSLSocketFactory sslSocketFactory = DelegatingSSLSocketFactory.getDefaultFactory();
+      if (sslSocketFactory != null) {
+        secureConn.setSSLSocketFactory(sslSocketFactory);
+      }
+    }
 
     this.connection.setConnectTimeout(connectionTimeout);
     this.connection.setReadTimeout(readTimeout);
@@ -372,30 +337,10 @@ public class AbfsHttpOperation extends HttpOperation {
     startTime = System.nanoTime();
 
     parseResponse(buffer, offset, length);
-    captureReadLatency();
   }
 
   public void setRequestProperty(String key, String value) {
-    StringBuilder stringBuilder = new StringBuilder(value);
-    if(X_MS_CLIENT_REQUEST_ID.equals(key)) {
-      try {
-        LatencyCaptureInfo connLatencyCaptureInfo = connLatencyInfos.pop();
-        stringBuilder.append(":Conn_").append(
-            connLatencyCaptureInfo.operationType).append("_").append(
-            connLatencyCaptureInfo.latencyCapture);
-      } catch (EmptyStackException ignored) {}
-      try {
-        LatencyCaptureInfo readCaptureInfo = readLatencyInfos.pop();
-        stringBuilder.append(":Read_").append(readCaptureInfo.operationType)
-            .append("_").append(readCaptureInfo.latencyCapture).append("_")
-            .append(readCaptureInfo.status);
-      } catch (EmptyStackException ex) {}
-      try {
-        AbfsHttpsUrlConnection.AbfsHttpClient.finishedStack.pop();
-        stringBuilder.append(":FinsihedConn");
-      } catch (EmptyStackException ex) {}
-    }
-    this.connection.setRequestProperty(key, stringBuilder.toString());
+    this.connection.setRequestProperty(key, value);
   }
 
   /**
@@ -404,25 +349,12 @@ public class AbfsHttpOperation extends HttpOperation {
    * @throws IOException if an error occurs.
    */
   private HttpURLConnection openConnection() throws IOException {
-    if("https".equals(url.getProtocol())) {
-      AbfsHttpsUrlConnection conn = new AbfsHttpsUrlConnection(url, null, new sun.net.www.protocol.https.Handler());
-      SSLSocketFactory sslSocketFactory = DelegatingSSLSocketFactory.getDefaultFactory();
-      if (sslSocketFactory != null) {
-        conn.setSSLSocketFactory(sslSocketFactory);
-      }
-      return conn;
+    long start = System.nanoTime();
+    try {
+      return (HttpURLConnection) url.openConnection();
+    } finally {
+      connectionTimeMs = elapsedTimeMs(start);
     }
-
-    return  new AbfsHttpUrlConnection(url, null, new sun.net.www.protocol.http.Handler());
-//    if (!isTraceEnabled) {
-//      return (HttpURLConnection) url.openConnection();
-//    }
-//    long start = System.nanoTime();
-//    try {
-//      return (HttpURLConnection) url.openConnection();
-//    } finally {
-//      connectionTimeMs = elapsedTimeMs(start);
-//    }
   }
 
   @Override
