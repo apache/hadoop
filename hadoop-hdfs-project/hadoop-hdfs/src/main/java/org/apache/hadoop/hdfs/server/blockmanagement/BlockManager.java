@@ -4348,10 +4348,6 @@ public class BlockManager implements BlockStatsMXBean {
       if (candidates.size() > 1) {
         List<StorageType> internalExcessTypes = storagePolicy.chooseExcess(
             (short) 1, DatanodeStorageInfo.toStorageTypes(candidates));
-        if (internalExcessTypes.isEmpty()) {
-          LOG.warn("excess types chosen for block {} among storages {} is empty",
-              storedBlock, candidates);
-        }
         List<DatanodeStorageInfo> replicasToDelete = placementPolicy
             .chooseReplicasToDelete(nonExcess, candidates, (short) 1,
                 internalExcessTypes, null, null);
