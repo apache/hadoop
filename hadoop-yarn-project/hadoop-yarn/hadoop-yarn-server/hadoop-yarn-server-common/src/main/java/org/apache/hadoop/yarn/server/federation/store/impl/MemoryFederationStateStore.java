@@ -87,6 +87,8 @@ import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationH
 import org.apache.hadoop.yarn.server.federation.store.records.UpdateReservationHomeSubClusterResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationHomeSubClusterRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.DeleteReservationHomeSubClusterResponse;
+import org.apache.hadoop.yarn.server.federation.store.records.DeletePoliciesConfigurationsRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.DeletePoliciesConfigurationsResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKey;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterMasterKeyResponse;
@@ -94,6 +96,8 @@ import org.apache.hadoop.yarn.server.federation.store.records.RouterRMDTSecretMa
 import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterRMTokenRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.RouterStoreToken;
+import org.apache.hadoop.yarn.server.federation.store.records.DeleteSubClusterPoliciesConfigurationsRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.DeleteSubClusterPoliciesConfigurationsResponse;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationApplicationHomeSubClusterStoreInputValidator;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationReservationHomeSubClusterStoreInputValidator;
 import org.apache.hadoop.yarn.server.federation.store.utils.FederationMembershipStateStoreInputValidator;
@@ -398,6 +402,26 @@ public class MemoryFederationStateStore implements FederationStateStore {
       result.add(policy);
     }
     return GetSubClusterPoliciesConfigurationsResponse.newInstance(result);
+  }
+
+  @Override
+  public DeleteSubClusterPoliciesConfigurationsResponse deletePoliciesConfigurations(
+      DeleteSubClusterPoliciesConfigurationsRequest request) throws YarnException {
+    FederationPolicyStoreInputValidator.validate(request);
+    for (String queue : request.getQueues()) {
+      if (policies.containsKey(queue)) {
+        policies.remove(queue);
+        LOG.info("The queue = {} policy has been deleted.", queue);
+      }
+    }
+    return DeleteSubClusterPoliciesConfigurationsResponse.newInstance();
+  }
+
+  @Override
+  public DeletePoliciesConfigurationsResponse deleteAllPoliciesConfigurations(
+      DeletePoliciesConfigurationsRequest request) throws Exception {
+    policies.clear();
+    return DeletePoliciesConfigurationsResponse.newInstance();
   }
 
   @Override

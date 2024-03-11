@@ -51,7 +51,7 @@ import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.util.Enumeration;
 import java.util.List;
@@ -93,8 +93,6 @@ public class DelegationTokenAuthenticationFilter
 
   public static final String DELEGATION_TOKEN_SECRET_MANAGER_ATTR =
       "hadoop.http.delegation-token-secret-manager";
-
-  private static final Charset UTF8_CHARSET = Charset.forName("UTF-8");
 
   private static final ThreadLocal<UserGroupInformation> UGI_TL =
       new ThreadLocal<UserGroupInformation>();
@@ -226,7 +224,7 @@ public class DelegationTokenAuthenticationFilter
     if (queryString == null) {
       return null;
     }
-    List<NameValuePair> list = URLEncodedUtils.parse(queryString, UTF8_CHARSET);
+    List<NameValuePair> list = URLEncodedUtils.parse(queryString, StandardCharsets.UTF_8);
     if (list != null) {
       for (NameValuePair nv : list) {
         if (DelegationTokenAuthenticatedURL.DO_AS.

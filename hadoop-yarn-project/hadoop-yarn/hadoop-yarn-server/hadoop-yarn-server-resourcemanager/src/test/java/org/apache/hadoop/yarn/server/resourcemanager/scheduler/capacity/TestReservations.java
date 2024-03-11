@@ -176,27 +176,26 @@ public class TestReservations {
       final String newRoot, boolean addUserLimits) {
 
     // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT,
-        new String[] { newRoot });
-    conf.setMaximumCapacity(CapacitySchedulerConfiguration.ROOT, 100);
-    conf.setAcl(CapacitySchedulerConfiguration.ROOT,
-        QueueACL.SUBMIT_APPLICATIONS, " ");
+    QueuePath root = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+    QueuePath newRootPath = root.createNewLeaf(newRoot);
+    QueuePath aQueuePath = newRootPath.createNewLeaf(A);
 
-    final String Q_newRoot = CapacitySchedulerConfiguration.ROOT + "."
-        + newRoot;
-    conf.setQueues(Q_newRoot, new String[] { A });
-    conf.setCapacity(Q_newRoot, 100);
-    conf.setMaximumCapacity(Q_newRoot, 100);
-    conf.setAcl(Q_newRoot, QueueACL.SUBMIT_APPLICATIONS, " ");
+    conf.setQueues(root, new String[] {newRoot});
+    conf.setMaximumCapacity(root, 100);
+    conf.setAcl(root, QueueACL.SUBMIT_APPLICATIONS, " ");
 
-    final String Q_A = Q_newRoot + "." + A;
-    conf.setCapacity(Q_A, 100f);
-    conf.setMaximumCapacity(Q_A, 100);
-    conf.setAcl(Q_A, QueueACL.SUBMIT_APPLICATIONS, "*");
+    conf.setQueues(newRootPath, new String[] {A});
+    conf.setCapacity(newRootPath, 100);
+    conf.setMaximumCapacity(newRootPath, 100);
+    conf.setAcl(newRootPath, QueueACL.SUBMIT_APPLICATIONS, " ");
+
+    conf.setCapacity(aQueuePath, 100f);
+    conf.setMaximumCapacity(aQueuePath, 100);
+    conf.setAcl(aQueuePath, QueueACL.SUBMIT_APPLICATIONS, "*");
 
     if (addUserLimits) {
-      conf.setUserLimit(Q_A, 25);
-      conf.setUserLimitFactor(Q_A, 0.25f);
+      conf.setUserLimit(aQueuePath, 25);
+      conf.setUserLimitFactor(aQueuePath, 0.25f);
     }
   }
 

@@ -60,7 +60,7 @@ public class TestFavoredNodesEndToEnd {
   private static Configuration conf;
   private final static int NUM_DATA_NODES = 10;
   private final static int NUM_FILES = 10;
-  private final static byte[] SOME_BYTES = new String("foo").getBytes();
+  private final static byte[] SOME_BYTES = "foo".getBytes();
   private static DistributedFileSystem dfs;
   private static ArrayList<DataNode> datanodes;
   

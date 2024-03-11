@@ -20,10 +20,13 @@ package org.apache.hadoop.fs.s3a;
 
 import static org.apache.hadoop.fs.s3a.AWSCredentialProviderList.maybeTranslateCredentialException;
 import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.sdkClientException;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.verifyExceptionClass;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.audit.AuditIntegration.maybeTranslateAuditException;
+import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.maybeExtractChannelException;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.*;
+import static org.apache.hadoop.test.LambdaTestUtils.verifyCause;
 import static org.junit.Assert.*;
 
 import java.io.EOFException;
@@ -35,29 +38,49 @@ import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 
 import org.assertj.core.api.Assertions;
+import org.junit.Before;
 import software.amazon.awssdk.awscore.exception.AwsErrorDetails;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
-import software.amazon.awssdk.core.exception.SdkClientException;
+import software.amazon.awssdk.core.exception.ApiCallAttemptTimeoutException;
+import software.amazon.awssdk.core.exception.ApiCallTimeoutException;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.http.SdkHttpResponse;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import org.junit.Test;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.api.UnsupportedRequestException;
 import org.apache.hadoop.fs.s3a.audit.AuditFailureException;
 import org.apache.hadoop.fs.s3a.audit.AuditOperationRejectedException;
 import org.apache.hadoop.fs.s3a.impl.ErrorTranslation;
-
+import org.apache.hadoop.io.retry.RetryPolicy;
+import org.apache.hadoop.test.AbstractHadoopTestBase;
+import org.apache.http.NoHttpResponseException;
 
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 
 /**
- * Unit test suite covering translation of AWS SDK exceptions to S3A exceptions,
+ * Unit test suite covering translation of AWS/network exceptions to S3A exceptions,
  * and retry/recovery policies.
  */
 @SuppressWarnings("ThrowableNotThrown")
-public class TestS3AExceptionTranslation {
+public class TestS3AExceptionTranslation extends AbstractHadoopTestBase {
+
+  public static final String WFOPENSSL_0035_STREAM_IS_CLOSED =
+      "Unable to execute HTTP request: "
+          + ErrorTranslation.OPENSSL_STREAM_CLOSED
+          + " Stream is closed";
+
+  /**
+   * Retry policy to use in tests.
+   */
+  private S3ARetryPolicy retryPolicy;
+
+  @Before
+  public void setup() {
+    retryPolicy = new S3ARetryPolicy(new Configuration(false));
+  }
 
   @Test
   public void test301ContainsRegion() throws Exception {
@@ -87,10 +110,10 @@ public class TestS3AExceptionTranslation {
         text != null && text.contains(contained));
   }
 
-  protected <E extends Throwable> void verifyTranslated(
+  protected <E extends Throwable> E verifyTranslated(
       int status,
       Class<E> expected) throws Exception {
-    verifyTranslated(expected, createS3Exception(status));
+    return verifyTranslated(expected, createS3Exception(status));
   }
 
   @Test
@@ -138,7 +161,12 @@ public class TestS3AExceptionTranslation {
 
   @Test
   public void test416isEOF() throws Exception {
-    verifyTranslated(SC_416_RANGE_NOT_SATISFIABLE, EOFException.class);
+
+    // 416 maps the the subclass of EOFException
+    final IOException ex = verifyTranslated(SC_416_RANGE_NOT_SATISFIABLE,
+            RangeNotSatisfiableEOFException.class);
+    Assertions.assertThat(ex)
+        .isInstanceOf(EOFException.class);
   }
 
   @Test
@@ -250,12 +278,6 @@ public class TestS3AExceptionTranslation {
                 .build()));
   }
 
-  private SdkClientException sdkClientException(String message, Throwable cause) {
-    return SdkClientException.builder()
-        .message(message)
-        .cause(cause)
-        .build();
-  }
   @Test
   public void testTranslateCredentialException() throws Throwable {
     verifyExceptionClass(AccessDeniedException.class,
@@ -328,6 +350,132 @@ public class TestS3AExceptionTranslation {
             maybeTranslateAuditException("/",
                 sdkClientException("", sdkClientException("not an audit exception", null))))
         .isNull();
+  }
+
+  /**
+   * 504 gateway timeout is translated to a {@link AWSApiCallTimeoutException}.
+   */
+  @Test
+  public void test504ToTimeout() throws Throwable {
+    AWSApiCallTimeoutException ex =
+        verifyExceptionClass(AWSApiCallTimeoutException.class,
+        translateException("test", "/", createS3Exception(504)));
+    verifyCause(S3Exception.class, ex);
+  }
+
+  /**
+   * SDK ApiCallTimeoutException is translated to a
+   * {@link AWSApiCallTimeoutException}.
+   */
+  @Test
+  public void testApiCallTimeoutExceptionToTimeout() throws Throwable {
+    AWSApiCallTimeoutException ex =
+        verifyExceptionClass(AWSApiCallTimeoutException.class,
+        translateException("test", "/",
+            ApiCallTimeoutException.builder()
+                .message("timeout")
+                .build()));
+    verifyCause(ApiCallTimeoutException.class, ex);
+  }
+
+  /**
+   * SDK ApiCallAttemptTimeoutException is translated to a
+   * {@link AWSApiCallTimeoutException}.
+   */
+  @Test
+  public void testApiCallAttemptTimeoutExceptionToTimeout() throws Throwable {
+    AWSApiCallTimeoutException ex =
+        verifyExceptionClass(AWSApiCallTimeoutException.class,
+        translateException("test", "/",
+            ApiCallAttemptTimeoutException.builder()
+                .message("timeout")
+                .build()));
+    verifyCause(ApiCallAttemptTimeoutException.class, ex);
+
+    // and confirm these timeouts are retried.
+    assertRetried(ex);
+  }
+
+  @Test
+  public void testChannelExtraction() throws Throwable {
+    verifyExceptionClass(HttpChannelEOFException.class,
+        maybeExtractChannelException("", "/",
+            new NoHttpResponseException("no response")));
+  }
+
+  @Test
+  public void testShadedChannelExtraction() throws Throwable {
+    verifyExceptionClass(HttpChannelEOFException.class,
+        maybeExtractChannelException("", "/",
+            shadedNoHttpResponse()));
+  }
+
+  @Test
+  public void testOpenSSLErrorChannelExtraction() throws Throwable {
+    verifyExceptionClass(HttpChannelEOFException.class,
+        maybeExtractChannelException("", "/",
+            sdkClientException(WFOPENSSL_0035_STREAM_IS_CLOSED, null)));
+  }
+
+  /**
+   * Test handling of the unshaded HTTP client exception.
+   */
+  @Test
+  public void testRawNoHttpResponseExceptionRetry() throws Throwable {
+    assertRetried(
+        verifyExceptionClass(HttpChannelEOFException.class,
+            translateException("test", "/",
+                sdkClientException(new NoHttpResponseException("no response")))));
+  }
+
+  /**
+   * Test handling of the shaded HTTP client exception.
+   */
+  @Test
+  public void testShadedNoHttpResponseExceptionRetry() throws Throwable {
+    assertRetried(
+        verifyExceptionClass(HttpChannelEOFException.class,
+            translateException("test", "/",
+                sdkClientException(shadedNoHttpResponse()))));
+  }
+
+  @Test
+  public void testOpenSSLErrorRetry() throws Throwable {
+    assertRetried(
+        verifyExceptionClass(HttpChannelEOFException.class,
+            translateException("test", "/",
+                sdkClientException(WFOPENSSL_0035_STREAM_IS_CLOSED, null))));
+  }
+
+  /**
+   * Create a shaded NoHttpResponseException.
+   * @return an exception.
+   */
+  private static Exception shadedNoHttpResponse() {
+    return new software.amazon.awssdk.thirdparty.org.apache.http.NoHttpResponseException("shaded");
+  }
+
+  /**
+   * Assert that an exception is retried.
+   * @param ex exception
+   * @throws Exception failure during retry policy evaluation.
+   */
+  private void assertRetried(final Exception ex) throws Exception {
+    assertRetryOutcome(ex, RetryPolicy.RetryAction.RetryDecision.RETRY);
+  }
+
+  /**
+   * Assert that the retry policy is as expected for a given exception.
+   * @param ex exception
+   * @param decision expected decision
+   * @throws Exception failure during retry policy evaluation.
+   */
+  private void assertRetryOutcome(
+      final Exception ex,
+      final RetryPolicy.RetryAction.RetryDecision decision) throws Exception {
+    Assertions.assertThat(retryPolicy.shouldRetry(ex, 0, 0, true).action)
+        .describedAs("retry policy for exception %s", ex)
+        .isEqualTo(decision);
   }
 
 }

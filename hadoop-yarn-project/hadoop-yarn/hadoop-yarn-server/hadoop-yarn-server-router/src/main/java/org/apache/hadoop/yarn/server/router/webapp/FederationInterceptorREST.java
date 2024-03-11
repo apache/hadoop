@@ -341,6 +341,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
     // Get homeSubCluster By appId
     SubClusterInfo subClusterInfo = getHomeSubClusterInfoByAppId(appId);
+    LOG.info("appId = {} : subClusterInfo = {}.", appId, subClusterInfo.getSubClusterId());
     return getOrCreateInterceptorForSubCluster(subClusterInfo);
   }
 
@@ -827,7 +828,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     });
 
     if (apps.getApps().isEmpty()) {
-      return null;
+      return new AppsInfo();
     }
 
     // Merge all the application reports got from all the available YARN RMs
@@ -1135,7 +1136,7 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
     } catch (YarnException | IllegalArgumentException e) {
       LOG.error("getHomeSubClusterInfoByAppId error, applicationId = {}.", appId, e);
     }
-    return null;
+    return new AppState();
   }
 
   @Override
@@ -3371,17 +3372,19 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
         }
 
         Exception exception = result.getException();
-
-        // If allowPartialResult=false, it means that if an exception occurs in a subCluster,
-        // an exception will be thrown directly.
-        if (!allowPartialResult && exception != null) {
+        if (exception != null) {
           throw exception;
         }
       } catch (Throwable e) {
         String subClusterId = subClusterInfo != null ?
             subClusterInfo.getSubClusterId().getId() : "UNKNOWN";
         LOG.error("SubCluster {} failed to {} report.", subClusterId, request.getMethodName(), e);
-        throw new YarnRuntimeException(e.getCause().getMessage(), e);
+        // If allowPartialResult=false, it means that if an exception occurs in a subCluster,
+        // an exception will be thrown directly.
+        if (!allowPartialResult) {
+          throw new YarnException("SubCluster " + subClusterId +
+              " failed to " + request.getMethodName() + " report.", e);
+        }
       }
     }
 

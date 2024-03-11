@@ -88,18 +88,22 @@ class NodesPage extends RmView {
             .th(".allocationTags", "Allocation Tags")
             .th(".mem", "Mem Used")
             .th(".mem", "Mem Avail")
+            .th(".mem", "Mem Total")
             .th(".mem", "Phys Mem Used %")
             .th(".vcores", "VCores Used")
             .th(".vcores", "VCores Avail")
+            .th(".vcores", "VCores Total")
             .th(".vcores", "Phys VCores Used %");
       } else {
         trbody.th(".containers", "Running Containers (G)")
             .th(".allocationTags", "Allocation Tags")
             .th(".mem", "Mem Used (G)")
             .th(".mem", "Mem Avail (G)")
+            .th(".mem", "Mem Total")
             .th(".mem", "Phys Mem Used %")
             .th(".vcores", "VCores Used (G)")
             .th(".vcores", "VCores Avail (G)")
+            .th(".vcores", "VCores Total")
             .th(".vcores", "Phys VCores Used %")
             .th(".containers", "Running Containers (O)")
             .th(".mem", "Mem Used (O)")
@@ -175,6 +179,8 @@ class NodesPage extends RmView {
         NodeInfo info = new NodeInfo(ni, sched);
         int usedMemory = (int) info.getUsedMemory();
         int availableMemory = (int) info.getAvailableMemory();
+        long totalMemory = info.getTotalResource().getMemorySize();
+        int totalVcore = info.getTotalResource().getvCores();
         nodeTableData.append("[\"")
             .append(StringUtils.join(",", info.getNodeLabels())).append("\",\"")
             .append(info.getRack()).append("\",\"").append(info.getState())
@@ -198,12 +204,16 @@ class NodesPage extends RmView {
             .append("\",\"").append("<br title='")
             .append(String.valueOf(availableMemory)).append("'>")
             .append(StringUtils.byteDesc(availableMemory * BYTES_IN_MB))
+            .append("\",\"").append("<br title='").append(String.valueOf(totalMemory))
+            .append("'>").append(StringUtils.byteDesc(totalMemory * BYTES_IN_MB))
             .append("\",\"")
             .append(String.valueOf((int) info.getMemUtilization()))
             .append("\",\"")
             .append(String.valueOf(info.getUsedVirtualCores()))
             .append("\",\"")
             .append(String.valueOf(info.getAvailableVirtualCores()))
+            .append("\",\"")
+            .append(String.valueOf(totalVcore))
             .append("\",\"")
             .append(String.valueOf((int) info.getVcoreUtilization()))
             .append("\",\"");

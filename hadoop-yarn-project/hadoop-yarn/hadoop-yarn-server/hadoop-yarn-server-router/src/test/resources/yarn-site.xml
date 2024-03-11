@@ -47,4 +47,8 @@
     <name>yarn.resourcemanager.cluster-id</name>
     <value>local-cluster</value>
   </property>
+  <property>
+    <name>yarn.router.interceptor.allow-partial-result.enable</name>
+    <value>true</value>
+  </property>
 </configuration>

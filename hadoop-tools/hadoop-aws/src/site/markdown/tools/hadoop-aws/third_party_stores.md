@@ -41,9 +41,18 @@ The features which may be unavailable include:
 * List API to use (`fs.s3a.list.version = 1`)
 * Bucket lifecycle rules to clean up pending uploads.
 
-## Configuring s3a to connect to a third party store
+### Disabling Change Detection
 
+The (default) etag-based change detection logic expects stores to provide an Etag header in HEAD/GET requests,
+and to support it as a precondition in subsequent GET and COPY calls.
+If a store does not do this, disable the checks.
 
+```xml
+<property>
+  <name>fs.s3a.change.detection.mode</name>
+  <value>none</value>
+</property>
+```
 ## Connecting to a third party object store over HTTPS
 
 The core setting for a third party store is to change the endpoint in `fs.s3a.endpoint`.
@@ -416,11 +425,6 @@ this makes renaming and deleting significantly slower.
 
   <property>
     <name>fs.s3a.bucket.gcs-container.multiobjectdelete.enable</name>
-    <value>false</value>
-  </property>
-
-  <property>
-    <name>fs.s3a.bucket.gcs-container.select.enabled</name>
     <value>false</value>
   </property>
 

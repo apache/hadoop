@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.w
 import java.util.List;
 
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSParentQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSQueue;
 
@@ -34,13 +35,14 @@ public class WeightToWeightConverter
     List<FSQueue> children = queue.getChildQueues();
 
     if (queue instanceof FSParentQueue || !children.isEmpty()) {
+      QueuePath queuePath = new QueuePath(queue.getName());
       if (queue.getName().equals(ROOT_QUEUE)) {
-        csConfig.setNonLabeledQueueWeight(queue.getName(), queue.getWeight());
+        csConfig.setNonLabeledQueueWeight(queuePath, queue.getWeight());
       }
 
       children.forEach(fsQueue -> csConfig.setNonLabeledQueueWeight(
-          fsQueue.getName(), fsQueue.getWeight()));
-      csConfig.setAutoQueueCreationV2Enabled(queue.getName(), true);
+          new QueuePath(fsQueue.getName()), fsQueue.getWeight()));
+      csConfig.setAutoQueueCreationV2Enabled(queuePath, true);
     }
   }
 }

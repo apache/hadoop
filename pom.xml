@@ -18,7 +18,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-main</artifactId>
-  <version>3.4.0-SNAPSHOT</version>
+  <version>3.5.0-SNAPSHOT</version>
   <description>Apache Hadoop Main</description>
   <name>Apache Hadoop Main</name>
   <packaging>pom</packaging>
@@ -80,7 +80,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
 
   <properties>
     <!-- required as child projects with different version can't use ${project.version} -->
-    <hadoop.version>3.4.0-SNAPSHOT</hadoop.version>
+    <hadoop.version>3.5.0-SNAPSHOT</hadoop.version>
 
     <distMgmtSnapshotsId>apache.snapshots.https</distMgmtSnapshotsId>
     <distMgmtSnapshotsName>Apache Development Snapshot Repository</distMgmtSnapshotsName>
@@ -118,7 +118,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
     <spotbugs-maven-plugin.version>4.2.0</spotbugs-maven-plugin.version>
     <jsonschema2pojo-maven-plugin.version>1.1.1</jsonschema2pojo-maven-plugin.version>
     <maven-compiler-plugin.version>3.10.1</maven-compiler-plugin.version>
-    <cyclonedx.version>2.7.6</cyclonedx.version>
+    <cyclonedx.version>2.7.10</cyclonedx.version>
 
     <shell-executable>bash</shell-executable>
 
@@ -223,6 +223,14 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
                     <bannedImports>
                       <bannedImport>org.apache.hadoop.thirdparty.com.google.common.io.BaseEncoding</bannedImport>
                       <bannedImport>org.apache.hadoop.thirdparty.com.google.common.io.BaseEncoding.**</bannedImport>
+                    </bannedImports>
+                  </restrictImports>
+                  <restrictImports>
+                    <includeTestCode>true</includeTestCode>
+                    <reason>Use java.nio.charset.StandardCharsets rather than Guava provided Charsets</reason>
+                    <bannedImports>
+                      <bannedImport>org.apache.hadoop.thirdparty.com.google.common.base.Charsets</bannedImport>
+                      <bannedImport>org.apache.hadoop.thirdparty.com.google.common.base.Charsets.**</bannedImport>
                     </bannedImports>
                   </restrictImports>
                   <restrictImports>

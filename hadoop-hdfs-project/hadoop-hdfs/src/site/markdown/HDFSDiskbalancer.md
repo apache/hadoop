@@ -86,9 +86,9 @@ So, query command can help to get the current status of execute command.
 
 ### Query
 
-Query command gets the current status of the diskbalancer from a datanode.
+Query command gets the current status of the diskbalancer from specified node(s).
 
-`hdfs diskbalancer -query nodename.mycluster.com`
+`hdfs diskbalancer -query nodename1.mycluster.com,nodename2.mycluster.com,...`
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |

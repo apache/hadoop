@@ -378,7 +378,7 @@ public class DiskBalancerCLI extends Configured implements Tool {
     Option query = Option.builder().longOpt(QUERY)
         .hasArg()
         .desc("Queries the disk balancer " +
-            "status of a given datanode.")
+            "status of given datanode(s).")
         .build();
     getQueryOptions().addOption(query);
     opt.addOption(query);
@@ -387,7 +387,7 @@ public class DiskBalancerCLI extends Configured implements Tool {
     // added to global table.
     Option verbose = Option.builder().longOpt(VERBOSE)
         .desc("Prints details of the plan that is being executed " +
-            "on the node.")
+            "on the datanode(s).")
         .build();
     getQueryOptions().addOption(verbose);
   }
@@ -482,7 +482,7 @@ public class DiskBalancerCLI extends Configured implements Tool {
       }
 
       if (cmd.hasOption(DiskBalancerCLI.QUERY)) {
-        dbCmd = new QueryCommand(getConf());
+        dbCmd = new QueryCommand(getConf(), this.printStream);
       }
 
       if (cmd.hasOption(DiskBalancerCLI.CANCEL)) {

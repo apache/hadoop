@@ -519,6 +519,23 @@ public abstract class FSImageTestUtil {
     }
   }
 
+  public static void assertNNHasRollbackCheckpoints(MiniDFSCluster cluster,
+      int nnIdx, List<Integer> txids) {
+
+    for (File nameDir : getNameNodeCurrentDirs(cluster, nnIdx)) {
+      LOG.info("examining name dir with files: {}",
+                   Joiner.on(",").join(nameDir.listFiles()));
+      // Should have fsimage_N for the three checkpoints
+      LOG.info("Examining storage dir {} with contents: {}", nameDir,
+                   StringUtils.join(nameDir.listFiles(), ", "));
+      for (long checkpointTxId : txids) {
+        File image = new File(nameDir,
+            NNStorage.getRollbackImageFileName(checkpointTxId));
+        assertTrue("Expected non-empty " + image, image.length() > 0);
+      }
+    }
+  }
+
   public static List<File> getNameNodeCurrentDirs(MiniDFSCluster cluster, int nnIdx) {
     List<File> nameDirs = Lists.newArrayList();
     for (URI u : cluster.getNameDirs(nnIdx)) {

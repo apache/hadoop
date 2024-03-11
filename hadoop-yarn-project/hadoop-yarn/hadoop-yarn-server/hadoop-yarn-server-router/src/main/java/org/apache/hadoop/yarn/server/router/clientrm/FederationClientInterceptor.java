@@ -208,6 +208,7 @@ public class FederationClientInterceptor
   private final Clock clock = new MonotonicClock();
   private boolean returnPartialReport;
   private long submitIntervalTime;
+  private boolean allowPartialResult;
 
   @Override
   public void init(String userName) {
@@ -263,6 +264,10 @@ public class FederationClientInterceptor
     returnPartialReport = conf.getBoolean(
         YarnConfiguration.ROUTER_CLIENTRM_PARTIAL_RESULTS_ENABLED,
         YarnConfiguration.DEFAULT_ROUTER_CLIENTRM_PARTIAL_RESULTS_ENABLED);
+
+    allowPartialResult = conf.getBoolean(
+        YarnConfiguration.ROUTER_INTERCEPTOR_ALLOW_PARTIAL_RESULT_ENABLED,
+        YarnConfiguration.DEFAULT_ROUTER_INTERCEPTOR_ALLOW_PARTIAL_RESULT_ENABLED);
   }
 
   @Override
@@ -659,6 +664,13 @@ public class FederationClientInterceptor
     try {
       LOG.info("forceKillApplication {} on SubCluster {}.", applicationId, subClusterId);
       response = clientRMProxy.forceKillApplication(request);
+      // If kill home sub-cluster application is successful,
+      // we will try to kill the same application in other sub-clusters.
+      if (response != null) {
+        ClientMethod remoteMethod = new ClientMethod("forceKillApplication",
+            new Class[]{KillApplicationRequest.class}, new Object[]{request});
+        invokeConcurrent(remoteMethod, KillApplicationResponse.class, subClusterId);
+      }
     } catch (Exception e) {
       routerMetrics.incrAppsFailedKilled();
       String msg = "Unable to kill the application report.";
@@ -829,12 +841,24 @@ public class FederationClientInterceptor
     return RouterYarnClientUtils.merge(clusterMetrics);
   }
 
-  <R> Collection<R> invokeConcurrent(ClientMethod request, Class<R> clazz)
-      throws YarnException {
-
+  <R> Collection<R> invokeConcurrent(ClientMethod request, Class<R> clazz) throws YarnException {
     // Get Active SubClusters
     Map<SubClusterId, SubClusterInfo> subClusterInfo = federationFacade.getSubClusters(true);
     Collection<SubClusterId> subClusterIds = subClusterInfo.keySet();
+    return invokeConcurrent(request, clazz, subClusterIds);
+  }
+
+  <R> Collection<R> invokeConcurrent(ClientMethod request, Class<R> clazz,
+      SubClusterId homeSubclusterId) throws YarnException {
+    // Get Active SubClusters
+    Map<SubClusterId, SubClusterInfo> subClusterInfo = federationFacade.getSubClusters(true);
+    Collection<SubClusterId> subClusterIds = subClusterInfo.keySet();
+    subClusterIds.remove(homeSubclusterId);
+    return invokeConcurrent(request, clazz, subClusterIds);
+  }
+
+  <R> Collection<R> invokeConcurrent(ClientMethod request, Class<R> clazz,
+      Collection<SubClusterId> subClusterIds) throws YarnException {
 
     List<Callable<Pair<SubClusterId, Object>>> callables = new ArrayList<>();
     List<Future<Pair<SubClusterId, Object>>> futures = new ArrayList<>();
@@ -895,8 +919,10 @@ public class FederationClientInterceptor
     // All sub-clusters return results to be considered successful,
     // otherwise an exception will be thrown.
     if (exceptions != null && !exceptions.isEmpty()) {
-      throw new YarnException("invokeConcurrent Failed = " +
-          StringUtils.join(exceptions.values(), ","));
+      if (!allowPartialResult || exceptions.keySet().size() == subClusterIds.size()) {
+        throw new YarnException("invokeConcurrent Failed = " +
+            StringUtils.join(exceptions.values(), ","));
+      }
     }
 
     // return result
@@ -2349,5 +2375,10 @@ public class FederationClientInterceptor
   @VisibleForTesting
   public void setNumSubmitRetries(int numSubmitRetries) {
     this.numSubmitRetries = numSubmitRetries;
+  }
+
+  @VisibleForTesting
+  public void setAllowPartialResult(boolean allowPartialResult) {
+    this.allowPartialResult = allowPartialResult;
   }
 }
