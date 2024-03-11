@@ -275,11 +275,11 @@ abstract class StripeReader {
             DFSClient.LOG.warn(msg);
             continue;
           }
-          DFSClient.LOG.warn("Exception while reading from "
-              + currentBlock + " of " + dfsStripedInputStream.getSrc() + " from "
-              + currentNode, e);
-          throw e;
         }
+        DFSClient.LOG.warn("Exception while reading from "
+            + currentBlock + " of " + dfsStripedInputStream.getSrc() + " from "
+            + currentNode, e);
+        throw e;
       }
     }
     throw new IOException("Read request interrupted. " +
