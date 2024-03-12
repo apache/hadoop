@@ -110,7 +110,7 @@ public class DefaultS3ClientFactory extends Configured
    */
   @VisibleForTesting
   public static final String ERROR_ENDPOINT_WITH_FIPS =
-      "An endpoint cannot set when " + FIPS_ENDPOINT + " is true";
+      "Non central endpoint cannot be set when " + FIPS_ENDPOINT + " is true";
 
   @Override
   public S3Client createS3Client(
@@ -290,10 +290,11 @@ public class DefaultS3ClientFactory extends Configured
     builder.fipsEnabled(fipsEnabled);
 
     if (endpoint != null) {
-      checkArgument(!fipsEnabled,
-          "%s : %s", ERROR_ENDPOINT_WITH_FIPS, endpoint);
       boolean endpointEndsWithCentral =
           endpointStr.endsWith(CENTRAL_ENDPOINT);
+      checkArgument(!fipsEnabled || endpointEndsWithCentral, "%s : %s",
+          ERROR_ENDPOINT_WITH_FIPS,
+          endpoint);
 
       // No region was configured,
       // determine the region from the endpoint.

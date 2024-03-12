@@ -48,6 +48,7 @@ import static org.apache.hadoop.fs.s3a.Constants.ALLOW_REQUESTER_PAYS;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.CENTRAL_ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.ENDPOINT;
+import static org.apache.hadoop.fs.s3a.Constants.FIPS_ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.PATH_STYLE_ACCESS;
 import static org.apache.hadoop.fs.s3a.DefaultS3ClientFactory.ERROR_ENDPOINT_WITH_FIPS;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
@@ -156,6 +157,11 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
     S3Client client = createS3Client(conf, CENTRAL_ENDPOINT, null, US_EAST_2, false);
 
     expectInterceptorException(client);
+
+    client = createS3Client(conf, CENTRAL_ENDPOINT, null,
+        US_EAST_2, true);
+
+    expectInterceptorException(client);
   }
 
   @Test
@@ -168,8 +174,18 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
 
     expectInterceptorException(client);
 
+    client = createS3Client(conf, CENTRAL_ENDPOINT, US_WEST_2,
+        US_WEST_2, true);
+
+    expectInterceptorException(client);
+
     client = createS3Client(conf, CENTRAL_ENDPOINT, US_EAST_1,
         US_EAST_1, false);
+
+    expectInterceptorException(client);
+
+    client = createS3Client(conf, CENTRAL_ENDPOINT, US_EAST_1,
+        US_EAST_1, true);
 
     expectInterceptorException(client);
 
@@ -203,7 +219,7 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
     describe("Create a client with fips and an endpoint");
 
     intercept(IllegalArgumentException.class, ERROR_ENDPOINT_WITH_FIPS, () ->
-        createS3Client(getConfiguration(), CENTRAL_ENDPOINT, null, US_EAST_1, true));
+        createS3Client(getConfiguration(), US_WEST_2, null, US_EAST_1, true));
   }
 
   @Test
@@ -293,7 +309,8 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
         ENDPOINT,
         AWS_REGION,
         ALLOW_REQUESTER_PAYS,
-        KEY_REQUESTER_PAYS_FILE);
+        KEY_REQUESTER_PAYS_FILE,
+        FIPS_ENDPOINT);
 
     removeBaseAndBucketOverrides(
         DEFAULT_REQUESTER_PAYS_BUCKET_NAME,
@@ -301,20 +318,14 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
         ENDPOINT,
         AWS_REGION,
         ALLOW_REQUESTER_PAYS,
-        KEY_REQUESTER_PAYS_FILE);
+        KEY_REQUESTER_PAYS_FILE,
+        FIPS_ENDPOINT);
 
     newConf.set(ENDPOINT, CENTRAL_ENDPOINT);
     newConf.set(AWS_REGION, EU_WEST_1);
     newConf.setBoolean(ALLOW_REQUESTER_PAYS, true);
 
-    Path filePath = new Path(PublicDatasetTestUtils
-        .getRequesterPaysObject(newConf));
-    newFS = (S3AFileSystem) filePath.getFileSystem(newConf);
-
-    Assertions
-        .assertThat(newFS.exists(filePath))
-        .describedAs("Existence of path: " + filePath)
-        .isTrue();
+    assertRequesterPaysFileExistence(newConf);
   }
 
   @Test
@@ -329,7 +340,8 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
         ENDPOINT,
         AWS_REGION,
         ALLOW_REQUESTER_PAYS,
-        KEY_REQUESTER_PAYS_FILE);
+        KEY_REQUESTER_PAYS_FILE,
+        FIPS_ENDPOINT);
 
     removeBaseAndBucketOverrides(
         DEFAULT_REQUESTER_PAYS_BUCKET_NAME,
@@ -337,15 +349,59 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
         ENDPOINT,
         AWS_REGION,
         ALLOW_REQUESTER_PAYS,
-        KEY_REQUESTER_PAYS_FILE);
+        KEY_REQUESTER_PAYS_FILE,
+        FIPS_ENDPOINT);
 
     newConf.set(ENDPOINT, CENTRAL_ENDPOINT);
     newConf.set(AWS_REGION, US_WEST_2);
     newConf.setBoolean(ALLOW_REQUESTER_PAYS, true);
 
+    assertRequesterPaysFileExistence(newConf);
+  }
+
+  @Test
+  public void testCentralEndpointAndFipsForPublicBucket() throws Throwable {
+    describe("Access public bucket using central endpoint and region "
+        + "same as that of the public bucket with fips enabled");
+    final Configuration conf = getConfiguration();
+    final Configuration newConf = new Configuration(conf);
+
+    removeBaseAndBucketOverrides(
+        newConf,
+        ENDPOINT,
+        AWS_REGION,
+        ALLOW_REQUESTER_PAYS,
+        KEY_REQUESTER_PAYS_FILE,
+        FIPS_ENDPOINT);
+
+    removeBaseAndBucketOverrides(
+        DEFAULT_REQUESTER_PAYS_BUCKET_NAME,
+        newConf,
+        ENDPOINT,
+        AWS_REGION,
+        ALLOW_REQUESTER_PAYS,
+        KEY_REQUESTER_PAYS_FILE,
+        FIPS_ENDPOINT);
+
+    newConf.set(ENDPOINT, CENTRAL_ENDPOINT);
+    newConf.set(AWS_REGION, US_WEST_2);
+    newConf.setBoolean(ALLOW_REQUESTER_PAYS, true);
+    newConf.setBoolean(FIPS_ENDPOINT, true);
+
+    assertRequesterPaysFileExistence(newConf);
+  }
+
+  /**
+   * Assert that the file exists on the requester pays public bucket.
+   *
+   * @param conf the configuration object.
+   * @throws IOException if file system operations encounter errors.
+   */
+  private void assertRequesterPaysFileExistence(Configuration conf)
+      throws IOException {
     Path filePath = new Path(PublicDatasetTestUtils
-        .getRequesterPaysObject(newConf));
-    newFS = (S3AFileSystem) filePath.getFileSystem(newConf);
+        .getRequesterPaysObject(conf));
+    newFS = (S3AFileSystem) filePath.getFileSystem(conf);
 
     Assertions
         .assertThat(newFS.exists(filePath))
@@ -364,9 +420,33 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
     removeBaseAndBucketOverrides(
         newConf,
         ENDPOINT,
-        AWS_REGION);
+        AWS_REGION,
+        FIPS_ENDPOINT);
 
     newConf.set(ENDPOINT, CENTRAL_ENDPOINT);
+
+    newFS = new S3AFileSystem();
+    newFS.initialize(getFileSystem().getUri(), newConf);
+
+    assertOpsUsingNewFs();
+  }
+
+  @Test
+  public void testCentralEndpointAndNullRegionFipsWithCRUD() throws Throwable {
+    describe("Access the test bucket using central endpoint and"
+        + " null region and fips enabled, perform file system CRUD operations");
+    final Configuration conf = getConfiguration();
+
+    final Configuration newConf = new Configuration(conf);
+
+    removeBaseAndBucketOverrides(
+        newConf,
+        ENDPOINT,
+        AWS_REGION,
+        FIPS_ENDPOINT);
+
+    newConf.set(ENDPOINT, CENTRAL_ENDPOINT);
+    newConf.setBoolean(FIPS_ENDPOINT, true);
 
     newFS = new S3AFileSystem();
     newFS.initialize(getFileSystem().getUri(), newConf);
