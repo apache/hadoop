@@ -1353,8 +1353,14 @@ public class TestDFSAdmin {
           decommissioningNode1.getIpcPort();
       String node2Addr = decommissioningNode2.getIpAddr() + ":" +
           decommissioningNode2.getIpcPort();
-      assertTrue(outsForFinishReconf.get(0).contains(node1Addr)
-          && outsForFinishReconf.get(0).contains(node2Addr));
+      int finishedReconfCount = 0;
+      for (String outMessage : outsForFinishReconf) {
+        finishedReconfCount = outMessage.contains(node1Addr) ?
+            finishedReconfCount + 1 : finishedReconfCount + 0;
+        finishedReconfCount = outMessage.contains(node2Addr) ?
+            finishedReconfCount + 1 : finishedReconfCount + 0;
+      }
+      assertTrue(finishedReconfCount == 2);
     }
   }
 
