@@ -139,6 +139,7 @@ public class AbfsClient implements Closeable {
 
 
   private boolean renameResilience;
+  private TimerTask runningTimerTask;
 
   /**
    * logging the rename failure if metadata is in an incomplete state.
@@ -239,6 +240,8 @@ public class AbfsClient implements Closeable {
 
   @Override
   public void close() throws IOException {
+    runningTimerTask.cancel();
+    timer.purge();
     if (tokenProvider instanceof Closeable) {
       IOUtils.cleanupWithLogger(LOG,
           (Closeable) tokenProvider);
@@ -1763,6 +1766,7 @@ public class AbfsClient implements Closeable {
    */
   synchronized boolean timerOrchestrator(TimerFunctionality timerFunctionality,
       TimerTask timerTask) {
+    this.runningTimerTask = timerTask;
     switch (timerFunctionality) {
     case RESUME:
       if (isMetricCollectionStopped.get()) {
