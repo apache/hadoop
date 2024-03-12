@@ -2211,20 +2211,4 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       abfsCounters.incrementCounter(METADATA_INCOMPLETE_RENAME_FAILURES, 1);
     }
   }
-
-  /**
-   * Sends a metric using the provided TracingContext.
-   *
-   * @param tracingContextMetric The TracingContext used for sending the metric.
-   * @throws AzureBlobFileSystemException If an error occurs while sending the metric.
-   *
-   * <p>
-   * This method retrieves filesystem properties using the specified TracingContext. The metrics are sent
-   * via this call in the header x-ms-feclient-metrics. As part of next iteration this additional call will be removed.
-   * </p>
-   */
-  public void sendMetric(TracingContext tracingContextMetric)
-      throws AzureBlobFileSystemException {
-    getFilesystemProperties(tracingContextMetric);
-  }
 }

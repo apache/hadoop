@@ -67,9 +67,9 @@ public class AbfsCountersImpl implements AbfsCounters {
 
   private final IOStatisticsStore ioStatisticsStore;
 
-  private AtomicReference<AbfsBackoffMetrics> abfsBackoffMetrics = null;
+  private AbfsBackoffMetrics abfsBackoffMetrics = null;
 
-  private AtomicReference<AbfsReadFooterMetrics> abfsReadFooterMetrics = null;
+  private AbfsReadFooterMetrics abfsReadFooterMetrics = null;
 
   private AtomicLong lastExecutionTime = null;
 
@@ -135,19 +135,19 @@ public class AbfsCountersImpl implements AbfsCounters {
 
   @Override
   public void initializeMetrics(MetricFormat metricFormat) {
-    switch(metricFormat) {
-    case INTERNAL_BACKOFF_METRIC_FORMAT:
-      abfsBackoffMetrics = new AtomicReference<>(new AbfsBackoffMetrics());
-      break;
-    case INTERNAL_FOOTER_METRIC_FORMAT:
-      abfsReadFooterMetrics = new AtomicReference<>(new AbfsReadFooterMetrics());
-      break;
-    case INTERNAL_METRIC_FORMAT:
-      abfsBackoffMetrics = new AtomicReference<>(new AbfsBackoffMetrics());
-      abfsReadFooterMetrics = new AtomicReference<>(new AbfsReadFooterMetrics());
-      break;
-    default:
-      break;
+    switch (metricFormat) {
+      case INTERNAL_BACKOFF_METRIC_FORMAT:
+        abfsBackoffMetrics = new AbfsBackoffMetrics();
+        break;
+      case INTERNAL_FOOTER_METRIC_FORMAT:
+        abfsReadFooterMetrics = new AbfsReadFooterMetrics();
+        break;
+      case INTERNAL_METRIC_FORMAT:
+        abfsBackoffMetrics = new AbfsBackoffMetrics();
+        abfsReadFooterMetrics = new AbfsReadFooterMetrics();
+        break;
+      default:
+        break;
     }
   }
 
@@ -218,7 +218,7 @@ public class AbfsCountersImpl implements AbfsCounters {
 
   @Override
   public AbfsBackoffMetrics getAbfsBackoffMetrics() {
-    return abfsBackoffMetrics != null ? abfsBackoffMetrics.get() : null;
+    return abfsBackoffMetrics != null ? abfsBackoffMetrics : null;
   }
 
   @Override
@@ -228,7 +228,7 @@ public class AbfsCountersImpl implements AbfsCounters {
 
   @Override
   public AbfsReadFooterMetrics getAbfsReadFooterMetrics() {
-    return abfsReadFooterMetrics != null ? abfsReadFooterMetrics.get() : null;
+    return abfsReadFooterMetrics != null ? abfsReadFooterMetrics : null;
   }
 
   /**

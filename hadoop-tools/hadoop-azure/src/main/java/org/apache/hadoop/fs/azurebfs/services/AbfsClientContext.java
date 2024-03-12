@@ -53,7 +53,7 @@ public class AbfsClientContext {
     return abfsPerfTracker;
   }
 
-  public AbfsCounters getAbfsCounters() {
+  AbfsCounters getAbfsCounters() {
     return abfsCounters;
   }
 }

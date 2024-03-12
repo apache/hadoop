@@ -107,7 +107,7 @@ public enum AzureServiceErrorCode {
     return UNKNOWN;
   }
 
-  public static AzureServiceErrorCode getAzureServiceCode(int httpStatusCode, String errorCode, String errorMessage) {
+  public static AzureServiceErrorCode getAzureServiceCode(int httpStatusCode, String errorCode, final String errorMessage) {
     if (errorCode == null || errorCode.isEmpty() || httpStatusCode == UNKNOWN.httpStatusCode || errorMessage == null || errorMessage.isEmpty()) {
       return UNKNOWN;
     }

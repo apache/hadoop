@@ -19,13 +19,16 @@
 package org.apache.hadoop.fs.azurebfs;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL_INFO;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_READ_BUFFER_SIZE;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_WRITE_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_FORMAT;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_TRACINGMETRICHEADER_FORMAT;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MIN_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_KB;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_READ_BUFFER_SIZE;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
 import org.junit.Test;
 
@@ -34,7 +37,6 @@ import java.util.Random;
 import org.apache.hadoop.fs.azurebfs.services.AbfsReadFooterMetrics;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderFormat;
 import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
@@ -61,17 +63,15 @@ public class ITestAbfsReadFooterMetrics extends AbstractAbfsScaleTest {
   /**
    * Configures the AzureBlobFileSystem with the given buffer size.
    *
-   * @param fs         AzureBlobFileSystem instance.
    * @param bufferSize Buffer size to set for write and read operations.
    * @return AbfsConfiguration used for configuration.
    */
-  private AbfsConfiguration configureFileSystem(AzureBlobFileSystem fs, int bufferSize) {
-    final AbfsConfiguration abfsConfiguration = fs.getAbfsStore().getAbfsConfiguration();
-    abfsConfiguration.set(FS_AZURE_METRIC_FORMAT, String.valueOf(MetricFormat.INTERNAL_FOOTER_METRIC_FORMAT));
-    abfsConfiguration.set(FS_AZURE_TRACINGMETRICHEADER_FORMAT, String.valueOf(TracingHeaderFormat.INTERNAL_FOOTER_METRIC_FORMAT));
-    abfsConfiguration.setWriteBufferSize(bufferSize);
-    abfsConfiguration.setReadBufferSize(bufferSize);
-    return abfsConfiguration;
+  private Configuration getConfiguration(int bufferSize) {
+    final Configuration configuration = getRawConfiguration();
+    configuration.set(FS_AZURE_METRIC_FORMAT, String.valueOf(MetricFormat.INTERNAL_FOOTER_METRIC_FORMAT));
+    configuration.setInt(AZURE_READ_BUFFER_SIZE, bufferSize);
+    configuration.setInt(AZURE_WRITE_BUFFER_SIZE, bufferSize);
+    return configuration;
   }
 
   /**
@@ -109,9 +109,10 @@ public class ITestAbfsReadFooterMetrics extends AbstractAbfsScaleTest {
   @Test
   public void testReadFooterMetrics() throws Exception {
     // Initialize AzureBlobFileSystem and set buffer size for configuration.
-    final AzureBlobFileSystem fs = getFileSystem();
     int bufferSize = MIN_BUFFER_SIZE;
-    AbfsConfiguration abfsConfiguration = configureFileSystem(fs, bufferSize);
+    Configuration configuration = getConfiguration(bufferSize);
+    final AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(configuration);
+    AbfsConfiguration abfsConfiguration = fs.getAbfsStore().getAbfsConfiguration();
 
     // Generate random data to write to the test file.
     final byte[] b = new byte[2 * bufferSize];
@@ -212,10 +213,9 @@ public class ITestAbfsReadFooterMetrics extends AbstractAbfsScaleTest {
    */
   private void testReadWriteAndSeek(int fileSize, int bufferSize, Integer seek1, Integer seek2) throws Exception {
     // Create an AzureBlobFileSystem instance.
-    final AzureBlobFileSystem fs = getFileSystem();
-
-    // Configure the AzureBlobFileSystem.
-    final AbfsConfiguration abfsConfiguration = configureFileSystem(fs, bufferSize);
+    Configuration configuration = getConfiguration(bufferSize);
+    final AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(configuration);
+    AbfsConfiguration abfsConfiguration = fs.getAbfsStore().getAbfsConfiguration();
 
     // Generate random data to write to the test file.
     final byte[] b = new byte[fileSize];
@@ -327,12 +327,9 @@ public class ITestAbfsReadFooterMetrics extends AbstractAbfsScaleTest {
   public void testMetricWithIdlePeriod() throws Exception {
     // Set the buffer size for the test.
     int bufferSize = MIN_BUFFER_SIZE;
-
-    // Create an AzureBlobFileSystem instance.
-    final AzureBlobFileSystem fs = getFileSystem();
-
-    // Configure the AzureBlobFileSystem.
-    AbfsConfiguration abfsConfiguration = configureFileSystem(fs, bufferSize);
+    Configuration configuration = getConfiguration(bufferSize);
+    final AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(configuration);
+    AbfsConfiguration abfsConfiguration = fs.getAbfsStore().getAbfsConfiguration();
 
     // Generate random data to write to the test file.
     final byte[] b = new byte[2 * bufferSize];

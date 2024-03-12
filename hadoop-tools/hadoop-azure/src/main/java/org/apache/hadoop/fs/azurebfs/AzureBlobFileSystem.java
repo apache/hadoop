@@ -162,7 +162,6 @@ public class AzureBlobFileSystem extends FileSystem
 
   /** Storing full path uri for better logging. */
   private URI fullPathUri;
-  private AzureBlobFileSystem metricFs = null;
 
   @Override
   public void initialize(URI uri, Configuration configuration)
@@ -698,40 +697,6 @@ public class AzureBlobFileSystem extends FileSystem
     }
   }
 
-  /**
-   * Retrieves an instance of AzureBlobFileSystem configured for metric tracking.
-   * This method checks if an instance of AzureBlobFileSystem for metric tracking
-   * has already been created. If not, it initializes a new AzureBlobFileSystem
-   * using the provided metric configuration parameters, including the account key and URI.
-   * If the metric URI is not provided, or an exception occurs during initialization,
-   * the method returns null.
-   *
-   * @return An instance of AzureBlobFileSystem configured for metric tracking, or null if the metric URI is not provided or initialization fails.
-   * @throws IOException If an I/O error occurs during filesystem creation.
-   */
-  public AzureBlobFileSystem getMetricFilesystem() throws IOException {
-    if (metricFs == null) {
-      try {
-        Configuration metricConfig = abfsStore.getAbfsConfiguration().getRawConfiguration();
-        String metricAccountKey = metricConfig.get(FS_AZURE_METRIC_ACCOUNT_KEY);
-        final String abfsMetricUrl = metricConfig.get(FS_AZURE_METRIC_URI);
-        if (abfsMetricUrl == null) {
-          return null;
-        }
-        metricConfig.set(FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME, metricAccountKey);
-        metricConfig.set(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION, "false");
-        URI metricUri;
-        metricUri = new URI(FileSystemUriSchemes.ABFS_SCHEME, abfsMetricUrl, null, null, null);
-        metricFs = (AzureBlobFileSystem) FileSystem.newInstance(metricUri, metricConfig);
-      } catch (AzureBlobFileSystemException | URISyntaxException ex) {
-        throw new IOException(ex);
-      }
-    }
-    return metricFs;
-  }
-
-
-
   @Override
   public synchronized void close() throws IOException {
     if (isClosed) {
@@ -744,7 +709,10 @@ public class AzureBlobFileSystem extends FileSystem
         listener, abfsCounters.toString());
     try {
       getAbfsClient().getMetricCall(tracingMetricContext);
-    } catch (Exception e) {
+    } catch (IOException e) {
+      if (abfsStore.getAbfsConfiguration().getMetricFormat() != null) {
+        throw new IOException(e);
+      }
     }
     // does all the delete-on-exit calls, and may be slow.
     super.close();
@@ -760,10 +728,6 @@ public class AzureBlobFileSystem extends FileSystem
     if (LOG.isDebugEnabled()) {
       LOG.debug("Closing Abfs: {}", toString());
     }
-  }
-
-  public void sendMetric(TracingContext tracingContextMetric) throws AzureBlobFileSystemException {
-     abfsStore.sendMetric(tracingContextMetric);
   }
 
   @Override

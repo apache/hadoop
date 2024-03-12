@@ -867,14 +867,6 @@ public class AbfsConfiguration{
     return getEnum(FS_AZURE_TRACINGHEADER_FORMAT, TracingHeaderFormat.ALL_ID_FORMAT);
   }
 
-  /**
-   * Enum config to allow user to pick format of x-ms-client-request-id header
-   * @return tracingContextFormat config if valid, else default ALL_ID_FORMAT
-   */
-  public TracingHeaderFormat getTracingMetricHeaderFormat() {
-    return getEnum(FS_AZURE_TRACINGMETRICHEADER_FORMAT, TracingHeaderFormat.EMPTY);
-  }
-
   public MetricFormat getMetricFormat() {
     return getEnum(FS_AZURE_METRIC_FORMAT, MetricFormat.EMPTY);
   }

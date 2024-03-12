@@ -72,7 +72,7 @@ public final class FileSystemConfigurations {
   public static final boolean DEFAULT_AZURE_ENABLE_SMALL_WRITE_OPTIMIZATION = false;
   public static final int DEFAULT_READ_BUFFER_SIZE = 4 * ONE_MB;  // 4 MB
   public static final boolean DEFAULT_READ_SMALL_FILES_COMPLETELY = false;
-  public static final boolean DEFAULT_OPTIMIZE_FOOTER_READ = false;
+  public static final boolean DEFAULT_OPTIMIZE_FOOTER_READ = true;
   public static final int DEFAULT_FOOTER_READ_BUFFER_SIZE = 512 * ONE_KB;
   public static final boolean DEFAULT_ALWAYS_READ_BUFFER_SIZE = false;
   public static final int DEFAULT_READ_AHEAD_BLOCK_SIZE = 4 * ONE_MB;
@@ -108,8 +108,8 @@ public final class FileSystemConfigurations {
   public static final boolean DEFAULT_ENABLE_FLUSH = true;
   public static final boolean DEFAULT_DISABLE_OUTPUTSTREAM_FLUSH = true;
   public static final boolean DEFAULT_ENABLE_AUTOTHROTTLING = true;
-  public static final int DEFAULT_METRIC_IDLE_TIMEOUT_MS = 60 * 1000;
-  public static final int DEFAULT_METRIC_ANALYSIS_TIMEOUT_MS = 60 * 1000;
+  public static final int DEFAULT_METRIC_IDLE_TIMEOUT_MS = 60_000;
+  public static final int DEFAULT_METRIC_ANALYSIS_TIMEOUT_MS = 60_000;
   public static final boolean DEFAULT_FS_AZURE_ACCOUNT_LEVEL_THROTTLING_ENABLED = true;
   public static final int DEFAULT_ACCOUNT_OPERATION_IDLE_TIMEOUT_MS = 60_000;
   public static final int DEFAULT_ANALYSIS_PERIOD_MS = 10_000;

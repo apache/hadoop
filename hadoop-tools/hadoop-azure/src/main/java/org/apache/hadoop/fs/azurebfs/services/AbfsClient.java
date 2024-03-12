@@ -42,7 +42,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsInvalidChecksumException;
@@ -125,11 +124,10 @@ public class AbfsClient implements Closeable {
   private SASTokenProvider sasTokenProvider;
   private final AbfsCounters abfsCounters;
   private final Timer timer;
-  private String abfsMetricUrl = null;
-  private boolean isMetricConfigurationChecked = false;
-  private boolean metricCollectionEnabled = false;
+  private final String abfsMetricUrl;
+  private boolean isMetricCollectionEnabled = false;
   private final MetricFormat metricFormat;
-  private final AtomicBoolean metricCollectionStopped;
+  private final AtomicBoolean isMetricCollectionStopped;
   private final int metricAnalysisPeriod;
   private final int metricIdlePeriod;
   private EncryptionContextProvider encryptionContextProvider = null;
@@ -200,20 +198,21 @@ public class AbfsClient implements Closeable {
     this.executorService = MoreExecutors.listeningDecorator(
         HadoopExecutors.newScheduledThreadPool(this.abfsConfiguration.getNumLeaseThreads(), tf));
     this.metricFormat = abfsConfiguration.getMetricFormat();
-    this.metricCollectionStopped = new AtomicBoolean(false);
+    this.isMetricCollectionStopped = new AtomicBoolean(false);
     this.metricAnalysisPeriod = abfsConfiguration.getMetricAnalysisTimeout();
     this.metricIdlePeriod = abfsConfiguration.getMetricIdleTimeout();
     if (!metricFormat.toString().equals("")) {
-      metricCollectionEnabled = true;
+      isMetricCollectionEnabled = true;
       abfsCounters.initializeMetrics(metricFormat);
     }
     this.timer = new Timer(
         "abfs-timer-client", true);
-    if (metricCollectionEnabled) {
+    if (isMetricCollectionEnabled) {
       timer.schedule(new AbfsClient.TimerTaskImpl(),
           metricIdlePeriod,
           metricIdlePeriod);
     }
+    this.abfsMetricUrl = abfsConfiguration.get(FS_AZURE_METRIC_URI);
   }
 
   public AbfsClient(final URL baseUrl, final SharedKeyCredentials sharedKeyCredentials,
@@ -1469,7 +1468,7 @@ public class AbfsClient implements Closeable {
     try {
       url = new URL(sb.toString());
     } catch (MalformedURLException ex) {
-      throw new InvalidUriException(sb.toString());
+      throw new InvalidUriException("URL is malformed" + sb.toString());
     }
     return url;
   }
@@ -1766,17 +1765,17 @@ public class AbfsClient implements Closeable {
       TimerTask timerTask) {
     switch (timerFunctionality) {
     case RESUME:
-      if (metricCollectionStopped.get()) {
+      if (isMetricCollectionStopped.get()) {
         resumeTimer();
       }
       break;
     case SUSPEND:
       long now = System.currentTimeMillis();
       long lastExecutionTime = abfsCounters.getLastExecutionTime().get();
-      if (metricCollectionEnabled && (now - lastExecutionTime >= metricAnalysisPeriod)) {
+      if (isMetricCollectionEnabled && (now - lastExecutionTime >= metricAnalysisPeriod)) {
         timerTask.cancel();
         timer.purge();
-        metricCollectionStopped.set(true);
+        isMetricCollectionStopped.set(true);
         return true;
       }
       break;
@@ -1787,26 +1786,10 @@ public class AbfsClient implements Closeable {
   }
 
   private void resumeTimer() {
-    metricCollectionStopped.set(false);
+    isMetricCollectionStopped.set(false);
     timer.schedule(new TimerTaskImpl(),
         metricIdlePeriod,
         metricIdlePeriod);
-  }
-
-  /**
-   * Retrieves the metric URL for the Azure Blob FileSystem (ABFS) instance. If the metric URL is not
-   * already set and metric configuration has not been checked, it checks the configuration settings
-   * to fetch the metric URL.
-   *
-   * @return The metric URL for ABFS.
-   */
-  private String getMetricUrl() {
-    if (abfsMetricUrl == null && !isMetricConfigurationChecked) {
-      Configuration metricConfig = getAbfsConfiguration().getRawConfiguration();
-      abfsMetricUrl = metricConfig.get(FS_AZURE_METRIC_URI);
-      isMetricConfigurationChecked = true;
-    }
-    return abfsMetricUrl;
   }
 
   /**
@@ -1821,7 +1804,7 @@ public class AbfsClient implements Closeable {
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE, FILESYSTEM);
 
-    final URL url = createRequestUrl(new URL(getMetricUrl()), EMPTY_STRING, abfsUriQueryBuilder.toString());
+    final URL url = createRequestUrl(new URL(abfsMetricUrl), EMPTY_STRING, abfsUriQueryBuilder.toString());
 
     final AbfsRestOperation op = getAbfsRestOperation(
             AbfsRestOperationType.GetFileSystemProperties,

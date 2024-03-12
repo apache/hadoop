@@ -132,6 +132,7 @@ public class TracingContext {
     if (originalTracingContext.listener != null) {
       this.listener = originalTracingContext.listener.getClone();
     }
+    this.metricResults = originalTracingContext.metricResults;
   }
   public static String validateClientCorrelationID(String clientCorrelationID) {
     if ((clientCorrelationID.length() > MAX_CLIENT_CORRELATION_ID_LENGTH)

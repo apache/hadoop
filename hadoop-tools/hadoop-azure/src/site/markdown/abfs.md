@@ -749,14 +749,14 @@ corresponding to the following enum options.
   `ALL_ID_FORMAT` : all IDs (default)
   `TWO_ID_FORMAT` : clientCorrelationId:clientRequestId
 
-Config `fs.azure.tracingmetricheader.format` provides an option to select the
+Config `fs.azure.metric.format` provides an option to select the
 format
-of IDs included in the `request-id-header` for metrics. This config accepts a
+of IDs included in the `header` for metrics. This config accepts a
 String value
 corresponding to the following enum options.
-`INTERNAL_METRIC_FORMAT` : all IDs + backoff + footer metrics
-`INTERNAL_BACKOFF_METRIC_FORMAT` : all IDs (default) + backoff metrics
-`INTERNAL_FOOTER_METRIC_FORMAT` : all IDs (default) + footer metrics
+`INTERNAL_METRIC_FORMAT` : backoff + footer metrics
+`INTERNAL_BACKOFF_METRIC_FORMAT` : backoff metrics
+`INTERNAL_FOOTER_METRIC_FORMAT` : footer metrics
 `EMPTY` : default
 
 ### <a name="flushconfigoptions"></a> Flush Options
@@ -1064,17 +1064,8 @@ settings to track their end-to-end latency.
 
 ### <a name="drivermetricoptions"></a> Driver Metric Options
 
-`fs.azure.metric.account.name`: This configuration parameter is used to specify
-the name of the account which will be used to push a failed(404) GetPathStatus
-request to the
-backend. We can configure a separate account to push metrics to the store or use
-the same for as the existing account on which other requests are made.
-
-`fs.azure.metric.account.key`: This is the access key for the storage account
-used for pushing metrics to the store.
-
 `fs.azure.metric.uri`: This configuration provides the uri in the format of
-containername@accountname.dfs.core.windows.net.
+https://<accountname>.dfs.core.windows.net/<containername>.
 This should be a part of the config in order to prevent extra calls to create
 the filesystem. We use an existing filsystem to push the metrics.
 
