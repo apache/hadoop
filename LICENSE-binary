@@ -499,7 +499,7 @@ org.slf4j:slf4j-reload4j:1.7.36
 CDDL 1.1 + GPLv2 with classpath exception
 -----------------------------------------
 
-com.github.pjfanning:jersey-json:1.20
+com.github.pjfanning:jersey-json:1.22.0
 com.sun.jersey:jersey-client:1.19.4
 com.sun.jersey:jersey-core:1.19.4
 com.sun.jersey:jersey-guice:1.19.4
