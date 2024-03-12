@@ -415,7 +415,7 @@ public class AbfsHttpOperation extends HttpOperation {
   }
 
   @VisibleForTesting
-  Boolean getConnectionDisconnectedOnError() {
+  boolean getConnectionDisconnectedOnError() {
     return connectionDisconnectedOnError;
   }
 

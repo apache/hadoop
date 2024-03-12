@@ -412,4 +412,6 @@ public abstract class HttpOperation implements AbfsPerfLoggable {
   abstract Map<String, List<String>> getRequestProperties();
 
   abstract String getRequestProperty(String headerName);
+
+  abstract boolean getConnectionDisconnectedOnError();
 }

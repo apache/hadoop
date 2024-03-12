@@ -327,10 +327,13 @@ public class AbfsRestOperation {
       AbfsIoUtils.dumpHeadersToDebugLog("Request Headers",
           httpOperation.getRequestProperties());
       intercept.sendingRequest(operationType, abfsCounters);
-      if((httpOperation instanceof AbfsHttpOperation && hasRequestBody) || httpOperation instanceof AbfsAHCHttpOperation) {
+      if ((httpOperation instanceof AbfsHttpOperation && hasRequestBody)
+          || httpOperation instanceof AbfsAHCHttpOperation) {
         httpOperation.sendRequest(buffer, bufferOffset, bufferLength);
-        incrementCounter(AbfsStatistic.SEND_REQUESTS, 1);
-        incrementCounter(AbfsStatistic.BYTES_SENT, bufferLength);
+        if (hasRequestBody) {
+          incrementCounter(AbfsStatistic.SEND_REQUESTS, 1);
+          incrementCounter(AbfsStatistic.BYTES_SENT, bufferLength);
+        }
       }
 
       if(httpOperation instanceof AbfsHttpOperation) {
@@ -348,7 +351,7 @@ public class AbfsRestOperation {
       }
     } catch (UnknownHostException ex) {
       String hostname = null;
-      hostname = url.getHost();
+      hostname = httpOperation.getHost();
       failureReason = RetryReason.getAbbreviation(ex, null, null);
       retryPolicy = client.getRetryPolicy(failureReason);
       LOG.warn("Unknown host name: {}. Retrying to resolve the host name...",
@@ -429,7 +432,7 @@ public class AbfsRestOperation {
         break;
       case SAS:
         // do nothing; the SAS token should already be appended to the query string
-//        httpOperation.setMaskForSAS(); //mask sig/oid from url for logs
+        httpOperation.setMaskForSAS(); //mask sig/oid from url for logs
         break;
       case SharedKey:
       default:

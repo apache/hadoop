@@ -63,6 +63,8 @@ public class AbfsAHCHttpOperation extends HttpOperation {
 
   private final AbfsRestOperationType abfsRestOperationType;
 
+  private boolean connectionDisconnectedOnError = false;
+
   private void setAbfsApacheHttpClient(final AbfsConfiguration abfsConfiguration,
       final String clientId) {
     AbfsApacheHttpClient client = abfsApacheHttpClientMap.get(clientId);
@@ -193,6 +195,7 @@ public class AbfsAHCHttpOperation extends HttpOperation {
         LOG.debug(
             "Getting output stream failed with expect header enabled, returning back ",
             ex);
+        connectionDisconnectedOnError = true;
         httpResponse = ex.getHttpResponse();
       }
 
@@ -339,6 +342,11 @@ public class AbfsAHCHttpOperation extends HttpOperation {
       }
     }
     return "";
+  }
+
+  @Override
+  boolean getConnectionDisconnectedOnError() {
+    return connectionDisconnectedOnError;
   }
 
   public String getClientRequestId() {
