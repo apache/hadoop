@@ -248,7 +248,7 @@ public class BootstrapStandby implements Tool, Configurable {
     }
 
     // download the fsimage from active namenode
-    int download = downloadImage(storage, proxy, proxyInfo);
+    int download = downloadImage(storage, proxy, proxyInfo, isRollingUpgrade);
     if (download != 0) {
       return download;
     }
@@ -351,12 +351,32 @@ public class BootstrapStandby implements Tool, Configurable {
     }
   }
 
-  private int downloadImage(NNStorage storage, NamenodeProtocol proxy, RemoteNameNodeInfo proxyInfo)
+  private int downloadImage(NNStorage storage, NamenodeProtocol proxy, RemoteNameNodeInfo proxyInfo,
+        boolean isRollingUpgrade)
       throws IOException {
     // Load the newly formatted image, using all of the directories
     // (including shared edits)
     final long imageTxId = proxy.getMostRecentCheckpointTxId();
     final long curTxId = proxy.getTransactionID();
+
+    if (isRollingUpgrade) {
+      final long rollbackTxId =
+          proxy.getMostRecentNameNodeFileTxId(NameNodeFile.IMAGE_ROLLBACK);
+      assert rollbackTxId != HdfsServerConstants.INVALID_TXID :
+          "Expected a valid TXID for fsimage_rollback file";
+      FSImage rollbackImage = new FSImage(conf);
+      try {
+        rollbackImage.getStorage().setStorageInfo(storage);
+        MD5Hash hash = TransferFsImage.downloadImageToStorage(
+            proxyInfo.getHttpAddress(), rollbackTxId, storage, true, true);
+        rollbackImage.saveDigestAndRenameCheckpointImage(
+            NameNodeFile.IMAGE_ROLLBACK, rollbackTxId, hash);
+      } catch (IOException ioe) {
+        throw ioe;
+      } finally {
+        rollbackImage.close();
+      }
+    }
     FSImage image = new FSImage(conf);
     try {
       image.getStorage().setStorageInfo(storage);
