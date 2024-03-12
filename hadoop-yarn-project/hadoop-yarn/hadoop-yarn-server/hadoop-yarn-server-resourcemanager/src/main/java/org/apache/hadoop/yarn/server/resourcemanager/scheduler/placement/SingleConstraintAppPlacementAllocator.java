@@ -309,6 +309,8 @@ public class SingleConstraintAppPlacementAllocator<N extends SchedulerNode>
     // Deduct pending #allocations by 1
     ResourceSizing sizing = schedulingRequest.getResourceSizing();
     sizing.setNumAllocations(sizing.getNumAllocations() - 1);
+
+    appSchedulingInfo.decPendingResource(targetNodePartition, sizing.getResources());
   }
 
   @Override
