@@ -51,7 +51,7 @@ public class AbfsAHCHttpOperation extends HttpOperation {
 
   private static final Logger LOG = LoggerFactory.getLogger(AbfsAHCHttpOperation.class);
 
-  private static Map<String, AbfsApacheHttpClient> abfsApacheHttpClientMap = new HashMap<>();
+  private static final Map<String, AbfsApacheHttpClient> abfsApacheHttpClientMap = new HashMap<>();
 
   private AbfsApacheHttpClient abfsApacheHttpClient;
 
@@ -63,11 +63,19 @@ public class AbfsAHCHttpOperation extends HttpOperation {
 
   private final AbfsRestOperationType abfsRestOperationType;
 
-  private synchronized void setAbfsApacheHttpClient(final AbfsConfiguration abfsConfiguration, final String clientId) {
+  private void setAbfsApacheHttpClient(final AbfsConfiguration abfsConfiguration,
+      final String clientId) {
     AbfsApacheHttpClient client = abfsApacheHttpClientMap.get(clientId);
-    if(client == null) {
-      client = new AbfsApacheHttpClient(DelegatingSSLSocketFactory.getDefaultFactory(), abfsConfiguration);
-      abfsApacheHttpClientMap.put(clientId, client);
+    if (client == null) {
+      synchronized (abfsApacheHttpClientMap) {
+        client = abfsApacheHttpClientMap.get(clientId);
+        if (client == null) {
+          client = new AbfsApacheHttpClient(
+              DelegatingSSLSocketFactory.getDefaultFactory(),
+              abfsConfiguration);
+          abfsApacheHttpClientMap.put(clientId, client);
+        }
+      }
     }
     abfsApacheHttpClient = client;
   }

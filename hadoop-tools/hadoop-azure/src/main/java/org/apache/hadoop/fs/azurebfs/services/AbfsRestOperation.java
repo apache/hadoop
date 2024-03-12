@@ -305,7 +305,7 @@ public class AbfsRestOperation {
    */
   private boolean executeHttpOperation(final int retryCount,
     TracingContext tracingContext) throws AzureBlobFileSystemException {
-    HttpOperation httpOperation;
+    final HttpOperation httpOperation;
     boolean wasIOExceptionThrown = false;
 
     try {
@@ -324,18 +324,14 @@ public class AbfsRestOperation {
 
     try {
       // dump the headers
-//      AbfsIoUtils.dumpHeadersToDebugLog("Request Headers",
-//          httpOperation.getConnection().getRequestProperties());
+      AbfsIoUtils.dumpHeadersToDebugLog("Request Headers",
+          httpOperation.getRequestProperties());
       intercept.sendingRequest(operationType, abfsCounters);
       if((httpOperation instanceof AbfsHttpOperation && hasRequestBody) || httpOperation instanceof AbfsAHCHttpOperation) {
         httpOperation.sendRequest(buffer, bufferOffset, bufferLength);
+        incrementCounter(AbfsStatistic.SEND_REQUESTS, 1);
+        incrementCounter(AbfsStatistic.BYTES_SENT, bufferLength);
       }
-//      if (hasRequestBody) {
-//        // HttpUrlConnection requires
-//        httpOperation.sendRequest(buffer, bufferOffset, bufferLength);
-//        incrementCounter(AbfsStatistic.SEND_REQUESTS, 1);
-//        incrementCounter(AbfsStatistic.BYTES_SENT, bufferLength);
-//      }
 
       if(httpOperation instanceof AbfsHttpOperation) {
         ((AbfsHttpOperation) httpOperation).setOperationType(operationType);
@@ -453,9 +449,12 @@ public class AbfsRestOperation {
    */
   @VisibleForTesting
   HttpOperation createHttpOperation() throws IOException {
-    HttpOperationType httpOperationType = abfsConfiguration.getPreferredHttpOperationType();
-    if(httpOperationType == HttpOperationType.APACHE_HTTP_CLIENT) {
-      return new AbfsAHCHttpOperation(url, method, requestHeaders, abfsConfiguration,
+    HttpOperationType httpOperationType
+        = abfsConfiguration.getPreferredHttpOperationType();
+    if (httpOperationType == HttpOperationType.APACHE_HTTP_CLIENT
+        && ApacheHttpClientHealthMonitor.HEALTH_MONITOR.usable()) {
+      return new AbfsAHCHttpOperation(url, method, requestHeaders,
+          abfsConfiguration,
           clientId, operationType);
     }
     return new AbfsHttpOperation(url, method, requestHeaders,

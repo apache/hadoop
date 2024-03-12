@@ -60,8 +60,6 @@ public abstract class HttpOperation implements AbfsPerfLoggable {
     this.LOG = logger;
   }
 
-
-
   public String getMethod() {
     return method;
   }
