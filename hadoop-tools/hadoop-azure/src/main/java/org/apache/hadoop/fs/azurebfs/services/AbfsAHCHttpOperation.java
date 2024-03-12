@@ -63,12 +63,6 @@ public class AbfsAHCHttpOperation extends HttpOperation {
 
   private final AbfsRestOperationType abfsRestOperationType;
 
-  public static void closeAllConn() {
-    for(AbfsApacheHttpClient client : abfsApacheHttpClientMap.values()) {
-      client.closeAllConn();
-    }
-  }
-
   private synchronized void setAbfsApacheHttpClient(final AbfsConfiguration abfsConfiguration, final String clientId) {
     AbfsApacheHttpClient client = abfsApacheHttpClientMap.get(clientId);
     if(client == null) {
@@ -83,7 +77,6 @@ public class AbfsAHCHttpOperation extends HttpOperation {
     if(client != null) {
       client.close();
     }
-    KeepAliveCache.kill();
   }
 
   private AbfsAHCHttpOperation(final URL url, final String method, final List<AbfsHttpHeader> requestHeaders,

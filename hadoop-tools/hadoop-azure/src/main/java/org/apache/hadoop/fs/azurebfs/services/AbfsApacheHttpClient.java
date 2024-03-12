@@ -158,8 +158,4 @@ public class AbfsApacheHttpClient {
         .register("https", sslSocketFactory)
         .build();
   }
-
-  public void closeAllConn() {
-    connMgr.closeAllConn();
-  }
 }

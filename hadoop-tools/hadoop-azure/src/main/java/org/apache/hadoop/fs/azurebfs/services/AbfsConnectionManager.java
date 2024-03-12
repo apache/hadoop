@@ -125,9 +125,4 @@ public class AbfsConnectionManager implements HttpClientConnectionManager {
   public void shutdown() {
 
   }
-
-  public void closeAllConn() {
-    KeepAliveCache.restart();
-
-  }
 }

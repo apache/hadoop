@@ -13,7 +13,6 @@ public class KeepAliveCache extends HashMap<KeepAliveCache.KeepAliveKey, KeepAli
 
   private Thread thread;
 
-  private boolean run = true;
   private KeepAliveCache() {
     thread = new Thread(this);
     thread.start();
@@ -21,68 +20,53 @@ public class KeepAliveCache extends HashMap<KeepAliveCache.KeepAliveKey, KeepAli
 
   public static KeepAliveCache INSTANCE = new KeepAliveCache();
 
-  public static void restart()  {
-    INSTANCE.run = false;
-    INSTANCE = new KeepAliveCache();
-  }
-
-  public static void kill() {
-    if(INSTANCE == null) {
-      return;
-    }
-    INSTANCE.run = false;
-    INSTANCE = null;
-  }
-
   @Override
   public void run() {
-    while(run) {
-      try {
-        Thread.sleep(5_000L);
-        synchronized (this) {
-          /* Remove all unused HttpClients.  Starting from the
-           * bottom of the stack (the least-recently used first).
-           * REMIND: It'd be nice to not remove *all* connections
-           * that aren't presently in use.  One could have been added
-           * a second ago that's still perfectly valid, and we're
-           * needlessly axing it.  But it's not clear how to do this
-           * cleanly, and doing it right may be more trouble than it's
-           * worth.
-           */
+    try {
+      Thread.sleep(5_000L);
+      synchronized (this) {
+        /* Remove all unused HttpClients.  Starting from the
+         * bottom of the stack (the least-recently used first).
+         * REMIND: It'd be nice to not remove *all* connections
+         * that aren't presently in use.  One could have been added
+         * a second ago that's still perfectly valid, and we're
+         * needlessly axing it.  But it's not clear how to do this
+         * cleanly, and doing it right may be more trouble than it's
+         * worth.
+         */
 
-          long currentTime = System.currentTimeMillis();
+        long currentTime = System.currentTimeMillis();
 
-          ArrayList<KeepAliveKey> keysToRemove
-              = new ArrayList<KeepAliveKey>();
+        ArrayList<KeepAliveKey> keysToRemove
+            = new ArrayList<KeepAliveKey>();
 
-          for (KeepAliveKey key : keySet()) {
-            ClientVector v = get(key);
-            synchronized (v) {
-              int i;
+        for (KeepAliveKey key : keySet()) {
+          ClientVector v = get(key);
+          synchronized (v) {
+            int i;
 
-              for (i = 0; i < v.size(); i++) {
-                KeepAliveEntry e = v.elementAt(i);
-                if ((currentTime - e.idleStartTime) > v.nap) {
-                  HttpClientConnection hc = e.httpClientConnection;
-                  hc.close();
-                } else {
-                  break;
-                }
-              }
-              v.subList(0, i).clear();
-
-              if (v.size() == 0) {
-                keysToRemove.add(key);
+            for (i = 0; i < v.size(); i++) {
+              KeepAliveEntry e = v.elementAt(i);
+              if ((currentTime - e.idleStartTime) > v.nap) {
+                HttpClientConnection hc = e.httpClientConnection;
+                hc.close();
+              } else {
+                break;
               }
             }
-          }
+            v.subList(0, i).clear();
 
-          for (KeepAliveKey key : keysToRemove) {
-            removeVector(key);
+            if (v.size() == 0) {
+              keysToRemove.add(key);
+            }
           }
         }
-      } catch (Exception ex) {}
-    }
+
+        for (KeepAliveKey key : keysToRemove) {
+          removeVector(key);
+        }
+      }
+    } catch (Exception ex) {}
   }
 
   synchronized void removeVector(KeepAliveKey k) {
