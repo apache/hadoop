@@ -27,14 +27,12 @@ import org.junit.Test;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.SASTokenProviderException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.TokenAccessProviderException;
 import org.apache.hadoop.fs.azurebfs.extensions.MockDelegationSASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azurebfs.services.FixedSASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.utils.AccountSASGenerator;
 import org.apache.hadoop.fs.azurebfs.utils.Base64;
-import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PATH;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_SAS_FIXED_TOKEN;
@@ -69,12 +67,15 @@ public class ITestAzureBlobFileSystemChooseSAS extends AbstractAbfsIntegrationTe
 
   /**
    * Generates an Account SAS Token using the Account Shared Key to be used as a fixed SAS Token.
+   * Account SAS used here will have only read permissions to resources.
    * This will be used by individual tests to set in the configurations.
    * @throws AzureBlobFileSystemException
    */
   private void generateAccountSAS() throws AzureBlobFileSystemException {
     final String accountKey = getConfiguration().getStorageAccountKey();
     AccountSASGenerator configAccountSASGenerator = new AccountSASGenerator(Base64.decode(accountKey));
+    // Setting only read permissions.
+    configAccountSASGenerator.setPermissions("r");
     accountSAS = configAccountSASGenerator.getAccountSAS(getAccountName());
   }
 

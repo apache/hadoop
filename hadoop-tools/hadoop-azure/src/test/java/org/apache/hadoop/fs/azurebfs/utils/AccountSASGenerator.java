@@ -37,11 +37,13 @@ public class AccountSASGenerator extends SASGenerator {
     super(accountKey);
   }
 
+  private String permissions = "racwdl";
+
   public String getAccountSAS(String accountName) throws
       AzureBlobFileSystemException {
     // retaining only the account name
     accountName = getCanonicalAccountName(accountName);
-    String sp = "radyl";
+    String sp = permissions;
     String sv = "2021-06-08";
     String srt = "sco";
 
@@ -88,5 +90,14 @@ public class AccountSASGenerator extends SASGenerator {
     String stringToSign = sb.toString();
     LOG.debug("Account SAS stringToSign: " + stringToSign.replace("\n", "."));
     return computeHmac256(stringToSign);
+  }
+
+  /**
+   * By default Account SAS has all the available permissions. Use this to
+   * override the default permissions and set as per the requirements.
+   * @param permissions
+   */
+  public void setPermissions(final String permissions) {
+    this.permissions = permissions;
   }
 }

@@ -32,7 +32,7 @@ import org.apache.hadoop.fs.azurebfs.utils.Base64;
 import org.apache.hadoop.fs.azurebfs.utils.ServiceSASGenerator;
 
 /**
- * A mock SAS token provider implementation
+ * A mock SAS token provider implementation.
  */
 public class MockSASTokenProvider implements SASTokenProvider {
 
