@@ -496,14 +496,6 @@ If the length of the file is known during the validation phase:
 range[i].getOffset + range[i].getLength >= data.length() raise EOFException
 ```
 
-The implementation class `org.apache.hadoop.fs.impl.CombinedFileRange` is not permitted as an element in the list
-the list
-```python
-if type(range[i]) is CombinedFileRange raise IllegalArgumentException
-```
-This in aggregate range representing multiple caller-supplied ranges; excluding
-as a valid argument to the API avoid problems relating to merging/coalescing this.
-
 #### Postconditions
 
 For each requested range `range[i]` in the list of ranges `range[0..i]`
@@ -527,7 +519,7 @@ end of first and start of next range is more than this value.
 #### `maxReadSizeForVectorReads()`
 
 Maximum number of bytes which can be read in one go after merging the ranges.
-Two ranges won't be merged if the combined data to be read is more than this value.
+Two ranges won't be merged if the combined data to be read It's okay we have a look at what we do right now for readOkayis more than this value.
 Essentially setting this to 0 will disable the merging of ranges.
 
 #### Concurrency
@@ -646,6 +638,6 @@ support through an explicit `hasCapability()` probe:
 Stream.hasCapability("in:readvectored")
 ```
 
-Given the HADOOP-18296 with ChecksumFileSystem and direct buffers, across all releases,
-it is simplest to avoid using this API in production with direct buffers.
+Given the HADOOP-18296 problem with `ChecksumFileSystem` and direct buffers, across all releases,
+it is best to avoid using this API in production with direct buffers.
 

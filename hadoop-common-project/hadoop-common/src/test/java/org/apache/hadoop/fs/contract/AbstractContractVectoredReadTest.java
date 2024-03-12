@@ -201,9 +201,10 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
   @Test
   public void testAllRangesMergedIntoOne() throws Exception {
     List<FileRange> fileRanges = new ArrayList<>();
-    range(fileRanges, 0, 100);
-    range(fileRanges, 4_000 - 101, 100);
-    range(fileRanges, 8_000 - 101, 100);
+    final int length = 100;
+    range(fileRanges, 0, length);
+    range(fileRanges, 4_000 - length - 1, length);
+    range(fileRanges, 8_000 - length - 1, length);
     try (FSDataInputStream in = openVectorFile()) {
       in.readVectored(fileRanges, allocate);
       validateVectoredReadResult(fileRanges, DATASET);
@@ -446,20 +447,22 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
   private void readBufferValidateDataAndReturnToPool(FileRange res,
                                                      CountDownLatch countDownLatch)
           throws IOException, TimeoutException {
-    CompletableFuture<ByteBuffer> data = res.getData();
-    // Read the data and perform custom operation. Here we are just
-    // validating it with original data.
-    FutureIO.awaitFuture(data.thenAccept(buffer -> {
-      assertDatasetEquals((int) res.getOffset(),
-              "vecRead", buffer, res.getLength(), DATASET);
-      // return buffer to the pool once read.
-      // issue: what if the read failed?
-      pool.putBuffer(buffer);
-    }),
-    VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS, TimeUnit.SECONDS);
-
-    // countdown to notify main thread that processing has been done.
-    countDownLatch.countDown();
+    try {
+      CompletableFuture<ByteBuffer> data = res.getData();
+      // Read the data and perform custom operation. Here we are just
+      // validating it with original data.
+      FutureIO.awaitFuture(data.thenAccept(buffer -> {
+        assertDatasetEquals((int) res.getOffset(),
+                "vecRead", buffer, res.getLength(), DATASET);
+        // return buffer to the pool once read.
+        // If the read failed, this doesn't get invoked.
+        pool.putBuffer(buffer);
+      }),
+      VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+    } finally {
+      // countdown to notify main thread that processing has been done.
+      countDownLatch.countDown();
+    }
   }
 
 

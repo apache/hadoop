@@ -22,7 +22,6 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -68,24 +67,11 @@ public final class VectoredReadUtils {
 
     requireNonNull(range, "range is null");
 
-    // this check prevents complex recursion situations
-    rejectCombinedFileRange(range);
     checkArgument(range.getLength() >= 0, "length is negative in %s", range);
     if (range.getOffset() < 0) {
       throw new EOFException("position is negative in range " + range);
     }
     return range;
-  }
-
-  /**
-   * Verify that a range is not an instance of {@link CombinedFileRange}.
-   * @param range range
-   * @param <T> range type
-   * @throws IllegalArgumentException the range length is a CombinedFileRange instance.
-   */
-  private static <T extends FileRange> void rejectCombinedFileRange(final T range) {
-    checkArgument(!(range instanceof CombinedFileRange),
-        "CombinedFileRange not supported: %s", range);
   }
 
   /**
@@ -376,7 +362,6 @@ public final class VectoredReadUtils {
 
     // now merge together the ones that merge
     for (FileRange range: sortedRanges) {
-      rejectCombinedFileRange(range);
       long start = roundDown(range.getOffset(), chunkSize);
       long end = roundUp(range.getOffset() + range.getLength(), chunkSize);
       if (current == null || !current.merge(start, end, range, minimumSeek, maxSize)) {

@@ -982,6 +982,8 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    * @param objectContent data from s3.
    * @param allocate method to allocate child byte buffers.
    * @throws IOException any IOE.
+   * @throws EOFException if EOF if read() call returns -1
+   * @throws InterruptedIOException if vectored IO operation is stopped.
    */
   private void populateChildBuffers(CombinedFileRange combinedFileRange,
                                     InputStream objectContent,
@@ -999,12 +1001,15 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
       FileRange prev = null;
       for (FileRange child : combinedFileRange.getUnderlying()) {
         checkIfVectoredIOStopped();
-        if (prev != null && prev.getOffset() + prev.getLength() < child.getOffset()) {
-          // there's data to drain between the requests.
-          // work out how much
-          long drainQuantity = child.getOffset() - prev.getOffset() - prev.getLength();
-          // and drain it.
-          drainUnnecessaryData(objectContent, drainQuantity);
+        if (prev != null) {
+          final long position = prev.getOffset() + prev.getLength();
+          if (position < child.getOffset()) {
+            // there's data to drain between the requests.
+            // work out how much
+            long drainQuantity = child.getOffset() - position;
+            // and drain it.
+            drainUnnecessaryData(objectContent, position, drainQuantity);
+          }
         }
         ByteBuffer buffer = allocate.apply(child.getLength());
         populateBuffer(child, buffer, objectContent);
@@ -1016,32 +1021,40 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
 
   /**
    * Drain unnecessary data in between ranges.
+   * There's no attempt at recovery here; it should be done at a higher level.
    * @param objectContent s3 data stream.
+   * @param position position in file, for logging
    * @param drainQuantity how many bytes to drain.
    * @throws IOException any IOE.
-   * @throws EOFException if the end of stream was reached ruing the draining
+   * @throws EOFException if the end of stream was reached during the draining
    */
-  private void drainUnnecessaryData(InputStream objectContent, long drainQuantity)
+  @Retries.OnceTranslated
+  private void drainUnnecessaryData(InputStream objectContent, final long position, long drainQuantity)
           throws IOException {
     int drainBytes = 0;
     int readCount;
     byte[] drainBuffer;
-    int size = Math.min(InternalConstants.DRAIN_BUFFER_SIZE, (int) drainQuantity);
+    int size = (int)Math.min(InternalConstants.DRAIN_BUFFER_SIZE, drainQuantity);
     drainBuffer = new byte[size];
+    LOG.debug("Draining {} bytes from stream from offset {}; buffer size={}",
+        drainQuantity, position, size);
     try {
-      while (drainBytes < drainQuantity) {
+      long remaining = drainQuantity;
+      while (remaining > 0) {
         checkIfVectoredIOStopped();
-        readCount = objectContent.read(drainBuffer);
+        readCount = objectContent.read(drainBuffer, 0, (int)Math.min(size, remaining));
+        LOG.debug("Drained {} bytes from stream", readCount);
         if (readCount < 0) {
           // read request failed; often network issues.
           // no attempt is made to recover at this point.
           final String s = String.format(
-              "End of stream reached draining data between ranges; expected %,d bytes, drained %,d bytes. ",
-              drainQuantity, drainBytes);
-          throw new EOFException(s
-          );
+              "End of stream reached draining data between ranges; expected %,d bytes;"
+                  + " only drained %,d bytes before -1 returned (position=%,d)",
+              drainQuantity, drainBytes, position + drainBytes);
+          throw new EOFException(s);
         }
         drainBytes += readCount;
+        remaining -= readCount;
       }
     } finally {
       streamStatistics.readVectoredBytesDiscarded(drainBytes);
@@ -1087,7 +1100,9 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    * @param length length from position of the object to be read from S3.
    * @return result s3 object.
    * @throws IOException exception if any.
+   * @throws InterruptedIOException if vectored io operation is stopped.
    */
+  @Retries.RetryTranslated
   private ResponseInputStream<GetObjectResponse> getS3ObjectInputStream(
       final String operationName, final long position, final int length) throws IOException {
     checkIfVectoredIOStopped();
@@ -1105,6 +1120,8 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    * @param buffer buffer to fill.
    * @param objectContent result retrieved from S3 store.
    * @throws IOException any IOE.
+   * @throws EOFException if EOF if read() call returns -1
+   * @throws InterruptedIOException if vectored IO operation is stopped.
    */
   private void populateBuffer(FileRange range,
                               ByteBuffer buffer,
@@ -1114,37 +1131,38 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     if (buffer.isDirect()) {
       VectoredReadUtils.readInDirectBuffer(range, buffer,
           (position, tmp, offset, currentLength) -> {
-            readByteArray(objectContent, tmp, offset, currentLength);
+            readByteArray(objectContent, range, tmp, offset, currentLength);
             return null;
           });
       buffer.flip();
     } else {
       // there is no use of a temp byte buffer, or buffer.put() calls,
       // so flip() is not needed.
-      readByteArray(objectContent, buffer.array(), 0, length);
+      readByteArray(objectContent, range, buffer.array(), 0, length);
     }
-
-    // update io stats.
-    incrementBytesRead(length);
   }
-
 
   /**
    * Read data into destination buffer from s3 object content.
+   * Calls {@link #incrementBytesRead(long)} to update statistics
+   * incrementally.
    * @param objectContent result from S3.
+   * @param range range being read into
    * @param dest destination buffer.
    * @param offset start offset of dest buffer.
    * @param length number of bytes to fill in dest.
    * @throws IOException any IOE.
    * @throws EOFException if EOF if read() call returns -1
-   * @throws InterruptedIOException if vectored io operation is stopped.
+   * @throws InterruptedIOException if vectored IO operation is stopped.
    */
   private void readByteArray(InputStream objectContent,
+                            final FileRange range,
                             byte[] dest,
                             int offset,
                             int length) throws IOException {
     LOG.debug("Reading {} bytes", length);
     int readBytes = 0;
+    long position = range.getOffset();
     while (readBytes < length) {
       checkIfVectoredIOStopped();
       int readBytesCurr = objectContent.read(dest,
@@ -1154,14 +1172,19 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
       if (readBytesCurr < 0) {
         throw new EOFException(
             String.format("HTTP stream closed before all bytes were read."
-                + " Expected %,d but only read %,d", length, readBytes));
+                    + " Expected %,d but only read %,d up to position %,d",
+                length, readBytes, position));
       }
       readBytes += readBytesCurr;
+      position += readBytesCurr;
+
+      // update io stats incrementally
+      incrementBytesRead(readBytesCurr);
     }
   }
 
   /**
-   * Read data from S3 using a http request with retries.
+   * Read data from S3 with retries for the GET request
    * This also handles if file has been changed while the
    * http call is getting executed. If the file has been
    * changed RemoteFileChangedException is thrown.
@@ -1170,7 +1193,10 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    * @param length length from position of the object to be read from S3.
    * @return S3Object result s3 object.
    * @throws IOException exception if any.
+   * @throws InterruptedIOException if vectored io operation is stopped.
+   * @throws RemoteFileChangedException if file has changed on the store.
    */
+  @Retries.RetryTranslated
   private ResponseInputStream<GetObjectResponse> getS3Object(String operationName,
                                                              long position,
                                                              int length)
