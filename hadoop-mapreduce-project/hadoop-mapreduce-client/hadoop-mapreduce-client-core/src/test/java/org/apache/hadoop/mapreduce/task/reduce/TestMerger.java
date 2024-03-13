@@ -84,8 +84,6 @@ public class TestMerger {
   private File unitTestDir;
   private JobConf jobConf;
   private FileSystem fs;
-  @Rule
-  public ExpectedException thrown = ExpectedException.none();
 
   @BeforeClass
   public static void setupClass() throws Exception {
