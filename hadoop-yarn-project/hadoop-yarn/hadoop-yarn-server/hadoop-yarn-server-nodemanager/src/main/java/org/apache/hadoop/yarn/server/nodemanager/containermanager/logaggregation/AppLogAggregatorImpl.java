@@ -74,6 +74,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Ap
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task.DeletionTask;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task.FileDeletionTask;
+import org.apache.hadoop.yarn.server.nodemanager.security.NMDelegationTokenManager;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.hadoop.yarn.util.Times;
 
@@ -125,6 +126,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
 
   private final LogAggregationFileController logAggregationFileController;
 
+  private NMDelegationTokenManager delegationTokenManager;
 
   /**
    * The value recovered from state store to determine the age of application
@@ -226,6 +228,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
             logAggregationInRolling,
             rollingMonitorInterval,
             this.appId, this.appAcls, this.nodeId, this.userUgi);
+    delegationTokenManager = new NMDelegationTokenManager(conf);
   }
 
   private ContainerLogAggregationPolicy getLogAggPolicy(Configuration conf) {
@@ -453,22 +456,16 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
       Token<? extends TokenIdentifier> token = tokenMap.get(tokenKey);
       if (token.getKind().equals(HDFS_DELEGATION_KIND)) {
         try {
-          renewToken(token);
-          LOG.info("Retrieved HDFS Delegation Token for {} is successfully renewed: {}",
+          delegationTokenManager.renewToken(token);
+          LOG.debug("HDFS Delegation Token for {} is successfully renewed: {}",
               appId, token);
         } catch (SecretManager.InvalidToken e) {
           userUgi.removeToken(tokenKey);
-          LOG.info("HDFS Delegation Token for {} is invalid, removed from the credentials: {}",
-              appId, token);
+          LOG.info("HDFS Delegation Token for {} is expired, " +
+              "removed from the credentials: {}", appId, token);
         }
       }
     }
-  }
-
-  private void renewToken(Token<? extends TokenIdentifier> token)
-      throws IOException, InterruptedException {
-    UserGroupInformation ugi = UserGroupInformation.getLoginUser();
-    ugi.doAs((PrivilegedExceptionAction<Long>) () -> token.renew(conf));
   }
 
   private void sendLogAggregationReport(
