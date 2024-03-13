@@ -742,18 +742,15 @@ input is invalid.
 
 #### <a name="tracingcontextformat"></a> 1. Correlation IDs Display Options
 
-Config `fs.azure.tracingheader.format` provides an option to select the format
+Config `fs.azure.tracingcontext.format` provides an option to select the format
 of IDs included in the `request-id-header`. This config accepts a String value
 corresponding to the following enum options.
   `SINGLE_ID_FORMAT` : clientRequestId
   `ALL_ID_FORMAT` : all IDs (default)
   `TWO_ID_FORMAT` : clientCorrelationId:clientRequestId
 
-Config `fs.azure.metric.format` provides an option to select the
-format
-of IDs included in the `header` for metrics. This config accepts a
-String value
-corresponding to the following enum options.
+Config `fs.azure.metric.format` provides an option to select the format of IDs included in the `header` for metrics.
+This config accepts a String value corresponding to the following enum options.
 `INTERNAL_METRIC_FORMAT` : backoff + footer metrics
 `INTERNAL_BACKOFF_METRIC_FORMAT` : backoff metrics
 `INTERNAL_FOOTER_METRIC_FORMAT` : footer metrics

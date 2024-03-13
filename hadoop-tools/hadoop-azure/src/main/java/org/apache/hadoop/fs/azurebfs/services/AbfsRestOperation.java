@@ -304,21 +304,23 @@ public class AbfsRestOperation {
 
   @VisibleForTesting
   void updateBackoffMetrics(int retryCount, int statusCode) {
-    if (statusCode < HttpURLConnection.HTTP_OK
-            || statusCode >= HttpURLConnection.HTTP_INTERNAL_ERROR) {
-      synchronized (this) {
-        if (retryCount >= maxIoRetries) {
-          abfsBackoffMetrics.incrementNumberOfRequestsFailed();
+    if (abfsBackoffMetrics != null) {
+      if (statusCode < HttpURLConnection.HTTP_OK
+              || statusCode >= HttpURLConnection.HTTP_INTERNAL_ERROR) {
+        synchronized (this) {
+          if (retryCount >= maxIoRetries) {
+            abfsBackoffMetrics.incrementNumberOfRequestsFailed();
+          }
         }
-      }
-    } else {
-      synchronized (this) {
-        if (retryCount > ZERO && retryCount <= maxIoRetries) {
-          maxRetryCount = Math.max(abfsBackoffMetrics.getMaxRetryCount(), retryCount);
-          abfsBackoffMetrics.setMaxRetryCount(maxRetryCount);
-          updateCount(retryCount);
-        } else {
-          abfsBackoffMetrics.incrementNumberOfRequestsSucceededWithoutRetrying();
+      } else {
+        synchronized (this) {
+          if (retryCount > ZERO && retryCount <= maxIoRetries) {
+            maxRetryCount = Math.max(abfsBackoffMetrics.getMaxRetryCount(), retryCount);
+            abfsBackoffMetrics.setMaxRetryCount(maxRetryCount);
+            updateCount(retryCount);
+          } else {
+            abfsBackoffMetrics.incrementNumberOfRequestsSucceededWithoutRetrying();
+          }
         }
       }
     }

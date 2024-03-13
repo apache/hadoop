@@ -112,25 +112,21 @@ class AbfsClientThrottlingAnalyzer {
    * @param timerTask The timertask object.
    * @return true or false.
    */
-  private boolean timerOrchestrator(TimerFunctionality timerFunctionality,
+  private synchronized boolean timerOrchestrator(TimerFunctionality timerFunctionality,
       TimerTask timerTask) {
     switch (timerFunctionality) {
     case RESUME:
       if (isOperationOnAccountIdle.get()) {
-        synchronized (this) {
-          resumeTimer();
-        }
+        resumeTimer();
       }
       break;
     case SUSPEND:
       if (accountLevelThrottlingEnabled && (System.currentTimeMillis()
           - lastExecutionTime.get() >= getOperationIdleTimeout())) {
-        synchronized (this) {
-          isOperationOnAccountIdle.set(true);
-          timerTask.cancel();
-          timer.purge();
-          return true;
-        }
+        isOperationOnAccountIdle.set(true);
+        timerTask.cancel();
+        timer.purge();
+        return true;
       }
       break;
     default:

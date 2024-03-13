@@ -209,7 +209,7 @@ public class AbfsClient implements Closeable {
     this.timer = new Timer(
         "abfs-timer-client", true);
     if (isMetricCollectionEnabled) {
-      timer.schedule(new AbfsClient.TimerTaskImpl(),
+      timer.schedule(new TimerTaskImpl(),
           metricIdlePeriod,
           metricIdlePeriod);
     }
@@ -240,8 +240,10 @@ public class AbfsClient implements Closeable {
 
   @Override
   public void close() throws IOException {
-    runningTimerTask.cancel();
-    timer.purge();
+    if (runningTimerTask != null) {
+      runningTimerTask.cancel();
+      timer.purge();
+    }
     if (tokenProvider instanceof Closeable) {
       IOUtils.cleanupWithLogger(LOG,
           (Closeable) tokenProvider);
@@ -1764,27 +1766,29 @@ public class AbfsClient implements Closeable {
    * @param timerTask The timertask object.
    * @return true or false.
    */
-  synchronized boolean timerOrchestrator(TimerFunctionality timerFunctionality,
-      TimerTask timerTask) {
-    this.runningTimerTask = timerTask;
+  boolean timerOrchestrator(TimerFunctionality timerFunctionality, TimerTask timerTask) {
     switch (timerFunctionality) {
-    case RESUME:
-      if (isMetricCollectionStopped.get()) {
-        resumeTimer();
-      }
-      break;
-    case SUSPEND:
-      long now = System.currentTimeMillis();
-      long lastExecutionTime = abfsCounters.getLastExecutionTime().get();
-      if (isMetricCollectionEnabled && (now - lastExecutionTime >= metricAnalysisPeriod)) {
-        timerTask.cancel();
-        timer.purge();
-        isMetricCollectionStopped.set(true);
-        return true;
-      }
-      break;
-    default:
-      break;
+      case RESUME:
+        if (isMetricCollectionStopped.get()) {
+          synchronized (this) {
+            resumeTimer();
+          }
+        }
+        break;
+      case SUSPEND:
+        long now = System.currentTimeMillis();
+        long lastExecutionTime = abfsCounters.getLastExecutionTime().get();
+        if (isMetricCollectionEnabled && (now - lastExecutionTime >= metricAnalysisPeriod)) {
+          synchronized (this) {
+            timerTask.cancel();
+            timer.purge();
+            isMetricCollectionStopped.set(true);
+            return true;
+          }
+        }
+        break;
+      default:
+        break;
     }
     return false;
   }
@@ -1819,6 +1823,9 @@ public class AbfsClient implements Closeable {
   }
 
   class TimerTaskImpl extends TimerTask {
+    public TimerTaskImpl() {
+      runningTimerTask = this;
+    }
     @Override
     public void run() {
       try {
