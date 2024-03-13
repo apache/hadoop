@@ -158,6 +158,7 @@ public class PeerCache {
     if (sockStreamList == null) {
       return null;
     }
+
     Iterator<Value> iter = sockStreamList.iterator();
     while (iter.hasNext()) {
       Value candidate = iter.next();
