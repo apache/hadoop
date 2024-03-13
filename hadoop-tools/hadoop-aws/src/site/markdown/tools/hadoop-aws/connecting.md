@@ -359,8 +359,18 @@ For a single bucket:
 </property>
 ```
 
-If this option is `true`, the endpoint option `fs.s3a.endpoint` MUST NOT be set:
+If `fs.s3a.endpoint.fips` is `true`, the endpoint option `fs.s3a.endpoint` MUST NOT be set to
+any non-central endpoint value. If `fs.s3a.endpoint.fips` is `true`, the only *optionally* allowed
+value for `fs.s3a.endpoint` is central endpoint `s3.amazonaws.com`.
 
+S3A error message if `s3.eu-west-2.amazonaws.com` endpoint is used with FIPS:
+```
+Non central endpoint cannot be set when fs.s3a.endpoint.fips is true : https://s3.eu-west-2.amazonaws.com
+```
+
+S3A validation is used to fail-fast before the SDK returns error.
+
+AWS SDK error message if S3A does not fail-fast:
 ```
 A custom endpoint cannot be combined with FIPS: https://s3.eu-west-2.amazonaws.com
 ```
@@ -377,6 +387,9 @@ Received an UnknownHostException when attempting to interact with a service.
     example-london-1.s3-fips.eu-west-2.amazonaws.com
 
 ```
+
+For more details on endpoint and region settings, please check
+[S3 endpoint and region settings in detail](connecting.html#s3_endpoint_region_details).
 
 *Important* OpenSSL and FIPS endpoints
 
