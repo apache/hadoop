@@ -51,6 +51,7 @@ import static org.apache.hadoop.fs.s3a.Constants.ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.FIPS_ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.PATH_STYLE_ACCESS;
 import static org.apache.hadoop.fs.s3a.DefaultS3ClientFactory.ERROR_ENDPOINT_WITH_FIPS;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.DEFAULT_REQUESTER_PAYS_BUCKET_NAME;
 import static org.apache.hadoop.io.IOUtils.closeStream;
@@ -435,8 +436,12 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
   public void testCentralEndpointAndNullRegionFipsWithCRUD() throws Throwable {
     describe("Access the test bucket using central endpoint and"
         + " null region and fips enabled, perform file system CRUD operations");
-    final Configuration conf = getConfiguration();
 
+    final String bucketLocation = getFileSystem().getBucketLocation();
+    assume("FIPS can be enabled to access US or Canada endpoints only",
+        bucketLocation.contains("us-") || bucketLocation.contains("ca-"));
+
+    final Configuration conf = getConfiguration();
     final Configuration newConf = new Configuration(conf);
 
     removeBaseAndBucketOverrides(
