@@ -1771,7 +1771,9 @@ public class AbfsClient implements Closeable {
       case RESUME:
         if (isMetricCollectionStopped.get()) {
           synchronized (this) {
-            resumeTimer();
+            if (isMetricCollectionStopped.get()) {
+              resumeTimer();
+            }
           }
         }
         break;
@@ -1780,10 +1782,12 @@ public class AbfsClient implements Closeable {
         long lastExecutionTime = abfsCounters.getLastExecutionTime().get();
         if (isMetricCollectionEnabled && (now - lastExecutionTime >= metricAnalysisPeriod)) {
           synchronized (this) {
-            timerTask.cancel();
-            timer.purge();
-            isMetricCollectionStopped.set(true);
-            return true;
+            if (!isMetricCollectionStopped.get()) {
+              timerTask.cancel();
+              timer.purge();
+              isMetricCollectionStopped.set(true);
+              return true;
+            }
           }
         }
         break;
