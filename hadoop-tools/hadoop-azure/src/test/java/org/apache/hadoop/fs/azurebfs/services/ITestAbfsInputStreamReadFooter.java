@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FutureDataInputStreamBuilder;
@@ -42,6 +43,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+import org.apache.hadoop.util.functional.FutureIO;
 
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -87,6 +89,8 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
       ONE_MB
   };
 
+  private static final long FUTURE_AWAIT_TIMEOUT_SEC = 10L;
+
   public ITestAbfsInputStreamReadFooter() throws Exception {
   }
 
@@ -103,40 +107,39 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
 
   @Test
   public void testOnlyOneServerCallIsMadeWhenTheConfIsTrue() throws Exception {
-    testNumBackendCalls(true);
+    validateNumBackendCalls(true);
   }
 
   @Test
   public void testMultipleServerCallsAreMadeWhenTheConfIsFalse()
       throws Exception {
-    testNumBackendCalls(false);
+    validateNumBackendCalls(false);
   }
 
-  private void testNumBackendCalls(boolean optimizeFooterRead)
+  private void validateNumBackendCalls(boolean optimizeFooterRead)
       throws Exception {
     int fileIdx = 0;
-    final List<Future> futureList = new ArrayList<>();
+    final List<Future<Void>> futureList = new ArrayList<>();
     for (int fileSize : FILE_SIZES) {
       final int fileId = fileIdx++;
-      Future future = executorService.submit(() -> {
+      Future<Void> future = executorService.submit(() -> {
         try (AzureBlobFileSystem spiedFs = createSpiedFs(
             getRawConfiguration())) {
           Path testPath = createPathAndFileWithContent(
               spiedFs, fileId, fileSize);
-          testNumBackendCalls(spiedFs, optimizeFooterRead, fileSize,
+          validateNumBackendCalls(spiedFs, optimizeFooterRead, fileSize,
               testPath);
+          return null;
         } catch (Exception ex) {
           throw new RuntimeException(ex);
         }
       });
       futureList.add(future);
     }
-    for (Future future : futureList) {
-      future.get();
-    }
+    FutureIO.awaitFuture(futureList, FUTURE_AWAIT_TIMEOUT_SEC, TimeUnit.SECONDS);
   }
 
-  private void testNumBackendCalls(final AzureBlobFileSystem spiedFs,
+  private void validateNumBackendCalls(final AzureBlobFileSystem spiedFs,
       final boolean optimizeFooterRead, final int fileSize, final Path testFilePath) throws Exception {
     for (int readBufferSize : READ_BUFFER_SIZE) {
       for (int footerReadBufferSize : FOOTER_READ_BUFFER_SIZE) {
@@ -179,58 +182,58 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
 
   @Test
   public void testSeekToBeginAndReadWithConfTrue() throws Exception {
-    testSeekAndReadWithConf(true, SeekTo.BEGIN);
+    validateSeekAndReadWithConf(true, SeekTo.BEGIN);
   }
 
   @Test
   public void testSeekToBeginAndReadWithConfFalse() throws Exception {
-    testSeekAndReadWithConf(false, SeekTo.BEGIN);
+    validateSeekAndReadWithConf(false, SeekTo.BEGIN);
   }
 
   @Test
   public void testSeekToBeforeFooterAndReadWithConfTrue() throws Exception {
-    testSeekAndReadWithConf(true, SeekTo.BEFORE_FOOTER_START);
+    validateSeekAndReadWithConf(true, SeekTo.BEFORE_FOOTER_START);
   }
 
   @Test
   public void testSeekToBeforeFooterAndReadWithConfFalse() throws Exception {
-    testSeekAndReadWithConf(false, SeekTo.BEFORE_FOOTER_START);
+    validateSeekAndReadWithConf(false, SeekTo.BEFORE_FOOTER_START);
   }
 
   @Test
   public void testSeekToFooterAndReadWithConfTrue() throws Exception {
-    testSeekAndReadWithConf(true, SeekTo.AT_FOOTER_START);
+    validateSeekAndReadWithConf(true, SeekTo.AT_FOOTER_START);
   }
 
   @Test
   public void testSeekToFooterAndReadWithConfFalse() throws Exception {
-    testSeekAndReadWithConf(false, SeekTo.AT_FOOTER_START);
+    validateSeekAndReadWithConf(false, SeekTo.AT_FOOTER_START);
   }
 
   @Test
   public void testSeekToAfterFooterAndReadWithConfTrue() throws Exception {
-    testSeekAndReadWithConf(true, SeekTo.AFTER_FOOTER_START);
+    validateSeekAndReadWithConf(true, SeekTo.AFTER_FOOTER_START);
   }
 
   @Test
   public void testSeekToToAfterFooterAndReadWithConfFalse() throws Exception {
-    testSeekAndReadWithConf(false, SeekTo.AFTER_FOOTER_START);
+    validateSeekAndReadWithConf(false, SeekTo.AFTER_FOOTER_START);
   }
 
   @Test
   public void testSeekToEndAndReadWithConfTrue() throws Exception {
-    testSeekAndReadWithConf(true, SeekTo.END);
+    validateSeekAndReadWithConf(true, SeekTo.END);
   }
 
   @Test
   public void testSeekToEndAndReadWithConfFalse() throws Exception {
-    testSeekAndReadWithConf(false, SeekTo.END);
+    validateSeekAndReadWithConf(false, SeekTo.END);
   }
 
-  private void testSeekAndReadWithConf(boolean optimizeFooterRead,
+  private void validateSeekAndReadWithConf(boolean optimizeFooterRead,
       SeekTo seekTo) throws Exception {
     int fileIdx = 0;
-    List<Future> futureList = new ArrayList<>();
+    List<Future<Void>> futureList = new ArrayList<>();
     for (int fileSize : FILE_SIZES) {
       final int fileId = fileIdx++;
       futureList.add(executorService.submit(() -> {
@@ -241,20 +244,19 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
           Path testFilePath = createFileWithContent(spiedFs, fileName,
               fileContent);
           for (int readBufferSize : READ_BUFFER_SIZE) {
-            testSeekAndReadWithConf(spiedFs, optimizeFooterRead, seekTo,
+            validateSeekAndReadWithConf(spiedFs, optimizeFooterRead, seekTo,
                 readBufferSize, fileSize, testFilePath, fileContent);
           }
+          return null;
         } catch (Exception ex) {
           throw new RuntimeException(ex);
         }
       }));
     }
-    for (Future future : futureList) {
-      future.get();
-    }
+    FutureIO.awaitFuture(futureList, FUTURE_AWAIT_TIMEOUT_SEC, TimeUnit.SECONDS);
   }
 
-  private void testSeekAndReadWithConf(final AzureBlobFileSystem spiedFs,
+  private void validateSeekAndReadWithConf(final AzureBlobFileSystem spiedFs,
       final boolean optimizeFooterRead,
       final SeekTo seekTo,
       final int readBufferSize,
@@ -362,7 +364,7 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
   @Test
   public void testPartialReadWithNoData() throws Exception {
     int fileIdx = 0;
-    List<Future> futureList = new ArrayList<>();
+    List<Future<Void>> futureList = new ArrayList<>();
     for (int fileSize : FILE_SIZES) {
       final int fileId = fileIdx++;
       final String fileName = methodName.getMethodName() + fileId;
@@ -372,19 +374,18 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
           byte[] fileContent = getRandomBytesArray(fileSize);
           Path testFilePath = createFileWithContent(spiedFs, fileName,
               fileContent);
-          testPartialReadWithNoData(spiedFs, fileSize, fileContent,
+          validatePartialReadWithNoData(spiedFs, fileSize, fileContent,
               testFilePath);
+          return null;
         } catch (Exception ex) {
           throw new RuntimeException(ex);
         }
       }));
-      for (Future future : futureList) {
-        future.get();
-      }
+      FutureIO.awaitFuture(futureList, FUTURE_AWAIT_TIMEOUT_SEC, TimeUnit.SECONDS);
     }
   }
 
-  private void testPartialReadWithNoData(final AzureBlobFileSystem spiedFs,
+  private void validatePartialReadWithNoData(final AzureBlobFileSystem spiedFs,
       final int fileSize,
       final byte[] fileContent,
       Path testFilePath) throws IOException {
@@ -393,7 +394,7 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
         changeFooterConfigs(spiedFs, true, fileSize,
             footerReadBufferSize, readBufferSize);
 
-        testPartialReadWithNoData(spiedFs, testFilePath,
+        validatePartialReadWithNoData(spiedFs, testFilePath,
             fileSize - AbfsInputStream.FOOTER_SIZE,
             AbfsInputStream.FOOTER_SIZE,
             fileContent, footerReadBufferSize, readBufferSize);
@@ -401,7 +402,7 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
     }
   }
 
-  private void testPartialReadWithNoData(final FileSystem fs,
+  private void validatePartialReadWithNoData(final FileSystem fs,
       final Path testFilePath, final int seekPos, final int length,
       final byte[] fileContent, int footerReadBufferSize, final int readBufferSize) throws IOException {
     FSDataInputStream iStream = fs.open(testFilePath);
@@ -435,7 +436,7 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
   @Test
   public void testPartialReadWithSomeData() throws Exception {
     int fileIdx = 0;
-    List<Future> futureList = new ArrayList<>();
+    List<Future<Void>> futureList = new ArrayList<>();
     for (int fileSize : FILE_SIZES) {
       final int fileId = fileIdx++;
       futureList.add(executorService.submit(() -> {
@@ -445,19 +446,18 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
           byte[] fileContent = getRandomBytesArray(fileSize);
           Path testFilePath = createFileWithContent(spiedFs, fileName,
               fileContent);
-          testParialReadWithSomeData(spiedFs, fileSize, testFilePath,
+          validatePartialReadWithSomeData(spiedFs, fileSize, testFilePath,
               fileContent);
+          return null;
         } catch (Exception ex) {
           throw new RuntimeException(ex);
         }
       }));
     }
-    for (Future future : futureList) {
-      future.get();
-    }
+    FutureIO.awaitFuture(futureList, FUTURE_AWAIT_TIMEOUT_SEC, TimeUnit.SECONDS);
   }
 
-  private void testParialReadWithSomeData(final AzureBlobFileSystem spiedFs,
+  private void validatePartialReadWithSomeData(final AzureBlobFileSystem spiedFs,
       final int fileSize, final Path testFilePath, final byte[] fileContent)
       throws IOException {
     for (int readBufferSize : READ_BUFFER_SIZE) {
@@ -465,7 +465,7 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
         changeFooterConfigs(spiedFs, true,
             fileSize, footerReadBufferSize, readBufferSize);
 
-        testPartialReadWithSomeData(spiedFs, testFilePath,
+        validatePartialReadWithSomeData(spiedFs, testFilePath,
             fileSize - AbfsInputStream.FOOTER_SIZE,
             AbfsInputStream.FOOTER_SIZE,
             fileContent, footerReadBufferSize, readBufferSize);
@@ -473,7 +473,7 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
     }
   }
 
-  private void testPartialReadWithSomeData(final FileSystem fs,
+  private void validatePartialReadWithSomeData(final FileSystem fs,
       final Path testFilePath, final int seekPos, final int length,
       final byte[] fileContent, final int footerReadBufferSize,
       final int readBufferSize) throws IOException {
