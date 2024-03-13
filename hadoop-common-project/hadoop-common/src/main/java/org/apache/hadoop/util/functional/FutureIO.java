@@ -21,6 +21,9 @@ package org.apache.hadoop.util.functional;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.UncheckedIOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -106,6 +109,70 @@ public final class FutureIO {
              TimeoutException {
     try {
       return future.get(timeout, unit);
+    } catch (InterruptedException e) {
+      throw (InterruptedIOException) new InterruptedIOException(e.toString())
+          .initCause(e);
+    } catch (ExecutionException e) {
+      return raiseInnerCause(e);
+    }
+  }
+
+  /**
+   * Given a future, evaluate it.
+   * <p>
+   * Any exception generated in the future is
+   * extracted and rethrown.
+   * </p>
+   * @param collection collection of futures to be evaluated
+   * @param <T> type of the result.
+   * @return the list of future's result, if all went well.
+   * @throws InterruptedIOException future was interrupted
+   * @throws IOException if something went wrong
+   * @throws RuntimeException any nested RTE thrown
+   */
+  public static <T> List<T> awaitFuture(final Collection<Future<T>> collection)
+      throws InterruptedIOException, IOException, RuntimeException {
+    List<T> results = new ArrayList<>();
+    try {
+      for (Future<T> future : collection) {
+        results.add(future.get());
+      }
+      return results;
+    } catch (InterruptedException e) {
+      throw (InterruptedIOException) new InterruptedIOException(e.toString())
+          .initCause(e);
+    } catch (ExecutionException e) {
+      return raiseInnerCause(e);
+    }
+  }
+
+  /**
+   * Given a future, evaluate it.
+   * <p>
+   * Any exception generated in the future is
+   * extracted and rethrown.
+   * </p>
+   * @param collection collection of futures to be evaluated
+   * @param timeout timeout to wait
+   * @param unit time unit.
+   * @param <T> type of the result.
+   * @return the list of future's result, if all went well.
+   * @throws InterruptedIOException future was interrupted
+   * @throws IOException if something went wrong
+   * @throws RuntimeException any nested RTE thrown
+   * @throws TimeoutException the future timed out.
+   */
+  public static <T> List<T> awaitFuture(final Collection<Future<T>> collection,
+      final long timeout,
+      final TimeUnit unit)
+      throws InterruptedIOException, IOException, RuntimeException,
+      TimeoutException {
+    List<T> results = new ArrayList<>();
+    try {
+      for (Future<T> future : collection) {
+        results.add(future.get(timeout, unit));
+      }
+      return results;
     } catch (InterruptedException e) {
       throw (InterruptedIOException) new InterruptedIOException(e.toString())
           .initCause(e);
