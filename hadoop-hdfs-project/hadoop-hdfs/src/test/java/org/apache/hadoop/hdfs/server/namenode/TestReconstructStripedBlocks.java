@@ -610,7 +610,6 @@ public class TestReconstructStripedBlocks {
 
       MiniDFSCluster.DataNodeProperties dnProp =
               cluster.stopDataNode(dnToStop.getXferAddr());
-      cluster.stopDataNode(dnToStop.getXferAddr());
       cluster.setDataNodeDead(dnToStop);
 
       // Wait for reconstruction to happen
