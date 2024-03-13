@@ -38,9 +38,9 @@ import static java.util.Objects.requireNonNull;
  * operation completes; if an object store needs to explicitly look for and create
  * directory markers, that step will be omitted.
  * <p>
- * <p>
  * Be aware that on some stores (AWS S3) each object listed in a bulk delete counts
- * against the write IOPS limit; large page sizes are counterproductive here.
+ * against the write IOPS limit; large page sizes are counterproductive here, as
+ * are attempts at parallel submissions across multiple threads.
  * @see <a href="https://issues.apache.org/jira/browse/HADOOP-16823">HADOOP-16823.
  *  Large DeleteObject requests are their own Thundering Herd</a>
  * <p>

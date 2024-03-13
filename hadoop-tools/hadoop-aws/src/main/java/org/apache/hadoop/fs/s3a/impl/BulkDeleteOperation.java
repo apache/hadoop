@@ -79,14 +79,14 @@ public class BulkDeleteOperation extends AbstractStoreOperation implements BulkD
       final String k = getStoreContext().pathToKey(p);
       return ObjectIdentifier.builder().key(k).build();
     }).collect(Collectors.toList());
-    try {
-      callbacks.bulkDelete(objects);
-    } catch (MultiObjectDeleteException e) {
-      final List<BulkDeleteOutcomeElement> outcomeElements = e.errors()
+
+    final List<String> errors = callbacks.bulkDelete(objects);
+    if (!errors.isEmpty()) {
+
+      final List<BulkDeleteOutcomeElement> outcomeElements = errors
           .stream()
           .map(error -> new BulkDeleteOutcomeElement(
-              getStoreContext().keyToPath(error.key()),
-              MultiObjectDeleteException.errorToString(error),
+              getStoreContext().keyToPath(error), error,
               null))
           .collect(Collectors.toList());
       return new BulkDeleteOutcome(outcomeElements);
@@ -104,6 +104,7 @@ public class BulkDeleteOperation extends AbstractStoreOperation implements BulkD
     /**
      * Attempt a bulk delete operation.
      * @param keys key list
+     * @return
      * @throws MultiObjectDeleteException one or more of the keys could not
      * be deleted in a multiple object delete operation.
      * @throws AwsServiceException amazon-layer failure.
@@ -111,7 +112,7 @@ public class BulkDeleteOperation extends AbstractStoreOperation implements BulkD
      * @throws IllegalArgumentException illegal arguments
      */
     @Retries.RetryTranslated
-    void bulkDelete(final List<ObjectIdentifier> keys)
+    List<String> bulkDelete(final List<ObjectIdentifier> keys)
         throws MultiObjectDeleteException, IOException, IllegalArgumentException;
   }
 }

@@ -81,7 +81,6 @@ import software.amazon.awssdk.services.s3.model.NoSuchBucketException;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
-import software.amazon.awssdk.services.s3.model.S3Error;
 import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.s3.model.StorageClass;
 import software.amazon.awssdk.services.s3.model.UploadPartRequest;
@@ -123,7 +122,7 @@ import org.apache.hadoop.fs.s3a.commit.magic.InMemoryMagicCommitTracker;
 import org.apache.hadoop.fs.s3a.impl.AWSCannedACL;
 import org.apache.hadoop.fs.s3a.impl.AWSHeaders;
 import org.apache.hadoop.fs.s3a.impl.BulkDeleteOperation;
-import org.apache.hadoop.fs.s3a.impl.BulkDeleteRetryHandler;
+import org.apache.hadoop.fs.s3a.impl.BulkDeleteOperationCallbacksImpl;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.ConfigurationHelper;
 import org.apache.hadoop.fs.s3a.impl.ContextAccessors;
@@ -144,9 +143,11 @@ import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
 import org.apache.hadoop.fs.s3a.impl.RenameOperation;
 import org.apache.hadoop.fs.s3a.impl.RequestFactoryImpl;
 import org.apache.hadoop.fs.s3a.impl.S3AMultipartUploaderBuilder;
+import org.apache.hadoop.fs.s3a.impl.S3AStoreBuilder;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.impl.StoreContextBuilder;
+import org.apache.hadoop.fs.s3a.impl.StoreContextFactory;
 import org.apache.hadoop.fs.s3a.prefetch.S3APrefetchingInputStream;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperations;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperationsImpl;
@@ -247,7 +248,6 @@ import static org.apache.hadoop.fs.s3a.impl.InternalConstants.AP_REQUIRED_EXCEPT
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.ARN_BUCKET_OPTION;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.CSE_PADDING_LENGTH;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.DEFAULT_UPLOAD_PART_COUNT_LIMIT;
-import static org.apache.hadoop.fs.s3a.impl.InternalConstants.DELETE_CONSIDERED_IDEMPOTENT;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_403_FORBIDDEN;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_404_NOT_FOUND;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.UPLOAD_PART_COUNT_LIMIT;
@@ -261,11 +261,11 @@ import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_CONTINU
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_LIST_REQUEST;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.pairedTrackerFactory;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDuration;
-import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfInvocation;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfOperation;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfSupplier;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 import static org.apache.hadoop.util.Preconditions.checkArgument;
+import static org.apache.hadoop.util.RateLimitingFactory.unlimitedRate;
 import static org.apache.hadoop.util.functional.RemoteIterators.foreach;
 import static org.apache.hadoop.util.functional.RemoteIterators.typeCastingRemoteIterator;
 
@@ -287,7 +287,7 @@ import static org.apache.hadoop.util.functional.RemoteIterators.typeCastingRemot
 public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     AWSPolicyProvider, DelegationTokenProvider, IOStatisticsSource,
     AuditSpanSource<AuditSpanS3A>, ActiveThreadSpanSource<AuditSpanS3A>,
-    BulkDeleteSource {
+    BulkDeleteSource, StoreContextFactory {
 
   /**
    * Default blocksize as used in blocksize and FS status queries.
@@ -299,6 +299,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private Path workingDir;
 
   private String username;
+
+  /**
+   * Store back end.
+   */
+  private S3AStore store;
 
   private S3Client s3Client;
 
@@ -684,9 +689,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // the encryption algorithms)
       bindAWSClient(name, delegationTokensEnabled);
 
-      // This initiates a probe against S3 for the bucket existing.
-      doBucketProbing();
-
       inputPolicy = S3AInputPolicy.getPolicy(
           conf.getTrimmed(INPUT_FADVISE,
               Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_DEFAULT),
@@ -733,9 +735,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       directoryPolicy = DirectoryPolicyImpl.getDirectoryPolicy(conf,
           this::allowAuthoritative);
       LOG.debug("Directory marker retention policy is {}", directoryPolicy);
-
-      initMultipartUploads(conf);
-
       pageSize = intOption(getConf(), BULK_DELETE_PAGE_SIZE,
           BULK_DELETE_PAGE_SIZE_DEFAULT, 0);
       checkArgument(pageSize <= InternalConstants.MAX_ENTRIES_TO_DELETE,
@@ -760,6 +759,25 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           OPTIMIZED_COPY_FROM_LOCAL_DEFAULT);
       LOG.debug("Using optimized copyFromLocal implementation: {}", optimizedCopyFromLocal);
       s3AccessGrantsEnabled = conf.getBoolean(AWS_S3_ACCESS_GRANTS_ENABLED, false);
+
+      // now create the store
+      store = new S3AStoreBuilder()
+          .withS3Client(s3Client)
+          .withDurationTrackerFactory(getDurationTrackerFactory())
+          .withStoreContextFactory(this)
+          .withAuditSpanSource(getAuditManager())
+          .withInstrumentation(getInstrumentation())
+          .withStatisticsContext(statisticsContext)
+          .withStorageStatistics(getStorageStatistics())
+          .withReadRateLimiter(unlimitedRate())
+          .withWriteRateLimiter(unlimitedRate())
+          .build();
+
+      // The filesystem is now ready to perform operations against
+      // S3
+      // This initiates a probe against S3 for the bucket existing.
+      doBucketProbing();
+      initMultipartUploads(conf);
     } catch (SdkException e) {
       // amazon client exception: stop all services then throw the translation
       cleanupWithLogger(LOG, span);
@@ -1419,6 +1437,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     public S3Client getAmazonS3Client(String reason) {
       LOG.debug("Access to S3 client requested, reason {}", reason);
       return s3Client;
+    }
+
+    @Override
+    public S3AStore getStore() {
+      return store;
     }
 
     /**
@@ -3068,29 +3091,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @Retries.RetryRaw
   protected void deleteObject(String key)
       throws SdkException, IOException {
-    blockRootDelete(key);
     incrementWriteOperations();
-    try (DurationInfo ignored =
-             new DurationInfo(LOG, false,
-                 "deleting %s", key)) {
-      invoker.retryUntranslated(String.format("Delete %s:/%s", bucket, key),
-          DELETE_CONSIDERED_IDEMPOTENT,
-          () -> {
-            incrementStatistic(OBJECT_DELETE_OBJECTS);
-            trackDurationOfInvocation(getDurationTrackerFactory(),
-                OBJECT_DELETE_REQUEST.getSymbol(),
-                () -> s3Client.deleteObject(getRequestFactory()
-                    .newDeleteObjectRequestBuilder(key)
-                    .build()));
-            return null;
-          });
-    } catch (AwsServiceException ase) {
-      // 404 errors get swallowed; this can be raised by
-      // third party stores (GCS).
-      if (!isObjectNotFound(ase)) {
-        throw ase;
-      }
-    }
+    store.deleteObject(getRequestFactory()
+        .newDeleteObjectRequestBuilder(key)
+        .build());
   }
 
   /**
@@ -3114,19 +3118,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       instrumentation.directoryDeleted();
     }
     deleteObject(key);
-  }
-
-  /**
-   * Reject any request to delete an object where the key is root.
-   * @param key key to validate
-   * @throws InvalidRequestException if the request was rejected due to
-   * a mistaken attempt to delete the root directory.
-   */
-  private void blockRootDelete(String key) throws InvalidRequestException {
-    if (key.isEmpty() || "/".equals(key)) {
-      throw new InvalidRequestException("Bucket "+ bucket
-          +" cannot be deleted");
-    }
   }
 
   /**
@@ -3155,38 +3146,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private DeleteObjectsResponse deleteObjects(DeleteObjectsRequest deleteRequest)
       throws MultiObjectDeleteException, SdkException, IOException {
     incrementWriteOperations();
-    BulkDeleteRetryHandler retryHandler =
-        new BulkDeleteRetryHandler(createStoreContext());
-    int keyCount = deleteRequest.delete().objects().size();
-    try (DurationInfo ignored =
-            new DurationInfo(LOG, false, "DELETE %d keys",
-                keyCount)) {
-      DeleteObjectsResponse response =
-          invoker.retryUntranslated("delete", DELETE_CONSIDERED_IDEMPOTENT,
-              (text, e, r, i) -> {
-                // handle the failure
-                retryHandler.bulkDeleteRetried(deleteRequest, e);
-              },
-              // duration is tracked in the bulk delete counters
-              trackDurationOfOperation(getDurationTrackerFactory(),
-                  OBJECT_BULK_DELETE_REQUEST.getSymbol(), () -> {
-                  incrementStatistic(OBJECT_DELETE_OBJECTS, keyCount);
-                  return s3Client.deleteObjects(deleteRequest);
-                }));
-
-      if (!response.errors().isEmpty()) {
-        // one or more of the keys could not be deleted.
-        // log and then throw
-        List<S3Error> errors = response.errors();
-        LOG.debug("Partial failure of delete, {} errors", errors.size());
-        for (S3Error error : errors) {
-          LOG.debug("{}: \"{}\" - {}", error.key(), error.code(), error.message());
-        }
-        throw new MultiObjectDeleteException(errors);
-      }
-
-      return response;
+    DeleteObjectsResponse response = store.deleteObjects(deleteRequest).getValue();
+    if (!response.errors().isEmpty()) {
+      throw new MultiObjectDeleteException(response.errors());
     }
+    return response;
   }
 
   /**
@@ -3395,14 +3359,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           List<ObjectIdentifier> keysToDelete,
           boolean deleteFakeDir)
       throws MultiObjectDeleteException, AwsServiceException, IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Initiating delete operation for {} objects",
-          keysToDelete.size());
-      for (ObjectIdentifier objectIdentifier : keysToDelete) {
-        LOG.debug(" \"{}\" {}", objectIdentifier.key(),
-            objectIdentifier.versionId() != null ? objectIdentifier.versionId() : "");
-      }
-    }
     if (keysToDelete.isEmpty()) {
       // exit fast if there are no keys to delete
       return;
@@ -3413,9 +3369,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       deleteObject(keysToDelete.get(0).key());
       noteDeleted(1, deleteFakeDir);
       return;
-    }
-    for (ObjectIdentifier objectIdentifier : keysToDelete) {
-      blockRootDelete(objectIdentifier.key());
     }
     try {
       if (enableMultiObjectsDelete) {
@@ -5682,6 +5635,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * new store context instances should be created as appropriate.
    * @return the store context of this FS.
    */
+  @Override
   @InterfaceAudience.Private
   public StoreContext createStoreContext() {
     return new StoreContextBuilder().setFsURI(getUri())
@@ -5789,44 +5743,23 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
     final Path p = makeQualified(path);
     final AuditSpanS3A span = createSpan("bulkdelete", p.toString(), null);
+    final int size = enableMultiObjectsDelete ? pageSize : 1;
     return new BulkDeleteOperation(
         createStoreContext(),
-        createBulkDeleteCallbacks(span),
+        createBulkDeleteCallbacks(p, size, span),
         p,
-        enableMultiObjectsDelete ? pageSize : 1,
+        size,
         span);
   }
 
   /**
-   * Override point for mocking.
+   * Create the callbacks for the bulk delete operation.
    * @param span span for operations.
-   * @return an instance of the Bulk Delette callbacks.
+   * @return an instance of the Bulk Delete callbacks.
    */
   protected BulkDeleteOperation.BulkDeleteOperationCallbacks createBulkDeleteCallbacks(
-      final AuditSpanS3A span) {
-    return new BulkDeleteOperationCallbacksImpl(span);
+      Path path, int pageSize, AuditSpanS3A span) {
+    return new BulkDeleteOperationCallbacksImpl(store, pathToKey(path), pageSize, span);
   }
 
-  /**
-   * Callbacks for the bulk delete operation.
-   */
-  protected class BulkDeleteOperationCallbacksImpl implements
-      BulkDeleteOperation.BulkDeleteOperationCallbacks {
-
-    /** span for operations. */
-    private final AuditSpan span;
-
-    protected BulkDeleteOperationCallbacksImpl(AuditSpan span) {
-      this.span = span;
-    }
-
-    @Override
-    @Retries.RetryTranslated
-    public void bulkDelete(final List<ObjectIdentifier> keys)
-        throws MultiObjectDeleteException, IOException, IllegalArgumentException {
-      span.activate();
-      once("bulkDelete", "", () ->
-          S3AFileSystem.this.removeKeys(keys, false));
-    }
-  }
 }
