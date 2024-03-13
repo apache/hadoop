@@ -77,6 +77,10 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
 
   private static final String US_GOV_EAST_1 = "us-gov-east-1";
 
+  private static final String US_REGION_STR = "us-";
+
+  private static final String CA_REGION_STR = "ca-";
+
   /**
    * If anyone were ever to create a bucket with this UUID pair it would break the tests.
    */
@@ -438,8 +442,9 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
         + " null region and fips enabled, perform file system CRUD operations");
 
     final String bucketLocation = getFileSystem().getBucketLocation();
-    assume("FIPS can be enabled to access US or Canada endpoints only",
-        bucketLocation.contains("us-") || bucketLocation.contains("ca-"));
+    assume("FIPS can be enabled to access buckets from US or Canada endpoints only",
+        bucketLocation.startsWith(US_REGION_STR)
+            || bucketLocation.startsWith(CA_REGION_STR));
 
     final Configuration conf = getConfiguration();
     final Configuration newConf = new Configuration(conf);
