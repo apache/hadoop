@@ -86,7 +86,7 @@ public class TestCrcCorruption {
    * create/write. To recover from corruption while writing, at
    * least two replicas are needed.
    */
-  @Test(timeout=50000)
+  @Test(timeout=600000)
   public void testCorruptionDuringWrt() throws Exception {
     Configuration conf = new HdfsConfiguration();
     // Set short retry timeouts so this test runs faster

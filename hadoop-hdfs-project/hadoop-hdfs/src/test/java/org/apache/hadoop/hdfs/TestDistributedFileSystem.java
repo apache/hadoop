@@ -1721,15 +1721,18 @@ public class TestDistributedFileSystem {
         false);
     conf.setInt(HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.
         MIN_REPLICATION, 2);
-    // 3 racks & 3 nodes. 1 per rack
-    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3)
-        .racks(new String[] {"/rack1", "/rack2", "/rack3"}).build()) {
+    // 3 racks & 6 nodes. 1 per rack for 2 racks and 3 nodes in the 3rd rack
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(6)
+        .racks(new String[] {"/rack1", "/rack2", "/rack3", "/rack3", "/rack3", "/rack3"}).build()) {
       cluster.waitClusterUp();
       DistributedFileSystem fs = cluster.getFileSystem();
-      // kill one DN, so only 2 racks stays with active DN
-      cluster.stopDataNode(0);
+      // kill all the DNs in the 3rd rack.
+      cluster.stopDataNode(5);
+      cluster.stopDataNode(4);
+      cluster.stopDataNode(3);
+      cluster.stopDataNode(2);
+
       // create a file with replication 3, for rack fault tolerant BPP,
-      // it should allocate nodes in all 3 racks.
       DFSTestUtil.createFile(fs, new Path("/testFile"), 1024L, (short) 3, 1024L);
     }
   }
@@ -1742,13 +1745,16 @@ public class TestDistributedFileSystem {
         BlockPlacementPolicyRackFaultTolerant.class, BlockPlacementPolicy.class);
     conf.setBoolean(HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.ENABLE_KEY, false);
     conf.setInt(HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.MIN_REPLICATION, 3);
-    // 3 racks & 3 nodes. 1 per rack
-    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3)
-        .racks(new String[] {"/rack1", "/rack2", "/rack3"}).build()) {
+    // 3 racks & 6 nodes. 1 per rack for 2 racks and 3 nodes in the 3rd rack
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(6)
+        .racks(new String[] {"/rack1", "/rack2", "/rack3", "/rack3", "/rack3", "/rack3"}).build()) {
       cluster.waitClusterUp();
       DistributedFileSystem fs = cluster.getFileSystem();
       // kill one DN, so only 2 racks stays with active DN
-      cluster.stopDataNode(0);
+      cluster.stopDataNode(5);
+      cluster.stopDataNode(4);
+      cluster.stopDataNode(3);
+      cluster.stopDataNode(2);
       boolean threw = false;
       try {
         DFSTestUtil.createFile(fs, new Path("/testFile"), 1024L, (short) 3, 1024L);
@@ -1771,12 +1777,15 @@ public class TestDistributedFileSystem {
     conf.setInt(HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.
         MIN_REPLICATION, 1);
     // 3 racks & 3 nodes. 1 per rack
-    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3)
-        .racks(new String[] {"/rack1", "/rack2", "/rack3"}).build()) {
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(6)
+        .racks(new String[] {"/rack1", "/rack2", "/rack3", "/rack3", "/rack3", "/rack3"}).build()) {
       cluster.waitClusterUp();
       DistributedFileSystem fs = cluster.getFileSystem();
-      // kill 2 DN, so only 1 racks stays with active DN
-      cluster.stopDataNode(0);
+      // kill one DN, so only 2 racks stays with active DN
+      cluster.stopDataNode(5);
+      cluster.stopDataNode(4);
+      cluster.stopDataNode(3);
+      cluster.stopDataNode(2);
       cluster.stopDataNode(1);
       // create a file with replication 3, for rack fault tolerant BPP,
       // it should allocate nodes in all 3 racks.
@@ -1797,12 +1806,15 @@ public class TestDistributedFileSystem {
     conf.setInt(HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.
         MIN_REPLICATION, 2);
     // 3 racks & 3 nodes. 1 per rack
-    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3)
-        .racks(new String[] {"/rack1", "/rack2", "/rack3"}).build()) {
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(6)
+        .racks(new String[] {"/rack1", "/rack2", "/rack3", "/rack3", "/rack3", "/rack3"}).build()) {
       cluster.waitClusterUp();
       DistributedFileSystem fs = cluster.getFileSystem();
-      // kill 2 DN, so only 1 rack stays with active DN
-      cluster.stopDataNode(0);
+      // kill one DN, so only 2 racks stays with active DN
+      cluster.stopDataNode(5);
+      cluster.stopDataNode(4);
+      cluster.stopDataNode(3);
+      cluster.stopDataNode(2);
       cluster.stopDataNode(1);
       boolean threw = false;
       try {
@@ -1826,8 +1838,8 @@ public class TestDistributedFileSystem {
         HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.ENABLE_KEY,
         false);
     // 3 racks & 3 nodes. 1 per rack
-    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3)
-        .racks(new String[] {"/rack1", "/rack2", "/rack3"}).build()) {
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(6)
+        .racks(new String[] {"/rack1", "/rack2", "/rack3", "/rack3", "/rack3", "/rack3"}).build()) {
       cluster.waitClusterUp();
       DistributedFileSystem fs = cluster.getFileSystem();
       // shutdown all DNs

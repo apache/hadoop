@@ -1671,7 +1671,6 @@ class DataStreamer extends Daemon {
         // Connect to first DataNode in the list.
         success = createBlockOutputStream(nodes, nextStorageTypes, 0L, false)
             || setupPipelineForAppendOrRecovery();
-
       } catch(IOException ie) {
         LOG.warn("Exception in setupPipelineForCreate " + this, ie);
         success = false;
