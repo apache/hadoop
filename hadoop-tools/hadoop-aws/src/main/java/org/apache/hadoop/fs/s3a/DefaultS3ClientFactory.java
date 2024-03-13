@@ -115,6 +115,11 @@ public class DefaultS3ClientFactory extends Configured
   public static final String ERROR_ENDPOINT_WITH_FIPS =
       "Non central endpoint cannot be set when " + FIPS_ENDPOINT + " is true";
 
+  /**
+   * A one-off log stating whether S3 Access Grants are enabled.
+   */
+  private static final LogExactlyOnce LOG_S3AG_ENABLED = new LogExactlyOnce(LOG);
+
   @Override
   public S3Client createS3Client(
       final URI uri,
@@ -181,7 +186,7 @@ public class DefaultS3ClientFactory extends Configured
 
     configureEndpointAndRegion(builder, parameters, conf);
 
-    applyS3AccessGrantsConfigurations(builder, conf);
+    maybeApplyS3AccessGrantsConfigurations(builder, conf);
 
     S3Configuration serviceConfiguration = S3Configuration.builder()
         .pathStyleAccessEnabled(parameters.isPathStyleAccess())
@@ -408,7 +413,7 @@ public class DefaultS3ClientFactory extends Configured
   }
 
   private static <BuilderT extends S3BaseClientBuilder<BuilderT, ClientT>, ClientT> void
-      applyS3AccessGrantsConfigurations(BuilderT builder, Configuration conf) {
+  maybeApplyS3AccessGrantsConfigurations(BuilderT builder, Configuration conf) {
     boolean isS3AccessGrantsEnabled = conf.getBoolean(AWS_S3_ACCESS_GRANTS_ENABLED, false);
     if (!isS3AccessGrantsEnabled){
       LOG.debug("S3 Access Grants plugin is not enabled.");
@@ -422,7 +427,8 @@ public class DefaultS3ClientFactory extends Configured
             .enableFallback(isFallbackEnabled)
             .build();
     builder.addPlugin(accessGrantsPlugin);
-    LOG.info("S3 Access Grants plugin is enabled with IAM fallback set to {}", isFallbackEnabled);
+    LOG_S3AG_ENABLED.info(
+        "S3 Access Grants plugin is enabled with IAM fallback set to {}", isFallbackEnabled);
   }
 
 }

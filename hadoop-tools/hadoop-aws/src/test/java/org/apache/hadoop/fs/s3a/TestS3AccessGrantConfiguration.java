@@ -41,7 +41,7 @@ public class TestS3AccessGrantConfiguration extends AbstractHadoopTestBase {
   /**
    * This credential provider will be attached to any client
    * that has been configured with the S3 Access Grants plugin.
-   * {@link software.amazon.awssdk.s3accessgrants.plugin.S3AccessGrantsPlugin}.
+   * {@code software.amazon.awssdk.s3accessgrants.plugin.S3AccessGrantsPlugin}.
    */
   public static final String S3_ACCESS_GRANTS_EXPECTED_CREDENTIAL_PROVIDER_CLASS =
       S3AccessGrantsIdentityProvider.class.getName();

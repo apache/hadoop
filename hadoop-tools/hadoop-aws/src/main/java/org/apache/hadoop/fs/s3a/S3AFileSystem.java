@@ -495,7 +495,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private String configuredRegion;
 
   /**
-   * Is a S3 Access Grants Enabled?
+   * Are S3 Access Grants Enabled?
    */
   private boolean s3AccessGrantsEnabled;
 

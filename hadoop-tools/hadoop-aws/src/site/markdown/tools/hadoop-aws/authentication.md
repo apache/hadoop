@@ -22,7 +22,7 @@ needs the credentials needed to interact with buckets.
 The client supports multiple authentication mechanisms and can be configured as to
 which mechanisms to use, and their order of use. Custom implementations
 of `com.amazonaws.auth.AWSCredentialsProvider` may also be used.
-However, with the upcoming upgrade to AWS Java SDK V2, these classes will need to be
+However, with the upgrade to AWS Java SDK V2 in Hadoop 3.4.0, these classes will need to be
 updated to implement `software.amazon.awssdk.auth.credentials.AwsCredentialsProvider`.
 For more information see [Upcoming upgrade to AWS Java SDK V2](./aws_sdk_upgrade.html).
 
