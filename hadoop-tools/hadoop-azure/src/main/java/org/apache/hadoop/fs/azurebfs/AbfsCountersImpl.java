@@ -39,7 +39,6 @@ import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatist
 import static org.apache.hadoop.util.Time.now;
 
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Instrumentation of Abfs counters.

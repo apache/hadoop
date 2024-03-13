@@ -1004,8 +1004,8 @@ HTTP headers in subsequent requests. Azure uses these settings to track their en
 
 ### <a name="drivermetricoptions"></a> Driver Metric Options
 
-`fs.azure.metric.uri`: This configuration provides the uri in the format of https://<accountname>
-.dfs.core.windows.net/<containername>. This should be a part of the config in order to prevent extra calls to create the
+`fs.azure.metric.uri`: This configuration provides the uri in the format of 'https://`<accountname>`
+.dfs.core.windows.net/`<containername>`'. This should be a part of the config in order to prevent extra calls to create the
 filesystem. We use an existing filsystem to push the metrics.
 
 ## <a name="troubleshooting"></a> Troubleshooting

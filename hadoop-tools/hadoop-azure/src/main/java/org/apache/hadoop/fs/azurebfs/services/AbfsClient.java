@@ -1827,7 +1827,7 @@ public class AbfsClient implements Closeable {
   }
 
   class TimerTaskImpl extends TimerTask {
-    public TimerTaskImpl() {
+    TimerTaskImpl() {
       runningTimerTask = this;
     }
     @Override
