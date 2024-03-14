@@ -5,17 +5,41 @@ import java.io.NotSerializableException;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.http.HttpClientConnection;
 import org.apache.http.conn.routing.HttpRoute;
+
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DEFAULT_MAX_CONN_SYS_PROP;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_MAX_CONN_SYS_PROP;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.KAC_CONN_TTL;
+import static org.xerial.snappy.Snappy.cleanUp;
 
 public class KeepAliveCache extends HashMap<KeepAliveCache.KeepAliveKey, KeepAliveCache.ClientVector>
     implements Runnable{
 
   private Thread thread;
-  private final static String HTTP_MAX_CONN_SYS_PROP = "http.maxConnections";
-  private final static Integer DEFAULT_MAX_CONN_SYS_PROP = 5;
+
+  private boolean threadShouldPause = true;
+
+  private boolean threadShouldRun = true;
 
   private final int maxConn;
+
+  public void close() {
+    INSTANCE.threadShouldRun = false;
+    INSTANCE = new KeepAliveCache();
+  }
+
+  @VisibleForTesting
+  void pauseThread() {
+    threadShouldPause = false;
+  }
+
+  @VisibleForTesting
+  void resumeThread() {
+    threadShouldPause = true;
+  }
+
 
   private KeepAliveCache() {
     thread = new Thread(this);
@@ -35,8 +59,16 @@ public class KeepAliveCache extends HashMap<KeepAliveCache.KeepAliveKey, KeepAli
 
   @Override
   public void run() {
+    while (threadShouldRun) {
+      if (threadShouldPause) {
+        kacCleanup();
+      }
+    }
+  }
+
+  private void kacCleanup() {
     try {
-      Thread.sleep(5_000L);
+      Thread.sleep(KAC_CONN_TTL);
       synchronized (this) {
         /* Remove all unused HttpClients.  Starting from the
          * bottom of the stack (the least-recently used first).
@@ -90,7 +122,7 @@ public class KeepAliveCache extends HashMap<KeepAliveCache.KeepAliveKey, KeepAli
     KeepAliveKey key = new KeepAliveKey(httpRoute);
     ClientVector v = super.get(key);
     if(v == null) {
-      v= new ClientVector(5_000);
+      v= new ClientVector(KAC_CONN_TTL);
       v.put(httpClientConnection);
       super.put(key, v);
     } else {
