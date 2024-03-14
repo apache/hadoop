@@ -104,6 +104,7 @@ public interface S3AStore extends IOStatisticsSource {
    * Retry policy: retry untranslated; delete considered idempotent.
    * 404 errors other than bucket not found are swallowed;
    * this can be raised by third party stores (GCS).
+   * <p>
    * If an exception is caught and swallowed, the response will be empty;
    * otherwise it will be the response from the delete operation.
    * @param request request to make

@@ -18,9 +18,12 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.file.AccessDeniedException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import software.amazon.awssdk.services.s3.model.DeleteObjectsResponse;
@@ -30,9 +33,13 @@ import software.amazon.awssdk.services.s3.model.S3Error;
 import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.S3AStore;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
+import org.apache.hadoop.util.functional.Tuples;
 
+import static java.util.Collections.emptyList;
+import static java.util.Collections.singletonList;
 import static org.apache.hadoop.fs.s3a.Invoker.once;
 import static org.apache.hadoop.util.Preconditions.checkArgument;
+import static org.apache.hadoop.util.functional.Tuples.pair;
 
 /**
  * Callbacks for the bulk delete operation.
@@ -40,13 +47,20 @@ import static org.apache.hadoop.util.Preconditions.checkArgument;
 public class BulkDeleteOperationCallbacksImpl implements
     BulkDeleteOperation.BulkDeleteOperationCallbacks {
 
+  /**
+   * Path for logging.
+   */
   private final String path;
 
+  /** Page size for bulk delete. */
   private final int pageSize;
 
   /** span for operations. */
   private final AuditSpan span;
 
+  /**
+   * Store.
+   */
   private final S3AStore store;
 
 
@@ -60,21 +74,18 @@ public class BulkDeleteOperationCallbacksImpl implements
 
   @Override
   @Retries.RetryTranslated
-  public List<String> bulkDelete(final List<ObjectIdentifier> keysToDelete)
-      throws MultiObjectDeleteException, IOException, IllegalArgumentException {
+  public List<Map.Entry<String, String>> bulkDelete(final List<ObjectIdentifier> keysToDelete)
+      throws IOException, IllegalArgumentException {
     span.activate();
     final int size = keysToDelete.size();
     checkArgument(size <= pageSize,
         "Too many paths to delete in one operation: %s", size);
     if (size == 0) {
-      return Collections.emptyList();
+      return emptyList();
     }
+
     if (size == 1) {
-      store.deleteObject(store.getRequestFactory()
-          .newDeleteObjectRequestBuilder(keysToDelete.get(0).key())
-          .build());
-      // no failures, so return an empty list
-      return Collections.emptyList();
+      return deleteSingleObject(keysToDelete.get(0).key());
     }
 
     final DeleteObjectsResponse response = once("bulkDelete", path, () ->
@@ -84,11 +95,31 @@ public class BulkDeleteOperationCallbacksImpl implements
     final List<S3Error> errors = response.errors();
     if (errors.isEmpty()) {
       // all good.
-      return Collections.emptyList();
+      return emptyList();
     } else {
       return errors.stream()
-          .map(S3Error::key)
+          .map(e -> pair(e.key(), e.message()))
           .collect(Collectors.toList());
     }
+  }
+
+  /**
+   * Delete a single object.
+   * @param key key to delete
+   * @return list of keys which failed to delete: length 0 or 1.
+   * @throws IOException IO problem other than AccessDeniedException
+   */
+  @Retries.RetryTranslated
+  private List<Map.Entry<String, String>> deleteSingleObject(final String key) throws IOException {
+    try {
+      once("bulkDelete", path, () ->
+          store.deleteObject(store.getRequestFactory()
+              .newDeleteObjectRequestBuilder(key)
+              .build()));
+    } catch (AccessDeniedException e) {
+      return singletonList(pair(key, e.toString()));
+    }
+    return emptyList();
+
   }
 }
