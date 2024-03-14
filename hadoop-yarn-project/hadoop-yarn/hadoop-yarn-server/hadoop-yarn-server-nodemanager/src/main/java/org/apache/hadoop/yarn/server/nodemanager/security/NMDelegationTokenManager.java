@@ -34,7 +34,7 @@ public class NMDelegationTokenManager {
     this.conf = conf;
   }
 
-  /** 
+  /**
    * Renews a token on behalf of the user logged in.
    * @param token Token to be renewed
    * @return Expiration time for the token

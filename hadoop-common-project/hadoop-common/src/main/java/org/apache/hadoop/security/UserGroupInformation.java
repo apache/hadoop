@@ -1717,7 +1717,7 @@ public class UserGroupInformation {
   }
 
   /**
-   * Remove a named token from this UGI
+   * Remove a named token from this UGI.
    *
    * @param alias Name of the token
    */

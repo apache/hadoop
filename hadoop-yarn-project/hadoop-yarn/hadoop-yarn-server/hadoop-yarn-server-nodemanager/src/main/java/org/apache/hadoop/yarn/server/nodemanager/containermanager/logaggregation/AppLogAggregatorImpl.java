@@ -19,11 +19,9 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.logaggregation;
 
 import java.io.IOException;
-import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -42,7 +40,6 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.util.StringUtils;
@@ -450,17 +447,16 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
 
   private void removeExpiredDelegationTokens()
       throws IOException, InterruptedException {
-    Map<Text, Token<? extends TokenIdentifier>> tokenMap = userUgi.getCredentials().getTokenMap();
+    for (Map.Entry<Text, Token<?>> tokenEntry : userUgi.getCredentials().getTokenMap().entrySet()) {
+      Token<?> token = tokenEntry.getValue();
 
-    for (Text tokenKey : tokenMap.keySet()) {
-      Token<? extends TokenIdentifier> token = tokenMap.get(tokenKey);
       if (token.getKind().equals(HDFS_DELEGATION_KIND)) {
         try {
           delegationTokenManager.renewToken(token);
           LOG.debug("HDFS Delegation Token for {} is successfully renewed: {}",
               appId, token);
         } catch (SecretManager.InvalidToken e) {
-          userUgi.removeToken(tokenKey);
+          userUgi.removeToken(tokenEntry.getKey());
           LOG.info("HDFS Delegation Token for {} is expired, " +
               "removed from the credentials: {}", appId, token);
         }

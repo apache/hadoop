@@ -2615,7 +2615,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     // Adding a valid and an expired delegation token to the credentials
     Token renewableToken = mockRenewableToken();
     Token expiredToken = mockExpiredToken();
-    
+
     Credentials credentials = new Credentials();
     credentials.addToken(new Text("renewableToken"), renewableToken);
     credentials.addToken(new Text("expiredToken"), expiredToken);
