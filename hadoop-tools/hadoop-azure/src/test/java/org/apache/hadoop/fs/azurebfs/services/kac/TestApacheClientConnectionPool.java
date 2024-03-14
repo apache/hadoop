@@ -1,19 +1,12 @@
 package org.apache.hadoop.fs.azurebfs.services.kac;
 
 import java.io.IOException;
-import java.util.Timer;
-import java.util.TimerTask;
 
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsTestWithTimeout;
-import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
-import org.apache.hadoop.fs.azurebfs.services.kac.KeepAliveCache;
 import org.apache.http.HttpClientConnection;
 import org.apache.http.HttpHost;
 import org.apache.http.conn.routing.HttpRoute;
@@ -113,14 +106,6 @@ public class TestApacheClientConnectionPool extends
     Assert.assertNull(keepAliveCache.get(routes));
     Mockito.verify(connection, Mockito.times(1)).close();
     keepAliveCache.close();
-  }
-
-
-
-  private AzureBlobFileSystem getAbfsFs(final Configuration configuration)
-      throws IOException {
-    AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(configuration);
-    return fs;
   }
 }
 
