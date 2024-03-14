@@ -12,13 +12,26 @@ public class KeepAliveCache extends HashMap<KeepAliveCache.KeepAliveKey, KeepAli
     implements Runnable{
 
   private Thread thread;
+  private final static String HTTP_MAX_CONN_SYS_PROP = "http.maxConnections";
+  private final static Integer DEFAULT_MAX_CONN_SYS_PROP = 5;
+
+  private final int maxConn;
 
   private KeepAliveCache() {
     thread = new Thread(this);
     thread.start();
+    String sysPropMaxConn = System.getProperty(HTTP_MAX_CONN_SYS_PROP);
+    if (sysPropMaxConn == null) {
+      maxConn = DEFAULT_MAX_CONN_SYS_PROP;
+    } else {
+      maxConn = Integer.parseInt(sysPropMaxConn);
+    }
   }
-
   public static KeepAliveCache INSTANCE = new KeepAliveCache();
+
+  private int getKacSize() {
+    return INSTANCE.maxConn;
+  }
 
   @Override
   public void run() {
@@ -128,7 +141,7 @@ public class KeepAliveCache extends HashMap<KeepAliveCache.KeepAliveKey, KeepAli
 
     /* return a still valid, unused HttpClient */
     synchronized void put(HttpClientConnection h) {
-      if (size() >= 5) {
+      if (size() >= getKacSize()) {
         try {h.close();} catch (Exception e) {}
         ;
         return;

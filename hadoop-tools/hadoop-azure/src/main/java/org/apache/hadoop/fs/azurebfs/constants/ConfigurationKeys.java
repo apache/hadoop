@@ -305,7 +305,5 @@ public final class ConfigurationKeys {
    */
   public static final String FS_AZURE_BUFFERED_PREAD_DISABLE = "fs.azure.buffered.pread.disable";
   public static final String FS_AZURE_NETWORKING_LIBRARY = "fs.azure.networking.library";
-  public static final String FS_AZURE_HTTP_CLIENT_MAX_CONN = "fs.azure.http.client.max.conn";
-  public static final String FS_AZURE_HTTP_CLIENT_MAX_CONN_IDLE_TIME = "fs.azure.http.client.max.client.idle.time";
   private ConfigurationKeys() {}
 }

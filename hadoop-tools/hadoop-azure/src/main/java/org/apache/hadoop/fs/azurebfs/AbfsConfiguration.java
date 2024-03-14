@@ -360,12 +360,6 @@ public class AbfsConfiguration{
           FS_AZURE_ABFS_RENAME_RESILIENCE, DefaultValue = DEFAULT_ENABLE_ABFS_RENAME_RESILIENCE)
   private boolean renameResilience;
 
-  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_HTTP_CLIENT_MAX_CONN, DefaultValue = -1)
-  private int httpClientMaxConn;
-
-  @LongConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_HTTP_CLIENT_MAX_CONN_IDLE_TIME, DefaultValue = DEFAULT_HTTP_CLIENT_CONN_MAX_IDLE_TIME)
-  private long httpClientConnMaxIdleTime;
-
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey =
       FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, DefaultValue = DEFAULT_ENABLE_ABFS_CHECKSUM_VALIDATION)
   private boolean isChecksumValidationEnabled;
@@ -851,25 +845,6 @@ public class AbfsConfiguration{
 
   public HttpOperationType getPreferredHttpOperationType() {
     return getEnum(FS_AZURE_NETWORKING_LIBRARY, DEFAULT_NETWORKING_LIBRARY);
-  }
-
-  public boolean isKacLimitApplied() {
-    return getBoolean("fs.abfs.kac.limit.enabled", true);
-  }
-
-  public boolean isReuseLimitApplied() {
-    return getBoolean("fs.abfs.reuse.limit.enabled", true);
-  }
-
-  public int getHttpClientMaxConn() {
-    if(httpClientMaxConn != -1) {
-      return httpClientMaxConn;
-    }
-    return getWriteMaxConcurrentRequestCount() + 8;
-  }
-
-  public long getHttpClientConnMaxIdleTime() {
-    return httpClientConnMaxIdleTime;
   }
 
   /**
