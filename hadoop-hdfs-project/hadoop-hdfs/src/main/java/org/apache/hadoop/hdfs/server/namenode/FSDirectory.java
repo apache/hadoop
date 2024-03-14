@@ -1998,6 +1998,7 @@ public class FSDirectory implements Closeable {
 
     if (inode.isFile()) {
       final INodeFile fileNode = inode.asFile();
+      // Depends on status of the last block
       size = fileNode.computeFileSize(snapshot);
       replication = fileNode.getFileReplication(snapshot);
       blocksize = fileNode.getPreferredBlockSize();
