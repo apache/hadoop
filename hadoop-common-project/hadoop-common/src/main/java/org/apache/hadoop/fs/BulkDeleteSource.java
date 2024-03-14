@@ -37,11 +37,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 public interface BulkDeleteSource {
 
   /**
-   * Exception message for the case where bulk delete is not supported.
-   */
-  String BULK_DELETE_NOT_SUPPORTED = "Bulk delete not supported";
-
-  /**
    * Create a bulk delete operation.
    * There is no network IO at this point, simply the creation of
    * a bulk delete object.
@@ -54,7 +49,7 @@ public interface BulkDeleteSource {
    */
   default BulkDelete createBulkDelete(Path path)
       throws UnsupportedOperationException, IllegalArgumentException, IOException {
-    throw new UnsupportedOperationException(BULK_DELETE_NOT_SUPPORTED);
+    throw new UnsupportedOperationException("Bulk delete not supported");
   }
 
 }

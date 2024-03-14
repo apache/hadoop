@@ -19,19 +19,20 @@
 package org.apache.hadoop.fs.s3a.impl;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Map;
 
-import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 
 import org.apache.hadoop.fs.BulkDelete;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
+import org.apache.hadoop.util.functional.Tuples;
 
+import static java.util.Collections.emptyList;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toList;
 import static org.apache.hadoop.util.Preconditions.checkArgument;
 
 /**
@@ -45,7 +46,8 @@ public class BulkDeleteOperation extends AbstractStoreOperation implements BulkD
 
   private final int pageSize;
 
-  public BulkDeleteOperation(final StoreContext storeContext,
+  public BulkDeleteOperation(
+      final StoreContext storeContext,
       final BulkDeleteOperationCallbacks callbacks,
       final Path basePath,
       final int pageSize,
@@ -68,30 +70,32 @@ public class BulkDeleteOperation extends AbstractStoreOperation implements BulkD
   }
 
   @Override
-  public BulkDeleteOutcome bulkDelete(final List<Path> paths)
+  public List<Map.Entry<Path, String>> bulkDelete(final List<Path> paths)
       throws IOException, IllegalArgumentException {
     requireNonNull(paths);
     checkArgument(paths.size() <= pageSize,
         "Number of paths (%d) is larger than the page size (%d)", paths.size(), pageSize);
 
+    final StoreContext context = getStoreContext();
     final List<ObjectIdentifier> objects = paths.stream().map(p -> {
       checkArgument(p.isAbsolute(), "Path %s is not absolute", p);
-      final String k = getStoreContext().pathToKey(p);
+      final String k = context.pathToKey(p);
       return ObjectIdentifier.builder().key(k).build();
-    }).collect(Collectors.toList());
+    }).collect(toList());
 
-    final List<String> errors = callbacks.bulkDelete(objects);
+    final List<Map.Entry<String, String>> errors = callbacks.bulkDelete(objects);
     if (!errors.isEmpty()) {
 
-      final List<BulkDeleteOutcomeElement> outcomeElements = errors
+      final List<Map.Entry<Path, String>> outcomeElements = errors
           .stream()
-          .map(error -> new BulkDeleteOutcomeElement(
-              getStoreContext().keyToPath(error), error,
-              null))
-          .collect(Collectors.toList());
-      return new BulkDeleteOutcome(outcomeElements);
+          .map(error -> Tuples.pair(
+              context.keyToPath(error.getKey()),
+              error.getValue()
+          ))
+          .collect(toList());
+      return outcomeElements;
     }
-    return new BulkDeleteOutcome(Collections.emptyList());
+    return emptyList();
   }
 
   @Override
@@ -99,20 +103,20 @@ public class BulkDeleteOperation extends AbstractStoreOperation implements BulkD
 
   }
 
+  /**
+   * Callbacks for the bulk delete operation.
+   */
   public interface BulkDeleteOperationCallbacks {
 
     /**
-     * Attempt a bulk delete operation.
+     * Perform a bulk delete operation.
      * @param keys key list
-     * @return
-     * @throws MultiObjectDeleteException one or more of the keys could not
-     * be deleted in a multiple object delete operation.
-     * @throws AwsServiceException amazon-layer failure.
-     * @throws IOException other IO Exception.
+     * @return paths which failed to delete (if any).
+     * @throws IOException IO Exception.
      * @throws IllegalArgumentException illegal arguments
      */
     @Retries.RetryTranslated
-    List<String> bulkDelete(final List<ObjectIdentifier> keys)
-        throws MultiObjectDeleteException, IOException, IllegalArgumentException;
+    List<Map.Entry<String, String>> bulkDelete(final List<ObjectIdentifier> keys)
+        throws IOException, IllegalArgumentException;
   }
 }

@@ -55,7 +55,6 @@ import java.util.concurrent.Future;
 import java.util.jar.Attributes;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
-import java.util.stream.Collectors;
 import java.util.zip.GZIPInputStream;
 
 import org.apache.commons.collections.map.CaseInsensitiveMap;
@@ -2133,7 +2132,7 @@ public class FileUtil {
    */
   private static BulkDeleteSource toBulkDeleteSource(final FileSystem fs) {
     if (!(fs instanceof BulkDeleteSource)) {
-      throw new UnsupportedOperationException(BulkDeleteSource.BULK_DELETE_NOT_SUPPORTED);
+      throw new UnsupportedOperationException("Bulk delete not supported");
     }
     return (BulkDeleteSource) fs;
   }
@@ -2155,18 +2154,15 @@ public class FileUtil {
    * @param fs filesystem
    * @param base path to delete under.
    * @param paths list of paths which must be absolute and under the base path.
-   * @return a list of all the paths which couldn't be deleted for a reason other than "not found".
+   * @return a list of all the paths which couldn't be deleted for a reason other than "not found" and any associated error message.
    * @throws UnsupportedOperationException bulk delete under that path is not supported.
    * @throws IOException IO problems including networking, authentication and more.
    * @throws IllegalArgumentException if a path argument is invalid.
    */
-  public static List<Path> bulkDelete(FileSystem fs, Path base, List<Path> paths)
+  public static List<Map.Entry<Path, String>> bulkDelete(FileSystem fs, Path base, List<Path> paths)
         throws IOException {
     try (BulkDelete bulk = toBulkDeleteSource(fs).createBulkDelete(base)) {
-      final BulkDelete.BulkDeleteOutcome outcome = bulk.bulkDelete(paths);
-      return outcome.getFailures().stream()
-          .map(BulkDelete.BulkDeleteOutcomeElement::getPath)
-          .collect(Collectors.toList());
+      return bulk.bulkDelete(paths);
     }
   }
 
