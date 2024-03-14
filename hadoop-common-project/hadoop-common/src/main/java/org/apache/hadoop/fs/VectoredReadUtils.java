@@ -172,15 +172,13 @@ public final class VectoredReadUtils {
   /**
    * Read bytes from stream into a byte buffer using an
    * intermediate byte array.
-   * <p>
    *   <pre>
-   *     (position, buffer, buffer-offset, length) -> Void
+   *     (position, buffer, buffer-offset, length): Void
    *     position:= the position within the file to read data.
    *     buffer := a buffer to read fully `length` bytes into.
    *     buffer-offset := the offset within the buffer to write data
    *     length := the number of bytes to read.
    *   </pre>
-   *  <p>
    * The passed in function MUST block until the required length of
    * data is read, or an exception is thrown.
    * @param range range to read
@@ -315,10 +313,15 @@ public final class VectoredReadUtils {
     }
     // at this point the final element in the list is the last range
     // so make sure it is not beyond the end of the file, if passed in.
+    // where invalid is: starts at or after the end of the file
     if (fileLength.isPresent()) {
       final FileRange last = sortedRanges.get(sortedRanges.size() - 1);
-      if (last.getOffset() + last.getLength() > fileLength.get()) {
-        throw new EOFException("Last range extends beyond the end of the file: " + last);
+      final Long l = fileLength.get();
+      if (last.getOffset() >= l) {
+        throw new EOFException("Last range starts beyond the file length (" + l + "): " + last);
+      }
+      if (last.getOffset() + last.getLength() > l) {
+        throw new EOFException("Last range extends beyond the file length (" + l + "): " + last);
       }
     }
     return sortedRanges;

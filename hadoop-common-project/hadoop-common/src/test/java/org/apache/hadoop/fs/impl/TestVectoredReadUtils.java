@@ -18,10 +18,12 @@
 
 package org.apache.hadoop.fs.impl;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -38,9 +40,12 @@ import org.apache.hadoop.fs.PositionedReadable;
 import org.apache.hadoop.fs.VectoredReadUtils;
 import org.apache.hadoop.test.HadoopTestBase;
 
+import static java.util.Arrays.asList;
 import static org.apache.hadoop.fs.FileRange.createFileRange;
 import static org.apache.hadoop.fs.VectoredReadUtils.isOrderedDisjoint;
 import static org.apache.hadoop.fs.VectoredReadUtils.mergeSortedRanges;
+import static org.apache.hadoop.fs.VectoredReadUtils.readRangeFrom;
+import static org.apache.hadoop.fs.VectoredReadUtils.readVectored;
 import static org.apache.hadoop.fs.VectoredReadUtils.sortRanges;
 import static org.apache.hadoop.fs.VectoredReadUtils.validateAndSortRanges;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -170,7 +175,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
 
   @Test
   public void testSortAndMerge() {
-    List<FileRange> input = Arrays.asList(
+    List<FileRange> input = asList(
         createFileRange(3000, 100, "1"),
         createFileRange(2100, 100, null),
         createFileRange(1000, 100, "3")
@@ -282,7 +287,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
 
   @Test
   public void testSortAndMergeMoreCases() throws Exception {
-    List<FileRange> input = Arrays.asList(
+    List<FileRange> input = asList(
             createFileRange(3000, 110),
             createFileRange(3000, 100),
             createFileRange(2100, 100),
@@ -343,7 +348,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
 
   @Test
   public void testValidateOverlappingRanges()  throws Exception {
-    List<FileRange> input = Arrays.asList(
+    List<FileRange> input = asList(
             createFileRange(100, 100),
             createFileRange(200, 100),
             createFileRange(250, 100)
@@ -352,7 +357,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
     intercept(IllegalArgumentException.class,
         () -> validateAndSortRanges(input, Optional.empty()));
 
-    List<FileRange> input1 = Arrays.asList(
+    List<FileRange> input1 = asList(
             createFileRange(100, 100),
             createFileRange(500, 100),
             createFileRange(1000, 100),
@@ -362,7 +367,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
     intercept(IllegalArgumentException.class,
         () -> validateAndSortRanges(input1, Optional.empty()));
 
-    List<FileRange> input2 = Arrays.asList(
+    List<FileRange> input2 = asList(
             createFileRange(100, 100),
             createFileRange(200, 100),
             createFileRange(300, 100)
@@ -372,8 +377,8 @@ public class TestVectoredReadUtils extends HadoopTestBase {
   }
 
   @Test
-  public void testMaxSizeZeroDisablesMering() throws Exception {
-    List<FileRange> randomRanges = Arrays.asList(
+  public void testMaxSizeZeroDisablesMerging() throws Exception {
+    List<FileRange> randomRanges = asList(
             createFileRange(3000, 110),
             createFileRange(3000, 100),
             createFileRange(2100, 100)
@@ -383,11 +388,19 @@ public class TestVectoredReadUtils extends HadoopTestBase {
     assertEqualRangeCountsAfterMerging(randomRanges, 1, 100, 0);
   }
 
+  /**
+   * Assert that  the range count is the same after merging.
+   * @param inputRanges input ranges
+   * @param chunkSize chunk size for merge
+   * @param minimumSeek minimum seek for merge
+   * @param maxSize max size for merge
+   */
   private void assertEqualRangeCountsAfterMerging(List<FileRange> inputRanges,
                                                   int chunkSize,
                                                   int minimumSeek,
                                                   int maxSize) {
-    List<CombinedFileRange> combinedFileRanges = mergeSortedRanges(inputRanges, chunkSize, minimumSeek, maxSize);
+    List<CombinedFileRange> combinedFileRanges = mergeSortedRanges(
+        inputRanges, chunkSize, minimumSeek, maxSize);
     Assertions.assertThat(combinedFileRanges)
             .describedAs("Mismatch in number of ranges post merging")
             .hasSize(inputRanges.size());
@@ -413,7 +426,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
     }).when(stream).readFully(ArgumentMatchers.anyLong(),
                               ArgumentMatchers.any(ByteBuffer.class));
     CompletableFuture<ByteBuffer> result =
-        VectoredReadUtils.readRangeFrom(stream, createFileRange(1000, 100),
+        readRangeFrom(stream, createFileRange(1000, 100),
         ByteBuffer::allocate);
     assertFutureCompletedSuccessfully(result);
     ByteBuffer buffer = result.get();
@@ -429,7 +442,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
         .when(stream).readFully(ArgumentMatchers.anyLong(),
                                 ArgumentMatchers.any(ByteBuffer.class));
     result =
-        VectoredReadUtils.readRangeFrom(stream, createFileRange(1000, 100),
+        readRangeFrom(stream, createFileRange(1000, 100),
             ByteBuffer::allocate);
     assertFutureFailedExceptionally(result);
   }
@@ -448,7 +461,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
         ArgumentMatchers.any(), ArgumentMatchers.anyInt(),
         ArgumentMatchers.anyInt());
     CompletableFuture<ByteBuffer> result =
-        VectoredReadUtils.readRangeFrom(stream, createFileRange(1000, 100),
+        readRangeFrom(stream, createFileRange(1000, 100),
             allocate);
     assertFutureCompletedSuccessfully(result);
     ByteBuffer buffer = result.get();
@@ -464,8 +477,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
         .when(stream).readFully(ArgumentMatchers.anyLong(),
         ArgumentMatchers.any(), ArgumentMatchers.anyInt(),
         ArgumentMatchers.anyInt());
-    result =
-        VectoredReadUtils.readRangeFrom(stream, createFileRange(1000, 100),
+    result = readRangeFrom(stream, createFileRange(1000, 100),
             ByteBuffer::allocate);
     assertFutureFailedExceptionally(result);
   }
@@ -483,7 +495,7 @@ public class TestVectoredReadUtils extends HadoopTestBase {
   /**
    * Validate a buffer where the first byte value is {@code start}
    * and the subsequent bytes are from that value incremented by one, wrapping
-   * at 256
+   * at 256.
    * @param message error message.
    * @param buffer buffer
    * @param start first byte of the buffer.
@@ -500,20 +512,38 @@ public class TestVectoredReadUtils extends HadoopTestBase {
 
   @Test
   public void testReadVectored() throws Exception {
-    List<FileRange> input = Arrays.asList(createFileRange(0, 100),
-        createFileRange(100_000, 100),
-        createFileRange(200_000, 100));
+    List<FileRange> input = asList(createFileRange(0, 100),
+        createFileRange(100_000, 100, "this"),
+        createFileRange(200_000, 100, "that"));
     runAndValidateVectoredRead(input);
   }
 
   @Test
   public void testReadVectoredZeroBytes() throws Exception {
-    List<FileRange> input = Arrays.asList(createFileRange(0, 0),
-            createFileRange(100_000, 100),
-            createFileRange(200_000, 0));
+    List<FileRange> input = asList(createFileRange(0, 0, "1"),
+            createFileRange(100_000, 100, "2"),
+            createFileRange(200_000, 0, "3"));
     runAndValidateVectoredRead(input);
+    // look up by name and validate.
+    final FileRange r1 = retrieve("1", input);
+    Assertions.assertThat(r1.getData().get().limit())
+            .describedAs("Data limit of %s", r1)
+            .isEqualTo(0);
   }
 
+  /**
+   * Retrieve a range from a list of ranges by its (string) reference.
+   * @param key key to look up
+   * @param input input list
+   * @return the range
+   * @throws IllegalArgumentException if the range is not found.
+   */
+  private static FileRange retrieve(String key, List<FileRange> input) {
+    return input.stream()
+        .filter(r -> key.equals(r.getReference()))
+        .findFirst()
+        .orElseThrow(() -> new IllegalArgumentException("No range with key " + key));
+  }
 
   private void runAndValidateVectoredRead(List<FileRange> input)
           throws Exception {
@@ -524,16 +554,53 @@ public class TestVectoredReadUtils extends HadoopTestBase {
     }).when(stream).readFully(ArgumentMatchers.anyLong(),
             ArgumentMatchers.any(ByteBuffer.class));
     // should not merge the ranges
-    VectoredReadUtils.readVectored(stream, input, ByteBuffer::allocate);
-    Mockito.verify(stream, Mockito.times(3))
+    readVectored(stream, input, ByteBuffer::allocate);
+    // readFully is invoked once per range
+    Mockito.verify(stream, Mockito.times(input.size()))
             .readFully(ArgumentMatchers.anyLong(), ArgumentMatchers.any(ByteBuffer.class));
     for (int b = 0; b < input.size(); ++b) {
       validateBuffer("buffer " + b, input.get(b).getData().get(), 0);
     }
   }
 
+  /**
+   * Special case of overlap: the ranges are equal.
+   */
   @Test
-  public void testArgValidation() throws Throwable {
+  public void testDuplicateRangesRejected() throws Exception {
+    intercept(IllegalArgumentException.class, () ->
+        validateAndSortRanges(asList(
+            createFileRange(1000, 100),
+            createFileRange(1000, 100)),
+            Optional.empty()));
+  }
+
+  @Test
+  public void testEmptyRangesAreInvalid() throws Throwable {
+    intercept(IllegalArgumentException.class,
+        () -> validateAndSortRanges(Collections.emptyList(), Optional.empty()));
+  }
+
+  /**
+   * Special case of overlap: the ranges are equal.
+   */
+  @Test
+  public void testReadPastEOFRejected() throws Exception {
+    final int length = 1000;
+    final Optional<Long> olen = Optional.of((long) length);
+
+    // ok to read whole file as one element
+    validateAndSortRanges(asList(createFileRange(0, length)), olen);
+
+    // but not to go past it
+    intercept(EOFException.class, () ->
+        validateAndSortRanges(asList(createFileRange(0, length + 1)), olen));
+
+    // and if the start offset is past the end, also an error
+    intercept(EOFException.class, () ->
+        validateAndSortRanges(asList(createFileRange(length, 0)), olen));
+    intercept(EOFException.class, () ->
+        validateAndSortRanges(asList(createFileRange(length - 1, 1)), olen));
 
   }
 }

@@ -177,6 +177,21 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     }
   }
 
+  @Test
+  public void testVectoredReadWholeFile()  throws Exception {
+    describe("Read the whole file in one single vectored read");
+    List<FileRange> fileRanges = new ArrayList<>();
+    range(fileRanges, 0, DATASET_LEN);
+    try (FSDataInputStream in = openVectorFile()) {
+      in.readVectored(fileRanges, allocate);
+      ByteBuffer vecRes = FutureIO.awaitFuture(fileRanges.get(0).getData());
+      Assertions.assertThat(vecRes)
+              .describedAs("Result from vectored read and readFully must match")
+              .isEqualByComparingTo(ByteBuffer.wrap(DATASET));
+      returnBuffersToPoolPostRead(fileRanges, pool);
+    }
+  }
+
   /**
    * As the minimum seek value is 4*1024,none of the below ranges
    * will get merged.
@@ -309,13 +324,26 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
   }
 
   /**
+   * Create a list with a single range within it
+   * @param offset offset
+   * @param length length
+   * @return the list.
+   */
+  protected static List<FileRange> range(
+      final int offset,
+      final int length) {
+    return range(new ArrayList<>(), offset, length);
+  }
+
+  /**
    * Create a range and add it to the list.
    * @param fileRanges list of ranges
    * @param offset offset
    * @param length length
    * @return the list.
    */
-  protected static List<FileRange> range(final List<FileRange> fileRanges,
+  protected static List<FileRange> range(
+      final List<FileRange> fileRanges,
       final int offset,
       final int length) {
     fileRanges.add(FileRange.createFileRange(offset, length));
@@ -326,36 +354,60 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
    * Test to validate EOF ranges. Default implementation fails with EOFException
    * while reading the ranges. Some implementation like s3, checksum fs fail fast
    * as they already have the file length calculated.
+   * The contract option {@link ContractOptions#VECTOR_IO_EARLY_EOF_CHECK} is used
+   * to determine which check to perform.
    */
   @Test
   public void testEOFRanges()  throws Exception {
-    List<FileRange> fileRanges = range(new ArrayList<>(), DATASET_LEN, 100);
+    describe("Testing reading with an offset past the end of the file");
+    List<FileRange> fileRanges = range(DATASET_LEN + 1, 100);
 
+    if (isSupported(VECTOR_IO_EARLY_EOF_CHECK)) {
+      LOG.info("Expecting early EOF failure");
+      verifyExceptionalVectoredRead(fileRanges, EOFException.class);
+    } else {
+      expectEOFinRead(fileRanges);
+    }
+  }
+
+
+  @Test
+  public void testVectoredReadWholeFilePlusOne()  throws Exception {
+    describe("Try to read whole file plus 1 byte");
+    List<FileRange> fileRanges = range(0, DATASET_LEN + 1);
+
+    if (isSupported(VECTOR_IO_EARLY_EOF_CHECK)) {
+      LOG.info("Expecting early EOF failure");
+      verifyExceptionalVectoredRead(fileRanges, EOFException.class);
+    } else {
+      expectEOFinRead(fileRanges);
+    }
+  }
+
+  private void expectEOFinRead(final List<FileRange> fileRanges) throws Exception {
+    LOG.info("Expecting late EOF failure");
     try (FSDataInputStream in = openVectorFile()) {
       in.readVectored(fileRanges, allocate);
       for (FileRange res : fileRanges) {
         CompletableFuture<ByteBuffer> data = res.getData();
         interceptFuture(EOFException.class,
-                "",
-                ContractTestUtils.VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS,
-                TimeUnit.SECONDS,
-                data);
+            "",
+            ContractTestUtils.VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS,
+            TimeUnit.SECONDS,
+            data);
       }
     }
   }
 
   @Test
   public void testNegativeLengthRange()  throws Exception {
-    List<FileRange> fileRanges = new ArrayList<>();
-    range(fileRanges, 0, -50);
-    verifyExceptionalVectoredRead(fileRanges, IllegalArgumentException.class);
+
+    verifyExceptionalVectoredRead(range(0, -50), IllegalArgumentException.class);
   }
 
   @Test
   public void testNegativeOffsetRange()  throws Exception {
-    List<FileRange> fileRanges = new ArrayList<>();
-    range(fileRanges, -1, 50);
-    verifyExceptionalVectoredRead(fileRanges, EOFException.class);
+    verifyExceptionalVectoredRead(range(-1, 50), EOFException.class);
   }
 
   @Test
@@ -507,8 +559,10 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
           Class<T> clazz) throws Exception {
 
     try (FSDataInputStream in = openVectorFile()) {
-      intercept(clazz,
-          () -> in.readVectored(fileRanges, allocate));
+      intercept(clazz, () -> {
+        in.readVectored(fileRanges, allocate);
+        return "triggered read of " + fileRanges.size() + " ranges" + " against " + in;
+      });
     }
   }
 }

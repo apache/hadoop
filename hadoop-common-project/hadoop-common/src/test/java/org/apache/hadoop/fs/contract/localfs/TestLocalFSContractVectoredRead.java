@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.contract.localfs;
 
-import java.io.EOFException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -31,7 +30,6 @@ import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileRange;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.AbstractContractVectoredReadTest;
@@ -128,16 +126,4 @@ public class TestLocalFSContractVectoredRead extends AbstractContractVectoredRea
     }
   }
 
-
-  /**
-   * Overriding in checksum fs as vectored read api fails fast
-   * in case of EOF requested range.
-   */
-  @Override
-  public void testEOFRanges() throws Exception {
-    FileSystem fs = getFileSystem();
-    List<FileRange> fileRanges = new ArrayList<>();
-    fileRanges.add(FileRange.createFileRange(DATASET_LEN, 100));
-    verifyExceptionalVectoredRead(fileRanges, EOFException.class);
-  }
 }

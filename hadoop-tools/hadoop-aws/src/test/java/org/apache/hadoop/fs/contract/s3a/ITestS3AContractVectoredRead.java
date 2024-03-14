@@ -64,6 +64,11 @@ import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsTo
 import static org.apache.hadoop.test.LambdaTestUtils.interceptFuture;
 import static org.apache.hadoop.test.MoreAsserts.assertEqual;
 
+/**
+ * S3A contract tests for vectored reads.
+ * This is a complex suite as it really is testing the store, so measurements of
+ * what IO took place is also performed if the input stream is suitable for this.
+ */
 public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTest {
 
   private static final Logger LOG = LoggerFactory.getLogger(ITestS3AContractVectoredRead.class);
@@ -75,16 +80,6 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
   @Override
   protected AbstractFSContract createContract(Configuration conf) {
     return new S3AContract(conf);
-  }
-
-  /**
-   * Overriding in S3 vectored read api fails fast in case of EOF
-   * requested range.
-   */
-  @Override
-  public void testEOFRanges() throws Exception {
-    verifyExceptionalVectoredRead(range(new ArrayList<>(), DATASET_LEN, 100),
-        EOFException.class);
   }
 
   /**
@@ -223,19 +218,19 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
 
     try (S3AFileSystem fs = getTestFileSystemWithReadAheadDisabled()) {
       List<FileRange> fileRanges = new ArrayList<>();
-      range(fileRanges,10 * 1024, 100);
-      range(fileRanges,8 * 1024, 100);
-      range(fileRanges,14 * 1024, 100);
-      range(fileRanges,2 * 1024 - 101, 100);
-      range(fileRanges,40 * 1024, 1024);
+      range(fileRanges, 10 * 1024, 100);
+      range(fileRanges, 8 * 1024,100);
+      range(fileRanges, 14 * 1024, 100);
+      range(fileRanges, 2 * 1024 - 101, 100);
+      range(fileRanges, 40 * 1024, 1024);
 
       FileStatus fileStatus = fs.getFileStatus(path(VECTORED_READ_FILE_NAME));
       CompletableFuture<FSDataInputStream> builder =
-              fs.openFile(path(VECTORED_READ_FILE_NAME))
-                  .withFileStatus(fileStatus)
-                  .opt(FS_OPTION_OPENFILE_READ_POLICY,
-                      FS_OPTION_OPENFILE_READ_POLICY_VECTOR)
-                  .build();
+          fs.openFile(path(VECTORED_READ_FILE_NAME))
+              .withFileStatus(fileStatus)
+              .opt(FS_OPTION_OPENFILE_READ_POLICY,
+                  FS_OPTION_OPENFILE_READ_POLICY_VECTOR)
+              .build();
       try (FSDataInputStream in = builder.get()) {
         in.readVectored(fileRanges, getAllocate());
         validateVectoredReadResult(fileRanges, DATASET);
