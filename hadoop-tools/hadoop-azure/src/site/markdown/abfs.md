@@ -734,13 +734,6 @@ the `request-id-header`. This config accepts a String value corresponding to the
 `ALL_ID_FORMAT` : all IDs (default)
 `TWO_ID_FORMAT` : clientCorrelationId:clientRequestId
 
-Config `fs.azure.metric.format` provides an option to select the format of IDs included in the `header` for metrics.
-This config accepts a String value corresponding to the following enum options.
-`INTERNAL_METRIC_FORMAT` : backoff + footer metrics
-`INTERNAL_BACKOFF_METRIC_FORMAT` : backoff metrics
-`INTERNAL_FOOTER_METRIC_FORMAT` : footer metrics
-`EMPTY` : default
-
 ### <a name="flushconfigoptions"></a> Flush Options
 
 #### <a name="abfsflushconfigoptions"></a> 1. Azure Blob File System Flush Options
@@ -1003,6 +996,13 @@ Note that these performance numbers are also sent back to the ADLS Gen 2 API end
 HTTP headers in subsequent requests. Azure uses these settings to track their end-to-end latency.
 
 ### <a name="drivermetricoptions"></a> Driver Metric Options
+
+Config `fs.azure.metric.format` provides an option to select the format of IDs included in the `header` for metrics.
+This config accepts a String value corresponding to the following enum options.
+`INTERNAL_METRIC_FORMAT` : backoff + footer metrics
+`INTERNAL_BACKOFF_METRIC_FORMAT` : backoff metrics
+`INTERNAL_FOOTER_METRIC_FORMAT` : footer metrics
+`EMPTY` : default
 
 `fs.azure.metric.account.name`: This configuration parameter is used to specify the name of the account which will be
 used to push the metrics to the backend. We can configure a separate account to push metrics to the store or use the
