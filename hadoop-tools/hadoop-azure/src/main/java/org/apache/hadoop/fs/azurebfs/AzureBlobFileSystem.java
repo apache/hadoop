@@ -698,15 +698,15 @@ public class AzureBlobFileSystem extends FileSystem
     if (isClosed) {
       return;
     }
-    TracingContext tracingMetricContext = new TracingContext(
-        clientCorrelationId,
-        fileSystemId, FSOperationType.GET_ATTR, true,
-        tracingHeaderFormat,
-        listener, abfsCounters.toString());
-    try {
-      getAbfsClient().getMetricCall(tracingMetricContext);
-    } catch (IOException e) {
-      if (abfsStore.getAbfsConfiguration().getMetricFormat() != null) {
+    if (abfsStore.getClient().isMetricCollectionEnabled()) {
+      TracingContext tracingMetricContext = new TracingContext(
+              clientCorrelationId,
+              fileSystemId, FSOperationType.GET_ATTR, true,
+              tracingHeaderFormat,
+              listener, abfsCounters.toString());
+      try {
+        getAbfsClient().getMetricCall(tracingMetricContext);
+      } catch (IOException e) {
         throw new IOException(e);
       }
     }

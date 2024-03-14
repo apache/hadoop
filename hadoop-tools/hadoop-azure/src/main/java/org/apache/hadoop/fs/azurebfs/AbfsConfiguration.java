@@ -300,6 +300,18 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_METRIC_ANALYSIS_TIMEOUT_MS)
   private int metricAnalysisTimeout;
 
+  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_METRIC_URI,
+          DefaultValue = EMPTY_STRING)
+  private String metricUri;
+
+  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_METRIC_ACCOUNT_NAME,
+          DefaultValue = EMPTY_STRING)
+  private String metricAccount;
+
+  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_METRIC_ACCOUNT_KEY,
+          DefaultValue = EMPTY_STRING)
+  private String metricAccountKey;
+
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ACCOUNT_OPERATION_IDLE_TIMEOUT,
       DefaultValue = DEFAULT_ACCOUNT_OPERATION_IDLE_TIMEOUT_MS)
   private int accountOperationIdleTimeout;
@@ -829,6 +841,18 @@ public class AbfsConfiguration{
 
   public int getMetricAnalysisTimeout() {
     return this.metricAnalysisTimeout;
+  }
+
+  public String getMetricUri() {
+    return metricUri;
+  }
+
+  public String getMetricAccount() {
+    return metricAccount;
+  }
+
+  public String getMetricAccountKey() {
+    return metricAccountKey;
   }
 
   public int getAccountOperationIdleTimeout() {

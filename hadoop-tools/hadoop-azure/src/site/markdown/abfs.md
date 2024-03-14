@@ -1004,9 +1004,39 @@ HTTP headers in subsequent requests. Azure uses these settings to track their en
 
 ### <a name="drivermetricoptions"></a> Driver Metric Options
 
+`fs.azure.metric.account.name`: This configuration parameter is used to specify the name of the account which will be
+used to push the metrics to the backend. We can configure a separate account to push metrics to the store or use the
+same for as the existing account on which other requests are made.
+
+```xml
+
+<property>
+    <name>fs.azure.metric.account.name</name>
+    <value>METRICACCOUNTNAME.dfs.core.windows.net</value>
+</property>
+```
+
+`fs.azure.metric.account.key`: This is the access key for the storage account used for pushing metrics to the store.
+
+```xml
+
+<property>
+    <name>fs.azure.metric.account.key</name>
+    <value>ACCOUNTKEY</value>
+</property>
+```
+
 `fs.azure.metric.uri`: This configuration provides the uri in the format of 'https://`<accountname>`
-.dfs.core.windows.net/`<containername>`'. This should be a part of the config in order to prevent extra calls to create the
-filesystem. We use an existing filsystem to push the metrics.
+.dfs.core.windows.net/`<containername>`'. This should be a part of the config in order to prevent extra calls to create
+the filesystem. We use an existing filsystem to push the metrics.
+
+```xml
+
+<property>
+    <name>fs.azure.metric.uri</name>
+    <value>https://METRICACCOUNTNAME.dfs.core.windows.net/CONTAINERNAME</value>
+</property>
+```
 
 ## <a name="troubleshooting"></a> Troubleshooting
 

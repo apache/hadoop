@@ -151,7 +151,9 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
     // Stop filesystem creation as it will lead to calls to store.
     config.set("fs.azure.createRemoteFileSystemDuringInitialization", "false");
 
-   final AzureBlobFileSystem fs1 = (AzureBlobFileSystem) FileSystem.newInstance(fs.getUri(), config);
+    try (final AzureBlobFileSystem fs1 =
+        (AzureBlobFileSystem) FileSystem.newInstance(fs.getUri(),
+        config)) {
       RetryTestTokenProvider retryTestTokenProvider
               = RetryTestTokenProvider.getCurrentRetryTestProviderInstance(
               getAccessTokenProvider(fs1));
@@ -167,7 +169,7 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
               .describedAs("Number of token fetch retries done does not "
                       + "match with fs.azure.custom.token.fetch.retry.count configured")
               .isEqualTo(numOfRetries);
-    intercept(Exception.class, fs1::close);
+    }
   }
 
   @Test

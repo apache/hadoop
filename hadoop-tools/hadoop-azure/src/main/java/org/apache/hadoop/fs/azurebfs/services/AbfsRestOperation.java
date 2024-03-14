@@ -25,6 +25,8 @@ import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.List;
 
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -489,26 +491,39 @@ public class AbfsRestOperation {
    */
   @VisibleForTesting
   public void signRequest(final AbfsHttpOperation httpOperation, int bytesToSign) throws IOException {
-    switch(client.getAuthType()) {
-      case Custom:
-      case OAuth:
-        LOG.debug("Authenticating request with OAuth2 access token");
-        httpOperation.getConnection().setRequestProperty(HttpHeaderConfigurations.AUTHORIZATION,
-            client.getAccessToken());
-        break;
-      case SAS:
-        // do nothing; the SAS token should already be appended to the query string
-        httpOperation.setMaskForSAS(); //mask sig/oid from url for logs
-        break;
-      case SharedKey:
-      default:
-        // sign the HTTP request
-        LOG.debug("Signing request with shared key");
-        // sign the HTTP request
-        client.getSharedKeyCredentials().signRequest(
-            httpOperation.getConnection(),
-            bytesToSign);
-        break;
+    if (client.isSendMetricCall()) {
+      AbfsConfiguration abfsConfiguration = client.getAbfsConfiguration();
+      String metricAccountName = abfsConfiguration.getMetricAccount();
+      int dotIndex = metricAccountName.indexOf(AbfsHttpConstants.DOT);
+      if (dotIndex <= 0) {
+        throw new InvalidUriException(
+                metricAccountName + " - account name is not fully qualified.");
+      }
+      String metricAccountKey = abfsConfiguration.getMetricAccountKey();
+      SharedKeyCredentials sharedKeyCredentials = new SharedKeyCredentials(metricAccountName.substring(0, dotIndex), metricAccountKey);
+      sharedKeyCredentials.signRequest(httpOperation.getConnection(), bytesToSign);
+    } else {
+      switch (client.getAuthType()) {
+        case Custom:
+        case OAuth:
+          LOG.debug("Authenticating request with OAuth2 access token");
+          httpOperation.getConnection().setRequestProperty(HttpHeaderConfigurations.AUTHORIZATION,
+                  client.getAccessToken());
+          break;
+        case SAS:
+          // do nothing; the SAS token should already be appended to the query string
+          httpOperation.setMaskForSAS(); //mask sig/oid from url for logs
+          break;
+        case SharedKey:
+        default:
+          // sign the HTTP request
+          LOG.debug("Signing request with shared key");
+          // sign the HTTP request
+          client.getSharedKeyCredentials().signRequest(
+                  httpOperation.getConnection(),
+                  bytesToSign);
+          break;
+      }
     }
   }
 

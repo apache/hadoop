@@ -140,6 +140,7 @@ public class AbfsClient implements Closeable {
 
   private boolean renameResilience;
   private TimerTask runningTimerTask;
+  private boolean isSendMetricCall;
 
   /**
    * logging the rename failure if metadata is in an incomplete state.
@@ -213,7 +214,7 @@ public class AbfsClient implements Closeable {
           metricIdlePeriod,
           metricIdlePeriod);
     }
-    this.abfsMetricUrl = abfsConfiguration.get(FS_AZURE_METRIC_URI);
+    this.abfsMetricUrl = abfsConfiguration.getMetricUri();
   }
 
   public AbfsClient(final URL baseUrl, final SharedKeyCredentials sharedKeyCredentials,
@@ -1812,6 +1813,7 @@ public class AbfsClient implements Closeable {
    * @throws IOException throws IOException.
    */
   public void getMetricCall(TracingContext tracingContext) throws IOException {
+    this.isSendMetricCall = true;
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE, FILESYSTEM);
@@ -1823,7 +1825,19 @@ public class AbfsClient implements Closeable {
             HTTP_METHOD_HEAD,
             url,
             requestHeaders);
-    op.execute(tracingContext);
+    try {
+      op.execute(tracingContext);
+    } finally {
+      this.isSendMetricCall = false;
+    }
+  }
+
+  public boolean isSendMetricCall() {
+    return isSendMetricCall;
+  }
+
+  public boolean isMetricCollectionEnabled() {
+    return isMetricCollectionEnabled;
   }
 
   class TimerTaskImpl extends TimerTask {
