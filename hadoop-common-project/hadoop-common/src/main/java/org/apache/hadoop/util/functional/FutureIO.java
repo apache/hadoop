@@ -118,11 +118,13 @@ public final class FutureIO {
   }
 
   /**
-   * Given a future, evaluate it.
+   * Evaluates a collection of futures and returns their results as a list.
    * <p>
-   * Any exception generated in the future is
-   * extracted and rethrown.
+   * This method blocks until all futures in the collection have completed.
+   * If any future throws an exception during its execution, this method
+   * extracts and rethrows that exception.
    * </p>
+   *
    * @param collection collection of futures to be evaluated
    * @param <T> type of the result.
    * @return the list of future's result, if all went well.
@@ -147,11 +149,14 @@ public final class FutureIO {
   }
 
   /**
-   * Given a future, evaluate it.
+   * Evaluates a collection of futures and returns their results as a list,
+   * but only waits up to the specified timeout for each future to complete.
    * <p>
-   * Any exception generated in the future is
-   * extracted and rethrown.
+   * This method blocks until all futures in the collection have completed or
+   * the timeout expires, whichever happens first. If any future throws an
+   * exception during its execution, this method extracts and rethrows that exception.
    * </p>
+   *
    * @param collection collection of futures to be evaluated
    * @param timeout timeout to wait
    * @param unit time unit.
