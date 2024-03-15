@@ -206,10 +206,10 @@ includes the name of the store endpoint:
 }
 ```
 
-The `abfswales1.dfs.core.windows.net` account is the name by which the storage account will be referred to.
+The `abfswales1.dfs.core.windows.net` account is the name by which the
+storage account will be referred to.
 
 Now ask for the connection string to the store, which contains the account key
-
 ```bash
 az storage account  show-connection-string --name abfswales1
 {
