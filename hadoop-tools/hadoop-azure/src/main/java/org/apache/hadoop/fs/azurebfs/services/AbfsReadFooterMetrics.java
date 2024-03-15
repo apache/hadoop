@@ -503,7 +503,9 @@ private String getFooterMetrics(List<AbfsReadFooterMetrics> readFooterMetricsLis
     if (abfsReadFooterMetrics.getIsParquetFile()) {
       isParquetList.add(abfsReadFooterMetrics);
     } else {
-      isNonParquetList.add(abfsReadFooterMetrics);
+      if (abfsReadFooterMetrics.getReadCount() >= 2) {
+        isNonParquetList.add(abfsReadFooterMetrics);
+      }
     }
   }
   AbfsReadFooterMetrics avgParquetReadFooterMetrics = new AbfsReadFooterMetrics();
