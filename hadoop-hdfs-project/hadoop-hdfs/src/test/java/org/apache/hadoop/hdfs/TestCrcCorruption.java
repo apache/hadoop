@@ -36,7 +36,6 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.FinalizedReplica;
 import org.apache.hadoop.io.IOUtils;
-
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
