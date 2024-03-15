@@ -329,7 +329,7 @@ public class ValueQueue <E> {
       if (map.get(keyName) == null) {
         return 0;
       }
-        return map.get(keyName).size();
+      return map.get(keyName).size();
     } finally {
       readUnlock(keyName);
     }
