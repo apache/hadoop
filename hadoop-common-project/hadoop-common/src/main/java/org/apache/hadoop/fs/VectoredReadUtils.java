@@ -233,7 +233,6 @@ public final class VectoredReadUtils {
                                           int minimumSeek) {
     long previous = -minimumSeek;
     for (FileRange range: input) {
-      // TODO: reject CombinedFileRange
       long offset = range.getOffset();
       long end = range.getOffset() + range.getLength();
       if (offset % chunkSize != 0 ||
