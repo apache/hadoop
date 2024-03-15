@@ -18,6 +18,7 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 import static org.apache.hadoop.fs.azurebfs.services.HttpOperationType.APACHE_HTTP_CLIENT;
 import static org.apache.hadoop.fs.azurebfs.services.HttpOperationType.JDK_HTTP_URL_CONNECTION;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 
 public class TestApacheHttpClientFallback extends AbstractAbfsTestWithTimeout {
@@ -28,15 +29,16 @@ public class TestApacheHttpClientFallback extends AbstractAbfsTestWithTimeout {
 
   @Test
   public void testMultipleFailureLeadToFallback()
-      throws IOException {
+      throws Exception {
     TracingContext tc = Mockito.mock(TracingContext.class);
     Mockito.doNothing().when(tc).constructHeader(Mockito.any(HttpOperation.class), Mockito.nullable(String.class), Mockito.nullable(String.class));
     for (int i = 0; i < 5; i++) {
       AbfsRestOperation op = getMockRestOperation(APACHE_HTTP_CLIENT, false);
       op.execute(tc);
     }
-    getMockRestOperation(APACHE_HTTP_CLIENT, true).execute(tc);
-
+    intercept(IOException.class, () -> {
+      getMockRestOperation(APACHE_HTTP_CLIENT, true).execute(tc);
+    });
     getMockRestOperation(JDK_HTTP_URL_CONNECTION, false).execute(tc);
   }
 
@@ -92,7 +94,7 @@ public class TestApacheHttpClientFallback extends AbstractAbfsTestWithTimeout {
       if (shouldExceptionBeThrown) {
         Mockito.doThrow(new IOException("Test Exception"))
             .when(operation)
-            .processResponse(Mockito.any(byte[].class), Mockito.anyInt(),
+            .processResponse(Mockito.nullable(byte[].class), Mockito.anyInt(),
                 Mockito.anyInt());
       } else {
         Mockito.doNothing()
@@ -100,6 +102,8 @@ public class TestApacheHttpClientFallback extends AbstractAbfsTestWithTimeout {
             .processResponse(Mockito.any(byte[].class), Mockito.anyInt(),
                 Mockito.anyInt());
       }
+      Mockito.doCallRealMethod().when(operation).incrementServerCall();
+      Mockito.doCallRealMethod().when(operation).registerIOException();
       return operation;
     }).when(op).createHttpOperation();
     return op;

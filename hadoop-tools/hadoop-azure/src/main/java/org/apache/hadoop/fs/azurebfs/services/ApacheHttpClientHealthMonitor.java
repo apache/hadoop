@@ -14,7 +14,9 @@ public class ApacheHttpClientHealthMonitor {
     if(serverCalls == 0) {
       return true;
     }
-    return (double) (IO_EXCEPTIONS.getSum() / serverCalls) < 0.01;
+    final long exceptions = IO_EXCEPTIONS.getSum();
+    final double ratio = ((double)exceptions / serverCalls);
+    return ratio < 0.01;
 
   }
 
