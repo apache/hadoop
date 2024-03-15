@@ -492,16 +492,7 @@ public class AbfsRestOperation {
   @VisibleForTesting
   public void signRequest(final AbfsHttpOperation httpOperation, int bytesToSign) throws IOException {
     if (client.isSendMetricCall()) {
-      AbfsConfiguration abfsConfiguration = client.getAbfsConfiguration();
-      String metricAccountName = abfsConfiguration.getMetricAccount();
-      int dotIndex = metricAccountName.indexOf(AbfsHttpConstants.DOT);
-      if (dotIndex <= 0) {
-        throw new InvalidUriException(
-                metricAccountName + " - account name is not fully qualified.");
-      }
-      String metricAccountKey = abfsConfiguration.getMetricAccountKey();
-      SharedKeyCredentials sharedKeyCredentials = new SharedKeyCredentials(metricAccountName.substring(0, dotIndex), metricAccountKey);
-      sharedKeyCredentials.signRequest(httpOperation.getConnection(), bytesToSign);
+      client.getMetricSharedkeyCredentials().signRequest(httpOperation.getConnection(), bytesToSign);
     } else {
       switch (client.getAuthType()) {
         case Custom:

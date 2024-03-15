@@ -140,6 +140,7 @@ public class AbfsClient implements Closeable {
   private boolean renameResilience;
   private TimerTask runningTimerTask;
   private boolean isSendMetricCall;
+  private SharedKeyCredentials metricSharedkeyCredentials = null;
 
   /**
    * logging the rename failure if metadata is in an incomplete state.
@@ -205,6 +206,19 @@ public class AbfsClient implements Closeable {
     if (!metricFormat.toString().equals("")) {
       isMetricCollectionEnabled = true;
       abfsCounters.initializeMetrics(metricFormat);
+      String metricAccountName = abfsConfiguration.getMetricAccount();
+      int dotIndex = metricAccountName.indexOf(AbfsHttpConstants.DOT);
+      if (dotIndex <= 0) {
+        throw new InvalidUriException(
+                metricAccountName + " - account name is not fully qualified.");
+      }
+      String metricAccountKey = abfsConfiguration.getMetricAccountKey();
+      try {
+        metricSharedkeyCredentials = new SharedKeyCredentials(metricAccountName.substring(0, dotIndex),
+                metricAccountKey);
+      } catch (IllegalArgumentException e) {
+        throw new IOException("Exception while initializing metric credentials " + e);
+      }
     }
     this.timer = new Timer(
         "abfs-timer-client", true);
@@ -281,6 +295,10 @@ public class AbfsClient implements Closeable {
 
   SharedKeyCredentials getSharedKeyCredentials() {
     return sharedKeyCredentials;
+  }
+
+  SharedKeyCredentials getMetricSharedkeyCredentials() {
+    return metricSharedkeyCredentials;
   }
 
   public void setEncryptionType(EncryptionType encryptionType) {
