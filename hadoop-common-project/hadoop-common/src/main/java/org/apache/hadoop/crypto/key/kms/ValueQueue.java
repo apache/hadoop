@@ -328,9 +328,8 @@ public class ValueQueue <E> {
           keyQueues.getAllPresent(Arrays.asList(keyName));
       if (map.get(keyName) == null) {
         return 0;
-      }else {
-        return map.get(keyName).size();
       }
+        return map.get(keyName).size();
     } finally {
       readUnlock(keyName);
     }

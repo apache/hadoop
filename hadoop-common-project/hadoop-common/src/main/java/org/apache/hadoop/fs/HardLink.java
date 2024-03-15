@@ -32,6 +32,8 @@ import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import static java.nio.file.Files.createLink;
 
@@ -52,6 +54,8 @@ public class HardLink {
   private static HardLinkCommandGetter getHardLinkCommand;
   
   public final LinkStats linkStats; //not static
+
+  static final Logger Log = LoggerFactory.getLogger(HardLink.class);
 
   private static final String FileAttributeView = "unix";
   private static final String FileAttribute = "unix:nlink";
@@ -219,6 +223,7 @@ public class HardLink {
       FileStore store = Files.getFileStore(f.toPath());
       return store.supportsFileAttributeView(FileAttributeView);
     } catch (IOException e) {
+      Log.warn("Failed to determine if hardlink is supported", e);
       return false;
     }
   }
