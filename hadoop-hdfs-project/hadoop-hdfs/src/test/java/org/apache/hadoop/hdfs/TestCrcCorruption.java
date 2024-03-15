@@ -36,6 +36,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.FinalizedReplica;
 import org.apache.hadoop.io.IOUtils;
+
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -86,7 +87,7 @@ public class TestCrcCorruption {
    * create/write. To recover from corruption while writing, at
    * least two replicas are needed.
    */
-  @Test(timeout=600000)
+  @Test(timeout=50000)
   public void testCorruptionDuringWrt() throws Exception {
     Configuration conf = new HdfsConfiguration();
     // Set short retry timeouts so this test runs faster

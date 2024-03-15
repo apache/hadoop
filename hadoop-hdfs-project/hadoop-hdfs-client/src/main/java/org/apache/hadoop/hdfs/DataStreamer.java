@@ -1242,7 +1242,8 @@ class DataStreamer extends Daemon {
       streamerClosed = true;
       return false;
     }
-    boolean doSleep = setupPipelineForAppendOrRecovery();
+    boolean doSleep = false;
+    setupPipelineForAppendOrRecovery();
 
     if (!streamerClosed && dfsClient.clientRunning) {
       if (stage == BlockConstructionStage.PIPELINE_CLOSE) {
