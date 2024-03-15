@@ -45,6 +45,8 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_MET
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_POST;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PUT;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_RESET_ABBREVIATION;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.IO_EXCEPTION_ABBREVIATION;
 import static org.apache.http.entity.ContentType.TEXT_PLAIN;
 
 public class AbfsAHCHttpOperation extends HttpOperation {
@@ -385,5 +387,20 @@ public class AbfsAHCHttpOperation extends HttpOperation {
     sb.append(",");
     sb.append(getMaskedUrl());
     return sb.toString();
+  }
+
+  @Override
+  public void incrementServerCall() {
+    ApacheHttpClientHealthMonitor.incrementServerCalls();
+  }
+
+  @Override
+  public void registerIOException(final String failureReason) {
+    if(CONNECTION_RESET_ABBREVIATION.equals(failureReason)) {
+      ApacheHttpClientHealthMonitor.incrementConnectionResets();
+    }
+    if(IO_EXCEPTION_ABBREVIATION.equals(failureReason)) {
+      ApacheHttpClientHealthMonitor.incrementUnknownIoExceptions();
+    }
   }
 }

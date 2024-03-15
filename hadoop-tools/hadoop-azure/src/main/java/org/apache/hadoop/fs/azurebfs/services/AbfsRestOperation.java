@@ -311,6 +311,7 @@ public class AbfsRestOperation {
     try {
       // initialize the HTTP request and open the connection
       httpOperation = createHttpOperation();
+      httpOperation.incrementServerCall();
       incrementCounter(AbfsStatistic.CONNECTIONS_MADE, 1);
       tracingContext.constructHeader(httpOperation, failureReason, retryPolicy.getAbbreviation());
 
@@ -366,6 +367,7 @@ public class AbfsRestOperation {
       }
 
       failureReason = RetryReason.getAbbreviation(ex, -1, "");
+      httpOperation.registerIOException(failureReason);
       retryPolicy = client.getRetryPolicy(failureReason);
       wasIOExceptionThrown = true;
       if (!retryPolicy.shouldRetry(retryCount, -1)) {
@@ -455,7 +457,7 @@ public class AbfsRestOperation {
     HttpOperationType httpOperationType
         = abfsConfiguration.getPreferredHttpOperationType();
     if (httpOperationType == HttpOperationType.APACHE_HTTP_CLIENT
-        && ApacheHttpClientHealthMonitor.HEALTH_MONITOR.usable()) {
+        && ApacheHttpClientHealthMonitor.usable()) {
       return new AbfsAHCHttpOperation(url, method, requestHeaders,
           abfsConfiguration,
           clientId, operationType);
