@@ -10,7 +10,11 @@ public class ApacheHttpClientHealthMonitor {
   private ApacheHttpClientHealthMonitor() {}
 
   public static boolean usable() {
-    return (double) (IO_EXCEPTIONS.getSum() / SERVER_CALLS.getSum()) < 0.01;
+    final long serverCalls = SERVER_CALLS.getSum();
+    if(serverCalls == 0) {
+      return true;
+    }
+    return (double) (IO_EXCEPTIONS.getSum() / serverCalls) < 0.01;
 
   }
 

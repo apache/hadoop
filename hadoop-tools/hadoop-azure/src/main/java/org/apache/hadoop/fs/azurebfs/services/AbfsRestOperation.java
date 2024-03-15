@@ -458,13 +458,23 @@ public class AbfsRestOperation {
         = abfsConfiguration.getPreferredHttpOperationType();
     if (httpOperationType == HttpOperationType.APACHE_HTTP_CLIENT
         && ApacheHttpClientHealthMonitor.usable()) {
-      return new AbfsAHCHttpOperation(url, method, requestHeaders,
-          abfsConfiguration,
-          clientId, operationType);
+      return createAbfsAHCHttpOperation();
     }
+    return createAbfsHttpOperation();
+  }
+
+  @VisibleForTesting
+  AbfsHttpOperation createAbfsHttpOperation() throws IOException {
     return new AbfsHttpOperation(url, method, requestHeaders,
         client.getAbfsConfiguration().getHttpConnectionTimeout(),
         client.getAbfsConfiguration().getHttpReadTimeout());
+  }
+
+  @VisibleForTesting
+  AbfsAHCHttpOperation createAbfsAHCHttpOperation() {
+    return new AbfsAHCHttpOperation(url, method, requestHeaders,
+        abfsConfiguration,
+        clientId, operationType);
   }
 
   /**

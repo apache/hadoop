@@ -148,11 +148,6 @@ public abstract class AbstractAbfsIntegrationTest extends
 
     // For tests, we want to enforce checksum validation so that any regressions can be caught.
     abfsConfig.setIsChecksumValidationEnabled(true);
-    addTestCustomFsInitConfig(rawConfig);
-  }
-
-  protected void addTestCustomFsInitConfig(Configuration config) {
-
   }
 
   protected boolean getIsNamespaceEnabled(AzureBlobFileSystem fs)
