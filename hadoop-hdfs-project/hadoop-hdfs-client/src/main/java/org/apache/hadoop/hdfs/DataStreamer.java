@@ -1242,7 +1242,7 @@ class DataStreamer extends Daemon {
       streamerClosed = true;
       return false;
     }
-    boolean doSleep = false;
+
     setupPipelineForAppendOrRecovery();
 
     if (!streamerClosed && dfsClient.clientRunning) {
@@ -1277,7 +1277,7 @@ class DataStreamer extends Daemon {
       }
     }
 
-    return doSleep;
+    return false;
   }
 
   void setHflush() {
