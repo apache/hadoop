@@ -5,7 +5,6 @@ import java.io.InputStream;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.EmptyStackException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -20,7 +19,6 @@ import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsApacheHttpExpect100Exception;
-import org.apache.hadoop.fs.azurebfs.services.kac.KeepAliveCache;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.http.Header;
 import org.apache.http.HttpClientConnection;
@@ -395,12 +393,7 @@ public class AbfsAHCHttpOperation extends HttpOperation {
   }
 
   @Override
-  public void registerIOException(final String failureReason) {
-    if(CONNECTION_RESET_ABBREVIATION.equals(failureReason)) {
-      ApacheHttpClientHealthMonitor.incrementConnectionResets();
-    }
-    if(IO_EXCEPTION_ABBREVIATION.equals(failureReason)) {
-      ApacheHttpClientHealthMonitor.incrementUnknownIoExceptions();
-    }
+  public void registerIOException() {
+    ApacheHttpClientHealthMonitor.incrementUnknownIoExceptions();
   }
 }

@@ -367,7 +367,7 @@ public class AbfsRestOperation {
       }
 
       failureReason = RetryReason.getAbbreviation(ex, -1, "");
-      httpOperation.registerIOException(failureReason);
+      httpOperation.registerIOException();
       retryPolicy = client.getRetryPolicy(failureReason);
       wasIOExceptionThrown = true;
       if (!retryPolicy.shouldRetry(retryCount, -1)) {
