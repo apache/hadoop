@@ -1760,7 +1760,8 @@ public class TestDistributedFileSystem {
         DFSTestUtil.createFile(fs, new Path("/testFile"), 1024L, (short) 3, 1024L);
       } catch (IOException e) {
         threw = true;
-      } assertTrue(threw);
+      }
+      assertTrue(threw);
     }
   }
 
