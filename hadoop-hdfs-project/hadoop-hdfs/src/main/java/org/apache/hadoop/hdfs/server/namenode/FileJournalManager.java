@@ -537,16 +537,11 @@ public class FileJournalManager implements JournalManager {
     private boolean hasCorruptHeader = false;
     private final boolean isInProgress;
 
-    final static Comparator<EditLogFile> COMPARE_BY_START_TXID 
-      = new Comparator<EditLogFile>() {
-      @Override
-      public int compare(EditLogFile a, EditLogFile b) {
-        return ComparisonChain.start()
-        .compare(a.getFirstTxId(), b.getFirstTxId())
-        .compare(a.getLastTxId(), b.getLastTxId())
-        .result();
-      }
-    };
+    final static Comparator<EditLogFile> COMPARE_BY_START_TXID =
+        (a, b) -> ComparisonChain.start()
+            .compare(a.getFirstTxId(), b.getFirstTxId())
+            .compare(a.getLastTxId(), b.getLastTxId())
+            .result();
 
     EditLogFile(File file,
         long firstTxId, long lastTxId) {

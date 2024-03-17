@@ -18,11 +18,9 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.File;
-import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
@@ -137,15 +135,10 @@ public class NNStorageRetentionManager {
     
     ArrayList<EditLogInputStream> editLogs = new ArrayList<EditLogInputStream>();
     purgeableLogs.selectInputStreams(editLogs, purgeLogsFrom, false, false);
-    Collections.sort(editLogs, new Comparator<EditLogInputStream>() {
-      @Override
-      public int compare(EditLogInputStream a, EditLogInputStream b) {
-        return ComparisonChain.start()
-            .compare(a.getFirstTxId(), b.getFirstTxId())
-            .compare(a.getLastTxId(), b.getLastTxId())
-            .result();
-      }
-    });
+    editLogs.sort((a, b) -> ComparisonChain.start()
+        .compare(a.getFirstTxId(), b.getFirstTxId())
+        .compare(a.getLastTxId(), b.getLastTxId())
+        .result());
 
     // Remove from consideration any edit logs that are in fact required.
     while (editLogs.size() > 0 &&
@@ -259,12 +252,8 @@ public class NNStorageRetentionManager {
     String filesInStorage[];
 
     // Get the listing
-    filesInStorage = oivImageDir.list(new FilenameFilter() {
-      @Override
-      public boolean accept(File dir, String name) {
-        return name.matches(oivImagePrefix + "_(\\d+)");
-      }
-    });
+    filesInStorage = oivImageDir.list(
+        (dir1, name) -> name.matches(oivImagePrefix + "_(\\d+)"));
 
     // Check whether there is any work to do.
     if (filesInStorage != null

@@ -20,8 +20,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.text.NumberFormat;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.Formatter;
 import java.util.HashMap;
@@ -70,14 +68,7 @@ public class StoragePolicySummary {
     List<Entry<StorageTypeAllocation, Long>> storageAllocations = 
         new LinkedList<>(unsortMap.entrySet());
     // Sorting the list based on values
-    Collections.sort(storageAllocations, 
-      new Comparator<Entry<StorageTypeAllocation, Long>>() {
-          public int compare(Entry<StorageTypeAllocation, Long> o1,
-              Entry<StorageTypeAllocation, Long> o2)
-          {
-            return o2.getValue().compareTo(o1.getValue());
-          }
-    });
+    storageAllocations.sort((o1, o2) -> o2.getValue().compareTo(o1.getValue()));
     return storageAllocations;
   }
 

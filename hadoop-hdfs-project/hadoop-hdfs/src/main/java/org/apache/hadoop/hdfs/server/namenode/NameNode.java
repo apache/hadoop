@@ -112,7 +112,6 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.net.URI;
-import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -1067,13 +1066,10 @@ public class NameNode extends ReconfigurableBase implements
     // case the current user is the administrator, not the NN. The trash
     // emptier needs to run as the NN. See HDFS-3972.
     FileSystem fs = SecurityUtil.doAsLoginUser(
-        new PrivilegedExceptionAction<FileSystem>() {
-          @Override
-          public FileSystem run() throws IOException {
-            FileSystem dfs = new DistributedFileSystem();
-            dfs.initialize(FileSystem.getDefaultUri(conf), conf);
-            return dfs;
-          }
+        () -> {
+          FileSystem dfs = new DistributedFileSystem();
+          dfs.initialize(FileSystem.getDefaultUri(conf), conf);
+          return dfs;
         });
     this.emptier = new Thread(new Trash(fs, conf).getEmptier(), "Trash Emptier");
     this.emptier.setDaemon(true);

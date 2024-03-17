@@ -223,25 +223,21 @@ public class LeaseManager {
         Executors.newFixedThreadPool(workerCount);
     for (int workerIdx = 0; workerIdx < workerCount; workerIdx++) {
       final int startIdx = workerIdx;
-      Callable<List<INodesInPath>> c = new Callable<List<INodesInPath>>() {
-        @Override
-        public List<INodesInPath> call() {
-          List<INodesInPath> iNodesInPaths = Lists.newArrayList();
-          for (int idx = startIdx; idx < inodeCount; idx += workerCount) {
-            INode inode = inodes[idx];
-            if (!inode.isFile()) {
-              continue;
-            }
-            INodesInPath inodesInPath = INodesInPath.fromINode(
-                fsnamesystem.getFSDirectory().getRoot(), inode.asFile());
-            if (ancestorDir != null &&
-                !inodesInPath.isDescendant(ancestorDir)) {
-              continue;
-            }
-            iNodesInPaths.add(inodesInPath);
+      Callable<List<INodesInPath>> c = () -> {
+        List<INodesInPath> iNodesInPaths = Lists.newArrayList();
+        for (int idx = startIdx; idx < inodeCount; idx += workerCount) {
+          INode inode = inodes[idx];
+          if (!inode.isFile()) {
+            continue;
           }
-          return iNodesInPaths;
+          INodesInPath inodesInPath = INodesInPath.fromINode(
+              fsnamesystem.getFSDirectory().getRoot(), inode.asFile());
+          if (ancestorDir != null && !inodesInPath.isDescendant(ancestorDir)) {
+            continue;
+          }
+          iNodesInPaths.add(inodesInPath);
         }
+        return iNodesInPaths;
       };
 
       // Submit the inode filter task to the Executor Service

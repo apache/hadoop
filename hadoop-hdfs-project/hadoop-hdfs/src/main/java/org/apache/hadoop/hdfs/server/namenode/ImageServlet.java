@@ -565,135 +565,117 @@ public class ImageServlet extends HttpServlet {
       validateRequest(context, conf, request, response, nnImage,
           parsedParams.getStorageInfoString());
 
-      UserGroupInformation.getCurrentUser().doAs(
-          new PrivilegedExceptionAction<Void>() {
+      UserGroupInformation.getCurrentUser().doAs((PrivilegedExceptionAction<Void>) () -> {
+        // if its not the active NN, then we need to notify the caller it was was the wrong
+        // target (regardless of the fact that we got the image)
+        HAServiceProtocol.HAServiceState state = NameNodeHttpServer
+            .getNameNodeStateFromContext(getServletContext());
+        if (state != HAServiceProtocol.HAServiceState.ACTIVE &&
+            state != HAServiceProtocol.HAServiceState.OBSERVER) {
+          // we need a different response type here so the client can differentiate this
+          // from the failure to upload due to (1) security, or (2) other checkpoints already
+          // present
+          sendError(response, HttpServletResponse.SC_EXPECTATION_FAILED,
+              "Nameode "+request.getLocalAddr()+" is currently not in a state which can "
+                  + "accept uploads of new fsimages. State: "+state);
+          return null;
+        }
 
-            @Override
-            public Void run() throws Exception {
-              // if its not the active NN, then we need to notify the caller it was was the wrong
-              // target (regardless of the fact that we got the image)
-              HAServiceProtocol.HAServiceState state = NameNodeHttpServer
-                  .getNameNodeStateFromContext(getServletContext());
-              if (state != HAServiceProtocol.HAServiceState.ACTIVE &&
-                  state != HAServiceProtocol.HAServiceState.OBSERVER) {
-                // we need a different response type here so the client can differentiate this
-                // from the failure to upload due to (1) security, or (2) other checkpoints already
-                // present
-                sendError(response, HttpServletResponse.SC_EXPECTATION_FAILED,
-                    "Nameode "+request.getLocalAddr()+" is currently not in a state which can "
-                        + "accept uploads of new fsimages. State: "+state);
-                return null;
-              }
+        final long txid = parsedParams.getTxId();
+        String remoteAddr = request.getRemoteAddr();
+        ImageUploadRequest imageRequest = new ImageUploadRequest(txid, remoteAddr);
 
-              final long txid = parsedParams.getTxId();
-              String remoteAddr = request.getRemoteAddr();
-              ImageUploadRequest imageRequest = new ImageUploadRequest(txid, remoteAddr);
+        final NameNodeFile nnf = parsedParams.getNameNodeFile();
 
-              final NameNodeFile nnf = parsedParams.getNameNodeFile();
+        // if the node is attempting to upload an older transaction, we ignore it
+        SortedSet<ImageUploadRequest> larger =
+            currentlyDownloadingCheckpoints.tailSet(imageRequest);
+        if (larger.size() > 0) {
+          sendError(response, HttpServletResponse.SC_CONFLICT,
+              "Another checkpointer is already in the process of uploading a" +
+                  " checkpoint made up to transaction ID " + larger.last());
+          return null;
+        }
 
-              // if the node is attempting to upload an older transaction, we ignore it
-              SortedSet<ImageUploadRequest> larger = currentlyDownloadingCheckpoints.tailSet(imageRequest);
-              if (larger.size() > 0) {
-                sendError(response, HttpServletResponse.SC_CONFLICT,
-                    "Another checkpointer is already in the process of uploading a" +
-                        " checkpoint made up to transaction ID " + larger.last());
-                return null;
-              }
+        //make sure no one else has started uploading one
+        if (!currentlyDownloadingCheckpoints.add(imageRequest)) {
+          sendError(response, HttpServletResponse.SC_CONFLICT,
+              "Either current namenode is checkpointing or another"
+                  + " checkpointer is already in the process of "
+                  + "uploading a checkpoint made at transaction ID "
+                  + txid);
+          return null;
+        }
 
-              //make sure no one else has started uploading one
-              if (!currentlyDownloadingCheckpoints.add(imageRequest)) {
-                sendError(response, HttpServletResponse.SC_CONFLICT,
-                    "Either current namenode is checkpointing or another"
-                        + " checkpointer is already in the process of "
-                        + "uploading a checkpoint made at transaction ID "
-                        + txid);
-                return null;
-              }
+        long now = System.currentTimeMillis();
+        long lastCheckpointTime = nnImage.getStorage().getMostRecentCheckpointTime();
+        long lastCheckpointTxid = nnImage.getStorage().getMostRecentCheckpointTxId();
 
-              long now = System.currentTimeMillis();
-              long lastCheckpointTime =
-                  nnImage.getStorage().getMostRecentCheckpointTime();
-              long lastCheckpointTxid =
-                  nnImage.getStorage().getMostRecentCheckpointTxId();
+        long checkpointPeriod = conf.getTimeDuration(DFS_NAMENODE_CHECKPOINT_PERIOD_KEY,
+            DFS_NAMENODE_CHECKPOINT_PERIOD_DEFAULT, TimeUnit.SECONDS);
+        checkpointPeriod = Math.round(checkpointPeriod * recentImageCheckTimePrecision);
 
-              long checkpointPeriod =
-                  conf.getTimeDuration(DFS_NAMENODE_CHECKPOINT_PERIOD_KEY,
-                      DFS_NAMENODE_CHECKPOINT_PERIOD_DEFAULT, TimeUnit.SECONDS);
-              checkpointPeriod = Math.round(
-                  checkpointPeriod * recentImageCheckTimePrecision);
+        long checkpointTxnCount = conf.getLong(DFS_NAMENODE_CHECKPOINT_TXNS_KEY,
+            DFS_NAMENODE_CHECKPOINT_TXNS_DEFAULT);
 
-              long checkpointTxnCount =
-                  conf.getLong(DFS_NAMENODE_CHECKPOINT_TXNS_KEY,
-                      DFS_NAMENODE_CHECKPOINT_TXNS_DEFAULT);
+        long timeDelta = TimeUnit.MILLISECONDS.toSeconds(now - lastCheckpointTime);
 
-              long timeDelta = TimeUnit.MILLISECONDS.toSeconds(
-                  now - lastCheckpointTime);
+        // Since the goal of the check below is to prevent overly
+        // frequent upload from Standby, the check should only be done
+        // for the periodical upload from Standby. For the other
+        // scenarios such as rollback image and ckpt file, they skip
+        // this check, see HDFS-15036 for more info.
+        if (checkRecentImageEnable && NameNodeFile.IMAGE.equals(parsedParams.getNameNodeFile()) &&
+            timeDelta < checkpointPeriod && txid - lastCheckpointTxid < checkpointTxnCount) {
+          // only when at least one of two conditions are met we accept
+          // a new fsImage
+          // 1. most recent image's txid is too far behind
+          // 2. last checkpoint time was too old
+          String message = "Rejecting a fsimage due to small time delta "
+              + "and txnid delta. Time since previous checkpoint is "
+              + timeDelta + " expecting at least " + checkpointPeriod
+              + " txnid delta since previous checkpoint is " +
+              (txid - lastCheckpointTxid) + " expecting at least "
+              + checkpointTxnCount;
+          LOG.info(message);
+          sendError(response, HttpServletResponse.SC_CONFLICT, message);
+          return null;
+        }
 
-              // Since the goal of the check below is to prevent overly
-              // frequent upload from Standby, the check should only be done
-              // for the periodical upload from Standby. For the other
-              // scenarios such as rollback image and ckpt file, they skip
-              // this check, see HDFS-15036 for more info.
-              if (checkRecentImageEnable &&
-                  NameNodeFile.IMAGE.equals(parsedParams.getNameNodeFile()) &&
-                  timeDelta < checkpointPeriod &&
-                  txid - lastCheckpointTxid < checkpointTxnCount) {
-                // only when at least one of two conditions are met we accept
-                // a new fsImage
-                // 1. most recent image's txid is too far behind
-                // 2. last checkpoint time was too old
-                String message = "Rejecting a fsimage due to small time delta "
-                    + "and txnid delta. Time since previous checkpoint is "
-                    + timeDelta + " expecting at least " + checkpointPeriod
-                    + " txnid delta since previous checkpoint is " +
-                    (txid - lastCheckpointTxid) + " expecting at least "
-                    + checkpointTxnCount;
-                LOG.info(message);
-                sendError(response, HttpServletResponse.SC_CONFLICT, message);
-                return null;
-              }
+        try {
+          if (nnImage.getStorage().findImageFile(nnf, txid) != null) {
+            String message = "Either current namenode has checkpointed or "
+                + "another checkpointer already uploaded an "
+                + "checkpoint for txid " + txid;
+            LOG.info(message);
+            sendError(response, HttpServletResponse.SC_CONFLICT, message);
+            return null;
+          }
 
-              try {
-                if (nnImage.getStorage().findImageFile(nnf, txid) != null) {
-                  String message = "Either current namenode has checkpointed or "
-                      + "another checkpointer already uploaded an "
-                      + "checkpoint for txid " + txid;
-                  LOG.info(message);
-                  sendError(response, HttpServletResponse.SC_CONFLICT, message);
-                  return null;
-                }
-
-                InputStream stream = request.getInputStream();
-                try {
-                  long start = monotonicNow();
-                  MD5Hash downloadImageDigest = TransferFsImage
-                      .handleUploadImageRequest(request, txid,
-                          nnImage.getStorage(), stream,
-                          parsedParams.getFileSize(), getThrottler(conf));
-                  nnImage.saveDigestAndRenameCheckpointImage(nnf, txid,
-                      downloadImageDigest);
-                  // Metrics non-null only when used inside name node
-                  if (metrics != null) {
-                    long elapsed = monotonicNow() - start;
-                    metrics.addPutImage(elapsed);
-                  }
-                  // Now that we have a new checkpoint, we might be able to
-                  // remove some old ones.
-                  nnImage.purgeOldStorage(nnf);
-                } finally {
-                  // remove the request once we've processed it, or it threw an error, so we
-                  // aren't using it either
-                  currentlyDownloadingCheckpoints.remove(imageRequest);
-
-                  stream.close();
-                }
-              } finally {
-                nnImage.removeFromCheckpointing(txid);
-              }
-              return null;
+          try (InputStream stream = request.getInputStream()) {
+            long start = monotonicNow();
+            MD5Hash downloadImageDigest = TransferFsImage.handleUploadImageRequest(
+                request, txid, nnImage.getStorage(), stream,
+                parsedParams.getFileSize(), getThrottler(conf));
+            nnImage.saveDigestAndRenameCheckpointImage(nnf, txid, downloadImageDigest);
+            // Metrics non-null only when used inside name node
+            if (metrics != null) {
+              long elapsed = monotonicNow() - start;
+              metrics.addPutImage(elapsed);
             }
-
-          });
+            // Now that we have a new checkpoint, we might be able to
+            // remove some old ones.
+            nnImage.purgeOldStorage(nnf);
+          } finally {
+            // remove the request once we've processed it, or it threw an error, so we
+            // aren't using it either
+            currentlyDownloadingCheckpoints.remove(imageRequest);
+          }
+        } finally {
+          nnImage.removeFromCheckpointing(txid);
+        }
+        return null;
+      });
     } catch (Throwable t) {
       String errMsg = "PutImage failed. " + StringUtils.stringifyException(t);
       sendError(response, HttpServletResponse.SC_GONE, errMsg);

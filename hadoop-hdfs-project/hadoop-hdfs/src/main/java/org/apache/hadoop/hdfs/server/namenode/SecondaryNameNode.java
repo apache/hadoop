@@ -25,7 +25,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URL;
-import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 import java.util.*;
 
@@ -318,14 +317,10 @@ public class SecondaryNameNode implements Runnable,
 
   @Override
   public void run() {
-    SecurityUtil.doAsLoginUserOrFatal(
-        new PrivilegedAction<Object>() {
-        @Override
-        public Object run() {
-          doWork();
-          return null;
-        }
-      });
+    SecurityUtil.doAsLoginUserOrFatal(() -> {
+      doWork();
+      return null;
+    });
   }
   //
   // The main work loop
@@ -406,11 +401,8 @@ public class SecondaryNameNode implements Runnable,
     }
 
     try {
-        Boolean b = UserGroupInformation.getCurrentUser().doAs(
-            new PrivilegedExceptionAction<Boolean>() {
-  
-          @Override
-          public Boolean run() throws Exception {
+      return UserGroupInformation.getCurrentUser().doAs(
+          (PrivilegedExceptionAction<Boolean>) () -> {
             dstImage.getStorage().cTime = sig.cTime;
 
             // get fsimage
@@ -425,19 +417,16 @@ public class SecondaryNameNode implements Runnable,
               dstImage.saveDigestAndRenameCheckpointImage(NameNodeFile.IMAGE,
                   sig.mostRecentCheckpointTxId, downloadedHash);
             }
-        
+
             // get edits file
             for (RemoteEditLog log : manifest.getLogs()) {
-              TransferFsImage.downloadEditsToStorage(
-                  nnHostPort, log, dstImage.getStorage());
+              TransferFsImage.downloadEditsToStorage(nnHostPort, log, dstImage.getStorage());
             }
-        
+
             // true if we haven't loaded all the transactions represented by the
             // downloaded fsimage.
             return dstImage.getLastAppliedTxId() < sig.mostRecentCheckpointTxId;
-          }
-        });
-        return b.booleanValue();
+          });
       } catch (InterruptedException e) {
         throw new RuntimeException(e);
       }

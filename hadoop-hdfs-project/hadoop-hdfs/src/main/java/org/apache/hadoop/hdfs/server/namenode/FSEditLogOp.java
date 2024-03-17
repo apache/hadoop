@@ -125,7 +125,6 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
-import org.apache.hadoop.io.WritableFactory;
 import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.io.erasurecode.ErasureCodeConstants;
 import org.apache.hadoop.ipc.ClientId;
@@ -158,12 +157,7 @@ public abstract class FSEditLogOp {
 
   public static class OpInstanceCache {
     private static final ThreadLocal<OpInstanceCacheMap> CACHE =
-        new ThreadLocal<OpInstanceCacheMap>() {
-      @Override
-      protected OpInstanceCacheMap initialValue() {
-        return new OpInstanceCacheMap();
-      }
-    };
+        ThreadLocal.withInitial(OpInstanceCacheMap::new);
 
     @SuppressWarnings("serial")
     static final class OpInstanceCacheMap extends
@@ -4467,12 +4461,7 @@ public abstract class FSEditLogOp {
     long len;
 
     static {                                      // register a ctor
-      WritableFactories.setFactory
-        (BlockTwo.class,
-         new WritableFactory() {
-           @Override
-           public Writable newInstance() { return new BlockTwo(); }
-         });
+      WritableFactories.setFactory(BlockTwo.class, BlockTwo::new);
     }
 
 

@@ -404,13 +404,8 @@ public abstract class INodeReference extends INode {
      * Compare snapshot with IDs, where null indicates the current status thus
      * is greater than any non-null snapshot.
      */
-    public static final Comparator<WithName> WITHNAME_COMPARATOR
-        = new Comparator<WithName>() {
-      @Override
-      public int compare(WithName left, WithName right) {
-        return left.lastSnapshotId - right.lastSnapshotId;
-      }
-    };
+    public static final Comparator<WithName> WITHNAME_COMPARATOR =
+        Comparator.comparingInt(left -> left.lastSnapshotId);
     
     public WithCount(INodeReference parent, INode referred) {
       super(parent, referred);

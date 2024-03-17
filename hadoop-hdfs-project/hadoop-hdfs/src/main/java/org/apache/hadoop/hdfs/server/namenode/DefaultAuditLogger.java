@@ -39,12 +39,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 @InterfaceStability.Evolving
 public abstract class DefaultAuditLogger extends HdfsAuditLogger {
   protected static final ThreadLocal<StringBuilder> STRING_BUILDER =
-      new ThreadLocal<StringBuilder>() {
-        @Override
-        protected StringBuilder initialValue() {
-          return new StringBuilder();
-        }
-      };
+      ThreadLocal.withInitial(StringBuilder::new);
 
   protected volatile boolean isCallerContextEnabled;
 

@@ -51,11 +51,9 @@ import org.apache.hadoop.hdfs.client.impl.BlockReaderFactory;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtilClient;
-import org.apache.hadoop.hdfs.RemotePeerFactory;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.net.Peer;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfoWithStorage;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
@@ -67,7 +65,6 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.DataEncryptionKeyFactory;
-import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.block.DataEncryptionKey;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
@@ -84,7 +81,6 @@ import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.tracing.TraceUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.tracing.Tracer;
@@ -1104,26 +1100,20 @@ public class NamenodeFsck implements DataEncryptionKeyFactory {
             setCachingStrategy(CachingStrategy.newDropBehind()).
             setClientCacheContext(dfs.getClientContext()).
             setConfiguration(namenode.getConf()).
-            setRemotePeerFactory(new RemotePeerFactory() {
-              @Override
-              public Peer newConnectedPeer(InetSocketAddress addr,
-                  Token<BlockTokenIdentifier> blockToken, DatanodeID datanodeId)
-                  throws IOException {
-                Peer peer = null;
-                Socket s = NetUtils.getDefaultSocketFactory(conf).createSocket();
-                try {
-                  s.connect(addr, HdfsConstants.READ_TIMEOUT);
-                  s.setSoTimeout(HdfsConstants.READ_TIMEOUT);
-                  peer = DFSUtilClient.peerFromSocketAndKey(
-                        dfs.getSaslDataTransferClient(), s, NamenodeFsck.this,
-                        blockToken, datanodeId, HdfsConstants.READ_TIMEOUT);
-                } finally {
-                  if (peer == null) {
-                    IOUtils.closeStream(s);
-                  }
+            setRemotePeerFactory((addr, blockToken, datanodeId) -> {
+              Peer peer = null;
+              Socket s = NetUtils.getDefaultSocketFactory(conf).createSocket();
+              try {
+                s.connect(addr, HdfsConstants.READ_TIMEOUT);
+                s.setSoTimeout(HdfsConstants.READ_TIMEOUT);
+                peer = DFSUtilClient.peerFromSocketAndKey(dfs.getSaslDataTransferClient(), s,
+                    NamenodeFsck.this, blockToken, datanodeId, HdfsConstants.READ_TIMEOUT);
+              } finally {
+                if (peer == null) {
+                  IOUtils.closeStream(s);
                 }
-                return peer;
               }
+              return peer;
             }).
             build();
       }  catch (IOException ex) {

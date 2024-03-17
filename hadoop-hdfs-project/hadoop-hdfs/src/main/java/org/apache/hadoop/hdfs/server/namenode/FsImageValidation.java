@@ -45,7 +45,6 @@ import java.io.FilenameFilter;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -146,19 +145,16 @@ public class FsImageValidation {
     /** @return a filter for the given type. */
     static FilenameFilter newFilenameFilter(NameNodeFile type) {
       final String prefix = type.getName() + "_";
-      return new FilenameFilter() {
-        @Override
-        public boolean accept(File dir, String name) {
-          if (!name.startsWith(prefix)) {
+      return (dir, name) -> {
+        if (!name.startsWith(prefix)) {
+          return false;
+        }
+        for (int i = prefix.length(); i < name.length(); i++) {
+          if (!Character.isDigit(name.charAt(i))) {
             return false;
           }
-          for (int i = prefix.length(); i < name.length(); i++) {
-            if (!Character.isDigit(name.charAt(i))) {
-              return false;
-            }
-          }
-          return true;
         }
+        return true;
       };
     }
   }
@@ -262,12 +258,7 @@ public class FsImageValidation {
 
   static class INodeMapValidation {
     static Iterable<INodeWithAdditionalFields> iterate(INodeMap map) {
-      return new Iterable<INodeWithAdditionalFields>() {
-        @Override
-        public Iterator<INodeWithAdditionalFields> iterator() {
-          return map.getMapIterator();
-        }
-      };
+      return map::getMapIterator;
     }
 
     static void run(FSDirectory fsdir, AtomicInteger errorCount) {

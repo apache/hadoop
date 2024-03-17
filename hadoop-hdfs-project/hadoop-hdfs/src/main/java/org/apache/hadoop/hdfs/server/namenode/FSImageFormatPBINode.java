@@ -305,20 +305,8 @@ public final class FSImageFormatPBINode {
 
     private void addToCacheAndBlockMap(final ArrayList<INode> inodeList) {
       final ArrayList<INode> inodes = new ArrayList<>(inodeList);
-      nameCacheUpdateExecutor.submit(
-          new Runnable() {
-            @Override
-            public void run() {
-              addToCacheInternal(inodes);
-            }
-          });
-      blocksMapUpdateExecutor.submit(
-          new Runnable() {
-            @Override
-            public void run() {
-              updateBlockMapInternal(inodes);
-            }
-          });
+      nameCacheUpdateExecutor.submit(() -> addToCacheInternal(inodes));
+      blocksMapUpdateExecutor.submit(() -> updateBlockMapInternal(inodes));
     }
 
     // update name cache with non-thread safe

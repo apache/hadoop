@@ -1705,18 +1705,14 @@ public class NameNodeRpcServer implements NamenodeProtocols {
         nodeReg, receivedAndDeletedBlocks.length);
     final BlockManager bm = namesystem.getBlockManager();
     for (final StorageReceivedDeletedBlocks r : receivedAndDeletedBlocks) {
-      bm.enqueueBlockOp(new Runnable() {
-        @Override
-        public void run() {
-          try {
-            namesystem.processIncrementalBlockReport(nodeReg, r);
-          } catch (Exception ex) {
-            // usually because the node is unregistered/dead.  next heartbeat
-            // will correct the problem
-            blockStateChangeLog.error(
-                "*BLOCK* NameNode.blockReceivedAndDeleted: "
-                    + "failed from " + nodeReg + ": " + ex.getMessage());
-          }
+      bm.enqueueBlockOp(() -> {
+        try {
+          namesystem.processIncrementalBlockReport(nodeReg, r);
+        } catch (Exception ex) {
+          // usually because the node is unregistered/dead.  next heartbeat
+          // will correct the problem
+          blockStateChangeLog.error("*BLOCK* NameNode.blockReceivedAndDeleted: "
+              + "failed from " + nodeReg + ": " + ex.getMessage());
         }
       });
     }

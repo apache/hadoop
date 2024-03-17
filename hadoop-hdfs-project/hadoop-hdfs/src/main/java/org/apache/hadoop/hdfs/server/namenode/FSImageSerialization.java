@@ -75,13 +75,7 @@ public class FSImageSerialization {
    * in this class should be thread-safe since image-saving is multithreaded, so 
    * we need to keep the static objects in a thread-local.
    */
-  static private final ThreadLocal<TLData> TL_DATA =
-    new ThreadLocal<TLData>() {
-    @Override
-    protected TLData initialValue() {
-      return new TLData();
-    }
-  };
+  static private final ThreadLocal<TLData> TL_DATA = ThreadLocal.withInitial(TLData::new);
 
   /**
    * Simple container "struct" for threadlocal data.

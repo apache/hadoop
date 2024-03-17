@@ -93,12 +93,7 @@ class FSNamesystemLock {
    * many read locks held simultaneously.
    */
   private final ThreadLocal<Long> readLockHeldTimeStampNanos =
-      new ThreadLocal<Long>() {
-        @Override
-        public Long initialValue() {
-          return Long.MAX_VALUE;
-        }
-      };
+      ThreadLocal.withInitial(() -> Long.MAX_VALUE);
   private final AtomicInteger numReadLockWarningsSuppressed =
       new AtomicInteger(0);
   /** Time stamp (ms) of the last time a read lock report was written. */
