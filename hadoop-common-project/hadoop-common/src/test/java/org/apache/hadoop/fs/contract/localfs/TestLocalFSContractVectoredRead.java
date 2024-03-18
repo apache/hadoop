@@ -89,7 +89,7 @@ public class TestLocalFSContractVectoredRead extends AbstractContractVectoredRea
     CompletableFuture<FSDataInputStream> fis = localFs.openFile(testPath).build();
     try (FSDataInputStream in = fis.get()){
       in.readVectored(ranges, getAllocate());
-      validateVectoredReadResult(ranges, datasetCorrect);
+      validateVectoredReadResult(ranges, datasetCorrect, 0);
     }
     final byte[] datasetCorrupted = ContractTestUtils.dataset(length, 'a', 64);
     try (FSDataOutputStream out = localFs.getRaw().create(testPath, true)){
@@ -101,7 +101,7 @@ public class TestLocalFSContractVectoredRead extends AbstractContractVectoredRea
       // Expect checksum exception when data is updated directly through
       // raw local fs instance.
       intercept(ChecksumException.class,
-          () -> validateVectoredReadResult(ranges, datasetCorrupted));
+          () -> validateVectoredReadResult(ranges, datasetCorrupted, 0));
     }
   }
   @Test
@@ -122,7 +122,7 @@ public class TestLocalFSContractVectoredRead extends AbstractContractVectoredRea
     smallRange.add(FileRange.createFileRange(1000, 71));
     try (FSDataInputStream in = fis.get()){
       in.readVectored(smallRange, getAllocate());
-      validateVectoredReadResult(smallRange, datasetCorrect);
+      validateVectoredReadResult(smallRange, datasetCorrect, 0);
     }
   }
 

@@ -57,6 +57,7 @@ import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_LE
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_ADAPTIVE;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_VECTOR;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.range;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.returnBuffersToPoolPostRead;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.validateVectoredReadResult;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
@@ -100,7 +101,7 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
             .opt(FS_OPTION_OPENFILE_READ_POLICY,
                 FS_OPTION_OPENFILE_READ_POLICY_ADAPTIVE)
             .build();
-    List<FileRange> fileRanges = range(new ArrayList<>(), DATASET_LEN, 100);
+    List<FileRange> fileRanges = range(DATASET_LEN, 100);
 
     // read starting past EOF generates a 416 response, mapped to
     // RangeNotSatisfiableEOFException
@@ -183,12 +184,12 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
       in.readVectored(fileRanges, getAllocate());
       in.close();
       LambdaTestUtils.intercept(InterruptedIOException.class,
-          () -> validateVectoredReadResult(fileRanges, DATASET));
+          () -> validateVectoredReadResult(fileRanges, DATASET, 0));
     }
     // reopening the stream should succeed.
     try (FSDataInputStream in = openVectorFile()){
       in.readVectored(fileRanges, getAllocate());
-      validateVectoredReadResult(fileRanges, DATASET);
+      validateVectoredReadResult(fileRanges, DATASET, 0);
     }
   }
 
@@ -205,10 +206,10 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
       in.readVectored(fileRanges, getAllocate());
       in.unbuffer();
       LambdaTestUtils.intercept(InterruptedIOException.class,
-          () -> validateVectoredReadResult(fileRanges, DATASET));
+          () -> validateVectoredReadResult(fileRanges, DATASET, 0));
       // re-initiating the vectored reads after unbuffer should succeed.
       in.readVectored(fileRanges, getAllocate());
-      validateVectoredReadResult(fileRanges, DATASET);
+      validateVectoredReadResult(fileRanges, DATASET, 0);
     }
 
   }
@@ -237,7 +238,7 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
               .build();
       try (FSDataInputStream in = builder.get()) {
         in.readVectored(fileRanges, getAllocate());
-        validateVectoredReadResult(fileRanges, DATASET);
+        validateVectoredReadResult(fileRanges, DATASET, 0);
         returnBuffersToPoolPostRead(fileRanges, getPool());
         final InputStream wrappedStream = in.getWrappedStream();
 
@@ -349,8 +350,8 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
       try (FSDataInputStream in = builder.get()) {
         in.readVectored(ranges1, getAllocate());
         in.readVectored(ranges2, getAllocate());
-        validateVectoredReadResult(ranges1, DATASET);
-        validateVectoredReadResult(ranges2, DATASET);
+        validateVectoredReadResult(ranges1, DATASET, 0);
+        validateVectoredReadResult(ranges2, DATASET, 0);
         returnBuffersToPoolPostRead(ranges1, getPool());
         returnBuffersToPoolPostRead(ranges2, getPool());
 

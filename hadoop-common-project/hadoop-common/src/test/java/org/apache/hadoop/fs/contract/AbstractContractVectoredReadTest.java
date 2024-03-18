@@ -44,6 +44,7 @@ import org.apache.hadoop.fs.FileRange;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.ElasticByteBufferPool;
 import org.apache.hadoop.io.WeakReferencedElasticByteBufferPool;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.util.functional.FutureIO;
@@ -54,6 +55,7 @@ import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_RE
 import static org.apache.hadoop.fs.contract.ContractTestUtils.VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertDatasetEquals;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.range;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.returnBuffersToPoolPostRead;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.validateVectoredReadResult;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -70,9 +72,15 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
   protected static final byte[] DATASET = ContractTestUtils.dataset(DATASET_LEN, 'a', 32);
   protected static final String VECTORED_READ_FILE_NAME = "vectored_file.txt";
 
+  /**
+   * Buffer allocator for vector IO.
+   */
   private final IntFunction<ByteBuffer> allocate;
 
-  private final WeakReferencedElasticByteBufferPool pool =
+  /**
+   * Buffer pool for vector IO.
+   */
+  private final ElasticByteBufferPool pool =
           new WeakReferencedElasticByteBufferPool();
 
   private final String bufferType;
@@ -90,14 +98,23 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
   public AbstractContractVectoredReadTest(String bufferType) {
     this.bufferType = bufferType;
     final boolean isDirect = !"array".equals(bufferType);
-    this.allocate = value -> pool.getBuffer(isDirect, value);
+    this.allocate = size -> pool.getBuffer(isDirect, size);
   }
 
-  public IntFunction<ByteBuffer> getAllocate() {
+  /**
+   * Get the buffer allocator.
+   * @return allocator function for vector IO.
+   */
+  protected IntFunction<ByteBuffer> getAllocate() {
     return allocate;
   }
 
-  public WeakReferencedElasticByteBufferPool getPool() {
+  /**
+   * Get the vector IO buffer pool.
+   * @return a pool.
+   */
+
+  protected ElasticByteBufferPool getPool() {
     return pool;
   }
 
@@ -156,7 +173,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
       CompletableFuture<Void> combinedFuture = CompletableFuture.allOf(completableFutures);
       combinedFuture.get();
 
-      validateVectoredReadResult(fileRanges, DATASET);
+      validateVectoredReadResult(fileRanges, DATASET, 0);
       returnBuffersToPoolPostRead(fileRanges, pool);
     }
   }
@@ -204,7 +221,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     range(fileRanges, 16_000 + 101, 100);
     try (FSDataInputStream in = openVectorFile()) {
       in.readVectored(fileRanges, allocate);
-      validateVectoredReadResult(fileRanges, DATASET);
+      validateVectoredReadResult(fileRanges, DATASET, 0);
       returnBuffersToPoolPostRead(fileRanges, pool);
     }
   }
@@ -222,7 +239,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     range(fileRanges, 8_000 - length - 1, length);
     try (FSDataInputStream in = openVectorFile()) {
       in.readVectored(fileRanges, allocate);
-      validateVectoredReadResult(fileRanges, DATASET);
+      validateVectoredReadResult(fileRanges, DATASET, 0);
       returnBuffersToPoolPostRead(fileRanges, pool);
     }
   }
@@ -247,7 +264,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
                     .build();
     try (FSDataInputStream in = builder.get()) {
       in.readVectored(fileRanges, allocate);
-      validateVectoredReadResult(fileRanges, DATASET);
+      validateVectoredReadResult(fileRanges, DATASET, 0);
       returnBuffersToPoolPostRead(fileRanges, pool);
     }
   }
@@ -303,7 +320,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     range(fileRanges, 10, 5);
     try (FSDataInputStream in = openVectorFile()) {
       in.readVectored(fileRanges, allocate);
-      validateVectoredReadResult(fileRanges, DATASET);
+      validateVectoredReadResult(fileRanges, DATASET, 0);
       returnBuffersToPoolPostRead(fileRanges, pool);
     }
   }
@@ -318,36 +335,9 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     range(fileRanges, 800, 100);
     try (FSDataInputStream in = openVectorFile()) {
       in.readVectored(fileRanges, allocate);
-      validateVectoredReadResult(fileRanges, DATASET);
+      validateVectoredReadResult(fileRanges, DATASET, 0);
       returnBuffersToPoolPostRead(fileRanges, pool);
     }
-  }
-
-  /**
-   * Create a list with a single range within it
-   * @param offset offset
-   * @param length length
-   * @return the list.
-   */
-  protected static List<FileRange> range(
-      final int offset,
-      final int length) {
-    return range(new ArrayList<>(), offset, length);
-  }
-
-  /**
-   * Create a range and add it to the list.
-   * @param fileRanges list of ranges
-   * @param offset offset
-   * @param length length
-   * @return the list.
-   */
-  protected static List<FileRange> range(
-      final List<FileRange> fileRanges,
-      final int offset,
-      final int length) {
-    fileRanges.add(FileRange.createFileRange(offset, length));
-    return fileRanges;
   }
 
   /**
@@ -421,7 +411,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
       in.readFully(res, 0, len);
       ByteBuffer buffer = ByteBuffer.wrap(res);
       assertDatasetEquals(0, "normal_read", buffer, len, DATASET);
-      validateVectoredReadResult(fileRanges, DATASET);
+      validateVectoredReadResult(fileRanges, DATASET, 0);
       returnBuffersToPoolPostRead(fileRanges, pool);
     }
   }
@@ -437,7 +427,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
       ByteBuffer buffer = ByteBuffer.wrap(res);
       assertDatasetEquals(0, "normal_read", buffer, len, DATASET);
       in.readVectored(fileRanges, allocate);
-      validateVectoredReadResult(fileRanges, DATASET);
+      validateVectoredReadResult(fileRanges, DATASET, 0);
       returnBuffersToPoolPostRead(fileRanges, pool);
     }
   }
@@ -449,8 +439,8 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     try (FSDataInputStream in = openVectorFile()) {
       in.readVectored(fileRanges1, allocate);
       in.readVectored(fileRanges2, allocate);
-      validateVectoredReadResult(fileRanges2, DATASET);
-      validateVectoredReadResult(fileRanges1, DATASET);
+      validateVectoredReadResult(fileRanges2, DATASET, 0);
+      validateVectoredReadResult(fileRanges1, DATASET, 0);
       returnBuffersToPoolPostRead(fileRanges1, pool);
       returnBuffersToPoolPostRead(fileRanges2, pool);
     }

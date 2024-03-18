@@ -957,7 +957,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    */
   private void readCombinedRangeAndUpdateChildren(CombinedFileRange combinedFileRange,
                                                   IntFunction<ByteBuffer> allocate) {
-    LOG.debug("Start reading combined range {} from path {} ", combinedFileRange, pathStr);
+    LOG.debug("Start reading {} from path {} ", combinedFileRange, pathStr);
     ResponseInputStream<GetObjectResponse> rangeContent = null;
     try {
       rangeContent = getS3ObjectInputStream("readCombinedFileRange",
@@ -965,14 +965,14 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
               combinedFileRange.getLength());
       populateChildBuffers(combinedFileRange, rangeContent, allocate);
     } catch (Exception ex) {
-      LOG.debug("Exception while reading a range {} from path {} ", combinedFileRange, pathStr, ex);
+      LOG.debug("Exception while reading {} from path {} ", combinedFileRange, pathStr, ex);
       for(FileRange child : combinedFileRange.getUnderlying()) {
         child.getData().completeExceptionally(ex);
       }
     } finally {
       IOUtils.cleanupWithLogger(LOG, rangeContent);
     }
-    LOG.debug("Finished reading range {} from path {} ", combinedFileRange, pathStr);
+    LOG.debug("Finished reading {} from path {} ", combinedFileRange, pathStr);
   }
 
   /**
@@ -1071,7 +1071,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    * @param buffer buffer to fill.
    */
   private void readSingleRange(FileRange range, ByteBuffer buffer) {
-    LOG.debug("Start reading range {} from path {} ", range, pathStr);
+    LOG.debug("Start reading {} from {} ", range, pathStr);
     if (range.getLength() == 0) {
       // a zero byte read.
       buffer.flip();
