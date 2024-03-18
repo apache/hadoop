@@ -1721,12 +1721,12 @@ public class TestDistributedFileSystem {
         false);
     conf.setInt(HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.
         MIN_REPLICATION, 2);
-    // 3 racks & 6 nodes. 1 per rack for 2 racks and 3 nodes in the 3rd rack
+    // 3 racks & 6 nodes. 1 per rack for 2 racks and 4 nodes in the 3rd rack
     try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(6)
         .racks(new String[] {"/rack1", "/rack2", "/rack3", "/rack3", "/rack3", "/rack3"}).build()) {
       cluster.waitClusterUp();
       DistributedFileSystem fs = cluster.getFileSystem();
-      // kill all the DNs in the 3rd rack.
+      // kill all the DNs in the 3rd rack, so only 2 racks stays with 1 active DN each
       cluster.stopDataNode(5);
       cluster.stopDataNode(4);
       cluster.stopDataNode(3);
@@ -1745,12 +1745,12 @@ public class TestDistributedFileSystem {
         BlockPlacementPolicyRackFaultTolerant.class, BlockPlacementPolicy.class);
     conf.setBoolean(HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.ENABLE_KEY, false);
     conf.setInt(HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.MIN_REPLICATION, 3);
-    // 3 racks & 6 nodes. 1 per rack for 2 racks and 3 nodes in the 3rd rack
+    // 3 racks & 6 nodes. 1 per rack for 2 racks and 4 nodes in the 3rd rack
     try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(6)
         .racks(new String[] {"/rack1", "/rack2", "/rack3", "/rack3", "/rack3", "/rack3"}).build()) {
       cluster.waitClusterUp();
       DistributedFileSystem fs = cluster.getFileSystem();
-      // kill one DN, so only 2 racks stays with active DN
+      // kill all the DNs in the 3rd rack, so only 2 racks stays with 1 active DN each
       cluster.stopDataNode(5);
       cluster.stopDataNode(4);
       cluster.stopDataNode(3);
@@ -1777,12 +1777,12 @@ public class TestDistributedFileSystem {
         false);
     conf.setInt(HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.
         MIN_REPLICATION, 1);
-    // 3 racks & 3 nodes. 1 per rack
+    // 3 racks & 6 nodes. 1 per rack for 2 racks and 4 nodes in the 3rd rack
     try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(6)
         .racks(new String[] {"/rack1", "/rack2", "/rack3", "/rack3", "/rack3", "/rack3"}).build()) {
       cluster.waitClusterUp();
       DistributedFileSystem fs = cluster.getFileSystem();
-      // kill one DN, so only 2 racks stays with active DN
+      // kill all DNs except 1, so only rack1 stays with 1 active DN
       cluster.stopDataNode(5);
       cluster.stopDataNode(4);
       cluster.stopDataNode(3);
@@ -1806,12 +1806,12 @@ public class TestDistributedFileSystem {
         false);
     conf.setInt(HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.
         MIN_REPLICATION, 2);
-    // 3 racks & 3 nodes. 1 per rack
+    // 3 racks & 6 nodes. 1 per rack for 2 racks and 4 nodes in the 3rd rack
     try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(6)
         .racks(new String[] {"/rack1", "/rack2", "/rack3", "/rack3", "/rack3", "/rack3"}).build()) {
       cluster.waitClusterUp();
       DistributedFileSystem fs = cluster.getFileSystem();
-      // kill one DN, so only 2 racks stays with active DN
+      // kill all DNs except 1, so only rack1 stays with 1 active DN
       cluster.stopDataNode(5);
       cluster.stopDataNode(4);
       cluster.stopDataNode(3);
@@ -1838,7 +1838,7 @@ public class TestDistributedFileSystem {
     conf.setBoolean(
         HdfsClientConfigKeys.BlockWrite.ReplaceDatanodeOnFailure.ENABLE_KEY,
         false);
-    // 3 racks & 3 nodes. 1 per rack
+    // 3 racks & 6 nodes. 1 per rack for 2 racks and 4 nodes in the 3rd rack
     try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(6)
         .racks(new String[] {"/rack1", "/rack2", "/rack3", "/rack3", "/rack3", "/rack3"}).build()) {
       cluster.waitClusterUp();
@@ -1857,5 +1857,4 @@ public class TestDistributedFileSystem {
       assertTrue(threw);
     }
   }
-
 }
