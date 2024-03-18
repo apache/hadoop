@@ -32,7 +32,6 @@ import org.apache.hadoop.util.AutoCloseableLock;
  * Maintains the replica map. 
  */
 class ReplicaMap {
-  private final ReadWriteLock rwLock;
   // Lock object to synchronize this instance.
   private final AutoCloseableLock readLock;
   private final AutoCloseableLock writeLock;
@@ -41,18 +40,22 @@ class ReplicaMap {
   private final Map<String, LightWeightResizableGSet<Block, ReplicaInfo>> map =
     new HashMap<String, LightWeightResizableGSet<Block, ReplicaInfo>>();
 
-  ReplicaMap(ReadWriteLock lock) {
-    if (lock == null) {
+  ReplicaMap(AutoCloseableLock rLock, AutoCloseableLock wLock) {
+    if (rLock == null || wLock == null) {
       throw new HadoopIllegalArgumentException(
           "Lock to synchronize on cannot be null");
     }
-    this.rwLock = lock;
-    this.readLock = new AutoCloseableLock(rwLock.readLock());
-    this.writeLock = new AutoCloseableLock(rwLock.writeLock());
+    this.readLock = rLock;
+    this.writeLock = wLock;
+  }
+
+  ReplicaMap(ReadWriteLock lock) {
+    this(new AutoCloseableLock(lock.readLock()),
+        new AutoCloseableLock(lock.writeLock()));
   }
   
   String[] getBlockPoolList() {
-    try (AutoCloseableLock l = writeLock.acquire()) {
+    try (AutoCloseableLock l = readLock.acquire()) {
       return map.keySet().toArray(new String[map.keySet().size()]);   
     }
   }
@@ -97,7 +100,7 @@ class ReplicaMap {
    */
   ReplicaInfo get(String bpid, long blockId) {
     checkBlockPool(bpid);
-    try (AutoCloseableLock l = writeLock.acquire()) {
+    try (AutoCloseableLock l = readLock.acquire()) {
       LightWeightResizableGSet<Block, ReplicaInfo> m = map.get(bpid);
       return m != null ? m.get(new Block(blockId)) : null;
     }
@@ -217,7 +220,7 @@ class ReplicaMap {
    */
   int size(String bpid) {
     LightWeightResizableGSet<Block, ReplicaInfo> m = null;
-    try (AutoCloseableLock l = writeLock.acquire()) {
+    try (AutoCloseableLock l = readLock.acquire()) {
       m = map.get(bpid);
       return m != null ? m.size() : 0;
     }
@@ -265,4 +268,14 @@ class ReplicaMap {
   AutoCloseableLock getLock() {
     return writeLock;
   }
+
+  /**
+   * Get the lock object used for synchronizing the ReplicasMap for read only
+   * operations.
+   * @return The read lock object
+   */
+  AutoCloseableLock getReadLock() {
+    return readLock;
+  }
+
 }

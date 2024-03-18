@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -55,6 +57,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.util.FakeTimer;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Assert;
@@ -184,6 +187,122 @@ public class TestFsDatasetImpl {
     assertEquals(0, dataset.getNumFailedVolumes());
   }
 
+  @Test(timeout=10000)
+  public void testReadLockEnabledByDefault()
+      throws Exception {
+    final FsDatasetSpi ds = dataset;
+    final AtomicBoolean accessed = new AtomicBoolean(false);
+    final CountDownLatch latch = new CountDownLatch(1);
+    final CountDownLatch waiterLatch = new CountDownLatch(1);
+
+    Thread holder = new Thread() {
+      public void run() {
+        try (AutoCloseableLock l = ds.acquireDatasetReadLock()) {
+          latch.countDown();
+          // wait for the waiter thread to access the lock.
+          waiterLatch.await();
+        } catch (Exception e) {
+        }
+      }
+    };
+
+    Thread waiter = new Thread() {
+      public void run() {
+        try {
+          latch.await();
+        } catch (InterruptedException e) {
+          waiterLatch.countDown();
+          return;
+        }
+        try (AutoCloseableLock l = ds.acquireDatasetReadLock()) {
+          accessed.getAndSet(true);
+          // signal the holder thread.
+          waiterLatch.countDown();
+        } catch (Exception e) {
+        }
+      }
+    };
+    waiter.start();
+    holder.start();
+    holder.join();
+    waiter.join();
+    // The holder thread is still holding the lock, but the waiter can still
+    // run as the lock is a shared read lock.
+    // Otherwise test will timeout with deadlock.
+    assertEquals(true, accessed.get());
+    holder.interrupt();
+  }
+
+  @Test(timeout=20000)
+  public void testReadLockCanBeDisabledByConfig()
+      throws Exception {
+    HdfsConfiguration conf = new HdfsConfiguration();
+    conf.setBoolean(
+        DFSConfigKeys.DFS_DATANODE_LOCK_READ_WRITE_ENABLED_KEY, false);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(1).build();
+    try {
+      final AtomicBoolean accessed = new AtomicBoolean(false);
+      final CountDownLatch latch = new CountDownLatch(1);
+      final CountDownLatch waiterLatch = new CountDownLatch(1);
+      cluster.waitActive();
+      DataNode dn = cluster.getDataNodes().get(0);
+      final FsDatasetSpi<?> ds = DataNodeTestUtils.getFSDataset(dn);
+
+
+      Thread holder = new Thread() {
+        public void run() {
+          try (AutoCloseableLock l = ds.acquireDatasetReadLock()) {
+            latch.countDown();
+            // wait for the waiter thread to access the lock.
+            waiterLatch.await();
+          } catch (Exception e) {
+          }
+        }
+      };
+
+      Thread waiter = new Thread() {
+        public void run() {
+          try {
+            // Wait for holder to get ds read lock.
+            latch.await();
+          } catch (InterruptedException e) {
+            waiterLatch.countDown();
+            return;
+          }
+          try (AutoCloseableLock l = ds.acquireDatasetReadLock()) {
+            accessed.getAndSet(true);
+            // signal the holder thread.
+            waiterLatch.countDown();
+          } catch (Exception e) {
+          }
+        }
+      };
+      waiter.start();
+      holder.start();
+      // Wait for sometime to make sure we are in deadlock,
+      try {
+        GenericTestUtils.waitFor(
+            new Supplier<Boolean>() {
+              @Override
+              public Boolean get() {
+                return accessed.get();
+              }}, 100, 10000);
+        fail("Waiter thread should not execute.");
+      } catch (TimeoutException e) {
+      }
+      // Release waiterLatch to exit deadlock.
+      waiterLatch.countDown();
+      holder.join();
+      waiter.join();
+      // After releasing waiterLatch water
+      // thread will be able to execute.
+      assertTrue(accessed.get());
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
   @Test
   public void testAddVolumes() throws IOException {
     final int numNewVolumes = 3;
@@ -225,8 +344,8 @@ public class TestFsDatasetImpl {
 
   @Test
   public void testAddVolumeWithSameStorageUuid() throws IOException {
-    HdfsConfiguration conf = new HdfsConfiguration();
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+    HdfsConfiguration hdfsConf = new HdfsConfiguration();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(hdfsConf)
         .numDataNodes(1).build();
     try {
       cluster.waitActive();

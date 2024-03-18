@@ -668,12 +668,16 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
   boolean isDeletingBlock(String bpid, long blockId);
 
   /**
-   * Acquire the lock of the dataset.
+   * Acquire the lock of the data set. This prevents other threads from
+   * modifying the volume map structure inside the datanode, but other changes
+   * are still possible. For example modifying the genStamp of a block instance.
    */
   AutoCloseableLock acquireDatasetLock();
 
-  /***
-   * Acquire the read lock of the data set.
+  /**
+   * Acquire the read lock of the data set. This prevents other threads from
+   * modifying the volume map structure inside the datanode, but other changes
+   * are still possible. For example modifying the genStamp of a block instance.
    * @return The AutoClosable read lock instance.
    */
   AutoCloseableLock acquireDatasetReadLock();

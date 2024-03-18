@@ -3058,6 +3058,19 @@
 </property>
 
 <property>
+  <name>dfs.datanode.lock.read.write.enabled</name>
+  <value>true</value>
+  <description>If this is true, the FsDataset lock will be a read write lock. If
+    it is false, all locks will be a write lock.
+    Enabling this should give better datanode throughput, as many read only
+    functions can run concurrently under the read lock, when they would
+    previously have required the exclusive write lock. As the feature is
+    experimental, this switch can be used to disable the shared read lock, and
+    cause all lock acquisitions to use the exclusive write lock.
+  </description>
+</property>
+
+<property>
   <name>dfs.datanode.lock-reporting-threshold-ms</name>
   <value>300</value>
   <description>When thread waits to obtain a lock, or a thread holds a lock for
