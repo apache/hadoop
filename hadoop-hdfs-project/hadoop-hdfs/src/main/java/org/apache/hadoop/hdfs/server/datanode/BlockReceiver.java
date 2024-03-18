@@ -212,7 +212,10 @@ class BlockReceiver implements Closeable {
       } else {
         switch (stage) {
         case PIPELINE_SETUP_CREATE:
-          replicaHandler = datanode.data.createRbw(storageType, block, allowLazyPersist);
+          replicaHandler = datanode.data.createRbw(storageType, block, allowLazyPersist, newGs);
+          if (newGs != 0L) {
+            block.setGenerationStamp(newGs);
+          }
           datanode.notifyNamenodeReceivingBlock(
               block, replicaHandler.getReplica().getStorageUuid());
           break;

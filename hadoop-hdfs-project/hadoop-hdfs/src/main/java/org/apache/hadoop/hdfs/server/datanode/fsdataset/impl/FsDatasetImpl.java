@@ -1472,13 +1472,29 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   public ReplicaHandler createRbw(
       StorageType storageType, ExtendedBlock b, boolean allowLazyPersist)
       throws IOException {
+    return createRbw(storageType, b, allowLazyPersist, 0L);
+  }
+
+  @Override // FsDatasetSpi
+  public ReplicaHandler createRbw(
+      StorageType storageType, ExtendedBlock b,
+      boolean allowLazyPersist, long newGS) throws IOException {
     try(AutoCloseableLock lock = datasetWriteLock.acquire()) {
       ReplicaInfo replicaInfo = volumeMap.get(b.getBlockPoolId(),
           b.getBlockId());
       if (replicaInfo != null) {
-        throw new ReplicaAlreadyExistsException("Block " + b +
-            " already exists in state " + replicaInfo.getState() +
-            " and thus cannot be created.");
+        // In case of retries with same blockPoolId + blockId as before
+        // with updated GS, cleanup the old replica to avoid
+        // any multiple copies with same blockPoolId + blockId
+        if (newGS != 0L) {
+          cleanupReplica(replicaInfo, replicaInfo.getBlockFile(), replicaInfo.getMetaFile(),
+              replicaInfo.getBlockFile().length(), replicaInfo.getMetaFile().length(),
+              b.getBlockPoolId());
+        } else {
+          throw new ReplicaAlreadyExistsException("Block " + b +
+              " already exists in state " + replicaInfo.getState() +
+              " and thus cannot be created.");
+        }
       }
       // create a new block
       FsVolumeReference ref = null;
@@ -3198,6 +3214,14 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         newReplicaInfo.isOnTransientStorage());
 
     // Remove the old replicas
+    cleanupReplica(replicaInfo, blockFile, metaFile, blockFileUsed, metaFileUsed, bpid);
+
+    // If deletion failed then the directory scanner will cleanup the blocks
+    // eventually.
+  }
+
+  private void cleanupReplica(ReplicaInfo replicaInfo, File blockFile, File metaFile,
+      long blockFileUsed, long metaFileUsed, final String bpid) {
     if (blockFile.delete() || !blockFile.exists()) {
       FsVolumeImpl volume = (FsVolumeImpl) replicaInfo.getVolume();
       volume.onBlockFileDeletion(bpid, blockFileUsed);
@@ -3205,9 +3229,6 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         volume.onMetaFileDeletion(bpid, metaFileUsed);
       }
     }
-
-    // If deletion failed then the directory scanner will cleanup the blocks
-    // eventually.
   }
 
   class LazyWriter implements Runnable {
