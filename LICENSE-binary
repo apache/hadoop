@@ -241,7 +241,7 @@ com.google.guava:guava:20.0
 com.google.guava:guava:27.0-jre
 com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava
 com.microsoft.azure:azure-storage:7.0.0
-com.nimbusds:nimbus-jose-jwt:9.31
+com.nimbusds:nimbus-jose-jwt:9.37.2
 com.zaxxer:HikariCP:4.0.3
 commons-beanutils:commons-beanutils:1.9.4
 commons-cli:commons-cli:1.5.0
