@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.HardLink;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.SecureIOUtils.AlreadyExistsException;
+import org.apache.hadoop.util.CleanerUtil;
 import org.apache.hadoop.util.NativeCodeLoader;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.PerformanceAdvisory;
@@ -312,7 +313,7 @@ public class NativeIO {
       }
       mlock_native(buffer, len);
     }
-    
+
     /**
      * Unmaps the block from memory. See munmap(2).
      *
@@ -326,10 +327,14 @@ public class NativeIO {
      * @param buffer    The buffer to unmap.
      */
     public static void munmap(MappedByteBuffer buffer) {
-      if (buffer instanceof sun.nio.ch.DirectBuffer) {
-        sun.misc.Cleaner cleaner =
-            ((sun.nio.ch.DirectBuffer)buffer).cleaner();
-        cleaner.clean();
+      if (CleanerUtil.UNMAP_SUPPORTED) {
+        try {
+          CleanerUtil.getCleaner().freeBuffer(buffer);
+        } catch (IOException e) {
+          LOG.info("Failed to unmap the buffer", e);
+        }
+      } else {
+        LOG.trace(CleanerUtil.UNMAP_NOT_SUPPORTED_REASON);
       }
     }
 
