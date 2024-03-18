@@ -89,6 +89,21 @@ public abstract class Shell {
     return true;
   }
 
+  // "1.8"->8, "9"->9, "10"->10
+  private static final int JAVA_SPEC_VER = Math.max(8, Integer.parseInt(
+      System.getProperty("java.specification.version").split("\\.")[0]));
+
+  /**
+   * Query to see if major version of Java specification of the system
+   * is equal or greater than the parameter.
+   *
+   * @param version 8, 9, 10 etc.
+   * @return comparison with system property, always true for 8
+   */
+  public static boolean isJavaVersionAtLeast(int version) {
+    return JAVA_SPEC_VER >= version;
+  }
+
   /**
    * Maximum command line length in Windows
    * KB830473 documents this as 8191
