@@ -289,6 +289,21 @@ public class DatanodeAdminManager {
    */
   @VisibleForTesting
   public void stopMaintenance(DatanodeDescriptor node) {
+    stopMaintenance(node, true);
+  }
+
+  /**
+   * Stop maintenance of the specified datanode with option to remove it from
+   * outOfServiceNodeBlocks to avoid ConcurrentModificationException while
+   * iterating it.
+   *
+   * @param node datanode to stop maintenance
+   * @param removeOutOfServiceNodeBlocks false means the node won't be removed
+   *                                     from outOfServiceNodeBlocks. Caller
+   *                                     will do that.
+   */
+  private void stopMaintenance(DatanodeDescriptor node,
+      boolean removeOutOfServiceNodeBlocks) {
     if (node.isMaintenance()) {
       // Update DN stats maintained by HeartbeatManager
       hbManager.stopMaintenance(node);
@@ -324,7 +339,9 @@ public class DatanodeAdminManager {
 
       // Remove from tracking in DatanodeAdminManager
       pendingNodes.remove(node);
-      outOfServiceNodeBlocks.remove(node);
+      if (removeOutOfServiceNodeBlocks) {
+        outOfServiceNodeBlocks.remove(node);
+      }
     } else {
       LOG.trace("stopMaintenance: Node {} in {}, nothing to do." +
           node, node.getAdminState());
@@ -556,7 +573,7 @@ public class DatanodeAdminManager {
           boolean fullScan = false;
           if (dn.isMaintenance() && dn.maintenanceExpired()) {
             // If maintenance expires, stop tracking it.
-            stopMaintenance(dn);
+            stopMaintenance(dn, false);
             toRemove.add(dn);
             continue;
           }
