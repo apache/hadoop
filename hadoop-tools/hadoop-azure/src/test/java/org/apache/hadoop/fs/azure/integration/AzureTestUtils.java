@@ -47,6 +47,7 @@ import static org.junit.Assume.assumeTrue;
 import static org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount.WASB_ACCOUNT_NAME_DOMAIN_SUFFIX_REGEX;
 import static org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount.WASB_TEST_ACCOUNT_NAME_WITH_DOMAIN;
 import static org.apache.hadoop.fs.azure.integration.AzureTestConstants.*;
+import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT;
 import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getLongGauge;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
@@ -544,5 +545,13 @@ public final class AzureTestUtils extends Assert {
     }
     inputStream.close();
     return new String(buffer, 0, count);
+  }
+
+  /**
+   * Assume hierarchical namespace is disabled for test account.
+   */
+  public static void assumeNamespaceDisabled(Configuration conf) {
+    Assume.assumeFalse("Hierarchical namespace is enabled for test account.",
+        conf.getBoolean(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false));
   }
 }
