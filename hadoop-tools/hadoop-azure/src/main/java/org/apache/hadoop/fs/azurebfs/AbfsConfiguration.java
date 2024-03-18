@@ -843,6 +843,9 @@ public class AbfsConfiguration{
     return getEnum(FS_AZURE_SSL_CHANNEL_MODE_KEY, DEFAULT_FS_AZURE_SSL_CHANNEL_MODE);
   }
 
+  /**
+   * Config to select netlib for server communication.
+   */
   public HttpOperationType getPreferredHttpOperationType() {
     return getEnum(FS_AZURE_NETWORKING_LIBRARY, DEFAULT_NETWORKING_LIBRARY);
   }
