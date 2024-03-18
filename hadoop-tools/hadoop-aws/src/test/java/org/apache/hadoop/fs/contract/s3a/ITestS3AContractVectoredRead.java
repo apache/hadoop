@@ -102,18 +102,22 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
             .build();
     List<FileRange> fileRanges = range(new ArrayList<>(), DATASET_LEN, 100);
 
+    // read starting past EOF generates a 416 response, mapped to
+    // RangeNotSatisfiableEOFException
     describe("Read starting from past EOF");
     try (FSDataInputStream in = builder.get()) {
       in.readVectored(fileRanges, getAllocate());
       FileRange res = fileRanges.get(0);
       CompletableFuture<ByteBuffer> data = res.getData();
-      interceptFuture(RangeNotSatisfiableEOFException.class,
-          "416",
+      interceptFuture(EOFException.class,
+          "",
           ContractTestUtils.VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS,
           TimeUnit.SECONDS,
           data);
     }
 
+    // a read starting before the EOF and continuing past it does generate
+    // an EOF exception, but not a 416.
     describe("Read starting 0 continuing past EOF");
     try (FSDataInputStream in = fs.openFile(path(VECTORED_READ_FILE_NAME))
                 .mustLong(FS_OPTION_OPENFILE_LENGTH, extendedLen)
@@ -121,7 +125,7 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
       final FileRange range = FileRange.createFileRange(0, extendedLen);
       in.readVectored(Arrays.asList(range), getAllocate());
       CompletableFuture<ByteBuffer> data = range.getData();
-      interceptFuture(EOFException.class,
+      interceptFuture(RangeNotSatisfiableEOFException.class,
           "",
           ContractTestUtils.VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS,
           TimeUnit.SECONDS,
@@ -219,7 +223,7 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
     try (S3AFileSystem fs = getTestFileSystemWithReadAheadDisabled()) {
       List<FileRange> fileRanges = new ArrayList<>();
       range(fileRanges, 10 * 1024, 100);
-      range(fileRanges, 8 * 1024,100);
+      range(fileRanges, 8 * 1024, 100);
       range(fileRanges, 14 * 1024, 100);
       range(fileRanges, 2 * 1024 - 101, 100);
       range(fileRanges, 40 * 1024, 1024);

@@ -1029,8 +1029,11 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    * @throws EOFException if the end of stream was reached during the draining
    */
   @Retries.OnceTranslated
-  private void drainUnnecessaryData(InputStream objectContent, final long position, long drainQuantity)
-          throws IOException {
+  private void drainUnnecessaryData(
+      final InputStream objectContent,
+      final long position,
+      long drainQuantity) throws IOException {
+
     int drainBytes = 0;
     int readCount;
     byte[] drainBuffer;
@@ -1172,8 +1175,9 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
       if (readBytesCurr < 0) {
         throw new EOFException(
             String.format("HTTP stream closed before all bytes were read."
-                    + " Expected %,d bytes but only read %,d bytes up to position %,d",
-                length, readBytes, position));
+                    + " Expected %,d bytes but only read %,d bytes. Current position %,d"
+                    + " (%s)",
+                length, readBytes, position, range));
       }
       readBytes += readBytesCurr;
       position += readBytesCurr;
