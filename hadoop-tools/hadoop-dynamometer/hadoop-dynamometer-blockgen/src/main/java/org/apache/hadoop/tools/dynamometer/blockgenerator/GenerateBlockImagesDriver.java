@@ -21,7 +21,7 @@ import java.net.URI;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.OptionBuilder;
+import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.PosixParser;
 import org.apache.hadoop.conf.Configuration;
@@ -65,24 +65,25 @@ public class GenerateBlockImagesDriver extends Configured implements Tool {
   public int run(String[] args) throws Exception {
     Options options = new Options();
     options.addOption("h", "help", false, "Shows this message");
-    options.addOption(OptionBuilder.withArgName("Input path of the XML fsImage")
-        .hasArg().isRequired(true)
-        .withDescription("Input path to the Hadoop fsImage XML file (required)")
-        .create(FSIMAGE_INPUT_PATH_ARG));
-    options.addOption(OptionBuilder.withArgName("BlockImage output directory")
-        .hasArg().isRequired(true)
-        .withDescription("Directory where the generated files containing the "
+    options.addOption(Option.builder(FSIMAGE_INPUT_PATH_ARG)
+        .argName("Input path of the XML fsImage")
+        .hasArg().required(true)
+        .desc("Input path to the Hadoop fsImage XML file (required)")
+        .build());
+    options.addOption(Option.builder(BLOCK_IMAGE_OUTPUT_ARG).argName("BlockImage output directory")
+        .hasArg().required(true)
+        .desc("Directory where the generated files containing the "
             + "block listing for each DataNode should be stored (required)")
-        .create(BLOCK_IMAGE_OUTPUT_ARG));
-    options.addOption(OptionBuilder.withArgName("Number of reducers").hasArg()
-        .isRequired(false)
-        .withDescription(
+        .build());
+    options.addOption(Option.builder(NUM_REDUCERS_ARG).argName("Number of reducers").hasArg()
+        .required(false)
+        .desc(
             "Number of reducers for this job (defaults to number of datanodes)")
-        .create(NUM_REDUCERS_ARG));
-    options.addOption(OptionBuilder.withArgName("Number of datanodes").hasArg()
-        .isRequired(true)
-        .withDescription("Number of DataNodes to create blocks for (required)")
-        .create(NUM_DATANODES_ARG));
+        .build());
+    options.addOption(Option.builder(NUM_DATANODES_ARG).argName("Number of datanodes").hasArg()
+        .required(true)
+        .desc("Number of DataNodes to create blocks for (required)")
+        .build());
 
     CommandLineParser parser = new PosixParser();
     CommandLine cli = parser.parse(options, args);
