@@ -1766,6 +1766,11 @@ public class DatanodeManager {
             storageIdx.add(i);
           }
         }
+        assert recoveryLocations.size() > 0 : "recoveryLocations size should be > 0";
+        if (recoveryLocations.size() != storages.length) {
+          LOG.info("Skipped dead nodes for recovery : {}",
+              storages.length - recoveryLocations.size());
+        }
       }
       recoveryInfos = DatanodeStorageInfo.toDatanodeInfos(recoveryLocations);
       RecoveringBlock rBlock;
