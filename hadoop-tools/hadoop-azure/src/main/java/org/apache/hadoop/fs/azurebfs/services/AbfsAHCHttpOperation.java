@@ -63,10 +63,21 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_MET
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID;
 import static org.apache.http.entity.ContentType.TEXT_PLAIN;
 
+//javadocs with discription
+/**
+ * AbfsAHCHttpOperation.
+ * <p>
+ * This class is used to perform the HTTP operations using Apache Http Client.
+ * </p>
+ */
 public class AbfsAHCHttpOperation extends HttpOperation {
 
   private static final Logger LOG = LoggerFactory.getLogger(AbfsAHCHttpOperation.class);
 
+  /**
+   * Map to store the AbfsApacheHttpClient. Each instance of AbfsClient to have
+   * a unique AbfsApacheHttpClient instance. The key of the map is the UUID of the client.
+   */
   private static final Map<String, AbfsApacheHttpClient> abfsApacheHttpClientMap = new HashMap<>();
 
   private AbfsApacheHttpClient abfsApacheHttpClient;
@@ -161,6 +172,11 @@ public class AbfsAHCHttpOperation extends HttpOperation {
 
   @Override
   String getConnProperty(final String key) {
+    for(AbfsHttpHeader header : requestHeaders) {
+      if(header.getName().equals(key)) {
+        return header.getValue();
+      }
+    }
     return null;
   }
 
@@ -171,34 +187,19 @@ public class AbfsAHCHttpOperation extends HttpOperation {
 
   @Override
   String getConnRequestMethod() {
-    return null;
+    return method;
   }
 
   @Override
   Integer getConnResponseCode() throws IOException {
-    return null;
+    return statusCode;
   }
 
   @Override
   String getConnResponseMessage() throws IOException {
-    return null;
+    return statusDescription;
   }
 
-  private static final Stack<ConnInfo> connInfoStack = new Stack<>();
-  private static final Stack<LatencyCaptureInfo> READ_INFO_STACK = new Stack<>();
-
-  private static class ConnInfo {
-    long connTime;
-    AbfsRestOperationType operationType;
-  }
-
-  private static class LatencyCaptureInfo {
-    long latencyCapture;
-    AbfsRestOperationType operationType;
-    int status;
-  }
-
- public final static Set<HttpClientConnection> connThatCantBeClosed = new HashSet<>();
   public void processResponse(final byte[] buffer,
       final int offset,
       final int length) throws IOException {
@@ -213,6 +214,7 @@ public class AbfsAHCHttpOperation extends HttpOperation {
             ex);
         connectionDisconnectedOnError = true;
         httpResponse = ex.getHttpResponse();
+        throw ex;
       }
 
       this.statusCode = httpResponse.getStatusLine().getStatusCode();
@@ -228,18 +230,6 @@ public class AbfsAHCHttpOperation extends HttpOperation {
           getResponseHeaders(httpResponse));
       parseResponse(buffer, offset, length);
       abfsHttpClientContext.isBeingRead = false;
-
-      if(abfsHttpClientContext.connectTime != null) {
-        ConnInfo connInfo = new ConnInfo();
-        connInfo.connTime = abfsHttpClientContext.connectTime;
-        connInfo.operationType = abfsRestOperationType;
-        connInfoStack.push(connInfo);
-      }
-      LatencyCaptureInfo readLatencyCaptureInfo = new LatencyCaptureInfo();
-      readLatencyCaptureInfo.latencyCapture = recvResponseTimeMs;
-      readLatencyCaptureInfo.operationType = abfsRestOperationType;
-      readLatencyCaptureInfo.status = statusCode;
-      READ_INFO_STACK.push(readLatencyCaptureInfo);
     } finally {
       if(httpResponse != null) {
         EntityUtils.consume(httpResponse.getEntity());
