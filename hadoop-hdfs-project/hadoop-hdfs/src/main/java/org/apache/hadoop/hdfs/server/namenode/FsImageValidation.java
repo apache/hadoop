@@ -43,6 +43,8 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
@@ -76,6 +78,35 @@ public class FsImageValidation {
   static final Logger LOG = LoggerFactory.getLogger(FsImageValidation.class);
 
   static final String FS_IMAGE = "FS_IMAGE";
+
+  /**
+   * Use an environment variable "PRINT_ERROR" to enable/disable printing error messages.
+   * The default is true
+   */
+  static final boolean PRINT_ERROR;
+
+  static {
+    PRINT_ERROR = getEnvBoolean("PRINT_ERROR", true);
+  }
+
+  /**
+   * @return the boolean value of an environment property.
+   *         If the environment property is not set or cannot be parsed as a boolean,
+   *         return the default value.
+   */
+  static boolean getEnvBoolean(String property, boolean defaultValue) {
+    final String env = System.getenv().get(property);
+    final boolean setToNonDefault = ("" + !defaultValue).equalsIgnoreCase(env);
+    // default | setToNonDefault | value
+    // ---------------------------------
+    // true    |    true         | false
+    // true    |    false        | true
+    // false   |    true         | true
+    // false   |    false        | false
+    final boolean value = defaultValue != setToNonDefault;
+    LOG.info("ENV: {} = {} (\"{}\")", property, value, env);
+    return value;
+  }
 
   static String getEnv(String property) {
     final String value = System.getenv().get(property);
@@ -186,12 +217,18 @@ public class FsImageValidation {
     final FSNamesystem namesystem = checkINodeReference(conf, errorCount);
 
     // check INodeMap
-    INodeMapValidation.run(namesystem.getFSDirectory(), errorCount);
+    final boolean changed = INodeMapValidation.run(namesystem.getFSDirectory(), errorCount);
     LOG.info(Util.memoryInfo());
 
     final int d = errorCount.get() - initCount;
     if (d > 0) {
       Cli.println("Found %d error(s) in %s", d, fsImageFile.getAbsolutePath());
+    }
+    if (changed) {
+      final File dir = fsImageFile.isDirectory()? fsImageFile: fsImageFile.getParentFile();
+      final Path temp = Files.createTempDirectory(dir.toPath(), "newFsImage");
+      Cli.println("INodeMap changed, save a new FSImage to %s", temp);
+      namesystem.getFSImage().save(namesystem, temp.toFile());
     }
     return d;
   }
@@ -261,27 +298,26 @@ public class FsImageValidation {
   }
 
   static class INodeMapValidation {
-    static Iterable<INodeWithAdditionalFields> iterate(INodeMap map) {
-      return new Iterable<INodeWithAdditionalFields>() {
-        @Override
-        public Iterator<INodeWithAdditionalFields> iterator() {
-          return map.getMapIterator();
-        }
-      };
-    }
-
-    static void run(FSDirectory fsdir, AtomicInteger errorCount) {
+    static boolean run(FSDirectory fsdir, AtomicInteger errorCount) {
+      final String name = INodeMapValidation.class.getSimpleName();
       final int initErrorCount = errorCount.get();
       final Counts counts = INodeCountVisitor.countTree(fsdir.getRoot());
-      for (INodeWithAdditionalFields i : iterate(fsdir.getINodeMap())) {
+      final INodeMap map = fsdir.getINodeMap();
+      final int oldSize = map.size();
+      println("%s INodeMap old size: %d", name, oldSize);
+      for (final Iterator<INodeWithAdditionalFields> j = map.getMapIterator(); j.hasNext();) {
+        final INodeWithAdditionalFields i = j.next();
         if (counts.getCount(i) == 0) {
+          j.remove();
           Cli.printError(errorCount, "%s (%d) is inaccessible (%s)",
               i, i.getId(), i.getFullPathName());
         }
       }
-      println("%s ended successfully: %d error(s) found.",
-          INodeMapValidation.class.getSimpleName(),
+      final int newSize = map.size();
+      println("%s INodeMap new size: %d", name, newSize);
+      println("%s ended successfully: %d error(s) found.", name,
           errorCount.get() - initErrorCount);
+      return newSize != oldSize;
     }
   }
 
@@ -343,6 +379,10 @@ public class FsImageValidation {
     static synchronized void printError(AtomicInteger errorCount,
         String format, Object... args) {
       final int count = errorCount.incrementAndGet();
+      if (!PRINT_ERROR) {
+        return;
+      }
+
       final String s = "FSIMAGE_ERROR " + count + ": "
           + String.format(format, args);
       System.out.println(s);
