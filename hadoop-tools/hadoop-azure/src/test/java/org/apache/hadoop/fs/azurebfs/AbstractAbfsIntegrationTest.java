@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Hashtable;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 
@@ -33,6 +34,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
+import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azure.AzureNativeFileSystemStore;
 import org.apache.hadoop.fs.azure.NativeAzureFileSystem;
@@ -41,6 +44,7 @@ import org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
 
 import static org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount.WASB_ACCOUNT_NAME_DOMAIN_SUFFIX;
@@ -237,6 +241,11 @@ public abstract class AbstractAbfsIntegrationTest extends
   protected void setFileSystemName(String fileSystemName) {
     this.fileSystemName = fileSystemName;
   }
+
+  protected String getMethodName() {
+    return methodName.getMethodName();
+  }
+
   protected String getFileSystemName() {
     return fileSystemName;
   }
@@ -341,4 +350,36 @@ public abstract class AbstractAbfsIntegrationTest extends
         new Path(getTestPath(), filepath));
   }
 
+  /**
+   * Generic create File and enabling AbfsOutputStream Flush.
+   *
+   * @param fs   AzureBlobFileSystem that is initialised in the test.
+   * @param path Path of the file to be created.
+   * @return AbfsOutputStream for writing.
+   * @throws AzureBlobFileSystemException
+   */
+  protected AbfsOutputStream createAbfsOutputStreamWithFlushEnabled(
+      AzureBlobFileSystem fs,
+      Path path) throws AzureBlobFileSystemException {
+    AzureBlobFileSystemStore abfss = fs.getAbfsStore();
+    abfss.getAbfsConfiguration().setDisableOutputStreamFlush(false);
+
+    return (AbfsOutputStream) abfss.createFile(path,
+        true, FsPermission.getDefault(), FsPermission.getUMask(fs.getConf()));
+  }
+
+  /**
+   * Custom assertion for AbfsStatistics which have statistics, expected
+   * value and map of statistics and value as its parameters.
+   * @param statistic the AbfsStatistics which needs to be asserted.
+   * @param expectedValue the expected value of the statistics.
+   * @param metricMap map of (String, Long) with statistics name as key and
+   *                  statistics value as map value.
+   */
+  protected long assertAbfsStatistics(AbfsStatistic statistic,
+      long expectedValue, Map<String, Long> metricMap) {
+    assertEquals("Mismatch in " + statistic.getStatName(), expectedValue,
+        (long) metricMap.get(statistic.getStatName()));
+    return expectedValue;
+  }
 }

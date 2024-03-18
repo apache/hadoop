@@ -49,6 +49,7 @@ public abstract class StorageStatistics {
     String OP_DELETE = "op_delete";
     String OP_EXISTS = "op_exists";
     String OP_GET_CONTENT_SUMMARY = "op_get_content_summary";
+    String OP_GET_DELEGATION_TOKEN = "op_get_delegation_token";
     String OP_GET_FILE_CHECKSUM = "op_get_file_checksum";
     String OP_GET_FILE_STATUS = "op_get_file_status";
     String OP_GET_STATUS = "op_get_status";

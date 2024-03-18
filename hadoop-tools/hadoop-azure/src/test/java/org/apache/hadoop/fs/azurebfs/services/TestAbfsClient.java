@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import java.lang.reflect.Field;
 import java.net.URL;
 import java.util.regex.Pattern;
 
@@ -29,6 +30,11 @@ import org.apache.hadoop.fs.azurebfs.utils.SSLSocketFactoryEx;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 import org.apache.hadoop.util.VersionInfo;
+
+import static org.mockito.Matchers.anyString;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 
 /**
  * Test useragent of abfs client.
@@ -43,7 +49,7 @@ public final class TestAbfsClient {
                                  AbfsConfiguration config,
                                  boolean includeSSLProvider) {
     AbfsClient client = new AbfsClient(baseUrl, null,
-        config, null, null);
+        config, null, null, null);
     String sslProviderName = null;
     if (includeSSLProvider) {
       sslProviderName = SSLSocketFactoryEx.getDefaultFactory().getProviderName();
@@ -90,5 +96,54 @@ public final class TestAbfsClient {
     AbfsConfiguration abfsConfiguration = new AbfsConfiguration(configuration, accountName);
     validateUserAgent(expectedUserAgentPattern, new URL("https://azure.com"),
         abfsConfiguration, true);
+  }
+
+  public static AbfsClient getMockAbfsClient(AbfsClient baseAbfsClientInstance,
+      AbfsConfiguration abfsConfig) throws Exception {
+
+    AbfsClient client = mock(AbfsClient.class);
+    when(client.getRetryPolicy()).thenReturn(
+        new ExponentialRetryPolicy(1));
+
+    when(client.createDefaultUriQueryBuilder()).thenCallRealMethod();
+    when(client.createRequestUrl(anyString(), anyString())).thenCallRealMethod();
+    when(client.getAccessToken()).thenCallRealMethod();
+    when(client.getSharedKeyCredentials()).thenCallRealMethod();
+    when(client.createDefaultHeaders()).thenCallRealMethod();
+
+    // override baseurl
+    client = TestAbfsClient.setAbfsClientField(client, "abfsConfiguration",
+        abfsConfig);
+
+    // override baseurl
+    client = TestAbfsClient.setAbfsClientField(client, "baseUrl",
+        baseAbfsClientInstance.getBaseUrl());
+
+    // override auth provider
+    client = TestAbfsClient.setAbfsClientField(client, "tokenProvider",
+        abfsConfig.getTokenProvider());
+
+    // override user agent
+    String userAgent = "APN/1.0 Azure Blob FS/3.4.0-SNAPSHOT (PrivateBuild "
+        + "JavaJRE 1.8.0_252; Linux 5.3.0-59-generic/amd64; openssl-1.0; "
+        + "UNKNOWN/UNKNOWN) MSFT";
+    client = TestAbfsClient.setAbfsClientField(client, "userAgent", userAgent);
+
+    return client;
+  }
+
+  private static AbfsClient setAbfsClientField(
+      final AbfsClient client,
+      final String fieldName,
+      Object fieldObject) throws Exception {
+
+    Field field = AbfsClient.class.getDeclaredField(fieldName);
+    field.setAccessible(true);
+    Field modifiersField = Field.class.getDeclaredField("modifiers");
+    modifiersField.setAccessible(true);
+    modifiersField.setInt(field,
+        field.getModifiers() & ~java.lang.reflect.Modifier.FINAL);
+    field.set(client, fieldObject);
+    return client;
   }
 }
