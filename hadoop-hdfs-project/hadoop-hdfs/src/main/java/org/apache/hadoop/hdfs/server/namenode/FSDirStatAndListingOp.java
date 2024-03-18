@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.apache.hadoop.util.Preconditions;
 
 import org.apache.hadoop.fs.ContentSummary;
@@ -445,15 +446,20 @@ class FSDirStatAndListingOp {
         feInfo = FSDirEncryptionZoneOp.getFileEncryptionInfo(fsd, iip);
       }
       if (needLocation) {
-        final boolean inSnapshot = snapshot != Snapshot.CURRENT_STATE_ID;
-        final boolean isUc = !inSnapshot && fileNode.isUnderConstruction();
-        final long fileSize = !inSnapshot && isUc
-            ? fileNode.computeFileSizeNotIncludingLastUcBlock() : size;
-        loc = fsd.getBlockManager().createLocatedBlocks(
-            fileNode.getBlocks(snapshot), fileSize, isUc, 0L, size,
-            needBlockToken, inSnapshot, feInfo, ecPolicy);
-        if (loc == null) {
-          loc = new LocatedBlocks();
+        fsd.getFSNamesystem().readLock(FSNamesystemLockMode.BM);
+        try {
+          final boolean inSnapshot = snapshot != Snapshot.CURRENT_STATE_ID;
+          final boolean isUc = !inSnapshot && fileNode.isUnderConstruction();
+          final long fileSize = !inSnapshot && isUc
+              ? fileNode.computeFileSizeNotIncludingLastUcBlock() : size;
+          loc = fsd.getBlockManager().createLocatedBlocks(
+              fileNode.getBlocks(snapshot), fileSize, isUc, 0L, size,
+              needBlockToken, inSnapshot, feInfo, ecPolicy);
+          if (loc == null) {
+            loc = new LocatedBlocks();
+          }
+        } finally {
+          fsd.getFSNamesystem().readUnlock(FSNamesystemLockMode.BM, "createFileStatus");
         }
       }
     } else if (node.isDirectory()) {
