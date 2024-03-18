@@ -312,9 +312,9 @@ org.apache.commons:commons-lang3:3.12.0
 org.apache.commons:commons-math3:3.1.1
 org.apache.commons:commons-text:1.10.0
 org.apache.commons:commons-validator:1.6
-org.apache.curator:curator-client:5.2.0
-org.apache.curator:curator-framework:5.2.0
-org.apache.curator:curator-recipes:5.2.0
+org.apache.curator:curator-client:5.4.0
+org.apache.curator:curator-framework:5.4.0
+org.apache.curator:curator-recipes:5.4.0
 org.apache.geronimo.specs:geronimo-jcache_1.0_spec:1.0-alpha-1
 org.apache.hbase:hbase-annotations:1.4.8
 org.apache.hbase:hbase-client:1.4.8
@@ -341,7 +341,7 @@ org.apache.kerby:kerby-util:1.0.1
 org.apache.kerby:kerby-xdr:1.0.1
 org.apache.kerby:token-provider:1.0.1
 org.apache.yetus:audience-annotations:0.5.0
-org.apache.zookeeper:zookeeper:3.7.2
+org.apache.zookeeper:zookeeper:3.8.2
 org.codehaus.jettison:jettison:1.5.4
 org.eclipse.jetty:jetty-annotations:9.4.53.v20231009
 org.eclipse.jetty:jetty-http:9.4.53.v20231009
