@@ -33,9 +33,13 @@ import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import com.google.common.collect.Maps;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.hdfs.client.BlockReportOptions;
@@ -92,6 +96,8 @@ class BPServiceActor implements Runnable {
 
   volatile long lastCacheReport = 0;
   private final Scheduler scheduler;
+  private final Object sendIBRLock;
+  private final ExecutorService ibrExecutorService;
 
   Thread bpThread;
   DatanodeProtocolClientSideTranslatorPB bpNamenode;
@@ -101,6 +107,7 @@ class BPServiceActor implements Runnable {
   }
 
   private volatile RunningState runningState = RunningState.CONNECTING;
+  private volatile boolean sendImmediateIBR = false;
   private volatile boolean shouldServiceRun = true;
   private final DataNode dn;
   private final DNConf dnConf;
@@ -135,6 +142,10 @@ class BPServiceActor implements Runnable {
         dnConf.getLifelineIntervalMs(), dnConf.blockReportInterval,
         dnConf.outliersReportIntervalMs);
     // get the value of maxDataLength.
+    sendIBRLock = new Object();
+    ibrExecutorService = Executors.newSingleThreadExecutor(
+            new ThreadFactoryBuilder().setDaemon(true)
+                    .setNameFormat("ibr-executor-%d").build());
     this.maxDataLength = dnConf.getMaxDataLength();
   }
 
@@ -349,6 +360,11 @@ class BPServiceActor implements Runnable {
    * @throws IOException
    */
   List<DatanodeCommand> blockReport(long fullBrLeaseId) throws IOException {
+
+    synchronized (sendIBRLock) {
+      reportReceivedDeletedBlocks();
+    }
+
     final ArrayList<DatanodeCommand> cmds = new ArrayList<DatanodeCommand>();
 
     // Flush any block information that precedes the block report. Otherwise
@@ -569,6 +585,9 @@ class BPServiceActor implements Runnable {
     if (bpThread != null) {
       bpThread.interrupt();
     }
+    if (ibrExecutorService != null && !ibrExecutorService.isShutdown()) {
+      ibrExecutorService.shutdownNow();
+    }
   }
 
   //This must be called only by blockPoolManager
@@ -590,6 +609,9 @@ class BPServiceActor implements Runnable {
     IOUtils.cleanup(null, bpNamenode);
     IOUtils.cleanup(null, lifelineSender);
     bpos.shutdownActor(this);
+    if (!ibrExecutorService.isShutdown()) {
+      ibrExecutorService.shutdownNow();
+    }
   }
 
   private void handleRollingUpgradeStatus(HeartbeatResponse resp) throws IOException {
@@ -842,6 +864,8 @@ class BPServiceActor implements Runnable {
       }
 
       runningState = RunningState.RUNNING;
+      ibrExecutorService.submit(new IBRTaskHandler());
+
       if (initialRegistrationComplete != null) {
         initialRegistrationComplete.countDown();
       }
@@ -1275,4 +1299,5 @@ class BPServiceActor implements Runnable {
       return Time.monotonicNow();
     }
   }
+
 }
