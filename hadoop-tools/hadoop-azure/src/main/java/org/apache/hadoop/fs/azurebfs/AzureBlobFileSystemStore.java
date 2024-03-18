@@ -75,7 +75,9 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsAclHelper;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
+import org.apache.hadoop.fs.azurebfs.services.AbfsInputStreamContext;
 import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStream;
+import org.apache.hadoop.fs.azurebfs.services.AbfsOutputStreamContext;
 import org.apache.hadoop.fs.azurebfs.services.AbfsPermission;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
@@ -362,9 +364,15 @@ public class AzureBlobFileSystemStore {
         client,
         AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path),
         0,
-        abfsConfiguration.getWriteBufferSize(),
-        abfsConfiguration.isFlushEnabled(),
-        abfsConfiguration.isOutputStreamFlushDisabled());
+        populateAbfsOutputStreamContext());
+  }
+
+  private AbfsOutputStreamContext populateAbfsOutputStreamContext() {
+    return new AbfsOutputStreamContext()
+            .withWriteBufferSize(abfsConfiguration.getWriteBufferSize())
+            .enableFlush(abfsConfiguration.isFlushEnabled())
+            .disableOutputStreamFlush(abfsConfiguration.isOutputStreamFlushDisabled())
+            .build();
   }
 
   public void createDirectory(final Path path, final FsPermission permission, final FsPermission umask)
@@ -402,11 +410,18 @@ public class AzureBlobFileSystemStore {
               null);
     }
 
-    // Add statistics for InputStream
     return new AbfsInputStream(client, statistics,
             AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path), contentLength,
-                abfsConfiguration.getReadBufferSize(), abfsConfiguration.getReadAheadQueueDepth(),
-                abfsConfiguration.getTolerateOobAppends(), eTag);
+            populateAbfsInputStreamContext(),
+            eTag);
+  }
+
+  private AbfsInputStreamContext populateAbfsInputStreamContext() {
+    return new AbfsInputStreamContext()
+            .withReadBufferSize(abfsConfiguration.getReadBufferSize())
+            .withReadAheadQueueDepth(abfsConfiguration.getReadAheadQueueDepth())
+            .withTolerateOobAppends(abfsConfiguration.getTolerateOobAppends())
+            .build();
   }
 
   public OutputStream openFileForWrite(final Path path, final boolean overwrite) throws
@@ -435,9 +450,7 @@ public class AzureBlobFileSystemStore {
         client,
         AbfsHttpConstants.FORWARD_SLASH + getRelativePath(path),
         offset,
-        abfsConfiguration.getWriteBufferSize(),
-        abfsConfiguration.isFlushEnabled(),
-        abfsConfiguration.isOutputStreamFlushDisabled());
+        populateAbfsOutputStreamContext());
   }
 
   public void rename(final Path source, final Path destination) throws
