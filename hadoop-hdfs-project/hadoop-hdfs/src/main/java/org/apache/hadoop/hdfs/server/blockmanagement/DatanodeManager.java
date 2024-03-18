@@ -1730,9 +1730,9 @@ public class DatanodeManager {
       }
       final DatanodeStorageInfo[] storages = uc.getExpectedStorageLocations();
       // Skip stale nodes during recovery
-      final List<DatanodeStorageInfo> recoveryLocations =
+      List<DatanodeStorageInfo> recoveryLocations =
           new ArrayList<>(storages.length);
-      final List<Integer> storageIdx = new ArrayList<>(storages.length);
+      List<Integer> storageIdx = new ArrayList<>(storages.length);
       for (int i = 0; i < storages.length; ++i) {
         if (!storages[i].getDatanodeDescriptor().isStale(staleInterval)) {
           recoveryLocations.add(storages[i]);
@@ -1755,12 +1755,19 @@ public class DatanodeManager {
           LOG.info("Skipped stale nodes for recovery : "
               + (storages.length - recoveryLocations.size()));
         }
-        recoveryInfos = DatanodeStorageInfo.toDatanodeInfos(recoveryLocations);
       } else {
-        // If too many replicas are stale, then choose all replicas to
+        // If too many replicas are stale, then choose live replicas to
         // participate in block recovery.
-        recoveryInfos = DatanodeStorageInfo.toDatanodeInfos(storages);
+        recoveryLocations.clear();
+        storageIdx.clear();
+        for (int i = 0; i < storages.length; ++i) {
+          if (storages[i].getDatanodeDescriptor().isAlive()) {
+            recoveryLocations.add(storages[i]);
+            storageIdx.add(i);
+          }
+        }
       }
+      recoveryInfos = DatanodeStorageInfo.toDatanodeInfos(recoveryLocations);
       RecoveringBlock rBlock;
       if (truncateRecovery) {
         Block recoveryBlock = (copyOnTruncateRecovery) ? b : uc.getTruncateBlock();
