@@ -275,7 +275,7 @@ public class SecureIOUtils {
             UserGroupInformation.createRemoteUser(expectedOwner);
         final String adminsGroupString = "Administrators";
         success = owner.equals(adminsGroupString)
-            && ugi.getGroups().contains(adminsGroupString);
+            && ugi.getGroupsSet().contains(adminsGroupString);
       } else {
         success = false;
       }

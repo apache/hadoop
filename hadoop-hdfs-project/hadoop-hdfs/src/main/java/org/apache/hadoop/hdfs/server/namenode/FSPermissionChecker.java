@@ -88,7 +88,7 @@ public class FSPermissionChecker implements AccessControlEnforcer {
     this.fsOwner = fsOwner;
     this.supergroup = supergroup;
     this.callerUgi = callerUgi;
-    this.groups = callerUgi.getGroups();
+    this.groups = callerUgi.getGroupsSet();
     user = callerUgi.getShortUserName();
     isSuper = user.equals(fsOwner) || groups.contains(supergroup);
     this.attributeProvider = attributeProvider;

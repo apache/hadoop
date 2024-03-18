@@ -60,8 +60,10 @@ import java.net.URL;
 import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.CountDownLatch;
@@ -381,6 +383,13 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     @Override
     public List<String> getGroups(String user) throws IOException {
       return mapping.get(user);
+    }
+
+    @Override
+    public Set<String> getGroupsSet(String user) throws IOException {
+      Set<String> result = new HashSet();
+      result.addAll(mapping.get(user));
+      return result;
     }
   }
 

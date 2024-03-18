@@ -18,17 +18,20 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
+import com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.security.GroupMappingServiceProvider;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 
 public class PeriodGroupsMapping implements GroupMappingServiceProvider {
   
   @Override
   public List<String> getGroups(String user) {
-    return Arrays.asList(user + ".group", user + "subgroup1", user + "subgroup2");
+    return Arrays.asList(user + ".group", user + "subgroup1",
+        user + "subgroup2");
   }
 
   @Override
@@ -41,4 +44,9 @@ public class PeriodGroupsMapping implements GroupMappingServiceProvider {
     throw new UnsupportedOperationException();
   }
 
+  @Override
+  public Set<String> getGroupsSet(String user) throws IOException {
+    return ImmutableSet.of(user + ".group", user + "subgroup1",
+        user + "subgroup2");
+  }
 }

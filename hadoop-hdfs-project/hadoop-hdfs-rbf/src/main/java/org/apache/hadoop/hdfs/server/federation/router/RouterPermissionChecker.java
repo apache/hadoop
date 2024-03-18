@@ -18,8 +18,6 @@
 package org.apache.hadoop.hdfs.server.federation.router;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -125,8 +123,7 @@ public class RouterPermissionChecker extends FSPermissionChecker {
     }
 
     // Is the user a member of the super group?
-    List<String> groups = Arrays.asList(ugi.getGroupNames());
-    if (groups.contains(superGroup)) {
+    if (ugi.getGroupsSet().contains(superGroup)) {
       return;
     }
 

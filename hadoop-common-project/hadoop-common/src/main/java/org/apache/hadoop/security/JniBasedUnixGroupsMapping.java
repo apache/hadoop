@@ -20,8 +20,11 @@ package org.apache.hadoop.security;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -75,6 +78,18 @@ public class JniBasedUnixGroupsMapping implements GroupMappingServiceProvider {
 
   @Override
   public List<String> getGroups(String user) throws IOException {
+    return Arrays.asList(getGroupsInternal(user));
+  }
+
+  @Override
+  public Set<String> getGroupsSet(String user) throws IOException {
+    String[] groups = getGroupsInternal(user);
+    Set<String> result = new LinkedHashSet(groups.length);
+    CollectionUtils.addAll(result, groups);
+    return result;
+  }
+
+  private String[] getGroupsInternal(String user) throws IOException {
     String[] groups = new String[0];
     try {
       groups = getGroupsForUser(user);
@@ -85,7 +100,7 @@ public class JniBasedUnixGroupsMapping implements GroupMappingServiceProvider {
         LOG.info("Error getting groups for " + user + ": " + e.getMessage());
       }
     }
-    return Arrays.asList(groups);
+    return groups;
   }
 
   @Override
