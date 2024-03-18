@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.apache.hadoop.util.Preconditions;
 
 import org.apache.hadoop.fs.ContentSummary;
@@ -560,8 +561,13 @@ class FSDirStatAndListingOp {
     if (usage != null) {
       return usage;
     } else {
-      //If quota isn't set, fall back to getContentSummary.
-      return getContentSummaryInt(fsd, pc, iip);
+      fsd.getFSNamesystem().readLock(FSNamesystemLockMode.BM);
+      try {
+        //If quota isn't set, fall back to getContentSummary.
+        return getContentSummaryInt(fsd, pc, iip);
+      } finally {
+        fsd.getFSNamesystem().readUnlock(FSNamesystemLockMode.BM, "getQuotaUsage");
+      }
     }
   }
 
