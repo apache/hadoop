@@ -103,6 +103,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeResourceUpdate
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.MutableConfScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.authorize.RMPolicyProvider;
+import org.apache.hadoop.yarn.server.resourcemanager.TransitionToActiveStandbyRunner.TransitionToActiveStandbyResult;
 
 import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.thirdparty.protobuf.BlockingService;
@@ -294,8 +295,30 @@ public class AdminService extends CompositeService implements
 
   @SuppressWarnings("unchecked")
   @Override
-  public synchronized void transitionToActive(
-      HAServiceProtocol.StateChangeRequestInfo reqInfo) throws IOException {
+  public void transitionToActive(
+          HAServiceProtocol.StateChangeRequestInfo reqInfo) throws IOException {
+    if (rm.rmContext.isHAEnabled()) {
+      try {
+        AdminServiceToActiveRunner activeRunner = new AdminServiceToActiveRunner(
+                ResourceManager.getClusterTimeStamp(), reqInfo);
+        TransitionToActiveStandbyResult toActiveResult = rm.getToActiveStandbyExecutor()
+                .submit(activeRunner).get();
+        if (!toActiveResult.isSuccess()) {
+          throw toActiveResult.getException();
+        }
+      } catch (ServiceFailedException | AccessControlException ex) {
+        throw ex;
+      } catch (Exception ex) {
+        throw new ServiceFailedException(
+                "Failed transition to active ", ex);
+      }
+    } else {
+      innerTransitionToActive(reqInfo);
+    }
+  }
+
+  private synchronized void innerTransitionToActive(
+          HAServiceProtocol.StateChangeRequestInfo reqInfo) throws IOException {
     if (isRMActive()) {
       return;
     }
@@ -339,8 +362,31 @@ public class AdminService extends CompositeService implements
   }
 
   @Override
-  public synchronized void transitionToStandby(
-      HAServiceProtocol.StateChangeRequestInfo reqInfo) throws IOException {
+  public void transitionToStandby(
+          HAServiceProtocol.StateChangeRequestInfo reqInfo) throws IOException {
+    if (rm.rmContext.isHAEnabled()) {
+      try {
+        AdminServiceToStandbyRunner standbyRunner = new AdminServiceToStandbyRunner(
+                ResourceManager.getClusterTimeStamp(), reqInfo);
+        TransitionToActiveStandbyResult toStandbyResult = rm.getToActiveStandbyExecutor()
+                .submit(standbyRunner).get();
+        if (!toStandbyResult.isSuccess()) {
+          throw toStandbyResult.getException();
+        }
+      } catch (ServiceFailedException | AccessControlException ex) {
+        throw ex;
+      } catch (Exception ex) {
+        throw new ServiceFailedException(
+                "Failed transition to standby ", ex);
+      }
+    } else {
+      innerTransitionToStandby(reqInfo);
+    }
+  }
+
+
+  private synchronized void innerTransitionToStandby(
+          HAServiceProtocol.StateChangeRequestInfo reqInfo) throws IOException {
     // call refreshAdminAcls before HA state transition
     // for the case that adminAcls have been updated in previous active RM
     try {
@@ -1104,5 +1150,47 @@ public class AdminService extends CompositeService implements
           .anyMatch(inactiveNode -> inactiveNode.getHost().equals(node));
     }
     return isKnown;
+  }
+
+  private class AdminServiceToActiveRunner extends TransitionToActiveStandbyRunner {
+    private HAServiceProtocol.StateChangeRequestInfo reqInfo;
+
+    AdminServiceToActiveRunner(long clusterTimeStamp, StateChangeRequestInfo reqInfo) {
+      super(clusterTimeStamp);
+      this.reqInfo = reqInfo;
+    }
+
+    @Override
+    public void doTransaction() throws Exception {
+      innerTransitionToActive(reqInfo);
+    }
+
+  }
+
+  private class AdminServiceToStandbyRunner extends TransitionToActiveStandbyRunner {
+
+    private HAServiceProtocol.StateChangeRequestInfo reqInfo;
+
+    AdminServiceToStandbyRunner(long clusterTimeStamp, StateChangeRequestInfo reqInfo) {
+      super(clusterTimeStamp);
+      this.reqInfo = reqInfo;
+    }
+
+    @Override
+    public void doTransaction() throws Exception {
+      innerTransitionToStandby(reqInfo);
+    }
+  }
+
+  @VisibleForTesting
+  public AdminServiceToActiveRunner createAdminServiceToActiveRunner(
+          long clusterTimeStamp, StateChangeRequestInfo reqInfo) {
+    return new AdminServiceToActiveRunner(clusterTimeStamp, reqInfo);
+  }
+
+  @VisibleForTesting
+  public AdminServiceToStandbyRunner createAdminServiceToStandbyRunner(
+          long clusterTimeStamp, StateChangeRequestInfo reqInfo) {
+    return new AdminServiceToStandbyRunner(clusterTimeStamp, reqInfo);
   }
 }
