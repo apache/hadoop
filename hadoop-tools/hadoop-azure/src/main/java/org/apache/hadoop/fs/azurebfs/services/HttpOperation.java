@@ -430,10 +430,4 @@ public abstract class HttpOperation implements AbfsPerfLoggable {
   abstract String getRequestProperty(String headerName);
 
   abstract boolean getConnectionDisconnectedOnError();
-
-  public void incrementServerCall() {
-  }
-
-  public void registerIOException() {
-  }
 }

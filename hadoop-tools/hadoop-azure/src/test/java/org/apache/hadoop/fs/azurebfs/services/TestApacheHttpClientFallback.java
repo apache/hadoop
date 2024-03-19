@@ -120,8 +120,6 @@ public class TestApacheHttpClientFallback extends AbstractAbfsTestWithTimeout {
             .processResponse(Mockito.any(byte[].class), Mockito.anyInt(),
                 Mockito.anyInt());
       }
-      Mockito.doCallRealMethod().when(operation).incrementServerCall();
-      Mockito.doCallRealMethod().when(operation).registerIOException();
       return operation;
     }).when(op).createHttpOperation();
     return op;

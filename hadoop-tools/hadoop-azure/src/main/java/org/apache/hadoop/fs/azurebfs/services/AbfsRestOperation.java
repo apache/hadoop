@@ -94,6 +94,9 @@ public class AbfsRestOperation {
 
   private final String clientId;
 
+  private int apacheHttpClientIoExceptions = 0;
+  private boolean checkApacheHttpClientIoExceptionCount = true;
+
   /**
    * Checks if there is non-null HTTP response.
    * @return true if there is a non-null HTTP response from the ABFS call.
@@ -265,6 +268,12 @@ public class AbfsRestOperation {
     while (!executeHttpOperation(retryCount, tracingContext)) {
       try {
         ++retryCount;
+        if (checkApacheHttpClientIoExceptionCount
+            && apacheHttpClientIoExceptions
+            >= abfsConfiguration.getMaxApacheHttpClientIoExceptions()) {
+          checkApacheHttpClientIoExceptionCount = false;
+          ApacheHttpClientHealthMonitor.registerFallback();
+        }
         tracingContext.setRetryCount(retryCount);
         long retryInterval = retryPolicy.getRetryInterval(retryCount);
         LOG.debug("Rest operation {} failed with failureReason: {}. Retrying with retryCount = {}, retryPolicy: {} and sleepInterval: {}",
@@ -311,7 +320,6 @@ public class AbfsRestOperation {
     try {
       // initialize the HTTP request and open the connection
       httpOperation = createHttpOperation();
-      httpOperation.incrementServerCall();
       incrementCounter(AbfsStatistic.CONNECTIONS_MADE, 1);
       tracingContext.constructHeader(httpOperation, failureReason, retryPolicy.getAbbreviation());
 
@@ -357,6 +365,9 @@ public class AbfsRestOperation {
       retryPolicy = client.getRetryPolicy(failureReason);
       LOG.warn("Unknown host name: {}. Retrying to resolve the host name...",
           hostname);
+      if (httpOperation instanceof AbfsAHCHttpOperation) {
+        apacheHttpClientIoExceptions++;
+      }
       if (!retryPolicy.shouldRetry(retryCount, -1)) {
         throw new InvalidAbfsRestOperationException(ex, retryCount);
       }
@@ -367,13 +378,14 @@ public class AbfsRestOperation {
       }
 
       failureReason = RetryReason.getAbbreviation(ex, -1, "");
-      httpOperation.registerIOException();
       retryPolicy = client.getRetryPolicy(failureReason);
       wasIOExceptionThrown = true;
+      if (httpOperation instanceof AbfsAHCHttpOperation) {
+        apacheHttpClientIoExceptions++;
+      }
       if (!retryPolicy.shouldRetry(retryCount, -1)) {
         throw new InvalidAbfsRestOperationException(ex, retryCount);
       }
-
       return false;
     } finally {
       int status = httpOperation.getStatusCode();

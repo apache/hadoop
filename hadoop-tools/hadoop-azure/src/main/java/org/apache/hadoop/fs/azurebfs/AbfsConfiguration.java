@@ -364,6 +364,10 @@ public class AbfsConfiguration{
       FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, DefaultValue = DEFAULT_ENABLE_ABFS_CHECKSUM_VALIDATION)
   private boolean isChecksumValidationEnabled;
 
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES, DefaultValue = APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES)
+  private int maxApacheHttpClientIoExceptions;
+
   private String clientProvidedEncryptionKey;
   private String clientProvidedEncryptionKeySHA;
 
@@ -848,6 +852,10 @@ public class AbfsConfiguration{
    */
   public HttpOperationType getPreferredHttpOperationType() {
     return getEnum(FS_AZURE_NETWORKING_LIBRARY, DEFAULT_NETWORKING_LIBRARY);
+  }
+
+  public int getMaxApacheHttpClientIoExceptions() {
+    return maxApacheHttpClientIoExceptions;
   }
 
   /**

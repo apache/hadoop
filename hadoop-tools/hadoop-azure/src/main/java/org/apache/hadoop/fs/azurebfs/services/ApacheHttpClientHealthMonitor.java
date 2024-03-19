@@ -22,33 +22,12 @@ package org.apache.hadoop.fs.azurebfs.services;
 public class ApacheHttpClientHealthMonitor {
   private static boolean usable = true;
 
-  private static final RollingWindow SERVER_CALLS = new RollingWindow(10);
-
-  private static final RollingWindow IO_EXCEPTIONS = new RollingWindow(10);
+  public static void registerFallback() {
+    usable = false;
+  }
   private ApacheHttpClientHealthMonitor() {}
 
   public static boolean usable() {
-    if(!usable) {
-      return false;
-    }
-    final long serverCalls = SERVER_CALLS.getSum();
-    if(serverCalls == 0) {
-      return true;
-    }
-    final long exceptions = IO_EXCEPTIONS.getSum();
-    final double ratio = ((double)exceptions / serverCalls);
-    boolean result = ratio < 0.01;
-    if(!result) {
-      usable = false;
-    }
-    return result;
-  }
-
-  public static void incrementServerCalls() {
-    SERVER_CALLS.add(1);
-  }
-
-  public static void incrementUnknownIoExceptions() {
-    IO_EXCEPTIONS.add(1);
+    return usable;
   }
 }

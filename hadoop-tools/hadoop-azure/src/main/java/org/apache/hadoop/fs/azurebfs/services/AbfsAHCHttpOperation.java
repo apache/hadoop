@@ -407,14 +407,4 @@ public class AbfsAHCHttpOperation extends HttpOperation {
     sb.append(getMaskedUrl());
     return sb.toString();
   }
-
-  @Override
-  public void incrementServerCall() {
-    ApacheHttpClientHealthMonitor.incrementServerCalls();
-  }
-
-  @Override
-  public void registerIOException() {
-    ApacheHttpClientHealthMonitor.incrementUnknownIoExceptions();
-  }
 }
