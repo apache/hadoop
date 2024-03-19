@@ -35,8 +35,7 @@ import org.junit.rules.ExpectedException;
 
 
 /**
- * Abstract base class for S3A unit tests using a mock S3 client and a null
- * metadata store.
+ * Abstract base class for S3A unit tests using a mock S3 client.
  */
 public abstract class AbstractS3AMockTest {
 

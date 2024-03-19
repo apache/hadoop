@@ -181,4 +181,10 @@ public final class CommonPathCapabilities {
    */
   public static final String DIRECTORY_LISTING_INCONSISTENT =
       "fs.capability.directory.listing.inconsistent";
+
+  /**
+   * Capability string to probe for bulk delete: {@value}.
+   */
+  public static final String BULK_DELETE = "fs.capability.bulk.delete";
+
 }

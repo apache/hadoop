@@ -61,9 +61,8 @@ public class TestS3ADeleteOnExit extends AbstractS3AMockTest {
     // processDeleteOnExit.
     @Override
     protected boolean deleteWithoutCloseCheck(Path f, boolean recursive) throws IOException {
-      boolean result = super.deleteWithoutCloseCheck(f, recursive);
       deleteOnDnExitCount--;
-      return result;
+      return true;
     }
   }
 
