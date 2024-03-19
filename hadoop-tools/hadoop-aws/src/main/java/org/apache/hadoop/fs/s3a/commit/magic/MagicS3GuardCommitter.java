@@ -85,6 +85,22 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
         getWorkPath());
   }
 
+  /**
+   * Create a job committer.
+   * @param outputPath the job's output path
+   * @param context the job's context
+   * @throws IOException on a failure
+   */
+  public MagicS3GuardCommitter(Path outputPath,
+                               JobContext context) throws IOException {
+    super(outputPath, context);
+    setWorkPath(getJobAttemptPath(context));
+    verifyIsMagicCommitPath(getDestS3AFS(), getWorkPath());
+    LOG.debug("Job attempt {} has work path {}",
+        context.getJobID(),
+        getWorkPath());
+  }
+
   @Override
   public String getName() {
     return NAME;

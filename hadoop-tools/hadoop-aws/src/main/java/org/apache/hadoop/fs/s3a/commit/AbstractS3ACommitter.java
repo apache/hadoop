@@ -83,6 +83,7 @@ import static org.apache.hadoop.fs.s3a.commit.CommitUtils.*;
 import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.E_NO_SPARK_UUID;
 import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.FS_S3A_COMMITTER_UUID;
 import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.FS_S3A_COMMITTER_UUID_SOURCE;
+import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.JOB_TEZ_UUID;
 import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.SPARK_WRITE_UUID;
 import static org.apache.hadoop.fs.s3a.commit.impl.CommitUtilsWithMR.*;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfInvocation;
@@ -238,6 +239,55 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
     this.committerStatistics = fs.newCommitterStatistics();
     this.commitOperations = new CommitOperations(fs, committerStatistics,
         outputPath.toString());
+  }
+
+  /**
+   * Create a committer.
+   * This constructor binds the destination directory and configuration, but
+   * does not update the work path: That must be calculated by the
+   * implementation;
+   * It is omitted here to avoid subclass methods being called too early.
+   * @param outputPath the job's output path: MUST NOT be null.
+   * @param context the job's context
+   * @throws IOException on a failure
+   */
+  protected AbstractS3ACommitter(
+          Path outputPath,
+          JobContext context) throws IOException {
+    super(outputPath, context);
+    setOutputPath(outputPath);
+    this.jobContext = requireNonNull(context, "null job context");
+    this.role = "Job committer " + context.getJobID();
+    setConf(context.getConfiguration());
+    Pair<String, JobUUIDSource> id = buildJobUUID(
+            conf, context.getJobID());
+    this.uuid = id.getLeft();
+    this.uuidSource = id.getRight();
+    LOG.info("Job UUID {} source {}", getUUID(), getUUIDSource().getText());
+    initOutput(outputPath);
+    LOG.debug("{} instantiated for job \"{}\" ID {} with destination {}",
+            role, jobName(context), jobIdString(context), outputPath);
+    S3AFileSystem fs = getDestS3AFS();
+    if (!fs.isMultipartUploadEnabled()) {
+      throw new PathCommitException(outputPath, "Multipart uploads are disabled for the FileSystem,"
+              + " the committer can't proceed.");
+    }
+    // set this thread's context with the job ID.
+    // audit spans created in this thread will pick
+    // up this value., including the commit operations instance
+    // soon to be created.
+    new AuditContextUpdater(jobContext)
+            .updateCurrentAuditContext();
+
+    // the filesystem is the span source, always.
+    this.auditSpanSource = fs.getAuditSpanSource();
+    this.createJobMarker = context.getConfiguration().getBoolean(
+            CREATE_SUCCESSFUL_JOB_OUTPUT_DIR_MARKER,
+            DEFAULT_CREATE_SUCCESSFUL_JOB_DIR_MARKER);
+    // the statistics are shared between this committer and its operations.
+    this.committerStatistics = fs.newCommitterStatistics();
+    this.commitOperations = new CommitOperations(fs, committerStatistics,
+            outputPath.toString());
   }
 
   /**
@@ -1377,6 +1427,13 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
       return Pair.of(jobUUID, JobUUIDSource.SparkWriteUUID);
     }
 
+    //no Spark UUID configured
+    // look for one from Tez
+    jobUUID = conf.getTrimmed(JOB_TEZ_UUID, "");
+    if (!jobUUID.isEmpty()) {
+      return Pair.of(jobUUID, JobUUIDSource.TezJobUUID);
+    }
+
     // there is no UUID configuration in the job/task config
 
     // Check the job hasn't declared a requirement for the UUID.
@@ -1407,6 +1464,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter
    */
   public enum JobUUIDSource {
     SparkWriteUUID(SPARK_WRITE_UUID),
+    TezJobUUID(JOB_TEZ_UUID),
     CommitterUUIDProperty(FS_S3A_COMMITTER_UUID),
     JobID("JobID"),
     GeneratedLocally("Generated Locally");

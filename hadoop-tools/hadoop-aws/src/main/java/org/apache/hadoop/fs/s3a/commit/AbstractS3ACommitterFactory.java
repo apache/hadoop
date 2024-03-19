@@ -58,6 +58,23 @@ public abstract class AbstractS3ACommitterFactory
     return outputCommitter;
   }
 
+  public PathOutputCommitter createOutputCommitter(Path outputPath,
+                                                   JobContext context) throws IOException {
+    FileSystem fs = getDestinationFileSystem(outputPath, context);
+    PathOutputCommitter outputCommitter;
+    if (fs instanceof S3AFileSystem) {
+      outputCommitter = createJobCommitter((S3AFileSystem)fs,
+              outputPath, context);
+    } else {
+      throw new PathCommitException(outputPath,
+              "Filesystem not supported by this committer");
+    }
+    LOG.info("Using Committer {} for {}",
+            outputCommitter,
+            outputPath);
+    return outputCommitter;
+  }
+
   /**
    * Get the destination filesystem, returning null if there is none.
    * Code using this must explicitly or implicitly look for a null value
@@ -88,4 +105,18 @@ public abstract class AbstractS3ACommitterFactory
       S3AFileSystem fileSystem,
       Path outputPath,
       TaskAttemptContext context) throws IOException;
+
+  /**
+   * Implementation point: create a job committer for a specific filesystem.
+   * @param fileSystem destination FS.
+   * @param outputPath final output path for work
+   * @param context task context
+   * @return a committer
+   * @throws IOException any problem, including the FS not supporting
+   * the desired committer
+   */
+  public abstract PathOutputCommitter createJobCommitter(
+      S3AFileSystem fileSystem,
+      Path outputPath,
+      JobContext context) throws IOException;
 }

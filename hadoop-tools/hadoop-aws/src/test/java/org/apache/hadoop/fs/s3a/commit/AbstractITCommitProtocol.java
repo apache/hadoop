@@ -82,6 +82,7 @@ import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.E_NO_SPARK_UUID;
 import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.FS_S3A_COMMITTER_UUID;
 import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.FS_S3A_COMMITTER_UUID_SOURCE;
+import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.JOB_TEZ_UUID;
 import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.SPARK_WRITE_UUID;
 import static org.apache.hadoop.fs.s3a.Statistic.COMMITTER_TASKS_SUCCEEDED;
 import static org.apache.hadoop.fs.s3a.commit.magic.MagicCommitTrackerUtils.isTrackMagicCommitsInMemoryEnabled;
@@ -1775,6 +1776,37 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
   }
 
   /**
+   * Verify Tez-generated UUID logic.
+   */
+  @Test
+  public void testTezGeneratedUUID() throws Throwable {
+    describe("Create committer with Tez-generated UUID and see if it accepts it");
+    Configuration conf = getConfiguration();
+
+    unsetUUIDOptions(conf);
+    // job must pull Tez-generated UUID
+    conf.set(InternalCommitterConstants.JOB_TEZ_UUID, "dag-application654444302_10");
+
+    // create the job. don't write anything
+    JobData jobData = startJob(false);
+    AbstractS3ACommitter committer = jobData.committer;
+    String uuid = committer.getUUID();
+    Assertions.assertThat(committer.getUUIDSource())
+            .describedAs("UUID source of %s", committer)
+            .isEqualTo(AbstractS3ACommitter.JobUUIDSource.TezJobUUID);
+
+    // examine the job configuration and verify that it has been updated
+    Configuration jobConf = jobData.conf;
+    Assertions.assertThat(jobConf.get(FS_S3A_COMMITTER_UUID, null))
+            .describedAs("Config option " + FS_S3A_COMMITTER_UUID)
+            .isEqualTo(uuid);
+    Assertions.assertThat(jobConf.get(FS_S3A_COMMITTER_UUID_SOURCE, null))
+            .describedAs("Config option " + FS_S3A_COMMITTER_UUID_SOURCE)
+            .isEqualTo(AbstractS3ACommitter.JobUUIDSource.TezJobUUID
+                    .getText());
+  }
+
+  /**
    * Verify the option to require a UUID applies and
    * when a committer is instantiated without those options,
    * it fails early.
@@ -1799,6 +1831,7 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
    * @return the patched config
    */
   protected Configuration unsetUUIDOptions(final Configuration conf) {
+    conf.unset(JOB_TEZ_UUID);
     conf.unset(SPARK_WRITE_UUID);
     conf.unset(FS_S3A_COMMITTER_UUID);
     conf.unset(FS_S3A_COMMITTER_GENERATE_UUID);

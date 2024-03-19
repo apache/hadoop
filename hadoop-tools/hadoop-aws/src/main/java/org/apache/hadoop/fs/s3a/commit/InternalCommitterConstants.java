@@ -117,6 +117,12 @@ public final class InternalCommitterConstants {
   public static final String SPARK_WRITE_UUID =
       "spark.sql.sources.writeJobUUID";
 
+  /*
+  * The UUID for jobs set by Tez
+  */
+  public static final String JOB_TEZ_UUID =
+      "job.committer.uuid";
+
   /**
    * Java temp dir: {@value}.
    */

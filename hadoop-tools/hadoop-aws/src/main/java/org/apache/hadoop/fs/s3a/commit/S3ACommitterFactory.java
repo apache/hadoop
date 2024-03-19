@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.s3a.commit.magic.MagicS3GuardCommitterFactory;
 import org.apache.hadoop.fs.s3a.commit.staging.DirectoryStagingCommitterFactory;
 import org.apache.hadoop.fs.s3a.commit.staging.PartitionedStagingCommitterFactory;
 import org.apache.hadoop.fs.s3a.commit.staging.StagingCommitterFactory;
+import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.PathOutputCommitter;
 
@@ -79,6 +80,29 @@ public class S3ACommitterFactory extends AbstractS3ACommitterFactory {
         context.getConfiguration());
     if (factory != null) {
       PathOutputCommitter committer = factory.createTaskCommitter(
+          fileSystem, outputPath, context);
+      LOG.info("Using committer {} to output data to {}",
+          (committer instanceof AbstractS3ACommitter
+              ? ((AbstractS3ACommitter) committer).getName()
+              : committer.toString()),
+          outputPath);
+      return committer;
+    } else {
+      LOG.warn("Using standard FileOutputCommitter to commit work."
+          + " This is slow and potentially unsafe.");
+      return createFileOutputCommitter(outputPath, context);
+    }
+  }
+
+  @Override
+  public PathOutputCommitter createJobCommitter(S3AFileSystem fileSystem,
+      Path outputPath,
+      JobContext context) throws IOException {
+    AbstractS3ACommitterFactory factory = chooseCommitterFactory(fileSystem,
+        outputPath,
+        context.getConfiguration());
+    if (factory != null) {
+      PathOutputCommitter committer = factory.createJobCommitter(
           fileSystem, outputPath, context);
       LOG.info("Using committer {} to output data to {}",
           (committer instanceof AbstractS3ACommitter
