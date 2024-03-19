@@ -469,10 +469,15 @@ public class AbfsRestOperation {
     HttpOperationType httpOperationType
         = abfsConfiguration.getPreferredHttpOperationType();
     if (httpOperationType == HttpOperationType.APACHE_HTTP_CLIENT
-        && ApacheHttpClientHealthMonitor.usable()) {
+        && isApacheClientUsable()) {
       return createAbfsAHCHttpOperation();
     }
     return createAbfsHttpOperation();
+  }
+
+  @VisibleForTesting
+  boolean isApacheClientUsable() {
+    return ApacheHttpClientHealthMonitor.usable();
   }
 
   @VisibleForTesting

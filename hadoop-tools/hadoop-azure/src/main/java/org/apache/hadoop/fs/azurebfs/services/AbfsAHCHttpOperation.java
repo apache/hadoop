@@ -222,6 +222,9 @@ public class AbfsAHCHttpOperation extends HttpOperation {
 
       parseResponseHeaderAndBody(buffer, offset, length);
     } finally {
+      if(!connectionDisconnectedOnError && httpRequestBase instanceof  HttpEntityEnclosingRequestBase) {
+        this.bytesSent = length;
+      }
       if(httpResponse != null) {
         EntityUtils.consume(httpResponse.getEntity());
       }
@@ -319,9 +322,7 @@ public class AbfsAHCHttpOperation extends HttpOperation {
         httpRequestBase = new HttpPost(url.toURI());
       }
       if(httpRequestBase != null) {
-
         this.expectedBytesToBeSent = length;
-        this.bytesSent = length;
         if(buffer != null) {
           HttpEntity httpEntity = new ByteArrayEntity(buffer, offset, length,
               TEXT_PLAIN);

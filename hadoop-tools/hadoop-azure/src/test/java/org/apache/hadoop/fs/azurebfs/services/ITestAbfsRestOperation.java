@@ -272,12 +272,14 @@ public class ITestAbfsRestOperation extends AbstractAbfsIntegrationTest {
             .getConnOutputStream();
       }
       if (httpOperation instanceof AbfsAHCHttpOperation) {
+        Mockito.doNothing()
+            .when((AbfsAHCHttpOperation) httpOperation)
+            .parseResponseHeaderAndBody(Mockito.any(byte[].class),
+                Mockito.anyInt(), Mockito.anyInt());
         Mockito.doThrow(
                 new AbfsApacheHttpExpect100Exception(EXPECT_100_JDK_ERROR,
                     null))
-            .when(httpOperation)
-            .processResponse(Mockito.any(byte[].class), Mockito.anyInt(),
-                Mockito.anyInt());
+            .when((AbfsAHCHttpOperation) httpOperation).executeRequest();
       }
       break;
     case WRITE:
@@ -285,9 +287,7 @@ public class ITestAbfsRestOperation extends AbstractAbfsIntegrationTest {
       // enabled or not, it should throw back the exception.
       if (httpOperation instanceof AbfsAHCHttpOperation) {
         Mockito.doThrow(new IOException())
-            .when(httpOperation)
-            .processResponse(Mockito.any(byte[].class), Mockito.anyInt(),
-                Mockito.anyInt());
+            .when((AbfsAHCHttpOperation) httpOperation).executeRequest();
         return;
       }
       OutputStream outputStream = Mockito.spy(new OutputStream() {
