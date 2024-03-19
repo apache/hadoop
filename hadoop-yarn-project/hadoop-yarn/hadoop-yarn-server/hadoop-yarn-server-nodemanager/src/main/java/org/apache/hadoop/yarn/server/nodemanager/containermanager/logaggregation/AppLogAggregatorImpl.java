@@ -294,12 +294,10 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
     }
 
     addCredentials();
-    if (UserGroupInformation.isSecurityEnabled()) {
-      try {
-        removeExpiredDelegationTokens();
-      } catch (IOException | InterruptedException e) {
-        LOG.warn("Removing expired delegation tokens failed for " + appId, e);
-      }
+    try {
+      removeExpiredDelegationTokens();
+    } catch (IOException | InterruptedException e) {
+      LOG.warn("Removing expired delegation tokens failed for " + appId, e);
     }
     // Create a set of Containers whose logs will be uploaded in this cycle.
     // It includes:
@@ -447,6 +445,10 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
 
   private void removeExpiredDelegationTokens()
       throws IOException, InterruptedException {
+    if (!UserGroupInformation.isSecurityEnabled()) {
+      return;
+    }
+
     for (Map.Entry<Text, Token<?>> tokenEntry : userUgi.getCredentials().getTokenMap().entrySet()) {
       Token<?> token = tokenEntry.getValue();
 
