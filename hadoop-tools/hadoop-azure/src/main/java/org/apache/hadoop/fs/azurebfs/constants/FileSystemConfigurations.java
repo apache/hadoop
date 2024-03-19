@@ -165,7 +165,7 @@ public final class FileSystemConfigurations {
   public static final HttpOperationType DEFAULT_NETWORKING_LIBRARY
       = HttpOperationType.APACHE_HTTP_CLIENT;
 
-  public static final int APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES = 5;
+  public static final int DEFAULT_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES = 5;
 
   private FileSystemConfigurations() {}
 }

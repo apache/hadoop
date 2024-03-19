@@ -365,7 +365,7 @@ public class AbfsConfiguration{
   private boolean isChecksumValidationEnabled;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
-      FS_AZURE_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES, DefaultValue = APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES)
+      FS_AZURE_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES, DefaultValue = DEFAULT_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES)
   private int maxApacheHttpClientIoExceptions;
 
   private String clientProvidedEncryptionKey;
