@@ -316,11 +316,12 @@ public final class VectoredReadUtils {
     if (fileLength.isPresent()) {
       final FileRange last = sortedRanges.get(sortedRanges.size() - 1);
       final Long l = fileLength.get();
+      // this check is superfluous, but it allows for different exception message.
       if (last.getOffset() >= l) {
-        throw new EOFException("Last range starts beyond the file length (" + l + "): " + last);
+        throw new EOFException("Range starts beyond the file length (" + l + "): " + last);
       }
       if (last.getOffset() + last.getLength() > l) {
-        throw new EOFException("Last range extends beyond the file length (" + l + "): " + last);
+        throw new EOFException("Range extends beyond the file length (" + l + "): " + last);
       }
     }
     return sortedRanges;

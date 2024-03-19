@@ -966,8 +966,12 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
       populateChildBuffers(combinedFileRange, rangeContent, allocate);
     } catch (Exception ex) {
       LOG.debug("Exception while reading {} from path {} ", combinedFileRange, pathStr, ex);
+      // complete exception all the underlying ranges which have not already
+      // finished.
       for(FileRange child : combinedFileRange.getUnderlying()) {
-        child.getData().completeExceptionally(ex);
+        if (!child.getData().isDone()) {
+          child.getData().completeExceptionally(ex);
+        }
       }
     } finally {
       IOUtils.cleanupWithLogger(LOG, rangeContent);

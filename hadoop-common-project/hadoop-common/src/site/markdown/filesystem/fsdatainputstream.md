@@ -459,9 +459,11 @@ The position returned by `getPos()` after `readVectored()` is undefined.
 If a file is changed while the `readVectored()` operation is in progress, the output is
 undefined. Some ranges may have old data, some may have new, and some may have both.
 
-While a `readVectored()` operation is in progress, normal read api calls may block.
+While a `readVectored()` operation is in progress, normal read API calls MAY block;
+the value of `getPos(`) is also undefined. Applications SHOULD NOT make such requests
+while waiting for the results of a vectored read.
 
-Note: Don't use direct buffers for reading from ChecksumFileSystem as that may
+Note: Don't use direct buffers for reading from `ChecksumFileSystem` as that may
 lead to memory fragmentation explained in
 [HADOOP-18296](https://issues.apache.org/jira/browse/HADOOP-18296)
 _Memory fragmentation in ChecksumFileSystem Vectored IO implementation_
@@ -471,41 +473,48 @@ _Memory fragmentation in ChecksumFileSystem Vectored IO implementation_
 No empty lists.
 
 ```python
-if ranges = null raise NullPointereException
+if ranges = null raise NullPointerException
 if ranges.len() = 0 raise IllegalArgumentException
-if allocate = null raise NullPointereException
+if allocate = null raise NullPointerException
 ```
 
-For each requested range `range[i]` in the list of ranges `range[0..i]` sorted such that
+For each requested range `range[i]` in the list of ranges `range[0..n]` sorted
+on `getOffset()` ascending such that
+
 for all `i where i > 0`:
 
-    range[i].getOffset() > range[i-1]
+    range[i].getOffset() > range[i-1].getOffset()
 
 For all ranges `0..i` the preconditions are:
 
 ```python
 ranges[i] != null else raise IllegalArgumentException
-ranges[i].getOffset >= 0 else raise EOFException
-ranges[i].getLength >= 0 else raise IllegalArgumentException
+ranges[i].getOffset() >= 0 else raise EOFException
+ranges[i].getLength() >= 0 else raise IllegalArgumentException
 if i > 0 and ranges[i].getOffset() < (ranges[i-1].getOffset() + ranges[i-1].getLength) :
    raise IllegalArgumentException
 ```
 If the length of the file is known during the validation phase:
 
 ```python
-range[i].getOffset + range[i].getLength >= data.length() raise EOFException
+if range[i].getOffset + range[i].getLength >= data.length() raise EOFException
 ```
 
 #### Postconditions
 
-For each requested range `range[i]` in the list of ranges `range[0..i]`
+For each requested range `range[i]` in the list of ranges `range[0..n]`
 
 ```
-ranges[i]'.getData() = CompletableFuture<buffer: ByteBuffer> and when `getData().get()` completes:
-  len := ranges[i].getLength()
-  d := new byte[len]
-  (buffer.position() - buffer.limit) = len
-  buffer.get(d, 0, len) = readFully(ranges[i].getOffset(), d, 0, len)
+ranges[i]'.getData() = CompletableFuture<buffer: ByteBuffer>
+```
+
+ and when `getData().get()` completes:
+```
+let buffer = `getData().get()
+let len = ranges[i].getLength()
+let data = new byte[len]
+(buffer.position() - buffer.limit) = len
+buffer.get(data, 0, len) = readFully(ranges[i].getOffset(), data, 0, len)
 ```
 
 That is: the result of every ranged read is the result of the (possibly asynchronous)
