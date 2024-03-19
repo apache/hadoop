@@ -35,6 +35,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.mockito.Mockito;
 
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
@@ -514,6 +515,14 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     return b;
   }
 
+  @Override
+  public AzureBlobFileSystem getFileSystem(final Configuration configuration)
+      throws Exception {
+    Configuration conf = new Configuration(configuration);
+    conf.set(ConfigurationKeys.FS_AZURE_NETWORKING_LIBRARY, httpOperationType.toString());
+    return (AzureBlobFileSystem) FileSystem.newInstance(conf);
+  }
+
   /**
    * Test to verify that client retries append request without
    * expect header enabled if append with expect header enabled fails
@@ -523,9 +532,10 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
   @Test
   public void testExpectHundredContinue() throws Exception {
     // Get the filesystem.
-    final AzureBlobFileSystem fs = getFileSystem();
+    final AzureBlobFileSystem fs = getFileSystem(getRawConfiguration());
 
-    final Configuration configuration = new Configuration();
+    final Configuration configuration = fs.getAbfsStore().getAbfsConfiguration()
+        .getRawConfiguration();
     configuration.addResource(TEST_CONFIGURATION_FILE_NAME);
     AbfsClient abfsClient = fs.getAbfsStore().getClient();
 
@@ -599,8 +609,8 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
       Mockito.doReturn(url).when(httpOperation).getConnUrl();
 
       // Give user error code 404 when processResponse is called.
-      Mockito.doReturn(HTTP_METHOD_PUT).when(httpOperation).getConnRequestMethod();
-      Mockito.doReturn(HTTP_NOT_FOUND).when(httpOperation).getConnResponseCode();
+      Mockito.doReturn(HTTP_METHOD_PUT).when(httpOperation).getMethod();
+      Mockito.doReturn(HTTP_NOT_FOUND).when(httpOperation).getStatusCode();
       Mockito.doReturn("Resource Not Found")
           .when(httpOperation)
           .getConnResponseMessage();
@@ -613,12 +623,15 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
       }
 
       if (httpOperation instanceof AbfsAHCHttpOperation) {
+        Mockito.doNothing()
+            .when((AbfsAHCHttpOperation) httpOperation)
+            .parseResponseHeaderAndBody(Mockito.any(byte[].class),
+                Mockito.anyInt(), Mockito.anyInt());
         Mockito.doThrow(
-                new AbfsApacheHttpExpect100Exception("Server rejected operation",
+                new AbfsApacheHttpExpect100Exception(EXPECT_100_JDK_ERROR,
                     null))
-            .when(httpOperation)
-            .processResponse(Mockito.any(byte[].class), Mockito.anyInt(),
-                Mockito.anyInt());
+            .when((AbfsAHCHttpOperation) httpOperation)
+            .executeRequest();
       }
       return httpOperation;
     }).when(op).createHttpOperation();

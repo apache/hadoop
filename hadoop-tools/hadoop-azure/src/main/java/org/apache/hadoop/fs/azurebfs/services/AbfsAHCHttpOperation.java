@@ -33,6 +33,7 @@ import java.util.Stack;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
@@ -91,6 +92,8 @@ public class AbfsAHCHttpOperation extends HttpOperation {
   private final AbfsRestOperationType abfsRestOperationType;
 
   private boolean connectionDisconnectedOnError = false;
+
+  private AbfsApacheHttpExpect100Exception abfsApacheHttpExpect100Exception;
 
   private void setAbfsApacheHttpClient(final AbfsConfiguration abfsConfiguration,
       final String clientId) {
@@ -205,7 +208,7 @@ public class AbfsAHCHttpOperation extends HttpOperation {
       final int length) throws IOException {
     try {
       try {
-        httpResponse = abfsApacheHttpClient.execute(httpRequestBase, abfsHttpClientContext);
+        httpResponse = executeRequest();
         sendRequestTimeMs = abfsHttpClientContext.sendTime;
         recvResponseTimeMs = abfsHttpClientContext.readTime;
       } catch (AbfsApacheHttpExpect100Exception ex) {
@@ -214,22 +217,10 @@ public class AbfsAHCHttpOperation extends HttpOperation {
             ex);
         connectionDisconnectedOnError = true;
         httpResponse = ex.getHttpResponse();
-        throw ex;
+        abfsApacheHttpExpect100Exception = ex;
       }
 
-      this.statusCode = httpResponse.getStatusLine().getStatusCode();
-
-      this.statusDescription = httpResponse.getStatusLine().getReasonPhrase();
-
-      this.requestId = getResponseHeader(HttpHeaderConfigurations.X_MS_REQUEST_ID);
-      if (this.requestId == null) {
-        this.requestId = AbfsHttpConstants.EMPTY_STRING;
-      }
-      // dump the headers
-      AbfsIoUtils.dumpHeadersToDebugLog("Response Headers",
-          getResponseHeaders(httpResponse));
-      parseResponse(buffer, offset, length);
-      abfsHttpClientContext.isBeingRead = false;
+      parseResponseHeaderAndBody(buffer, offset, length);
     } finally {
       if(httpResponse != null) {
         EntityUtils.consume(httpResponse.getEntity());
@@ -238,6 +229,30 @@ public class AbfsAHCHttpOperation extends HttpOperation {
         ((CloseableHttpResponse) httpResponse).close();
       }
     }
+  }
+
+  @VisibleForTesting
+  void parseResponseHeaderAndBody(final byte[] buffer,
+      final int offset,
+      final int length) throws IOException {
+    this.statusCode = httpResponse.getStatusLine().getStatusCode();
+
+    this.statusDescription = httpResponse.getStatusLine().getReasonPhrase();
+
+    this.requestId = getResponseHeader(HttpHeaderConfigurations.X_MS_REQUEST_ID);
+    if (this.requestId == null) {
+      this.requestId = AbfsHttpConstants.EMPTY_STRING;
+    }
+    // dump the headers
+    AbfsIoUtils.dumpHeadersToDebugLog("Response Headers",
+        getResponseHeaders(httpResponse));
+    parseResponse(buffer, offset, length);
+    abfsHttpClientContext.isBeingRead = false;
+  }
+
+  @VisibleForTesting
+  HttpResponse executeRequest() throws IOException {
+    return abfsApacheHttpClient.execute(httpRequestBase, abfsHttpClientContext);
   }
 
   private Map<String, List<String>> getResponseHeaders(final HttpResponse httpResponse) {

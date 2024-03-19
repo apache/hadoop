@@ -34,12 +34,15 @@ import org.junit.runners.Parameterized;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.TestAbfsConfigurationFieldsValidation;
+import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsApacheHttpExpect100Exception;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
@@ -61,6 +64,8 @@ import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARA
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_POSITION;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ABFS_ACCOUNT_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_CONFIGURATION_FILE_NAME;
+import static org.apache.hadoop.fs.azurebfs.services.HttpOperationType.APACHE_HTTP_CLIENT;
+import static org.apache.hadoop.fs.azurebfs.services.HttpOperationType.JDK_HTTP_URL_CONNECTION;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -97,6 +102,9 @@ public class ITestAbfsRestOperation extends AbstractAbfsIntegrationTest {
   @Parameterized.Parameter(3)
   public ErrorType errorType;
 
+  @Parameterized.Parameter(4)
+  public HttpOperationType httpOperationType;
+
   // The intercept.
   private AbfsThrottlingIntercept intercept;
 
@@ -110,12 +118,23 @@ public class ITestAbfsRestOperation extends AbstractAbfsIntegrationTest {
   @Parameterized.Parameters(name = "expect={0}-code={1}-ErrorType={3}")
   public static Iterable<Object[]> params() {
     return Arrays.asList(new Object[][]{
-        {true, HTTP_OK, "OK", ErrorType.WRITE},
-        {false, HTTP_OK, "OK", ErrorType.WRITE},
-        {true, HTTP_UNAVAILABLE, "ServerBusy", ErrorType.OUTPUTSTREAM},
-        {true, HTTP_NOT_FOUND, "Resource Not Found", ErrorType.OUTPUTSTREAM},
-        {true, HTTP_EXPECTATION_FAILED, "Expectation Failed", ErrorType.OUTPUTSTREAM},
-        {true, HTTP_ERROR, "Error", ErrorType.OUTPUTSTREAM}
+        {true, HTTP_OK, "OK", ErrorType.WRITE, JDK_HTTP_URL_CONNECTION},
+        {true, HTTP_OK, "OK", ErrorType.WRITE, APACHE_HTTP_CLIENT},
+
+        {false, HTTP_OK, "OK", ErrorType.WRITE, JDK_HTTP_URL_CONNECTION},
+        {false, HTTP_OK, "OK", ErrorType.WRITE, APACHE_HTTP_CLIENT},
+
+        {true, HTTP_UNAVAILABLE, "ServerBusy", ErrorType.OUTPUTSTREAM, JDK_HTTP_URL_CONNECTION},
+        {true, HTTP_UNAVAILABLE, "ServerBusy", ErrorType.OUTPUTSTREAM, APACHE_HTTP_CLIENT},
+
+        {true, HTTP_NOT_FOUND, "Resource Not Found", ErrorType.OUTPUTSTREAM, JDK_HTTP_URL_CONNECTION},
+        {true, HTTP_NOT_FOUND, "Resource Not Found", ErrorType.OUTPUTSTREAM, APACHE_HTTP_CLIENT},
+
+        {true, HTTP_EXPECTATION_FAILED, "Expectation Failed", ErrorType.OUTPUTSTREAM, JDK_HTTP_URL_CONNECTION},
+        {true, HTTP_EXPECTATION_FAILED, "Expectation Failed", ErrorType.OUTPUTSTREAM, APACHE_HTTP_CLIENT},
+
+        {true, HTTP_ERROR, "Error", ErrorType.OUTPUTSTREAM, JDK_HTTP_URL_CONNECTION},
+        {true, HTTP_ERROR, "Error", ErrorType.OUTPUTSTREAM, APACHE_HTTP_CLIENT}
     });
   }
 
@@ -132,6 +151,14 @@ public class ITestAbfsRestOperation extends AbstractAbfsIntegrationTest {
     final byte[] b = new byte[length];
     new Random().nextBytes(b);
     return b;
+  }
+
+  @Override
+  public AzureBlobFileSystem getFileSystem(final Configuration configuration)
+      throws Exception {
+    Configuration conf = new Configuration(configuration);
+    conf.set(ConfigurationKeys.FS_AZURE_NETWORKING_LIBRARY, httpOperationType.toString());
+    return (AzureBlobFileSystem) FileSystem.newInstance(conf);
   }
 
   /**
@@ -204,27 +231,28 @@ public class ITestAbfsRestOperation extends AbstractAbfsIntegrationTest {
         appendRequestParameters.getoffset(),
         appendRequestParameters.getLength(), null, abfsConfig, "clientId"));
 
-    AbfsHttpOperation abfsHttpOperation = Mockito.spy(new AbfsHttpOperation(url, HTTP_METHOD_PUT, requestHeaders,
-            DEFAULT_HTTP_CONNECTION_TIMEOUT, DEFAULT_HTTP_READ_TIMEOUT));
+    Mockito.doAnswer(answer -> {
+      HttpOperation httpOperation = Mockito.spy(
+          (HttpOperation) answer.callRealMethod());
+      mockHttpOperation(appendRequestParameters, buffer, url, httpOperation);
+      return httpOperation;
+    }).when(op).createHttpOperation();
+    return op;
+  }
 
+  private void mockHttpOperation(final AppendRequestParameters appendRequestParameters,
+      final byte[] buffer,
+      final URL url,
+      final HttpOperation httpOperation) throws IOException {
     // Sets the expect request property if expect header is enabled.
     if (expectHeaderEnabled) {
       Mockito.doReturn(HUNDRED_CONTINUE)
-          .when(abfsHttpOperation)
+          .when(httpOperation)
           .getConnProperty(EXPECT);
     }
 
-    HttpURLConnection urlConnection = mock(HttpURLConnection.class);
-    Mockito.doNothing().when(urlConnection).setRequestProperty(Mockito
+    Mockito.doNothing().when(httpOperation).setRequestProperty(Mockito
         .any(), Mockito.any());
-    Mockito.doReturn(HTTP_METHOD_PUT).when(urlConnection).getRequestMethod();
-    Mockito.doReturn(url).when(urlConnection).getURL();
-    Mockito.doReturn(urlConnection).when(abfsHttpOperation).getConnection();
-
-    Mockito.doNothing().when(abfsHttpOperation).setRequestProperty(Mockito
-        .any(), Mockito.any());
-    Mockito.doReturn(url).when(abfsHttpOperation).getConnUrl();
-    Mockito.doReturn(HTTP_METHOD_PUT).when(abfsHttpOperation).getConnRequestMethod();
 
     switch (errorType) {
     case OUTPUTSTREAM:
@@ -232,23 +260,42 @@ public class ITestAbfsRestOperation extends AbstractAbfsIntegrationTest {
       // enabled, it returns back to processResponse and hence we have
       // mocked the response code and the response message to check different
       // behaviour based on response code.
-      Mockito.doReturn(responseCode).when(abfsHttpOperation).getConnResponseCode();
+      Mockito.doReturn(responseCode).when(httpOperation).getConnResponseCode();
       Mockito.doReturn(responseMessage)
-          .when(abfsHttpOperation)
+          .when(httpOperation)
           .getConnResponseMessage();
-      Mockito.doThrow(new ProtocolException(EXPECT_100_JDK_ERROR))
-          .when(abfsHttpOperation)
-          .getConnOutputStream();
+      if (httpOperation instanceof AbfsHttpOperation) {
+        Mockito.doThrow(new ProtocolException(EXPECT_100_JDK_ERROR))
+            .when((AbfsHttpOperation) httpOperation)
+            .getConnOutputStream();
+      }
+      if (httpOperation instanceof AbfsAHCHttpOperation) {
+        Mockito.doThrow(
+                new AbfsApacheHttpExpect100Exception(EXPECT_100_JDK_ERROR,
+                    null))
+            .when(httpOperation)
+            .processResponse(Mockito.any(byte[].class), Mockito.anyInt(),
+                Mockito.anyInt());
+      }
       break;
     case WRITE:
       // If write() throws IOException and Expect Header is
       // enabled or not, it should throw back the exception.
+      if (httpOperation instanceof AbfsAHCHttpOperation) {
+        Mockito.doThrow(new IOException())
+            .when(httpOperation)
+            .processResponse(Mockito.any(byte[].class), Mockito.anyInt(),
+                Mockito.anyInt());
+        return;
+      }
       OutputStream outputStream = Mockito.spy(new OutputStream() {
         @Override
         public void write(final int i) throws IOException {
         }
       });
-      Mockito.doReturn(outputStream).when(abfsHttpOperation).getConnOutputStream();
+      Mockito.doReturn(outputStream)
+          .when((AbfsHttpOperation) httpOperation)
+          .getConnOutputStream();
       Mockito.doThrow(new IOException())
           .when(outputStream)
           .write(buffer, appendRequestParameters.getoffset(),
@@ -257,12 +304,6 @@ public class ITestAbfsRestOperation extends AbstractAbfsIntegrationTest {
     default:
       break;
     }
-
-    // Sets the httpOperation for the rest operation.
-    Mockito.doReturn(abfsHttpOperation)
-        .when(op)
-        .createHttpOperation();
-    return op;
   }
 
   void assertTraceContextState(int retryCount, int assertRetryCount, int bytesSent, int assertBytesSent,
