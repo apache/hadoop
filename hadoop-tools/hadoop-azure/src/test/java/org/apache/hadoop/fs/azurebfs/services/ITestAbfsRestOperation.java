@@ -115,7 +115,7 @@ public class ITestAbfsRestOperation extends AbstractAbfsIntegrationTest {
     HTTP_EXPECTATION_FAILED = 417,
     HTTP_ERROR = 0.
    */
-  @Parameterized.Parameters(name = "expect={0}-code={1}-ErrorType={3}")
+  @Parameterized.Parameters(name = "expect={0}-code={1}-ErrorType={3}=NetLib={4}")
   public static Iterable<Object[]> params() {
     return Arrays.asList(new Object[][]{
         {true, HTTP_OK, "OK", ErrorType.WRITE, JDK_HTTP_URL_CONNECTION},
@@ -167,9 +167,9 @@ public class ITestAbfsRestOperation extends AbstractAbfsIntegrationTest {
    */
   private AbfsRestOperation getRestOperation() throws Exception {
     // Get the filesystem.
-    final AzureBlobFileSystem fs = getFileSystem();
+    final AzureBlobFileSystem fs = getFileSystem(getRawConfiguration());
 
-    final Configuration configuration = new Configuration();
+    final Configuration configuration = fs.getConf();
     configuration.addResource(TEST_CONFIGURATION_FILE_NAME);
     AbfsClient abfsClient = fs.getAbfsStore().getClient();
 
@@ -222,7 +222,7 @@ public class ITestAbfsRestOperation extends AbstractAbfsIntegrationTest {
     URL url =  testClient.createRequestUrl(finalTestPath, abfsUriQueryBuilder.toString());
 
     // Create a mock of the AbfsRestOperation to set the urlConnection in the corresponding httpOperation.
-    AbfsRestOperation op = Mockito.spy(new AbfsRestOperation(
+    final AbfsRestOperation op = Mockito.spy(new AbfsRestOperation(
         AbfsRestOperationType.Append,
         testClient,
         HTTP_METHOD_PUT,
@@ -235,6 +235,7 @@ public class ITestAbfsRestOperation extends AbstractAbfsIntegrationTest {
       HttpOperation httpOperation = Mockito.spy(
           (HttpOperation) answer.callRealMethod());
       mockHttpOperation(appendRequestParameters, buffer, url, httpOperation);
+      Mockito.doReturn(httpOperation).when(op).getResult();
       return httpOperation;
     }).when(op).createHttpOperation();
     return op;
@@ -260,7 +261,8 @@ public class ITestAbfsRestOperation extends AbstractAbfsIntegrationTest {
       // enabled, it returns back to processResponse and hence we have
       // mocked the response code and the response message to check different
       // behaviour based on response code.
-      Mockito.doReturn(responseCode).when(httpOperation).getConnResponseCode();
+
+      Mockito.doReturn(responseCode).when(httpOperation).getStatusCode();
       Mockito.doReturn(responseMessage)
           .when(httpOperation)
           .getConnResponseMessage();
@@ -330,8 +332,6 @@ public class ITestAbfsRestOperation extends AbstractAbfsIntegrationTest {
   public void testExpectHundredContinue() throws Exception {
     // Gets the AbfsRestOperation.
     AbfsRestOperation op = getRestOperation();
-    HttpOperation httpOperation = op.createHttpOperation();
-
     TracingContext tracingContext = Mockito.spy(new TracingContext("abcd",
         "abcde", FSOperationType.APPEND,
         TracingHeaderFormat.ALL_ID_FORMAT, null));
@@ -346,7 +346,7 @@ public class ITestAbfsRestOperation extends AbstractAbfsIntegrationTest {
           () -> op.execute(tracingContext));
 
       // Asserting update of metrics and retries.
-      assertTraceContextState(tracingContext.getRetryCount(), REDUCED_RETRY_COUNT, httpOperation.getBytesSent(), BUFFER_LENGTH,
+      assertTraceContextState(tracingContext.getRetryCount(), REDUCED_RETRY_COUNT, op.getResult().getBytesSent(), BUFFER_LENGTH,
               0, 0);
       break;
     case OUTPUTSTREAM:
@@ -357,8 +357,8 @@ public class ITestAbfsRestOperation extends AbstractAbfsIntegrationTest {
             () -> op.execute(tracingContext));
 
         // Asserting update of metrics and retries.
-        assertTraceContextState(tracingContext.getRetryCount(), REDUCED_RETRY_COUNT, httpOperation.getBytesSent(), ZERO,
-                httpOperation.getExpectedBytesToBeSent(), BUFFER_LENGTH);
+        assertTraceContextState(tracingContext.getRetryCount(), REDUCED_RETRY_COUNT, op.getResult().getBytesSent(), ZERO,
+                op.getResult().getExpectedBytesToBeSent(), BUFFER_LENGTH);
 
         // Verifies that update Metrics call is made for throttle case and for the first without retry +
         // for the retried cases as well.
@@ -371,7 +371,7 @@ public class ITestAbfsRestOperation extends AbstractAbfsIntegrationTest {
             () -> op.execute(tracingContext));
 
         // Asserting update of metrics and retries.
-        assertTraceContextState(tracingContext.getRetryCount(), REDUCED_RETRY_COUNT, httpOperation.getBytesSent(),
+        assertTraceContextState(tracingContext.getRetryCount(), REDUCED_RETRY_COUNT, op.getResult().getBytesSent(),
                 ZERO, 0, 0);
 
         // Verifies that update Metrics call is made for ErrorType case and for the first without retry +
