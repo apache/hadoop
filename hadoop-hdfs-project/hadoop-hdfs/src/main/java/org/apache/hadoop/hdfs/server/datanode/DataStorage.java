@@ -839,12 +839,9 @@ public class DataStorage extends Storage {
     if (callables == null) {
       doUpgrade(sd, nsInfo, prevDir, tmpDir, bbwDir, toDir, oldLV, conf);
     } else {
-      callables.add(new Callable<StorageDirectory>() {
-        @Override
-        public StorageDirectory call() throws Exception {
-          doUpgrade(sd, nsInfo, prevDir, tmpDir, bbwDir, toDir, oldLV, conf);
-          return sd;
-        }
+      callables.add(() -> {
+        doUpgrade(sd, nsInfo, prevDir, tmpDir, bbwDir, toDir, oldLV, conf);
+        return sd;
       });
     }
   }
@@ -1138,17 +1135,13 @@ public class DataStorage extends Storage {
     List<Future<Void>> futures = Lists.newArrayList();
     for (int i = 0; i < idBasedLayoutSingleLinks.size(); i += step) {
       final int iCopy = i;
-      futures.add(linkWorkers.submit(new Callable<Void>() {
-        @Override
-        public Void call() throws IOException {
-          int upperBound = Math.min(iCopy + step,
-              idBasedLayoutSingleLinks.size());
-          for (int j = iCopy; j < upperBound; j++) {
-            LinkArgs cur = idBasedLayoutSingleLinks.get(j);
-            HardLink.createHardLink(cur.src(), cur.dst());
-          }
-          return null;
+      futures.add(linkWorkers.submit(() -> {
+        int upperBound = Math.min(iCopy + step, idBasedLayoutSingleLinks.size());
+        for (int j = iCopy; j < upperBound; j++) {
+          LinkArgs cur = idBasedLayoutSingleLinks.get(j);
+          HardLink.createHardLink(cur.src(), cur.dst());
         }
+        return null;
       }));
     }
     linkWorkers.shutdown();
@@ -1334,12 +1327,7 @@ public class DataStorage extends Storage {
     // from is a directory
     hl.linkStats.countDirs++;
     
-    String[] blockNames = from.list(new java.io.FilenameFilter() {
-      @Override
-      public boolean accept(File dir, String name) {
-        return name.startsWith(Block.BLOCK_FILE_PREFIX);
-      }
-    });
+    String[] blockNames = from.list((dir, name) -> name.startsWith(Block.BLOCK_FILE_PREFIX));
 
     // If we are upgrading to block ID-based layout, we don't want to recreate
     // any subdirs from the source that contain blocks, since we have a new

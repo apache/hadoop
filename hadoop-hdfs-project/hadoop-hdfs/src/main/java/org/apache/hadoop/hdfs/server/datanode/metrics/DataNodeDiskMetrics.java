@@ -36,9 +36,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -106,69 +104,57 @@ public class DataNodeDiskMetrics {
   }
 
   private void startDiskOutlierDetectionThread() {
-    slowDiskDetectionDaemon = new Daemon(new Runnable() {
-      @Override
-      public void run() {
-        while (shouldRun) {
-          if (dn.getFSDataset() != null) {
-            Map<String, Double> metadataOpStats = Maps.newHashMap();
-            Map<String, Double> readIoStats = Maps.newHashMap();
-            Map<String, Double> writeIoStats = Maps.newHashMap();
-            FsDatasetSpi.FsVolumeReferences fsVolumeReferences = null;
-            try {
-              fsVolumeReferences = dn.getFSDataset().getFsVolumeReferences();
-              Iterator<FsVolumeSpi> volumeIterator = fsVolumeReferences
-                  .iterator();
-              while (volumeIterator.hasNext()) {
-                FsVolumeSpi volume = volumeIterator.next();
-                DataNodeVolumeMetrics metrics = volume.getMetrics();
-                String volumeName = volume.getBaseURI().getPath();
-
-                metadataOpStats.put(volumeName,
-                    metrics.getMetadataOperationMean());
-                readIoStats.put(volumeName, metrics.getReadIoMean());
-                writeIoStats.put(volumeName, metrics.getWriteIoMean());
-              }
-            } finally {
-              if (fsVolumeReferences != null) {
-                try {
-                  fsVolumeReferences.close();
-                } catch (IOException e) {
-                  LOG.error("Error in releasing FS Volume references", e);
-                }
-              }
-            }
-            if (metadataOpStats.isEmpty() && readIoStats.isEmpty()
-                && writeIoStats.isEmpty()) {
-              LOG.debug("No disk stats available for detecting outliers.");
-              continue;
-            }
-
-            detectAndUpdateDiskOutliers(metadataOpStats, readIoStats,
-                writeIoStats);
-
-            // Sort the slow disks by latency and extract the top n by maxSlowDisksToExclude.
-            if (maxSlowDisksToExclude > 0) {
-              ArrayList<DiskLatency> diskLatencies = new ArrayList<>();
-              for (Map.Entry<String, Map<DiskOp, Double>> diskStats :
-                  diskOutliersStats.entrySet()) {
-                diskLatencies.add(new DiskLatency(diskStats.getKey(), diskStats.getValue()));
-              }
-
-              Collections.sort(diskLatencies, (o1, o2)
-                  -> Double.compare(o2.getMaxLatency(), o1.getMaxLatency()));
-
-              slowDisksToExclude = diskLatencies.stream().limit(maxSlowDisksToExclude)
-                  .map(DiskLatency::getSlowDisk).collect(Collectors.toList());
-            }
-          }
-
+    slowDiskDetectionDaemon = new Daemon(() -> {
+      while (shouldRun) {
+        if (dn.getFSDataset() != null) {
+          Map<String, Double> metadataOpStats = Maps.newHashMap();
+          Map<String, Double> readIoStats = Maps.newHashMap();
+          Map<String, Double> writeIoStats = Maps.newHashMap();
+          FsDatasetSpi.FsVolumeReferences fsVolumeReferences = null;
           try {
-            Thread.sleep(detectionInterval);
-          } catch (InterruptedException e) {
-            LOG.error("Disk Outlier Detection thread interrupted", e);
-            Thread.currentThread().interrupt();
+            fsVolumeReferences = dn.getFSDataset().getFsVolumeReferences();
+            for (FsVolumeSpi volume : fsVolumeReferences) {
+              DataNodeVolumeMetrics metrics = volume.getMetrics();
+              String volumeName = volume.getBaseURI().getPath();
+              metadataOpStats.put(volumeName, metrics.getMetadataOperationMean());
+              readIoStats.put(volumeName, metrics.getReadIoMean());
+              writeIoStats.put(volumeName, metrics.getWriteIoMean());
+            }
+          } finally {
+            if (fsVolumeReferences != null) {
+              try {
+                fsVolumeReferences.close();
+              } catch (IOException e) {
+                LOG.error("Error in releasing FS Volume references", e);
+              }
+            }
           }
+          if (metadataOpStats.isEmpty() && readIoStats.isEmpty() && writeIoStats.isEmpty()) {
+            LOG.debug("No disk stats available for detecting outliers.");
+            continue;
+          }
+
+          detectAndUpdateDiskOutliers(metadataOpStats, readIoStats, writeIoStats);
+
+          // Sort the slow disks by latency and extract the top n by maxSlowDisksToExclude.
+          if (maxSlowDisksToExclude > 0) {
+            ArrayList<DiskLatency> diskLatencies = new ArrayList<>();
+            for (Map.Entry<String, Map<DiskOp, Double>> diskStats : diskOutliersStats.entrySet()) {
+              diskLatencies.add(new DiskLatency(diskStats.getKey(), diskStats.getValue()));
+            }
+
+            diskLatencies.sort((o1, o2) -> Double.compare(o2.getMaxLatency(), o1.getMaxLatency()));
+
+            slowDisksToExclude = diskLatencies.stream().limit(maxSlowDisksToExclude)
+                .map(DiskLatency::getSlowDisk).collect(Collectors.toList());
+          }
+        }
+
+        try {
+          Thread.sleep(detectionInterval);
+        } catch (InterruptedException e) {
+          LOG.error("Disk Outlier Detection thread interrupted", e);
+          Thread.currentThread().interrupt();
         }
       }
     });

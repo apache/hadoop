@@ -22,7 +22,6 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileDescriptor;
 import java.io.FileNotFoundException;
-import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
@@ -90,13 +89,9 @@ public class FsDatasetUtil {
   public static File findMetaFile(final File blockFile) throws IOException {
     final String prefix = blockFile.getName() + "_";
     final File parent = blockFile.getParentFile();
-    final File[] matches = parent.listFiles(new FilenameFilter() {
-      @Override
-      public boolean accept(File dir, String name) {
-        return dir.equals(parent) && name.startsWith(prefix)
-            && name.endsWith(Block.METADATA_EXTENSION);
-      }
-    });
+    final File[] matches = parent.listFiles(
+        (dir, name) -> dir.equals(parent) && name.startsWith(prefix)
+            && name.endsWith(Block.METADATA_EXTENSION));
 
     if (matches == null || matches.length == 0) {
       throw new FileNotFoundException(

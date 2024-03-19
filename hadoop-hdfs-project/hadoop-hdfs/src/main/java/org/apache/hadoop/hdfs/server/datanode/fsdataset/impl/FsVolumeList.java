@@ -260,23 +260,22 @@ class FsVolumeList {
         new ConcurrentHashMap<FsVolumeSpi, IOException>();
     List<Thread> replicaAddingThreads = new ArrayList<Thread>();
     for (final FsVolumeImpl v : volumes) {
-      Thread t = new Thread() {
-        public void run() {
-          try (FsVolumeReference ref = v.obtainReference()) {
-            FsDatasetImpl.LOG.info("Adding replicas to map for block pool " +
-                bpid + " on volume " + v + "...");
-            long startTime = Time.monotonicNow();
-            v.getVolumeMap(bpid, volumeMap, ramDiskReplicaMap);
-            long timeTaken = Time.monotonicNow() - startTime;
-            FsDatasetImpl.LOG.info("Time to add replicas to map for block pool"
-                + " " + bpid + " on volume " + v + ": " + timeTaken + "ms");
-          } catch (IOException ioe) {
-            FsDatasetImpl.LOG.info("Caught exception while adding replicas " +
-                "from " + v + ". Will throw later.", ioe);
-            unhealthyDataDirs.put(v, ioe);
-          }
+      Thread t = new Thread(() -> {
+        try (FsVolumeReference ref = v.obtainReference()) {
+          FsDatasetImpl.LOG.info("Adding replicas to map for block pool {} on volume {}...",
+              bpid, v);
+          long startTime = Time.monotonicNow();
+          v.getVolumeMap(bpid, volumeMap, ramDiskReplicaMap);
+          long timeTaken = Time.monotonicNow() - startTime;
+          FsDatasetImpl.LOG.info(
+              "Time to add replicas to map for block pool {} on volume {}: {}ms.",
+              bpid, v, timeTaken);
+        } catch (IOException ioe) {
+          FsDatasetImpl.LOG.info(
+              "Caught exception while adding replicas from {}. Will throw later.", v, ioe);
+          unhealthyDataDirs.put(v, ioe);
         }
-      };
+      });
       replicaAddingThreads.add(t);
       t.start();
     }
@@ -507,23 +506,19 @@ class FsVolumeList {
         new ConcurrentHashMap<FsVolumeSpi, IOException>();
     List<Thread> blockPoolAddingThreads = new ArrayList<Thread>();
     for (final FsVolumeImpl v : volumes) {
-      Thread t = new Thread() {
-        public void run() {
-          try (FsVolumeReference ref = v.obtainReference()) {
-            FsDatasetImpl.LOG.info("Scanning block pool " + bpid +
-                " on volume " + v + "...");
-            long startTime = Time.monotonicNow();
-            v.addBlockPool(bpid, conf);
-            long timeTaken = Time.monotonicNow() - startTime;
-            FsDatasetImpl.LOG.info("Time taken to scan block pool " + bpid +
-                " on " + v + ": " + timeTaken + "ms");
-          } catch (IOException ioe) {
-            FsDatasetImpl.LOG.info("Caught exception while scanning " + v +
-                ". Will throw later.", ioe);
-            unhealthyDataDirs.put(v, ioe);
-          }
+      Thread t = new Thread(() -> {
+        try (FsVolumeReference ref = v.obtainReference()) {
+          FsDatasetImpl.LOG.info("Scanning block pool {} on volume {}...", bpid, v);
+          long startTime = Time.monotonicNow();
+          v.addBlockPool(bpid, conf);
+          long timeTaken = Time.monotonicNow() - startTime;
+          FsDatasetImpl.LOG.info("Time taken to scan block pool {} on {}: {}ms",
+              bpid, v, timeTaken);
+        } catch (IOException ioe) {
+          FsDatasetImpl.LOG.info("Caught exception while scanning {}. Will throw later.", v, ioe);
+          unhealthyDataDirs.put(v, ioe);
         }
-      };
+      });
       blockPoolAddingThreads.add(t);
       t.start();
     }

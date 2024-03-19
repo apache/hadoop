@@ -75,17 +75,15 @@ class SimpleHttpProxyHandler extends SimpleChannelInboundHandler<HttpRequest> {
 
     @Override
     public void channelRead(final ChannelHandlerContext ctx, Object msg) {
-      client.writeAndFlush(msg).addListener(new ChannelFutureListener() {
-        @Override
-        public void operationComplete(ChannelFuture future) {
-          if (future.isSuccess()) {
-            ctx.channel().read();
-          } else {
-            LOG.debug("Proxy failed. Cause: ", future.cause());
-            future.channel().close();
-          }
-        }
-      });
+      client.writeAndFlush(msg).addListener(
+          (ChannelFutureListener) future -> {
+            if (future.isSuccess()) {
+              ctx.channel().read();
+            } else {
+              LOG.debug("Proxy failed. Cause: ", future.cause());
+              future.channel().close();
+            }
+          });
     }
 
     @Override
@@ -112,23 +110,19 @@ class SimpleHttpProxyHandler extends SimpleChannelInboundHandler<HttpRequest> {
       });
     ChannelFuture f = proxiedServer.connect(host);
     proxiedChannel = f.channel();
-    f.addListener(new ChannelFutureListener() {
-      @Override
-      public void operationComplete(ChannelFuture future) throws Exception {
-        if (future.isSuccess()) {
-          ctx.channel().pipeline().remove(HttpResponseEncoder.class);
-          HttpRequest newReq = new DefaultFullHttpRequest(HTTP_1_1, req.method(), req.uri());
-          newReq.headers().add(req.headers());
-          newReq.headers().set(CONNECTION, HttpHeaderValues.CLOSE);
-          future.channel().writeAndFlush(newReq);
-        } else {
-          DefaultHttpResponse resp = new DefaultHttpResponse(HTTP_1_1,
-            INTERNAL_SERVER_ERROR);
-          resp.headers().set(CONNECTION, HttpHeaderValues.CLOSE);
-          LOG.info("Proxy " + uri + " failed. Cause: ", future.cause());
-          ctx.writeAndFlush(resp).addListener(ChannelFutureListener.CLOSE);
-          client.close();
-        }
+    f.addListener((ChannelFutureListener) future -> {
+      if (future.isSuccess()) {
+        ctx.channel().pipeline().remove(HttpResponseEncoder.class);
+        HttpRequest newReq = new DefaultFullHttpRequest(HTTP_1_1, req.method(), req.uri());
+        newReq.headers().add(req.headers());
+        newReq.headers().set(CONNECTION, HttpHeaderValues.CLOSE);
+        future.channel().writeAndFlush(newReq);
+      } else {
+        DefaultHttpResponse resp = new DefaultHttpResponse(HTTP_1_1, INTERNAL_SERVER_ERROR);
+        resp.headers().set(CONNECTION, HttpHeaderValues.CLOSE);
+        LOG.info("Proxy {} failed. Cause: ", uri, future.cause());
+        ctx.writeAndFlush(resp).addListener(ChannelFutureListener.CLOSE);
+        client.close();
       }
     });
   }

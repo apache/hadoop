@@ -30,7 +30,6 @@ import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
@@ -78,13 +77,7 @@ public class DataNodeUGIProvider {
       // This makes it possible to access the data stored in secure DataNode
       // through insecure Namenode.
       if (UserGroupInformation.isSecurityEnabled() && token != null) {
-        ugi = ugiCache.get(buildTokenCacheKey(token),
-            new Callable<UserGroupInformation>() {
-              @Override
-              public UserGroupInformation call() throws Exception {
-                return tokenUGI(token);
-              }
-            });
+        ugi = ugiCache.get(buildTokenCacheKey(token), () -> tokenUGI(token));
       } else {
         final String usernameFromQuery = params.userName();
         final String doAsUserFromQuery = params.doAsUser();
@@ -92,15 +85,8 @@ public class DataNodeUGIProvider {
             .getDefaultWebUserName(params.conf()) // not specified in request
             : usernameFromQuery;
 
-        ugi = ugiCache.get(
-            buildNonTokenCacheKey(doAsUserFromQuery, remoteUser),
-            new Callable<UserGroupInformation>() {
-              @Override
-              public UserGroupInformation call() throws Exception {
-                return nonTokenUGI(usernameFromQuery, doAsUserFromQuery,
-                    remoteUser);
-              }
-            });
+        ugi = ugiCache.get(buildNonTokenCacheKey(doAsUserFromQuery, remoteUser),
+            () -> nonTokenUGI(usernameFromQuery, doAsUserFromQuery, remoteUser));
       }
     } catch (ExecutionException e) {
       Throwable cause = e.getCause();

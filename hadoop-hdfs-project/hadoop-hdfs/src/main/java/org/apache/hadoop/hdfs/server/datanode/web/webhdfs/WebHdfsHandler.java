@@ -130,25 +130,21 @@ public class WebHdfsHandler extends SimpleChannelInboundHandler<HttpRequest> {
     path = params.path();
 
     injectToken();
-    ugi.doAs(new PrivilegedExceptionAction<Void>() {
-      @Override
-      public Void run() throws Exception {
+    ugi.doAs((PrivilegedExceptionAction<Void>) () -> {
+      try {
+        handle(ctx, req);
+      } finally {
+        String host;
         try {
-          handle(ctx, req);
-        } finally {
-          String host = null;
-          try {
-            host = ((InetSocketAddress)ctx.channel().remoteAddress()).
-                getAddress().getHostAddress();
-          } catch (Exception e) {
-            LOG.warn("Error retrieving hostname: ", e);
-            host = "unknown";
-          }
-          REQLOG.info(host + " " + req.method() + " "  + req.uri() + " " +
-              getResponseCode());
+          host = ((InetSocketAddress) ctx.channel().remoteAddress())
+              .getAddress().getHostAddress();
+        } catch (Exception e) {
+          LOG.warn("Error retrieving hostname: ", e);
+          host = "unknown";
         }
-        return null;
+        REQLOG.info(host + " " + req.method() + " "  + req.uri() + " " + getResponseCode());
       }
+      return null;
     });
   }
 

@@ -396,7 +396,7 @@ class DataXceiverServer implements Runnable {
     lock.lock();
     try {
       // interrupt each and every DataXceiver thread.
-      peers.values().forEach(t -> t.interrupt());
+      peers.values().forEach(Thread::interrupt);
     } finally {
       lock.unlock();
     }

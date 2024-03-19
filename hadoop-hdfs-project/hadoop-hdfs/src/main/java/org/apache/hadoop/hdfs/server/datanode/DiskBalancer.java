@@ -580,17 +580,12 @@ public class DiskBalancer {
       this.scheduler = Executors.newSingleThreadExecutor();
     }
 
-    this.future = scheduler.submit(new Runnable() {
-      @Override
-      public void run() {
-        Thread.currentThread().setName("DiskBalancerThread");
-        LOG.info("Executing Disk balancer plan. Plan File: {}, Plan ID: {}",
-            planFile, planID);
-        for (Map.Entry<VolumePair, DiskBalancerWorkItem> entry :
-            workMap.entrySet()) {
-          blockMover.setRunnable();
-          blockMover.copyBlocks(entry.getKey(), entry.getValue());
-        }
+    this.future = scheduler.submit(() -> {
+      Thread.currentThread().setName("DiskBalancerThread");
+      LOG.info("Executing Disk balancer plan. Plan File: {}, Plan ID: {}", planFile, planID);
+      for (Map.Entry<VolumePair, DiskBalancerWorkItem> entry : workMap.entrySet()) {
+        blockMover.setRunnable();
+        blockMover.copyBlocks(entry.getKey(), entry.getValue());
       }
     });
   }

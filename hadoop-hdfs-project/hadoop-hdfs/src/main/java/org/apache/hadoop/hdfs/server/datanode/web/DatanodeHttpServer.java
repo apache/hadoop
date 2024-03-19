@@ -180,19 +180,15 @@ public class DatanodeHttpServer implements Closeable {
       if (externalHttpChannel == null) {
         httpServer.channel(NioServerSocketChannel.class);
       } else {
-        httpServer.channelFactory(new ChannelFactory<NioServerSocketChannel>() {
-          @Override
-          public NioServerSocketChannel newChannel() {
-            return new NioServerSocketChannel(externalHttpChannel) {
+        httpServer.channelFactory((ChannelFactory<NioServerSocketChannel>) ()
+            -> new NioServerSocketChannel(externalHttpChannel) {
               // The channel has been bounded externally via JSVC,
               // thus bind() becomes a no-op.
               @Override
-              protected void doBind(SocketAddress localAddress)
-                  throws Exception {
+              protected void doBind(SocketAddress localAddress) {
+
               }
-            };
-          }
-        });
+            });
       }
     } else {
       this.httpServer = null;

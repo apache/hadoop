@@ -614,26 +614,23 @@ public class BlockRecoveryWorker {
 
   public Daemon recoverBlocks(final String who,
       final Collection<RecoveringBlock> blocks) {
-    Daemon d = new Daemon(datanode.threadGroup, new Runnable() {
-      @Override
-      public void run() {
-        datanode.metrics.incrDataNodeBlockRecoveryWorkerCount();
-        try {
-          for (RecoveringBlock b : blocks) {
-            try {
-              logRecoverBlock(who, b);
-              if (b.isStriped()) {
-                new RecoveryTaskStriped((RecoveringStripedBlock) b).recover();
-              } else {
-                new RecoveryTaskContiguous(b).recover();
-              }
-            } catch (IOException e) {
-              LOG.warn("recover Block: {} FAILED: {}", b, e);
+    Daemon d = new Daemon(datanode.threadGroup, () -> {
+      datanode.metrics.incrDataNodeBlockRecoveryWorkerCount();
+      try {
+        for (RecoveringBlock b : blocks) {
+          try {
+            logRecoverBlock(who, b);
+            if (b.isStriped()) {
+              new RecoveryTaskStriped((RecoveringStripedBlock) b).recover();
+            } else {
+              new RecoveryTaskContiguous(b).recover();
             }
+          } catch (IOException e) {
+            LOG.warn("recover Block: {} FAILED: {}", b, e);
           }
-        } finally {
-          datanode.metrics.decrDataNodeBlockRecoveryWorkerCount();
         }
+      } finally {
+        datanode.metrics.decrDataNodeBlockRecoveryWorkerCount();
       }
     });
     d.start();
