@@ -63,14 +63,7 @@ public class AbfsHttpOperation extends HttpOperation {
 
   private HttpURLConnection connection;
 
-  private AbfsRestOperationType operationType;
-  private static final int CLEAN_UP_BUFFER_SIZE = 64 * 1024;
-
   private boolean connectionDisconnectedOnError = false;
-
-  public void setOperationType(AbfsRestOperationType operationType) {
-    this.operationType = operationType;
-  }
 
   public static AbfsHttpOperation getAbfsHttpOperationWithFixedResult(
       final URL url,
@@ -207,7 +200,7 @@ public class AbfsHttpOperation extends HttpOperation {
    *
    * @throws IOException if an error occurs.
    */
-  public void sendRequest(byte[] buffer, int offset, int length) throws IOException {
+  public void sendPayload(byte[] buffer, int offset, int length) throws IOException {
     this.connection.setDoOutput(true);
     this.connection.setFixedLengthStreamingMode(length);
     if (buffer == null) {

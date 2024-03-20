@@ -336,17 +336,10 @@ public class AbfsRestOperation {
       AbfsIoUtils.dumpHeadersToDebugLog("Request Headers",
           httpOperation.getRequestProperties());
       intercept.sendingRequest(operationType, abfsCounters);
-      if ((httpOperation instanceof AbfsHttpOperation && hasRequestBody)
-          || httpOperation instanceof AbfsAHCHttpOperation) {
-        httpOperation.sendRequest(buffer, bufferOffset, bufferLength);
-        if (hasRequestBody) {
-          incrementCounter(AbfsStatistic.SEND_REQUESTS, 1);
-          incrementCounter(AbfsStatistic.BYTES_SENT, bufferLength);
-        }
-      }
-
-      if(httpOperation instanceof AbfsHttpOperation) {
-        ((AbfsHttpOperation) httpOperation).setOperationType(operationType);
+      if (hasRequestBody) {
+        httpOperation.sendPayload(buffer, bufferOffset, bufferLength);
+        incrementCounter(AbfsStatistic.SEND_REQUESTS, 1);
+        incrementCounter(AbfsStatistic.BYTES_SENT, bufferLength);
       }
       httpOperation.processResponse(buffer, bufferOffset, bufferLength);
       incrementCounter(AbfsStatistic.GET_RESPONSES, 1);

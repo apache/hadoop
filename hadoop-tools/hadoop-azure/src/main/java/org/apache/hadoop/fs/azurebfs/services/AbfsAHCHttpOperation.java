@@ -20,6 +20,8 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -91,6 +93,8 @@ public class AbfsAHCHttpOperation extends HttpOperation {
 
   private AbfsApacheHttpExpect100Exception abfsApacheHttpExpect100Exception;
 
+  private final boolean isPayloadRequest;
+
   private void setAbfsApacheHttpClient(final AbfsConfiguration abfsConfiguration,
       final String clientId) {
     AbfsApacheHttpClient client = abfsApacheHttpClientMap.get(clientId);
@@ -122,6 +126,7 @@ public class AbfsAHCHttpOperation extends HttpOperation {
     this.url = url;
     this.method = method;
     this.requestHeaders = requestHeaders;
+    this.isPayloadRequest = isPayloadRequest(method);
   }
 
   @VisibleForTesting
@@ -141,6 +146,12 @@ public class AbfsAHCHttpOperation extends HttpOperation {
     this.url = url;
     this.requestHeaders = requestHeaders;
     setAbfsApacheHttpClient(abfsConfiguration, clientId);
+    this.isPayloadRequest = isPayloadRequest(method);
+  }
+
+  private boolean isPayloadRequest(final String method) {
+    return HTTP_METHOD_PUT.equals(method) || HTTP_METHOD_PATCH.equals(method)
+        || HTTP_METHOD_POST.equals(method);
   }
 
 
@@ -196,28 +207,17 @@ public class AbfsAHCHttpOperation extends HttpOperation {
       final int offset,
       final int length) throws IOException {
     try {
-      try {
+      if (!isPayloadRequest) {
+        prepareRequest();
         httpResponse = executeRequest();
-        sendRequestTimeMs = abfsHttpClientContext.sendTime;
-        recvResponseTimeMs = abfsHttpClientContext.readTime;
-      } catch (AbfsApacheHttpExpect100Exception ex) {
-        LOG.debug(
-            "Getting output stream failed with expect header enabled, returning back ",
-            ex);
-        connectionDisconnectedOnError = true;
-        httpResponse = ex.getHttpResponse();
-        abfsApacheHttpExpect100Exception = ex;
       }
-
       parseResponseHeaderAndBody(buffer, offset, length);
     } finally {
-      if(!connectionDisconnectedOnError && httpRequestBase instanceof  HttpEntityEnclosingRequestBase) {
-        this.bytesSent = length;
-      }
-      if(httpResponse != null) {
+      if (httpResponse != null) {
         EntityUtils.consume(httpResponse.getEntity());
       }
-      if(httpResponse != null && httpResponse instanceof CloseableHttpResponse) {
+      if (httpResponse != null
+          && httpResponse instanceof CloseableHttpResponse) {
         ((CloseableHttpResponse) httpResponse).close();
       }
     }
@@ -245,7 +245,11 @@ public class AbfsAHCHttpOperation extends HttpOperation {
   @VisibleForTesting
   HttpResponse executeRequest() throws IOException {
     abfsHttpClientContext = setFinalAbfsClientContext(method);
-    return abfsApacheHttpClient.execute(httpRequestBase, abfsHttpClientContext);
+    HttpResponse response = abfsApacheHttpClient.execute(httpRequestBase,
+        abfsHttpClientContext);
+    sendRequestTimeMs = abfsHttpClientContext.sendTime;
+    recvResponseTimeMs = abfsHttpClientContext.readTime;
+    return response;
   }
 
   private Map<String, List<String>> getResponseHeaders(final HttpResponse httpResponse) {
@@ -276,6 +280,9 @@ public class AbfsAHCHttpOperation extends HttpOperation {
 
   @Override
   public String getResponseHeader(final String headerName) {
+    if (httpResponse == null) {
+      return null;
+    }
     Header header = httpResponse.getFirstHeader(headerName);
     if(header != null) {
       return header.getValue();
@@ -296,42 +303,67 @@ public class AbfsAHCHttpOperation extends HttpOperation {
     return null;
   }
 
-  public void sendRequest(final byte[] buffer,
+  public void sendPayload(final byte[] buffer,
       final int offset,
       final int length)
       throws IOException {
+    if (!isPayloadRequest) {
+      return;
+    }
+
+    if (HTTP_METHOD_PUT.equals(method)) {
+      httpRequestBase = new HttpPut(getUri());
+    }
+    if (HTTP_METHOD_PATCH.equals(method)) {
+      httpRequestBase = new HttpPatch(getUri());
+    }
+    if (HTTP_METHOD_POST.equals(method)) {
+      httpRequestBase = new HttpPost(getUri());
+    }
+
+    this.expectedBytesToBeSent = length;
+    if (buffer != null) {
+      HttpEntity httpEntity = new ByteArrayEntity(buffer, offset, length,
+          TEXT_PLAIN);
+      ((HttpEntityEnclosingRequestBase) httpRequestBase).setEntity(
+          httpEntity);
+    }
+
+    translateHeaders(httpRequestBase, requestHeaders);
     try {
-      HttpRequestBase httpRequestBase = null;
-      if (HTTP_METHOD_PUT.equals(method)) {
-        httpRequestBase = new HttpPut(url.toURI());
+      httpResponse = executeRequest();
+    } catch (AbfsApacheHttpExpect100Exception ex) {
+      LOG.debug(
+          "Getting output stream failed with expect header enabled, returning back ",
+          ex);
+      connectionDisconnectedOnError = true;
+      httpResponse = ex.getHttpResponse();
+      abfsApacheHttpExpect100Exception = ex;
+    } finally {
+      if (!connectionDisconnectedOnError
+          && httpRequestBase instanceof HttpEntityEnclosingRequestBase) {
+        this.bytesSent = length;
       }
-      if(HTTP_METHOD_PATCH.equals(method)) {
-        httpRequestBase = new HttpPatch(url.toURI());
-      }
-      if(HTTP_METHOD_POST.equals(method)) {
-        httpRequestBase = new HttpPost(url.toURI());
-      }
-      if(httpRequestBase != null) {
-        this.expectedBytesToBeSent = length;
-        if(buffer != null) {
-          HttpEntity httpEntity = new ByteArrayEntity(buffer, offset, length,
-              TEXT_PLAIN);
-          ((HttpEntityEnclosingRequestBase)httpRequestBase).setEntity(httpEntity);
-        }
-      } else {
-        if(HTTP_METHOD_GET.equals(method)) {
-          httpRequestBase = new HttpGet(url.toURI());
-        }
-        if(HTTP_METHOD_DELETE.equals(method)) {
-          httpRequestBase = new HttpDelete((url.toURI()));
-        }
-        if(HTTP_METHOD_HEAD.equals(method)) {
-          httpRequestBase = new HttpHead(url.toURI());
-        }
-      }
-      translateHeaders(httpRequestBase, requestHeaders);
-      this.httpRequestBase = httpRequestBase;
-    } catch (Exception e) {
+    }
+  }
+
+  private void prepareRequest() throws IOException {
+    if (HTTP_METHOD_GET.equals(method)) {
+      httpRequestBase = new HttpGet(getUri());
+    }
+    if (HTTP_METHOD_DELETE.equals(method)) {
+      httpRequestBase = new HttpDelete(getUri());
+    }
+    if (HTTP_METHOD_HEAD.equals(method)) {
+      httpRequestBase = new HttpHead(getUri());
+    }
+    translateHeaders(httpRequestBase, requestHeaders);
+  }
+
+  private URI getUri() throws IOException {
+    try {
+      return url.toURI();
+    } catch (URISyntaxException e) {
       throw new IOException(e);
     }
   }

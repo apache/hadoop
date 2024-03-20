@@ -222,14 +222,14 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
       final int offset = answer.getArgument(1);
       final int length = answer.getArgument(2);
       normalRestOp.signRequest(normalOp, length);
-      normalOp.sendRequest(buffer, offset, length);
+      normalOp.sendPayload(buffer, offset, length);
       normalOp.processResponse(buffer, offset, length);
       LOG.info("Actual outcome is {} \"{}\" \"{}\"; injecting failure",
           normalOp.getStatusCode(),
           normalOp.getStorageErrorCode(),
           normalOp.getStorageErrorMessage());
       throw new SocketException("connection-reset");
-    }).when(failingOperation).sendRequest(Mockito.nullable(byte[].class),
+    }).when(failingOperation).sendPayload(Mockito.nullable(byte[].class),
         Mockito.nullable(int.class), Mockito.nullable(int.class));
 
   }

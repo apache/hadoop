@@ -213,7 +213,7 @@ public abstract class HttpOperation implements AbfsPerfLoggable {
     return maskedEncodedUrl;
   }
 
-  public abstract  void sendRequest(byte[] buffer, int offset, int length) throws
+  public abstract  void sendPayload(byte[] buffer, int offset, int length) throws
       IOException;
   public abstract  void processResponse(final byte[] buffer, final int offset, final int length) throws IOException;
 
