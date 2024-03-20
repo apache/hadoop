@@ -24,11 +24,8 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.Stack;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,7 +37,6 @@ import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsApacheHttpExpect100Exception;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.http.Header;
-import org.apache.http.HttpClientConnection;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -87,7 +83,7 @@ public class AbfsAHCHttpOperation extends HttpOperation {
 
   private HttpResponse httpResponse;
 
-  private AbfsApacheHttpClient.AbfsHttpClientContext abfsHttpClientContext;
+  private AbfsManagedHttpContext abfsHttpClientContext;
 
   private final AbfsRestOperationType abfsRestOperationType;
 
@@ -129,15 +125,9 @@ public class AbfsAHCHttpOperation extends HttpOperation {
   }
 
   @VisibleForTesting
-  AbfsApacheHttpClient.AbfsHttpClientContext setFinalAbfsClientContext(
+  AbfsManagedHttpContext setFinalAbfsClientContext(
       final String method) {
-    final AbfsApacheHttpClient.AbfsHttpClientContext abfsHttpClientContext;
-    if(HTTP_METHOD_GET.equals(method)) {
-      abfsHttpClientContext = new AbfsApacheHttpClient.AbfsHttpClientContext(true, abfsRestOperationType);
-    } else {
-      abfsHttpClientContext = new AbfsApacheHttpClient.AbfsHttpClientContext(false, abfsRestOperationType);
-    }
-    return abfsHttpClientContext;
+    return new AbfsManagedHttpContext(abfsRestOperationType);
   }
 
   public AbfsAHCHttpOperation(final URL url,

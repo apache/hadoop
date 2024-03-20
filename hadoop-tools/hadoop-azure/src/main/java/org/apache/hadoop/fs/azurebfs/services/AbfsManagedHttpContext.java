@@ -18,26 +18,38 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
-import javax.net.ssl.SSLSession;
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.Socket;
+import org.apache.http.HttpClientConnection;
+import org.apache.http.client.protocol.HttpClientContext;
 
-import org.apache.http.HttpConnectionMetrics;
-import org.apache.http.HttpEntityEnclosingRequest;
-import org.apache.http.HttpException;
-import org.apache.http.HttpRequest;
-import org.apache.http.HttpResponse;
-import org.apache.http.config.ConnectionConfig;
-import org.apache.http.conn.ManagedHttpClientConnection;
-import org.apache.http.conn.routing.HttpRoute;
-import org.apache.http.impl.conn.ManagedHttpClientConnectionFactory;
+public class AbfsManagedHttpContext extends HttpClientContext {
 
-public class AbfsConnFactory extends ManagedHttpClientConnectionFactory {
+  Long connectTime;
 
-  @Override
-  public ManagedHttpClientConnection create(final HttpRoute route,
-      final ConnectionConfig config) {
-    return new AbfsManagedApacheHttpConnection(super.create(route, config), route);
+  long readTime;
+
+  long sendTime;
+
+  HttpClientConnection httpClientConnection;
+
+  long expect100HeaderSendTime = 0L;
+
+  long expect100ResponseTime;
+
+  long keepAliveTime;
+
+  Boolean isBeingRead = false;
+
+  final AbfsRestOperationType abfsRestOperationType;
+
+  public AbfsManagedHttpContext(AbfsRestOperationType operationType) {
+    this.abfsRestOperationType = operationType;
+  }
+
+  /**
+   * This to be used only in tests to get connection level activity.
+   */
+  protected HttpClientConnection interceptConnectionActivity(
+      HttpClientConnection httpClientConnection) {
+    return httpClientConnection;
   }
 }

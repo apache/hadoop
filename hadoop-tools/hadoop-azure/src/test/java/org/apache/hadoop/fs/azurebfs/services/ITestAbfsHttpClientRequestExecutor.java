@@ -77,8 +77,8 @@ public class ITestAbfsHttpClientRequestExecutor extends
         AbfsAHCHttpOperation httpOperation = Mockito.spy(
             (AbfsAHCHttpOperation) httpOpCreationAnswer.callRealMethod());
         Mockito.doAnswer(createContextAnswer -> {
-              AbfsApacheHttpClient.AbfsHttpClientContext context = Mockito.spy(
-                  (AbfsApacheHttpClient.AbfsHttpClientContext) createContextAnswer.callRealMethod());
+              AbfsManagedHttpContext context = Mockito.spy(
+                  (AbfsManagedHttpContext) createContextAnswer.callRealMethod());
               Mockito.doAnswer(connectionSpyIntercept -> {
                 return interceptedConn(invocation[0], sendHeadersInvocation,
                     sendBodyInvocation, receiveResponseInvocation,
