@@ -55,10 +55,10 @@ public class HardLink {
   
   public final LinkStats linkStats; //not static
 
-  static final Logger Log = LoggerFactory.getLogger(HardLink.class);
+  static final Logger LOG = LoggerFactory.getLogger(HardLink.class);
 
-  private static final String FileAttributeView = "unix";
-  private static final String FileAttribute = "unix:nlink";
+  private static final String FILE_ATTRIBUTE_VIEW = "unix";
+  private static final String FILE_ATTRIBUTE = "unix:nlink";
   
   //initialize the command "getters" statically, so can use their 
   //methods without instantiating the HardLink object
@@ -221,9 +221,9 @@ public class HardLink {
   public static boolean supportsHardLink(File f) {
     try {
       FileStore store = Files.getFileStore(f.toPath());
-      return store.supportsFileAttributeView(FileAttributeView);
+      return store.supportsFileAttributeView(FILE_ATTRIBUTE_VIEW);
     } catch (IOException e) {
-      Log.warn("Failed to determine if hardlink is supported", e);
+      LOG.warn("Failed to determine if hardlink is supported", e);
       return false;
     }
   }
@@ -245,7 +245,7 @@ public class HardLink {
     }
 
     if (supportsHardLink(fileName)) {
-      return (int) Files.getAttribute(fileName.toPath(), FileAttribute);
+      return (int) Files.getAttribute(fileName.toPath(), FILE_ATTRIBUTE);
     }
 
     // construct and execute shell command
