@@ -19,7 +19,11 @@
 package org.apache.hadoop.fs.s3a;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Map;
+import java.util.Optional;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -36,11 +40,14 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.EncryptionTestUtils.AWS_KMS_SSE_ALGORITHM;
+import static org.apache.hadoop.fs.s3a.EncryptionTestUtils.validateEncryptionFileAttributes;
 import static org.apache.hadoop.fs.s3a.S3AEncryptionMethods.SSE_KMS;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfEncryptionNotSet;
 import static org.apache.hadoop.fs.s3a.S3AUtils.getS3EncryptionKey;
+import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.XA_ENCRYPTION_KEY_ID;
+import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.XA_SERVER_SIDE_ENCRYPTION;
 
 /**
  * Concrete class that extends {@link AbstractTestS3AEncryption}
@@ -96,6 +103,21 @@ public class ITestS3AEncryptionWithDefaultS3Settings extends
     String kmsKey = getS3EncryptionKey(getTestBucketName(c), c);
     EncryptionTestUtils.assertEncrypted(fs, path, SSE_KMS, kmsKey);
   }
+
+  @Test
+  public void testEncryptionFileAttributes() throws Exception {
+    Path path = path(createFilename(1024));
+    byte[] data = dataset(1024, 'a', 'z');
+    S3AFileSystem fs = getFileSystem();
+    writeDataset(fs, path, data, data.length, 1024 * 1024, true);
+    ContractTestUtils.verifyFileContents(fs, path, data);
+    Configuration c = fs.getConf();
+    String kmsKey = getS3EncryptionKey(getTestBucketName(c), c);
+    validateEncryptionFileAttributes(fs, path, AWS_KMS_SSE_ALGORITHM, Optional.of(kmsKey));
+  }
+
+
+
 
   @Override
   @Ignore
