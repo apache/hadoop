@@ -21,23 +21,18 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.mockito.Mockito;
-import org.mockito.stubbing.Answer;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
-import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsTestWithTimeout;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES;
 import static org.apache.hadoop.fs.azurebfs.services.HttpOperationType.APACHE_HTTP_CLIENT;
-import static org.apache.hadoop.fs.azurebfs.services.HttpOperationType.JDK_HTTP_URL_CONNECTION;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 
@@ -55,12 +50,16 @@ public class TestApacheHttpClientFallback extends AbstractAbfsTestWithTimeout {
         .when(tc)
         .constructHeader(Mockito.any(HttpOperation.class),
             Mockito.nullable(String.class), Mockito.nullable(String.class));
+    int[] retryIteration = {0};
     intercept(IOException.class, () -> {
-      getMockRestOperation().execute(tc);
+      getMockRestOperation(retryIteration).execute(tc);
+    });
+    intercept(IOException.class, () -> {
+      getMockRestOperation(retryIteration).execute(tc);
     });
   }
 
-  private AbfsRestOperation getMockRestOperation() throws IOException {
+  private AbfsRestOperation getMockRestOperation(int[] retryIteration) throws IOException {
     AbfsConfiguration configuration = Mockito.mock(AbfsConfiguration.class);
     Mockito.doReturn(APACHE_HTTP_CLIENT)
         .when(configuration)
@@ -78,7 +77,6 @@ public class TestApacheHttpClientFallback extends AbstractAbfsTestWithTimeout {
         .when(client)
         .getRetryPolicy(Mockito.nullable(String.class));
 
-    int[] retryIteration = {0};
     Mockito.doAnswer(answer -> {
           if (retryIteration[0]
               < DEFAULT_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES) {
