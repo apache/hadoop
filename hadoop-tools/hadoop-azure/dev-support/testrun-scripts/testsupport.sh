@@ -21,8 +21,13 @@ combtestfile=$resourceDir
 combtestfile+=abfs-combination-test-configs.xml
 logdir=dev-support/testlogs/
 
-testresultsregex="Results:(\n|.)*?Tests run:"
+testresultsregex="Tests run: [0-9]+, Failures: [0-9]+, Errors: [0-9]+, Skipped: [0-9]+$"
+failedTestRegex1="<<< FAILURE!$"
+failedTestRegex2="<<< ERROR!$"
+removeFormattingRegex="s/\x1b\[[0-9;]*m//g"
 accountConfigFileSuffix="_settings.xml"
+separatorbar1="============================================================"
+separatorbar2="------------------------------"
 testOutputLogFolder=$logdir
 testlogfilename=combinationTestLogFile
 
@@ -59,6 +64,10 @@ ENDOFFILE
     logOutput "Exiting. Number of properties and values differ for $combination"
     exit 1
   fi
+  echo "$separatorbar1"
+  echo "$combination"
+  echo "$separatorbar1"
+
   for ((i = 0; i < propertiessize; i++)); do
     key=${PROPERTIES[$i]}
     val=${VALUES[$i]}
@@ -81,6 +90,8 @@ ENDOFFILE
     echo "Running test for combination $combination on account $accountName [ProcessCount=$processcount]"
     logOutput "Test run report can be seen in $testlogfilename"
     mvn -T 1C -Dparallel-tests=abfs -Dscale -DtestsThreadCount="$processcount" verify >> "$testlogfilename" || true
+    # Remove the formatting used by mvn output for better regex matching.
+    sed -i $removeFormattingRegex $testlogfilename
     ENDTIME=$(date +%s)
     summary
   fi
@@ -102,19 +113,37 @@ ENDOFFILE
 summary() {
   {
     echo ""
+    echo "$separatorbar1"
     echo "$combination"
-    echo "========================"
-    pcregrep -M "$testresultsregex" "$testlogfilename"
+    echo "$separatorbar1"
+    summarycontent
   } >> "$aggregatedTestResult"
   printf "\n----- Test results -----\n"
-  pcregrep -M "$testresultsregex" "$testlogfilename"
+  summarycontent
   secondstaken=$((ENDTIME - STARTTIME))
   mins=$((secondstaken / 60))
   secs=$((secondstaken % 60))
   printf "\nTime taken: %s mins %s secs.\n" "$mins" "$secs"
-  echo "Find test result for the combination ($combination) in: $testlogfilename"
+  logOutput "For Error details refer to Test run report in: $testlogfilename"
   logOutput "Consolidated test result is saved in: $aggregatedTestResult"
-  echo "------------------------"
+  echo "$separatorbar2"
+}
+
+summarycontent() {
+  output=$(pcregrep -M "$failedTestRegex1" "$testlogfilename" || true)
+  if [ -n "$output" ]; then
+    echo "$output"
+  fi
+  output=$(pcregrep -M "$failedTestRegex2" "$testlogfilename" || true)
+  if [ -n "$output" ]; then
+    echo ""
+    echo "$output"
+  fi
+  output=$(pcregrep -M "$testresultsregex" "$testlogfilename" || true)
+  if [ -n "$output" ]; then
+    echo ""
+    echo "$output"
+  fi
 }
 
 checkdependencies() {
@@ -170,3 +199,5 @@ init() {
 logOutput() {
   echo -e "$outputFormatOn" "$1" "$outputFormatOff"
 }
+
+
