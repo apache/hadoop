@@ -1489,7 +1489,7 @@ class BPServiceActor implements Runnable {
     void enqueue(DatanodeCommand[] cmds) throws InterruptedException {
       if (cmds.length != 0) {
         queue.put(() -> processCommand(cmds));
-        dn.getMetrics().incrActorCmdQueueLength(1); 
+        dn.getMetrics().incrActorCmdQueueLength(1);
       }
     }
   }
