@@ -4606,8 +4606,28 @@
   <value>3000</value>
   <description>
     Base time window in ms for DFSClient retries.  For each retry attempt,
-    this value is extended linearly (e.g. 3000 ms for first attempt and
-    first retry, 6000 ms for second retry, 9000 ms for third retry, etc.).
+    this value is extended exponentially based on dfs.client.retry.window.multiplier.
+  </description>
+</property>
+
+<property>
+  <name>dfs.client.retry.window.multiplier</name>
+  <value>1</value>
+  <description>
+    Multiplier for extending the retry time window.  For each retry attempt,
+    the retry time window is extended by multiplying dfs.client.retry.window.base
+    by this multiplier raised to the power of the current failure count. The default
+    value of 1 means the window will expand linearly (e.g. 3000 ms for first attempt
+    and first retry, 6000 ms for second retry, 9000 ms for third retry, etc.).
+  </description>
+</property>
+
+<property>
+  <name>dfs.client.retry.window.max</name>
+  <value>30000</value>
+  <description>
+    Maximum value that the retry window can be expanded to. Once the maximum has been reached,
+    the retry window will be a constant value until the maximum retries are exhausted.
   </description>
 </property>
 

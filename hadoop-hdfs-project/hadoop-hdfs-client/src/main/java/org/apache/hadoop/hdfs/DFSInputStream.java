@@ -41,7 +41,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.Future;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -63,6 +62,7 @@ import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.hdfs.DFSUtilClient.CorruptedBlocks;
 import org.apache.hadoop.hdfs.client.impl.BlockReaderFactory;
 import org.apache.hadoop.hdfs.client.impl.DfsClientConf;
+import org.apache.hadoop.hdfs.client.impl.DfsClientConf.FetchBlockLocationsRetryer;
 import org.apache.hadoop.hdfs.protocol.BlockType;
 import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -1003,10 +1003,12 @@ public class DFSInputStream extends FSInputStream
    */
   private LocatedBlock refetchLocations(LocatedBlock block,
       Collection<DatanodeInfo> ignoredNodes) throws IOException {
+    FetchBlockLocationsRetryer retryer = dfsClient.getConf().getFetchBlockLocationsRetryer();
+
     String errMsg = getBestNodeDNAddrPairErrorString(block.getLocations(),
             dfsClient.getDeadNodes(this), ignoredNodes);
     String blockInfo = block.getBlock() + " file=" + src;
-    if (failures >= dfsClient.getConf().getMaxBlockAcquireFailures()) {
+    if (retryer.isMaxFailuresExceeded(failures)) {
       String description = "Could not obtain block: " + blockInfo;
       DFSClient.LOG.warn(description + errMsg
           + ". Throwing a BlockMissingException");
@@ -1022,21 +1024,7 @@ public class DFSInputStream extends FSInputStream
         + " from any node: " + errMsg
         + ". Will get new block locations from namenode and retry...");
     try {
-      // Introducing a random factor to the wait time before another retry.
-      // The wait time is dependent on # of failures and a random factor.
-      // At the first time of getting a BlockMissingException, the wait time
-      // is a random number between 0..3000 ms. If the first retry
-      // still fails, we will wait 3000 ms grace period before the 2nd retry.
-      // Also at the second retry, the waiting window is expanded to 6000 ms
-      // alleviating the request rate from the server. Similarly the 3rd retry
-      // will wait 6000ms grace period before retry and the waiting window is
-      // expanded to 9000ms.
-      final int timeWindow = dfsClient.getConf().getTimeWindow();
-      // grace period for the last round of attempt
-      double waitTime = timeWindow * failures +
-          // expanding time window for each failure
-          timeWindow * (failures + 1) *
-          ThreadLocalRandom.current().nextDouble();
+      double waitTime = retryer.getWaitTime(failures);
       DFSClient.LOG.warn("DFS chooseDataNode: got # " + (failures + 1) +
           " IOException, will wait for " + waitTime + " msec.");
       Thread.sleep((long)waitTime);

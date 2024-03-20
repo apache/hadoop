@@ -1773,6 +1773,18 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   @Deprecated
   public static final int     DFS_CLIENT_RETRY_WINDOW_BASE_DEFAULT
       = HdfsClientConfigKeys.Retry.WINDOW_BASE_DEFAULT;
+  @Deprecated
+  public static final String  DFS_CLIENT_RETRY_WINDOW_MULTIPLIER
+      = HdfsClientConfigKeys.Retry.WINDOW_MULTIPLIER_KEY;
+  @Deprecated
+  public static final int     DFS_CLIENT_RETRY_WINDOW_MULTIPLIER_DEFAULT
+      = HdfsClientConfigKeys.Retry.WINDOW_MULTIPLIER_DEFAULT;
+  @Deprecated
+  public static final String  DFS_CLIENT_RETRY_WINDOW_MAXIMUM
+      = HdfsClientConfigKeys.Retry.WINDOW_MAXIMUM_KEY;
+  @Deprecated
+  public static final int     DFS_CLIENT_RETRY_WINDOW_MAXIMUM_DEFAULT
+      = HdfsClientConfigKeys.Retry.WINDOW_MAXIMUM_DEFAULT;
 
   // dfs.client.failover confs are moved to HdfsClientConfigKeys.Failover 
   @Deprecated

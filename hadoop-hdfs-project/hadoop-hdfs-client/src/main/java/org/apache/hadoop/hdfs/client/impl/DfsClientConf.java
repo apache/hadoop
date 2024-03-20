@@ -37,6 +37,7 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.BlockWrite;
@@ -114,7 +115,7 @@ public class DfsClientConf {
   private final int maxPipelineRecoveryRetries;
   private final int failoverSleepBaseMillis;
   private final int failoverSleepMaxMillis;
-  private final int maxBlockAcquireFailures;
+  private final FetchBlockLocationsRetryer fetchBlockLocationsRetryer;
   private final int datanodeSocketWriteTimeout;
   private final int ioBufferSize;
   private final ChecksumOpt defaultChecksumOpt;
@@ -126,8 +127,6 @@ public class DfsClientConf {
   private final int socketTimeout;
   private final int socketSendBufferSize;
   private final long excludedNodesCacheExpiry;
-  /** Wait time window (in msec) if BlockMissingException is caught. */
-  private final int timeWindow;
   private final int numCachedConnRetry;
   private final int numBlockWriteRetry;
   private final int numBlockWriteLocateFollowingRetry;
@@ -174,9 +173,6 @@ public class DfsClientConf {
     maxRetryAttempts = conf.getInt(
         Retry.MAX_ATTEMPTS_KEY,
         Retry.MAX_ATTEMPTS_DEFAULT);
-    timeWindow = conf.getInt(
-        Retry.WINDOW_BASE_KEY,
-        Retry.WINDOW_BASE_DEFAULT);
     retryTimesForGetLastBlockLength = conf.getInt(
         Retry.TIMES_GET_LAST_BLOCK_LENGTH_KEY,
         Retry.TIMES_GET_LAST_BLOCK_LENGTH_DEFAULT);
@@ -194,9 +190,8 @@ public class DfsClientConf {
         Failover.SLEEPTIME_MAX_KEY,
         Failover.SLEEPTIME_MAX_DEFAULT);
 
-    maxBlockAcquireFailures = conf.getInt(
-        DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_KEY,
-        DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_DEFAULT);
+    fetchBlockLocationsRetryer = new FetchBlockLocationsRetryer(conf);
+
     datanodeSocketWriteTimeout = conf.getInt(
         DFS_DATANODE_SOCKET_WRITE_TIMEOUT_KEY,
         HdfsConstants.WRITE_TIMEOUT);
@@ -460,13 +455,6 @@ public class DfsClientConf {
   }
 
   /**
-   * @return the maxBlockAcquireFailures
-   */
-  public int getMaxBlockAcquireFailures() {
-    return maxBlockAcquireFailures;
-  }
-
-  /**
    * @return the datanodeSocketWriteTimeout
    */
   public int getDatanodeSocketWriteTimeout() {
@@ -551,10 +539,11 @@ public class DfsClientConf {
   }
 
   /**
-   * @return the timeWindow
+   *
+   * @return the fetchBlockLocationsRetryer
    */
-  public int getTimeWindow() {
-    return timeWindow;
+  public FetchBlockLocationsRetryer getFetchBlockLocationsRetryer() {
+    return fetchBlockLocationsRetryer;
   }
 
   /**
@@ -1015,6 +1004,100 @@ public class DfsClientConf {
           + keyProviderCacheExpiryMs
           + ", domainSocketDisableIntervalSeconds = "
           + domainSocketDisableIntervalSeconds;
+    }
+  }
+
+  /**
+   * Handles calculating the wait time when BlockMissingException is caught.
+   */
+  public static class FetchBlockLocationsRetryer {
+    private final int maxBlockAcquireFailures;
+    private final int timeWindowBase;
+    private final int timeWindowMultiplier;
+    private final int timeWindowMax;
+    private final boolean enableRandom;
+
+    public FetchBlockLocationsRetryer(Configuration conf) {
+      this(conf, true);
+    }
+
+    /**
+     * It helps for testing to be able to disable the random factor. It should remain
+     * enabled for non-test use
+     */
+    @VisibleForTesting
+    FetchBlockLocationsRetryer(Configuration conf, boolean enableRandom) {
+      maxBlockAcquireFailures = conf.getInt(
+          DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_KEY,
+          DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_DEFAULT);
+      timeWindowBase = conf.getInt(
+          Retry.WINDOW_BASE_KEY,
+          Retry.WINDOW_BASE_DEFAULT);
+      timeWindowMultiplier = conf.getInt(
+          Retry.WINDOW_MULTIPLIER_KEY,
+          Retry.WINDOW_MULTIPLIER_DEFAULT);
+      timeWindowMax = conf.getInt(
+          Retry.WINDOW_MAXIMUM_KEY,
+          Retry.WINDOW_MAXIMUM_DEFAULT
+      );
+      this.enableRandom = enableRandom;
+    }
+
+    /**
+     * For tests, exposes the maximum allowed failures.
+     */
+    @VisibleForTesting
+    public int getMaxBlockAcquireFailures() {
+      return maxBlockAcquireFailures;
+    }
+
+    /**
+     * Returns whether the passed number of failures is greater or equal to the maximum
+     * allowed failures.
+     */
+    public boolean isMaxFailuresExceeded(int numFailures) {
+      return numFailures >= maxBlockAcquireFailures;
+    }
+
+    /**
+     * The wait time is calculated using a grace period, a time window, and a
+     * random factor applied to that time window. With each subsequent failure,
+     * the grace period expands to the maximum value of the previous time window,
+     * and the time window upper limit expands by a constant exponential multiplier.
+     * The first retry has a grace period of 0ms.
+     *
+     * With default settings, the first failure will result in a wait time of a
+     * random number between 0 and 3000ms. The second failure will have a grace
+     * period of 3000ms, and an additional wait time of a random number between 0 and
+     * 6000ms. Subsequent failures will expand to 6000ms grace period and 0 - 9000ms,
+     * then 9000ms grace and 0 - 12000ms, etc.
+     *
+     * This behavior can be made more and less aggressive by configuring the base
+     * value (default 3000ms) and constant exponential multiplier (default 1). For
+     * example, a base of 10 and multiplier 5 could result in one very fast retry that
+     * quickly backs off in case of multiple failures. This may be useful for low
+     * latency applications. One downside with high multipliers is how quickly the
+     * backoff can get to very high numbers. One can further customize this by setting
+     * a maximum window size to cap.
+     */
+    public double getWaitTime(int numFailures) {
+      double gracePeriod = backoff(numFailures);
+      double waitTimeWithRandomFactor = backoff(numFailures + 1) * getRandomFactor();
+
+      return gracePeriod + waitTimeWithRandomFactor;
+    }
+
+    private double backoff(int failures) {
+      double window = timeWindowBase * Math.pow(timeWindowMultiplier, failures) * failures;
+      return Math.min(window, timeWindowMax);
+    }
+
+    private double getRandomFactor() {
+      if (enableRandom) {
+        return ThreadLocalRandom.current().nextDouble();
+      } else {
+        return 1;
+      }
     }
   }
 }
