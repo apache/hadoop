@@ -19,14 +19,9 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
-import java.util.Stack;
 
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsApacheHttpExpect100Exception;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
-import org.apache.http.HttpClientConnection;
-import org.apache.http.HttpException;
-import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpRequestBase;
@@ -38,17 +33,10 @@ import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
-import org.apache.http.protocol.HttpContext;
-import org.apache.http.protocol.HttpRequestExecutor;
 
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EXPECT_100_JDK_ERROR;
-import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.EXPECT;
 import static org.apache.http.conn.ssl.SSLConnectionSocketFactory.getDefaultHostnameVerifier;
 
-
 public class AbfsApacheHttpClient {
-  public static final Stack<Integer> connectionReuseCount = new Stack<>();
-  public static final Stack<Integer> kacSizeStack = new Stack<>();
 
   public void close() throws IOException {
     if(httpClient != null) {
@@ -58,14 +46,12 @@ public class AbfsApacheHttpClient {
 
   final CloseableHttpClient httpClient;
 
-  private final AbfsConnectionManager connMgr;
-
   private final AbfsConfiguration abfsConfiguration;
 
   public AbfsApacheHttpClient(DelegatingSSLSocketFactory delegatingSSLSocketFactory,
       final AbfsConfiguration abfsConfiguration) {
     this.abfsConfiguration = abfsConfiguration;
-    connMgr = new AbfsConnectionManager(createSocketFactoryRegistry(
+    final AbfsConnectionManager connMgr = new AbfsConnectionManager(createSocketFactoryRegistry(
         new SSLConnectionSocketFactory(delegatingSSLSocketFactory, getDefaultHostnameVerifier())),
         new org.apache.hadoop.fs.azurebfs.services.AbfsConnFactory());
     final HttpClientBuilder builder = HttpClients.custom();

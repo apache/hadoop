@@ -31,6 +31,23 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DEFAULT_
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_MAX_CONN_SYS_PROP;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.KAC_CONN_TTL;
 
+/**
+ * Connection-pooling heuristics adapted from JDK's connection pooling
+ * {@link sun.net.www.http.KeepAliveCache}.
+ * <p>
+ * Why this implementation is required in comparison to {@link org.apache.http.impl.conn.PoolingHttpClientConnectionManager}
+ * connection-pooling:
+ * <ol>
+ * <li>PoolingHttpClientConnectionManager heuristic caches all the reusable connections it has created.
+ * JDK's implementation only caches limited number of connections. The limit is given by JVM system
+ * property "http.maxConnections". If there is no system-property, it defaults to 5.</li>
+ * <li>In PoolingHttpClientConnectionManager, it expects the application to provide `setMaxPerRoute` and `setMaxTotal`,
+ * which the implementation uses as the total number of connections it can create. For application using ABFS, it is not
+ * feasible to provide a value in the initialisation of the connectionManager. JDK's implementation has no cap on the
+ * number of connections it can create.</li>
+ * </ol>
+ * </p>
+ */
 public class KeepAliveCache extends HashMap<KeepAliveCache.KeepAliveKey, KeepAliveCache.ClientVector>
     implements Runnable{
 

@@ -31,6 +31,10 @@ import org.apache.http.HttpResponse;
 import org.apache.http.conn.ManagedHttpClientConnection;
 import org.apache.http.conn.routing.HttpRoute;
 
+/**
+ * This class wraps the {@link ManagedHttpClientConnection} and provides
+ * insights onto the connection level activity.
+ */
 public class AbfsManagedApacheHttpConnection
     implements ManagedHttpClientConnection {
 

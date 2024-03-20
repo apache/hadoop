@@ -18,21 +18,16 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
-import javax.net.ssl.SSLSession;
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.Socket;
-
-import org.apache.http.HttpConnectionMetrics;
-import org.apache.http.HttpEntityEnclosingRequest;
-import org.apache.http.HttpException;
-import org.apache.http.HttpRequest;
-import org.apache.http.HttpResponse;
 import org.apache.http.config.ConnectionConfig;
 import org.apache.http.conn.ManagedHttpClientConnection;
 import org.apache.http.conn.routing.HttpRoute;
 import org.apache.http.impl.conn.ManagedHttpClientConnectionFactory;
 
+/**
+ * Custom implementation of {@link ManagedHttpClientConnectionFactory} and overrides
+ * {@link ManagedHttpClientConnectionFactory#create(HttpRoute, ConnectionConfig)} to return
+ * {@link AbfsManagedApacheHttpConnection}.
+ */
 public class AbfsConnFactory extends ManagedHttpClientConnectionFactory {
 
   @Override

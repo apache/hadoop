@@ -19,8 +19,6 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
@@ -39,20 +37,21 @@ import org.apache.http.impl.conn.ManagedHttpClientConnectionFactory;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.util.Asserts;
 
+/**
+ * AbfsConnectionManager is a custom implementation of {@link HttpClientConnectionManager}.
+ * This implementation manages connection-pooling heuristics and custom implementation
+ * of {@link ManagedHttpClientConnectionFactory}.
+ */
 public class AbfsConnectionManager implements HttpClientConnectionManager {
 
   KeepAliveCache kac = KeepAliveCache.INSTANCE;
 
-  private final ManagedHttpClientConnectionFactory
-      httpConnectionFactory;
+  private final AbfsConnFactory httpConnectionFactory;
 
   private final HttpClientConnectionOperator connectionOperator;
 
-
-  private final Map<HttpClientConnection, HttpRoute> map = new HashMap<>();
-
   public AbfsConnectionManager(Registry<ConnectionSocketFactory> socketFactoryRegistry,
-      ManagedHttpClientConnectionFactory connectionFactory) {
+      AbfsConnFactory connectionFactory) {
     this.httpConnectionFactory = connectionFactory;
     connectionOperator = new DefaultHttpClientConnectionOperator(
         socketFactoryRegistry, null, null);
@@ -85,6 +84,15 @@ public class AbfsConnectionManager implements HttpClientConnectionManager {
     };
   }
 
+  /**
+   * Releases a connection for reuse. It can be reused only if validDuration is greater than 0.
+   * This method is called by {@link org.apache.http.impl.execchain.ConnectionHolder}, which on
+   * if want to reuse the connection, it will send a non-zero validDuration.
+   * @param conn the connection to release
+   * @param newState the new state of the connection
+   * @param validDuration the duration for which the connection is valid
+   * @param timeUnit the time unit for the validDuration
+   */
   @Override
   public void releaseConnection(final HttpClientConnection conn,
       final Object newState,
