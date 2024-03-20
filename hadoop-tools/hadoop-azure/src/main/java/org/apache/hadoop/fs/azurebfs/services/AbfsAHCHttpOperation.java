@@ -87,7 +87,7 @@ public class AbfsAHCHttpOperation extends HttpOperation {
 
   private HttpResponse httpResponse;
 
-  private final AbfsApacheHttpClient.AbfsHttpClientContext abfsHttpClientContext;
+  private AbfsApacheHttpClient.AbfsHttpClientContext abfsHttpClientContext;
 
   private final AbfsRestOperationType abfsRestOperationType;
 
@@ -126,10 +126,10 @@ public class AbfsAHCHttpOperation extends HttpOperation {
     this.url = url;
     this.method = method;
     this.requestHeaders = requestHeaders;
-    abfsHttpClientContext = setFinalAbfsClientContext(method);
   }
 
-  private AbfsApacheHttpClient.AbfsHttpClientContext setFinalAbfsClientContext(
+  @VisibleForTesting
+  AbfsApacheHttpClient.AbfsHttpClientContext setFinalAbfsClientContext(
       final String method) {
     final AbfsApacheHttpClient.AbfsHttpClientContext abfsHttpClientContext;
     if(HTTP_METHOD_GET.equals(method)) {
@@ -151,7 +151,6 @@ public class AbfsAHCHttpOperation extends HttpOperation {
     this.url = url;
     this.requestHeaders = requestHeaders;
     setAbfsApacheHttpClient(abfsConfiguration, clientId);
-    abfsHttpClientContext = setFinalAbfsClientContext(method);
   }
 
 
@@ -255,6 +254,7 @@ public class AbfsAHCHttpOperation extends HttpOperation {
 
   @VisibleForTesting
   HttpResponse executeRequest() throws IOException {
+    abfsHttpClientContext = setFinalAbfsClientContext(method);
     return abfsApacheHttpClient.execute(httpRequestBase, abfsHttpClientContext);
   }
 

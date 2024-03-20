@@ -645,7 +645,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           populateAbfsOutputStreamContext(
               isAppendBlob,
               lease,
-              client,
+              getClient(),
               statistics,
               relativePath,
               0,

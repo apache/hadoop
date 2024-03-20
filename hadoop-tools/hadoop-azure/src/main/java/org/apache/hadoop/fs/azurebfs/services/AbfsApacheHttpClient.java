@@ -42,7 +42,9 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.protocol.HttpRequestExecutor;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EXPECT_100_JDK_ERROR;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.EXPECT;
+import static org.apache.http.conn.ssl.SSLConnectionSocketFactory.getDefaultHostnameVerifier;
 
 
 public class AbfsApacheHttpClient {
@@ -73,23 +75,40 @@ public class AbfsApacheHttpClient {
       this.isReadable = isReadable;
       this.abfsRestOperationType = operationType;
     }
+
+    /**
+     * This to be used only in tests to get connection level activity.
+     */
+    protected HttpClientConnection interceptConnectionActivity(HttpClientConnection httpClientConnection) {
+      return httpClientConnection;
+    }
   }
 
   private static class AbfsHttpRequestExecutor extends HttpRequestExecutor {
+
+    public AbfsHttpRequestExecutor(final int expect100WaitTimeout) {
+      super(expect100WaitTimeout);
+    }
 
     @Override
     protected HttpResponse doSendRequest(final HttpRequest request,
         final HttpClientConnection conn,
         final HttpContext context) throws IOException, HttpException {
+      final HttpClientConnection inteceptedConnection;
+      if(context instanceof AbfsHttpClientContext) {
+        inteceptedConnection = ((AbfsHttpClientContext) context).interceptConnectionActivity(conn);
+      } else {
+        inteceptedConnection = conn;
+      }
 //      long start = System.currentTimeMillis();
-      final HttpResponse res = super.doSendRequest(request, conn, context);
+      final HttpResponse res = super.doSendRequest(request, inteceptedConnection, context);
 //      long elapsed = System.currentTimeMillis() - start;
       if(context instanceof AbfsHttpClientContext) {
         ((AbfsHttpClientContext) context).httpClientConnection = conn;
 //        ((AbfsHttpClientContext) context).sendTime = elapsed;
       }
       if(request != null && request.containsHeader(EXPECT) && res != null && res.getStatusLine().getStatusCode() != 200) {
-        throw new AbfsApacheHttpExpect100Exception("Server rejected operation", res);
+        throw new AbfsApacheHttpExpect100Exception(EXPECT_100_JDK_ERROR, res);
       }
       return res;
     }
@@ -98,8 +117,14 @@ public class AbfsApacheHttpClient {
     protected HttpResponse doReceiveResponse(final HttpRequest request,
         final HttpClientConnection conn,
         final HttpContext context) throws HttpException, IOException {
+      final HttpClientConnection interceptedConnection;
+      if(context instanceof AbfsHttpClientContext) {
+        interceptedConnection = ((AbfsHttpClientContext) context).interceptConnectionActivity(conn);
+      } else {
+        interceptedConnection = conn;
+      }
       long start = System.currentTimeMillis();
-      final HttpResponse res = super.doReceiveResponse(request, conn, context);
+      final HttpResponse res = super.doReceiveResponse(request, interceptedConnection, context);
       long elapsed = System.currentTimeMillis() - start;
       if(context instanceof AbfsHttpClientContext) {
         ((AbfsHttpClientContext) context).readTime = elapsed;
@@ -118,11 +143,11 @@ public class AbfsApacheHttpClient {
       final AbfsConfiguration abfsConfiguration) {
     this.abfsConfiguration = abfsConfiguration;
     connMgr = new AbfsConnectionManager(createSocketFactoryRegistry(
-        new SSLConnectionSocketFactory(delegatingSSLSocketFactory, null)),
+        new SSLConnectionSocketFactory(delegatingSSLSocketFactory, getDefaultHostnameVerifier())),
         new org.apache.hadoop.fs.azurebfs.services.AbfsConnFactory());
     final HttpClientBuilder builder = HttpClients.custom();
     builder.setConnectionManager(connMgr)
-        .setRequestExecutor(new AbfsHttpRequestExecutor())
+        .setRequestExecutor(new AbfsHttpRequestExecutor(abfsConfiguration.getHttpReadTimeout()))
         .disableContentCompression()
         .disableRedirectHandling()
         .disableAutomaticRetries()
