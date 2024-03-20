@@ -523,14 +523,14 @@ And optional settings for debugging/performance analysis
 
 ```
 spark.hadoop.mapreduce.outputcommitter.factory.scheme.abfs org.apache.hadoop.fs.azurebfs.commit.AzureManifestCommitterFactory
-spark.hadoop.fs.azure.io.rate.limit 10000
+spark.hadoop.fs.azure.io.rate.limit 1000
 spark.sql.parquet.output.committer.class org.apache.spark.internal.io.cloud.BindingParquetOutputCommitter
 spark.sql.sources.commitProtocolClass org.apache.spark.internal.io.cloud.PathOutputCommitProtocol
 
 spark.hadoop.mapreduce.manifest.committer.summary.report.directory  (optional: URI of a directory for job summaries)
 ```
 
-## Experimental: ABFS Rename Rate Limiting `fs.azure.io.rate.limit`
+## <a name="rate-limiting"> ABFS Rename Rate Limiting `fs.azure.io.rate.limit`
 
 To avoid triggering store throttling and backoff delays, as well as other
 throttling-related failure conditions file renames during job commit
@@ -538,19 +538,23 @@ are throttled through a "rate limiter" which limits the number of
 rename operations per second a single instance of the ABFS FileSystem client
 may issue.
 
-| Option | Meaning |
-|--------|---------|
-| `fs.azure.io.rate.limit` | Rate limit in operations/second for IO operations. |
+| Option                                                          | Meaning                                                     |
+|-----------------------------------------------------------------|-------------------------------------------------------------|
+| `fs.azure.io.rate.limit`                                        | Rate limit in operations/second for IO operations.          |
+| `mapreduce.manifest.committer.cleanup.directory.write.capacity` | Write capacity to request for each task directory deletion. |
 
+### Option `fs.azure.io.rate.limit`
+
+This is the number of IOPS to allocate for reading and writing during task and job commit.
 Set the option to `0` remove all rate limiting.
 
-The default value of this is set to 10000, which is the default IO capacity for
-an ADLS storage account.
+The default value of this is set to 1000.
+
 
 ```xml
 <property>
   <name>fs.azure.io.rate.limit</name>
-  <value>10000</value>
+  <value>1000</value>
   <description>maximum number of renames attempted per second</description>
 </property>
 ```
@@ -562,26 +566,54 @@ alone other applications sharing the same storage account.
 It will be shared with all jobs being committed by the same
 Spark driver, as these do share that filesystem connector.
 
+###  Option `mapreduce.manifest.committer.cleanup.directory.write.capacity`
+
+This option controls the amount of IO capacity requested for directory cleanup.
+
+When deleting directory trees on Azure storage, the number of write operations
+required is proportional to the number of subdirectories in the tree;
+the deeper and wider the tree is, the more IOPS it consumes.
+
+The option `mapreduce.manifest.committer.cleanup.directory.write.capacity`
+set the capacity to be asked by every task cleanup operation.
+When deleting task attempt directories in parallel (the default), each task attempt
+directory deletion will ask for this capacity. That is: the capacity is not shared
+across multiple task attempts, although the total store capacity, set by `fs.azure.io.rate.limit`
+is.
+
+The reason for a specific configuration option, rather than measuring the tree depth and acting on it
+is: that listing operation will itself require the same capacity.
+
+
+### Observing rate limiting
+
 If rate limiting is imposed, the statistic `store_io_rate_limited` will
 report the time to acquire permits for committing files.
 
 If server-side throttling took place, signs of this can be seen in
 * The store service's logs and their throttling status codes (usually 503 or 500).
-* The job statistic `commit_file_rename_recovered`. This statistic indicates that
-  ADLS throttling manifested as failures in renames, failures which were recovered
-  from in the comitter.
+* The job statistic `commit_file_rename_recovered` in the `_SUCCESS` file.
+  This statistic indicates that ADLS throttling manifested as failures in renames,
+  failures which were recovered from in the committer.
 
 If these are seen -or other applications running at the same time experience
 throttling/throttling-triggered problems, consider reducing the value of
 `fs.azure.io.rate.limit`, and/or requesting a higher IO capacity from Microsoft.
+
+All operations which make filesystem operations will invoke the rate limiter
+to acquire read or write capacity.
+
+Consider Reducing the value of `fs.azure.io.rate.limit` if:
+* Other operations in the cluster fail while spark queries are committing work.
+* The job commit/task commit operations are failing intermittently and load
+  is hypothesised. Note: the committer is intended to be resilient to this.
+* The storage account has reduced IO capacity.
 
 *Important* if you do get extra capacity from Microsoft and you want to use
 it to speed up job commits, increase the value of `fs.azure.io.rate.limit`
 either across the cluster, or specifically for those jobs which you wish
 to allocate extra priority to.
 
-This is still a work in progress; it may be expanded to support
-all IO operations performed by a single filesystem instance.
 
 # <a name="gcs"></a> Working with Google Cloud Storage
 

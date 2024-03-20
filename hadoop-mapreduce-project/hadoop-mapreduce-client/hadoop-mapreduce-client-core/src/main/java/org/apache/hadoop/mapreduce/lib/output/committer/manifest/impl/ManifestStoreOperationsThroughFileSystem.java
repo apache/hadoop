@@ -26,10 +26,13 @@ import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RateLimiterSource;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.AbstractManifestData;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 import org.apache.hadoop.util.JsonSerialization;
+
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.*;
 
 /**
  * Implementation of manifest store operations through the filesystem API.
@@ -87,6 +90,7 @@ public class ManifestStoreOperationsThroughFileSystem extends ManifestStoreOpera
 
   @Override
   public FileStatus getFileStatus(Path path) throws IOException {
+    acquireReadCapacity(OP_GET_FILE_STATUS, 1);
     return fileSystem.getFileStatus(path);
   }
 
@@ -99,30 +103,35 @@ public class ManifestStoreOperationsThroughFileSystem extends ManifestStoreOpera
   @SuppressWarnings("deprecation")
   @Override
   public boolean isFile(Path path) throws IOException {
+    acquireReadCapacity(OP_IS_FILE, 1);
     return fileSystem.isFile(path);
   }
 
   @Override
   public boolean delete(Path path, boolean recursive)
       throws IOException {
+    acquireWriteCapacity(OP_DELETE, 1);
     return fileSystem.delete(path, recursive);
   }
 
   @Override
   public boolean mkdirs(Path path)
       throws IOException {
+    acquireWriteCapacity(OP_MKDIRS, 1);
     return fileSystem.mkdirs(path);
   }
 
   @Override
   public boolean renameFile(Path source, Path dest)
       throws IOException {
+    acquireWriteCapacity(OP_RENAME, 1);
     return fileSystem.rename(source, dest);
   }
 
   @Override
   public RemoteIterator<FileStatus> listStatusIterator(Path path)
       throws IOException {
+    acquireReadCapacity(OP_LIST_STATUS, 1);
     return fileSystem.listStatusIterator(path);
   }
 
@@ -130,6 +139,7 @@ public class ManifestStoreOperationsThroughFileSystem extends ManifestStoreOpera
   public TaskManifest loadTaskManifest(
       JsonSerialization<TaskManifest> serializer,
       FileStatus st) throws IOException {
+    acquireReadCapacity(OP_OPENFILE, 1);
     return TaskManifest.load(serializer, fileSystem, st.getPath(), st);
   }
 
@@ -138,6 +148,7 @@ public class ManifestStoreOperationsThroughFileSystem extends ManifestStoreOpera
       final T manifestData,
       final Path path,
       final boolean overwrite) throws IOException {
+    acquireWriteCapacity(OP_CREATE, 1);
     manifestData.save(fileSystem, path, overwrite);
   }
 
@@ -175,6 +186,7 @@ public class ManifestStoreOperationsThroughFileSystem extends ManifestStoreOpera
     // qualify so we can be confident that the FS being synced
     // is the one we expect.
     fileSystem.makeQualified(path);
+    acquireWriteCapacity(OP_MSYNC, 1);
     try {
       fileSystem.msync();
     } catch (UnsupportedOperationException ignored) {
@@ -184,4 +196,16 @@ public class ManifestStoreOperationsThroughFileSystem extends ManifestStoreOpera
     }
   }
 
+  /**
+   * If the FS is a rate limiter source, return it,
+   * else the superclass (unlimited) implementation.
+   * @return a rate limiter source.
+   */
+  @Override
+  public RateLimiterSource rateLimiterSource() {
+    final FileSystem fs = getFileSystem();
+    return fs instanceof RateLimiterSource
+     ? (RateLimiterSource) fs
+     : super.rateLimiterSource();
+  }
 }

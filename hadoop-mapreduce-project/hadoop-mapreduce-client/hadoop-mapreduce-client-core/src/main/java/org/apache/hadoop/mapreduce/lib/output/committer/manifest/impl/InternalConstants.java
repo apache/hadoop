@@ -40,6 +40,7 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
  */
 @InterfaceAudience.Private
 public final class InternalConstants {
+
   private InternalConstants() {
   }
 
@@ -127,4 +128,11 @@ public final class InternalConstants {
   /** Schemas of filesystems we know to not work with this committer. */
   public static final Set<String> UNSUPPORTED_FS_SCHEMAS =
       ImmutableSet.of("s3a", "wasb");
+
+  /**
+   * How many attempts to commit the task by save and rename
+   * before giving up.
+   */
+  public static final int TASK_COMMIT_RETRY_COUNT = 3;
+
 }

@@ -144,6 +144,21 @@ public final class ManifestCommitterConstants {
   public static final boolean OPT_CLEANUP_PARALLEL_DELETE_DIRS_DEFAULT = true;
 
   /**
+   * How much write capacity to request when deleting a task attempt directory
+   * or the entire job directory if parallel deletion is disabled?
+   * Value: {@value}.
+   */
+  public static final String OPT_CLEANUP_DIRECTORY_WRITE_CAPACITY =
+      OPT_PREFIX + "cleanup.directory.write.capacity";
+
+  /**
+   * The default value for {@link #OPT_CLEANUP_DIRECTORY_WRITE_CAPACITY}: {@value}.
+   * There was no evidence to choose this specific number, only that it is intended
+   * to reduce the IO load on the filesystem during parallel directory tree deletion.
+   */
+  public static final int OPT_CLEANUP_DIRECTORY_WRITE_CAPACITY_DEFAULT = 50;
+
+  /**
    * Threads to use for IO.
    */
   public static final String OPT_IO_PROCESSORS = OPT_PREFIX + "io.threads";

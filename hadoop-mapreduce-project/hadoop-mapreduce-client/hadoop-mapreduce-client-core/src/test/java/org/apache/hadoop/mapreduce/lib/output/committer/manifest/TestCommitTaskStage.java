@@ -33,6 +33,7 @@ import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.SetupJob
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.SetupTaskStage;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.StageConfig;
 
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_CLEANUP_DIRECTORY_WRITE_CAPACITY_DEFAULT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_CLEANUP;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
@@ -108,8 +109,8 @@ public class TestCommitTaskStage extends AbstractManifestCommitterTest {
                 OP_STAGE_JOB_CLEANUP,
                 true,
                 true,
-                false
-            )));
+                false,
+                OPT_CLEANUP_DIRECTORY_WRITE_CAPACITY_DEFAULT)));
 
     // review success file
     final Path successPath = outcome.getSuccessPath();

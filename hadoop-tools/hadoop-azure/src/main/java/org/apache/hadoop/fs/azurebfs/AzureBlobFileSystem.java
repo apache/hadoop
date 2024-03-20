@@ -46,6 +46,7 @@ import javax.annotation.Nullable;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.impl.BackReference;
+import org.apache.hadoop.fs.RateLimiterSource;
 import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
@@ -133,7 +134,7 @@ import static org.apache.hadoop.util.functional.RemoteIterators.mappingRemoteIte
  */
 @InterfaceStability.Evolving
 public class AzureBlobFileSystem extends FileSystem
-    implements IOStatisticsSource {
+    implements IOStatisticsSource, RateLimiterSource {
   public static final Logger LOG = LoggerFactory.getLogger(AzureBlobFileSystem.class);
   private URI uri;
   private Path workingDir;
@@ -1678,5 +1679,17 @@ public class AzureBlobFileSystem extends FileSystem
   @Override
   public IOStatistics getIOStatistics() {
     return abfsCounters != null ? abfsCounters.getIOStatistics() : null;
+  }
+
+  @Override
+  public RateLimiting acquireReadRateLimiter(final String operation) {
+    LOG.debug("Acquiring read rate limiter for operation: {}", operation);
+    return rateLimiting;
+  }
+
+  @Override
+  public RateLimiting acquireWriteRateLimiter(final String operation) {
+    LOG.debug("Acquiring write rate limiter for operation: {}", operation);
+    return rateLimiting;
   }
 }

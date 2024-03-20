@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_TASK_SAVE_MANIFEST;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.TASK_COMMIT_RETRY_COUNT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport.manifestPathForTask;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport.manifestTempPathForTaskAttempt;
 
@@ -38,12 +39,32 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.Man
  * Uses both the task ID and task attempt ID to determine the temp filename;
  * Before the rename of (temp, final-path), any file at the final path
  * is deleted.
+ * <p>
  * This is so that when this stage is invoked in a task commit, its output
  * overwrites any of the first commit.
  * When it succeeds, therefore, unless there is any subsequent commit of
  * another task, the task manifest at the final path is from this
  * operation.
- *
+ * <p>
+ * If the save and rename fails, there are a limited number of retries, with no sleep
+ * interval.
+ * This is to briefly try recover from any transient rename() failure, including a
+ * race condition with any other task commit.
+ * <ol>
+ *   <li>If the previous task commit has already succeeded, this rename will overwrite it.
+ *        Both task attempts will report success.</li>
+ *   <li>If after, writing, another task attempt overwrites it, again, both
+ *        task attempts will report success.</li>
+ *   <li>If another task commits between the delete() and rename() operations, the retry will
+ *        attempt to recover by repeating the manifest write, and then report success.</li>
+ * </ol>
+ * This means that multiple task attempts may report success, but only one will have it actual
+ * manifest saved.
+ * The mapreduce and spark committers only schedule a second task commit attempt if the first
+ * task attempt's commit operation fails <i>or fails to report success in the allocated time</i>.
+ * The overwrite with retry loop is an attempt to ensure that the second attempt will report
+ * success, if a partitioned cluster means that the original TA commit is still in progress.
+ * <p>
  * Returns the path where the manifest was saved.
  */
 public class SaveTaskManifestStage extends
@@ -73,8 +94,21 @@ public class SaveTaskManifestStage extends
         getRequiredTaskId());
     Path manifestTempFile = manifestTempPathForTaskAttempt(manifestDir,
         getRequiredTaskAttemptId());
-    LOG.info("{}: Saving manifest file to {}", getName(), manifestFile);
-    save(manifest, manifestTempFile, manifestFile);
+    int limit = TASK_COMMIT_RETRY_COUNT;
+    boolean success = false;
+    do {
+      try {
+        LOG.info("{}: Saving manifest file to {}", getName(), manifestFile);
+        save(manifest, manifestTempFile, manifestFile);
+        success = true;
+      } catch (IOException e) {
+        LOG.warn("Failed to save manifest to {} via temp file {} and rename()",
+            manifestFile, manifestTempFile, e);
+        if (--limit < 0) {
+          throw e;
+        }
+      }
+    } while (!success);
     return manifestFile;
   }
 

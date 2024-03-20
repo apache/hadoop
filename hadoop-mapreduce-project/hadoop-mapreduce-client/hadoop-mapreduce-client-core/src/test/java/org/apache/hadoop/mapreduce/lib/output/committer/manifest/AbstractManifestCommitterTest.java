@@ -77,6 +77,7 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.DEFAULT_WRITER_QUEUE_CAPACITY;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.JOB_ID_SOURCE_MAPREDUCE;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.MANIFEST_COMMITTER_FACTORY;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_CLEANUP_DIRECTORY_WRITE_CAPACITY_DEFAULT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_DIAGNOSTICS_MANIFEST_DIR;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_SUMMARY_REPORT_DIR;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_VALIDATE_OUTPUT;
@@ -1014,7 +1015,8 @@ public abstract class AbstractManifestCommitterTest
     StageConfig stageConfig = getJobStageConfig();
     CleanupJobStage.Result result = new CleanupJobStage(stageConfig)
         .apply(new CleanupJobStage.Arguments(OP_STAGE_JOB_CLEANUP,
-            enabled, deleteTaskAttemptDirsInParallel, suppressExceptions));
+            enabled, deleteTaskAttemptDirsInParallel, suppressExceptions,
+            OPT_CLEANUP_DIRECTORY_WRITE_CAPACITY_DEFAULT));
     assertCleanupResult(result, outcome, expectedDirsDeleted);
     return result;
   }

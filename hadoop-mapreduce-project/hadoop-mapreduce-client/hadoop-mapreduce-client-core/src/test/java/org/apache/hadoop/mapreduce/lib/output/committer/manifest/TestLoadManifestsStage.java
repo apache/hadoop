@@ -39,6 +39,7 @@ import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.StageCon
 
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.DEFAULT_WRITER_QUEUE_CAPACITY;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_CLEANUP_DIRECTORY_WRITE_CAPACITY_DEFAULT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_SUMMARY_REPORT_DIR;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_COMMIT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport.addHeapInformation;
@@ -176,7 +177,11 @@ public class TestLoadManifestsStage extends AbstractManifestCommitterTest {
     // and skipping the rename stage (which is going to fail),
     // go straight to cleanup
     new CleanupJobStage(stageConfig).apply(
-        new CleanupJobStage.Arguments("", true, true, false));
+        new CleanupJobStage.Arguments("",
+            true,
+            true,
+            false,
+            OPT_CLEANUP_DIRECTORY_WRITE_CAPACITY_DEFAULT));
     heapinfo(heapInfo, "cleanup");
 
     ManifestSuccessData success = createManifestOutcome(stageConfig, OP_STAGE_JOB_COMMIT);

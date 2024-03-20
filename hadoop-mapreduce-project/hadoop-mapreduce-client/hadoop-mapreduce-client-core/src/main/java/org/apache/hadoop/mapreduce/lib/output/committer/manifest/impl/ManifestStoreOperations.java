@@ -30,10 +30,12 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.RateLimiterSource;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.AbstractManifestData;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 import org.apache.hadoop.util.JsonSerialization;
+import org.apache.hadoop.util.RateLimiting;
 
 /**
  * FileSystem operations which are needed to generate the task manifest.
@@ -45,7 +47,7 @@ import org.apache.hadoop.util.JsonSerialization;
  */
 @InterfaceAudience.LimitedPrivate("mapreduce, object-stores")
 @InterfaceStability.Unstable
-public abstract class ManifestStoreOperations implements Closeable {
+public abstract class ManifestStoreOperations implements Closeable, RateLimiterSource {
 
   /**
    * Bind to the filesystem.
@@ -286,6 +288,53 @@ public abstract class ManifestStoreOperations implements Closeable {
     public Duration getWaitTime() {
       return waitTime;
     }
+  }
+
+  /**
+   * Get the rate limiter source.
+   * Shall never be null; may be unlimited.
+   * @return the rate limiter source.
+   */
+  public RateLimiterSource rateLimiterSource() {
+    return RateLimiterSource.unlimited();
+  }
+
+  /**
+   * Delegate to {@link #rateLimiterSource()}.
+   * {@inheritDoc}
+   */
+  @Override
+  public RateLimiting acquireReadRateLimiter(final String operation) {
+    return rateLimiterSource().acquireReadRateLimiter(operation);
+  }
+
+  /**
+   * Delegate to {@link #rateLimiterSource()}.
+   * {@inheritDoc}
+   */
+  @Override
+  public RateLimiting acquireWriteRateLimiter(final String operation) {
+    return rateLimiterSource().acquireWriteRateLimiter(operation);
+  }
+
+  /**
+   * Acquire read capacity for a given operation.
+   * @param operation operation name.
+   * @param requestedCapacity capacity requested.
+   * @return time waited.
+   */
+  public Duration acquireReadCapacity(String operation, int requestedCapacity) {
+    return acquireReadRateLimiter(operation).acquire(requestedCapacity);
+  }
+
+  /**
+   * Acquire write capacity for a given operation.
+   * @param operation operation name.
+   * @param requestedCapacity capacity requested.
+   * @return time waited.
+   */
+  public Duration acquireWriteCapacity(String operation, int requestedCapacity) {
+    return acquireReadRateLimiter(operation).acquire(requestedCapacity);
   }
 
 }
