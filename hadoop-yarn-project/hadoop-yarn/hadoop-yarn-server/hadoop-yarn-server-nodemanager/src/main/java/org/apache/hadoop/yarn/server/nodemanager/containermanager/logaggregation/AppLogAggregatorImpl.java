@@ -64,6 +64,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
+import org.apache.hadoop.yarn.server.nodemanager.SecureModeLocalUserAllocator;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task.DeletionTask;
@@ -104,6 +105,8 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
   private final Context context;
   private final NodeId nodeId;
   private final LogAggregationFileControllerContext logControllerContext;
+  private final boolean secureModeUseLocalUser;
+  private final SecureModeLocalUserAllocator secureModeLocalUserAllocator;
 
   // These variables are only for testing
   private final AtomicBoolean waiting = new AtomicBoolean(false);
@@ -218,6 +221,16 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
             logAggregationInRolling,
             rollingMonitorInterval,
             this.appId, this.appAcls, this.nodeId, this.userUgi);
+    secureModeUseLocalUser = UserGroupInformation.isSecurityEnabled() &&
+        conf.getBoolean(YarnConfiguration.NM_SECURE_MODE_USE_POOL_USER,
+            YarnConfiguration.DEFAULT_NM_SECURE_MODE_USE_POOL_USER);
+    if (secureModeUseLocalUser) {
+      secureModeLocalUserAllocator =
+          SecureModeLocalUserAllocator.getInstance(conf);
+    }
+    else {
+      secureModeLocalUserAllocator = null;
+    }
   }
 
   private ContainerLogAggregationPolicy getLogAggPolicy(Configuration conf) {
@@ -468,6 +481,10 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
 
   @Override
   public void run() {
+    if (this.secureModeUseLocalUser) {
+      this.secureModeLocalUserAllocator.incrementLogHandlingCount(
+          this.userUgi.getShortUserName());
+    }
     try {
       doAppLogAggregation();
     } catch (LogAggregationDFSException e) {
@@ -489,6 +506,10 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
                 ApplicationEventType.APPLICATION_LOG_HANDLING_FAILED));
       }
       this.appAggregationFinished.set(true);
+      if (this.secureModeUseLocalUser) {
+        this.secureModeLocalUserAllocator.decrementLogHandlingCount(
+            this.userUgi.getShortUserName());
+      }
     }
   }
 
@@ -657,9 +678,13 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
           + ". Current good log dirs are "
           + StringUtils.join(",", dirsHandler.getLogDirsForRead()));
       final LogKey logKey = new LogKey(containerId);
+      String user = userUgi.getShortUserName();
+      if (secureModeUseLocalUser) {
+        user = secureModeLocalUserAllocator.getRunAsLocalUser(user);
+      }
       final LogValue logValue =
           new LogValue(dirsHandler.getLogDirsForRead(), containerId,
-            userUgi.getShortUserName(), logAggregationContext,
+            user, logAggregationContext,
             this.uploadedFileMeta,  retentionContext, appFinished,
             containerFinished);
       try {

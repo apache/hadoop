@@ -2715,6 +2715,39 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_NM_NONSECURE_MODE_USER_PATTERN = 
       "^[_.A-Za-z0-9][-@_.A-Za-z0-9]{0,255}?[$]?$";
 
+  /**
+   * Whether or not to use precreated pool of local users in secure mode.
+   */
+  public static final String NM_SECURE_MODE_USE_POOL_USER = NM_PREFIX +
+      "linux-container-executor.secure-mode.use-pool-user";
+
+  public static final boolean DEFAULT_NM_SECURE_MODE_USE_POOL_USER = false;
+
+  /**
+   * The number of pool local users. If set to -1, we'll take the value from:
+   * NM_PREFIX + "resource.cpu-vcores"
+   */
+  public static final String NM_SECURE_MODE_POOL_USER_COUNT = NM_PREFIX +
+      "linux-container-executor.secure-mode.pool-user-count";
+
+  public static final int DEFAULT_NM_SECURE_MODE_POOL_USER_COUNT = -1;
+
+  /**
+   * The prefix of the local pool users can be used by Yarn Secure Container.
+   * The number of local pool users to use is specified by:
+   *
+   * For example, if prefix is "user" and pool-user-count configured to 20,
+   * then local user names are:
+   *   user0
+   *   user1
+   *   ...
+   *   user19
+   */
+  public static final String NM_SECURE_MODE_POOL_USER_PREFIX = NM_PREFIX +
+      "linux-container-executor.secure-mode.pool-user-prefix";
+
+  public static final String DEFAULT_NM_SECURE_MODE_POOL_USER_PREFIX = "user";
+
   /** The type of resource enforcement to use with the
    *  linux container executor.
    */

@@ -34,6 +34,7 @@ import org.apache.hadoop.thirdparty.protobuf.ByteString;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
@@ -49,6 +50,7 @@ import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.Containe
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.FlowContextProto;
 import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
+import org.apache.hadoop.yarn.server.nodemanager.SecureModeLocalUserAllocator;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServicesEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServicesEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
@@ -86,6 +88,7 @@ public class ApplicationImpl implements Application {
   private final ReadLock readLock;
   private final WriteLock writeLock;
   private final Context context;
+  private final SecureModeLocalUserAllocator secureModeLocalUserAllocator;
 
   private static final Logger LOG =
        LoggerFactory.getLogger(ApplicationImpl.class);
@@ -126,6 +129,15 @@ public class ApplicationImpl implements Application {
       if (YarnConfiguration.systemMetricsPublisherEnabled(conf)) {
         context.getNMTimelinePublisher().createTimelineClient(appId);
       }
+    }
+    boolean secureModeUseLocalUser = UserGroupInformation.isSecurityEnabled() &&
+        conf.getBoolean(YarnConfiguration.NM_SECURE_MODE_USE_POOL_USER,
+        YarnConfiguration.DEFAULT_NM_SECURE_MODE_USE_POOL_USER);
+    if (secureModeUseLocalUser) {
+      secureModeLocalUserAllocator = SecureModeLocalUserAllocator.getInstance(conf);
+    }
+    else {
+      secureModeLocalUserAllocator = null;
     }
     this.context = context;
     this.appStateStore = context.getNMStateStore();
@@ -336,6 +348,9 @@ public class ApplicationImpl implements Application {
       SingleArcTransition<ApplicationImpl, ApplicationEvent> {
     @Override
     public void transition(ApplicationImpl app, ApplicationEvent event) {
+      if (app.secureModeLocalUserAllocator != null) {
+        app.secureModeLocalUserAllocator.allocate(app.user, app.appId.toString());
+      }
       ApplicationInitEvent initEvent = (ApplicationInitEvent)event;
       app.applicationACLs = initEvent.getApplicationACLs();
       app.aclsManager.addApplication(app.getAppId(), app.applicationACLs);
@@ -607,13 +622,16 @@ public class ApplicationImpl implements Application {
 
     @Override
     public void transition(ApplicationImpl app, ApplicationEvent event) {
-
       // Inform the logService
       app.dispatcher.getEventHandler().handle(
           new LogHandlerAppFinishedEvent(app.appId));
 
       app.context.getNMTokenSecretManager().appFinished(app.getAppId());
       updateCollectorStatus(app);
+
+      if (app.secureModeLocalUserAllocator != null) {
+        app.secureModeLocalUserAllocator.deallocate(app.user, app.appId.toString());
+      }
     }
   }
 

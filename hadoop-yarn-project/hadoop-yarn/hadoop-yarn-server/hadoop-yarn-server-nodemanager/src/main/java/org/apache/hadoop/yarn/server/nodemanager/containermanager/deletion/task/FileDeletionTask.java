@@ -19,8 +19,11 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.DeletionServiceDeleteTaskProto;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
+import org.apache.hadoop.yarn.server.nodemanager.SecureModeLocalUserAllocator;
 import org.apache.hadoop.yarn.server.nodemanager.executor.DeletionAsUserContext;
 
 import java.io.IOException;
@@ -34,6 +37,8 @@ public class FileDeletionTask extends DeletionTask implements Runnable {
   private final Path subDir;
   private final List<Path> baseDirs;
   private static final FileContext lfs = getLfs();
+  private final boolean secureModeUseLocalUser;
+  private final SecureModeLocalUserAllocator secureModeLocalUserAllocator;
 
   private static FileContext getLfs() {
     try {
@@ -70,6 +75,20 @@ public class FileDeletionTask extends DeletionTask implements Runnable {
     super(taskId, deletionService, user, DeletionTaskType.FILE);
     this.subDir = subDir;
     this.baseDirs = baseDirs;
+    secureModeUseLocalUser = UserGroupInformation.isSecurityEnabled() &&
+        deletionService.getConfig().getBoolean(
+            YarnConfiguration.NM_SECURE_MODE_USE_POOL_USER,
+            YarnConfiguration.DEFAULT_NM_SECURE_MODE_USE_POOL_USER);
+    if (secureModeUseLocalUser) {
+      secureModeLocalUserAllocator = SecureModeLocalUserAllocator.getInstance(
+          deletionService.getConfig());
+      if (user != null) {
+        secureModeLocalUserAllocator.incrementFileOpCount(user);
+      }
+    }
+    else {
+      secureModeLocalUserAllocator = null;
+    }
   }
 
   /**
@@ -138,6 +157,9 @@ public class FileDeletionTask extends DeletionTask implements Runnable {
       } catch (IOException|InterruptedException e) {
         error = true;
         LOG.warn("Failed to delete as user " + getUser(), e);
+      }
+      if (secureModeUseLocalUser) {
+        secureModeLocalUserAllocator.decrementFileOpCount(getUser());
       }
     }
     if (error) {

@@ -143,6 +143,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
   private boolean containerSchedPriorityIsSet = false;
   private int containerSchedPriorityAdjustment = 0;
   private boolean containerLimitUsers;
+  private SecureModeLocalUserAllocator secureModeLocalUserAllocator;
   private ResourceHandler resourceHandlerChain;
   private LinuxContainerRuntime linuxContainerRuntime;
   private Context nmContext;
@@ -246,6 +247,12 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       LOG.warn("{}: impersonation without authentication enabled",
           YarnConfiguration.NM_NONSECURE_MODE_LIMIT_USERS);
     }
+    boolean secureModeUseLocalUser = UserGroupInformation.isSecurityEnabled() &&
+        conf.getBoolean(YarnConfiguration.NM_SECURE_MODE_USE_POOL_USER,
+        YarnConfiguration.DEFAULT_NM_SECURE_MODE_USE_POOL_USER);
+    if (secureModeUseLocalUser) {
+      secureModeLocalUserAllocator = SecureModeLocalUserAllocator.getInstance(conf);
+    }
   }
 
   private LCEResourcesHandler getResourcesHandler(Configuration conf) {
@@ -274,8 +281,14 @@ public class LinuxContainerExecutor extends ContainerExecutor {
   }
 
   String getRunAsUser(String user) {
-    if (UserGroupInformation.isSecurityEnabled() ||
-        !containerLimitUsers) {
+    if (UserGroupInformation.isSecurityEnabled()) {
+      if (secureModeLocalUserAllocator != null) {
+        return secureModeLocalUserAllocator.getRunAsLocalUser(user);
+      }
+      else {
+        return user;
+      }
+    } else if (!containerLimitUsers) {
       return user;
     } else {
       return nonsecureLocalUser;

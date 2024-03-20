@@ -35,6 +35,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.concurrent.HadoopScheduledThreadPoolExecutor;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -44,6 +45,7 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LogDeleterProto;
 import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
+import org.apache.hadoop.yarn.server.nodemanager.SecureModeLocalUserAllocator;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task.FileDeletionTask;
@@ -74,6 +76,7 @@ public class NonAggregatingLogHandler extends AbstractService implements
   private boolean enableTriggerDeleteBySize;
   private long deleteThreshold;
   private ScheduledThreadPoolExecutor sched;
+  private SecureModeLocalUserAllocator secureModeLocalUserAllocator;
 
   public NonAggregatingLogHandler(Dispatcher dispatcher,
       DeletionService delService, LocalDirsHandlerService dirsHandler,
@@ -99,6 +102,13 @@ public class NonAggregatingLogHandler extends AbstractService implements
         conf.getLongBytes(YarnConfiguration.NM_LOG_DELETE_THRESHOLD,
         YarnConfiguration.DEFAULT_NM_LOG_DELETE_THRESHOLD);
     sched = createScheduledThreadPoolExecutor(conf);
+    boolean secureModeUseLocalUser = UserGroupInformation.isSecurityEnabled() &&
+        conf.getBoolean(YarnConfiguration.NM_SECURE_MODE_USE_POOL_USER,
+            YarnConfiguration.DEFAULT_NM_SECURE_MODE_USE_POOL_USER);
+    if (secureModeUseLocalUser) {
+      secureModeLocalUserAllocator =
+          SecureModeLocalUserAllocator.getInstance(conf);
+    }
     super.serviceInit(conf);
     recover();
   }
@@ -165,6 +175,10 @@ public class NonAggregatingLogHandler extends AbstractService implements
         this.dispatcher.getEventHandler().handle(
             new ApplicationEvent(appStartedEvent.getApplicationId(),
                 ApplicationEventType.APPLICATION_LOG_HANDLING_INITED));
+        if (this.secureModeLocalUserAllocator != null) {
+          this.secureModeLocalUserAllocator.incrementLogHandlingCount(
+              appStartedEvent.getUser());
+        }
         break;
       case CONTAINER_FINISHED:
         // Ignore
@@ -213,6 +227,9 @@ public class NonAggregatingLogHandler extends AbstractService implements
           // Handling this event in local thread before starting threads
           // or after calling sched.shutdownNow().
           logDeleter.run();
+        }
+        if (this.secureModeLocalUserAllocator != null) {
+          this.secureModeLocalUserAllocator.decrementLogHandlingCount(user);
         }
         break;
       default:
