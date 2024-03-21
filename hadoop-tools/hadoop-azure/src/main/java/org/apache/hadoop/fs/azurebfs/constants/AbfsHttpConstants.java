@@ -140,5 +140,9 @@ public final class AbfsHttpConstants {
   public static final Integer DEFAULT_MAX_CONN_SYS_PROP = 5;
   public static final int KAC_CONN_TTL = 5_000;
 
+  public static final String JDK_IMPL = "JDK";
+  public static final String APACHE_IMPL = "APACHE";
+  public static final String JDK_FALLBACK_IMPL = "JDK_FALLBACK";
+
   private AbfsHttpConstants() {}
 }
