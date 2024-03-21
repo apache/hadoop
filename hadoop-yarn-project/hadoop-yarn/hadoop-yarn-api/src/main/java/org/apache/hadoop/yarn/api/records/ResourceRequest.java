@@ -306,9 +306,10 @@ public abstract class ResourceRequest implements Comparable<ResourceRequest> {
         String h2 = r2.getResourceName();
         ret = h1.compareTo(h2);
       }
-      if (ret == 0) {
-        ret = r1.getExecutionTypeRequest()
-            .compareTo(r2.getExecutionTypeRequest());
+      ExecutionTypeRequest e1 = r1.getExecutionTypeRequest();
+      ExecutionTypeRequest e2 = r2.getExecutionTypeRequest();
+      if (ret == 0 && e1 != null && e2 != null) {
+        ret = e1.compareTo(e2);
       }
       if (ret == 0) {
         ret = r1.getCapability().compareTo(r2.getCapability());

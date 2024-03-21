@@ -30,6 +30,9 @@ import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.junit.Test;
 
+import java.util.Set;
+import java.util.TreeSet;
+
 import static org.junit.Assert.*;
 
 
@@ -61,6 +64,30 @@ public class TestYarnApiClasses {
     assertNotSame(0, original.compareTo(copy));
     assertFalse(original.hashCode() == copy.hashCode());
 
+  }
+
+  /**
+   * Simple test Resource request comparator.
+   * Test ExecutionTypeRequest is null
+   */
+  @Test
+  public void testResourceRequestComparator() {
+
+    Resource resource = recordFactory.newRecordInstance(Resource.class);
+    Priority priority = recordFactory.newRecordInstance(Priority.class);
+
+    ResourceRequest r1 = ResourceRequest.newInstance(priority, "localhost", resource, 1);
+    r1.setExecutionTypeRequest(null);
+    r1.setCapability(Resource.newInstance(1024, 1));
+
+    ResourceRequest r2 = ResourceRequest.newInstance(priority, "localhost", resource, 1);
+    r2.setExecutionTypeRequest(null);
+    r2.setCapability(Resource.newInstance(2048, 1));
+
+    Set<ResourceRequest> ask =
+            new TreeSet<>(new ResourceRequest.ResourceRequestComparator());
+    assertTrue(ask.add(r1));
+    assertTrue(ask.add(r2));
   }
 
   /**
