@@ -55,47 +55,57 @@ public abstract class HttpOperation implements AbfsPerfLoggable {
 
   private static final int ONE_MILLION = ONE_THOUSAND * ONE_THOUSAND;
 
-  protected String method;
+  private String method;
 
-  protected URL url;
+  private URL url;
 
-  protected List<AbfsHttpHeader> requestHeaders;
+  private String maskedUrl;
 
-  protected String maskedUrl;
+  private String maskedEncodedUrl;
 
-  protected String maskedEncodedUrl;
+  private int statusCode;
 
-  protected int statusCode;
+  private String statusDescription;
 
-  protected String statusDescription;
+  private String storageErrorCode = "";
 
-  protected String storageErrorCode = "";
+  private String storageErrorMessage = "";
 
-  protected String storageErrorMessage = "";
+  private String requestId = "";
 
-  protected String requestId = "";
+  private String expectedAppendPos = "";
 
-  protected String expectedAppendPos = "";
-
-  protected ListResultSchema listResultSchema = null;
+  private ListResultSchema listResultSchema = null;
 
   // metrics
-  protected int bytesSent;
+  private int bytesSent;
 
-  protected int expectedBytesToBeSent;
+  private int expectedBytesToBeSent;
 
-  protected long bytesReceived;
+  private long bytesReceived;
 
-  protected long connectionTimeMs;
+  private long connectionTimeMs;
 
-  protected long sendRequestTimeMs;
+  private long sendRequestTimeMs;
 
-  protected long recvResponseTimeMs;
+  private long recvResponseTimeMs;
 
-  protected boolean shouldMask = false;
+  private boolean shouldMask = false;
 
-  public HttpOperation(Logger logger) {
+  public HttpOperation(Logger logger,
+      final URL url,
+      final String method,
+      final int httpStatus) {
     this.log = logger;
+    this.url = url;
+    this.method = method;
+    this.statusCode = httpStatus;
+  }
+
+  public HttpOperation(final Logger log, final URL url, final String method) {
+    this.log = log;
+    this.url = url;
+    this.method = method;
   }
 
   public String getMethod() {
@@ -148,11 +158,47 @@ public abstract class HttpOperation implements AbfsPerfLoggable {
     return bytesReceived;
   }
 
+  public URL getUrl() {
+    return url;
+  }
+
   public ListResultSchema getListResultSchema() {
     return listResultSchema;
   }
 
   public abstract String getResponseHeader(String httpHeader);
+
+  void setExpectedBytesToBeSent(int expectedBytesToBeSent) {
+    this.expectedBytesToBeSent = expectedBytesToBeSent;
+  }
+
+  void setStatusCode(int statusCode) {
+    this.statusCode = statusCode;
+  }
+
+  void setStatusDescription(String statusDescription) {
+    this.statusDescription = statusDescription;
+  }
+
+  void setBytesSent(int bytesSent) {
+    this.bytesSent = bytesSent;
+  }
+
+  void setSendRequestTimeMs(long sendRequestTimeMs) {
+    this.sendRequestTimeMs = sendRequestTimeMs;
+  }
+
+  void setRecvResponseTimeMs(long recvResponseTimeMs) {
+    this.recvResponseTimeMs = recvResponseTimeMs;
+  }
+
+  void setRequestId(String requestId) {
+    this.requestId = requestId;
+  }
+
+  void setConnectionTimeMs(long connectionTimeMs) {
+    this.connectionTimeMs = connectionTimeMs;
+  }
 
   // Returns a trace message for the request
   @Override

@@ -38,7 +38,6 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
-import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EXPECT_100_JDK_ERROR;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HUNDRED_CONTINUE;
@@ -74,71 +73,16 @@ public class AbfsHttpOperation extends HttpOperation {
   protected AbfsHttpOperation(final URL url,
       final String method,
       final int httpStatus) {
-    super(LOG);
-    this.url = url;
-    this.method = method;
-    this.statusCode = httpStatus;
+    super(LOG, url, method, httpStatus);
   }
 
   protected HttpURLConnection getConnection() {
     return connection;
   }
 
-  public String getMethod() {
-    return method;
-  }
-
-  public String getHost() {
-    return url.getHost();
-  }
-
-  public int getStatusCode() {
-    return statusCode;
-  }
-
-  public String getStatusDescription() {
-    return statusDescription;
-  }
-
-  public String getStorageErrorCode() {
-    return storageErrorCode;
-  }
-
-  public String getStorageErrorMessage() {
-    return storageErrorMessage;
-  }
-
   public String getClientRequestId() {
     return this.connection
         .getRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID);
-  }
-
-  public String getExpectedAppendPos() {
-    return expectedAppendPos;
-  }
-
-  public String getRequestId() {
-    return requestId;
-  }
-
-  public void setMaskForSAS() {
-    shouldMask = true;
-  }
-
-  public int getBytesSent() {
-    return bytesSent;
-  }
-
-  public int getExpectedBytesToBeSent() {
-    return expectedBytesToBeSent;
-  }
-
-  public long getBytesReceived() {
-    return bytesReceived;
-  }
-
-  public ListResultSchema getListResultSchema() {
-    return listResultSchema;
   }
 
   public String getResponseHeader(String httpHeader) {
@@ -161,9 +105,7 @@ public class AbfsHttpOperation extends HttpOperation {
       final int connectionTimeout,
       final int readTimeout)
       throws IOException {
-    super(LOG);
-    this.url = url;
-    this.method = method;
+    super(LOG, url, method);
 
     this.connection = openConnection();
     if (this.connection instanceof HttpsURLConnection) {
@@ -213,7 +155,7 @@ public class AbfsHttpOperation extends HttpOperation {
     startTime = System.nanoTime();
     OutputStream outputStream = null;
     // Updates the expected bytes to be sent based on length.
-    this.expectedBytesToBeSent = length;
+    setExpectedBytesToBeSent(length);
     try {
       try {
         /* Without expect header enabled, if getOutputStream() throws
@@ -243,8 +185,8 @@ public class AbfsHttpOperation extends HttpOperation {
            * case of Expect-100 error. Reason being, in JDK, it stores the responseCode
            * in the HttpUrlConnection object before throwing exception to the caller.
            */
-          this.statusCode = getConnResponseCode();
-          this.statusDescription = getConnResponseMessage();
+          setStatusCode(getConnResponseCode());
+          setStatusDescription(getConnResponseMessage());
           return;
         } else {
           LOG.debug(
@@ -255,7 +197,7 @@ public class AbfsHttpOperation extends HttpOperation {
       }
       // update bytes sent for successful as well as failed attempts via the
       // accompanying statusCode.
-      this.bytesSent = length;
+      setBytesSent(length);
 
       // If this fails with or without expect header enabled,
       // it throws an IOException.
@@ -265,7 +207,7 @@ public class AbfsHttpOperation extends HttpOperation {
       if (outputStream != null) {
         outputStream.close();
       }
-      this.sendRequestTimeMs = elapsedTimeMs(startTime);
+      setSendRequestTimeMs(elapsedTimeMs(startTime));
     }
   }
 
@@ -311,21 +253,23 @@ public class AbfsHttpOperation extends HttpOperation {
     long startTime = 0;
     startTime = System.nanoTime();
 
-    this.statusCode = getConnResponseCode();
-    this.recvResponseTimeMs = elapsedTimeMs(startTime);
+    setStatusCode(getConnResponseCode());
+    setRecvResponseTimeMs(elapsedTimeMs(startTime));
 
-    this.statusDescription = getConnResponseMessage();
+    setStatusDescription(getConnResponseMessage());
 
-    this.requestId = this.connection.getHeaderField(
+    String requestId = this.connection.getHeaderField(
         HttpHeaderConfigurations.X_MS_REQUEST_ID);
-    if (this.requestId == null) {
-      this.requestId = AbfsHttpConstants.EMPTY_STRING;
+    if (requestId == null) {
+      requestId = AbfsHttpConstants.EMPTY_STRING;
     }
+    setRequestId(requestId);
+
     // dump the headers
     AbfsIoUtils.dumpHeadersToDebugLog("Response Headers",
         connection.getHeaderFields());
 
-    if (AbfsHttpConstants.HTTP_METHOD_HEAD.equals(this.method)) {
+    if (AbfsHttpConstants.HTTP_METHOD_HEAD.equals(getMethod())) {
       // If it is HEAD, and it is ERROR
       return;
     }
@@ -345,9 +289,9 @@ public class AbfsHttpOperation extends HttpOperation {
   private HttpURLConnection openConnection() throws IOException {
     long start = System.nanoTime();
     try {
-      return (HttpURLConnection) url.openConnection();
+      return (HttpURLConnection) getUrl().openConnection();
     } finally {
-      connectionTimeMs = elapsedTimeMs(start);
+      setConnectionTimeMs(elapsedTimeMs(start));
     }
   }
 

@@ -94,6 +94,39 @@ public class AbfsAHCHttpOperation extends HttpOperation {
 
   private final boolean isPayloadRequest;
 
+  private List<AbfsHttpHeader> requestHeaders;
+
+  private AbfsAHCHttpOperation(final URL url,
+      final String method,
+      final List<AbfsHttpHeader> requestHeaders,
+      final AbfsRestOperationType abfsRestOperationType) {
+    super(LOG, url, method);
+    this.abfsRestOperationType = abfsRestOperationType;
+    this.requestHeaders = requestHeaders;
+    this.isPayloadRequest = isPayloadRequest(method);
+  }
+
+  public AbfsAHCHttpOperation(final URL url,
+      final String method,
+      final List<AbfsHttpHeader> requestHeaders,
+      final AbfsConfiguration abfsConfiguration,
+      final String clientId,
+      final AbfsRestOperationType abfsRestOperationType) {
+    super(LOG, url, method);
+    this.abfsRestOperationType = abfsRestOperationType;
+    this.requestHeaders = requestHeaders;
+    setAbfsApacheHttpClient(abfsConfiguration, clientId);
+    this.isPayloadRequest = isPayloadRequest(method);
+  }
+
+  public AbfsAHCHttpOperation(final URL url,
+      final String method,
+      final ArrayList<AbfsHttpHeader> requestHeaders,
+      final int httpStatus) {
+    this(url, method, requestHeaders, null);
+    setStatusCode(httpStatus);
+  }
+
   private void setAbfsApacheHttpClient(final AbfsConfiguration abfsConfiguration,
       final String clientId) {
     AbfsApacheHttpClient client = ABFS_APACHE_HTTP_CLIENT_MAP.get(clientId);
@@ -118,36 +151,9 @@ public class AbfsAHCHttpOperation extends HttpOperation {
     }
   }
 
-  private AbfsAHCHttpOperation(final URL url,
-      final String method,
-      final List<AbfsHttpHeader> requestHeaders,
-      final AbfsRestOperationType abfsRestOperationType) {
-    super(LOG);
-    this.abfsRestOperationType = abfsRestOperationType;
-    this.url = url;
-    this.method = method;
-    this.requestHeaders = requestHeaders;
-    this.isPayloadRequest = isPayloadRequest(method);
-  }
-
   @VisibleForTesting
   AbfsManagedHttpContext setFinalAbfsClientContext() {
     return new AbfsManagedHttpContext();
-  }
-
-  public AbfsAHCHttpOperation(final URL url,
-      final String method,
-      final List<AbfsHttpHeader> requestHeaders,
-      final AbfsConfiguration abfsConfiguration,
-      final String clientId,
-      final AbfsRestOperationType abfsRestOperationType) {
-    super(LOG);
-    this.abfsRestOperationType = abfsRestOperationType;
-    this.method = method;
-    this.url = url;
-    this.requestHeaders = requestHeaders;
-    setAbfsApacheHttpClient(abfsConfiguration, clientId);
-    this.isPayloadRequest = isPayloadRequest(method);
   }
 
   private boolean isPayloadRequest(final String method) {
@@ -160,10 +166,7 @@ public class AbfsAHCHttpOperation extends HttpOperation {
       final URL url,
       final String method,
       final int httpStatus) {
-    AbfsAHCHttpOperation abfsApacheHttpClientHttpOperation
-        = new AbfsAHCHttpOperation(url, method, new ArrayList<>(), null);
-    abfsApacheHttpClientHttpOperation.statusCode = httpStatus;
-    return abfsApacheHttpClientHttpOperation;
+    return new AbfsAHCHttpOperation(url, method, new ArrayList<>(), httpStatus);
   }
 
   @Override
@@ -187,22 +190,22 @@ public class AbfsAHCHttpOperation extends HttpOperation {
 
   @Override
   URL getConnUrl() {
-    return url;
+    return getUrl();
   }
 
   @Override
   String getConnRequestMethod() {
-    return method;
+    return getMethod();
   }
 
   @Override
   Integer getConnResponseCode() throws IOException {
-    return statusCode;
+    return getStatusCode();
   }
 
   @Override
   String getConnResponseMessage() throws IOException {
-    return statusDescription;
+    return getStatusDescription();
   }
 
   public void processResponse(final byte[] buffer,
@@ -229,15 +232,17 @@ public class AbfsAHCHttpOperation extends HttpOperation {
   void parseResponseHeaderAndBody(final byte[] buffer,
       final int offset,
       final int length) throws IOException {
-    this.statusCode = httpResponse.getStatusLine().getStatusCode();
+    setStatusCode(httpResponse.getStatusLine().getStatusCode());
 
-    this.statusDescription = httpResponse.getStatusLine().getReasonPhrase();
+    setStatusDescription(httpResponse.getStatusLine().getReasonPhrase());
 
-    this.requestId = getResponseHeader(
+    String requestId = getResponseHeader(
         HttpHeaderConfigurations.X_MS_REQUEST_ID);
-    if (this.requestId == null) {
-      this.requestId = AbfsHttpConstants.EMPTY_STRING;
+    if (requestId == null) {
+      requestId = AbfsHttpConstants.EMPTY_STRING;
     }
+    setRequestId(requestId);
+
     // dump the headers
     AbfsIoUtils.dumpHeadersToDebugLog("Response Headers",
         getResponseHeaders(httpResponse));
@@ -249,9 +254,9 @@ public class AbfsAHCHttpOperation extends HttpOperation {
     abfsHttpClientContext = setFinalAbfsClientContext();
     HttpResponse response = abfsApacheHttpClient.execute(httpRequestBase,
         abfsHttpClientContext);
-    connectionTimeMs = abfsHttpClientContext.getConnectTime();
-    sendRequestTimeMs = abfsHttpClientContext.getSendTime();
-    recvResponseTimeMs = abfsHttpClientContext.getReadTime();
+    setConnectionTimeMs(abfsHttpClientContext.getConnectTime());
+    setSendRequestTimeMs(abfsHttpClientContext.getSendTime());
+    setRecvResponseTimeMs(abfsHttpClientContext.getReadTime());
     return response;
   }
 
@@ -315,17 +320,17 @@ public class AbfsAHCHttpOperation extends HttpOperation {
       return;
     }
 
-    if (HTTP_METHOD_PUT.equals(method)) {
+    if (HTTP_METHOD_PUT.equals(getMethod())) {
       httpRequestBase = new HttpPut(getUri());
     }
-    if (HTTP_METHOD_PATCH.equals(method)) {
+    if (HTTP_METHOD_PATCH.equals(getMethod())) {
       httpRequestBase = new HttpPatch(getUri());
     }
-    if (HTTP_METHOD_POST.equals(method)) {
+    if (HTTP_METHOD_POST.equals(getMethod())) {
       httpRequestBase = new HttpPost(getUri());
     }
 
-    this.expectedBytesToBeSent = length;
+    setExpectedBytesToBeSent(length);
     if (buffer != null) {
       HttpEntity httpEntity = new ByteArrayEntity(buffer, offset, length,
           TEXT_PLAIN);
@@ -346,19 +351,19 @@ public class AbfsAHCHttpOperation extends HttpOperation {
     } finally {
       if (!connectionDisconnectedOnError
           && httpRequestBase instanceof HttpEntityEnclosingRequestBase) {
-        this.bytesSent = length;
+        setBytesSent(length);
       }
     }
   }
 
   private void prepareRequest() throws IOException {
-    if (HTTP_METHOD_GET.equals(method)) {
+    if (HTTP_METHOD_GET.equals(getMethod())) {
       httpRequestBase = new HttpGet(getUri());
     }
-    if (HTTP_METHOD_DELETE.equals(method)) {
+    if (HTTP_METHOD_DELETE.equals(getMethod())) {
       httpRequestBase = new HttpDelete(getUri());
     }
-    if (HTTP_METHOD_HEAD.equals(method)) {
+    if (HTTP_METHOD_HEAD.equals(getMethod())) {
       httpRequestBase = new HttpHead(getUri());
     }
     translateHeaders(httpRequestBase, requestHeaders);
@@ -366,7 +371,7 @@ public class AbfsAHCHttpOperation extends HttpOperation {
 
   private URI getUri() throws IOException {
     try {
-      return url.toURI();
+      return getUrl().toURI();
     } catch (URISyntaxException e) {
       throw new IOException(e);
     }
@@ -405,34 +410,5 @@ public class AbfsAHCHttpOperation extends HttpOperation {
       }
     }
     return "";
-  }
-
-  @Override
-  public String toString() {
-    final StringBuilder sb = new StringBuilder();
-    sb.append(statusCode);
-    sb.append(",");
-    sb.append(storageErrorCode);
-    sb.append(",");
-    sb.append(expectedAppendPos);
-    sb.append(",cid=");
-    sb.append(getClientRequestId());
-    sb.append(",rid=");
-    sb.append(requestId);
-    sb.append(",connMs=");
-    sb.append(connectionTimeMs);
-    sb.append(",sendMs=");
-    sb.append(sendRequestTimeMs);
-    sb.append(",recvMs=");
-    sb.append(recvResponseTimeMs);
-    sb.append(",sent=");
-    sb.append(bytesSent);
-    sb.append(",recv=");
-    sb.append(bytesReceived);
-    sb.append(",");
-    sb.append(method);
-    sb.append(",");
-    sb.append(getMaskedUrl());
-    return sb.toString();
   }
 }
