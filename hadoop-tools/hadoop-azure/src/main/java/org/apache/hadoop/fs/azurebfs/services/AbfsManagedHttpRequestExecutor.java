@@ -63,8 +63,20 @@ public class AbfsManagedHttpRequestExecutor extends HttpRequestExecutor {
     }
     final HttpResponse res = super.doSendRequest(request, inteceptedConnection,
         context);
-    if (request != null && request.containsHeader(EXPECT) && res != null
-        && res.getStatusLine().getStatusCode() != 200) {
+
+    /*
+    * ApacheHttpClient implementation does not raise an exception if the status
+    * of expect100 hand-shake is not less than 200. Although it sends payload only
+    * if the statusCode of the expect100 hand-shake is 100.
+    *
+    * ADLS can send any failure statusCode in exect100 handshake. So, an exception
+    * needs to be explicitly raised if expect100 assertion is failure but the
+    * ApacheHttpClient has not raised an exception.
+    *
+    * Response is only returned by this method if there is no expect100 request header
+    * or the expect100 assertion is failed.
+    */
+    if (request != null && request.containsHeader(EXPECT) && res != null) {
       throw new AbfsApacheHttpExpect100Exception(EXPECT_100_JDK_ERROR, res);
     }
     return res;

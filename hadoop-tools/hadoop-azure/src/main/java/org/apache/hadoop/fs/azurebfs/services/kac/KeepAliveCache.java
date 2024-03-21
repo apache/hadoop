@@ -57,11 +57,15 @@ public final class KeepAliveCache
 
   private boolean threadShouldRun = true;
 
-  private final int maxConn;
+  private int maxConn;
 
   private KeepAliveCache() {
     Thread thread = new Thread(this);
     thread.start();
+    setMaxConn();
+  }
+
+  private void setMaxConn() {
     String sysPropMaxConn = System.getProperty(HTTP_MAX_CONN_SYS_PROP);
     if (sysPropMaxConn == null) {
       maxConn = DEFAULT_MAX_CONN_SYS_PROP;
@@ -70,12 +74,12 @@ public final class KeepAliveCache
     }
   }
 
-  private static KeepAliveCache INSTANCE = new KeepAliveCache();
+  private static final KeepAliveCache INSTANCE = new KeepAliveCache();
 
   @VisibleForTesting
   void close() {
-    INSTANCE.threadShouldRun = false;
-    INSTANCE = new KeepAliveCache();
+    clear();
+    setMaxConn();
   }
 
   public static KeepAliveCache getInstance() {
@@ -189,7 +193,7 @@ public final class KeepAliveCache
     private static final long serialVersionUID = -8680532108106489459L;
 
     // sleep time in milliseconds, before cache clear
-    int nap;
+    private int nap;
 
     ClientVector(int nap) {
       this.nap = nap;
@@ -234,6 +238,11 @@ public final class KeepAliveCache
     private void readObject(java.io.ObjectInputStream stream)
         throws IOException, ClassNotFoundException {
       throw new NotSerializableException();
+    }
+
+    @Override
+    public synchronized boolean equals(final Object o) {
+      return super.equals(o);
     }
   }
 
@@ -286,6 +295,15 @@ public final class KeepAliveCache
     KeepAliveEntry(HttpClientConnection hc, long idleStartTime) {
       this.httpClientConnection = hc;
       this.idleStartTime = idleStartTime;
+    }
+
+    @Override
+    public boolean equals(final Object o) {
+      if (o instanceof KeepAliveEntry) {
+        return httpClientConnection.equals(
+            ((KeepAliveEntry) o).httpClientConnection);
+      }
+      return false;
     }
   }
 }

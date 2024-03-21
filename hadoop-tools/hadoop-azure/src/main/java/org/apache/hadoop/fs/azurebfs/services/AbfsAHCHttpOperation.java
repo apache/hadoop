@@ -282,7 +282,9 @@ public class AbfsAHCHttpOperation extends HttpOperation {
     Map<String, List<String>> map = new HashMap<>();
     for (AbfsHttpHeader header : requestHeaders) {
       map.put(header.getName(),
-          new ArrayList<String>() {{add(header.getValue());}});
+          new ArrayList<String>() {{
+            add(header.getValue());
+          }});
     }
     return map;
   }

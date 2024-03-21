@@ -180,4 +180,13 @@ public class AbfsManagedApacheHttpConnection
   public int getRemotePort() {
     return httpClientConnection.getRemotePort();
   }
+
+  @Override
+  public boolean equals(final Object o) {
+    if (o instanceof AbfsManagedApacheHttpConnection) {
+      return httpClientConnection.equals(
+          ((AbfsManagedApacheHttpConnection) o).httpClientConnection);
+    }
+    return false;
+  }
 }

@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.azurebfs.AbstractAbfsTestWithTimeout;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
+import static java.net.HttpURLConnection.HTTP_OK;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES;
 import static org.apache.hadoop.fs.azurebfs.services.HttpOperationType.APACHE_HTTP_CLIENT;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -138,7 +139,7 @@ public class TestApacheHttpClientFallback extends AbstractAbfsTestWithTimeout {
               < DEFAULT_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES
               ? AbfsAHCHttpOperation.class
               : AbfsHttpOperation.class);
-      Mockito.doReturn(200).when(operation).getStatusCode();
+      Mockito.doReturn(HTTP_OK).when(operation).getStatusCode();
       Mockito.doThrow(new IOException("Test Exception"))
           .when(operation)
           .processResponse(Mockito.nullable(byte[].class), Mockito.anyInt(),
