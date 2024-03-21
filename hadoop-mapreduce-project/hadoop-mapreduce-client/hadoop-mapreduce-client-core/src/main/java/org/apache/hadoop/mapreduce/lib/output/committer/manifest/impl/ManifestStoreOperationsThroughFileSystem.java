@@ -25,14 +25,20 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.IORateLimiter;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.RateLimiterSource;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.AbstractManifestData;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 import org.apache.hadoop.util.JsonSerialization;
 
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.*;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.DELETE_DIR_CAPACITY;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.DELETE_FILE_CAPACITY;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.GET_FILE_STATUS_CAPACITY;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.LIST_CAPACITY;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.MKDIRS_CAPACITY;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.RENAME_CAPACITY;
 
 /**
  * Implementation of manifest store operations through the filesystem API.
@@ -90,7 +96,7 @@ public class ManifestStoreOperationsThroughFileSystem extends ManifestStoreOpera
 
   @Override
   public FileStatus getFileStatus(Path path) throws IOException {
-    acquireReadCapacity(OP_GET_FILE_STATUS, 1);
+    acquireIOCapacity(OP_GET_FILE_STATUS, GET_FILE_STATUS_CAPACITY);
     return fileSystem.getFileStatus(path);
   }
 
@@ -103,35 +109,42 @@ public class ManifestStoreOperationsThroughFileSystem extends ManifestStoreOpera
   @SuppressWarnings("deprecation")
   @Override
   public boolean isFile(Path path) throws IOException {
-    acquireReadCapacity(OP_IS_FILE, 1);
+    acquireIOCapacity(OP_IS_FILE, GET_FILE_STATUS_CAPACITY);
     return fileSystem.isFile(path);
   }
 
   @Override
   public boolean delete(Path path, boolean recursive)
       throws IOException {
-    acquireWriteCapacity(OP_DELETE, 1);
+    acquireIOCapacity(OP_DELETE,
+        recursive ? DELETE_FILE_CAPACITY : DELETE_DIR_CAPACITY);
     return fileSystem.delete(path, recursive);
+  }
+
+  @Override
+  public boolean rmdir(final Path path, final int capacity) throws IOException {
+    acquireIOCapacity(OP_DELETE_DIR, capacity);
+    return fileSystem.delete(path, true);
   }
 
   @Override
   public boolean mkdirs(Path path)
       throws IOException {
-    acquireWriteCapacity(OP_MKDIRS, 1);
+    acquireIOCapacity(OP_MKDIRS, MKDIRS_CAPACITY);
     return fileSystem.mkdirs(path);
   }
 
   @Override
   public boolean renameFile(Path source, Path dest)
       throws IOException {
-    acquireWriteCapacity(OP_RENAME, 1);
+    acquireIOCapacity(OP_RENAME, RENAME_CAPACITY);
     return fileSystem.rename(source, dest);
   }
 
   @Override
   public RemoteIterator<FileStatus> listStatusIterator(Path path)
       throws IOException {
-    acquireReadCapacity(OP_LIST_STATUS, 1);
+    acquireIOCapacity(OP_LIST_STATUS, LIST_CAPACITY);
     return fileSystem.listStatusIterator(path);
   }
 
@@ -139,7 +152,7 @@ public class ManifestStoreOperationsThroughFileSystem extends ManifestStoreOpera
   public TaskManifest loadTaskManifest(
       JsonSerialization<TaskManifest> serializer,
       FileStatus st) throws IOException {
-    acquireReadCapacity(OP_OPENFILE, 1);
+    acquireIOCapacity(OP_OPENFILE, 1);
     return TaskManifest.load(serializer, fileSystem, st.getPath(), st);
   }
 
@@ -148,7 +161,7 @@ public class ManifestStoreOperationsThroughFileSystem extends ManifestStoreOpera
       final T manifestData,
       final Path path,
       final boolean overwrite) throws IOException {
-    acquireWriteCapacity(OP_CREATE, 1);
+    acquireIOCapacity(OP_CREATE, 1);
     manifestData.save(fileSystem, path, overwrite);
   }
 
@@ -186,7 +199,7 @@ public class ManifestStoreOperationsThroughFileSystem extends ManifestStoreOpera
     // qualify so we can be confident that the FS being synced
     // is the one we expect.
     fileSystem.makeQualified(path);
-    acquireWriteCapacity(OP_MSYNC, 1);
+    acquireIOCapacity(OP_MSYNC, 1);
     try {
       fileSystem.msync();
     } catch (UnsupportedOperationException ignored) {
@@ -202,10 +215,10 @@ public class ManifestStoreOperationsThroughFileSystem extends ManifestStoreOpera
    * @return a rate limiter source.
    */
   @Override
-  public RateLimiterSource rateLimiterSource() {
+  public IORateLimiter rateLimiterSource() {
     final FileSystem fs = getFileSystem();
-    return fs instanceof RateLimiterSource
-     ? (RateLimiterSource) fs
+    return fs instanceof IORateLimiter
+     ? (IORateLimiter) fs
      : super.rateLimiterSource();
   }
 }

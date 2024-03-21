@@ -489,7 +489,6 @@ public abstract class AbstractAbfsIntegrationTest extends
         .right(UUID.randomUUID().toString(), SHORTENED_GUID_LEN));
   }
 
-
   /**
    * Get any Delegation Token manager created by the filesystem.
    * @return the DT manager or null.

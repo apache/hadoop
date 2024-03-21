@@ -28,14 +28,13 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.IORateLimiter;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
-import org.apache.hadoop.fs.RateLimiterSource;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.AbstractManifestData;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 import org.apache.hadoop.util.JsonSerialization;
-import org.apache.hadoop.util.RateLimiting;
 
 /**
  * FileSystem operations which are needed to generate the task manifest.
@@ -47,7 +46,7 @@ import org.apache.hadoop.util.RateLimiting;
  */
 @InterfaceAudience.LimitedPrivate("mapreduce, object-stores")
 @InterfaceStability.Unstable
-public abstract class ManifestStoreOperations implements Closeable, RateLimiterSource {
+public abstract class ManifestStoreOperations implements Closeable, IORateLimiter {
 
   /**
    * Bind to the filesystem.
@@ -97,6 +96,18 @@ public abstract class ManifestStoreOperations implements Closeable, RateLimiterS
    * @throws IOException failure.
    */
   public abstract boolean delete(Path path, boolean recursive)
+      throws IOException;
+
+  /**
+   * Delete Directory to {@code FileSystem#delete(Path, true)}.
+   * If it returns without an error: there is nothing at
+   * the end of the path.
+   * @param path path
+   * @param capacity IO capacity to ask for.
+   * @return true if the path was deleted.
+   * @throws IOException failure.
+   */
+  public abstract boolean rmdir(Path path, int capacity)
       throws IOException;
 
   /**
@@ -295,8 +306,8 @@ public abstract class ManifestStoreOperations implements Closeable, RateLimiterS
    * Shall never be null; may be unlimited.
    * @return the rate limiter source.
    */
-  public RateLimiterSource rateLimiterSource() {
-    return RateLimiterSource.unlimited();
+  public IORateLimiter rateLimiterSource() {
+    return IORateLimiter.unlimited();
   }
 
   /**
@@ -304,37 +315,8 @@ public abstract class ManifestStoreOperations implements Closeable, RateLimiterS
    * {@inheritDoc}
    */
   @Override
-  public RateLimiting acquireReadRateLimiter(final String operation) {
-    return rateLimiterSource().acquireReadRateLimiter(operation);
-  }
-
-  /**
-   * Delegate to {@link #rateLimiterSource()}.
-   * {@inheritDoc}
-   */
-  @Override
-  public RateLimiting acquireWriteRateLimiter(final String operation) {
-    return rateLimiterSource().acquireWriteRateLimiter(operation);
-  }
-
-  /**
-   * Acquire read capacity for a given operation.
-   * @param operation operation name.
-   * @param requestedCapacity capacity requested.
-   * @return time waited.
-   */
-  public Duration acquireReadCapacity(String operation, int requestedCapacity) {
-    return acquireReadRateLimiter(operation).acquire(requestedCapacity);
-  }
-
-  /**
-   * Acquire write capacity for a given operation.
-   * @param operation operation name.
-   * @param requestedCapacity capacity requested.
-   * @return time waited.
-   */
-  public Duration acquireWriteCapacity(String operation, int requestedCapacity) {
-    return acquireReadRateLimiter(operation).acquire(requestedCapacity);
+  public Duration acquireIOCapacity(final String operation, final int requestedCapacity) {
+    return rateLimiterSource().acquireIOCapacity(operation, requestedCapacity);
   }
 
 }

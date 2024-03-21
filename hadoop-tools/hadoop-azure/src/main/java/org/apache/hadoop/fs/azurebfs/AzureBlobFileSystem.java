@@ -46,7 +46,7 @@ import javax.annotation.Nullable;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.impl.BackReference;
-import org.apache.hadoop.fs.RateLimiterSource;
+import org.apache.hadoop.fs.statistics.StoreStatisticNames;
 import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
@@ -69,6 +69,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.IORateLimiter;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
@@ -104,8 +105,6 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.RateLimiting;
-import org.apache.hadoop.util.RateLimitingFactory;
 import org.apache.hadoop.util.functional.RemoteIterators;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.LambdaUtils;
@@ -134,7 +133,7 @@ import static org.apache.hadoop.util.functional.RemoteIterators.mappingRemoteIte
  */
 @InterfaceStability.Evolving
 public class AzureBlobFileSystem extends FileSystem
-    implements IOStatisticsSource, RateLimiterSource {
+    implements IOStatisticsSource, IORateLimiter {
   public static final Logger LOG = LoggerFactory.getLogger(AzureBlobFileSystem.class);
   private URI uri;
   private Path workingDir;
@@ -155,9 +154,6 @@ public class AzureBlobFileSystem extends FileSystem
   private DataBlocks.BlockFactory blockFactory;
   /** Maximum Active blocks per OutputStream. */
   private int blockOutputActiveBlocks;
-
-  /** Rate limiting for operations which use it to throttle their IO. */
-  private RateLimiting rateLimiting;
 
   /** Storing full path uri for better logging. */
   private URI fullPathUri;
@@ -188,6 +184,7 @@ public class AzureBlobFileSystem extends FileSystem
     if (blockOutputActiveBlocks < 1) {
       blockOutputActiveBlocks = 1;
     }
+    LOG.debug("Initializing AzureBlobFileSystem for {} complete", uri);
 
     // AzureBlobFileSystemStore with params in builder.
     AzureBlobFileSystemStore.AzureBlobFileSystemStoreBuilder
@@ -236,8 +233,6 @@ public class AzureBlobFileSystem extends FileSystem
       }
     }
 
-    rateLimiting = RateLimitingFactory.create(abfsConfiguration.getRateLimit());
-    LOG.debug("Initializing AzureBlobFileSystem for {} complete", uri);
   }
 
   @Override
@@ -559,7 +554,7 @@ public class AzureBlobFileSystem extends FileSystem
       }
 
       // acquire one IO permit
-      final Duration waitTime = rateLimiting.acquire(1);
+      final Duration waitTime = acquireIOCapacity(StoreStatisticNames.OP_RENAME, 1);
 
       try {
         final boolean recovered = abfsStore.rename(qualifiedSrcPath,
@@ -1682,14 +1677,8 @@ public class AzureBlobFileSystem extends FileSystem
   }
 
   @Override
-  public RateLimiting acquireReadRateLimiter(final String operation) {
-    LOG.debug("Acquiring read rate limiter for operation: {}", operation);
-    return rateLimiting;
+  public Duration acquireIOCapacity(final String operation, final int requestedCapacity) {
+    return abfsStore.acquireIOCapacity(operation, requestedCapacity);
   }
 
-  @Override
-  public RateLimiting acquireWriteRateLimiter(final String operation) {
-    LOG.debug("Acquiring write rate limiter for operation: {}", operation);
-    return rateLimiting;
-  }
 }

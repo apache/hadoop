@@ -64,6 +64,9 @@ public final class StoreStatisticNames {
   public static final String OP_DELETE = "op_delete";
 
   /** {@value}. */
+  public static final String OP_DELETE_DIR = "op_delete_dir";
+
+  /** {@value}. */
   public static final String OP_EXISTS = "op_exists";
 
   /** {@value}. */

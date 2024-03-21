@@ -131,8 +131,42 @@ public final class InternalConstants {
 
   /**
    * How many attempts to commit the task by save and rename
-   * before giving up.
+   * before giving up: {@value}.
    */
   public static final int TASK_COMMIT_RETRY_COUNT = 3;
+
+  /**
+   * Capacity for getFileStatus and similar HEAD requests: {@value}.
+   */
+  public static final int GET_FILE_STATUS_CAPACITY = 1;
+
+  /**
+   * Capacity for deleting a single file: {@value}.
+   */
+  public static final int DELETE_FILE_CAPACITY = 10;
+
+  /**
+   * Capacity for deleting a directory.
+   * This is considered more expensive, and may be configured.
+   * Value: {@value}.
+   */
+  public static final int DELETE_DIR_CAPACITY = 100;
+
+  /**
+   * Capacity for listing: {@value}.
+   */
+  public static final int LIST_CAPACITY = 10;
+
+  /**
+   * Capacity for mkdirs: {@value}.
+   */
+  public static final int MKDIRS_CAPACITY = 10;
+
+  /**
+   * Capacity for rename, includes optional LIST request;
+   * does not worry about total depth or file count.
+   * Value: {@value}.
+   */
+  public static final int RENAME_CAPACITY = 10;
 
 }

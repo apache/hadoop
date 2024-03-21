@@ -35,12 +35,11 @@ import org.apache.hadoop.util.functional.TaskPool;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.retrieveIOStatistics;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_DELETE_DIR;
 import static org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter.FILEOUTPUTCOMMITTER_CLEANUP_FAILURES_IGNORED;
 import static org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter.FILEOUTPUTCOMMITTER_CLEANUP_FAILURES_IGNORED_DEFAULT;
 import static org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter.FILEOUTPUTCOMMITTER_CLEANUP_SKIPPED;
 import static org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter.FILEOUTPUTCOMMITTER_CLEANUP_SKIPPED_DEFAULT;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_CLEANUP_DIRECTORY_WRITE_CAPACITY;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_CLEANUP_DIRECTORY_WRITE_CAPACITY_DEFAULT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_CLEANUP_PARALLEL_DELETE;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_CLEANUP_PARALLEL_DELETE_DIRS_DEFAULT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_CLEANUP;
@@ -105,11 +104,6 @@ public class CleanupJobStage extends
    */
   private String stageName = OP_STAGE_JOB_CLEANUP;
 
-  /**
-   * Capacity for delete operations.
-   */
-  private int deleteCapacity;
-
   public CleanupJobStage(final StageConfig stageConfig) {
     super(false, stageConfig, OP_STAGE_JOB_CLEANUP, true);
   }
@@ -150,8 +144,6 @@ public class CleanupJobStage extends
           0, null);
     }
 
-    // set the capacity for the delete operations.
-    deleteCapacity = args.deleteCapacity;
     Outcome outcome = null;
     IOException exception;
 
@@ -230,7 +222,7 @@ public class CleanupJobStage extends
    * Delete a single TA dir in a parallel task.
    * Updates the audit context.
    * Exceptions are swallowed so that attempts are still made
-   * to delete the others, but the first exception
+   * to delete the others, but one of any exceptions raised.
    * caught is saved in a field which can be retrieved
    * via {@link #getLastDeleteException()}.
    *
@@ -256,11 +248,8 @@ public class CleanupJobStage extends
   private IOException deleteOneDir(final Path dir)
       throws IOException {
 
-    // on ABFS, tree delete is O(directories); on GCS O(files).
-    // rate limiting focuses on ABFS.
-    getOperations().acquireWriteCapacity("delete", deleteCapacity);
     deleteDirCount.incrementAndGet();
-    IOException ex = deleteDir(dir, true);
+    final IOException ex = deleteDirSuppressingExceptions(dir, OP_DELETE_DIR);
     if (ex != null) {
       deleteFailure(ex);
     }
@@ -272,8 +261,9 @@ public class CleanupJobStage extends
    * @param ex exception
    */
   private synchronized void deleteFailure(IOException ex) {
-    // excaption: add the count
+    // exception: add the count
     deleteFailureCount.incrementAndGet();
+    // and save the exception, overwriting any predecessor.
     lastDeleteException = ex;
   }
 
@@ -305,30 +295,22 @@ public class CleanupJobStage extends
     private final boolean suppressExceptions;
 
     /**
-     * Delete IO capacity.
-     */
-    private final int deleteCapacity;
-
-    /**
      * Arguments to the stage.
      * @param statisticName stage name to report
      * @param enabled is the stage enabled?
      * @param deleteTaskAttemptDirsInParallel delete task attempt dirs in
      * parallel?
      * @param suppressExceptions suppress exceptions?
-     * @param deleteCapacity Delete IO capacity.
      */
     public Arguments(
         final String statisticName,
         final boolean enabled,
         final boolean deleteTaskAttemptDirsInParallel,
-        final boolean suppressExceptions,
-        final int deleteCapacity) {
+        final boolean suppressExceptions) {
       this.statisticName = statisticName;
       this.enabled = enabled;
       this.deleteTaskAttemptDirsInParallel = deleteTaskAttemptDirsInParallel;
       this.suppressExceptions = suppressExceptions;
-      this.deleteCapacity = deleteCapacity;
     }
 
     public String getStatisticName() {
@@ -365,8 +347,7 @@ public class CleanupJobStage extends
   public static final Arguments DISABLED = new Arguments(OP_STAGE_JOB_CLEANUP,
       false,
       false,
-      false,
-      1);
+      false);
 
   /**
    * Build an options argument from a configuration, using the
@@ -386,15 +367,11 @@ public class CleanupJobStage extends
     boolean deleteTaskAttemptDirsInParallel = conf.getBoolean(
         OPT_CLEANUP_PARALLEL_DELETE,
         OPT_CLEANUP_PARALLEL_DELETE_DIRS_DEFAULT);
-    int deleteCapacity = conf.getInt(
-        OPT_CLEANUP_DIRECTORY_WRITE_CAPACITY,
-        OPT_CLEANUP_DIRECTORY_WRITE_CAPACITY_DEFAULT);
     return new Arguments(
         statisticName,
         enabled,
         deleteTaskAttemptDirsInParallel,
-        suppressExceptions,
-        deleteCapacity
+        suppressExceptions
     );
   }
 

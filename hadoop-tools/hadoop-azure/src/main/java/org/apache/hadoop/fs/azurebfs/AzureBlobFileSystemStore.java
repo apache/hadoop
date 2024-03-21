@@ -36,6 +36,7 @@ import java.nio.charset.CharsetDecoder;
 import java.nio.charset.CharsetEncoder;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -55,6 +56,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.IORateLimiter;
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
 import org.apache.hadoop.fs.azurebfs.security.ContextProviderEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
@@ -138,6 +140,8 @@ import org.apache.hadoop.fs.store.DataBlocks;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
+import org.apache.hadoop.util.RateLimiting;
+import org.apache.hadoop.util.RateLimitingFactory;
 import org.apache.hadoop.util.SemaphoredDelegatingExecutor;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.http.client.utils.URIBuilder;
@@ -166,7 +170,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
+public class AzureBlobFileSystemStore implements Closeable, ListingSupport, IORateLimiter {
   private static final Logger LOG = LoggerFactory.getLogger(AzureBlobFileSystemStore.class);
 
   private AbfsClient client;
@@ -203,6 +207,9 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
   /** ABFS instance reference to be held by the store to avoid GC close. */
   private BackReference fsBackRef;
+
+  /** Rate limiting for operations which use it to throttle their IO. */
+  private final RateLimiting rateLimiting;
 
   /**
    * FileSystem Store for {@link AzureBlobFileSystem} for Abfs operations.
@@ -282,6 +289,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         abfsConfiguration.getMaxWriteRequestsToQueue(),
         10L, TimeUnit.SECONDS,
         "abfs-bounded");
+    this.rateLimiting = RateLimitingFactory.create(abfsConfiguration.getRateLimit());
   }
 
   /**
@@ -2210,5 +2218,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     if (abfsClientRenameResult.isIncompleteMetadataState()) {
       abfsCounters.incrementCounter(METADATA_INCOMPLETE_RENAME_FAILURES, 1);
     }
+  }
+
+  @Override
+  public Duration acquireIOCapacity(final String operation, final int requestedCapacity) {
+    LOG.debug("Acquiring read rate limiter for operation: {}", operation);
+    return rateLimiting.acquire(requestedCapacity);
   }
 }

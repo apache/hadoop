@@ -49,6 +49,12 @@ public class StubStoreOperations extends ManifestStoreOperations {
   }
 
   @Override
+  public boolean rmdir(final Path path, final int capacity)
+      throws IOException {
+    return true;
+  }
+
+  @Override
   public boolean mkdirs(final Path path) throws IOException {
     return true;
   }
