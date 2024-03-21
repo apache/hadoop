@@ -477,6 +477,18 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     if (useLocalConfigurationProvider) {
       addResource(CS_CONFIGURATION_FILE);
     }
+    super.setPropListeners(
+        (name, value) -> {
+          if (configurationProperties != null) {
+            configurationProperties.set(name, value);
+          }
+        },
+        name -> {
+          if (configurationProperties != null) {
+            configurationProperties.unset(name);
+          }
+        }
+    );
   }
 
   static String getUserPrefix(String user) {
@@ -1219,7 +1231,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public void reinitializeConfigurationProperties() {
     // Props are always Strings, therefore this cast is safe
     Map<String, String> props = (Map) getProps();
-    configurationProperties = new ConfigurationProperties(props);
+    configurationProperties = new ConfigurationProperties(props, PREFIX);
   }
 
   public void setQueueMaximumAllocationMb(QueuePath queue, int value) {

@@ -63,6 +63,8 @@ import java.util.StringTokenizer;
 import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
@@ -242,6 +244,9 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   private static boolean restrictSystemPropsDefault = false;
   private boolean restrictSystemProps = restrictSystemPropsDefault;
   private boolean allowNullValueProperties = false;
+
+  private BiConsumer<String, String> propertiesAddListener;
+  private Consumer<String> propertiesRemoveListener;
 
   private static class Resource {
     private final Object resource;
@@ -757,6 +762,15 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       }
     }
     return names;
+  }
+
+  protected void setPropListeners(
+      BiConsumer<String, String> propertiesAddListener,
+      Consumer<String> propertiesRemoveListener
+  ) {
+    this.properties = null;
+    this.propertiesAddListener = propertiesAddListener;
+    this.propertiesRemoveListener = propertiesRemoveListener;
   }
 
   private void updatePropertiesWithDeprecatedKeys(
@@ -2923,10 +2937,27 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
 
   protected synchronized Properties getProps() {
     if (properties == null) {
-      properties = new Properties();
+      properties = propertiesAddListener != null || propertiesRemoveListener != null
+          ? new PropertiesWithListener()
+          : new Properties();
       loadProps(properties, 0, true);
     }
     return properties;
+  }
+
+  private class PropertiesWithListener extends Properties {
+
+    @Override
+    public synchronized Object setProperty(String key, String value) {
+      propertiesAddListener.accept(key, value);
+      return super.setProperty(key, value);
+    }
+
+    @Override
+    public synchronized Object remove(Object key) {
+      propertiesRemoveListener.accept(String.valueOf(key));
+      return super.remove(key);
+    }
   }
 
   /**
