@@ -54,7 +54,7 @@ public class TestApacheClientConnectionPool extends
   }
 
   private void validatePoolSize(int size) throws IOException {
-    KeepAliveCache keepAliveCache = KeepAliveCache.INSTANCE;
+    KeepAliveCache keepAliveCache = KeepAliveCache.getInstance();
     final HttpRoute routes = new HttpRoute(new HttpHost("localhost"));
     final HttpClientConnection[] connections = new HttpClientConnection[size * 2];
 
@@ -83,7 +83,7 @@ public class TestApacheClientConnectionPool extends
 
   @Test
   public void testKeepAliveCache() throws IOException {
-    KeepAliveCache keepAliveCache = KeepAliveCache.INSTANCE;
+    KeepAliveCache keepAliveCache = KeepAliveCache.getInstance();
     final HttpRoute routes = new HttpRoute(new HttpHost("localhost"));
     HttpClientConnection connection = Mockito.mock(HttpClientConnection.class);
 
@@ -99,7 +99,7 @@ public class TestApacheClientConnectionPool extends
 
   @Test
   public void testKeepAliveCacheCleanup() throws Exception {
-    KeepAliveCache keepAliveCache = KeepAliveCache.INSTANCE;
+    KeepAliveCache keepAliveCache = KeepAliveCache.getInstance();
     final HttpRoute routes = new HttpRoute(new HttpHost("localhost"));
     HttpClientConnection connection = Mockito.mock(HttpClientConnection.class);
     keepAliveCache.put(routes, connection);
@@ -113,7 +113,7 @@ public class TestApacheClientConnectionPool extends
 
   @Test
   public void testKeepAliveCacheCleanupWithConnections() throws Exception {
-    KeepAliveCache keepAliveCache = KeepAliveCache.INSTANCE;
+    KeepAliveCache keepAliveCache = KeepAliveCache.getInstance();
     keepAliveCache.pauseThread();
     final HttpRoute routes = new HttpRoute(new HttpHost("localhost"));
     HttpClientConnection connection = Mockito.mock(HttpClientConnection.class);

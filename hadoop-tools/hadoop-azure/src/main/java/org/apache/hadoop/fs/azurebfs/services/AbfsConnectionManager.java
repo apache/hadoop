@@ -44,7 +44,7 @@ import org.apache.http.util.Asserts;
  */
 public class AbfsConnectionManager implements HttpClientConnectionManager {
 
-  KeepAliveCache kac = KeepAliveCache.INSTANCE;
+  KeepAliveCache kac = KeepAliveCache.getInstance();
 
   private final AbfsConnFactory httpConnectionFactory;
 

@@ -42,10 +42,16 @@ public class AbfsManagedApacheHttpConnection
 
   public final HttpRoute httpRoute;
 
+  private AbfsManagedHttpContext managedHttpContext;
+
   public AbfsManagedApacheHttpConnection(ManagedHttpClientConnection conn,
       final HttpRoute route) {
     this.httpClientConnection = conn;
     this.httpRoute = route;
+  }
+
+  void setManagedHttpContext(AbfsManagedHttpContext managedHttpContext) {
+    this.managedHttpContext = managedHttpContext;
   }
 
   @Override
@@ -87,6 +93,7 @@ public class AbfsManagedApacheHttpConnection
   public boolean isResponseAvailable(final int timeout) throws IOException {
     Long start = System.currentTimeMillis();
     boolean val = httpClientConnection.isResponseAvailable(timeout);
+    managedHttpContext.readTime += System.currentTimeMillis() - start;
     return val;
   }
 
@@ -95,12 +102,15 @@ public class AbfsManagedApacheHttpConnection
       throws HttpException, IOException {
     long start = System.currentTimeMillis();
     httpClientConnection.sendRequestHeader(request);
+    managedHttpContext.sendTime += System.currentTimeMillis() - start;
   }
 
   @Override
   public void sendRequestEntity(final HttpEntityEnclosingRequest request)
       throws HttpException, IOException {
+    long start = System.currentTimeMillis();
     httpClientConnection.sendRequestEntity(request);
+    managedHttpContext.sendTime += System.currentTimeMillis() - start;
   }
 
   @Override
@@ -108,18 +118,23 @@ public class AbfsManagedApacheHttpConnection
       throws HttpException, IOException {
     long start = System.currentTimeMillis();
     HttpResponse response = httpClientConnection.receiveResponseHeader();
+    managedHttpContext.readTime += System.currentTimeMillis() - start;
     return response;
   }
 
   @Override
   public void receiveResponseEntity(final HttpResponse response)
       throws HttpException, IOException {
+    long start = System.currentTimeMillis();
     httpClientConnection.receiveResponseEntity(response);
+    managedHttpContext.readTime += System.currentTimeMillis() - start;
   }
 
   @Override
   public void flush() throws IOException {
+    long start = System.currentTimeMillis();
     httpClientConnection.flush();
+    managedHttpContext.sendTime += System.currentTimeMillis() - start;
   }
 
   @Override

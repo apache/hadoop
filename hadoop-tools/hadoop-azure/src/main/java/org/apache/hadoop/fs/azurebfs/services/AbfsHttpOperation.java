@@ -327,8 +327,6 @@ public class AbfsHttpOperation extends HttpOperation {
       return;
     }
 
-    startTime = System.nanoTime();
-
     parseResponse(buffer, offset, length);
   }
 

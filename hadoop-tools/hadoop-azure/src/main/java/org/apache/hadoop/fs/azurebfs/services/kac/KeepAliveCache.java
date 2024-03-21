@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.NotSerializableException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.http.HttpClientConnection;
@@ -50,18 +51,32 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.KAC_CONN
  */
 public class KeepAliveCache extends HashMap<KeepAliveCache.KeepAliveKey, KeepAliveCache.ClientVector>
     implements Runnable{
-
-  private Thread thread;
-
   private boolean threadShouldPause = true;
 
   private boolean threadShouldRun = true;
 
   private final int maxConn;
 
-  public void close() {
+  private KeepAliveCache() {
+    Thread thread = new Thread(this);
+    thread.start();
+    String sysPropMaxConn = System.getProperty(HTTP_MAX_CONN_SYS_PROP);
+    if (sysPropMaxConn == null) {
+      maxConn = DEFAULT_MAX_CONN_SYS_PROP;
+    } else {
+      maxConn = Integer.parseInt(sysPropMaxConn);
+    }
+  }
+  private static KeepAliveCache INSTANCE = new KeepAliveCache();
+
+  @VisibleForTesting
+  void close() {
     INSTANCE.threadShouldRun = false;
     INSTANCE = new KeepAliveCache();
+  }
+
+  public static KeepAliveCache getInstance() {
+    return INSTANCE;
   }
 
   @VisibleForTesting
@@ -73,19 +88,6 @@ public class KeepAliveCache extends HashMap<KeepAliveCache.KeepAliveKey, KeepAli
   void resumeThread() {
     threadShouldPause = true;
   }
-
-
-  private KeepAliveCache() {
-    thread = new Thread(this);
-    thread.start();
-    String sysPropMaxConn = System.getProperty(HTTP_MAX_CONN_SYS_PROP);
-    if (sysPropMaxConn == null) {
-      maxConn = DEFAULT_MAX_CONN_SYS_PROP;
-    } else {
-      maxConn = Integer.parseInt(sysPropMaxConn);
-    }
-  }
-  public static KeepAliveCache INSTANCE = new KeepAliveCache();
 
   private int getKacSize() {
     return INSTANCE.maxConn;
@@ -103,49 +105,54 @@ public class KeepAliveCache extends HashMap<KeepAliveCache.KeepAliveKey, KeepAli
   private void kacCleanup() {
     try {
       Thread.sleep(KAC_CONN_TTL);
-      synchronized (this) {
-        /* Remove all unused HttpClients.  Starting from the
-         * bottom of the stack (the least-recently used first).
-         * REMIND: It'd be nice to not remove *all* connections
-         * that aren't presently in use.  One could have been added
-         * a second ago that's still perfectly valid, and we're
-         * needlessly axing it.  But it's not clear how to do this
-         * cleanly, and doing it right may be more trouble than it's
-         * worth.
-         */
+    } catch (InterruptedException ex) {
+      return;
+    }
+    synchronized (this) {
+      /* Remove all unused HttpClients.  Starting from the
+       * bottom of the stack (the least-recently used first).
+       * REMIND: It'd be nice to not remove *all* connections
+       * that aren't presently in use.  One could have been added
+       * a second ago that's still perfectly valid, and we're
+       * needlessly axing it.  But it's not clear how to do this
+       * cleanly, and doing it right may be more trouble than it's
+       * worth.
+       */
 
-        long currentTime = System.currentTimeMillis();
+      long currentTime = System.currentTimeMillis();
 
-        ArrayList<KeepAliveKey> keysToRemove
-            = new ArrayList<KeepAliveKey>();
+      ArrayList<KeepAliveKey> keysToRemove
+          = new ArrayList<KeepAliveKey>();
 
-        for (KeepAliveKey key : keySet()) {
-          ClientVector v = get(key);
-          synchronized (v) {
-            int i;
+      for (Map.Entry<KeepAliveKey, ClientVector> entry : entrySet()) {
+        KeepAliveKey key = entry.getKey();
+        ClientVector v = entry.getValue();
+        synchronized (v) {
+          int i;
 
-            for (i = 0; i < v.size(); i++) {
-              KeepAliveEntry e = v.elementAt(i);
-              if ((currentTime - e.idleStartTime) > v.nap) {
-                HttpClientConnection hc = e.httpClientConnection;
+          for (i = 0; i < v.size(); i++) {
+            KeepAliveEntry e = v.elementAt(i);
+            if ((currentTime - e.idleStartTime) > v.nap) {
+              HttpClientConnection hc = e.httpClientConnection;
+              try {
                 hc.close();
-              } else {
-                break;
-              }
-            }
-            v.subList(0, i).clear();
-
-            if (v.size() == 0) {
-              keysToRemove.add(key);
+              } catch (IOException ignoredException) {}
+            } else {
+              break;
             }
           }
-        }
+          v.subList(0, i).clear();
 
-        for (KeepAliveKey key : keysToRemove) {
-          removeVector(key);
+          if (v.size() == 0) {
+            keysToRemove.add(key);
+          }
         }
       }
-    } catch (Exception ex) {}
+
+      for (KeepAliveKey key : keysToRemove) {
+        removeVector(key);
+      }
+    }
   }
 
   synchronized void removeVector(KeepAliveKey k) {
@@ -179,9 +186,6 @@ public class KeepAliveCache extends HashMap<KeepAliveCache.KeepAliveKey, KeepAli
 
     // sleep time in milliseconds, before cache clear
     int nap;
-
-
-
     ClientVector (int nap) {
       this.nap = nap;
     }
@@ -208,8 +212,7 @@ public class KeepAliveCache extends HashMap<KeepAliveCache.KeepAliveKey, KeepAli
     /* return a still valid, unused HttpClient */
     synchronized void put(HttpClientConnection h) {
       if (size() >= getKacSize()) {
-        try {h.close();} catch (Exception e) {}
-        ;
+        try {h.close();} catch (IOException ignored) {}
         return;
       }
       push(new KeepAliveEntry(h, System.currentTimeMillis()));
@@ -230,7 +233,7 @@ public class KeepAliveCache extends HashMap<KeepAliveCache.KeepAliveKey, KeepAli
   }
 
 
-  class KeepAliveKey {
+  static class KeepAliveKey {
     private final HttpRoute httpRoute;
 
 
@@ -257,7 +260,7 @@ public class KeepAliveCache extends HashMap<KeepAliveCache.KeepAliveKey, KeepAli
     }
   }
 
-  class KeepAliveEntry {
+  static class KeepAliveEntry {
     HttpClientConnection httpClientConnection;
     long idleStartTime;
 

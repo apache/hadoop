@@ -23,21 +23,13 @@ import org.apache.http.client.protocol.HttpClientContext;
 
 public class AbfsManagedHttpContext extends HttpClientContext {
 
-  Long connectTime;
+  long connectTime;
 
   long readTime;
 
   long sendTime;
 
   HttpClientConnection httpClientConnection;
-
-  long expect100HeaderSendTime = 0L;
-
-  long expect100ResponseTime;
-
-  long keepAliveTime;
-
-  Boolean isBeingRead = false;
 
   final AbfsRestOperationType abfsRestOperationType;
 

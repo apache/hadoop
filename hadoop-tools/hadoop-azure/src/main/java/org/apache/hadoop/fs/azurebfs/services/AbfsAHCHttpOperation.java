@@ -239,7 +239,6 @@ public class AbfsAHCHttpOperation extends HttpOperation {
     AbfsIoUtils.dumpHeadersToDebugLog("Response Headers",
         getResponseHeaders(httpResponse));
     parseResponse(buffer, offset, length);
-    abfsHttpClientContext.isBeingRead = false;
   }
 
   @VisibleForTesting
@@ -247,6 +246,7 @@ public class AbfsAHCHttpOperation extends HttpOperation {
     abfsHttpClientContext = setFinalAbfsClientContext(method);
     HttpResponse response = abfsApacheHttpClient.execute(httpRequestBase,
         abfsHttpClientContext);
+    connectionTimeMs = abfsHttpClientContext.connectTime;
     sendRequestTimeMs = abfsHttpClientContext.sendTime;
     recvResponseTimeMs = abfsHttpClientContext.readTime;
     return response;

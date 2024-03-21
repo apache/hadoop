@@ -38,6 +38,18 @@ public class AbfsManagedHttpRequestExecutor extends HttpRequestExecutor {
   }
 
   @Override
+  public HttpResponse execute(final HttpRequest request,
+      final HttpClientConnection conn,
+      final HttpContext context) throws IOException, HttpException {
+    if (context instanceof AbfsManagedHttpContext
+        && conn instanceof AbfsManagedApacheHttpConnection) {
+      ((AbfsManagedApacheHttpConnection) conn).setManagedHttpContext(
+          (AbfsManagedHttpContext) context);
+    }
+    return super.execute(request, conn, context);
+  }
+
+  @Override
   protected HttpResponse doSendRequest(final HttpRequest request,
       final HttpClientConnection conn,
       final HttpContext context) throws IOException, HttpException {
@@ -49,14 +61,8 @@ public class AbfsManagedHttpRequestExecutor extends HttpRequestExecutor {
     } else {
       inteceptedConnection = conn;
     }
-//      long start = System.currentTimeMillis();
     final HttpResponse res = super.doSendRequest(request, inteceptedConnection,
         context);
-//      long elapsed = System.currentTimeMillis() - start;
-    if (context instanceof AbfsManagedHttpContext) {
-      ((AbfsManagedHttpContext) context).httpClientConnection = conn;
-//        ((AbfsHttpClientContext) context).sendTime = elapsed;
-    }
     if (request != null && request.containsHeader(EXPECT) && res != null
         && res.getStatusLine().getStatusCode() != 200) {
       throw new AbfsApacheHttpExpect100Exception(EXPECT_100_JDK_ERROR, res);
@@ -76,13 +82,7 @@ public class AbfsManagedHttpRequestExecutor extends HttpRequestExecutor {
     } else {
       interceptedConnection = conn;
     }
-    long start = System.currentTimeMillis();
-    final HttpResponse res = super.doReceiveResponse(request,
+    return super.doReceiveResponse(request,
         interceptedConnection, context);
-    long elapsed = System.currentTimeMillis() - start;
-    if (context instanceof AbfsManagedHttpContext) {
-      ((AbfsManagedHttpContext) context).readTime = elapsed;
-    }
-    return res;
   }
 }
