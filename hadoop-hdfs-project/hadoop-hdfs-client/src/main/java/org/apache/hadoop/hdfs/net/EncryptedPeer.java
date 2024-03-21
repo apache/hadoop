@@ -19,7 +19,7 @@ package org.apache.hadoop.hdfs.net;
 
 import java.io.IOException;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
+import org.apache.hadoop.io.IOStreamPair;
 import org.apache.hadoop.net.unix.DomainSocket;
 
 import java.io.InputStream;

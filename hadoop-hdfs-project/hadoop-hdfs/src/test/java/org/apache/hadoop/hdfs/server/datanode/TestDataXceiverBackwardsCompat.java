@@ -30,6 +30,7 @@ import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
+import org.apache.hadoop.io.IOStreamPair;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.security.token.Token;

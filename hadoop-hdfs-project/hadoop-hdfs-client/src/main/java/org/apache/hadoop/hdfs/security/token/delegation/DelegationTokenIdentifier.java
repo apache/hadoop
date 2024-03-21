@@ -25,6 +25,7 @@ import java.util.Collections;
 import java.util.Map;
 
 import org.apache.commons.collections.map.LRUMap;
+import org.apache.hadoop.Constants;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.web.WebHdfsConstants;
 import org.apache.hadoop.io.Text;
@@ -41,8 +42,7 @@ import org.apache.hadoop.classification.VisibleForTesting;
 @InterfaceAudience.Private
 public class DelegationTokenIdentifier
     extends AbstractDelegationTokenIdentifier {
-  public static final Text HDFS_DELEGATION_KIND =
-      new Text("HDFS_DELEGATION_TOKEN");
+  public static final Text HDFS_DELEGATION_KIND = Constants.HDFS_DELEGATION_KIND;
 
   @SuppressWarnings("unchecked")
   private static Map<TokenIdentifier, UserGroupInformation> ugiCache =

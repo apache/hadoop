@@ -29,7 +29,7 @@ import javax.security.sasl.SaslServer;
 import javax.security.sasl.SaslServerFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
+import org.apache.hadoop.io.IOStreamPair;
 import org.apache.hadoop.security.FastSaslClientFactory;
 import org.apache.hadoop.security.FastSaslServerFactory;
 import org.apache.hadoop.security.SaslInputStream;

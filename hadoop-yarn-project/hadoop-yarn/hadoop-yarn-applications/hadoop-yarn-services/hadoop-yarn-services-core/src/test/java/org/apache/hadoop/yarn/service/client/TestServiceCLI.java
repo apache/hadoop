@@ -19,10 +19,10 @@
 package org.apache.hadoop.yarn.service.client;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.Constants;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.yarn.client.cli.ApplicationCLI;
@@ -138,7 +138,7 @@ public class TestServiceCLI {
       basedir.mkdirs();
     }
     yarnAdminNoneAclProp = YarnConfiguration.YARN_ADMIN_ACL + "=none";
-    dfsAdminAclProp = DFSConfigKeys.DFS_ADMIN + "=" +
+    dfsAdminAclProp = Constants.DFS_ADMIN + "=" +
         UserGroupInformation.getCurrentUser();
     System.setProperty(YarnServiceConstants.PROPERTY_LIB_DIR, basedir
         .getAbsolutePath());

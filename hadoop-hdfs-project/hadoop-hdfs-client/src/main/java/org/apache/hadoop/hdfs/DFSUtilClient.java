@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs;
 
 import org.apache.commons.collections.list.TreeList;
+import org.apache.hadoop.io.IOStreamPair;
 import org.apache.hadoop.ipc.RpcNoSuchMethodException;
 import org.apache.hadoop.net.DomainNameResolver;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
@@ -44,7 +45,6 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
-import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
 import org.apache.hadoop.hdfs.protocol.ReconfigurationProtocol;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;

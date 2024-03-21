@@ -21,12 +21,12 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.IOStreamPair;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
