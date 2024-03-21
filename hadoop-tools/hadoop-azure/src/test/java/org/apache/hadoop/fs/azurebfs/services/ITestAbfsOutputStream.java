@@ -199,7 +199,8 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
         .describedAs("First try from AbfsClient will have expect-100 "
             + "header and should fail with expect-100 error.").isTrue();
     if (httpOpForAppendTest[0] instanceof AbfsHttpOperation) {
-      Mockito.verify((AbfsHttpOperation)httpOpForAppendTest[0], Mockito.times(0))
+      Mockito.verify((AbfsHttpOperation) httpOpForAppendTest[0],
+              Mockito.times(0))
           .processConnHeadersAndInputStreams(Mockito.any(byte[].class),
               Mockito.anyInt(), Mockito.anyInt());
     }

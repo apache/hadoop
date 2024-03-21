@@ -87,10 +87,9 @@ public class ITestAbfsHttpClientRequestExecutor extends
                   HttpClientConnection.class));
               return context;
             })
-            .when(httpOperation).setFinalAbfsClientContext(Mockito.anyString());
+            .when(httpOperation).setFinalAbfsClientContext();
         return httpOperation;
       }).when(op).createHttpOperation();
-      //TODO: keep checking what are connections state on the iteration of op.execute.
       Mockito.doAnswer(executeAnswer -> {
         Throwable throwable = intercept(IOException.class, () -> {
           try {

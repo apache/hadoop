@@ -23,18 +23,13 @@ import org.apache.http.client.protocol.HttpClientContext;
 
 public class AbfsManagedHttpContext extends HttpClientContext {
 
-  long connectTime;
+  private long connectTime = 0L;
 
-  long readTime;
+  private long readTime = 0L;
 
-  long sendTime;
+  private long sendTime = 0L;
 
-  HttpClientConnection httpClientConnection;
-
-  final AbfsRestOperationType abfsRestOperationType;
-
-  public AbfsManagedHttpContext(AbfsRestOperationType operationType) {
-    this.abfsRestOperationType = operationType;
+  public AbfsManagedHttpContext() {
   }
 
   /**
@@ -43,5 +38,29 @@ public class AbfsManagedHttpContext extends HttpClientContext {
   protected HttpClientConnection interceptConnectionActivity(
       HttpClientConnection httpClientConnection) {
     return httpClientConnection;
+  }
+
+  public long getConnectTime() {
+    return connectTime;
+  }
+
+  public void setConnectTime(long connectTime) {
+    this.connectTime = connectTime;
+  }
+
+  public long getReadTime() {
+    return readTime;
+  }
+
+  public long getSendTime() {
+    return sendTime;
+  }
+
+  public void addSendTime(long sendTime) {
+    this.sendTime += sendTime;
+  }
+
+  public void addReadTime(long readTime) {
+    this.readTime += readTime;
   }
 }

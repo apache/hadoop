@@ -19,7 +19,7 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 
-public class ApacheHttpClientHealthMonitor {
+public final class ApacheHttpClientHealthMonitor {
   private static boolean usable = true;
 
   public static void registerFallback() {

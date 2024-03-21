@@ -37,26 +37,22 @@ import org.apache.http.impl.client.HttpClients;
 import static org.apache.http.conn.ssl.SSLConnectionSocketFactory.getDefaultHostnameVerifier;
 
 public class AbfsApacheHttpClient {
-
-  public void close() throws IOException {
-    if(httpClient != null) {
-      httpClient.close();
-    }
-  }
-
-  final CloseableHttpClient httpClient;
+  private final CloseableHttpClient httpClient;
 
   private final AbfsConfiguration abfsConfiguration;
 
   public AbfsApacheHttpClient(DelegatingSSLSocketFactory delegatingSSLSocketFactory,
       final AbfsConfiguration abfsConfiguration) {
     this.abfsConfiguration = abfsConfiguration;
-    final AbfsConnectionManager connMgr = new AbfsConnectionManager(createSocketFactoryRegistry(
-        new SSLConnectionSocketFactory(delegatingSSLSocketFactory, getDefaultHostnameVerifier())),
+    final AbfsConnectionManager connMgr = new AbfsConnectionManager(
+        createSocketFactoryRegistry(
+            new SSLConnectionSocketFactory(delegatingSSLSocketFactory,
+                getDefaultHostnameVerifier())),
         new org.apache.hadoop.fs.azurebfs.services.AbfsConnFactory());
     final HttpClientBuilder builder = HttpClients.custom();
     builder.setConnectionManager(connMgr)
-        .setRequestExecutor(new AbfsManagedHttpRequestExecutor(abfsConfiguration.getHttpReadTimeout()))
+        .setRequestExecutor(new AbfsManagedHttpRequestExecutor(
+            abfsConfiguration.getHttpReadTimeout()))
         .disableContentCompression()
         .disableRedirectHandling()
         .disableAutomaticRetries()
@@ -65,7 +61,14 @@ public class AbfsApacheHttpClient {
     httpClient = builder.build();
   }
 
-  public HttpResponse execute(HttpRequestBase httpRequest, final AbfsManagedHttpContext abfsHttpClientContext) throws IOException {
+  public void close() throws IOException {
+    if (httpClient != null) {
+      httpClient.close();
+    }
+  }
+
+  public HttpResponse execute(HttpRequestBase httpRequest,
+      final AbfsManagedHttpContext abfsHttpClientContext) throws IOException {
     RequestConfig.Builder requestConfigBuilder = RequestConfig
         .custom()
         .setConnectTimeout(abfsConfiguration.getHttpConnectionTimeout())
@@ -75,8 +78,9 @@ public class AbfsApacheHttpClient {
   }
 
 
-  private static Registry<ConnectionSocketFactory> createSocketFactoryRegistry(ConnectionSocketFactory sslSocketFactory) {
-    if(sslSocketFactory == null) {
+  private static Registry<ConnectionSocketFactory> createSocketFactoryRegistry(
+      ConnectionSocketFactory sslSocketFactory) {
+    if (sslSocketFactory == null) {
       return RegistryBuilder.<ConnectionSocketFactory>create()
           .register("http", PlainConnectionSocketFactory.getSocketFactory())
           .build();

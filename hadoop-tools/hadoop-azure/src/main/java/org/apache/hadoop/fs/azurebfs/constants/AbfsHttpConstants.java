@@ -136,9 +136,9 @@ public final class AbfsHttpConstants {
    */
   public static final Integer HTTP_STATUS_CATEGORY_QUOTIENT = 100;
 
-  public final static String HTTP_MAX_CONN_SYS_PROP = "http.maxConnections";
-  public final static Integer DEFAULT_MAX_CONN_SYS_PROP = 5;
-  public final static int KAC_CONN_TTL = 5_000;
+  public static final String HTTP_MAX_CONN_SYS_PROP = "http.maxConnections";
+  public static final Integer DEFAULT_MAX_CONN_SYS_PROP = 5;
+  public static final int KAC_CONN_TTL = 5_000;
 
   private AbfsHttpConstants() {}
 }

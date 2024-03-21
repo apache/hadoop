@@ -167,13 +167,17 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     Mockito.doReturn(spiedConf).when(spyClient).getAbfsConfiguration();
 
     Mockito.doAnswer(answer -> {
-      AbfsRestOperation op = new AbfsRestOperation(AbfsRestOperationType.RenamePath,
-              spyClient, HTTP_METHOD_PUT, answer.getArgument(0), answer.getArgument(1),
-            spyClient.getAbfsConfiguration(),"clientId");
-      AbfsRestOperation spiedOp = Mockito.spy(op);
-      addSpyBehavior(spiedOp, op, spyClient);
-      return spiedOp;
-    }).when(spyClient).createRenameRestOperation(Mockito.any(URL.class), anyList());
+          AbfsRestOperation op = new AbfsRestOperation(
+              AbfsRestOperationType.RenamePath,
+              spyClient, HTTP_METHOD_PUT, answer.getArgument(0),
+              answer.getArgument(1),
+              spyClient.getAbfsConfiguration(), "clientId");
+          AbfsRestOperation spiedOp = Mockito.spy(op);
+          addSpyBehavior(spiedOp, op, spyClient);
+          return spiedOp;
+        })
+        .when(spyClient)
+        .createRenameRestOperation(Mockito.any(URL.class), anyList());
 
     return spyClient;
 

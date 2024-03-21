@@ -24,42 +24,33 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.ProtocolException;
 import java.net.URL;
-import java.util.EmptyStackException;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
-import java.util.Stack;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonToken;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
-import org.apache.hadoop.fs.azurebfs.contracts.services.AbfsPerfLoggable;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EXPECT_100_JDK_ERROR;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HUNDRED_CONTINUE;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.EXPECT;
-import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID;
 
 /**
- * Represents an HTTP operation.
+ * Implementation of {@link HttpOperation} for orchestrating calls using JDK's HttpURLConnection.
  */
 public class AbfsHttpOperation extends HttpOperation {
-  private static final Logger LOG = LoggerFactory.getLogger(AbfsHttpOperation.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(
+      AbfsHttpOperation.class);
 
   private HttpURLConnection connection;
 
@@ -89,7 +80,7 @@ public class AbfsHttpOperation extends HttpOperation {
     this.statusCode = httpStatus;
   }
 
-  protected  HttpURLConnection getConnection() {
+  protected HttpURLConnection getConnection() {
     return connection;
   }
 
@@ -164,8 +155,11 @@ public class AbfsHttpOperation extends HttpOperation {
    * @param readTimeout The Read Timeout value to be used with http connection while making a request
    * @throws IOException if an error occurs.
    */
-  public AbfsHttpOperation(final URL url, final String method, final List<AbfsHttpHeader> requestHeaders,
-                           final int connectionTimeout, final int readTimeout)
+  public AbfsHttpOperation(final URL url,
+      final String method,
+      final List<AbfsHttpHeader> requestHeaders,
+      final int connectionTimeout,
+      final int readTimeout)
       throws IOException {
     super(LOG);
     this.url = url;
@@ -174,7 +168,8 @@ public class AbfsHttpOperation extends HttpOperation {
     this.connection = openConnection();
     if (this.connection instanceof HttpsURLConnection) {
       HttpsURLConnection secureConn = (HttpsURLConnection) this.connection;
-      SSLSocketFactory sslSocketFactory = DelegatingSSLSocketFactory.getDefaultFactory();
+      SSLSocketFactory sslSocketFactory
+          = DelegatingSSLSocketFactory.getDefaultFactory();
       if (sslSocketFactory != null) {
         secureConn.setSSLSocketFactory(sslSocketFactory);
       }
@@ -189,7 +184,7 @@ public class AbfsHttpOperation extends HttpOperation {
     }
   }
 
-   /**
+  /**
    * Sends the HTTP request.  Note that HttpUrlConnection requires that an
    * empty buffer be sent in order to set the "Content-Length: 0" header, which
    * is required by our endpoint.
@@ -200,7 +195,8 @@ public class AbfsHttpOperation extends HttpOperation {
    *
    * @throws IOException if an error occurs.
    */
-  public void sendPayload(byte[] buffer, int offset, int length) throws IOException {
+  public void sendPayload(byte[] buffer, int offset, int length)
+      throws IOException {
     this.connection.setDoOutput(true);
     this.connection.setFixedLengthStreamingMode(length);
     if (buffer == null) {
@@ -235,7 +231,9 @@ public class AbfsHttpOperation extends HttpOperation {
         if (expectHeader != null && expectHeader.equals(HUNDRED_CONTINUE)
             && e instanceof ProtocolException
             && EXPECT_100_JDK_ERROR.equals(e.getMessage())) {
-          LOG.debug("Getting output stream failed with expect header enabled, returning back ", e);
+          LOG.debug(
+              "Getting output stream failed with expect header enabled, returning back ",
+              e);
           /*
            * In case expect-100 assertion has failed, headers and inputStream should not
            * be parsed. Reason being, conn.getHeaderField(), conn.getHeaderFields(),
@@ -249,7 +247,9 @@ public class AbfsHttpOperation extends HttpOperation {
           this.statusDescription = getConnResponseMessage();
           return;
         } else {
-          LOG.debug("Getting output stream failed without expect header enabled, throwing exception ", e);
+          LOG.debug(
+              "Getting output stream failed without expect header enabled, throwing exception ",
+              e);
           throw e;
         }
       }
@@ -293,7 +293,9 @@ public class AbfsHttpOperation extends HttpOperation {
    *
    * @throws IOException if an error occurs.
    */
-  public void processResponse(final byte[] buffer, final int offset, final int length) throws IOException {
+  public void processResponse(final byte[] buffer,
+      final int offset,
+      final int length) throws IOException {
     if (connectionDisconnectedOnError) {
       LOG.debug("This connection was not successful or has been disconnected, "
           + "hence not parsing headers and inputStream");
@@ -314,7 +316,8 @@ public class AbfsHttpOperation extends HttpOperation {
 
     this.statusDescription = getConnResponseMessage();
 
-    this.requestId = this.connection.getHeaderField(HttpHeaderConfigurations.X_MS_REQUEST_ID);
+    this.requestId = this.connection.getHeaderField(
+        HttpHeaderConfigurations.X_MS_REQUEST_ID);
     if (this.requestId == null) {
       this.requestId = AbfsHttpConstants.EMPTY_STRING;
     }
@@ -410,7 +413,9 @@ public class AbfsHttpOperation extends HttpOperation {
     return connectionDisconnectedOnError;
   }
 
-  public static class AbfsHttpOperationWithFixedResult extends AbfsHttpOperation {
+  public static class AbfsHttpOperationWithFixedResult
+      extends AbfsHttpOperation {
+
     /**
      * Creates an instance to represent fixed results.
      * This is used in idempotency handling.

@@ -37,43 +37,65 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.AbfsPerfLoggable;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
 import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
 
+/**
+ * Base Http operation class for orchestrating server IO calls. Child classes would
+ * define the certain orchestration implementation on the basis of network library used.
+ * <p>
+ * For JDK netlib usage, the child class would be {@link AbfsHttpOperation}. <br>
+ * For ApacheHttpClient netlib usage, the child class would be {@link AbfsAHCHttpOperation}.
+ * </p>
+ */
 public abstract class HttpOperation implements AbfsPerfLoggable {
-  Logger LOG;
 
-  protected static final int CONNECT_TIMEOUT = 30 * 1000;
-  protected static final int READ_TIMEOUT = 30 * 1000;
+  private final Logger log;
 
-  protected static final int CLEAN_UP_BUFFER_SIZE = 64 * 1024;
+  private static final int CLEAN_UP_BUFFER_SIZE = 64 * 1024;
 
-  protected static final int ONE_THOUSAND = 1000;
-  protected static final int ONE_MILLION = ONE_THOUSAND * ONE_THOUSAND;
+  private static final int ONE_THOUSAND = 1000;
+
+  private static final int ONE_MILLION = ONE_THOUSAND * ONE_THOUSAND;
 
   protected String method;
+
   protected URL url;
+
   protected List<AbfsHttpHeader> requestHeaders;
+
   protected String maskedUrl;
+
   protected String maskedEncodedUrl;
 
   protected int statusCode;
+
   protected String statusDescription;
+
   protected String storageErrorCode = "";
-  protected String storageErrorMessage  = "";
-  protected String requestId  = "";
+
+  protected String storageErrorMessage = "";
+
+  protected String requestId = "";
+
   protected String expectedAppendPos = "";
+
   protected ListResultSchema listResultSchema = null;
 
   // metrics
   protected int bytesSent;
+
   protected int expectedBytesToBeSent;
+
   protected long bytesReceived;
 
   protected long connectionTimeMs;
+
   protected long sendRequestTimeMs;
+
   protected long recvResponseTimeMs;
+
   protected boolean shouldMask = false;
 
   public HttpOperation(Logger logger) {
-    this.LOG = logger;
+    this.log = logger;
   }
 
   public String getMethod() {
@@ -213,11 +235,14 @@ public abstract class HttpOperation implements AbfsPerfLoggable {
     return maskedEncodedUrl;
   }
 
-  public abstract  void sendPayload(byte[] buffer, int offset, int length) throws
+  public abstract void sendPayload(byte[] buffer, int offset, int length) throws
       IOException;
-  public abstract  void processResponse(final byte[] buffer, final int offset, final int length) throws IOException;
 
-  public abstract  void setRequestProperty(String key, String value);
+  public abstract void processResponse(byte[] buffer,
+      int offset,
+      int length) throws IOException;
+
+  public abstract void setRequestProperty(String key, String value);
 
   void parseResponse(final byte[] buffer,
       final int offset,
@@ -235,7 +260,7 @@ public abstract class HttpOperation implements AbfsPerfLoggable {
       this.recvResponseTimeMs += elapsedTimeMs(startTime);
       String contentLength = getResponseHeader(
           HttpHeaderConfigurations.CONTENT_LENGTH);
-      if(contentLength != null) {
+      if (contentLength != null) {
         this.bytesReceived = Long.parseLong(contentLength);
       } else {
         this.bytesReceived = 0L;
@@ -253,13 +278,15 @@ public abstract class HttpOperation implements AbfsPerfLoggable {
 
         // this is a list operation and need to retrieve the data
         // need a better solution
-        if (AbfsHttpConstants.HTTP_METHOD_GET.equals(this.method) && buffer == null) {
+        if (AbfsHttpConstants.HTTP_METHOD_GET.equals(this.method)
+            && buffer == null) {
           parseListFilesResponse(stream);
         } else {
           if (buffer != null) {
             while (totalBytesRead < length) {
-              int bytesRead = stream.read(buffer, offset + totalBytesRead, length
-                  - totalBytesRead);
+              int bytesRead = stream.read(buffer, offset + totalBytesRead,
+                  length
+                      - totalBytesRead);
               if (bytesRead == -1) {
                 endOfStream = true;
                 break;
@@ -277,9 +304,9 @@ public abstract class HttpOperation implements AbfsPerfLoggable {
           }
         }
       } catch (IOException ex) {
-        LOG.warn("IO/Network error: {} {}: {}",
+        log.warn("IO/Network error: {} {}: {}",
             method, getMaskedUrl(), ex.getMessage());
-        LOG.debug("IO Error: ", ex);
+        log.debug("IO Error: ", ex);
         throw ex;
       } finally {
         this.recvResponseTimeMs += elapsedTimeMs(startTime);
@@ -345,7 +372,7 @@ public abstract class HttpOperation implements AbfsPerfLoggable {
       // Ignore errors that occur while attempting to parse the storage
       // error, since the response may have been handled by the HTTP driver
       // or for other reasons have an unexpected
-      LOG.debug("ExpectedError: ", ex);
+      log.debug("ExpectedError: ", ex);
     }
   }
 
@@ -357,7 +384,8 @@ public abstract class HttpOperation implements AbfsPerfLoggable {
    * @param stream InputStream contains the list results.
    * @throws IOException
    */
-  protected void parseListFilesResponse(final InputStream stream) throws IOException {
+  protected void parseListFilesResponse(final InputStream stream)
+      throws IOException {
     if (stream == null) {
       return;
     }
@@ -369,9 +397,10 @@ public abstract class HttpOperation implements AbfsPerfLoggable {
 
     try {
       final ObjectMapper objectMapper = new ObjectMapper();
-      this.listResultSchema = objectMapper.readValue(stream, ListResultSchema.class);
+      this.listResultSchema = objectMapper.readValue(stream,
+          ListResultSchema.class);
     } catch (IOException ex) {
-      LOG.error("Unable to deserialize list results", ex);
+      log.error("Unable to deserialize list results", ex);
       throw ex;
     }
   }

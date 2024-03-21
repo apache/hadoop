@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.net.HttpURLConnection;
 import java.net.ProtocolException;
 import java.net.URL;
 import java.util.Arrays;
@@ -615,10 +614,10 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
           .when(httpOperation)
           .getConnResponseMessage();
 
-      if(httpOperation instanceof  AbfsHttpOperation) {
+      if (httpOperation instanceof AbfsHttpOperation) {
         // Make the getOutputStream throw IOException to see it returns from the sendRequest correctly.
         Mockito.doThrow(new ProtocolException(EXPECT_100_JDK_ERROR))
-            .when((AbfsHttpOperation)httpOperation)
+            .when((AbfsHttpOperation) httpOperation)
             .getConnOutputStream();
       }
 

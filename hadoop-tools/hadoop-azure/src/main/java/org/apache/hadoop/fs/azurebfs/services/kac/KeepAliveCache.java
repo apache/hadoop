@@ -49,8 +49,10 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.KAC_CONN
  * </ol>
  * </p>
  */
-public class KeepAliveCache extends HashMap<KeepAliveCache.KeepAliveKey, KeepAliveCache.ClientVector>
-    implements Runnable{
+public final class KeepAliveCache
+    extends HashMap<KeepAliveCache.KeepAliveKey, KeepAliveCache.ClientVector>
+    implements Runnable {
+
   private boolean threadShouldPause = true;
 
   private boolean threadShouldRun = true;
@@ -67,6 +69,7 @@ public class KeepAliveCache extends HashMap<KeepAliveCache.KeepAliveKey, KeepAli
       maxConn = Integer.parseInt(sysPropMaxConn);
     }
   }
+
   private static KeepAliveCache INSTANCE = new KeepAliveCache();
 
   @VisibleForTesting
@@ -134,9 +137,7 @@ public class KeepAliveCache extends HashMap<KeepAliveCache.KeepAliveKey, KeepAli
             KeepAliveEntry e = v.elementAt(i);
             if ((currentTime - e.idleStartTime) > v.nap) {
               HttpClientConnection hc = e.httpClientConnection;
-              try {
-                hc.close();
-              } catch (IOException ignoredException) {}
+              closeHtpClientConnection(hc);
             } else {
               break;
             }
@@ -159,11 +160,12 @@ public class KeepAliveCache extends HashMap<KeepAliveCache.KeepAliveKey, KeepAli
     super.remove(k);
   }
 
-  public synchronized void put(final HttpRoute httpRoute, final HttpClientConnection httpClientConnection) {
+  public synchronized void put(final HttpRoute httpRoute,
+      final HttpClientConnection httpClientConnection) {
     KeepAliveKey key = new KeepAliveKey(httpRoute);
     ClientVector v = super.get(key);
-    if(v == null) {
-      v= new ClientVector(KAC_CONN_TTL);
+    if (v == null) {
+      v = new ClientVector(KAC_CONN_TTL);
       v.put(httpClientConnection);
       super.put(key, v);
     } else {
@@ -171,7 +173,8 @@ public class KeepAliveCache extends HashMap<KeepAliveCache.KeepAliveKey, KeepAli
     }
   }
 
-  public synchronized HttpClientConnection get(HttpRoute httpRoute) throws IOException {
+  public synchronized HttpClientConnection get(HttpRoute httpRoute)
+      throws IOException {
 
     KeepAliveKey key = new KeepAliveKey(httpRoute);
     ClientVector v = super.get(key);
@@ -182,11 +185,13 @@ public class KeepAliveCache extends HashMap<KeepAliveCache.KeepAliveKey, KeepAli
   }
 
   class ClientVector extends java.util.Stack<KeepAliveEntry> {
+
     private static final long serialVersionUID = -8680532108106489459L;
 
     // sleep time in milliseconds, before cache clear
     int nap;
-    ClientVector (int nap) {
+
+    ClientVector(int nap) {
       this.nap = nap;
     }
 
@@ -204,7 +209,7 @@ public class KeepAliveCache extends HashMap<KeepAliveCache.KeepAliveKey, KeepAli
           } else {
             hc = e.httpClientConnection;
           }
-        } while ((hc== null) && (!empty()));
+        } while ((hc == null) && (!empty()));
         return hc;
       }
     }
@@ -212,7 +217,7 @@ public class KeepAliveCache extends HashMap<KeepAliveCache.KeepAliveKey, KeepAli
     /* return a still valid, unused HttpClient */
     synchronized void put(HttpClientConnection h) {
       if (size() >= getKacSize()) {
-        try {h.close();} catch (IOException ignored) {}
+        closeHtpClientConnection(h);
         return;
       }
       push(new KeepAliveEntry(h, System.currentTimeMillis()));
@@ -232,12 +237,21 @@ public class KeepAliveCache extends HashMap<KeepAliveCache.KeepAliveKey, KeepAli
     }
   }
 
+  private void closeHtpClientConnection(final HttpClientConnection h) {
+    try {
+      h.close();
+    } catch (IOException ignored) {
+
+    }
+  }
+
 
   static class KeepAliveKey {
+
     private final HttpRoute httpRoute;
 
 
-    public KeepAliveKey(HttpRoute httpRoute) {
+    KeepAliveKey(HttpRoute httpRoute) {
       this.httpRoute = httpRoute;
     }
 
@@ -246,7 +260,9 @@ public class KeepAliveCache extends HashMap<KeepAliveCache.KeepAliveKey, KeepAli
      */
     @Override
     public boolean equals(Object obj) {
-      return obj instanceof KeepAliveKey && httpRoute.getTargetHost().getHostName().equals(((KeepAliveKey) obj).httpRoute.getTargetHost().getHostName());
+      return obj instanceof KeepAliveKey && httpRoute.getTargetHost()
+          .getHostName()
+          .equals(((KeepAliveKey) obj).httpRoute.getTargetHost().getHostName());
     }
 
     /**
@@ -255,14 +271,17 @@ public class KeepAliveCache extends HashMap<KeepAliveCache.KeepAliveKey, KeepAli
      */
     @Override
     public int hashCode() {
-      String str = httpRoute.getTargetHost().getHostName() + ":" + httpRoute.getTargetHost().getPort();
+      String str = httpRoute.getTargetHost().getHostName() + ":"
+          + httpRoute.getTargetHost().getPort();
       return str.hashCode();
     }
   }
 
   static class KeepAliveEntry {
-    HttpClientConnection httpClientConnection;
-    long idleStartTime;
+
+    private HttpClientConnection httpClientConnection;
+
+    private long idleStartTime;
 
     KeepAliveEntry(HttpClientConnection hc, long idleStartTime) {
       this.httpClientConnection = hc;

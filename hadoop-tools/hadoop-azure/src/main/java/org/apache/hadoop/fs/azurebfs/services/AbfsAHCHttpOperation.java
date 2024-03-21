@@ -62,26 +62,25 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_MET
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID;
 import static org.apache.http.entity.ContentType.TEXT_PLAIN;
 
-//javadocs with discription
 /**
- * AbfsAHCHttpOperation.
- * <p>
- * This class is used to perform the HTTP operations using Apache Http Client.
- * </p>
+ * Implementation of {@link HttpOperation} for orchestrating server calls using
+ * Apache Http Client.
  */
 public class AbfsAHCHttpOperation extends HttpOperation {
 
-  private static final Logger LOG = LoggerFactory.getLogger(AbfsAHCHttpOperation.class);
+  private static final Logger LOG = LoggerFactory.getLogger(
+      AbfsAHCHttpOperation.class);
 
   /**
    * Map to store the AbfsApacheHttpClient. Each instance of AbfsClient to have
    * a unique AbfsApacheHttpClient instance. The key of the map is the UUID of the client.
    */
-  private static final Map<String, AbfsApacheHttpClient> abfsApacheHttpClientMap = new HashMap<>();
+  private static final Map<String, AbfsApacheHttpClient>
+      ABFS_APACHE_HTTP_CLIENT_MAP = new HashMap<>();
 
   private AbfsApacheHttpClient abfsApacheHttpClient;
 
-  public HttpRequestBase httpRequestBase;
+  private HttpRequestBase httpRequestBase;
 
   private HttpResponse httpResponse;
 
@@ -97,15 +96,15 @@ public class AbfsAHCHttpOperation extends HttpOperation {
 
   private void setAbfsApacheHttpClient(final AbfsConfiguration abfsConfiguration,
       final String clientId) {
-    AbfsApacheHttpClient client = abfsApacheHttpClientMap.get(clientId);
+    AbfsApacheHttpClient client = ABFS_APACHE_HTTP_CLIENT_MAP.get(clientId);
     if (client == null) {
-      synchronized (abfsApacheHttpClientMap) {
-        client = abfsApacheHttpClientMap.get(clientId);
+      synchronized (ABFS_APACHE_HTTP_CLIENT_MAP) {
+        client = ABFS_APACHE_HTTP_CLIENT_MAP.get(clientId);
         if (client == null) {
           client = new AbfsApacheHttpClient(
               DelegatingSSLSocketFactory.getDefaultFactory(),
               abfsConfiguration);
-          abfsApacheHttpClientMap.put(clientId, client);
+          ABFS_APACHE_HTTP_CLIENT_MAP.put(clientId, client);
         }
       }
     }
@@ -113,13 +112,15 @@ public class AbfsAHCHttpOperation extends HttpOperation {
   }
 
   static void removeClient(final String clientId) throws IOException {
-    AbfsApacheHttpClient client = abfsApacheHttpClientMap.remove(clientId);
-    if(client != null) {
+    AbfsApacheHttpClient client = ABFS_APACHE_HTTP_CLIENT_MAP.remove(clientId);
+    if (client != null) {
       client.close();
     }
   }
 
-  private AbfsAHCHttpOperation(final URL url, final String method, final List<AbfsHttpHeader> requestHeaders,
+  private AbfsAHCHttpOperation(final URL url,
+      final String method,
+      final List<AbfsHttpHeader> requestHeaders,
       final AbfsRestOperationType abfsRestOperationType) {
     super(LOG);
     this.abfsRestOperationType = abfsRestOperationType;
@@ -130,16 +131,16 @@ public class AbfsAHCHttpOperation extends HttpOperation {
   }
 
   @VisibleForTesting
-  AbfsManagedHttpContext setFinalAbfsClientContext(
-      final String method) {
-    return new AbfsManagedHttpContext(abfsRestOperationType);
+  AbfsManagedHttpContext setFinalAbfsClientContext() {
+    return new AbfsManagedHttpContext();
   }
 
   public AbfsAHCHttpOperation(final URL url,
       final String method,
       final List<AbfsHttpHeader> requestHeaders,
       final AbfsConfiguration abfsConfiguration,
-      final String clientId, final AbfsRestOperationType abfsRestOperationType) {
+      final String clientId,
+      final AbfsRestOperationType abfsRestOperationType) {
     super(LOG);
     this.abfsRestOperationType = abfsRestOperationType;
     this.method = method;
@@ -159,7 +160,8 @@ public class AbfsAHCHttpOperation extends HttpOperation {
       final URL url,
       final String method,
       final int httpStatus) {
-    AbfsAHCHttpOperation abfsApacheHttpClientHttpOperation = new AbfsAHCHttpOperation(url, method, new ArrayList<>(), null);
+    AbfsAHCHttpOperation abfsApacheHttpClientHttpOperation
+        = new AbfsAHCHttpOperation(url, method, new ArrayList<>(), null);
     abfsApacheHttpClientHttpOperation.statusCode = httpStatus;
     return abfsApacheHttpClientHttpOperation;
   }
@@ -167,7 +169,7 @@ public class AbfsAHCHttpOperation extends HttpOperation {
   @Override
   protected InputStream getErrorStream() throws IOException {
     HttpEntity entity = httpResponse.getEntity();
-    if(entity == null) {
+    if (entity == null) {
       return null;
     }
     return entity.getContent();
@@ -175,8 +177,8 @@ public class AbfsAHCHttpOperation extends HttpOperation {
 
   @Override
   String getConnProperty(final String key) {
-    for(AbfsHttpHeader header : requestHeaders) {
-      if(header.getName().equals(key)) {
+    for (AbfsHttpHeader header : requestHeaders) {
+      if (header.getName().equals(key)) {
         return header.getValue();
       }
     }
@@ -231,7 +233,8 @@ public class AbfsAHCHttpOperation extends HttpOperation {
 
     this.statusDescription = httpResponse.getStatusLine().getReasonPhrase();
 
-    this.requestId = getResponseHeader(HttpHeaderConfigurations.X_MS_REQUEST_ID);
+    this.requestId = getResponseHeader(
+        HttpHeaderConfigurations.X_MS_REQUEST_ID);
     if (this.requestId == null) {
       this.requestId = AbfsHttpConstants.EMPTY_STRING;
     }
@@ -243,21 +246,21 @@ public class AbfsAHCHttpOperation extends HttpOperation {
 
   @VisibleForTesting
   HttpResponse executeRequest() throws IOException {
-    abfsHttpClientContext = setFinalAbfsClientContext(method);
+    abfsHttpClientContext = setFinalAbfsClientContext();
     HttpResponse response = abfsApacheHttpClient.execute(httpRequestBase,
         abfsHttpClientContext);
-    connectionTimeMs = abfsHttpClientContext.connectTime;
-    sendRequestTimeMs = abfsHttpClientContext.sendTime;
-    recvResponseTimeMs = abfsHttpClientContext.readTime;
+    connectionTimeMs = abfsHttpClientContext.getConnectTime();
+    sendRequestTimeMs = abfsHttpClientContext.getSendTime();
+    recvResponseTimeMs = abfsHttpClientContext.getReadTime();
     return response;
   }
 
   private Map<String, List<String>> getResponseHeaders(final HttpResponse httpResponse) {
-    if(httpResponse == null || httpResponse.getAllHeaders() == null) {
+    if (httpResponse == null || httpResponse.getAllHeaders() == null) {
       return new HashMap<>();
     }
     Map<String, List<String>> map = new HashMap<>();
-    for(Header header : httpResponse.getAllHeaders()) {
+    for (Header header : httpResponse.getAllHeaders()) {
       map.put(header.getName(), new ArrayList<String>(
           Collections.singleton(header.getValue())));
     }
@@ -272,8 +275,9 @@ public class AbfsAHCHttpOperation extends HttpOperation {
   @Override
   Map<String, List<String>> getRequestProperties() {
     Map<String, List<String>> map = new HashMap<>();
-    for(AbfsHttpHeader header : requestHeaders) {
-      map.put(header.getName(), new ArrayList<String>(){{add(header.getValue());}});
+    for (AbfsHttpHeader header : requestHeaders) {
+      map.put(header.getName(),
+          new ArrayList<String>() {{add(header.getValue());}});
     }
     return map;
   }
@@ -284,7 +288,7 @@ public class AbfsAHCHttpOperation extends HttpOperation {
       return null;
     }
     Header header = httpResponse.getFirstHeader(headerName);
-    if(header != null) {
+    if (header != null) {
       return header.getValue();
     }
     return null;
@@ -293,11 +297,11 @@ public class AbfsAHCHttpOperation extends HttpOperation {
   @Override
   InputStream getContentInputStream()
       throws IOException {
-    if(httpResponse == null) {
+    if (httpResponse == null) {
       return null;
     }
     HttpEntity entity = httpResponse.getEntity();
-    if(entity != null) {
+    if (entity != null) {
       return httpResponse.getEntity().getContent();
     }
     return null;
@@ -368,8 +372,9 @@ public class AbfsAHCHttpOperation extends HttpOperation {
     }
   }
 
-  private void translateHeaders(final HttpRequestBase httpRequestBase, final List<AbfsHttpHeader> requestHeaders) {
-    for(AbfsHttpHeader header : requestHeaders) {
+  private void translateHeaders(final HttpRequestBase httpRequestBase,
+      final List<AbfsHttpHeader> requestHeaders) {
+    for (AbfsHttpHeader header : requestHeaders) {
       httpRequestBase.setHeader(header.getName(), header.getValue());
     }
   }
@@ -380,8 +385,8 @@ public class AbfsAHCHttpOperation extends HttpOperation {
 
   @Override
   public String getRequestProperty(String name) {
-    for(AbfsHttpHeader header : requestHeaders) {
-      if(header.getName().equals(name)) {
+    for (AbfsHttpHeader header : requestHeaders) {
+      if (header.getName().equals(name)) {
         return header.getValue();
       }
     }
@@ -394,8 +399,8 @@ public class AbfsAHCHttpOperation extends HttpOperation {
   }
 
   public String getClientRequestId() {
-    for(AbfsHttpHeader header : requestHeaders) {
-      if(X_MS_CLIENT_REQUEST_ID.equals(header.getName())) {
+    for (AbfsHttpHeader header : requestHeaders) {
+      if (X_MS_CLIENT_REQUEST_ID.equals(header.getName())) {
         return header.getValue();
       }
     }

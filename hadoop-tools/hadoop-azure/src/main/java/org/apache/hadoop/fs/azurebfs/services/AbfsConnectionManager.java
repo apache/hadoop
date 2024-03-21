@@ -44,7 +44,7 @@ import org.apache.http.util.Asserts;
  */
 public class AbfsConnectionManager implements HttpClientConnectionManager {
 
-  KeepAliveCache kac = KeepAliveCache.getInstance();
+  private final KeepAliveCache kac = KeepAliveCache.getInstance();
 
   private final AbfsConnFactory httpConnectionFactory;
 
@@ -102,7 +102,7 @@ public class AbfsConnectionManager implements HttpClientConnectionManager {
       return;
     }
     if (conn.isOpen() && conn instanceof AbfsManagedApacheHttpConnection) {
-      HttpRoute route = ((AbfsManagedApacheHttpConnection) conn).httpRoute;
+      HttpRoute route = ((AbfsManagedApacheHttpConnection) conn).getHttpRoute();
       if (route != null) {
         kac.put(route, conn);
       }
@@ -121,7 +121,7 @@ public class AbfsConnectionManager implements HttpClientConnectionManager {
         route.getTargetHost(), route.getLocalSocketAddress(),
         connectTimeout, SocketConfig.DEFAULT, context);
     if (context instanceof AbfsManagedHttpContext) {
-      ((AbfsManagedHttpContext) context).connectTime = (
+      ((AbfsManagedHttpContext) context).setConnectTime(
           System.currentTimeMillis() - start);
     }
   }
