@@ -363,7 +363,7 @@ org.objenesis:objenesis:2.6
 org.xerial.snappy:snappy-java:1.1.10.4
 org.yaml:snakeyaml:2.0
 org.wildfly.openssl:wildfly-openssl:1.1.3.Final
-software.amazon.awssdk:bundle:jar:2.23.19
+software.amazon.awssdk:bundle:jar:2.24.6
 
 
 --------------------------------------------------------------------------------
@@ -395,9 +395,10 @@ hadoop-tools/hadoop-sls/src/main/html/js/thirdparty/d3.v3.js
 hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/d3-3.5.17.min.js
 leveldb v1.13
 
-com.google.protobuf:protobuf-java:3.6.1
+com.google.protobuf:protobuf-java:2.5.0
+com.google.protobuf:protobuf-java:3.21.12
 com.google.re2j:re2j:1.1
-com.jcraft:jsch:0.1.54
+com.jcraft:jsch:0.1.55
 com.thoughtworks.paranamer:paranamer:2.3
 jakarta.activation:jakarta.activation-api:1.2.1
 org.fusesource.leveldbjni:leveldbjni-all:1.8
@@ -498,7 +499,7 @@ org.slf4j:slf4j-reload4j:1.7.36
 CDDL 1.1 + GPLv2 with classpath exception
 -----------------------------------------
 
-com.github.pjfanning:jersey-json:1.20
+com.github.pjfanning:jersey-json:1.22.0
 com.sun.jersey:jersey-client:1.19.4
 com.sun.jersey:jersey-core:1.19.4
 com.sun.jersey:jersey-guice:1.19.4

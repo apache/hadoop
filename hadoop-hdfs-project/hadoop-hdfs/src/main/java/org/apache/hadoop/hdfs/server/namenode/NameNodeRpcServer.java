@@ -1361,6 +1361,14 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     namesystem.checkSuperuserPrivilege(operationName);
     return namesystem.getFSImage().getMostRecentCheckpointTxId();
   }
+
+  @Override // NamenodeProtocol
+  public long getMostRecentNameNodeFileTxId(NNStorage.NameNodeFile nnf) throws IOException {
+    checkNNStartup();
+    namesystem.checkOperation(OperationCategory.UNCHECKED);
+    namesystem.checkSuperuserPrivilege();
+    return namesystem.getFSImage().getMostRecentNameNodeFileTxId(nnf);
+  }
   
   @Override // NamenodeProtocol
   public CheckpointSignature rollEditLog() throws IOException {
