@@ -1973,13 +1973,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         isGetBlocksCheckOperationEnabled ? OperationCategory.READ :
             OperationCategory.UNCHECKED;
     checkOperation(checkOp);
-    readLock();
+    readLock(FSNamesystemLockMode.BM);
     try {
       checkOperation(checkOp);
       return getBlockManager().getBlocksWithLocations(datanode, size,
           minimumBlockSize, timeInterval, storageType);
     } finally {
-      readUnlock("getBlocks");
+      readUnlock(FSNamesystemLockMode.BM, "getBlocks");
     }
   }
 
@@ -5311,7 +5311,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     CheckpointSignature result = null;
     checkSuperuserPrivilege(operationName);
     checkOperation(OperationCategory.JOURNAL);
-    writeLock();
+    // Using FSWriteLock to make edit-related operations thread safe.
+    writeLock(FSNamesystemLockMode.FS);
     try {
       checkOperation(OperationCategory.JOURNAL);
       checkNameNodeSafeMode("Log not rolled");
@@ -5320,7 +5321,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       }
       result = getFSImage().rollEditLog(getEffectiveLayoutVersion());
     } finally {
-      writeUnlock(operationName, getLockReportInfoSupplier(null));
+      writeUnlock(FSNamesystemLockMode.FS, operationName, getLockReportInfoSupplier(null));
     }
     logAuditEvent(true, operationName, null);
     return result;
@@ -5329,7 +5330,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   NamenodeCommand startCheckpoint(NamenodeRegistration backupNode,
       NamenodeRegistration activeNamenode) throws IOException {
     checkOperation(OperationCategory.CHECKPOINT);
-    writeLock();
+    writeLock(FSNamesystemLockMode.GLOBAL);
     try {
       checkOperation(OperationCategory.CHECKPOINT);
       checkNameNodeSafeMode("Checkpoint not started");
@@ -5340,7 +5341,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       getEditLog().logSync();
       return cmd;
     } finally {
-      writeUnlock("startCheckpoint");
+      writeUnlock(FSNamesystemLockMode.GLOBAL, "startCheckpoint");
     }
   }
 
@@ -5358,14 +5359,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   void endCheckpoint(NamenodeRegistration registration,
                             CheckpointSignature sig) throws IOException {
     checkOperation(OperationCategory.CHECKPOINT);
-    readLock();
+    readLock(FSNamesystemLockMode.GLOBAL);
     try {
       checkOperation(OperationCategory.CHECKPOINT);
       checkNameNodeSafeMode("Checkpoint not ended");
       LOG.info("End checkpoint for " + registration.getAddress());
       getFSImage().endCheckpoint(sig);
     } finally {
-      readUnlock("endCheckpoint");
+      readUnlock(FSNamesystemLockMode.GLOBAL, "endCheckpoint");
     }
   }
 
@@ -6120,7 +6121,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   void registerBackupNode(NamenodeRegistration bnReg,
       NamenodeRegistration nnReg) throws IOException {
-    writeLock();
+    writeLock(FSNamesystemLockMode.FS);
     try {
       if(getNNStorage().getNamespaceID()
          != bnReg.getNamespaceID())
@@ -6134,7 +6135,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             bnReg, nnReg);
       }
     } finally {
-      writeUnlock("registerBackupNode");
+      writeUnlock(FSNamesystemLockMode.FS, "registerBackupNode");
     }
   }
 
@@ -6147,7 +6148,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   void releaseBackupNode(NamenodeRegistration registration)
     throws IOException {
     checkOperation(OperationCategory.WRITE);
-    writeLock();
+    writeLock(FSNamesystemLockMode.GLOBAL);
     try {
       checkOperation(OperationCategory.WRITE);
       if(getNNStorage().getNamespaceID()
@@ -6159,7 +6160,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             " node namespaceID = " + registration.getNamespaceID());
       getEditLog().releaseBackupStream(registration);
     } finally {
-      writeUnlock("releaseBackupNode");
+      writeUnlock(FSNamesystemLockMode.GLOBAL, "releaseBackupNode");
     }
   }
 
