@@ -25,6 +25,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.fs.impl.IORateLimiterSupport;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 import org.apache.hadoop.util.RateLimiting;
 import org.apache.hadoop.util.RateLimitingFactory;
@@ -95,7 +96,7 @@ public class TestIORateLimiter extends AbstractHadoopTestBase {
   @Test
   public void testLimitedCapacity() {
     final int size = 10;
-    final IORateLimiter limiter = IORateLimiter.create(size);
+    final IORateLimiter limiter = IORateLimiterSupport.create(size);
     final int excess = size * 2;
     // first attempt gets more capacity than arrives every second.
     assertNotDelayed(limiter, "", excess);
@@ -110,13 +111,13 @@ public class TestIORateLimiter extends AbstractHadoopTestBase {
   @Test
   public void testUnlimitedRejectsNegativeCapacity() throws Exception {
     intercept(IllegalArgumentException.class, () ->
-        IORateLimiter.unlimited().acquireIOCapacity("", -1));
+        IORateLimiterSupport.unlimited().acquireIOCapacity("", -1));
   }
 
   @Test
   public void testUnlimitedRejectsNullOperation() throws Exception {
     intercept(NullPointerException.class, () ->
-        IORateLimiter.unlimited().acquireIOCapacity(null, 0));
+        IORateLimiterSupport.unlimited().acquireIOCapacity(null, 0));
   }
 
   /**

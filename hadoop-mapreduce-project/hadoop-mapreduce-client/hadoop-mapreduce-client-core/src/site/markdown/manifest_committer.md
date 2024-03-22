@@ -17,7 +17,7 @@
 
 This document how to use the _Manifest Committer_.
 
-The _Manifest_ committer is a committer for work which provides
+The _Manifest Committer_ is a committer for work which provides
 performance on ABFS for "real world" queries,
 and performance and correctness on GCS.
 It also works with other filesystems, including HDFS.
@@ -538,10 +538,10 @@ are throttled through a "rate limiter" which limits the number of
 rename operations per second a single instance of the ABFS FileSystem client
 may issue.
 
-| Option                                                          | Meaning                                                     |
-|-----------------------------------------------------------------|-------------------------------------------------------------|
-| `fs.azure.io.rate.limit`                                        | Rate limit in operations/second for IO operations.          |
-| `mapreduce.manifest.committer.cleanup.directory.write.capacity` | Write capacity to request for each task directory deletion. |
+| Option                                             | Meaning                                            |
+|----------------------------------------------------|----------------------------------------------------|
+| `fs.azure.io.rate.limit`                           | Rate limit in operations/second for IO operations. |
+| `mapreduce.manifest.committer.delete.dir.capacity` | Write capacity to request for directory deletion.  |
 
 ### Option `fs.azure.io.rate.limit`
 
@@ -566,24 +566,23 @@ alone other applications sharing the same storage account.
 It will be shared with all jobs being committed by the same
 Spark driver, as these do share that filesystem connector.
 
-###  Option `mapreduce.manifest.committer.cleanup.directory.write.capacity`
+###  Option `mapreduce.manifest.committer.delete.dir.capacity`
 
-This option controls the amount of IO capacity requested for directory cleanup.
+This option controls the amount of IO capacity requested for directory cleanup, abort, and any other
+directory deletion.
 
 When deleting directory trees on Azure storage, the number of write operations
 required is proportional to the number of subdirectories in the tree;
 the deeper and wider the tree is, the more IOPS it consumes.
 
-The option `mapreduce.manifest.committer.cleanup.directory.write.capacity`
-set the capacity to be asked by every task cleanup operation.
+The option `mapreduce.manifest.committer.delete.dir.capacity`
+set the capacity to be asked by every directory deletion operation, such as during cleanup
+and abort operations.
+
 When deleting task attempt directories in parallel (the default), each task attempt
 directory deletion will ask for this capacity. That is: the capacity is not shared
 across multiple task attempts, although the total store capacity, set by `fs.azure.io.rate.limit`
 is.
-
-The reason for a specific configuration option, rather than measuring the tree depth and acting on it
-is: that listing operation will itself require the same capacity.
-
 
 ### Observing rate limiting
 

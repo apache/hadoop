@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.IORateLimiter;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.impl.IORateLimiterSupport;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.AbstractManifestData;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
@@ -307,7 +308,7 @@ public abstract class ManifestStoreOperations implements Closeable, IORateLimite
    * @return the rate limiter source.
    */
   public IORateLimiter rateLimiterSource() {
-    return IORateLimiter.unlimited();
+    return IORateLimiterSupport.unlimited();
   }
 
   /**
@@ -316,7 +317,8 @@ public abstract class ManifestStoreOperations implements Closeable, IORateLimite
    */
   @Override
   public Duration acquireIOCapacity(final String operation, final int requestedCapacity) {
-    return rateLimiterSource().acquireIOCapacity(operation, requestedCapacity);
+    final Duration duration = rateLimiterSource().acquireIOCapacity(operation, requestedCapacity);
+    return duration;
   }
 
 }

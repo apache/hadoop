@@ -300,12 +300,12 @@ public abstract class AbstractJobOrTaskStage<IN, OUT>
 
   /**
    * Note any rate limiting to the given timing statistic.
-   * If the wait was 0, no statistics are updated.
+   * If the wait was null/0, no statistics are updated.
    * @param statistic statistic key.
    * @param wait wait duration.
    */
-  private void noteAnyRateLimiting(String statistic, Duration wait) {
-    if (!wait.isZero()) {
+  protected void noteAnyRateLimiting(String statistic, Duration wait) {
+    if (wait != null && !wait.isZero()) {
       // rate limiting took place
       getIOStatistics().addTimedOperation(
           statistic,

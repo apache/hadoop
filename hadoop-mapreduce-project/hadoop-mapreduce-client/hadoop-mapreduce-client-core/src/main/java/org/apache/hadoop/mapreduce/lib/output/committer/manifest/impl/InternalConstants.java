@@ -143,7 +143,7 @@ public final class InternalConstants {
   /**
    * Capacity for deleting a single file: {@value}.
    */
-  public static final int DELETE_FILE_CAPACITY = 10;
+  public static final int DELETE_FILE_CAPACITY = 1;
 
   /**
    * Capacity for deleting a directory.
@@ -155,18 +155,18 @@ public final class InternalConstants {
   /**
    * Capacity for listing: {@value}.
    */
-  public static final int LIST_CAPACITY = 10;
+  public static final int LIST_CAPACITY = 1;
 
   /**
    * Capacity for mkdirs: {@value}.
    */
-  public static final int MKDIRS_CAPACITY = 10;
+  public static final int MKDIRS_CAPACITY = 1;
 
   /**
    * Capacity for rename, includes optional LIST request;
    * does not worry about total depth or file count.
    * Value: {@value}.
    */
-  public static final int RENAME_CAPACITY = 10;
+  public static final int RENAME_CAPACITY = 1;
 
 }

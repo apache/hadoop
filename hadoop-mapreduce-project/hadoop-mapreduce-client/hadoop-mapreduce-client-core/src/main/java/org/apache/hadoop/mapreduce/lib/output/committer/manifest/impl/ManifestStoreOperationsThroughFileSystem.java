@@ -218,7 +218,7 @@ public class ManifestStoreOperationsThroughFileSystem extends ManifestStoreOpera
   public IORateLimiter rateLimiterSource() {
     final FileSystem fs = getFileSystem();
     return fs instanceof IORateLimiter
-     ? (IORateLimiter) fs
-     : super.rateLimiterSource();
+        ? (IORateLimiter) fs
+        : super.rateLimiterSource();
   }
 }

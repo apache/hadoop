@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *     https://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -22,10 +22,6 @@ import java.time.Duration;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.util.RateLimiting;
-import org.apache.hadoop.util.RateLimitingFactory;
-
-import static java.util.Objects.requireNonNull;
 
 /**
  * An optional interface for classes that provide rate limiters.
@@ -65,8 +61,10 @@ public interface IORateLimiter {
 
   /**
    * Acquire IO capacity.
+   * <p>
    * The implementation may assign different costs to the different
    * operations.
+   * <p>
    * If there is not enough space, the permits will be acquired,
    * but the subsequent call will block until the capacity has been
    * refilled.
@@ -79,27 +77,4 @@ public interface IORateLimiter {
    */
   Duration acquireIOCapacity(String operation, int requestedCapacity);
 
-  /**
-   * Get a rate limiter source which has no rate limiting.
-   * @return a rate limiter source which has no rate limiting.
-   */
-  static IORateLimiter unlimited() {
-    return (operation, requestedCapacity) -> {
-      requireNonNull(operation, "operation");
-      return RateLimitingFactory.unlimitedRate().acquire(requestedCapacity);
-    };
-  }
-
-  /**
-   * Create a rate limiter with a fixed capacity.
-   * @param capacityPerSecond capacity per second.
-   * @return a rate limiter.
-   */
-  static IORateLimiter create(int capacityPerSecond) {
-    final RateLimiting limiting = RateLimitingFactory.create(capacityPerSecond);
-    return (operation, requestedCapacity) -> {
-      requireNonNull(operation, "operation");
-      return limiting.acquire(requestedCapacity);
-    };
-  }
 }

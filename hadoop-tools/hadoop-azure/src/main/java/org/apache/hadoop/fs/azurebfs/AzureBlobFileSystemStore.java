@@ -164,6 +164,10 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_FO
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_BUFFERED_PREAD_DISABLE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_IDENTITY_TRANSFORM_CLASS;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_ENCRYPTION_CONTEXT;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_LIST_FILES;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_LIST_LOCATED_STATUS;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_LIST_STATUS;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_RENAME;
 
 /**
  * Provides the bridging logic between Hadoop's abstract filesystem and Azure Storage.
@@ -2220,9 +2224,33 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport, IORa
     }
   }
 
+  /**
+   * Rate limiting.
+   * <p>
+   * Some operations (list and rename) are considered more expensive and so whatever capacity
+   * is asked for is multiplied.
+   * {@inheritDoc}
+   */
   @Override
   public Duration acquireIOCapacity(final String operation, final int requestedCapacity) {
-    LOG.debug("Acquiring read rate limiter for operation: {}", operation);
-    return rateLimiting.acquire(requestedCapacity);
+
+
+    double multiplier;
+    int lowCost = 1;
+    int mediumCost = 10;
+    switch (operation) {
+    case OP_LIST_FILES:
+    case OP_LIST_STATUS:
+    case OP_LIST_LOCATED_STATUS:
+    case OP_RENAME:
+      multiplier = mediumCost;
+      break;
+    default:
+      multiplier = lowCost;
+    }
+    final int capacity = (int)(requestedCapacity * multiplier);
+    LOG.debug("Acquiring IO capacity {} for operation: {}; multiplier: {}; final capacity: {}",
+        requestedCapacity, operation, multiplier, capacity);
+    return rateLimiting.acquire(capacity);
   }
 }

@@ -19,6 +19,8 @@
 package org.apache.hadoop.fs.azurebfs.commit;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
@@ -28,6 +30,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.IORateLimiter;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.contract.ABFSContractTestBinding;
 import org.apache.hadoop.fs.azurebfs.contract.AbfsFileSystemContract;
@@ -39,6 +42,10 @@ import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestSt
 
 import static org.apache.hadoop.fs.CommonPathCapabilities.ETAGS_PRESERVED_IN_RENAME;
 import static org.apache.hadoop.fs.azurebfs.commit.AbfsCommitTestHelper.prepareTestConfiguration;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ABFS_IO_RATE_LIMIT;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.RATE_LIMIT_DEFAULT;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_LIST_FILES;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_RENAME;
 import static org.junit.Assume.assumeTrue;
 
 /**
@@ -172,4 +179,35 @@ public class ITestAbfsManifestStoreOperations extends AbstractManifestCommitterT
         .isEqualTo(srcTag);
   }
 
+  /**
+   * Verify IORateLimiter passes through to the ABFS store by
+   * making multiple requests greater than the rate limit, and
+   * verifying that the second request is delayed.
+   * The rate asked for is a fraction of the configured limit;
+   * it relies on the abfs store to use a multiplier
+   */
+  @Test
+  public void testCapacityLimiting() throws Throwable {
+    describe("Verifying Rate Limiting");
+    final Configuration conf = getConfiguration();
+    // get the capacity per second
+    final int size = conf.getInt(FS_AZURE_ABFS_IO_RATE_LIMIT, RATE_LIMIT_DEFAULT);
+    final int capacity = (int)(size/4.0);
+    final IORateLimiter limiter = createManifestStoreOperations();
+
+    // this operation is amplified; if a different name is used then
+    // the second assertion fails.
+    final String operation = OP_LIST_FILES;
+    // first one has no delay
+    Assertions.assertThat(limiter.acquireIOCapacity(operation, capacity))
+        .describedAs("Duration of acquiring %d capacity", capacity)
+        .isEqualTo(Duration.ZERO);
+
+    // second one is delayed
+    final Duration duration = limiter.acquireIOCapacity(operation, capacity);
+    describe("Duration of second capacity request of %d: %s", capacity, duration);
+    Assertions.assertThat(duration)
+        .describedAs("Duration of acquiring %d capacity", capacity)
+        .isGreaterThan(Duration.of(1, ChronoUnit.SECONDS));
+  }
 }
