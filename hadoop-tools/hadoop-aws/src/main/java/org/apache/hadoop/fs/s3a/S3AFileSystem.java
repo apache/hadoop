@@ -494,6 +494,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   private String configuredRegion;
 
+  /**
+   * Are S3 Access Grants Enabled?
+   */
+  private boolean s3AccessGrantsEnabled;
+
   /** Add any deprecated keys. */
   @SuppressWarnings("deprecation")
   private static void addDeprecatedKeys() {
@@ -747,6 +752,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       optimizedCopyFromLocal = conf.getBoolean(OPTIMIZED_COPY_FROM_LOCAL,
           OPTIMIZED_COPY_FROM_LOCAL_DEFAULT);
       LOG.debug("Using optimized copyFromLocal implementation: {}", optimizedCopyFromLocal);
+      s3AccessGrantsEnabled = conf.getBoolean(AWS_S3_ACCESS_GRANTS_ENABLED, false);
     } catch (SdkException e) {
       // amazon client exception: stop all services then throw the translation
       cleanupWithLogger(LOG, span);
@@ -5515,6 +5521,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     // probe for a fips endpoint
     case FIPS_ENDPOINT:
       return fipsEnabled;
+
+    // is S3 Access Grants enabled
+    case AWS_S3_ACCESS_GRANTS_ENABLED:
+      return s3AccessGrantsEnabled;
 
     default:
       return super.hasPathCapability(p, cap);
