@@ -34,6 +34,10 @@ public class AbfsManagedHttpContext extends HttpClientContext {
 
   /**
    * This to be used only in tests to get connection level activity.
+   * @param httpClientConnection HttpClientConnection which has to be intercepted
+   * by test-implementation.
+   * @return HttpClientConnection which is intercepted by test-implementation. For production
+   * implementation, it will return the same httpClientConnection.
    */
   protected HttpClientConnection interceptConnectionActivity(
       HttpClientConnection httpClientConnection) {

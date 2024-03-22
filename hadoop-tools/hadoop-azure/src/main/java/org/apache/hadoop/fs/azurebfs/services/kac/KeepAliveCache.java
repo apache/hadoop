@@ -47,7 +47,6 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.KAC_CONN
  * feasible to provide a value in the initialisation of the connectionManager. JDK's implementation has no cap on the
  * number of connections it can create.</li>
  * </ol>
- * </p>
  */
 public final class KeepAliveCache
     extends HashMap<KeepAliveCache.KeepAliveKey, KeepAliveCache.ClientVector>
@@ -244,6 +243,11 @@ public final class KeepAliveCache
     public synchronized boolean equals(final Object o) {
       return super.equals(o);
     }
+
+    @Override
+    public synchronized int hashCode() {
+      return super.hashCode();
+    }
   }
 
   private void closeHtpClientConnection(final HttpClientConnection h) {
@@ -288,9 +292,9 @@ public final class KeepAliveCache
 
   static class KeepAliveEntry {
 
-    private HttpClientConnection httpClientConnection;
+    private final HttpClientConnection httpClientConnection;
 
-    private long idleStartTime;
+    private final long idleStartTime;
 
     KeepAliveEntry(HttpClientConnection hc, long idleStartTime) {
       this.httpClientConnection = hc;
@@ -304,6 +308,11 @@ public final class KeepAliveCache
             ((KeepAliveEntry) o).httpClientConnection);
       }
       return false;
+    }
+
+    @Override
+    public int hashCode() {
+      return httpClientConnection.hashCode();
     }
   }
 }

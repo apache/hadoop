@@ -22,6 +22,7 @@ import javax.net.ssl.SSLSession;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.util.UUID;
 
 import org.apache.http.HttpConnectionMetrics;
 import org.apache.http.HttpEntityEnclosingRequest;
@@ -44,10 +45,14 @@ public class AbfsManagedApacheHttpConnection
 
   private AbfsManagedHttpContext managedHttpContext;
 
+  private final int hashCode;
+
   public AbfsManagedApacheHttpConnection(ManagedHttpClientConnection conn,
       final HttpRoute route) {
     this.httpClientConnection = conn;
     this.httpRoute = route;
+    this.hashCode = (UUID.randomUUID().toString()
+        + httpClientConnection.getId()).hashCode();
   }
 
   HttpRoute getHttpRoute() {
@@ -184,9 +189,14 @@ public class AbfsManagedApacheHttpConnection
   @Override
   public boolean equals(final Object o) {
     if (o instanceof AbfsManagedApacheHttpConnection) {
-      return httpClientConnection.equals(
-          ((AbfsManagedApacheHttpConnection) o).httpClientConnection);
+      return httpClientConnection.getId().equals(
+          ((AbfsManagedApacheHttpConnection) o).httpClientConnection.getId());
     }
     return false;
+  }
+
+  @Override
+  public int hashCode() {
+    return hashCode;
   }
 }

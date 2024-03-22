@@ -86,8 +86,8 @@ public class AbfsConnectionManager implements HttpClientConnectionManager {
 
   /**
    * Releases a connection for reuse. It can be reused only if validDuration is greater than 0.
-   * This method is called by {@link org.apache.http.impl.execchain.ConnectionHolder}, which on
-   * if want to reuse the connection, it will send a non-zero validDuration.
+   * This method is called by {@link org.apache.http.impl.execchain} internal class `ConnectionHolder`.
+   * If it wants to reuse the connection, it will send a non-zero validDuration, else it will send 0.
    * @param conn the connection to release
    * @param newState the new state of the connection
    * @param validDuration the duration for which the connection is valid

@@ -848,7 +848,7 @@ public class AbfsConfiguration{
   }
 
   /**
-   * Config to select netlib for server communication.
+   * @return Config to select netlib for server communication.
    */
   public HttpOperationType getPreferredHttpOperationType() {
     return getEnum(FS_AZURE_NETWORKING_LIBRARY, DEFAULT_NETWORKING_LIBRARY);
