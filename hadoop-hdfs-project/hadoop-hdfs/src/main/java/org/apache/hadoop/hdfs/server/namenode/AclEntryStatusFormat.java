@@ -68,6 +68,10 @@ public enum AclEntryStatusFormat implements LongBitFormat.Enum {
     return FSACTION_VALUES[ordinal];
   }
 
+   static FsAction getPermission1(int aclEntry) {
+    int ordinal = (int) PERMISSION.BITS.retrieve(aclEntry);
+    return FSACTION_VALUES[ordinal];
+  }
   static String getName(int aclEntry) {
     return getName(aclEntry, null);
   }
