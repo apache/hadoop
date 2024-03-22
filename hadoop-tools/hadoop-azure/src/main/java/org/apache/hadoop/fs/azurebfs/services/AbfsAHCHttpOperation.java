@@ -53,7 +53,6 @@ import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.util.EntityUtils;
 
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APACHE_IMPL;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_DELETE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_GET;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_HEAD;
@@ -275,11 +274,7 @@ public class AbfsAHCHttpOperation extends HttpOperation {
 
   @Override
   public void setRequestProperty(final String key, final String value) {
-    StringBuilder stringBuilder = new StringBuilder(value);
-    if (X_MS_CLIENT_REQUEST_ID.equals(key)) {
-      stringBuilder.append("_").append(APACHE_IMPL);
-    }
-    setHeader(key, stringBuilder.toString());
+    setHeader(key, value);
   }
 
   @Override

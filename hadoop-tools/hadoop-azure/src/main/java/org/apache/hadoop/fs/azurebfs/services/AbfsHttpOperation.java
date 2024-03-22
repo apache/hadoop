@@ -41,10 +41,7 @@ import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EXPECT_100_JDK_ERROR;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HUNDRED_CONTINUE;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.JDK_FALLBACK_IMPL;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.JDK_IMPL;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.EXPECT;
-import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID;
 
 /**
  * Implementation of {@link HttpOperation} for orchestrating calls using JDK's HttpURLConnection.
@@ -281,15 +278,7 @@ public class AbfsHttpOperation extends HttpOperation {
   }
 
   public void setRequestProperty(String key, String value) {
-    StringBuilder stringBuilder = new StringBuilder(value);
-    if (X_MS_CLIENT_REQUEST_ID.equals(key)) {
-      if (!ApacheHttpClientHealthMonitor.usable()) {
-        stringBuilder.append("_").append(JDK_FALLBACK_IMPL);
-      } else {
-        stringBuilder.append("_").append(JDK_IMPL);
-      }
-    }
-    this.getConnection().setRequestProperty(key, stringBuilder.toString());
+    this.connection.setRequestProperty(key, value);
   }
 
   /**
