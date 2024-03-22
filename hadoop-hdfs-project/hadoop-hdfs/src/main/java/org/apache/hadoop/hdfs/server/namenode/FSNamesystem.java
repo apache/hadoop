@@ -8714,7 +8714,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   @Override
   public void removeXattr(long id, String xattrName) throws IOException {
-    writeLock();
+    writeLock(FSNamesystemLockMode.FS);
     try {
       final INode inode = dir.getInode(id);
       if (inode == null) {
@@ -8730,7 +8730,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         FSDirSatisfyStoragePolicyOp.removeSPSXattr(dir, inode, spsXAttr);
       }
     } finally {
-      writeUnlock("removeXAttr");
+      writeUnlock(FSNamesystemLockMode.FS, "removeXAttr");
     }
     getEditLog().logSync();
   }
