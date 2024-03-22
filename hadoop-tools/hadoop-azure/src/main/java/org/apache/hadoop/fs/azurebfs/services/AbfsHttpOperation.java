@@ -41,6 +41,8 @@ import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EXPECT_100_JDK_ERROR;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HUNDRED_CONTINUE;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.JDK_FALLBACK;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.JDK_IMPL;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.EXPECT;
 
 /**
@@ -355,6 +357,11 @@ public class AbfsHttpOperation extends HttpOperation {
   @VisibleForTesting
   boolean getConnectionDisconnectedOnError() {
     return connectionDisconnectedOnError;
+  }
+
+  @Override
+  public String getTracingContextSuffix() {
+    return ApacheHttpClientHealthMonitor.usable() ? JDK_IMPL : JDK_FALLBACK;
   }
 
   public static class AbfsHttpOperationWithFixedResult

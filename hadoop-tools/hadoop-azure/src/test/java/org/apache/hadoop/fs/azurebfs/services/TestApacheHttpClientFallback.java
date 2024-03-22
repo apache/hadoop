@@ -29,9 +29,14 @@ import org.mockito.Mockito;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsTestWithTimeout;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
+import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderFormat;
 
 import static java.net.HttpURLConnection.HTTP_OK;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APACHE_IMPL;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.JDK_FALLBACK;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.JDK_IMPL;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES;
 import static org.apache.hadoop.fs.azurebfs.services.HttpOperationType.APACHE_HTTP_CLIENT;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -43,14 +48,39 @@ public class TestApacheHttpClientFallback extends AbstractAbfsTestWithTimeout {
     super();
   }
 
-  @Test
-  public void testMultipleFailureLeadToFallback()
-      throws Exception {
-    TracingContext tc = Mockito.mock(TracingContext.class);
-    Mockito.doNothing()
+  private TracingContext getSampleTracingContext() {
+    String correlationId, fsId;
+    TracingHeaderFormat format;
+    correlationId = "test-corr-id";
+    fsId = "test-filesystem-id";
+    format = TracingHeaderFormat.ALL_ID_FORMAT;
+    TracingContext tc = Mockito.spy(new TracingContext(correlationId, fsId,
+        FSOperationType.TEST_OP, true, format, null));
+    Mockito.doAnswer(answer -> {
+          answer.callRealMethod();
+          HttpOperation op = answer.getArgument(0);
+          if (op instanceof AbfsAHCHttpOperation) {
+            Assertions.assertThat(tc.getHeader()).endsWith(APACHE_IMPL);
+          }
+          if (op instanceof AbfsHttpOperation) {
+            if (ApacheHttpClientHealthMonitor.usable()) {
+              Assertions.assertThat(tc.getHeader()).endsWith(JDK_IMPL);
+            } else {
+              Assertions.assertThat(tc.getHeader()).endsWith(JDK_FALLBACK);
+            }
+          }
+          return null;
+        })
         .when(tc)
         .constructHeader(Mockito.any(HttpOperation.class),
             Mockito.nullable(String.class), Mockito.nullable(String.class));
+    return tc;
+  }
+
+  @Test
+  public void testMultipleFailureLeadToFallback()
+      throws Exception {
+    TracingContext tc = getSampleTracingContext();
     int[] retryIteration = {0};
     intercept(IOException.class, () -> {
       getMockRestOperation(retryIteration).execute(tc);
@@ -60,7 +90,8 @@ public class TestApacheHttpClientFallback extends AbstractAbfsTestWithTimeout {
     });
   }
 
-  private AbfsRestOperation getMockRestOperation(int[] retryIteration) throws IOException {
+  private AbfsRestOperation getMockRestOperation(int[] retryIteration)
+      throws IOException {
     AbfsConfiguration configuration = Mockito.mock(AbfsConfiguration.class);
     Mockito.doReturn(APACHE_HTTP_CLIENT)
         .when(configuration)
@@ -116,10 +147,10 @@ public class TestApacheHttpClientFallback extends AbstractAbfsTestWithTimeout {
 
     Mockito.doReturn(null).when(op).getClientLatency();
 
-    Mockito.doReturn(Mockito.mock(AbfsHttpOperation.class))
+    Mockito.doReturn(createApacheHttpOp())
         .when(op)
         .createAbfsHttpOperation();
-    Mockito.doReturn(Mockito.mock(AbfsAHCHttpOperation.class))
+    Mockito.doReturn(createAhcHttpOp())
         .when(op)
         .createAbfsAHCHttpOperation();
 
@@ -144,8 +175,31 @@ public class TestApacheHttpClientFallback extends AbstractAbfsTestWithTimeout {
           .when(operation)
           .processResponse(Mockito.nullable(byte[].class), Mockito.anyInt(),
               Mockito.anyInt());
+      Mockito.doCallRealMethod().when(operation).getTracingContextSuffix();
       return operation;
     }).when(op).createHttpOperation();
     return op;
+  }
+
+  private AbfsAHCHttpOperation createAhcHttpOp() {
+    AbfsAHCHttpOperation ahcOp = Mockito.mock(AbfsAHCHttpOperation.class);
+    Mockito.doCallRealMethod().when(ahcOp).getTracingContextSuffix();
+    return ahcOp;
+  }
+
+  private AbfsHttpOperation createApacheHttpOp() {
+    AbfsHttpOperation httpOperationMock = Mockito.mock(AbfsHttpOperation.class);
+    Mockito.doCallRealMethod()
+        .when(httpOperationMock)
+        .getTracingContextSuffix();
+    return httpOperationMock;
+  }
+
+  @Test
+  public void testTcHeaderOnJDKClientUse() {
+    TracingContext tc = getSampleTracingContext();
+    AbfsHttpOperation op = Mockito.mock(AbfsHttpOperation.class);
+    Mockito.doCallRealMethod().when(op).getTracingContextSuffix();
+    tc.constructHeader(op, null, null);
   }
 }

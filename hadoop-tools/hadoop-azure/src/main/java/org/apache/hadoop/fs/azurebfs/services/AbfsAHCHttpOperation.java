@@ -53,6 +53,7 @@ import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.util.EntityUtils;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APACHE_IMPL;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_DELETE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_GET;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_HEAD;
@@ -403,6 +404,11 @@ public class AbfsAHCHttpOperation extends HttpOperation {
   @Override
   boolean getConnectionDisconnectedOnError() {
     return connectionDisconnectedOnError;
+  }
+
+  @Override
+  public String getTracingContextSuffix() {
+    return APACHE_IMPL;
   }
 
   public String getClientRequestId() {
