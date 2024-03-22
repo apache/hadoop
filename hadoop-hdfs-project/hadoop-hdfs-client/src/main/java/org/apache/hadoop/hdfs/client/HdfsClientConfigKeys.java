@@ -431,7 +431,6 @@ public interface HdfsClientConfigKeys {
           "dfs.client.ec.failed.write.block.tolerated";
       int DFS_CLIENT_EC_FAILED_WRITE_BLOCK_TOLERATED_DEFAILT = Integer.MAX_VALUE;
     }
-    
   }
 
   /** dfs.client.block.write configuration properties */
