@@ -33,8 +33,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_MAX
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.KAC_CONN_TTL;
 
 /**
- * Connection-pooling heuristics adapted from JDK's connection pooling
- * {@link sun.net.www.http.KeepAliveCache}.
+ * Connection-pooling heuristics adapted from JDK's connection pooling `KeepAliveCache`
  * <p>
  * Why this implementation is required in comparison to {@link org.apache.http.impl.conn.PoolingHttpClientConnectionManager}
  * connection-pooling:
