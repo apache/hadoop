@@ -5347,7 +5347,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   public void processIncrementalBlockReport(final DatanodeID nodeID,
       final StorageReceivedDeletedBlocks srdb)
       throws IOException {
-    // Needs the FSWriteLock since it may update quota and access storage policyId and full path.
+    // completeBlock will updateQuota, so it needs BMWriteLock and FSWriteLock.
+    // processExtraRedundancyBlock chooses excess replicas depending on storage policyId,
+    // so it needs FSReadLock.
     writeLock(FSNamesystemLockMode.GLOBAL);
     try {
       blockManager.processIncrementalBlockReport(nodeID, srdb);
