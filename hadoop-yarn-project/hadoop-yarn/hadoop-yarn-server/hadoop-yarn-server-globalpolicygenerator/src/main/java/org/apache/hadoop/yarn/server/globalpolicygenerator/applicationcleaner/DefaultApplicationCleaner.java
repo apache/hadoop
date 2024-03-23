@@ -19,14 +19,13 @@
 package org.apache.hadoop.yarn.server.globalpolicygenerator.applicationcleaner;
 
 import java.util.Date;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.Map;
 
-import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSubCluster;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,47 +45,38 @@ public class DefaultApplicationCleaner extends ApplicationCleaner {
     LOG.info("Application cleaner run at time {}", now);
 
     FederationStateStoreFacade facade = getGPGContext().getStateStoreFacade();
+
     try {
-      // Get the candidate list from StateStore before calling router
-      Set<ApplicationId> allStateStoreApps = new HashSet<>();
-      List<ApplicationHomeSubCluster> response =
+      // Step1. Get the candidate list from StateStore before calling router
+      List<ApplicationHomeSubCluster> applicationHomeSubClusters =
           facade.getApplicationsHomeSubCluster();
-      for (ApplicationHomeSubCluster app : response) {
-        allStateStoreApps.add(app.getApplicationId());
-      }
-      LOG.info("{} app entries in FederationStateStore", allStateStoreApps.size());
+      LOG.info("FederationStateStore has {} applications.", applicationHomeSubClusters.size());
 
-      // Get the candidate list from Registry before calling router
-      List<String> allRegistryApps = getRegistryClient().getAllApplications();
-      LOG.info("{} app entries in FederationRegistry", allStateStoreApps.size());
+      // Step2. Get the list of active subClusters
+      Map<SubClusterId, SubClusterInfo> subClusters = facade.getSubClusters(true);
 
-      // Get the list of known apps from Router
-      Set<ApplicationId> routerApps = getRouterKnownApplications();
-      LOG.info("{} known applications from Router", routerApps.size());
-
-      // Clean up StateStore entries
-      Set<ApplicationId> toDelete =
-          Sets.difference(allStateStoreApps, routerApps);
-
-      LOG.info("Deleting {} applications from statestore", toDelete.size());
-      LOG.debug("Apps to delete: {}.",
-          toDelete.stream().map(Object::toString).collect(Collectors.joining(",")));
-
-      for (ApplicationId appId : toDelete) {
-        try {
-          LOG.debug("Deleting {} from statestore ", appId);
-          facade.deleteApplicationHomeSubCluster(appId);
-        } catch (Exception e) {
-          LOG.error("deleteApplicationHomeSubCluster failed at application {}.", appId, e);
-        }
-      }
-
-      // Clean up Registry entries
-      for (String app : allRegistryApps) {
-        ApplicationId appId = ApplicationId.fromString(app);
-        if (!routerApps.contains(appId)) {
-          LOG.debug("removing finished application entry for {}", app);
-          getRegistryClient().removeAppFromRegistry(appId, true);
+      // Step3. We iterate through all application lists.
+      for (ApplicationHomeSubCluster app : applicationHomeSubClusters) {
+        ApplicationId applicationId = app.getApplicationId();
+        SubClusterId homeSubCluster = app.getHomeSubCluster();
+        if (subClusters.containsKey(homeSubCluster)) {
+          SubClusterInfo subClusterInfo = subClusters.get(homeSubCluster);
+          String rmWebAddress = subClusterInfo.getRMWebServiceAddress();
+          // If the application no longer exists in the subCluster, it can be deleted.
+          if (!isApplicationExistsSubCluster(rmWebAddress, applicationId)) {
+            try {
+              // Delete application from homeSubCluster
+              facade.deleteApplicationHomeSubCluster(app.getApplicationId());
+              // Delete application from registry
+              getRegistryClient().removeAppFromRegistry(applicationId, true);
+            } catch (Exception e) {
+              LOG.error("deleteApplicationHomeSubCluster failed at application {}.",
+                  applicationId, e);
+            }
+          } else {
+            LOG.debug("Find application [{}] exists In SubCluster [] and skip deleting.",
+                applicationId, homeSubCluster);
+          }
         }
       }
     } catch (Throwable e) {
