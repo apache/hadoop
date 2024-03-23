@@ -36,6 +36,7 @@ public class FederationGuavaCache extends FederationCache {
   private Cache<String, CacheRequest<String, ?>> cache;
 
   private int cacheTimeToLive;
+  private long cacheEntityNums;
 
   private String className = this.getClass().getSimpleName();
 
@@ -52,6 +53,8 @@ public class FederationGuavaCache extends FederationCache {
     // no conflict or pick up a specific one in the future.
     cacheTimeToLive = pConf.getInt(YarnConfiguration.FEDERATION_CACHE_TIME_TO_LIVE_SECS,
         YarnConfiguration.DEFAULT_FEDERATION_CACHE_TIME_TO_LIVE_SECS);
+    cacheEntityNums = pConf.getLong(YarnConfiguration.FEDERATION_CACHE_ENTITY_NUMS,
+        YarnConfiguration.DEFAULT_FEDERATION_CACHE_ENTITY_NUMS);
     if (cacheTimeToLive <= 0) {
       isCachingEnabled = false;
       return;
@@ -60,7 +63,7 @@ public class FederationGuavaCache extends FederationCache {
 
     // Initialize Cache.
     cache = CacheBuilder.newBuilder().expireAfterWrite(cacheTimeToLive,
-        TimeUnit.MILLISECONDS).build();
+        TimeUnit.MILLISECONDS).maximumSize(cacheEntityNums).build();
     isCachingEnabled = true;
   }
 
