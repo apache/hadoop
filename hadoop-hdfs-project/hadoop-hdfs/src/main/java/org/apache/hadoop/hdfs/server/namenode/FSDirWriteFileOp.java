@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.fs.XAttrSetFlag;
@@ -104,7 +105,7 @@ class FSDirWriteFileOp {
    */
   static void persistBlocks(
       FSDirectory fsd, String path, INodeFile file, boolean logRetryCache) {
-    assert fsd.getFSNamesystem().hasWriteLock();
+    assert fsd.getFSNamesystem().hasWriteLock(FSNamesystemLockMode.FS);
     Preconditions.checkArgument(file.isUnderConstruction());
     fsd.getEditLog().logUpdateBlocks(path, file, logRetryCache);
     if(NameNode.stateChangeLog.isDebugEnabled()) {
