@@ -97,6 +97,7 @@ import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.INodesInPath;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
+import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfyManager;
@@ -1900,7 +1901,7 @@ public class BlockManager implements BlockStatsMXBean {
    */
   public void findAndMarkBlockAsCorrupt(final ExtendedBlock blk,
       final DatanodeInfo dn, String storageID, String reason) throws IOException {
-    assert namesystem.hasWriteLock();
+    assert namesystem.hasWriteLock(FSNamesystemLockMode.BM);
     final Block reportedBlock = blk.getLocalBlock();
     final BlockInfo storedBlock = getStoredBlock(reportedBlock);
     if (storedBlock == null) {
@@ -2715,7 +2716,7 @@ public class BlockManager implements BlockStatsMXBean {
   }
 
   public long requestBlockReportLeaseId(DatanodeRegistration nodeReg) {
-    assert namesystem.hasReadLock();
+    assert namesystem.hasReadLock(FSNamesystemLockMode.BM);
     DatanodeDescriptor node = null;
     try {
       node = datanodeManager.getDatanode(nodeReg);
@@ -2737,7 +2738,6 @@ public class BlockManager implements BlockStatsMXBean {
 
   public void registerDatanode(DatanodeRegistration nodeReg)
       throws IOException {
-    assert namesystem.hasWriteLock();
     datanodeManager.registerDatanode(nodeReg);
     bmSafeMode.checkSafeMode();
   }
@@ -3004,7 +3004,7 @@ public class BlockManager implements BlockStatsMXBean {
 
   public void removeBRLeaseIfNeeded(final DatanodeID nodeID,
       final BlockReportContext context) throws IOException {
-    namesystem.writeLock();
+    namesystem.writeLock(FSNamesystemLockMode.BM);
     DatanodeDescriptor node;
     try {
       node = datanodeManager.getDatanode(nodeID);
@@ -3022,7 +3022,7 @@ public class BlockManager implements BlockStatsMXBean {
         }
       }
     } finally {
-      namesystem.writeUnlock("removeBRLeaseIfNeeded");
+      namesystem.writeUnlock(FSNamesystemLockMode.BM, "removeBRLeaseIfNeeded");
     }
   }
 
@@ -3214,7 +3214,7 @@ public class BlockManager implements BlockStatsMXBean {
       BlockInfo block,
       long oldGenerationStamp, long oldNumBytes, 
       DatanodeStorageInfo[] newStorages) throws IOException {
-    assert namesystem.hasWriteLock();
+    assert namesystem.hasWriteLock(FSNamesystemLockMode.BM);
     BlockToMarkCorrupt b = null;
     if (block.getGenerationStamp() != oldGenerationStamp) {
       b = new BlockToMarkCorrupt(oldBlock, block, oldGenerationStamp,
@@ -4433,7 +4433,7 @@ public class BlockManager implements BlockStatsMXBean {
    */
   public void removeStoredBlock(BlockInfo storedBlock, DatanodeDescriptor node) {
     blockLog.debug("BLOCK* removeStoredBlock: {} from {}", storedBlock, node);
-    assert (namesystem.hasWriteLock());
+    assert (namesystem.hasWriteLock(FSNamesystemLockMode.BM));
     {
       if (storedBlock == null || !blocksMap.removeNode(storedBlock, node)) {
         blockLog.debug("BLOCK* removeStoredBlock: {} has already been removed from node {}",
@@ -4948,7 +4948,7 @@ public class BlockManager implements BlockStatsMXBean {
   }
 
   public void removeBlock(BlockInfo block) {
-    assert namesystem.hasWriteLock();
+    assert namesystem.hasWriteLock(FSNamesystemLockMode.BM);
     // No need to ACK blocks that are being removed entirely
     // from the namespace, since the removal of the associated
     // file already removes them from the block map below.
@@ -4991,7 +4991,7 @@ public class BlockManager implements BlockStatsMXBean {
   /** updates a block in needed reconstruction queue. */
   private void updateNeededReconstructions(final BlockInfo block,
       final int curReplicasDelta, int expectedReplicasDelta) {
-    namesystem.writeLock();
+    namesystem.writeLock(FSNamesystemLockMode.BM);
     try {
       if (!isPopulatingReplQueues() || !block.isComplete()) {
         return;
@@ -5010,7 +5010,7 @@ public class BlockManager implements BlockStatsMXBean {
             repl.outOfServiceReplicas(), oldExpectedReplicas);
       }
     } finally {
-      namesystem.writeUnlock("updateNeededReconstructions");
+      namesystem.writeUnlock(FSNamesystemLockMode.BM, "updateNeededReconstructions");
     }
   }
 
