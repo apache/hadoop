@@ -21,6 +21,7 @@ import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
+import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.thirdparty.com.google.common.collect.LinkedListMultimap;
@@ -166,6 +167,10 @@ public class TestBlockManager {
     fsn = Mockito.mock(FSNamesystem.class);
     Mockito.doReturn(true).when(fsn).hasWriteLock();
     Mockito.doReturn(true).when(fsn).hasReadLock();
+    Mockito.doReturn(true).when(fsn).hasWriteLock(FSNamesystemLockMode.GLOBAL);
+    Mockito.doReturn(true).when(fsn).hasReadLock(FSNamesystemLockMode.GLOBAL);
+    Mockito.doReturn(true).when(fsn).hasWriteLock(FSNamesystemLockMode.BM);
+    Mockito.doReturn(true).when(fsn).hasReadLock(FSNamesystemLockMode.BM);
     Mockito.doReturn(true).when(fsn).isRunning();
     //Make shouldPopulaeReplQueues return true
     HAContext haContext = Mockito.mock(HAContext.class);
