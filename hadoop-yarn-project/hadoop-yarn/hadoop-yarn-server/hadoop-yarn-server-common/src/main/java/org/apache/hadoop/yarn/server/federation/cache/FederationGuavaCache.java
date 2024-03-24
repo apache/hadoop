@@ -27,11 +27,15 @@ import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 public class FederationGuavaCache extends FederationCache {
+
+  private static final Logger LOG = LoggerFactory.getLogger(FederationCache.class);
 
   private Cache<String, CacheRequest<String, ?>> cache;
 
@@ -62,8 +66,11 @@ public class FederationGuavaCache extends FederationCache {
     this.setStateStore(pStateStore);
 
     // Initialize Cache.
+    LOG.info("Creating a JCache Manager with name {}. " +
+        "Cache TTL Time = {} secs. Cache Entity Nums = {}.", className, cacheTimeToLive,
+        cacheEntityNums);
     cache = CacheBuilder.newBuilder().expireAfterWrite(cacheTimeToLive,
-        TimeUnit.MILLISECONDS).maximumSize(cacheEntityNums).build();
+        TimeUnit.SECONDS).maximumSize(cacheEntityNums).build();
     isCachingEnabled = true;
   }
 

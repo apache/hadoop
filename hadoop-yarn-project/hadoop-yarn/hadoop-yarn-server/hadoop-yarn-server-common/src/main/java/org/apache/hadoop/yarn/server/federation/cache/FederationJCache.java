@@ -73,11 +73,13 @@ public class FederationJCache extends FederationCache {
     CacheManager cacheManager = CacheManagerBuilder.newCacheManagerBuilder().build(true);
 
     if (this.cache == null) {
-      LOG.info("Creating a JCache Manager with name {}. Cache TTL Time = {} secs. Cache Entity Nums = {}.",
-          className, cacheTimeToLive, cacheEntityNums);
+      LOG.info("Creating a JCache Manager with name {}. " +
+          "Cache TTL Time = {} secs. Cache Entity Nums = {}.", className, cacheTimeToLive,
+          cacheEntityNums);
       // Set the number of caches
       ResourcePoolsBuilder poolsBuilder = ResourcePoolsBuilder.heap(cacheEntityNums);
-      ExpiryPolicy expiryPolicy = ExpiryPolicyBuilder.timeToLiveExpiration(Duration.ofSeconds(cacheTimeToLive));
+      ExpiryPolicy expiryPolicy = ExpiryPolicyBuilder.timeToLiveExpiration(
+          Duration.ofSeconds(cacheTimeToLive));
       CacheConfigurationBuilder<String, CacheRequest> configurationBuilder =
           CacheConfigurationBuilder.newCacheConfigurationBuilder(
           String.class, CacheRequest.class, poolsBuilder)

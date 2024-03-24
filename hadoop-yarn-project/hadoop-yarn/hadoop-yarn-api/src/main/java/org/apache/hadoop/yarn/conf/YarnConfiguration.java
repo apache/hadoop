@@ -4032,7 +4032,7 @@ public class YarnConfiguration extends Configuration {
   public static final int DEFAULT_FEDERATION_CACHE_TIME_TO_LIVE_SECS = 5 * 60;
 
   public static final String FEDERATION_CACHE_ENTITY_NUMS =
-      FEDERATION_PREFIX + "entity.nums";
+      FEDERATION_PREFIX + "cache-entity.nums";
   // default 1000
   public static final int DEFAULT_FEDERATION_CACHE_ENTITY_NUMS = 1000;
 
