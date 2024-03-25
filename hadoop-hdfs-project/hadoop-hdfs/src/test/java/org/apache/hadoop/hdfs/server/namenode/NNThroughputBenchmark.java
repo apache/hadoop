@@ -806,7 +806,7 @@ public class NNThroughputBenchmark implements Tool {
     static final String OP_OPEN_NAME = "open";
     static final String OP_USAGE_ARGS =
         " [-threads T] [-files N] [-blockSize S] [-filesPerDir P]"
-        + " [-useExisting] [-baseDirName D] [-nonSuperUser]";
+        + " [-useExisting] [-baseDirName D]";
     static final String OP_OPEN_USAGE = 
       "-op " + OP_OPEN_NAME + OP_USAGE_ARGS;
 
