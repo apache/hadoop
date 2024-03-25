@@ -57,6 +57,7 @@ import java.util.stream.Collectors;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.HAUtil;
+import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheLoader;
 import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
@@ -145,6 +146,7 @@ import org.apache.hadoop.hdfs.server.federation.router.security.RouterSecurityMa
 import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
 import org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException;
 import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
+import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.hdfs.server.namenode.NotReplicatedYetException;
 import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
@@ -369,7 +371,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
         RetriableException.class);
 
     this.rpcServer.addSuppressedLoggingExceptions(
-        StandbyException.class);
+        StandbyException.class, UnresolvedPathException.class);
 
     // The RPC-server port can be ephemeral... ensure we have the correct info
     InetSocketAddress listenAddress = this.rpcServer.getListenerAddress();
@@ -430,6 +432,9 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
    * Clear expired namespace in the shared RouterStateIdContext.
    */
   private void clearStaleNamespacesInRouterStateIdContext() {
+    if (!router.isRouterState(RouterServiceState.RUNNING)) {
+      return;
+    }
     try {
       final Set<String> resolvedNamespaces = namenodeResolver.getNamespaces()
           .stream()
@@ -1610,11 +1615,16 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     return clientProto.getSlowDatanodeReport();
   }
 
+  @Override // ClientProtocol
+  public Path getEnclosingRoot(String src) throws IOException {
+    return clientProto.getEnclosingRoot(src);
+  }
+
   @Override // NamenodeProtocol
   public BlocksWithLocations getBlocks(DatanodeInfo datanode, long size,
-      long minBlockSize, long hotBlockTimeInterval) throws IOException {
+      long minBlockSize, long hotBlockTimeInterval, StorageType storageType) throws IOException {
     return nnProto.getBlocks(datanode, size, minBlockSize,
-            hotBlockTimeInterval);
+            hotBlockTimeInterval, storageType);
   }
 
   @Override // NamenodeProtocol
@@ -1630,6 +1640,12 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   @Override // NamenodeProtocol
   public long getMostRecentCheckpointTxId() throws IOException {
     return nnProto.getMostRecentCheckpointTxId();
+  }
+
+  @Override // NamenodeProtocol
+  public long getMostRecentNameNodeFileTxId(NNStorage.NameNodeFile nnf)
+      throws IOException {
+    return nnProto.getMostRecentNameNodeFileTxId(nnf);
   }
 
   @Override // NamenodeProtocol

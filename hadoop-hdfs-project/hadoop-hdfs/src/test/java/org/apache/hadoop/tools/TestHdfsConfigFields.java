@@ -39,7 +39,7 @@ public class TestHdfsConfigFields extends TestConfigurationFieldsBase {
 
   @Override
   public void initializeMemberVariables() {
-    xmlFilename = new String("hdfs-default.xml");
+    xmlFilename = "hdfs-default.xml";
     configurationClasses = new Class[] { HdfsClientConfigKeys.class,
         HdfsClientConfigKeys.Failover.class,
         HdfsClientConfigKeys.StripedRead.class, DFSConfigKeys.class,

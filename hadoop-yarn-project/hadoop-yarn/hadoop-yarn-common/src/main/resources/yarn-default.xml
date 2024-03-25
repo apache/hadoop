@@ -742,7 +742,11 @@
   </property>
 
   <property>
-    <description>Enable SSL/TLS encryption for the ZooKeeper communication.</description>
+    <description>
+      Enable SSL/TLS encryption for the ZooKeeper communication.
+      Note: if hadoop.zk.ssl.enabled is set to a value, then that central setting has precedence,
+      and this value will be overridden by the value of hadoop.zk.ssl.enabled.
+    </description>
     <name>yarn.resourcemanager.zk-client-ssl.enabled</name>
     <value>false</value>
   </property>
@@ -1482,6 +1486,15 @@
     </description>
     <name>yarn.nodemanager.container-localizer.java.opts</name>
     <value>-Xmx256m</value>
+  </property>
+
+  <property>
+    <description>
+      The admin JVM options used on forking ContainerLocalizer process
+      by the container executor.
+    </description>
+    <name>yarn.nodemanager.container-localizer.admin.java.opts</name>
+    <value></value>
   </property>
 
   <property>

@@ -21,9 +21,12 @@ package org.apache.hadoop.fs.contract.s3a;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -36,7 +39,9 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.contract.AbstractContractVectoredReadTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.Constants;
+import org.apache.hadoop.fs.s3a.RangeNotSatisfiableEOFException;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.statistics.IOStatistics;
@@ -44,10 +49,13 @@ import org.apache.hadoop.fs.statistics.StoreStatisticNames;
 import org.apache.hadoop.fs.statistics.StreamStatisticNames;
 import org.apache.hadoop.test.LambdaTestUtils;
 
+import static org.apache.hadoop.fs.FSExceptionMessages.EOF_IN_READ_FULLY;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_LENGTH;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.returnBuffersToPoolPostRead;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.validateVectoredReadResult;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
+import static org.apache.hadoop.test.LambdaTestUtils.interceptFuture;
 import static org.apache.hadoop.test.MoreAsserts.assertEqual;
 
 public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTest {
@@ -72,7 +80,54 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
     FileSystem fs = getFileSystem();
     List<FileRange> fileRanges = new ArrayList<>();
     fileRanges.add(FileRange.createFileRange(DATASET_LEN, 100));
-    verifyExceptionalVectoredRead(fs, fileRanges, EOFException.class);
+    verifyExceptionalVectoredRead(fs, fileRanges, RangeNotSatisfiableEOFException.class);
+  }
+
+  /**
+   * Verify response to a vector read request which is beyond the
+   * real length of the file.
+   * Unlike the {@link #testEOFRanges()} test, the input stream in
+   * this test thinks the file is longer than it is, so the call
+   * fails in the GET request.
+   */
+  @Test
+  public void testEOFRanges416Handling() throws Exception {
+    FileSystem fs = getFileSystem();
+
+    final int extendedLen = DATASET_LEN + 1024;
+    CompletableFuture<FSDataInputStream> builder =
+        fs.openFile(path(VECTORED_READ_FILE_NAME))
+            .mustLong(FS_OPTION_OPENFILE_LENGTH, extendedLen)
+            .build();
+    List<FileRange> fileRanges = new ArrayList<>();
+    fileRanges.add(FileRange.createFileRange(DATASET_LEN, 100));
+
+    describe("Read starting from past EOF");
+    try (FSDataInputStream in = builder.get()) {
+      in.readVectored(fileRanges, getAllocate());
+      FileRange res = fileRanges.get(0);
+      CompletableFuture<ByteBuffer> data = res.getData();
+      interceptFuture(RangeNotSatisfiableEOFException.class,
+          "416",
+          ContractTestUtils.VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS,
+          TimeUnit.SECONDS,
+          data);
+    }
+
+    describe("Read starting 0 continuing past EOF");
+    try (FSDataInputStream in = fs.openFile(path(VECTORED_READ_FILE_NAME))
+                .mustLong(FS_OPTION_OPENFILE_LENGTH, extendedLen)
+                .build().get()) {
+      final FileRange range = FileRange.createFileRange(0, extendedLen);
+      in.readVectored(Arrays.asList(range), getAllocate());
+      CompletableFuture<ByteBuffer> data = range.getData();
+      interceptFuture(EOFException.class,
+          EOF_IN_READ_FULLY,
+          ContractTestUtils.VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS,
+          TimeUnit.SECONDS,
+          data);
+    }
+
   }
 
   @Test

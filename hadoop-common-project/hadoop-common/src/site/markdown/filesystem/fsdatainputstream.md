@@ -55,7 +55,7 @@ with access functions:
 file as returned by `FileSystem.getFileStatus(Path p)`
 
     forall p in dom(FS.Files[p]) :
-    len(data(FSDIS)) == FS.getFileStatus(p).length
+        len(data(FSDIS)) == FS.getFileStatus(p).length
 
 
 ### `Closeable.close()`
@@ -259,8 +259,8 @@ Examples: `RawLocalFileSystem` , `HttpFSFileSystem`
 
 If the operation is supported and there is a new location for the data:
 
-        FSDIS' = (pos, data', true)
-        result = True
+    FSDIS' = (pos, data', true)
+    result = True
 
 The new data is the original data (or an updated version of it, as covered
 in the Consistency section below), but the block containing the data at `offset`
@@ -268,7 +268,7 @@ is sourced from a different replica.
 
 If there is no other copy, `FSDIS` is  not updated; the response indicates this:
 
-        result = False
+    result = False
 
 Outside of test methods, the primary use of this method is in the {{FSInputChecker}}
 class, which can react to a checksum error in a read by attempting to source

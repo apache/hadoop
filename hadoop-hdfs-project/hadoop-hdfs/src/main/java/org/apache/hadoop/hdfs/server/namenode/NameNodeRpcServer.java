@@ -649,7 +649,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   /////////////////////////////////////////////////////
   @Override // NamenodeProtocol
   public BlocksWithLocations getBlocks(DatanodeInfo datanode, long size, long
-      minBlockSize, long timeInterval)
+      minBlockSize, long timeInterval, StorageType storageType)
       throws IOException {
     String operationName = "getBlocks";
     if(size <= 0) {
@@ -663,7 +663,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     checkNNStartup();
     namesystem.checkSuperuserPrivilege(operationName);
     namesystem.checkNameNodeSafeMode("Cannot execute getBlocks");
-    return namesystem.getBlocks(datanode, size, minBlockSize, timeInterval);
+    return namesystem.getBlocks(datanode, size, minBlockSize, timeInterval, storageType);
   }
 
   @Override // NamenodeProtocol
@@ -1360,6 +1360,14 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     namesystem.checkOperation(OperationCategory.UNCHECKED);
     namesystem.checkSuperuserPrivilege(operationName);
     return namesystem.getFSImage().getMostRecentCheckpointTxId();
+  }
+
+  @Override // NamenodeProtocol
+  public long getMostRecentNameNodeFileTxId(NNStorage.NameNodeFile nnf) throws IOException {
+    checkNNStartup();
+    namesystem.checkOperation(OperationCategory.UNCHECKED);
+    namesystem.checkSuperuserPrivilege();
+    return namesystem.getFSImage().getMostRecentNameNodeFileTxId(nnf);
   }
   
   @Override // NamenodeProtocol
@@ -2676,5 +2684,12 @@ public class NameNodeRpcServer implements NamenodeProtocols {
           + "external SPS service is not allowed to fetch the path Ids");
     }
     return namesystem.getBlockManager().getSPSManager().getNextPathId();
+  }
+
+  @Override // ClientProtocol
+  public Path getEnclosingRoot(String src)
+      throws IOException {
+    checkNNStartup();
+    return namesystem.getEnclosingRoot(src);
   }
 }

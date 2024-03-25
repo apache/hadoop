@@ -25,7 +25,9 @@ import java.nio.file.AccessDeniedException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -47,39 +49,39 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.auth.AbstractSessionCredentialsProvider;
 import org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider;
+import org.apache.hadoop.fs.s3a.auth.CredentialProviderListFactory;
 import org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider;
 import org.apache.hadoop.fs.s3a.auth.NoAuthWithAWSException;
+import org.apache.hadoop.fs.s3a.auth.delegation.CountInvocationsProvider;
 import org.apache.hadoop.fs.s3a.impl.InstantiationIOException;
+import org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.util.Sets;
 
 import static org.apache.hadoop.fs.s3a.Constants.ASSUMED_ROLE_CREDENTIALS_PROVIDER;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_CREDENTIALS_PROVIDER;
-import static org.apache.hadoop.fs.s3a.S3ATestConstants.DEFAULT_CSVTEST_FILE;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_CREDENTIALS_PROVIDER_MAPPING;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.authenticationContains;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.buildClassListString;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.getCSVTestPath;
 import static org.apache.hadoop.fs.s3a.auth.CredentialProviderListFactory.STANDARD_AWS_PROVIDERS;
 import static org.apache.hadoop.fs.s3a.auth.CredentialProviderListFactory.buildAWSProviderList;
 import static org.apache.hadoop.fs.s3a.auth.CredentialProviderListFactory.createAWSCredentialProviderList;
 import static org.apache.hadoop.fs.s3a.impl.InstantiationIOException.DOES_NOT_IMPLEMENT;
+import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.getExternalData;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.test.LambdaTestUtils.interceptFuture;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 
 /**
  * Unit tests for {@link Constants#AWS_CREDENTIALS_PROVIDER} logic.
  */
-public class TestS3AAWSCredentialsProvider {
+public class TestS3AAWSCredentialsProvider extends AbstractS3ATestBase {
 
   /**
-   * URI of the landsat images.
+   * URI of the test file: this must be anonymously accessible.
+   * As these are unit tests no actual connection to the store is made.
    */
   private static final URI TESTFILE_URI = new Path(
-      DEFAULT_CSVTEST_FILE).toUri();
+      PublicDatasetTestUtils.DEFAULT_EXTERNAL_FILE).toUri();
 
   private static final Logger LOG = LoggerFactory.getLogger(TestS3AAWSCredentialsProvider.class);
 
@@ -122,7 +124,7 @@ public class TestS3AAWSCredentialsProvider {
         TemporaryAWSCredentialsProvider.NAME
             + ", \t" + SimpleAWSCredentialsProvider.NAME
             + " ,\n " + AnonymousAWSCredentialsProvider.NAME);
-    Path testFile = getCSVTestPath(conf);
+    Path testFile = getExternalData(conf);
 
     AWSCredentialProviderList list = createAWSCredentialProviderList(
         testFile.toUri(), conf);
@@ -204,6 +206,66 @@ public class TestS3AAWSCredentialsProvider {
             EnvironmentVariableCredentialsProvider.class),
         Sets.newHashSet());
     assertTrue("empty credentials", credentials.size() > 0);
+  }
+
+  /**
+   * Test S3A credentials provider remapping with assumed role
+   * credentials provider.
+   */
+  @Test
+  public void testAssumedRoleWithRemap() throws Throwable {
+    Configuration conf = new Configuration(false);
+    conf.set(ASSUMED_ROLE_CREDENTIALS_PROVIDER,
+        "custom.assume.role.key1,custom.assume.role.key2,custom.assume.role.key3");
+    conf.set(AWS_CREDENTIALS_PROVIDER_MAPPING,
+        "custom.assume.role.key1="
+            + CredentialProviderListFactory.ENVIRONMENT_CREDENTIALS_V2
+            + " ,custom.assume.role.key2 ="
+            + CountInvocationsProvider.NAME
+            + ", custom.assume.role.key3= "
+            + CredentialProviderListFactory.PROFILE_CREDENTIALS_V1);
+    final AWSCredentialProviderList credentials =
+        buildAWSProviderList(
+            new URI("s3a://bucket1"),
+            conf,
+            ASSUMED_ROLE_CREDENTIALS_PROVIDER,
+            new ArrayList<>(),
+            new HashSet<>());
+    Assertions
+        .assertThat(credentials.size())
+        .describedAs("List of Credentials providers")
+        .isEqualTo(3);
+  }
+
+  /**
+   * Test S3A credentials provider remapping with aws
+   * credentials provider.
+   */
+  @Test
+  public void testAwsCredentialProvidersWithRemap() throws Throwable {
+    Configuration conf = new Configuration(false);
+    conf.set(AWS_CREDENTIALS_PROVIDER,
+        "custom.aws.creds.key1,custom.aws.creds.key2,custom.aws.creds.key3,custom.aws.creds.key4");
+    conf.set(AWS_CREDENTIALS_PROVIDER_MAPPING,
+        "custom.aws.creds.key1="
+            + CredentialProviderListFactory.ENVIRONMENT_CREDENTIALS_V2
+            + " ,\ncustom.aws.creds.key2="
+            + CountInvocationsProvider.NAME
+            + "\n, custom.aws.creds.key3="
+            + CredentialProviderListFactory.PROFILE_CREDENTIALS_V1
+            + ",custom.aws.creds.key4 = "
+            + CredentialProviderListFactory.PROFILE_CREDENTIALS_V2);
+    final AWSCredentialProviderList credentials =
+        buildAWSProviderList(
+            new URI("s3a://bucket1"),
+            conf,
+            AWS_CREDENTIALS_PROVIDER,
+            new ArrayList<>(),
+            new HashSet<>());
+    Assertions
+        .assertThat(credentials.size())
+        .describedAs("List of Credentials providers")
+        .isEqualTo(4);
   }
 
   @Test
@@ -521,7 +583,7 @@ public class TestS3AAWSCredentialsProvider {
   @Test
   public void testConcurrentAuthentication() throws Throwable {
     Configuration conf = createProviderConfiguration(SlowProvider.class.getName());
-    Path testFile = getCSVTestPath(conf);
+    Path testFile = getExternalData(conf);
 
     AWSCredentialProviderList list = createAWSCredentialProviderList(testFile.toUri(), conf);
 
@@ -591,7 +653,7 @@ public class TestS3AAWSCredentialsProvider {
   @Test
   public void testConcurrentAuthenticationError() throws Throwable {
     Configuration conf = createProviderConfiguration(ErrorProvider.class.getName());
-    Path testFile = getCSVTestPath(conf);
+    Path testFile = getExternalData(conf);
 
     AWSCredentialProviderList list = createAWSCredentialProviderList(testFile.toUri(), conf);
     ErrorProvider provider = (ErrorProvider) list.getProviders().get(0);
@@ -654,6 +716,80 @@ public class TestS3AAWSCredentialsProvider {
             createProviderConfiguration(V2CredentialProviderDoesNotInstantiate.class.getName())));
     // print for the curious
     LOG.info("{}", expected.toString());
+  }
+
+  /**
+   * Tests for the string utility that will be used by S3A credentials provider.
+   */
+  @Test
+  public void testStringCollectionSplitByEquals() {
+    final Configuration configuration = new Configuration();
+    configuration.set("custom_key", "");
+    Map<String, String> splitMap =
+        S3AUtils.getTrimmedStringCollectionSplitByEquals(
+            configuration, "custom_key");
+    Assertions
+        .assertThat(splitMap)
+        .describedAs(
+            "Map of key value pairs derived from config, split by equals(=) and comma(,)")
+        .hasSize(0);
+
+    splitMap =
+        S3AUtils.getTrimmedStringCollectionSplitByEquals(
+            configuration, "not_present");
+    Assertions
+        .assertThat(splitMap)
+        .describedAs(
+            "Map of key value pairs derived from config, split by equals(=) and comma(,)")
+        .hasSize(0);
+
+    configuration.set("custom_key", "element.first.key1 = element.first.val1");
+    splitMap = S3AUtils.getTrimmedStringCollectionSplitByEquals(
+        configuration, "custom_key");
+
+    Assertions
+        .assertThat(splitMap)
+        .describedAs(
+            "Map of key value pairs derived from config, split by equals(=) and comma(,)")
+        .hasSize(1)
+        .containsEntry("element.first.key1", "element.first.val1");
+
+    configuration.set("custom_key",
+        "element.xyz.key1 =element.abc.val1 , element.xyz.key2= element.abc.val2");
+    splitMap =
+        S3AUtils.getTrimmedStringCollectionSplitByEquals(
+            configuration, "custom_key");
+
+    Assertions
+        .assertThat(splitMap)
+        .describedAs(
+            "Map of key value pairs derived from config, split by equals(=) and comma(,)")
+        .hasSize(2)
+        .containsEntry("element.xyz.key1", "element.abc.val1")
+        .containsEntry("element.xyz.key2", "element.abc.val2");
+
+    configuration.set("custom_key",
+        "\nelement.xyz.key1 =element.abc.val1 \n"
+            + ", element.xyz.key2=element.abc.val2,element.xyz.key3=element.abc.val3"
+            + " , element.xyz.key4     =element.abc.val4,element.xyz.key5=        "
+            + "element.abc.val5 ,\n \n \n "
+            + " element.xyz.key6      =       element.abc.val6 \n , \n"
+            + "element.xyz.key7=element.abc.val7,\n");
+    splitMap = S3AUtils.getTrimmedStringCollectionSplitByEquals(
+        configuration, "custom_key");
+
+    Assertions
+        .assertThat(splitMap)
+        .describedAs(
+            "Map of key value pairs derived from config, split by equals(=) and comma(,)")
+        .hasSize(7)
+        .containsEntry("element.xyz.key1", "element.abc.val1")
+        .containsEntry("element.xyz.key2", "element.abc.val2")
+        .containsEntry("element.xyz.key3", "element.abc.val3")
+        .containsEntry("element.xyz.key4", "element.abc.val4")
+        .containsEntry("element.xyz.key5", "element.abc.val5")
+        .containsEntry("element.xyz.key6", "element.abc.val6")
+        .containsEntry("element.xyz.key7", "element.abc.val7");
   }
 
   /**

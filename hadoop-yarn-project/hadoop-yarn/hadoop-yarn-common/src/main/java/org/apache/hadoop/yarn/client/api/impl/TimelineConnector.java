@@ -78,7 +78,8 @@ public class TimelineConnector extends AbstractService {
   private static final Joiner JOINER = Joiner.on("");
   private static final Logger LOG =
       LoggerFactory.getLogger(TimelineConnector.class);
-  public final static int DEFAULT_SOCKET_TIMEOUT = 1 * 60 * 1000; // 1 minute
+
+  private int socketTimeOut = 60_000;
 
   private SSLFactory sslFactory;
   Client client;
@@ -112,7 +113,7 @@ public class TimelineConnector extends AbstractService {
       sslFactory = getSSLFactory(conf);
       connConfigurator = getConnConfigurator(sslFactory);
     } else {
-      connConfigurator = DEFAULT_TIMEOUT_CONN_CONFIGURATOR;
+      connConfigurator = defaultTimeoutConnConfigurator;
     }
     String defaultAuth = UserGroupInformation.isSecurityEnabled() ?
             KerberosAuthenticationHandler.TYPE :
@@ -139,23 +140,18 @@ public class TimelineConnector extends AbstractService {
     }
   }
 
-  private static final ConnectionConfigurator DEFAULT_TIMEOUT_CONN_CONFIGURATOR
-    = new ConnectionConfigurator() {
-        @Override
-        public HttpURLConnection configure(HttpURLConnection conn)
-            throws IOException {
-          setTimeouts(conn, DEFAULT_SOCKET_TIMEOUT);
-          return conn;
-        }
-      };
+  private ConnectionConfigurator defaultTimeoutConnConfigurator = conn -> {
+    setTimeouts(conn, socketTimeOut);
+    return conn;
+  };
 
   private ConnectionConfigurator getConnConfigurator(SSLFactory sslFactoryObj) {
     try {
-      return initSslConnConfigurator(DEFAULT_SOCKET_TIMEOUT, sslFactoryObj);
+      return initSslConnConfigurator(socketTimeOut, sslFactoryObj);
     } catch (Exception e) {
       LOG.debug("Cannot load customized ssl related configuration. "
           + "Fallback to system-generic settings.", e);
-      return DEFAULT_TIMEOUT_CONN_CONFIGURATOR;
+      return defaultTimeoutConnConfigurator;
     }
   }
 
@@ -455,5 +451,10 @@ public class TimelineConnector extends AbstractService {
       return (e instanceof ConnectException
           || e instanceof SocketTimeoutException);
     }
+  }
+
+  @VisibleForTesting
+  public void setSocketTimeOut(int socketTimeOut) {
+    this.socketTimeOut = socketTimeOut;
   }
 }

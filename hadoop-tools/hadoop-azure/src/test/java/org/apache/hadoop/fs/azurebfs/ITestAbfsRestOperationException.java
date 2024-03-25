@@ -21,14 +21,12 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.IOException;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Assert;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.oauth2.RetryTestTokenProvider;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
@@ -43,7 +41,8 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  * Verify the AbfsRestOperationException error message format.
  * */
 public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest{
-  private static final String RETRY_TEST_TOKEN_PROVIDER = "org.apache.hadoop.fs.azurebfs.oauth2.RetryTestTokenProvider";
+  private static final String RETRY_TEST_TOKEN_PROVIDER =
+      "org.apache.hadoop.fs.azurebfs.oauth2.RetryTestTokenProvider";
 
   public ITestAbfsRestOperationException() throws Exception {
     super();
@@ -55,17 +54,35 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
     Path nonExistedFilePath1 = new Path("nonExistedPath1");
     Path nonExistedFilePath2 = new Path("nonExistedPath2");
     try {
-      FileStatus fileStatus = fs.getFileStatus(nonExistedFilePath1);
+      fs.getFileStatus(nonExistedFilePath1);
     } catch (Exception ex) {
       String errorMessage = ex.getLocalizedMessage();
       String[] errorFields = errorMessage.split(",");
 
-      Assert.assertEquals(4, errorFields.length);
+      // Expected Fields are: Message, StatusCode, Method, URL, ActivityId(rId)
+      Assertions.assertThat(errorFields)
+          .describedAs("Number of Fields in exception message are not as expected")
+          .hasSize(5);
       // Check status message, status code, HTTP Request Type and URL.
-      Assert.assertEquals("Operation failed: \"The specified path does not exist.\"", errorFields[0].trim());
-      Assert.assertEquals("404", errorFields[1].trim());
-      Assert.assertEquals("HEAD", errorFields[2].trim());
-      Assert.assertTrue(errorFields[3].trim().startsWith("http"));
+      Assertions.assertThat(errorFields[0].trim())
+          .describedAs("Error Message Field in exception message is wrong")
+          .isEqualTo("Operation failed: \"The specified path does not exist.\"");
+      Assertions.assertThat(errorFields[1].trim())
+          .describedAs("Status Code Field in exception message "
+              + "should be \"404\"")
+          .isEqualTo("404");
+      Assertions.assertThat(errorFields[2].trim())
+          .describedAs("Http Rest Method Field in exception message "
+              + "should be \"HEAD\"")
+          .isEqualTo("HEAD");
+      Assertions.assertThat(errorFields[3].trim())
+          .describedAs("Url Field in exception message"
+              + " should start with \"http\"")
+          .startsWith("http");
+      Assertions.assertThat(errorFields[4].trim())
+          .describedAs("ActivityId Field in exception message "
+              + "should start with \"rId:\"")
+          .startsWith("rId:");
     }
 
     try {
@@ -74,18 +91,43 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
       // verify its format
       String errorMessage = ex.getLocalizedMessage();
       String[] errorFields = errorMessage.split(",");
+      // Expected Fields are: Message, StatusCode, Method, URL, ActivityId(rId), StorageErrorCode, StorageErrorMessage.
       Assertions.assertThat(errorFields)
-          .describedAs("fields in exception of %s", ex)
-          .hasSize(6);
+          .describedAs("Number of Fields in exception message are not as expected")
+          .hasSize(7);
       // Check status message, status code, HTTP Request Type and URL.
-      Assert.assertEquals("Operation failed: \"The specified path does not exist.\"", errorFields[0].trim());
-      Assert.assertEquals("404", errorFields[1].trim());
-      Assert.assertEquals("GET", errorFields[2].trim());
-      Assert.assertTrue(errorFields[3].trim().startsWith("http"));
+      Assertions.assertThat(errorFields[0].trim())
+          .describedAs("Error Message Field in exception message is wrong")
+          .isEqualTo("Operation failed: \"The specified path does not exist.\"");
+      Assertions.assertThat(errorFields[1].trim())
+          .describedAs("Status Code Field in exception message"
+              + " should be \"404\"")
+          .isEqualTo("404");
+      Assertions.assertThat(errorFields[2].trim())
+          .describedAs("Http Rest Method Field in exception message"
+              + " should be \"GET\"")
+          .isEqualTo("GET");
+      Assertions.assertThat(errorFields[3].trim())
+          .describedAs("Url Field in exception message"
+              + " should start with \"http\"")
+          .startsWith("http");
+      Assertions.assertThat(errorFields[4].trim())
+          .describedAs("ActivityId Field in exception message"
+              + " should start with \"rId:\"")
+          .startsWith("rId:");
       // Check storage error code and storage error message.
-      Assert.assertEquals("PathNotFound", errorFields[4].trim());
-      Assert.assertTrue(errorFields[5].contains("RequestId")
-              && errorFields[5].contains("Time"));
+      Assertions.assertThat(errorFields[5].trim())
+          .describedAs("StorageErrorCode Field in exception message"
+              + " should be \"PathNotFound\"")
+          .isEqualTo("PathNotFound");
+      Assertions.assertThat(errorFields[6].trim())
+          .describedAs("StorageErrorMessage Field in exception message"
+              + " should contain \"RequestId\"")
+          .contains("RequestId");
+      Assertions.assertThat(errorFields[6].trim())
+          .describedAs("StorageErrorMessage Field in exception message"
+              + " should contain \"Time\"")
+          .contains("Time");
     }
   }
 
@@ -101,7 +143,7 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
 
     Configuration config = new Configuration(this.getRawConfiguration());
     String accountName = config.get("fs.azure.abfs.account.name");
-    // Setup to configure custom token provider
+    // Setup to configure custom token provider.
     config.set("fs.azure.account.auth.type." + accountName, "Custom");
     config.set("fs.azure.account.oauth.provider.type." + accountName, "org.apache.hadoop.fs"
         + ".azurebfs.oauth2.RetryTestTokenProvider");
@@ -109,24 +151,25 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
     // Stop filesystem creation as it will lead to calls to store.
     config.set("fs.azure.createRemoteFileSystemDuringInitialization", "false");
 
-    final AzureBlobFileSystem fs1 =
+    try (final AzureBlobFileSystem fs1 =
         (AzureBlobFileSystem) FileSystem.newInstance(fs.getUri(),
-        config);
-    RetryTestTokenProvider retryTestTokenProvider
-        = RetryTestTokenProvider.getCurrentRetryTestProviderInstance(
-        getAccessTokenProvider(fs1));
-    retryTestTokenProvider.resetStatusToFirstTokenFetch();
+        config)) {
+      RetryTestTokenProvider retryTestTokenProvider
+              = RetryTestTokenProvider.getCurrentRetryTestProviderInstance(
+              getAccessTokenProvider(fs1));
+      retryTestTokenProvider.resetStatusToFirstTokenFetch();
 
-    intercept(Exception.class,
-        ()-> {
-          fs1.getFileStatus(new Path("/"));
-        });
+      intercept(Exception.class,
+              () -> {
+                fs1.getFileStatus(new Path("/"));
+              });
 
-    // Number of retries done should be as configured
-    Assert.assertEquals(
-        "Number of token fetch retries done does not match with fs.azure"
-            + ".custom.token.fetch.retry.count configured", numOfRetries,
-        retryTestTokenProvider.getRetryCount());
+      // Number of retries done should be as configured
+      Assertions.assertThat(retryTestTokenProvider.getRetryCount())
+              .describedAs("Number of token fetch retries done does not "
+                      + "match with fs.azure.custom.token.fetch.retry.count configured")
+              .isEqualTo(numOfRetries);
+    }
   }
 
   @Test
@@ -145,8 +188,10 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
 
     final AzureBlobFileSystem fs = getFileSystem(config);
     try {
-      fs.getFileStatus(new Path("/"));
-      fail("Should fail at auth token fetch call");
+      intercept(Exception.class,
+              () -> {
+                fs.getFileStatus(new Path("/"));
+              });
     } catch (AbfsRestOperationException e) {
       String errorDesc = "Should throw RestOp exception on AAD failure";
       Assertions.assertThat(e.getStatusCode())

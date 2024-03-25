@@ -33,6 +33,7 @@ full details.
 
 ## <a name="documents"></a> Documents
 
+* [Connecting](./connecting.html)
 * [Encryption](./encryption.html)
 * [Performance](./performance.html)
 * [The upgrade to AWS Java SDK V2](./aws_sdk_upgrade.html)
@@ -223,344 +224,15 @@ Do not inadvertently share these credentials through means such as:
 If you do any of these: change your credentials immediately!
 
 
+## Connecting to Amazon S3 or a third-party store
+
+See [Connecting to an Amazon S3 Bucket through the S3A Connector](connecting.html).
+
+Also, please check [S3 endpoint and region settings in detail](connecting.html#s3_endpoint_region_details).
+
 ## <a name="authenticating"></a> Authenticating with S3
 
-Except when interacting with public S3 buckets, the S3A client
-needs the credentials needed to interact with buckets.
-
-The client supports multiple authentication mechanisms and can be configured as to
-which mechanisms to use, and their order of use. Custom implementations
-of `com.amazonaws.auth.AWSCredentialsProvider` may also be used.
-However, with the upcoming upgrade to AWS Java SDK V2, these classes will need to be
-updated to implement `software.amazon.awssdk.auth.credentials.AwsCredentialsProvider`.
-For more information see [Upcoming upgrade to AWS Java SDK V2](./aws_sdk_upgrade.html).
-
-### Authentication properties
-
-```xml
-<property>
-  <name>fs.s3a.access.key</name>
-  <description>AWS access key ID used by S3A file system. Omit for IAM role-based or provider-based authentication.</description>
-</property>
-
-<property>
-  <name>fs.s3a.secret.key</name>
-  <description>AWS secret key used by S3A file system. Omit for IAM role-based or provider-based authentication.</description>
-</property>
-
-<property>
-  <name>fs.s3a.session.token</name>
-  <description>Session token, when using org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider
-    as one of the providers.
-  </description>
-</property>
-
-<property>
-  <name>fs.s3a.aws.credentials.provider</name>
-  <value>
-    org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider,
-    org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider,
-    software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider,
-    org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider
-  </value>
-  <description>
-    Comma-separated class names of credential provider classes which implement
-    software.amazon.awssdk.auth.credentials.AwsCredentialsProvider.
-
-    When S3A delegation tokens are not enabled, this list will be used
-    to directly authenticate with S3 and other AWS services.
-    When S3A Delegation tokens are enabled, depending upon the delegation
-    token binding it may be used
-    to communicate wih the STS endpoint to request session/role
-    credentials.
-  </description>
-</property>
-```
-
-### <a name="auth_env_vars"></a> Authenticating via the AWS Environment Variables
-
-S3A supports configuration via [the standard AWS environment variables](http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html#cli-environment).
-
-The core environment variables are for the access key and associated secret:
-
-```bash
-export AWS_ACCESS_KEY_ID=my.aws.key
-export AWS_SECRET_ACCESS_KEY=my.secret.key
-```
-
-If the environment variable `AWS_SESSION_TOKEN` is set, session authentication
-using "Temporary Security Credentials" is enabled; the Key ID and secret key
-must be set to the credentials for that specific session.
-
-```bash
-export AWS_SESSION_TOKEN=SECRET-SESSION-TOKEN
-export AWS_ACCESS_KEY_ID=SESSION-ACCESS-KEY
-export AWS_SECRET_ACCESS_KEY=SESSION-SECRET-KEY
-```
-
-These environment variables can be used to set the authentication credentials
-instead of properties in the Hadoop configuration.
-
-*Important:*
-These environment variables are generally not propagated from client to server when
-YARN applications are launched. That is: having the AWS environment variables
-set when an application is launched will not permit the launched application
-to access S3 resources. The environment variables must (somehow) be set
-on the hosts/processes where the work is executed.
-
-### <a name="auth_providers"></a> Changing Authentication Providers
-
-The standard way to authenticate is with an access key and secret key set in
-the Hadoop configuration files.
-
-By default, the S3A client follows the following authentication chain:
-
-1. The options `fs.s3a.access.key`, `fs.s3a.secret.key` and `fs.s3a.sesson.key`
-are looked for in the Hadoop XML configuration/Hadoop credential providers,
-returning a set of session credentials if all three are defined.
-1. The `fs.s3a.access.key` and `fs.s3a.secret.key` are looked for in the Hadoop
-XML configuration//Hadoop credential providers, returning a set of long-lived
-credentials if they are defined.
-1. The [AWS environment variables](http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html#cli-environment),
-are then looked for: these will return session or full credentials depending
-on which values are set.
-1. An attempt is made to query the Amazon EC2 Instance/k8s container Metadata Service to
- retrieve credentials published to EC2 VMs.
-
-S3A can be configured to obtain client authentication providers from classes
-which integrate with the AWS SDK by implementing the
-`software.amazon.awssdk.auth.credentials.AwsCredentialsProvider`
-interface.
-This is done by listing the implementation classes, in order of
-preference, in the configuration option `fs.s3a.aws.credentials.provider`.
-In previous hadoop releases, providers were required to
-implement the AWS V1 SDK interface `com.amazonaws.auth.AWSCredentialsProvider`.
-Consult the [Upgrading S3A to AWS SDK V2](./aws_sdk_upgrade.html) documentation
-to see how to migrate credential providers.
-
-*Important*: AWS Credential Providers are distinct from _Hadoop Credential Providers_.
-As will be covered later, Hadoop Credential Providers allow passwords and other secrets
-to be stored and transferred more securely than in XML configuration files.
-AWS Credential Providers are classes which can be used by the Amazon AWS SDK to
-obtain an AWS login from a different source in the system, including environment
-variables, JVM properties and configuration files.
-
-All Hadoop `fs.s3a.` options used to store login details can all be secured
-in [Hadoop credential providers](../../../hadoop-project-dist/hadoop-common/CredentialProviderAPI.html);
-this is advised as a more secure way to store valuable secrets.
-
-There are a number of AWS Credential Providers inside the `hadoop-aws` JAR:
-
-| Hadoop module credential provider                              | Authentication Mechanism                         |
-|----------------------------------------------------------------|--------------------------------------------------|
-| `org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider`     | Session Credentials in configuration             |
-| `org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider`        | Simple name/secret credentials in configuration  |
-| `org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider`     | Anonymous Login                                  |
-| `org.apache.hadoop.fs.s3a.auth.AssumedRoleCredentialProvider`  | [Assumed Role credentials](./assumed_roles.html) |
-| `org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider` | EC2/k8s instance credentials                     |
-
-
-There are also many in the Amazon SDKs, with the common ones being as follows
-
-| classname                                                                        | description                  |
-|----------------------------------------------------------------------------------|------------------------------|
-| `software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider` | AWS Environment Variables    |
-| `software.amazon.awssdk.auth.credentials.InstanceProfileCredentialsProvider`     | EC2 Metadata Credentials     |
-| `software.amazon.awssdk.auth.credentials.ContainerCredentialsProvider`           | EC2/k8s Metadata Credentials |
-
-
-
-### <a name="auth_iam"></a> EC2 IAM Metadata Authentication with `InstanceProfileCredentialsProvider`
-
-Applications running in EC2 may associate an IAM role with the VM and query the
-[EC2 Instance Metadata Service](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-metadata.html)
-for credentials to access S3.  Within the AWS SDK, this functionality is
-provided by `InstanceProfileCredentialsProvider`, which internally enforces a
-singleton instance in order to prevent throttling problem.
-
-### <a name="auth_named_profile"></a> Using Named Profile Credentials with `ProfileCredentialsProvider`
-
-You can configure Hadoop to authenticate to AWS using a [named profile](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html).
-
-To authenticate with a named profile:
-
-1. Declare `software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider` as the provider.
-1. Set your profile via the `AWS_PROFILE` environment variable.
-1. Due to a [bug in version 1 of the AWS Java SDK](https://github.com/aws/aws-sdk-java/issues/803),
-you'll need to remove the `profile` prefix from the AWS configuration section heading.
-
-    Here's an example of what your AWS configuration files should look like:
-
-    ```
-    $ cat ~/.aws/config
-    [user1]
-    region = us-east-1
-    $ cat ~/.aws/credentials
-    [user1]
-    aws_access_key_id = ...
-    aws_secret_access_key = ...
-    aws_session_token = ...
-    aws_security_token = ...
-    ```
-Note:
-
-1. The `region` setting is only used if `fs.s3a.endpoint.region` is set to the empty string.
-1. For the credentials to be available to applications running in a Hadoop cluster, the
-   configuration files MUST be in the `~/.aws/` directory on the local filesystem in
-   all hosts in the cluster.
-
-### <a name="auth_session"></a> Using Session Credentials with `TemporaryAWSCredentialsProvider`
-
-[Temporary Security Credentials](http://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp.html)
-can be obtained from the Amazon Security Token Service; these
-consist of an access key, a secret key, and a session token.
-
-To authenticate with these:
-
-1. Declare `org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider` as the
-provider.
-1. Set the session key in the property `fs.s3a.session.token`,
-and the access and secret key properties to those of this temporary session.
-
-Example:
-
-```xml
-<property>
-  <name>fs.s3a.aws.credentials.provider</name>
-  <value>org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider</value>
-</property>
-
-<property>
-  <name>fs.s3a.access.key</name>
-  <value>SESSION-ACCESS-KEY</value>
-</property>
-
-<property>
-  <name>fs.s3a.secret.key</name>
-  <value>SESSION-SECRET-KEY</value>
-</property>
-
-<property>
-  <name>fs.s3a.session.token</name>
-  <value>SECRET-SESSION-TOKEN</value>
-</property>
-```
-
-The lifetime of session credentials are fixed when the credentials
-are issued; once they expire the application will no longer be able to
-authenticate to AWS.
-
-### <a name="auth_anon"></a> Anonymous Login with `AnonymousAWSCredentialsProvider`
-
-Specifying `org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider` allows
-anonymous access to a publicly accessible S3 bucket without any credentials.
-It can be useful for accessing public data sets without requiring AWS credentials.
-
-```xml
-<property>
-  <name>fs.s3a.aws.credentials.provider</name>
-  <value>org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider</value>
-</property>
-```
-
-Once this is done, there's no need to supply any credentials
-in the Hadoop configuration or via environment variables.
-
-This option can be used to verify that an object store does
-not permit unauthenticated access: that is, if an attempt to list
-a bucket is made using the anonymous credentials, it should fail —unless
-explicitly opened up for broader access.
-
-```bash
-hadoop fs -ls \
- -D fs.s3a.aws.credentials.provider=org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider \
- s3a://landsat-pds/
-```
-
-1. Allowing anonymous access to an S3 bucket compromises
-security and therefore is unsuitable for most use cases.
-
-1. If a list of credential providers is given in `fs.s3a.aws.credentials.provider`,
-then the Anonymous Credential provider *must* come last. If not, credential
-providers listed after it will be ignored.
-
-### <a name="auth_simple"></a> Simple name/secret credentials with `SimpleAWSCredentialsProvider`*
-
-This is the standard credential provider, which supports the secret
-key in `fs.s3a.access.key` and token in `fs.s3a.secret.key`
-values.
-
-```xml
-<property>
-  <name>fs.s3a.aws.credentials.provider</name>
-  <value>org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider</value>
-</property>
-```
-
-This is the basic authenticator used in the default authentication chain.
-
-This means that the default S3A authentication chain can be defined as
-
-```xml
-<property>
-  <name>fs.s3a.aws.credentials.provider</name>
-  <value>
-    org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider,
-    org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider,
-    software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider
-    org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider
-  </value>
-</property>
-```
-
-## <a name="auth_security"></a> Protecting the AWS Credentials
-
-It is critical that you never share or leak your AWS credentials.
-Loss of credentials can leak/lose all your data, run up large bills,
-and significantly damage your organisation.
-
-1. Never share your secrets.
-
-1. Never commit your secrets into an SCM repository.
-The [git secrets](https://github.com/awslabs/git-secrets) can help here.
-
-1. Never include AWS credentials in bug reports, files attached to them,
-or similar.
-
-1. If you use the `AWS_` environment variables,  your list of environment variables
-is equally sensitive.
-
-1. Never use root credentials.
-Use IAM user accounts, with each user/application having its own set of credentials.
-
-1. Use IAM permissions to restrict the permissions individual users and applications
-have. This is best done through roles, rather than configuring individual users.
-
-1. Avoid passing in secrets to Hadoop applications/commands on the command line.
-The command line of any launched program is visible to all users on a Unix system
-(via `ps`), and preserved in command histories.
-
-1. Explore using [IAM Assumed Roles](assumed_roles.html) for role-based permissions
-management: a specific S3A connection can be made with a different assumed role
-and permissions from the primary user account.
-
-1. Consider a workflow in which users and applications are issued with short-lived
-session credentials, configuring S3A to use these through
-the `TemporaryAWSCredentialsProvider`.
-
-1. Have a secure process in place for cancelling and re-issuing credentials for
-users and applications. Test it regularly by using it to refresh credentials.
-
-1. In installations where Kerberos is enabled, [S3A Delegation Tokens](delegation_tokens.html)
-can be used to acquire short-lived session/role credentials and then pass them
-into the shared application. This can ensure that the long-lived secrets stay
-on the local system.
-
-When running in EC2, the IAM EC2 instance credential provider will automatically
-obtain the credentials needed to access AWS services in the role the EC2 VM
-was deployed as.
-This AWS credential provider is enabled in S3A by default.
-
+See [Authenticating with S3](authentication.md).
 
 ## <a name="hadoop_credential_providers"></a>Storing secrets with Hadoop Credential Providers
 
@@ -703,8 +375,12 @@ to allow different buckets to override the shared settings. This is commonly
 used to change the endpoint, encryption and authentication mechanisms of buckets.
 and various minor options.
 
-Here are the S3A properties for use in production; some testing-related
-options are covered in [Testing](./testing.md).
+Here are some the S3A properties for use in production.
+
+* See [Performance](./performance.html) for performance related settings including
+  thread and network pool options.
+* Testing-related options are covered in [Testing](./testing.md).
+
 
 ```xml
 
@@ -841,62 +517,6 @@ options are covered in [Testing](./testing.md).
 </property>
 
 <property>
-  <name>fs.s3a.connection.ssl.enabled</name>
-  <value>true</value>
-  <description>Enables or disables SSL connections to AWS services.
-    Also sets the default port to use for the s3a proxy settings,
-    when not explicitly set in fs.s3a.proxy.port.</description>
-</property>
-
-<property>
-  <name>fs.s3a.endpoint</name>
-  <description>AWS S3 endpoint to connect to. An up-to-date list is
-    provided in the AWS Documentation: regions and endpoints. Without this
-    property, the standard region (s3.amazonaws.com) is assumed.
-  </description>
-</property>
-
-<property>
-  <name>fs.s3a.path.style.access</name>
-  <value>false</value>
-  <description>Enable S3 path style access ie disabling the default virtual hosting behaviour.
-    Useful for S3A-compliant storage providers as it removes the need to set up DNS for virtual hosting.
-  </description>
-</property>
-
-<property>
-  <name>fs.s3a.proxy.host</name>
-  <description>Hostname of the (optional) proxy server for S3 connections.</description>
-</property>
-
-<property>
-  <name>fs.s3a.proxy.port</name>
-  <description>Proxy server port. If this property is not set
-    but fs.s3a.proxy.host is, port 80 or 443 is assumed (consistent with
-    the value of fs.s3a.connection.ssl.enabled).</description>
-</property>
-
-<property>
-  <name>fs.s3a.proxy.username</name>
-  <description>Username for authenticating with proxy server.</description>
-</property>
-
-<property>
-  <name>fs.s3a.proxy.password</name>
-  <description>Password for authenticating with proxy server.</description>
-</property>
-
-<property>
-  <name>fs.s3a.proxy.domain</name>
-  <description>Domain for authenticating with proxy server.</description>
-</property>
-
-<property>
-  <name>fs.s3a.proxy.workstation</name>
-  <description>Workstation for authenticating with proxy server.</description>
-</property>
-
-<property>
   <name>fs.s3a.attempts.maximum</name>
   <value>5</value>
   <description>
@@ -906,18 +526,6 @@ options are covered in [Testing](./testing.md).
     SDK operations are not wrapped is during multipart copy via the AWS SDK
     transfer manager.
   </description>
-</property>
-
-<property>
-  <name>fs.s3a.connection.establish.timeout</name>
-  <value>5000</value>
-  <description>Socket connection setup timeout in milliseconds.</description>
-</property>
-
-<property>
-  <name>fs.s3a.connection.timeout</name>
-  <value>200000</value>
-  <description>Socket connection timeout in milliseconds.</description>
 </property>
 
 <property>
@@ -937,43 +545,6 @@ options are covered in [Testing](./testing.md).
   <value>5000</value>
   <description>How many keys to request from S3 when doing
      directory listings at a time.</description>
-</property>
-
-<property>
-  <name>fs.s3a.threads.max</name>
-  <value>64</value>
-  <description>The total number of threads available in the filesystem for data
-    uploads *or any other queued filesystem operation*.</description>
-</property>
-
-<property>
-  <name>fs.s3a.threads.keepalivetime</name>
-  <value>60</value>
-  <description>Number of seconds a thread can be idle before being
-    terminated.</description>
-</property>
-
-<property>
-  <name>fs.s3a.max.total.tasks</name>
-  <value>32</value>
-  <description>The number of operations which can be queued for execution.
-  This is in addition to the number of active threads in fs.s3a.threads.max.
-  </description>
-</property>
-
-<property>
-  <name>fs.s3a.executor.capacity</name>
-  <value>16</value>
-  <description>The maximum number of submitted tasks which is a single
-    operation (e.g. rename(), delete()) may submit simultaneously for
-    execution -excluding the IO-heavy block uploads, whose capacity
-    is set in "fs.s3a.fast.upload.active.blocks"
-
-    All tasks are submitted to the shared thread pool whose size is
-    set in "fs.s3a.threads.max"; the value of capacity should be less than that
-    of the thread pool itself, as the goal is to stop a single operation
-    from overloading that thread pool.
-  </description>
 </property>
 
 <property>
@@ -1058,14 +629,6 @@ options are covered in [Testing](./testing.md).
   <name>fs.s3a.signing-algorithm</name>
   <description>Override the default signing algorithm so legacy
     implementations can still be used</description>
-</property>
-
-<property>
-  <name>fs.s3a.accesspoint.required</name>
-  <value>false</value>
-  <description>Require that all S3 access is made through Access Points and not through
-  buckets directly. If enabled, use per-bucket overrides to allow bucket access to a specific set
-  of buckets.</description>
 </property>
 
 <property>
@@ -1270,23 +833,6 @@ options are covered in [Testing](./testing.md).
   <description>
     Select which version of the S3 SDK's List Objects API to use.  Currently
     support 2 (default) and 1 (older API).
-  </description>
-</property>
-
-<property>
-  <name>fs.s3a.connection.request.timeout</name>
-  <value>0</value>
-  <description>
-    Time out on HTTP requests to the AWS service; 0 means no timeout.
-    Measured in seconds; the usual time suffixes are all supported
-
-    Important: this is the maximum duration of any AWS service call,
-    including upload and copy operations. If non-zero, it must be larger
-    than the time to upload multi-megabyte blocks to S3 from the client,
-    and to rename many-GB files. Use with care.
-
-    Values that are larger than Integer.MAX_VALUE milliseconds are
-    converged to Integer.MAX_VALUE milliseconds
   </description>
 </property>
 
@@ -1703,11 +1249,11 @@ a session key:
 </property>
 ```
 
-Finally, the public `s3a://landsat-pds/` bucket can be accessed anonymously:
+Finally, the public `s3a://noaa-isd-pds/` bucket can be accessed anonymously:
 
 ```xml
 <property>
-  <name>fs.s3a.bucket.landsat-pds.aws.credentials.provider</name>
+  <name>fs.s3a.bucket.noaa-isd-pds.aws.credentials.provider</name>
   <value>org.apache.hadoop.fs.s3a.AnonymousAWSCredentialsProvider</value>
 </property>
 ```
@@ -1753,179 +1299,6 @@ For a site configuration of:
 
 The bucket "nightly" will be encrypted with SSE-KMS using the KMS key
 `arn:aws:kms:eu-west-2:1528130000000:key/753778e4-2d0f-42e6-b894-6a3ae4ea4e5f`
-
-###  <a name="per_bucket_endpoints"></a>Using Per-Bucket Configuration to access data round the world
-
-S3 Buckets are hosted in different "regions", the default being "US-East".
-The S3A client talks to this region by default, issuing HTTP requests
-to the server `s3.amazonaws.com`.
-
-S3A can work with buckets from any region. Each region has its own
-S3 endpoint, documented [by Amazon](http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region).
-
-1. Applications running in EC2 infrastructure do not pay for IO to/from
-*local S3 buckets*. They will be billed for access to remote buckets. Always
-use local buckets and local copies of data, wherever possible.
-1. The default S3 endpoint can support data IO with any bucket when the V1 request
-signing protocol is used.
-1. When the V4 signing protocol is used, AWS requires the explicit region endpoint
-to be used —hence S3A must be configured to use the specific endpoint. This
-is done in the configuration option `fs.s3a.endpoint`.
-1. All endpoints other than the default endpoint only support interaction
-with buckets local to that S3 instance.
-
-While it is generally simpler to use the default endpoint, working with
-V4-signing-only regions (Frankfurt, Seoul) requires the endpoint to be identified.
-Expect better performance from direct connections —traceroute will give you some insight.
-
-If the wrong endpoint is used, the request may fail. This may be reported as a 301/redirect error,
-or as a 400 Bad Request: take these as cues to check the endpoint setting of
-a bucket.
-
-Here is a list of properties defining all AWS S3 regions, current as of June 2017:
-
-```xml
-<!--
- This is the default endpoint, which can be used to interact
- with any v2 region.
- -->
-<property>
-  <name>central.endpoint</name>
-  <value>s3.amazonaws.com</value>
-</property>
-
-<property>
-  <name>canada.endpoint</name>
-  <value>s3.ca-central-1.amazonaws.com</value>
-</property>
-
-<property>
-  <name>frankfurt.endpoint</name>
-  <value>s3.eu-central-1.amazonaws.com</value>
-</property>
-
-<property>
-  <name>ireland.endpoint</name>
-  <value>s3-eu-west-1.amazonaws.com</value>
-</property>
-
-<property>
-  <name>london.endpoint</name>
-  <value>s3.eu-west-2.amazonaws.com</value>
-</property>
-
-<property>
-  <name>mumbai.endpoint</name>
-  <value>s3.ap-south-1.amazonaws.com</value>
-</property>
-
-<property>
-  <name>ohio.endpoint</name>
-  <value>s3.us-east-2.amazonaws.com</value>
-</property>
-
-<property>
-  <name>oregon.endpoint</name>
-  <value>s3-us-west-2.amazonaws.com</value>
-</property>
-
-<property>
-  <name>sao-paolo.endpoint</name>
-  <value>s3-sa-east-1.amazonaws.com</value>
-</property>
-
-<property>
-  <name>seoul.endpoint</name>
-  <value>s3.ap-northeast-2.amazonaws.com</value>
-</property>
-
-<property>
-  <name>singapore.endpoint</name>
-  <value>s3-ap-southeast-1.amazonaws.com</value>
-</property>
-
-<property>
-  <name>sydney.endpoint</name>
-  <value>s3-ap-southeast-2.amazonaws.com</value>
-</property>
-
-<property>
-  <name>tokyo.endpoint</name>
-  <value>s3-ap-northeast-1.amazonaws.com</value>
-</property>
-
-<property>
-  <name>virginia.endpoint</name>
-  <value>${central.endpoint}</value>
-</property>
-```
-
-This list can be used to specify the endpoint of individual buckets, for example
-for buckets in the central and EU/Ireland endpoints.
-
-```xml
-<property>
-  <name>fs.s3a.bucket.landsat-pds.endpoint</name>
-  <value>${central.endpoint}</value>
-  <description>The endpoint for s3a://landsat-pds URLs</description>
-</property>
-
-<property>
-  <name>fs.s3a.bucket.eu-dataset.endpoint</name>
-  <value>${ireland.endpoint}</value>
-  <description>The endpoint for s3a://eu-dataset URLs</description>
-</property>
-```
-
-Why explicitly declare a bucket bound to the central endpoint? It ensures
-that if the default endpoint is changed to a new region, data store in
-US-east is still reachable.
-
-## <a name="accesspoints"></a>Configuring S3 AccessPoints usage with S3A
-S3a now supports [S3 Access Point](https://aws.amazon.com/s3/features/access-points/) usage which
-improves VPC integration with S3 and simplifies your data's permission model because different
-policies can be applied now on the Access Point level. For more information about why to use and
-how to create them make sure to read the official documentation.
-
-Accessing data through an access point, is done by using its ARN, as opposed to just the bucket name.
-You can set the Access Point ARN property using the following per bucket configuration property:
-```xml
-<property>
-    <name>fs.s3a.bucket.sample-bucket.accesspoint.arn</name>
-    <value> {ACCESSPOINT_ARN_HERE} </value>
-    <description>Configure S3a traffic to use this AccessPoint</description>
-</property>
-```
-
-This configures access to the `sample-bucket` bucket for S3A, to go through the
-new Access Point ARN. So, for example `s3a://sample-bucket/key` will now use your
-configured ARN when getting data from S3 instead of your bucket.
-
-The `fs.s3a.accesspoint.required` property can also require all access to S3 to go through Access
-Points. This has the advantage of increasing security inside a VPN / VPC as you only allow access
-to known sources of data defined through Access Points. In case there is a need to access a bucket
-directly (without Access Points) then you can use per bucket overrides to disable this setting on a
-bucket by bucket basis i.e. `fs.s3a.bucket.{YOUR-BUCKET}.accesspoint.required`.
-
-```xml
-<!-- Require access point only access -->
-<property>
-    <name>fs.s3a.accesspoint.required</name>
-    <value>true</value>
-</property>
-<!-- Disable it on a per-bucket basis if needed -->
-<property>
-    <name>fs.s3a.bucket.example-bucket.accesspoint.required</name>
-    <value>false</value>
-</property>
-```
-
-Before using Access Points make sure you're not impacted by the following:
-- `ListObjectsV1` is not supported, this is also deprecated on AWS S3 for performance reasons;
-- The endpoint for S3 requests will automatically change from `s3.amazonaws.com` to use
-`s3-accesspoint.REGION.amazonaws.{com | com.cn}` depending on the Access Point ARN. While
-considering endpoints, if you have any custom signers that use the host endpoint property make
-sure to update them if needed;
 
 ## <a name="requester_pays"></a>Requester Pays buckets
 
@@ -2232,43 +1605,33 @@ from VMs running on EC2.
   </description>
 </property>
 
-<property>
-  <name>fs.s3a.threads.max</name>
-  <value>10</value>
-  <description>The total number of threads available in the filesystem for data
-    uploads *or any other queued filesystem operation*.</description>
-</property>
-
-<property>
-  <name>fs.s3a.max.total.tasks</name>
-  <value>5</value>
-  <description>The number of operations which can be queued for execution</description>
-</property>
-
-<property>
-  <name>fs.s3a.threads.keepalivetime</name>
-  <value>60</value>
-  <description>Number of seconds a thread can be idle before being
-    terminated.</description>
-</property>
 ```
 
 ### <a name="multipart_purge"></a>Cleaning up after partial Upload Failures
 
-There are two mechanisms for cleaning up after leftover multipart
+There are four mechanisms for cleaning up after leftover multipart
 uploads:
+- AWS Lifecycle rules. This is the simplest and SHOULD be used unless there
+  are are good reasons, such as the store not supporting lifecycle rules.
 - Hadoop s3guard CLI commands for listing and deleting uploads by their
 age. Documented in the [S3Guard](./s3guard.html) section.
+- Setting `fs.s3a.directory.operations.purge.uploads` to `true` for automatic
+  scan and delete during directory rename and delete
 - The configuration parameter `fs.s3a.multipart.purge`, covered below.
 
 If a large stream write operation is interrupted, there may be
 intermediate partitions uploaded to S3 —data which will be billed for.
+If an S3A committer job is halted partway through, again, there may be
+many incomplete multipart uploads in the output directory.
 
 These charges can be reduced by enabling `fs.s3a.multipart.purge`,
-and setting a purge time in seconds, such as 86400 seconds —24 hours.
+and setting a purge time in seconds, such as 24 hours.
 When an S3A FileSystem instance is instantiated with the purge time greater
 than zero, it will, on startup, delete all outstanding partition requests
-older than this time.
+older than this time. However, this makes filesystem instantiate slow, especially
+against very large buckets, as a full scan is made.
+
+Consider avoiding this in future.
 
 ```xml
 <property>
@@ -2280,7 +1643,7 @@ older than this time.
 
 <property>
   <name>fs.s3a.multipart.purge.age</name>
-  <value>86400</value>
+  <value>24h</value>
   <description>Minimum age in seconds of multipart uploads to purge</description>
 </property>
 ```

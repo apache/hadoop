@@ -19,8 +19,8 @@ package org.apache.hadoop.hdfs.tools;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -56,8 +56,8 @@ public class TestDFSAdminWithHA {
   private static String newLine = System.getProperty("line.separator");
 
   private void assertOutputMatches(String string) {
-    String errOutput = new String(err.toByteArray(), Charsets.UTF_8);
-    String output = new String(out.toByteArray(), Charsets.UTF_8);
+    String errOutput = new String(err.toByteArray(), StandardCharsets.UTF_8);
+    String output = new String(out.toByteArray(), StandardCharsets.UTF_8);
 
     if (!errOutput.matches(string) && !output.matches(string)) {
       fail("Expected output to match '" + string +
@@ -70,8 +70,8 @@ public class TestDFSAdminWithHA {
   }
 
   private void assertOutputMatches(String outMessage, String errMessage) {
-    String errOutput = new String(err.toByteArray(), Charsets.UTF_8);
-    String output = new String(out.toByteArray(), Charsets.UTF_8);
+    String errOutput = new String(err.toByteArray(), StandardCharsets.UTF_8);
+    String output = new String(out.toByteArray(), StandardCharsets.UTF_8);
 
     if (!errOutput.matches(errMessage) || !output.matches(outMessage)) {
       fail("Expected output to match '" + outMessage + " and " + errMessage +

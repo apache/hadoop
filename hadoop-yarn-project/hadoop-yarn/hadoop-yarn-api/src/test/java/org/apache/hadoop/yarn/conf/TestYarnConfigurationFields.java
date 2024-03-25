@@ -36,7 +36,7 @@ public class TestYarnConfigurationFields extends TestConfigurationFieldsBase {
   @SuppressWarnings({"deprecation", "methodlength"})
   @Override
   public void initializeMemberVariables() {
-    xmlFilename = new String("yarn-default.xml");
+    xmlFilename = "yarn-default.xml";
     configurationClasses = new Class[] { YarnConfiguration.class };
 
     // Allocate for usage

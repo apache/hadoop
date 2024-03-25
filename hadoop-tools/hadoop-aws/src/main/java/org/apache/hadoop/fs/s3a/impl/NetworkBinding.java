@@ -98,6 +98,17 @@ public final class NetworkBinding {
   }
 
   /**
+   * Is this an AWS endpoint? looks at end of FQDN.
+   * @param endpoint endpoint
+   * @return true if the endpoint matches the requirements for an aws endpoint.
+   */
+  public static boolean isAwsEndpoint(final String endpoint) {
+    return (endpoint.isEmpty()
+        || endpoint.endsWith(".amazonaws.com")
+        || endpoint.endsWith(".amazonaws.com.cn"));
+  }
+
+  /**
    * Interface used to bind to the socket factory, allows the code which
    * works with the shaded AWS libraries to exist in their own class.
    */

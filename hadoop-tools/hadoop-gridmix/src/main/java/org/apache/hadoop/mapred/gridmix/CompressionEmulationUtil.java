@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -99,7 +100,7 @@ class CompressionEmulationUtil {
   private static final CompressionRatioLookupTable COMPRESSION_LOOKUP_TABLE = 
     new CompressionRatioLookupTable();
 
-  private static final Charset charsetUTF8 = Charset.forName("UTF-8");
+  private static final Charset charsetUTF8 = StandardCharsets.UTF_8;
 
   /**
    * This is a {@link Mapper} implementation for generating random text data.

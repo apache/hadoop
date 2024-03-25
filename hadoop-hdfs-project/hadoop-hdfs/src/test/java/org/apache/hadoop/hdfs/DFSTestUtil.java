@@ -53,6 +53,7 @@ import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
@@ -70,7 +71,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
@@ -985,7 +985,7 @@ public class DFSTestUtil {
    * @return url content as string (UTF-8 encoding assumed)
    */
   public static String urlGet(URL url) throws IOException {
-    return new String(urlGetBytes(url), Charsets.UTF_8);
+    return new String(urlGetBytes(url), StandardCharsets.UTF_8);
   }
   
   /**
@@ -1438,7 +1438,7 @@ public class DFSTestUtil {
     Short permission = 0777;
     filesystem.setPermission(pathFileCreate, new FsPermission(permission));
     // OP_SET_OWNER 8
-    filesystem.setOwner(pathFileCreate, new String("newOwner"), null);
+    filesystem.setOwner(pathFileCreate, "newOwner", null);
     // OP_CLOSE 9 see above
     // OP_SET_GENSTAMP 10 see above
     // OP_SET_NS_QUOTA 11 obsolete
@@ -1872,6 +1872,33 @@ public class DFSTestUtil {
     options.setDescription(keyName);
     options.setBitLength(128);
     provider.createKey(keyName, options);
+    provider.flush();
+  }
+
+  /**
+   * Helper function to delete a key in the Key Provider. Defaults
+   * to the first indexed NameNode's Key Provider.
+   *
+   * @param keyName The name of the key to create
+   * @param cluster The cluster to create it in
+   */
+  public static void deleteKey(String keyName, MiniDFSCluster cluster)
+      throws NoSuchAlgorithmException, IOException {
+    deleteKey(keyName, cluster, 0);
+  }
+
+  /**
+   * Helper function to delete a key in the Key Provider.
+   *
+   * @param keyName The name of the key to create
+   * @param cluster The cluster to create it in
+   * @param idx The NameNode index
+   */
+  public static void deleteKey(String keyName, MiniDFSCluster cluster, int idx)
+      throws NoSuchAlgorithmException, IOException {
+    NameNode nn = cluster.getNameNode(idx);
+    KeyProvider provider = nn.getNamesystem().getProvider();
+    provider.deleteKey(keyName);
     provider.flush();
   }
 

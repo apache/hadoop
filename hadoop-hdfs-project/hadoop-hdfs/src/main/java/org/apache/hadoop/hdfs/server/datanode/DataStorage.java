@@ -704,7 +704,7 @@ public class DataStorage extends Storage {
   }
 
   /**
-   * Analize which and whether a transition of the fs state is required
+   * Analyze which and whether a transition of the fs state is required
    * and perform it if necessary.
    * 
    * Rollback if the rollback startup option was specified.

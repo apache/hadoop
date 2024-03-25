@@ -36,7 +36,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.DigestOutputStream;
@@ -1840,7 +1840,7 @@ class OfflineImageReconstructor {
       Files.deleteIfExists(Paths.get(outputPath));
       fout = Files.newOutputStream(Paths.get(outputPath));
       fis = Files.newInputStream(Paths.get(inputPath));
-      reader = new InputStreamReader(fis, Charset.forName("UTF-8"));
+      reader = new InputStreamReader(fis, StandardCharsets.UTF_8);
       out = new CountingOutputStream(
           new DigestOutputStream(
               new BufferedOutputStream(fout), digester));

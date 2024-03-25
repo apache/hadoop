@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.yarn.server.globalpolicygenerator.webapp;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.globalpolicygenerator.GlobalPolicyGenerator;
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
@@ -36,5 +37,15 @@ public class TestGPGWebApp {
     LOG.info("testGPGPoliciesPageWebView.");
     WebAppTests.testPage(GPGPoliciesPage.class, GlobalPolicyGenerator.class,
         new GlobalPolicyGenerator());
+  }
+
+  @Test
+  public void testGPGOverview()
+      throws InterruptedException, YarnException, IOException {
+    LOG.info("testGPGOverview.");
+    GlobalPolicyGenerator globalPolicyGenerator = new GlobalPolicyGenerator();
+    globalPolicyGenerator.setConfig(new Configuration());
+    WebAppTests.testPage(GPGOverviewPage.class, GlobalPolicyGenerator.class,
+        globalPolicyGenerator);
   }
 }

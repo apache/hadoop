@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.s3a.S3AInputPolicy;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
+import org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
 import org.apache.hadoop.fs.statistics.MeanStatistic;
@@ -112,7 +113,9 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
     Configuration conf = getConf();
     conf.setInt(SOCKET_SEND_BUFFER, 16 * 1024);
     conf.setInt(SOCKET_RECV_BUFFER, 16 * 1024);
-    String testFile =  conf.getTrimmed(KEY_CSVTEST_FILE, DEFAULT_CSVTEST_FILE);
+    // look up the test file, no requirement to be set.
+    String testFile =  conf.getTrimmed(KEY_CSVTEST_FILE,
+        PublicDatasetTestUtils.DEFAULT_EXTERNAL_FILE);
     if (testFile.isEmpty()) {
       assumptionMessage = "Empty test property: " + KEY_CSVTEST_FILE;
       LOG.warn(assumptionMessage);
@@ -394,6 +397,9 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
     CompressionCodecFactory factory
         = new CompressionCodecFactory(getConf());
     CompressionCodec codec = factory.getCodec(testData);
+    Assertions.assertThat(codec)
+        .describedAs("No codec found for %s", testData)
+        .isNotNull();
     long bytesRead = 0;
     int lines = 0;
 
@@ -525,12 +531,18 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
     describe("Random IO with policy \"%s\"", policy);
     byte[] buffer = new byte[_1MB];
     long totalBytesRead = 0;
-
+    final long len = testDataStatus.getLen();
     in = openTestFile(policy, 0);
     ContractTestUtils.NanoTimer timer = new ContractTestUtils.NanoTimer();
     for (int[] action : RANDOM_IO_SEQUENCE) {
-      int position = action[0];
+      long position = action[0];
       int range = action[1];
+      // if a read goes past EOF, fail with details
+      // this will happen if the test datafile is too small.
+      Assertions.assertThat(position + range)
+          .describedAs("readFully(pos=%d range=%d) of %s",
+              position, range, testDataStatus)
+          .isLessThanOrEqualTo(len);
       in.readFully(position, buffer, 0, range);
       totalBytesRead += range;
     }

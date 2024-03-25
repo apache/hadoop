@@ -18,10 +18,12 @@
 
 package org.apache.hadoop.fs.s3a.scale;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.IntFunction;
@@ -72,6 +74,7 @@ import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatis
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsSourceToString;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_WRITE_BLOCK_UPLOADS;
+import static org.apache.hadoop.util.functional.RemoteIterators.filteringRemoteIterator;
 
 /**
  * Scale test which creates a huge file.
@@ -103,8 +106,8 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
   public void setup() throws Exception {
     super.setup();
     scaleTestDir = new Path(getTestPath(), getTestSuiteName());
-    hugefile = new Path(scaleTestDir, "hugefile");
-    hugefileRenamed = new Path(scaleTestDir, "hugefileRenamed");
+    hugefile = new Path(scaleTestDir, "src/hugefile");
+    hugefileRenamed = new Path(scaleTestDir, "dest/hugefile");
     uploadBlockSize = uploadBlockSize();
     filesize = getTestPropertyBytes(getConf(), KEY_HUGE_FILESIZE,
         DEFAULT_HUGE_FILESIZE);
@@ -490,7 +493,40 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     ContractTestUtils.assertPathExists(fs, "Huge file", hugefile);
     FileStatus status = fs.getFileStatus(hugefile);
     ContractTestUtils.assertIsFile(hugefile, status);
+    LOG.info("Huge File Status: {}", status);
     assertEquals("File size in " + status, filesize, status.getLen());
+
+    // now do some etag status checks asserting they are always the same
+    // across listing operations.
+    final Path path = hugefile;
+    final FileStatus listStatus = listFile(hugefile);
+    LOG.info("List File Status: {}", listStatus);
+
+    Assertions.assertThat(listStatus.getLen())
+        .describedAs("List file status length %s", listStatus)
+        .isEqualTo(filesize);
+    Assertions.assertThat(etag(listStatus))
+        .describedAs("List file status etag %s", listStatus)
+        .isEqualTo(etag(status));
+  }
+
+  /**
+   * Get a filestatus by listing the parent directory.
+   * @param path path
+   * @return status
+   * @throws IOException failure to read, file not found
+   */
+  private FileStatus listFile(final Path path)
+      throws IOException {
+    try {
+      return filteringRemoteIterator(
+          getFileSystem().listStatusIterator(path.getParent()),
+          st -> st.getPath().equals(path))
+          .next();
+    } catch (NoSuchElementException e) {
+      throw (FileNotFoundException)(new FileNotFoundException("Not found: " + path)
+          .initCause(e));
+    }
   }
 
   /**
@@ -509,7 +545,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     String filetype = encrypted ? "encrypted file" : "file";
     describe("Positioned reads of %s %s", filetype, hugefile);
     S3AFileSystem fs = getFileSystem();
-    FileStatus status = fs.getFileStatus(hugefile);
+    FileStatus status = listFile(hugefile);
     long size = status.getLen();
     int ops = 0;
     final int bufferSize = 8192;
@@ -518,7 +554,11 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
 
     ContractTestUtils.NanoTimer timer = new ContractTestUtils.NanoTimer();
     ContractTestUtils.NanoTimer readAtByte0, readAtByte0Again, readAtEOF;
-    try (FSDataInputStream in = fs.open(hugefile, uploadBlockSize)) {
+    try (FSDataInputStream in = fs.openFile(hugefile)
+        .withFileStatus(status)
+        .opt(FS_OPTION_OPENFILE_READ_POLICY, "random")
+        .opt(FS_OPTION_OPENFILE_BUFFER_SIZE, uploadBlockSize)
+        .build().get()) {
       readAtByte0 = new ContractTestUtils.NanoTimer();
       in.readFully(0, buffer);
       readAtByte0.end("time to read data at start of file");
@@ -661,25 +701,43 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     S3AFileSystem fs = getFileSystem();
     FileStatus status = fs.getFileStatus(hugefile);
     long size = status.getLen();
-    fs.delete(hugefileRenamed, false);
     ContractTestUtils.NanoTimer timer = new ContractTestUtils.NanoTimer();
-    fs.rename(hugefile, hugefileRenamed);
+    renameFile(hugefile, hugefileRenamed);
     long mb = Math.max(size / _1MB, 1);
     timer.end("time to rename file of %d MB", mb);
     LOG.info("Time per MB to rename = {} nS",
         toHuman(timer.nanosPerOperation(mb)));
     bandwidth(timer, size);
+    assertPathExists("renamed file", hugefileRenamed);
     logFSState();
     FileStatus destFileStatus = fs.getFileStatus(hugefileRenamed);
     assertEquals(size, destFileStatus.getLen());
 
     // rename back
     ContractTestUtils.NanoTimer timer2 = new ContractTestUtils.NanoTimer();
-    fs.rename(hugefileRenamed, hugefile);
+    renameFile(hugefileRenamed, hugefile);
+
     timer2.end("Renaming back");
     LOG.info("Time per MB to rename = {} nS",
         toHuman(timer2.nanosPerOperation(mb)));
     bandwidth(timer2, size);
+  }
+
+  /**
+   * Rename a file.
+   * Subclasses may do this differently.
+   * @param src source file
+   * @param dest dest file
+   * @throws IOException IO failure
+   */
+  protected void renameFile(final Path src,
+      final Path dest) throws IOException {
+    final S3AFileSystem fs = getFileSystem();
+    fs.delete(dest, false);
+    final boolean renamed = fs.rename(src, dest);
+    Assertions.assertThat(renamed)
+        .describedAs("rename(%s, %s)", src, dest)
+        .isTrue();
   }
 
   /**

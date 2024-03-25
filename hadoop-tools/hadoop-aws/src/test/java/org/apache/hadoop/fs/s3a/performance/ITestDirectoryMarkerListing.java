@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
+import org.assertj.core.api.Assertions;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -684,7 +685,8 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
   }
 
   /**
-   * Expect the list of status objects to match that of the paths.
+   * Expect the list of status objects to match that of the paths,
+   * without enforcing ordering of the values.
    * @param statuses status object list
    * @param paths ordered varargs list of paths
    * @param <T> type of status objects
@@ -692,20 +694,11 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
   private <T extends FileStatus> void assertContainsExactlyStatusOfPaths(
       List<T> statuses, Path... paths) {
 
-    String actual = statuses.stream()
-        .map(Object::toString)
-        .collect(Collectors.joining(";"));
-    String expected = Arrays.stream(paths)
-        .map(Object::toString)
-        .collect(Collectors.joining(";"));
-    String summary = "expected [" + expected + "]"
-        + " actual = [" + actual + "]";
-    assertEquals("mismatch in size of listing " + summary,
-        paths.length, statuses.size());
-    for (int i = 0; i < statuses.size(); i++) {
-      assertEquals("Path mismatch at element " + i + " in " + summary,
-          paths[i], statuses.get(i).getPath());
-    }
+    final List<Path> pathList = statuses.stream()
+        .map(FileStatus::getPath)
+        .collect(Collectors.toList());
+    Assertions.assertThat(pathList)
+        .containsExactlyInAnyOrder(paths);
   }
 
   /**

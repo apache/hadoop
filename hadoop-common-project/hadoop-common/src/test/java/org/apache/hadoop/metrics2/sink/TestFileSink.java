@@ -23,6 +23,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.io.IOUtils;
@@ -113,7 +114,7 @@ public class TestFileSink {
       is = new FileInputStream(outFile);
       baos = new ByteArrayOutputStream((int)outFile.length());
       IOUtils.copyBytes(is, baos, 1024, true);
-      outFileContent = new String(baos.toByteArray(), "UTF-8");
+      outFileContent = new String(baos.toByteArray(), StandardCharsets.UTF_8);
     } finally {
       IOUtils.cleanupWithLogger(null, baos, is);
     }

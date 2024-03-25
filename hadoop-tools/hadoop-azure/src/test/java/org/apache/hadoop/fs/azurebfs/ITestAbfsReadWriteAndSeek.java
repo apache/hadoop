@@ -84,6 +84,7 @@ public class ITestAbfsReadWriteAndSeek extends AbstractAbfsScaleTest {
     abfsConfiguration.setWriteBufferSize(bufferSize);
     abfsConfiguration.setReadBufferSize(bufferSize);
     abfsConfiguration.setReadAheadEnabled(readaheadEnabled);
+    abfsConfiguration.setOptimizeFooterRead(false);
 
     final byte[] b = new byte[2 * bufferSize];
     new Random().nextBytes(b);

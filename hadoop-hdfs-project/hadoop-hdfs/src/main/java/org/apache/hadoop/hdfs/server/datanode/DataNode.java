@@ -80,6 +80,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SLOWDISK_LOW_THR
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SLOWDISK_LOW_THRESHOLD_MS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_SLOWDISKS_TO_EXCLUDE_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_SLOWDISKS_TO_EXCLUDE_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_STARTUP_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_DEFAULT;
@@ -371,7 +373,8 @@ public class DataNode extends ReconfigurableBase
               DFS_DISK_BALANCER_PLAN_VALID_INTERVAL,
               DFS_DATANODE_DATA_TRANSFER_BANDWIDTHPERSEC_KEY,
               DFS_DATANODE_DATA_WRITE_BANDWIDTHPERSEC_KEY,
-              DFS_DATANODE_DATA_READ_BANDWIDTHPERSEC_KEY));
+              DFS_DATANODE_DATA_READ_BANDWIDTHPERSEC_KEY,
+              DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_KEY));
 
   public static final String METRICS_LOG_NAME = "DataNodeMetricsLog";
 
@@ -735,6 +738,8 @@ public class DataNode extends ReconfigurableBase
     case DFS_DISK_BALANCER_ENABLED:
     case DFS_DISK_BALANCER_PLAN_VALID_INTERVAL:
       return reconfDiskBalancerParameters(property, newVal);
+    case DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_KEY:
+      return reconfSlowIoWarningThresholdParameters(property, newVal);
     default:
       break;
     }
@@ -1052,6 +1057,24 @@ public class DataNode extends ReconfigurableBase
       LOG.info("RECONFIGURE* changed {} to {}", property, result);
       return result;
     } catch (IllegalArgumentException | IOException e) {
+      throw new ReconfigurationException(property, newVal, getConf().get(property), e);
+    }
+  }
+
+  private String reconfSlowIoWarningThresholdParameters(String property, String newVal)
+      throws ReconfigurationException {
+    String result;
+    try {
+      LOG.info("Reconfiguring {} to {}", property, newVal);
+      Preconditions.checkNotNull(dnConf, "DNConf has not been initialized.");
+      long slowIoWarningThreshold = (newVal == null ?
+          DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_DEFAULT :
+          Long.parseLong(newVal));
+      result = Long.toString(slowIoWarningThreshold);
+      dnConf.setDatanodeSlowIoWarningThresholdMs(slowIoWarningThreshold);
+      LOG.info("RECONFIGURE* changed {} to {}", property, newVal);
+      return result;
+    } catch (IllegalArgumentException e) {
       throw new ReconfigurationException(property, newVal, getConf().get(property), e);
     }
   }
@@ -2616,6 +2639,8 @@ public class DataNode extends ReconfigurableBase
     }
     if (metrics != null) {
       metrics.setDataNodeActiveXceiversCount(0);
+      metrics.setDataNodeReadActiveXceiversCount(0);
+      metrics.setDataNodeWriteActiveXceiversCount(0);
       metrics.setDataNodePacketResponderCount(0);
       metrics.setDataNodeBlockRecoveryWorkerCount(0);
     }
@@ -4084,8 +4109,12 @@ public class DataNode extends ReconfigurableBase
       return;
     }
     if (!fromScanner && blockScanner.isEnabled()) {
-      blockScanner.markSuspectBlock(data.getVolume(block).getStorageID(),
-          block);
+      FsVolumeSpi volume = data.getVolume(block);
+      if (volume == null) {
+        LOG.warn("Cannot find FsVolumeSpi to handle bad block: {}", block);
+        return;
+      }
+      blockScanner.markSuspectBlock(volume.getStorageID(), block);
     } else {
       try {
         reportBadBlocks(block);

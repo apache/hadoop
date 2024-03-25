@@ -428,6 +428,14 @@ message GetPreferredBlockSizeResponseProto {
 message GetSlowDatanodeReportRequestProto {
 }
 
+message GetEnclosingRootRequestProto {
+  optional string filename = 1;
+}
+
+message GetEnclosingRootResponseProto {
+  optional string enclosingRootPath = 1;
+}
+
 message GetSlowDatanodeReportResponseProto {
   repeated DatanodeInfoProto datanodeInfoProto = 1;
 }
@@ -1080,4 +1088,6 @@ service ClientNamenodeProtocol {
       returns(HAServiceStateResponseProto);
   rpc getSlowDatanodeReport(GetSlowDatanodeReportRequestProto)
       returns(GetSlowDatanodeReportResponseProto);
+  rpc getEnclosingRoot(GetEnclosingRootRequestProto)
+      returns(GetEnclosingRootResponseProto);
 }

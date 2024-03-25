@@ -1076,5 +1076,13 @@ public class CommonConfigurationKeysPublic {
   public static final String IPC_SERVER_METRICS_UPDATE_RUNNER_INTERVAL =
       "ipc.server.metrics.update.runner.interval";
   public static final int IPC_SERVER_METRICS_UPDATE_RUNNER_INTERVAL_DEFAULT = 5000;
+
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  public static final String JMX_NAN_FILTER = "hadoop.http.jmx.nan-filter.enabled";
+  public static final boolean JMX_NAN_FILTER_DEFAULT = false;
 }
 

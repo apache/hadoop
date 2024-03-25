@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -20,6 +20,7 @@ package org.apache.hadoop.util;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.util.Objects;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
@@ -38,19 +39,18 @@ public class TestCrcComposer {
   @Rule
   public Timeout globalTimeout = new Timeout(10000, TimeUnit.MILLISECONDS);
 
-  private Random rand = new Random(1234);
+  private final Random rand = new Random(1234);
 
-  private DataChecksum.Type type = DataChecksum.Type.CRC32C;
-  private DataChecksum checksum = DataChecksum.newDataChecksum(
-      type, Integer.MAX_VALUE);
-  private int dataSize = 75;
-  private byte[] data = new byte[dataSize];
-  private int chunkSize = 10;
-  private int cellSize = 20;
+  private final DataChecksum.Type type = DataChecksum.Type.CRC32C;
+  private final DataChecksum checksum = Objects.requireNonNull(
+      DataChecksum.newDataChecksum(type, Integer.MAX_VALUE));
+  private final int dataSize = 75;
+  private final byte[] data = new byte[dataSize];
+  private final int chunkSize = 10;
+  private final int cellSize = 20;
 
   private int fullCrc;
   private int[] crcsByChunk;
-  private int[] crcsByCell;
 
   private byte[] crcBytesByChunk;
   private byte[] crcBytesByCell;
@@ -69,7 +69,7 @@ public class TestCrcComposer {
         data, (crcsByChunk.length - 1) * chunkSize, dataSize % chunkSize);
 
     // 3 cells of size cellSize, 1 cell of size (dataSize % cellSize).
-    crcsByCell = new int[4];
+    int[] crcsByCell = new int[4];
     for (int i = 0; i < 3; ++i) {
       crcsByCell[i] = getRangeChecksum(data, i * cellSize, cellSize);
     }
@@ -86,7 +86,7 @@ public class TestCrcComposer {
     return (int) checksum.getValue();
   }
 
-  private byte[] intArrayToByteArray(int[] values) throws IOException {
+  private byte[] intArrayToByteArray(int[] values) {
     byte[] bytes = new byte[values.length * 4];
     for (int i = 0; i < values.length; ++i) {
       CrcUtil.writeInt(bytes, i * 4, values[i]);
@@ -95,7 +95,7 @@ public class TestCrcComposer {
   }
 
   @Test
-  public void testUnstripedIncorrectChunkSize() throws IOException {
+  public void testUnstripedIncorrectChunkSize() {
     CrcComposer digester = CrcComposer.newCrcComposer(type, chunkSize);
 
     // If we incorrectly specify that all CRCs ingested correspond to chunkSize
@@ -110,7 +110,7 @@ public class TestCrcComposer {
   }
 
   @Test
-  public void testUnstripedByteArray() throws IOException {
+  public void testUnstripedByteArray() {
     CrcComposer digester = CrcComposer.newCrcComposer(type, chunkSize);
     digester.update(crcBytesByChunk, 0, crcBytesByChunk.length - 4, chunkSize);
     digester.update(
@@ -137,7 +137,7 @@ public class TestCrcComposer {
   }
 
   @Test
-  public void testUnstripedSingleCrcs() throws IOException {
+  public void testUnstripedSingleCrcs() {
     CrcComposer digester = CrcComposer.newCrcComposer(type, chunkSize);
     for (int i = 0; i < crcsByChunk.length - 1; ++i) {
       digester.update(crcsByChunk[i], chunkSize);
@@ -151,7 +151,7 @@ public class TestCrcComposer {
   }
 
   @Test
-  public void testStripedByteArray() throws IOException {
+  public void testStripedByteArray() {
     CrcComposer digester =
         CrcComposer.newStripedCrcComposer(type, chunkSize, cellSize);
     digester.update(crcBytesByChunk, 0, crcBytesByChunk.length - 4, chunkSize);
@@ -176,7 +176,7 @@ public class TestCrcComposer {
   }
 
   @Test
-  public void testStripedSingleCrcs() throws IOException {
+  public void testStripedSingleCrcs() {
     CrcComposer digester =
         CrcComposer.newStripedCrcComposer(type, chunkSize, cellSize);
     for (int i = 0; i < crcsByChunk.length - 1; ++i) {
@@ -225,7 +225,7 @@ public class TestCrcComposer {
     // boundary in a single CRC, which is not allowed, since we'd lack a
     // CRC corresponding to the actual cellSize boundary.
     LambdaTestUtils.intercept(
-        IOException.class,
+        IllegalStateException.class,
         "stripe",
         () -> digester.update(crcsByChunk[1], cellSize));
   }
@@ -236,7 +236,7 @@ public class TestCrcComposer {
     CrcComposer digester = CrcComposer.newCrcComposer(type, chunkSize);
 
     LambdaTestUtils.intercept(
-        IOException.class,
+        IllegalArgumentException.class,
         "length",
         () -> digester.update(crcBytesByChunk, 0, 6, chunkSize));
   }

@@ -19,6 +19,7 @@
 package org.apache.hadoop.mapred.jobcontrol;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.text.NumberFormat;
 import java.util.Iterator;
 import java.util.List;
@@ -100,7 +101,7 @@ public class JobControlTestUtils {
     FSDataOutputStream out = fs.create(new Path(dirPath, "data.txt"));
     for (int i = 0; i < 10000; i++) {
       String line = generateRandomLine();
-      out.write(line.getBytes("UTF-8"));
+      out.write(line.getBytes(StandardCharsets.UTF_8));
     }
     out.close();
   }

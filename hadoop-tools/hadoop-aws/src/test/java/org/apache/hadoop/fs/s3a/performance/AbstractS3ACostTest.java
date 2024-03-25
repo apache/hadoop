@@ -107,7 +107,8 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
 
     removeBaseAndBucketOverrides(bucketName, conf,
         DIRECTORY_MARKER_POLICY,
-        AUTHORITATIVE_PATH);
+        AUTHORITATIVE_PATH,
+        FS_S3A_CREATE_PERFORMANCE);
     // directory marker options
     conf.set(DIRECTORY_MARKER_POLICY,
         keepMarkers
@@ -236,6 +237,21 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
   }
 
   /**
+   * Create a file with a specific body, returning its path.
+   * @param path path to file.
+   * @param overwrite overwrite flag
+   * @param body body of file
+   * @return path of new file
+   */
+  protected Path file(Path path, final boolean overwrite, byte[] body)
+      throws IOException {
+    ContractTestUtils.createFile(getFileSystem(), path, overwrite, body);
+    return path;
+  }
+
+
+
+  /**
    * Touch a file, overwriting.
    * @param path path
    * @return path to new object.
@@ -352,6 +368,14 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
   protected OperationCostValidator.ExpectedProbe always(
       OperationCost cost) {
     return expect(true, cost);
+  }
+
+  /**
+   * Always run a metrics operation.
+   * @return a probe.
+   */
+  protected OperationCostValidator.ExpectedProbe always() {
+    return OperationCostValidator.always();
   }
 
   /**

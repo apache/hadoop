@@ -22,7 +22,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -96,7 +96,7 @@ abstract class DistTool implements org.apache.hadoop.util.Tool {
     List<String> result = new ArrayList<String>();
     FileSystem fs = inputfile.getFileSystem(conf);
     try (BufferedReader input = new BufferedReader(new InputStreamReader(fs.open(inputfile),
-            Charset.forName("UTF-8")))) {
+            StandardCharsets.UTF_8))) {
       for(String line; (line = input.readLine()) != null;) {
         result.add(line);
       }

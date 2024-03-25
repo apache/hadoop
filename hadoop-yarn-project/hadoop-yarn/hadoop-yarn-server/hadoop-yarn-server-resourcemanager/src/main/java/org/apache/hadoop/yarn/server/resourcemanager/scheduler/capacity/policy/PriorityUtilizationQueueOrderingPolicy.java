@@ -28,6 +28,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity
     .CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
@@ -254,9 +255,9 @@ public class PriorityUtilizationQueueOrderingPolicy
     // partitionToLookAt is a thread local variable, therefore it is safe to mutate it.
     PriorityUtilizationQueueOrderingPolicy.partitionToLookAt.set(partition);
 
-    // Sort the snapshot of the queues in order to avoid breaking the prerequisites of TimSort.
-    // See YARN-10178 for details.
-    return queues.stream().map(PriorityQueueResourcesForSorting::new).sorted(
+    // Copy (for thread safety) and sort the snapshot of the queues in order to avoid breaking
+    // the prerequisites of TimSort. See YARN-10178 for details.
+    return new ArrayList<>(queues).stream().map(PriorityQueueResourcesForSorting::new).sorted(
         new PriorityQueueComparator()).map(PriorityQueueResourcesForSorting::getQueue).collect(
             Collectors.toList()).iterator();
   }

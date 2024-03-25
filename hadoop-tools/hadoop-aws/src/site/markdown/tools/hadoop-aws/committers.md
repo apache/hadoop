@@ -747,7 +747,7 @@ For example, for any job executed through Hadoop MapReduce, the Job ID can be us
 ### `Filesystem does not have support for 'magic' committer`
 
 ```
-org.apache.hadoop.fs.s3a.commit.PathCommitException: `s3a://landsat-pds': Filesystem does not have support for 'magic' committer enabled
+org.apache.hadoop.fs.s3a.commit.PathCommitException: `s3a://noaa-isd-pds': Filesystem does not have support for 'magic' committer enabled
 in configuration option fs.s3a.committer.magic.enabled
 ```
 
@@ -760,41 +760,14 @@ Remove all global/per-bucket declarations of `fs.s3a.bucket.magic.enabled` or se
 
 ```xml
 <property>
-  <name>fs.s3a.bucket.landsat-pds.committer.magic.enabled</name>
+  <name>fs.s3a.bucket.noaa-isd-pds.committer.magic.enabled</name>
   <value>true</value>
 </property>
 ```
 
 Tip: you can verify that a bucket supports the magic committer through the
-`hadoop s3guard bucket-info` command:
+`hadoop s3guard bucket-info` command.
 
-
-```
-> hadoop s3guard bucket-info -magic s3a://landsat-pds/
-Location: us-west-2
-
-S3A Client
-        Signing Algorithm: fs.s3a.signing-algorithm=(unset)
-        Endpoint: fs.s3a.endpoint=s3.amazonaws.com
-        Encryption: fs.s3a.encryption.algorithm=none
-        Input seek policy: fs.s3a.experimental.input.fadvise=normal
-        Change Detection Source: fs.s3a.change.detection.source=etag
-        Change Detection Mode: fs.s3a.change.detection.mode=server
-
-S3A Committers
-        The "magic" committer is supported in the filesystem
-        S3A Committer factory class: mapreduce.outputcommitter.factory.scheme.s3a=org.apache.hadoop.fs.s3a.commit.S3ACommitterFactory
-        S3A Committer name: fs.s3a.committer.name=magic
-        Store magic committer integration: fs.s3a.committer.magic.enabled=true
-
-Security
-        Delegation token support is disabled
-
-Directory Markers
-        The directory marker policy is "keep"
-        Available Policies: delete, keep, authoritative
-        Authoritative paths: fs.s3a.authoritative.path=```
-```
 
 ### Error message: "File being created has a magic path, but the filesystem has magic file support disabled"
 

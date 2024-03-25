@@ -160,7 +160,7 @@ public class TestDatanodeReport {
       cluster.waitActive();
       DistributedFileSystem fs = cluster.getFileSystem();
       Path p = new Path("/testDatanodeReportMissingBlock");
-      DFSTestUtil.writeFile(fs, p, new String("testdata"));
+      DFSTestUtil.writeFile(fs, p, "testdata");
       LocatedBlock lb = fs.getClient().getLocatedBlocks(p.toString(), 0).get(0);
       assertEquals(3, lb.getLocations().length);
       ExtendedBlock b = lb.getBlock();
@@ -172,19 +172,8 @@ public class TestDatanodeReport {
         // all bad datanodes
       }
       cluster.triggerHeartbeats(); // IBR delete ack
-      int retries = 0;
-      while (true) {
-        lb = fs.getClient().getLocatedBlocks(p.toString(), 0).get(0);
-        if (0 != lb.getLocations().length) {
-          retries++;
-          if (retries > 7) {
-            Assert.fail("getLocatedBlocks failed after 7 retries");
-          }
-          Thread.sleep(2000);
-        } else {
-          break;
-        }
-      }
+      lb = fs.getClient().getLocatedBlocks(p.toString(), 0).get(0);
+      assertEquals(0, lb.getLocations().length);
     } finally {
       cluster.shutdown();
     }

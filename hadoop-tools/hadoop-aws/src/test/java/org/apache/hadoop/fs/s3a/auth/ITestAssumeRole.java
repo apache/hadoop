@@ -46,7 +46,6 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.AWSBadRequestException;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
-import org.apache.hadoop.fs.s3a.S3ATestConstants;
 import org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
@@ -59,6 +58,7 @@ import org.apache.hadoop.fs.s3a.statistics.CommitterStatistics;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.Constants.S3EXPRESS_CREATE_SESSION;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.s3a.auth.CredentialProviderListFactory.E_FORBIDDEN_AWS_PROVIDER;
 import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.*;
@@ -67,6 +67,7 @@ import static org.apache.hadoop.fs.s3a.auth.RolePolicies.*;
 import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.forbidden;
 import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.newAssumedRoleConfig;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardToolTestHelper.exec;
+import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.requireAnonymousDataPath;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsSourceToString;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
@@ -104,10 +105,17 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
       = "ValidationError";
 
   @Override
+  protected Configuration createConfiguration() {
+    final Configuration conf = super.createConfiguration();
+    removeBaseAndBucketOverrides(conf, S3EXPRESS_CREATE_SESSION);
+    return conf;
+  }
+
+  @Override
   public void setup() throws Exception {
     super.setup();
     assumeRoleTests();
-    uri = new URI(S3ATestConstants.DEFAULT_CSVTEST_FILE);
+    uri = requireAnonymousDataPath(getConfiguration()).toUri();
   }
 
   @Override
@@ -181,6 +189,10 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     conf.set(ASSUMED_ROLE_ARN, roleARN);
     conf.set(ASSUMED_ROLE_SESSION_NAME, "valid");
     conf.set(ASSUMED_ROLE_SESSION_DURATION, "45m");
+    // disable create session so there's no need to
+    // add a role policy for it.
+    disableCreateSession(conf);
+
     bindRolePolicy(conf, RESTRICTED_POLICY);
     return conf;
   }
@@ -737,12 +749,14 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
 
     describe("Restrict role to read only");
     Configuration conf = createAssumedRoleConfig();
-
     bindRolePolicyStatements(conf, STATEMENT_ALLOW_KMS_RW,
         statement(true, S3_ALL_BUCKETS, S3_ALL_OPERATIONS),
         statement(false, S3_ALL_BUCKETS, S3_GET_BUCKET_LOCATION));
     Path path = methodPath();
     roleFS = (S3AFileSystem) path.getFileSystem(conf);
+
+    // getBucketLocation fails with error
+    assumeNotS3ExpressFileSystem(roleFS);
     forbidden("",
         () -> roleFS.getBucketLocation());
     S3GuardTool.BucketInfo infocmd = new S3GuardTool.BucketInfo(conf);

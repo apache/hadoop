@@ -54,15 +54,15 @@ Following are all the operations supported along with their respective operation
 | OPERATION\_OPTION    | Operation-specific parameters |
 |:---- |:---- |
 |`all` | _options for other operations_ |
-|`create` | [`-threads 3`] [`-files 10`] [`-filesPerDir 4`] [`-close`] |
-|`mkdirs` | [`-threads 3`] [`-dirs 10`] [`-dirsPerDir 2`] |
-|`open` | [`-threads 3`] [`-files 10`] [`-filesPerDir 4`] [`-useExisting`] |
-|`delete` | [`-threads 3`] [`-files 10`] [`-filesPerDir 4`] [`-useExisting`] |
-|`append` | [`-threads 3`] [`-files 10`] [`-filesPerDir 4`] [`-useExisting`] [`-appendNewBlk`] |
-|`fileStatus` | [`-threads 3`] [`-files 10`] [`-filesPerDir 4`] [`-useExisting`] |
-|`rename` | [`-threads 3`] [`-files 10`] [`-filesPerDir 4`] [`-useExisting`] |
-|`blockReport` | [`-datanodes 10`] [`-reports 30`] [`-blocksPerReport 100`] [`-blocksPerFile 10`] |
-|`replication` | [`-datanodes 10`] [`-nodesToDecommission 1`] [`-nodeReplicationLimit 100`] [`-totalBlocks 100`] [`-replication 3`] |
+|`create` | [`-threads 3`] [`-files 10`] [`-filesPerDir 4`] [`-close`] [`-baseDirName /nnThroughputBenchmark`] |
+|`mkdirs` | [`-threads 3`] [`-dirs 10`] [`-dirsPerDir 2`] [`-baseDirName /nnThroughputBenchmark`] |
+|`open` | [`-threads 3`] [`-files 10`] [`-filesPerDir 4`] [`-useExisting`] [`-baseDirName /nnThroughputBenchmark`] |
+|`delete` | [`-threads 3`] [`-files 10`] [`-filesPerDir 4`] [`-useExisting`] [`-baseDirName /nnThroughputBenchmark`] |
+|`append` | [`-threads 3`] [`-files 10`] [`-filesPerDir 4`] [`-useExisting`] [`-appendNewBlk`] [`-baseDirName /nnThroughputBenchmark`] |
+|`fileStatus` | [`-threads 3`] [`-files 10`] [`-filesPerDir 4`] [`-useExisting`] [`-baseDirName /nnThroughputBenchmark`] |
+|`rename` | [`-threads 3`] [`-files 10`] [`-filesPerDir 4`] [`-useExisting`] [`-baseDirName /nnThroughputBenchmark`] |
+|`blockReport` | [`-datanodes 10`] [`-reports 30`] [`-blocksPerReport 100`] [`-blocksPerFile 10`] [`-baseDirName /nnThroughputBenchmark`] |
+|`replication` | [`-datanodes 10`] [`-nodesToDecommission 1`] [`-nodeReplicationLimit 100`] [`-totalBlocks 100`] [`-replication 3`] [`-baseDirName /nnThroughputBenchmark`] |
 |`clean` | N/A |
 
 ##### Operation Options
@@ -86,6 +86,7 @@ When running benchmarks with the above operation(s), please provide operation-sp
 |`-nodeReplicationLimit` | The maximum number of outgoing replication streams for a data-node. |
 |`-totalBlocks` | Number of total blocks to operate. |
 |`-replication` | Replication factor. Will be adjusted to number of data-nodes if it is larger than that. |
+|`-baseDirName` | The base dir name for benchmarks, to support multiple clients submitting benchmark tests at the same time. |
 
 ### Reports
 

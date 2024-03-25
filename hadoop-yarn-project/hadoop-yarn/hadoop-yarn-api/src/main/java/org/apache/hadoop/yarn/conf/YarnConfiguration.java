@@ -2232,6 +2232,13 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_CONTAINER_LOCALIZER_JAVA_OPTS_DEFAULT =
       "-Xmx256m";
 
+  /** The admin JVM options used on forking ContainerLocalizer process
+      by container executor. */
+  public static final String NM_CONTAINER_LOCALIZER_ADMIN_JAVA_OPTS_KEY =
+      NM_PREFIX + "container-localizer.admin.java.opts";
+
+  public static final String NM_CONTAINER_LOCALIZER_ADMIN_JAVA_OPTS_DEFAULT = "";
+
   /*
    * Flag to indicate whether JDK17's required add-exports flags should be added to
    * container localizers regardless of the user specified JAVA_OPTS.

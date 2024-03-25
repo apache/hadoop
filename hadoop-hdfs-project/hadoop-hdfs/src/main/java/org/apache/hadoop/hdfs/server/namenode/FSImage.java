@@ -24,6 +24,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -1213,6 +1214,14 @@ public class FSImage implements Closeable {
     currentlyCheckpointing.remove(txid);
   }
 
+  void save(FSNamesystem src, File dst) throws IOException {
+    final SaveNamespaceContext context = new SaveNamespaceContext(src,
+        getCorrectLastAppliedOrWrittenTxId(), new Canceler());
+    final Storage.StorageDirectory storageDirectory = new Storage.StorageDirectory(dst);
+    Files.createDirectories(storageDirectory.getCurrentDir().toPath());
+    new FSImageSaver(context, storageDirectory, NameNodeFile.IMAGE).run();
+  }
+
   private synchronized void saveFSImageInAllDirs(FSNamesystem source,
       NameNodeFile nnf, long txid, Canceler canceler) throws IOException {
     StartupProgress prog = NameNode.getStartupProgress();
@@ -1561,5 +1570,32 @@ public class FSImage implements Closeable {
   // old value.
   public long getMostRecentCheckpointTxId() {
     return storage.getMostRecentCheckpointTxId();
+  }
+
+  /**
+   * Given a NameNodeFile type, retrieve the latest txid for that file or {@link
+   * HdfsServerConstants#INVALID_TXID} if the file does not exist.
+   *
+   * @param nnf The NameNodeFile type to retrieve the latest txid from.
+   * @return the latest txid for the NameNodeFile type, or {@link
+   * HdfsServerConstants#INVALID_TXID} if there is no FSImage file of the type
+   * requested.
+   * @throws IOException
+   */
+  public long getMostRecentNameNodeFileTxId(NameNodeFile nnf)
+      throws IOException {
+    final FSImageStorageInspector inspector =
+        new FSImageTransactionalStorageInspector(EnumSet.of(nnf));
+    storage.inspectStorageDirs(inspector);
+    try {
+      List<FSImageFile> images = inspector.getLatestImages();
+      if (images != null && !images.isEmpty()) {
+        return images.get(0).getCheckpointTxId();
+      } else {
+        return HdfsServerConstants.INVALID_TXID;
+      }
+    } catch (FileNotFoundException e) {
+      return HdfsServerConstants.INVALID_TXID;
+    }
   }
 }

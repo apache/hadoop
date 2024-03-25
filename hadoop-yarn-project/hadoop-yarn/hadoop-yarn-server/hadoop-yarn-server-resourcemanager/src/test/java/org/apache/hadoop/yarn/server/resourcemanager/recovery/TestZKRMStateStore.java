@@ -814,19 +814,19 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
       ApplicationAttemptId attemptId, Container container, long startTime,
       int amExitStatus) {
     Map<String, Long> resourceSecondsMap = new HashMap<>();
-    Map<String, Long> preemptedResoureSecondsMap = new HashMap<>();
+    Map<String, Long> preemptedResourceSecondsMap = new HashMap<>();
     resourceSecondsMap
         .put(ResourceInformation.MEMORY_MB.getName(), 0L);
     resourceSecondsMap
         .put(ResourceInformation.VCORES.getName(), 0L);
-    preemptedResoureSecondsMap.put(ResourceInformation.MEMORY_MB.getName(),
+    preemptedResourceSecondsMap.put(ResourceInformation.MEMORY_MB.getName(),
         0L);
-    preemptedResoureSecondsMap
+    preemptedResourceSecondsMap
         .put(ResourceInformation.VCORES.getName(), 0L);
     return ApplicationAttemptStateData.newInstance(attemptId,
         container, null, startTime, RMAppAttemptState.FINISHED,
         "myTrackingUrl", "attemptDiagnostics", FinalApplicationStatus.SUCCEEDED,
-        amExitStatus, 0, resourceSecondsMap, preemptedResoureSecondsMap, 0);
+        amExitStatus, 0, resourceSecondsMap, preemptedResourceSecondsMap, 0);
   }
 
   private ApplicationAttemptId storeAttempt(RMStateStore store,

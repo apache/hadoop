@@ -24,6 +24,7 @@ import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileRange;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathCapabilities;
@@ -34,6 +35,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.functional.RemoteIterators;
 import org.apache.hadoop.util.functional.FutureIO;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Assert;
 import org.junit.AssumptionViolatedException;
 import org.slf4j.Logger;
@@ -45,6 +47,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -61,6 +64,7 @@ import java.util.concurrent.TimeoutException;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
+import static org.apache.hadoop.util.functional.RemoteIterators.foreach;
 
 /**
  * Utilities used across test cases.
@@ -806,7 +810,7 @@ public class ContractTestUtils extends Assert {
     try (FSDataInputStream in = fs.open(path)) {
       byte[] buf = new byte[length];
       in.readFully(0, buf);
-      return new String(buf, "UTF-8");
+      return new String(buf, StandardCharsets.UTF_8);
     }
   }
 
@@ -1506,19 +1510,39 @@ public class ContractTestUtils extends Assert {
    */
   public static TreeScanResults treeWalk(FileSystem fs, Path path)
       throws IOException {
-    TreeScanResults dirsAndFiles = new TreeScanResults();
+    return treeWalk(fs, fs.getFileStatus(path), new TreeScanResults());
+  }
 
-    FileStatus[] statuses = fs.listStatus(path);
-    for (FileStatus status : statuses) {
-      LOG.info("{}{}", status.getPath(), status.isDirectory() ? "*" : "");
+  /**
+   * Recursively list all entries, with a depth first traversal of the
+   * directory tree.
+   * @param dir status of the dir to scan
+   * @return the scan results
+   * @throws IOException IO problems
+   * @throws FileNotFoundException if the dir is not found and this FS does not
+   * have the listing inconsistency path capability/flag.
+   */
+  private static TreeScanResults treeWalk(FileSystem fs,
+      FileStatus dir,
+      TreeScanResults results) throws IOException {
+
+    Path path = dir.getPath();
+
+    try {
+      foreach(fs.listStatusIterator(path), (status) -> {
+        LOG.info("{}{}", status.getPath(), status.isDirectory() ? "*" : "");
+        if (status.isDirectory()) {
+          treeWalk(fs, status, results);
+        } else {
+          results.add(status);
+        }
+      });
+      // and ourselves
+      results.add(dir);
+    } catch (FileNotFoundException fnfe) {
+      FileUtil.maybeIgnoreMissingDirectory(fs, path, fnfe);
     }
-    for (FileStatus status : statuses) {
-      dirsAndFiles.add(status);
-      if (status.isDirectory()) {
-        dirsAndFiles.add(treeWalk(fs, status.getPath()));
-      }
-    }
-    return dirsAndFiles;
+    return results;
   }
 
   /**
@@ -1916,17 +1940,16 @@ public class ContractTestUtils extends Assert {
     public void assertFieldsEquivalent(String fieldname,
         TreeScanResults that,
         List<Path> ours, List<Path> theirs) {
-      String ourList = pathsToString(ours);
-      String theirList = pathsToString(theirs);
-      assertFalse("Duplicate  " + fieldname + " in " + this
-          +": " + ourList,
-          containsDuplicates(ours));
-      assertFalse("Duplicate  " + fieldname + " in other " + that
-              + ": " + theirList,
-          containsDuplicates(theirs));
-      assertTrue(fieldname + " mismatch: between " + ourList
-          + " and " + theirList,
-          collectionsEquivalent(ours, theirs));
+      Assertions.assertThat(ours).
+          describedAs("list of %s", fieldname)
+          .doesNotHaveDuplicates();
+      Assertions.assertThat(theirs).
+          describedAs("list of %s in %s", fieldname, that)
+          .doesNotHaveDuplicates();
+      Assertions.assertThat(ours)
+          .describedAs("Elements of %s", fieldname)
+          .containsExactlyInAnyOrderElementsOf(theirs);
+
     }
 
     public List<Path> getFiles() {

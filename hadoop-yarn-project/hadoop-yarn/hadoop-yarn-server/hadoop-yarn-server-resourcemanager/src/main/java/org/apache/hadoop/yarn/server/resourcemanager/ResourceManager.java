@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager;
 
 import org.apache.commons.lang3.math.NumberUtils;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.classification.VisibleForTesting;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
@@ -148,7 +149,7 @@ import java.lang.management.ThreadMXBean;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URL;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.security.SecureRandom;
 import java.util.ArrayList;
@@ -421,14 +422,17 @@ public class ResourceManager extends CompositeService
       String defaultFencingAuth =
           zkRootNodeUsername + ":" + zkRootNodePassword;
       byte[] defaultFencingAuthData =
-          defaultFencingAuth.getBytes(Charset.forName("UTF-8"));
+          defaultFencingAuth.getBytes(StandardCharsets.UTF_8);
       String scheme = new DigestAuthenticationProvider().getScheme();
       AuthInfo authInfo = new AuthInfo(scheme, defaultFencingAuthData);
       authInfos.add(authInfo);
     }
 
-    manager.start(authInfos, config.getBoolean(YarnConfiguration.RM_ZK_CLIENT_SSL_ENABLED,
-        YarnConfiguration.DEFAULT_RM_ZK_CLIENT_SSL_ENABLED));
+    boolean isSSLEnabled =
+        config.getBoolean(CommonConfigurationKeys.ZK_CLIENT_SSL_ENABLED,
+            config.getBoolean(YarnConfiguration.RM_ZK_CLIENT_SSL_ENABLED,
+                YarnConfiguration.DEFAULT_RM_ZK_CLIENT_SSL_ENABLED));
+    manager.start(authInfos, isSSLEnabled);
     return manager;
   }
 

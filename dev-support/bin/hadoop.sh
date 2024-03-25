@@ -21,18 +21,20 @@
 personality_plugins "all,-ant,-gradle,-scalac,-scaladoc"
 
 # These flags are needed to run Yetus against Hadoop on Windows.
-WINDOWS_FLAGS="-Pnative-win
-  -Dhttps.protocols=TLSv1.2
-  -Drequire.openssl
-  -Drequire.test.libhadoop
-  -Dshell-executable=${BASH_EXECUTABLE}
-  -Dopenssl.prefix=${VCPKG_INSTALLED_PACKAGES}
-  -Dcmake.prefix.path=${VCPKG_INSTALLED_PACKAGES}
-  -Dwindows.cmake.toolchain.file=${CMAKE_TOOLCHAIN_FILE}
-  -Dwindows.cmake.build.type=RelWithDebInfo
-  -Dwindows.build.hdfspp.dll=off
-  -Dwindows.no.sasl=on
-  -Duse.platformToolsetVersion=v142"
+WINDOWS_FLAGS=(
+  "-Pnative-win"
+  "-Dhttps.protocols=TLSv1.2"
+  "-Drequire.openssl"
+  "-Drequire.test.libhadoop"
+  "-Dshell-executable=${BASH_EXECUTABLE}"
+  "-Dopenssl.prefix=${VCPKG_INSTALLED_PACKAGES}"
+  "-Dcmake.prefix.path=${VCPKG_INSTALLED_PACKAGES}"
+  "-Dwindows.cmake.toolchain.file=${CMAKE_TOOLCHAIN_FILE}"
+  "-Dwindows.cmake.build.type=RelWithDebInfo"
+  "-Dwindows.build.hdfspp.dll=off"
+  "-Dwindows.no.sasl=on"
+  "-Duse.platformToolsetVersion=v142"
+)
 
 ## @description  Globals specific to this personality
 ## @audience     private
@@ -292,7 +294,7 @@ function hadoop_native_flags
         -Drequire.snappy \
         -Pdist \
         -Dtar \
-        "${WINDOWS_FLAGS}"
+        "${WINDOWS_FLAGS[@]}"
     ;;
     *)
       echo \
@@ -385,6 +387,11 @@ function personality_modules
       fi
     ;;
     unit)
+      if [[ "$IS_WINDOWS" && "$IS_WINDOWS" == 1 && (-z "$IS_NIGHTLY_BUILD" || "$IS_NIGHTLY_BUILD" == 0) ]]; then
+        echo "Won't run unit tests for Windows in pre-commit CI"
+        return
+      fi
+
       extra="-Dsurefire.rerunFailingTestsCount=2"
       if [[ "${BUILDMODE}" = full ]]; then
         ordering=mvnsrc
@@ -436,7 +443,7 @@ function personality_modules
   fi
 
   if [[ "$IS_WINDOWS" && "$IS_WINDOWS" == 1 ]]; then
-    extra="-Ptest-patch -Pdist -Dtar ${WINDOWS_FLAGS} ${extra}"
+    extra="-Ptest-patch -Pdist -Dtar ${WINDOWS_FLAGS[*]} ${extra}"
   fi
 
   for module in $(hadoop_order ${ordering}); do
@@ -557,14 +564,6 @@ function shadedclient_rebuild
   declare module
   declare -a modules=()
 
-  if [[ ${OSTYPE} = Windows_NT ||
-        ${OSTYPE} =~ ^CYGWIN.* ||
-        ${OSTYPE} =~ ^MINGW32.* ||
-        ${OSTYPE} =~ ^MSYS.* ]]; then
-    echo "hadoop personality: building on windows, skipping check of client artifacts."
-    return 0
-  fi
-
   yetus_debug "hadoop personality: seeing if we need the test of client artifacts."
   for module in hadoop-client-modules/hadoop-client-check-invariants \
                 hadoop-client-modules/hadoop-client-check-test-invariants \
@@ -581,28 +580,47 @@ function shadedclient_rebuild
 
   big_console_header "Checking client artifacts on ${repostatus} with shaded clients"
 
-  extra="-Dtest=NoUnitTests -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true -Dspotbugs.skip=true"
+  extra=(
+    "-Dtest=NoUnitTests"
+    "-Dmaven.javadoc.skip=true"
+    "-Dcheckstyle.skip=true"
+    "-Dspotbugs.skip=true"
+  )
 
   if [[ "$IS_WINDOWS" && "$IS_WINDOWS" == 1 ]]; then
+    # shellcheck disable=SC2206
+    extra+=(${WINDOWS_FLAGS[*]})
+
+    # The shaded client integration tests require the Hadoop jars that were just built to be
+    # installed in the local maven repository.
+    # shellcheck disable=SC2086
+    echo_and_redirect "${logfile}" \
+      "${MAVEN}" "${MAVEN_ARGS[@]}" install -fae --batch-mode \
+        -DskipTests -DskipDocs -Pdist -Dtar ${extra[*]}
+
+    # The shaded client integration tests spawn a MiniDFS and MiniYARN cluster for testing. Both of
+    # them require winutils.exe to be found in the PATH and HADOOP_HOME to be set.
     if load_hadoop_version; then
       export HADOOP_HOME="${SOURCEDIR}/hadoop-dist/target/hadoop-${HADOOP_VERSION}-SNAPSHOT"
+      WIN_HADOOP_HOME=$(cygpath -w -a "${HADOOP_HOME}")
+      export PATH="${PATH};${WIN_HADOOP_HOME}\bin"
     else
       yetus_error "[WARNING] Unable to extract the Hadoop version and thus HADOOP_HOME is not set. Some tests may fail."
     fi
-
-    extra="${WINDOWS_FLAGS} ${extra}"
   fi
 
+  # shellcheck disable=SC2086
   echo_and_redirect "${logfile}" \
-    "${MAVEN}" "${MAVEN_ARGS[@]}" verify -fae --batch-mode -am "${modules[@]}" "${extra}"
+    "${MAVEN}" "${MAVEN_ARGS[@]}" verify -fae --batch-mode -am "${modules[@]}" ${extra[*]}
 
   big_console_header "Checking client artifacts on ${repostatus} with non-shaded clients"
 
+  # shellcheck disable=SC2086
   echo_and_redirect "${logfile}" \
     "${MAVEN}" "${MAVEN_ARGS[@]}" verify -fae --batch-mode -am \
       "${modules[@]}" \
       -DskipShade -Dtest=NoUnitTests -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true \
-      -Dspotbugs.skip=true "${extra}"
+      -Dspotbugs.skip=true ${extra[*]}
 
   count=$("${GREP}" -c '\[ERROR\]' "${logfile}")
   if [[ ${count} -gt 0 ]]; then

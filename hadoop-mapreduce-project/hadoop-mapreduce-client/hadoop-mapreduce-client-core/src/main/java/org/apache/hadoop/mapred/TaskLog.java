@@ -27,6 +27,7 @@ import java.io.Flushable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
@@ -56,7 +57,6 @@ import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 
 /**
  * A simple logger to handle the task-specific user logs.
@@ -114,7 +114,7 @@ public class TaskLog {
     File indexFile = getIndexFile(taskid, isCleanup);
     BufferedReader fis = new BufferedReader(new InputStreamReader(
       SecureIOUtils.openForRead(indexFile, obtainLogDirOwner(taskid), null),
-      Charsets.UTF_8));
+      StandardCharsets.UTF_8));
     //the format of the index file is
     //LOG_DIR: <the dir where the task logs are really stored>
     //stdout:<start-offset in the stdout file> <length>

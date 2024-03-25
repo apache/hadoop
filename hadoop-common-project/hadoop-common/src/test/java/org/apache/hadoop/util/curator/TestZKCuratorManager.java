@@ -22,6 +22,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -117,7 +118,7 @@ public class TestZKCuratorManager {
     curator.create(node1);
     assertNull(curator.getStringData(node1));
 
-    byte[] setData = "setData".getBytes("UTF-8");
+    byte[] setData = "setData".getBytes(StandardCharsets.UTF_8);
     curator.setData(node1, setData, -1);
     assertEquals("setData", curator.getStringData(node1));
 
@@ -136,7 +137,7 @@ public class TestZKCuratorManager {
     String fencingNodePath = "/fencing";
     String node1 = "/node1";
     String node2 = "/node2";
-    byte[] testData = "testData".getBytes("UTF-8");
+    byte[] testData = "testData".getBytes(StandardCharsets.UTF_8);
     assertFalse(curator.exists(fencingNodePath));
     assertFalse(curator.exists(node1));
     assertFalse(curator.exists(node2));
@@ -154,7 +155,7 @@ public class TestZKCuratorManager {
     assertTrue(Arrays.equals(testData, curator.getData(node1)));
     assertTrue(Arrays.equals(testData, curator.getData(node2)));
 
-    byte[] setData = "setData".getBytes("UTF-8");
+    byte[] setData = "setData".getBytes(StandardCharsets.UTF_8);
     txn = curator.createTransaction(zkAcl, fencingNodePath);
     txn.setData(node1, setData, -1);
     txn.delete(node2);

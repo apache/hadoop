@@ -44,6 +44,8 @@ import java.util.regex.Pattern;
 import org.apache.commons.lang3.time.FastDateFormat;
 import org.apache.hadoop.test.UnitTestcaseTimeLimit;
 import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
+
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 public class TestStringUtils extends UnitTestcaseTimeLimit {
@@ -510,6 +512,60 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
     String msg = StringUtils.createStartupShutdownMessage(
         this.getClass().getName(), "test.host", null);
     assertTrue(msg.startsWith("STARTUP_MSG:"));
+  }
+
+  @Test
+  public void testStringCollectionSplitByEquals() {
+    Map<String, String> splitMap =
+        StringUtils.getTrimmedStringCollectionSplitByEquals("");
+    Assertions
+        .assertThat(splitMap)
+        .describedAs("Map of key value pairs split by equals(=) and comma(,)")
+        .hasSize(0);
+
+    splitMap = StringUtils.getTrimmedStringCollectionSplitByEquals(null);
+    Assertions
+        .assertThat(splitMap)
+        .describedAs("Map of key value pairs split by equals(=) and comma(,)")
+        .hasSize(0);
+
+    splitMap = StringUtils.getTrimmedStringCollectionSplitByEquals(
+        "element.first.key1 = element.first.val1");
+    Assertions
+        .assertThat(splitMap)
+        .describedAs("Map of key value pairs split by equals(=) and comma(,)")
+        .hasSize(1)
+        .containsEntry("element.first.key1", "element.first.val1");
+
+    splitMap = StringUtils.getTrimmedStringCollectionSplitByEquals(
+        "element.xyz.key1 =element.abc.val1 , element.xyz.key2= element.abc.val2");
+
+    Assertions
+        .assertThat(splitMap)
+        .describedAs("Map of key value pairs split by equals(=) and comma(,)")
+        .hasSize(2)
+        .containsEntry("element.xyz.key1", "element.abc.val1")
+        .containsEntry("element.xyz.key2", "element.abc.val2");
+
+    splitMap = StringUtils.getTrimmedStringCollectionSplitByEquals(
+        "\nelement.xyz.key1 =element.abc.val1 \n"
+            + ", element.xyz.key2=element.abc.val2,element.xyz.key3=element.abc.val3"
+            + " , element.xyz.key4     =element.abc.val4,element.xyz.key5=        "
+            + "element.abc.val5 ,\n \n \n "
+            + " element.xyz.key6      =       element.abc.val6 \n , \n"
+            + "element.xyz.key7=element.abc.val7,\n");
+
+    Assertions
+        .assertThat(splitMap)
+        .describedAs("Map of key value pairs split by equals(=) and comma(,)")
+        .hasSize(7)
+        .containsEntry("element.xyz.key1", "element.abc.val1")
+        .containsEntry("element.xyz.key2", "element.abc.val2")
+        .containsEntry("element.xyz.key3", "element.abc.val3")
+        .containsEntry("element.xyz.key4", "element.abc.val4")
+        .containsEntry("element.xyz.key5", "element.abc.val5")
+        .containsEntry("element.xyz.key6", "element.abc.val6")
+        .containsEntry("element.xyz.key7", "element.abc.val7");
   }
 
   // Benchmark for StringUtils split

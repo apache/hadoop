@@ -232,6 +232,7 @@ message GetQueueInfoRequestProto {
   optional bool includeApplications = 2;
   optional bool includeChildQueues = 3;
   optional bool recursive = 4;
+  optional string subClusterId = 5;
 }
 
 message GetQueueInfoResponseProto {

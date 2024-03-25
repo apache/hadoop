@@ -919,7 +919,7 @@ public class TestFsck {
     dfs = cluster.getFileSystem();
 
     // create files
-    final String testFile = new String("/testfile");
+    final String testFile = "/testfile";
     final Path path = new Path(testFile);
     DFSTestUtil.createFile(dfs, path, fileSize, replFactor, 1000L);
     DFSTestUtil.waitReplication(dfs, path, replFactor);
@@ -1202,7 +1202,7 @@ public class TestFsck {
     assertNotNull("Failed to get FileSystem", dfs);
 
     // Create a file that will be intentionally under-replicated
-    final String pathString = new String("/testfile");
+    final String pathString = "/testfile";
     final Path path = new Path(pathString);
     long fileLen = blockSize * numBlocks;
     DFSTestUtil.createFile(dfs, path, fileLen, replFactor, 1);
@@ -1263,7 +1263,7 @@ public class TestFsck {
     assertNotNull("Failed to get FileSystem", dfs);
 
     // Create a file that will be intentionally under-replicated
-    final String pathString = new String("/testfile");
+    final String pathString = "/testfile";
     final Path path = new Path(pathString);
     long fileLen = blockSize * numBlocks;
     DFSTestUtil.createFile(dfs, path, fileLen, replFactor, 1);
@@ -1436,7 +1436,7 @@ public class TestFsck {
     DFSTestUtil util = new DFSTestUtil.Builder().
         setName(getClass().getSimpleName()).setNumFiles(1).build();
     //create files
-    final String pathString = new String("/testfile");
+    final String pathString = "/testfile";
     final Path path = new Path(pathString);
     util.createFile(dfs, path, 1024, replFactor, 1000L);
     util.waitReplication(dfs, path, replFactor);
@@ -1490,7 +1490,7 @@ public class TestFsck {
     DFSTestUtil util = new DFSTestUtil.Builder().
         setName(getClass().getSimpleName()).setNumFiles(1).build();
     //create files
-    final String pathString = new String("/testfile");
+    final String pathString = "/testfile";
     final Path path = new Path(pathString);
     util.createFile(dfs, path, 1024, replFactor, 1000L);
     util.waitReplication(dfs, path, replFactor);
@@ -1577,7 +1577,7 @@ public class TestFsck {
     DFSTestUtil util = new DFSTestUtil.Builder().
         setName(getClass().getSimpleName()).setNumFiles(1).build();
     //create files
-    final String pathString = new String("/testfile");
+    final String pathString = "/testfile";
     final Path path = new Path(pathString);
     util.createFile(dfs, path, 1024, replFactor, 1000L);
     util.waitReplication(dfs, path, replFactor);
@@ -1694,7 +1694,7 @@ public class TestFsck {
           setName(getClass().getSimpleName()).setNumFiles(1).build();
 
       // Create one file.
-      final String pathString = new String("/testfile");
+      final String pathString = "/testfile";
       final Path path = new Path(pathString);
       util.createFile(fs, path, 1024L, replFactor, 1024L);
       util.waitReplication(fs, path, replFactor);
@@ -1780,7 +1780,7 @@ public class TestFsck {
     DFSTestUtil util = new DFSTestUtil.Builder().
         setName(getClass().getSimpleName()).setNumFiles(1).build();
     //create files
-    final String pathString = new String("/testfile");
+    final String pathString = "/testfile";
     final Path path = new Path(pathString);
     util.createFile(dfs, path, 1024, repFactor, 1000L);
     util.waitReplication(dfs, path, repFactor);
@@ -1937,7 +1937,7 @@ public class TestFsck {
         setName(getClass().getSimpleName()).setNumFiles(1).build();
 
     //create files
-    final String testFile = new String("/testfile");
+    final String testFile = "/testfile";
     final Path path = new Path(testFile);
     util.createFile(dfs, path, fileSize, replFactor, 1000L);
     util.waitReplication(dfs, path, replFactor);
@@ -2020,7 +2020,7 @@ public class TestFsck {
     DFSTestUtil util = new DFSTestUtil.Builder().
         setName(getClass().getSimpleName()).setNumFiles(1).build();
     //create files
-    final String testFile = new String("/testfile");
+    final String testFile = "/testfile";
     final Path path = new Path(testFile);
     util.createFile(dfs, path, 1024, replFactor, 1000L);
     util.waitReplication(dfs, path, replFactor);
@@ -2394,7 +2394,7 @@ public class TestFsck {
     }
 
     // create files
-    final String testFile = new String("/testfile");
+    final String testFile = "/testfile";
     final Path path = new Path(testFile);
     DFSTestUtil.createFile(dfs, path, fileSize, replFactor, 1000L);
     DFSTestUtil.waitReplication(dfs, path, replFactor);

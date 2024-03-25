@@ -30,6 +30,7 @@ import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -50,6 +51,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 import javax.management.ObjectName;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -86,6 +88,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo.AddBloc
 import org.apache.hadoop.hdfs.server.blockmanagement.NumberReplicas.StoredReplicaState;
 import org.apache.hadoop.hdfs.server.blockmanagement.PendingDataNodeMessages.ReportedBlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.PendingReconstructionBlocks.PendingBlockInfo;
+import org.apache.hadoop.hdfs.server.blockmanagement.ExcessRedundancyMap.ExcessBlockInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.namenode.CachedBlock;
@@ -116,6 +119,7 @@ import org.apache.hadoop.hdfs.server.namenode.CacheManager;
 
 import static org.apache.hadoop.hdfs.util.StripedBlockUtil.getInternalBlockLength;
 
+import org.apache.hadoop.hdfs.util.LightWeightHashSet;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -482,6 +486,16 @@ public class BlockManager implements BlockStatsMXBean {
   /** Storages accessible from multiple DNs. */
   private final ProvidedStorageMap providedStorageMap;
 
+  /**
+   * Timeout for excess redundancy block.
+   */
+  private long excessRedundancyTimeout;
+
+  /**
+   * Limits number of blocks used to check for excess redundancy timeout.
+   */
+  private long excessRedundancyTimeoutCheckLimit;
+
   public BlockManager(final Namesystem namesystem, boolean haEnabled,
       final Configuration conf) throws IOException {
     this.namesystem = namesystem;
@@ -588,6 +602,12 @@ public class BlockManager implements BlockStatsMXBean {
     this.deleteCorruptReplicaImmediately =
         conf.getBoolean(DFS_NAMENODE_CORRUPT_BLOCK_DELETE_IMMEDIATELY_ENABLED,
             DFS_NAMENODE_CORRUPT_BLOCK_DELETE_IMMEDIATELY_ENABLED_DEFAULT);
+
+    setExcessRedundancyTimeout(conf.getLong(DFS_NAMENODE_EXCESS_REDUNDANCY_TIMEOUT_SEC_KEY,
+        DFS_NAMENODE_EXCESS_REDUNDANCY_TIMEOUT_SEC_DEAFULT));
+    setExcessRedundancyTimeoutCheckLimit(conf.getLong(
+        DFS_NAMENODE_EXCESS_REDUNDANCY_TIMEOUT_CHECK_LIMIT,
+        DFS_NAMENODE_EXCESS_REDUNDANCY_TIMEOUT_CHECK_LIMIT_DEFAULT));
 
     printInitialConfigs();
   }
@@ -1720,8 +1740,8 @@ public class BlockManager implements BlockStatsMXBean {
 
   /** Get all blocks with location information from a datanode. */
   public BlocksWithLocations getBlocksWithLocations(final DatanodeID datanode,
-      final long size, final long minBlockSize, final long timeInterval) throws
-      UnregisteredNodeException {
+      final long size, final long minBlockSize, final long timeInterval,
+      final StorageType storageType) throws UnregisteredNodeException {
     final DatanodeDescriptor node = getDatanodeManager().getDatanode(datanode);
     if (node == null) {
       blockLog.warn("BLOCK* getBlocks: Asking for blocks from an" +
@@ -1735,10 +1755,11 @@ public class BlockManager implements BlockStatsMXBean {
       return new BlocksWithLocations(new BlockWithLocations[0]);
     }
 
-    // skip stale storage
+    // skip stale storage, then choose specific storage type.
     DatanodeStorageInfo[] storageInfos = Arrays
         .stream(node.getStorageInfos())
         .filter(s -> !s.areBlockContentsStale())
+        .filter(s -> storageType == null || s.getStorageType().equals(storageType))
         .toArray(DatanodeStorageInfo[]::new);
 
     // starting from a random block
@@ -3040,6 +3061,100 @@ public class BlockManager implements BlockStatsMXBean {
           (Time.monotonicNow() - startTime), endSize, (startSize - endSize));
     }
   }
+
+  /**
+   * Sets the timeout (in seconds) for excess redundancy blocks, if the provided timeout is
+   * less than or equal to 0, the default value is used (converted to milliseconds).
+   * @param timeout The time (in seconds) to set as the excess redundancy block timeout.
+   */
+  public void setExcessRedundancyTimeout(long timeout) {
+    if (timeout <= 0) {
+      this.excessRedundancyTimeout = DFS_NAMENODE_EXCESS_REDUNDANCY_TIMEOUT_SEC_DEAFULT * 1000L;
+    } else {
+      this.excessRedundancyTimeout = timeout * 1000L;
+    }
+  }
+
+  /**
+   * Sets the limit number of blocks for checking excess redundancy timeout.
+   * If the provided limit is less than or equal to 0, the default limit is used.
+   *
+   * @param limit The limit number of blocks used to check for excess redundancy timeout.
+   */
+  public void setExcessRedundancyTimeoutCheckLimit(long limit) {
+    if (excessRedundancyTimeoutCheckLimit <= 0) {
+      this.excessRedundancyTimeoutCheckLimit =
+          DFS_NAMENODE_EXCESS_REDUNDANCY_TIMEOUT_CHECK_LIMIT_DEFAULT;
+    } else {
+      this.excessRedundancyTimeoutCheckLimit = limit;
+    }
+  }
+
+  /**
+   * Process timed-out blocks in the excess redundancy map.
+   */
+  void processTimedOutExcessBlocks() {
+    if (excessRedundancyMap.size() == 0) {
+      return;
+    }
+    namesystem.writeLock();
+    long now = Time.monotonicNow();
+    int processed = 0;
+    try {
+      Iterator<Map.Entry<String, LightWeightHashSet<Block>>> iter =
+          excessRedundancyMap.getExcessRedundancyMap().entrySet().iterator();
+      while (iter.hasNext() && processed < excessRedundancyTimeoutCheckLimit) {
+        Map.Entry<String, LightWeightHashSet<Block>> entry = iter.next();
+        String datanodeUuid = entry.getKey();
+        LightWeightHashSet<Block> blocks = entry.getValue();
+        // Sort blocks by timestamp in descending order.
+        List<ExcessBlockInfo> sortedBlocks = blocks.stream()
+            .filter(block -> block instanceof ExcessBlockInfo)
+            .map(block -> (ExcessBlockInfo) block)
+            .sorted(Comparator.comparingLong(ExcessBlockInfo::getTimeStamp))
+            .collect(Collectors.toList());
+
+        for (ExcessBlockInfo excessBlockInfo : sortedBlocks) {
+          if (processed >= excessRedundancyTimeoutCheckLimit) {
+            break;
+          }
+
+          processed++;
+          // If the datanode doesn't have any excess block that has exceeded the timeout,
+          // can exit this loop.
+          if (now <= excessBlockInfo.getTimeStamp() + excessRedundancyTimeout) {
+            break;
+          }
+
+          BlockInfo blockInfo = excessBlockInfo.getBlockInfo();
+          BlockInfo bi = blocksMap.getStoredBlock(blockInfo);
+          if (bi == null || bi.isDeleted()) {
+            continue;
+          }
+
+          Iterator<DatanodeStorageInfo> iterator = blockInfo.getStorageInfos();
+          while (iterator.hasNext()) {
+            DatanodeStorageInfo datanodeStorageInfo = iterator.next();
+            DatanodeDescriptor datanodeDescriptor = datanodeStorageInfo.getDatanodeDescriptor();
+            if (datanodeDescriptor.getDatanodeUuid().equals(datanodeUuid) &&
+                datanodeStorageInfo.getState().equals(State.NORMAL)) {
+              final Block b = getBlockOnStorage(blockInfo, datanodeStorageInfo);
+              if (!containsInvalidateBlock(datanodeDescriptor, b)) {
+                addToInvalidates(b, datanodeDescriptor);
+                LOG.debug("Excess block timeout ({}, {}) is added to invalidated.",
+                    b, datanodeDescriptor);
+              }
+              excessBlockInfo.setTimeStamp();
+              break;
+            }
+          }
+        }
+      }
+    } finally {
+      namesystem.writeUnlock("processTimedOutExcessBlocks");
+      LOG.info("processTimedOutExcessBlocks {} msecs.", (Time.monotonicNow() - now));
+    }
+  }
   
   Collection<Block> processReport(
       final DatanodeStorageInfo storageInfo,
@@ -3310,7 +3425,7 @@ public class BlockManager implements BlockStatsMXBean {
 
     // find block by blockId
     BlockInfo storedBlock = getStoredBlock(block);
-    if(storedBlock == null) {
+    if (storedBlock == null) {
       // If blocksMap does not contain reported block id,
       // The replica should be removed from Datanode, and set NumBytes to BlockCommand.No_ACK to
       // avoid useless report to NameNode from Datanode when complete to process it.
@@ -3324,8 +3439,8 @@ public class BlockManager implements BlockStatsMXBean {
     // Block is on the NN
     LOG.debug("In memory blockUCState = {}", ucState);
 
-    // Ignore replicas already scheduled to be removed from the DN
-    if(invalidateBlocks.contains(dn, block)) {
+    // Ignore replicas already scheduled to be removed from the DN or had been deleted
+    if (invalidateBlocks.contains(dn, block) || storedBlock.isDeleted()) {
       return storedBlock;
     }
 
@@ -5231,6 +5346,7 @@ public class BlockManager implements BlockStatsMXBean {
             computeDatanodeWork();
             processPendingReconstructions();
             rescanPostponedMisreplicatedBlocks();
+            processTimedOutExcessBlocks();
             lastRedundancyCycleTS.set(Time.monotonicNow());
           }
           TimeUnit.MILLISECONDS.sleep(redundancyRecheckIntervalMs);

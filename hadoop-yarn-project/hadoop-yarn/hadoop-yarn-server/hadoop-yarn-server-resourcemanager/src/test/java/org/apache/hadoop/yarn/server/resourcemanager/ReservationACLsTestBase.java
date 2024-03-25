@@ -499,19 +499,15 @@ public class ReservationACLsTestBase extends ACLsTestBase {
   private static Configuration createCapacitySchedulerConfiguration() {
     CapacitySchedulerConfiguration csConf =
             new CapacitySchedulerConfiguration();
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {
+    csConf.setQueues(ROOT, new String[] {
             QUEUEA, QUEUEB, QUEUEC });
 
-    String absoluteQueueA = CapacitySchedulerConfiguration.ROOT + "." + QUEUEA;
-    String absoluteQueueB = CapacitySchedulerConfiguration.ROOT + "." + QUEUEB;
-    String absoluteQueueC = CapacitySchedulerConfiguration.ROOT + "." + QUEUEC;
-
-    csConf.setCapacity(absoluteQueueA, 50f);
-    csConf.setCapacity(absoluteQueueB, 20f);
-    csConf.setCapacity(absoluteQueueC, 30f);
-    csConf.setReservable(absoluteQueueA, true);
-    csConf.setReservable(absoluteQueueB, true);
-    csConf.setReservable(absoluteQueueC, true);
+    csConf.setCapacity(A_QUEUE_PATH, 50f);
+    csConf.setCapacity(B_QUEUE_PATH, 20f);
+    csConf.setCapacity(C_QUEUE_PATH, 30f);
+    csConf.setReservable(A_QUEUE_PATH, true);
+    csConf.setReservable(B_QUEUE_PATH, true);
+    csConf.setReservable(C_QUEUE_PATH, true);
 
     // Set up ACLs on Queue A
     Map<ReservationACL, AccessControlList> reservationAclsOnQueueA =
@@ -528,7 +524,7 @@ public class ReservationACLsTestBase extends ACLsTestBase {
     reservationAclsOnQueueA.put(ReservationACL.LIST_RESERVATIONS,
             listACLonQueueA);
 
-    csConf.setReservationAcls(absoluteQueueA, reservationAclsOnQueueA);
+    csConf.setReservationAcls(A_QUEUE_PATH, reservationAclsOnQueueA);
 
     // Set up ACLs on Queue B
     Map<ReservationACL, AccessControlList> reservationAclsOnQueueB =
@@ -545,7 +541,7 @@ public class ReservationACLsTestBase extends ACLsTestBase {
     reservationAclsOnQueueB.put(ReservationACL.LIST_RESERVATIONS,
             listACLonQueueB);
 
-    csConf.setReservationAcls(absoluteQueueB, reservationAclsOnQueueB);
+    csConf.setReservationAcls(B_QUEUE_PATH, reservationAclsOnQueueB);
 
     csConf.setBoolean(YarnConfiguration.RM_RESERVATION_SYSTEM_ENABLE, true);
     csConf.setBoolean(YarnConfiguration.YARN_ACL_ENABLE, true);

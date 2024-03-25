@@ -406,6 +406,10 @@ public final class PlacementConstraintParser {
         // multiple values are present for same attribute, it will also be
         // coming as next token. for example, java=1.8,1.9 or python!=2.
         if (attributeKV.countTokens() > 1) {
+          if (!constraintEntities.isEmpty()) {
+            throw new PlacementConstraintParseException(
+                "expecting valid expression like k=v or k!=v or k=v1,v2");
+          }
           opCode = getAttributeOpCode(currentTag);
           attributeName = attributeKV.nextToken();
           currentTag = attributeKV.nextToken();

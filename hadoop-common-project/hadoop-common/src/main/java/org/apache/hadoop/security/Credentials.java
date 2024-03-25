@@ -137,6 +137,14 @@ public class Credentials implements Writable {
   }
 
   /**
+   * Remove a token from the storage (in memory).
+   * @param alias the alias for the key
+   */
+  public void removeToken(Text alias) {
+    tokenMap.remove(alias);
+  }
+
+  /**
    * Return all the tokens in the in-memory map.
    *
    * @return all the tokens in the in-memory map.

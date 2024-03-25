@@ -210,12 +210,13 @@ hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/nvd3-1.8.5.* (css and js
 hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/checker/AbstractFuture.java
 hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/checker/TimeoutFuture.java
 
+ch.qos.reload4j:reload4j:1.2.22
 com.aliyun:aliyun-java-sdk-core:4.5.10
 com.aliyun:aliyun-java-sdk-kms:2.11.0
 com.aliyun:aliyun-java-sdk-ram:3.1.0
 com.aliyun:aliyun-java-sdk-sts:3.0.0
 com.aliyun.oss:aliyun-sdk-oss:3.13.2
-com.amazonaws:aws-java-sdk-bundle:1.12.499
+com.amazonaws:aws-java-sdk-bundle:1.12.599
 com.cedarsoftware:java-util:1.9.0
 com.cedarsoftware:json-io:2.5.1
 com.fasterxml.jackson.core:jackson-annotations:2.12.7
@@ -250,13 +251,13 @@ commons-daemon:commons-daemon:1.0.13
 commons-io:commons-io:2.14.0
 commons-net:commons-net:3.9.0
 de.ruedigermoeller:fst:2.50
-io.grpc:grpc-api:1.26.0
-io.grpc:grpc-context:1.26.0
-io.grpc:grpc-core:1.26.0
-io.grpc:grpc-netty:1.26.0
-io.grpc:grpc-protobuf:1.26.0
-io.grpc:grpc-protobuf-lite:1.26.0
-io.grpc:grpc-stub:1.26.0
+io.grpc:grpc-api:1.53.0
+io.grpc:grpc-context:1.53.0
+io.grpc:grpc-core:1.53.0
+io.grpc:grpc-netty:1.53.0
+io.grpc:grpc-protobuf:1.53.0
+io.grpc:grpc-protobuf-lite:1.53.0
+io.grpc:grpc-stub:1.53.0
 io.netty:netty-all:4.1.100.Final
 io.netty:netty-buffer:4.1.100.Final
 io.netty:netty-codec:4.1.100.Final
@@ -294,7 +295,6 @@ io.reactivex:rxjava-string:1.1.1
 io.reactivex:rxnetty:0.4.20
 io.swagger:swagger-annotations:1.5.4
 javax.inject:javax.inject:1
-log4j:log4j:1.2.17
 net.java.dev.jna:jna:5.2.0
 net.minidev:accessors-smart:1.2
 org.apache.avro:avro:1.9.2
@@ -335,9 +335,12 @@ org.apache.kerby:kerby-pkix:2.0.3
 org.apache.kerby:kerby-util:2.0.3
 org.apache.kerby:kerby-xdr:2.0.3
 org.apache.kerby:token-provider:2.0.3
+org.apache.sshd:sshd-common:2.11.0
+org.apache.sshd:sshd-core:2.11.0
+org.apache.sshd:sshd-sftp:2.11.0
 org.apache.solr:solr-solrj:8.11.2
 org.apache.yetus:audience-annotations:0.5.0
-org.apache.zookeeper:zookeeper:3.7.2
+org.apache.zookeeper:zookeeper:3.8.4
 org.codehaus.jettison:jettison:1.5.4
 org.eclipse.jetty:jetty-annotations:9.4.53.v20231009
 org.eclipse.jetty:jetty-http:9.4.53.v20231009
@@ -360,7 +363,7 @@ org.objenesis:objenesis:2.6
 org.xerial.snappy:snappy-java:1.1.10.4
 org.yaml:snakeyaml:2.0
 org.wildfly.openssl:wildfly-openssl:1.1.3.Final
-software.amazon.awssdk:bundle:jar:2.20.160
+software.amazon.awssdk:bundle:jar:2.24.6
 
 
 --------------------------------------------------------------------------------
@@ -393,9 +396,9 @@ hadoop-hdfs-project/hadoop-hdfs/src/main/webapps/static/d3-3.5.17.min.js
 leveldb v1.13
 
 com.google.protobuf:protobuf-java:2.5.0
-com.google.protobuf:protobuf-java:3.6.1
+com.google.protobuf:protobuf-java:3.21.12
 com.google.re2j:re2j:1.1
-com.jcraft:jsch:0.1.54
+com.jcraft:jsch:0.1.55
 com.thoughtworks.paranamer:paranamer:2.3
 jakarta.activation:jakarta.activation-api:1.2.1
 org.fusesource.leveldbjni:leveldbjni-all:1.8
@@ -480,23 +483,23 @@ com.microsoft.azure:azure-cosmosdb-gateway:2.4.5
 com.microsoft.azure:azure-data-lake-store-sdk:2.3.3
 com.microsoft.azure:azure-keyvault-core:1.0.0
 com.microsoft.sqlserver:mssql-jdbc:6.2.1.jre7
-org.bouncycastle:bcpkix-jdk15on:1.68
-org.bouncycastle:bcprov-jdk15on:1.68
+org.bouncycastle:bcpkix-jdk15on:1.70
+org.bouncycastle:bcprov-jdk15on:1.70
+org.bouncycastle:bcutil-jdk15on:1.70
 org.checkerframework:checker-qual:2.5.2
-org.codehaus.mojo:animal-sniffer-annotations:1.17
+org.codehaus.mojo:animal-sniffer-annotations:1.21
 org.jruby.jcodings:jcodings:1.0.13
 org.jruby.joni:joni:2.1.2
-org.slf4j:jul-to-slf4j:jar:1.7.25
-org.ojalgo:ojalgo:43.0:compile
-org.slf4j:jul-to-slf4j:1.7.25
-org.slf4j:slf4j-api:1.7.25
-org.slf4j:slf4j-log4j12:1.7.25
+org.ojalgo:ojalgo:43.0
+org.slf4j:jul-to-slf4j:1.7.36
+org.slf4j:slf4j-api:1.7.36
+org.slf4j:slf4j-reload4j:1.7.36
 
 
 CDDL 1.1 + GPLv2 with classpath exception
 -----------------------------------------
 
-com.github.pjfanning:jersey-json:1.20
+com.github.pjfanning:jersey-json:1.22.0
 com.sun.jersey:jersey-client:1.19.4
 com.sun.jersey:jersey-core:1.19.4
 com.sun.jersey:jersey-guice:1.19.4

@@ -96,6 +96,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DIFF_LI
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DIFF_LISTING_LIMIT_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSUtil.isParentEntry;
 
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.text.CaseUtils;
@@ -175,7 +176,6 @@ import java.util.TreeMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Supplier;
@@ -343,7 +343,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -662,7 +661,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   private KeyProviderCryptoExtension provider = null;
 
   private volatile boolean imageLoaded = false;
-  private final Condition cond;
 
   private final FSImage fsImage;
 
@@ -704,7 +702,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     try {
       setImageLoaded(true);
       dir.markNameCacheInitialized();
-      cond.signalAll();
     } finally {
       writeUnlock("setImageLoaded");
     }
@@ -875,7 +872,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         conf.get(HADOOP_CALLER_CONTEXT_SEPARATOR_KEY,
             HADOOP_CALLER_CONTEXT_SEPARATOR_DEFAULT);
     fsLock = new FSNamesystemLock(conf, detailedLockHoldTimeMetrics);
-    cond = fsLock.newWriteLockCondition();
     cpLock = new ReentrantLock();
 
     this.fsImage = fsImage;
@@ -1946,10 +1942,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    *
    * @param datanode on which blocks are located
    * @param size total size of blocks
-   * @param minimumBlockSize
+   * @param minimumBlockSize each block should be of this minimum Block Size
+   * @param timeInterval prefer to get blocks which are belong to
+   *                     the cold files accessed before the time interval
+   * @param storageType the given storage type {@link StorageType}
    */
   public BlocksWithLocations getBlocks(DatanodeID datanode, long size, long
-      minimumBlockSize, long timeInterval) throws IOException {
+      minimumBlockSize, long timeInterval, StorageType storageType) throws IOException {
     OperationCategory checkOp =
         isGetBlocksCheckOperationEnabled ? OperationCategory.READ :
             OperationCategory.UNCHECKED;
@@ -1958,7 +1957,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     try {
       checkOperation(checkOp);
       return getBlockManager().getBlocksWithLocations(datanode, size,
-          minimumBlockSize, timeInterval);
+          minimumBlockSize, timeInterval, storageType);
     } finally {
       readUnlock("getBlocks");
     }
@@ -1979,7 +1978,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         File file = new File(System.getProperty("hadoop.log.dir"), filename);
         PrintWriter out = new PrintWriter(new BufferedWriter(
                 new OutputStreamWriter(Files.newOutputStream(file.toPath()),
-                        Charsets.UTF_8)));
+                        StandardCharsets.UTF_8)));
         metaSave(out);
         out.flush();
         out.close();
@@ -3812,7 +3811,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         // may be client have crashed before writing data to pipeline.
         // This blocks doesn't need any recovery.
         // We can remove this block and close the file.
-        pendingFile.removeLastBlock(lastBlock);
+        BlockInfo lastBlockInfo = pendingFile.removeLastBlock(lastBlock);
+        if (lastBlockInfo != null) {
+          blockManager.removeBlock(lastBlockInfo);
+        }
         finalizeINodeFileUnderConstruction(src, pendingFile,
             iip.getLatestSnapshotId(), false);
         if (uc.getNumExpectedLocations() == 0) {
@@ -4214,7 +4216,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   public byte[] getSrcPathsHash(String[] srcs) {
     synchronized (digest) {
       for (String src : srcs) {
-        digest.update(src.getBytes(Charsets.UTF_8));
+        digest.update(src.getBytes(StandardCharsets.UTF_8));
       }
       byte[] result = digest.digest();
       digest.reset();
@@ -6656,6 +6658,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           .put("infoSecureAddr", node.getInfoSecureAddr())
           .put("xferaddr", node.getXferAddr())
           .put("location", node.getNetworkLocation())
+          .put("uuid", node.getDatanodeUuid())
           .put("lastContact", getLastContact(node))
           .put("usedSpace", getDfsUsed(node))
           .put("adminState", node.getAdminState().toString())
@@ -6709,6 +6712,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           .put("adminState", node.getAdminState().toString())
           .put("xferaddr", node.getXferAddr())
           .put("location", node.getNetworkLocation())
+          .put("uuid", node.getDatanodeUuid())
           .build();
       info.put(node.getXferAddrWithHostname(), innerinfo);
     }
@@ -6731,6 +6735,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           .<String, Object> builder()
           .put("xferaddr", node.getXferAddr())
           .put("location", node.getNetworkLocation())
+          .put("uuid", node.getDatanodeUuid())
           .put("underReplicatedBlocks",
           node.getLeavingServiceStatus().getUnderReplicatedBlocks())
           .put("decommissionOnlyReplicas",
@@ -6761,6 +6766,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           .<String, Object> builder()
           .put("xferaddr", node.getXferAddr())
           .put("location", node.getNetworkLocation())
+          .put("uuid", node.getDatanodeUuid())
           .put("underReplicatedBlocks",
               node.getLeavingServiceStatus().getUnderReplicatedBlocks())
           .put("maintenanceOnlyReplicas",
@@ -9105,5 +9111,47 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         }
       }
     }
+  }
+
+  /**
+   * Get the enclosing root  for the specified path.
+   *
+   * @param srcArg the path of a file or directory to get the EZ for.
+   * @return the enclosing root of the path or null if none.
+   */
+  Path getEnclosingRoot(final String srcArg) throws IOException {
+    EncryptionZone ez = getEZForPath(srcArg);
+    if (ez != null) {
+      return new Path(ez.getPath());
+    } else {
+      return new Path("/");
+    }
+  }
+
+  public void setMetricsEnabled(boolean metricsEnabled) {
+    this.fsLock.setMetricsEnabled(metricsEnabled);
+  }
+
+  @VisibleForTesting
+  public boolean isMetricsEnabled() {
+    return this.fsLock.isMetricsEnabled();
+  }
+
+  public void setReadLockReportingThresholdMs(long readLockReportingThresholdMs) {
+    this.fsLock.setReadLockReportingThresholdMs(readLockReportingThresholdMs);
+  }
+
+  @VisibleForTesting
+  public long getReadLockReportingThresholdMs() {
+    return this.fsLock.getReadLockReportingThresholdMs();
+  }
+
+  public void setWriteLockReportingThresholdMs(long writeLockReportingThresholdMs) {
+    this.fsLock.setWriteLockReportingThresholdMs(writeLockReportingThresholdMs);
+  }
+
+  @VisibleForTesting
+  public long getWriteLockReportingThresholdMs() {
+    return this.fsLock.getWriteLockReportingThresholdMs();
   }
 }

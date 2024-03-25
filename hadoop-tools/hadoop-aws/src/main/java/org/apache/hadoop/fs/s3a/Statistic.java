@@ -265,10 +265,6 @@ public enum Statistic {
       StoreStatisticNames.OBJECT_PUT_BYTES_PENDING,
       "number of bytes queued for upload/being actively uploaded",
       TYPE_GAUGE),
-  OBJECT_SELECT_REQUESTS(
-      StoreStatisticNames.OBJECT_SELECT_REQUESTS,
-      "Count of S3 Select requests issued",
-      TYPE_COUNTER),
   STREAM_READ_ABORTED(
       StreamStatisticNames.STREAM_READ_ABORTED,
       "Count of times the TCP stream was aborted",

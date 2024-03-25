@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.monitor.invariants;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.hadoop.thirdparty.com.google.common.io.Files;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.AbstractMetric;
@@ -39,6 +38,7 @@ import javax.script.ScriptException;
 import javax.script.SimpleBindings;
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -113,7 +113,7 @@ public class MetricsInvariantChecker extends InvariantsChecker {
     StringBuilder sb = new StringBuilder();
     try {
       List<String> tempInv =
-          Files.readLines(new File(invariantFile), Charsets.UTF_8);
+          Files.readLines(new File(invariantFile), StandardCharsets.UTF_8);
 
 
       boolean first = true;

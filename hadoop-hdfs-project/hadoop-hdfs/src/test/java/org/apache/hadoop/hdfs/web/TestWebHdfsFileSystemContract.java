@@ -27,6 +27,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.Map;
@@ -341,7 +342,7 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
       byte[] respBody = new byte[content.length()];
       is = conn.getInputStream();
       IOUtils.readFully(is, respBody, 0, content.length());
-      assertEquals(content, new String(respBody, "US-ASCII"));
+      assertEquals(content, new String(respBody, StandardCharsets.US_ASCII));
     } finally {
       IOUtils.closeStream(is);
       if (conn != null) {
@@ -392,7 +393,7 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
       byte[] respBody = new byte[content.length() - 1];
       is = conn.getInputStream();
       IOUtils.readFully(is, respBody, 0, content.length() - 1);
-      assertEquals(content.substring(1), new String(respBody, "US-ASCII"));
+      assertEquals(content.substring(1), new String(respBody, StandardCharsets.US_ASCII));
     } finally {
       IOUtils.closeStream(is);
       if (conn != null) {

@@ -259,7 +259,7 @@ public class Listing extends AbstractStoreOperation {
     }
 
     S3ListRequest request = createListObjectsRequest(key, "/", span);
-    LOG.debug("listStatus: doing listObjects for directory {}", key);
+    LOG.debug("listStatus: doing listObjects for directory \"{}\"", key);
 
     // return the results obtained from s3.
     return createFileStatusListingIterator(

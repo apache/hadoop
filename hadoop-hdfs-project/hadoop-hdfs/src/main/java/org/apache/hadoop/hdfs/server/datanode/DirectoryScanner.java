@@ -509,6 +509,7 @@ public class DirectoryScanner implements Runnable {
 
     // Pre-sort the reports outside of the lock
     blockPoolReport.sortBlocks();
+    DataNodeFaultInjector.get().delayDiffRecord();
 
     for (final String bpid : blockPoolReport.getBlockPoolIds()) {
       List<ScanInfo> blockpoolReport = blockPoolReport.getScanInfo(bpid);

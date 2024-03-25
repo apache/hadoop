@@ -121,4 +121,14 @@ public interface S3AInternals {
    * @return true if the transfer manager is used to copy files.
    */
   boolean isMultipartCopyEnabled();
+
+  /**
+   * Abort multipart uploads under a path.
+   * @param path path to abort uploads under.
+   * @return a count of aborts
+   * @throws IOException trouble; FileNotFoundExceptions are swallowed.
+   */
+  @AuditEntryPoint
+  @Retries.RetryTranslated
+  long abortMultipartUploads(Path path) throws IOException;
 }

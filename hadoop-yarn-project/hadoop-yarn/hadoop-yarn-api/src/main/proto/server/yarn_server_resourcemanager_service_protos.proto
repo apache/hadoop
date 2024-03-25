@@ -203,6 +203,29 @@ message QueryFederationQueuePoliciesResponseProto {
   repeated FederationQueueWeightProto federationQueueWeights = 5;
 }
 
+message DeleteFederationApplicationRequestProto {
+  optional string application = 1;
+}
+
+message DeleteFederationApplicationResponseProto {
+  optional string message = 1;
+}
+
+message GetSubClustersRequestProto {
+}
+
+message GetSubClustersResponseProto {
+  repeated FederationSubClusterProto subClusters = 1;
+}
+
+message DeleteFederationQueuePoliciesRequestProto {
+  repeated string queues = 1;
+}
+
+message DeleteFederationQueuePoliciesResponseProto {
+  required string message = 1;
+}
+
 //////////////////////////////////////////////////////////////////
 ///////////// RM Failover related records ////////////////////////
 //////////////////////////////////////////////////////////////////

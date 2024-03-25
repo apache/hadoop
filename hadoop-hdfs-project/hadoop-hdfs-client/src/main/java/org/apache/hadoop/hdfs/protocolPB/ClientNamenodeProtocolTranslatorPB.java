@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Options.Rename;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.XAttr;
@@ -127,6 +128,8 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetDat
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetDatanodeReportRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetDatanodeStorageReportRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetEditsFromTxidRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetEnclosingRootRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetEnclosingRootResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFileInfoRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFileInfoResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFileLinkInfoRequestProto;
@@ -1666,6 +1669,21 @@ public class ClientNamenodeProtocolTranslatorPB implements
     case INITIALIZING:
     default:
       return HAServiceProtocol.HAServiceState.INITIALIZING;
+    }
+  }
+
+  @Override
+  public Path getEnclosingRoot(String filename) throws IOException {
+    final GetEnclosingRootRequestProto.Builder builder =
+        GetEnclosingRootRequestProto.newBuilder();
+    builder.setFilename(filename);
+    final GetEnclosingRootRequestProto req = builder.build();
+    try {
+      final GetEnclosingRootResponseProto response =
+          rpcProxy.getEnclosingRoot(null, req);
+      return new Path(response.getEnclosingRootPath());
+    } catch (ServiceException e) {
+      throw getRemoteException(e);
     }
   }
 
