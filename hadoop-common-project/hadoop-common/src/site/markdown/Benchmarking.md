@@ -46,6 +46,7 @@ The following are all supported command options:
 |`-logLevel` | Specify the logging level when the benchmark runs. The default logging level is ERROR. |
 |`-UGCacheRefreshCount` | After every specified number of operations, the benchmark purges the name-node's user group cache. By default the refresh is never called. |
 |`-keepResults` | If specified, do not clean up the name-space after execution. By default the name-space will be removed after test. |
+|`-nonSuperUser` | If specified, non super user can use the tool and can be helpful for bringing authorization time into benchmarking calculations. |
 
 ##### Operations Supported
 
