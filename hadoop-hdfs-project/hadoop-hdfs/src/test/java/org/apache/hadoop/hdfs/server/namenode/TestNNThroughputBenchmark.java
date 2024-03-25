@@ -98,7 +98,29 @@ public class TestNNThroughputBenchmark {
       }
     }
   }
-
+  /**
+   * This test runs {@link NNThroughputBenchmark} against a mini DFS cluster with nonSuperUser option
+   * (useful when testing any authorization framework e.g. Ranger since only super user e.g. hdfs can enter/exit safemode
+   * but any request from super user is not sent for authorization).
+   */
+  @Test(timeout = 120000)
+  public void testNNThroughputAgainstRemoteNNNonSuperUser() throws Exception {
+    final Configuration conf = new HdfsConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_MIN_BLOCK_SIZE_KEY, 16);
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
+      cluster.waitActive();
+      final Configuration benchConf = new HdfsConfiguration();
+      benchConf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 16);
+      FileSystem.setDefaultUri(benchConf, cluster.getURI());
+      NNThroughputBenchmark.runBenchmark(benchConf, new String[]{"-op", "all", "-nonSuperUser"});
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
   /**
    * This test runs {@link NNThroughputBenchmark} against a mini DFS cluster
    * with explicit -fs option.
