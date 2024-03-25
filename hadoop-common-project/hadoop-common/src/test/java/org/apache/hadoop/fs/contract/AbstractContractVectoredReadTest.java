@@ -341,7 +341,9 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
   }
 
   /**
-   * Test to validate EOF ranges. Default implementation fails with EOFException
+   * Test to validate EOF ranges.
+   * <p>
+   * Default implementation fails with EOFException
    * while reading the ranges. Some implementation like s3, checksum fs fail fast
    * as they already have the file length calculated.
    * The contract option {@link ContractOptions#VECTOR_IO_EARLY_EOF_CHECK} is used

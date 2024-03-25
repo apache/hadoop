@@ -277,15 +277,17 @@ public final class VectoredReadUtils {
   /**
    * Validate a list of ranges (including overlapping checks) and
    * return the sorted list.
-   * Two ranges overlapping when the start offset
+   * <p>
+   * Two ranges overlap when the start offset
    * of second is less than the end offset of first.
    * End offset is calculated as start offset + length.
    * @param input input list
-   * @param fileLength file lenth if known
+   * @param fileLength file length if known
    * @return a new sorted list.
    * @throws IllegalArgumentException if there are overlapping ranges or
-   * a range element is invalid
+   * a range element is invalid (other than with negative offset)
    * @throws EOFException if the last range extends beyond the end of the file supplied
+   *                          or a range offset is negative
    */
   public static List<? extends FileRange> validateAndSortRanges(
       final List<? extends FileRange> input,
