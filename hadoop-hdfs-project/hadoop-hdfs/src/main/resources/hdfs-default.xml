@@ -3910,7 +3910,7 @@
 
 <property>
   <name>dfs.client.ec.failed.write.block.tolerated</name>
-  <value></value>
+  <value>2147483647</value>
   <description>
     Provide extra tolerated failed streamer for ec policy to prevent
     the potential data loss. For example, if we use RS-6-3-1024K ec policy.
