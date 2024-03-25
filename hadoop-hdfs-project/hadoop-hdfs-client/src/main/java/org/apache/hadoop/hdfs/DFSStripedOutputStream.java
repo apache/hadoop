@@ -75,8 +75,6 @@ import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Write.ECRedunency.DFS_CLIENT_EC_FAILED_WRITE_BLOCK_TOLERATED;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Write.ECRedunency.DFS_CLIENT_EC_FAILED_WRITE_BLOCK_TOLERATED_DEFAILT;
-import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Write.RECOVER_LEASE_ON_CLOSE_EXCEPTION_DEFAULT;
-import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Write.RECOVER_LEASE_ON_CLOSE_EXCEPTION_KEY;
 
 /**
  * This class supports writing files in striped layout and erasure coded format.
