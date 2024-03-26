@@ -823,51 +823,42 @@ public class TestS3AAWSCredentialsProvider extends AbstractS3ATestBase {
   }
 
   /**
+   * Validates that the argument provided is invalid by intercepting the expected
+   * Exception.
+   *
+   * @param propKey The property key to validate.
+   * @throws Exception If any error occurs.
+   */
+  private static void expectInvalidArgument(final String propKey) throws Exception {
+    final Configuration configuration = new Configuration(false);
+    configuration.set("custom_key", propKey);
+
+    intercept(
+        IllegalArgumentException.class,
+        STRING_COLLECTION_SPLIT_EQUALS_INVALID_ARG,
+        () -> S3AUtils.getTrimmedStringCollectionSplitByEquals(
+            configuration, "custom_key"));
+  }
+
+  /**
    * Tests for the string utility that will be used by S3A credentials provider.
    */
   @Test
   public void testStringCollectionSplitByEqualsFailure() throws Exception {
-    final Configuration configuration = new Configuration(false);
-    configuration.set("custom_key", " = element.abc.val1");
-
-    intercept(
-        IllegalArgumentException.class,
-        STRING_COLLECTION_SPLIT_EQUALS_INVALID_ARG,
-        () -> S3AUtils.getTrimmedStringCollectionSplitByEquals(
-            configuration, "custom_key"));
-
-    configuration.set("custom_key", "element.abc.key1=");
-
-    intercept(
-        IllegalArgumentException.class,
-        STRING_COLLECTION_SPLIT_EQUALS_INVALID_ARG,
-        () -> S3AUtils.getTrimmedStringCollectionSplitByEquals(
-            configuration, "custom_key"));
-
-    configuration.set("custom_key", "=");
-
-    intercept(
-        IllegalArgumentException.class,
-        STRING_COLLECTION_SPLIT_EQUALS_INVALID_ARG,
-        () -> S3AUtils.getTrimmedStringCollectionSplitByEquals(
-            configuration, "custom_key"));
-
-    configuration.set("custom_key", "== = =    =");
-
-    intercept(
-        IllegalArgumentException.class,
-        STRING_COLLECTION_SPLIT_EQUALS_INVALID_ARG,
-        () -> S3AUtils.getTrimmedStringCollectionSplitByEquals(
-            configuration, "custom_key"));
-
-    configuration.set("custom_key", ", = ");
-
-    intercept(
-        IllegalArgumentException.class,
-        STRING_COLLECTION_SPLIT_EQUALS_INVALID_ARG,
-        () -> S3AUtils.getTrimmedStringCollectionSplitByEquals(
-            configuration, "custom_key"));
-
+    expectInvalidArgument(" = element.abc.val1");
+    expectInvalidArgument("=element.abc.val1");
+    expectInvalidArgument("= element.abc.val1");
+    expectInvalidArgument(" =element.abc.val1");
+    expectInvalidArgument("element.abc.key1=");
+    expectInvalidArgument("element.abc.key1= ");
+    expectInvalidArgument("element.abc.key1 =");
+    expectInvalidArgument("element.abc.key1 = ");
+    expectInvalidArgument("=");
+    expectInvalidArgument(" =");
+    expectInvalidArgument("= ");
+    expectInvalidArgument(" = ");
+    expectInvalidArgument("== = =    =");
+    expectInvalidArgument(", = ");
   }
 
   /**
