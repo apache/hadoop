@@ -45,7 +45,6 @@ import static org.apache.hadoop.fs.azurebfs.commit.AbfsCommitTestHelper.prepareT
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ABFS_IO_RATE_LIMIT;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.RATE_LIMIT_DEFAULT;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_LIST_FILES;
-import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_RENAME;
 import static org.junit.Assume.assumeTrue;
 
 /**
@@ -190,9 +189,9 @@ public class ITestAbfsManifestStoreOperations extends AbstractManifestCommitterT
   public void testCapacityLimiting() throws Throwable {
     describe("Verifying Rate Limiting");
     final Configuration conf = getConfiguration();
-    // get the capacity per second
+    // get the capacity per second, either the default or any override.
     final int size = conf.getInt(FS_AZURE_ABFS_IO_RATE_LIMIT, RATE_LIMIT_DEFAULT);
-    final int capacity = (int)(size/4.0);
+    final int capacity = (int) (size/4.0);
     final IORateLimiter limiter = createManifestStoreOperations();
 
     // this operation is amplified; if a different name is used then

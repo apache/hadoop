@@ -51,7 +51,7 @@ public class StubStoreOperations extends ManifestStoreOperations {
   @Override
   public boolean rmdir(final Path path, final int capacity)
       throws IOException {
-    return true;
+    return delete(path, true);
   }
 
   @Override

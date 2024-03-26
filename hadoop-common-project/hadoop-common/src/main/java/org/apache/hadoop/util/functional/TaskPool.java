@@ -19,6 +19,7 @@
 package org.apache.hadoop.util.functional;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -40,6 +41,7 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.statistics.IOStatisticsContext;
 
 import static java.util.Objects.requireNonNull;
+import static org.apache.hadoop.util.functional.FutureIO.awaitAllFutures;
 import static org.apache.hadoop.util.functional.RemoteIterators.remoteIteratorFromIterable;
 
 /**
@@ -466,7 +468,7 @@ public final class TaskPool {
         taskFailed.set(true);
       }
       // let the above tasks complete (or abort)
-      waitFor(futures, sleepInterval);
+      awaitAllFutures(futures, Duration.ofMillis(sleepInterval));
       int futureCount = futures.size();
       futures.clear();
 
@@ -498,7 +500,7 @@ public final class TaskPool {
         }
 
         // let the revert tasks complete
-        waitFor(futures, sleepInterval);
+        awaitAllFutures(futures, Duration.ofMillis(sleepInterval));
       }
 
       // give priority to execution exceptions over
@@ -535,40 +537,6 @@ public final class TaskPool {
     private void resetStatisticsContext() {
       if (ioStatisticsContext != null) {
         IOStatisticsContext.setThreadIOStatisticsContext(null);
-      }
-    }
-  }
-
-  /**
-   * Wait for all the futures to complete; there's a small sleep between
-   * each iteration; enough to yield the CPU.
-   * @param futures futures.
-   * @param sleepInterval Interval in milliseconds to await completion.
-   */
-  @InterfaceAudience.Private
-  public static void waitFor(Collection<Future<?>> futures, int sleepInterval) {
-    int size = futures.size();
-    LOG.debug("Waiting for {} tasks to complete", size);
-    int oldNumFinished = 0;
-    while (true) {
-      int numFinished = (int) futures.stream().filter(Future::isDone).count();
-
-      if (oldNumFinished != numFinished) {
-        LOG.debug("Finished count -> {}/{}", numFinished, size);
-        oldNumFinished = numFinished;
-      }
-
-      if (numFinished == size) {
-        // all of the futures are done, stop looping
-        break;
-      } else {
-        try {
-          Thread.sleep(sleepInterval);
-        } catch (InterruptedException e) {
-          futures.forEach(future -> future.cancel(true));
-          Thread.currentThread().interrupt();
-          break;
-        }
       }
     }
   }

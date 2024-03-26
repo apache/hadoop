@@ -33,6 +33,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
@@ -43,19 +44,26 @@ import org.apache.hadoop.util.functional.CloseableTaskPoolSubmitter;
 
 import static org.apache.hadoop.fs.CommonPathCapabilities.ETAGS_AVAILABLE;
 import static org.apache.hadoop.fs.CommonPathCapabilities.ETAGS_PRESERVED_IN_RENAME;
+import static org.apache.hadoop.fs.azure.integration.AzureTestUtils.assumeScaleTestsEnabled;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ABFS_IO_RATE_LIMIT;
+import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConfig.createCloseableTaskSubmitter;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_DELETE_DIR_CAPACITY;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport.getEtag;
 import static org.apache.hadoop.util.functional.FutureIO.awaitAllFutures;
 import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
- * HADOOP-19093: real load test to generate rename failures.
- * This test is designed to overload the storage account so
- * will run up tangible costs as well as interfere with any
- * other use of the containers.
+ * HADOOP-19093: Scale test to attempt to generate rename failures.
+ * <p>
+ * This test is intended to overload the storage account.
+ * It has been unable to create this problem, even on a very throttled
+ * account.
+ * The test suite asserts that the number of failures is zero;
+ * if it ever fails it means that the rename operation did fail
+ * and that recovery was successful.
  */
-public class ILoadTestRenameRecovery extends AbstractAbfsIntegrationTest {
+public class ITestRenameRecovery extends AbstractAbfsIntegrationTest {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       AbfsManifestStoreOperations.class);
@@ -68,7 +76,7 @@ public class ILoadTestRenameRecovery extends AbstractAbfsIntegrationTest {
   /**
    * Number of threads to use.
    */
-  private final int threadCount = 100;
+  private static final int THREAD_COUNT = 100;
 
   /**
    * Number of renames to attempt per thread: {@value}.
@@ -116,14 +124,17 @@ public class ILoadTestRenameRecovery extends AbstractAbfsIntegrationTest {
    */
   private final AtomicLong rateLimitingTime = new AtomicLong(0);
 
-  public ILoadTestRenameRecovery() throws Exception {
+  public ITestRenameRecovery() throws Exception {
   }
 
   @Override
   public void setup() throws Exception {
-    getRawConfiguration()
-        .setInt(FS_AZURE_ABFS_IO_RATE_LIMIT, 0);
+    final Configuration conf = getRawConfiguration();
+    assumeScaleTestsEnabled(conf);
+    conf.setInt(FS_AZURE_ABFS_IO_RATE_LIMIT, 50_000);
+    conf.setInt(OPT_DELETE_DIR_CAPACITY, 0);
     super.setup();
+
     final AzureBlobFileSystem fs = getFileSystem();
     baseDir = new Path("/" + getMethodName());
     fs.mkdirs(baseDir);
@@ -135,7 +146,7 @@ public class ILoadTestRenameRecovery extends AbstractAbfsIntegrationTest {
         .isTrue();
     storeOperations = new AbfsManifestStoreOperations();
     storeOperations.bindToFileSystem(fs, baseDir);
-    submitter = createCloseableTaskSubmitter(threadCount, "ILoadTestRenameRecovery");
+    submitter = createCloseableTaskSubmitter(THREAD_COUNT, "ITestRenameRecovery");
   }
 
   @Override
@@ -152,11 +163,11 @@ public class ILoadTestRenameRecovery extends AbstractAbfsIntegrationTest {
   @Test
   public void testResilientRename() throws Throwable {
 
-    List<Future<?>> futures = new ArrayList<>(threadCount);
+    List<Future<?>> futures = new ArrayList<>(THREAD_COUNT);
     final AzureBlobFileSystem fs = getFileSystem();
 
     // for every worker, create a file and submit a rename worker
-    for (int i = 0; i < threadCount; i++) {
+    for (int i = 0; i < THREAD_COUNT; i++) {
 
       final int id = threadNumber.incrementAndGet();
       final Path source = new Path(baseDir, "source-" + id);
@@ -178,10 +189,12 @@ public class ILoadTestRenameRecovery extends AbstractAbfsIntegrationTest {
     if (failure.get() != null) {
       throw failure.get();
     }
+    final String stats = ioStatisticsToPrettyString(fs.getIOStatistics());
+    LOG.info("Store IO Statistics: {}", stats);
 
     Assertions.assertThat(renameRecoveries.get())
-        .describedAs("Number of recoveries")
-        .isGreaterThan(0);
+        .describedAs("Rename recovery took place; statistics %s", stats)
+        .isEqualTo(0);
   }
 
   /**
@@ -230,10 +243,8 @@ public class ILoadTestRenameRecovery extends AbstractAbfsIntegrationTest {
             .isEqualTo(etag);
       }
       // clean up the files.
-      // this is less efficient than a directory delete, but it helps
-      // generate load.
-      fs.delete(source, false);
-      fs.delete(dest, false);
+      storeOperations.deleteFile(source);
+      storeOperations.deleteFile(dest);
 
     } catch (Throwable e) {
       noteFailure(e);

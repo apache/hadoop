@@ -2234,7 +2234,6 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport, IORa
   @Override
   public Duration acquireIOCapacity(final String operation, final int requestedCapacity) {
 
-
     double multiplier;
     int lowCost = 1;
     int mediumCost = 10;
@@ -2248,7 +2247,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport, IORa
     default:
       multiplier = lowCost;
     }
-    final int capacity = (int)(requestedCapacity * multiplier);
+    final int capacity = (int) (requestedCapacity * multiplier);
     LOG.debug("Acquiring IO capacity {} for operation: {}; multiplier: {}; final capacity: {}",
         requestedCapacity, operation, multiplier, capacity);
     return rateLimiting.acquire(capacity);

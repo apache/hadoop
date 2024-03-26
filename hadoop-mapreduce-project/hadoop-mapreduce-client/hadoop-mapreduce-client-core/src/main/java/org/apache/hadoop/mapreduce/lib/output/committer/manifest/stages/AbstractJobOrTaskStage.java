@@ -454,17 +454,20 @@ public abstract class AbstractJobOrTaskStage<IN, OUT>
 
   /**
    * Delete a file at a path.
+   * <p>
+   * If it returns without an error: there is nothing at
+   * the end of the path.
    * @param path path
    * @param statistic statistic to update
-   * @return status or null
+   * @return outcome.
    * @throws IOException IO Failure.
    */
-  protected Boolean deleteFile(
+  protected boolean deleteFile(
       final Path path,
       final String statistic)
       throws IOException {
     return trackDuration(getIOStatistics(), statistic, () ->
-        operations.delete(path, false));
+        operations.deleteFile(path));
   }
 
   /**
@@ -945,7 +948,7 @@ public abstract class AbstractJobOrTaskStage<IN, OUT>
    */
   protected boolean deleteDir(
       final Path dir,
-      String statistic)
+      final String statistic)
       throws IOException {
     return trackDuration(getIOStatistics(), statistic, () ->
         operations.rmdir(dir, stageConfig.getDeleteDirCapacity()));
@@ -959,10 +962,10 @@ public abstract class AbstractJobOrTaskStage<IN, OUT>
    */
   protected IOException deleteDirSuppressingExceptions(
       final Path dir,
-      String statistic)
+      final String statistic)
       throws IOException {
     try {
-      deleteDir(dir, OP_DELETE_DIR);
+      deleteDir(dir, statistic);
       return null;
     } catch (IOException ex) {
       LOG.info("Error deleting {}: {}", dir, ex.toString());

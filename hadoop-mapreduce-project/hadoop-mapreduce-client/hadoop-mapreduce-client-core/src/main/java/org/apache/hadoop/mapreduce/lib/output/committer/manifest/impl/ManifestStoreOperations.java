@@ -100,12 +100,29 @@ public abstract class ManifestStoreOperations implements Closeable, IORateLimite
       throws IOException;
 
   /**
-   * Delete Directory to {@code FileSystem#delete(Path, true)}.
+   * Forward to {@code delete(Path, true)}
+   * unless overridden.
+   * <p>
+   * If it returns without an error: there is nothing at
+   * the end of the path.
+   * @param path path
+   * @return outcome
+   * @throws IOException failure.
+   */
+  public boolean deleteFile(Path path)
+      throws IOException {
+    return delete(path, true);
+  }
+
+  /**
+   * Acquire the delete capacity then call {@code FileSystem#delete(Path, true)}
+   * or equivalent.
+   * <p>
    * If it returns without an error: there is nothing at
    * the end of the path.
    * @param path path
    * @param capacity IO capacity to ask for.
-   * @return true if the path was deleted.
+   * @return outcome
    * @throws IOException failure.
    */
   public abstract boolean rmdir(Path path, int capacity)
@@ -317,8 +334,7 @@ public abstract class ManifestStoreOperations implements Closeable, IORateLimite
    */
   @Override
   public Duration acquireIOCapacity(final String operation, final int requestedCapacity) {
-    final Duration duration = rateLimiterSource().acquireIOCapacity(operation, requestedCapacity);
-    return duration;
+    return rateLimiterSource().acquireIOCapacity(operation, requestedCapacity);
   }
 
 }

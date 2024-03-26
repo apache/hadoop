@@ -31,6 +31,9 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -56,6 +59,9 @@ import org.apache.hadoop.fs.FSBuilder;
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 public final class FutureIO {
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(FutureIO.class);
 
   private FutureIO() {
   }
@@ -279,12 +285,42 @@ public final class FutureIO {
   }
 
   /**
-   * Wait for all the futures to complete; there's a small sleep between
-   * each iteration; enough to yield the CPU.
+   * Wait for all the futures to complete; the caller should pass down
+   * small sleep interval between each iteration; enough to yield the CPU.
    * @param futures futures.
-   * @param sleepInterval Interval to await completion.
+   * @param sleepInterval Interval in milliseconds to await completion.
    */
-  public static void awaitAllFutures(Collection<Future<?>> futures, Duration sleepInterval) {
-    TaskPool.waitFor(futures, (int)sleepInterval.toMillis());
+  public static void awaitAllFutures(final Collection<Future<?>> futures,
+      final Duration sleepInterval) {
+    int size = futures.size();
+    LOG.debug("Waiting for {} tasks to complete", size);
+    if (size == 0) {
+      // shortcut for empty list.
+      return;
+    }
+    int oldNumFinished = 0;
+    while (true) {
+      int numFinished = (int) futures.stream()
+          .filter(Future::isDone)
+          .count();
+
+      if (oldNumFinished != numFinished) {
+        LOG.debug("Finished count -> {}/{}", numFinished, size);
+        oldNumFinished = numFinished;
+      }
+
+      if (numFinished == size) {
+        // all of the futures are done, stop looping
+        break;
+      } else {
+        try {
+          Thread.sleep(sleepInterval.toMillis());
+        } catch (InterruptedException e) {
+          futures.forEach(future -> future.cancel(true));
+          Thread.currentThread().interrupt();
+          break;
+        }
+      }
+    }
   }
 }

@@ -113,6 +113,11 @@ public class ManifestStoreOperationsThroughFileSystem extends ManifestStoreOpera
     return fileSystem.isFile(path);
   }
 
+  /**
+   * Delete a path.
+   * The capacity to acquire is based on the recursive flag.
+   * {@inheritDoc}
+   */
   @Override
   public boolean delete(Path path, boolean recursive)
       throws IOException {
