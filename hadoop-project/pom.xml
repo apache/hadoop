@@ -80,6 +80,7 @@
     <slf4j.version>1.7.36</slf4j.version>
     <reload4j.version>1.2.22</reload4j.version>
     <log4j2.version>2.17.1</log4j2.version>
+    <log4j-extras.version>1.2.17</log4j-extras.version>
 
     <!-- com.google.re2j version -->
     <re2j.version>1.1</re2j.version>
