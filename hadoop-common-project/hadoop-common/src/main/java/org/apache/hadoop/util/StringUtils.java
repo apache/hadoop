@@ -40,6 +40,7 @@ import org.apache.commons.lang3.SystemUtils;
 import org.apache.commons.lang3.time.FastDateFormat;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.log4j.LogManager;
@@ -84,7 +85,9 @@ public class StringUtils {
    * {@link IllegalArgumentException} with error message starting with this string
    * if the argument provided is not valid representation of non-empty key-value
    * pairs.
+   * Value = {@value}
    */
+  @VisibleForTesting
   public static final String STRING_COLLECTION_SPLIT_EQUALS_INVALID_ARG =
       "Trimmed string split by equals does not correctly represent "
           + "non-empty key-value pairs.";
