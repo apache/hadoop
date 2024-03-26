@@ -3616,12 +3616,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     final FSPermissionChecker pc = getPermissionChecker();
     FSPermissionChecker.setOperationType(operationName);
     try {
-      readLock(FSNamesystemLockMode.FS);
+      readLock(FSNamesystemLockMode.GLOBAL);
       try {
         checkOperation(OperationCategory.READ);
         quotaUsage = FSDirStatAndListingOp.getQuotaUsage(dir, pc, src);
       } finally {
-        readUnlock(FSNamesystemLockMode.FS, operationName, getLockReportInfoSupplier(src));
+        readUnlock(FSNamesystemLockMode.GLOBAL, operationName, getLockReportInfoSupplier(src));
       }
     } catch (AccessControlException ace) {
       logAuditEvent(false, operationName, src);

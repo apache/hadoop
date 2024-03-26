@@ -561,13 +561,8 @@ class FSDirStatAndListingOp {
     if (usage != null) {
       return usage;
     } else {
-      fsd.getFSNamesystem().readLock(FSNamesystemLockMode.BM);
-      try {
-        //If quota isn't set, fall back to getContentSummary.
-        return getContentSummaryInt(fsd, pc, iip);
-      } finally {
-        fsd.getFSNamesystem().readUnlock(FSNamesystemLockMode.BM, "getQuotaUsage");
-      }
+      //If quota isn't set, fall back to getContentSummary.
+      return getContentSummaryInt(fsd, pc, iip);
     }
   }
 
