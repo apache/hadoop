@@ -217,7 +217,7 @@
     <jsonschema2pojo.version>1.0.2</jsonschema2pojo.version>
     <woodstox.version>5.4.0</woodstox.version>
     <nimbus-jose-jwt.version>9.31</nimbus-jose-jwt.version>
-    <nodejs.version>v12.22.1</nodejs.version>
+    <nodejs.version>v14.0.0</nodejs.version>
     <yarnpkg.version>v1.22.5</yarnpkg.version>
     <apache-ant.version>1.10.13</apache-ant.version>
     <jmh.version>1.20</jmh.version>
