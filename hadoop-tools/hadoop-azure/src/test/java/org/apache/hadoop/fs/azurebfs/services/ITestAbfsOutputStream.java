@@ -25,6 +25,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 
 import org.assertj.core.api.Assertions;
+import org.junit.Assume;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -161,6 +162,7 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
     AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(
         configuration);
     Path path = new Path("/testFile");
+    Assume.assumeFalse(fs.getAbfsStore().isAppendBlobKey(fs.makeQualified(path).toString()));
     AbfsOutputStream os = Mockito.spy(
         (AbfsOutputStream) fs.create(path).getWrappedStream());
     AbfsClient spiedClient = Mockito.spy(os.getClient());

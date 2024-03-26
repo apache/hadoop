@@ -24,6 +24,7 @@ import java.util.HashSet;
 
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.assertj.core.api.Assertions;
+import org.junit.Assume;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -71,6 +72,9 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
     AzureBlobFileSystem fs = getConfiguredFileSystem(MB_4, MB_4, true);
     AbfsClient client = fs.getAbfsStore().getClient();
     Path path = path("testPath" + getMethodName());
+    Assume.assumeFalse("Test involve appending to different offsets and"
+        + " positions which is not allowed in append blobs",
+        fs.getAbfsStore().isAppendBlobKey(fs.makeQualified(path).toString()));
     try (FSDataOutputStream out = fs.create(path)) {
       byte[] data = generateRandomBytes(MB_4);
 

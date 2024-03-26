@@ -21,11 +21,13 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.junit.Test;
 
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -171,20 +173,5 @@ public class ITestAzureBlobFileSystemFileStatus extends
     testPathStr = testPathStr.substring(0, testPathStr.length() - 1);
     validateStatus(fs, new Path(testPathStr), true);
 
-  }
-
-  @Test
-  public void demo() throws  Exception {
-    Configuration conf = new Configuration(getRawConfiguration());
-    String pid = conf.get(FS_AZURE_TEST_APP_SERVICE_PRINCIPAL_OBJECT_ID);
-    conf.set(FS_AZURE_OVERRIDE_OWNER_SP, pid);
-    conf.set(FS_AZURE_OVERRIDE_OWNER_SP_LIST, "*");
-    AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(conf);
-//    String pid = getConfiguration().get(FS_AZURE_TEST_APP_SERVICE_PRINCIPAL_OBJECT_ID);
-//    getConfiguration().set(FS_AZURE_OVERRIDE_OWNER_SP, pid);
-//    getConfiguration().set(FS_AZURE_OVERRIDE_OWNER_SP_LIST, "*");
-    fs.create(new Path("/hello"));
-    FileStatus status = fs.getFileStatus(new Path("/hello"));
-    String owner = status.getOwner();
   }
 }
