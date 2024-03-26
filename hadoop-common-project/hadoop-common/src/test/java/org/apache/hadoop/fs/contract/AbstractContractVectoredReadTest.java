@@ -502,7 +502,7 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
         // If the read failed, this doesn't get invoked.
         pool.putBuffer(buffer);
       }),
-        VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+          VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS, TimeUnit.SECONDS);
     } finally {
       // countdown to notify main thread that processing has been done.
       countDownLatch.countDown();

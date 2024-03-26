@@ -669,7 +669,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     String format = String.format("Vector read to %s buffer taking %s was %s faster than"
             + " readFully() (%s); ratio=%,.2fX",
         direct ? "direct" : "heap",
-        vectorDuration, diff, readFullyDuration , ratio);
+        vectorDuration, diff, readFullyDuration, ratio);
     LOG.info(format);
     LOG.info("Bulk read IOStatistics={}", ioStatisticsToPrettyString(readIOStats));
     LOG.info("Vector IOStatistics={}", ioStatisticsToPrettyString(vectorIOStats));
