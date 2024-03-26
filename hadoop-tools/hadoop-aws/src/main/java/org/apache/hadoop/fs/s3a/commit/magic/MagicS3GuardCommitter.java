@@ -287,7 +287,7 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
     // get all the pending commit metadata associated with the taskAttemptId.
     // This will also remove the entry from the map.
     List<SinglePendingCommit> pendingCommits =
-        InMemoryMagicCommitTracker.getTaskAttemptIdToMpuMetdadata().remove(taskAttemptId);
+        InMemoryMagicCommitTracker.getTaskAttemptIdToMpuMetadata().remove(taskAttemptId);
     // get all the path/files associated with the taskAttemptId.
     // This will also remove the entry from the map.
     List<Path> pathsAssociatedWithTaskAttemptId =

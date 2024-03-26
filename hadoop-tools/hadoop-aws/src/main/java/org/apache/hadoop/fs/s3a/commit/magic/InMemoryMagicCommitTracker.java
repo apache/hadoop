@@ -49,8 +49,7 @@ public class InMemoryMagicCommitTracker extends MagicCommitTracker {
    * Map to store taskAttemptId, and it's corresponding list of pending commit data.
    * The entries in the Map gets removed when a task commits or aborts.
    */
-  private final static Map<String, List<SinglePendingCommit>>
-      TASK_ATTEMPT_ID_TO_MPU_METDADATA = new ConcurrentHashMap<>();
+  private final static Map<String, List<SinglePendingCommit>> TASK_ATTEMPT_ID_TO_MPU_METADATA = new ConcurrentHashMap<>();
 
   /**
    * Map to store path of the file, and it's corresponding size.
@@ -101,7 +100,7 @@ public class InMemoryMagicCommitTracker extends MagicCommitTracker {
     String taskAttemptId = extractTaskAttemptIdFromPath(getPath());
 
     // store the commit data with taskAttemptId as the key
-    TASK_ATTEMPT_ID_TO_MPU_METDADATA.computeIfAbsent(taskAttemptId,
+    TASK_ATTEMPT_ID_TO_MPU_METADATA.computeIfAbsent(taskAttemptId,
         k -> Collections.synchronizedList(new ArrayList<>())).add(commitData);
 
     // store the byteswritten(length) for the corresponding file
@@ -126,15 +125,15 @@ public class InMemoryMagicCommitTracker extends MagicCommitTracker {
   public String toString() {
     final StringBuilder sb = new StringBuilder(
         "InMemoryMagicCommitTracker{");
-    sb.append(", Number of taskAttempts=").append(TASK_ATTEMPT_ID_TO_MPU_METDADATA.size());
+    sb.append(", Number of taskAttempts=").append(TASK_ATTEMPT_ID_TO_MPU_METADATA.size());
     sb.append(", Number of files=").append(PATH_TO_BYTES_WRITTEN.size());
     sb.append('}');
     return sb.toString();
   }
 
 
-  public static Map<String, List<SinglePendingCommit>> getTaskAttemptIdToMpuMetdadata() {
-    return TASK_ATTEMPT_ID_TO_MPU_METDADATA;
+  public static Map<String, List<SinglePendingCommit>> getTaskAttemptIdToMpuMetadata() {
+    return TASK_ATTEMPT_ID_TO_MPU_METADATA;
   }
 
   public static Map<Path, Long> getPathToBytesWritten() {
