@@ -2010,6 +2010,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   private void metaSave(PrintWriter out) {
+    // TODO: Change to hasReadLock(FSNamesystemLockMode.BM)
     assert hasReadLock(FSNamesystemLockMode.GLOBAL);
     // Normally FSReadLock is needed here, but I think thread-safe is unnecessary here.
     long totalInodes = this.dir.totalInodes();
@@ -5119,12 +5120,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     checkSuperuserPrivilege(operationName);
     checkOperation(OperationCategory.UNCHECKED);
     cpLock();  // Block if a checkpointing is in progress on standby.
-    writeLock(FSNamesystemLockMode.GLOBAL);
+    writeLock(FSNamesystemLockMode.FS);
     try {
       checkOperation(OperationCategory.UNCHECKED);
       getFSImage().finalizeUpgrade(this.isHaEnabled() && inActiveState());
     } finally {
-      writeUnlock(FSNamesystemLockMode.GLOBAL, operationName, getLockReportInfoSupplier(null));
+      writeUnlock(FSNamesystemLockMode.FS, operationName, getLockReportInfoSupplier(null));
       cpUnlock();
     }
     logAuditEvent(true, operationName, null);
