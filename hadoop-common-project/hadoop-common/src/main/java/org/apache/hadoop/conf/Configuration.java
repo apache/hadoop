@@ -768,7 +768,9 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       BiConsumer<String, String> propertiesAddListener,
       Consumer<String> propertiesRemoveListener
   ) {
-    this.properties = null;
+    synchronized (properties) {
+      this.properties = null;
+    }
     this.propertiesAddListener = propertiesAddListener;
     this.propertiesRemoveListener = propertiesRemoveListener;
   }
