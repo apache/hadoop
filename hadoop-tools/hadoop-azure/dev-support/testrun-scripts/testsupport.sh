@@ -68,6 +68,12 @@ ENDOFFILE
   echo "$combination"
   echo "$separatorbar1"
 
+  # First include the account specific configurations.
+  xmlstarlet ed -P -L -s /configuration -t elem -n include -v "" $combtestfile
+  xmlstarlet ed -P -L -i /configuration/include -t attr -n href -v "$accountConfigFile" $combtestfile
+  xmlstarlet ed -P -L -i /configuration/include -t attr -n xmlns -v "http://www.w3.org/2001/XInclude" $combtestfile
+
+  # Override the combination specific configurations.
   for ((i = 0; i < propertiessize; i++)); do
     key=${PROPERTIES[$i]}
     val=${VALUES[$i]}
@@ -75,10 +81,6 @@ ENDOFFILE
     changeconf "$key" "$val"
   done
   formatxml "$combtestfile"
-  xmlstarlet ed -P -L -s /configuration -t elem -n include -v "" $combtestfile
-  xmlstarlet ed -P -L -i /configuration/include -t attr -n href -v "$accountConfigFile" $combtestfile
-  xmlstarlet ed -P -L -i /configuration/include -t attr -n xmlns -v "http://www.w3.org/2001/XInclude" $combtestfile
-  formatxml $combtestfile
   echo ' '
   echo "Activated [$combtestfile] - for account: $accountName for combination $combination"
   testlogfilename="$testOutputLogFolder/Test-Logs-$combination.txt"
