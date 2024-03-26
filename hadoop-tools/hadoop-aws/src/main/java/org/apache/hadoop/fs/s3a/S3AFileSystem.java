@@ -117,6 +117,7 @@ import org.apache.hadoop.fs.s3a.audit.AuditSpanS3A;
 import org.apache.hadoop.fs.s3a.auth.SignerManager;
 import org.apache.hadoop.fs.s3a.auth.delegation.DelegationOperations;
 import org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenProvider;
+import org.apache.hadoop.fs.s3a.commit.magic.InMemoryMagicCommitTracker;
 import org.apache.hadoop.fs.s3a.impl.AWSCannedACL;
 import org.apache.hadoop.fs.s3a.impl.AWSHeaders;
 import org.apache.hadoop.fs.s3a.impl.BulkDeleteRetryHandler;
@@ -231,6 +232,8 @@ import static org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens.Token
 import static org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens.hasDelegationTokenBinding;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.FS_S3A_COMMITTER_ABORT_PENDING_UPLOADS;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.FS_S3A_COMMITTER_STAGING_ABORT_PENDING_UPLOADS;
+import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC_COMMITTER_PENDING_OBJECT_ETAG_NAME;
+import static org.apache.hadoop.fs.s3a.commit.magic.MagicCommitTrackerUtils.isTrackMagicCommitsInMemoryEnabled;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
 import static org.apache.hadoop.fs.s3a.impl.CreateFileBuilder.OPTIONS_CREATE_FILE_NO_OVERWRITE;
 import static org.apache.hadoop.fs.s3a.impl.CreateFileBuilder.OPTIONS_CREATE_FILE_OVERWRITE;
@@ -3894,6 +3897,21 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @Retries.RetryTranslated
   public FileStatus getFileStatus(final Path f) throws IOException {
     Path path = qualify(f);
+    if (isTrackMagicCommitsInMemoryEnabled(getConf()) && isMagicCommitPath(path)) {
+      // Some downstream apps might call getFileStatus for a magic path to get the file size.
+      // when commit data is stored in memory construct the dummy S3AFileStatus with correct
+      // file size fetched from the memory.
+      if (InMemoryMagicCommitTracker.getPathToBytesWritten().containsKey(path)) {
+        long len = InMemoryMagicCommitTracker.getPathToBytesWritten().get(path);
+        return new S3AFileStatus(len,
+            0L,
+            path,
+            getDefaultBlockSize(path),
+            username,
+            MAGIC_COMMITTER_PENDING_OBJECT_ETAG_NAME,
+            null);
+      }
+    }
     return trackDurationAndSpan(
         INVOCATION_GET_FILE_STATUS, path, () ->
             innerGetFileStatus(path, false, StatusProbeEnum.ALL));
