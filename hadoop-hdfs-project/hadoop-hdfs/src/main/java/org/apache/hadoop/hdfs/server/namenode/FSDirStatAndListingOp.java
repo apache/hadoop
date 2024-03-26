@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
-import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.apache.hadoop.util.Preconditions;
 
 import org.apache.hadoop.fs.ContentSummary;
