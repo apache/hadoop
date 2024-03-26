@@ -1339,7 +1339,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   
   @Override
   public void startSecretManagerIfNecessary() {
-    assert hasWriteLock() : "Starting secret manager needs write lock";
+    assert hasWriteLock(FSNamesystemLockMode.BM) : "Starting secret manager needs write lock";
     boolean shouldRun = shouldUseDelegationTokens() &&
       !isInSafeMode() && getEditLog().isOpenForWrite();
     boolean running = dtSecretManager.isRunning();
@@ -1359,7 +1359,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   void startCommonServices(Configuration conf, HAContext haContext) throws IOException {
     this.registerMBean(); // register the MBean for the FSNamesystemState
-    writeLock();
+    writeLock(FSNamesystemLockMode.GLOBAL);
     this.haContext = haContext;
     try {
       nnResourceChecker = new NameNodeResourceChecker(conf);
@@ -1372,7 +1372,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           completeBlocksTotal);
       blockManager.activate(conf, completeBlocksTotal);
     } finally {
-      writeUnlock("startCommonServices");
+      writeUnlock(FSNamesystemLockMode.GLOBAL, "startCommonServices");
     }
     
     registerMXBean();
@@ -1411,7 +1411,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   void startActiveServices() throws IOException {
     startingActiveService = true;
     LOG.info("Starting services required for active state");
-    writeLock();
+    writeLock(FSNamesystemLockMode.GLOBAL);
     try {
       FSEditLog editLog = getFSImage().getEditLog();
       
@@ -1505,7 +1505,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     } finally {
       startingActiveService = false;
       blockManager.checkSafeMode();
-      writeUnlock("startActiveServices");
+      writeUnlock(FSNamesystemLockMode.GLOBAL, "startActiveServices");
     }
   }
 
@@ -5252,7 +5252,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @throws IOException
    */
   void enterSafeMode(boolean resourcesLow) throws IOException {
-    writeLock();
+    writeLock(FSNamesystemLockMode.GLOBAL);
     try {
       // Stop the secret manager, since rolling the master key would
       // try to write to the edit log
@@ -5271,7 +5271,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       NameNode.stateChangeLog.info("STATE* Safe mode is ON.\n" +
           getSafeModeTip());
     } finally {
-      writeUnlock("enterSafeMode", getLockReportInfoSupplier(null));
+      writeUnlock(FSNamesystemLockMode.GLOBAL,
+          "enterSafeMode", getLockReportInfoSupplier(null));
     }
   }
 
@@ -5280,7 +5281,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @param force true if to leave safe mode forcefully with -forceExit option
    */
   void leaveSafeMode(boolean force) {
-    writeLock();
+    writeLock(FSNamesystemLockMode.GLOBAL);
     try {
       if (!isInSafeMode()) {
         NameNode.stateChangeLog.info("STATE* Safe mode is already OFF"); 
@@ -5291,7 +5292,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         startSecretManagerIfNecessary();
       }
     } finally {
-      writeUnlock("leaveSafeMode", getLockReportInfoSupplier(null));
+      writeUnlock(FSNamesystemLockMode.GLOBAL,
+          "leaveSafeMode", getLockReportInfoSupplier(null));
     }
   }
 
@@ -8813,8 +8815,15 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   @Override
   public synchronized void checkAndProvisionSnapshotTrashRoots() {
+    assert hasWriteLock(FSNamesystemLockMode.BM);
     if (isSnapshotTrashRootEnabled && (haEnabled && inActiveState()
         || !haEnabled) && !blockManager.isInSafeMode()) {
+      boolean releaseFSLock = false;
+      if (!hasWriteLock(FSNamesystemLockMode.GLOBAL)) {
+        writeUnlock(FSNamesystemLockMode.BM, "CheckAndProvisionSnapshotTrashRoots");
+        writeLock(FSNamesystemLockMode.GLOBAL);
+        releaseFSLock = true;
+      }
       SnapshottableDirectoryStatus dirStatus = null;
       try {
         SnapshottableDirectoryStatus[] dirStatusList =
@@ -8846,6 +8855,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         } else {
           LOG.error("Could not provision Trash directory for existing "
               + "snapshottable directory {}", dirStatus, e);
+        }
+      } finally {
+        if (releaseFSLock) {
+          writeUnlock(FSNamesystemLockMode.GLOBAL, "checkAndProvisionSnapshotTrashRoots");
+          writeLock(FSNamesystemLockMode.BM);
         }
       }
     }
