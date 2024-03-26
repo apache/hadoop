@@ -145,7 +145,7 @@ public class ProvidedStorageMap {
 
   private void processProvidedStorageReport()
       throws IOException {
-    assert lock.hasWriteLock() : "Not holding write lock";
+    assert lock.hasWriteLock(FSNamesystemLockMode.GLOBAL) : "Not holding write lock";
     if (providedStorageInfo.getBlockReportCount() == 0
         || providedDescriptor.activeProvidedDatanodes() == 0) {
       LOG.info("Calling process first blk report from storage: "
