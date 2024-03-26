@@ -3947,7 +3947,7 @@ public class BlockManager implements BlockStatsMXBean {
    * extra or low redundancy. Place it into the respective queue.
    */
   public void processMisReplicatedBlocks() {
-    assert namesystem.hasWriteLock();
+    assert namesystem.hasWriteLock(FSNamesystemLockMode.BM);
     stopReconstructionInitializer();
     neededReconstruction.clear();
     reconstructionQueuesInitializer = new Daemon() {
