@@ -6148,7 +6148,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   void releaseBackupNode(NamenodeRegistration registration)
     throws IOException {
     checkOperation(OperationCategory.WRITE);
-    writeLock(FSNamesystemLockMode.GLOBAL);
+    writeLock(FSNamesystemLockMode.FS);
     try {
       checkOperation(OperationCategory.WRITE);
       if(getNNStorage().getNamespaceID()
@@ -6160,7 +6160,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             " node namespaceID = " + registration.getNamespaceID());
       getEditLog().releaseBackupStream(registration);
     } finally {
-      writeUnlock(FSNamesystemLockMode.GLOBAL, "releaseBackupNode");
+      writeUnlock(FSNamesystemLockMode.FS, "releaseBackupNode");
     }
   }
 
