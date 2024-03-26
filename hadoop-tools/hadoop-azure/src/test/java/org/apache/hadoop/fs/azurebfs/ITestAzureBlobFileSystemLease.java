@@ -63,7 +63,7 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
 
   public ITestAzureBlobFileSystemLease() throws Exception {
     super();
-
+    assumeValidTestConfigPresent(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT);
     this.isHNSEnabled = getConfiguration()
         .getBoolean(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false);
   }

@@ -26,6 +26,7 @@ import java.util.UUID;
 import java.util.concurrent.Callable;
 
 import org.junit.After;
+import org.junit.Assume;
 import org.junit.Before;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -263,26 +264,28 @@ public abstract class AbstractAbfsIntegrationTest extends
   }
 
   public void loadConfiguredFileSystem() throws Exception {
-      // disable auto-creation of filesystem
-      abfsConfig.setBoolean(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION,
+    // disable auto-creation of filesystem
+    abfsConfig.setBoolean(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION,
           false);
 
-      // AbstractAbfsIntegrationTest always uses a new instance of FileSystem,
-      // need to disable that and force filesystem provided in test configs.
-      String[] authorityParts =
-          (new URI(rawConfig.get(FS_AZURE_CONTRACT_TEST_URI))).getRawAuthority().split(
-        AbfsHttpConstants.AZURE_DISTRIBUTED_FILE_SYSTEM_AUTHORITY_DELIMITER, 2);
-      this.fileSystemName = authorityParts[0];
+    // AbstractAbfsIntegrationTest always uses a new instance of FileSystem,
+    // need to disable that and force filesystem provided in test configs.
+    assumeValidTestConfigPresent(FS_AZURE_CONTRACT_TEST_URI);
 
-      // Reset URL with configured filesystem
-      final String abfsUrl = this.getFileSystemName() + "@" + this.getAccountName();
-      URI defaultUri = null;
+    String[] authorityParts =
+        (new URI(rawConfig.get(FS_AZURE_CONTRACT_TEST_URI))).getRawAuthority().split(
+      AbfsHttpConstants.AZURE_DISTRIBUTED_FILE_SYSTEM_AUTHORITY_DELIMITER, 2);
+    this.fileSystemName = authorityParts[0];
 
-      defaultUri = new URI(abfsScheme, abfsUrl, null, null, null);
+    // Reset URL with configured filesystem
+    final String abfsUrl = this.getFileSystemName() + "@" + this.getAccountName();
+    URI defaultUri = null;
 
-      this.testUrl = defaultUri.toString();
-      abfsConfig.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY,
-          defaultUri.toString());
+    defaultUri = new URI(abfsScheme, abfsUrl, null, null, null);
+
+    this.testUrl = defaultUri.toString();
+    abfsConfig.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY,
+        defaultUri.toString());
 
     useConfiguredFileSystem = true;
   }
@@ -531,5 +534,10 @@ public abstract class AbstractAbfsIntegrationTest extends
     assertEquals("Mismatch in " + statistic.getStatName(), expectedValue,
         (long) metricMap.get(statistic.getStatName()));
     return expectedValue;
+  }
+
+  protected void assumeValidTestConfigPresent(final String key) {
+    String configuredValue = getConfiguration().get(key);
+    Assume.assumeTrue(configuredValue != null && !configuredValue.isEmpty());
   }
 }

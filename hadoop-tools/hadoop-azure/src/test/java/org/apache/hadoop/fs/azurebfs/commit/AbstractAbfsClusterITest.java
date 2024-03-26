@@ -33,7 +33,6 @@ import org.apache.hadoop.fs.azurebfs.contract.ABFSContractTestBinding;
 import org.apache.hadoop.fs.azurebfs.contract.AbfsFileSystemContract;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.AbstractManifestCommitterTest;
 import org.apache.hadoop.mapreduce.v2.MiniMRYarnCluster;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
@@ -41,6 +40,9 @@ import org.apache.hadoop.util.DurationInfo;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.azure.integration.AzureTestUtils.assumeScaleTestsEnabled;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_OVERRIDE_OWNER_SP;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_OVERRIDE_OWNER_SP_LIST;
+import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_APP_SERVICE_PRINCIPAL_OBJECT_ID;
 import static org.apache.hadoop.io.IOUtils.closeStream;
 
 /**
@@ -226,6 +228,13 @@ public abstract class AbstractAbfsClusterITest extends
   protected JobConf newJobConf() throws IOException {
     JobConf jobConf = new JobConf(getYarn().getConfig());
     jobConf.addResource(getConfiguration());
+
+    String pid = jobConf.get(FS_AZURE_TEST_APP_SERVICE_PRINCIPAL_OBJECT_ID);
+    jobConf.set(FS_AZURE_OVERRIDE_OWNER_SP, pid);
+    jobConf.set(FS_AZURE_OVERRIDE_OWNER_SP_LIST, "*");
+    // Disabling cache to make sure identity transformation takes place.
+    jobConf.setBoolean("fs.abfss.impl.disable.cache", true);
+
     applyCustomConfigOptions(jobConf);
     return jobConf;
   }

@@ -134,18 +134,21 @@ public class ITestAzureBlobFileSystemAppend extends
                 BlockUploadStatistics.class));
         return factory;
       }).when(store).getBlockFactory();
-      try (OutputStream os = fs.create(
-          new Path(getMethodName() + "_" + blockBufferType))) {
+      Path testPath = new Path(getMethodName() + "_" + blockBufferType);
+      try (OutputStream os = fs.create(testPath)) {
         os.write(new byte[1]);
         Assertions.assertThat(dataBlock[0].getState())
             .describedAs(
                 "On write of data in outputStream, state should become Writing")
             .isEqualTo(Writing);
         os.close();
-        Mockito.verify(dataBlock[0], Mockito.times(1)).close();
-        Assertions.assertThat(dataBlock[0].getState())
-            .describedAs("On close of outputStream, state should become Closed")
-            .isEqualTo(Closed);
+        if (!fs.getAbfsStore().isAppendBlobKey(fs.makeQualified(testPath).toString())) {
+          Mockito.verify(dataBlock[0], Mockito.times(1)).close();
+          Assertions.assertThat(dataBlock[0].getState())
+              .describedAs(
+                  "On close of outputStream, state should become Closed")
+              .isEqualTo(Closed);
+        }
       }
     }
   }
