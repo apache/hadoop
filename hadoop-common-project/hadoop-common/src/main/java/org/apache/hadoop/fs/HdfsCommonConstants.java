@@ -16,20 +16,27 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop;
+package org.apache.hadoop.fs;
 
 import org.apache.hadoop.io.Text;
 
 /**
  * This class contains constants for configuration keys and default values.
  */
-public final class Constants {
+public final class HdfsCommonConstants {
 
+  /**
+   * HDFS delegation kind: {@value}
+   */
   public static final Text HDFS_DELEGATION_KIND =
       new Text("HDFS_DELEGATION_TOKEN");
+
+  /**
+   * DFS admin configuration: {@value}
+   */
   public static final String DFS_ADMIN = "dfs.cluster.administrators";
 
-  private Constants() {
+  private HdfsCommonConstants() {
   }
 
 }

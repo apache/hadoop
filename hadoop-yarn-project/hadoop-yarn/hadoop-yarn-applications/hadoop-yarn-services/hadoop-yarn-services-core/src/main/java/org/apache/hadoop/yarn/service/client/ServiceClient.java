@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.service.client;
 
-import org.apache.hadoop.Constants;
 import org.apache.hadoop.classification.VisibleForTesting;
 
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
@@ -32,6 +31,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.HdfsCommonConstants;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -1707,12 +1707,12 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
         YarnConfiguration.YARN_ADMIN_ACL,
         YarnConfiguration.DEFAULT_YARN_ADMIN_ACL));
     AccessControlList dfsAdminAcl = new AccessControlList(
-        getConfig().get(Constants.DFS_ADMIN, " "));
+        getConfig().get(HdfsCommonConstants.DFS_ADMIN, " "));
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     if (!yarnAdminAcl.isUserAllowed(ugi) && !dfsAdminAcl.isUserAllowed(ugi)) {
       LOG.error("User must be on the {} or {} list to have permission to " +
           "upload AM dependency tarball", YarnConfiguration.YARN_ADMIN_ACL,
-          Constants.DFS_ADMIN);
+          HdfsCommonConstants.DFS_ADMIN);
       return false;
     }
 

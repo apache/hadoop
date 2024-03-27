@@ -18,12 +18,12 @@
 
 package org.apache.hadoop.yarn.service;
 
-import org.apache.hadoop.Constants;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Options;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.HdfsCommonConstants;
 import org.apache.hadoop.fs.Path;
 
 import org.apache.hadoop.io.DataOutputBuffer;
@@ -230,7 +230,7 @@ public class ServiceMaster extends CompositeService {
     while (iter.hasNext()) {
       Token<? extends TokenIdentifier> token = iter.next();
       if (token.getKind().equals(
-          Constants.HDFS_DELEGATION_KIND)) {
+          HdfsCommonConstants.HDFS_DELEGATION_KIND)) {
         LOG.info("Remove HDFS delegation token {}.", token);
         iter.remove();
       }
