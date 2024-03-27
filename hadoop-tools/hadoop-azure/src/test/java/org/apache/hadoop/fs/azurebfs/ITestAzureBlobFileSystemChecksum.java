@@ -24,7 +24,6 @@ import java.util.HashSet;
 
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.assertj.core.api.Assertions;
-import org.junit.Assume;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -72,17 +71,14 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
     AzureBlobFileSystem fs = getConfiguredFileSystem(MB_4, MB_4, true);
     AbfsClient client = fs.getAbfsStore().getClient();
     Path path = path("testPath" + getMethodName());
-    Assume.assumeFalse("Test involve appending to different offsets and"
-        + " positions which is not allowed in append blobs",
-        fs.getAbfsStore().isAppendBlobKey(fs.makeQualified(path).toString()));
-    try (FSDataOutputStream out = fs.create(path)) {
-      byte[] data = generateRandomBytes(MB_4);
+    fs.create(path);
+    byte[] data = generateRandomBytes(MB_4);
+    int pos = 0;
 
-      appendWithOffsetHelper(client, path, data, fs, 0);
-      appendWithOffsetHelper(client, path, data, fs, ONE_MB);
-      appendWithOffsetHelper(client, path, data, fs, MB_2);
-      appendWithOffsetHelper(client, path, data, fs, MB_4 - 1);
-    }
+    pos += appendWithOffsetHelper(client, path, data, fs, pos, 0);
+    pos += appendWithOffsetHelper(client, path, data, fs, pos, ONE_MB);
+    pos += appendWithOffsetHelper(client, path, data, fs, pos, MB_2);
+    appendWithOffsetHelper(client, path, data, fs, pos, MB_4 - 1);
   }
 
   @Test
@@ -118,7 +114,7 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
     Mockito.doReturn(invalidMD5Hash).when(spiedClient).computeMD5Hash(any(),
         any(Integer.class), any(Integer.class));
     AbfsRestOperationException ex = intercept(AbfsInvalidChecksumException.class, () -> {
-      appendWithOffsetHelper(spiedClient, path, data, fs, 0);
+      appendWithOffsetHelper(spiedClient, path, data, fs, 0, 0);
     });
 
     Assertions.assertThat(ex.getErrorCode())
@@ -174,12 +170,13 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
    * @param offset
    * @throws Exception
    */
-  private void appendWithOffsetHelper(AbfsClient client, Path path,
-      byte[] data, AzureBlobFileSystem fs, final int offset) throws Exception {
+  private int appendWithOffsetHelper(AbfsClient client, Path path,
+      byte[] data, AzureBlobFileSystem fs, final int pos, final int offset) throws Exception {
     AppendRequestParameters reqParams = new AppendRequestParameters(
-        0, offset, data.length - offset, APPEND_MODE, false, null, true);
+        pos, offset, data.length - offset, APPEND_MODE, isAppendBlobEnabled(), null, true);
     client.append(path.toUri().getPath(), data, reqParams, null, null,
         getTestTracingContext(fs, false));
+    return reqParams.getLength();
   }
 
   /**
