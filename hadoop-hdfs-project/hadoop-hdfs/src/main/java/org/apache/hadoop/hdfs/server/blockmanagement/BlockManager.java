@@ -1825,7 +1825,7 @@ public class BlockManager implements BlockStatsMXBean {
 
   /** Remove the blocks associated to the given DatanodeStorageInfo. */
   void removeBlocksAssociatedTo(final DatanodeStorageInfo storageInfo) {
-    assert namesystem.hasWriteLock();
+    assert namesystem.hasWriteLock(FSNamesystemLockMode.BM);
     final Iterator<BlockInfo> it = storageInfo.getBlockIterator();
     DatanodeDescriptor node = storageInfo.getDatanodeDescriptor();
     while(it.hasNext()) {
@@ -4876,6 +4876,7 @@ public class BlockManager implements BlockStatsMXBean {
         NumberReplicas num = countNodes(block);
         if (shouldProcessExtraRedundancy(num, expectedReplication)) {
           // extra redundancy block
+          // Here involves storage policy ID.
           processExtraRedundancyBlock(block, (short) expectedReplication, null,
               null);
           numExtraRedundancy++;
@@ -4884,14 +4885,15 @@ public class BlockManager implements BlockStatsMXBean {
       // When called by tests like TestDefaultBlockPlacementPolicy.
       // testPlacementWithLocalRackNodesDecommissioned, it is not protected by
       // lock, only when called by DatanodeManager.refreshNodes have writeLock
-      if (namesystem.hasWriteLock()) {
-        namesystem.writeUnlock("processExtraRedundancyBlocksOnInService");
+      if (namesystem.hasWriteLock(FSNamesystemLockMode.GLOBAL)) {
+        namesystem.writeUnlock(FSNamesystemLockMode.GLOBAL,
+            "processExtraRedundancyBlocksOnInService");
         try {
           Thread.sleep(1);
         } catch (InterruptedException e) {
           Thread.currentThread().interrupt();
         }
-        namesystem.writeLock();
+        namesystem.writeLock(FSNamesystemLockMode.GLOBAL);
       }
     }
     LOG.info("Invalidated {} extra redundancy blocks on {} after "
