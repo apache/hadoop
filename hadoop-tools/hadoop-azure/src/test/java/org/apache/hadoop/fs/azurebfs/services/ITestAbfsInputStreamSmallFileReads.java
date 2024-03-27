@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
@@ -40,7 +41,8 @@ import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CONNECTIONS_MADE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_KB;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
 
-public class ITestAbfsInputStreamSmallFileReads extends ITestAbfsInputStream {
+public class ITestAbfsInputStreamSmallFileReads extends
+    AbstractAbfsIntegrationTest {
 
   private final AbfsInputStreamTestUtils abfsInputStreamTestUtils;
   public ITestAbfsInputStreamSmallFileReads() throws Exception {

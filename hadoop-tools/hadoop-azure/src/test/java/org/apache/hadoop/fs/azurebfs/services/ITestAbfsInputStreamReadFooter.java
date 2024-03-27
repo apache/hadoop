@@ -25,7 +25,6 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FutureDataInputStreamBuilder;
@@ -91,8 +90,6 @@ public class ITestAbfsInputStreamReadFooter extends AbstractAbfsScaleTest {
       ONE_MB
   };
 
-  private static final long FUTURE_AWAIT_TIMEOUT_SEC = 60L;
-
   private final AbfsInputStreamTestUtils abfsInputStreamTestUtils;
 
   public ITestAbfsInputStreamReadFooter() throws Exception {
@@ -121,6 +118,18 @@ public class ITestAbfsInputStreamReadFooter extends AbstractAbfsScaleTest {
     validateNumBackendCalls(false);
   }
 
+
+  /**
+   * For different combination of file sizes, read buffer sizes and footer read
+   * buffer size, assert the number of server calls made when the optimization
+   * is enabled and disabled.
+   * <p>
+   * If the footer optimization is on, if the first read on the file is within the
+   * footer range (given by {@link AbfsInputStream#FOOTER_SIZE}, then the last block
+   * of size footerReadBufferSize is read from the server, and then subsequent
+   * inputStream reads from that block is returned from the buffer maintained by the
+   * AbfsInputStream. So, those reads will not result in server calls.
+   */
   private void validateNumBackendCalls(boolean optimizeFooterRead)
       throws Exception {
     int fileIdx = 0;
@@ -141,7 +150,7 @@ public class ITestAbfsInputStreamReadFooter extends AbstractAbfsScaleTest {
       });
       futureList.add(future);
     }
-    FutureIO.awaitFuture(futureList, FUTURE_AWAIT_TIMEOUT_SEC, TimeUnit.SECONDS);
+    FutureIO.awaitFuture(futureList);
   }
 
   private void validateNumBackendCalls(final AzureBlobFileSystem spiedFs,
@@ -236,6 +245,11 @@ public class ITestAbfsInputStreamReadFooter extends AbstractAbfsScaleTest {
     validateSeekAndReadWithConf(false, SeekTo.END);
   }
 
+  /**
+   * For different combination of file sizes, read buffer sizes and footer read
+   * buffer size, and read from different seek positions, validate the internal
+   * state of AbfsInputStream.
+   */
   private void validateSeekAndReadWithConf(boolean optimizeFooterRead,
       SeekTo seekTo) throws Exception {
     int fileIdx = 0;
@@ -259,7 +273,7 @@ public class ITestAbfsInputStreamReadFooter extends AbstractAbfsScaleTest {
         }
       }));
     }
-    FutureIO.awaitFuture(futureList, FUTURE_AWAIT_TIMEOUT_SEC, TimeUnit.SECONDS);
+    FutureIO.awaitFuture(futureList);
   }
 
   private void validateSeekAndReadWithConf(final AzureBlobFileSystem spiedFs,
@@ -387,7 +401,7 @@ public class ITestAbfsInputStreamReadFooter extends AbstractAbfsScaleTest {
           throw new RuntimeException(ex);
         }
       }));
-      FutureIO.awaitFuture(futureList, FUTURE_AWAIT_TIMEOUT_SEC, TimeUnit.SECONDS);
+      FutureIO.awaitFuture(futureList);
     }
   }
 
@@ -460,7 +474,7 @@ public class ITestAbfsInputStreamReadFooter extends AbstractAbfsScaleTest {
         }
       }));
     }
-    FutureIO.awaitFuture(futureList, FUTURE_AWAIT_TIMEOUT_SEC, TimeUnit.SECONDS);
+    FutureIO.awaitFuture(futureList);
   }
 
   private void validatePartialReadWithSomeData(final AzureBlobFileSystem spiedFs,
