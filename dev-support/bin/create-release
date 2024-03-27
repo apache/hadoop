@@ -418,6 +418,7 @@ function option_parse
     fi
   fi
   if [ -n "$MVNEXTRAARGS" ]; then
+    # shellcheck disable=SC2206
     MVN_ARGS+=(${MVNEXTRAARGS[*]})
   fi
 
@@ -552,9 +553,11 @@ function makearelease
   mkdir -p "${LOGDIR}"
 
   # Install the Hadoop maven plugins first
+  # shellcheck disable=SC2086
   run_and_redirect "${LOGDIR}/mvn_install_maven_plugins.log" "${MVN}" ${MVN_ARGS[*]} -pl hadoop-maven-plugins -am clean install
 
   # mvn clean for sanity
+  # shellcheck disable=SC2086
   run_and_redirect "${LOGDIR}/mvn_clean.log" "${MVN}" ${MVN_ARGS[*]} clean
 
   # Create staging dir for release artifacts
@@ -563,6 +566,7 @@ function makearelease
   big_console_header "Apache RAT Check"
 
   # Create RAT report
+  # shellcheck disable=SC2086
   run_and_redirect "${LOGDIR}/mvn_apache_rat.log" "${MVN}" ${MVN_ARGS[*]} apache-rat:check
 
   big_console_header "Maven Build and Install"
@@ -579,6 +583,7 @@ function makearelease
   # Create SRC and BIN tarballs for release,
   # shellcheck disable=SC2046
   run_and_redirect "${LOGDIR}/mvn_${target}.log" \
+    # shellcheck disable=SC2086
     "${MVN}" ${MVN_ARGS[*]} ${target} \
       -Pdist,src,yarn-ui \
       "${signflags[@]}" \
@@ -608,6 +613,7 @@ function makearelease
   # we need to do install again so that jdiff and
   # a few other things get registered in the maven
   # universe correctly
+  # shellcheck disable=SC2206
   run_and_redirect "${LOGDIR}/mvn_site.log" \
     "${MVN}" ${MVN_ARGS[*]} install \
       site site:stage \
