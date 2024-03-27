@@ -264,9 +264,8 @@ public class RetryCache {
       // If an entry in the cache does not exist, add a new one
       if (mapEntry == null) {
         if (LOG.isTraceEnabled()) {
-          LOG.trace("Adding Rpc request clientId "
-              + newEntry.clientIdMsb + newEntry.clientIdLsb + " callId "
-              + newEntry.callId + " to retryCache");
+          LOG.trace("Adding Rpc request clientId {}{} callId {} to retryCache",
+                  newEntry.clientIdMsb, newEntry.clientIdLsb, newEntry.callId);
         }
         set.put(newEntry);
         retryCacheMetrics.incrCacheUpdated();
