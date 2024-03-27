@@ -107,10 +107,10 @@ public abstract class AbstractAbfsIntegrationTest extends
     abfsConfig = new AbfsConfiguration(rawConfig, accountName);
 
     authType = abfsConfig.getEnum(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SharedKey);
+    assumeValidAuthConfigsPresent();
+
     abfsScheme = authType == AuthType.SharedKey ? FileSystemUriSchemes.ABFS_SCHEME
             : FileSystemUriSchemes.ABFS_SECURE_SCHEME;
-
-    assumeValidAuthConfigsPresent();
 
     final String abfsUrl = this.getFileSystemName() + "@" + this.getAccountName();
     URI defaultUri = null;
@@ -531,7 +531,7 @@ public abstract class AbstractAbfsIntegrationTest extends
 
   protected void assumeValidTestConfigPresent(final Configuration conf, final String key) {
     String configuredValue = conf.get(key);
-    Assume.assumeTrue("Required Test Config \"" + key + "\" missing.",
+    Assume.assumeTrue(String.format("Missing Required Test Config: %s.", key),
         configuredValue != null && !configuredValue.isEmpty());
   }
 

@@ -143,7 +143,7 @@ public class ITestAzureBlobFileSystemAppend extends
                 "On write of data in outputStream, state should become Writing")
             .isEqualTo(Writing);
         os.close();
-        if (fs.getAbfsStore().isAppendBlobKey(fs.makeQualified(testPath).toString())) {
+        if (isAppendBlobEnabled()) {
           // Append Blobs does not require flush and close.
           Mockito.verify(dataBlock[0], Mockito.times(0)).close();
           Assertions.assertThat(dataBlock[0].getState())

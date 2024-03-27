@@ -173,6 +173,7 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
   public void testTwoWritersCreateAppendNoInfiniteLease() throws Exception {
     final Path testFilePath = new Path(path(methodName.getMethodName()), TEST_FILE);
     final AzureBlobFileSystem fs = getFileSystem();
+    Assume.assumeFalse(isAppendBlobEnabled());
     fs.mkdirs(testFilePath.getParent());
 
     twoWriters(fs, testFilePath, false);

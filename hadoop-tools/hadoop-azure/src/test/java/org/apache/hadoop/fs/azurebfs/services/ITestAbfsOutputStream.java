@@ -162,7 +162,7 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
     AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(
         configuration);
     Path path = new Path("/testFile");
-    Assume.assumeFalse(fs.getAbfsStore().isAppendBlobKey(fs.makeQualified(path).toString()));
+    Assume.assumeFalse(isAppendBlobEnabled());
     AbfsOutputStream os = Mockito.spy(
         (AbfsOutputStream) fs.create(path).getWrappedStream());
     AbfsClient spiedClient = Mockito.spy(os.getClient());
