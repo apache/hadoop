@@ -44,6 +44,7 @@ import static org.apache.hadoop.fs.store.DataBlocks.DATA_BLOCKS_BUFFER_ARRAY;
 import static org.apache.hadoop.fs.store.DataBlocks.DATA_BLOCKS_BUFFER_DISK;
 import static org.apache.hadoop.fs.store.DataBlocks.DATA_BLOCKS_BYTEBUFFER;
 import static org.apache.hadoop.fs.store.DataBlocks.DataBlock.DestState.Closed;
+import static org.apache.hadoop.fs.store.DataBlocks.DataBlock.DestState.Upload;
 import static org.apache.hadoop.fs.store.DataBlocks.DataBlock.DestState.Writing;
 
 /**
@@ -142,7 +143,14 @@ public class ITestAzureBlobFileSystemAppend extends
                 "On write of data in outputStream, state should become Writing")
             .isEqualTo(Writing);
         os.close();
-        if (!fs.getAbfsStore().isAppendBlobKey(fs.makeQualified(testPath).toString())) {
+        if (fs.getAbfsStore().isAppendBlobKey(fs.makeQualified(testPath).toString())) {
+          // Append Blobs does not require flush and close.
+          Mockito.verify(dataBlock[0], Mockito.times(0)).close();
+          Assertions.assertThat(dataBlock[0].getState())
+              .describedAs(
+                  "On close of outputStream, state should become Closed")
+              .isEqualTo(Upload);
+        } else {
           Mockito.verify(dataBlock[0], Mockito.times(1)).close();
           Assertions.assertThat(dataBlock[0].getState())
               .describedAs(

@@ -93,7 +93,7 @@ ENDOFFILE
     logOutput "Test run report can be seen in $testlogfilename"
     mvn -T 1C -Dparallel-tests=abfs -Dscale -DtestsThreadCount="$processcount" verify >> "$testlogfilename" || true
     # Remove the formatting used by mvn output for better regex matching.
-    sed -i $removeFormattingRegex $testlogfilename
+    sed -i "$removeFormattingRegex" "$testlogfilename"
     ENDTIME=$(date +%s)
     summary
   fi

@@ -63,7 +63,6 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
 
   public ITestAzureBlobFileSystemLease() throws Exception {
     super();
-    assumeValidTestConfigPresent(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT);
     this.isHNSEnabled = getConfiguration()
         .getBoolean(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false);
   }
@@ -136,6 +135,7 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
   public void testTwoCreate() throws Exception {
     final Path testFilePath = new Path(path(methodName.getMethodName()), TEST_FILE);
     final AzureBlobFileSystem fs = getCustomFileSystem(testFilePath.getParent(), 1);
+    assumeValidTestConfigPresent(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT);
     fs.mkdirs(testFilePath.getParent());
 
     try (FSDataOutputStream out = fs.create(testFilePath)) {
