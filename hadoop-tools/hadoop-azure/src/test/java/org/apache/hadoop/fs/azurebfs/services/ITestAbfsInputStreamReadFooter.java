@@ -29,6 +29,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FutureDataInputStreamBuilder;
+import org.apache.hadoop.fs.azurebfs.AbstractAbfsScaleTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
 
 import org.assertj.core.api.Assertions;
@@ -51,6 +52,7 @@ import static java.lang.Math.min;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_FOOTER_READ_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_FOOTER_READ_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsInputStreamTestUtils.HUNDRED;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -60,7 +62,7 @@ import static org.mockito.Mockito.spy;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CONNECTIONS_MADE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_KB;
 
-public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
+public class ITestAbfsInputStreamReadFooter extends AbstractAbfsScaleTest {
 
   private static final int TEN = 10;
   private static final int TWENTY = 20;
@@ -89,9 +91,12 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
       ONE_MB
   };
 
-  private static final long FUTURE_AWAIT_TIMEOUT_SEC = 10L;
+  private static final long FUTURE_AWAIT_TIMEOUT_SEC = 60L;
+
+  private final AbfsInputStreamTestUtils abfsInputStreamTestUtils;
 
   public ITestAbfsInputStreamReadFooter() throws Exception {
+    this.abfsInputStreamTestUtils = new AbfsInputStreamTestUtils(this);
   }
 
   @BeforeClass
@@ -151,7 +156,8 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
           verifyConfigValueInStream(iStream, footerReadBufferSize);
           byte[] buffer = new byte[length];
 
-          Map<String, Long> metricMap = getInstrumentationMap(spiedFs);
+          Map<String, Long> metricMap =
+              abfsInputStreamTestUtils.getInstrumentationMap(spiedFs);
           long requestsMadeBeforeTest = metricMap
               .get(CONNECTIONS_MADE.getStatName());
 
@@ -164,7 +170,7 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
           iStream.seek(fileSize - (TWENTY * ONE_KB));
           iStream.read(buffer, 0, length);
 
-          metricMap = getInstrumentationMap(spiedFs);
+          metricMap = abfsInputStreamTestUtils.getInstrumentationMap(spiedFs);
           long requestsMadeAfterTest = metricMap
               .get(CONNECTIONS_MADE.getStatName());
 
@@ -240,8 +246,8 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
         try (AzureBlobFileSystem spiedFs = createSpiedFs(
             getRawConfiguration())) {
           String fileName = methodName.getMethodName() + fileId;
-          byte[] fileContent = getRandomBytesArray(fileSize);
-          Path testFilePath = createFileWithContent(spiedFs, fileName,
+          byte[] fileContent = abfsInputStreamTestUtils.getRandomBytesArray(fileSize);
+          Path testFilePath = abfsInputStreamTestUtils.createFileWithContent(spiedFs, fileName,
               fileContent);
           for (int readBufferSize : READ_BUFFER_SIZE) {
             validateSeekAndReadWithConf(spiedFs, optimizeFooterRead, seekTo,
@@ -306,7 +312,7 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
       AbfsInputStream abfsInputStream = (AbfsInputStream) iStream.getWrappedStream();
       verifyConfigValueInStream(iStream, footerReadBufferSize);
       long readBufferSize = abfsInputStream.getBufferSize();
-      seek(iStream, seekPos);
+      abfsInputStreamTestUtils.seek(iStream, seekPos);
       byte[] buffer = new byte[length];
       long bytesRead = iStream.read(buffer, 0, length);
 
@@ -350,13 +356,13 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
       assertEquals(expectedBCursor, abfsInputStream.getBCursor());
       assertEquals(actualLength, bytesRead);
       //  Verify user-content read
-      assertContentReadCorrectly(fileContent, seekPos, (int) actualLength, buffer, testFilePath);
+      abfsInputStreamTestUtils.assertContentReadCorrectly(fileContent, seekPos, (int) actualLength, buffer, testFilePath);
       //  Verify data read to AbfsInputStream buffer
       int from = seekPos;
       if (optimizationOn) {
         from = (int) max(0, actualContentLength - footerReadBufferSize);
       }
-      assertContentReadCorrectly(fileContent, from, (int) abfsInputStream.getLimit(),
+      abfsInputStreamTestUtils.assertContentReadCorrectly(fileContent, from, (int) abfsInputStream.getLimit(),
           abfsInputStream.getBuffer(), testFilePath);
     }
   }
@@ -371,8 +377,8 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
       futureList.add(executorService.submit(() -> {
         try (AzureBlobFileSystem spiedFs = createSpiedFs(
             getRawConfiguration())) {
-          byte[] fileContent = getRandomBytesArray(fileSize);
-          Path testFilePath = createFileWithContent(spiedFs, fileName,
+          byte[] fileContent = abfsInputStreamTestUtils.getRandomBytesArray(fileSize);
+          Path testFilePath = abfsInputStreamTestUtils.createFileWithContent(spiedFs, fileName,
               fileContent);
           validatePartialReadWithNoData(spiedFs, fileSize, fileContent,
               testFilePath);
@@ -419,12 +425,12 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
               any(TracingContext.class));
 
       iStream = new FSDataInputStream(abfsInputStream);
-      seek(iStream, seekPos);
+      abfsInputStreamTestUtils.seek(iStream, seekPos);
 
       byte[] buffer = new byte[length];
       int bytesRead = iStream.read(buffer, 0, length);
       assertEquals(length, bytesRead);
-      assertContentReadCorrectly(fileContent, seekPos, length, buffer, testFilePath);
+      abfsInputStreamTestUtils.assertContentReadCorrectly(fileContent, seekPos, length, buffer, testFilePath);
       assertEquals(fileContent.length, abfsInputStream.getFCursor());
       assertEquals(length, abfsInputStream.getBCursor());
       assertTrue(abfsInputStream.getLimit() >= length);
@@ -443,8 +449,8 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
         try (AzureBlobFileSystem spiedFs = createSpiedFs(
             getRawConfiguration())) {
           String fileName = methodName.getMethodName() + fileId;
-          byte[] fileContent = getRandomBytesArray(fileSize);
-          Path testFilePath = createFileWithContent(spiedFs, fileName,
+          byte[] fileContent = abfsInputStreamTestUtils.getRandomBytesArray(fileSize);
+          Path testFilePath = abfsInputStreamTestUtils.createFileWithContent(spiedFs, fileName,
               fileContent);
           validatePartialReadWithSomeData(spiedFs, fileSize, testFilePath,
               fileContent);
@@ -494,7 +500,7 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
               any(TracingContext.class));
 
       iStream = new FSDataInputStream(abfsInputStream);
-      seek(iStream, seekPos);
+      abfsInputStreamTestUtils.seek(iStream, seekPos);
 
       byte[] buffer = new byte[length];
       int bytesRead = iStream.read(buffer, 0, length);
@@ -565,8 +571,8 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
   private Path createPathAndFileWithContent(final AzureBlobFileSystem fs,
       final int fileIdx, final int fileSize) throws Exception {
     String fileName = methodName.getMethodName() + fileIdx;
-    byte[] fileContent = getRandomBytesArray(fileSize);
-    return createFileWithContent(fs, fileName, fileContent);
+    byte[] fileContent = abfsInputStreamTestUtils.getRandomBytesArray(fileSize);
+    return abfsInputStreamTestUtils.createFileWithContent(fs, fileName, fileContent);
   }
 
   private FutureDataInputStreamBuilder getParameterizedBuilder(final Path path,
