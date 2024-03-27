@@ -295,13 +295,13 @@ public class ClientServiceDelegate {
 
   MRClientProtocol instantiateAMProxy(final InetSocketAddress serviceAddr)
       throws IOException {
-    LOG.trace("Connecting to ApplicationMaster at: " + serviceAddr);
+    LOG.trace("Connecting to ApplicationMaster at: {}", serviceAddr);
     YarnRPC rpc = YarnRPC.create(conf);
     MRClientProtocol proxy = 
          (MRClientProtocol) rpc.getProxy(MRClientProtocol.class,
             serviceAddr, conf);
     usingAMProxy.set(true);
-    LOG.trace("Connected to ApplicationMaster at: " + serviceAddr);
+    LOG.trace("Connected to ApplicationMaster at: {}", serviceAddr);
     return proxy;
   }
 
