@@ -1995,7 +1995,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     String operationName = "metaSave";
     checkSuperuserPrivilege(operationName);
     checkOperation(OperationCategory.READ);
-    readLock();
+    readLock(FSNamesystemLockMode.GLOBAL);
     try {
       checkOperation(OperationCategory.READ);
       synchronized(metaSaveLock) {
@@ -2008,13 +2008,15 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         out.close();
       }
     } finally {
-      readUnlock(operationName, getLockReportInfoSupplier(null));
+      readUnlock(FSNamesystemLockMode.GLOBAL, operationName, getLockReportInfoSupplier(null));
     }
     logAuditEvent(true, operationName, null);
   }
 
   private void metaSave(PrintWriter out) {
-    assert hasReadLock();
+    // TODO: Change to hasReadLock(FSNamesystemLockMode.BM)
+    assert hasReadLock(FSNamesystemLockMode.GLOBAL);
+    // Normally FSReadLock is needed here, but I think thread-safe is unnecessary here.
     long totalInodes = this.dir.totalInodes();
     long totalBlocks = this.getBlocksTotal();
     out.println(totalInodes + " files and directories, " + totalBlocks
@@ -4988,14 +4990,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     String operationName = "slowDataNodesReport";
     DatanodeInfo[] datanodeInfos;
     checkOperation(OperationCategory.UNCHECKED);
-    readLock();
+    readLock(FSNamesystemLockMode.BM);
     try {
       checkOperation(OperationCategory.UNCHECKED);
       final DatanodeManager dm = getBlockManager().getDatanodeManager();
       final List<DatanodeDescriptor> results = dm.getAllSlowDataNodes();
       datanodeInfos = getDatanodeInfoFromDescriptors(results);
     } finally {
-      readUnlock(operationName, getLockReportInfoSupplier(null));
+      readUnlock(FSNamesystemLockMode.BM, operationName, getLockReportInfoSupplier(null));
     }
     logAuditEvent(true, operationName, null);
     return datanodeInfos;
@@ -5016,14 +5018,14 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     DatanodeInfo[] arr;
     checkSuperuserPrivilege(operationName);
     checkOperation(OperationCategory.UNCHECKED);
-    readLock();
+    readLock(FSNamesystemLockMode.BM);
     try {
       checkOperation(OperationCategory.UNCHECKED);
       final DatanodeManager dm = getBlockManager().getDatanodeManager();      
       final List<DatanodeDescriptor> results = dm.getDatanodeListForReport(type);
       arr = getDatanodeInfoFromDescriptors(results);
     } finally {
-      readUnlock(operationName, getLockReportInfoSupplier(null));
+      readUnlock(FSNamesystemLockMode.BM, operationName, getLockReportInfoSupplier(null));
     }
     logAuditEvent(true, operationName, null);
     return arr;
@@ -5035,13 +5037,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     DatanodeStorageReport[] reports;
     checkSuperuserPrivilege(operationName);
     checkOperation(OperationCategory.UNCHECKED);
-    readLock();
+    readLock(FSNamesystemLockMode.BM);
     try {
       checkOperation(OperationCategory.UNCHECKED);
       final DatanodeManager dm = getBlockManager().getDatanodeManager();      
       reports = dm.getDatanodeStorageReport(type);
     } finally {
-      readUnlock(operationName, getLockReportInfoSupplier(null));
+      readUnlock(FSNamesystemLockMode.BM, operationName, getLockReportInfoSupplier(null));
     }
     logAuditEvent(true, operationName, null);
     return reports;
@@ -5060,7 +5062,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
     boolean saved = false;
     cpLock();  // Block if a checkpointing is in progress on standby.
-    readLock();
+    // TODO: MileStone2 should change this readLock() to writeLock(FSNamesystemLockMode.FS)
+    //  since all directory-tree modification operations will just hold the FSReadLock.
+    readLock(FSNamesystemLockMode.FS);
     try {
       checkOperation(OperationCategory.UNCHECKED);
 
@@ -5070,7 +5074,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       }
       saved = getFSImage().saveNamespace(timeWindow, txGap, this);
     } finally {
-      readUnlock(operationName, getLockReportInfoSupplier(null));
+      readUnlock(FSNamesystemLockMode.FS, operationName, getLockReportInfoSupplier(null));
       cpUnlock();
     }
     if (saved) {
@@ -5092,7 +5096,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     checkSuperuserPrivilege(operationName);
     checkOperation(OperationCategory.UNCHECKED);
     cpLock();  // Block if a checkpointing is in progress on standby.
-    writeLock();
+    writeLock(FSNamesystemLockMode.FS);
     try {
       checkOperation(OperationCategory.UNCHECKED);
       
@@ -5104,7 +5108,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         getNNStorage().setRestoreFailedStorage(val);
       }
     } finally {
-      writeUnlock(operationName, getLockReportInfoSupplier(null));
+      writeUnlock(FSNamesystemLockMode.FS, operationName, getLockReportInfoSupplier(null));
       cpUnlock();
     }
     logAuditEvent(true, operationName, null);
@@ -5120,12 +5124,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     checkSuperuserPrivilege(operationName);
     checkOperation(OperationCategory.UNCHECKED);
     cpLock();  // Block if a checkpointing is in progress on standby.
-    writeLock();
+    writeLock(FSNamesystemLockMode.FS);
     try {
       checkOperation(OperationCategory.UNCHECKED);
       getFSImage().finalizeUpgrade(this.isHaEnabled() && inActiveState());
     } finally {
-      writeUnlock(operationName, getLockReportInfoSupplier(null));
+      writeUnlock(FSNamesystemLockMode.FS, operationName, getLockReportInfoSupplier(null));
       cpUnlock();
     }
     logAuditEvent(true, operationName, null);
@@ -7521,7 +7525,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     final String operationName = "queryRollingUpgrade";
     checkSuperuserPrivilege(operationName);
     checkOperation(OperationCategory.READ);
-    readLock();
+    readLock(FSNamesystemLockMode.FS);
     try {
       checkOperation(OperationCategory.READ);
       if (!isRollingUpgrade()) {
@@ -7531,7 +7535,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       boolean hasRollbackImage = this.getFSImage().hasRollbackFSImage();
       rollingUpgradeInfo.setCreatedRollbackImages(hasRollbackImage);
     } finally {
-      readUnlock(operationName, getLockReportInfoSupplier(null));
+      readUnlock(FSNamesystemLockMode.FS, operationName, getLockReportInfoSupplier(null));
     }
     logAuditEvent(true, operationName, null, null, null);
     return rollingUpgradeInfo;
@@ -7541,7 +7545,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     final String operationName = "startRollingUpgrade";
     checkSuperuserPrivilege(operationName);
     checkOperation(OperationCategory.WRITE);
-    writeLock();
+    writeLock(FSNamesystemLockMode.FS);
     try {
       checkOperation(OperationCategory.WRITE);
       if (isRollingUpgrade()) {
@@ -7561,7 +7565,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         getFSImage().rollEditLog(getEffectiveLayoutVersion());
       }
     } finally {
-      writeUnlock(operationName, getLockReportInfoSupplier(null));
+      writeUnlock(FSNamesystemLockMode.FS, operationName, getLockReportInfoSupplier(null));
     }
 
     getEditLog().logSync();
