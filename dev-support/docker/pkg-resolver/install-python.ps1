@@ -24,21 +24,21 @@ Invoke-WebRequest -Uri $url -OutFile 'python.exe'
 
 Write-Host 'Installing ...'
 $exitCode = (Start-Process python.exe -Wait -NoNewWindow -PassThru `
-		-ArgumentList @(
-		'/quiet',
-		'InstallAllUsers=1',
-		'TargetDir=C:\Python',
-		'PrependPath=1',
-		'Shortcuts=0',
-		'Include_doc=0',
-		'Include_pip=0',
-		'Include_test=0'
-	)
+        -ArgumentList @(
+            '/quiet',
+            'InstallAllUsers=1',
+            'TargetDir=C:\Python',
+            'PrependPath=1',
+            'Shortcuts=0',
+            'Include_doc=0',
+            'Include_pip=0',
+            'Include_test=0'
+        )
 ).ExitCode
 if ($exitCode -ne 0) {
-	Write-Host ('Running python installer failed with exit code: {0}' -f $exitCode)
-	Get-ChildItem $Env:TEMP | Sort-Object -Descending -Property LastWriteTime | Select-Object -First 1 | Get-Content
-	exit $exitCode
+    Write-Host ('Running python installer failed with exit code: {0}' -f $exitCode)
+    Get-ChildItem $Env:TEMP | Sort-Object -Descending -Property LastWriteTime | Select-Object -First 1 | Get-Content
+    exit $exitCode
 }
 
 # the installer updated PATH, so we should refresh our local value
