@@ -28,6 +28,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
+import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
 import org.apache.hadoop.util.Daemon;
@@ -514,20 +515,20 @@ class HeartbeatManager implements DatanodeStatistics {
 
       for (DatanodeDescriptor dead : deadDatanodes) {
         // acquire the fsnamesystem lock, and then remove the dead node.
-        namesystem.writeLock();
+        namesystem.writeLock(FSNamesystemLockMode.BM);
         try {
           dm.removeDeadDatanode(dead, !dead.isMaintenance());
         } finally {
-          namesystem.writeUnlock("removeDeadDatanode");
+          namesystem.writeUnlock(FSNamesystemLockMode.BM, "removeDeadDatanode");
         }
       }
       for (DatanodeStorageInfo failedStorage : failedStorages) {
         // acquire the fsnamesystem lock, and remove blocks on the storage.
-        namesystem.writeLock();
+        namesystem.writeLock(FSNamesystemLockMode.BM);
         try {
           blockManager.removeBlocksAssociatedTo(failedStorage);
         } finally {
-          namesystem.writeUnlock("removeBlocksAssociatedTo");
+          namesystem.writeUnlock(FSNamesystemLockMode.BM, "removeBlocksAssociatedTo");
         }
       }
     }

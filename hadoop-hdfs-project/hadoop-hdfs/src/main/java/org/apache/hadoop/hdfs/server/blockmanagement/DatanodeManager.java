@@ -1335,12 +1335,13 @@ public class DatanodeManager {
    */
   public void refreshNodes(final Configuration conf) throws IOException {
     refreshHostsReader(conf);
-    namesystem.writeLock();
+    // processExtraRedundancyBlocksOnInService involves FS in stopMaintenance and stopDecommission.
+    namesystem.writeLock(FSNamesystemLockMode.GLOBAL);
     try {
       refreshDatanodes();
       countSoftwareVersions();
     } finally {
-      namesystem.writeUnlock("refreshNodes");
+      namesystem.writeUnlock(FSNamesystemLockMode.GLOBAL, "refreshNodes");
     }
   }
 

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -182,7 +183,9 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
     numBlocksCheckedPerLock = 0;
     numNodesChecked = 0;
     // Check decommission or maintenance progress.
-    namesystem.writeLock();
+    // dnAdmin.stopMaintenance(dn) needs FSReadLock
+    // since processExtraRedundancyBlock involves storage policy and isSufficient involves bc.
+    namesystem.writeLock(FSNamesystemLockMode.GLOBAL);
     try {
       processCancelledNodes();
       processPendingNodes();
@@ -191,7 +194,7 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
       LOG.warn("DatanodeAdminMonitor caught exception when processing node.",
           e);
     } finally {
-      namesystem.writeUnlock("DatanodeAdminMonitorThread");
+      namesystem.writeUnlock(FSNamesystemLockMode.GLOBAL, "DatanodeAdminMonitorThread");
     }
     if (numBlocksChecked + numNodesChecked > 0) {
       LOG.info("Checked {} blocks and {} nodes this tick. {} nodes are now " +
@@ -426,7 +429,7 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
         // lock.
         // Yielding is required in case of block number is greater than the
         // configured per-iteration-limit.
-        namesystem.writeUnlock("processBlocksInternal");
+        namesystem.writeUnlock(FSNamesystemLockMode.GLOBAL, "processBlocksInternal");
         try {
           LOG.debug("Yielded lock during decommission/maintenance check");
           Thread.sleep(0, 500);
@@ -435,7 +438,7 @@ public class DatanodeAdminDefaultMonitor extends DatanodeAdminMonitorBase
         }
         // reset
         numBlocksCheckedPerLock = 0;
-        namesystem.writeLock();
+        namesystem.writeLock(FSNamesystemLockMode.GLOBAL);
       }
       numBlocksChecked++;
       numBlocksCheckedPerLock++;
