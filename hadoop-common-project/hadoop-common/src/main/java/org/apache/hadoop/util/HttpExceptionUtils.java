@@ -156,10 +156,8 @@ public class HttpExceptionUtils {
           try {
             ClassLoader cl = HttpExceptionUtils.class.getClassLoader();
             Class klass = cl.loadClass(exClass);
-            if (!Exception.class.isAssignableFrom(klass)) {
-              // no need to fill in details because the catch below will create a good exception
-              throw new IllegalStateException();
-            }
+            Preconditions.checkState(Exception.class.isAssignableFrom(klass),
+                "Class [%s] is not a subclass of Exception", klass);
             MethodHandle methodHandle = PUBLIC_LOOKUP.findConstructor(
                     klass, EXCEPTION_CONSTRUCTOR_TYPE);
             toThrow = (Exception) methodHandle.invoke(exMsg);
