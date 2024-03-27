@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.namenode.INode;
@@ -170,7 +171,7 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
     numBlocksChecked = 0;
     // Check decommission or maintenance progress.
     try {
-      namesystem.writeLock();
+      namesystem.writeLock(FSNamesystemLockMode.BM);
       try {
         /**
          * Other threads can modify the pendingNode list and the cancelled
@@ -208,7 +209,7 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
 
         processPendingNodes();
       } finally {
-        namesystem.writeUnlock("DatanodeAdminMonitorV2Thread");
+        namesystem.writeUnlock(FSNamesystemLockMode.BM, "DatanodeAdminMonitorV2Thread");
       }
       // After processing the above, various parts of the check() method will
       // take and drop the read / write lock as needed. Aside from the
@@ -326,7 +327,7 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
    */
   private void processMaintenanceNodes() {
     // Check for any maintenance state nodes which need to be expired
-    namesystem.writeLock();
+    namesystem.writeLock(FSNamesystemLockMode.GLOBAL);
     try {
       for (DatanodeDescriptor dn : outOfServiceNodeBlocks.keySet()) {
         if (dn.isMaintenance() && dn.maintenanceExpired()) {
@@ -338,12 +339,12 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
           // which added the node to the cancelled list. Therefore expired
           // maintenance nodes do not need to be added to the toRemove list.
           dnAdmin.stopMaintenance(dn);
-          namesystem.writeUnlock("processMaintenanceNodes");
-          namesystem.writeLock();
+          namesystem.writeUnlock(FSNamesystemLockMode.GLOBAL, "processMaintenanceNodes");
+          namesystem.writeLock(FSNamesystemLockMode.GLOBAL);
         }
       }
     } finally {
-      namesystem.writeUnlock("processMaintenanceNodes");
+      namesystem.writeUnlock(FSNamesystemLockMode.GLOBAL, "processMaintenanceNodes");
     }
   }
 
@@ -360,7 +361,7 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
       // taking the write lock at all.
       return;
     }
-    namesystem.writeLock();
+    namesystem.writeLock(FSNamesystemLockMode.BM);
     try {
       for (DatanodeDescriptor dn : toRemove) {
         final boolean isHealthy =
@@ -402,7 +403,7 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
         }
       }
     } finally {
-      namesystem.writeUnlock("processCompletedNodes");
+      namesystem.writeUnlock(FSNamesystemLockMode.BM, "processCompletedNodes");
     }
   }
 
@@ -486,7 +487,7 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
       return;
     }
 
-    namesystem.writeLock();
+    namesystem.writeLock(FSNamesystemLockMode.GLOBAL);
     try {
       long repQueueSize = blockManager.getLowRedundancyBlocksCount();
 
@@ -524,8 +525,8 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
           // replication
           if (blocksProcessed >= blocksPerLock) {
             blocksProcessed = 0;
-            namesystem.writeUnlock("moveBlocksToPending");
-            namesystem.writeLock();
+            namesystem.writeUnlock(FSNamesystemLockMode.GLOBAL, "moveBlocksToPending");
+            namesystem.writeLock(FSNamesystemLockMode.GLOBAL);
           }
           blocksProcessed++;
           if (nextBlockAddedToPending(blockIt, dn)) {
@@ -546,7 +547,7 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
         }
       }
     } finally {
-      namesystem.writeUnlock("moveBlocksToPending");
+      namesystem.writeUnlock(FSNamesystemLockMode.GLOBAL, "moveBlocksToPending");
     }
     LOG.debug("{} blocks are now pending replication", pendingCount);
   }
@@ -626,15 +627,16 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
     }
 
     DatanodeStorageInfo[] storage;
-    namesystem.readLock();
+    namesystem.readLock(FSNamesystemLockMode.BM);
     try {
       storage = dn.getStorageInfos();
     } finally {
-      namesystem.readUnlock("scanDatanodeStorage");
+      namesystem.readUnlock(FSNamesystemLockMode.BM, "scanDatanodeStorage");
     }
 
     for (DatanodeStorageInfo s : storage) {
-      namesystem.readLock();
+      // isBlockReplicatedOk involves FS.
+      namesystem.readLock(FSNamesystemLockMode.GLOBAL);
       try {
         // As the lock is dropped and re-taken between each storage, we need
         // to check the storage is still present before processing it, as it
@@ -660,7 +662,7 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
           numBlocksChecked++;
         }
       } finally {
-        namesystem.readUnlock("scanDatanodeStorage");
+        namesystem.readUnlock(FSNamesystemLockMode.GLOBAL, "scanDatanodeStorage");
       }
     }
   }
@@ -683,7 +685,7 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
    * namenode write lock while it runs.
    */
   private void processPendingReplication() {
-    namesystem.writeLock();
+    namesystem.writeLock(FSNamesystemLockMode.GLOBAL);
     try {
       for (Iterator<Map.Entry<DatanodeDescriptor, List<BlockInfo>>>
            entIt = pendingRep.entrySet().iterator(); entIt.hasNext();) {
@@ -715,7 +717,7 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
             suspectBlocks.getOutOfServiceBlockCount());
       }
     } finally {
-      namesystem.writeUnlock("processPendingReplication");
+      namesystem.writeUnlock(FSNamesystemLockMode.GLOBAL, "processPendingReplication");
     }
   }
 
