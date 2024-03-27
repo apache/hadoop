@@ -30,6 +30,7 @@ import org.junit.rules.TemporaryFolder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.azure.integration.AzureTestConstants;
+import org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes;
 import org.apache.hadoop.fs.azurebfs.contract.ABFSContractTestBinding;
 import org.apache.hadoop.fs.azurebfs.contract.AbfsFileSystemContract;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
@@ -239,8 +240,8 @@ public abstract class AbstractAbfsClusterITest extends
       String pid = jobConf.get(FS_AZURE_BLOB_FS_CLIENT_SERVICE_PRINCIPAL_OBJECT_ID);
       jobConf.set(FS_AZURE_OVERRIDE_OWNER_SP, pid);
       jobConf.set(FS_AZURE_OVERRIDE_OWNER_SP_LIST, "*");
-      jobConf.setBoolean("fs.abfss.impl.disable.cache", true);
-      jobConf.setBoolean("fs.abfs.impl.disable.cache", true);
+      jobConf.setBoolean(String.format("fs.%s.impl.disable.cache",
+          FileSystemUriSchemes.ABFS_SECURE_SCHEME), true);
     }
 
     applyCustomConfigOptions(jobConf);

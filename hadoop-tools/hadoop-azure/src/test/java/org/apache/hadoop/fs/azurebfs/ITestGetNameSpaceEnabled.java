@@ -72,7 +72,7 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
 
   @Test
   public void testNonXNSAccount() throws IOException {
-    assumeValidTestConfigPresent(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT);
+    assumeValidTestConfigPresent(getRawConfiguration(), FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT);
     Assume.assumeFalse("Skip this test because the account being used for test is a XNS account",
             isUsingXNSAccount);
     assertFalse("Expecting getIsNamespaceEnabled() return false",
@@ -81,7 +81,7 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
 
   @Test
   public void testGetIsNamespaceEnabledWhenConfigIsTrue() throws Exception {
-    assumeValidTestConfigPresent(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT);
+    assumeValidTestConfigPresent(getRawConfiguration(), FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT);
     AzureBlobFileSystem fs = getNewFSWithHnsConf(TRUE_STR);
     Assertions.assertThat(getIsNamespaceEnabled(fs)).describedAs(
         "getIsNamespaceEnabled should return true when the "
@@ -92,7 +92,7 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
 
   @Test
   public void testGetIsNamespaceEnabledWhenConfigIsFalse() throws Exception {
-    assumeValidTestConfigPresent(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT);
+    assumeValidTestConfigPresent(getRawConfiguration(), FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT);
     AzureBlobFileSystem fs = getNewFSWithHnsConf(FALSE_STR);
     Assertions.assertThat(getIsNamespaceEnabled(fs)).describedAs(
         "getIsNamespaceEnabled should return false when the "

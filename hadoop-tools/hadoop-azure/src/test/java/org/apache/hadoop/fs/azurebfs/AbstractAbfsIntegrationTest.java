@@ -110,14 +110,7 @@ public abstract class AbstractAbfsIntegrationTest extends
     abfsScheme = authType == AuthType.SharedKey ? FileSystemUriSchemes.ABFS_SCHEME
             : FileSystemUriSchemes.ABFS_SECURE_SCHEME;
 
-    if (authType == AuthType.SharedKey) {
-      assumeTrue("Not set: " + FS_AZURE_ACCOUNT_KEY,
-          abfsConfig.get(FS_AZURE_ACCOUNT_KEY) != null);
-      // Update credentials
-    } else {
-      assumeTrue("Not set: " + FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME,
-          abfsConfig.get(FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME) != null);
-    }
+    assumeValidAuthConfigsPresent();
 
     final String abfsUrl = this.getFileSystemName() + "@" + this.getAccountName();
     URI defaultUri = null;
@@ -131,7 +124,7 @@ public abstract class AbstractAbfsIntegrationTest extends
     this.testUrl = defaultUri.toString();
     abfsConfig.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, defaultUri.toString());
     abfsConfig.setBoolean(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION, true);
-    if (abfsConfig.get(FS_AZURE_TEST_APPENDBLOB_ENABLED) == "true") {
+    if (isAppendBlobEnabled()) {
       String appendblobDirs = this.testUrl + "," + abfsConfig.get(FS_AZURE_CONTRACT_TEST_URI);
       rawConfig.set(FS_AZURE_APPEND_BLOB_KEY, appendblobDirs);
     }
@@ -270,7 +263,7 @@ public abstract class AbstractAbfsIntegrationTest extends
 
     // AbstractAbfsIntegrationTest always uses a new instance of FileSystem,
     // need to disable that and force filesystem provided in test configs.
-    assumeValidTestConfigPresent(FS_AZURE_CONTRACT_TEST_URI);
+    assumeValidTestConfigPresent(this.getRawConfiguration(), FS_AZURE_CONTRACT_TEST_URI);
 
     String[] authorityParts =
         (new URI(rawConfig.get(FS_AZURE_CONTRACT_TEST_URI))).getRawAuthority().split(
@@ -536,8 +529,32 @@ public abstract class AbstractAbfsIntegrationTest extends
     return expectedValue;
   }
 
-  protected void assumeValidTestConfigPresent(final String key) {
-    String configuredValue = getConfiguration().get(key);
-    Assume.assumeTrue(configuredValue != null && !configuredValue.isEmpty());
+  protected void assumeValidTestConfigPresent(final Configuration conf, final String key) {
+    String configuredValue = conf.get(key);
+    Assume.assumeTrue("Required Test Config \"" + key + "\" missing.",
+        configuredValue != null && !configuredValue.isEmpty());
+  }
+
+  protected void assumeValidAuthConfigsPresent() {
+    final AuthType currentAuthType = getAuthType();
+    if (currentAuthType == AuthType.SharedKey) {
+      assumeValidTestConfigPresent(getRawConfiguration(), FS_AZURE_ACCOUNT_KEY);
+    } else if (currentAuthType == AuthType.OAuth) {
+      assumeValidTestConfigPresent(getRawConfiguration(),
+          FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME);
+      assumeValidTestConfigPresent(getRawConfiguration(),
+          FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID);
+      assumeValidTestConfigPresent(getRawConfiguration(),
+          FS_AZURE_ACCOUNT_OAUTH_CLIENT_SECRET);
+      assumeValidTestConfigPresent(getRawConfiguration(),
+          FS_AZURE_ACCOUNT_OAUTH_CLIENT_ENDPOINT);
+    } else if (currentAuthType == AuthType.Custom) {
+      assumeValidTestConfigPresent(getRawConfiguration(),
+          FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME);
+    }
+  }
+
+  protected boolean isAppendBlobEnabled() {
+    return getRawConfiguration().getBoolean(FS_AZURE_TEST_APPENDBLOB_ENABLED, false);
   }
 }
