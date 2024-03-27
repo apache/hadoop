@@ -40,6 +40,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem.RecoverLeaseOp;
 import org.apache.hadoop.hdfs.server.namenode.INode.BlocksMapUpdateInfo;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 
 /**
  * Helper class to perform truncate operation.
@@ -71,7 +72,7 @@ final class FSDirTruncateOp {
       final String clientMachine, final long mtime,
       final BlocksMapUpdateInfo toRemoveBlocks, final FSPermissionChecker pc)
       throws IOException, UnresolvedLinkException {
-    assert fsn.hasWriteLock();
+    assert fsn.hasWriteLock(FSNamesystemLockMode.GLOBAL);
 
     FSDirectory fsd = fsn.getFSDirectory();
     final String src;
@@ -219,7 +220,7 @@ final class FSDirTruncateOp {
   static Block prepareFileForTruncate(FSNamesystem fsn, INodesInPath iip,
       String leaseHolder, String clientMachine, long lastBlockDelta,
       Block newBlock) throws IOException {
-    assert fsn.hasWriteLock();
+    assert fsn.hasWriteLock(FSNamesystemLockMode.GLOBAL);
 
     INodeFile file = iip.getLastINode().asFile();
     assert !file.isStriped();
@@ -303,7 +304,7 @@ final class FSDirTruncateOp {
   private static boolean unprotectedTruncate(FSNamesystem fsn,
       INodesInPath iip, long newLength, BlocksMapUpdateInfo collectedBlocks,
       long mtime, QuotaCounts delta) throws IOException {
-    assert fsn.hasWriteLock();
+    assert fsn.hasWriteLock(FSNamesystemLockMode.GLOBAL);
 
     INodeFile file = iip.getLastINode().asFile();
     int latestSnapshot = iip.getLatestSnapshotId();

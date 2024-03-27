@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -118,8 +119,8 @@ public class ContentSummaryComputationContext {
 
     boolean hadDirReadLock = dir.hasReadLock();
     boolean hadDirWriteLock = dir.hasWriteLock();
-    boolean hadFsnReadLock = fsn.hasReadLock();
-    boolean hadFsnWriteLock = fsn.hasWriteLock();
+    boolean hadFsnReadLock = fsn.hasReadLock(FSNamesystemLockMode.GLOBAL);
+    boolean hadFsnWriteLock = fsn.hasWriteLock(FSNamesystemLockMode.GLOBAL);
 
     // sanity check.
     if (!hadDirReadLock || !hadFsnReadLock || hadDirWriteLock ||
@@ -130,14 +131,14 @@ public class ContentSummaryComputationContext {
 
     // unlock
     dir.readUnlock();
-    fsn.readUnlock("contentSummary");
+    fsn.readUnlock(FSNamesystemLockMode.GLOBAL, "contentSummary");
 
     try {
       Thread.sleep(sleepMilliSec, sleepNanoSec);
     } catch (InterruptedException ie) {
     } finally {
       // reacquire
-      fsn.readLock();
+      fsn.readLock(FSNamesystemLockMode.GLOBAL);
       dir.readLock();
     }
     yieldCount++;
