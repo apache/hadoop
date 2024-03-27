@@ -202,7 +202,7 @@ for (CharSequence str : vargs) {
   command.append(str).append(" ");
 }
 
-LOG.info("Completed setting up app master command " + command.toString());
+LOG.info("Completed setting up app master command {}", command);
 List<String> commands = new ArrayList<String>();
 commands.add(command.toString());
 

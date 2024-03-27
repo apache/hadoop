@@ -1018,7 +1018,7 @@ public class RMAppImpl implements RMApp, Recoverable {
   private void processNodeUpdate(RMAppNodeUpdateType type, RMNode node) {
     NodeState nodeState = node.getState();
     updatedNodes.put(node, RMAppNodeUpdateType.convertToNodeUpdateType(type));
-    LOG.debug("Received node update event:{} for node:{} with state:",
+    LOG.debug("Received node update event:{} for node:{} with state:{}",
         type, node, nodeState);
   }
 
@@ -1145,11 +1145,10 @@ public class RMAppImpl implements RMApp, Recoverable {
             timeout.getKey(), timeout.getValue());
         if (LOG.isDebugEnabled()) {
           long remainingTime = timeout.getValue() - app.systemClock.getTime();
-          LOG.debug("Application " + app.applicationId
-              + " is registered for timeout monitor, type=" + timeout.getKey()
-              + " remaining timeout=" + (remainingTime > 0 ?
-              remainingTime / 1000 :
-              0) + " seconds");
+          LOG.debug("Application {} is registered for timeout monitor, type={} remaining timeout={} seconds",
+                  app.applicationId,
+                  timeout.getKey(),
+                  remainingTime > 0 ? remainingTime / 1000 : 0);
         }
       }
 

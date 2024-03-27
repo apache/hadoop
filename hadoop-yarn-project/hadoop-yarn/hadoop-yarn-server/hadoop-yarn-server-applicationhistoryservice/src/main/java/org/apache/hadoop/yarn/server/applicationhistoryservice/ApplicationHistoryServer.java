@@ -315,7 +315,7 @@ public class ApplicationHistoryServer extends CompositeService {
         YarnConfiguration.TIMELINE_SERVICE_WEBAPP_ADDRESS,
         YarnConfiguration.DEFAULT_TIMELINE_SERVICE_WEBAPP_ADDRESS,
         this.getListenerAddress());
-       LOG.info("Instantiating AHSWebApp at " + getPort());
+       LOG.info("Instantiating AHSWebApp at {}", getPort());
     } catch (Exception e) {
       String msg = "AHSWebApp failed to start.";
       LOG.error(msg, e);

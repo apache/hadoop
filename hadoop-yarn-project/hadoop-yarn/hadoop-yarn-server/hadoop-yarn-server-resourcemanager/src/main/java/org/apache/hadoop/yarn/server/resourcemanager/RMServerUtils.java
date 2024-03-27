@@ -424,8 +424,7 @@ public class RMServerUtils {
     }
 
     if (!authorizer.isAdmin(user)) {
-      LOG.warn("User " + user.getShortUserName() + " doesn't have permission" +
-          " to call '" + method + "'");
+      LOG.warn("User {} doesn't have permission to call '{}'", user.getShortUserName(), method);
 
       RMAuditLogger.logFailure(user.getShortUserName(), method, "", module,
           RMAuditLogger.AuditConstants.UNAUTHORIZED_USER);
@@ -435,7 +434,7 @@ public class RMServerUtils {
           " to call '" + method + "'");
     }
     if (LOG.isTraceEnabled()) {
-      LOG.trace(method + " invoked by user " + user.getShortUserName());
+      LOG.trace("{} invoked by user {}", method, user.getShortUserName());
     }
     return user;
   }

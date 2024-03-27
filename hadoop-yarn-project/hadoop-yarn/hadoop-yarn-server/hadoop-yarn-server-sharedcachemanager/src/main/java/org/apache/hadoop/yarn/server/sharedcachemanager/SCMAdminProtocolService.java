@@ -118,8 +118,7 @@ public class SCMAdminProtocolService extends AbstractService implements
     }
 
     if (!authorizer.isAdmin(user)) {
-      LOG.warn("User " + user.getShortUserName() + " doesn't have permission" +
-          " to call '" + method + "'");
+      LOG.warn("User {} doesn't have permission to call '{}'", user.getShortUserName(), method);
 
       throw RPCUtil.getRemoteException(
           new AccessControlException("User " + user.getShortUserName() +

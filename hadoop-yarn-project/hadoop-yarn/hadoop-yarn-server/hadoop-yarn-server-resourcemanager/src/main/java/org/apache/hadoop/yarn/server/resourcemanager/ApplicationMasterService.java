@@ -159,12 +159,10 @@ public class ApplicationMasterService extends AbstractService implements
       for (ApplicationMasterServiceProcessor p : processors) {
         // Ensure only single instance of PlacementProcessor is included
         if (p instanceof AbstractPlacementProcessor) {
-          LOG.warn("Found PlacementProcessor=" + p.getClass().getCanonicalName()
-              + " defined in "
-              + YarnConfiguration.RM_APPLICATION_MASTER_SERVICE_PROCESSORS
-              + ", however PlacementProcessor handler should be configured "
-              + "by using " + YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_HANDLER
-              + ", this processor will be ignored.");
+          LOG.warn("Found PlacementProcessor={} defined in {}, however PlacementProcessor handler should be configured "
+              + "by using {}, this processor will be ignored.",
+                  p.getClass().getCanonicalName(), YarnConfiguration.RM_APPLICATION_MASTER_SERVICE_PROCESSORS,
+                  YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_HANDLER);
           continue;
         }
         this.amsProcessingChain.addProcessor(p);

@@ -104,10 +104,9 @@ public class TimelineACLsManager {
       ApplicationAccessType applicationAccessType,
       TimelineEntity entity) throws YarnException, IOException {
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Verifying the access of "
-          + (callerUGI == null ? null : callerUGI.getShortUserName())
-          + " on the timeline entity "
-          + new EntityIdentifier(entity.getEntityId(), entity.getEntityType()));
+      LOG.debug("Verifying the access of {} on the timeline entity {}",
+              callerUGI == null ? null : callerUGI.getShortUserName(),
+              new EntityIdentifier(entity.getEntityId(), entity.getEntityType()));
     }
 
     if (!adminAclsManager.areACLsEnabled()) {
@@ -127,9 +126,8 @@ public class TimelineACLsManager {
     String owner = aclExt.owner;
     AccessControlList domainACL = aclExt.acls.get(applicationAccessType);
     if (domainACL == null) {
-      LOG.debug("ACL not found for access-type {} for domain {} owned by {}."
-          + " Using default [{}]", applicationAccessType,
-          entity.getDomainId(), owner, YarnConfiguration.DEFAULT_YARN_APP_ACL);
+      LOG.debug("ACL not found for access-type {} for domain {} owned by {}. Using default [{}]",
+              applicationAccessType, entity.getDomainId(), owner, YarnConfiguration.DEFAULT_YARN_APP_ACL);
       domainACL =
           new AccessControlList(YarnConfiguration.DEFAULT_YARN_APP_ACL);
     }
@@ -146,9 +144,8 @@ public class TimelineACLsManager {
   public boolean checkAccess(UserGroupInformation callerUGI,
       TimelineDomain domain) throws YarnException, IOException {
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Verifying the access of "
-          + (callerUGI == null ? null : callerUGI.getShortUserName())
-          + " on the timeline domain " + domain);
+      LOG.debug("Verifying the access of {} on the timeline domain {}",
+              (callerUGI == null ? null : callerUGI.getShortUserName()), domain);
     }
 
     if (!adminAclsManager.areACLsEnabled()) {

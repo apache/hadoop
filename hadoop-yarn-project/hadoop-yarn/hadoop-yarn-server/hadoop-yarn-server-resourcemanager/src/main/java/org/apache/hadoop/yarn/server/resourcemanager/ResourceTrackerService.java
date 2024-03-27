@@ -264,8 +264,7 @@ public class ResourceTrackerService extends AbstractService implements
                   DEFAULT_RM_NM_HEARTBEAT_INTERVAL_SLOWDOWN_FACTOR);
 
       if (nextHeartBeatInterval <= 0) {
-        LOG.warn("HeartBeat interval: " + nextHeartBeatInterval
-            + " must be greater than 0, using default.");
+        LOG.warn("HeartBeat interval: {} must be greater than 0, using default.", nextHeartBeatInterval);
         nextHeartBeatInterval =
             YarnConfiguration.DEFAULT_RM_NM_HEARTBEAT_INTERVAL_MS;
       }
@@ -365,10 +364,8 @@ public class ResourceTrackerService extends AbstractService implements
     RMApp rmApp =
         rmContext.getRMApps().get(appAttemptId.getApplicationId());
     if (rmApp == null) {
-      LOG.error("Received finished container : "
-          + containerStatus.getContainerId()
-          + " for unknown application " + appAttemptId.getApplicationId()
-          + " Skipping.");
+      LOG.error("Received finished container : {} for unknown application {} Skipping.",
+              containerStatus.getContainerId(), appAttemptId.getApplicationId());
       return;
     }
 
@@ -507,9 +504,8 @@ public class ResourceTrackerService extends AbstractService implements
       if (request.getLogAggregationReportsForApps() != null
           && !request.getLogAggregationReportsForApps().isEmpty()) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Found the number of previous cached log aggregation "
-              + "status from nodemanager:" + nodeId + " is :"
-              + request.getLogAggregationReportsForApps().size());
+          LOG.debug("Found the number of previous cached log aggregation status from nodemanager:{} is :{}",
+                  nodeId, request.getLogAggregationReportsForApps().size());
         }
         startEvent.setLogAggregationReportsForApps(request
             .getLogAggregationReportsForApps());
@@ -806,8 +802,7 @@ public class ResourceTrackerService extends AbstractService implements
   private void updateNodeAttributesIfNecessary(NodeId nodeId,
       Set<NodeAttribute> nodeAttributes) throws IOException {
     if (LOG.isDebugEnabled()) {
-      nodeAttributes.forEach(nodeAttribute -> LOG.debug(
-          nodeId.toString() + " ATTRIBUTE : " + nodeAttribute.toString()));
+      nodeAttributes.forEach(nodeAttribute -> LOG.debug("{} ATTRIBUTE : {}", nodeId, nodeAttribute));
     }
 
     // Validate attributes
@@ -963,8 +958,8 @@ public class ResourceTrackerService extends AbstractService implements
       labelsUpdate.put(nodeId, nodeLabels);
       this.rmContext.getNodeLabelManager().replaceLabelsOnNode(labelsUpdate);
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Node Labels {" + StringUtils.join(",", nodeLabels)
-            + "} from Node " + nodeId + " were Accepted from RM");
+        LOG.debug("Node Labels {{}} from Node {} were Accepted from RM",
+                StringUtils.join(",", nodeLabels), nodeId);
       }
     } catch (IOException ex) {
       StringBuilder errorMessage = new StringBuilder();
@@ -1043,11 +1038,12 @@ public class ResourceTrackerService extends AbstractService implements
   private void populateTokenSequenceNo(NodeHeartbeatRequest request,
       NodeHeartbeatResponse nodeHeartBeatResponse) {
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Token sequence no received from heartbeat request: "
-          + request.getTokenSequenceNo() + ". Current token sequeunce no: "
-          + this.rmContext.getTokenSequenceNo()
-          + ". System credentials for apps size: "
-          + rmContext.getSystemCredentialsForApps().size());
+      LOG.debug("Token sequence no received from heartbeat request: {}. "
+                      + "Current token sequeunce no: {}. "
+                      + "System credentials for apps size: {}",
+              request.getTokenSequenceNo(),
+              this.rmContext.getTokenSequenceNo(),
+              rmContext.getSystemCredentialsForApps().size());
     }
     if(request.getTokenSequenceNo() != this.rmContext.getTokenSequenceNo()) {
       if (!rmContext.getSystemCredentialsForApps().isEmpty()) {
