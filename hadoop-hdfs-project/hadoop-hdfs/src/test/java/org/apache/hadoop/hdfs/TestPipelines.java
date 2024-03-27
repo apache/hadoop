@@ -89,7 +89,7 @@ public class TestPipelines {
   public void pipeline_01() throws IOException {
     final String METHOD_NAME = GenericTestUtils.getMethodName();
     if(LOG.isDebugEnabled()) {
-      LOG.debug("Running " + METHOD_NAME);
+      LOG.debug("Running {}", METHOD_NAME);
     }
     Path filePath = new Path("/" + METHOD_NAME + ".dat");
 
@@ -139,7 +139,7 @@ public class TestPipelines {
         bytesToWriteNext);
       written += bytesToWriteNext;
       if(LOG.isDebugEnabled()) {
-        LOG.debug("Written: " + bytesToWriteNext + "; Total: " + written);
+        LOG.debug("Written: {}; Total: {}", bytesToWriteNext, written);
       }
       bytesToWrite -= bytesToWriteNext;
     }
