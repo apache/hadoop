@@ -4033,7 +4033,6 @@ public class YarnConfiguration extends Configuration {
 
   public static final String FEDERATION_CACHE_ENTITY_NUMS =
       FEDERATION_PREFIX + "cache-entity.nums";
-  // default 1000
   public static final int DEFAULT_FEDERATION_CACHE_ENTITY_NUMS = 1000;
 
   public static final String FEDERATION_FLUSH_CACHE_FOR_RM_ADDR =
