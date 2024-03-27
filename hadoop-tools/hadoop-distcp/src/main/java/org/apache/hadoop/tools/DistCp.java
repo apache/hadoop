@@ -422,9 +422,9 @@ public class DistCp extends Configured implements Tool {
     Configuration configuration = getConf();
     Path stagingDir = JobSubmissionFiles.getStagingDir(
             new Cluster(configuration), configuration);
-    Path metaFolderPath = new Path(stagingDir, PREFIX + String.valueOf(rand.nextInt()));
+    Path metaFolderPath = new Path(stagingDir, PREFIX + rand.nextInt());
     if (LOG.isDebugEnabled())
-      LOG.debug("Meta folder location: " + metaFolderPath);
+      LOG.debug("Meta folder location: {}", metaFolderPath);
     configuration.set(DistCpConstants.CONF_LABEL_META_FOLDER, metaFolderPath.toString());    
     return metaFolderPath;
   }
