@@ -40,26 +40,28 @@ RUN pkg-resolver/set-vault-as-baseurl-centos.sh centos:8
 ######
 # Install packages from yum
 ######
-# hadolint ignore=DL3008,SC2046
+# hadolint ignore=DL3008,SC2046,DL3033
 RUN yum update -y \
     && yum install -y python3 \
-    && yum install -y $(pkg-resolver/resolve.py centos:8)
+    && yum install -y $(pkg-resolver/resolve.py centos:8) \
+    && yum clean all
 
 ####
 # Install EPEL
 ####
 RUN pkg-resolver/install-epel.sh centos:8
 
+# hadolint ignore=DL3033,DL3041
 RUN dnf --enablerepo=powertools install -y \
     doxygen \
     snappy-devel \
-    yasm
-
-RUN dnf install -y \
-    bouncycastle \
-    gcc-toolset-9-gcc \
-    gcc-toolset-9-gcc-c++ \
-    libpmem-devel
+    yasm \
+    && dnf install -y \
+      bouncycastle \
+      gcc-toolset-9-gcc \
+      gcc-toolset-9-gcc-c++ \
+      libpmem-devel \
+    && dnf clean all
 
 # Set GCC 9 as the default C/C++ compiler
 RUN echo "source /opt/rh/gcc-toolset-9/enable" >> /etc/bashrc
@@ -115,4 +117,5 @@ RUN pkg-resolver/install-boost.sh centos:8
 RUN pkg-resolver/install-spotbugs.sh centos:8
 RUN pkg-resolver/install-protobuf.sh centos:8
 RUN pkg-resolver/install-zstandard.sh centos:8
+RUN pkg-resolver/install-hadolint.sh centos:8 2.10.0
 RUN pkg-resolver/install-common-pkgs.sh
