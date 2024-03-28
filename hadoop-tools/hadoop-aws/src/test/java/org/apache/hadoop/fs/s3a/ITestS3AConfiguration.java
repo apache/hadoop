@@ -386,8 +386,10 @@ public class ITestS3AConfiguration {
           s3Configuration.pathStyleAccessEnabled());
       byte[] file = ContractTestUtils.toAsciiByteArray("test file");
       ContractTestUtils.writeAndRead(fs,
-          new Path("/path/style/access/testFile"), file, file.length,
-              (int) conf.getLongBytes(Constants.FS_S3A_BLOCK_SIZE, file.length), false, true);
+          createTestPath(new Path("/path/style/access/testFile")),
+          file, file.length,
+          (int) conf.getLongBytes(Constants.FS_S3A_BLOCK_SIZE, file.length),
+          false, true);
     } catch (final AWSRedirectException e) {
       LOG.error("Caught exception: ", e);
       // Catch/pass standard path style access behaviour when live bucket
