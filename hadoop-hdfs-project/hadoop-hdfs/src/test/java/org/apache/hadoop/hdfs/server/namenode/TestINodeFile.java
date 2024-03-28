@@ -1265,4 +1265,15 @@ public class TestINodeFile {
           qu.getFileAndDirectoryCount());
     }
   }
+
+  @Test
+  public void testIsRoot() {
+    INodeDirectory root = new INodeDirectory(HdfsConstants.GRANDFATHER_INODE_ID,
+        null, perm, 0L);
+    INodeFile file = new INodeFile(HdfsConstants.GRANDFATHER_INODE_ID + 1,
+        "file".getBytes(), perm, 0, 0, null, (short) 1, 0);
+    file.setParent(root);
+    Assert.assertTrue(root.isRoot());
+    Assert.assertFalse(file.isRoot());
+  }
 }
