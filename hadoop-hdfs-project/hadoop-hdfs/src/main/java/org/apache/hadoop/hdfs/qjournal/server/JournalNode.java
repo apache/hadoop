@@ -17,15 +17,8 @@
  */
 package org.apache.hadoop.hdfs.qjournal.server;
 
-import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.util.Preconditions;
-import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
-import org.apache.hadoop.util.Lists;
-import org.apache.hadoop.util.VersionInfo;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -40,29 +33,26 @@ import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
+import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.apache.hadoop.tracing.TraceUtils;
-import org.apache.hadoop.util.DiskChecker;
-
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_JOURNALNODE_HTTP_BIND_HOST_KEY;
-import static org.apache.hadoop.util.ExitUtil.terminate;
-import static org.apache.hadoop.util.Time.now;
-import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.util.Tool;
-import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.tracing.Tracer;
+import org.apache.hadoop.util.*;
 import org.eclipse.jetty.util.ajax.JSON;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.management.ObjectName;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
+
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_JOURNALNODE_HTTP_BIND_HOST_KEY;
+import static org.apache.hadoop.util.ExitUtil.terminate;
+import static org.apache.hadoop.util.Time.now;
 
 /**
  * The JournalNode is a daemon which allows namenodes using
@@ -403,6 +393,18 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
     }
 
     return JSON.toString(status);
+  }
+
+  @Override // JournalNodeMXBean
+  public String getJournalSyncerStatus() {
+    StringBuilder sbuilder = new StringBuilder();
+    journalSyncersById.keySet().forEach((jid) ->
+        sbuilder.append(jid)
+            .append(","));
+    if (sbuilder.length() > 0) {
+      sbuilder.deleteCharAt(sbuilder.length() - 1);
+    }
+    return sbuilder.toString();
   }
 
   @Override // JournalNodeMXBean
