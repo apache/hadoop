@@ -2950,8 +2950,12 @@ public abstract class Server {
           if (alignmentContext.isCoordinatedCall(protoName, methodName)) {
             call.markCallCoordinated(true);
             long stateId;
-            stateId = alignmentContext.receiveRequestState(
-                header, getMaxIdleTime());
+            try {
+              stateId = alignmentContext.receiveRequestState(header, getMaxIdleTime());
+            } catch (RetriableException re) {
+              rpcMetrics.incrRpcCallsRejectedByObserver();
+              throw re;
+            }
             call.setClientStateId(stateId);
             if (header.hasRouterFederatedState()) {
               call.setFederatedNamespaceState(header.getRouterFederatedState());

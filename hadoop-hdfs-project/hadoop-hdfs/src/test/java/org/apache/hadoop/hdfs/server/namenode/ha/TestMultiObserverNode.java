@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_STATE_CONTEXT_ENABLED_KEY;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -28,6 +29,9 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeRpcServer;
+import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.metrics.RpcMetrics;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -145,13 +149,29 @@ public class TestMultiObserverNode {
   public void testObserverFallBehind() throws Exception {
     dfs.mkdir(testPath, FsPermission.getDefault());
     assertSentTo(0);
+    RPC.Server clientRpcServer2 = ((NameNodeRpcServer)dfsCluster
+        .getNameNodeRpc(2)).getClientRpcServer();
+    RpcMetrics rpcMetrics2 = clientRpcServer2.getRpcMetrics();
+    assertEquals(0, rpcMetrics2.getRpcCallsRejectedByObserver());
+    RPC.Server clientRpcServer3 = ((NameNodeRpcServer)dfsCluster
+        .getNameNodeRpc(3)).getClientRpcServer();
+    RpcMetrics rpcMetrics3 = clientRpcServer3.getRpcMetrics();
+    assertEquals(0, rpcMetrics3.getRpcCallsRejectedByObserver());
 
-    // Set large state Id on the client
+    dfsCluster.rollEditLogAndTail(0);
+    dfs.getFileStatus(testPath);
+    assertSentTo(2, 3);
+
+    // Set large state Id on the client.
     long realStateId = HATestUtil.setACStateId(dfs, 500000);
     dfs.getFileStatus(testPath);
-    // Should end up on ANN
+    // Should end up on ANN.
     assertSentTo(0);
     HATestUtil.setACStateId(dfs, realStateId);
+
+    // Validate rpcCallsRejectedByObserver metric.
+    assertEquals(1, rpcMetrics2.getRpcCallsRejectedByObserver());
+    assertEquals(1, rpcMetrics3.getRpcCallsRejectedByObserver());
   }
 
   private void assertSentTo(int... nnIndices) throws IOException {
