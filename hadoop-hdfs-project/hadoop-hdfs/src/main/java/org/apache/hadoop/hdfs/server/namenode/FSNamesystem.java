@@ -2618,15 +2618,16 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @throws  IOException
    */
   BlockStoragePolicy getStoragePolicy(String src) throws IOException {
+    final String operationName = "getStoragePolicy";
     checkOperation(OperationCategory.READ);
     final FSPermissionChecker pc = getPermissionChecker();
-    FSPermissionChecker.setOperationType(null);
+    FSPermissionChecker.setOperationType(operationName);
     readLock();
     try {
       checkOperation(OperationCategory.READ);
       return FSDirAttrOp.getStoragePolicy(dir, pc, blockManager, src);
     } finally {
-      readUnlock("getStoragePolicy");
+      readUnlock(operationName);
     }
   }
 
@@ -2646,15 +2647,16 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   long getPreferredBlockSize(String src) throws IOException {
+    final String operationName = "getPreferredBlockSize";
     checkOperation(OperationCategory.READ);
     final FSPermissionChecker pc = getPermissionChecker();
-    FSPermissionChecker.setOperationType(null);
+    FSPermissionChecker.setOperationType(operationName);
     readLock();
     try {
       checkOperation(OperationCategory.READ);
       return FSDirAttrOp.getPreferredBlockSize(dir, pc, src);
     } finally {
-      readUnlock("getPreferredBlockSize");
+      readUnlock(operationName);
     }
   }
 
@@ -2727,6 +2729,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       long blockSize, CryptoProtocolVersion[] supportedVersions,
       String ecPolicyName, String storagePolicy, boolean logRetryCache)
       throws IOException {
+    final String operationName = "create";
     if (NameNode.stateChangeLog.isDebugEnabled()) {
       StringBuilder builder = new StringBuilder();
       builder.append("DIR* NameSystem.startFile: src=").append(src)
@@ -2764,7 +2767,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
     checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = getPermissionChecker();
-    FSPermissionChecker.setOperationType(null);
+    FSPermissionChecker.setOperationType(operationName);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -2827,7 +2830,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         dir.writeUnlock();
       }
     } finally {
-      writeUnlock("create", getLockReportInfoSupplier(src, null, stat));
+      writeUnlock(operationName, getLockReportInfoSupplier(src, null, stat));
       // There might be transactions logged while trying to recover the lease.
       // They need to be sync'ed even when an exception was thrown.
       if (!skipSync) {
@@ -2856,10 +2859,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   boolean recoverLease(String src, String holder, String clientMachine)
       throws IOException {
+    final String operationName = "recoverLease";
     boolean skipSync = false;
     checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = getPermissionChecker();
-    FSPermissionChecker.setOperationType(null);
+    FSPermissionChecker.setOperationType(operationName);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -2880,7 +2884,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       skipSync = true;
       throw se;
     } finally {
-      writeUnlock("recoverLease");
+      writeUnlock(operationName);
       // There might be transactions logged while trying to recover the lease.
       // They need to be sync'ed even when an exception was thrown.
       if (!skipSync) {
@@ -3096,6 +3100,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       final Set<Node> excludes,
       final int numAdditionalNodes, final String clientName
       ) throws IOException {
+    final String operationName = "getAdditionalDatanode";
     //check if the feature is enabled
     dtpReplaceDatanodeOnFailure.checkEnabled();
 
@@ -3107,7 +3112,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     final BlockType blockType;
     checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = getPermissionChecker();
-    FSPermissionChecker.setOperationType(null);
+    FSPermissionChecker.setOperationType(operationName);
     readLock();
     try {
       // Changing this operation category to WRITE instead of making getAdditionalDatanode as a
@@ -3133,7 +3138,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           "src=%s, fileId=%d, blk=%s, clientName=%s, clientMachine=%s",
           src, fileId, blk, clientName, clientMachine));
     } finally {
-      readUnlock("getAdditionalDatanode");
+      readUnlock(operationName);
     }
 
     if (clientnode == null) {
@@ -3155,10 +3160,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   void abandonBlock(ExtendedBlock b, long fileId, String src, String holder)
       throws IOException {
+    final String operationName = "abandonBlock";
     NameNode.stateChangeLog.debug("BLOCK* NameSystem.abandonBlock: {} of file {}", b, src);
     checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = getPermissionChecker();
-    FSPermissionChecker.setOperationType(null);
+    FSPermissionChecker.setOperationType(operationName);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -3167,7 +3173,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       NameNode.stateChangeLog.debug(
           "BLOCK* NameSystem.abandonBlock: {} is removed from pendingCreates", b);
     } finally {
-      writeUnlock("abandonBlock");
+      writeUnlock(operationName);
     }
     getEditLog().logSync();
   }
@@ -3220,11 +3226,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   boolean completeFile(final String src, String holder,
                        ExtendedBlock last, long fileId)
-    throws IOException {
+      throws IOException {
+    final String operationName = "completeFile";
     boolean success = false;
     checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = getPermissionChecker();
-    FSPermissionChecker.setOperationType(null);
+    FSPermissionChecker.setOperationType(operationName);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -3232,7 +3239,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       success = FSDirWriteFileOp.completeFile(this, pc, src, holder, last,
                                               fileId);
     } finally {
-      writeUnlock("completeFile");
+      writeUnlock(operationName);
     }
     getEditLog().logSync();
     if (success) {
@@ -3666,10 +3673,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   void fsync(String src, long fileId, String clientName, long lastBlockLength)
       throws IOException {
+    final String operationName = "fsync";
     NameNode.stateChangeLog.info("BLOCK* fsync: " + src + " for " + clientName);
     checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = getPermissionChecker();
-    FSPermissionChecker.setOperationType(null);
+    FSPermissionChecker.setOperationType(operationName);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -3683,7 +3691,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       }
       FSDirWriteFileOp.persistBlocks(dir, src, pendingFile, false);
     } finally {
-      writeUnlock("fsync");
+      writeUnlock(operationName);
     }
     getEditLog().logSync();
   }
