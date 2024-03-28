@@ -34,6 +34,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -137,6 +138,11 @@ public abstract class AbstractYarnScheduler
   protected SchedulerHealth schedulerHealth = new SchedulerHealth();
   protected volatile long lastNodeUpdateTime;
 
+  protected volatile static boolean nodeLoadBasedAssignEnable; // node load based assign enabled or not
+  protected volatile static float nodeLoadMemoryLimit; // max memory ratio limit of a node to assign container
+  protected volatile static float nodeLoadCpuLimit; // max cpu ratio limit of a node to assign container
+  protected volatile static float nodeLoadDiskIoLimit; // max disk io ratio limit of a node to assign container
+
   // timeout to join when we stop this service
   protected final long THREAD_JOIN_TIMEOUT_MS = 1000;
 
@@ -225,6 +231,19 @@ public abstract class AbstractYarnScheduler
     autoUpdateContainers =
         conf.getBoolean(YarnConfiguration.RM_AUTO_UPDATE_CONTAINERS,
             YarnConfiguration.DEFAULT_RM_AUTO_UPDATE_CONTAINERS);
+
+    nodeLoadBasedAssignEnable =
+        conf.getBoolean(YarnConfiguration.NODE_LOAD_BASED_ASSIGN_ENABLE,
+            YarnConfiguration.DEFAULT_NODE_LOAD_BASED_ASSIGN_ENABLE);
+    nodeLoadMemoryLimit =
+        conf.getFloat(YarnConfiguration.NODE_LOAD_MEMORY_LIMIT,
+            YarnConfiguration.DEFAULT_NODE_LOAD_MEMORY_LIMIT);
+    nodeLoadCpuLimit =
+        conf.getFloat(YarnConfiguration.NODE_LOAD_CPU_LIMIT,
+            YarnConfiguration.DEFAULT_NODE_LOAD_CPU_LIMIT);
+    nodeLoadDiskIoLimit =
+        conf.getFloat(YarnConfiguration.NODE_LOAD_DISK_IO_LIMIT,
+            YarnConfiguration.DEFAULT_NODE_LOAD_DISK_IO_LIMIT);
 
     if (updateInterval > 0) {
       updateThread = new UpdateThread();
@@ -502,6 +521,43 @@ public abstract class AbstractYarnScheduler
       throws YarnException {
     throw new YarnException(getClass().getSimpleName()
         + " does not support this operation");
+  }
+
+  protected static boolean isNodeOverload(NodeStatus nodeStatus, boolean printVerboseLog) {
+    float cpuUsage = nodeStatus.getCpuUsage();
+    float diskIoUsage = nodeStatus.getIoUsage();
+    float memoryUsage = nodeStatus.getMemUsage();
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Node " + nodeStatus.getNodeId() + ", cpu usage is " + cpuUsage
+          + ", disk io usage is " + diskIoUsage + ", memory usage is " + memoryUsage);
+    }
+
+    if (nodeLoadCpuLimit > 0 && cpuUsage > nodeLoadCpuLimit) {
+      if (printVerboseLog && LOG.isDebugEnabled()) {
+        LOG.debug("Skip this node " + nodeStatus.getNodeId()
+            + " because cpu usage:" + cpuUsage + " is over cpu limit "
+            + nodeLoadCpuLimit);
+      }
+      return true;
+    }
+    if (nodeLoadDiskIoLimit > 0 && diskIoUsage > nodeLoadDiskIoLimit) {
+      if (printVerboseLog && LOG.isDebugEnabled()) {
+        LOG.debug("Skip this node " + nodeStatus.getNodeId()
+            + " because disk I/Os:" + diskIoUsage + " is over disk I/Os limit "
+            + nodeLoadCpuLimit);
+      }
+      return true;
+    }
+    if (nodeLoadMemoryLimit > 0 && memoryUsage > nodeLoadMemoryLimit) {
+      if (printVerboseLog && LOG.isDebugEnabled()) {
+        LOG.debug("Skip this node " + nodeStatus.getNodeId()
+            + " because memory usage:" + memoryUsage + " is over memory limit "
+            + nodeLoadCpuLimit);
+      }
+      return true;
+    }
+    return false;
   }
 
   private void killOrphanContainerOnNode(RMNode node,

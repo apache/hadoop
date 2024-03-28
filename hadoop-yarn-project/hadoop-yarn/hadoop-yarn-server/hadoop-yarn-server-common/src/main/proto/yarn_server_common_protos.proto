@@ -41,6 +41,9 @@ message NodeStatusProto {
   optional ResourceUtilizationProto node_utilization = 7;
   repeated ContainerProto increased_containers = 8;
   optional OpportunisticContainersStatusProto opportunistic_containers_status = 9;
+  optional float cpu_usage = 10;
+  optional float io_usage = 11;
+  optional float mem_usage = 12;
 }
 
 message OpportunisticContainersStatusProto {

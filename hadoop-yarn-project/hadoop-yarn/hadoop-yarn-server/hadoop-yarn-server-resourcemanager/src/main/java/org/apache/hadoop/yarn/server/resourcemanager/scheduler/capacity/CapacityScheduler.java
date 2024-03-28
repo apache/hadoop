@@ -36,6 +36,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.ApplicationPlacementContext;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.CSMappingPlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementFactory;
@@ -522,6 +523,13 @@ public class CapacityScheduler extends
       }
       return true;
     }
+
+    NodeStatus nodeStatus = node.getRMNode().getNodeStatus();
+    if (nodeLoadBasedAssignEnable && nodeStatus != null
+        && isNodeOverload(nodeStatus, printVerboseLog)) {
+      return true;
+    }
+
     return false;
   }
 

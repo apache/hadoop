@@ -59,7 +59,8 @@ public abstract class NodeStatus {
       NodeHealthStatus nodeHealthStatus,
       ResourceUtilization containersUtilization,
       ResourceUtilization nodeUtilization,
-      List<Container> increasedContainers) {
+      List<Container> increasedContainers,
+      float cpuUsage, float ioUsage, float memUsage) {
     NodeStatus nodeStatus = Records.newRecord(NodeStatus.class);
     nodeStatus.setResponseId(responseId);
     nodeStatus.setNodeId(nodeId);
@@ -69,6 +70,9 @@ public abstract class NodeStatus {
     nodeStatus.setContainersUtilization(containersUtilization);
     nodeStatus.setNodeUtilization(nodeUtilization);
     nodeStatus.setIncreasedContainers(increasedContainers);
+    nodeStatus.setCpuUsage(cpuUsage);
+    nodeStatus.setIoUsage(ioUsage);
+    nodeStatus.setMemUsage(memUsage);
     return nodeStatus;
   }
 
@@ -132,4 +136,28 @@ public abstract class NodeStatus {
   @Unstable
   public abstract void setOpportunisticContainersStatus(
       OpportunisticContainersStatus opportunisticContainersStatus);
+
+  @Private
+  @Unstable
+  public abstract void setCpuUsage(float cpuUsage);
+
+  @Private
+  @Unstable
+  public abstract void setIoUsage(float ioUsage);
+
+  @Private
+  @Unstable
+  public abstract void setMemUsage(float memUsage);
+
+  @Private
+  @Unstable
+  public abstract float getCpuUsage();
+
+  @Private
+  @Unstable
+  public abstract float getIoUsage();
+
+  @Private
+  @Unstable
+  public abstract float getMemUsage();
 }
