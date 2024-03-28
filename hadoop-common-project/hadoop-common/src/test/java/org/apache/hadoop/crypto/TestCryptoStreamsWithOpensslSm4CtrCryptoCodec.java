@@ -21,6 +21,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.random.OsSecureRandom;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -40,6 +41,7 @@ public class TestCryptoStreamsWithOpensslSm4CtrCryptoCodec
   @BeforeClass
   public static void init() throws Exception {
     GenericTestUtils.assumeInNativeProfile();
+    Assume.assumeTrue(OpensslCipher.isSupported(CipherSuite.SM4_CTR_NOPADDING));
     Configuration conf = new Configuration();
     conf.set(HADOOP_SECURITY_CRYPTO_CIPHER_SUITE_KEY, "SM4/CTR/NoPadding");
     conf.set(HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_SM4_CTR_NOPADDING_KEY,
