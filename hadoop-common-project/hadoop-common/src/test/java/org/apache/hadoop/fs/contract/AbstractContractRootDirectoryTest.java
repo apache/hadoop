@@ -79,9 +79,20 @@ public abstract class AbstractContractRootDirectoryTest extends AbstractFSContra
     skipIfUnsupported(TEST_ROOT_TESTS_ENABLED);
     Path root = new Path("/");
     assertIsDirectory(root);
-    boolean deleted = getFileSystem().delete(root, true);
-    LOG.info("rm -r / of empty dir result is {}", deleted);
-    assertIsDirectory(root);
+    if (isSupported(ROOT_DELETE_INCOMPATIBLE_FS)) {
+      // Root delete incompatible file systems should throw an exception on calling
+      try {
+        boolean deleted = getFileSystem().delete(root, true);
+        fail("incompatible file system should have raised an exception," +
+            " but completed with exit code " + deleted);
+      } catch (IOException e) {
+        handleExpectedException(e);
+      }
+    } else {
+      boolean deleted = getFileSystem().delete(root, true);
+      LOG.info("rm -r / of empty dir result is {}", deleted);
+      assertIsDirectory(root);
+    }
   }
 
   @Test
@@ -114,9 +125,20 @@ public abstract class AbstractContractRootDirectoryTest extends AbstractFSContra
         },
         new LambdaTestUtils.ProportionalRetryInterval(50, 1000));
     // then try to delete the empty one
-    boolean deleted = fs.delete(root, false);
-    LOG.info("rm / of empty dir result is {}", deleted);
-    assertIsDirectory(root);
+    if (isSupported(ROOT_DELETE_INCOMPATIBLE_FS)) {
+      // Root delete incompatible file systems should throw an exception on calling
+      try {
+        boolean deleted = getFileSystem().delete(root, true);
+        fail("incompatible file system should have raised an exception," +
+            " but completed with exit code " + deleted);
+      } catch (IOException e) {
+        handleExpectedException(e);
+      }
+    } else {
+      boolean deleted = fs.delete(root, false);
+      LOG.info("rm / of empty dir result is {}", deleted);
+      assertIsDirectory(root);
+    }
   }
 
   @Test
@@ -152,13 +174,24 @@ public abstract class AbstractContractRootDirectoryTest extends AbstractFSContra
     Path file = new Path("/testRmRootRecursive");
     try {
       ContractTestUtils.touch(getFileSystem(), file);
-      boolean deleted = getFileSystem().delete(root, true);
-      assertIsDirectory(root);
-      LOG.info("rm -rf / result is {}", deleted);
-      if (deleted) {
-        assertPathDoesNotExist("expected file to be deleted", file);
+      if (isSupported(ROOT_DELETE_INCOMPATIBLE_FS)) {
+        // Root delete incompatible file systems should throw an exception on calling
+        try {
+          boolean deleted = getFileSystem().delete(root, true);
+          fail("incompatible file system should have raised an exception," +
+              " but completed with exit code " + deleted);
+        } catch (IOException e) {
+          handleExpectedException(e);
+        }
       } else {
-        assertPathExists("expected file to be preserved", file);
+        boolean deleted = getFileSystem().delete(root, true);
+        assertIsDirectory(root);
+        LOG.info("rm -rf / result is {}", deleted);
+        if (deleted) {
+          assertPathDoesNotExist("expected file to be deleted", file);
+        } else {
+          assertPathExists("expected file to be preserved", file);
+        }
       }
     } finally{
       getFileSystem().delete(file, false);

@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
+import org.apache.hadoop.fs.PathPermissionException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.Retries;
@@ -215,7 +216,7 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
         LOG.error("S3A: Cannot delete the root directory."
                 + " Path: {}. Recursive: {}",
             status.getPath(), recursive);
-        return false;
+        throw new PathPermissionException(path.toString(), "S3A: Cannot delete the root directory");
       }
 
       if (!recursive && status.isEmptyDirectory() == Tristate.FALSE) {
