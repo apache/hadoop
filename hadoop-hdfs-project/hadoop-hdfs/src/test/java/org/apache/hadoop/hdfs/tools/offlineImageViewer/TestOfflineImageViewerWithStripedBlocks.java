@@ -40,24 +40,24 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
-import org.junit.After;
-import org.junit.Before;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class TestOfflineImageViewerWithStripedBlocks {
-  private final ErasureCodingPolicy ecPolicy =
+  private final static ErasureCodingPolicy ecPolicy =
       StripedFileTestUtil.getDefaultECPolicy();
-  private int dataBlocks = ecPolicy.getNumDataUnits();
-  private int parityBlocks = ecPolicy.getNumParityUnits();
+  private static int dataBlocks = ecPolicy.getNumDataUnits();
+  private static int parityBlocks = ecPolicy.getNumParityUnits();
 
   private static MiniDFSCluster cluster;
   private static DistributedFileSystem fs;
-  private final int cellSize = ecPolicy.getCellSize();
-  private final int stripesPerBlock = 3;
-  private final int blockSize = cellSize * stripesPerBlock;
+  private final static int cellSize = ecPolicy.getCellSize();
+  private final static int stripesPerBlock = 3;
+  private final static int blockSize = cellSize * stripesPerBlock;
 
-  @Before
-  public void setup() throws IOException {
+  @BeforeClass
+  public static void setup() throws IOException {
     int numDNs = dataBlocks + parityBlocks + 2;
     Configuration conf = new Configuration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
@@ -72,8 +72,8 @@ public class TestOfflineImageViewerWithStripedBlocks {
     fs.mkdirs(eczone);
   }
 
-  @After
-  public void tearDown() {
+  @AfterClass
+  public static void tearDown() {
     if (cluster != null) {
       cluster.shutdown();
     }
