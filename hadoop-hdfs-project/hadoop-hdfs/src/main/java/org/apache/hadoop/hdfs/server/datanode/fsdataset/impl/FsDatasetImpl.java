@@ -38,6 +38,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 
@@ -2113,7 +2114,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   @Override
   public Map<DatanodeStorage, BlockListAsLongs> getBlockReports(String bpid) {
     Map<DatanodeStorage, BlockListAsLongs> blockReportsMap =
-        new HashMap<DatanodeStorage, BlockListAsLongs>();
+        new TreeMap<DatanodeStorage, BlockListAsLongs>();
 
     Map<String, BlockListAsLongs.Builder> builders =
         new HashMap<String, BlockListAsLongs.Builder>();
