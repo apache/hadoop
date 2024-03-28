@@ -33,7 +33,7 @@ public class TestAvroSerialization {
   @Test
   public void testSpecific() throws Exception {
     AvroRecord before = new AvroRecord();
-    before.intField = 5;
+    before.setIntField(5);
     AvroRecord after = SerializationTestUtil.testSerialization(conf, before);
     assertEquals(before, after);
   }
