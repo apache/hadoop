@@ -477,6 +477,18 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     if (useLocalConfigurationProvider) {
       addResource(CS_CONFIGURATION_FILE);
     }
+    super.setPropListeners(
+        (name, value) -> {
+          if (configurationProperties != null) {
+            configurationProperties.set(name, value);
+          }
+        },
+        name -> {
+          if (configurationProperties != null) {
+            configurationProperties.unset(name);
+          }
+        }
+    );
   }
 
   static String getUserPrefix(String user) {
@@ -533,6 +545,9 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
     		getMaximumApplicationMasterResourcePercent());
   }
 
+  public boolean isMaximumApplicationMasterResourcePerQueuePercentSet(String queue) {
+    return get(getQueuePrefix(queue) + MAXIMUM_AM_RESOURCE_SUFFIX) != null;
+  }
   public void setMaximumApplicationMasterResourcePerQueuePercent(QueuePath queue,
       float percent) {
     setFloat(getQueuePrefix(queue) + MAXIMUM_AM_RESOURCE_SUFFIX, percent);
@@ -745,6 +760,10 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
         getFloat(getQueuePrefix(queue) + USER_LIMIT_FACTOR,
             defaultUserLimitFactor);
     return userLimitFactor;
+  }
+
+  public boolean isUserLimitFactorSet(String queue) {
+    return get(getQueuePrefix(queue) + USER_LIMIT_FACTOR) != null;
   }
 
   public void setUserLimitFactor(QueuePath queuePath, float userLimitFactor) {
@@ -1219,7 +1238,7 @@ public class CapacitySchedulerConfiguration extends ReservationSchedulerConfigur
   public void reinitializeConfigurationProperties() {
     // Props are always Strings, therefore this cast is safe
     Map<String, String> props = (Map) getProps();
-    configurationProperties = new ConfigurationProperties(props);
+    configurationProperties = new ConfigurationProperties(props, PREFIX);
   }
 
   public void setQueueMaximumAllocationMb(QueuePath queue, int value) {
