@@ -1653,5 +1653,15 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   public void setLastDirScannerFinishTime(long time) {
     throw new UnsupportedOperationException();
   }
+
+  @Override
+  public void setDeleteCorruptReplicaFromDisk(boolean deleteCorruptReplicaFromDisk) {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public boolean isDeleteCorruptReplicaFromDisk() {
+    throw new UnsupportedOperationException();
+  }
 }
 
