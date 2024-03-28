@@ -748,7 +748,8 @@ public class ContainersMonitorImpl extends AbstractService implements
                             ProcessTreeInfo ptInfo,
                             long currentVmemUsage,
                             long currentPmemUsage) {
-      if (strictMemoryEnforcement && !elasticMemoryEnforcement) {
+      if ((strictMemoryEnforcement && !elasticMemoryEnforcement) ||
+          (!strictMemoryEnforcement && elasticMemoryEnforcement)) {
         // When cgroup-based strict memory enforcement is used alone without
         // elastic memory control, the oom-kill would take care of it.
         // However, when elastic memory control is also enabled, the oom killer
