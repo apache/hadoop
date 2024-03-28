@@ -101,6 +101,9 @@ function hdfscmd_case
       HADOOP_CLASSNAME='org.apache.hadoop.hdfs.server.datanode.DataNode'
       hadoop_deprecate_envvar HADOOP_SECURE_DN_PID_DIR HADOOP_SECURE_PID_DIR
       hadoop_deprecate_envvar HADOOP_SECURE_DN_LOG_DIR HADOOP_SECURE_LOG_DIR
+      if [[ -n "${HDFS_DATANODE_HEAPSIZE}" ]]; then
+        HADOOP_HEAPSIZE_MAX="${HDFS_DATANODE_HEAPSIZE}"
+      fi
     ;;
     debug)
       HADOOP_CLASSNAME='org.apache.hadoop.hdfs.tools.DebugAdmin'
@@ -161,6 +164,9 @@ function hdfscmd_case
     journalnode)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
       HADOOP_CLASSNAME='org.apache.hadoop.hdfs.qjournal.server.JournalNode'
+      if [[ -n "${HDFS_JOURNALNODE_HEAPSIZE}" ]]; then
+        HADOOP_HEAPSIZE_MAX="${HDFS_JOURNALNODE_HEAPSIZE}"
+      fi
     ;;
     jmxget)
       HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.JMXGet
@@ -179,6 +185,9 @@ function hdfscmd_case
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
       HADOOP_CLASSNAME='org.apache.hadoop.hdfs.server.namenode.NameNode'
       hadoop_add_param HADOOP_OPTS hdfs.audit.logger "-Dhdfs.audit.logger=${HDFS_AUDIT_LOGGER}"
+      if [[ -n "${HDFS_NAMENODE_HEAPSIZE}" ]]; then
+        HADOOP_HEAPSIZE_MAX="${HDFS_NAMENODE_HEAPSIZE}"
+      fi
     ;;
     nfs3)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
@@ -204,6 +213,12 @@ function hdfscmd_case
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
       HADOOP_CLASSNAME='org.apache.hadoop.hdfs.server.namenode.SecondaryNameNode'
       hadoop_add_param HADOOP_OPTS hdfs.audit.logger "-Dhdfs.audit.logger=${HDFS_AUDIT_LOGGER}"
+      if [[ -n "${HDFS_NAMENODE_HEAPSIZE}" ]]; then
+        HADOOP_HEAPSIZE_MAX="${HDFS_NAMENODE_HEAPSIZE}"
+      fi
+      if [[ -n "${HDFS_SECONDARYNAMENODE_HEAPSIZE}" ]]; then
+        HADOOP_HEAPSIZE_MAX="${HDFS_SECONDARYNAMENODE_HEAPSIZE}"
+      fi
     ;;
     snapshotDiff)
       HADOOP_CLASSNAME=org.apache.hadoop.hdfs.tools.snapshot.SnapshotDiff
