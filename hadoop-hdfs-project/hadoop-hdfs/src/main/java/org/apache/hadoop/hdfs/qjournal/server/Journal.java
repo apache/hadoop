@@ -723,16 +723,20 @@ public class Journal implements Closeable {
     List<RemoteEditLog> logs = fjm.getRemoteEditLogs(sinceTxId, inProgressOk);
     
     if (inProgressOk) {
-      RemoteEditLog log = null;
+      RemoteEditLog maxInProgressLog = null;
       for (Iterator<RemoteEditLog> iter = logs.iterator(); iter.hasNext();) {
-        log = iter.next();
+        RemoteEditLog log = iter.next();
         if (log.isInProgress()) {
+          if (maxInProgressLog == null) {
+            maxInProgressLog = log;
+          } else if (maxInProgressLog.getStartTxId() < log.getStartTxId()) {
+            maxInProgressLog = log;
+          }
           iter.remove();
-          break;
         }
       }
-      if (log != null && log.isInProgress()) {
-        logs.add(new RemoteEditLog(log.getStartTxId(),
+      if (maxInProgressLog != null && maxInProgressLog.isInProgress()) {
+        logs.add(new RemoteEditLog(maxInProgressLog.getStartTxId(),
             getHighestWrittenTxId(), true));
       }
     }

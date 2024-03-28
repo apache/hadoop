@@ -20,9 +20,12 @@ package org.apache.hadoop.hdfs.qjournal.server;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
+import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.thirdparty.com.google.common.primitives.Bytes;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
@@ -534,5 +537,40 @@ public class TestJournal {
     } catch (IOException ioe) {
       fail("Format should be success with force option.");
     }
+  }
+
+  @Test
+  public void testMultiInProgressSegment() throws Exception {
+    journal.newEpoch(FAKE_NSINFO, 1);
+
+    // Start a segment at txid 1, and write a batch of 3 txns.
+    journal.startLogSegment(makeRI(1), 1,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
+    journal.journal(makeRI(2), 1, 1, 3,
+        QJMTestUtil.createTxnData(1, 3));
+
+    GenericTestUtils.assertExists(
+        journal.getStorage().getInProgressEditLog(1));
+
+    // Try to start new segment at txid 6, this should abort old segment and
+    // then succeed, allowing us to write txid 6-9.
+    journal.startLogSegment(makeRI(3), 6,
+        NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
+    journal.journal(makeRI(4), 6, 6, 3,
+        QJMTestUtil.createTxnData(6, 3));
+
+    // The old segment should *not* be finalized.
+    GenericTestUtils.assertExists(
+        journal.getStorage().getInProgressEditLog(1));
+    GenericTestUtils.assertExists(
+        journal.getStorage().getInProgressEditLog(6));
+
+    RemoteEditLogManifest remoteEditLogManifest =
+        journal.getEditLogManifest(1, true);
+    assertNotNull(remoteEditLogManifest);
+    assertEquals(1, remoteEditLogManifest.getLogs().size());
+    RemoteEditLog remoteEditLog = remoteEditLogManifest.getLogs().get(0);
+    assertTrue(remoteEditLog.isInProgress());
+    assertEquals(6, remoteEditLog.getStartTxId());
   }
 }
