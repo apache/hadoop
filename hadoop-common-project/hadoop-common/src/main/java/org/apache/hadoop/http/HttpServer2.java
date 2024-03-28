@@ -1752,9 +1752,19 @@ public final class HttpServer2 implements FilterContainer {
       response.setContentType("text/plain; charset=UTF-8");
       try (PrintStream out = new PrintStream(
           response.getOutputStream(), false, "UTF-8")) {
-        ReflectionUtils.printThreadInfo(out, "");
+        Map<String, String[]> paramsMap = request.getParameterMap();
+        if (paramsMap.containsKey("ext")) {
+          int depth = -1;
+          if (paramsMap.containsKey("depth")) {
+            String depthParam = request.getParameter("depth");
+            depth = Integer.parseInt(depthParam);
+          }
+          ReflectionUtils.printThreadInfoExt(out, "", depth);
+        } else {
+          ReflectionUtils.printThreadInfo(out, "");
+        }
+        ReflectionUtils.logThreadInfo(LOG, "jsp requested", 1);
       }
-      ReflectionUtils.logThreadInfo(LOG, "jsp requested", 1);
     }
   }
 
