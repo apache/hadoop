@@ -26,6 +26,7 @@ import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 public class TestCapacitySchedulerConfiguration {
@@ -105,6 +106,40 @@ public class TestCapacitySchedulerConfiguration {
     assertTrue(acl.getUsers().isEmpty());
     assertTrue(acl.getGroups().isEmpty());
     assertTrue(acl.isAllAllowed());
+  }
+
+  /**
+   * dfs.nfs.exports.allowed.hosts
+   * prop is deprecated, now we use
+   * nfs.exports.allowed.hosts
+   * instead
+   */
+  @Test
+  public void testDeprecationFeatureWorks() {
+    final String value1 = "VALUE_1";
+    final String value2 = "VALUE_2";
+    final String deprecatedName = "dfs.nfs.exports.allowed.hosts";
+    final String newName = "nfs.exports.allowed.hosts";
+    final CapacitySchedulerConfiguration csConf = createDefaultCsConf();
+    final ConfigurationProperties properties = csConf.getConfigurationProperties();
+
+    csConf.set(deprecatedName, value1);
+    assertEquals(value1, csConf.get(deprecatedName));
+    assertEquals(value1, csConf.get(newName));
+    assertEquals(value1, properties.getPropertiesWithPrefix(deprecatedName).values().iterator().next());
+    assertEquals(value1, properties.getPropertiesWithPrefix(newName).values().iterator().next());
+
+    csConf.set(deprecatedName, value2);
+    assertEquals(value2, csConf.get(deprecatedName));
+    assertEquals(value2, csConf.get(newName));
+    assertEquals(value2, properties.getPropertiesWithPrefix(deprecatedName).values().iterator().next());
+    assertEquals(value2, properties.getPropertiesWithPrefix(newName).values().iterator().next());
+
+    csConf.unset(newName);
+    assertNull(csConf.get(deprecatedName));
+    assertNull(csConf.get(newName));
+    assertTrue(properties.getPropertiesWithPrefix(deprecatedName).isEmpty());
+    assertTrue(properties.getPropertiesWithPrefix(newName).isEmpty());
   }
 
   @Test
