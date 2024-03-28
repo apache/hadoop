@@ -24,6 +24,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -322,6 +323,11 @@ public class RunJar {
     Thread.currentThread().setContextClassLoader(loader);
     Class<?> mainClass = Class.forName(mainClassName, true, loader);
     Method main = mainClass.getMethod("main", String[].class);
+
+    if (!Modifier.isStatic(main.getModifiers())) {
+      throw new IOException("Method main must be static: " + mainClassName);
+    }
+
     List<String> newArgsSubList = Arrays.asList(args)
         .subList(firstArg, args.length);
     String[] newArgs = newArgsSubList
