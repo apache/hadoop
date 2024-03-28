@@ -30,7 +30,37 @@ export default BaseChartComponent.extend({
   memoryLabel: "Memory",
   cpuLabel: "VCores",
   containersLabel: "Containers",
-  totalContainers: 0,
+  racks: [],
+  containerCounts: new Map(),
+
+  initRacks: function (data) {
+        this.racks.clear();
+        let rackSet = new Set();
+
+        data.forEach(item => rackSet.add(item.get("rack")));
+        rackSet.forEach(rack => this.racks.push(rack));
+
+        for (let i = 0; i < data.length; i++) {
+            let rack = data[i].get("rack");
+            let lastCount = this.getContainerCountByRack(rack);
+            this.containerCounts.set(rack, lastCount + data[i].get("numContainers"))
+        }
+
+    },
+
+    initContainerCounts: function (data) {
+        this.containerCounts.clear();
+
+        for (let i = 0; i < data.length; i++) {
+            let rack = data[i].get("rack");
+            let lastCount = this.getContainerCountByRack(rack);
+            this.containerCounts.set(rack, lastCount + data[i].get("numContainers"))
+        }
+
+    },
+    getContainerCountByRack: function (rack) {
+        return this.containerCounts.has(rack) ? this.containerCounts.get(rack) : 0;
+    },
 
   bindTP: function(element, cell) {
     var currentToolTip = this.tooltip;
@@ -104,21 +134,15 @@ export default BaseChartComponent.extend({
     model.forEach(function (o) {
       data.push(o);
     });
-
+    this.initRacks(data);
+    if (selectedOption === this.containersLabel) {
+            this.initContainerCounts(data);
+    }
     this.chart.g.remove();
     this.chart.g = this.chart.svg.append("g");
     var g = this.chart.g;
     var layout = this.getLayout();
     layout.margin = 50;
-
-    let racks = new Set();
-    for (var i = 0; i < data.length; i++) {
-      racks.add(data[i].get("rack"));
-    }
-
-    let racksArray = [];
-    racks.forEach(v => racksArray.push(v));
-
     var xOffset = layout.margin;
     var yOffset = layout.margin * 3;
 
@@ -162,11 +186,9 @@ export default BaseChartComponent.extend({
     }
 
     var chartXOffset = -1;
-
-    this.totalContainers = 0;
-    for (i = 0; i < racksArray.length; i++) {
+    for (var i = 0; i < this.racks.length; i++) {
       text = g.append("text")
-        .text(racksArray[i])
+        .text(this.racks[i])
         .attr("y", yOffset + this.CELL_HEIGHT / 2 + 5)
         .attr("x", layout.margin)
         .attr("class", "heatmap-rack");
@@ -180,8 +202,7 @@ export default BaseChartComponent.extend({
       for (var j = 0; j < data.length; j++) {
         var rack = data[j].get("rack");
 
-        if (rack === racksArray[i]) {
-          this.totalContainers += data[j].get("numContainers");
+        if (rack === this.racks[i]) {
           this.addNode(g, xOffset, yOffset, colorFunc, data[j]);
           xOffset += this.CELL_MARGIN + this.CELL_WIDTH;
           if (xOffset + this.CELL_MARGIN + this.CELL_WIDTH >= layout.x2 -
@@ -293,9 +314,13 @@ export default BaseChartComponent.extend({
         (data.get("usedVirtualCores") + data.get("availableVirtualCores"));
     }
     else if (selectedOption === this.containersLabel) {
-      var totalContainers = this.totalContainers;
-      if (totalContainers === 0) { return 0; }
-      return data.get("numContainers") / totalContainers;
+      let currentRack = data.get("rack");
+      let totalContainersInCurrentRack = this.getContainerCountByRack(currentRack)
+
+      if (totalContainersInCurrentRack === 0) {
+        return 0;
+      }
+      return data.get("numContainers") / totalContainersInCurrentRack;
     }
   },
 
@@ -311,7 +336,7 @@ export default BaseChartComponent.extend({
     }
     else if (selectedOption === this.containersLabel) {
         return "<p>Containers: " + Math.round(data.get("numContainers")) + " Containers</p>" +
-          "<p>Total Containers: " + this.totalContainers + " Containers</p>";
+          "<p>Total Containers: " + this.getContainerCountByRack(data.get("rack")) + " Containers</p>";
     }
   }
 });
