@@ -405,6 +405,7 @@ public class NameNode extends ReconfigurableBase implements
       + StartupOption.INITIALIZESHAREDEDITS.getName() + "] | \n\t["
       + StartupOption.BOOTSTRAPSTANDBY.getName() + " ["
       + StartupOption.FORCE.getName() + "] ["
+      + StartupOption.NEWEDITSONLY.getName() + "] ["
       + StartupOption.NONINTERACTIVE.getName() + "] ["
       + StartupOption.SKIPSHAREDEDITSCHECK.getName() + "] ] | \n\t["
       + StartupOption.RECOVER.getName() + " [ "
@@ -1446,7 +1447,14 @@ public class NameNode extends ReconfigurableBase implements
   @VisibleForTesting
   public static boolean initializeSharedEdits(Configuration conf,
       boolean force) throws IOException {
-    return initializeSharedEdits(conf, force, false);
+    return initializeSharedEdits(conf, force, false, false);
+  }
+
+  @VisibleForTesting
+  public static boolean initializeSharedEdits(Configuration conf,
+      boolean force,
+      boolean newEditsOnly) throws IOException {
+    return initializeSharedEdits(conf, force, newEditsOnly, false);
   }
 
   /**
@@ -1479,7 +1487,9 @@ public class NameNode extends ReconfigurableBase implements
    * @return true if the command aborts, false otherwise
    */
   private static boolean initializeSharedEdits(Configuration conf,
-      boolean force, boolean interactive) throws IOException {
+      boolean force,
+      boolean newEditsOnly,
+      boolean interactive) throws IOException {
     String nsId = DFSUtil.getNamenodeNameServiceId(conf);
     String namenodeId = HAUtil.getNameNodeId(conf, nsId);
     initializeGenericKeys(conf, nsId, namenodeId);
@@ -1510,27 +1520,49 @@ public class NameNode extends ReconfigurableBase implements
       sharedEditsImage = new FSImage(conf,
           Lists.<URI>newArrayList(),
           sharedEditsDirs);
-      sharedEditsImage.getEditLog().initJournalsForWrite();
-      
-      if (!sharedEditsImage.confirmFormat(force, interactive)) {
-        return true; // abort
+
+      if (newEditsOnly) {
+        // need the information on console output because the method is called in command line
+        // for newEditsOnly option, we don't copy the existing segments to the new ones and
+        // rely on the recovery logic in QJM to handle that
+        // otherwise, we may break the quorum logic
+        System.out.println(
+            "=====================================================\n" +
+                "About to format unformatted non-file journals:\n" +
+                "           Nameservice ID: " + nsId + "\n" +
+                "             Namespace ID: " + nsInfo.getNamespaceID() + "\n" +
+                "            Block pool ID: " + nsInfo.getBlockPoolID() + "\n" +
+                "               Cluster ID: " + nsInfo.getClusterID() + "\n" +
+                "           Layout version: " + nsInfo.getLayoutVersion() + "\n" +
+                "           sharedEditsDir: " + Joiner.on(",").join(sharedEditsDirs) + "\n" +
+                "=====================================================");
+        sharedEditsImage.getEditLog().initSharedJournalsForRead();
+        int formatted = sharedEditsImage.getEditLog().formatUnformattedNonFileJournals(nsInfo);
+        System.out.println("Formatted " + formatted + " journal(s)");
+      } else {
+        sharedEditsImage.getEditLog().initJournalsForWrite();
+
+        if (!sharedEditsImage.confirmFormat(force, interactive)) {
+          return true; // abort
+        }
+
+        NNStorage newSharedStorage = sharedEditsImage.getStorage();
+
+        // Call Storage.format instead of FSImage.format here, since we don't
+        // actually want to save a checkpoint - just prime the dirs with
+        // the existing namespace info
+        newSharedStorage.format(nsInfo);
+        sharedEditsImage.getEditLog().formatNonFileJournals(nsInfo, force);
+
+        // Need to make sure the edit log segments are in good shape to initialize
+        // the shared edits dir.
+        fsns.getFSImage().getEditLog().close();
+        fsns.getFSImage().getEditLog().initJournalsForWrite();
+        fsns.getFSImage().getEditLog().recoverUnclosedStreams();
+
+        copyEditLogSegmentsToSharedDir(fsns, sharedEditsDirs, newSharedStorage,
+            conf);
       }
-      
-      NNStorage newSharedStorage = sharedEditsImage.getStorage();
-      // Call Storage.format instead of FSImage.format here, since we don't
-      // actually want to save a checkpoint - just prime the dirs with
-      // the existing namespace info
-      newSharedStorage.format(nsInfo);
-      sharedEditsImage.getEditLog().formatNonFileJournals(nsInfo, force);
-
-      // Need to make sure the edit log segments are in good shape to initialize
-      // the shared edits dir.
-      fsns.getFSImage().getEditLog().close();
-      fsns.getFSImage().getEditLog().initJournalsForWrite();
-      fsns.getFSImage().getEditLog().recoverUnclosedStreams();
-
-      copyEditLogSegmentsToSharedDir(fsns, sharedEditsDirs, newSharedStorage,
-          conf);
     } catch (IOException ioe) {
       LOG.error("Could not initialize shared edits dir", ioe);
       return true; // aborted
@@ -1748,6 +1780,8 @@ public class NameNode extends ReconfigurableBase implements
             startOpt.setInteractiveFormat(false);
           } else if (StartupOption.FORCE.getName().equals(args[i])) {
             startOpt.setForceFormat(true);
+          } else if (StartupOption.NEWEDITSONLY.getName().equals(args[i])) {
+            startOpt.setNewEditsOnly(true);
           } else {
             LOG.error("Invalid argument: " + args[i]);
             return null;
@@ -1881,6 +1915,7 @@ public class NameNode extends ReconfigurableBase implements
     case INITIALIZESHAREDEDITS:
       aborted = initializeSharedEdits(conf,
           startOpt.getForceFormat(),
+          startOpt.isNewEditsOnly(),
           startOpt.getInteractiveFormat());
       terminate(aborted ? 1 : 0);
       return null; // avoid warning
