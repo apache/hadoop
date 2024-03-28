@@ -606,7 +606,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
       outputStreamStatistics.uploadFailed(bytesLength);
       failureWhileSubmit(ex);
     } finally {
-      IOUtils.close(uploadData);
+      IOUtils.close(uploadData, activeBlock);
     }
   }
 

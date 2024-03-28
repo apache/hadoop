@@ -179,7 +179,6 @@ public class ITestAzureBlobFileSystemDelete extends
 
     final AzureBlobFileSystem fs = getFileSystem();
     AbfsClient abfsClient = fs.getAbfsStore().getClient();
-    assumeValidAuthConfigsPresent();
     AbfsClient testClient = ITestAbfsClient.createTestClientFromCurrentContext(
         abfsClient,
         abfsConfig);

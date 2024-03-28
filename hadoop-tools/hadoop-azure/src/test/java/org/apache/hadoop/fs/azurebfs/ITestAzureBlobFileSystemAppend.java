@@ -44,7 +44,6 @@ import static org.apache.hadoop.fs.store.DataBlocks.DATA_BLOCKS_BUFFER_ARRAY;
 import static org.apache.hadoop.fs.store.DataBlocks.DATA_BLOCKS_BUFFER_DISK;
 import static org.apache.hadoop.fs.store.DataBlocks.DATA_BLOCKS_BYTEBUFFER;
 import static org.apache.hadoop.fs.store.DataBlocks.DataBlock.DestState.Closed;
-import static org.apache.hadoop.fs.store.DataBlocks.DataBlock.DestState.Upload;
 import static org.apache.hadoop.fs.store.DataBlocks.DataBlock.DestState.Writing;
 
 /**
@@ -135,28 +134,18 @@ public class ITestAzureBlobFileSystemAppend extends
                 BlockUploadStatistics.class));
         return factory;
       }).when(store).getBlockFactory();
-      Path testPath = new Path(getMethodName() + "_" + blockBufferType);
-      try (OutputStream os = fs.create(testPath)) {
+      try (OutputStream os = fs.create(
+          new Path(getMethodName() + "_" + blockBufferType))) {
         os.write(new byte[1]);
         Assertions.assertThat(dataBlock[0].getState())
             .describedAs(
                 "On write of data in outputStream, state should become Writing")
             .isEqualTo(Writing);
         os.close();
-        if (isAppendBlobEnabled()) {
-          // Append Blobs does not require flush and close.
-          Mockito.verify(dataBlock[0], Mockito.times(0)).close();
-          Assertions.assertThat(dataBlock[0].getState())
-              .describedAs(
-                  "On close of outputStream, state should become Closed")
-              .isEqualTo(Upload);
-        } else {
-          Mockito.verify(dataBlock[0], Mockito.times(1)).close();
-          Assertions.assertThat(dataBlock[0].getState())
-              .describedAs(
-                  "On close of outputStream, state should become Closed")
-              .isEqualTo(Closed);
-        }
+        Mockito.verify(dataBlock[0], Mockito.times(1)).close();
+        Assertions.assertThat(dataBlock[0].getState())
+            .describedAs("On close of outputStream, state should become Closed")
+            .isEqualTo(Closed);
       }
     }
   }
