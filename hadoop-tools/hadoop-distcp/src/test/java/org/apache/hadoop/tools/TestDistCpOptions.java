@@ -29,6 +29,7 @@ import org.apache.hadoop.tools.DistCpOptions.FileAttribute;
 
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.apache.hadoop.tools.DistCpOptions.MAX_NUM_LISTSTATUS_THREADS;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.fail;
 
 /**
@@ -289,7 +290,7 @@ public class TestDistCpOptions {
         "atomicWorkPath=null, logPath=null, sourceFileListing=abc, " +
         "sourcePaths=null, targetPath=xyz, filtersFile='null', " +
         "blocksPerChunk=0, copyBufferSize=8192, verboseLog=false, " +
-        "directWrite=false, useiterator=false, updateRoot=false}";
+        "directWrite=false, useiterator=false, updateRoot=false, favoredNodes=null}";
     String optionString = option.toString();
     Assert.assertEquals(val, optionString);
     Assert.assertNotSame(DistCpOptionSwitch.ATOMIC_COMMIT.toString(),
@@ -573,5 +574,18 @@ public class TestDistCpOptions {
         .withUpdateRoot(true)
         .build();
     Assert.assertTrue(options.shouldUpdateRoot());
+  }
+
+  @Test
+  public void testFavoredNodes() {
+    String favoredNodes = "localhost:50010,localhost:50011";
+    final DistCpOptions options = new DistCpOptions.Builder(
+        Collections.singletonList(
+            new Path("hdfs://localhost:8020/source")),
+        new Path("hdfs://localhost:8020/target/"))
+        .withFavoredNodes(favoredNodes)
+        .build();
+    assertThat(options.getFavoredNodes()).isNotNull();
+    assertThat(options.getFavoredNodes()).isEqualTo(favoredNodes);
   }
 }

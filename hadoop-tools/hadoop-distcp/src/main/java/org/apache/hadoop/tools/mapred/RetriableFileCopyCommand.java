@@ -21,10 +21,18 @@ package org.apache.hadoop.tools.mapred;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EnumSet;
+import java.util.List;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.tools.DistCpOptions;
@@ -55,6 +63,7 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL;
 import static org.apache.hadoop.tools.mapred.CopyMapper.getFileAttributeSettings;
+import static org.apache.hadoop.util.Preconditions.checkArgument;
 import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
 
 /**
@@ -204,6 +213,8 @@ public class RetriableFileCopyCommand extends RetriableCommand {
         DistCpConstants.COPY_BUFFER_SIZE_DEFAULT);
     boolean preserveEC = getFileAttributeSettings(context)
         .contains(DistCpOptions.FileAttribute.ERASURECODINGPOLICY);
+    String favoredNodesStr = context.getConfiguration().get(
+        DistCpOptionSwitch.FAVORED_NODES.getConfigLabel());
 
     ErasureCodingPolicy ecPolicy = null;
     if (preserveEC && sourceStatus.isErasureCoded()
@@ -223,9 +234,25 @@ public class RetriableFileCopyCommand extends RetriableCommand {
       FSDataOutputStream out;
       ChecksumOpt checksumOpt = getChecksumOpt(fileAttributes, sourceChecksum);
       if (!preserveEC || ecPolicy == null) {
-        out = targetFS.create(targetPath, permission,
-            EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE), copyBufferSize,
-            repl, blockSize, context, checksumOpt);
+        if (targetFS instanceof DistributedFileSystem
+            && StringUtils.isNotEmpty(favoredNodesStr)) {
+          DistributedFileSystem dfs = (DistributedFileSystem) targetFS;
+          DistributedFileSystem.HdfsDataOutputStreamBuilder builder =
+              dfs.createFile(targetPath).permission(permission).create()
+                  .overwrite(true).bufferSize(copyBufferSize).replication(repl)
+                  .blockSize(blockSize).progress(context).recursive();
+          if (checksumOpt != null) {
+            builder.checksumOpt(checksumOpt);
+          }
+          if (StringUtils.isNotEmpty(favoredNodesStr)) {
+            builder.favoredNodes(toFavoredNodes(favoredNodesStr));
+          }
+          out = builder.build();
+        } else {
+          out = targetFS.create(targetPath, permission,
+              EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE), copyBufferSize,
+              repl, blockSize, context, checksumOpt);
+        }
       } else {
         DistributedFileSystem dfs = (DistributedFileSystem) targetFS;
         DistributedFileSystem.HdfsDataOutputStreamBuilder builder =
@@ -236,6 +263,9 @@ public class RetriableFileCopyCommand extends RetriableCommand {
         if (checksumOpt != null) {
           builder.checksumOpt(checksumOpt);
         }
+        if (StringUtils.isNotEmpty(favoredNodesStr)) {
+          builder.favoredNodes(toFavoredNodes(favoredNodesStr));
+        }
         out = builder.build();
       }
       outStream = new BufferedOutputStream(out);
@@ -245,6 +275,30 @@ public class RetriableFileCopyCommand extends RetriableCommand {
     }
     return copyBytes(source, sourceOffset, outStream, copyBufferSize,
         context);
+  }
+
+  /**
+   * Map the favored nodes string to IP Socket Address array.
+   *
+   * @param favoredNodesStr favored nodes
+   * @return the IP Socket Address array of favored nodes.
+   * @throws UnknownHostException when favored nodes can not be resolved.
+   */
+  private InetSocketAddress[] toFavoredNodes(String favoredNodesStr) throws UnknownHostException {
+    checkArgument(StringUtils.isNotEmpty(favoredNodesStr),
+        "Empty favoredNodes parameter: %s", favoredNodesStr);
+    List<InetSocketAddress> result = new ArrayList<>();
+    for (String hostAndPort : favoredNodesStr.split(",")) {
+      String[] split = hostAndPort.split(":");
+      checkArgument(split.length == 2, "Illegal favoredNodes parameter: %s", hostAndPort);
+      InetAddress hostname = InetAddress.getByName(split[0]);
+      int port = Integer.parseInt(split[1]);
+      LOG.info("DistCp favored node, hostname: {}, port: {}", hostname, port);
+      result.add(new InetSocketAddress(hostname, port));
+    }
+    Collections.shuffle(result);
+    return result.stream().limit(HdfsClientConfigKeys.DFS_REPLICATION_DEFAULT)
+        .toArray(InetSocketAddress[]::new);
   }
 
   //If target file exists and unable to delete target - fail

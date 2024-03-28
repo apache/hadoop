@@ -19,6 +19,7 @@
 package org.apache.hadoop.tools;
 
 import static org.apache.hadoop.test.GenericTestUtils.getMethodName;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
@@ -45,6 +46,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.tools.util.DistCpTestUtils;
 import org.apache.hadoop.util.ToolRunner;
@@ -593,5 +595,56 @@ public class TestDistCpSystem {
     assertEquals(srcStatus.getOwner(), destStatus2.getOwner());
     assertEquals(srcStatus.getModificationTime(),
         destStatus2.getModificationTime());
+  }
+
+  @Test
+  public void testFavoredNodes() throws Exception {
+    final String testRoot = "/testdir";
+    final String testSrc = testRoot + "/" + SRCDAT;
+    final String testDst = testRoot + "/" + DSTDAT;
+
+    String nnUri = FileSystem.getDefaultUri(conf).toString();
+    String rootStr = nnUri + testSrc;
+    String tgtStr = nnUri + testDst;
+
+    FileEntry[] srcFiles = {
+        new FileEntry(SRCDAT, true),
+        new FileEntry(SRCDAT + "/file10", false)
+    };
+
+    DistributedFileSystem fs = (DistributedFileSystem) FileSystem.get(URI.create(nnUri), conf);
+    createFiles(fs, testRoot, srcFiles, -1);
+
+    // illegal distcp option, it will be fail.
+    assertThat(ToolRunner.run(conf, new DistCp(),
+        new String[]{"-favoredNodes", "-i", rootStr, tgtStr}))
+        .isNotEqualTo(0);
+    // illegal favored nodes option, it will be fail.
+    assertThat(ToolRunner.run(conf, new DistCp(),
+        new String[]{"-favoredNodes", "unknown_host", "-i", rootStr, tgtStr}))
+        .isNotEqualTo(0);
+    // favored node can not be resolved, it will be fail.
+    assertThat(ToolRunner.run(conf, new DistCp(),
+        new String[]{"-favoredNodes", "unknown_host:10000", "-i", rootStr, tgtStr}))
+        .isNotEqualTo(0);
+
+    FsShell shell = new FsShell(fs.getConf());
+    LOG.info("ls before distcp");
+    LOG.info(execCmd(shell, "-lsr", testRoot));
+
+    // legal favored nodes option, it will be successful.
+    assertThat(ToolRunner.run(conf, new DistCp(),
+        new String[]{"-favoredNodes", getFavoredNodes(), "-i", rootStr, tgtStr}))
+        .isEqualTo(0);
+
+    LOG.info("ls after distcp");
+    LOG.info(execCmd(shell, "-lsr", testRoot));
+  }
+
+  private String getFavoredNodes() {
+    DataNode dataNode = cluster.getDataNodes().get(0);
+    String hostName = dataNode.ipcServer.getListenerAddress().getHostName();
+    int port = dataNode.ipcServer.getListenerAddress().getPort();
+    return String.format("%s:%s", hostName, port);
   }
 }

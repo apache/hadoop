@@ -249,7 +249,11 @@ public enum DistCpOptionSwitch {
   UPDATE_ROOT(DistCpConstants.CONF_LABEL_UPDATE_ROOT,
       new Option("updateRoot", false,
       "Update root directory attributes "
-          + "(eg permissions, ownership ...)"));
+          + "(eg permissions, ownership ...)")),
+
+  FAVORED_NODES(DistCpConstants.CONF_LABEL_FAVORED_NODES,
+      new Option("favoredNodes", true,
+          "Specify favored nodes in target hdfs filesystem."));
 
   public static final String PRESERVE_STATUS_DEFAULT = "-prbugpct";
   private final String confLabel;

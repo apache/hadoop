@@ -364,6 +364,7 @@ Command Line Options
 | `-direct` | Write directly to destination paths | Useful for avoiding potentially very expensive temporary file rename operations when the destination is an object store |
 | `-useiterator` | Uses single threaded listStatusIterator to build listing | Useful for saving memory at the client side. Using this option will ignore the numListstatusThreads option |
 | `-updateRoot` | Update root directory attributes (eg permissions, ownership ...) | Useful if you need to enforce root directory attributes update when using distcp |
+| `-favoredNodes` | Specify favored nodes (Desired option input format: host1:port1,host2:port2,...) | Useful if you need to specify favored nodes in target `hdfs` filesystem when using distcp |
 
 Architecture of DistCp
 ----------------------

@@ -164,6 +164,9 @@ public final class DistCpOptions {
 
   private final boolean updateRoot;
 
+  /** Favored nodes in target hdfs filesystem. */
+  private final String favoredNodes;
+
   /**
    * File attributes for preserve.
    *
@@ -232,6 +235,8 @@ public final class DistCpOptions {
     this.useIterator = builder.useIterator;
 
     this.updateRoot = builder.updateRoot;
+
+    this.favoredNodes = builder.favoredNodes;
   }
 
   public Path getSourceFileListing() {
@@ -382,6 +387,10 @@ public final class DistCpOptions {
     return updateRoot;
   }
 
+  public String getFavoredNodes() {
+    return favoredNodes;
+  }
+
   /**
    * Add options to configuration. These will be used in the Mapper/committer
    *
@@ -438,6 +447,10 @@ public final class DistCpOptions {
 
     DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.UPDATE_ROOT,
         String.valueOf(updateRoot));
+
+    if (favoredNodes != null) {
+      DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.FAVORED_NODES, favoredNodes);
+    }
   }
 
   /**
@@ -477,6 +490,7 @@ public final class DistCpOptions {
         ", directWrite=" + directWrite +
         ", useiterator=" + useIterator +
         ", updateRoot=" + updateRoot +
+        ", favoredNodes=" + favoredNodes +
         '}';
   }
 
@@ -531,6 +545,8 @@ public final class DistCpOptions {
     private boolean useIterator = false;
 
     private boolean updateRoot = false;
+
+    private String favoredNodes;
 
     public Builder(List<Path> sourcePaths, Path targetPath) {
       Preconditions.checkArgument(sourcePaths != null && !sourcePaths.isEmpty(),
@@ -814,6 +830,11 @@ public final class DistCpOptions {
 
     public Builder withUpdateRoot(boolean updateRootAttrs) {
       this.updateRoot = updateRootAttrs;
+      return this;
+    }
+
+    public Builder withFavoredNodes(String favoredNodesStr) {
+      this.favoredNodes = favoredNodesStr;
       return this;
     }
   }

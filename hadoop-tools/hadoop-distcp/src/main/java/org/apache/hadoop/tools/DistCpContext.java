@@ -179,6 +179,10 @@ public class DistCpContext {
     return options.shouldUpdateRoot();
   }
 
+  public String getFavoredNodes() {
+    return options.getFavoredNodes();
+  }
+
   public final boolean splitLargeFile() {
     return options.getBlocksPerChunk() > 0;
   }
