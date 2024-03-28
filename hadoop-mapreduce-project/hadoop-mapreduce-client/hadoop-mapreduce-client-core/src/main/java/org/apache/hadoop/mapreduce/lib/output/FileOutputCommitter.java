@@ -20,6 +20,14 @@ package org.apache.hadoop.mapreduce.lib.output;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -29,6 +37,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.mapreduce.MRJobConfig;
@@ -36,6 +45,7 @@ import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.DurationInfo;
@@ -43,7 +53,7 @@ import org.apache.hadoop.util.Progressable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** An {@link OutputCommitter} that commits files specified 
+/** An {@link OutputCommitter} that commits files specified
  * in job output directory i.e. ${mapreduce.output.fileoutputformat.outputdir}.
  **/
 @InterfaceAudience.Public
@@ -100,11 +110,24 @@ public class FileOutputCommitter extends PathOutputCommitter {
   public static final boolean
       FILEOUTPUTCOMMITTER_TASK_CLEANUP_ENABLED_DEFAULT = false;
 
+  public static final String FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_MV_THREADS =
+      "mapreduce.fileoutputcommitter.algorithm.version.v1.experimental.mv.threads";
+  public static final int FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_MV_THREADS_DEFAULT = 1;
+
+  public static final String FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_PARALLEL_TASK_COMMIT =
+      "mapreduce.fileoutputcommitter.algorithm.version.v1.experimental.parallel.task.commit";
+  public static final boolean
+      FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_PARALLEL_TASK_COMMIT_DEFAULT = true;
+
   private Path outputPath = null;
   private Path workPath = null;
   private final int algorithmVersion;
   private final boolean skipCleanup;
   private final boolean ignoreCleanupFailures;
+  @VisibleForTesting
+  final int moveThreads;
+  final AtomicInteger numberOfTasks = new AtomicInteger();
+  final boolean isParallelTaskCommitEnabled;
 
   /**
    * Create a file output committer
@@ -139,6 +162,14 @@ public class FileOutputCommitter extends PathOutputCommitter {
     algorithmVersion =
         conf.getInt(FILEOUTPUTCOMMITTER_ALGORITHM_VERSION,
                     FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_DEFAULT);
+    int configuredThreads =
+        context.getConfiguration().getInt(FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_MV_THREADS,
+            FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_MV_THREADS_DEFAULT);
+    int minThreads = Math.max(1, configuredThreads);
+    moveThreads = Math.min(minThreads, (Runtime.getRuntime().availableProcessors() * 16));
+    isParallelTaskCommitEnabled = context.getConfiguration().getBoolean(
+        FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_PARALLEL_TASK_COMMIT,
+        FILEOUTPUTCOMMITTER_ALGORITHM_VERSION_V1_PARALLEL_TASK_COMMIT_DEFAULT);
     LOG.info("File Output Committer Algorithm version is " + algorithmVersion);
     if (algorithmVersion != 1 && algorithmVersion != 2) {
       throw new IOException("Only 1 or 2 algorithm version is supported");
@@ -396,6 +427,11 @@ public class FileOutputCommitter extends PathOutputCommitter {
    */
   @VisibleForTesting
   protected void commitJobInternal(JobContext context) throws IOException {
+    if (isParallelMoveEnabled()) {
+      // Note: Code paths are intentionally copied
+      parallelCommitJobInternal(context);
+      return;
+    }
     if (hasOutputPath()) {
       Path finalOutput = getOutputPath();
       FileSystem fs = finalOutput.getFileSystem(context.getConfiguration());
@@ -494,6 +530,275 @@ public class FileOutputCommitter extends PathOutputCommitter {
           renameOrMerge(fs, from, to, context);
         }
       }
+    }
+  }
+
+  public boolean isParallelMoveEnabled() {
+    // Only available for algo v1
+    return (moveThreads > 1 && algorithmVersion == 1);
+  }
+
+  void validateParallelMove() throws IOException {
+    if (!isParallelMoveEnabled()) {
+      throw new IOException("Parallel file move is not enabled. "
+          + "moveThreads=" + moveThreads
+          + ", algo=" + algorithmVersion);
+    }
+  }
+
+  void validateThreadPool(ExecutorService pool, BlockingQueue<Future<Void>> futures)
+      throws IOException {
+    boolean threadPoolEnabled = isParallelMoveEnabled();
+    if (!threadPoolEnabled || pool == null || futures == null) {
+      String errorMsg = "Thread pool is not configured correctly. "
+          + "threadPoolEnabled: " + threadPoolEnabled
+          + ", pool: " + pool
+          + ", futures: " + futures;
+      LOG.error(errorMsg);
+      throw new IOException(errorMsg);
+    }
+  }
+
+  /**
+   * Get executor service for moving files for v1 algorithm.
+   * @return executor service
+   * @throws IOException on error
+   */
+  private ExecutorService createExecutorService() throws IOException {
+    // intentional validation
+    validateParallelMove();
+
+    ExecutorService pool = new ThreadPoolExecutor(moveThreads, moveThreads,
+        0L, TimeUnit.MILLISECONDS,
+        new LinkedBlockingQueue<>(),
+        new ThreadFactoryBuilder()
+            .setDaemon(true)
+            .setNameFormat("FileCommitter-v1-move-thread-%d")
+            .build(),
+        new ThreadPoolExecutor.CallerRunsPolicy()
+    );
+    LOG.info("Size of move thread pool: {}, pool: {}", moveThreads, pool);
+    return pool;
+  }
+
+  private void parallelCommitJobInternal(JobContext context) throws IOException {
+    // validate to be on safer side.
+    validateParallelMove();
+
+    if (hasOutputPath()) {
+      Path finalOutput = getOutputPath();
+      FileSystem fs = finalOutput.getFileSystem(context.getConfiguration());
+
+      // No need to check for algo ver=1, as this entire code path is for V1.
+      try (DurationInfo d = new DurationInfo(LOG, true,
+          "Merging data from committed tasks %s", finalOutput)) {
+        mergeCommittedTasksInParallel(fs, context, finalOutput);
+      }
+
+      if (skipCleanup) {
+        LOG.info("Skip cleanup the _temporary folders under job's output " +
+            "directory in commitJob.");
+      } else {
+        // delete the _temporary folder.
+        try {
+          cleanupJob(context);
+        } catch (IOException e) {
+          if (ignoreCleanupFailures) {
+            // swallow exceptions in cleanup as user configure to make sure
+            // commitJob could be success even when cleanup get failure.
+            LOG.error("Error in cleanup job, manually cleanup is needed.", e);
+          } else {
+            // throw back exception to fail commitJob.
+            throw e;
+          }
+        }
+      }
+      // True if the job requires output.dir marked on successful job.
+      // Note that by default it is set to true.
+      if (context.getConfiguration().getBoolean(
+          SUCCESSFUL_JOB_OUTPUT_DIR_MARKER, true)) {
+        Path markerPath = new Path(outputPath, SUCCEEDED_FILE_NAME);
+        // If job commit is repeatable and previous/another AM could write
+        // mark file already, we need to set overwritten to be true explicitly
+        // in case other FS implementations don't overwritten by default.
+        fs.create(markerPath, true).close();
+      }
+    } else {
+      LOG.warn("Output Path is null in commitJob()");
+    }
+  }
+
+  private void mergeCommittedTasksInParallel(FileSystem fs, JobContext context,
+      Path finalOutput) throws IOException {
+
+    // validate to be on safer side.
+    validateParallelMove();
+
+    ExecutorService pool = createExecutorService();
+    BlockingQueue<Future<Void>> futures = new LinkedBlockingQueue<>();
+    try {
+      for (FileStatus stat : getAllCommittedTaskPaths(context)) {
+        LOG.info("Merging in parallel, from: {}, to: {}, parallelTaskCommitEnabled: {}",
+            stat.getPath(), finalOutput, isParallelTaskCommitEnabled);
+        if (isParallelTaskCommitEnabled) {
+          futures.add(pool.submit(() -> {
+            mergePathsInParallel(fs, stat, finalOutput, context, pool, futures);
+            return null;
+          }));
+          numberOfTasks.getAndIncrement();
+        } else {
+          mergePathsInParallel(fs, stat, finalOutput, context, pool, futures);
+        }
+      }
+      drainFutures(pool, futures);
+    } finally {
+      shutdownThreadPool(pool);
+    }
+  }
+
+  /**
+   * Drain all future tasks and clean up thread pool.
+   *
+   * @throws IOException if an exception was raised in any pool.
+   */
+  private void drainFutures(ExecutorService pool, BlockingQueue<Future<Void>> futures)
+      throws IOException {
+    if (futures == null) {
+      return;
+    }
+    try {
+      int i = 0;
+      while(!futures.isEmpty()) {
+        futures.take().get();
+        if (i % 1000 == 0) {
+          LOG.info("Drained task id: {}, overall: {}", i, numberOfTasks.get());
+        }
+        i++;
+      }
+    } catch (InterruptedException | ExecutionException e) {
+      throw cancelTasks(pool, e);
+    }
+  }
+
+  @VisibleForTesting
+  public int getNumCompletedTasks() {
+    return numberOfTasks.get();
+  }
+
+  /**
+   * Cancel pending tasks in case of exception.
+   *
+   * @param pool threadpool
+   * @param e exception
+   * @return IOException
+   */
+  private IOException cancelTasks(ExecutorService pool, Exception e) {
+    if (e == null) {
+      // shouldn't land here
+      return new IOException("exception was null");
+    }
+    LOG.error("Cancelling all tasks and shutting down thread pool.", e);
+    pool.shutdownNow();
+    if (e.getCause() instanceof IOException) {
+      return (IOException) e.getCause();
+    }
+    return new IOException(e);
+  }
+
+  /**
+   * Shutdown thread pool.
+   */
+  private void shutdownThreadPool(ExecutorService pool) {
+    if (pool != null && !pool.isTerminated()) {
+      LOG.info("Shutting down thread pool");
+      pool.shutdown();
+      numberOfTasks.set(0);
+    }
+  }
+
+  /**
+   * Merge two paths together with parallel threads.
+   * Anything in from will be moved into to, if there
+   * are any name conflicts while merging the files or directories in from win.
+   * @param fs the File System to use
+   * @param from the path data is coming from.
+   * @param to the path data is going to.
+   * @throws IOException on any error
+   */
+  private void mergePathsInParallel(FileSystem fs, final FileStatus from,
+      final Path to, JobContext context, ExecutorService pool,
+      BlockingQueue<Future<Void>> futures) throws IOException {
+    validateThreadPool(pool, futures);
+
+    try (DurationInfo d = new DurationInfo(LOG, false,
+        "Merging data from %s to %s", from.getPath(), to)) {
+      reportProgress(context);
+      FileStatus toStat;
+      try {
+        toStat = fs.getFileStatus(to);
+      } catch (FileNotFoundException fnfe) {
+        toStat = null;
+      }
+
+      if (from.isFile()) {
+        if (toStat != null) {
+          if (!fs.delete(to, true)) {
+            throw new IOException("Failed to delete " + to);
+          }
+        }
+
+        if (!fs.rename(from.getPath(), to)) {
+          throw new IOException("Failed to rename " + from.getPath() + " to " + to);
+        }
+      } else if (from.isDirectory()) {
+        if (toStat != null) {
+          if (!toStat.isDirectory()) {
+            if (!fs.delete(to, true)) {
+              throw new IOException("Failed to delete " + to);
+            }
+            boolean dirCreated = fs.mkdirs(to);
+            LOG.debug("Merging from:{} to:{}, destCreated: {}", from.getPath(), to, dirCreated);
+            mergePathsInParallel(fs, from, to, context, pool, futures);
+          } else {
+            //It is a directory so merge everything in the directories
+            LOG.debug("Dir merge from : {} to: {}", from.getPath(), to);
+            mergeDirInParallel(fs, from, to, context, pool, futures);
+          }
+        } else {
+          // Init dir to avoid conflicting multi-threaded rename
+          boolean dirCreated = fs.mkdirs(to);
+          LOG.debug("Created dir upfront. from: {} --> to:{}, totalTasks:{}, destCreated: {}",
+              from.getPath(), to, futures.size(), dirCreated);
+          mergePathsInParallel(fs, from, to, context, pool, futures);
+        }
+      }
+    }
+  }
+
+  /**
+   * Merge a directory in parallel fashion.
+   *
+   * @param fs
+   * @param from
+   * @param to
+   * @param context
+   * @throws IOException
+   */
+  private void mergeDirInParallel(FileSystem fs, FileStatus from, Path to,
+      JobContext context, ExecutorService pool,
+      BlockingQueue<Future<Void>> futures) throws IOException {
+
+    validateThreadPool(pool, futures);
+    RemoteIterator<FileStatus> it = fs.listStatusIterator(from.getPath());
+    while(it.hasNext()) {
+      FileStatus subFrom = it.next();
+      Path subTo = new Path(to, subFrom.getPath().getName());
+      LOG.debug("Merge from: {}, to: {} in parallel", subFrom.getPath(), subTo);
+      futures.add(pool.submit(() -> {
+        mergePathsInParallel(fs, subFrom, subTo, context, pool, futures);
+        return null;
+      }));
+      numberOfTasks.getAndIncrement();
     }
   }
 
