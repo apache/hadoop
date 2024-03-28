@@ -27,6 +27,7 @@ import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.List;
 
+import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -171,7 +172,7 @@ public class FSEditLogLoader {
     StartupProgress prog = NameNode.getStartupProgress();
     Step step = createStartupProgressStep(edits);
     prog.beginStep(Phase.LOADING_EDITS, step);
-    fsNamesys.writeLock();
+    fsNamesys.writeLock(FSNamesystemLockMode.GLOBAL);
     try {
       long startTime = timer.monotonicNow();
       LogAction preLogAction = LOAD_EDITS_LOG_HELPER.record("pre", startTime);
@@ -196,7 +197,7 @@ public class FSEditLogLoader {
       return numEdits;
     } finally {
       edits.close();
-      fsNamesys.writeUnlock("loadFSEdits");
+      fsNamesys.writeUnlock(FSNamesystemLockMode.GLOBAL, "loadFSEdits");
       prog.endStep(Phase.LOADING_EDITS, step);
     }
   }
@@ -218,7 +219,7 @@ public class FSEditLogLoader {
       LOG.trace("Acquiring write lock to replay edit log");
     }
 
-    fsNamesys.writeLock();
+    fsNamesys.writeLock(FSNamesystemLockMode.GLOBAL);
     FSDirectory fsDir = fsNamesys.dir;
     fsDir.writeLock();
 
@@ -342,7 +343,7 @@ public class FSEditLogLoader {
         in.close();
       }
       fsDir.writeUnlock();
-      fsNamesys.writeUnlock("loadEditRecords");
+      fsNamesys.writeUnlock(FSNamesystemLockMode.GLOBAL, "loadEditRecords");
 
       if (LOG.isTraceEnabled()) {
         LOG.trace("replaying edit log finished");
