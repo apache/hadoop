@@ -121,9 +121,9 @@ class StripedBlockReconstructor extends StripedReconstructor
 
       // Only the succeed reconstructions are recorded.
       final DataNodeMetrics metrics = getDatanode().getMetrics();
-      metrics.incrECReconstructionReadTime(readEnd - start);
-      metrics.incrECReconstructionDecodingTime(decodeEnd - readEnd);
-      metrics.incrECReconstructionWriteTime(writeEnd - decodeEnd);
+      metrics.addECReconstructionReadTime(readEnd - start);
+      metrics.addECReconstructionDecodingTime(decodeEnd - readEnd);
+      metrics.addECReconstructionWriteTime(writeEnd - decodeEnd);
 
       updatePositionInBlock(toReconstructLen);
 

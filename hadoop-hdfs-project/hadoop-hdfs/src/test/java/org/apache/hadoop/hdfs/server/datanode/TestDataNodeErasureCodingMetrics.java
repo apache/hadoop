@@ -90,9 +90,9 @@ public class TestDataNodeErasureCodingMetrics {
 
   @Test(timeout = 120000)
   public void testFullBlock() throws Exception {
-    Assert.assertEquals(0, getLongMetric("EcReconstructionReadTimeMillis"));
-    Assert.assertEquals(0, getLongMetric("EcReconstructionDecodingTimeMillis"));
-    Assert.assertEquals(0, getLongMetric("EcReconstructionWriteTimeMillis"));
+    Assert.assertEquals(0, getLongMetric("EcReconstructionReadTimeMillisNumOps"));
+    Assert.assertEquals(0, getLongMetric("EcReconstructionDecodingTimeMillisNumOps"));
+    Assert.assertEquals(0, getLongMetric("EcReconstructionWriteTimeMillisNumOps"));
 
     doTest("/testEcMetrics", blockGroupSize, 0);
 
@@ -107,9 +107,9 @@ public class TestDataNodeErasureCodingMetrics {
         blockSize, getLongMetric("EcReconstructionBytesWritten"));
     Assert.assertEquals("EcReconstructionRemoteBytesRead should be ",
         0, getLongMetricWithoutCheck("EcReconstructionRemoteBytesRead"));
-    Assert.assertTrue(getLongMetric("EcReconstructionReadTimeMillis") > 0);
-    Assert.assertTrue(getLongMetric("EcReconstructionDecodingTimeMillis") > 0);
-    Assert.assertTrue(getLongMetric("EcReconstructionWriteTimeMillis") > 0);
+    Assert.assertTrue(getLongMetric("EcReconstructionReadTimeMillisNumOps") > 0);
+    Assert.assertTrue(getLongMetric("EcReconstructionDecodingTimeMillisNumOps") > 0);
+    Assert.assertTrue(getLongMetric("EcReconstructionWriteTimeMillisNumOps") > 0);
   }
 
   // A partial block, reconstruct the partial block
