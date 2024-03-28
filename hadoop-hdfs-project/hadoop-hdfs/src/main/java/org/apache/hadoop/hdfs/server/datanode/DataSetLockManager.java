@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.Stack;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,6 +38,7 @@ public class DataSetLockManager implements DataNodeLockManager<AutoCloseDataSetL
   public static final Logger LOG = LoggerFactory.getLogger(DataSetLockManager.class);
   private final HashMap<String, TrackLog> threadCountMap = new HashMap<>();
   private final LockMap lockMap = new LockMap();
+  private DataNode datanode;
   private boolean isFair = true;
   private final boolean openLockTrace;
   private Exception lastException;
@@ -136,13 +138,14 @@ public class DataSetLockManager implements DataNodeLockManager<AutoCloseDataSetL
     }
   }
 
-  public DataSetLockManager(Configuration conf) {
+  public DataSetLockManager(Configuration conf, DataNode dn) {
     this.isFair = conf.getBoolean(
         DFSConfigKeys.DFS_DATANODE_LOCK_FAIR_KEY,
         DFSConfigKeys.DFS_DATANODE_LOCK_FAIR_DEFAULT);
     this.openLockTrace = conf.getBoolean(
         DFSConfigKeys.DFS_DATANODE_LOCKMANAGER_TRACE,
         DFSConfigKeys.DFS_DATANODE_LOCKMANAGER_TRACE_DEFAULT);
+    this.datanode = dn;
   }
 
   public DataSetLockManager() {
@@ -185,6 +188,7 @@ public class DataSetLockManager implements DataNodeLockManager<AutoCloseDataSetL
    * Return a not null ReadLock.
    */
   private AutoCloseDataSetLock getReadLock(LockLevel level, String... resources) {
+    long startTimeNanos = Time.monotonicNowNanos();
     String lockName = generateLockName(level, resources);
     AutoCloseDataSetLock lock = lockMap.getReadLock(lockName);
     if (lock == null) {
@@ -197,6 +201,9 @@ public class DataSetLockManager implements DataNodeLockManager<AutoCloseDataSetL
     if (openLockTrace) {
       putThreadName(getThreadName());
     }
+    if (datanode != null) {
+      datanode.metrics.addAcquireDataSetReadLock(Time.monotonicNowNanos() - startTimeNanos);
+    }
     return lock;
   }
 
@@ -204,6 +211,7 @@ public class DataSetLockManager implements DataNodeLockManager<AutoCloseDataSetL
    * Return a not null WriteLock.
    */
   private AutoCloseDataSetLock getWriteLock(LockLevel level, String... resources) {
+    long startTimeNanos = Time.monotonicNowNanos();
     String lockName = generateLockName(level, resources);
     AutoCloseDataSetLock lock = lockMap.getWriteLock(lockName);
     if (lock == null) {
@@ -215,6 +223,9 @@ public class DataSetLockManager implements DataNodeLockManager<AutoCloseDataSetL
     lock.lock();
     if (openLockTrace) {
       putThreadName(getThreadName());
+    }
+    if (datanode != null) {
+      datanode.metrics.addAcquireDataSetWriteLock(Time.monotonicNowNanos() - startTimeNanos);
     }
     return lock;
   }
