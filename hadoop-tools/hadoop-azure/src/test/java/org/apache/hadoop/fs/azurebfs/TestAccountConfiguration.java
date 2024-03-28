@@ -27,8 +27,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.ConfigurationPropertyNotFoundException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.TokenAccessProviderException;
+import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.CustomTokenProviderAdapter;
+import org.apache.hadoop.fs.azurebfs.oauth2.MsiTokenProvider;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
@@ -57,7 +59,8 @@ import static org.junit.Assert.assertNull;
  * that do allow default values (all others) follow another form.
  */
 public class TestAccountConfiguration {
-  private static final String TEST_OAUTH_PROVIDER_CLASS_CONFIG = "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider";
+  private static final String TEST_OAUTH_CLIENT_CREDS_TOKEN_PROVIDER_CLASS_CONFIG = "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider";
+  private static final String TEST_OAUTH_MSI_TOKEN_PROVIDER_CLASS_CONFIG = "org.apache.hadoop.fs.azurebfs.oauth2.MsiTokenProvider";
   private static final String TEST_CUSTOM_PROVIDER_CLASS_CONFIG = "org.apache.hadoop.fs.azurebfs.oauth2.RetryTestTokenProvider";
   private static final String TEST_SAS_PROVIDER_CLASS_CONFIG_1 = "org.apache.hadoop.fs.azurebfs.extensions.MockErrorSASTokenProvider";
   private static final String TEST_SAS_PROVIDER_CLASS_CONFIG_2 = "org.apache.hadoop.fs.azurebfs.extensions.MockSASTokenProvider";
@@ -69,7 +72,6 @@ public class TestAccountConfiguration {
   private static final List<String> CONFIG_KEYS =
       Collections.unmodifiableList(Arrays.asList(
           FS_AZURE_ACCOUNT_OAUTH_CLIENT_ENDPOINT,
-          FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID,
           FS_AZURE_ACCOUNT_OAUTH_CLIENT_SECRET));
 
   @Test
@@ -401,6 +403,30 @@ public class TestAccountConfiguration {
                 () -> abfsConf.getTokenProvider().getClass().getTypeName())));
   }
 
+  @Test
+  public void testClientAndTenantIdOptionalWhenUsingMsiTokenProvider() throws Throwable {
+      final String accountName = "account";
+      final Configuration conf = new Configuration();
+      final AbfsConfiguration abfsConf = new AbfsConfiguration(conf, accountName);
+
+      final String accountNameSuffix = "." + abfsConf.getAccountName();
+      String authKey = FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME + accountNameSuffix;
+      String providerClassKey = "";
+      String providerClassValue = "";
+
+      providerClassKey = FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME + accountNameSuffix;
+      providerClassValue = TEST_OAUTH_MSI_TOKEN_PROVIDER_CLASS_CONFIG;
+
+      abfsConf.set(authKey, AuthType.OAuth.toString());
+      abfsConf.set(providerClassKey, providerClassValue);
+
+      AccessTokenProvider tokenProviderTypeName = abfsConf.getTokenProvider();
+      // Test that we managed to instantiate an MsiTokenProvider without having to define the tenant and client ID.
+      // Those 2 fields are optional as they can automatically be determined by the Azure Metadata service when
+      // running on an Azure VM.
+      Assertions.assertThat(tokenProviderTypeName).isInstanceOf(MsiTokenProvider.class);
+  }
+
   public void testGlobalAndAccountOAuthPrecedence(AbfsConfiguration abfsConf,
       AuthType globalAuthType,
       AuthType accountSpecificAuthType)
@@ -456,7 +482,7 @@ public class TestAccountConfiguration {
     case OAuth:
       providerClassKey = FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME
           + (isAccountSetting ? accountNameSuffix : "");
-      providerClassValue = TEST_OAUTH_PROVIDER_CLASS_CONFIG;
+      providerClassValue = TEST_OAUTH_CLIENT_CREDS_TOKEN_PROVIDER_CLASS_CONFIG;
 
       abfsConf.set(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ENDPOINT
           + ((isAccountSetting) ? accountNameSuffix : ""),
