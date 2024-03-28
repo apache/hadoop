@@ -506,7 +506,7 @@ public class EditLogTailer {
           // read any more transactions since the last time a roll was
           // triggered.
           boolean triggeredLogRoll = false;
-          if (tooLongSinceLastLoad() &&
+          if (!namesystem.isInObserverState() && tooLongSinceLastLoad() &&
               lastRollTriggerTxId < lastLoadedTxnId) {
             triggerActiveLogRoll();
             triggeredLogRoll = true;
