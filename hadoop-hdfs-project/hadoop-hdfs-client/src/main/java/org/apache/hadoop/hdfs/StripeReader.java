@@ -21,7 +21,6 @@ import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
-import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil.BlockReadStats;
@@ -120,6 +119,7 @@ abstract class StripeReader {
   protected final RawErasureDecoder decoder;
   protected final DFSStripedInputStream dfsStripedInputStream;
   private long readTo = -1;
+  private final int readDNMaxAttempts;
 
   protected ECChunk[] decodeInputs;
 
@@ -138,6 +138,8 @@ abstract class StripeReader {
     this.corruptedBlocks = corruptedBlocks;
     this.decoder = decoder;
     this.dfsStripedInputStream = dfsStripedInputStream;
+    this.readDNMaxAttempts = dfsStripedInputStream.getDFSClient()
+        .getConf().getStripedReadDnMaxAttempts();
 
     service = new ExecutorCompletionService<>(
             dfsStripedInputStream.getStripedReadsThreadPool());
@@ -233,41 +235,62 @@ abstract class StripeReader {
 
   private int readToBuffer(BlockReader blockReader,
       DatanodeInfo currentNode, ByteBufferStrategy strategy,
-      ExtendedBlock currentBlock) throws IOException {
+      LocatedBlock currentBlock, int chunkIndex) throws IOException {
     final int targetLength = strategy.getTargetLength();
-    int length = 0;
-    try {
-      while (length < targetLength) {
-        int ret = strategy.readFromBlock(blockReader);
-        if (ret < 0) {
-          throw new IOException("Unexpected EOS from the reader");
+    int curAttempts = 0;
+    while (curAttempts < readDNMaxAttempts) {
+      curAttempts++;
+      int length = 0;
+      try {
+        while (length < targetLength) {
+          int ret = strategy.readFromBlock(blockReader);
+          if (ret < 0) {
+            throw new IOException("Unexpected EOS from the reader");
+          }
+          length += ret;
         }
-        length += ret;
+        return length;
+      } catch (ChecksumException ce) {
+        DFSClient.LOG.warn("Found Checksum error for "
+            + currentBlock + " from " + currentNode
+            + " at " + ce.getPos());
+        //Clear buffer to make next decode success
+        strategy.getReadBuffer().clear();
+        // we want to remember which block replicas we have tried
+        corruptedBlocks.addCorruptedBlock(currentBlock.getBlock(), currentNode);
+        throw ce;
+      } catch (IOException e) {
+        //Clear buffer to make next decode success
+        strategy.getReadBuffer().clear();
+        if (curAttempts < readDNMaxAttempts) {
+          if (readerInfos[chunkIndex].reader != null) {
+            readerInfos[chunkIndex].reader.close();
+          }
+          if (dfsStripedInputStream.createBlockReader(currentBlock,
+              alignedStripe.getOffsetInBlock(), targetBlocks,
+              readerInfos, chunkIndex, readTo)) {
+            blockReader = readerInfos[chunkIndex].reader;
+            String msg = "Reconnect to " + currentNode.getInfoAddr()
+                + " for block " + currentBlock.getBlock();
+            DFSClient.LOG.warn(msg);
+            continue;
+          }
+        }
+        DFSClient.LOG.warn("Exception while reading from "
+            + currentBlock + " of " + dfsStripedInputStream.getSrc() + " from "
+            + currentNode, e);
+        throw e;
       }
-      return length;
-    } catch (ChecksumException ce) {
-      DFSClient.LOG.warn("Found Checksum error for "
-          + currentBlock + " from " + currentNode
-          + " at " + ce.getPos());
-      //Clear buffer to make next decode success
-      strategy.getReadBuffer().clear();
-      // we want to remember which block replicas we have tried
-      corruptedBlocks.addCorruptedBlock(currentBlock, currentNode);
-      throw ce;
-    } catch (IOException e) {
-      DFSClient.LOG.warn("Exception while reading from "
-          + currentBlock + " of " + dfsStripedInputStream.getSrc() + " from "
-          + currentNode, e);
-      //Clear buffer to make next decode success
-      strategy.getReadBuffer().clear();
-      throw e;
     }
+    throw new IOException("Read request interrupted. " +
+        currentBlock + " of " + dfsStripedInputStream.getSrc() + " from "
+        + currentNode);
   }
 
   private Callable<BlockReadStats> readCells(final BlockReader reader,
       final DatanodeInfo datanode, final long currentReaderOffset,
       final long targetReaderOffset, final ByteBufferStrategy[] strategies,
-      final ExtendedBlock currentBlock) {
+      final LocatedBlock currentBlock, final int chunkIndex) {
     return () -> {
       // reader can be null if getBlockReaderWithRetry failed or
       // the reader hit exception before
@@ -284,7 +307,8 @@ abstract class StripeReader {
 
       int ret = 0;
       for (ByteBufferStrategy strategy : strategies) {
-        int bytesReead = readToBuffer(reader, datanode, strategy, currentBlock);
+        int bytesReead = readToBuffer(reader, datanode, strategy, currentBlock,
+            chunkIndex);
         ret += bytesReead;
       }
       return new BlockReadStats(ret, reader.isShortCircuit(),
@@ -318,7 +342,7 @@ abstract class StripeReader {
         readerInfos[chunkIndex].datanode,
         readerInfos[chunkIndex].blockReaderOffset,
         alignedStripe.getOffsetInBlock(), getReadStrategies(chunk),
-        block.getBlock());
+        block, chunkIndex);
 
     Future<BlockReadStats> request = service.submit(readCallable);
     futures.put(request, chunkIndex);
