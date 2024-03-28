@@ -916,6 +916,17 @@ public class TestDataNodeReconfiguration {
       dn.reconfigureProperty(DFS_DISK_BALANCER_PLAN_VALID_INTERVAL, "1m");
       assertEquals(60000, dn.getDiskBalancer().getPlanValidityInterval());
       assertEquals(60000, dn.getDiskBalancer().getPlanValidityIntervalInConfig());
+
+      // Verify set to the value of the current system
+      long curTimeInterval = dn.getConf().getTimeDuration(DFS_DISK_BALANCER_PLAN_VALID_INTERVAL,
+          DFS_DISK_BALANCER_PLAN_VALID_INTERVAL_DEFAULT, TimeUnit.MILLISECONDS);
+      dn.reconfigureProperty(DFS_DISK_BALANCER_PLAN_VALID_INTERVAL, null);
+      assertEquals(60000, curTimeInterval);
+      assertEquals(curTimeInterval, dn.getDiskBalancer().getPlanValidityInterval());
+      assertEquals(60000, dn.getDiskBalancer().getPlanValidityIntervalInConfig());
+      curTimeInterval = dn.getConf().getTimeDuration(DFS_DISK_BALANCER_PLAN_VALID_INTERVAL,
+          DFS_DISK_BALANCER_PLAN_VALID_INTERVAL_DEFAULT, TimeUnit.MILLISECONDS);
+      assertEquals(60000, curTimeInterval);
     }
   }
 
