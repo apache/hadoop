@@ -96,7 +96,7 @@ public class ManifestStoreOperationsThroughFileSystem extends ManifestStoreOpera
 
   @Override
   public FileStatus getFileStatus(Path path) throws IOException {
-    acquireIOCapacity(OP_GET_FILE_STATUS, GET_FILE_STATUS_CAPACITY);
+    acquireIOCapacity(OP_GET_FILE_STATUS, new Path("/"), GET_FILE_STATUS_CAPACITY);
     return fileSystem.getFileStatus(path);
   }
 
@@ -109,7 +109,7 @@ public class ManifestStoreOperationsThroughFileSystem extends ManifestStoreOpera
   @SuppressWarnings("deprecation")
   @Override
   public boolean isFile(Path path) throws IOException {
-    acquireIOCapacity(OP_IS_FILE, GET_FILE_STATUS_CAPACITY);
+    acquireIOCapacity(OP_IS_FILE, new Path("/"), GET_FILE_STATUS_CAPACITY);
     return fileSystem.isFile(path);
   }
 
@@ -122,34 +122,34 @@ public class ManifestStoreOperationsThroughFileSystem extends ManifestStoreOpera
   public boolean delete(Path path, boolean recursive)
       throws IOException {
     acquireIOCapacity(OP_DELETE,
-        recursive ? DELETE_FILE_CAPACITY : DELETE_DIR_CAPACITY);
+        new Path("/"), recursive ? DELETE_FILE_CAPACITY : DELETE_DIR_CAPACITY);
     return fileSystem.delete(path, recursive);
   }
 
   @Override
   public boolean rmdir(final Path path, final int capacity) throws IOException {
-    acquireIOCapacity(OP_DELETE_DIR, capacity);
+    acquireIOCapacity(OP_DELETE_DIR, new Path("/"), capacity);
     return fileSystem.delete(path, true);
   }
 
   @Override
   public boolean mkdirs(Path path)
       throws IOException {
-    acquireIOCapacity(OP_MKDIRS, MKDIRS_CAPACITY);
+    acquireIOCapacity(OP_MKDIRS, new Path("/"), MKDIRS_CAPACITY);
     return fileSystem.mkdirs(path);
   }
 
   @Override
   public boolean renameFile(Path source, Path dest)
       throws IOException {
-    acquireIOCapacity(OP_RENAME, RENAME_CAPACITY);
+    acquireIOCapacity(OP_RENAME, new Path("/"), RENAME_CAPACITY);
     return fileSystem.rename(source, dest);
   }
 
   @Override
   public RemoteIterator<FileStatus> listStatusIterator(Path path)
       throws IOException {
-    acquireIOCapacity(OP_LIST_STATUS, LIST_CAPACITY);
+    acquireIOCapacity(OP_LIST_STATUS, new Path("/"), LIST_CAPACITY);
     return fileSystem.listStatusIterator(path);
   }
 
@@ -157,7 +157,7 @@ public class ManifestStoreOperationsThroughFileSystem extends ManifestStoreOpera
   public TaskManifest loadTaskManifest(
       JsonSerialization<TaskManifest> serializer,
       FileStatus st) throws IOException {
-    acquireIOCapacity(OP_OPENFILE, 1);
+    acquireIOCapacity(OP_OPENFILE, new Path("/"), 1);
     return TaskManifest.load(serializer, fileSystem, st.getPath(), st);
   }
 
@@ -166,7 +166,7 @@ public class ManifestStoreOperationsThroughFileSystem extends ManifestStoreOpera
       final T manifestData,
       final Path path,
       final boolean overwrite) throws IOException {
-    acquireIOCapacity(OP_CREATE, 1);
+    acquireIOCapacity(OP_CREATE, new Path("/"), 1);
     manifestData.save(fileSystem, path, overwrite);
   }
 
@@ -204,7 +204,7 @@ public class ManifestStoreOperationsThroughFileSystem extends ManifestStoreOpera
     // qualify so we can be confident that the FS being synced
     // is the one we expect.
     fileSystem.makeQualified(path);
-    acquireIOCapacity(OP_MSYNC, 1);
+    acquireIOCapacity(OP_MSYNC, new Path("/"), 1);
     try {
       fileSystem.msync();
     } catch (UnsupportedOperationException ignored) {

@@ -68,13 +68,17 @@ public interface IORateLimiter {
    * If there is not enough space, the permits will be acquired,
    * but the subsequent call will block until the capacity has been
    * refilled.
+   * <p>
+   * The path parameter is used to support stores where there may be different throttling
+   * under different paths.
    * @param operation operation being performed. Must not be null, may be "",
-   *         should be from {@link org.apache.hadoop.fs.statistics.StoreStatisticNames}
-   *         where there is a matching operation.
+   * should be from {@link org.apache.hadoop.fs.statistics.StoreStatisticNames}
+   * where there is a matching operation.
+   * @param path path under which the operations will be initiated.
    * @param requestedCapacity capacity to acquire.
-   *         Must be greater than or equal to 0.
+   * Must be greater than or equal to 0.
    * @return time spent waiting for output.
    */
-  Duration acquireIOCapacity(String operation, int requestedCapacity);
+  Duration acquireIOCapacity(String operation, final Path path, int requestedCapacity);
 
 }

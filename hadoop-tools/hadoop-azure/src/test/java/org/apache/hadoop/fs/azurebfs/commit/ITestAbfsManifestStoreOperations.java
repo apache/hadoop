@@ -198,12 +198,12 @@ public class ITestAbfsManifestStoreOperations extends AbstractManifestCommitterT
     // the second assertion fails.
     final String operation = OP_LIST_FILES;
     // first one has no delay
-    Assertions.assertThat(limiter.acquireIOCapacity(operation, capacity))
+    Assertions.assertThat(limiter.acquireIOCapacity(operation, new Path("/"), capacity))
         .describedAs("Duration of acquiring %d capacity", capacity)
         .isEqualTo(Duration.ZERO);
 
     // second one is delayed
-    final Duration duration = limiter.acquireIOCapacity(operation, capacity);
+    final Duration duration = limiter.acquireIOCapacity(operation, new Path("/"), capacity);
     describe("Duration of second capacity request of %d: %s", capacity, duration);
     Assertions.assertThat(duration)
         .describedAs("Duration of acquiring %d capacity", capacity)

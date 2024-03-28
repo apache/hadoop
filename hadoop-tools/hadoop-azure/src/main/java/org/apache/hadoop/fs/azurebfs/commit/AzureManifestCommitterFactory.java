@@ -20,10 +20,14 @@ package org.apache.hadoop.fs.azurebfs.commit;
 
 import java.io.IOException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitter;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterFactory;
@@ -41,10 +45,12 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
 @InterfaceStability.Evolving
 public class AzureManifestCommitterFactory extends ManifestCommitterFactory {
 
+  private static final Logger LOG = LoggerFactory.getLogger(AzureManifestCommitterFactory.class);
+
   /**
    * Classname, which can be declared in job configurations.
    */
-  public static final String NAME = ManifestCommitterFactory.class.getName();
+  public static final String NAME = AzureManifestCommitterFactory.class.getName();
 
   @Override
   public ManifestCommitter createOutputCommitter(final Path outputPath,

@@ -111,13 +111,13 @@ public class TestIORateLimiter extends AbstractHadoopTestBase {
   @Test
   public void testUnlimitedRejectsNegativeCapacity() throws Exception {
     intercept(IllegalArgumentException.class, () ->
-        IORateLimiterSupport.unlimited().acquireIOCapacity("", -1));
+        IORateLimiterSupport.unlimited().acquireIOCapacity("", new Path("/"), -1));
   }
 
   @Test
   public void testUnlimitedRejectsNullOperation() throws Exception {
     intercept(NullPointerException.class, () ->
-        IORateLimiterSupport.unlimited().acquireIOCapacity(null, 0));
+        IORateLimiterSupport.unlimited().acquireIOCapacity(null, new Path("/"), 0));
   }
 
   /**
@@ -147,7 +147,7 @@ public class TestIORateLimiter extends AbstractHadoopTestBase {
    * @param capacity capacity
    */
   private static void assertNotDelayed(IORateLimiter limiter, String op, int capacity) {
-    assertZeroDuration(capacity, limiter.acquireIOCapacity(op, capacity));
+    assertZeroDuration(capacity, limiter.acquireIOCapacity(op, new Path("/"), capacity));
   }
 
   /**
@@ -158,7 +158,7 @@ public class TestIORateLimiter extends AbstractHadoopTestBase {
    * @param capacity capacity
    */
   private static void assertDelayed(IORateLimiter limiter, String op, int capacity) {
-    assertNonZeroDuration(capacity, limiter.acquireIOCapacity(op, capacity));
+    assertNonZeroDuration(capacity, limiter.acquireIOCapacity(op, new Path("/"), capacity));
   }
 
   /**
