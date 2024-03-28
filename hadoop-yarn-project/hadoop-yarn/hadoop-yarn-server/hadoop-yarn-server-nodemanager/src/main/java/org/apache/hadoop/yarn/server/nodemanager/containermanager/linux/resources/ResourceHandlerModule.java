@@ -278,6 +278,15 @@ public class ResourceHandlerModule {
     return null;
   }
 
+  private static ResourceHandler
+      getPidsResourceHandler(Configuration conf) throws ResourceHandlerException{
+    if (conf.getBoolean(YarnConfiguration.NM_CONTAINER_PROCESS_MONITOR_ENABLED,
+        YarnConfiguration.DEFAULT_NM_CONTAINER_PROCESS_MONITOR_ENABLED)){
+      return new CGroupsPidsResourceHandlerImpl(getCGroupsHandler());
+    }
+    return null;
+  }
+
   private static void addHandlerIfNotNull(List<ResourceHandler> handlerList,
       ResourceHandler handler) {
     if (handler != null) {
@@ -299,6 +308,7 @@ public class ResourceHandlerModule {
     addHandlerIfNotNull(handlerList,
         initCGroupsCpuResourceHandler(conf));
     addHandlerIfNotNull(handlerList, getNumaResourceHandler(conf, nmContext));
+    addHandlerIfNotNull(handlerList, getPidsResourceHandler(conf));
     addHandlersFromConfiguredResourcePlugins(handlerList, conf, nmContext);
     resourceHandlerChain = new ResourceHandlerChain(handlerList);
   }

@@ -2061,6 +2061,18 @@ public class YarnConfiguration extends Configuration {
   public static final long DEFAULT_NM_CONTAINER_LOG_TOTAL_SIZE_LIMIT_BYTES =
       10000000000L;
 
+  /** Enable switch for container process number monitoring. */
+  public static final String NM_CONTAINER_PROCESS_MONITOR_ENABLED =
+      NM_PREFIX + "container-process-monitor.enable";
+  public static final boolean
+      DEFAULT_NM_CONTAINER_PROCESS_MONITOR_ENABLED= false;
+
+  /** The max process number limit for a single container. */
+  public static final String NM_CONTAINER_PROCESS_MAX_LIMIT_NUM =
+      NM_PREFIX + "container-process-monitor.max-limit-num";
+  public static final int DEFAULT_NM_CONTAINER_PROCESS_NUM_MAX_LIMIT =
+      10000;
+
   /** Enable/disable container metrics. */
   @Private
   public static final String NM_CONTAINER_METRICS_ENABLE =
