@@ -615,6 +615,9 @@ public class TestDFSIO implements Tool {
                        String name, 
                        long totalSize // in bytes
                      ) throws IOException {
+      if (bufferSize <= 0) {
+        throw new IllegalArgumentException("Buffer size must be greater than 0");
+      }
       InputStream in = (InputStream)this.stream;
       long actualSize = 0;
       while (actualSize < totalSize) {
