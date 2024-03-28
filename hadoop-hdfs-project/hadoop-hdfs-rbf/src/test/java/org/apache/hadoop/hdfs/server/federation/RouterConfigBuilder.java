@@ -44,6 +44,7 @@ public class RouterConfigBuilder {
   private boolean enableMetrics = false;
   private boolean enableQuota = false;
   private boolean enableSafemode = false;
+  private boolean enableAutoMsync = false;
   private RouterRenameOption routerRenameOption = RouterRenameOption.NONE;
   private boolean enableCacheRefresh;
   private Map<String, String> innerMap = new HashMap<>();
@@ -65,6 +66,7 @@ public class RouterConfigBuilder {
     this.enableStateStore = true;
     this.enableMetrics = true;
     this.enableSafemode = true;
+    this.enableAutoMsync = true;
     return this;
   }
 
@@ -118,6 +120,11 @@ public class RouterConfigBuilder {
     return this;
   }
 
+  public RouterConfigBuilder autoMsync(boolean enable) {
+    this.enableAutoMsync = enable;
+    return this;
+  }
+
   public RouterConfigBuilder refreshCache(boolean enable) {
     this.enableCacheRefresh = enable;
     return this;
@@ -161,6 +168,10 @@ public class RouterConfigBuilder {
 
   public RouterConfigBuilder safemode() {
     return this.safemode(true);
+  }
+
+  public RouterConfigBuilder autoMsync() {
+    return this.autoMsync(true);
   }
 
   public RouterConfigBuilder refreshCache() {
@@ -207,6 +218,7 @@ public class RouterConfigBuilder {
         this.enableSafemode);
     conf.setBoolean(RBFConfigKeys.MOUNT_TABLE_CACHE_UPDATE,
         this.enableCacheRefresh);
+    conf.setBoolean(RBFConfigKeys.DFS_ROUTER_AUTO_MSYNC_ENABLE, this.enableAutoMsync);
     conf.set(DFS_ROUTER_FEDERATION_RENAME_OPTION, routerRenameOption.name());
     for (Map.Entry<String, String> kv : innerMap.entrySet()) {
       conf.set(kv.getKey(), kv.getValue());
