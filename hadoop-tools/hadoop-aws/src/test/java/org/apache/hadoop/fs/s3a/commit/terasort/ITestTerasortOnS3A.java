@@ -44,6 +44,7 @@ import org.apache.hadoop.examples.terasort.TeraSortConfigKeys;
 import org.apache.hadoop.examples.terasort.TeraValidate;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.commit.AbstractYarnClusterITest;
+import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.commit.magic.MagicS3GuardCommitter;
 import org.apache.hadoop.fs.s3a.commit.staging.DirectoryStagingCommitter;
 import org.apache.hadoop.mapred.JobConf;
@@ -97,6 +98,9 @@ public class ITestTerasortOnS3A extends AbstractYarnClusterITest {
   /** Name of the committer for this run. */
   private final String committerName;
 
+  /** Should Magic committer track pending commits in-memory. */
+  private final boolean trackCommitsInMemory;
+
   /** Base path for all the terasort input and output paths. */
   private Path terasortPath;
 
@@ -117,12 +121,14 @@ public class ITestTerasortOnS3A extends AbstractYarnClusterITest {
   @Parameterized.Parameters(name = "{0}")
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
-        {DirectoryStagingCommitter.NAME},
-        {MagicS3GuardCommitter.NAME}});
+        {DirectoryStagingCommitter.NAME, false},
+        {MagicS3GuardCommitter.NAME, false},
+        {MagicS3GuardCommitter.NAME, true}});
   }
 
-  public ITestTerasortOnS3A(final String committerName) {
+  public ITestTerasortOnS3A(final String committerName, final boolean trackCommitsInMemory) {
     this.committerName = committerName;
+    this.trackCommitsInMemory = trackCommitsInMemory;
   }
 
   @Override
@@ -152,6 +158,9 @@ public class ITestTerasortOnS3A extends AbstractYarnClusterITest {
     conf.setBoolean(
         TeraSortConfigKeys.USE_SIMPLE_PARTITIONER.key(),
         false);
+    conf.setBoolean(
+        CommitConstants.FS_S3A_COMMITTER_MAGIC_TRACK_COMMITS_IN_MEMORY_ENABLED,
+        trackCommitsInMemory);
   }
 
   private int getExpectedPartitionCount() {
@@ -173,7 +182,7 @@ public class ITestTerasortOnS3A extends AbstractYarnClusterITest {
    */
   private void prepareToTerasort() {
     // small sample size for faster runs
-    terasortPath = new Path("/terasort-" + committerName)
+    terasortPath = new Path("/terasort-" + committerName + "-" + trackCommitsInMemory)
         .makeQualified(getFileSystem());
     sortInput = new Path(terasortPath, "sortin");
     sortOutput = new Path(terasortPath, "sortout");
