@@ -39,6 +39,7 @@ import javax.net.ssl.SSLException;
 
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
+import org.apache.hadoop.thirdparty.com.google.common.net.HttpHeaders;
 import org.junit.Assert;
 
 import org.apache.hadoop.conf.Configuration;
@@ -69,7 +70,6 @@ import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
 
-import org.apache.hadoop.thirdparty.com.google.common.net.HttpHeaders;
 import com.google.inject.Injector;
 import org.junit.contrib.java.lang.system.EnvironmentVariables;
 
