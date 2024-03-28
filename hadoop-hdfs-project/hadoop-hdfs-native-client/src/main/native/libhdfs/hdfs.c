@@ -3901,6 +3901,46 @@ tOffset hdfsGetUsed(hdfsFS fs)
     }
     return jVal.j;
 }
+
+
+
+tOffset hdfsGetRemaining(hdfsFS fs)
+{
+    // JAVA EQUIVALENT:
+    //  FsStatus fss = fs.getStatus();
+    //  return Fss.getRemaining();
+
+    jobject jFS = (jobject)fs;
+    jvalue  jVal;
+    jthrowable jthr;
+    jobject fss;
+
+    //Get the JNIEnv* corresponding to current thread
+    JNIEnv* env = getJNIEnv();
+    if (env == NULL) {
+      errno = EINTERNAL;
+      return -1;
+    }
+
+    //FileSystem#getStatus
+    jthr = invokeMethod(env, &jVal, INSTANCE, jFS, HADOOP_FS,
+                     "getStatus", "()Lorg/apache/hadoop/fs/FsStatus;");
+    if (jthr) {
+        errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+            "hdfsGetRemaining FileSystem#getStatus");
+        return -1;
+    }
+    fss = (jobject)jVal.l;
+    jthr = invokeMethod(env, &jVal, INSTANCE, fss, HADOOP_FSSTATUS,
+                     "getRemaining", "()J");
+    destroyLocalReference(env, fss);
+    if (jthr) {
+        errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+            "hdfsGetRemaining: FsStatus#getRemaining");
+        return -1;
+    }
+    return jVal.j;
+}
  
 /**
  * We cannot add new fields to the hdfsFileInfo structure because it would break
