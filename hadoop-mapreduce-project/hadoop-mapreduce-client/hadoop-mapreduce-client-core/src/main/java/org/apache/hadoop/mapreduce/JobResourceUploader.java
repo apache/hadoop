@@ -41,6 +41,7 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.RpcNoSuchMethodException;
 import org.apache.hadoop.mapreduce.filecache.ClientDistributedCacheManager;
 import org.apache.hadoop.mapreduce.filecache.DistributedCache;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.client.api.SharedCacheClient;
@@ -75,6 +76,7 @@ class JobResourceUploader {
   private void initSharedCache(JobID jobid, Configuration conf) {
     this.scConfig.init(conf);
     if (this.scConfig.isSharedCacheEnabled()) {
+      Preconditions.checkArgument(jobid != null, "JobId cannot be null if shared cache is enabled");
       this.scClient = createSharedCacheClient(conf);
       appId = jobIDToAppId(jobid);
     }
@@ -88,6 +90,7 @@ class JobResourceUploader {
    * mapreduce-client-common.
    */
   private ApplicationId jobIDToAppId(JobID jobId) {
+    Preconditions.checkArgument(jobId != null, "Cannot acquire the ApplicationId for a null JobId");
     return ApplicationId.newInstance(Long.parseLong(jobId.getJtIdentifier()),
         jobId.getId());
   }
