@@ -62,6 +62,11 @@ class ReadBufferWorker implements Runnable {
       }
       if (buffer != null) {
         try {
+          // Stop network call if stream is closed
+          if (postFailureWhenStreamClosed(bufferManager, buffer)) {
+            continue;
+          }
+
           // do the actual read, from the file.
           int bytesRead = buffer.getStream().readRemote(
               buffer.getOffset(),
@@ -73,7 +78,11 @@ class ReadBufferWorker implements Runnable {
               Math.min(buffer.getRequestedLength(), buffer.getBuffer().length),
                   buffer.getTracingContext());
 
-          bufferManager.doneReading(buffer, ReadBufferStatus.AVAILABLE, bytesRead);  // post result back to ReadBufferManager
+          // Update failure to completed list if stream is closed
+          if (!postFailureWhenStreamClosed(bufferManager, buffer)) {
+            bufferManager.doneReading(buffer, ReadBufferStatus.AVAILABLE,
+                bytesRead);  // post result back to ReadBufferManager
+          }
         } catch (IOException ex) {
           buffer.setErrException(ex);
           bufferManager.doneReading(buffer, ReadBufferStatus.READ_FAILED, 0);
@@ -83,5 +92,17 @@ class ReadBufferWorker implements Runnable {
         }
       }
     }
+  }
+
+  private boolean postFailureWhenStreamClosed(ReadBufferManager bufferManager,
+      ReadBuffer buffer) {
+
+    // When stream is closed report failure to be picked by eviction
+    if (buffer.getStream().isClosed()) {
+      // Fail read
+      bufferManager.doneReading(buffer, ReadBufferStatus.READ_FAILED, 0);
+      return true;
+    }
+    return false;
   }
 }
