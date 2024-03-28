@@ -26,11 +26,13 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.Statistic;
-import org.apache.hadoop.fs.s3a.commit.magic.MagicCommitTracker;
+import org.apache.hadoop.fs.s3a.commit.magic.InMemoryMagicCommitTracker;
+import org.apache.hadoop.fs.s3a.commit.magic.S3MagicCommitTracker;
 import org.apache.hadoop.fs.s3a.impl.AbstractStoreOperation;
 import org.apache.hadoop.fs.s3a.statistics.PutTrackerStatistics;
 
 import static org.apache.hadoop.fs.s3a.commit.MagicCommitPaths.*;
+import static org.apache.hadoop.fs.s3a.commit.magic.MagicCommitTrackerUtils.isTrackMagicCommitsInMemoryEnabled;
 
 /**
  * Adds the code needed for S3A to support magic committers.
@@ -105,13 +107,15 @@ public class MagicCommitIntegration extends AbstractStoreOperation {
         String pendingsetPath = key + CommitConstants.PENDING_SUFFIX;
         getStoreContext().incrementStatistic(
             Statistic.COMMITTER_MAGIC_FILES_CREATED);
-        tracker = new MagicCommitTracker(path,
-            getStoreContext().getBucket(),
-            key,
-            destKey,
-            pendingsetPath,
-            owner.getWriteOperationHelper(),
-            trackerStatistics);
+        if (isTrackMagicCommitsInMemoryEnabled(getStoreContext().getConfiguration())) {
+          tracker = new InMemoryMagicCommitTracker(path, getStoreContext().getBucket(),
+              key, destKey, pendingsetPath, owner.getWriteOperationHelper(),
+              trackerStatistics);
+        } else {
+          tracker = new S3MagicCommitTracker(path, getStoreContext().getBucket(),
+              key, destKey, pendingsetPath, owner.getWriteOperationHelper(),
+              trackerStatistics);
+        }
         LOG.debug("Created {}", tracker);
       } else {
         LOG.warn("File being created has a \"magic\" path, but the filesystem"

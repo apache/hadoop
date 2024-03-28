@@ -219,6 +219,16 @@ public class TestHardLink {
     assertEquals(1, getLinkCount(x3));
   }
 
+  @Test
+  public void testGetLinkCountFromFileAttribute() throws IOException {
+    assertTrue(supportsHardLink(x1));
+    assertEquals(1, getLinkCount(x1));
+    assertTrue(supportsHardLink(x2));
+    assertEquals(1, getLinkCount(x2));
+    assertTrue(supportsHardLink(x3));
+    assertEquals(1, getLinkCount(x3));
+  }
+
   /**
    * Test the single-file method HardLink.createHardLink().
    * Also tests getLinkCount() with values greater than one.

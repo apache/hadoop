@@ -467,6 +467,7 @@ public class FSPermissionChecker implements AccessControlEnforcer {
             false);
       }
     } catch (AccessControlException ace) {
+      LOG.debug("Error while checking permission: ", ace);
       throw new AccessControlException(
           toAccessControlString(nodeAttributes, inode.getFullPathName(),
               access));
