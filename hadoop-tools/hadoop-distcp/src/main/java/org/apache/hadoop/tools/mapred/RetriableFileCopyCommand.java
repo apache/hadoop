@@ -132,15 +132,14 @@ public class RetriableFileCopyCommand extends RetriableCommand {
       throws IOException {
     LOG.info("Copying {} to {}", source.getPath(), target);
 
+    final Configuration configuration = context.getConfiguration();
+    FileSystem targetFS = target.getFileSystem(configuration);
     final boolean toAppend = action == FileAction.APPEND;
     final boolean useTempTarget = !toAppend && !directWrite;
-    Path targetPath = useTempTarget ? getTempFile(target, context) : target;
+    Path targetPath = useTempTarget ? getTempFile(target, context, targetFS) : target;
 
     LOG.info("Writing to {} target file path {}", useTempTarget ? "temporary"
         : "direct", targetPath);
-
-    final Configuration configuration = context.getConfiguration();
-    FileSystem targetFS = target.getFileSystem(configuration);
 
     try {
       final Path sourcePath = source.getPath();
@@ -164,6 +163,7 @@ public class RetriableFileCopyCommand extends RetriableCommand {
       if (useTempTarget) {
         LOG.info("Renaming temporary target file path {} to {}", targetPath,
             target);
+        target = new Path(target.toUri().getPath());
         promoteTmpToTarget(targetPath, target, targetFS);
       }
       LOG.info("Completed writing {} ({} bytes)", target, bytesRead);
@@ -260,17 +260,18 @@ public class RetriableFileCopyCommand extends RetriableCommand {
     }
   }
 
-  private Path getTempFile(Path target, Mapper.Context context) {
+  private Path getTempFile(Path target, Mapper.Context context, FileSystem fileSystem) {
     Path targetWorkPath = new Path(context.getConfiguration().
         get(DistCpConstants.CONF_LABEL_TARGET_WORK_PATH));
 
     Path root = target.equals(targetWorkPath) ? targetWorkPath.getParent()
         : targetWorkPath;
-    Path tempFile = new Path(root, ".distcp.tmp." +
+    String tempFilePrefix = DistCpUtils.getTargetTempFilePrefix(target);
+    Path tempFile = new Path(root, tempFilePrefix +
         context.getTaskAttemptID().toString() +
         "." + String.valueOf(System.currentTimeMillis()));
     LOG.info("Creating temp file: {}", tempFile);
-    return tempFile;
+    return new Path(tempFile.toUri().getPath());
   }
 
   @VisibleForTesting
