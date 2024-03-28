@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.concurrent.RejectedExecutionException;
 
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
@@ -63,7 +64,6 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
 
   public ITestAzureBlobFileSystemLease() throws Exception {
     super();
-
     this.isHNSEnabled = getConfiguration()
         .getBoolean(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false);
   }
@@ -136,6 +136,7 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
   public void testTwoCreate() throws Exception {
     final Path testFilePath = new Path(path(methodName.getMethodName()), TEST_FILE);
     final AzureBlobFileSystem fs = getCustomFileSystem(testFilePath.getParent(), 1);
+    assumeValidTestConfigPresent(getRawConfiguration(), FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT);
     fs.mkdirs(testFilePath.getParent());
 
     try (FSDataOutputStream out = fs.create(testFilePath)) {
@@ -172,6 +173,7 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
   public void testTwoWritersCreateAppendNoInfiniteLease() throws Exception {
     final Path testFilePath = new Path(path(methodName.getMethodName()), TEST_FILE);
     final AzureBlobFileSystem fs = getFileSystem();
+    Assume.assumeFalse("Parallel Writes Not Allowed on Append Blobs", isAppendBlobEnabled());
     fs.mkdirs(testFilePath.getParent());
 
     twoWriters(fs, testFilePath, false);
@@ -181,6 +183,7 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
   public void testTwoWritersCreateAppendWithInfiniteLeaseEnabled() throws Exception {
     final Path testFilePath = new Path(path(methodName.getMethodName()), TEST_FILE);
     final AzureBlobFileSystem fs = getCustomFileSystem(testFilePath.getParent(), 1);
+    Assume.assumeFalse("Parallel Writes Not Allowed on Append Blobs", isAppendBlobEnabled());
     fs.mkdirs(testFilePath.getParent());
 
     twoWriters(fs, testFilePath, true);
