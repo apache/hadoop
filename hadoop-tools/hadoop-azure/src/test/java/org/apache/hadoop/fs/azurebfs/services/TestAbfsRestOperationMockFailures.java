@@ -29,6 +29,7 @@ import org.junit.Test;
 import org.mockito.Mockito;
 import org.mockito.stubbing.Stubber;
 
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
@@ -193,7 +194,9 @@ public class TestAbfsRestOperationMockFailures {
         abfsClient,
         "PUT",
         null,
-        new ArrayList<>()
+        new ArrayList<>(),
+        Mockito.mock(AbfsConfiguration.class),
+        "clientId"
     ));
 
     AbfsHttpOperation httpOperation = Mockito.mock(AbfsHttpOperation.class);
@@ -278,7 +281,9 @@ public class TestAbfsRestOperationMockFailures {
         abfsClient,
         "PUT",
         null,
-        new ArrayList<>()
+        new ArrayList<>(),
+        Mockito.mock(AbfsConfiguration.class),
+        "clientId"
     ));
 
     AbfsHttpOperation httpOperation = Mockito.mock(AbfsHttpOperation.class);
@@ -340,7 +345,9 @@ public class TestAbfsRestOperationMockFailures {
         abfsClient,
         "PUT",
         null,
-        new ArrayList<>()
+        new ArrayList<>(),
+        Mockito.mock(AbfsConfiguration.class),
+        "clientId"
     ));
 
     AbfsHttpOperation httpOperation = Mockito.mock(AbfsHttpOperation.class);

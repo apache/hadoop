@@ -18,20 +18,16 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
-final class AbfsNoOpThrottlingIntercept implements AbfsThrottlingIntercept {
 
-  public static final AbfsNoOpThrottlingIntercept INSTANCE = new AbfsNoOpThrottlingIntercept();
+public final class ApacheHttpClientHealthMonitor {
+  private static boolean usable = true;
 
-  private AbfsNoOpThrottlingIntercept() {
+  public static void registerFallback() {
+    usable = false;
   }
+  private ApacheHttpClientHealthMonitor() {}
 
-  @Override
-  public void updateMetrics(final AbfsRestOperationType operationType,
-      final HttpOperation abfsHttpOperation) {
-  }
-
-  @Override
-  public void sendingRequest(final AbfsRestOperationType operationType,
-      final AbfsCounters abfsCounters) {
+  public static boolean usable() {
+    return usable;
   }
 }

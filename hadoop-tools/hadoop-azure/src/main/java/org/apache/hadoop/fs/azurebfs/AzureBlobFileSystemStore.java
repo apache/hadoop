@@ -55,6 +55,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.azurebfs.services.HttpOperation;
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
 import org.apache.hadoop.fs.azurebfs.security.ContextProviderEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
@@ -107,7 +108,6 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsClientContext;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientContextBuilder;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientRenameResult;
 import org.apache.hadoop.fs.azurebfs.services.AbfsCounters;
-import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStreamContext;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStreamStatisticsImpl;
@@ -645,7 +645,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           populateAbfsOutputStreamContext(
               isAppendBlob,
               lease,
-              client,
+              getClient(),
               statistics,
               relativePath,
               0,
@@ -848,7 +848,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
               encryptionContext.getBytes(StandardCharsets.UTF_8));
         }
       } else {
-        AbfsHttpOperation op = client.getPathStatus(relativePath, false,
+        HttpOperation op = client.getPathStatus(relativePath, false,
             tracingContext, null).getResult();
         resourceType = op.getResponseHeader(
             HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
@@ -1117,7 +1117,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
       perfInfo.registerResult(op.getResult());
       final long blockSize = abfsConfiguration.getAzureBlockSize();
-      final AbfsHttpOperation result = op.getResult();
+      final HttpOperation result = op.getResult();
 
       String eTag = extractEtagHeader(result);
       final String lastModified = result.getResponseHeader(HttpHeaderConfigurations.LAST_MODIFIED);
@@ -1622,7 +1622,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
       AbfsRestOperation op = client
           .getAclStatus(getRelativePath(path), tracingContext);
-      AbfsHttpOperation result = op.getResult();
+      HttpOperation result = op.getResult();
       perfInfo.registerResult(result);
 
       final String transformedOwner = identityTransformer.transformIdentityForGetRequest(
@@ -2177,7 +2177,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * @param result response to process.
    * @return the quote-unwrapped etag.
    */
-  public static String extractEtagHeader(AbfsHttpOperation result) {
+  public static String extractEtagHeader(HttpOperation result) {
     String etag = result.getResponseHeader(HttpHeaderConfigurations.ETAG);
     if (etag != null) {
       // strip out any wrapper "" quotes which come back, for consistency with

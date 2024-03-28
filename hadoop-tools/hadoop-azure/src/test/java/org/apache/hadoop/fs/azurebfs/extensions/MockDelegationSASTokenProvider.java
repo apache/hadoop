@@ -110,7 +110,7 @@ public class MockDelegationSASTokenProvider implements SASTokenProvider {
             DEFAULT_HTTP_CONNECTION_TIMEOUT, DEFAULT_HTTP_READ_TIMEOUT);
 
     byte[] requestBuffer = requestBody.toString().getBytes(StandardCharsets.UTF_8.toString());
-    op.sendRequest(requestBuffer, 0, requestBuffer.length);
+    op.sendPayload(requestBuffer, 0, requestBuffer.length);
 
     byte[] responseBuffer = new byte[4 * 1024];
     op.processResponse(responseBuffer, 0, responseBuffer.length);

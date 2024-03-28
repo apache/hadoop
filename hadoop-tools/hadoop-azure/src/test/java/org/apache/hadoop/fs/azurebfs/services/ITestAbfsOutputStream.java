@@ -23,9 +23,12 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.Arrays;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.conf.Configuration;
@@ -43,13 +46,34 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
 /**
  * Test create operation.
  */
+@RunWith(Parameterized.class)
 public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
 
   private static final int TEST_EXECUTION_TIMEOUT = 2 * 60 * 1000;
   private static final String TEST_FILE_PATH = "testfile";
 
+  @Parameterized.Parameter
+  public HttpOperationType httpOperationType;
+
+  @Parameterized.Parameters(name = "{0}")
+  public static Iterable<Object[]> params() {
+    return Arrays.asList(new Object[][]{
+        {HttpOperationType.JDK_HTTP_URL_CONNECTION},
+        {HttpOperationType.APACHE_HTTP_CLIENT}
+    });
+  }
+
+
   public ITestAbfsOutputStream() throws Exception {
     super();
+  }
+
+  @Override
+  public AzureBlobFileSystem getFileSystem(final Configuration configuration)
+      throws Exception {
+    Configuration conf = new Configuration(configuration);
+    conf.set(ConfigurationKeys.FS_AZURE_NETWORKING_LIBRARY, httpOperationType.toString());
+    return (AzureBlobFileSystem) FileSystem.newInstance(conf);
   }
 
   @Test
@@ -158,13 +182,12 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
   public void testExpect100ContinueFailureInAppend() throws Exception {
     Configuration configuration = new Configuration(getRawConfiguration());
     configuration.set(FS_AZURE_ACCOUNT_IS_EXPECT_HEADER_ENABLED, "true");
-    AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(
-        configuration);
+    AzureBlobFileSystem fs = getFileSystem(configuration);
     Path path = new Path("/testFile");
     AbfsOutputStream os = Mockito.spy(
         (AbfsOutputStream) fs.create(path).getWrappedStream());
     AbfsClient spiedClient = Mockito.spy(os.getClient());
-    AbfsHttpOperation[] httpOpForAppendTest = new AbfsHttpOperation[2];
+    HttpOperation[] httpOpForAppendTest = new HttpOperation[2];
     mockSetupForAppend(httpOpForAppendTest, spiedClient);
     Mockito.doReturn(spiedClient).when(os).getClient();
     fs.delete(path, true);
@@ -175,20 +198,26 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
     Assertions.assertThat(httpOpForAppendTest[0].getConnectionDisconnectedOnError())
         .describedAs("First try from AbfsClient will have expect-100 "
             + "header and should fail with expect-100 error.").isTrue();
-    Mockito.verify(httpOpForAppendTest[0], Mockito.times(0))
-        .processConnHeadersAndInputStreams(Mockito.any(byte[].class),
-            Mockito.anyInt(), Mockito.anyInt());
+    if (httpOpForAppendTest[0] instanceof AbfsHttpOperation) {
+      Mockito.verify((AbfsHttpOperation) httpOpForAppendTest[0],
+              Mockito.times(0))
+          .processConnHeadersAndInputStreams(Mockito.any(byte[].class),
+              Mockito.anyInt(), Mockito.anyInt());
+    }
 
     Assertions.assertThat(httpOpForAppendTest[1].getConnectionDisconnectedOnError())
         .describedAs("The retried operation from AbfsClient should not "
             + "fail with expect-100 error. The retried operation does not have"
             + "expect-100 header.").isFalse();
-    Mockito.verify(httpOpForAppendTest[1], Mockito.times(1))
-        .processConnHeadersAndInputStreams(Mockito.any(byte[].class),
-            Mockito.anyInt(), Mockito.anyInt());
+    if (httpOpForAppendTest[1] instanceof AbfsHttpOperation) {
+      Mockito.verify((AbfsHttpOperation) httpOpForAppendTest[1],
+              Mockito.times(1))
+          .processConnHeadersAndInputStreams(Mockito.any(byte[].class),
+              Mockito.anyInt(), Mockito.anyInt());
+    }
   }
 
-  private void mockSetupForAppend(final AbfsHttpOperation[] httpOpForAppendTest,
+  private void mockSetupForAppend(final HttpOperation[] httpOpForAppendTest,
       final AbfsClient spiedClient) {
     int[] index = new int[1];
     index[0] = 0;
@@ -197,7 +226,7 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
               (AbfsRestOperation) abfsRestOpAppendGetInvocation.callRealMethod());
           Mockito.doAnswer(createHttpOpInvocation -> {
             httpOpForAppendTest[index[0]] = Mockito.spy(
-                (AbfsHttpOperation) createHttpOpInvocation.callRealMethod());
+                (HttpOperation) createHttpOpInvocation.callRealMethod());
             return httpOpForAppendTest[index[0]++];
           }).when(op).createHttpOperation();
           return op;

@@ -18,20 +18,21 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
-final class AbfsNoOpThrottlingIntercept implements AbfsThrottlingIntercept {
+import org.apache.http.config.ConnectionConfig;
+import org.apache.http.conn.ManagedHttpClientConnection;
+import org.apache.http.conn.routing.HttpRoute;
+import org.apache.http.impl.conn.ManagedHttpClientConnectionFactory;
 
-  public static final AbfsNoOpThrottlingIntercept INSTANCE = new AbfsNoOpThrottlingIntercept();
-
-  private AbfsNoOpThrottlingIntercept() {
-  }
+/**
+ * Custom implementation of {@link ManagedHttpClientConnectionFactory} and overrides
+ * {@link ManagedHttpClientConnectionFactory#create(HttpRoute, ConnectionConfig)} to return
+ * {@link AbfsManagedApacheHttpConnection}.
+ */
+public class AbfsConnFactory extends ManagedHttpClientConnectionFactory {
 
   @Override
-  public void updateMetrics(final AbfsRestOperationType operationType,
-      final HttpOperation abfsHttpOperation) {
-  }
-
-  @Override
-  public void sendingRequest(final AbfsRestOperationType operationType,
-      final AbfsCounters abfsCounters) {
+  public ManagedHttpClientConnection create(final HttpRoute route,
+      final ConnectionConfig config) {
+    return new AbfsManagedApacheHttpConnection(super.create(route, config), route);
   }
 }

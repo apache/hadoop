@@ -29,6 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbfsStatistic;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
@@ -74,7 +75,7 @@ public class AbfsRestOperation {
   private int bufferLength;
   private int retryCount = 0;
 
-  private AbfsHttpOperation result;
+  private HttpOperation result;
   private AbfsCounters abfsCounters;
 
   /**
@@ -84,10 +85,17 @@ public class AbfsRestOperation {
   private String failureReason;
   private AbfsRetryPolicy retryPolicy;
 
+  private final AbfsConfiguration abfsConfiguration;
+
   /**
    * This variable stores the tracing context used for last Rest Operation.
    */
   private TracingContext lastUsedTracingContext;
+
+  private final String clientId;
+
+  private int apacheHttpClientIoExceptions = 0;
+  private boolean checkApacheHttpClientIoExceptionCount = true;
 
   /**
    * Checks if there is non-null HTTP response.
@@ -97,11 +105,19 @@ public class AbfsRestOperation {
     return result != null;
   }
 
-  public AbfsHttpOperation getResult() {
+  public HttpOperation getResult() {
     return result;
   }
 
   public void hardSetResult(int httpStatus) {
+    if (abfsConfiguration.getPreferredHttpOperationType()
+        == HttpOperationType.APACHE_HTTP_CLIENT) {
+      result
+          = AbfsAHCHttpOperation.getAbfsApacheHttpClientHttpOperationWithFixedResult(
+          this.url,
+          this.method, httpStatus);
+      return;
+    }
     result = AbfsHttpOperation.getAbfsHttpOperationWithFixedResult(this.url,
         this.method, httpStatus);
   }
@@ -134,8 +150,11 @@ public class AbfsRestOperation {
                     final AbfsClient client,
                     final String method,
                     final URL url,
-                    final List<AbfsHttpHeader> requestHeaders) {
-    this(operationType, client, method, url, requestHeaders, null);
+                    final List<AbfsHttpHeader> requestHeaders,
+                    final AbfsConfiguration abfsConfiguration,
+                    final String clientId) {
+    this(operationType, client, method, url, requestHeaders, null, abfsConfiguration,
+        clientId);
   }
 
   /**
@@ -152,7 +171,10 @@ public class AbfsRestOperation {
                     final String method,
                     final URL url,
                     final List<AbfsHttpHeader> requestHeaders,
-                    final String sasToken) {
+                    final String sasToken,
+                    final AbfsConfiguration abfsConfiguration,
+                    final String clientId) {
+    this.clientId = clientId;
     this.operationType = operationType;
     this.client = client;
     this.method = method;
@@ -164,6 +186,7 @@ public class AbfsRestOperation {
     this.sasToken = sasToken;
     this.abfsCounters = client.getAbfsCounters();
     this.intercept = client.getIntercept();
+    this.abfsConfiguration = abfsConfiguration;
     this.retryPolicy = client.getExponentialRetryPolicy();
   }
 
@@ -189,8 +212,11 @@ public class AbfsRestOperation {
                     byte[] buffer,
                     int bufferOffset,
                     int bufferLength,
-                    String sasToken) {
-    this(operationType, client, method, url, requestHeaders, sasToken);
+                    String sasToken,
+                    final AbfsConfiguration abfsConfiguration,
+                    final String clientId) {
+    this(operationType, client, method, url, requestHeaders, sasToken, abfsConfiguration,
+        clientId);
     this.buffer = buffer;
     this.bufferOffset = bufferOffset;
     this.bufferLength = bufferLength;
@@ -242,6 +268,12 @@ public class AbfsRestOperation {
     while (!executeHttpOperation(retryCount, tracingContext)) {
       try {
         ++retryCount;
+        if (checkApacheHttpClientIoExceptionCount
+            && apacheHttpClientIoExceptions
+            >= abfsConfiguration.getMaxApacheHttpClientIoExceptions()) {
+          checkApacheHttpClientIoExceptionCount = false;
+          ApacheHttpClientHealthMonitor.registerFallback();
+        }
         tracingContext.setRetryCount(retryCount);
         long retryInterval = retryPolicy.getRetryInterval(retryCount);
         LOG.debug("Rest operation {} failed with failureReason: {}. Retrying with retryCount = {}, retryPolicy: {} and sleepInterval: {}",
@@ -282,7 +314,7 @@ public class AbfsRestOperation {
    */
   private boolean executeHttpOperation(final int retryCount,
     TracingContext tracingContext) throws AzureBlobFileSystemException {
-    AbfsHttpOperation httpOperation;
+    final HttpOperation httpOperation;
     boolean wasIOExceptionThrown = false;
 
     try {
@@ -296,21 +328,19 @@ public class AbfsRestOperation {
     } catch (IOException e) {
       LOG.debug("Auth failure: {}, {}", method, url);
       throw new AbfsRestOperationException(-1, null,
-          "Auth failure: " + e.getMessage(), e);
+          "Auth failure: " + e.getMessage(), e, result);
     }
 
     try {
       // dump the headers
       AbfsIoUtils.dumpHeadersToDebugLog("Request Headers",
-          httpOperation.getConnection().getRequestProperties());
+          httpOperation.getRequestProperties());
       intercept.sendingRequest(operationType, abfsCounters);
       if (hasRequestBody) {
-        // HttpUrlConnection requires
-        httpOperation.sendRequest(buffer, bufferOffset, bufferLength);
+        httpOperation.sendPayload(buffer, bufferOffset, bufferLength);
         incrementCounter(AbfsStatistic.SEND_REQUESTS, 1);
         incrementCounter(AbfsStatistic.BYTES_SENT, bufferLength);
       }
-
       httpOperation.processResponse(buffer, bufferOffset, bufferLength);
       incrementCounter(AbfsStatistic.GET_RESPONSES, 1);
       //Only increment bytesReceived counter when the status code is 2XX.
@@ -328,6 +358,9 @@ public class AbfsRestOperation {
       retryPolicy = client.getRetryPolicy(failureReason);
       LOG.warn("Unknown host name: {}. Retrying to resolve the host name...",
           hostname);
+      if (httpOperation instanceof AbfsAHCHttpOperation) {
+        apacheHttpClientIoExceptions++;
+      }
       if (!retryPolicy.shouldRetry(retryCount, -1)) {
         throw new InvalidAbfsRestOperationException(ex, retryCount);
       }
@@ -340,10 +373,12 @@ public class AbfsRestOperation {
       failureReason = RetryReason.getAbbreviation(ex, -1, "");
       retryPolicy = client.getRetryPolicy(failureReason);
       wasIOExceptionThrown = true;
+      if (httpOperation instanceof AbfsAHCHttpOperation) {
+        apacheHttpClientIoExceptions++;
+      }
       if (!retryPolicy.shouldRetry(retryCount, -1)) {
         throw new InvalidAbfsRestOperationException(ex, retryCount);
       }
-
       return false;
     } finally {
       int status = httpOperation.getStatusCode();
@@ -394,12 +429,12 @@ public class AbfsRestOperation {
    * @throws IOException failure
    */
   @VisibleForTesting
-  public void signRequest(final AbfsHttpOperation httpOperation, int bytesToSign) throws IOException {
+  public void signRequest(final HttpOperation httpOperation, int bytesToSign) throws IOException {
     switch(client.getAuthType()) {
       case Custom:
       case OAuth:
         LOG.debug("Authenticating request with OAuth2 access token");
-        httpOperation.getConnection().setRequestProperty(HttpHeaderConfigurations.AUTHORIZATION,
+        httpOperation.setRequestProperty(HttpHeaderConfigurations.AUTHORIZATION,
             client.getAccessToken());
         break;
       case SAS:
@@ -412,23 +447,44 @@ public class AbfsRestOperation {
         LOG.debug("Signing request with shared key");
         // sign the HTTP request
         client.getSharedKeyCredentials().signRequest(
-            httpOperation.getConnection(),
+            httpOperation,
             bytesToSign);
         break;
     }
   }
 
   /**
-   * Creates new object of {@link AbfsHttpOperation} with the url, method, requestHeader fields and
-   * timeout values as set in configuration of the AbfsRestOperation object.
-   *
-   * @return {@link AbfsHttpOperation} to be used for sending requests
+   * Creates new object of {@link HttpOperation} with the url, method, and
+   * requestHeaders fields of the AbfsRestOperation object.
    */
   @VisibleForTesting
-  AbfsHttpOperation createHttpOperation() throws IOException {
+  HttpOperation createHttpOperation() throws IOException {
+    HttpOperationType httpOperationType
+        = abfsConfiguration.getPreferredHttpOperationType();
+    if (httpOperationType == HttpOperationType.APACHE_HTTP_CLIENT
+        && isApacheClientUsable()) {
+      return createAbfsAHCHttpOperation();
+    }
+    return createAbfsHttpOperation();
+  }
+
+  @VisibleForTesting
+  boolean isApacheClientUsable() {
+    return ApacheHttpClientHealthMonitor.usable();
+  }
+
+  @VisibleForTesting
+  AbfsHttpOperation createAbfsHttpOperation() throws IOException {
     return new AbfsHttpOperation(url, method, requestHeaders,
-            client.getAbfsConfiguration().getHttpConnectionTimeout(),
-            client.getAbfsConfiguration().getHttpReadTimeout());
+        client.getAbfsConfiguration().getHttpConnectionTimeout(),
+        client.getAbfsConfiguration().getHttpReadTimeout());
+  }
+
+  @VisibleForTesting
+  AbfsAHCHttpOperation createAbfsAHCHttpOperation() {
+    return new AbfsAHCHttpOperation(url, method, requestHeaders,
+        abfsConfiguration,
+        clientId, operationType);
   }
 
   /**

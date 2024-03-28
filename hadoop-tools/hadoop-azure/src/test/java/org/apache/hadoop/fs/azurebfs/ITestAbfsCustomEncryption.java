@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.security.EncodingHelper;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientUtils;
+import org.apache.hadoop.fs.azurebfs.services.HttpOperation;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
@@ -51,7 +52,6 @@ import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
 import org.apache.hadoop.fs.azurebfs.extensions.MockEncryptionContextProvider;
 import org.apache.hadoop.fs.azurebfs.security.ContextProviderEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
-import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.utils.EncryptionType;
 import org.apache.hadoop.fs.impl.OpenFileParameters;
@@ -190,7 +190,7 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
     if (op == null) {
       return;
     }
-    AbfsHttpOperation httpOp = op.getResult();
+    HttpOperation httpOp = op.getResult();
     if (isCpkResponseHdrExpected) {
       if (requestEncryptionType == ENCRYPTION_CONTEXT) {
         String encryptionContext = ecp.getEncryptionContextForTest(relativePath);
@@ -274,7 +274,7 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
         if (!fileSystemListStatusResultToBeUsedForOpeningFile
             || fileEncryptionType != ENCRYPTION_CONTEXT) {
           TracingContext tracingContext = getTestTracingContext(fs, true);
-          AbfsHttpOperation statusOp = client.getPathStatus(path, false,
+          HttpOperation statusOp = client.getPathStatus(path, false,
               tracingContext, null).getResult();
           return client.read(path, 0, new byte[5], 0, 5,
               statusOp.getResponseHeader(HttpHeaderConfigurations.ETAG),

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,23 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.hadoop.fs.azurebfs.services;
-
-final class AbfsNoOpThrottlingIntercept implements AbfsThrottlingIntercept {
-
-  public static final AbfsNoOpThrottlingIntercept INSTANCE = new AbfsNoOpThrottlingIntercept();
-
-  private AbfsNoOpThrottlingIntercept() {
-  }
-
-  @Override
-  public void updateMetrics(final AbfsRestOperationType operationType,
-      final HttpOperation abfsHttpOperation) {
-  }
-
-  @Override
-  public void sendingRequest(final AbfsRestOperationType operationType,
-      final AbfsCounters abfsCounters) {
-  }
-}
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
+package org.apache.hadoop.fs.azurebfs.services.kac;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;

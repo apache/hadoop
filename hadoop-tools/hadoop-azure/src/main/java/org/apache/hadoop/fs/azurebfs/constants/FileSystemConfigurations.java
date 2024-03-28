@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs.constants;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.azurebfs.services.HttpOperationType;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
@@ -133,6 +134,7 @@ public final class FileSystemConfigurations {
   public static final int STREAM_ID_LEN = 12;
   public static final boolean DEFAULT_ENABLE_ABFS_LIST_ITERATOR = true;
   public static final boolean DEFAULT_ENABLE_ABFS_RENAME_RESILIENCE = true;
+  public static final long DEFAULT_HTTP_CLIENT_CONN_MAX_IDLE_TIME = 5_000L;
   public static final boolean DEFAULT_ENABLE_ABFS_CHECKSUM_VALIDATION = false;
 
   /**
@@ -159,6 +161,11 @@ public final class FileSystemConfigurations {
    * IO rate limit. Value: {@value}
    */
   public static final int RATE_LIMIT_DEFAULT = 10_000;
+
+  public static final HttpOperationType DEFAULT_NETWORKING_LIBRARY
+      = HttpOperationType.APACHE_HTTP_CLIENT;
+
+  public static final int DEFAULT_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES = 5;
 
   private FileSystemConfigurations() {}
 }

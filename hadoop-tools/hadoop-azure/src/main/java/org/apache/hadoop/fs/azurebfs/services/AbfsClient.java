@@ -96,6 +96,8 @@ import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNEC
  */
 public class AbfsClient implements Closeable {
   public static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
+
+  private final String clientId = UUID.randomUUID().toString();
   public static final String HUNDRED_CONTINUE_USER_AGENT = SINGLE_WHITE_SPACE + HUNDRED_CONTINUE + SEMICOLON;
 
   private final URL baseUrl;
@@ -212,6 +214,7 @@ public class AbfsClient implements Closeable {
       IOUtils.cleanupWithLogger(LOG,
           (Closeable) tokenProvider);
     }
+    AbfsAHCHttpOperation.removeClient(clientId);
     HadoopExecutors.shutdown(executorService, LOG, 0, TimeUnit.SECONDS);
   }
 
@@ -640,7 +643,7 @@ public class AbfsClient implements Closeable {
         final AbfsRestOperation srcStatusOp = getPathStatus(source,
                 false, tracingContext, null);
         if (srcStatusOp.hasResult()) {
-          final AbfsHttpOperation result = srcStatusOp.getResult();
+          final HttpOperation result = srcStatusOp.getResult();
           sourceEtag = extractEtagHeader(result);
           // and update the directory status.
           boolean isDir = checkIsDir(result);
@@ -706,7 +709,7 @@ public class AbfsClient implements Closeable {
           isMetadataIncompleteState = true;
           // Extract the sourceEtag, using the status Op, and set it
           // for future rename recovery.
-          AbfsHttpOperation sourceStatusResult = sourceStatusOp.getResult();
+          HttpOperation sourceStatusResult = sourceStatusOp.getResult();
           sourceEtagAfterFailure = extractEtagHeader(sourceStatusResult);
         }
         renamePath(source, destination, continuation, tracingContext,
@@ -732,7 +735,7 @@ public class AbfsClient implements Closeable {
     }
   }
 
-  private boolean checkIsDir(AbfsHttpOperation result) {
+  private boolean checkIsDir(HttpOperation result) {
     String resourceType = result.getResponseHeader(
             HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
     return resourceType != null
@@ -795,7 +798,7 @@ public class AbfsClient implements Closeable {
       try {
         final AbfsRestOperation destStatusOp = getPathStatus(destination,
             false, tracingContext, null);
-        final AbfsHttpOperation result = destStatusOp.getResult();
+        final HttpOperation result = destStatusOp.getResult();
 
         final boolean recovered = result.getStatusCode() == HttpURLConnection.HTTP_OK
                 && sourceEtag.equals(extractEtagHeader(result));
@@ -815,7 +818,7 @@ public class AbfsClient implements Closeable {
   }
 
   @VisibleForTesting
-  boolean isSourceDestEtagEqual(String sourceEtag, AbfsHttpOperation result) {
+  boolean isSourceDestEtagEqual(String sourceEtag, HttpOperation result) {
     return sourceEtag.equals(extractEtagHeader(result));
   }
 
@@ -1134,7 +1137,7 @@ public class AbfsClient implements Closeable {
             this,
             HTTP_METHOD_DELETE,
             url,
-            requestHeaders);
+            requestHeaders, abfsConfiguration, clientId);
     try {
     op.execute(tracingContext);
     } catch (AzureBlobFileSystemException e) {
@@ -1512,6 +1515,7 @@ public class AbfsClient implements Closeable {
       sb.append(HUNDRED_CONTINUE);
       sb.append(SEMICOLON);
     }
+    sb.append(" ").append(abfsConfiguration.getPreferredHttpOperationType()).append(";");
 
     sb.append(SINGLE_WHITE_SPACE);
     sb.append(abfsConfiguration.getClusterName());
@@ -1560,7 +1564,7 @@ public class AbfsClient implements Closeable {
    * @throws AbfsRestOperationException if Md5Mismatch.
    */
   private void verifyCheckSumForRead(final byte[] buffer,
-      final AbfsHttpOperation result, final int bufferOffset)
+      final HttpOperation result, final int bufferOffset)
       throws AbfsRestOperationException {
     // Number of bytes returned by server could be less than or equal to what
     // caller requests. In case it is less, extra bytes will be initialized to 0
@@ -1723,7 +1727,8 @@ public class AbfsClient implements Closeable {
         buffer,
         bufferOffset,
         bufferLength,
-        sasTokenForReuse);
+        sasTokenForReuse,
+        abfsConfiguration, clientId);
   }
 
   /**
@@ -1744,7 +1749,9 @@ public class AbfsClient implements Closeable {
         this,
         httpMethod,
         url,
-        requestHeaders
+        requestHeaders,
+        abfsConfiguration,
+        clientId
     );
   }
 
@@ -1768,6 +1775,6 @@ public class AbfsClient implements Closeable {
         this,
         httpMethod,
         url,
-        requestHeaders, sasTokenForReuse);
+        requestHeaders, sasTokenForReuse, abfsConfiguration, clientId);
   }
 }
