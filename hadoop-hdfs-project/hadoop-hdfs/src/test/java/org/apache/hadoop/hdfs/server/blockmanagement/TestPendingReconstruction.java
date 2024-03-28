@@ -98,6 +98,7 @@ public class TestPendingReconstruction {
     }
     assertEquals("Size of pendingReconstruction ",
                  10, pendingReconstructions.size());
+    assertEquals(10L, pendingReconstructions.getNumReplicatedPendingBlocks());
 
 
     //
@@ -107,6 +108,7 @@ public class TestPendingReconstruction {
     pendingReconstructions.decrement(blk, storages[7]); // removes one replica
     assertEquals("pendingReconstructions.getNumReplicas ",
                  7, pendingReconstructions.getNumReplicas(blk));
+    assertEquals(10L, pendingReconstructions.getNumReplicatedPendingBlocks());
 
     //
     // insert the same item twice should be counted as once
@@ -114,15 +116,18 @@ public class TestPendingReconstruction {
     pendingReconstructions.increment(blk, storages[0]);
     assertEquals("pendingReconstructions.getNumReplicas ",
         7, pendingReconstructions.getNumReplicas(blk));
+    assertEquals(10L, pendingReconstructions.getNumReplicatedPendingBlocks());
 
     for (int i = 0; i < 7; i++) {
       // removes all replicas
       pendingReconstructions.decrement(blk, storages[i]);
     }
     assertTrue(pendingReconstructions.size() == 9);
+    assertEquals(9L, pendingReconstructions.getNumReplicatedPendingBlocks());
     pendingReconstructions.increment(blk,
         DFSTestUtil.createDatanodeStorageInfos(8));
     assertTrue(pendingReconstructions.size() == 10);
+    assertEquals(10L, pendingReconstructions.getNumReplicatedPendingBlocks());
 
     //
     // verify that the number of replicas returned
@@ -155,6 +160,7 @@ public class TestPendingReconstruction {
     }
     assertEquals(15, pendingReconstructions.size());
     assertEquals(0L, pendingReconstructions.getNumTimedOuts());
+    assertEquals(15L, pendingReconstructions.getNumReplicatedPendingBlocks());
 
     //
     // Wait for everything to timeout.
@@ -175,11 +181,13 @@ public class TestPendingReconstruction {
     //
     assertEquals("Size of pendingReconstructions ", 0, pendingReconstructions.size());
     assertEquals(15L, pendingReconstructions.getNumTimedOuts());
+    assertEquals(15L, pendingReconstructions.getNumReplicatedPendingBlocks());
     Block[] timedOut = pendingReconstructions.getTimedOutBlocks();
     assertNotNull(timedOut);
     assertEquals(15, timedOut.length);
     // Verify the number is not reset
     assertEquals(15L, pendingReconstructions.getNumTimedOuts());
+    assertEquals(0L, pendingReconstructions.getNumReplicatedPendingBlocks());
     for (Block block : timedOut) {
       assertTrue(block.getBlockId() < 15);
     }
