@@ -421,6 +421,8 @@ public class ClientRMService extends AbstractService implements
     GetApplicationReportResponse response = recordFactory
         .newRecordInstance(GetApplicationReportResponse.class);
     response.setApplicationReport(report);
+    RMAuditLogger.logSuccess(callerUGI.getUserName(),
+        AuditConstants.GET_APP_REPORT, "ClientRMService", applicationId);
     return response;
   }
 
@@ -450,7 +452,14 @@ public class ClientRMService extends AbstractService implements
       ApplicationAttemptReport attemptReport = appAttempt
           .createApplicationAttemptReport();
       response = GetApplicationAttemptReportResponse.newInstance(attemptReport);
+      RMAuditLogger.logSuccess(callerUGI.getUserName(),
+          AuditConstants.GET_APP_ATTEMPT_REPORT, "ClientRMService",
+          applicationId, appAttemptId);
     }else{
+      RMAuditLogger.logFailure(callerUGI.getShortUserName(),
+          AuditConstants.GET_APP_ATTEMPT_REPORT, "User does not have privilege to "
+          + ApplicationAccessType.VIEW_APP.toString(), "ClientRMService",
+          AuditConstants.UNAUTHORIZED_USER, applicationId, appAttemptId);
       throw new YarnException("User " + callerUGI.getShortUserName()
           + " does not have privilege to see this attempt " + appAttemptId);
     }
@@ -481,7 +490,13 @@ public class ClientRMService extends AbstractService implements
             .createApplicationAttemptReport());
       }
       response = GetApplicationAttemptsResponse.newInstance(listAttempts);
+      RMAuditLogger.logSuccess(callerUGI.getUserName(),
+          AuditConstants.GET_APP_ATTEMPTS, "ClientRMService", appId);
     } else {
+      RMAuditLogger.logFailure(callerUGI.getShortUserName(),
+          AuditConstants.GET_APP_ATTEMPTS, "User does not have privilege to "
+          + ApplicationAccessType.VIEW_APP.toString(), "ClientRMService",
+          AuditConstants.UNAUTHORIZED_USER, appId);
       throw new YarnException("User " + callerUGI.getShortUserName()
           + " does not have privilege to see this application " + appId);
     }
@@ -526,7 +541,13 @@ public class ClientRMService extends AbstractService implements
       }
       response = GetContainerReportResponse.newInstance(rmContainer
           .createContainerReport());
+      RMAuditLogger.logSuccess(callerUGI.getUserName(),
+          AuditConstants.GET_CONTAINER_REPORT, "ClientRMService", appId);
     } else {
+      RMAuditLogger.logFailure(callerUGI.getShortUserName(),
+          AuditConstants.GET_CONTAINER_REPORT, "User does not have privilege to "
+          + ApplicationAccessType.VIEW_APP.toString(), "ClientRMService",
+          AuditConstants.UNAUTHORIZED_USER, appId);
       throw new YarnException("User " + callerUGI.getShortUserName()
           + " does not have privilege to see this application " + appId);
     }
@@ -569,7 +590,13 @@ public class ClientRMService extends AbstractService implements
         listContainers.add(rmContainer.createContainerReport());
       }
       response = GetContainersResponse.newInstance(listContainers);
+      RMAuditLogger.logSuccess(callerUGI.getUserName(),
+          AuditConstants.GET_CONTAINERS, "ClientRMService", appId);
     } else {
+      RMAuditLogger.logFailure(callerUGI.getShortUserName(),
+          AuditConstants.GET_CONTAINERS, "User doesn't have permissions to "
+          + ApplicationAccessType.VIEW_APP.toString(), "ClientRMService",
+          AuditConstants.UNAUTHORIZED_USER, appId);
       throw new YarnException("User " + callerUGI.getShortUserName()
           + " does not have privilege to see this application " + appId);
     }
@@ -1486,7 +1513,7 @@ public class ClientRMService extends AbstractService implements
             requestInfo.getReservationId());
     }
 
-    checkReservationACLs(requestInfo.getQueue(),
+    String user = checkReservationACLs(requestInfo.getQueue(),
             AuditConstants.LIST_RESERVATION_REQUEST, reservationId);
 
     long startTime = Math.max(requestInfo.getStartTime(), 0);
@@ -1503,6 +1530,8 @@ public class ClientRMService extends AbstractService implements
                     reservations, includeResourceAllocations);
 
     response.setReservationAllocationState(info);
+    RMAuditLogger.logSuccess(user, AuditConstants.LIST_RESERVATION_REQUEST,
+        "ClientRMService: " + reservationId);
     return response;
   }
 
