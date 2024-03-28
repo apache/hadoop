@@ -3788,6 +3788,15 @@
   </property>
 
   <property>
+    <description>
+      The number of entries in the Federation cache.
+      default is 1000.
+    </description>
+    <name>yarn.federation.cache-entity.nums</name>
+    <value>1000</value>
+  </property>
+
+  <property>
     <description>The registry base directory for federation.</description>
     <name>yarn.federation.registry.base-dir</name>
     <value>yarnfederation/</value>
