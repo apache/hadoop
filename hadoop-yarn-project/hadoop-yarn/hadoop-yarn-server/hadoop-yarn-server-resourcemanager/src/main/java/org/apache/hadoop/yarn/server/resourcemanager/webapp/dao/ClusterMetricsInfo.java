@@ -27,6 +27,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ParentQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSParentQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 
 @XmlRootElement(name = "clusterMetrics")
 @XmlAccessorType(XmlAccessType.FIELD)
@@ -105,45 +107,64 @@ public class ClusterMetricsInfo {
     this.appsRunning = metrics.getAppsRunning();
     this.appsFailed = metrics.getAppsFailed();
     this.appsKilled = metrics.getAppsKilled();
-
-    this.reservedMB = metrics.getReservedMB();
-    this.availableMB = metrics.getAvailableMB();
-    this.allocatedMB = metrics.getAllocatedMB();
     this.pendingMB = metrics.getPendingMB();
-
-    this.reservedVirtualCores = metrics.getReservedVirtualCores();
-    this.availableVirtualCores = metrics.getAvailableVirtualCores();
-    this.allocatedVirtualCores = metrics.getAllocatedVirtualCores();
     this.pendingVirtualCores = metrics.getPendingVirtualCores();
 
     this.containersAllocated = metrics.getAllocatedContainers();
     this.containersPending = metrics.getPendingContainers();
     this.containersReserved = metrics.getReservedContainers();
 
+    this.totalMB = new ResourceInfo(rs.getClusterResource()).getMemorySize();
+    this.totalVirtualCores = new ResourceInfo(rs.getClusterResource()).getvCores();
+
     if (rs instanceof CapacityScheduler) {
       CapacityScheduler cs = (CapacityScheduler) rs;
-      this.totalMB = availableMB + allocatedMB + reservedMB;
-      this.totalVirtualCores =
-          availableVirtualCores + allocatedVirtualCores + reservedVirtualCores;
       // TODO, add support of other schedulers to get total used resources
       // across partition.
-      if (cs.getRootQueue() != null
-          && cs.getRootQueue().getQueueResourceUsage() != null
+      if (cs.getRootQueue() != null && cs.getRootQueue().getQueueResourceUsage() != null
           && cs.getRootQueue().getQueueResourceUsage().getAllUsed() != null) {
-        totalUsedResourcesAcrossPartition = new ResourceInfo(
-            cs.getRootQueue().getQueueResourceUsage().getAllUsed());
-        totalClusterResourcesAcrossPartition = new ResourceInfo(
-            cs.getClusterResource());
-        totalReservedResourcesAcrossPartition = new ResourceInfo(
-            cs.getRootQueue().getQueueResourceUsage().getAllReserved());
+        totalUsedResourcesAcrossPartition =
+            new ResourceInfo(cs.getRootQueue().getQueueResourceUsage().getAllUsed());
+        totalClusterResourcesAcrossPartition = new ResourceInfo(cs.getClusterResource());
+        totalReservedResourcesAcrossPartition =
+            new ResourceInfo(cs.getRootQueue().getQueueResourceUsage().getAllReserved());
         totalAllocatedContainersAcrossPartition =
             ((ParentQueue) cs.getRootQueue()).getNumContainers();
         crossPartitionMetricsAvailable = true;
+
+        this.allocatedMB = totalUsedResourcesAcrossPartition.getMemorySize();
+        this.allocatedVirtualCores = totalUsedResourcesAcrossPartition.getvCores();
+
+        this.reservedMB = totalReservedResourcesAcrossPartition.getMemorySize();
+        this.reservedVirtualCores = totalReservedResourcesAcrossPartition.getvCores();
       }
+      this.availableMB = this.totalMB - this.allocatedMB;
+      this.availableVirtualCores = this.totalVirtualCores - this.allocatedVirtualCores;
+    } else if (rs instanceof FairScheduler) {
+      FairScheduler fs = (FairScheduler) rs;
+
+      if (fs.getQueueManager().getRootQueue() != null) {
+        FSParentQueue rootQueue = fs.getQueueManager().getRootQueue();
+        this.allocatedMB = rootQueue.getResourceUsage().getMemorySize();
+        this.allocatedVirtualCores = rootQueue.getResourceUsage().getVirtualCores();
+
+        this.reservedMB = rootQueue.getReservedResource().getMemorySize();
+        this.reservedVirtualCores = rootQueue.getReservedResource().getVirtualCores();
+      }
+      this.availableMB = this.totalMB - this.allocatedMB;
+      this.availableVirtualCores = this.totalVirtualCores - this.allocatedVirtualCores;
     } else {
+      this.reservedMB = metrics.getReservedMB();
+      this.availableMB = metrics.getAvailableMB();
+      this.allocatedMB = metrics.getAllocatedMB();
+      this.reservedVirtualCores = metrics.getReservedVirtualCores();
+      this.availableVirtualCores = metrics.getAvailableVirtualCores();
+      this.allocatedVirtualCores = metrics.getAllocatedVirtualCores();
+
       this.totalMB = availableMB + allocatedMB;
       this.totalVirtualCores = availableVirtualCores + allocatedVirtualCores;
     }
+
     long baseMem = this.totalMB;
     this.utilizedMBPercent = baseMem <= 0 ? 0 :
         (int) (clusterMetrics.getUtilizedMB() * 100 / baseMem);
