@@ -31,4 +31,9 @@ public class RMStateStoreRemoveAppEvent extends RMStateStoreEvent {
   public ApplicationStateData getAppState() {
     return appState;
   }
+
+  @Override
+  public String getLockKey() {
+    return appState.getApplicationSubmissionContext().getApplicationId().toString();
+  }
 }

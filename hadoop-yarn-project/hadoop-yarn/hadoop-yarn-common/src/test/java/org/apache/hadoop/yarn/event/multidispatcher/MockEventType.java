@@ -16,25 +16,9 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.resourcemanager.recovery;
+package org.apache.hadoop.yarn.event.multidispatcher;
 
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationStateData;
-
-public class RMStateStoreAppEvent extends RMStateStoreEvent {
-
-  private final ApplicationStateData appState;
-
-  public RMStateStoreAppEvent(ApplicationStateData appState) {
-    super(RMStateStoreEventType.STORE_APP);
-    this.appState = appState;
-  }
-
-  public ApplicationStateData getAppState() {
-    return appState;
-  }
-
-  @Override
-  public String getLockKey() {
-    return appState.getApplicationSubmissionContext().getApplicationId().toString();
-  }
+enum MockEventType {
+  TYPE_1,
+  TYPE_2
 }
