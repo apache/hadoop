@@ -32,6 +32,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.jar.JarOutputStream;
 import java.util.zip.ZipEntry;
@@ -339,12 +340,12 @@ public class TestJobResourceUploaderWithSharedCache {
       IOException {
     FileOutputStream fos =
         new FileOutputStream(new File(p.toUri().getPath()));
-    JarOutputStream jos = new JarOutputStream(fos);
-    ZipEntry ze = new ZipEntry("distributed.jar.inside" + index);
-    jos.putNextEntry(ze);
-    jos.write(("inside the jar!" + index).getBytes());
-    jos.closeEntry();
-    jos.close();
+    try (JarOutputStream jos = new JarOutputStream(fos)) {
+      ZipEntry ze = new ZipEntry("distributed.jar.inside" + index);
+      jos.putNextEntry(ze);
+      jos.write(("inside the jar!" + index).getBytes());
+      jos.closeEntry();
+    }
     localFs.setPermission(p, new FsPermission("700"));
     return p;
   }
@@ -354,12 +355,12 @@ public class TestJobResourceUploaderWithSharedCache {
     Path archive = new Path(testRootDir, archiveFile);
     Path file = new Path(testRootDir, filename);
     DataOutputStream out = localFs.create(archive);
-    ZipOutputStream zos = new ZipOutputStream(out);
-    ZipEntry ze = new ZipEntry(file.toString());
-    zos.putNextEntry(ze);
-    zos.write(input.getBytes("UTF-8"));
-    zos.closeEntry();
-    zos.close();
+    try (ZipOutputStream zos = new ZipOutputStream(out)) {
+      ZipEntry ze = new ZipEntry(file.toString());
+      zos.putNextEntry(ze);
+      zos.write(input.getBytes(StandardCharsets.UTF_8));
+      zos.closeEntry();
+    }
     return archive;
   }
 }

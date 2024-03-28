@@ -18,6 +18,7 @@
 package org.apache.hadoop.fs;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.binary.Base64;
@@ -76,7 +77,7 @@ public enum XAttrCodec {
         String en = value.substring(0, 2);
         if (value.startsWith("\"") && value.endsWith("\"")) {
           value = value.substring(1, value.length()-1);
-          result = value.getBytes("utf-8");
+          result = value.getBytes(StandardCharsets.UTF_8);
         } else if (en.equalsIgnoreCase(HEX_PREFIX)) {
           value = value.substring(2, value.length());
           try {
@@ -90,7 +91,7 @@ public enum XAttrCodec {
         }
       }
       if (result == null) {
-        result = value.getBytes("utf-8");
+        result = value.getBytes(StandardCharsets.UTF_8);
       }
     }
     return result;
@@ -114,7 +115,7 @@ public enum XAttrCodec {
     } else if (encoding == BASE64) {
       return BASE64_PREFIX + base64.encodeToString(value);
     } else {
-      return "\"" + new String(value, "utf-8") + "\"";
+      return "\"" + new String(value, StandardCharsets.UTF_8) + "\"";
     }
   }
 }

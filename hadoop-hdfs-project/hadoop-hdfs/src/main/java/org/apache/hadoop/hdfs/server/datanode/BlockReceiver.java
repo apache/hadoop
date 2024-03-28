@@ -29,6 +29,7 @@ import java.io.InterruptedIOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Queue;
@@ -1063,7 +1064,7 @@ class BlockReceiver implements Closeable {
           // send a special ack upstream.
           if (datanode.isRestarting() && isClient && !isTransfer) {
             try (Writer out = new OutputStreamWriter(
-                replicaInfo.createRestartMetaStream(), "UTF-8")) {
+                replicaInfo.createRestartMetaStream(), StandardCharsets.UTF_8)) {
               // write out the current time.
               out.write(Long.toString(Time.now() + restartBudget));
               out.flush();

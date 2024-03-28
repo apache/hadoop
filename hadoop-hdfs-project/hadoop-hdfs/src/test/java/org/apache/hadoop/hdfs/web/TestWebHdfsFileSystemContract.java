@@ -316,7 +316,7 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
     String content = "testLengthParamLongerThanFile";
     FSDataOutputStream testFileOut = webhdfs.create(testFile);
     try {
-      testFileOut.write(content.getBytes("US-ASCII"));
+      testFileOut.write(content.getBytes(StandardCharsets.US_ASCII));
     } finally {
       IOUtils.closeStream(testFileOut);
     }
@@ -366,7 +366,7 @@ public class TestWebHdfsFileSystemContract extends FileSystemContractBaseTest {
     String content = "testOffsetPlusLengthParamsLongerThanFile";
     FSDataOutputStream testFileOut = webhdfs.create(testFile);
     try {
-      testFileOut.write(content.getBytes("US-ASCII"));
+      testFileOut.write(content.getBytes(StandardCharsets.US_ASCII));
     } finally {
       IOUtils.closeStream(testFileOut);
     }

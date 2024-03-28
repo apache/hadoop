@@ -39,6 +39,7 @@ import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.SystemClock;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
@@ -216,7 +217,7 @@ class CGroupsHandlerImpl implements CGroupsHandler {
 
     try {
       FileInputStream fis = new FileInputStream(new File(mtab));
-      in = new BufferedReader(new InputStreamReader(fis, "UTF-8"));
+      in = new BufferedReader(new InputStreamReader(fis, StandardCharsets.UTF_8));
 
       for (String str = in.readLine(); str != null;
            str = in.readLine()) {
@@ -474,7 +475,7 @@ class CGroupsHandlerImpl implements CGroupsHandler {
     if (LOG.isDebugEnabled()) {
       try (BufferedReader inl =
           new BufferedReader(new InputStreamReader(new FileInputStream(cgf
-              + "/tasks"), "UTF-8"))) {
+              + "/tasks"), StandardCharsets.UTF_8))) {
         str = inl.readLine();
         if (str != null) {
           LOG.debug("First line in cgroup tasks file: {} {}", cgf, str);
@@ -559,7 +560,7 @@ class CGroupsHandlerImpl implements CGroupsHandler {
 
     try {
       File file = new File(cGroupParamPath);
-      Writer w = new OutputStreamWriter(new FileOutputStream(file), "UTF-8");
+      Writer w = new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8);
       pw = new PrintWriter(w);
       pw.write(value);
     } catch (IOException e) {
@@ -595,7 +596,7 @@ class CGroupsHandlerImpl implements CGroupsHandler {
 
     try {
       byte[] contents = Files.readAllBytes(Paths.get(cGroupParamPath));
-      return new String(contents, "UTF-8").trim();
+      return new String(contents, StandardCharsets.UTF_8).trim();
     } catch (IOException e) {
       throw new ResourceHandlerException(
           "Unable to read from " + cGroupParamPath);

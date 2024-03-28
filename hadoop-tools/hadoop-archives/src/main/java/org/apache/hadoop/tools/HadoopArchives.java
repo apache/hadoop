@@ -691,7 +691,7 @@ public class HadoopArchives implements Tool {
       if (value.isDir()) { 
         towrite = encodeName(relPath.toString())
                   + " dir " + propStr + " 0 0 ";
-        StringBuffer sbuff = new StringBuffer();
+        StringBuilder sbuff = new StringBuilder();
         sbuff.append(towrite);
         for (String child: value.children) {
           sbuff.append(encodeName(child) + " ");

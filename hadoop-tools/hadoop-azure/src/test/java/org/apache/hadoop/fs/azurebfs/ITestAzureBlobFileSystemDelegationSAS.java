@@ -390,7 +390,7 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
     fs.create(reqPath).close();
 
     final String propertyName = "user.mime_type";
-    final byte[] propertyValue = "text/plain".getBytes("utf-8");
+    final byte[] propertyValue = "text/plain".getBytes(StandardCharsets.UTF_8);
     fs.setXAttr(reqPath, propertyName, propertyValue);
 
     assertArrayEquals(propertyValue, fs.getXAttr(reqPath, propertyName));

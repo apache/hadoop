@@ -30,6 +30,7 @@ import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.io.Writer;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
@@ -159,7 +160,7 @@ public class TestAggregatedLogFormat {
 
     File outputFile = new File(new File(srcFilePath.toString()), fileName);
     FileOutputStream os = new FileOutputStream(outputFile);
-    final OutputStreamWriter osw = new OutputStreamWriter(os, "UTF8");
+    final OutputStreamWriter osw = new OutputStreamWriter(os, StandardCharsets.UTF_8);
     final int ch = filler;
 
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
@@ -473,7 +474,7 @@ public class TestAggregatedLogFormat {
     }
     File outputFile = new File(new File(srcFilePath.toString()), fileName);
     FileOutputStream os = new FileOutputStream(outputFile);
-    OutputStreamWriter osw = new OutputStreamWriter(os, "UTF8");
+    OutputStreamWriter osw = new OutputStreamWriter(os, StandardCharsets.UTF_8);
     return osw;
   }
 }

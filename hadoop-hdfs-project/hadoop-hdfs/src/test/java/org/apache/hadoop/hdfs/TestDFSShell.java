@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.security.Permission;
 import java.security.PrivilegedExceptionAction;
 import java.text.SimpleDateFormat;
@@ -1917,7 +1918,7 @@ public class TestDFSShell {
     char c = content.charAt(0);
     sb.setCharAt(0, ++c);
     for(MaterializedReplica replica : replicas) {
-      replica.corruptData(sb.toString().getBytes("UTF8"));
+      replica.corruptData(sb.toString().getBytes(StandardCharsets.UTF_8));
     }
   }
 

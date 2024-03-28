@@ -92,7 +92,7 @@ public class TestConcatenatedCompressedInput {
 
   private static LineReader makeStream(String str) throws IOException {
     return new LineReader(new ByteArrayInputStream(
-            str.getBytes("UTF-8")), defaultConf);
+            str.getBytes(StandardCharsets.UTF_8)), defaultConf);
   }
 
   private static void writeFile(FileSystem fs, Path name,

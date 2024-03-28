@@ -817,7 +817,7 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
     HashMap<String, String> tokens = new HashMap<>();
     HashMap<String, String> secrets = new HashMap<>();
     secrets.put("secret1", Base64.encodeBase64String(
-        "mysecret".getBytes("UTF8")));
+        "mysecret".getBytes(StandardCharsets.UTF_8)));
     credentials.setSecrets(secrets);
     credentials.setTokens(tokens);
     ApplicationSubmissionContextInfo appInfo = new ApplicationSubmissionContextInfo();
@@ -840,7 +840,7 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
     appInfo.getContainerLaunchContextInfo().setEnvironment(environment);
     appInfo.getContainerLaunchContextInfo().setAcls(acls);
     appInfo.getContainerLaunchContextInfo().getAuxillaryServiceData()
-      .put("test", Base64.encodeBase64URLSafeString("value12".getBytes("UTF8")));
+      .put("test", Base64.encodeBase64URLSafeString("value12".getBytes(StandardCharsets.UTF_8)));
     appInfo.getContainerLaunchContextInfo().setCredentials(credentials);
     appInfo.getResource().setMemory(1024);
     appInfo.getResource().setvCores(1);

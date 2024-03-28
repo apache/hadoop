@@ -27,6 +27,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -220,7 +221,7 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
     PrintWriter pw = null;
     try {
       File file = new File(path + "/" + param);
-      Writer w = new OutputStreamWriter(new FileOutputStream(file), "UTF-8");
+      Writer w = new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8);
       pw = new PrintWriter(w);
       pw.write(value);
     } catch (IOException e) {
@@ -249,7 +250,7 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
     if (LOG.isDebugEnabled()) {
       try (BufferedReader inl =
             new BufferedReader(new InputStreamReader(new FileInputStream(cgf
-              + "/tasks"), "UTF-8"))) {
+              + "/tasks"), StandardCharsets.UTF_8))) {
         str = inl.readLine();
         if (str != null) {
           LOG.debug("First line in cgroup tasks file: {} {}", cgf, str);
@@ -403,7 +404,7 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
 
     try {
       FileInputStream fis = new FileInputStream(new File(getMtabFileName()));
-      in = new BufferedReader(new InputStreamReader(fis, "UTF-8"));
+      in = new BufferedReader(new InputStreamReader(fis, StandardCharsets.UTF_8));
 
       for (String str = in.readLine(); str != null;
           str = in.readLine()) {

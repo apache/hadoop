@@ -26,6 +26,7 @@ import org.apache.hadoop.mapreduce.lib.fieldsel.TestMRFieldSelection;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 
+import java.nio.charset.StandardCharsets;
 import java.text.NumberFormat;
 
 public class TestFieldSelection {
@@ -60,7 +61,7 @@ private static NumberFormat idFormat = NumberFormat.getInstance();
     TestMRFieldSelection.constructInputOutputData(inputData,
       expectedOutput, numOfInputLines);
     FSDataOutputStream fileOut = fs.create(new Path(INPUT_DIR, inputFile));
-    fileOut.write(inputData.toString().getBytes("utf-8"));
+    fileOut.write(inputData.toString().getBytes(StandardCharsets.UTF_8));
     fileOut.close();
 
     System.out.println("inputData:");

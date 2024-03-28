@@ -38,6 +38,7 @@ import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -364,7 +365,7 @@ public class TestYarnCLI {
     verify(client).getContainers(attemptId);
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     OutputStreamWriter stream =
-        new OutputStreamWriter(baos, "UTF-8");
+        new OutputStreamWriter(baos, StandardCharsets.UTF_8);
     PrintWriter pw = new PrintWriter(stream);
     pw.println("Total number of containers :3");
     pw.printf(ApplicationCLI.CONTAINER_PATTERN, "Container-Id", "Start Time",

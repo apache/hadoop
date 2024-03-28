@@ -31,6 +31,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileg
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -73,7 +74,7 @@ public class CGroupsBlkioResourceHandlerImpl implements DiskResourceHandler {
     // are using the CFQ scheduler. If they aren't print a warning
     try {
       byte[] contents = Files.readAllBytes(Paths.get(PARTITIONS_FILE));
-      data = new String(contents, "UTF-8").trim();
+      data = new String(contents, StandardCharsets.UTF_8).trim();
     } catch (IOException e) {
       String msg = "Couldn't read " + PARTITIONS_FILE +
           "; can't determine disk scheduler type";
@@ -96,7 +97,7 @@ public class CGroupsBlkioResourceHandlerImpl implements DiskResourceHandler {
             if (schedulerFile.exists()) {
               try {
                 byte[] contents = Files.readAllBytes(Paths.get(schedulerPath));
-                String schedulerString = new String(contents, "UTF-8").trim();
+                String schedulerString = new String(contents, StandardCharsets.UTF_8).trim();
                 if (!schedulerString.contains("[cfq]")) {
                   LOG.warn("Device " + partition + " does not use the CFQ"
                       + " scheduler; disk isolation using "
