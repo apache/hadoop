@@ -27,7 +27,7 @@ import java.net.URISyntaxException;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
-import org.apache.avro.reflect.Stringable;
+import org.apache.hadoop.thirdparty.avro.reflect.Stringable;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;

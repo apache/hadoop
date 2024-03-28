@@ -33,7 +33,7 @@ import java.text.CharacterIterator;
 import java.text.StringCharacterIterator;
 import java.util.Arrays;
 
-import org.apache.avro.reflect.Stringable;
+import org.apache.hadoop.thirdparty.avro.reflect.Stringable;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
