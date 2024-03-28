@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -197,7 +196,6 @@ public class DecayRpcScheduler implements RpcScheduler,
   private MetricsProxy metricsProxy;
   private final CostProvider costProvider;
   private final Map<String, Integer> staticPriorities = new HashMap<>();
-  private Set<String> serviceUserNames;
 
   /**
    * This TimerTask will call decayCurrentCosts until
@@ -249,7 +247,7 @@ public class DecayRpcScheduler implements RpcScheduler,
         conf);
     this.backOffResponseTimeThresholds =
         parseBackOffResponseTimeThreshold(ns, conf, numLevels);
-    this.serviceUserNames = this.parseServiceUserNames(ns, conf);
+    this.parseServiceUserNames(ns, conf);
 
     // Setup response time metrics
     responseTimeTotalInCurrWindow = new AtomicLongArray(numLevels);
@@ -406,10 +404,12 @@ public class DecayRpcScheduler implements RpcScheduler,
     return decimals;
   }
 
-  private Set<String> parseServiceUserNames(String ns, Configuration conf) {
+  private void parseServiceUserNames(String ns, Configuration conf) {
     Collection<String> collection = conf.getStringCollection(
         ns + "." + IPC_DECAYSCHEDULER_SERVICE_USERS_KEY);
-    return new HashSet<>(collection);
+    for (String user : collection) {
+      staticPriorities.put(user, -1);
+    }
   }
 
   /**
@@ -607,10 +607,6 @@ public class DecayRpcScheduler implements RpcScheduler,
    * @return scheduling decision from 0 to numLevels - 1
    */
   private int computePriorityLevel(long cost, Object identity) {
-    // The priority for service users is always 0
-    if (isServiceUser((String)identity)) {
-      return 0;
-    }
     Integer staticPriority = staticPriorities.get(identity);
     if (staticPriority != null) {
       return staticPriority.intValue();
@@ -714,7 +710,7 @@ public class DecayRpcScheduler implements RpcScheduler,
   }
 
   private boolean isServiceUser(String userName) {
-    return this.serviceUserNames.contains(userName);
+    return this.staticPriorities.getOrDefault(userName, 0) < 0;
   }
 
   @Override
@@ -816,7 +812,7 @@ public class DecayRpcScheduler implements RpcScheduler,
 
   @VisibleForTesting
   Set<String> getServiceUserNames() {
-    return serviceUserNames;
+    return staticPriorities.keySet();
   }
 
   @VisibleForTesting
