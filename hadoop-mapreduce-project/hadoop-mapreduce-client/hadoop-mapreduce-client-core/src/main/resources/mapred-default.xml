@@ -734,6 +734,31 @@
 </property>
 
 <property>
+  <name>mapreduce.job.fail.map.priority</name>
+  <value>5</value>
+  <description>The priority of failed map tasks.
+  </description>
+</property>
+<property>
+  <name>mapreduce.job.reduce.priority</name>
+  <value>10</value>
+  <description>The priority of reduce tasks.
+  </description>
+</property>
+<property>
+  <name>mapreduce.job.map.priority</name>
+  <value>20</value>
+  <description>The priority of map tasks.
+  </description>
+</property>
+<property>
+  <name>mapreduce.job.opportunistic.map.priority</name>
+  <value>19</value>
+  <description>The priority of opportunistic map tasks.
+  </description>
+</property>
+
+<property>
   <name>mapreduce.input.fileinputformat.split.minsize</name>
   <value>0</value>
   <description>The minimum size chunk that map input should be split
