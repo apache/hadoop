@@ -618,6 +618,8 @@ public class TestDFSIO implements Tool {
       InputStream in = (InputStream)this.stream;
       long actualSize = 0;
       while (actualSize < totalSize) {
+        if(bufferSize <= 0)
+          throw new IllegalArgumentException("buffer size should be positive integer.");
         int curSize = in.read(buffer, 0, bufferSize);
         if(curSize < 0) break;
         actualSize += curSize;
