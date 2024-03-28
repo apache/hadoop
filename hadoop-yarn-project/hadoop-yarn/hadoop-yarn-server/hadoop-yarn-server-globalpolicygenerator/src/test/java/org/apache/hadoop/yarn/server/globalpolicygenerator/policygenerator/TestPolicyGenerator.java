@@ -139,7 +139,7 @@ public class TestPolicyGenerator {
       ClusterMetricsInfo metricsInfo = new ClusterMetricsInfo();
       metricsInfo.setAppsPending(2000);
       if (!clusterInfos.containsKey(id)) {
-        clusterInfos.put(id, new HashMap<Class, Object>());
+        clusterInfos.put(id, new HashMap<>());
       }
       clusterInfos.get(id).put(ClusterMetricsInfo.class, metricsInfo);
 
