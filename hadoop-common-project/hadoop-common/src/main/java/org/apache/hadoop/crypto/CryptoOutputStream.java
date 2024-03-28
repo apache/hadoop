@@ -100,6 +100,7 @@ public class CryptoOutputStream extends FilterOutputStream implements
       throws IOException {
     super(out);
     CryptoStreamUtils.checkCodec(codec);
+    Preconditions.checkArgument(key != null, "key for CryptoOutputStream cannot be null");
     this.bufferSize = CryptoStreamUtils.checkBufferSize(codec, bufferSize);
     this.codec = codec;
     this.key = key.clone();
