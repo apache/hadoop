@@ -87,19 +87,24 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
   private RetryPolicy retryPolicy = null;
 
   public LoadBalancingKMSClientProvider(URI providerUri,
-      KMSClientProvider[] providers, Configuration conf) {
+      KMSClientProvider[] providers, Configuration conf) throws IOException {
     this(providerUri, providers, Time.monotonicNow(), conf);
   }
 
   @VisibleForTesting
   LoadBalancingKMSClientProvider(KMSClientProvider[] providers, long seed,
-      Configuration conf) {
+      Configuration conf) throws IOException {
     this(URI.create("kms://testing"), providers, seed, conf);
   }
 
   private LoadBalancingKMSClientProvider(URI uri,
-      KMSClientProvider[] providers, long seed, Configuration conf) {
+      KMSClientProvider[] providers, long seed, Configuration conf) throws IOException {
     super(conf);
+
+    if (providers.length == 0) {
+      throw new IOException("No providers configured !");
+    }
+
     // uri is the token service so it can be instantiated for renew/cancel.
     dtService = KMSClientProvider.getDtService(uri);
     // if provider not in conf, new client will alias on uri else addr.
@@ -166,9 +171,6 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
 
   private <T> T doOp(ProviderCallable<T> op, int currPos,
       boolean isIdempotent) throws IOException {
-    if (providers.length == 0) {
-      throw new IOException("No providers configured !");
-    }
     int numFailovers = 0;
     for (int i = 0;; i++, numFailovers++) {
       KMSClientProvider provider = providers[(currPos + i) % providers.length];
