@@ -274,6 +274,10 @@ class Ls extends FsCommand {
       if (!pathOnly) {
         out.println("Found " + items.length + " items");
       }
+      else if (items.length == 0)
+      {
+        out.println("The path is empty.");
+      }
       Arrays.sort(items, getOrderComparator());
     }
     if (!pathOnly) {
