@@ -26,6 +26,8 @@ import org.apache.hadoop.hdfs.server.federation.router.FederationUtil;
 import org.apache.hadoop.hdfs.server.federation.router.RouterRpcServer;
 import org.apache.hadoop.hdfs.server.federation.router.Router;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.ipc.CallerContext;
+import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
@@ -38,6 +40,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 
 /**
@@ -51,6 +54,8 @@ public class RouterSecurityManager {
   private AbstractDelegationTokenSecretManager<DelegationTokenIdentifier>
       dtSecretManager = null;
 
+  private RouterSecurityAuditLogger auditLogger;
+
   public RouterSecurityManager(Configuration conf) throws IOException {
     AuthenticationMethod authMethodConfigured =
         SecurityUtil.getAuthenticationMethod(conf);
@@ -62,12 +67,14 @@ public class RouterSecurityManager {
         throw new IOException("Failed to create SecretManager");
       }
     }
+    auditLogger = new RouterSecurityAuditLogger(conf);
   }
 
   @VisibleForTesting
   public RouterSecurityManager(AbstractDelegationTokenSecretManager
       <DelegationTokenIdentifier> dtSecretManager) {
     this.dtSecretManager = dtSecretManager;
+    auditLogger = new RouterSecurityAuditLogger(new Configuration());
   }
 
   public AbstractDelegationTokenSecretManager<DelegationTokenIdentifier>
@@ -127,6 +134,7 @@ public class RouterSecurityManager {
     final String operationName = "getDelegationToken";
     boolean success = false;
     String tokenId = "";
+    String user = "";
     Token<DelegationTokenIdentifier> token;
     try {
       if (!isAllowedDelegationTokenOp()) {
@@ -139,7 +147,7 @@ public class RouterSecurityManager {
         return null;
       }
       UserGroupInformation ugi = getRemoteUser();
-      String user = ugi.getUserName();
+      user = ugi.getUserName();
       Text owner = new Text(user);
       Text realUser = null;
       if (ugi.getRealUser() != null) {
@@ -152,7 +160,8 @@ public class RouterSecurityManager {
       tokenId = dtId.toStringStable();
       success = true;
     } finally {
-      logAuditEvent(success, operationName, tokenId);
+      logAuditEvent(success, user, Server.getRemoteIp(), operationName,
+          CallerContext.getCurrent(), tokenId);
     }
     return token;
   }
@@ -169,6 +178,7 @@ public class RouterSecurityManager {
     final String operationName = "renewDelegationToken";
     boolean success = false;
     String tokenId = "";
+    String user = "";
     long expiryTime;
     try {
       if (!isAllowedDelegationTokenOp()) {
@@ -186,7 +196,8 @@ public class RouterSecurityManager {
       tokenId = id.toStringStable();
       throw ace;
     } finally {
-      logAuditEvent(success, operationName, tokenId);
+      logAuditEvent(success, user, Server.getRemoteIp(), operationName,
+          CallerContext.getCurrent(), tokenId);
     }
     return expiryTime;
   }
@@ -201,6 +212,7 @@ public class RouterSecurityManager {
     final String operationName = "cancelDelegationToken";
     boolean success = false;
     String tokenId = "";
+    String user = "";
     try {
       String canceller = getRemoteUser().getUserName();
       LOG.info("Cancel request by " + canceller);
@@ -213,7 +225,8 @@ public class RouterSecurityManager {
       tokenId = id.toStringStable();
       throw ace;
     } finally {
-      logAuditEvent(success, operationName, tokenId);
+      logAuditEvent(success, user, Server.getRemoteIp(), operationName,
+          CallerContext.getCurrent(), tokenId);
     }
   }
 
@@ -259,11 +272,10 @@ public class RouterSecurityManager {
    * Log status of delegation token related operation.
    * Extend in future to use audit logger instead of local logging.
    */
-  void logAuditEvent(boolean succeeded, String cmd, String tokenId)
-      throws IOException {
-    LOG.debug(
-        "Operation:" + cmd +
-        " Status:" + succeeded +
-        " TokenId:" + tokenId);
+  void logAuditEvent(boolean succeeded, String userName,
+                     InetAddress addr, String cmd,
+                     CallerContext callerContext, String tokenId) {
+    auditLogger.logAuditEvent(succeeded, userName, addr, cmd,
+        callerContext, tokenId);
   }
 }
