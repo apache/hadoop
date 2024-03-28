@@ -298,7 +298,7 @@ public class DirectoryScanner implements Runnable {
         DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THROTTLE_LIMIT_MS_PER_SEC_KEY,
         DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THROTTLE_LIMIT_MS_PER_SEC_DEFAULT);
 
-    if (throttle >= TimeUnit.SECONDS.toMillis(1)) {
+    if (throttle > TimeUnit.SECONDS.toMillis(1)) {
       LOG.warn(
           "{} set to value above 1000 ms/sec. Assuming default value of {}",
           DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THROTTLE_LIMIT_MS_PER_SEC_KEY,

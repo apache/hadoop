@@ -946,7 +946,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       DFS_DATANODE_DIRECTORYSCAN_THROTTLE_LIMIT_MS_PER_SEC_KEY =
       "dfs.datanode.directoryscan.throttle.limit.ms.per.sec";
   public static final int
-      DFS_DATANODE_DIRECTORYSCAN_THROTTLE_LIMIT_MS_PER_SEC_DEFAULT = -1;
+      DFS_DATANODE_DIRECTORYSCAN_THROTTLE_LIMIT_MS_PER_SEC_DEFAULT = 1000;
   public static final String
       DFS_DATANODE_DIRECTORYSCAN_MAX_NOTIFY_COUNT_KEY =
       "dfs.datanode.directoryscan.max.notify.count";
