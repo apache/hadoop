@@ -368,9 +368,9 @@ public class YarnClientImpl extends YarnClient {
         // is blocked here too long.
         if (++pollCount % 10 == 0) {
           LOG.info("Application submission is not finished, " +
-                          "submitted application {} is still in {}",
-                  applicationId,
-                  state);
+              "submitted application {} is still in {}.",
+              applicationId,
+              state);
         }
         try {
           Thread.sleep(submitPollIntervalMillis);
@@ -384,7 +384,7 @@ public class YarnClientImpl extends YarnClient {
         // FailOver or RM restart happens before RMStateStore saves
         // ApplicationState
         LOG.info("Re-submit application {} with the" +
-                " same ApplicationSubmissionContext", applicationId);
+            " same ApplicationSubmissionContext.", applicationId);
         rmClient.submitApplication(request);
       }
     }
@@ -409,7 +409,7 @@ public class YarnClientImpl extends YarnClient {
       throw new IOException(
           "Can't get Master Kerberos principal for use as renewer");
     }
-    LOG.debug("Delegation Token Renewer: {}", masterPrincipal);
+    LOG.debug("Delegation Token Renewer: {}.", masterPrincipal);
 
     LogAggregationFileControllerFactory factory =
         new LogAggregationFileControllerFactory(conf);
@@ -422,7 +422,8 @@ public class YarnClientImpl extends YarnClient {
         fs.addDelegationTokens(masterPrincipal, credentials);
     if (finalTokens != null) {
       for (org.apache.hadoop.security.token.Token<?> token : finalTokens) {
-        LOG.info("Added delegation token for log aggregation path {}; {}", remoteRootLogDir, token);
+        LOG.info("Added delegation token " +
+            "for log aggregation path {} {}.", remoteRootLogDir, token);
       }
     }
 
@@ -485,7 +486,7 @@ public class YarnClientImpl extends YarnClient {
       return timelineClient.getDelegationToken(timelineDTRenewer);
     } catch (Exception e) {
       if (timelineServiceBestEffort) {
-        LOG.warn("Failed to get delegation token from the timeline server: {}", e.getMessage());
+        LOG.warn("Failed to get delegation token from the timeline server: {}.", e.getMessage());
         return null;
       }
       throw new IOException(e);
@@ -559,7 +560,7 @@ public class YarnClientImpl extends YarnClient {
         KillApplicationResponse response =
             rmClient.forceKillApplication(request);
         if (response.getIsKillCompleted()) {
-          LOG.info("Killed application {}", applicationId);
+          LOG.info("Killed application {}.", applicationId);
           break;
         }
 
@@ -1100,7 +1101,7 @@ public class YarnClientImpl extends YarnClient {
   public void signalToContainer(ContainerId containerId,
       SignalContainerCommand command)
           throws YarnException, IOException {
-    LOG.info("Signalling container {} with command {}", containerId, command);
+    LOG.info("Signalling container {} with command {}.", containerId, command);
     SignalContainerRequest request =
         SignalContainerRequest.newInstance(containerId, command);
     rmClient.signalToContainer(request);
@@ -1206,9 +1207,9 @@ public class YarnClientImpl extends YarnClient {
         client.stop();
       }
     } catch (WebSocketException e) {
-      LOG.debug("Websocket exception: {}", e.getMessage());
+      LOG.debug("Websocket exception: {}.", e.getMessage());
     } catch (Throwable t) {
-      LOG.error("Fail to shell to container: {}", t.getMessage());
+      LOG.error("Fail to shell to container: {}.", t.getMessage());
     }
   }
 }
