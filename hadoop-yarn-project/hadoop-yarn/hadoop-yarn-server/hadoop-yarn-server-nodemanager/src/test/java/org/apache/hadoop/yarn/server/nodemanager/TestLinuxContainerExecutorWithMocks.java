@@ -30,6 +30,8 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
+
+import org.apache.hadoop.util.Shell;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -307,7 +309,51 @@ public class TestLinuxContainerExecutorWithMocks {
           .build());
 
       List<String> result=readMockParams();
-      assertThat(result).hasSize(26);
+      if (!Shell.isJavaVersionAtLeast(17)) {
+        assertThat(result).hasSize(26);
+        assertThat(result.get(13)).isEqualTo(
+                "-Dlog4j.configuration=container-log4j.properties");
+        assertThat(result.get(14)).isEqualTo(
+                String.format("-Dyarn.app.container.log.dir=%s/application_0/12345",
+                        mockExec.getConf().get(YarnConfiguration.NM_LOG_DIRS)));
+        assertThat(result.get(15)).isEqualTo(
+                "-Dyarn.app.container.log.filesize=0");
+        assertThat(result.get(16)).isEqualTo("-Dhadoop.root.logger=INFO,CLA");
+        assertThat(result.get(17)).isEqualTo(
+                "-Dhadoop.root.logfile=container-localizer-syslog");
+        assertThat(result.get(18)).isEqualTo("org.apache.hadoop.yarn.server." +
+                "nodemanager.containermanager.localizer.ContainerLocalizer");
+        assertThat(result.get(19)).isEqualTo("test");
+        assertThat(result.get(20)).isEqualTo("application_0");
+        assertThat(result.get(21)).isEqualTo("12345");
+        assertThat(result.get(22)).isEqualTo("localhost");
+        assertThat(result.get(23)).isEqualTo("8040");
+        assertThat(result.get(24)).isEqualTo("nmPrivateCTokensPath");
+      } else {
+        assertThat(result).hasSize(28);
+        assertThat(result.get(13)).isEqualTo(
+                "--add-exports=java.base/sun.net.dns=ALL-UNNAMED");
+        assertThat(result.get(14)).isEqualTo(
+                "--add-exports=java.base/sun.net.util=ALL-UNNAMED");
+        assertThat(result.get(15)).isEqualTo(
+                "-Dlog4j.configuration=container-log4j.properties");
+        assertThat(result.get(16)).isEqualTo(
+                String.format("-Dyarn.app.container.log.dir=%s/application_0/12345",
+                        mockExec.getConf().get(YarnConfiguration.NM_LOG_DIRS)));
+        assertThat(result.get(17)).isEqualTo(
+                "-Dyarn.app.container.log.filesize=0");
+        assertThat(result.get(18)).isEqualTo("-Dhadoop.root.logger=INFO,CLA");
+        assertThat(result.get(19)).isEqualTo(
+                "-Dhadoop.root.logfile=container-localizer-syslog");
+        assertThat(result.get(20)).isEqualTo("org.apache.hadoop.yarn.server." +
+                "nodemanager.containermanager.localizer.ContainerLocalizer");
+        assertThat(result.get(21)).isEqualTo("test");
+        assertThat(result.get(22)).isEqualTo("application_0");
+        assertThat(result.get(23)).isEqualTo("12345");
+        assertThat(result.get(24)).isEqualTo("localhost");
+        assertThat(result.get(25)).isEqualTo("8040");
+        assertThat(result.get(26)).isEqualTo("nmPrivateCTokensPath");
+      }
       assertThat(result.get(0)).isEqualTo(YarnConfiguration.
           DEFAULT_NM_NONSECURE_MODE_LOCAL_USER);
       assertThat(result.get(1)).isEqualTo("test");
@@ -317,25 +363,6 @@ public class TestLinuxContainerExecutorWithMocks {
       assertThat(result.get(5)).isEqualTo("/bin/nmPrivateCTokensPath");
       assertThat(result.get(9)).isEqualTo("-classpath");
       assertThat(result.get(12)).isEqualTo("-Xmx256m");
-      assertThat(result.get(13)).isEqualTo(
-          "-Dlog4j.configuration=container-log4j.properties" );
-      assertThat(result.get(14)).isEqualTo(
-          String.format("-Dyarn.app.container.log.dir=%s/application_0/12345",
-          mockExec.getConf().get(YarnConfiguration.NM_LOG_DIRS)));
-      assertThat(result.get(15)).isEqualTo(
-          "-Dyarn.app.container.log.filesize=0");
-      assertThat(result.get(16)).isEqualTo("-Dhadoop.root.logger=INFO,CLA");
-      assertThat(result.get(17)).isEqualTo(
-          "-Dhadoop.root.logfile=container-localizer-syslog");
-      assertThat(result.get(18)).isEqualTo("org.apache.hadoop.yarn.server." +
-          "nodemanager.containermanager.localizer.ContainerLocalizer");
-      assertThat(result.get(19)).isEqualTo("test");
-      assertThat(result.get(20)).isEqualTo("application_0");
-      assertThat(result.get(21)).isEqualTo("12345");
-      assertThat(result.get(22)).isEqualTo("localhost");
-      assertThat(result.get(23)).isEqualTo("8040");
-      assertThat(result.get(24)).isEqualTo("nmPrivateCTokensPath");
-
     } catch (InterruptedException e) {
       LOG.error("Error:"+e.getMessage(),e);
       Assert.fail();
