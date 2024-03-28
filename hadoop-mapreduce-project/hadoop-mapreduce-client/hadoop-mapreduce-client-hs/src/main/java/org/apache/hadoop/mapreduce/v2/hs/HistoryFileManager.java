@@ -55,6 +55,7 @@ import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.ipc.CallerContext;
 import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.mapred.JobACLsManager;
 import org.apache.hadoop.mapreduce.jobhistory.JobSummary;
@@ -985,15 +986,14 @@ public class HistoryFileManager extends AbstractService {
             LOG.debug("Scheduling move to done of " +found);
           }
 
-          moveToDoneExecutor.execute(new Runnable() {
-            @Override
-            public void run() {
-              try {
-                found.moveToDone();
-              } catch (IOException e) {
-                LOG.info("Failed to process fileInfo for job: " + 
-                    found.getJobId(), e);
-              }
+          moveToDoneExecutor.execute(() -> {
+            try {
+              CallerContext.setCurrent(
+                  new CallerContext.Builder("jhs-moveToDone").build());
+              found.moveToDone();
+            } catch (IOException e) {
+              LOG.info(
+                  "Failed to process fileInfo for job: " + found.getJobId(), e);
             }
           });
         }
