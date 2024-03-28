@@ -97,6 +97,8 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
 
   private static final String VPC_ENDPOINT = "vpce-1a2b3c4d-5e6f.s3.us-west-2.vpce.amazonaws.com";
 
+  private static final String CN_VPC_ENDPOINT = "vpce-1a2b3c4d-5e6f.s3.cn-northwest-1.vpce.amazonaws.com.cn";
+
   public static final String EXCEPTION_THROWN_BY_INTERCEPTOR = "Exception thrown by interceptor";
 
   /**
@@ -294,12 +296,21 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
   }
 
   @Test
-  @Ignore("Pending HADOOP-18938. S3A region logic to handle vpce and non standard endpoints")
   public void testWithVPCE() throws Throwable {
     describe("Test with vpc endpoint");
     Configuration conf = getConfiguration();
 
     S3Client client = createS3Client(conf, VPC_ENDPOINT, null, US_WEST_2, false);
+
+    expectInterceptorException(client);
+  }
+
+  @Test
+  public void testWithChinaVPCE() throws Throwable {
+    describe("Test with china vpc endpoint");
+    Configuration conf = getConfiguration();
+
+    S3Client client = createS3Client(conf, CN_VPC_ENDPOINT, null, CN_NORTHWEST_1, false);
 
     expectInterceptorException(client);
   }
