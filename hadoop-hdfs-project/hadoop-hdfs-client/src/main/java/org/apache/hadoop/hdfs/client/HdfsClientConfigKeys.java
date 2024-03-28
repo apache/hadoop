@@ -532,6 +532,9 @@ public interface HdfsClientConfigKeys {
      * span 6 DNs, so this default value accommodates 3 read streams
      */
     int     THREADPOOL_SIZE_DEFAULT = 18;
+
+    String WEAK_REF_BUFFER_POOL_KEY = PREFIX + "bufferpool.weak.references.enabled";
+    boolean WEAK_REF_BUFFER_POOL_DEFAULT = false;
   }
 
   /** dfs.http.client configuration properties */
