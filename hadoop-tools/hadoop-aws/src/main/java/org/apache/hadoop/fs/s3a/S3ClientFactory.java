@@ -34,6 +34,7 @@ import software.amazon.awssdk.transfer.s3.S3TransferManager;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.s3a.impl.CSEMaterials;
 import org.apache.hadoop.fs.s3a.statistics.StatisticsFromAwsSdk;
 
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_ENDPOINT;
@@ -185,6 +186,16 @@ public interface S3ClientFactory {
      * Is FIPS enabled?
      */
     private boolean fipsEnabled;
+
+    /**
+     * Is client side encryption enabled.
+     */
+    private Boolean isCSEEnabled;
+
+    /**
+     * Client side encryption materials.
+     */
+    private CSEMaterials cseMaterials;
 
     /**
      * List of execution interceptors to include in the chain
@@ -503,6 +514,44 @@ public interface S3ClientFactory {
     public S3ClientCreationParameters withFipsEnabled(final boolean value) {
       fipsEnabled = value;
       return this;
+    }
+
+    /**
+     * Set the client side encryption flag.
+     *
+     * @param value new value
+     * @return the builder
+     */
+    public S3ClientCreationParameters withClientSideEncryptionEnabled(final boolean value) {
+      this.isCSEEnabled = value;
+      return this;
+    }
+
+    /**
+     * Get the client side encryption flag.
+     * @return client side encryption flag
+     */
+    public boolean isClientSideEncryptionEnabled() {
+      return this.isCSEEnabled;
+    }
+
+    /**
+     * Set the client side encryption materials.
+     *
+     * @param value new value
+     * @return the builder
+     */
+    public S3ClientCreationParameters withClientSideEncryptionMaterials(final CSEMaterials value) {
+      this.cseMaterials = value;
+      return this;
+    }
+
+    /**
+     * Get the client side encryption materials.
+     * @return client side encryption materials
+     */
+    public CSEMaterials getClientSideEncryptionMaterials() {
+      return this.cseMaterials;
     }
   }
 }

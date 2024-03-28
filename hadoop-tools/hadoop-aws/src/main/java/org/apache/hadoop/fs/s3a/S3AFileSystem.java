@@ -121,6 +121,7 @@ import org.apache.hadoop.fs.s3a.commit.magic.InMemoryMagicCommitTracker;
 import org.apache.hadoop.fs.s3a.impl.AWSCannedACL;
 import org.apache.hadoop.fs.s3a.impl.AWSHeaders;
 import org.apache.hadoop.fs.s3a.impl.BulkDeleteRetryHandler;
+import org.apache.hadoop.fs.s3a.impl.CSEMaterials;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.ConfigurationHelper;
 import org.apache.hadoop.fs.s3a.impl.ContextAccessors;
@@ -1043,6 +1044,21 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         S3_CLIENT_FACTORY_IMPL, DEFAULT_S3_CLIENT_FACTORY_IMPL,
         S3ClientFactory.class);
 
+    S3ClientFactory clientFactory;
+    CSEMaterials cseMaterials = null;
+
+    if (isCSEEnabled) {
+      String kmsKeyId = getS3EncryptionKey(bucket, conf, true);
+
+      cseMaterials  = new CSEMaterials()
+          .withCSEKeyType(CSEMaterials.CSEKeyType.KMS)
+          .withKmsKeyId(kmsKeyId);
+
+      clientFactory = ReflectionUtils.newInstance(EncryptionS3ClientFactory.class, conf);
+    } else {
+      clientFactory = ReflectionUtils.newInstance(s3ClientFactoryClass, conf);
+    }
+
     S3ClientFactory.S3ClientCreationParameters parameters =
         new S3ClientFactory.S3ClientCreationParameters()
         .withCredentialSet(credentials)
@@ -1062,9 +1078,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .withExpressCreateSession(
             conf.getBoolean(S3EXPRESS_CREATE_SESSION, S3EXPRESS_CREATE_SESSION_DEFAULT))
         .withChecksumValidationEnabled(
-            conf.getBoolean(CHECKSUM_VALIDATION, CHECKSUM_VALIDATION_DEFAULT));
+            conf.getBoolean(CHECKSUM_VALIDATION, CHECKSUM_VALIDATION_DEFAULT))
+        .withClientSideEncryptionEnabled(isCSEEnabled)
+        .withClientSideEncryptionMaterials(cseMaterials);
 
-    S3ClientFactory clientFactory = ReflectionUtils.newInstance(s3ClientFactoryClass, conf);
     s3Client = clientFactory.createS3Client(getUri(), parameters);
     createS3AsyncClient(clientFactory, parameters);
     transferManager =  clientFactory.createS3TransferManager(getS3AsyncClient());
@@ -1079,7 +1096,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws IOException on any IO problem
    */
   private void createS3AsyncClient(S3ClientFactory clientFactory,
-      S3ClientFactory.S3ClientCreationParameters parameters) throws IOException {
+      S3ClientFactory.S3ClientCreationParameters parameters)
+      throws IOException {
     s3AsyncClient = clientFactory.createS3AsyncClient(getUri(), parameters);
   }
 

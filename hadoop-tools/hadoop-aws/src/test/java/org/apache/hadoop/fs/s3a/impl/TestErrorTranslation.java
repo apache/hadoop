@@ -30,15 +30,18 @@ import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import software.amazon.awssdk.awscore.retry.conditions.RetryOnErrorCodeCondition;
 import software.amazon.awssdk.core.exception.SdkClientException;
+import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.core.retry.RetryPolicyContext;
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
+import software.amazon.encryption.s3.S3EncryptionClientException;
 
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.auth.NoAwsCredentialsException;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.maybeExtractIOException;
+import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.maybeExtractSdkException;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.junit.Assert.assertTrue;
 
 /**
  * Unit tests related to the {@link ErrorTranslation} class.
@@ -152,5 +155,29 @@ public class TestErrorTranslation extends AbstractHadoopTestBase {
     Assertions.assertThat(retry.shouldRetry(context))
         .describedAs("retry policy of MultiObjectException")
         .isFalse();
+  }
+
+  @Test
+  public void testEncryptionClientExceptionExtraction() throws Throwable {
+    intercept(NoSuchKeyException.class, () -> {
+      throw maybeExtractSdkException(new S3EncryptionClientException("top",
+          new S3EncryptionClientException("middle", NoSuchKeyException.builder().build())));
+    });
+  }
+
+  @Test
+  public void testNonEncryptionClientExceptionExtraction() throws Throwable {
+    intercept(SdkException.class, () -> {
+      throw maybeExtractSdkException(
+          sdkException("top", sdkException("middle", NoSuchKeyException.builder().build())));
+    });
+  }
+
+  @Test
+  public void testEncryptionClientExceptionExtractionWithRTE() throws Throwable {
+    intercept(S3EncryptionClientException.class, () -> {
+      throw maybeExtractSdkException(new S3EncryptionClientException("top",
+          new UnsupportedOperationException()));
+    });
   }
 }

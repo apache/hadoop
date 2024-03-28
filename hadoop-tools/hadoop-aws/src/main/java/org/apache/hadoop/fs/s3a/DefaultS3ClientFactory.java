@@ -39,6 +39,7 @@ import software.amazon.awssdk.identity.spi.AwsCredentialsIdentity;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.s3accessgrants.plugin.S3AccessGrantsPlugin;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
+import software.amazon.awssdk.services.s3.S3AsyncClientBuilder;
 import software.amazon.awssdk.services.s3.S3BaseClientBuilder;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Configuration;
@@ -153,11 +154,17 @@ public class DefaultS3ClientFactory extends Configured
         .thresholdInBytes(parameters.getMultiPartThreshold())
         .build();
 
-    return configureClientBuilder(S3AsyncClient.builder(), parameters, conf, bucket)
-        .httpClientBuilder(httpClientBuilder)
-        .multipartConfiguration(multipartConfiguration)
-        .multipartEnabled(parameters.isMultipartCopy())
-        .build();
+    S3AsyncClientBuilder s3AsyncClientBuilder =
+        configureClientBuilder(S3AsyncClient.builder(), parameters, conf, bucket).httpClientBuilder(
+            httpClientBuilder);
+
+    if (!parameters.isClientSideEncryptionEnabled()) {
+      s3AsyncClientBuilder
+          .multipartConfiguration(multipartConfiguration)
+          .multipartEnabled(parameters.isMultipartCopy());
+    }
+
+    return s3AsyncClientBuilder.build();
   }
 
   @Override
