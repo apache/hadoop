@@ -278,7 +278,7 @@ public class UnmanagedAMLauncher {
     // wait for the process to finish and check the exit code
     try {
       int exitCode = amProc.waitFor();
-      LOG.info("AM process exited with value: " + exitCode);
+      LOG.info("AM process exited with value: {}", exitCode);
     } catch (InterruptedException e) {
       e.printStackTrace();
     } finally {
@@ -350,7 +350,7 @@ public class UnmanagedAMLauncher {
               YarnApplicationAttemptState.LAUNCHED);
         ApplicationAttemptId attemptId =
             attemptReport.getApplicationAttemptId();
-        LOG.info("Launching AM with application attempt id " + attemptId);
+        LOG.info("Launching AM with application attempt id {}", attemptId);
         // launch AM
         launchAM(attemptId);
         // Monitor the application for end state
@@ -362,8 +362,7 @@ public class UnmanagedAMLauncher {
       YarnApplicationState appState = appReport.getYarnApplicationState();
       FinalApplicationStatus appStatus = appReport.getFinalApplicationStatus();
   
-      LOG.info("App ended with state: " + appReport.getYarnApplicationState()
-          + " and status: " + appStatus);
+      LOG.info("App ended with state: {} and status: {}", appReport.getYarnApplicationState(), appStatus);
       
       boolean success;
       if (YarnApplicationState.FINISHED == appState
@@ -371,8 +370,7 @@ public class UnmanagedAMLauncher {
         LOG.info("Application has completed successfully.");
         success = true;
       } else {
-        LOG.info("Application did finished unsuccessfully." + " YarnState="
-            + appState.toString() + ", FinalStatus=" + appStatus.toString());
+        LOG.info("Application did finished unsuccessfully. YarnState={}, FinalStatus={}", appState, appStatus);
         success = false;
       }
       
@@ -400,14 +398,12 @@ public class UnmanagedAMLauncher {
           return attemptReport;
         }
       }
-      LOG.info("Current attempt state of " + appId + " is " + (attemptReport == null
-            ? " N/A " : attemptReport.getYarnApplicationAttemptState())
-                + ", waiting for current attempt to reach " + attemptState);
+      LOG.info("Current attempt state of {} is {}, waiting for current attempt to reach {}", appId, attemptReport == null
+              ? " N/A " : attemptReport.getYarnApplicationAttemptState(), attemptState);
       try {
         Thread.sleep(1000);
       } catch (InterruptedException e) {
-        LOG.warn("Interrupted while waiting for current attempt of " + appId
-            + " to reach " + attemptState);
+        LOG.warn("Interrupted while waiting for current attempt of {} to reach {}", appId, attemptState);
       }
       if (System.currentTimeMillis() - startTime > AM_STATE_WAIT_TIMEOUT_MS) {
         String errmsg =
@@ -457,17 +453,31 @@ public class UnmanagedAMLauncher {
       // Get application report for the appId we are interested in
       ApplicationReport report = rmClient.getApplicationReport(appId);
 
-      LOG.info("Got application report from ASM for" + ", appId="
-          + appId.getId() + ", appAttemptId="
-          + report.getCurrentApplicationAttemptId() + ", clientToAMToken="
-          + report.getClientToAMToken() + ", appDiagnostics="
-          + report.getDiagnostics() + ", appMasterHost=" + report.getHost()
-          + ", appQueue=" + report.getQueue() + ", appMasterRpcPort="
-          + report.getRpcPort() + ", appStartTime=" + report.getStartTime()
-          + ", yarnAppState=" + report.getYarnApplicationState().toString()
-          + ", distributedFinalState="
-          + report.getFinalApplicationStatus().toString() + ", appTrackingUrl="
-          + report.getTrackingUrl() + ", appUser=" + report.getUser());
+      LOG.info("Got application report from ASM for, " +
+                      "appId={}, " +
+                      "appAttemptId={}, " +
+                      "clientToAMToken={}, " +
+                      "appDiagnostics={}, " +
+                      "appMasterHost={}, " +
+                      "appQueue={}, " +
+                      "appMasterRpcPort={}, " +
+                      "appStartTime={}, " +
+                      "yarnAppState={}, " +
+                      "distributedFinalState={}, " +
+                      "appTrackingUrl={}, " +
+                      "appUser={}",
+              appId.getId(),
+              report.getCurrentApplicationAttemptId(),
+              report.getClientToAMToken(),
+              report.getDiagnostics(),
+              report.getHost(),
+              report.getQueue(),
+              report.getRpcPort(),
+              report.getStartTime(),
+              report.getYarnApplicationState(),
+              report.getFinalApplicationStatus(),
+              report.getTrackingUrl(),
+              report.getUser());
 
       YarnApplicationState state = report.getYarnApplicationState();
       if (finalState.contains(state)) {
@@ -481,15 +491,12 @@ public class UnmanagedAMLauncher {
           foundAMCompletedTime = System.currentTimeMillis();
         } else if ((System.currentTimeMillis() - foundAMCompletedTime)
             > AM_STATE_WAIT_TIMEOUT_MS) {
-          LOG.warn("Waited " + AM_STATE_WAIT_TIMEOUT_MS/1000
+          LOG.warn("Waited {}"
               + " seconds after process completed for AppReport"
               + " to reach desired final state. Not waiting anymore."
-              + "CurrentState = " + state
-              + ", ExpectedStates = " + expectedFinalState.toString());
-          throw new RuntimeException("Failed to receive final expected state"
-              + " in ApplicationReport"
-              + ", CurrentState=" + state
-              + ", ExpectedStates=" + expectedFinalState.toString());
+              + "CurrentState = {}"
+              + ", ExpectedStates = {}", AM_STATE_WAIT_TIMEOUT_MS/1000, state, expectedFinalState);
+          throw new RuntimeException(String.format("Failed to receive final expected state in ApplicationReport, CurrentState=%s, ExpectedStates=%s",  state, expectedFinalState));
         }
       }
     }

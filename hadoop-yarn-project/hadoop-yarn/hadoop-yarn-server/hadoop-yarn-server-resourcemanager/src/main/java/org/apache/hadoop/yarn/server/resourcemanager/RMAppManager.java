@@ -405,7 +405,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
             .handle(new RMAppEvent(applicationId, RMAppEventType.START));
       }
     } catch (Exception e) {
-      LOG.warn("Unable to parse credentials for " + applicationId, e);
+      LOG.warn("Unable to parse credentials for {}", applicationId, e);
       // Sending APP_REJECTED is fine, since we assume that the
       // RMApp is in NEW state and thus we haven't yet informed the
       // scheduler about the existence of the application
@@ -750,11 +750,11 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
         moveApplicationAcrossQueue(applicationId,
             event.getTargetQueueForMove());
       } catch (YarnException e) {
-        LOG.warn("Move Application has failed: " + e.getMessage());
+        LOG.warn("Move Application has failed: {}", e.getMessage());
       }
       break;
     default :
-      LOG.error("Invalid eventtype " + event.getType() + ". Ignoring!");
+      LOG.error("Invalid eventtype {}. Ignoring!", event.getType());
     }
   }
 
@@ -962,9 +962,9 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
         // Placement could also fail if the user doesn't exist in system
         // skip if the user is not found during recovery.
         if (isRecovery) {
-          LOG.warn("Application placement failed for user " + user +
-              " and application " + context.getApplicationId() +
-              ", skipping placement on recovery of rm", e);
+          LOG.warn("Application placement failed for user {} and application {}, "
+                          + "skipping placement on recovery of rm",
+                  user, context.getApplicationId(), e);
           return placementContext;
         }
         throw e;

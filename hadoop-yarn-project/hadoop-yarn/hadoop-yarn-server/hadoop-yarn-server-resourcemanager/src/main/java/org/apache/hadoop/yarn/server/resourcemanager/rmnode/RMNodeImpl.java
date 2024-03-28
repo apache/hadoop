@@ -758,9 +758,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
           Math.min(maxInterval, Math.max(minInterval, newInterval));
 
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Setting heartbeatinterval to: " + newInterval
-            + " node:" + this.nodeId + " nodeUtil: " + nodeUtil
-            + " clusterUtil: " + clusterUtil);
+        LOG.debug("Setting heartbeatinterval to: {} node:{} nodeUtil: {} clusterUtil: {}",
+                newInterval, this.nodeId, nodeUtil, clusterUtil);
       }
     }
     return newInterval;

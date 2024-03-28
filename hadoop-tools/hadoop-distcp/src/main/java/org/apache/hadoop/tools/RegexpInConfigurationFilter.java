@@ -62,8 +62,7 @@ public class RegexpInConfigurationFilter extends CopyFilter {
   public boolean shouldCopy(Path path) {
     for (Pattern filter : filters) {
       if (filter.matcher(path.toString()).matches()) {
-        LOG.debug("Skipping {} as it matches the filter regex",
-                path.toString());
+        LOG.debug("Skipping {} as it matches the filter regex", path);
         return false;
       }
     }

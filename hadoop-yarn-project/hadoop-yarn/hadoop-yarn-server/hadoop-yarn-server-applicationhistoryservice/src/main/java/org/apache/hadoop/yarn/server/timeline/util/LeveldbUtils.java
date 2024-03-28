@@ -207,8 +207,7 @@ public class LeveldbUtils {
       File dbFile = new File(dbPath.toString());
       File dbBackupPath = new File(
           dbPath.toString() + BACKUP_EXT + Time.monotonicNow());
-      LOG.warn("Incurred exception while loading LevelDb database. Backing " +
-          "up at "+ dbBackupPath, ioe);
+      LOG.warn("Incurred exception while loading LevelDb database. Backing up at {}", dbBackupPath, ioe);
       FileUtils.copyDirectory(dbFile, dbBackupPath);
       factory.repair(dbFile, options);
       db = factory.open(dbFile, options);

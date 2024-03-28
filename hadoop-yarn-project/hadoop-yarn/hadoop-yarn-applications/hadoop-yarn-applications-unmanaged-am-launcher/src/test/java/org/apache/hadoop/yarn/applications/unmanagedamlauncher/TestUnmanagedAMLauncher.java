@@ -68,14 +68,14 @@ public class TestUnmanagedAMLauncher {
       yarnCluster.start();
       //get the address
       Configuration yarnClusterConfig = yarnCluster.getConfig();
-      LOG.info("MiniYARN ResourceManager published address: " +
+      LOG.info("MiniYARN ResourceManager published address: {}",
                yarnClusterConfig.get(YarnConfiguration.RM_ADDRESS));
-      LOG.info("MiniYARN ResourceManager published web address: " +
+      LOG.info("MiniYARN ResourceManager published web address: {}",
                yarnClusterConfig.get(YarnConfiguration.RM_WEBAPP_ADDRESS));
       String webapp = yarnClusterConfig.get(YarnConfiguration.RM_WEBAPP_ADDRESS);
       assertFalse(webapp.startsWith("0.0.0.0"),
           "Web app address still unbound to a host at " + webapp);
-      LOG.info("Yarn webapp is at " + webapp);
+      LOG.info("Yarn webapp is at {}", webapp);
       URL url = Thread.currentThread().getContextClassLoader()
           .getResource("yarn-site.xml");
       if (url == null) {
@@ -95,7 +95,7 @@ public class TestUnmanagedAMLauncher {
     try {
       Thread.sleep(2000);
     } catch (InterruptedException e) {
-      LOG.info("setup thread sleep interrupted. message=" + e.getMessage());
+      LOG.info("setup thread sleep interrupted. message={}", e.getMessage());
     }
   }
 
@@ -162,7 +162,7 @@ public class TestUnmanagedAMLauncher {
     LOG.info("Running Launcher");
     boolean result = launcher.run();
 
-    LOG.info("Launcher run completed. Result=" + result);
+    LOG.info("Launcher run completed. Result={}", result);
     assertTrue(result);
 
   }

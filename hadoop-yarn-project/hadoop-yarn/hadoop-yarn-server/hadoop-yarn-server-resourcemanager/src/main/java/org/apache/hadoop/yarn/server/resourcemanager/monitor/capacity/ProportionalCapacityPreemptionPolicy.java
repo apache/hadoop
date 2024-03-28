@@ -52,7 +52,6 @@ import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import java.io.IOException;
-import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -341,7 +340,7 @@ public class ProportionalCapacityPreemptionPolicy
     containerBasedPreemptOrKill(root, clusterResources);
 
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Total time used=" + (clock.getTime() - startTs) + " ms.");
+      LOG.debug("Total time used={} ms.", clock.getTime() - startTs);
     }
   }
 
@@ -370,8 +369,8 @@ public class ProportionalCapacityPreemptionPolicy
             Set<RMContainer>> e : cMap.entrySet()) {
           ApplicationAttemptId appAttemptId = e.getKey();
           if (LOG.isDebugEnabled()) {
-            LOG.debug("Send to scheduler: in app=" + appAttemptId
-                + " #containers-to-be-preemptionCandidates=" + e.getValue().size());
+            LOG.debug("Send to scheduler: in app={} #containers-to-be-preemptionCandidates={}",
+                    appAttemptId, e.getValue().size());
           }
           for (RMContainer container : e.getValue()) {
             // if we tried to preempt this for more than maxWaitTime, this
@@ -501,9 +500,8 @@ public class ProportionalCapacityPreemptionPolicy
         candidatesSelectionPolicies) {
       long startTime = 0;
       if (LOG.isDebugEnabled()) {
-        LOG.debug(MessageFormat
-            .format("Trying to use {0} to select preemption candidates",
-                selector.getClass().getName()));
+        LOG.debug("Trying to use {} to select preemption candidates",
+                selector.getClass().getName());
         startTime = clock.getTime();
       }
       Map<ApplicationAttemptId, Set<RMContainer>> curCandidates =
@@ -512,9 +510,7 @@ public class ProportionalCapacityPreemptionPolicy
       toPreemptPerSelector.putIfAbsent(selector, curCandidates);
 
       if (LOG.isDebugEnabled()) {
-        LOG.debug(MessageFormat
-            .format("{0} uses {1} millisecond to run",
-                selector.getClass().getName(), clock.getTime() - startTime));
+        LOG.debug("{} uses {} millisecond to run", selector.getClass().getName(), clock.getTime() - startTime);
         int totalSelected = 0;
         int curSelected = 0;
         for (Set<RMContainer> set : toPreempt.values()) {
@@ -523,10 +519,8 @@ public class ProportionalCapacityPreemptionPolicy
         for (Set<RMContainer> set : curCandidates.values()) {
           curSelected += set.size();
         }
-        LOG.debug(MessageFormat
-            .format("So far, total {0} containers selected to be preempted, {1}"
-                    + " containers selected this round\n",
-                totalSelected, curSelected));
+        LOG.debug("So far, total {} containers selected to be preempted, {} containers selected this round\n",
+                totalSelected, curSelected);
       }
     }
 

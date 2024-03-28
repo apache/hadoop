@@ -227,9 +227,8 @@ public class InMemorySCMStore extends SCMStore {
             // make sure we insert only one file per checksum whichever comes
             // first
             if (initialCachedEntries.containsKey(key)) {
-              LOG.warn("Key " + key + " is already mapped to file "
-                  + initialCachedEntries.get(key) + "; file " + fileName
-                  + " will not be added");
+              LOG.warn("Key {} is already mapped to file {}; file {} will not be added",
+                      key, initialCachedEntries.get(key), fileName);
             } else {
               initialCachedEntries.put(key, fileName);
             }

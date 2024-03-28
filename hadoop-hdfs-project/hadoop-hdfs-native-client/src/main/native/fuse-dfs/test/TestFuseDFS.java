@@ -87,7 +87,7 @@ public class TestFuseDFS {
 
   /** Exec the given command and assert it executed successfully */
   private static void execWaitRet(String cmd) throws IOException {
-    LOG.debug("EXEC "+cmd);
+    LOG.debug("EXEC {}", cmd);
     Process p = r.exec(cmd);
     try {
       p.waitFor();
@@ -98,19 +98,19 @@ public class TestFuseDFS {
 
   /** Exec the given command and assert it executed successfully */
   private static void execIgnoreRet(String cmd) throws IOException {
-    LOG.debug("EXEC "+cmd);
+    LOG.debug("EXEC {}", cmd);
     r.exec(cmd);
   }
 
   /** Exec the given command and assert it executed successfully */
   private static void execAssertSucceeds(String cmd) throws IOException {
-    LOG.debug("EXEC "+cmd);
+    LOG.debug("EXEC {}", cmd);
     checkProcessRet(r.exec(cmd), true);
   }
 
   /** Exec the given command, assert it returned an error code */
   private static void execAssertFails(String cmd) throws IOException {
-    LOG.debug("EXEC "+cmd);
+    LOG.debug("EXEC {}", cmd);
     checkProcessRet(r.exec(cmd), false);
   }
 
@@ -170,7 +170,7 @@ public class TestFuseDFS {
     String arch = System.getProperty("os.arch");
     String jvm = System.getProperty("java.home") + "/lib/" + arch + "/server";
     String lp = System.getProperty("LD_LIBRARY_PATH")+":"+libHdfs+":"+jvm;
-    LOG.debug("LD_LIBRARY_PATH=" + lp);
+    LOG.debug("LD_LIBRARY_PATH={}", lp);
 
     String nameNode = 
       "dfs://" + uri.getHost() + ":" + String.valueOf(uri.getPort());

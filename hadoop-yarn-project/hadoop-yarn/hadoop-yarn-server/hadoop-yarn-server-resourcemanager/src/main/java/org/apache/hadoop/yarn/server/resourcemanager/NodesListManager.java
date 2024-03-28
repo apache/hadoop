@@ -212,11 +212,11 @@ public class NodesListManager extends CompositeService implements
       return;
     }
 
-    LOG.debug("hostsReader: in=" +
-        conf.get(YarnConfiguration.RM_NODES_INCLUDE_FILE_PATH,
-        YarnConfiguration.DEFAULT_RM_NODES_INCLUDE_FILE_PATH) + " out=" +
-        conf.get(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH,
-            YarnConfiguration.DEFAULT_RM_NODES_EXCLUDE_FILE_PATH));
+    LOG.debug("hostsReader: in={} out={}",
+            conf.get(YarnConfiguration.RM_NODES_INCLUDE_FILE_PATH,
+                    YarnConfiguration.DEFAULT_RM_NODES_INCLUDE_FILE_PATH),
+            conf.get(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH,
+                    YarnConfiguration.DEFAULT_RM_NODES_EXCLUDE_FILE_PATH));
 
     HostDetails hostDetails;
     if (graceful) {
@@ -225,10 +225,10 @@ public class NodesListManager extends CompositeService implements
       hostDetails = hostsReader.getHostDetails();
     }
     for (String include : hostDetails.getIncludedHosts()) {
-      LOG.debug("include: " + include);
+      LOG.debug("include: {}", include);
     }
     for (String exclude : hostDetails.getExcludedHosts()) {
-      LOG.debug("exclude: " + exclude);
+      LOG.debug("exclude: {}", exclude);
     }
   }
 
@@ -499,9 +499,8 @@ public class NodesListManager extends CompositeService implements
                   CachedResolver.this.expiryIntervalMs) {
             iterator.remove();
             if (LOG.isDebugEnabled()) {
-              LOG.debug("[" + entry.getKey() + ":" + entry.getValue().ip +
-                  "] Expired after " +
-                  CachedResolver.this.expiryIntervalMs / 1000 + " secs");
+              LOG.debug("[{}:{}] Expired after {} secs",
+                      entry.getKey(), entry.getValue().ip, CachedResolver.this.expiryIntervalMs / 1000);
             }
           }
         }
@@ -558,7 +557,7 @@ public class NodesListManager extends CompositeService implements
       break;
 
     default:
-      LOG.error("Ignoring invalid eventtype " + event.getType());
+      LOG.error("Ignoring invalid eventtype {}", event.getType());
     }
     // remove the cache of normalized hostname if enabled
     if (resolver instanceof CachedResolver) {
@@ -695,7 +694,7 @@ public class NodesListManager extends CompositeService implements
             + defaultDecTimeoutSecs);
       }
     } catch (Exception e) {
-      LOG.warn("Error readDecommissioningTimeout " + e.getMessage());
+      LOG.warn("Error readDecommissioningTimeout {}", e.getMessage());
     }
     return defaultDecTimeoutSecs;
   }

@@ -453,7 +453,7 @@ public class Client {
       try {
         Log4jPropertyHelper.updateLog4jConfiguration(Client.class, log4jPath);
       } catch (Exception e) {
-        LOG.warn("Can not set up custom log4j properties. " + e);
+        LOG.warn("Can not set up custom log4j properties. ", e);
       }
     }
 
@@ -683,18 +683,13 @@ public class Client {
     clientStartTime = System.currentTimeMillis();
 
     YarnClusterMetrics clusterMetrics = yarnClient.getYarnClusterMetrics();
-    LOG.info("Got Cluster metric info from ASM" 
-        + ", numNodeManagers=" + clusterMetrics.getNumNodeManagers());
+    LOG.info("Got Cluster metric info from ASM, numNodeManagers={}", clusterMetrics.getNumNodeManagers());
 
     List<NodeReport> clusterNodeReports = yarnClient.getNodeReports(
         NodeState.RUNNING);
     LOG.info("Got Cluster node info from ASM");
     for (NodeReport node : clusterNodeReports) {
-      LOG.info("Got node report from ASM for"
-          + ", nodeId=" + node.getNodeId() 
-          + ", nodeAddress=" + node.getHttpAddress()
-          + ", nodeRackName=" + node.getRackName()
-          + ", nodeNumContainers=" + node.getNumContainers());
+      LOG.info("Got node report from ASM for, nodeId={}, nodeAddress={}, nodeRackName={}, nodeNumContainers={}", node.getNodeId(), node.getHttpAddress(), node.getRackName(), node.getNumContainers());
     }
 
     QueueInfo queueInfo = yarnClient.getQueueInfo(this.amQueue);
@@ -704,19 +699,15 @@ public class Client {
               this.amQueue));
     }
 
-    LOG.info("Queue info"
-        + ", queueName=" + queueInfo.getQueueName()
-        + ", queueCurrentCapacity=" + queueInfo.getCurrentCapacity()
-        + ", queueMaxCapacity=" + queueInfo.getMaximumCapacity()
-        + ", queueApplicationCount=" + queueInfo.getApplications().size()
-        + ", queueChildQueueCount=" + queueInfo.getChildQueues().size());
+    LOG.info("Queue info, queueName={}, queueCurrentCapacity={}, queueMaxCapacity={}, "
+            + "queueApplicationCount={}, queueChildQueueCount={}",
+            queueInfo.getQueueName(), queueInfo.getCurrentCapacity(), queueInfo.getMaximumCapacity(),
+            queueInfo.getApplications().size(), queueInfo.getChildQueues().size());
 
     List<QueueUserACLInfo> listAclInfo = yarnClient.getQueueAclsInfo();
     for (QueueUserACLInfo aclInfo : listAclInfo) {
       for (QueueACL userAcl : aclInfo.getUserAcls()) {
-        LOG.info("User ACL Info for Queue"
-            + ", queueName=" + aclInfo.getQueueName()
-            + ", userAcl=" + userAcl.name());
+        LOG.info("User ACL Info for Queue, queueName={}, userAcl={}" , aclInfo.getQueueName(), userAcl.name());
       }
     }
 
@@ -759,23 +750,22 @@ public class Client {
     // Memory ask has to be a multiple of min and less than max. 
     // Dump out information about cluster capability as seen by the resource manager
     long maxMem = appResponse.getMaximumResourceCapability().getMemorySize();
-    LOG.info("Max mem capability of resources in this cluster " + maxMem);
+    LOG.info("Max mem capability of resources in this cluster {}", maxMem);
 
     // A resource ask cannot exceed the max. 
     if (amMemory > maxMem) {
-      LOG.info("AM memory specified above max threshold of cluster. Using max value."
-          + ", specified=" + amMemory
-          + ", max=" + maxMem);
+      LOG.info("AM memory specified above max threshold of cluster. Using max value. "
+          + "Specified={}, max={}", amMemory, maxMem);
       amMemory = maxMem;
     }
 
     int maxVCores = appResponse.getMaximumResourceCapability().getVirtualCores();
-    LOG.info("Max virtual cores capability of resources in this cluster " + maxVCores);
+    LOG.info("Max virtual cores capability of resources in this cluster {}", maxVCores);
     
     if (amVCores > maxVCores) {
       LOG.info("AM virtual cores specified above max threshold of cluster. " 
-          + "Using max value." + ", specified=" + amVCores 
-          + ", max=" + maxVCores);
+          + "Using max value. Specified={}, max={}",
+              amVCores, maxVCores);
       amVCores = maxVCores;
     }
     
@@ -985,7 +975,7 @@ public class Client {
       // Encode the spec to avoid passing special chars via shell arguments.
       String encodedSpec = Base64.getEncoder()
           .encodeToString(placementSpec.getBytes(StandardCharsets.UTF_8));
-      LOG.info("Encode placement spec: " + encodedSpec);
+      LOG.info("Encode placement spec: {}", encodedSpec);
       vargs.add("--placement_spec " + encodedSpec);
     }
     if (null != nodeLabelExpression) {
@@ -1020,7 +1010,7 @@ public class Client {
       command.append(str).append(" ");
     }
 
-    LOG.info("Completed setting up app master command " + command.toString());
+    LOG.info("Completed setting up app master command {}", command);
     List<String> commands = new ArrayList<String>();
     commands.add(command.toString());
 
@@ -1048,7 +1038,7 @@ public class Client {
           fs.addDelegationTokens(tokenRenewer, rmCredentials);
       if (tokens != null) {
         for (Token<?> token : tokens) {
-          LOG.info("Got dt for " + fs.getUri() + "; " + token);
+          LOG.info("Got dt for {}; {}", fs.getUri(), token);
         }
       }
     }
@@ -1146,17 +1136,28 @@ public class Client {
       ApplicationReport report = yarnClient.getApplicationReport(appId);
 
       LOG.info("Got application report from ASM for"
-          + ", appId=" + appId.getId()
-          + ", clientToAMToken=" + report.getClientToAMToken()
-          + ", appDiagnostics=" + report.getDiagnostics()
-          + ", appMasterHost=" + report.getHost()
-          + ", appQueue=" + report.getQueue()
-          + ", appMasterRpcPort=" + report.getRpcPort()
-          + ", appStartTime=" + report.getStartTime()
-          + ", yarnAppState=" + report.getYarnApplicationState().toString()
-          + ", distributedFinalState=" + report.getFinalApplicationStatus().toString()
-          + ", appTrackingUrl=" + report.getTrackingUrl()
-          + ", appUser=" + report.getUser());
+          + ", appId={}"
+          + ", clientToAMToken={}"
+          + ", appDiagnostics={}"
+          + ", appMasterHost={}"
+          + ", appQueue={}"
+          + ", appMasterRpcPort={}"
+          + ", appStartTime={}"
+          + ", yarnAppState={}"
+          + ", distributedFinalState={}"
+          + ", appTrackingUrl={}"
+          + ", appUser={}",
+          appId.getId(),
+          report.getClientToAMToken(),
+          report.getDiagnostics(),
+          report.getHost(),
+          report.getQueue(),
+          report.getRpcPort(),
+          report.getStartTime(),
+          report.getYarnApplicationState().toString(),
+          report.getFinalApplicationStatus().toString(),
+          report.getTrackingUrl(),
+          report.getUser());
 
       YarnApplicationState state = report.getYarnApplicationState();
       FinalApplicationStatus dsStatus = report.getFinalApplicationStatus();
@@ -1261,8 +1262,7 @@ public class Client {
       timelineClient.init(conf);
       timelineClient.start();
     } else {
-      LOG.warn("Cannot put the domain " + domainId +
-          " because the timeline service is not enabled");
+      LOG.warn("Cannot put the domain {} because the timeline service is not enabled", domainId);
       return;
     }
     try {
@@ -1275,8 +1275,8 @@ public class Client {
       domain.setWriters(
           modifyACLs != null && modifyACLs.length() > 0 ? modifyACLs : " ");
       timelineClient.putDomain(domain);
-      LOG.info("Put the timeline domain: " +
-          TimelineUtils.dumpTimelineRecordtoJSON(domain));
+      LOG.info("Put the timeline domain: {}",
+              TimelineUtils.dumpTimelineRecordtoJSON(domain));
     } catch (Exception e) {
       LOG.error("Error when putting the timeline domain", e);
     } finally {
@@ -1322,19 +1322,17 @@ public class Client {
     // set amMemory because it's used to set Xmx param
     if (amMemory == -1) {
       amMemory = DEFAULT_AM_MEMORY;
-      LOG.warn("AM Memory not specified, use " + DEFAULT_AM_MEMORY
-          + " mb as AM memory");
+      LOG.warn("AM Memory not specified, use {} mb as AM memory", DEFAULT_AM_MEMORY);
     }
     if (amVCores == -1) {
       amVCores = DEFAULT_AM_VCORES;
-      LOG.warn("AM vcore not specified, use " + DEFAULT_AM_VCORES
-          + " mb as AM vcores");
+      LOG.warn("AM vcore not specified, use {} mb as AM vcores", DEFAULT_AM_VCORES);
     }
     capability.setMemorySize(amMemory);
     capability.setVirtualCores(amVCores);
     appContext.getAMContainerResourceRequests().get(0).setCapability(
         capability);
-    LOG.warn("AM Resource capability=" + capability);
+    LOG.warn("AM Resource capability={}", capability);
   }
 
   private void setContainerResources(Map<String, Resource> profiles,

@@ -575,11 +575,9 @@ public final class SecurityUtil {
       long elapsedMs = lookupTimer.stop().now(TimeUnit.MILLISECONDS);
 
       if (elapsedMs >= slowLookupThresholdMs) {
-        LOG.warn("Slow name lookup for " + hostname + ". Took " + elapsedMs +
-            " ms.");
+        LOG.warn("Slow name lookup for {}. Took {} ms.", hostname, elapsedMs);
       } else if (LOG.isTraceEnabled()) {
-        LOG.trace("Name lookup for " + hostname + " took " + elapsedMs +
-            " ms.");
+        LOG.trace("Name lookup for {} took {} ms.", hostname, elapsedMs);
       }
       return result;
     } else {

@@ -184,8 +184,7 @@ class RollingLevelDB {
 
   protected void setNextRollingTimeMillis(final long timestamp) {
     this.nextRollingCheckMillis = timestamp;
-    LOG.info("Next rolling time for " + getName() + " is "
-        + fdf.format(nextRollingCheckMillis));
+    LOG.info("Next rolling time for {} is {}", getName(), fdf.format(nextRollingCheckMillis));
   }
 
   public void init(final Configuration config) throws Exception {
@@ -234,8 +233,7 @@ class RollingLevelDB {
         Long dbStartTime = sdf.parse(dbName).getTime();
         initRollingLevelDB(dbStartTime, status.getPath());
       } catch (ParseException pe) {
-        LOG.warn("Failed to initialize rolling leveldb " + dbName + " for "
-            + getName());
+        LOG.warn("Failed to initialize rolling leveldb {} for {}", dbName, getName());
       }
     }
   }
@@ -266,8 +264,7 @@ class RollingLevelDB {
       String dbName = fdf.format(dbStartTime);
       LOG.info("Added rolling leveldb instance " + dbName + " to " + getName());
     } catch (IOException ioe) {
-      LOG.warn("Failed to open rolling leveldb instance :"
-          + new File(rollingInstanceDBPath.toUri().getPath()), ioe);
+      LOG.warn("Failed to open rolling leveldb instance :{}", new File(rollingInstanceDBPath.toUri().getPath()), ioe);
     }
   }
 
@@ -351,10 +348,10 @@ class RollingLevelDB {
       String dbName = fdf.format(entry.getKey());
       Path path = new Path(rollingDBPath, getName() + "." + dbName);
       try {
-        LOG.info("Removing old db directory contents in " + path);
+        LOG.info("Removing old db directory contents in {}", path);
         lfs.delete(path, true);
       } catch (IOException ioe) {
-        LOG.warn("Failed to evict old db " + path, ioe);
+        LOG.warn("Failed to evict old db {}", path, ioe);
       }
       iterator.remove();
     }

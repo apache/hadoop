@@ -364,10 +364,10 @@ public interface SSLHostnameVerifier extends javax.net.ssl.HostnameVerifier {
                           final boolean strictWithSubDomains)
             throws SSLException {
             if (LOG.isTraceEnabled()) {
-                LOG.trace("Hosts:{}, CNs:{} subjectAlts:{}, ie6:{}, " +
-                    "strictWithSubDomains{}", Arrays.toString(hosts),
-                    Arrays.toString(cns), Arrays.toString(subjectAlts), ie6,
-                    strictWithSubDomains);
+                LOG.trace("Hosts:{}, CNs:{} subjectAlts:{}, ie6:{}, strictWithSubDomains{}",
+                        Arrays.toString(hosts),
+                        Arrays.toString(cns), Arrays.toString(subjectAlts), ie6,
+                        strictWithSubDomains);
             }
             // Build up lists of allowed hosts For logging/debugging purposes.
             StringBuffer buf = new StringBuffer(32);

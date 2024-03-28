@@ -358,8 +358,8 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
         if (uploadedFilePathsInThisCycle.size() > 0) {
           uploadedLogsInThisCycle = true;
           if (enableLocalCleanup) {
-            LOG.trace("Uploaded the following files for {}: {}", container,
-                uploadedFilePathsInThisCycle.toString());
+            LOG.trace("Uploaded the following files for {}: {}",
+                    container, uploadedFilePathsInThisCycle);
             List<Path> uploadedFilePathsInThisCycleList = new ArrayList<>();
             uploadedFilePathsInThisCycleList.addAll(uploadedFilePathsInThisCycle);
             if (LOG.isDebugEnabled()) {

@@ -116,8 +116,7 @@ class CleanerTask implements Runnable {
 
     try {
       if (!fs.exists(root)) {
-        LOG.error("The shared cache root " + location + " was not found. "
-            + "The cleaner task will do nothing.");
+        LOG.error("The shared cache root {} was not found. The cleaner task will do nothing.", location);
         return;
       }
 
@@ -162,9 +161,7 @@ class CleanerTask implements Runnable {
           if (resource.isDirectory()) {
             processSingleResource(resource);
           } else {
-            LOG.warn("Invalid file at path " + resource.getPath().toString()
-                +
-                " when a directory was expected");
+            LOG.warn("Invalid file at path {} when a directory was expected", resource.getPath().toString());
           }
           // add sleep time between cleaning each directory if it is non-zero
           if (sleepTime > 0) {
@@ -209,7 +206,7 @@ class CleanerTask implements Runnable {
           resourceStatus = ResourceStatus.DELETED;
         }
       } catch (IOException e) {
-        LOG.error("Error while processing a shared cache resource: " + path, e);
+        LOG.error("Error while processing a shared cache resource: {}", path, e);
       }
     } else {
       // this is the path to the cache resource directory
@@ -239,7 +236,7 @@ class CleanerTask implements Runnable {
               resourceStatus = ResourceStatus.DELETED;
             } else {
               LOG.error("Failed to remove path from the file system."
-                  + " Skipping this resource: " + path);
+                  + " Skipping this resource: {}", path);
               resourceStatus = ResourceStatus.ERROR;
             }
           } else {
@@ -249,8 +246,7 @@ class CleanerTask implements Runnable {
           }
         } catch (IOException e) {
           LOG.error(
-              "Failed to remove path from the file system. Skipping this resource: "
-                  + path, e);
+              "Failed to remove path from the file system. Skipping this resource: {}", path, e);
           resourceStatus = ResourceStatus.ERROR;
         }
       } else {
@@ -270,8 +266,8 @@ class CleanerTask implements Runnable {
       metrics.reportAFileError();
       break;
     default:
-      LOG.error("Cleaner encountered an invalid status (" + resourceStatus
-          + ") while processing resource: " + path.getName());
+      LOG.error("Cleaner encountered an invalid status ({}) while processing resource: {}",
+              resourceStatus, path.getName());
     }
   }
 
@@ -287,8 +283,7 @@ class CleanerTask implements Runnable {
     } else {
       // we were unable to remove it for some reason: it's best to leave
       // it at that
-      LOG.error("We were not able to rename the directory to "
-          + renamedPath.toString() + ". We will leave it intact.");
+      LOG.error("We were not able to rename the directory to {}. We will leave it intact.", renamedPath);
     }
     return false;
   }

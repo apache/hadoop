@@ -238,7 +238,7 @@ public class AMRMTokenSecretManager extends
     this.writeLock.lock();
     try {
       AMRMTokenIdentifier identifier = token.decodeIdentifier();
-      LOG.debug("Adding password for " + identifier.getApplicationAttemptId());
+      LOG.debug("Adding password for {}", identifier.getApplicationAttemptId());
       appAttemptSet.add(identifier.getApplicationAttemptId());
     } finally {
       this.writeLock.unlock();

@@ -285,7 +285,7 @@ public abstract class PipeMapRed {
 
   void envPut(Properties env, String name, String value) {
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Add  env entry:" + name + "=" + value);
+      LOG.debug("Add  env entry:{}={}", name, value);
     }
     env.put(name, value);
   }

@@ -190,12 +190,11 @@ public class ShellCommandFencer
         f.setAccessible(true);
         return String.valueOf(f.getInt(p));
       } else {
-        LOG.trace("Unable to determine pid for " + p
-            + " since it is not a UNIXProcess");
+        LOG.trace("Unable to determine pid for {} since it is not a UNIXProcess", p);
         return null;
       }
     } catch (Throwable t) {
-      LOG.trace("Unable to determine pid for " + p, t);
+      LOG.trace("Unable to determine pid for {}", p, t);
       return null;
     }
   }

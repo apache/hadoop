@@ -1446,7 +1446,7 @@ public class TestEncryptionZones {
 
     Credentials creds = new Credentials();
     final Token<?> tokens[] = dfs.addDelegationTokens("JobTracker", creds);
-    LOG.debug("Delegation tokens: " + Arrays.asList(tokens));
+    LOG.debug("Delegation tokens: {}", Arrays.asList(tokens));
     Assert.assertEquals(2, tokens.length);
     Assert.assertEquals(tokens[1], testToken);
     Assert.assertEquals(2, creds.numberOfTokens());

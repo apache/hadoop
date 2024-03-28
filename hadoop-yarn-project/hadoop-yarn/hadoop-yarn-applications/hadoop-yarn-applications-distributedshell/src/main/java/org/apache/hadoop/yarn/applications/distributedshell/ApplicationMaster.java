@@ -427,7 +427,7 @@ public class ApplicationMaster {
     LOG.info("Dump debug output");
     Map<String, String> envs = System.getenv();
     for (Map.Entry<String, String> env : envs.entrySet()) {
-      LOG.info("System env: key=" + env.getKey() + ", val=" + env.getValue());
+      LOG.info("System env: key={}, val={}", env.getKey(), env.getValue());
       System.out.println("System env: key=" + env.getKey() + ", val="
           + env.getValue());
     }
@@ -439,7 +439,7 @@ public class ApplicationMaster {
       buf = new BufferedReader(new StringReader(lines));
       String line = "";
       while ((line = buf.readLine()) != null) {
-        LOG.info("System CWD content: " + line);
+        LOG.info("System CWD content: {}", line);
         System.out.println("System CWD content: " + line);
       }
     } catch (IOException e) {
@@ -532,7 +532,7 @@ public class ApplicationMaster {
         Log4jPropertyHelper.updateLog4jConfiguration(ApplicationMaster.class,
             log4jPath);
       } catch (Exception e) {
-        LOG.warn("Can not set up custom log4j properties. " + e);
+        LOG.warn("Can not set up custom log4j properties. ", e);
       }
     }
 
@@ -603,10 +603,7 @@ public class ApplicationMaster {
           + " not set in the environment");
     }
 
-    LOG.info("Application master for app" + ", appId="
-        + appAttemptID.getApplicationId().getId() + ", clustertimestamp="
-        + appAttemptID.getApplicationId().getClusterTimestamp()
-        + ", attemptId=" + appAttemptID.getAttemptId());
+    LOG.info("Application master for app, appId={}, clustertimestamp={}, attemptId={}", appAttemptID.getApplicationId().getId(),appAttemptID.getApplicationId().getClusterTimestamp(), appAttemptID.getAttemptId());
 
     if (!fileExist(shellCommandPath)
         && envs.get(DSConstants.DISTRIBUTEDSHELLSCRIPTLOCATION).isEmpty()) {
@@ -653,9 +650,7 @@ public class ApplicationMaster {
       }
       if (!scriptPath.isEmpty()
           && (shellScriptPathTimestamp <= 0 || shellScriptPathLen <= 0)) {
-        LOG.error("Illegal values in env for shell script path" + ", path="
-            + scriptPath + ", len=" + shellScriptPathLen + ", timestamp="
-            + shellScriptPathTimestamp);
+        LOG.error("Illegal values in env for shell script path, path={}, len={}, timestamp={}", scriptPath, shellScriptPathLen, shellScriptPathTimestamp);
         throw new IllegalArgumentException(
             "Illegal values in env for shell script path");
       }
@@ -768,7 +763,7 @@ public class ApplicationMaster {
     byte[] decodedBytes = decoder.decode(
         placementSpecifications.getBytes(StandardCharsets.UTF_8));
     String decodedSpec = new String(decodedBytes, StandardCharsets.UTF_8);
-    LOG.info("Decode placement spec: " + decodedSpec);
+    LOG.info("Decode placement spec: {}", decodedSpec);
     return decodedSpec;
   }
 
@@ -886,30 +881,29 @@ public class ApplicationMaster {
     // Dump out information about cluster capability as seen by the
     // resource manager
     long maxMem = response.getMaximumResourceCapability().getMemorySize();
-    LOG.info("Max mem capability of resources in this cluster " + maxMem);
+    LOG.info("Max mem capability of resources in this cluster {}", maxMem);
     
     int maxVCores = response.getMaximumResourceCapability().getVirtualCores();
-    LOG.info("Max vcores capability of resources in this cluster " + maxVCores);
+    LOG.info("Max vcores capability of resources in this cluster {}", maxVCores);
 
     // A resource ask cannot exceed the max.
     if (containerMemory > maxMem) {
       LOG.info("Container memory specified above max threshold of cluster."
-          + " Using max value." + ", specified=" + containerMemory + ", max="
-          + maxMem);
+          + " Using max value." + ", specified={}, max={}", containerMemory, maxMem);
       containerMemory = maxMem;
     }
 
     if (containerVirtualCores > maxVCores) {
       LOG.info("Container virtual cores specified above max threshold of cluster."
-          + " Using max value." + ", specified=" + containerVirtualCores + ", max="
-          + maxVCores);
+          + " Using max value. Specified={}, max={}",
+              containerVirtualCores, maxVCores);
       containerVirtualCores = maxVCores;
     }
 
     List<Container> previousAMRunningContainers =
         response.getContainersFromPreviousAttempts();
-    LOG.info(appAttemptID + " received " + previousAMRunningContainers.size()
-      + " previous attempts' running containers on AM registration.");
+    LOG.info("{} received {} previous attempts' running containers on AM registration.",
+            appAttemptID, previousAMRunningContainers.size());
     for(Container container: previousAMRunningContainers) {
       launchedContainers.add(container.getId());
     }
@@ -931,11 +925,10 @@ public class ApplicationMaster {
         amRMClient.addContainerRequest(containerAsk);
       }
     } else {
-      LOG.info("placementSpecs to create req:" + placementSpecs);
+      LOG.info("placementSpecs to create req:{}", placementSpecs);
       List<SchedulingRequest> schedReqs = new ArrayList<>();
       for (PlacementSpec pSpec : this.placementSpecs.values()) {
-        LOG.info("placementSpec :" + pSpec + ", container:" + pSpec
-            .getNumContainers());
+        LOG.info("placementSpec :{}, container:{}", pSpec, pSpec.getNumContainers());
         for (int i = 0; i < pSpec.getNumContainers(); i++) {
           SchedulingRequest sr = setupSchedulingRequest(pSpec);
           schedReqs.add(sr);
@@ -1017,7 +1010,7 @@ public class ApplicationMaster {
       try {
         launchThread.join(10000);
       } catch (InterruptedException e) {
-        LOG.info("Exception thrown in thread join: " + e.getMessage());
+        LOG.info("Exception thrown in thread join: {}", e.getMessage());
         e.printStackTrace();
       }
     }
@@ -1073,8 +1066,7 @@ public class ApplicationMaster {
     @SuppressWarnings("unchecked")
     @Override
     public void onContainersCompleted(List<ContainerStatus> completedContainers) {
-      LOG.info("Got response from RM for container ask, completedCnt="
-          + completedContainers.size());
+      LOG.info("Got response from RM for container ask, completedCnt={}", completedContainers.size());
       for (ContainerStatus containerStatus : completedContainers) {
         String message = appAttemptID + " got container status for containerID="
             + containerStatus.getContainerId() + ", state="
@@ -1093,9 +1085,8 @@ public class ApplicationMaster {
         // ignore containers we know nothing about - probably from a previous
         // attempt
         if (!launchedContainers.contains(containerStatus.getContainerId())) {
-          LOG.info("Ignoring completed status of "
-              + containerStatus.getContainerId()
-              + "; unknown container(probably launched by previous attempt)");
+          LOG.info("Ignoring completed status of {}; unknown container(probably launched by previous attempt)",
+                  containerStatus.getContainerId());
           continue;
         }
 
@@ -1368,12 +1359,12 @@ public class ApplicationMaster {
     @Override
     public void onGetContainerStatusError(
         ContainerId containerId, Throwable t) {
-      LOG.error("Failed to query the status of Container " + containerId);
+      LOG.error("Failed to query the status of Container {}", containerId);
     }
 
     @Override
     public void onStopContainerError(ContainerId containerId, Throwable t) {
-      LOG.error("Failed to stop Container " + containerId);
+      LOG.error("Failed to stop Container {}", containerId);
       containers.remove(containerId);
     }
 
@@ -1464,8 +1455,8 @@ public class ApplicationMaster {
         try {
           yarnUrl = URL.fromURI(new URI(renamedScriptPath.toString()));
         } catch (URISyntaxException e) {
-          LOG.error("Error when trying to use shell script path specified"
-              + " in env, path=" + renamedScriptPath, e);
+          LOG.error("Error when trying to use shell script path specified in env, path={}",
+                  renamedScriptPath, e);
           // A failure scenario on bad input such as invalid shell script path
           // We know we cannot continue launching the container
           // so we should release it.
@@ -1648,8 +1639,8 @@ public class ApplicationMaster {
               container.getId().getApplicationAttemptId(),
               entity));
     } catch (YarnException | IOException | ClientHandlerException e) {
-      LOG.error("Container start event could not be published for "
-          + container.getId().toString(), e);
+      LOG.error("Container start event could not be published for {}",
+              container.getId().toString(), e);
     }
   }
 
@@ -1678,8 +1669,8 @@ public class ApplicationMaster {
               container.getContainerId().getApplicationAttemptId(),
               entity));
     } catch (YarnException | IOException | ClientHandlerException e) {
-      LOG.error("Container end event could not be published for "
-          + container.getContainerId().toString(), e);
+      LOG.error("Container end event could not be published for {}",
+              container.getContainerId().toString(), e);
     }
   }
 
@@ -1713,10 +1704,8 @@ public class ApplicationMaster {
       TimelinePutResponse response = timelineClient.putEntities(entity);
       processTimelineResponseErrors(response);
     } catch (YarnException | IOException | ClientHandlerException e) {
-      LOG.error("App Attempt "
-          + (appEvent.equals(DSEvent.DS_APP_ATTEMPT_START) ? "start" : "end")
-          + " event could not be published for "
-          + appAttemptID, e);
+      LOG.error("App Attempt {} event could not be published for {}",
+              (appEvent.equals(DSEvent.DS_APP_ATTEMPT_START) ? "start" : "end"), appAttemptID, e);
     }
   }
 
@@ -1728,9 +1717,8 @@ public class ApplicationMaster {
     } else {
       for (TimelinePutResponse.TimelinePutError error : errors) {
         LOG.error(
-            "Error when publishing entity [" + error.getEntityType() + ","
-                + error.getEntityId() + "], server side error code: "
-                + error.getErrorCode());
+            "Error when publishing entity [{},{}], server side error code: {}",
+                error.getEntityType(), error.getEntityId(), error.getErrorCode());
       }
     }
     return response;
@@ -1793,9 +1781,8 @@ public class ApplicationMaster {
         }
       });
     } catch (Exception e) {
-      LOG.error("Container start event could not be published for "
-          + container.getId().toString(),
-          e instanceof UndeclaredThrowableException ? e.getCause() : e);
+      LOG.error("Container start event could not be published for {}",
+              container.getId().toString(), e instanceof UndeclaredThrowableException ? e.getCause() : e);
     }
   }
 
@@ -1880,9 +1867,8 @@ public class ApplicationMaster {
         }
       });
     } catch (Exception e) {
-      LOG.error("Container end event could not be published for "
-          + container.getContainerId().toString(),
-          e instanceof UndeclaredThrowableException ? e.getCause() : e);
+      LOG.error("Container end event could not be published for {}",
+              container.getContainerId().toString(), e instanceof UndeclaredThrowableException ? e.getCause() : e);
     }
   }
 
@@ -1916,10 +1902,8 @@ public class ApplicationMaster {
         }
       });
     } catch (Exception e) {
-      LOG.error("App Attempt "
-          + (appEvent.equals(DSEvent.DS_APP_ATTEMPT_START) ? "start" : "end")
-          + " event could not be published for "
-          + appAttemptID,
+      LOG.error("App Attempt {} event could not be published for {}",
+              (appEvent.equals(DSEvent.DS_APP_ATTEMPT_START) ? "start" : "end"), appAttemptID,
           e instanceof UndeclaredThrowableException ? e.getCause() : e);
     }
   }

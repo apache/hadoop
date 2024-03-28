@@ -435,8 +435,8 @@ public class SchedulerUtils {
         getZeroResources(availableResource);
 
     if (LOG.isTraceEnabled()) {
-      LOG.trace("Resources with zero amount: "
-          + Arrays.toString(resourcesWithZeroAmount.entrySet().toArray()));
+      LOG.trace("Resources with zero amount: {}",
+              Arrays.toString(resourcesWithZeroAmount.entrySet().toArray()));
     }
 
     List<ResourceInformation> invalidResources = Lists.newArrayList();

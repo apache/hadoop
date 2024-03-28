@@ -162,7 +162,7 @@ public class ReadaheadPool {
         identifier, fd, off, len);
     pool.execute(req);
     if (LOG.isTraceEnabled()) {
-      LOG.trace("submit readahead: " + req);
+      LOG.trace("submit readahead: {}", req);
     }
     return req;
   }

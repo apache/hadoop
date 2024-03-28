@@ -105,24 +105,21 @@ public final class DomainSocketWatcher implements Closeable {
       try {
         kicked = false;
         if (LOG.isTraceEnabled()) {
-          LOG.trace(this + ": NotificationHandler: doing a read on " +
-            sock.fd);
+          LOG.trace("{}: NotificationHandler: doing a read on {}", this, sock.fd);
         }
         if (sock.getInputStream().read() == -1) {
           if (LOG.isTraceEnabled()) {
-            LOG.trace(this + ": NotificationHandler: got EOF on " + sock.fd);
+            LOG.trace("{}: NotificationHandler: got EOF on {}", this, sock.fd);
           }
           throw new EOFException();
         }
         if (LOG.isTraceEnabled()) {
-          LOG.trace(this + ": NotificationHandler: read succeeded on " +
-            sock.fd);
+          LOG.trace("{}: NotificationHandler: read succeeded on {}", this, sock.fd);
         }
         return false;
       } catch (IOException e) {
         if (LOG.isTraceEnabled()) {
-          LOG.trace(this + ": NotificationHandler: setting closed to " +
-              "true for " + sock.fd);
+          LOG.trace("{}: NotificationHandler: setting closed to true for {}", this, sock.fd);
         }
         closed = true;
         return true;
@@ -386,7 +383,7 @@ public final class DomainSocketWatcher implements Closeable {
   private boolean sendCallback(String caller, TreeMap<Integer, Entry> entries,
       FdSet fdSet, int fd) {
     if (LOG.isTraceEnabled()) {
-      LOG.trace(this + ": " + caller + " starting sendCallback for fd " + fd);
+      LOG.trace("{}: {} starting sendCallback for fd {}", this, caller, fd);
     }
     Entry entry = entries.get(fd);
     Preconditions.checkNotNull(entry,
@@ -395,13 +392,11 @@ public final class DomainSocketWatcher implements Closeable {
     DomainSocket sock = entry.getDomainSocket();
     if (entry.getHandler().handle(sock)) {
       if (LOG.isTraceEnabled()) {
-        LOG.trace(this + ": " + caller + ": closing fd " + fd +
-            " at the request of the handler.");
+        LOG.trace("{}: {}: closing fd {} at the request of the handler.", this, caller, fd);
       }
       if (toRemove.remove(fd) != null) {
         if (LOG.isTraceEnabled()) {
-          LOG.trace(this + ": " + caller + " : sendCallback processed fd " +
-            fd  + " in toRemove.");
+          LOG.trace("{}: {}: sendCallback processed fd {} in toRemove.", this, caller, fd);
         }
       }
       try {
@@ -416,8 +411,7 @@ public final class DomainSocketWatcher implements Closeable {
       return true;
     } else {
       if (LOG.isTraceEnabled()) {
-        LOG.trace(this + ": " + caller + ": sendCallback not " +
-            "closing fd " + fd);
+        LOG.trace("{}: {}: sendCallback not closing fd {}", this, caller, fd);
       }
       return false;
     }
@@ -469,7 +463,7 @@ public final class DomainSocketWatcher implements Closeable {
                     this + ": tried to watch a file descriptor that we " +
                     "were already watching: " + sock);
                 if (LOG.isTraceEnabled()) {
-                  LOG.trace(this + ": adding fd " + sock.fd);
+                  LOG.trace("{}: adding fd {}", this, sock.fd);
                 }
                 fdSet.add(sock.fd);
               }
@@ -554,9 +548,8 @@ public final class DomainSocketWatcher implements Closeable {
     }
     fdSet.add(notificationSockets[1].fd);
     if (LOG.isTraceEnabled()) {
-      LOG.trace(this + ": adding notificationSocket " +
-          notificationSockets[1].fd + ", connected to " +
-          notificationSockets[0].fd);
+      LOG.trace("{}: adding notificationSocket {}, connected to {}",
+              this, notificationSockets[1].fd,  notificationSockets[0].fd);
     }
   }
 

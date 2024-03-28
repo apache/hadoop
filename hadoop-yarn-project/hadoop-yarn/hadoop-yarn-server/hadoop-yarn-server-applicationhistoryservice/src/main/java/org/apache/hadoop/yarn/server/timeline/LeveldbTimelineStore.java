@@ -239,7 +239,7 @@ public class LeveldbTimelineStore extends AbstractService
     } finally {
       IOUtils.cleanupWithLogger(LOG, localFS);
     }
-    LOG.info("Using leveldb path " + dbPath);
+    LOG.info("Using leveldb path {}", dbPath);
     db = LeveldbUtils.loadOrRepairLevelDb(factory, dbPath, options);
     checkVersion();
     startTimeWriteCache =
@@ -265,8 +265,7 @@ public class LeveldbTimelineStore extends AbstractService
       try {
         deletionThread.join();
       } catch (InterruptedException e) {
-        LOG.warn("Interrupted while waiting for deletion thread to complete," +
-            " closing db now", e);
+        LOG.warn("Interrupted while waiting for deletion thread to complete, closing db now", e);
       }
     }
     IOUtils.cleanupWithLogger(LOG, db);
@@ -293,8 +292,7 @@ public class LeveldbTimelineStore extends AbstractService
       ttlInterval = conf.getLong(
           YarnConfiguration.TIMELINE_SERVICE_LEVELDB_TTL_INTERVAL_MS,
           YarnConfiguration.DEFAULT_TIMELINE_SERVICE_LEVELDB_TTL_INTERVAL_MS);
-      LOG.info("Starting deletion thread with ttl " + ttl + " and cycle " +
-          "interval " + ttlInterval);
+      LOG.info("Starting deletion thread with ttl {} and cycle interval {}", ttl, ttlInterval);
     }
 
     @Override
@@ -900,12 +898,10 @@ public class LeveldbTimelineStore extends AbstractService
       }
       db.write(writeBatch);
     } catch (DBException de) {
-      LOG.error("Error putting entity " + entity.getEntityId() +
-                " of type " + entity.getEntityType(), de);
+      LOG.error("Error putting entity {} of type {}", entity.getEntityId(), entity.getEntityType(), de);
       handleError(entity, response, TimelinePutError.IO_EXCEPTION);
     } catch (IOException e) {
-      LOG.error("Error putting entity " + entity.getEntityId() +
-          " of type " + entity.getEntityType(), e);
+      LOG.error("Error putting entity {} of type {}", entity.getEntityId(), entity.getEntityType(), e);
       handleError(entity, response, TimelinePutError.IO_EXCEPTION);
     } finally {
       lock.unlock();
@@ -937,14 +933,14 @@ public class LeveldbTimelineStore extends AbstractService
             writeReverseOrderedLong(relatedEntityStartAndInsertTime
                 .insertTime));
       } catch (DBException de) {
-        LOG.error("Error putting related entity " + relatedEntity.getId() +
-            " of type " + relatedEntity.getType() + " for entity " +
-            entity.getEntityId() + " of type " + entity.getEntityType(), de);
+        LOG.error("Error putting related entity {} of type {} for entity {} of type {}",
+                relatedEntity.getId(), relatedEntity.getType(), entity.getEntityId(), entity.getEntityType(),
+                de);
         handleError(entity, response, TimelinePutError.IO_EXCEPTION);
       } catch (IOException e) {
-        LOG.error("Error putting related entity " + relatedEntity.getId() +
-            " of type " + relatedEntity.getType() + " for entity " +
-            entity.getEntityId() + " of type " + entity.getEntityType(), e);
+        LOG.error("Error putting related entity {} of type {} for entity {} of type {}",
+                relatedEntity.getId(), relatedEntity.getType(), entity.getEntityId(), entity.getEntityType(),
+                e);
         handleError(entity, response, TimelinePutError.IO_EXCEPTION);
       } finally {
         lock.unlock();
@@ -1445,9 +1441,8 @@ public class LeveldbTimelineStore extends AbstractService
           String id = kp.getNextString();
           byte[] relatedEntityStartTime = getStartTime(id, type);
           if (relatedEntityStartTime == null) {
-            LOG.warn("Found no start time for " +
-                "related entity " + id + " of type " + type + " while " +
-                "deleting " + entityId + " of type " + entityType);
+            LOG.warn("Found no start time for related entity {} of type {} while deleting {} of type {}",
+                    id, type, entityId, entityType);
             continue;
           }
           writeBatch.delete(createReverseRelatedEntityKey(id, type,
@@ -1463,9 +1458,8 @@ public class LeveldbTimelineStore extends AbstractService
           String id = kp.getNextString();
           byte[] relatedEntityStartTime = getStartTime(id, type);
           if (relatedEntityStartTime == null) {
-            LOG.warn("Found no start time for reverse " +
-                "related entity " + id + " of type " + type + " while " +
-                "deleting " + entityId + " of type " + entityType);
+            LOG.warn("Found no start time for reverse related entity {} of type {} while deleting {} of type {}",
+                    id, type, entityId, entityType);
             continue;
           }
           writeBatch.delete(createRelatedEntityKey(id, type,
@@ -1520,8 +1514,8 @@ public class LeveldbTimelineStore extends AbstractService
             }
           }
         } catch (IOException e) {
-          LOG.error("Got IOException while deleting entities for type " +
-              entityType + ", continuing to next type", e);
+          LOG.error("Got IOException while deleting entities for type {}, continuing to next type",
+                  entityType, e);
         } finally {
           IOUtils.cleanupWithLogger(LOG, iterator, pfIterator);
           deleteLock.writeLock().unlock();
@@ -1813,7 +1807,7 @@ public class LeveldbTimelineStore extends AbstractService
           domain.setCreatedTime(readReverseOrderedLong(value, 0));
           domain.setModifiedTime(readReverseOrderedLong(value, 8));
         } else {
-          LOG.error("Unrecognized domain column: " + key[prefix.length]);
+          LOG.error("Unrecognized domain column: {}", key[prefix.length]);
         }
       }
     }

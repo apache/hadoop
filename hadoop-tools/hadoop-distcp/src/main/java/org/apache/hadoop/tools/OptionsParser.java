@@ -48,7 +48,7 @@ public class OptionsParser {
   static {
     for (DistCpOptionSwitch option : DistCpOptionSwitch.values()) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Adding option " + option.getOption());
+        LOG.debug("Adding option {}", option.getOption());
       }
       cliOptions.addOption(option.getOption());
     }

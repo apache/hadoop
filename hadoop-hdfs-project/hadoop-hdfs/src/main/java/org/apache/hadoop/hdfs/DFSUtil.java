@@ -1276,8 +1276,7 @@ public class DFSUtil {
       Collection<String> nnIds = DFSUtilClient.getNameNodeIds(conf, nsId);
       for (String nnId : DFSUtilClient.emptyAsSingletonNull(nnIds)) {
         if (LOG.isTraceEnabled()) {
-          LOG.trace(String.format("addressKey: %s nsId: %s nnId: %s",
-              addressKey, nsId, nnId));
+          LOG.trace("addressKey: {} nsId: {} nnId: {}", addressKey, nsId, nnId);
         }
         if (knownNNId != null && !knownNNId.equals(nnId)) {
           continue;

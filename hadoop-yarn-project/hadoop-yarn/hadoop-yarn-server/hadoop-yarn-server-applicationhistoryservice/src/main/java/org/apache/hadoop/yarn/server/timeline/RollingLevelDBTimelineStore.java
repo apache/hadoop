@@ -339,7 +339,7 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
     options.writeBufferSize(conf.getInt(
         TIMELINE_SERVICE_LEVELDB_WRITE_BUFFER_SIZE,
         DEFAULT_TIMELINE_SERVICE_LEVELDB_WRITE_BUFFER_SIZE));
-    LOG.info("Using leveldb path " + dbPath);
+    LOG.info("Using leveldb path {}", dbPath);
     domaindb = LeveldbUtils.loadOrRepairLevelDb(factory, domainDBPath, options);
     entitydb = new RollingLevelDB(ENTITY);
     entitydb.init(conf);
@@ -515,8 +515,7 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
               o = fstConf224.asObject(iterator.peekNext().getValue());
               entity.addOtherInfo(keyStr, o);
             } catch (Exception e) {
-              LOG.warn("Error while decoding "
-                  + entityId + ":otherInfo:" + keyStr, e);
+              LOG.warn("Error while decoding {}:otherInfo:{}", entityId, keyStr, e);
             }
           }
         }
@@ -1079,8 +1078,7 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
       putCount += writePrimaryFilterEntries(indexWriteBatch, primaryFilters,
           markerKey, EMPTY_BYTES);
     } catch (IOException e) {
-      LOG.error("Error putting entity " + entity.getEntityId() + " of type "
-          + entity.getEntityType(), e);
+      LOG.error("Error putting entity {} of type {}", entity.getEntityId(), entity.getEntityType(), e);
       TimelinePutError error = new TimelinePutError();
       error.setEntityId(entity.getEntityId());
       error.setEntityType(entity.getEntityType());
@@ -1139,10 +1137,9 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
         ++putCount;
       } catch (IOException e) {
         LOG.error(
-            "Error putting related entity " + relatedEntity.getId()
-                + " of type " + relatedEntity.getType() + " for entity "
-                + entity.getEntityId() + " of type " + entity.getEntityType(),
-            e);
+            "Error putting related entity {} of type {} for entity {} of type {}",
+                relatedEntity.getId(), relatedEntity.getType(), entity.getEntityId(), entity.getEntityType(),
+                e);
         TimelinePutError error = new TimelinePutError();
         error.setEntityId(entity.getEntityId());
         error.setEntityType(entity.getEntityType());
@@ -1388,7 +1385,7 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
           // Fall back to 2.24 parser
           o = fstConf224.asObject(value);
         } catch (Exception e) {
-          LOG.warn("Error while decoding " + tstype, e);
+          LOG.warn("Error while decoding {}", tstype, e);
         }
       }
       if (o == null) {
@@ -1424,7 +1421,7 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
         value = fstConf224.asObject(bytes);
         entity.addPrimaryFilter(name, value);
       } catch (Exception e) {
-        LOG.warn("Error while decoding " + name, e);
+        LOG.warn("Error while decoding {}", name, e);
       }
     }
   }
@@ -1544,8 +1541,8 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
       LOG.debug("Preparing to delete a batch of {} old start times",
           batchSize);
       starttimedb.write(writeBatch);
-      LOG.debug("Deleted batch of {}. Total start times deleted so far"
-          + " this cycle: {}", batchSize, startTimesCount);
+      LOG.debug("Deleted batch of {}. Total start times deleted so far this cycle: {}",
+              batchSize, startTimesCount);
       LOG.info("Deleted " + startTimesCount + "/" + totalCount
           + " start time entities earlier than " + minStartTime);
     } finally {
@@ -1819,7 +1816,7 @@ public class RollingLevelDBTimelineStore extends AbstractService implements
           domain.setCreatedTime(readReverseOrderedLong(value, 0));
           domain.setModifiedTime(readReverseOrderedLong(value, 8));
         } else {
-          LOG.error("Unrecognized domain column: " + key[prefix.length]);
+          LOG.error("Unrecognized domain column: {}", key[prefix.length]);
         }
       }
     }

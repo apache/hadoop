@@ -621,8 +621,7 @@ public class ClientRMService extends AbstractService implements
           }
         }
       } catch (NumberFormatException e) {
-        LOG.warn("Invalid to flow run: " + value +
-            ". Flow run should be a long integer", e);
+        LOG.warn("Invalid to flow run: {}. Flow run should be a long integer", value, e);
         RMAuditLogger.logFailure(user, AuditConstants.SUBMIT_APP_REQUEST,
             e.getMessage(), "ClientRMService",
             "Exception in submitting application", applicationId,

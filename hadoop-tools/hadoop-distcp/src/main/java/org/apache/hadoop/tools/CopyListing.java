@@ -210,8 +210,7 @@ public abstract class CopyListing extends Configured {
           lastChunkLength = lastFileStatus.getChunkLength();
         }
         if (context.shouldUseDiff() && LOG.isDebugEnabled()) {
-          LOG.debug("Copy list entry " + idx + ": " +
-                  lastFileStatus.getPath().toUri().getPath());
+          LOG.debug("Copy list entry {}: {}", idx, lastFileStatus.getPath().toUri().getPath());
           idx++;
         }
       }

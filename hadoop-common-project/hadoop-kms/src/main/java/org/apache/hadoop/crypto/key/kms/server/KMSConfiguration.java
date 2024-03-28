@@ -152,8 +152,8 @@ public class KMSConfiguration {
             "' must be an absolute path: " + confDir);
       }
       File f = new File(confDir, KMS_ACLS_XML);
-      LOG.trace("Checking file {}, modification time is {}, last reload time is"
-          + " {}", f.getPath(), f.lastModified(), time);
+      LOG.trace("Checking file {}, modification time is {}, last reload time is {}",
+              f.getPath(), f.lastModified(), time);
       // at least 100ms newer than time, we do this to ensure the file
       // has been properly closed/flushed
       newer = f.lastModified() - time > 100;

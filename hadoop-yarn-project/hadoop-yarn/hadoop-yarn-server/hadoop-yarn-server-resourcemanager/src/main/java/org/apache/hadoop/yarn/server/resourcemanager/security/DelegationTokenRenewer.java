@@ -384,7 +384,7 @@ public class DelegationTokenRenewer extends AbstractService {
           tokenWithConf = queue.take();
           final TokenWithConf current = tokenWithConf;
           if (LOG.isDebugEnabled()) {
-            LOG.debug("Cancelling token " + tokenWithConf.token.getService());
+            LOG.debug("Cancelling token {}", tokenWithConf.token.getService());
           }
           // need to use doAs so that http can find the kerberos tgt
           UserGroupInformation.getLoginUser()
