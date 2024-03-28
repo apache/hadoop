@@ -49,6 +49,13 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.CompletionService;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.apache.hadoop.tools.DistCpConstants.*;
 
@@ -238,6 +245,17 @@ public class CopyCommitter extends FileOutputCommitter {
     Path targetRoot =
         new Path(conf.get(DistCpConstants.CONF_LABEL_TARGET_WORK_PATH));
 
+    int nThreads = conf.getInt(DistCpConstants.CONF_LABEL_CHUNK_CONCAT_THREAD_POOL_SIZE, 10);
+    final ExecutorService executorService = Executors.newFixedThreadPool(nThreads, (runnable) -> {
+      Thread thread = new Thread(runnable);
+      thread.setName(Thread.currentThread().getName() + " Concat Executor #" + thread.getId());
+      return thread;
+    });
+    final CompletionService<Boolean> completionService =
+        new ExecutorCompletionService<>(executorService);
+    int concatTasksCnt = 0;
+    final AtomicReference<IOException> concatFailedException = new AtomicReference<>();
+
     try {
       CopyListingFileStatus srcFileStatus = new CopyListingFileStatus();
       Text srcRelPath = new Text();
@@ -246,6 +264,9 @@ public class CopyCommitter extends FileOutputCommitter {
 
       // Iterate over every source path that was copied.
       while (sourceReader.next(srcRelPath, srcFileStatus)) {
+        if (concatFailedException.get() != null) {
+          throw concatFailedException.get(); // skip concatenation if previous already failed
+        }
         if (srcFileStatus.isDirectory()) {
           continue;
         }
@@ -259,24 +280,32 @@ public class CopyCommitter extends FileOutputCommitter {
         if (srcFileStatus.getChunkOffset() + srcFileStatus.getChunkLength()
             == srcFileStatus.getLen()) {
           // This is the last chunk of the splits, consolidate allChunkPaths
-          try {
-            concatFileChunks(conf, srcFileStatus.getPath(), targetFile,
-                allChunkPaths, srcFileStatus);
-          } catch (IOException e) {
-            // If the concat failed because a chunk file doesn't exist,
-            // then we assume that the CopyMapper has skipped copying this
-            // file, and we ignore the exception here.
-            // If a chunk file should have been created but it was not, then
-            // the CopyMapper would have failed.
-            if (!isFileNotFoundException(e)) {
-              String emsg = "Failed to concat chunk files for " + targetFile;
-              if (!ignoreFailures) {
-                throw new IOException(emsg, e);
-              } else {
-                LOG.warn(emsg, e);
+          final LinkedList<Path> chunksToConcat = new LinkedList<>(allChunkPaths);
+          final CopyListingFileStatus finalSrcFileStatus = new CopyListingFileStatus(srcFileStatus);
+          completionService.submit(() -> {
+            if (concatFailedException.get() != null) {
+              return; // skip concatenation if previous already failed
+            }
+            try {
+              concatFileChunks(conf, finalSrcFileStatus.getPath(), targetFile,
+                  chunksToConcat, finalSrcFileStatus);
+            } catch (IOException e) {
+              // If the concat failed because a chunk file doesn't exist,
+              // then we assume that the CopyMapper has skipped copying this
+              // file, and we ignore the exception here.
+              // If a chunk file should have been created but it was not, then
+              // the CopyMapper would have failed.
+              if (!isFileNotFoundException(e)) {
+                String emsg = "Failed to concat chunk files for " + targetFile;
+                if (!ignoreFailures) {
+                  concatFailedException.compareAndSet(null, new IOException(emsg, e));
+                } else {
+                  LOG.warn(emsg, e);
+                }
               }
             }
-          }
+          }, true);
+          concatTasksCnt++;
           allChunkPaths.clear();
           lastFileStatus = null;
         } else {
@@ -304,8 +333,25 @@ public class CopyCommitter extends FileOutputCommitter {
           }
         }
       }
+      // fail fast if any task fails
+      for (int i = 0; i < concatTasksCnt; i++) {
+        Future<Boolean> concatTask = completionService.take(); // wait for any task to complete
+        IOException concatIOException = concatFailedException.get();
+        if (concatIOException != null) {
+          LOG.error("IOException while concatenating chunks: ", concatIOException);
+          throw concatIOException;
+        }
+        concatTask.get(); // throws exceptions not covered by concatFailedException
+      }
+    } catch (ExecutionException e) {
+      LOG.error("Exception occurred while concatenating chunk files", e);
+      throw new RuntimeException(e.getCause());
+    } catch (InterruptedException e) {
+      LOG.error("Executor interrupted while concatenating chunk files", e);
+      throw new RuntimeException(e);
     } finally {
       IOUtils.closeStream(sourceReader);
+      executorService.shutdownNow();
     }
   }
 
