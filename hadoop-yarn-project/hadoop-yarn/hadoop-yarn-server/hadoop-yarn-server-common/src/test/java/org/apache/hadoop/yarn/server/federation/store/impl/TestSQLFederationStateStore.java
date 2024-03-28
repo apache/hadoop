@@ -91,6 +91,7 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
   private static final String DATABASE_USERNAME = "SA";
   private static final String DATABASE_PASSWORD = "";
   private SQLFederationStateStore sqlFederationStateStore = null;
+  private static final String MYSQL_COMPATIBILITY = ";sql.syntax_mys=true";
 
   @Override
   protected FederationStateStore createStateStore() {
@@ -104,7 +105,7 @@ public class TestSQLFederationStateStore extends FederationStateStoreBaseTest {
     conf.set(YarnConfiguration.FEDERATION_STATESTORE_SQL_PASSWORD,
         DATABASE_PASSWORD);
     conf.set(YarnConfiguration.FEDERATION_STATESTORE_SQL_URL,
-        DATABASE_URL + System.currentTimeMillis());
+        DATABASE_URL + System.currentTimeMillis() + MYSQL_COMPATIBILITY);
     conf.setInt(YarnConfiguration.FEDERATION_STATESTORE_MAX_APPLICATIONS, 10);
     conf.setInt(YarnConfiguration.FEDERATION_STATESTORE_SQL_MAXCONNECTIONS, 10);
     super.setConf(conf);
