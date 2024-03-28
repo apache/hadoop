@@ -453,7 +453,7 @@ class OBSListing {
       }
 
       // prefixes: always directories
-      for (ObsObject prefix : objects.getExtenedCommonPrefixes()) {
+      for (ObsObject prefix : objects.getExtendCommonPrefixes()) {
         String key = prefix.getObjectKey();
         Path keyPath = OBSCommonUtils.keyToQualifiedPath(owner, key);
         if (acceptor.accept(keyPath, key) && filter.accept(keyPath)) {
