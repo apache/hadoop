@@ -179,10 +179,10 @@ For example, when the following configuration is used but a path like `viewfs:/f
 ```
 
 ### Solution
-To avoid the above problem, the configuration `fs.viewfs.mounttable.default.name.key` has to be set to the name of the cluster, i.e, the following should be added to `core-site.xml`
+To avoid the above problem, the configuration `fs.viewfs.mounttable.default-name-key` has to be set to the name of the cluster, i.e, the following should be added to `core-site.xml`
 ```xml
 <property>
-  <name>fs.viewfs.mounttable.default.name.key</name>
+  <name>fs.viewfs.mounttable.default-name-key</name>
   <value>cluster</value>
 </property>
 ```
