@@ -972,6 +972,12 @@ public class INodeFile extends INodeWithAdditionalFields
 
   /**
    * Compute file size of the current file.
+   *
+   * ComputeFileSize only needs the FSLock even through it involves block.
+   * BlockSize only be changed by hsync, addBlock, commitBlockSynchronization,
+   * complete, updatePipeline and forceCompleteBlock, all these operations
+   * already hold the FSWriteLock.
+   * CompleteBlock also hold the FSWriteLock since it needs to update Quota
    * 
    * @param includesLastUcBlock
    *          If the last block is under construction, should it be included?
@@ -982,11 +988,6 @@ public class INodeFile extends INodeWithAdditionalFields
    *          if includesLastUcBlock == false.
    * @return file size
    */
-  // ComputeFileSize only needs the FSLock even through it involves block.
-  // BlockSize only be changed by hsync, addBlock, commitBlockSynchronization,
-  // complete, updatePipeline and forceCompleteBlock, all these operations
-  // already hold the FSWriteLock.
-  // CompleteBlock also hold the FSWriteLock since it needs to update Quota.
   public final long computeFileSize(boolean includesLastUcBlock,
       boolean usePreferredBlockSize4LastUcBlock) {
     if (blocks.length == 0) {
