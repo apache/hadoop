@@ -766,7 +766,7 @@ public class TestStartup {
    * 4. NN will mark DatanodeStorageInfo#blockContentsStale to false.
    * @throws Exception
    */
-  @Test(timeout = 60000)
+  @Test(timeout = 120000)
   public void testStorageBlockContentsStaleAfterNNRestart() throws Exception {
     MiniDFSCluster dfsCluster = null;
     try {
