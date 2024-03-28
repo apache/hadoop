@@ -406,6 +406,22 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
   }
 
   @Override // JournalNodeMXBean
+  public String getJournalSyncerStatus() {
+    String[] nsArr = conf.get(DFSConfigKeys.DFS_NAMESERVICES).split(",");
+    StringBuilder stringBuilder = new StringBuilder();
+    for (String ns : nsArr) {
+      stringBuilder.append(ns)
+          .append(":")
+          .append(getJournalSyncerStatus(ns))
+          .append(",");
+    }
+    if (stringBuilder.length() > 0) {
+      stringBuilder.deleteCharAt(stringBuilder.length() - 1);
+    }
+    return stringBuilder.toString();
+  }
+
+  @Override // JournalNodeMXBean
   public String getHostAndPort() {
     return NetUtils.getHostPortString(rpcServer.getAddress());
   }
