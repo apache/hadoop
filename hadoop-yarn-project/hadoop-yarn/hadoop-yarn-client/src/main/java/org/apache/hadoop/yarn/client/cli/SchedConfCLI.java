@@ -130,59 +130,42 @@ public class SchedConfCLI extends Configured implements Tool {
     if (parsedCli.hasOption(HELP_CMD)) {
       printUsage();
       return 0;
-    }
-
-    boolean hasOption = false;
-    boolean format = false;
-    boolean getConf = false;
-    SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
-    try {
-      if (parsedCli.hasOption(ADD_QUEUES_OPTION)) {
-        hasOption = true;
-        addQueues(parsedCli.getOptionValue(ADD_QUEUES_OPTION), updateInfo);
+    } else if (parsedCli.hasOption(FORMAT_CONF)) {
+      return WebAppUtils.execOnActiveRM(getConf(), this::formatSchedulerConf,
+          null);
+    } else if (parsedCli.hasOption(GET_SCHEDULER_CONF)) {
+      return WebAppUtils.execOnActiveRM(getConf(), this::getSchedulerConf,
+          null);
+    } else if (parsedCli.hasOption(ADD_QUEUES_OPTION)
+        || parsedCli.hasOption(REMOVE_QUEUES_OPTION)
+        || parsedCli.hasOption(UPDATE_QUEUES_OPTION)
+        || parsedCli.hasOption(GLOBAL_OPTIONS)) {
+      SchedConfUpdateInfo updateInfo = new SchedConfUpdateInfo();
+      try {
+        if (parsedCli.hasOption(ADD_QUEUES_OPTION)) {
+          addQueues(parsedCli.getOptionValue(ADD_QUEUES_OPTION), updateInfo);
+        }
+        if (parsedCli.hasOption(REMOVE_QUEUES_OPTION)) {
+          removeQueues(parsedCli.getOptionValue(REMOVE_QUEUES_OPTION),
+              updateInfo);
+        }
+        if (parsedCli.hasOption(UPDATE_QUEUES_OPTION)) {
+          updateQueues(parsedCli.getOptionValue(UPDATE_QUEUES_OPTION),
+              updateInfo);
+        }
+        if (parsedCli.hasOption(GLOBAL_OPTIONS)) {
+          globalUpdates(parsedCli.getOptionValue(GLOBAL_OPTIONS), updateInfo);
+        }
+        return WebAppUtils.execOnActiveRM(getConf(),
+            this::updateSchedulerConfOnRMNode, updateInfo);
+      } catch (IllegalArgumentException e) {
+        System.err.println(e.getMessage());
+        return -1;
       }
-      if (parsedCli.hasOption(REMOVE_QUEUES_OPTION)) {
-        hasOption = true;
-        removeQueues(parsedCli.getOptionValue(REMOVE_QUEUES_OPTION),
-            updateInfo);
-      }
-      if (parsedCli.hasOption(UPDATE_QUEUES_OPTION)) {
-        hasOption = true;
-        updateQueues(parsedCli.getOptionValue(UPDATE_QUEUES_OPTION),
-            updateInfo);
-      }
-      if (parsedCli.hasOption(GLOBAL_OPTIONS)) {
-        hasOption = true;
-        globalUpdates(parsedCli.getOptionValue(GLOBAL_OPTIONS), updateInfo);
-      }
-      if (parsedCli.hasOption((FORMAT_CONF))) {
-        hasOption = true;
-        format = true;
-      }
-      if (parsedCli.hasOption(GET_SCHEDULER_CONF)) {
-        hasOption = true;
-        getConf = true;
-      }
-
-    } catch (IllegalArgumentException e) {
-      System.err.println(e.getMessage());
-      return -1;
-    }
-
-    if (!hasOption) {
+    } else {
       System.err.println("Invalid Command Usage: ");
       printUsage();
       return -1;
-    }
-
-    Configuration conf = getConf();
-    if (format) {
-      return WebAppUtils.execOnActiveRM(conf, this::formatSchedulerConf, null);
-    } else if (getConf) {
-      return WebAppUtils.execOnActiveRM(conf, this::getSchedulerConf, null);
-    } else {
-      return WebAppUtils.execOnActiveRM(conf,
-          this::updateSchedulerConfOnRMNode, updateInfo);
     }
   }
 
