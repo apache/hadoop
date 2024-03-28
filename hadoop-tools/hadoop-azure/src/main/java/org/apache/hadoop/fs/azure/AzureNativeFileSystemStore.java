@@ -912,8 +912,15 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
     URI blobEndPoint;
     if (isStorageEmulatorAccount(accountName)) {
       isStorageEmulator = true;
-      CloudStorageAccount account =
-          CloudStorageAccount.getDevelopmentStorageAccount();
+      CloudStorageAccount account;
+      String[] accountNameParts = accountName.split("\\.", 2);
+      if (accountNameParts.length < 2) {
+        account = CloudStorageAccount.getDevelopmentStorageAccount();
+      }
+      else {
+        URI uri = new URI("http://" + accountNameParts[1]);
+        account = CloudStorageAccount.getDevelopmentStorageAccount(uri);
+      }
       storageInteractionLayer.createBlobClient(account);
     } else {
       blobEndPoint = new URI(getHTTPScheme() + "://" + accountName);
