@@ -60,7 +60,6 @@ public class ITestS3AFSMainOperations extends FSMainOperationsBaseTest {
     }
   }
 
-
   @Test
   @Override
   public void testWDAbsolute() throws IOException {
@@ -68,16 +67,6 @@ public class ITestS3AFSMainOperations extends FSMainOperationsBaseTest {
     fSys.mkdirs(absoluteDir);
     fSys.setWorkingDirectory(absoluteDir);
     Assert.assertEquals(absoluteDir, fSys.getWorkingDirectory());
-  }
-
-  /**
-   * Get an absolute directory for the test {@link #testWDAbsolute()}.
-   *
-   * @return a fully qualified path.
-   */
-  protected Path getAbsoluteDirectoryForWorkingDir() {
-    return new Path(new Path(fSys.getUri()),
-        createTestPath(new Path("/test/existingDir")));
   }
 
   @Override

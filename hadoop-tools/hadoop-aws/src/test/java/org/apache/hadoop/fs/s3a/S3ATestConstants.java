@@ -279,7 +279,6 @@ public interface S3ATestConstants {
    */
   String ROOT_TESTS_ENABLED = "fs.s3a.root.tests.enabled";
 
-
   /**
    * Default policy on root tests: {@value}.
    */

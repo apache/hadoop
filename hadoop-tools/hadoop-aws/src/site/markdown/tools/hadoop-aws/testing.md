@@ -575,7 +575,6 @@ Anyone doing this privately should:
 * Have a dedicated IAM role with restricted access to the test bucket, any KMS keys used, and the
   external bucket containing the CSV test file.
 * Have a build process which generates short-lived session credentials for this role.
-  The cloudstore utility's command [sessionkeys](https://github.com/steveloughran/cloudstore/blob/main/src/main/site/sessionkey.md) can assist.
 * Run the tests in an EC2 VM/container which collects the restricted IAM credentials
   from the IAM instance/container credentials provider.
 

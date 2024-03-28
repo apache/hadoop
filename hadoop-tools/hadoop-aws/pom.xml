@@ -56,13 +56,11 @@
 
     <!-- Is prefetch enabled? -->
     <fs.s3a.prefetch.enabled>unset</fs.s3a.prefetch.enabled>
-
     <!-- Job ID; allows for parallel jobs on same bucket -->
-    <job.id>0</job.id>
+    <!-- job.id is used to build the path for tests; default is 00.-->
+    <job.id>00</job.id>
     <!-- are root tests enabled. Set to false when running parallel jobs on same bucket -->
     <root.tests.enabled>unset</root.tests.enabled>
-
-
   </properties>
 
   <profiles>
