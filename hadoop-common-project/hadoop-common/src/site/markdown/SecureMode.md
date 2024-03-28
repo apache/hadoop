@@ -402,6 +402,98 @@ To re-cap, here are the local file-sysytem permissions required for the various 
 | `mapreduce.jobhistory.principal` | `jhs/_HOST@REALM.TLD`                     | Kerberos principal name for the MapReduce JobHistory Server. |
 
 
+Enabling secure mode in HDFS without downtime
+-------------------------------------
+
+### Background
+
+It has always been possible to convert some parts of Hadoop (e.g. YARN) from non-secure mode into secure mode without downtime. Most Hadoop RPCs are done with SASL handshakes powered by classes `SaslRpcClient` and `SaslRpcServer`, which always negotiate the type of authentication to use on every connection. In a non-secure mode cluster, these handshakes always negotiate `SIMPLE` authentication, which is no authentication. In a secure-mode cluster, these handshakes negotiate `KERBEROS` or `TOKEN` authentication. For clusters without HDFS, transitioning from a non-secure cluster to a secure cluster is reasonably easy. The basic Kerberos settings can be applied to all nodes in the cluster, along with `ipc.client.fallback-to-simple-auth-allowed` = `true` and then all nodes can be restarted in dependency order. Then `ipc.client.fallback-to-simple-auth-allowed` can be removed, and again all nodes restarted in the same order.
+
+Starting in Hadoop 3.4.0, it is possible to convert a non-secure HDFS cluster into a secure HDFS cluster without downtime. DataNodes do not entirely use `SaslRpcClient` and `SaslRpcServer`, and so require more finesse to transition to secure mode. DataNodes implement the "data transfer protocol," powered by classes `SaslDataTransferClient` and `SaslDataTransferServer`. In non-secure clusters, `SaslDataTransferServer` does no handshaking at all, and assumes incoming connections contain raw plaintext payload. In secure clusters, `SaslDataTransferServer` requires that incoming connections contain SASL handshakes. The setting `dfs.datanode.unsafe.sasl.allowed-not-required` was introduced to allow attempted SASL handshakes to downgrade to raw plaintext, so the transition from non-secure to secure can be made gracefully. Additionally, when registering with multiple NameNodes, DataNodes typically require that either all NameNodes or none of them use block access tokens. This requirement makes it impossible to enable block access tokens without NameNode downtime in a multi-NameNode cluster, because this would necessarily include a brief period where one NameNode uses block access tokens, and the others do not. The setting `dfs.datanode.block.access.token.unsafe.allowed-not-required` was introduced to temporarily remove this restriction so that NameNodes can have block access tokens enabled gracefully.
+
+### Steps
+
+The following is a recommended set of steps for converting a non-secure cluster that includes HDFS to a secure cluster.
+1. Apply settings and behavior to clients of your cluster, and non-HDFS nodes in your cluster, so they offer `KERBEROS` authentication during SASL negotiation in addition to `SIMPLE`. This can include YARN nodes, HBase nodes, etc.
+    - This will include these settings:
+      - Set `hadoop.security.authentication` = `kerberos`
+      - Set `hadoop.security.authorization` = `true`
+      - Set `ipc.client.fallback-to-simple-auth-allowed` = `true`
+      - Set `hadoop.rpc.protection` as desired
+      - Set `hadoop.security.auth_to_local` as necessary
+    - You must also perform Kerberos logins in these applications, so that the `UserGroupInformation` that your application uses to make connections represents a logged-in Kerberos principal. How to accomplish this is application-specific. The specifics for YARN nodes are described elsewhere in this document.
+1. Add a temporary setting that allows your DataNodes to tolerate communicating with multiple NameNodes, some of which have block tokens enabled, and some of which do not. Normally, DataNodes refuse to communicate with NameNodes in this circumstance.
+    - Set `dfs.datanode.block.access.token.unsafe.allowed-not-required` = `true` on your DataNodes
+    - Gracefully restart your DataNodes
+1. Enable block access tokens on your NameNodes. This will begin serving block access tokens to clients, who will them pass them onto your DataNodes when connecting to read block contents. At this point, the DataNodes will ignore them, but after the next step, the DataNodes will begin checking them.
+    - Set `dfs.block.access.token.enable` = `true` on your NameNodes
+    - Gracefully restart your NameNodes.
+1. Enable Kerberos on your DataNodes. This will make your DataNodes require Kerberos during some SASL negotiation. The "data transfer protocol" is a special case. These settings will allow it to perform a SASL handshake, but also accept raw plaintext with no handshake.
+    - Set `hadoop.security.authentication` = `kerberos`
+    - Set `hadoop.security.authorization` = `true`
+    - Set `ipc.client.fallback-to-simple-auth-allowed` = `true`
+    - Set `dfs.datanode.unsafe.sasl.allowed-not-required` = `true`
+    - Set `dfs.block.access.token.enable` = `true`
+    - Set `ignore.secure.ports.for.testing` = `true`. This is required for now to pass a DataNode startup check that otherwise does not allow Kerberos without `dfs.data.transfer.protection`.
+    - Set `dfs.datanode.keytab.file` pointing to your keytab file
+    - Set `dfs.datanode.kerberos.principal` with your Kerberos principal
+    - Set `hadoop.rpc.protection` as desired
+    - Set `hadoop.security.auth_to_local` as necessary
+    - Remove `dfs.datanode.block.access.token.unsafe.allowed-not-required` or set it to `false`. Following the prior step, this setting has accomplished its goal and is no longer necessary.
+    - Gracefully restart your DataNodes.
+1. Enable Kerberos on your NameNodes, but still allow fallback to `SIMPLE` authentication for outgoing connections, like to JournalNodes.
+    - Set `hadoop.security.authentication` = `kerberos`
+    - Set `hadoop.security.authorization` = `true`
+    - Set `ipc.client.fallback-to-simple-auth-allowed` = `true`
+    - Set `dfs.namenode.keytab.file` pointing to your keytab file
+    - Set `dfs.namenode.kerberos.principal` with your Kerberos principal
+    - Set `hadoop.rpc.protection` as desired
+    - Set `dfs.data.transfer.protection` as desired
+    - Set `hadoop.security.auth_to_local` as necessary
+    - Set `dfs.journalnode.kerberos.principal[.pattern]` as necessary, matching with the next step
+    - Keep `dfs.block.access.token.enable` = `true` from above
+    - Gracefully restart your NameNodes
+1. Enable Kerberos on your JournalNodes.
+    - Set `hadoop.security.authentication` = `kerberos`
+    - Set `hadoop.security.authorization` = `true`
+    - Set `dfs.journalnode.keytab.file` pointing to your keytab file
+    - Set `dfs.journalnode.kerberos.principal` with your Kerberos principal
+    - Set `hadoop.rpc.protection` as desired
+    - Set `hadoop.security.auth_to_local` as necessary
+    - Set `dfs.journalnode.kerberos.principal[.pattern]` as necessary for your RPC principal
+    - Set `dfs.journalnode.kerberos.internal.spnego.principal` as necessary for your HTTP principal
+    - Set `hadoop.http.authentication.kerberos.principal` = `${dfs.journalnode.kerberos.internal.spnego.principal}`
+    - Gracefully restart your JournalNodes
+1. Start using SASL in connections initiated by `SaslDataTransferClient` within DataNodes.
+    - Set `dfs.data.transfer.protection` with your desired non-blank value
+    - Remove `ignore.secure.ports.for.testing` or set it to `false`. This is no longer necessary.
+    - Set `dfs.http.policy` = `HTTPS_ONLY`. DataNodes require TLS on their HTTP port if `dfs.data.transfer.protection` is used.
+    - Set the necessary settings in `ssl-server.xml` for serving TLS traffic
+    - Gracefully restart your DataNodes
+1. Require SASL for incoming connections in `SaslDataTransferServer` within DataNodes. This ensures that no insecure data transfer protocol connections will be allowed.
+    - Remove `dfs.datanode.unsafe.sasl.allowed-not-required` or set it to `false`
+    - Gracefully restart your DataNodes
+1. Enable Kerberos on all other nodes in your cluster, for example YARN NodeManagers and ResourceManagers.
+   - Set `hadoop.security.authentication` = `kerberos`
+   - Set `hadoop.security.authorization` = `true`
+   - Set whatever settings are appropriate to point to your keytab file and set your Kerberos principal.
+   - Set `hadoop.rpc.protection` as desired
+   - Set `hadoop.security.auth_to_local` as necessary
+   - Gracefully restart affected nodes
+1. Require `KERBEROS` in all SASL handshakes on outgoing connections, across your Hadoop cluster. This ensures that no insecure RPC connections will be allowed.
+    - Remove `ipc.client.fallback-to-simple-auth-allowed` = `true` or set it to false on all nodes, including those mentioned in step 1
+    - Gracefully restart all affected nodes and applications
+
+### Final notes
+
+As a sanity check to ensure security, verify that no nodes in your cluster contain these transition-related settings:
+  - `ipc.client.fallback-to-simple-auth-allowed`
+  - `ignore.secure.ports.for.testing`
+  - `dfs.datanode.unsafe.sasl.allowed-not-required`
+  - `dfs.datanode.block.access.token.unsafe.allowed-not-required`
+
+The process of converting a non-secure cluster into a secure cluster can be safely reversed at any point in the above steps, if you need to roll them back. Additionally, a cluster that is fully secure can be made non-secure by following the steps in reverse.
+
 Multihoming
 -----------
 
