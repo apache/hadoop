@@ -29,6 +29,7 @@
 
   <properties>
     <hadoop.common.build.dir>${basedir}/../../../../hadoop-common-project/hadoop-common/target</hadoop.common.build.dir>
+    <hbase-compatible-hadoop.version>3.3.6</hbase-compatible-hadoop.version>
   </properties>
 
   <!-- Do not add dependencies here, add them to the POM of the leaf module -->
@@ -49,4 +50,5 @@
     <module>hadoop-yarn-server-timelineservice-documentstore</module>
     <module>hadoop-yarn-server-globalpolicygenerator</module>
   </modules>
+
 </project>

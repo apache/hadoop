@@ -37,5 +37,4 @@
     <module>hadoop-yarn-server-timelineservice-hbase-server</module>
   </modules>
 
-
 </project>
