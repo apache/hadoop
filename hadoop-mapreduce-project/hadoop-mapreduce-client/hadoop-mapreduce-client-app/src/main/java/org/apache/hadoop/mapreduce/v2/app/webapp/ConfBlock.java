@@ -22,6 +22,8 @@ import static org.apache.hadoop.mapreduce.v2.app.webapp.AMParams.JOB_ID;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI._TH;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
@@ -46,6 +48,20 @@ public class ConfBlock extends HtmlBlock {
 
   @Inject ConfBlock(AppContext appctx) {
     appContext = appctx;
+  }
+
+  /**
+   * To URLDecode the string value for URLEncoded data.
+   * @param value string data to be decoded
+   * @return value data after decoded
+   * @throws UnsupportedEncodingException if empty string or unsupported enc parameter.
+   */
+  private String urlDecode(String value){
+    try {
+      return URLDecoder.decode(value, "UTF-8");
+    } catch (UnsupportedEncodingException e) {
+      return value;
+    }
   }
 
   /*
@@ -95,12 +111,21 @@ public class ConfBlock extends HtmlBlock {
           first = false;
           buffer.append(sources[i]);
         }
-        tbody.
-          tr().
+        if( entry.getName().equals("hive.query.string")){
+          tbody.
+            tr().
+            td(entry.getName()).
+            td(urlDecode(entry.getValue())).
+            td(buffer.toString()).
+            __();
+        }else{
+          tbody.
+            tr().
             td(entry.getName()).
             td(entry.getValue()).
             td(buffer.toString()).
             __();
+        }
       }
       tbody.__().
       tfoot().
