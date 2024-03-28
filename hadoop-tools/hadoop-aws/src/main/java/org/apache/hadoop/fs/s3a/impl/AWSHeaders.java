@@ -55,6 +55,9 @@ public interface AWSHeaders {
   /** Header for optional server-side encryption algorithm. */
   String SERVER_SIDE_ENCRYPTION = "x-amz-server-side-encryption";
 
+  /** Header for optional server-side encryption algorithm. */
+  String SERVER_SIDE_ENCRYPTION_AWS_KMS_KEY_ID = "x-amz-server-side-encryption-aws-kms-key-id";
+
   /** Range header for the get object request. */
   String RANGE = "Range";
 

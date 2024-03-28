@@ -19,12 +19,20 @@
 package org.apache.hadoop.fs.s3a;
 
 import java.io.IOException;
+import java.util.Optional;
 
+import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.junit.Test;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 
+import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
+import static org.apache.hadoop.fs.s3a.EncryptionTestUtils.validateEncryptionFileAttributes;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
+import static org.apache.hadoop.fs.s3a.S3AUtils.getS3EncryptionKey;
 import static org.hamcrest.CoreMatchers.containsString;
 
 /**
@@ -55,5 +63,16 @@ public class ITestS3AEncryptionSSEKMSDefaultKey
     assertEquals("SSE Algorithm", EncryptionTestUtils.AWS_KMS_SSE_ALGORITHM,
             md.serverSideEncryptionAsString());
     assertThat(md.ssekmsKeyId(), containsString("arn:aws:kms:"));
+  }
+
+  @Test
+  public void testEncryptionFileAttributes() throws Exception {
+    Path path = path(createFilename(1024));
+    byte[] data = dataset(1024, 'a', 'z');
+    S3AFileSystem fs = getFileSystem();
+    writeDataset(fs, path, data, data.length, 1024 * 1024, true);
+    ContractTestUtils.verifyFileContents(fs, path, data);
+    // we don't know the KMS key in case of server default option.
+    validateEncryptionFileAttributes(fs, path, EncryptionTestUtils.AWS_KMS_SSE_ALGORITHM,  Optional.empty());
   }
 }
