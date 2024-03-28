@@ -69,6 +69,14 @@ public class StatUtils {
     StringTokenizer tokenizer =
         new StringTokenizer(sPerm, Shell.TOKEN_SEPARATOR_REGEX);
     String symbolicPermission = tokenizer.nextToken();
+
+    // As per https://www.gnu.org/software/coreutils/manual/html_node/What-information-is-listed.html
+    // "GNU ls uses a ‘.’ character to indicate a file with a security context,
+    // but no other alternate access method"
+    if (symbolicPermission.endsWith(".")) {
+      symbolicPermission = symbolicPermission.substring(0, symbolicPermission.length() - 1);
+    }
+
     tokenizer.nextToken(); // skip hard link
     String owner = tokenizer.nextToken();
     String group = tokenizer.nextToken();
