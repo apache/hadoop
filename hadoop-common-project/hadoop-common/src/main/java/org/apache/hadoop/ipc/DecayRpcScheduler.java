@@ -164,6 +164,9 @@ public class DecayRpcScheduler implements RpcScheduler,
   // The sum of all AtomicLongs in raw callCosts of service-user.
   private final AtomicLong totalServiceUserRawCallCost = new AtomicLong();
 
+  // Track total call count and response time in current decay window for reserved queue
+  private final AtomicLongArray reservedQueueResponseTimeCountInCurrWindow;
+  private final AtomicLongArray reservedQueueResponseTimeTotalInCurrWindow;
 
   // Track total call count and response time in current decay window
   private final AtomicLongArray responseTimeCountInCurrWindow;
@@ -198,6 +201,7 @@ public class DecayRpcScheduler implements RpcScheduler,
   private final CostProvider costProvider;
   private final Map<String, Integer> staticPriorities = new HashMap<>();
   private Set<String> serviceUserNames;
+  private final Map<String, Integer> reservedUserPriorities;
 
   /**
    * This TimerTask will call decayCurrentCosts until
@@ -262,6 +266,15 @@ public class DecayRpcScheduler implements RpcScheduler,
             DECAYSCHEDULER_METRICS_TOP_USER_COUNT_DEFAULT);
     Preconditions.checkArgument(topUsersCount > 0,
         "the number of top users for scheduler metrics must be at least 1");
+    // Reserved queue confs
+    String[] reservedUsers = parseReservedUsers(conf, ns);
+    this.reservedUserPriorities = new HashMap<>();
+    int numReservedQueues = reservedUsers == null ? 0 : reservedUsers.length;
+    for (int i = 0; i < numReservedQueues; i++) {
+      reservedUserPriorities.put(reservedUsers[i], numLevels + i);
+    }
+    reservedQueueResponseTimeCountInCurrWindow = new AtomicLongArray(numReservedQueues);
+    reservedQueueResponseTimeTotalInCurrWindow = new AtomicLongArray(numReservedQueues);
 
     decayRpcSchedulerDetailedMetrics =
         DecayRpcSchedulerDetailedMetrics.create(ns);
@@ -276,6 +289,11 @@ public class DecayRpcScheduler implements RpcScheduler,
 
     metricsProxy = MetricsProxy.getInstance(ns, numLevels, this);
     recomputeScheduleCache();
+  }
+
+  private String[] parseReservedUsers(Configuration conf, String ns) {
+    return conf.getStrings(ns + "." +
+        CommonConfigurationKeys.IPC_CALLQUEUE_RESERVED_USERS_KEY);
   }
 
   private CostProvider parseCostProvider(String ns, Configuration conf) {
@@ -678,6 +696,10 @@ public class DecayRpcScheduler implements RpcScheduler,
   public int getPriorityLevel(Schedulable obj) {
     // First get the identity
     String identity = getIdentity(obj);
+    // get reserved user priority
+    if (reservedUserPriorities.containsKey(identity)) {
+      return reservedUserPriorities.get(identity);
+    }
     // highest priority users may have a negative priority but their
     // calls will be priority 0.
     return Math.max(0, cachedOrComputedPriorityLevel(identity));
@@ -722,6 +744,9 @@ public class DecayRpcScheduler implements RpcScheduler,
     Boolean backOff = false;
     if (backOffByResponseTimeEnabled) {
       int priorityLevel = obj.getPriorityLevel();
+      if (priorityLevel >= this.numLevels) {
+        return backOff;
+      }
       if (LOG.isDebugEnabled()) {
         double[] responseTimes = getAverageResponseTime();
         LOG.debug("Current Caller: {}  Priority: {} ",
@@ -755,6 +780,17 @@ public class DecayRpcScheduler implements RpcScheduler,
     long queueTime = details.get(Timing.QUEUE, metricsTimeUnit);
     long processingTime = details.get(Timing.PROCESSING,
         metricsTimeUnit);
+    if (priorityLevel >= numLevels) {
+      // add response time for dedicated queue.
+      reservedQueueResponseTimeCountInCurrWindow.getAndIncrement(priorityLevel - this.numLevels);
+      reservedQueueResponseTimeTotalInCurrWindow.getAndAdd(priorityLevel - this.numLevels, queueTime + processingTime);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("addResponseTime reserved queue for call: {}  user: {} queueTime: {} " +
+                "processingTime: {} ", callName, user, queueTime,
+            processingTime);
+      }
+      return;
+    }
 
     this.decayRpcSchedulerDetailedMetrics.addQueueTime(
         priorityLevel, queueTime);
@@ -796,6 +832,10 @@ public class DecayRpcScheduler implements RpcScheduler,
       responseTimeTotalInCurrWindow.set(i, 0);
       responseTimeCountInCurrWindow.set(i, 0);
     }
+    for (int i = 0; i < this.reservedUserPriorities.size(); i++) {
+      reservedQueueResponseTimeTotalInCurrWindow.set(i, 0);
+      reservedQueueResponseTimeCountInCurrWindow.set(i, 0);
+    }
   }
 
   // For testing
@@ -807,6 +847,11 @@ public class DecayRpcScheduler implements RpcScheduler,
   @VisibleForTesting
   long getDecayPeriodMillis() {
     return decayPeriodMillis;
+  }
+
+  @VisibleForTesting
+  Map<String, Integer> getReservedUserPriorities() {
+    return reservedUserPriorities;
   }
 
   @VisibleForTesting

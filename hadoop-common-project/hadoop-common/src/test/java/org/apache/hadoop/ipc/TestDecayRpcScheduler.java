@@ -145,6 +145,44 @@ public class TestDecayRpcScheduler {
   }
 
   @Test
+  public void testParseReservedUserPriorities() {
+    // No reserved users
+    int numLevels = 2;
+    Configuration conf = new Configuration();
+    scheduler = new DecayRpcScheduler(numLevels, "", conf);
+    assertEquals(0, scheduler.getReservedUserPriorities().size());
+
+    // Reserved users
+    conf.setStrings("ns." + CommonConfigurationKeys.IPC_CALLQUEUE_RESERVED_USERS_KEY, "user1", "user2");
+    scheduler = new DecayRpcScheduler(numLevels, "ns", conf);
+    assertEquals(2, scheduler.getReservedUserPriorities().size());
+    assertTrue(scheduler.getReservedUserPriorities().containsKey("user1"));
+    assertEquals((int) scheduler.getReservedUserPriorities().get("user1"),
+        numLevels);
+    assertTrue(scheduler.getReservedUserPriorities().containsKey("user2"));
+    assertEquals((int) scheduler.getReservedUserPriorities().get("user2"),
+        numLevels + 1);
+  }
+
+  @Test
+  public void testGetPriorityForReservedUsers() {
+    // No reserved users
+    int numLevels = 2;
+    Configuration conf = new Configuration();
+    scheduler = new DecayRpcScheduler(numLevels, "ns1", conf);
+    assertEquals(0, scheduler.getReservedUserPriorities().size());
+
+    // Reserved users should return queue size + its idx in the reserved user list.
+    conf.setStrings("ns2." + CommonConfigurationKeys.IPC_CALLQUEUE_RESERVED_USERS_KEY, "user1", "user2");
+    scheduler = new DecayRpcScheduler(numLevels, "ns2", conf);
+    assertEquals(numLevels, scheduler.getPriorityLevel(mockCall("user1")));
+    assertEquals(numLevels + 1, scheduler.getPriorityLevel(mockCall("user2")));
+
+    // Random user should return 0
+    assertEquals(0, scheduler.getPriorityLevel(mockCall("foo")));
+  }
+
+  @Test
   @SuppressWarnings("deprecation")
   public void testParseFactor() {
     // Default
