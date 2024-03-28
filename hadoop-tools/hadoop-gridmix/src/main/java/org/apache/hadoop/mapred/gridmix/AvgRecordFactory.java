@@ -61,10 +61,11 @@ class AvgRecordFactory extends RecordFactory {
   public AvgRecordFactory(long targetBytes, long targetRecords,
       Configuration conf, int minSpilledBytes) {
     this.targetBytes = targetBytes;
-    this.targetRecords = targetRecords <= 0 && this.targetBytes >= 0
-      ? Math.max(1,
+    this.targetRecords = targetRecords <= 0 ? (this.targetBytes >= 0 ?
+      Math.max(1,
           this.targetBytes / conf.getInt(GRIDMIX_MISSING_REC_SIZE, 64 * 1024))
-      : targetRecords;
+      : 1) : targetRecords;
+
     final long tmp = this.targetBytes / this.targetRecords;
     step = this.targetBytes - this.targetRecords * tmp;
     avgrec = (int) Math.min(Integer.MAX_VALUE, tmp + 1);
