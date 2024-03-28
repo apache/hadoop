@@ -116,6 +116,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
     <dependency-check-maven.version>7.1.1</dependency-check-maven.version>
     <spotbugs.version>4.2.2</spotbugs.version>
     <spotbugs-maven-plugin.version>4.2.0</spotbugs-maven-plugin.version>
+    <surefire.failIfNoSpecifiedTests>false</surefire.failIfNoSpecifiedTests>
     <jsonschema2pojo-maven-plugin.version>1.1.1</jsonschema2pojo-maven-plugin.version>
     <maven-compiler-plugin.version>3.10.1</maven-compiler-plugin.version>
     <cyclonedx.version>2.7.10</cyclonedx.version>
