@@ -1086,7 +1086,9 @@ public class AbfsClient implements Closeable {
     AbfsHttpHeader rangeHeader = new AbfsHttpHeader(RANGE,
         String.format("bytes=%d-%d", position, position + bufferLength - 1));
     requestHeaders.add(rangeHeader);
-    requestHeaders.add(new AbfsHttpHeader(IF_MATCH, eTag));
+    if(eTag == null || !eTag.isEmpty()) {
+      requestHeaders.add(new AbfsHttpHeader(IF_MATCH, eTag));
+    }
 
     // Add request header to fetch MD5 Hash of data returned by server.
     if (isChecksumValidationEnabled(requestHeaders, rangeHeader, bufferLength)) {

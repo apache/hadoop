@@ -26,6 +26,7 @@ import java.util.UUID;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.impl.BackReference;
 import org.apache.hadoop.util.Preconditions;
 
@@ -69,11 +70,11 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   private final AbfsClient client;
   private final Statistics statistics;
   private final String path;
-  private final long contentLength;
+  private long contentLength;
   private final int bufferSize; // default buffer size
   private final int footerReadSize; // default buffer size to read when reading footer
   private final int readAheadQueueDepth;         // initialized in constructor
-  private final String eTag;                  // eTag of the path when InputStream are created
+  private String eTag;                  // eTag of the path when InputStream are created
   private final boolean tolerateOobAppends; // whether tolerate Oob Appends
   private final boolean readAheadEnabled; // whether enable readAhead;
   private final String inputStreamId;
@@ -128,6 +129,10 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   /** ABFS instance to be held by the input stream to avoid GC close. */
   private final BackReference fsBackRef;
 
+  private final Boolean fileStatusInformationAlreadyPresent;
+
+  private int usage;
+
   public AbfsInputStream(
           final AbfsClient client,
           final Statistics statistics,
@@ -145,6 +150,11 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     this.readAheadQueueDepth = abfsInputStreamContext.getReadAheadQueueDepth();
     this.tolerateOobAppends = abfsInputStreamContext.isTolerateOobAppends();
     this.eTag = eTag;
+    if (StringUtils.isNotEmpty(eTag)) {
+      fileStatusInformationAlreadyPresent = true;
+    } else {
+      fileStatusInformationAlreadyPresent = false;
+    }
     this.readAheadRange = abfsInputStreamContext.getReadAheadRange();
     this.readAheadEnabled = abfsInputStreamContext.isReadAheadEnabled();
     this.alwaysReadBufferSize
@@ -192,6 +202,28 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         throw new IOException(FSExceptionMessages.STREAM_IS_CLOSED);
       }
     }
+
+    /*
+     * When the inputStream is started, if the application tries to parallelly read
+     * ont he inputStream, the first read will be synchronized and the subsequent
+     * reads will be non-synchronized.
+     */
+    synchronized (this) {
+      if (usage == 0) {
+        try {
+          return readOnPosition(position, buffer, offset, length);
+        } finally {
+          usage++;
+        }
+      }
+    }
+    return readOnPosition(position, buffer, offset, length);
+  }
+
+  private int readOnPosition(final long position,
+      final byte[] buffer,
+      final int offset,
+      final int length) throws IOException {
     LOG.debug("pread requested offset = {} len = {} bufferedPreadDisabled = {}",
         offset, length, bufferedPreadDisabled);
     if (!bufferedPreadDisabled) {
@@ -227,6 +259,15 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   @Override
   public synchronized int read(final byte[] b, final int off, final int len) throws IOException {
+    try {
+      return synchronizedRead(b, off, len);
+    } finally {
+      usage++;
+    }
+  }
+
+  private int synchronizedRead(final byte[] b, final int off, final int len)
+      throws IOException {
     // check if buffer is null before logging the length
     if (b != null) {
       LOG.debug("read requested b.length = {} offset = {} len = {}", b.length,
@@ -570,6 +611,9 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       }
       throw new IOException(ex);
     }
+    if (usage == 0) {
+      initPathProperties(op);
+    }
     long bytesRead = op.getResult().getBytesReceived();
     if (streamStatistics != null) {
       streamStatistics.remoteBytesRead(bytesRead);
@@ -580,6 +624,16 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     LOG.debug("HTTP request read bytes = {}", bytesRead);
     bytesFromRemoteRead += bytesRead;
     return (int) bytesRead;
+  }
+
+  private void initPathProperties(final AbfsRestOperation op) {
+    AbfsHttpOperation result = op.getResult();
+    if(result == null) {
+      return;
+    }
+    contentLength = Long.parseLong(
+        result.getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH));
+    eTag = result.getResponseHeader(HttpHeaderConfigurations.ETAG);
   }
 
   /**

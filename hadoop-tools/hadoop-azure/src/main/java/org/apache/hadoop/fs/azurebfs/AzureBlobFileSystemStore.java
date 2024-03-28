@@ -817,8 +817,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       FileStatus fileStatus = parameters.map(OpenFileParameters::getStatus)
           .orElse(null);
       String relativePath = getRelativePath(path);
-      String resourceType, eTag;
-      long contentLength;
+      String resourceType = null, eTag = null;
+      long contentLength = -1;
       ContextEncryptionAdapter contextEncryptionAdapter = NoContextEncryptionAdapter.getInstance();
       /*
       * GetPathStatus API has to be called in case of:
@@ -848,38 +848,33 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
               encryptionContext.getBytes(StandardCharsets.UTF_8));
         }
       } else {
-        AbfsHttpOperation op = client.getPathStatus(relativePath, false,
-            tracingContext, null).getResult();
-        resourceType = op.getResponseHeader(
-            HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
-        contentLength = Long.parseLong(
-            op.getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH));
-        eTag = op.getResponseHeader(HttpHeaderConfigurations.ETAG);
-        /*
-         * For file created with ENCRYPTION_CONTEXT, client shall receive
-         * encryptionContext from header field: X_MS_ENCRYPTION_CONTEXT.
-         */
-        if (client.getEncryptionType() == EncryptionType.ENCRYPTION_CONTEXT) {
-          final String fileEncryptionContext = op.getResponseHeader(
-              HttpHeaderConfigurations.X_MS_ENCRYPTION_CONTEXT);
-          if (fileEncryptionContext == null) {
-            LOG.debug("EncryptionContext missing in GetPathStatus response");
-            throw new PathIOException(path.toString(),
-                "EncryptionContext not present in GetPathStatus response headers");
+        if(client.getEncryptionType() == EncryptionType.ENCRYPTION_CONTEXT) {
+          AbfsHttpOperation op = client.getPathStatus(relativePath, false,
+              tracingContext, null).getResult();
+          resourceType = op.getResponseHeader(
+              HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
+          contentLength = Long.parseLong(
+              op.getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH));
+          eTag = op.getResponseHeader(HttpHeaderConfigurations.ETAG);
+          /*
+           * For file created with ENCRYPTION_CONTEXT, client shall receive
+           * encryptionContext from header field: X_MS_ENCRYPTION_CONTEXT.
+           */
+          if (client.getEncryptionType() == EncryptionType.ENCRYPTION_CONTEXT) {
+            final String fileEncryptionContext = op.getResponseHeader(
+                HttpHeaderConfigurations.X_MS_ENCRYPTION_CONTEXT);
+            if (fileEncryptionContext == null) {
+              LOG.debug("EncryptionContext missing in GetPathStatus response");
+              throw new PathIOException(path.toString(),
+                  "EncryptionContext not present in GetPathStatus response headers");
+            }
+            contextEncryptionAdapter = new ContextProviderEncryptionAdapter(
+                client.getEncryptionContextProvider(), getRelativePath(path),
+                fileEncryptionContext.getBytes(StandardCharsets.UTF_8));
           }
-          contextEncryptionAdapter = new ContextProviderEncryptionAdapter(
-              client.getEncryptionContextProvider(), getRelativePath(path),
-              fileEncryptionContext.getBytes(StandardCharsets.UTF_8));
         }
       }
-
-      if (parseIsDirectory(resourceType)) {
-        throw new AbfsRestOperationException(
-            AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode(),
-            AzureServiceErrorCode.PATH_NOT_FOUND.getErrorCode(),
-            "openFileForRead must be used with files and not directories",
-            null);
-      }
+      //TODO: Check on directory in abfsinputstream.
 
       perfInfo.registerSuccess(true);
 
