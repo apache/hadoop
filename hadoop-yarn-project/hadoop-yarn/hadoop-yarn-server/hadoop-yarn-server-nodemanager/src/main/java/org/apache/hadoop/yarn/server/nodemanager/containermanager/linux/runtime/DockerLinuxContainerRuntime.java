@@ -21,7 +21,7 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
+import org.apache.hadoop.io.IOStreamPair;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;

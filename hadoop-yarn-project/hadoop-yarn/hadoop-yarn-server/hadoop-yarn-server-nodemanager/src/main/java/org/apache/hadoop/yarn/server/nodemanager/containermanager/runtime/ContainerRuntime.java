@@ -22,7 +22,7 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
+import org.apache.hadoop.io.IOStreamPair;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerExecContext;
 
