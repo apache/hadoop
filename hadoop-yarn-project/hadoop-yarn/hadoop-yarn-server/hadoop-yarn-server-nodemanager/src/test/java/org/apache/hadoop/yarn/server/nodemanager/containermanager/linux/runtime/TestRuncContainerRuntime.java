@@ -84,6 +84,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.NM_RUNC_CONTAINER_TRANSFORMER_PLUGIN;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.NM_RUNC_DEFAULT_RO_MOUNTS;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.NM_RUNC_DEFAULT_RW_MOUNTS;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.NM_RUNC_LAYER_MOUNTS_TO_KEEP;
@@ -799,6 +800,83 @@ public class TestRuncContainerRuntime {
 
     File configFile = captureRuncConfigFile();
     verifyRuncConfig(configFile);
+  }
+
+  @Test
+  public void testTransformedMountSourceExists()
+        throws ContainerExecutionException, PrivilegedOperationException,
+        IOException {
+
+    // Create a temporary krb5.conf file for testing
+    String kerberosConfigFile = tmpPath + "/krb5.conf";
+    File testMount = new File(kerberosConfigFile);
+    if (!testMount.createNewFile()) {
+      LOG.info("File already exists");
+    }
+
+    // Set the container transformer class
+    conf.set(NM_RUNC_CONTAINER_TRANSFORMER_PLUGIN,
+            "org.apache.hadoop.yarn.server.nodemanager.containermanager." +
+              "linux.runtime.runc.KerberosContainerTransformerPlugin");
+
+    List<String> roOptions = new ArrayList<>();
+    roOptions.add("rbind");
+    roOptions.add("ro");
+    roOptions.add("rprivate");
+
+    // Set the optional YARN config property to use the test
+    // krb5.conf file as the source
+    conf.set("YARN_CONTAINER_KRB5_CONFIG_FILE", kerberosConfigFile);
+
+    // Add the krb5.conf to the expected mounts from our
+    // container transformation
+    expectedMounts.add(new OCIMount("/etc/krb5.conf", "bind",
+            kerberosConfigFile, roOptions));
+
+    MockRuncContainerRuntime runtime = new MockRuncContainerRuntime(
+            mockExecutor, mockCGroupsHandler);
+
+    runtime.initialize(conf, nmContext);
+    runtime.launchContainer(builder.build());
+
+    File configFile = captureRuncConfigFile();
+    verifyRuncConfig(configFile);
+  }
+
+  @Test
+  public void testTransformedMountSourceDoesNotExist() {
+
+    // Set the container transformer class
+    conf.set(NM_RUNC_CONTAINER_TRANSFORMER_PLUGIN,
+            "org.apache.hadoop.yarn.server.nodemanager.containermanager." +
+              "linux.runtime.runc.KerberosContainerTransformerPlugin");
+
+    List<String> roOptions = new ArrayList<>();
+    roOptions.add("rbind");
+    roOptions.add("ro");
+    roOptions.add("rprivate");
+
+    // Set the optional YARN config property to use a test krb5.conf file
+    // as the source (does not exist)
+    String kerberosConfigFile = "/etc/fake-krb5.conf";
+    conf.set("YARN_CONTAINER_KRB5_CONFIG_FILE", kerberosConfigFile);
+
+    // Add the default krb5.conf to the expected mounts from our
+    // container transformation
+    expectedMounts.add(new OCIMount("/etc/krb5.conf", "bind",
+            kerberosConfigFile, roOptions));
+
+    MockRuncContainerRuntime runtime = new MockRuncContainerRuntime(
+            mockExecutor, mockCGroupsHandler);
+
+    try {
+      runtime.initialize(conf, nmContext);
+      runtime.launchContainer(builder.build());
+      Assert.fail("Expected a launch container failure due to " +
+                "invalid mount.");
+    } catch (ContainerExecutionException e) {
+      LOG.info("Caught expected exception : " + e);
+    }
   }
 
   @Test
