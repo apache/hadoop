@@ -127,6 +127,7 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
 
   static final int FLAG_DNSSECOK = 1;
   static final int FLAG_SIGONLY = 2;
+  private static final int DEFAULT_NUM_THREADS = 4;
 
   private static final Logger LOG =
       LoggerFactory.getLogger(RegistryDNS.class);
@@ -168,7 +169,12 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
    */
   public RegistryDNS(String name) {
     super(name);
-    executor = HadoopExecutors.newCachedThreadPool(
+    int nThreads = Runtime.getRuntime().availableProcessors() / 4;
+    if (nThreads < DEFAULT_NUM_THREADS) {
+      nThreads = DEFAULT_NUM_THREADS;
+    }
+    executor = HadoopExecutors.newFixedThreadPool(
+        nThreads,
         new ThreadFactory() {
           private AtomicInteger counter = new AtomicInteger(1);
 
@@ -177,6 +183,27 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
             return new Thread(r,
                 "RegistryDNS "
                     + counter.getAndIncrement());
+          }
+        });
+  }
+
+  public RegistryDNS(String name, Configuration conf) {
+    super(name);
+    int nThreads = conf.getInt(KEY_NUM_THREADS, Runtime.getRuntime().availableProcessors() / 4);
+    if (nThreads < DEFAULT_NUM_THREADS) {
+      nThreads = DEFAULT_NUM_THREADS;
+    }
+    LOG.info("using {} threads for serving dns query", nThreads);
+    executor = HadoopExecutors.newFixedThreadPool(
+        nThreads,
+        new ThreadFactory() {
+          private AtomicInteger counter = new AtomicInteger(1);
+
+          @Override
+          public Thread newThread(Runnable r) {
+            return new Thread(r,
+                    "RegistryDNS "
+                            + counter.getAndIncrement());
           }
         });
   }
@@ -807,6 +834,65 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
   }
 
   /**
+   * Process a UDP request.
+   *
+   * @param channel the datagram channel for the request.
+   * @param remoteAddress the socket address of client.
+   * @param input the input ByteBuffer.
+   * @throws IOException if the udp processing generates an issue.
+   */
+  public void nioUDPClient(DatagramChannel channel, SocketAddress remoteAddress, ByteBuffer input) throws IOException {
+    ByteBuffer output = ByteBuffer.allocate(4096);
+    byte[] in = null;
+    byte[] response = null;
+    Message query = null;
+    try {
+      try {
+        int position = input.position();
+        in = new byte[position];
+        input.flip();
+        input.get(in);
+        query = new Message(in);
+        LOG.info("{}: received UDP query {}", remoteAddress,
+                query.getQuestion());
+        response = generateReply(query, null);
+        if (response.length > output.capacity()) {
+          LOG.warn("{}: Response of UDP query {} exceeds limit {}",
+                  remoteAddress, query.getQuestion(), output.limit());
+          query.getHeader().setFlag(Flags.TC);
+          response = query.toWire();
+        }
+        if (response == null) {
+          return;
+        }
+      } catch (IOException e) {
+        response = formErrorMessage(in);
+        if (response == null) {
+          LOG.debug("Error during create an error message."
+                  + " Failed to parse a header", e);
+          return;
+        }
+      }
+      output.clear();
+      output.put(response);
+      output.flip();
+
+      LOG.debug("{}:  sending response", remoteAddress);
+      channel.send(output, remoteAddress);
+    } catch (Exception e) {
+      if (e instanceof IOException && remoteAddress != null) {
+        throw NetUtils.wrapException(channel.socket().getInetAddress().getHostName(),
+                channel.socket().getPort(),
+                ((InetSocketAddress) remoteAddress).getHostName(),
+                ((InetSocketAddress) remoteAddress).getPort(),
+                (IOException) e);
+      } else {
+        throw e;
+      }
+    }
+  }
+
+  /**
    * Calculate the inbound message length, which is related in the message as an
    * unsigned short value.
    *
@@ -833,9 +919,8 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
    */
   public void serveNIOTCP(ServerSocketChannel serverSocketChannel,
       InetAddress addr, int port) throws Exception {
-    try {
-
-      while (true) {
+    while (true) {
+      try {
         final SocketChannel socketChannel = serverSocketChannel.accept();
         if (socketChannel != null) {
           executor.submit(new Callable<Boolean>() {
@@ -849,10 +934,9 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
         } else {
           Thread.sleep(500);
         }
+      } catch (Exception e) {
+        LOG.error("Error during accept", e);
       }
-    } catch (IOException e) {
-      throw NetUtils.wrapException(addr.getHostName(), port,
-          addr.getHostName(), port, e);
     }
   }
 
@@ -869,7 +953,7 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
     ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
     try {
       serverSocketChannel.socket().bind(new InetSocketAddress(addr, port));
-      serverSocketChannel.configureBlocking(false);
+      serverSocketChannel.configureBlocking(true);
     } catch (IOException e) {
       throw NetUtils.wrapException(null, 0,
           InetAddress.getLocalHost().getHostName(),
@@ -918,7 +1002,7 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
       @Override
       public Boolean call() throws Exception {
         try {
-          serveNIOUDP(udpChannel, addr, port);
+          serveNIOUDP(udpChannel);
         } catch (Exception e) {
           LOG.error("Error initializing DNS UDP listener", e);
           throw e;
@@ -932,60 +1016,22 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
    * Process an inbound UDP request.
    *
    * @param channel the UDP datagram channel.
-   * @param addr    local host address.
-   * @param port    local port.
-   * @throws IOException if the UDP processing fails.
    */
-  private synchronized void serveNIOUDP(DatagramChannel channel,
-      InetAddress addr, int port) throws Exception {
-    SocketAddress remoteAddress = null;
-    try {
-
-      ByteBuffer input = ByteBuffer.allocate(4096);
-      ByteBuffer output = ByteBuffer.allocate(4096);
-      byte[] in = null;
-
-      while (true) {
+  private synchronized void serveNIOUDP(DatagramChannel channel) {
+    while (true) {
+      try {
+        ByteBuffer input = ByteBuffer.allocate(4096);
         input.clear();
-        try {
-          remoteAddress = channel.receive(input);
-        } catch (IOException e) {
-          LOG.debug("Error during message receipt", e);
-          continue;
-        }
-        Message query;
-        byte[] response = null;
-        try {
-          int position = input.position();
-          in = new byte[position];
-          input.flip();
-          input.get(in);
-          query = new Message(in);
-          LOG.info("{}: received UDP query {}", remoteAddress,
-              query.getQuestion());
-          response = generateReply(query, null);
-          if (response == null) {
-            continue;
+        SocketAddress remoteAddress = channel.receive(input);
+        executor.submit(new Callable<Boolean>() {
+          @Override
+          public Boolean call() throws Exception {
+            nioUDPClient(channel, remoteAddress, input);
+            return true;
           }
-        } catch (IOException e) {
-          response = formErrorMessage(in);
-        }
-        output.clear();
-        output.put(response);
-        output.flip();
-
-        LOG.debug("{}:  sending response", remoteAddress);
-        channel.send(output, remoteAddress);
-      }
-    } catch (Exception e) {
-      if (e instanceof IOException && remoteAddress != null) {
-        throw NetUtils.wrapException(addr.getHostName(),
-            port,
-            ((InetSocketAddress) remoteAddress).getHostName(),
-            ((InetSocketAddress) remoteAddress).getPort(),
-            (IOException) e);
-      } else {
-        throw e;
+        });
+      } catch (Exception e) {
+        LOG.debug("Error during message receive", e);
       }
     }
   }
@@ -1393,7 +1439,7 @@ public class RegistryDNS extends AbstractService implements DNSOperations,
         }
       } else if (sr.isSuccessful()) {
         List<RRset> rrsets = sr.answers();
-        LOG.info("found answers {}", rrsets);
+        LOG.debug("found answers {}", rrsets);
         for (RRset rrset : rrsets) {
           addRRset(name, response, rrset, Section.ANSWER, flags);
         }
