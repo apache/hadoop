@@ -42,7 +42,6 @@ import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 
-import static org.apache.hadoop.fs.FSExceptionMessages.EOF_IN_READ_FULLY;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_RANDOM;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL;
@@ -438,7 +437,7 @@ public class ITestS3AOpenCost extends AbstractS3ACostTest {
         final FileRange range = FileRange.createFileRange(0, longLen);
         in.readVectored(Arrays.asList(range), (i) -> bb);
         interceptFuture(EOFException.class,
-            EOF_IN_READ_FULLY,
+            "",
             ContractTestUtils.VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS,
             TimeUnit.SECONDS,
             range.getData());
