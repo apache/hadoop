@@ -22,6 +22,7 @@ import static org.apache.hadoop.hdfs.protocolPB.PBHelperClient.vintPrefixed;
 
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -78,13 +79,15 @@ public abstract class Receiver implements DataTransferProtocol {
     return Op.read(in);
   }
 
-  private TraceScope continueTraceSpan(ByteString spanContextBytes,
+  private TraceScope continueTraceSpan(Map<String, String> spanContextMap,
                                        String description) {
     TraceScope scope = null;
-    SpanContext spanContext =
-        TraceUtils.byteStringToSpanContext(spanContextBytes);
-    if (spanContext != null) {
-      scope = tracer.newScope(description, spanContext);
+    if(!spanContextMap.isEmpty()){
+      SpanContext spanContext =
+          TraceUtils.mapToSpanContext(spanContextMap);
+      if (spanContext != null) {
+        scope = tracer.newScope(description, spanContext);
+      }
     }
     return scope;
   }
@@ -96,7 +99,7 @@ public abstract class Receiver implements DataTransferProtocol {
 
   private TraceScope continueTraceSpan(BaseHeaderProto header,
                                              String description) {
-    return continueTraceSpan(header.getTraceInfo().getSpanContext(),
+    return continueTraceSpan(header.getTraceInfo().getSpanContextMap(),
         description);
   }
 

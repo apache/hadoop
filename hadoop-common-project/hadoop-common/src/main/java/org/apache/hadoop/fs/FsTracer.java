@@ -38,7 +38,7 @@ public final class FsTracer {
 
   public static synchronized Tracer get(Configuration conf) {
     if (instance == null) {
-      instance = new Tracer.Builder("FSClient").
+      instance = new Tracer.Builder().
           conf(TraceUtils.wrapHadoopConf(CommonConfigurationKeys.
               FS_CLIENT_HTRACE_PREFIX, conf)).
           build();

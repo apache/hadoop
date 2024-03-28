@@ -19,17 +19,20 @@ package org.apache.hadoop.tracing;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.thirdparty.protobuf.ByteString;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.Map;
 
 /**
  * This class provides utility functions for tracing.
  */
 @InterfaceAudience.Private
 public class TraceUtils {
+  public static final Logger LOG = LoggerFactory.getLogger(TraceUtils.class.getName());
   static final String DEFAULT_HADOOP_TRACE_PREFIX = "hadoop.htrace.";
 
-  public static TraceConfiguration wrapHadoopConf(final String prefix,
-      final Configuration conf) {
+  public static TraceConfiguration wrapHadoopConf(final String prefix, final Configuration conf) {
     return null;
   }
 
@@ -37,11 +40,14 @@ public class TraceUtils {
     return null;
   }
 
-  public static SpanContext byteStringToSpanContext(ByteString byteString) {
-    return null;
+  public static SpanContext mapToSpanContext(Map<String, String> kvMap) {
+    return SpanContext.buildFromKVMap(kvMap);
   }
 
-  public static ByteString spanContextToByteString(SpanContext context) {
-    return null;
+  public static Map<String, String> spanContextToMap(SpanContext context) {
+    if (context == null) {
+      return null;
+    }
+    return context.getKVSpanContext();
   }
 }
