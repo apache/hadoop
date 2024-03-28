@@ -1493,15 +1493,4 @@ class BPServiceActor implements Runnable {
       }
     }
   }
-
-  @VisibleForTesting
-  void stopCommandProcessingThread() {
-    if (commandProcessingThread != null) {
-      commandProcessingThread.interrupt();
-    }
-  }
-
-  boolean isSlownode() {
-    return isSlownode;
-  }
 }

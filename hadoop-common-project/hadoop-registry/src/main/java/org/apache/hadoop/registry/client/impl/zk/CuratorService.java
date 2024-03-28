@@ -574,9 +574,9 @@ public class CuratorService extends CompositeService
     }
 
     try {
-      RegistrySecurity.AclListInfo aclInfo =
-          new RegistrySecurity.AclListInfo(acls);
       if (LOG.isDebugEnabled()) {
+        RegistrySecurity.AclListInfo aclInfo =
+                new RegistrySecurity.AclListInfo(acls);
         LOG.debug("Creating path {} with mode {} and ACL {}",
             path, mode, aclInfo);
       }

@@ -245,8 +245,8 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
    * Utility routine to print first line from cgroup tasks file
    */
   private void logLineFromTasksFile(File cgf) {
-    String str;
     if (LOG.isDebugEnabled()) {
+      String str;
       try (BufferedReader inl =
             new BufferedReader(new InputStreamReader(new FileInputStream(cgf
               + "/tasks"), "UTF-8"))) {

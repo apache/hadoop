@@ -573,8 +573,8 @@ public class WindowsSecureContainerExecutor extends DefaultContainerExecutor {
   @Override
   protected String[] getRunCommand(String command, String groupId,
       String userName, Path pidFile, Configuration conf) {
-    File f = new File(command);
     if (LOG.isDebugEnabled()) {
+      File f = new File(command);
       LOG.debug(String.format("getRunCommand: %s exists:%b", 
           command, f.exists()));
     }
