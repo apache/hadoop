@@ -381,6 +381,9 @@ performance -and vice versa.
 |--------------|----------------------------------------------------------|
 | `adaptive`   | Any adaptive policy implemented by the store.            |
 | `default`    | The default policy for this store. Generally "adaptive". |
+| `columnar`   | This is any columnar format other than ORC/parquet.      |
+| `orc`        | This is an ORC file. Optimize for it.                    |
+| `parquet`    | This is a Parquet file. Optimize for it.                 |
 | `random`     | Optimize for random access.                              |
 | `sequential` | Optimize for sequential access.                          |
 | `vector`     | The Vectored IO API is intended to be used.              |
@@ -425,7 +428,7 @@ sequential to random seek policies may be exensive.
 When applications explicitly set the `fs.option.openfile.read.policy` option, if
 they know their read plan, they SHOULD declare which policy is most appropriate.
 
-#### <a name="read.policy.default"></a> Read Policy ``
+#### <a name="read.policy.default"></a> Read Policy `default`
 
 The default policy for the filesystem instance.
 Implementation/installation-specific.
@@ -472,6 +475,20 @@ Strategies can include:
 
 Applications which know that the entire file is to be read from an opened stream SHOULD declare this
 read policy.
+
+#### <a name="read.policy.whole-file"></a> Read Policy `columnar`, `parquetd`, and `orc`
+
+These are read policies which declare that the file is of a specific format
+and that the input stream MAY be optimized for reading from these.
+
+In particular
+* File footers may be fetched and cached.
+* Vector IO and random IO SHOULD be expected.
+
+These read policies are a Hadoop 3.4.x addition, so applications and
+libraries targeting multiple versions, MUST list their fallback
+policies if these are not recognized, e.g. request a policy such as `parquet, vector, random`.
+
 
 ### <a name="openfile.length"></a> Option: `fs.option.openfile.length`
 

@@ -599,10 +599,36 @@ public final class Options {
         "adaptive";
 
     /**
+     * We are an avro file: {@value}.
+     */
+    public static final String FS_OPTION_OPENFILE_READ_POLICY_AVRO = "avro";
+
+    /**
+     * This is a columnar file format.
+     * Do whatever is needed to optimize for it: {@value}.
+     */
+    public static final String FS_OPTION_OPENFILE_READ_POLICY_COLUMNAR =
+        "columnar";
+
+    /**
      * Read policy {@value} -whateve the implementation does by default.
      */
     public static final String FS_OPTION_OPENFILE_READ_POLICY_DEFAULT =
         "default";
+
+    /**
+     * This is an ORC file.
+     * Do whatever is needed to optimize for it: {@value}.
+     */
+    public static final String FS_OPTION_OPENFILE_READ_POLICY_ORC =
+        "orc";
+
+    /**
+     * This is a v1 parquet file.
+     * Do whatever is needed to optimize for it: {@value}.
+     */
+    public static final String FS_OPTION_OPENFILE_READ_POLICY_PARQUET =
+        "parquet";
 
     /**
      * Read policy for random IO: {@value}.
@@ -628,13 +654,17 @@ public final class Options {
     public static final String FS_OPTION_OPENFILE_READ_POLICY_WHOLE_FILE =
         "whole-file";
 
+
     /**
      * All the current read policies as a set.
      */
     public static final Set<String> FS_OPTION_OPENFILE_READ_POLICIES =
         Collections.unmodifiableSet(Stream.of(
                 FS_OPTION_OPENFILE_READ_POLICY_ADAPTIVE,
+                FS_OPTION_OPENFILE_READ_POLICY_AVRO,
                 FS_OPTION_OPENFILE_READ_POLICY_DEFAULT,
+                FS_OPTION_OPENFILE_READ_POLICY_ORC,
+                FS_OPTION_OPENFILE_READ_POLICY_PARQUET,
                 FS_OPTION_OPENFILE_READ_POLICY_RANDOM,
                 FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL,
                 FS_OPTION_OPENFILE_READ_POLICY_VECTOR,
