@@ -154,6 +154,10 @@ public class DefaultResourceCalculator extends ResourceCalculator {
   }
 
   @Override
+  public boolean isAnyRequestedResourceZeroOrNegative(Resource available, Resource resource) {
+    return resource.getMemorySize() == 0;
+  }
+  @Override
   public boolean isAnyMajorResourceAboveZero(Resource resource) {
     return resource.getMemorySize() > 0;
   }
