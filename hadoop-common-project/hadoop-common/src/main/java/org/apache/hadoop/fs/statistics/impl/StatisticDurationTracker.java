@@ -31,6 +31,10 @@ import org.apache.hadoop.util.OperationDuration;
  * In the constructor, the counter with name of 'key' is
  * incremented -default is by 1, but can be set to other
  * values, including 0.
+ * <p>
+ *  If there is also a gauge with with the same key,
+ *  then it is incremented in the constructor and decremented
+ *  afterwards.
  */
 public class StatisticDurationTracker extends OperationDuration
     implements DurationTracker {
@@ -78,6 +82,9 @@ public class StatisticDurationTracker extends OperationDuration
     if (count > 0) {
       iostats.incrementCounter(key, count);
     }
+    if (iostats.gauges().containsKey(key)) {
+      iostats.incrementGauge(key, 1);
+    }
   }
 
   @Override
@@ -102,6 +109,9 @@ public class StatisticDurationTracker extends OperationDuration
       iostats.incrementCounter(name);
     }
     iostats.addTimedOperation(name, asDuration());
+    if (iostats.gauges().containsKey(key)) {
+      iostats.incrementGauge(key, -1);
+    }
   }
 
   @Override

@@ -102,13 +102,13 @@ public class TestBufferPool extends AbstractHadoopTestBase {
     assertEquals(2, pool.numCreated());
     assertEquals(0, pool.numAvailable());
 
-    data1.updateState(BufferData.State.READY, BufferData.State.BLANK);
+    data1.updateState(BufferData.State.READY, BufferData.State.EMPTY);
     pool.release(data1);
 
     assertEquals(2, pool.numCreated());
     assertEquals(1, pool.numAvailable());
 
-    data2.updateState(BufferData.State.READY, BufferData.State.BLANK);
+    data2.updateState(BufferData.State.READY, BufferData.State.EMPTY);
     pool.release(data2);
 
     assertEquals(2, pool.numCreated());
@@ -117,7 +117,7 @@ public class TestBufferPool extends AbstractHadoopTestBase {
 
   @Test
   public void testRelease() throws Exception {
-    testReleaseHelper(BufferData.State.BLANK, true);
+    testReleaseHelper(BufferData.State.EMPTY, true);
     testReleaseHelper(BufferData.State.PREFETCHING, true);
     testReleaseHelper(BufferData.State.CACHING, true);
     testReleaseHelper(BufferData.State.READY, false);
@@ -131,7 +131,7 @@ public class TestBufferPool extends AbstractHadoopTestBase {
     assertInitialState(pool, POOL_SIZE);
 
     BufferData data = this.acquire(pool, 1);
-    data.updateState(stateBeforeRelease, BufferData.State.BLANK);
+    data.updateState(stateBeforeRelease, BufferData.State.EMPTY);
 
     if (expectThrow) {
 

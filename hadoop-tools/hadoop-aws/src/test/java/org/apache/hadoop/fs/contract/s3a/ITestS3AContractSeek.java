@@ -47,11 +47,12 @@ import org.apache.hadoop.util.NativeCodeLoader;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_DEFAULT;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_RANDOM;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.setPrefetchOption;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.prepareTestConfiguration;
 import static org.apache.hadoop.util.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.s3a.Constants.INPUT_FADVISE;
 import static org.apache.hadoop.fs.s3a.Constants.READAHEAD_RANGE;
 import static org.apache.hadoop.fs.s3a.Constants.SSL_CHANNEL_MODE;
-import static org.apache.hadoop.fs.s3a.S3ATestConstants.FS_S3A_IMPL_DISABLE_CACHE;
 import static org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory.
         SSLChannelMode.Default_JSSE;
 import static org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory.
@@ -75,32 +76,42 @@ public class ITestS3AContractSeek extends AbstractContractSeekTest {
   private final String seekPolicy;
   private final DelegatingSSLSocketFactory.SSLChannelMode sslChannelMode;
 
+  /**
+   * Prefetch flag.
+   */
+  private final boolean prefetch;
+
   public static final int DATASET_LEN = READAHEAD * 2;
 
   public static final byte[] DATASET = ContractTestUtils.dataset(DATASET_LEN, 'a', 32);
 
   /**
    * This test suite is parameterized for the different seek policies
-   * which S3A Supports.
+   * which S3A Supports, openssl policy and whether prefetch is enabled or
+   * not.
+   * The openssl option is only executed if the required openssl library
+   * is found on the path; skipped otherwise.
    * @return a list of seek policies to test.
    */
-  @Parameterized.Parameters
+  @Parameterized.Parameters(name = "policy={0}-ssl={1}-prefetch={2}")
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
-        {FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL, Default_JSSE},
-        {FS_OPTION_OPENFILE_READ_POLICY_RANDOM, OpenSSL},
-        {FS_OPTION_OPENFILE_READ_POLICY_DEFAULT, Default_JSSE_with_GCM},
+        {FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL, Default_JSSE, false},
+        {FS_OPTION_OPENFILE_READ_POLICY_RANDOM, OpenSSL, true}, // requires openssl
+        {FS_OPTION_OPENFILE_READ_POLICY_DEFAULT, Default_JSSE_with_GCM, true},
     });
   }
 
   /**
    * Run the test with a chosen seek policy.
    * @param seekPolicy fadvise policy to use.
+   * @param prefetch
    */
   public ITestS3AContractSeek(final String seekPolicy,
-      final DelegatingSSLSocketFactory.SSLChannelMode sslChannelMode) {
+      final DelegatingSSLSocketFactory.SSLChannelMode sslChannelMode, final boolean prefetch) {
     this.seekPolicy = seekPolicy;
     this.sslChannelMode = sslChannelMode;
+    this.prefetch = prefetch;
   }
 
   /**
@@ -112,7 +123,8 @@ public class ITestS3AContractSeek extends AbstractContractSeekTest {
    */
   @Override
   protected Configuration createConfiguration() {
-    Configuration conf = super.createConfiguration();
+    Configuration conf = setPrefetchOption(
+        prepareTestConfiguration(super.createConfiguration()), prefetch);
     // purge any per-bucket overrides.
     try {
       URI bucketURI = new URI(checkNotNull(conf.get("fs.contract.test.fs.s3a")));
@@ -134,16 +146,6 @@ public class ITestS3AContractSeek extends AbstractContractSeekTest {
   @Override
   protected AbstractFSContract createContract(Configuration conf) {
     return new S3AContract(conf);
-  }
-
-  @Override
-  public void teardown() throws Exception {
-    super.teardown();
-    S3AFileSystem fs = getFileSystem();
-    if (fs != null && fs.getConf().getBoolean(FS_S3A_IMPL_DISABLE_CACHE,
-        false)) {
-      fs.close();
-    }
   }
 
   /**

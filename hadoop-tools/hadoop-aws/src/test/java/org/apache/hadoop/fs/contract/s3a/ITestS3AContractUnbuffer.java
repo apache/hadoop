@@ -18,11 +18,50 @@
 
 package org.apache.hadoop.fs.contract.s3a;
 
+import java.util.Collection;
+
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractUnbufferTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.PREFETCH_OPTIONS;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.setPrefetchOption;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.prepareTestConfiguration;
+
+@RunWith(Parameterized.class)
 public class ITestS3AContractUnbuffer extends AbstractContractUnbufferTest {
+
+  /**
+   * Parameterization.
+   */
+  @Parameterized.Parameters(name = "prefetch={0}")
+  public static Collection<Object[]> params() {
+    return PREFETCH_OPTIONS;
+  }
+
+  /**
+   * Prefetch flag.
+   */
+  private final boolean prefetch;
+
+  public ITestS3AContractUnbuffer(final boolean prefetch) {
+    this.prefetch = prefetch;
+  }
+
+  /**
+   * Create a configuration.
+   * @return a configuration
+   */
+  @Override
+  protected Configuration createConfiguration() {
+    final Configuration conf = prepareTestConfiguration(super.createConfiguration());
+    disableFilesystemCaching(conf);
+    return setPrefetchOption(conf, prefetch);
+  }
 
   @Override
   protected AbstractFSContract createContract(Configuration conf) {

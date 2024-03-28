@@ -340,7 +340,9 @@ public final class S3APrefetchFakes {
 
     @Override
     protected Path getCacheFilePath(final Configuration conf,
-        final LocalDirAllocator localDirAllocator)
+        final LocalDirAllocator localDirAllocator,
+        final String blockInfo,
+        final long fileSize)
         throws IOException {
       fileCount++;
       return Paths.get(Long.toString(fileCount));
@@ -349,6 +351,13 @@ public final class S3APrefetchFakes {
     @Override
     public void close() throws IOException {
       this.files.clear();
+    }
+
+    @Override
+    public String toString() {
+      return "FakeS3FilePerBlockCache{" +
+          "fileCount=" + fileCount +
+          "} " + super.toString();
     }
   }
 

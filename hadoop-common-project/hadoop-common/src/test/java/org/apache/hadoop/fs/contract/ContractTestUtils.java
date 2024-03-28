@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.contract;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FSDataOutputStreamBuilder;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileRange;
 import org.apache.hadoop.fs.FileStatus;
@@ -157,7 +158,9 @@ public class ContractTestUtils extends Assert {
    * whether file overwrite operations should be enabled
    * @param fs filesystem
    * @param path path to write to
+   * @param src source buffer
    * @param len length of data
+   * @param buffersize buffer size.
    * @param overwrite should the create option allow overwrites?
    * @throws IOException IO problems
    */
@@ -178,7 +181,9 @@ public class ContractTestUtils extends Assert {
    *
    * @param fs filesystem
    * @param path path to write to
+   * @param src source buffer
    * @param len length of data
+   * @param buffersize buffer size.
    * @param overwrite should the create option allow overwrites?
    * @param useBuilder should use builder API to create file?
    * @throws IOException IO problems
@@ -651,6 +656,15 @@ public class ContractTestUtils extends Assert {
                                  Path path,
                                  boolean overwrite,
                                  byte[] data) throws IOException {
+    final FSDataOutputStreamBuilder builder = fs.createFile(path)
+        .recursive()
+        .overwrite(overwrite);
+    if (overwrite) {
+      // for s3a tests, skip the safety checks.
+
+
+      builder.opt("fs.s3a.create.performance", true);
+    }
     FSDataOutputStream stream = fs.create(path, overwrite);
     try {
       if (data != null && data.length > 0) {

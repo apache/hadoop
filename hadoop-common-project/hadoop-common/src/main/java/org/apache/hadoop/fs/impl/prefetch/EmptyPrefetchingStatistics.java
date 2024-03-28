@@ -68,6 +68,11 @@ public final class EmptyPrefetchingStatistics
   }
 
   @Override
+  public void fetchOperationCompleted(final boolean prefetch, final long bytesFetched) {
+
+  }
+
+  @Override
   public void executorAcquired(Duration timeInQueue) {
 
   }
@@ -81,5 +86,7 @@ public final class EmptyPrefetchingStatistics
   public void memoryFreed(int size) {
 
   }
+
+
 }
 

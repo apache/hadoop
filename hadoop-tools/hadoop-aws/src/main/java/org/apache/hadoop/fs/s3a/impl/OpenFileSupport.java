@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a.impl;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Optional;
 import java.util.Set;
 
 import org.slf4j.Logger;
@@ -38,6 +39,8 @@ import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.select.SelectConstants;
 import org.apache.hadoop.fs.store.LogExactlyOnce;
 
+import static java.util.Objects.requireNonNull;
+import static java.util.Optional.empty;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_BUFFER_SIZE;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_LENGTH;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
@@ -46,6 +49,8 @@ import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_SP
 import static org.apache.hadoop.fs.impl.AbstractFSBuilderImpl.rejectUnknownMandatoryKeys;
 import static org.apache.hadoop.fs.s3a.Constants.ASYNC_DRAIN_THRESHOLD;
 import static org.apache.hadoop.fs.s3a.Constants.INPUT_FADVISE;
+import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_BLOCK_COUNT_KEY;
+import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_BLOCK_SIZE_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.READAHEAD_RANGE;
 import static org.apache.hadoop.util.Preconditions.checkArgument;
 
@@ -252,17 +257,20 @@ public class OpenFileSupport {
     }
     FSBuilderSupport builderSupport = new FSBuilderSupport(options);
     // determine start and end of file.
-    long splitStart = builderSupport.getPositiveLong(FS_OPTION_OPENFILE_SPLIT_START, 0);
+    Optional<Long> splitStart = getOptionalLong(options, FS_OPTION_OPENFILE_SPLIT_START);
 
     // split end
-    long splitEnd = builderSupport.getLong(
-        FS_OPTION_OPENFILE_SPLIT_END, LENGTH_UNKNOWN);
-
-    if (splitStart > 0 && splitStart > splitEnd) {
-      LOG.warn("Split start {} is greater than split end {}, resetting",
+    Optional<Long> splitEnd = getOptionalLong(options, FS_OPTION_OPENFILE_SPLIT_END);
+    // if there's a mismatch between start and end, set both to empty
+    if (splitEnd.isPresent() && splitEnd.get() < splitStart.orElse(0L)) {
+      LOG.debug("Split start {} is greater than split end {}, resetting",
           splitStart, splitEnd);
-      splitStart = 0;
+      splitStart = empty();
+      splitEnd = empty();
     }
+    Optional<Integer> prefetchBlockSize = getOptionalInteger(options, PREFETCH_BLOCK_SIZE_KEY);
+    Optional<Integer> prefetchBlockCount = getOptionalInteger(options, PREFETCH_BLOCK_COUNT_KEY);
+
 
     // read end is the open file value
     fileLength = builderSupport.getPositiveLong(FS_OPTION_OPENFILE_LENGTH, fileLength);
@@ -296,6 +304,8 @@ public class OpenFileSupport {
             S3AInputPolicy.getFirstSupportedPolicy(policies, defaultInputPolicy))
         .withReadAheadRange(
             builderSupport.getPositiveLong(READAHEAD_RANGE, defaultReadAhead))
+        .withPrefetchBlockCount(prefetchBlockCount)
+        .withPrefetchBlockSize(prefetchBlockSize)
         .withSplitStart(splitStart)
         .withSplitEnd(splitEnd)
         .withStatus(fileStatus)
@@ -336,8 +346,8 @@ public class OpenFileSupport {
         .withFileLength(LENGTH_UNKNOWN)
         .withInputPolicy(defaultInputPolicy)
         .withReadAheadRange(defaultReadAhead)
-        .withSplitStart(0)
-        .withSplitEnd(LENGTH_UNKNOWN)
+        .withSplitStart(empty())
+        .withSplitEnd(empty())
         .build();
   }
 
@@ -350,6 +360,36 @@ public class OpenFileSupport {
         ", defaultAsyncDrainThreshold=" + defaultAsyncDrainThreshold +
         ", defaultInputPolicy=" + defaultInputPolicy +
         '}';
+  }
+
+
+  /**
+   * Get a long value with resilience to unparseable values.
+   * @param options configuration to parse
+   * @param key key to log
+   * @return long value or empty()
+   */
+  public Optional<Long> getOptionalLong(final Configuration options, String key) {
+    final String v = options.getTrimmed(key, "");
+    if (v.isEmpty()) {
+      return empty();
+    }
+    try {
+      return Optional.of(Long.parseLong(v));
+    } catch (NumberFormatException e) {
+      return empty();
+    }
+  }
+
+  /**
+   * Get an int value with resilience to unparseable values.
+   * @param options configuration to parse
+   * @param key key to log
+   * @return long value or empty()
+   */
+  public Optional<Integer> getOptionalInteger(final Configuration options, String key) {
+    return getOptionalLong(options, key)
+        .map(l -> l.intValue());
   }
 
   /**
@@ -373,15 +413,24 @@ public class OpenFileSupport {
     private int bufferSize;
 
     /**
-     * Where does the read start from. 0 unless known.
+     * Where does the read start from, if known.
      */
-    private long splitStart;
+    private Optional<Long> splitStart = empty();
 
     /**
-     * What is the split end?
-     * Negative if not known.
+     * What is the split end, if known?
      */
-    private long splitEnd = -1;
+    private Optional<Long> splitEnd = empty();
+
+    /**
+     * Prefetch block size.
+     */
+    private Optional<Integer> prefetchBlockSize  = empty();
+
+    /**
+     * Prefetch block count.
+     */
+    private Optional<Integer> prefetchBlockCount = empty();
 
     /**
      * What is the file length?
@@ -429,11 +478,27 @@ public class OpenFileSupport {
       return bufferSize;
     }
 
-    public long getSplitStart() {
+    public Optional<Integer> getPrefetchBlockSize() {
+      return prefetchBlockSize;
+    }
+
+    public Optional<Integer> getPrefetchBlockCount() {
+      return prefetchBlockCount;
+    }
+
+    /**
+     * Where does the read start from, if known.
+     * @return split start.
+     */
+    public Optional<Long> getSplitStart() {
       return splitStart;
     }
 
-    public long getSplitEnd() {
+    /**
+     * What is the split end, if known?
+     * @return split end.
+     */
+    public Optional<Long> getSplitEnd() {
       return splitEnd;
     }
 
@@ -444,6 +509,8 @@ public class OpenFileSupport {
           ", inputPolicy=" + inputPolicy +
           ", changePolicy=" + changePolicy +
           ", readAheadRange=" + readAheadRange +
+          ", prefetchBlockSize=" + prefetchBlockSize +
+          ", prefetchBlockCount=" + prefetchBlockCount +
           ", splitStart=" + splitStart +
           ", splitEnd=" + splitEnd +
           ", bufferSize=" + bufferSize +
@@ -514,8 +581,8 @@ public class OpenFileSupport {
      * @param value new value
      * @return the builder
      */
-    public OpenFileInformation withSplitStart(final long value) {
-      splitStart = value;
+    public OpenFileInformation withPrefetchBlockSize(final Optional<Integer> value) {
+      prefetchBlockSize = value;
       return this;
     }
 
@@ -524,10 +591,31 @@ public class OpenFileSupport {
      * @param value new value
      * @return the builder
      */
-    public OpenFileInformation withSplitEnd(final long value) {
-      splitEnd = value;
+    public OpenFileInformation withPrefetchBlockCount(final Optional<Integer> value) {
+      prefetchBlockCount = value;
       return this;
     }
+
+    /**
+     * Set split start.
+     * @param value new value -must not be null
+     * @return the builder
+     */
+    public OpenFileInformation withSplitStart(final Optional<Long> value) {
+      splitStart = requireNonNull(value);
+      return this;
+    }
+
+    /**
+     * Set split end.
+     * @param value new value -must not be null
+     * @return the builder
+     */
+    public OpenFileInformation withSplitEnd(final Optional<Long> value) {
+      splitEnd = requireNonNull(value);
+      return this;
+    }
+
 
     /**
      * Set builder value.
@@ -556,11 +644,16 @@ public class OpenFileSupport {
      * @return the context
      */
     public S3AReadOpContext applyOptions(S3AReadOpContext roc) {
-      return roc
-          .withInputPolicy(inputPolicy)
+      roc.withInputPolicy(inputPolicy)
           .withChangeDetectionPolicy(changePolicy)
           .withAsyncDrainThreshold(asyncDrainThreshold)
-          .withReadahead(readAheadRange);
+          .withReadahead(readAheadRange)
+          .withSplitStart(splitStart)
+          .withSplitEnd(splitEnd);
+      prefetchBlockCount.map(roc::withPrefetchBlockCount);
+      prefetchBlockSize.map(roc::withPrefetchBlockSize);
+      return roc;
+
     }
 
   }

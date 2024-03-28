@@ -64,12 +64,14 @@ public final class FilePosition {
    */
   private long readStartOffset;
 
+  private long totalBytesRead;
+
   // Read stats after a seek (mostly for debugging use).
-  private int numSingleByteReads;
+  private long numSingleByteReads;
 
-  private int numBytesRead;
+  private long numBytesRead;
 
-  private int numBufferReads;
+  private long numBufferReads;
 
   /**
    * Constructs an instance of {@link FilePosition}.
@@ -245,8 +247,13 @@ public final class FilePosition {
         && (numBytesRead == buffer.limit());
   }
 
+  /**
+   * Increment the read statistic counters.
+   * @param n number of bytes read
+   */
   public void incrementBytesRead(int n) {
     numBytesRead += n;
+    totalBytesRead += n;
     if (n == 1) {
       numSingleByteReads++;
     } else {
@@ -254,18 +261,29 @@ public final class FilePosition {
     }
   }
 
-  public int numBytesRead() {
+  public long numBytesRead() {
     return numBytesRead;
   }
 
-  public int numSingleByteReads() {
+  public long numSingleByteReads() {
     return numSingleByteReads;
   }
 
-  public int numBufferReads() {
+  public long numBufferReads() {
     return numBufferReads;
   }
 
+  /**
+   * Total bytes read: is never reset.
+   * @return count of bytes read.
+   */
+  public long getTotalBytesRead() {
+    return totalBytesRead;
+  }
+
+  /**
+   * Reset the read statistics.
+   */
   private void resetReadStats() {
     numBytesRead = 0;
     numSingleByteReads = 0;
@@ -292,6 +310,9 @@ public final class FilePosition {
           currentBufferState));
       sb.append("\n");
     }
+    sb.append(String.format(
+        "totalBytesRead=%d; numBytesRead=%d; numBufferReads=%d; numSingleByteReads=%d;",
+        totalBytesRead, numBytesRead, numBufferReads, numSingleByteReads));
     return sb.toString();
   }
 

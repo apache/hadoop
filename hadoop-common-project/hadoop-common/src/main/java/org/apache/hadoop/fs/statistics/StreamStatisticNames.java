@@ -422,6 +422,44 @@ public final class StreamStatisticNames {
       = "stream_read_prefetch_operations";
 
   /**
+   * Is this stream currently saving blocks to a cache?
+   *
+   * Value: {@value}.
+   */
+  public static final String STREAM_READ_BLOCK_CACHE_ENABLED =
+      "stream_read_block_cache_enabled";
+
+  /**
+   * Is this stream currently prefetching data blocks.
+   *
+   * Value: {@value}.
+   */
+  public static final String STREAM_READ_BLOCK_PREFETCH_ENABLED =
+      "stream_read_block_prefetch_enabled";
+
+  /**
+   * Maximum number of blocks to prefetch.
+   *
+   * Value: {@value}.
+   */
+  public static final String STREAM_READ_BLOCK_PREFETCH_LIMIT =
+      "stream_read_block_prefetch_limit";
+
+  /**
+   * Block size for fetch/prefetch.
+   *
+   * Value: {@value}.
+   */
+  public static final String STREAM_READ_BLOCK_SIZE =
+      "stream_read_block_size";
+
+  /**
+   * Total number of block fetch operations executed.
+   */
+  public static final String STREAM_READ_BLOCK_FETCH_OPERATIONS
+      = "stream_read_block_fetch_operations";
+
+  /**
    * Total number of block in disk cache.
    */
   public static final String STREAM_READ_BLOCKS_IN_FILE_CACHE

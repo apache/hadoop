@@ -264,8 +264,9 @@ public class LoggingAuditor
      * Attach Range of data for GetObject Request.
      * @param request the sdk request to be modified
      * @param executionAttributes execution attributes for this request
+     * @return the extracted range (bytes) or null if not a GetObject request/or no range
      */
-    private void attachRangeFromRequest(SdkHttpRequest request,
+    private String attachRangeFromRequest(SdkHttpRequest request,
         ExecutionAttributes executionAttributes) {
 
       String operationName = executionAttributes.getAttribute(AwsExecutionAttribute.OPERATION_NAME);
@@ -275,10 +276,13 @@ public class LoggingAuditor
           String[] rangeHeader = request.headers().get("Range").get(0).split("=");
           // only set header if range unit is  bytes
           if (rangeHeader[0].equals("bytes")) {
-            referrer.set(AuditConstants.PARAM_RANGE, rangeHeader[1]);
+            final String range = rangeHeader[1];
+            referrer.set(AuditConstants.PARAM_RANGE, range);
+            return range;
           }
         }
       }
+      return null;
     }
 
     private final String description;
@@ -376,7 +380,7 @@ public class LoggingAuditor
       SdkRequest sdkRequest = context.request();
 
       // attach range for GetObject requests
-      attachRangeFromRequest(httpRequest, executionAttributes);
+      final String range = attachRangeFromRequest(httpRequest, executionAttributes);
 
       // for delete op, attach the number of files to delete
       attachDeleteKeySizeAttribute(sdkRequest);
@@ -392,11 +396,13 @@ public class LoggingAuditor
             .build();
       }
       if (LOG.isDebugEnabled()) {
-        LOG.debug("[{}] {} Executing {} with {}; {}",
+        String extra = range == null ? "" : (" range=" + range + ";");
+        LOG.debug("[{}] {} Executing {} with {};{} {}",
             currentThreadID(),
             getSpanId(),
             getOperationName(),
             analyzer.analyze(context.request()),
+            extra,
             header);
       }
 
