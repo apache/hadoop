@@ -391,6 +391,24 @@ public class TestAccountConfiguration {
     unsetAuthConfig(abfsConf, true);
   }
 
+  @Test
+  public void testConfigPropEmptyString() throws Throwable {
+    final String accountName = "account";
+
+    final Configuration conf = new Configuration();
+    final AbfsConfiguration abfsConf = new AbfsConfiguration(conf, accountName);
+
+    for (String key : CONFIG_KEYS) {
+      setAuthConfig(abfsConf, true, AuthType.OAuth);
+      abfsConf.set(key, "");
+      abfsConf.set(key + "." + accountName, "");
+      testMissingConfigKey(abfsConf, key);
+    }
+
+    unsetAuthConfig(abfsConf, false);
+    unsetAuthConfig(abfsConf, true);
+  }
+
   private static void testMissingConfigKey(final AbfsConfiguration abfsConf,
       final String confKey) throws Throwable {
     GenericTestUtils.assertExceptionContains("Configuration property "
