@@ -24,6 +24,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -98,7 +99,7 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
   public void testSeekZeroByteFile() throws Throwable {
     describe("seek and read a 0 byte file");
     instream = getFileSystem().open(zeroByteFile);
-    assertEquals(0, instream.getPos());
+    Assertions.assertThat(instream.getPos()).isEqualTo(0);
     //expect initial read to fai;
     int result = instream.read();
     assertMinusOne("initial byte read", result);
@@ -116,7 +117,7 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
   public void testBlockReadZeroByteFile() throws Throwable {
     describe("do a block read on a 0 byte file");
     instream = getFileSystem().open(zeroByteFile);
-    assertEquals(0, instream.getPos());
+    Assertions.assertThat(instream.getPos()).isEqualTo(0);
     //expect that seek to 0 works
     byte[] buffer = new byte[1];
     int result = instream.read(buffer, 0, 1);
@@ -179,7 +180,7 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
   @Test
   public void testNegativeSeek() throws Throwable {
     instream = getFileSystem().open(smallSeekFile);
-    assertEquals(0, instream.getPos());
+    Assertions.assertThat(instream.getPos()).isEqualTo(0);
     try {
       instream.seek(-1);
       long p = instream.getPos();
@@ -194,39 +195,39 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
       //bad seek -expected, but not as preferred as an EOFException
       handleRelaxedException("a negative seek", "EOFException", e);
     }
-    assertEquals(0, instream.getPos());
+    Assertions.assertThat(instream.getPos()).isEqualTo(0);
   }
 
   @Test
   public void testSeekFile() throws Throwable {
     describe("basic seek operations");
     instream = getFileSystem().open(smallSeekFile);
-    assertEquals(0, instream.getPos());
+    Assertions.assertThat(instream.getPos()).isEqualTo(0);
     //expect that seek to 0 works
     instream.seek(0);
     int result = instream.read();
-    assertEquals(0, result);
-    assertEquals(1, instream.read());
-    assertEquals(2, instream.getPos());
-    assertEquals(2, instream.read());
-    assertEquals(3, instream.getPos());
+    Assertions.assertThat(result).isEqualTo(0);
+    Assertions.assertThat(instream.read()).isEqualTo(1);
+    Assertions.assertThat(instream.getPos()).isEqualTo(2);
+    Assertions.assertThat(instream.read()).isEqualTo(2);
+    Assertions.assertThat(instream.getPos()).isEqualTo(3);
     instream.seek(128);
-    assertEquals(128, instream.getPos());
-    assertEquals(128, instream.read());
+    Assertions.assertThat(instream.getPos()).isEqualTo(128);
+    Assertions.assertThat(instream.read()).isEqualTo(128);
     instream.seek(63);
-    assertEquals(63, instream.read());
+    Assertions.assertThat(instream.read()).isEqualTo(63);
   }
 
   @Test
   public void testSeekAndReadPastEndOfFile() throws Throwable {
     describe("verify that reading past the last bytes in the file returns -1");
     instream = getFileSystem().open(smallSeekFile);
-    assertEquals(0, instream.getPos());
+    Assertions.assertThat(instream.getPos()).isEqualTo(0);
     //expect that seek to 0 works
     //go just before the end
     instream.seek(TEST_FILE_LEN - 2);
-    assertTrue("Premature EOF", instream.read() != -1);
-    assertTrue("Premature EOF", instream.read() != -1);
+    Assertions.assertThat(instream.read() != -1).withFailMessage("Premature EOF").isTrue();
+    Assertions.assertThat(instream.read() != -1).withFailMessage("Premature EOF").isTrue();
     assertMinusOne("read past end of file", instream.read());
   }
 
@@ -260,7 +261,7 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
     }
     //now go back and try to read from a valid point in the file
     instream.seek(1);
-    assertTrue("Premature EOF", instream.read() != -1);
+    Assertions.assertThat(instream.read() != -1).withFailMessage("Premature EOF").isTrue();
   }
 
   /**
@@ -274,32 +275,32 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
     byte[] block = dataset(100 * 1024, 0, 255);
     createFile(getFileSystem(), testSeekFile, true, block);
     instream = getFileSystem().open(testSeekFile);
-    assertEquals(0, instream.getPos());
+    Assertions.assertThat(instream.getPos()).isEqualTo(0);
     //expect that seek to 0 works
     instream.seek(0);
     int result = instream.read();
-    assertEquals(0, result);
-    assertEquals(1, instream.read());
-    assertEquals(2, instream.read());
+    Assertions.assertThat(result).isEqualTo(0);
+    Assertions.assertThat(instream.read()).isEqualTo(1);
+    Assertions.assertThat(instream.read()).isEqualTo(2);
 
     //do seek 32KB ahead
     instream.seek(32768);
-    assertEquals("@32768", block[32768], (byte) instream.read());
+    Assertions.assertThat((byte) instream.read()).withFailMessage("@32768").isEqualTo(block[32768]);
     instream.seek(40000);
-    assertEquals("@40000", block[40000], (byte) instream.read());
+    Assertions.assertThat((byte) instream.read()).withFailMessage("@40000").isEqualTo(block[40000]);
     instream.seek(8191);
-    assertEquals("@8191", block[8191], (byte) instream.read());
+    Assertions.assertThat((byte) instream.read()).withFailMessage("@8191").isEqualTo(block[8191]);
     instream.seek(0);
-    assertEquals("@0", 0, (byte) instream.read());
+    Assertions.assertThat((byte) instream.read()).withFailMessage("@0").isEqualTo((byte) 0);
 
     // try read & readFully
     instream.seek(0);
-    assertEquals(0, instream.getPos());
+    Assertions.assertThat(instream.getPos()).isEqualTo(0);
     instream.read();
-    assertEquals(1, instream.getPos());
+    Assertions.assertThat(instream.getPos()).isEqualTo(1);
     byte[] buf = new byte[80 * 1024];
     instream.readFully(1, buf, 0, buf.length);
-    assertEquals(1, instream.getPos());
+    Assertions.assertThat(instream.getPos()).isEqualTo(1);
   }
 
   @Test
@@ -312,19 +313,19 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
     createFile(getFileSystem(), testSeekFile, true, block);
     instream = getFileSystem().open(testSeekFile);
     instream.seek(39999);
-    assertTrue(-1 != instream.read());
-    assertEquals(40000, instream.getPos());
+    Assertions.assertThat(instream.read()).isNotEqualTo(-1);
+    Assertions.assertThat(instream.getPos()).isEqualTo(40000);
 
     int v = 256;
     byte[] readBuffer = new byte[v];
     instream.readFully(128, readBuffer, 0, v);
     //have gone back
-    assertEquals(40000, instream.getPos());
+    Assertions.assertThat(instream.getPos()).isEqualTo(40000);
     //content is the same too
-    assertEquals("@40000", block[40000], (byte) instream.read());
+    Assertions.assertThat((byte) instream.read()).withFailMessage("@40000").isEqualTo(block[40000]);
     //now verify the picked up data
     for (int i = 0; i < 256; i++) {
-      assertEquals("@" + i, block[i + 128], readBuffer[i]);
+      Assertions.assertThat(readBuffer[i]).withFailMessage("@" + i).isEqualTo(block[i + 128]);
     }
   }
 
@@ -373,13 +374,13 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
     describe("readFully against a 0 byte file");
     assumeSupportsPositionedReadable();
     instream = getFileSystem().open(zeroByteFile);
-    assertEquals(0, instream.getPos());
+    Assertions.assertThat(instream.getPos()).isEqualTo(0);
     byte[] buffer = new byte[1];
     instream.readFully(0, buffer, 0, 0);
-    assertEquals(0, instream.getPos());
+    Assertions.assertThat(instream.getPos()).isEqualTo(0);
     // seek to 0 read 0 bytes from it
     instream.seek(0);
-    assertEquals(0, instream.read(buffer, 0, 0));
+    Assertions.assertThat(instream.read(buffer, 0, 0)).isEqualTo(0);
   }
 
   @Test
@@ -439,14 +440,14 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
     }
 
     // read properly
-    assertEquals(0, instream.getPos());
+    Assertions.assertThat(instream.getPos()).isEqualTo(0);
     instream.readFully(0, buffer);
-    assertEquals(0, instream.getPos());
+    Assertions.assertThat(instream.getPos()).isEqualTo(0);
 
     // now read the entire file in one go
     byte[] fullFile = new byte[TEST_FILE_LEN];
     instream.readFully(0, fullFile);
-    assertEquals(0, instream.getPos());
+    Assertions.assertThat(instream.getPos()).isEqualTo(0);
 
     try {
       instream.readFully(16, fullFile);
@@ -566,18 +567,18 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
     }
 
     // read properly
-    assertEquals(0, instream.getPos());
+    Assertions.assertThat(instream.getPos()).isEqualTo(0);
     instream.readFully(0, buffer);
-    assertEquals(0, instream.getPos());
+    Assertions.assertThat(instream.getPos()).isEqualTo(0);
 
     // now read the entire file in one go
     byte[] fullFile = new byte[TEST_FILE_LEN];
     instream.readFully(0, fullFile, 0, fullFile.length);
-    assertEquals(0, instream.getPos());
+    Assertions.assertThat(instream.getPos()).isEqualTo(0);
 
     // now read past the end of the file
-    assertEquals(-1,
-        instream.read(TEST_FILE_LEN + 16, buffer, 0, 1));
+    Assertions.assertThat(instream.read(TEST_FILE_LEN + 16, buffer, 0, 1))
+        .isEqualTo(-1);
   }
 
   @Test
@@ -585,7 +586,7 @@ public abstract class AbstractContractSeekTest extends AbstractFSContractTestBas
     describe("read at the end of the file");
     instream = getFileSystem().open(smallSeekFile);
     instream.seek(TEST_FILE_LEN -1);
-    assertTrue("read at last byte", instream.read() > 0);
-    assertEquals("read just past EOF", -1, instream.read());
+    Assertions.assertThat(instream.read() > 0).withFailMessage("read at last byte").isTrue();
+    Assertions.assertThat(instream.read()).withFailMessage("read just past EOF").isEqualTo(-1);
   }
 }

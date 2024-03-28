@@ -22,6 +22,7 @@ import java.security.PrivilegedExceptionAction;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,23 +37,27 @@ public abstract class AbstractContractGetEnclosingRoot extends AbstractFSContrac
     Path root = path("/");
     Path foobar = path("/foo/bar");
 
-    assertEquals("Ensure getEnclosingRoot on the root directory returns the root directory",
-        root, fs.getEnclosingRoot(foobar));
-    assertEquals("Ensure getEnclosingRoot called on itself returns the root directory",
-        root, fs.getEnclosingRoot(fs.getEnclosingRoot(foobar)));
-    assertEquals(
-        "Ensure getEnclosingRoot for different paths in the same enclosing root "
-            + "returns the same path",
-        fs.getEnclosingRoot(root), fs.getEnclosingRoot(foobar));
-    assertEquals("Ensure getEnclosingRoot on a path returns the root directory",
-        root, fs.getEnclosingRoot(methodPath()));
-    assertEquals("Ensure getEnclosingRoot called on itself on a path returns the root directory",
-        root, fs.getEnclosingRoot(fs.getEnclosingRoot(methodPath())));
-    assertEquals(
-        "Ensure getEnclosingRoot for different paths in the same enclosing root "
-            + "returns the same path",
-        fs.getEnclosingRoot(root),
-        fs.getEnclosingRoot(methodPath()));
+    Assertions.assertThat(fs.getEnclosingRoot(foobar))
+        .withFailMessage("Ensure getEnclosingRoot on the root directory"
+            + " returns the root directory")
+        .isEqualTo(root);
+    Assertions.assertThat(fs.getEnclosingRoot(fs.getEnclosingRoot(foobar)))
+        .withFailMessage("Ensure getEnclosingRoot called on itself returns the root directory")
+        .isEqualTo(root);
+    Assertions.assertThat(fs.getEnclosingRoot(foobar))
+        .withFailMessage("Ensure getEnclosingRoot for different paths in the same enclosing root"
+            + " returns the same path")
+        .isEqualTo(fs.getEnclosingRoot(root));
+    Assertions.assertThat(fs.getEnclosingRoot(methodPath()))
+        .withFailMessage("Ensure getEnclosingRoot on a path returns the root directory")
+        .isEqualTo(root);
+    Assertions.assertThat(fs.getEnclosingRoot(fs.getEnclosingRoot(methodPath())))
+        .withFailMessage("Ensure getEnclosingRoot called on itself on a path returns the root directory")
+        .isEqualTo(root);
+    Assertions.assertThat(fs.getEnclosingRoot(methodPath()))
+        .withFailMessage("Ensure getEnclosingRoot for different paths in the same enclosing root"
+            + " returns the same path")
+        .isEqualTo(fs.getEnclosingRoot(root));
   }
 
 
@@ -63,11 +68,12 @@ public abstract class AbstractContractGetEnclosingRoot extends AbstractFSContrac
     Path foobar = methodPath();
     fs.mkdirs(foobar);
 
-    assertEquals(
-        "Ensure getEnclosingRoot returns the root directory when the root directory exists",
-        root, fs.getEnclosingRoot(foobar));
-    assertEquals("Ensure getEnclosingRoot returns the root directory when the directory exists",
-        root, fs.getEnclosingRoot(foobar));
+    Assertions.assertThat(fs.getEnclosingRoot(foobar))
+        .withFailMessage("Ensure getEnclosingRoot returns the root directory when the root directory exists")
+        .isEqualTo(root);
+    Assertions.assertThat(fs.getEnclosingRoot(foobar))
+        .withFailMessage("Ensure getEnclosingRoot returns the root directory when the directory exists")
+        .isEqualTo(root);
   }
 
   @Test
@@ -77,12 +83,12 @@ public abstract class AbstractContractGetEnclosingRoot extends AbstractFSContrac
     Path root = path("/");
 
     // .
-    assertEquals(
-        "Ensure getEnclosingRoot returns the root directory even when the path does not exist",
-        root, fs.getEnclosingRoot(foobar));
-    assertEquals(
-        "Ensure getEnclosingRoot returns the root directory even when the path does not exist",
-        root, fs.getEnclosingRoot(methodPath()));
+    Assertions.assertThat(fs.getEnclosingRoot(foobar))
+        .withFailMessage("Ensure getEnclosingRoot returns the root directory even when the path does not exist")
+        .isEqualTo(root);
+    Assertions.assertThat(fs.getEnclosingRoot(methodPath()))
+        .withFailMessage("Ensure getEnclosingRoot returns the root directory even when the path does not exist")
+        .isEqualTo(root);
   }
 
   @Test
@@ -90,14 +96,17 @@ public abstract class AbstractContractGetEnclosingRoot extends AbstractFSContrac
     FileSystem fs = getFileSystem();
     Path root = path("/");
 
-    assertEquals("Ensure getEnclosingRoot returns the root directory when the directory exists",
-        root, fs.getEnclosingRoot(new Path("/foo/bar")));
+    Assertions.assertThat(fs.getEnclosingRoot(new Path("/foo/bar")))
+        .withFailMessage("Ensure getEnclosingRoot returns the root directory when the directory exists")
+        .isEqualTo(root);
 
     UserGroupInformation ugi = UserGroupInformation.createRemoteUser("foo");
     Path p = ugi.doAs((PrivilegedExceptionAction<Path>) () -> {
       FileSystem wFs = getContract().getTestFileSystem();
       return wFs.getEnclosingRoot(new Path("/foo/bar"));
     });
-    assertEquals("Ensure getEnclosingRoot works correctly within a wrapped FileSystem", root, p);
+    Assertions.assertThat(p)
+        .withFailMessage("Ensure getEnclosingRoot works correctly within a wrapped FileSystem")
+        .isEqualTo(root);
   }
 }

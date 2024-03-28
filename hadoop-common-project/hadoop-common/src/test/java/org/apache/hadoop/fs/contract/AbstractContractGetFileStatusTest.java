@@ -284,10 +284,9 @@ public abstract class AbstractContractGetFileStatusTest extends
     treeWalk.assertFieldsEquivalent("files", listing,
         treeWalk.getFiles(),
         listing.getFiles());
-    assertEquals("Size of status list through next() calls",
-        count,
-        toListThroughNextCallsAlone(
-            fs.listFiles(tree.getBasePath(), true)).size());
+    Assertions.assertThat(toListThroughNextCallsAlone(fs.listFiles(tree.getBasePath(), true)))
+        .withFailMessage("Size of status list through next() calls")
+        .hasSize(count);
   }
 
   @Test
@@ -343,7 +342,8 @@ public abstract class AbstractContractGetFileStatusTest extends
   public void testListStatusFilteredFile() throws Throwable {
     describe("test the listStatus(path, filter) on a file");
     Path f = touchf("liststatus");
-    assertEquals(0, getFileSystem().listStatus(f, NO_PATHS).length);
+    Assertions.assertThat(getFileSystem().listStatus(f, NO_PATHS))
+        .isEmpty();
   }
 
   @Test
@@ -398,12 +398,15 @@ public abstract class AbstractContractGetFileStatusTest extends
     Path f = touchf("listfilesfile");
     List<LocatedFileStatus> statusList = toList(
         getFileSystem().listFiles(f, false));
-    assertEquals("size of file list returned", 1, statusList.size());
+    Assertions.assertThat(statusList)
+        .withFailMessage("size of file list returned")
+        .hasSize(1);
     assertIsNamedFile(f, statusList.get(0));
     List<LocatedFileStatus> statusList2 = toListThroughNextCallsAlone(
         getFileSystem().listFiles(f, false));
-    assertEquals("size of file list returned through next() calls",
-        1, statusList2.size());
+    Assertions.assertThat(statusList2)
+        .withFailMessage("size of file list returned through next() calls")
+        .hasSize(1);
     assertIsNamedFile(f, statusList2.get(0));
   }
 
@@ -413,11 +416,15 @@ public abstract class AbstractContractGetFileStatusTest extends
     Path f = touchf("listfilesRecursive");
     List<LocatedFileStatus> statusList = toList(
         getFileSystem().listFiles(f, true));
-    assertEquals("size of file list returned", 1, statusList.size());
+    Assertions.assertThat(statusList)
+        .withFailMessage("size of file list returned")
+        .hasSize(1);
     assertIsNamedFile(f, statusList.get(0));
     List<LocatedFileStatus> statusList2 = toListThroughNextCallsAlone(
         getFileSystem().listFiles(f, true));
-    assertEquals("size of file list returned", 1, statusList2.size());
+    Assertions.assertThat(statusList2)
+        .withFailMessage("size of file list returned")
+        .hasSize(1);
   }
 
   @Test
@@ -426,12 +433,15 @@ public abstract class AbstractContractGetFileStatusTest extends
     Path f = touchf("listLocatedStatus");
     List<LocatedFileStatus> statusList = toList(
         getFileSystem().listLocatedStatus(f));
-    assertEquals("size of file list returned", 1, statusList.size());
+    Assertions.assertThat(statusList)
+        .withFailMessage("size of file list returned")
+        .hasSize(1);
     assertIsNamedFile(f, statusList.get(0));
     List<LocatedFileStatus> statusList2 = toListThroughNextCallsAlone(
         getFileSystem().listLocatedStatus(f));
-    assertEquals("size of file list returned through next() calls",
-        1, statusList2.size());
+    Assertions.assertThat(statusList2)
+        .withFailMessage("size of file list returned through next() calls")
+        .hasSize(1);
   }
 
   /**
@@ -440,7 +450,7 @@ public abstract class AbstractContractGetFileStatusTest extends
    * @param status status array
    */
   private void verifyStatusArrayMatchesFile(Path f, FileStatus[] status) {
-    assertEquals(1, status.length);
+    Assertions.assertThat(status).hasSize(1);
     FileStatus fileStatus = status[0];
     assertIsNamedFile(f, fileStatus);
   }
@@ -451,8 +461,12 @@ public abstract class AbstractContractGetFileStatusTest extends
    * @param fileStatus status to validate
    */
   private void assertIsNamedFile(Path f, FileStatus fileStatus) {
-    assertEquals("Wrong pathname in " + fileStatus, f, fileStatus.getPath());
-    assertTrue("Not a file: " + fileStatus, fileStatus.isFile());
+    Assertions.assertThat(fileStatus.getPath())
+        .withFailMessage("Wrong pathname in " + fileStatus)
+        .isEqualTo(f);
+    Assertions.assertThat(fileStatus.isFile())
+        .withFailMessage("Not a file: " + fileStatus)
+        .isTrue();
   }
 
   /**
@@ -515,10 +529,18 @@ public abstract class AbstractContractGetFileStatusTest extends
       count++;
       LocatedFileStatus next = results.next();
       FileStatus fileStatus = getFileSystem().getFileStatus(next.getPath());
-      assertEquals("isDirectory", fileStatus.isDirectory(), next.isDirectory());
-      assertEquals("isFile", fileStatus.isFile(), next.isFile());
-      assertEquals("getLen", fileStatus.getLen(), next.getLen());
-      assertEquals("getOwner", fileStatus.getOwner(), next.getOwner());
+      Assertions.assertThat(next.isDirectory())
+          .withFailMessage("isDirectory")
+          .isEqualTo(fileStatus.isDirectory());
+      Assertions.assertThat(next.isFile())
+          .withFailMessage("isFile")
+          .isEqualTo(fileStatus.isFile());
+      Assertions.assertThat(next.getLen())
+          .withFailMessage("getLen")
+          .isEqualTo(fileStatus.getLen());
+      Assertions.assertThat(next.getOwner())
+          .withFailMessage("getOwner")
+          .isEqualTo(fileStatus.getOwner());
     }
     return count;
   }
@@ -537,13 +559,16 @@ public abstract class AbstractContractGetFileStatusTest extends
 
     MatchesNameFilter file1Filter = new MatchesNameFilter("file-1.txt");
     result = verifyListStatus(1, parent, file1Filter);
-    assertEquals(file1, result[0].getPath());
+    Assertions.assertThat(result[0].getPath())
+        .isEqualTo(file1);
 
     verifyListStatus(0, file1, NO_PATHS);
     result = verifyListStatus(1, file1, ALL_PATHS);
-    assertEquals(file1, result[0].getPath());
+    Assertions.assertThat(result[0].getPath())
+        .isEqualTo(file1);
     result = verifyListStatus(1, file1, file1Filter);
-    assertEquals(file1, result[0].getPath());
+    Assertions.assertThat(result[0].getPath())
+        .isEqualTo(file1);
 
     // empty subdirectory
     Path subdir = path("subdir");
@@ -573,13 +598,16 @@ public abstract class AbstractContractGetFileStatusTest extends
 
     MatchesNameFilter file1Filter = new MatchesNameFilter("file-1.txt");
     result = verifyListLocatedStatus(xfs, 1, parent, file1Filter);
-    assertEquals(file1, result.get(0).getPath());
+    Assertions.assertThat(result.get(0).getPath())
+        .isEqualTo(file1);
 
     verifyListLocatedStatus(xfs, 0, file1, NO_PATHS);
     verifyListLocatedStatus(xfs, 1, file1, ALL_PATHS);
-    assertEquals(file1, result.get(0).getPath());
+    Assertions.assertThat(result.get(0).getPath())
+        .isEqualTo(file1);
     verifyListLocatedStatus(xfs, 1, file1, file1Filter);
-    assertEquals(file1, result.get(0).getPath());
+    Assertions.assertThat(result.get(0).getPath())
+        .isEqualTo(file1);
     verifyListLocatedStatusNextCalls(xfs, 1, file1, file1Filter);
 
     // empty subdirectory
@@ -604,9 +632,9 @@ public abstract class AbstractContractGetFileStatusTest extends
       Path path,
       PathFilter filter) throws IOException {
     FileStatus[] result = getFileSystem().listStatus(path, filter);
-    assertEquals("length of listStatus(" + path + ", " + filter + " ) " +
-        Arrays.toString(result),
-        expected, result.length);
+    Assertions.assertThat(result)
+        .withFailMessage("length of listStatus(" + path + ", " + filter + " ) " + Arrays.toString(result))
+        .hasSize(expected);
     return result;
   }
 
@@ -626,8 +654,9 @@ public abstract class AbstractContractGetFileStatusTest extends
       PathFilter filter) throws IOException {
     RemoteIterator<LocatedFileStatus> it = xfs.listLocatedStatus(path, filter);
     List<LocatedFileStatus> result = toList(it);
-    assertEquals("length of listLocatedStatus(" + path + ", " + filter + " )",
-        expected, result.size());
+    Assertions.assertThat(result)
+        .withFailMessage("length of listLocatedStatus(" + path + ", " + filter + " )")
+        .hasSize(expected);
     return result;
   }
 
@@ -650,8 +679,9 @@ public abstract class AbstractContractGetFileStatusTest extends
       PathFilter filter) throws IOException {
     RemoteIterator<LocatedFileStatus> it = xfs.listLocatedStatus(path, filter);
     List<LocatedFileStatus> result = toListThroughNextCallsAlone(it);
-    assertEquals("length of listLocatedStatus(" + path + ", " + filter + " )",
-        expected, result.size());
+    Assertions.assertThat(result)
+        .withFailMessage("length of listLocatedStatus(" + path + ", " + filter + " )")
+        .hasSize(expected);
     return result;
   }
 

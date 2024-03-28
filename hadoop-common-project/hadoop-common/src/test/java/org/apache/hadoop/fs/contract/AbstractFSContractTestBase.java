@@ -22,12 +22,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
-import org.junit.AssumptionViolatedException;
 import org.junit.rules.TestName;
 import org.junit.rules.Timeout;
 import org.slf4j.Logger;
@@ -39,6 +39,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.cleanup;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * This is the base class for all the contract tests.
@@ -149,8 +150,9 @@ public abstract class AbstractFSContractTestBase extends Assert
    * Include at the start of tests to skip them if the FS is not enabled.
    */
   protected void assumeEnabled() {
-    if (!contract.isEnabled())
-      throw new AssumptionViolatedException("test cases disabled for " + contract);
+    assumeThat(contract.isEnabled())
+        .withFailMessage("test cases disabled for " + contract)
+        .isTrue();
   }
 
   /**
@@ -191,15 +193,18 @@ public abstract class AbstractFSContractTestBase extends Assert
     assumeEnabled();
     //extract the test FS
     fileSystem = contract.getTestFileSystem();
-    assertNotNull("null filesystem", fileSystem);
+    Assertions.assertThat(fileSystem)
+        .withFailMessage("null filesystem")
+        .isNotNull();
     URI fsURI = fileSystem.getUri();
     LOG.info("Test filesystem = {} implemented by {}",
         fsURI, fileSystem);
     //sanity check to make sure that the test FS picked up really matches
     //the scheme chosen. This is to avoid defaulting back to the localFS
     //which would be drastic for root FS tests
-    assertEquals("wrong filesystem of " + fsURI,
-                 contract.getScheme(), fsURI.getScheme());
+    Assertions.assertThat(fsURI.getScheme())
+        .withFailMessage("wrong filesystem of " + fsURI)
+        .isEqualTo(contract.getScheme());
     //create the test path
     testPath = getContract().getTestPath();
     mkdirs(testPath);
@@ -360,7 +365,9 @@ public abstract class AbstractFSContractTestBase extends Assert
    * @throws IOException IO problems during file operations
    */
   protected void mkdirs(Path path) throws IOException {
-    assertTrue("Failed to mkdir " + path, fileSystem.mkdirs(path));
+    Assertions.assertThat(fileSystem.mkdirs(path))
+        .withFailMessage("Failed to mkdir " + path)
+        .isTrue();
   }
 
   /**
@@ -381,7 +388,9 @@ public abstract class AbstractFSContractTestBase extends Assert
    * @param result read result to validate
    */
   protected void assertMinusOne(String text, int result) {
-    assertEquals(text + " wrong read result " + result, -1, result);
+    Assertions.assertThat(result)
+        .withFailMessage(text + " wrong read result " + result)
+        .isEqualTo(-1);
   }
 
   protected boolean rename(Path src, Path dst) throws IOException {
@@ -400,4 +409,5 @@ public abstract class AbstractFSContractTestBase extends Assert
     }
     return destDirLS;
   }
+
 }

@@ -27,8 +27,8 @@ import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StreamCapabilities;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
-import org.junit.AssumptionViolatedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,6 +43,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeTextFile;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsSourceToString;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Test creating files, overwrite options etc.
@@ -170,10 +171,10 @@ public abstract class AbstractContractCreateTest extends
     try {
       assertIsDirectory(path);
     } catch (AssertionError failure) {
-      if (isSupported(CREATE_OVERWRITES_DIRECTORY)) {
-        // file/directory hack surfaces here
-        throw new AssumptionViolatedException(failure.toString(), failure);
-      }
+      // file/directory hack surfaces here
+      assumeThat(isSupported(CREATE_OVERWRITES_DIRECTORY))
+          .withFailMessage(failure.toString())
+          .isFalse();
       // else: rethrow
       throw failure;
     }
@@ -278,8 +279,9 @@ public abstract class AbstractContractCreateTest extends
     FileSystem fs = getFileSystem();
 
     long rootPath = fs.getDefaultBlockSize(path("/"));
-    assertTrue("Root block size is invalid " + rootPath,
-        rootPath > 0);
+    Assertions.assertThat(rootPath)
+        .withFailMessage("Root block size is invalid " + rootPath)
+        .isPositive();
 
     Path path = path("testFileStatusBlocksizeNonEmptyFile");
     byte[] data = dataset(256, 'a', 'z');
@@ -303,13 +305,15 @@ public abstract class AbstractContractCreateTest extends
     FileStatus status =
         getFileStatusEventually(fs, path, CREATE_TIMEOUT);
     String statusDetails = status.toString();
-    assertTrue("File status block size too low:  " + statusDetails
-            + " min value: " + minValue,
-        status.getBlockSize() >= minValue);
+    Assertions.assertThat(status.getBlockSize())
+        .withFailMessage("File status block size too low:  " +
+            statusDetails + " min value: " + minValue)
+        .isGreaterThanOrEqualTo(minValue);
     long defaultBlockSize = fs.getDefaultBlockSize(path);
-    assertTrue("fs.getDefaultBlockSize(" + path + ") size " +
-            defaultBlockSize + " is below the minimum of " + minValue,
-        defaultBlockSize >= minValue);
+    Assertions.assertThat(defaultBlockSize)
+        .withFailMessage("fs.getDefaultBlockSize(" + path + ") size " +
+            defaultBlockSize + " is below the minimum of " + minValue)
+        .isGreaterThanOrEqualTo(minValue);
   }
 
   @Test
@@ -320,14 +324,18 @@ public abstract class AbstractContractCreateTest extends
     Path parent = new Path(grandparent, "parent");
     Path child = new Path(parent, "child");
     touch(fs, child);
-    assertEquals("List status of parent should include the 1 child file",
-        1, fs.listStatus(parent).length);
-    assertTrue("Parent directory does not appear to be a directory",
-        fs.getFileStatus(parent).isDirectory());
-    assertEquals("List status of grandparent should include the 1 parent dir",
-        1, fs.listStatus(grandparent).length);
-    assertTrue("Grandparent directory does not appear to be a directory",
-        fs.getFileStatus(grandparent).isDirectory());
+    Assertions.assertThat(fs.listStatus(parent))
+        .withFailMessage("List status of parent should include the 1 child file")
+        .hasSize(1);
+    Assertions.assertThat(fs.getFileStatus(parent).isDirectory())
+        .withFailMessage("Parent directory does not appear to be a directory")
+        .isTrue();
+    Assertions.assertThat(fs.listStatus(grandparent))
+        .withFailMessage("List status of grandparent should include the 1 parent dir")
+        .hasSize(1);
+    Assertions.assertThat(fs.getFileStatus(grandparent).isDirectory())
+        .withFailMessage("Grandparent directory does not appear to be a directory")
+        .isTrue();
   }
 
   @Test
@@ -531,17 +539,18 @@ public abstract class AbstractContractCreateTest extends
         final FileStatus st = fs.getFileStatus(path);
         if (metadataUpdatedOnHSync) {
           // not all stores reliably update it, HDFS/webHDFS in particular
-          assertEquals("Metadata not updated during write " + st,
-              2, st.getLen());
+          Assertions.assertThat(st.getLen())
+              .withFailMessage("Metadata not updated during write " + st)
+              .isEqualTo(2);
         }
 
         // there's no way to verify durability, but we can
         // at least verify a new file input stream reads
         // the data
         try (FSDataInputStream in = fs.open(path)) {
-          assertEquals('a', in.read());
-          assertEquals('b', in.read());
-          assertEquals(-1, in.read());
+          Assertions.assertThat(in.read()).isEqualTo('a');
+          Assertions.assertThat(in.read()).isEqualTo('b');
+          Assertions.assertThat(in.read()).isEqualTo(-1);
           LOG.info("Successfully read synced data on a new reader {}", in);
         }
       } else {
