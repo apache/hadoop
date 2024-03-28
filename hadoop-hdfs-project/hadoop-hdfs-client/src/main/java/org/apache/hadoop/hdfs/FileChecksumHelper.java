@@ -240,17 +240,35 @@ final class FileChecksumHelper {
        * magic entry that matches what previous hdfs versions return.
        */
       if (locatedBlocks == null || locatedBlocks.isEmpty()) {
-        // Explicitly specified here in case the default DataOutputBuffer
-        // buffer length value is changed in future. This matters because the
-        // fixed value 32 has to be used to repeat the magic value for previous
-        // HDFS version.
-        final int lenOfZeroBytes = 32;
-        byte[] emptyBlockMd5 = new byte[lenOfZeroBytes];
-        MD5Hash fileMD5 = MD5Hash.digest(emptyBlockMd5);
-        fileChecksum =  new MD5MD5CRC32GzipFileChecksum(0, 0, fileMD5);
+        fileChecksum = makeEmptyBlockResult();
       } else {
         checksumBlocks();
         fileChecksum = makeFinalResult();
+      }
+    }
+
+    /**
+     * Returns a zero byte checksum based on the combined mode and CRC type
+     */
+    FileChecksum makeEmptyBlockResult() {
+      // Explicitly specified here in case the default DataOutputBuffer
+      // buffer length value is changed in future. This matters because the
+      // fixed value 32 has to be used to repeat the magic value for previous
+      // HDFS version.
+      final int lenOfZeroBytes = 32;
+      byte[] emptyBlockMd5 = new byte[lenOfZeroBytes];
+      MD5Hash fileMD5 = MD5Hash.digest(emptyBlockMd5);
+
+      switch (combineMode) {
+        case MD5MD5CRC:
+          if (crcType == DataChecksum.Type.CRC32C) {
+            return new MD5MD5CRC32CastagnoliFileChecksum(0, 0, fileMD5);
+          }
+          return new MD5MD5CRC32GzipFileChecksum(0, 0, fileMD5);
+        case COMPOSITE_CRC:
+          return new CompositeCrcFileChecksum(0, getCrcType(), bytesPerCRC);
+        default:
+          return new MD5MD5CRC32GzipFileChecksum(0, 0, fileMD5);
       }
     }
 
