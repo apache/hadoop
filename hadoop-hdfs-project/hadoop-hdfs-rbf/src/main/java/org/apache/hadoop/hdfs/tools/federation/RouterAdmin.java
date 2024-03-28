@@ -161,59 +161,60 @@ public class RouterAdmin extends Configured implements Tool {
       }
       return usage.toString();
     }
-    if (cmd.equals("-add")) {
-      return "\t[-add <source> <nameservice1, nameservice2, ...> <destination> "
-          + "[-readonly] [-faulttolerant] "
-          + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
-          + "-owner <owner> -group <group> -mode <mode>]";
-    } else if (cmd.equals(ADD_ALL_COMMAND)) {
-      return "\t[" + ADD_ALL_COMMAND + " "
-          + "<source1> <nameservice1,nameservice2,...> <destination1> "
-          + "[-readonly] [-faulttolerant] " + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
-          + "-owner <owner1> -group <group1> -mode <mode1>"
-          + " , "
-          + "<source2> <nameservice1,nameservice2,...> <destination2> "
-          + "[-readonly] [-faulttolerant] " + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
-          + "-owner <owner2> -group <group2> -mode <mode2>"
-          + " , ...]";
-    } else if (cmd.equals("-update")) {
-      return "\t[-update <source>"
-          + " [<nameservice1, nameservice2, ...> <destination>] "
-          + "[-readonly true|false] [-faulttolerant true|false] "
-          + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
-          + "-owner <owner> -group <group> -mode <mode>]";
-    } else if (cmd.equals("-rm")) {
-      return "\t[-rm <source>]";
-    } else if (cmd.equals("-ls")) {
-      return "\t[-ls [-d] <path>]";
-    } else if (cmd.equals("-getDestination")) {
-      return "\t[-getDestination <path>]";
-    } else if (cmd.equals("-setQuota")) {
-      return "\t[-setQuota <path> -nsQuota <nsQuota> -ssQuota "
-          + "<quota in bytes or quota size string>]";
-    } else if (cmd.equals("-setStorageTypeQuota")) {
-      return "\t[-setStorageTypeQuota <path> -storageType <storage type> "
-          + "<quota in bytes or quota size string>]";
-    } else if (cmd.equals("-clrQuota")) {
-      return "\t[-clrQuota <path>]";
-    } else if (cmd.equals("-clrStorageTypeQuota")) {
-      return "\t[-clrStorageTypeQuota <path>]";
-    } else if (cmd.equals("-safemode")) {
-      return "\t[-safemode enter | leave | get]";
-    } else if (cmd.equals("-nameservice")) {
-      return "\t[-nameservice enable | disable <nameservice>]";
-    } else if (cmd.equals("-getDisabledNameservices")) {
-      return "\t[-getDisabledNameservices]";
-    } else if (cmd.equals("-refresh")) {
-      return "\t[-refresh]";
-    } else if (cmd.equals("-refreshRouterArgs")) {
-      return "\t[-refreshRouterArgs <host:ipc_port> <key> [arg1..argn]]";
-    } else if (cmd.equals("-refreshSuperUserGroupsConfiguration")) {
-      return "\t[-refreshSuperUserGroupsConfiguration]";
-    } else if (cmd.equals("-refreshCallQueue")) {
-      return "\t[-refreshCallQueue]";
-    } else if (cmd.equals(DUMP_COMMAND)) {
-      return "\t[" + DUMP_COMMAND + "]";
+    switch (cmd) {
+      case "-add":
+        return "\t[-add <source> <nameservice1, nameservice2, ...> <destination> "
+                + "[-readonly] [-faulttolerant] "
+                + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
+                + "-owner <owner> -group <group> -mode <mode>]";
+      case ADD_ALL_COMMAND:
+        return "\t[" + ADD_ALL_COMMAND + " "
+                + "<source1> <nameservice1,nameservice2,...> <destination1> "
+                + "[-readonly] [-faulttolerant] " + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
+                + "-owner <owner1> -group <group1> -mode <mode1>"
+                + " , "
+                + "<source2> <nameservice1,nameservice2,...> <destination2> "
+                + "[-readonly] [-faulttolerant] " + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
+                + "-owner <owner2> -group <group2> -mode <mode2>"
+                + " , ...]";
+      case "-update":
+        return "\t[-update <source>"
+                + " [<nameservice1, nameservice2, ...> <destination>] "
+                + "[-readonly true|false] [-faulttolerant true|false] "
+                + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
+                + "-owner <owner> -group <group> -mode <mode>]";
+      case "-rm":
+        return "\t[-rm <source>]";
+      case "-ls":
+        return "\t[-ls [-d] <path>]";
+      case "-getDestination":
+        return "\t[-getDestination <path>]";
+      case "-setQuota":
+        return "\t[-setQuota <path> -nsQuota <nsQuota> -ssQuota "
+                + "<quota in bytes or quota size string>]";
+      case "-setStorageTypeQuota":
+        return "\t[-setStorageTypeQuota <path> -storageType <storage type> "
+                + "<quota in bytes or quota size string>]";
+      case "-clrQuota":
+        return "\t[-clrQuota <path>]";
+      case "-clrStorageTypeQuota":
+        return "\t[-clrStorageTypeQuota <path>]";
+      case "-safemode":
+        return "\t[-safemode enter | leave | get]";
+      case "-nameservice":
+        return "\t[-nameservice enable | disable <nameservice>]";
+      case "-getDisabledNameservices":
+        return "\t[-getDisabledNameservices]";
+      case "-refresh":
+        return "\t[-refresh]";
+      case "-refreshRouterArgs":
+        return "\t[-refreshRouterArgs <host:ipc_port> <key> [arg1..argn]]";
+      case "-refreshSuperUserGroupsConfiguration":
+        return "\t[-refreshSuperUserGroupsConfiguration]";
+      case "-refreshCallQueue":
+        return "\t[-refreshCallQueue]";
+      case DUMP_COMMAND:
+        return "\t[" + DUMP_COMMAND + "]";
     }
     return getUsage(null);
   }
