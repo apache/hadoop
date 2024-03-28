@@ -136,7 +136,7 @@ class ChRootedFs extends AbstractFileSystem {
    */
   public String stripOutRoot(final Path p) {
     try {
-     checkPath(p);
+      checkPath(p);
     } catch (IllegalArgumentException e) {
       throw new RuntimeException("Internal Error - path " + p +
           " should have been with URI" + myUri);
