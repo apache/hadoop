@@ -26,6 +26,8 @@ import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
@@ -54,6 +56,8 @@ import org.apache.hadoop.fs.s3a.S3AFileStatus;
  *   <li>If needed, one PUT</li>
  * </ol>
  */
+@InterfaceAudience.Private
+@InterfaceStability.Evolving
 public class MkdirOperation extends ExecutingStoreOperation<Boolean> {
 
   private static final Logger LOG = LoggerFactory.getLogger(
@@ -63,21 +67,26 @@ public class MkdirOperation extends ExecutingStoreOperation<Boolean> {
 
   private final MkdirCallbacks callbacks;
 
-  /**
-   * Should checks for ancestors existing be skipped?
-   * This flag is set when working with magic directories.
-   */
-  private final boolean isMagicPath;
+  private final boolean performanceCreation;
 
+  /**
+   * Initialize Mkdir Operation context for S3A.
+   *
+   * @param storeContext Store context.
+   * @param dir Dir path of the directory.
+   * @param callbacks MkdirCallbacks object used by the Mkdir operation.
+   * @param performanceCreation If true, skip validation of the parent directory
+   * structure.
+   */
   public MkdirOperation(
       final StoreContext storeContext,
       final Path dir,
       final MkdirCallbacks callbacks,
-      final boolean isMagicPath) {
+      final boolean performanceCreation) {
     super(storeContext);
     this.dir = dir;
     this.callbacks = callbacks;
-    this.isMagicPath = isMagicPath;
+    this.performanceCreation = performanceCreation;
   }
 
   /**
@@ -98,14 +107,13 @@ public class MkdirOperation extends ExecutingStoreOperation<Boolean> {
     }
 
     // get the file status of the path.
-    // this is done even for a magic path, to avoid always  issuing PUT
-    // requests. Doing that without a check wouild seem to be an
-    // optimization, but it is not because
-    // 1. PUT is slower than HEAD
-    // 2. Write capacity is less than read capacity on a shard
-    // 3. It adds needless entries in versioned buckets, slowing
-    //    down subsequent operations.
-    FileStatus fileStatus = getPathStatusExpectingDir(dir);
+    // this is not done for magic path i.e. performanceCreation mode.
+    // For performanceCreation mode, we would probe for HEAD only.
+    // For non-performance or regular mode, the probe for both HEAD and LIST would
+    // be done.
+    S3AFileStatus fileStatus = performanceCreation
+        ? probePathStatusOrNull(dir, StatusProbeEnum.HEAD_ONLY)
+        : getPathStatusExpectingDir(dir);
     if (fileStatus != null) {
       if (fileStatus.isDirectory()) {
         return true;
@@ -115,16 +123,33 @@ public class MkdirOperation extends ExecutingStoreOperation<Boolean> {
     }
     // file status was null
 
-    // is the path magic?
-    // If so, we declare success without looking any further
-    if (isMagicPath) {
-      // Create the marker file immediately,
-      // and don't delete markers
-      callbacks.createFakeDirectory(dir, true);
-      return true;
+    // if performance creation mode is set, no need to check
+    // whether the closest ancestor is dir.
+    if (!performanceCreation) {
+      verifyFileStatusOfClosestAncestor();
     }
 
-    // Walk path to root, ensuring closest ancestor is a directory, not file
+    // if we get here there is no directory at the destination.
+    // so create one.
+
+    // Create the marker file, delete the parent entries
+    // if the filesystem isn't configured to retain them
+    callbacks.createFakeDirectory(dir,
+        performanceCreation);
+    return true;
+  }
+
+  /**
+   * Verify the file status of the closest ancestor, if it is
+   * dir, the mkdir operation should proceed. If it is file,
+   * the mkdir operation should throw error.
+   *
+   * @throws IOException If either file status could not be retrieved,
+   * or if the closest ancestor is a file.
+   */
+  private void verifyFileStatusOfClosestAncestor() throws IOException {
+    FileStatus fileStatus;
+    // Walk path to root, ensuring the closest ancestor is a directory, not file
     Path fPart = dir.getParent();
     try {
       while (fPart != null && !fPart.isRoot()) {
@@ -140,24 +165,18 @@ public class MkdirOperation extends ExecutingStoreOperation<Boolean> {
         }
 
         // there's a file at the parent entry
-        throw new FileAlreadyExistsException(String.format(
-            "Can't make directory for path '%s' since it is a file.",
-            fPart));
+        throw new FileAlreadyExistsException(
+            String.format(
+                "Can't make directory for path '%s' since it is a file.",
+                fPart));
       }
     } catch (AccessDeniedException e) {
       LOG.info("mkdirs({}}: Access denied when looking"
               + " for parent directory {}; skipping checks",
-          dir, fPart);
+          dir,
+          fPart);
       LOG.debug("{}", e, e);
     }
-
-    // if we get here there is no directory at the destination.
-    // so create one.
-
-    // Create the marker file, delete the parent entries
-    // if the filesystem isn't configured to retain them
-    callbacks.createFakeDirectory(dir, false);
-    return true;
   }
 
   /**
@@ -193,7 +212,7 @@ public class MkdirOperation extends ExecutingStoreOperation<Boolean> {
       throws IOException {
     S3AFileStatus status = probePathStatusOrNull(path,
         StatusProbeEnum.DIRECTORIES);
-    if (status == null && !isMagicPath) {
+    if (status == null && !performanceCreation) {
       status = probePathStatusOrNull(path,
           StatusProbeEnum.FILE);
     }

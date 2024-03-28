@@ -18,23 +18,32 @@
 
 package org.apache.hadoop.fs.contract.s3a;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
+
+import org.junit.Test;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractMkdirTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
- * Test dir operations on S3A.
+ * Test mkdir operations on S3A with create performance mode.
  */
-public class ITestS3AContractMkdir extends AbstractContractMkdirTest {
+public class ITestS3AContractMkdirWithCreatePerf extends AbstractContractMkdirTest {
 
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
-    removeBaseAndBucketOverrides(conf,
+    removeBaseAndBucketOverrides(
+        conf,
         FS_S3A_CREATE_PERFORMANCE);
+    conf.setBoolean(FS_S3A_CREATE_PERFORMANCE,
+        true);
     return conf;
   }
 
@@ -42,4 +51,25 @@ public class ITestS3AContractMkdir extends AbstractContractMkdirTest {
   protected AbstractFSContract createContract(Configuration conf) {
     return new S3AContract(conf);
   }
+
+  @Test
+  public void testMkdirOverParentFile() throws Throwable {
+    intercept(
+        UncheckedIOException.class,
+        MKDIRS_NOT_FAILED_OVER_FILE,
+        "Dir creation should not have failed. "
+            + "Creation performance mode is expected "
+            + "to create dir without checking file "
+            + "status of parent dir.",
+        this::callTestMkdirOverParentFile);
+  }
+
+  private void callTestMkdirOverParentFile() {
+    try {
+      super.testMkdirOverParentFile();
+    } catch (Throwable e) {
+      throw new UncheckedIOException(new IOException(e));
+    }
+  }
+
 }
