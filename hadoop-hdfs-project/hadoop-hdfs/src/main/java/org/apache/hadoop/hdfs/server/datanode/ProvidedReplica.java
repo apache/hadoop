@@ -291,7 +291,7 @@ public abstract class ProvidedReplica extends ReplicaInfo {
   }
 
   @Override
-  public void bumpReplicaGS(long newGS) throws IOException {
+  public void bumpReplicaGS(long newGS, String trashDir) throws IOException {
     throw new UnsupportedOperationException(
         "ProvidedReplica does not yet support writes");
   }
