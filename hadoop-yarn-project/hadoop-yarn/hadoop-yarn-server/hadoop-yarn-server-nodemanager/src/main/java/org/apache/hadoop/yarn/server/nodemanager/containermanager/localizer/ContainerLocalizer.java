@@ -115,6 +115,7 @@ public class ContainerLocalizer {
 
   private final String user;
   private final String appId;
+  private final String containerId;
   private final List<Path> localDirs;
   private final String localizerId;
   private final FileContext lfs;
@@ -130,7 +131,7 @@ public class ContainerLocalizer {
 
   public ContainerLocalizer(FileContext lfs, String user, String appId,
       String localizerId, String tokenFileName,  List<Path> localDirs,
-      RecordFactory recordFactory) throws IOException {
+      RecordFactory recordFactory, String containerId) throws IOException {
     if (null == user) {
       throw new IOException("Cannot initialize for null user");
     }
@@ -140,6 +141,7 @@ public class ContainerLocalizer {
     this.lfs = lfs;
     this.user = user;
     this.appId = appId;
+    this.containerId = containerId;
     this.localDirs = localDirs;
     this.localizerId = localizerId;
     this.recordFactory = recordFactory;
@@ -150,6 +152,12 @@ public class ContainerLocalizer {
     this.pendingResources = new HashMap<LocalResource,Future<Path>>();
     this.tokenFileName = Preconditions.checkNotNull(tokenFileName,
         "token file name cannot be null");
+  }
+
+  public ContainerLocalizer(FileContext lfs, String user, String appId,
+                            String localizerId, List<Path> localDirs,
+                            RecordFactory recordFactory) throws IOException {
+    this(lfs, user, appId, localizerId, localDirs, recordFactory, "");
   }
 
   @VisibleForTesting
@@ -242,6 +250,12 @@ public class ContainerLocalizer {
       super(files, ugi, conf, destDirPath, resource);
     }
 
+    FSDownloadWrapper(FileContext files, UserGroupInformation ugi,
+                      Configuration conf, Path destDirPath, LocalResource resource,
+                      String containerId) {
+      super(containerId, files, ugi, conf, destDirPath, resource);
+    }
+
     @Override
     public Path call() throws Exception {
       Thread currentThread = Thread.currentThread();
@@ -268,7 +282,7 @@ public class ContainerLocalizer {
     }
     diskValidator
         .checkStatus(new File(destDirPath.getParent().toUri().getRawPath()));
-    return new FSDownloadWrapper(lfs, ugi, conf, destDirPath, rsrc);
+    return new FSDownloadWrapper(lfs, ugi, conf, destDirPath, rsrc, containerId);
   }
 
   private void createParentDirs(Path destDirPath) throws IOException {
