@@ -17,12 +17,20 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MIN_OUTLIER_DETECTION_NODES_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PEER_METRICS_MIN_OUTLIER_DETECTION_SAMPLES_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SLOWPEER_COLLECT_INTERVAL_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertNotNull;
 
+import java.io.IOException;
 import java.lang.management.ManagementFactory;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -31,12 +39,18 @@ import javax.management.MBeanInfo;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
+
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.protocol.OutlierMetrics;
 import org.apache.hadoop.metrics2.impl.ConfigBuilder;
 import org.apache.hadoop.metrics2.impl.TestMetricsConfig;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -269,4 +283,65 @@ public class TestFSNamesystemMBean {
       assertEquals(1.0, reconstructionQueuesInitProgress, 0);
     }
   }
+
+  @Test
+  public void testCollectSlowNodesIpAddrCountsMetrics() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setBoolean(DFS_DATANODE_PEER_STATS_ENABLED_KEY, true);
+    conf.set(DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_KEY, "1000");
+    conf.set(DFS_DATANODE_MIN_OUTLIER_DETECTION_NODES_KEY, "1");
+    conf.set(DFS_DATANODE_PEER_METRICS_MIN_OUTLIER_DETECTION_SAMPLES_KEY, "1");
+    conf.setStrings(DFS_NAMENODE_SLOWPEER_COLLECT_INTERVAL_KEY, "1s");
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build()) {
+      cluster.waitActive();
+      DistributedFileSystem fs = cluster.getFileSystem();
+      FSNamesystem fsNamesystem = cluster.getNameNode().getNamesystem();
+
+      assertEquals("{}", fsNamesystem.getCollectSlowNodesIpAddrCounts());
+      MBeanServer mBeanServer = ManagementFactory.getPlatformMBeanServer();
+      ObjectName mxBeanName = new ObjectName("Hadoop:service=NameNode,name=FSNamesystemState");
+      String ipAddrCounts =
+          (String) mBeanServer.getAttribute(mxBeanName, "CollectSlowNodesIpAddrCounts");
+      assertEquals("{}", ipAddrCounts);
+
+      List<DataNode> dataNodes = cluster.getDataNodes();
+      assertEquals(2, dataNodes.size());
+
+      dataNodes.get(0).getPeerMetrics().setTestOutliers(ImmutableMap.of(
+          dataNodes.get(1).getDatanodeHostname() + ":" + dataNodes.get(1).getIpcPort(),
+          new OutlierMetrics(1.0, 2.0, 3.0, 4.0)));
+
+      GenericTestUtils.waitFor(() -> {
+        try {
+          DatanodeInfo[] slowNodeInfo = fs.getSlowDatanodeStats();
+          return slowNodeInfo.length == 1;
+        } catch (IOException e) {
+          return false;
+        }
+      }, 1000, 10000, "Slow nodes could not be detected");
+
+      GenericTestUtils.waitFor(() -> {
+        String tmp;
+        DatanodeInfo[] slowNodes;
+        try {
+          tmp = (String) mBeanServer.getAttribute(mxBeanName, "CollectSlowNodesIpAddrCounts");
+          slowNodes = fs.getSlowDatanodeStats();
+        } catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+        Map<String, Long> ipAddrFrequencyMap = (HashMap) JSON.parse(tmp);
+        for (Map.Entry<String, Long> entry : ipAddrFrequencyMap.entrySet()) {
+          boolean condition1 = slowNodes[0].getIpAddr().equals(entry.getKey());
+          boolean condition2 = entry.getValue() > 1;
+          return condition1 && condition2;
+        }
+        return false;
+      }, 100, 10000);
+
+      cluster.getNameNode().reconfigureProperty(DFS_DATANODE_PEER_STATS_ENABLED_KEY, "false");
+      DatanodeManager dnManager = fsNamesystem.getBlockManager().getDatanodeManager();
+      assertEquals("{}", dnManager.getCollectSlowNodesIpAddrCounts().toString());
+    }
+  }
+
 }
