@@ -17,10 +17,7 @@
  */
 package org.apache.hadoop.mapreduce.v2.hs;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.argThat;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.isA;
@@ -39,9 +36,9 @@ import org.apache.hadoop.mapreduce.v2.api.MRDelegationTokenIdentifier;
 import org.apache.hadoop.mapreduce.v2.hs.HistoryServerStateStoreService.HistoryServerState;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatcher;
 
 public class TestHistoryServerFileSystemStateStoreService {
@@ -53,7 +50,7 @@ public class TestHistoryServerFileSystemStateStoreService {
 
   private Configuration conf;
 
-  @Before
+  @BeforeEach
   public void setup() {
     FileUtil.fullyDelete(testDir);
     testDir.mkdirs();
@@ -66,7 +63,7 @@ public class TestHistoryServerFileSystemStateStoreService {
         testDir.getAbsoluteFile().toURI().toString());
   }
 
-  @After
+  @AfterEach
   public void cleanup() {
     FileUtil.fullyDelete(testDir);
   }
@@ -75,8 +72,8 @@ public class TestHistoryServerFileSystemStateStoreService {
       throws IOException {
     HistoryServerStateStoreService store =
         HistoryServerStateStoreServiceFactory.getStore(conf);
-    assertTrue("Factory did not create a filesystem store",
-        store instanceof HistoryServerFileSystemStateStoreService);
+    assertTrue(store instanceof HistoryServerFileSystemStateStoreService,
+        "Factory did not create a filesystem store");
     store.init(conf);
     store.start();
     return store;
@@ -87,8 +84,8 @@ public class TestHistoryServerFileSystemStateStoreService {
     HistoryServerStateStoreService store = createAndStartStore();
 
     HistoryServerState state = store.loadState();
-    assertTrue("token state not empty", state.tokenState.isEmpty());
-    assertTrue("key state not empty", state.tokenMasterKeyState.isEmpty());
+    assertTrue(state.tokenState.isEmpty(), "token state not empty");
+    assertTrue(state.tokenMasterKeyState.isEmpty(), "key state not empty");
 
     final DelegationKey key1 = new DelegationKey(1, 2, "keyData1".getBytes());
     final MRDelegationTokenIdentifier token1 =
@@ -121,17 +118,20 @@ public class TestHistoryServerFileSystemStateStoreService {
 
     store = createAndStartStore();
     state = store.loadState();
-    assertEquals("incorrect loaded token count", 2, state.tokenState.size());
-    assertTrue("missing token 1", state.tokenState.containsKey(token1));
-    assertEquals("incorrect token 1 date", tokenDate1,
-        state.tokenState.get(token1));
-    assertTrue("missing token 2", state.tokenState.containsKey(token2));
-    assertEquals("incorrect token 2 date", tokenDate2,
-        state.tokenState.get(token2));
-    assertEquals("incorrect master key count", 1,
-        state.tokenMasterKeyState.size());
-    assertTrue("missing master key 1",
-        state.tokenMasterKeyState.contains(key1));
+    assertEquals(2, state.tokenState.size(), "incorrect loaded token count");
+    assertTrue(state.tokenState.containsKey(token1), "missing token 1");
+    assertEquals(tokenDate1,
+        state.tokenState.get(token1),
+        "incorrect token 1 date");
+    assertTrue(state.tokenState.containsKey(token2), "missing token 2");
+    assertEquals(tokenDate2,
+        state.tokenState.get(token2),
+        "incorrect token 2 date");
+    assertEquals(1,
+        state.tokenMasterKeyState.size(),
+        "incorrect master key count");
+    assertTrue(state.tokenMasterKeyState.contains(key1),
+        "missing master key 1");
 
     final DelegationKey key2 = new DelegationKey(3, 4, "keyData2".getBytes());
     final DelegationKey key3 = new DelegationKey(5, 6, "keyData3".getBytes());
@@ -152,42 +152,45 @@ public class TestHistoryServerFileSystemStateStoreService {
 
     store = createAndStartStore();
     state = store.loadState();
-    assertEquals("incorrect loaded token count", 2, state.tokenState.size());
-    assertFalse("token 1 not removed", state.tokenState.containsKey(token1));
-    assertTrue("missing token 2", state.tokenState.containsKey(token2));
-    assertEquals("incorrect token 2 date", newTokenDate2,
-        state.tokenState.get(token2));
-    assertTrue("missing token 3", state.tokenState.containsKey(token3));
-    assertEquals("incorrect token 3 date", tokenDate3,
-        state.tokenState.get(token3));
-    assertEquals("incorrect master key count", 2,
-        state.tokenMasterKeyState.size());
-    assertFalse("master key 1 not removed",
-        state.tokenMasterKeyState.contains(key1));
-    assertTrue("missing master key 2",
-        state.tokenMasterKeyState.contains(key2));
-    assertTrue("missing master key 3",
-        state.tokenMasterKeyState.contains(key3));
+    assertEquals(2, state.tokenState.size(), "incorrect loaded token count");
+    assertFalse(state.tokenState.containsKey(token1), "token 1 not removed");
+    assertTrue(state.tokenState.containsKey(token2), "missing token 2");
+    assertEquals(newTokenDate2,
+        state.tokenState.get(token2),
+        "incorrect token 2 date");
+    assertTrue(state.tokenState.containsKey(token3), "missing token 3");
+    assertEquals(tokenDate3,
+        state.tokenState.get(token3),
+        "incorrect token 3 date");
+    assertEquals(2,
+        state.tokenMasterKeyState.size(),
+        "incorrect master key count");
+    assertFalse(state.tokenMasterKeyState.contains(key1),
+        "master key 1 not removed");
+    assertTrue(state.tokenMasterKeyState.contains(key2),
+        "missing master key 2");
+    assertTrue(state.tokenMasterKeyState.contains(key3),
+        "missing master key 3");
   }
 
   @Test
-  public void testTokenStore() throws IOException {
+  void testTokenStore() throws IOException {
     testTokenStore(testDir.getAbsoluteFile().toURI().toString());
   }
 
   @Test
-  public void testTokenStoreHdfs() throws IOException {
+  void testTokenStoreHdfs() throws IOException {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
     conf = cluster.getConfiguration(0);
     try {
       testTokenStore("/tmp/historystore");
     } finally {
-        cluster.shutdown();
+      cluster.shutdown();
     }
   }
 
   @Test
-  public void testUpdatedTokenRecovery() throws IOException {
+  void testUpdatedTokenRecovery() throws IOException {
     IOException intentionalErr = new IOException("intentional error");
     FileSystem fs = FileSystem.getLocal(conf);
     final FileSystem spyfs = spy(fs);
@@ -206,7 +209,7 @@ public class TestHistoryServerFileSystemStateStoreService {
           FileSystem createFileSystem() throws IOException {
             return spyfs;
           }
-    };
+        };
     store.init(conf);
     store.start();
 
@@ -229,10 +232,11 @@ public class TestHistoryServerFileSystemStateStoreService {
     // original token file is missing
     store = createAndStartStore();
     HistoryServerState state = store.loadState();
-    assertEquals("incorrect loaded token count", 1, state.tokenState.size());
-    assertTrue("missing token 1", state.tokenState.containsKey(token1));
-    assertEquals("incorrect token 1 date", newTokenDate1,
-        state.tokenState.get(token1));
+    assertEquals(1, state.tokenState.size(), "incorrect loaded token count");
+    assertTrue(state.tokenState.containsKey(token1), "missing token 1");
+    assertEquals(newTokenDate1,
+        state.tokenState.get(token1),
+        "incorrect token 1 date");
     store.close();
   }
 }

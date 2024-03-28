@@ -19,8 +19,8 @@
 package org.apache.hadoop.mapreduce.v2.hs.webapp;
 
 import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.StringReader;
 
@@ -46,8 +46,8 @@ import org.apache.hadoop.yarn.webapp.WebApp;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -100,7 +100,7 @@ public class TestHsWebServices extends JerseyTestBase {
         Guice.createInjector(new WebServletModule()));
   }
 
-  @Before
+  @BeforeEach
   @Override
   public void setUp() throws Exception {
     super.setUp();
@@ -117,43 +117,43 @@ public class TestHsWebServices extends JerseyTestBase {
   }
 
   @Test
-  public void testHS() throws JSONException, Exception {
+  void testHS() throws JSONException, Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("history")
         .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
-    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals(1, json.length(), "incorrect number of elements");
     verifyHSInfo(json.getJSONObject("historyInfo"), appContext);
   }
 
   @Test
-  public void testHSSlash() throws JSONException, Exception {
+  void testHSSlash() throws JSONException, Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("history/")
         .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
-    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals(1, json.length(), "incorrect number of elements");
     verifyHSInfo(json.getJSONObject("historyInfo"), appContext);
   }
 
   @Test
-  public void testHSDefault() throws JSONException, Exception {
+  void testHSDefault() throws JSONException, Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("history/")
         .get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
-    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals(1, json.length(), "incorrect number of elements");
     verifyHSInfo(json.getJSONObject("historyInfo"), appContext);
   }
 
   @Test
-  public void testHSXML() throws JSONException, Exception {
+  void testHSXML() throws JSONException, Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("history")
         .accept(MediaType.APPLICATION_XML).get(ClientResponse.class);
@@ -164,7 +164,7 @@ public class TestHsWebServices extends JerseyTestBase {
   }
 
   @Test
-  public void testInfo() throws JSONException, Exception {
+  void testInfo() throws JSONException, Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("history")
         .path("info").accept(MediaType.APPLICATION_JSON)
@@ -172,12 +172,12 @@ public class TestHsWebServices extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
-    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals(1, json.length(), "incorrect number of elements");
     verifyHSInfo(json.getJSONObject("historyInfo"), appContext);
   }
 
   @Test
-  public void testInfoSlash() throws JSONException, Exception {
+  void testInfoSlash() throws JSONException, Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("history")
         .path("info/").accept(MediaType.APPLICATION_JSON)
@@ -185,24 +185,24 @@ public class TestHsWebServices extends JerseyTestBase {
     assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
-    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals(1, json.length(), "incorrect number of elements");
     verifyHSInfo(json.getJSONObject("historyInfo"), appContext);
   }
 
   @Test
-  public void testInfoDefault() throws JSONException, Exception {
+  void testInfoDefault() throws JSONException, Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("history")
         .path("info/").get(ClientResponse.class);
     assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
-    assertEquals("incorrect number of elements", 1, json.length());
+    assertEquals(1, json.length(), "incorrect number of elements");
     verifyHSInfo(json.getJSONObject("historyInfo"), appContext);
   }
 
   @Test
-  public void testInfoXML() throws JSONException, Exception {
+  void testInfoXML() throws JSONException, Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("history")
         .path("info/").accept(MediaType.APPLICATION_XML)
@@ -214,7 +214,7 @@ public class TestHsWebServices extends JerseyTestBase {
   }
 
   @Test
-  public void testInvalidUri() throws JSONException, Exception {
+  void testInvalidUri() throws JSONException, Exception {
     WebResource r = resource();
     String responseStr = "";
     try {
@@ -230,7 +230,7 @@ public class TestHsWebServices extends JerseyTestBase {
   }
 
   @Test
-  public void testInvalidUri2() throws JSONException, Exception {
+  void testInvalidUri2() throws JSONException, Exception {
     WebResource r = resource();
     String responseStr = "";
     try {
@@ -246,7 +246,7 @@ public class TestHsWebServices extends JerseyTestBase {
   }
 
   @Test
-  public void testInvalidAccept() throws JSONException, Exception {
+  void testInvalidAccept() throws JSONException, Exception {
     WebResource r = resource();
     String responseStr = "";
     try {
@@ -270,13 +270,12 @@ public class TestHsWebServices extends JerseyTestBase {
         VersionInfo.getBuildVersion(), hadoopBuildVersion);
     WebServicesTestUtils.checkStringMatch("hadoopVersion",
         VersionInfo.getVersion(), hadoopVersion);
-    assertEquals("startedOn doesn't match: ",
-        JobHistoryServer.historyServerTimeStamp, startedon);
+    assertEquals(JobHistoryServer.historyServerTimeStamp, startedon, "startedOn doesn't match: ");
   }
 
   public void verifyHSInfo(JSONObject info, AppContext ctx)
       throws JSONException {
-    assertEquals("incorrect number of elements", 4, info.length());
+    assertEquals(4, info.length(), "incorrect number of elements");
 
     verifyHsInfoGeneric(info.getString("hadoopVersionBuiltOn"),
         info.getString("hadoopBuildVersion"), info.getString("hadoopVersion"),
@@ -291,7 +290,7 @@ public class TestHsWebServices extends JerseyTestBase {
     is.setCharacterStream(new StringReader(xml));
     Document dom = db.parse(is);
     NodeList nodes = dom.getElementsByTagName("historyInfo");
-    assertEquals("incorrect number of elements", 1, nodes.getLength());
+    assertEquals(1, nodes.getLength(), "incorrect number of elements");
 
     for (int i = 0; i < nodes.getLength(); i++) {
       Element element = (Element) nodes.item(i);

@@ -24,11 +24,11 @@ import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.hs.HistoryFileManager.HistoryFileInfo;
 import org.apache.hadoop.mapreduce.v2.hs.HistoryFileManager.JobIdHistoryFileInfoMap;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class TestJobIdHistoryFileInfoMap {
 
@@ -47,8 +47,9 @@ public class TestJobIdHistoryFileInfoMap {
    * Trivial test case that verifies basic functionality of {@link
    * JobIdHistoryFileInfoMap}
    */
-  @Test(timeout = 2000)
-  public void testWithSingleElement() throws InterruptedException {
+  @Test
+  @Timeout(2000)
+  void testWithSingleElement() throws InterruptedException {
     JobIdHistoryFileInfoMap mapWithSize = new JobIdHistoryFileInfoMap();
 
     JobId jobId = MRBuilderUtils.newJobId(1, 1, 1);
@@ -56,23 +57,22 @@ public class TestJobIdHistoryFileInfoMap {
     Mockito.when(fileInfo1.getJobId()).thenReturn(jobId);
 
     // add it twice
-    assertEquals("Incorrect return on putIfAbsent()",
-        null, mapWithSize.putIfAbsent(jobId, fileInfo1));
-    assertEquals("Incorrect return on putIfAbsent()",
-        fileInfo1, mapWithSize.putIfAbsent(jobId, fileInfo1));
+    assertNull(mapWithSize.putIfAbsent(jobId, fileInfo1));
+    assertEquals(fileInfo1, mapWithSize.putIfAbsent(jobId, fileInfo1),
+        "Incorrect return on putIfAbsent()");
 
     // check get()
-    assertEquals("Incorrect get()", fileInfo1, mapWithSize.get(jobId));
-    assertTrue("Incorrect size()", checkSize(mapWithSize, 1));
+    assertEquals(fileInfo1, mapWithSize.get(jobId), "Incorrect get()");
+    assertTrue(checkSize(mapWithSize, 1), "Incorrect size()");
 
     // check navigableKeySet()
     NavigableSet<JobId> set = mapWithSize.navigableKeySet();
-    assertEquals("Incorrect navigableKeySet()", 1, set.size());
-    assertTrue("Incorrect navigableKeySet()", set.contains(jobId));
+    assertEquals(1, set.size(), "Incorrect navigableKeySet()");
+    assertTrue(set.contains(jobId), "Incorrect navigableKeySet()");
 
     // check values()
     Collection<HistoryFileInfo> values = mapWithSize.values();
-    assertEquals("Incorrect values()", 1, values.size());
-    assertTrue("Incorrect values()", values.contains(fileInfo1));
+    assertEquals(1, values.size(), "Incorrect values()");
+    assertTrue(values.contains(fileInfo1), "Incorrect values()");
   }
 }

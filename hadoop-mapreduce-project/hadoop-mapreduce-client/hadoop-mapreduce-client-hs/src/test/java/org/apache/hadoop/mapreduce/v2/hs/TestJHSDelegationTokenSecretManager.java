@@ -18,9 +18,7 @@
 package org.apache.hadoop.mapreduce.v2.hs;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -36,13 +34,12 @@ import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.DelegationKey;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class TestJHSDelegationTokenSecretManager {
 
   @Test
-  public void testRecovery() throws Exception {
+  void testRecovery() throws Exception {
     Configuration conf = new Configuration();
     HistoryServerStateStoreService store =
         new HistoryServerMemStateStoreService();
@@ -80,14 +77,16 @@ public class TestJHSDelegationTokenSecretManager {
     mgr.recover(store.loadState());
     List<DelegationKey> recoveredKeys = Arrays.asList(mgr.getAllKeys());
     for (DelegationKey key : keys) {
-      assertTrue("key missing after recovery", recoveredKeys.contains(key));
+      assertTrue(recoveredKeys.contains(key), "key missing after recovery");
     }
-    assertTrue("token1 missing", mgr.getAllTokens().containsKey(tokenId1));
-    assertEquals("token1 renew date", tokenRenewDate1,
-        mgr.getAllTokens().get(tokenId1).getRenewDate());
-    assertTrue("token2 missing", mgr.getAllTokens().containsKey(tokenId2));
-    assertEquals("token2 renew date", tokenRenewDate2,
-        mgr.getAllTokens().get(tokenId2).getRenewDate());
+    assertTrue(mgr.getAllTokens().containsKey(tokenId1), "token1 missing");
+    assertEquals(tokenRenewDate1,
+        mgr.getAllTokens().get(tokenId1).getRenewDate(),
+        "token1 renew date");
+    assertTrue(mgr.getAllTokens().containsKey(tokenId2), "token2 missing");
+    assertEquals(tokenRenewDate2,
+        mgr.getAllTokens().get(tokenId2).getRenewDate(),
+        "token2 renew date");
 
     mgr.startThreads();
     mgr.verifyToken(tokenId1, token1.getPassword());
@@ -97,8 +96,9 @@ public class TestJHSDelegationTokenSecretManager {
         new Text("tokenUser"));
     Token<MRDelegationTokenIdentifier> token3 =
         new Token<MRDelegationTokenIdentifier>(tokenId3, mgr);
-    assertEquals("sequence number restore", tokenId2.getSequenceNumber() + 1,
-        tokenId3.getSequenceNumber());
+    assertEquals(tokenId2.getSequenceNumber() + 1,
+        tokenId3.getSequenceNumber(),
+        "sequence number restore");
     mgr.cancelToken(token1, "tokenOwner");
 
     // Testing with full principal name
@@ -128,15 +128,17 @@ public class TestJHSDelegationTokenSecretManager {
     stopAndCleanSecretManager(mgr);
 
     mgr.recover(store.loadState());
-    assertFalse("token1 should be missing",
-        mgr.getAllTokens().containsKey(tokenId1));
-    assertTrue("token2 missing", mgr.getAllTokens().containsKey(tokenId2));
-    assertEquals("token2 renew date incorrect", tokenRenewDate2,
-        mgr.getAllTokens().get(tokenId2).getRenewDate());
-    assertTrue("token3 missing from manager",
-        mgr.getAllTokens().containsKey(tokenId3));
-    assertEquals("token3 renew date", tokenRenewDate3,
-        mgr.getAllTokens().get(tokenId3).getRenewDate());
+    assertFalse(mgr.getAllTokens().containsKey(tokenId1),
+        "token1 should be missing");
+    assertTrue(mgr.getAllTokens().containsKey(tokenId2), "token2 missing");
+    assertEquals(tokenRenewDate2,
+        mgr.getAllTokens().get(tokenId2).getRenewDate(),
+        "token2 renew date incorrect");
+    assertTrue(mgr.getAllTokens().containsKey(tokenId3),
+        "token3 missing from manager");
+    assertEquals(tokenRenewDate3,
+        mgr.getAllTokens().get(tokenId3).getRenewDate(),
+        "token3 renew date");
 
     mgr.startThreads();
     mgr.verifyToken(tokenId2, token2.getPassword());
@@ -153,10 +155,10 @@ public class TestJHSDelegationTokenSecretManager {
     stopAndCleanSecretManager(mgr);
 
     // Store should contain token but manager should not
-    Assert.assertTrue("Store does not contain token3",
-        tokenState.containsKey(tokenId3));
-    Assert.assertFalse("Store does not contain token3",
-        mgr.getAllTokens().containsKey(tokenId3));
+    assertTrue(tokenState.containsKey(tokenId3),
+        "Store does not contain token3");
+    assertFalse(mgr.getAllTokens().containsKey(tokenId3),
+        "Store does not contain token3");
     // Recover to load the token into the manager; renew date is set to 0
     mgr.recover(store.loadState());
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
@@ -176,7 +178,7 @@ public class TestJHSDelegationTokenSecretManager {
         return !tokenState.containsKey(tokenId3);
       }
     }, 10, 2000);
- }
+  }
 
   private void stopAndCleanSecretManager(
       JHSDelegationTokenSecretManagerForTest mgr) {

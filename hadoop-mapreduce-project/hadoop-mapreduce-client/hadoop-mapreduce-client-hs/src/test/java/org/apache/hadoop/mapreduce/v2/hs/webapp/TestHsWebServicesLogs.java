@@ -61,10 +61,10 @@ import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebApp;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.WebApplicationException;
@@ -83,9 +83,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
@@ -251,7 +249,7 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setupClass() throws Exception {
     fs = FileSystem.get(conf);
     createAggregatedFolders();
@@ -259,7 +257,7 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
         Guice.createInjector(new WebServletModule()));
   }
 
-  @Before
+  @BeforeEach
   public void setUp() {
     GuiceServletConfig.setInjector(
         Guice.createInjector(new WebServletModule()));
@@ -306,14 +304,14 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
         .contextPath("jersey-guice-filter").servletPath("/").build());
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownClass() throws Exception {
     fs.delete(new Path(REMOTE_LOG_ROOT_DIR), true);
     fs.delete(new Path(LOCAL_ROOT_LOG_DIR), true);
   }
 
   @Test
-  public void testGetAggregatedLogsMetaForFinishedApp() {
+  void testGetAggregatedLogsMetaForFinishedApp() {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1")
         .path("history").path("aggregatedlogs")
@@ -322,7 +320,8 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
         .get(ClientResponse.class);
 
     List<ContainerLogsInfo> responseList =
-        response.getEntity(new GenericType<List<ContainerLogsInfo>>(){});
+        response.getEntity(new GenericType<List<ContainerLogsInfo>>(){
+        });
     Set<String> expectedIdStrings = Sets.newHashSet(
         CONTAINER_1_1_1.toString(), CONTAINER_1_1_2.toString(),
         CONTAINER_1_1_3.toString(), CONTAINER_1_2_1.toString());
@@ -346,7 +345,7 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
   }
 
   @Test
-  public void testGetAggregatedLogsMetaForRunningApp() {
+  void testGetAggregatedLogsMetaForRunningApp() {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1")
         .path("history").path("aggregatedlogs")
@@ -355,7 +354,8 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
         .get(ClientResponse.class);
 
     List<ContainerLogsInfo> responseList =
-        response.getEntity(new GenericType<List<ContainerLogsInfo>>(){});
+        response.getEntity(new GenericType<List<ContainerLogsInfo>>(){
+        });
     Set<String> expectedIdStrings = Sets.newHashSet(
         CONTAINER_2_1_1.toString(), CONTAINER_2_2_1.toString(),
         CONTAINER_2_2_3.toString());
@@ -378,7 +378,7 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
   }
 
   @Test
-  public void testGetAggregatedLogsMetaForFinishedAppAttempt() {
+  void testGetAggregatedLogsMetaForFinishedAppAttempt() {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1")
         .path("history").path("aggregatedlogs")
@@ -388,7 +388,8 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
         .get(ClientResponse.class);
 
     List<ContainerLogsInfo> responseList =
-        response.getEntity(new GenericType<List<ContainerLogsInfo>>(){});
+        response.getEntity(new GenericType<List<ContainerLogsInfo>>(){
+        });
     Set<String> expectedIdStrings = Sets.newHashSet(
         CONTAINER_1_1_1.toString(), CONTAINER_1_1_2.toString(),
         CONTAINER_1_1_3.toString());
@@ -411,7 +412,7 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
   }
 
   @Test
-  public void testGetAggregatedLogsMetaForRunningAppAttempt() {
+  void testGetAggregatedLogsMetaForRunningAppAttempt() {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1")
         .path("history").path("aggregatedlogs")
@@ -421,7 +422,8 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
         .get(ClientResponse.class);
 
     List<ContainerLogsInfo> responseList =
-        response.getEntity(new GenericType<List<ContainerLogsInfo>>(){});
+        response.getEntity(new GenericType<List<ContainerLogsInfo>>(){
+        });
     Set<String> expectedIdStrings = Sets.newHashSet(
         CONTAINER_2_2_1.toString(), CONTAINER_2_2_3.toString());
     assertResponseList(responseList, expectedIdStrings, true);
@@ -443,7 +445,7 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
   }
 
   @Test
-  public void testGetContainerLogsForFinishedContainer() {
+  void testGetContainerLogsForFinishedContainer() {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1")
         .path("history").path("containers")
@@ -452,7 +454,8 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
         .get(ClientResponse.class);
 
     List<ContainerLogsInfo> responseText =
-        response.getEntity(new GenericType<List<ContainerLogsInfo>>(){});
+        response.getEntity(new GenericType<List<ContainerLogsInfo>>(){
+        });
     assertThat(responseText.size()).isOne();
 
     ContainerLogsInfo logsInfo = responseText.get(0);
@@ -464,7 +467,7 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
   }
 
   @Test
-  public void testGetContainerLogsForRunningContainer() throws Exception {
+  void testGetContainerLogsForRunningContainer() throws Exception {
     WebResource r = resource();
     URI requestURI = r.path("ws").path("v1")
         .path("history").path("containers")
@@ -500,7 +503,8 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
         .get(ClientResponse.class);
 
     List<ContainerLogsInfo> responseText =
-        response.getEntity(new GenericType<List<ContainerLogsInfo>>(){});
+        response.getEntity(new GenericType<List<ContainerLogsInfo>>(){
+        });
     assertThat(responseText.size()).isEqualTo(2);
 
     ContainerLogsInfo logsInfo1 = responseText.get(0);
@@ -534,7 +538,7 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
   }
 
   @Test
-  public void testGetContainerLogFileForFinishedContainer() {
+  void testGetContainerLogFileForFinishedContainer() {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1")
         .path("history").path("containerlogs")
@@ -549,7 +553,7 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
   }
 
   @Test
-  public void testNoRedirectForFinishedContainer() throws Exception {
+  void testNoRedirectForFinishedContainer() throws Exception {
     WebResource r = resource();
     URI requestURI = r.path("ws").path("v1")
         .path("history").path("containerlogs")
@@ -563,7 +567,7 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
    * For local logs we can only check the redirect to the appropriate node.
    */
   @Test
-  public void testGetContainerLogFileForRunningContainer() throws Exception {
+  void testGetContainerLogFileForRunningContainer() throws Exception {
     WebResource r = resource();
     URI requestURI = r.path("ws").path("v1")
         .path("history").path("containerlogs")
@@ -601,7 +605,7 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
   }
 
   @Test
-  public void testRemoteLogDirWithUser() {
+  void testRemoteLogDirWithUser() {
     createReconfiguredServlet();
 
     WebResource r = resource();
@@ -609,13 +613,12 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
         .path("history").path("remote-log-dir")
         .queryParam(YarnWebServiceParams.REMOTE_USER,
             USER)
-        .accept(MediaType.APPLICATION_JSON)
-        .get(ClientResponse.class);
-    RemoteLogPaths res = response.
-        getEntity(new GenericType<RemoteLogPaths>(){});
+        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+    RemoteLogPaths res = response.getEntity(new GenericType<RemoteLogPaths>() {
+    });
 
     List<String> collectedControllerNames = new ArrayList<>();
-    for (RemoteLogPathEntry entry: res.getPaths()) {
+    for (RemoteLogPathEntry entry : res.getPaths()) {
       String path = String.format("%s/%s/bucket-%s-%s",
           YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR, USER,
           REMOTE_LOG_DIR_SUFFIX, entry.getFileController().toLowerCase());
@@ -628,7 +631,7 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
   }
 
   @Test
-  public void testRemoteLogDir() {
+  void testRemoteLogDir() {
     createReconfiguredServlet();
     UserGroupInformation ugi = UserGroupInformation.
         createRemoteUser(USER);
@@ -639,11 +642,11 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
         .path("history").path("remote-log-dir")
         .accept(MediaType.APPLICATION_JSON)
         .get(ClientResponse.class);
-    RemoteLogPaths res = response.
-        getEntity(new GenericType<RemoteLogPaths>(){});
+    RemoteLogPaths res = response.getEntity(new GenericType<RemoteLogPaths>() {
+    });
 
     List<String> collectedControllerNames = new ArrayList<>();
-    for (RemoteLogPathEntry entry: res.getPaths()) {
+    for (RemoteLogPathEntry entry : res.getPaths()) {
       String path = String.format("%s/%s/bucket-%s-%s",
           YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR, USER,
           REMOTE_LOG_DIR_SUFFIX, entry.getFileController().toLowerCase());
@@ -656,7 +659,7 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
   }
 
   @Test
-  public void testRemoteLogDirWithUserAndAppId() {
+  void testRemoteLogDirWithUserAndAppId() {
     createReconfiguredServlet();
 
     WebResource r = resource();
@@ -668,11 +671,11 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
             APPID_1.toString())
         .accept(MediaType.APPLICATION_JSON)
         .get(ClientResponse.class);
-    RemoteLogPaths res = response.
-        getEntity(new GenericType<RemoteLogPaths>(){});
+    RemoteLogPaths res = response.getEntity(new GenericType<RemoteLogPaths>() {
+    });
 
     List<String> collectedControllerNames = new ArrayList<>();
-    for (RemoteLogPathEntry entry: res.getPaths()) {
+    for (RemoteLogPathEntry entry : res.getPaths()) {
       String path = String.format("%s/%s/bucket-%s-%s/0001/%s",
           YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR, USER,
           REMOTE_LOG_DIR_SUFFIX, entry.getFileController().toLowerCase(),
@@ -687,7 +690,7 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
 
 
   @Test
-  public void testNonExistingAppId() {
+  void testNonExistingAppId() {
     ApplicationId nonExistingApp = ApplicationId.newInstance(99, 99);
 
     WebResource r = resource();
@@ -703,7 +706,7 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
   }
 
   @Test
-  public void testBadAppId() {
+  void testBadAppId() {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1")
         .path("history").path("aggregatedlogs")
@@ -717,7 +720,7 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
   }
 
   @Test
-  public void testNonExistingAppAttemptId() {
+  void testNonExistingAppAttemptId() {
     ApplicationId nonExistingApp = ApplicationId.newInstance(99, 99);
     ApplicationAttemptId nonExistingAppAttemptId =
         ApplicationAttemptId.newInstance(nonExistingApp, 1);
@@ -736,7 +739,7 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
   }
 
   @Test
-  public void testBadAppAttemptId() {
+  void testBadAppAttemptId() {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1")
         .path("history").path("aggregatedlogs")
@@ -750,7 +753,7 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
   }
 
   @Test
-  public void testNonExistingContainerId() {
+  void testNonExistingContainerId() {
     ApplicationId nonExistingApp = ApplicationId.newInstance(99, 99);
     ApplicationAttemptId nonExistingAppAttemptId =
         ApplicationAttemptId.newInstance(nonExistingApp, 1);
@@ -771,7 +774,7 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
   }
 
   @Test
-  public void testBadContainerId() {
+  void testBadContainerId() {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1")
         .path("history").path("aggregatedlogs")
@@ -785,7 +788,7 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
   }
 
   @Test
-  public void testNonExistingContainerMeta() {
+  void testNonExistingContainerMeta() {
     ApplicationId nonExistingApp = ApplicationId.newInstance(99, 99);
     ApplicationAttemptId nonExistingAppAttemptId =
         ApplicationAttemptId.newInstance(nonExistingApp, 1);
@@ -806,7 +809,7 @@ public class TestHsWebServicesLogs extends JerseyTestBase {
   }
 
   @Test
-  public void testBadContainerForMeta() {
+  void testBadContainerForMeta() {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1")
         .path("history").path("containers")
