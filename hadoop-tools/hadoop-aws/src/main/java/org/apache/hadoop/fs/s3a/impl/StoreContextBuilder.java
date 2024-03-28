@@ -25,6 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.S3AInputPolicy;
 import org.apache.hadoop.fs.s3a.S3AStorageStatistics;
+import org.apache.hadoop.fs.s3a.api.S3ObjectStorageClassFilter;
 import org.apache.hadoop.fs.s3a.audit.AuditSpanS3A;
 import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
 import org.apache.hadoop.fs.store.audit.AuditSpanSource;
@@ -68,6 +69,8 @@ public class StoreContextBuilder {
   private AuditSpanSource<AuditSpanS3A> auditor;
 
   private boolean isCSEEnabled;
+
+  private S3ObjectStorageClassFilter s3ObjectStorageClassFilter;
 
   public StoreContextBuilder setFsURI(final URI fsURI) {
     this.fsURI = fsURI;
@@ -175,6 +178,12 @@ public class StoreContextBuilder {
     return this;
   }
 
+  public StoreContextBuilder setS3ObjectStorageClassFilter(
+      S3ObjectStorageClassFilter value) {
+    s3ObjectStorageClassFilter = value;
+    return this;
+  }
+
   public StoreContext build() {
     return new StoreContext(fsURI,
         bucket,
@@ -192,6 +201,7 @@ public class StoreContextBuilder {
         useListV1,
         contextAccessors,
         auditor,
-        isCSEEnabled);
+        isCSEEnabled,
+        s3ObjectStorageClassFilter);
   }
 }

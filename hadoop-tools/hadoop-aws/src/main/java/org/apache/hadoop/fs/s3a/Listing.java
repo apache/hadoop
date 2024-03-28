@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.s3a.api.S3ObjectStorageClassFilter;
 import org.apache.hadoop.fs.s3a.impl.AbstractStoreOperation;
 import org.apache.hadoop.fs.s3a.impl.ListingOperationCallbacks;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
@@ -76,6 +77,7 @@ public class Listing extends AbstractStoreOperation {
 
   private static final Logger LOG = S3AFileSystem.LOG;
   private final boolean isCSEEnabled;
+  private final S3ObjectStorageClassFilter s3ObjectStorageClassFilter;
 
   static final FileStatusAcceptor ACCEPT_ALL_BUT_S3N =
       new AcceptAllButS3nDirs();
@@ -87,6 +89,7 @@ public class Listing extends AbstractStoreOperation {
     super(storeContext);
     this.listingOperationCallbacks = listingOperationCallbacks;
     this.isCSEEnabled = storeContext.isCSEEnabled();
+    this.s3ObjectStorageClassFilter = storeContext.getS3ObjectsStorageClassFilter();
   }
 
   /**
@@ -462,7 +465,10 @@ public class Listing extends AbstractStoreOperation {
           LOG.debug("{}: {}", keyPath, stringify(s3Object));
         }
         // Skip over keys that are ourselves and old S3N _$folder$ files
-        if (acceptor.accept(keyPath, s3Object) && filter.accept(keyPath)) {
+        // Handle Glacier Storage Class based on the config fs.s3a.glacier.read.restored.objects
+        if (s3ObjectStorageClassFilter.getFilter().apply(s3Object) &&
+            acceptor.accept(keyPath, s3Object) &&
+            filter.accept(keyPath)) {
           S3AFileStatus status = createFileStatus(keyPath, s3Object,
                   listingOperationCallbacks.getDefaultBlockSize(keyPath),
                   getStoreContext().getUsername(),
