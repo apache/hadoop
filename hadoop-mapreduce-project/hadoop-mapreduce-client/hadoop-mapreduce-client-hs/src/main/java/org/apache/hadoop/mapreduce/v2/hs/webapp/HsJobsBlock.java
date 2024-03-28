@@ -76,6 +76,7 @@ public class HsJobsBlock extends HtmlBlock {
             th(".id", "Job ID").
             th(".name", "Name").
             th("User").
+            th(".resourceManagerHost", "Resource Manager Host").
             th("Queue").
             th(".state", "State").
             th("Maps Total").
@@ -96,6 +97,11 @@ public class HsJobsBlock extends HtmlBlock {
           .checkAccess(ugi, JobACL.VIEW_JOB, job.getUserName(), null)) {
         continue;
       }
+
+      String resourceManagerHost = "";
+      if (j.getResourceManagerHost() != null) {
+        resourceManagerHost = j.getResourceManagerHost();
+      }
       jobsTableData.append("[\"")
       .append(dateFormat.format(new Date(job.getSubmitTime()))).append("\",\"")
       .append(job.getFormattedStartTimeStr(dateFormat)).append("\",\"")
@@ -106,6 +112,8 @@ public class HsJobsBlock extends HtmlBlock {
         job.getName()))).append("\",\"")
       .append(StringEscapeUtils.escapeEcmaScript(StringEscapeUtils.escapeHtml4(
         job.getUserName()))).append("\",\"")
+       .append(StringEscapeUtils.escapeEcmaScript(StringEscapeUtils.escapeHtml4(
+        resourceManagerHost))).append("\",\"")
       .append(StringEscapeUtils.escapeEcmaScript(StringEscapeUtils.escapeHtml4(
         job.getQueueName()))).append("\",\"")
       .append(job.getState()).append("\",\"")
@@ -140,6 +148,8 @@ public class HsJobsBlock extends HtmlBlock {
           .$name("name").$value("Name").__().__().
         th().input("search_init").$type(InputType.text)
           .$name("user").$value("User").__().__().
+        th().input("search_init").$type(InputType.text)
+          .$name("resourceManagerHost").$value("Resource Manager Host").__().__().
         th().input("search_init").$type(InputType.text)
           .$name("queue").$value("Queue").__().__().
         th().input("search_init").$type(InputType.text)
