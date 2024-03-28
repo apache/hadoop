@@ -71,7 +71,7 @@ import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 
 /**
- * Extends the AbstractRequestInterceptorClient class and provides an
+ * Extends the AbstractRESTRequestInterceptor class and provides an
  * implementation that simply forwards the client requests to the resource
  * manager.
  */
