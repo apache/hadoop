@@ -19,6 +19,8 @@ package org.apache.hadoop.hdfs.server.datanode.fsdataset;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_BALANCED_SPACE_THRESHOLD_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_HIGH_AVAILABLE_VOLUME_RESERVED_THRESHOLD_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_HIGH_AVAILABLE_VOLUME_RESERVED_THRESHOLD_KEY;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,6 +28,7 @@ import java.util.Random;
 
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsVolumeImpl;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.junit.Assert;
@@ -42,6 +45,12 @@ public class TestAvailableSpaceVolumeChoosingPolicy {
   private static void initPolicy(VolumeChoosingPolicy<FsVolumeSpi> policy,
       long balanceSpaceThreshold,
       float preferencePercent) {
+    initPolicy(policy, preferencePercent,
+        DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_HIGH_AVAILABLE_VOLUME_RESERVED_THRESHOLD_DEFAULT);
+  }
+
+  private static void initPolicy(VolumeChoosingPolicy<FsVolumeSpi> policy,
+      float preferencePercent, long reservedSizeConstrain) {
     Configuration conf = new Configuration();
     // Set the threshold to consider volumes imbalanced to 1MB
     conf.setLong(
@@ -50,6 +59,9 @@ public class TestAvailableSpaceVolumeChoosingPolicy {
     conf.setFloat(
         DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_KEY,
         preferencePercent);
+    conf.setLong(
+        DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_HIGH_AVAILABLE_VOLUME_RESERVED_THRESHOLD_KEY,
+        reservedSizeConstrain);
     ((Configurable) policy).setConf(conf);
   }
   
@@ -98,7 +110,36 @@ public class TestAvailableSpaceVolumeChoosingPolicy {
     Assert.assertEquals(volumes.get(1), policy.chooseVolume(volumes, 100,
         null));
   }
-  
+
+  @Test(timeout=60000)
+  public void testTwoUnbalancedVolumesWithReservedSizeBlock() throws Exception {
+    final AvailableSpaceVolumeChoosingPolicy<FsVolumeSpi> policy =
+        ReflectionUtils.newInstance(AvailableSpaceVolumeChoosingPolicy.class, null);
+    // Set reserved size constraint to 1MB
+    initPolicy(policy, 1.0f, 1024L * 1024L);
+
+    List<FsVolumeSpi> volumes = new ArrayList<>();
+
+    // First volume with 1MB free space
+    volumes.add(Mockito.mock(FsVolumeImpl.class));
+    Mockito.when(volumes.get(0).getAvailable()).thenReturn(1024L * 1024L);
+
+    // Second volume with 3MB free space, which is a difference of 2MB, more
+    // than the threshold of 1MB. Meanwhile set ReservedForReplicas to 1MB + 1 more than
+    // constrain 1MB
+    volumes.add(Mockito.mock(FsVolumeImpl.class));
+    Mockito.when(volumes.get(1).getAvailable()).thenReturn(1024L * 1024L * 3);
+    Mockito.when(volumes.get(1).getReservedForReplicas()).thenReturn(1024L * 1024L + 1);
+    // ReservedForReplicas is more than constrain, choose volume like pure round robin
+    Assert.assertEquals(volumes.get(0), policy.chooseVolume(volumes, 100,
+        null));
+    Assert.assertEquals(volumes.get(1), policy.chooseVolume(volumes, 100,
+        null));
+    Assert.assertEquals(volumes.get(0), policy.chooseVolume(volumes, 100,
+        null));
+  }
+
+
   @Test(timeout=60000)
   public void testThreeUnbalancedVolumes() throws Exception {
     @SuppressWarnings("unchecked")
