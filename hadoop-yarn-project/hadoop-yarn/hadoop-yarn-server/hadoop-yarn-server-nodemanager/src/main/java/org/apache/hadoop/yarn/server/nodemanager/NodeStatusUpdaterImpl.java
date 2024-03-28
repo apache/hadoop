@@ -717,6 +717,8 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
         org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState.DONE)) {
         context.getContainers().remove(containerId);
         removedContainers.add(containerId);
+        // For the finished containers, the residual data stored in leveldb should also be cleared
+        addCompletedContainer(containerId);
         iter.remove();
       }
       pendingCompletedContainers.remove(containerId);
