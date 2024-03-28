@@ -205,7 +205,7 @@ public class ITestNativeAzureFileSystemLive extends
 
     // Try to delete the same file
     beginningDeleteAttempt.countDown();
-    store.delete(fullKey);
+    store.delete(fullKey, nfs.getStore().retrieveMetadata(fullKey).getEtag());
 
     // At this point file SHOULD BE DELETED
     assertPathDoesNotExist("Leased path", path);
