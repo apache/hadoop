@@ -33,7 +33,6 @@ import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import org.apache.commons.lang3.RandomUtils;
@@ -50,7 +49,6 @@ import org.apache.hadoop.util.Shell.CommandExecutor;
 import org.apache.hadoop.util.Shell.ExitCodeException;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ConfigurationException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -340,10 +338,8 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       }
 
       shExec = buildCommandExecutor(sb.getWrapperScriptPath().toString(),
-              containerIdStr, user, pidFile, container.getResource(),
-              new File(containerWorkDir.toUri().getPath()),
-              container.getLaunchContext().getEnvironment(),
-              numaCommands);
+              user, pidFile, new File(containerWorkDir.toUri().getPath()),
+              container, numaCommands);
 
       if (isContainerActive(containerId)) {
         shExec.execute();
@@ -405,24 +401,24 @@ public class DefaultContainerExecutor extends ContainerExecutor {
    * Create a new {@link ShellCommandExecutor} using the parameters.
    *
    * @param wrapperScriptPath the path to the script to execute
-   * @param containerIdStr the container ID
    * @param user the application owner's username
    * @param pidFile the path to the container's PID file
-   * @param resource this parameter controls memory and CPU limits.
    * @param workDir If not-null, specifies the directory which should be set
    * as the current working directory for the command. If null,
    * the current working directory is not modified.
-   * @param environment the container environment
+   * @param container the container reference
    * @param numaCommands list of prefix numa commands
    * @return the new {@link ShellCommandExecutor}
    * @see ShellCommandExecutor
    */
   protected CommandExecutor buildCommandExecutor(String wrapperScriptPath,
-                            String containerIdStr, String user, Path pidFile, Resource resource,
-                            File workDir, Map<String, String> environment, String[] numaCommands) {
+                            String user, Path pidFile, File workDir,
+                            Container container, String[] numaCommands) {
+
 
     String[] command = getRunCommand(wrapperScriptPath,
-        containerIdStr, user, pidFile, this.getConf(), resource);
+        container.getContainerId().toString(), user, pidFile, this.getConf(),
+            container.getResource());
 
     // check if numa commands are passed and append it as prefix commands
     if(numaCommands != null && numaCommands.length!=0) {
@@ -433,7 +429,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
     return new ShellCommandExecutor(
         command,
         workDir,
-        environment,
+        container.getLaunchContext().getEnvironment(),
         0L,
         false);
   }
