@@ -378,6 +378,36 @@ public class RMContainerAllocator extends RMContainerRequestor
       ContainerRequestEvent reqEvent = (ContainerRequestEvent) event;
       boolean isMap = reqEvent.getAttemptID().getTaskId().getTaskType().
           equals(TaskType.MAP);
+
+        if (scheduledRequests.earlierFailedMaps.contains(event.getAttemptID())) {
+            LOG.info("Task Attempt ID : {} exist in earlier failed records, just removed");
+            scheduledRequests.earlierFailedMaps.remove(event.getAttemptID());
+        }
+
+        if (null != reqEvent.getHosts()) {
+            for (String host : reqEvent.getHosts()) {
+                if (scheduledRequests.mapsHostMapping.containsKey(host)) {
+                    LinkedList<TaskAttemptId> taskAttemptIds = scheduledRequests.mapsHostMapping.get(host);
+                    if (taskAttemptIds != null) {
+                        LOG.info("Task Attempt ID : {} exist in host mapping, just removed");
+                        taskAttemptIds.remove(reqEvent.getAttemptID());
+                    }
+                }
+            }
+        }
+
+        if (null != reqEvent.getRacks()) {
+            for (String rack : reqEvent.getRacks()) {
+                if (scheduledRequests.mapsRackMapping.containsKey(rack)) {
+                    LinkedList<TaskAttemptId> taskAttemptIds = scheduledRequests.mapsRackMapping.get(rack);
+                    if (taskAttemptIds != null) {
+                        LOG.info("Task Attempt ID : {} exist in rack mapping, just removed");
+                        taskAttemptIds.remove(reqEvent.getAttemptID());
+                    }
+                }
+            }
+        }
+
       if (isMap) {
         handleMapContainerRequest(reqEvent);
       } else {
