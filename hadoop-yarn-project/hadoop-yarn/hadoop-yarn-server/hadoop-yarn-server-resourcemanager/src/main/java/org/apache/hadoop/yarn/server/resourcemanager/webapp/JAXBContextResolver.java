@@ -32,6 +32,7 @@ import javax.ws.rs.ext.Provider;
 import javax.xml.bind.JAXBContext;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.app.SimpleAppInfo;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.UserInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.*;
@@ -57,26 +58,21 @@ public class JAXBContextResolver implements ContextResolver<JAXBContext> {
 
     // you have to specify all the dao classes here
     final Class[] cTypes =
-        { AppInfo.class, AppAttemptInfo.class, AppAttemptsInfo.class,
-            ClusterInfo.class, CapacitySchedulerQueueInfo.class,
-            FifoSchedulerInfo.class, SchedulerTypeInfo.class, NodeInfo.class,
-            UserMetricsInfo.class, CapacitySchedulerInfo.class,
-            ClusterMetricsInfo.class, SchedulerInfo.class, AppsInfo.class,
-            NodesInfo.class, RemoteExceptionData.class,
-            CapacitySchedulerQueueInfoList.class, ResourceInfo.class,
+        {AppInfo.class, AppAttemptInfo.class, AppAttemptsInfo.class, ClusterInfo.class,
+            CapacitySchedulerQueueInfo.class, FifoSchedulerInfo.class, SchedulerTypeInfo.class,
+            NodeInfo.class, UserMetricsInfo.class, CapacitySchedulerInfo.class,
+            ClusterMetricsInfo.class, SchedulerInfo.class, AppsInfo.class, NodesInfo.class,
+            RemoteExceptionData.class, CapacitySchedulerQueueInfoList.class, ResourceInfo.class,
             UsersInfo.class, UserInfo.class, ApplicationStatisticsInfo.class,
             StatisticsItemInfo.class, CapacitySchedulerHealthInfo.class,
-            FairSchedulerQueueInfoList.class, AppTimeoutsInfo.class,
-            AppTimeoutInfo.class, ResourceInformationsInfo.class,
-            ActivitiesInfo.class, AppActivitiesInfo.class,
-            QueueAclsInfo.class, QueueAclInfo.class,
-            BulkActivitiesInfo.class};
+            FairSchedulerQueueInfoList.class, AppTimeoutsInfo.class, AppTimeoutInfo.class,
+            ResourceInformationsInfo.class, ActivitiesInfo.class, AppActivitiesInfo.class,
+            QueueAclsInfo.class, QueueAclInfo.class, BulkActivitiesInfo.class, SimpleAppInfo.class};
     // these dao classes need root unwrapping
     final Class[] rootUnwrappedTypes =
-        { NewApplication.class, ApplicationSubmissionContextInfo.class,
-            ContainerLaunchContextInfo.class, LocalResourceInfo.class,
-            DelegationToken.class, AppQueue.class, AppPriority.class,
-            ResourceOptionInfo.class };
+        {NewApplication.class, ApplicationSubmissionContextInfo.class,
+            ContainerLaunchContextInfo.class, LocalResourceInfo.class, DelegationToken.class,
+            AppQueue.class, AppPriority.class, ResourceOptionInfo.class};
 
     ArrayList<Class> finalcTypesList = new ArrayList<>();
     ArrayList<Class> finalRootUnwrappedTypesList = new ArrayList<>();

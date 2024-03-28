@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.security.AccessControlException;
 import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -40,6 +42,9 @@ import javax.ws.rs.core.Response.Status;
 
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.mapreduce.JobACL;
+import org.apache.hadoop.mapreduce.task.TaskAttemptDescription;
+import org.apache.hadoop.mapreduce.task.TaskDescription;
+import org.apache.hadoop.mapreduce.task.TaskDescriptions;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.KillTaskAttemptRequest;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.KillTaskAttemptResponse;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.impl.pb.KillTaskAttemptRequestPBImpl;
@@ -116,7 +121,7 @@ public class AMWebServices {
   /**
    * convert a job id string to an actual job and handle all the error checking.
    */
- public static Job getJobFromJobIdString(String jid, AppContext appCtx) throws NotFoundException {
+  public static Job getJobFromJobIdString(String jid, AppContext appCtx) throws NotFoundException {
     JobId jobId;
     Job job;
     try {
@@ -538,5 +543,68 @@ public class AMWebServices {
     ret.setState(TaskAttemptState.KILLED.toString());
 
     return Response.status(Status.OK).entity(ret).build();
+  }
+
+  @GET
+  @Path("/jobs/{jobid}/taskDescriptions")
+  @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
+  public TaskDescriptions getTaskDescriptions(@Context HttpServletRequest hsr,
+      @PathParam("jobid") String jid) {
+    init();
+    Job job = getJobFromJobIdString(jid, appCtx);
+    TaskDescriptions taskDescriptions = new TaskDescriptions();
+    taskDescriptions.setFound(job != null);
+    long startTime, finishTime;
+    if (job != null && job.getTasks() != null && !job.getTasks().isEmpty()) {
+      List<TaskDescription> taskDescriptionList = new ArrayList<TaskDescription>();
+      for (Task task : job.getTasks().values()) {
+        TaskDescription taskDescription = new TaskDescription();
+        taskDescription.setJobId(jid);
+        taskDescription.setTaskId(task.getID().toString());
+        taskDescription.setProgress(Float.toString(task.getProgress() * 100));
+        taskDescription.setTaskType(task.getType().name());
+
+        startTime = Long.MAX_VALUE;
+        finishTime = 0;
+
+        if (task.getAttempts() != null && !task.getAttempts().isEmpty()) {
+          List<TaskAttemptDescription> taskAttemptDescriptionList =
+              new ArrayList<TaskAttemptDescription>();
+
+          for (TaskAttempt ta : task.getAttempts().values()) {
+            if (ta != null && ta.getAssignedContainerID() != null) {
+              TaskAttemptDescription taskAttemptDescription = new TaskAttemptDescription();
+              taskAttemptDescription.setTaskAttemptId(
+                  ta.getID().toString() + ":" + ta.getAssignedContainerID().toString());
+              taskAttemptDescription.setTaskAttemptState(ta.getState().name());
+              taskAttemptDescription.setStartTime(ta.getLaunchTime());
+              if (ta.getLaunchTime() < startTime) {
+                startTime = ta.getLaunchTime();
+              }
+              if (task.isFinished() && ta.isFinished() && ta.getFinishTime() > finishTime) {
+                finishTime = ta.getFinishTime();
+              }
+              taskAttemptDescription.setFinishTime(ta.getFinishTime());
+              taskAttemptDescription.setPhase(ta.getPhase().name());
+              taskAttemptDescription.setProgress(ta.getProgress() * 100);
+              taskAttemptDescription.setTaskAttemptState(ta.getState().name());
+              if (task.getType() == TaskType.REDUCE) {
+                taskAttemptDescription.setShuffleFinishTime(ta.getShuffleFinishTime());
+                taskAttemptDescription.setSortFinishTime(ta.getSortFinishTime());
+              }
+              taskAttemptDescriptionList.add(taskAttemptDescription);
+            }
+          }
+
+          taskDescription.setTaskAttempts(taskAttemptDescriptionList);
+          taskDescription.setStartTime(startTime);
+          taskDescription.setFinishTime(finishTime);
+        }
+        taskDescriptionList.add(taskDescription);
+      }
+      taskDescriptions.setTaskDescriptionList(taskDescriptionList);
+    }
+
+    return taskDescriptions;
   }
 }

@@ -23,6 +23,9 @@ import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 
+import com.fasterxml.jackson.annotation.JsonRootName;
+
+@JsonRootName(value = "tasks")
 @XmlRootElement(name = "tasks")
 @XmlAccessorType(XmlAccessType.FIELD)
 public class TasksInfo {
@@ -38,6 +41,14 @@ public class TasksInfo {
 
   public ArrayList<TaskInfo> getTasks() {
     return task;
+  }
+
+  public ArrayList<TaskInfo> getTask() {
+    return task;
+  }
+
+  public void setTask(ArrayList<TaskInfo> task) {
+    this.task = task;
   }
 
 }

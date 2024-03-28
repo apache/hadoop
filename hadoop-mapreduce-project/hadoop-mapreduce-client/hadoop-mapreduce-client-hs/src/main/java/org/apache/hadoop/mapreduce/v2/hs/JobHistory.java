@@ -60,7 +60,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Loads and manages the Job history cache.
  */
-public class JobHistory extends AbstractService implements HistoryContext {
+public class JobHistory extends AbstractService implements HistoryContext, ConfigureAware {
   private static final Logger LOG = LoggerFactory.getLogger(JobHistory.class);
 
   public static final Pattern CONF_FILENAME_REGEX = Pattern.compile("("
@@ -303,7 +303,8 @@ public class JobHistory extends AbstractService implements HistoryContext {
       futureHistoryCleaner = null;
       scheduleHistoryCleaner();
     } else {
-      LOG.warn("Failed to execute refreshJobRetentionSettings : Job History service is not started");
+      LOG.warn(
+          "Failed to execute refreshJobRetentionSettings : Job History service is not started");
     }
   }
 

@@ -29,6 +29,7 @@ import javax.ws.rs.ext.ContextResolver;
 import javax.ws.rs.ext.Provider;
 import javax.xml.bind.JAXBContext;
 
+import org.apache.hadoop.mapreduce.task.TaskDescriptions;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.AMAttemptInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.AMAttemptsInfo;
 import org.apache.hadoop.mapreduce.v2.app.webapp.dao.AppInfo;
@@ -58,12 +59,13 @@ public class JAXBContextResolver implements ContextResolver<JAXBContext> {
   private final Map<Class, JAXBContext> typesContextMap;
 
   // you have to specify all the dao classes here
-  private final Class[] cTypes = {AMAttemptInfo.class, AMAttemptsInfo.class,
-    AppInfo.class, CounterInfo.class, JobTaskAttemptCounterInfo.class,
-    JobTaskCounterInfo.class, TaskCounterGroupInfo.class, ConfInfo.class,
-    JobCounterInfo.class, TaskCounterInfo.class, CounterGroupInfo.class,
-    JobInfo.class, JobsInfo.class, MapTaskAttemptInfo.class, ReduceTaskAttemptInfo.class,
-    TaskInfo.class, TasksInfo.class, TaskAttemptsInfo.class, ConfEntryInfo.class, RemoteExceptionData.class};
+  private final Class[] cTypes =
+      {AMAttemptInfo.class, AMAttemptsInfo.class, AppInfo.class, CounterInfo.class,
+          JobTaskAttemptCounterInfo.class, JobTaskCounterInfo.class, TaskCounterGroupInfo.class,
+          ConfInfo.class, JobCounterInfo.class, TaskCounterInfo.class, CounterGroupInfo.class,
+          JobInfo.class, JobsInfo.class, MapTaskAttemptInfo.class, ReduceTaskAttemptInfo.class,
+          TaskInfo.class, TasksInfo.class, TaskAttemptsInfo.class, ConfEntryInfo.class,
+          RemoteExceptionData.class, TaskDescriptions.class};
 
   // these dao classes need root unwrapping
   private final Class[] rootUnwrappedTypes = {JobTaskAttemptState.class};

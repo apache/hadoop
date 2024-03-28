@@ -126,6 +126,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.api.records.SignalContainerCommand;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.app.SimpleAppInfo;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -1956,6 +1957,55 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
           + "delegation token authentication.";
       throw new YarnException(msg);
     }
+  }
+
+  @GET
+  @Path("/apps/{appid}/info")
+  @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
+  public SimpleAppInfo getSimpleAppInfo(@Context HttpServletRequest hsr,
+      @PathParam("appid") String appId) {
+    initForReadableEndpoints();
+    if (appId == null || appId.isEmpty()) {
+      throw new NotFoundException("appId, " + appId + ", is empty or null");
+    }
+    ApplicationId id;
+    id = ApplicationId.fromString(appId);
+    if (id == null) {
+      throw new NotFoundException("appId is null");
+    }
+    RMApp rmApp = rm.getRMContext().getRMApps().get(id);
+    if (rmApp == null) {
+      throw new NotFoundException("app with id: " + appId + " not found");
+    }
+
+    SimpleAppInfo app = new SimpleAppInfo();
+    app.setId(rmApp.getApplicationId().getId());
+
+    switch (rmApp.getState()) {
+    default:
+    case NEW:
+    case SUBMITTED:
+    case ACCEPTED:
+      app.setState(org.apache.hadoop.yarn.app.AppState.NOT_STARTED);
+      break;
+    case RUNNING:
+    case FINISHING:
+      app.setState(org.apache.hadoop.yarn.app.AppState.RUNNING);
+      break;
+    case FINISHED:
+    case FAILED:
+    case KILLED:
+      app.setState(org.apache.hadoop.yarn.app.AppState.COMPLETED);
+      break;
+    }
+    // check if trackUrl is ready
+    String trackUrl = rmApp.getTrackingUrl();
+    if (trackUrl != null && !trackUrl.isEmpty() && app.getState() != null
+        && app.getState() != org.apache.hadoop.yarn.app.AppState.NOT_STARTED) {
+      app.setTrackingUrl(trackUrl);
+    }
+
+    return app;
   }
 
   @POST
