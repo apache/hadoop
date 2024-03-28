@@ -600,7 +600,12 @@ public class IPCLoggerChannel implements AsyncLogger {
 
   @Override
   public String toString() {
-    return InetAddresses.toAddrString(addr.getAddress()) + ':' + addr.getPort();
+    if (addr.isUnresolved()) {
+      return addr.getHostName() + ":" + addr.getPort();
+    } else {
+      return InetAddresses.toAddrString(addr.getAddress()) + ':' +
+          addr.getPort();
+    }
   }
 
   @Override

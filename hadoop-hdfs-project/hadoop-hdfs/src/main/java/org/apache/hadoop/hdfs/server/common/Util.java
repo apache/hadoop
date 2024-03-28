@@ -378,6 +378,11 @@ public final class Util {
     boolean resolveNeeded = conf.getBoolean(
         DFSConfigKeys.DFS_NAMENODE_EDITS_QJOURNALS_RESOLUTION_ENABLED,
         DFSConfigKeys.DFS_NAMENODE_EDITS_QJOURNALS_RESOLUTION_ENABLED_DEFAULT);
+    // If not required, the resulting address may be unresolved, but that can be corrected within
+    // the client once the server becomes available.
+    boolean resolveRequired = conf.getBoolean(
+        DFSConfigKeys.DFS_NAMENODE_EDITS_QJOURNALS_RESOLUTION_REQUIRED,
+        DFSConfigKeys.DFS_NAMENODE_EDITS_QJOURNALS_RESOLUTION_REQUIRED_DEFAULT);
     DomainNameResolver dnr = DomainNameResolverFactory.newInstance(
         conf,
         DFSConfigKeys.DFS_NAMENODE_EDITS_QJOURNALS_RESOLUTION_RESOLVER_IMPL);
@@ -394,7 +399,7 @@ public final class Util {
         // QJM should just use FQDN
         String[] hostnames = dnr
             .getAllResolvedHostnameByDomainName(isa.getHostName(), true);
-        if (hostnames.length == 0) {
+        if (hostnames.length == 0 && resolveRequired) {
           throw new UnknownHostException(addr);
         }
         for (String h : hostnames) {
@@ -406,7 +411,7 @@ public final class Util {
       } else {
         InetSocketAddress isa = NetUtils.createSocketAddr(
             addr, DFSConfigKeys.DFS_JOURNALNODE_RPC_PORT_DEFAULT);
-        if (isa.isUnresolved()) {
+        if (isa.isUnresolved() && resolveRequired) {
           throw new UnknownHostException(addr);
         }
         addrs.add(isa);
