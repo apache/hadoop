@@ -82,6 +82,13 @@ public interface FileSubclusterResolver {
   String getDefaultNamespace();
 
   /**
+   * Get all namespaces which have mountpoints for the cluster.
+   *
+   * @return a set of namespace identifiers.
+   */
+  Set<String> getAllNamespaces();
+
+  /**
    * Get a list of mount points for a path.
    *
    * @param path Path to get the mount points under.
