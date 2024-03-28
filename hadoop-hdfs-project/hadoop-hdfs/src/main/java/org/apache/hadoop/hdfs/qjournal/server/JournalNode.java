@@ -406,6 +406,18 @@ public class JournalNode implements Tool, Configurable, JournalNodeMXBean {
   }
 
   @Override // JournalNodeMXBean
+  public String getJournalSyncerStatus() {
+    StringBuilder sbuilder = new StringBuilder();
+    journalSyncersById.keySet().forEach((jid) ->
+        sbuilder.append(jid)
+            .append(","));
+    if (sbuilder.length() > 0) {
+      sbuilder.deleteCharAt(sbuilder.length() - 1);
+    }
+    return "[" + sbuilder.toString() + "]";
+  }
+
+  @Override // JournalNodeMXBean
   public String getHostAndPort() {
     return NetUtils.getHostPortString(rpcServer.getAddress());
   }
