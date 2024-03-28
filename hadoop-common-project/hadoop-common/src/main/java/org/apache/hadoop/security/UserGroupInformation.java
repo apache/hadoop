@@ -1935,8 +1935,7 @@ public class UserGroupInformation {
   @InterfaceStability.Evolving
   public <T> T doAs(PrivilegedAction<T> action) {
     if (LOG.isDebugEnabled()) {
-      LOG.debug("PrivilegedAction [as: {}][action: {}]", this, action,
-          new Exception());
+      LOG.debug("PrivilegedAction [as: {}][action: {}]", this, action);
     }
     return Subject.doAs(subject, action);
   }
@@ -1958,8 +1957,7 @@ public class UserGroupInformation {
                     ) throws IOException, InterruptedException {
     try {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("PrivilegedAction [as: {}][action: {}]", this, action,
-            new Exception());
+        LOG.debug("PrivilegedAction [as: {}][action: {}]", this, action);
       }
       return Subject.doAs(subject, action);
     } catch (PrivilegedActionException pae) {
