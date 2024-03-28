@@ -84,8 +84,8 @@ final class FSDirEncryptionZoneOp {
   private static EncryptedKeyVersion generateEncryptedDataEncryptionKey(
       final FSDirectory fsd, final String ezKeyName) throws IOException {
     // must not be holding lock during this operation
-    assert !fsd.getFSNamesystem().hasReadLock();
-    assert !fsd.getFSNamesystem().hasWriteLock();
+    assert !fsd.getFSNamesystem().hasReadLock(FSNamesystemLockMode.FS);
+    assert !fsd.getFSNamesystem().hasWriteLock(FSNamesystemLockMode.FS);
     if (ezKeyName == null) {
       return null;
     }
@@ -657,13 +657,13 @@ final class FSDirEncryptionZoneOp {
     Preconditions.checkNotNull(ezKeyName);
 
     // Generate EDEK while not holding the fsn lock.
-    fsn.writeUnlock("getEncryptionKeyInfo");
+    fsn.writeUnlock(FSNamesystemLockMode.FS, "getEncryptionKeyInfo");
     try {
       EncryptionFaultInjector.getInstance().startFileBeforeGenerateKey();
       return new EncryptionKeyInfo(protocolVersion, suite, ezKeyName,
           generateEncryptedDataEncryptionKey(fsd, ezKeyName));
     } finally {
-      fsn.writeLock();
+      fsn.writeLock(FSNamesystemLockMode.FS);
       EncryptionFaultInjector.getInstance().startFileAfterGenerateKey();
     }
   }
