@@ -15,6 +15,16 @@
 // specific language governing permissions and limitations
 // under the License.
 
+properties([
+    // max 5 build/branch/day
+    rateLimitBuilds(throttle: [count: 5, durationName: 'day', userBoost: true]),
+    parameters([
+        string(name: 'SPLIT', defaultValue: '5', description: 'Number of buckets to split tests into.'),
+        string(name: 'OPTS', defaultValue: '', description: 'additional maven opts'),
+    ])
+])
+
+
 def getGithubCreds() {
     return [usernamePassword(credentialsId: 'apache-hadoop-at-github.com',
                                 passwordVariable: 'GITHUB_TOKEN',
