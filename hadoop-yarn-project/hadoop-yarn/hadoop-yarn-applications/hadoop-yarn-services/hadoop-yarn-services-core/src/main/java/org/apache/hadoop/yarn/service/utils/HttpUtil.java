@@ -25,9 +25,9 @@ import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 
 import javax.ws.rs.core.HttpHeaders;
-import javax.ws.rs.core.MediaType;
 
 import org.apache.commons.codec.binary.Base64;
+import org.apache.hadoop.http.ContentTypes;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.ietf.jgss.GSSContext;
@@ -107,7 +107,7 @@ public class HttpUtil {
     URI resource = new URI(url);
     Client client = Client.create();
     Builder builder = client
-        .resource(url).type(MediaType.APPLICATION_JSON);
+        .resource(url).type(ContentTypes.APPLICATION_JSON);
     if (useKerberos) {
       String challenge = generateToken(resource.getHost());
       builder.header(HttpHeaders.AUTHORIZATION, "Negotiate " +

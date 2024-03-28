@@ -22,9 +22,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-import javax.ws.rs.core.MediaType;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.ContentTypes;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.SignalContainerCommand;
@@ -124,8 +124,8 @@ public class TestRMWebServicesContainers extends JerseyTestBase {
             .path("signal")
             .path("not-exist-signal")
             .queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON).post(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+            .accept(ContentTypes.APPLICATION_JSON).post(ClientResponse.class);
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     assertEquals(Response.SC_BAD_REQUEST, response.getStatus());
     assertTrue(response.getEntity(String.class)
@@ -137,8 +137,8 @@ public class TestRMWebServicesContainers extends JerseyTestBase {
             .path("signal")
             .path(SignalContainerCommand.OUTPUT_THREAD_DUMP.name())
             .queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON).post(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+            .accept(ContentTypes.APPLICATION_JSON).post(ClientResponse.class);
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     assertEquals(Response.SC_INTERNAL_SERVER_ERROR, response.getStatus());
     assertTrue(
@@ -151,8 +151,8 @@ public class TestRMWebServicesContainers extends JerseyTestBase {
             .path("signal")
             .path(SignalContainerCommand.OUTPUT_THREAD_DUMP.name())
             .queryParam("user.name", userName)
-            .accept(MediaType.APPLICATION_JSON).post(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+            .accept(ContentTypes.APPLICATION_JSON).post(ClientResponse.class);
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     assertEquals(Response.SC_OK, response.getStatus());
 
@@ -163,8 +163,8 @@ public class TestRMWebServicesContainers extends JerseyTestBase {
             .path("signal")
             .path(SignalContainerCommand.OUTPUT_THREAD_DUMP.name())
             .queryParam("user.name", "admin")
-            .accept(MediaType.APPLICATION_JSON).post(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+            .accept(ContentTypes.APPLICATION_JSON).post(ClientResponse.class);
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     assertEquals(Response.SC_OK, response.getStatus());
 

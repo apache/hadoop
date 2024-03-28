@@ -24,12 +24,13 @@ import java.io.InterruptedIOException;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
-import javax.ws.rs.core.MediaType;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.http.ContentTypes;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineDomain;
@@ -40,7 +41,6 @@ import org.apache.hadoop.yarn.api.records.timeline.TimelinePutResponse;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
-import org.apache.hadoop.classification.VisibleForTesting;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
@@ -147,15 +147,15 @@ public abstract class TimelineWriter implements Flushable {
     WebResource webResource = client.resource(resURI);
     if (path == null) {
       LOG.debug("POST to {}", resURI);
-      ClientResponse r = webResource.accept(MediaType.APPLICATION_JSON)
-          .type(MediaType.APPLICATION_JSON)
+      ClientResponse r = webResource.accept(ContentTypes.APPLICATION_JSON)
+          .type(ContentTypes.APPLICATION_JSON)
           .post(ClientResponse.class, object);
       r.bufferEntity();
       return r;
     } else if (path.equals("domain")) {
       LOG.debug("PUT to {}/{}", resURI, path);
-      ClientResponse r = webResource.path(path).accept(MediaType.APPLICATION_JSON)
-          .type(MediaType.APPLICATION_JSON)
+      ClientResponse r = webResource.path(path).accept(ContentTypes.APPLICATION_JSON)
+          .type(ContentTypes.APPLICATION_JSON)
           .put(ClientResponse.class, object);
       r.bufferEntity();
       return r;

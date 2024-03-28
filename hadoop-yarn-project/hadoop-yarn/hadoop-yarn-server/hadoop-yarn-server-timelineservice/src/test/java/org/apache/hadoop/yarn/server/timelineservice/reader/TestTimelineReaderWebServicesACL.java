@@ -24,7 +24,6 @@ import java.lang.reflect.UndeclaredThrowableException;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
-import javax.ws.rs.core.MediaType;
 
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
@@ -41,6 +40,7 @@ import org.junit.jupiter.api.Test;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.ContentTypes;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineReaderImpl;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TestFileSystemTimelineReaderImpl;
@@ -111,8 +111,8 @@ public class TestTimelineReaderWebServicesACL {
   private static ClientResponse verifyHttpResponse(Client client, URI uri,
       Status expectedStatus) {
     ClientResponse resp =
-        client.resource(uri).accept(MediaType.APPLICATION_JSON)
-        .type(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+        client.resource(uri).accept(ContentTypes.APPLICATION_JSON)
+        .type(ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
     assertNotNull(resp);
     assertEquals(resp.getStatusInfo().getStatusCode(),
         expectedStatus.getStatusCode());

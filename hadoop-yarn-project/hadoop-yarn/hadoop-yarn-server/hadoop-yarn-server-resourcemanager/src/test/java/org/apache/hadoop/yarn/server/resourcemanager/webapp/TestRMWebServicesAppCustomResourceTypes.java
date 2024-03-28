@@ -23,6 +23,7 @@ import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 import com.sun.jersey.test.framework.WebAppDescriptor;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.ContentTypes;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
@@ -162,7 +163,7 @@ public class TestRMWebServicesAppCustomResourceTypes extends JerseyTestBase {
     WebResource r = resource();
     WebResource path = getWebResourcePathForApp(app1, r);
     ClientResponse response =
-        path.accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+        path.accept(ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
 
     JsonCustomResourceTypeTestcase testCase =
         new JsonCustomResourceTypeTestcase(path,

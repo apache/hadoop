@@ -29,7 +29,6 @@ import java.util.Properties;
 import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.core.MediaType;
 
 import com.google.inject.Guice;
 import com.google.inject.Singleton;
@@ -55,6 +54,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.http.ContentTypes;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
@@ -213,7 +213,7 @@ public class TestAHSWebServices extends JerseyTestBase {
         r.path("ws").path("v1").path("applicationhistory").path("apps")
             .path(appId.toString())
             .queryParam("user.name", USERS[round])
-            .accept(MediaType.APPLICATION_JSON)
+            .accept(ContentTypes.APPLICATION_JSON)
             .get(ClientResponse.class);
     assertResponseStatusCode("404 not found expected",
         Status.NOT_FOUND, response.getStatusInfo());
@@ -231,7 +231,7 @@ public class TestAHSWebServices extends JerseyTestBase {
             .path(appId.toString()).path("appattempts")
             .path(appAttemptId.toString())
             .queryParam("user.name", USERS[round])
-            .accept(MediaType.APPLICATION_JSON)
+            .accept(ContentTypes.APPLICATION_JSON)
             .get(ClientResponse.class);
     if (round == 1) {
       assertResponseStatusCode(Status.FORBIDDEN, response.getStatusInfo());
@@ -256,7 +256,7 @@ public class TestAHSWebServices extends JerseyTestBase {
             .path(appAttemptId.toString()).path("containers")
             .path(containerId.toString())
             .queryParam("user.name", USERS[round])
-            .accept(MediaType.APPLICATION_JSON)
+            .accept(ContentTypes.APPLICATION_JSON)
             .get(ClientResponse.class);
     if (round == 1) {
       assertResponseStatusCode(Status.FORBIDDEN, response.getStatusInfo());
@@ -275,7 +275,7 @@ public class TestAHSWebServices extends JerseyTestBase {
       responseStr =
           r.path("ws").path("v1").path("applicationhistory").path("bogus")
               .queryParam("user.name", USERS[round])
-              .accept(MediaType.APPLICATION_JSON).get(String.class);
+              .accept(ContentTypes.APPLICATION_JSON).get(String.class);
       fail("should have thrown exception on invalid uri");
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
@@ -293,7 +293,7 @@ public class TestAHSWebServices extends JerseyTestBase {
     String responseStr = "";
     try {
       responseStr = r.queryParam("user.name", USERS[round])
-          .accept(MediaType.APPLICATION_JSON).get(String.class);
+          .accept(ContentTypes.APPLICATION_JSON).get(String.class);
       fail("should have thrown exception on invalid uri");
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
@@ -312,7 +312,7 @@ public class TestAHSWebServices extends JerseyTestBase {
       responseStr =
           r.path("ws").path("v1").path("applicationhistory")
               .queryParam("user.name", USERS[round])
-              .accept(MediaType.TEXT_PLAIN).get(String.class);
+              .accept(ContentTypes.TEXT_PLAIN).get(String.class);
       fail("should have thrown exception on invalid uri");
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
@@ -330,8 +330,8 @@ public class TestAHSWebServices extends JerseyTestBase {
     ClientResponse response = r
         .path("ws").path("v1").path("applicationhistory").path("about")
         .queryParam("user.name", USERS[round])
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+        .accept(ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     TimelineAbout actualAbout = response.getEntity(TimelineAbout.class);
     TimelineAbout expectedAbout =
@@ -361,8 +361,8 @@ public class TestAHSWebServices extends JerseyTestBase {
         r.path("ws").path("v1").path("applicationhistory").path("apps")
             .queryParam("state", YarnApplicationState.FINISHED.toString())
             .queryParam("user.name", USERS[round])
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+            .accept(ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     assertEquals(1, json.length(), "incorrect number of elements");
@@ -380,9 +380,9 @@ public class TestAHSWebServices extends JerseyTestBase {
         r.path("ws").path("v1").path("applicationhistory").path("apps")
             .queryParam("queue", "test queue")
             .queryParam("user.name", USERS[round])
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+            .accept(ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
     assertResponseStatusCode(Status.OK, response.getStatusInfo());
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     assertEquals(1, json.length(), "incorrect number of elements");
@@ -403,9 +403,9 @@ public class TestAHSWebServices extends JerseyTestBase {
         r.path("ws").path("v1").path("applicationhistory").path("apps")
             .path(appId.toString())
             .queryParam("user.name", USERS[round])
-            .accept(MediaType.APPLICATION_JSON)
+            .accept(ContentTypes.APPLICATION_JSON)
             .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     assertEquals(1, json.length(), "incorrect number of elements");
@@ -436,12 +436,12 @@ public class TestAHSWebServices extends JerseyTestBase {
         r.path("ws").path("v1").path("applicationhistory").path("apps")
             .path(appId.toString()).path("appattempts")
             .queryParam("user.name", USERS[round])
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+            .accept(ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
     if (round == 1) {
       assertResponseStatusCode(Status.FORBIDDEN, response.getStatusInfo());
       return;
     }
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     assertEquals(1, json.length(), "incorrect number of elements");
@@ -463,13 +463,13 @@ public class TestAHSWebServices extends JerseyTestBase {
             .path(appId.toString()).path("appattempts")
             .path(appAttemptId.toString())
             .queryParam("user.name", USERS[round])
-            .accept(MediaType.APPLICATION_JSON)
+            .accept(ContentTypes.APPLICATION_JSON)
             .get(ClientResponse.class);
     if (round == 1) {
       assertResponseStatusCode(Status.FORBIDDEN, response.getStatusInfo());
       return;
     }
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     assertEquals(1, json.length(), "incorrect number of elements");
@@ -495,12 +495,12 @@ public class TestAHSWebServices extends JerseyTestBase {
             .path(appId.toString()).path("appattempts")
             .path(appAttemptId.toString()).path("containers")
             .queryParam("user.name", USERS[round])
-            .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+            .accept(ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
     if (round == 1) {
       assertResponseStatusCode(Status.FORBIDDEN, response.getStatusInfo());
       return;
     }
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     assertEquals(1, json.length(), "incorrect number of elements");
@@ -524,13 +524,13 @@ public class TestAHSWebServices extends JerseyTestBase {
             .path(appAttemptId.toString()).path("containers")
             .path(containerId.toString())
             .queryParam("user.name", USERS[round])
-            .accept(MediaType.APPLICATION_JSON)
+            .accept(ContentTypes.APPLICATION_JSON)
             .get(ClientResponse.class);
     if (round == 1) {
       assertResponseStatusCode(Status.FORBIDDEN, response.getStatusInfo());
       return;
     }
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     assertEquals(1, json.length(), "incorrect number of elements");
@@ -579,7 +579,7 @@ public class TestAHSWebServices extends JerseyTestBase {
         .path("applicationhistory").path("containerlogs")
         .path(containerId1.toString()).path(fileName)
         .queryParam("user.name", user)
-        .accept(MediaType.TEXT_PLAIN)
+        .accept(ContentTypes.TEXT_PLAIN)
         .get(ClientResponse.class);
     String responseText = response.getEntity(String.class);
     assertTrue(responseText.contains("Hello." + containerId1));
@@ -589,7 +589,7 @@ public class TestAHSWebServices extends JerseyTestBase {
         .path("applicationhistory").path("containers")
         .path(containerId1.toString()).path("logs").path(fileName)
         .queryParam("user.name", user)
-        .accept(MediaType.TEXT_PLAIN)
+        .accept(ContentTypes.TEXT_PLAIN)
         .get(ClientResponse.class);
     responseText = response.getEntity(String.class);
     assertTrue(responseText.contains("Hello." + containerId1));
@@ -600,7 +600,7 @@ public class TestAHSWebServices extends JerseyTestBase {
         .path("applicationhistory").path("containerlogs")
         .path(containerId100.toString()).path(fileName)
         .queryParam("user.name", user)
-        .accept(MediaType.TEXT_PLAIN)
+        .accept(ContentTypes.TEXT_PLAIN)
         .get(ClientResponse.class);
     responseText = response.getEntity(String.class);
     assertTrue(responseText.contains("Hello." + containerId100));
@@ -610,7 +610,7 @@ public class TestAHSWebServices extends JerseyTestBase {
         .path("applicationhistory").path("containers")
         .path(containerId100.toString()).path("logs").path(fileName)
         .queryParam("user.name", user)
-        .accept(MediaType.TEXT_PLAIN)
+        .accept(ContentTypes.TEXT_PLAIN)
         .get(ClientResponse.class);
     responseText = response.getEntity(String.class);
     assertTrue(responseText.contains("Hello." + containerId100));
@@ -630,7 +630,7 @@ public class TestAHSWebServices extends JerseyTestBase {
         .path("applicationhistory").path("containerlogs")
         .path(containerId1ForApp100.toString()).path(fileName)
         .queryParam("user.name", user)
-        .accept(MediaType.TEXT_PLAIN)
+        .accept(ContentTypes.TEXT_PLAIN)
         .get(ClientResponse.class);
     responseText = response.getEntity(String.class);
     assertTrue(responseText.contains("Hello." + containerId1ForApp100));
@@ -650,7 +650,7 @@ public class TestAHSWebServices extends JerseyTestBase {
         .path(containerId1ForApp100.toString()).path(fileName)
         .queryParam("user.name", user)
         .queryParam("size", "5")
-        .accept(MediaType.TEXT_PLAIN)
+        .accept(ContentTypes.TEXT_PLAIN)
         .get(ClientResponse.class);
     responseText = response.getEntity(String.class);
     assertEquals(responseText.getBytes().length,
@@ -668,7 +668,7 @@ public class TestAHSWebServices extends JerseyTestBase {
         .path(containerId1ForApp100.toString()).path(fileName)
         .queryParam("user.name", user)
         .queryParam("size", "-5")
-        .accept(MediaType.TEXT_PLAIN)
+        .accept(ContentTypes.TEXT_PLAIN)
         .get(ClientResponse.class);
     responseText = response.getEntity(String.class);
     assertEquals(responseText.getBytes().length,
@@ -685,7 +685,7 @@ public class TestAHSWebServices extends JerseyTestBase {
         .path(containerId1ForApp100.toString()).path(fileName)
         .queryParam("user.name", user)
         .queryParam("size", "10000")
-        .accept(MediaType.TEXT_PLAIN)
+        .accept(ContentTypes.TEXT_PLAIN)
         .get(ClientResponse.class);
     responseText = response.getEntity(String.class);
     assertThat(responseText.getBytes()).hasSize(fullTextSize);
@@ -696,7 +696,7 @@ public class TestAHSWebServices extends JerseyTestBase {
         .path(containerId1ForApp100.toString()).path(fileName)
         .queryParam("user.name", user)
         .queryParam("size", "-10000")
-        .accept(MediaType.TEXT_PLAIN)
+        .accept(ContentTypes.TEXT_PLAIN)
         .get(ClientResponse.class);
     responseText = response.getEntity(String.class);
     assertThat(responseText.getBytes()).hasSize(fullTextSize);
@@ -783,7 +783,7 @@ public class TestAHSWebServices extends JerseyTestBase {
         .path("applicationhistory").path("containerlogs")
         .path(containerId1000.toString()).path(fileName)
         .queryParam("user.name", user)
-        .accept(MediaType.TEXT_PLAIN)
+        .accept(ContentTypes.TEXT_PLAIN)
         .get(ClientResponse.class);
     String responseText = response.getEntity(String.class);
     assertTrue(responseText.contains(content));
@@ -802,7 +802,7 @@ public class TestAHSWebServices extends JerseyTestBase {
         .path(containerId1000.toString()).path(fileName)
         .queryParam(YarnWebServiceParams.NM_ID, "invalid-nm:1234")
         .queryParam("user.name", user)
-        .accept(MediaType.TEXT_PLAIN)
+        .accept(ContentTypes.TEXT_PLAIN)
         .get(ClientResponse.class);
     responseText = response.getEntity(String.class);
     assertTrue(responseText.contains(content));
@@ -823,7 +823,7 @@ public class TestAHSWebServices extends JerseyTestBase {
         .path(containerId1.toString()).path("logs").path(fileName)
         .queryParam("user.name", user)
         .queryParam(YarnWebServiceParams.REDIRECTED_FROM_NODE, "true")
-        .accept(MediaType.TEXT_PLAIN).get(ClientResponse.class);
+        .accept(ContentTypes.TEXT_PLAIN).get(ClientResponse.class);
     responseText = response.getEntity(String.class);
     assertTrue(responseText.contains(content1));
     assertTrue(responseText.contains("LogAggregationType: "
@@ -885,7 +885,7 @@ public class TestAHSWebServices extends JerseyTestBase {
         .path("applicationhistory").path("containers")
         .path(containerId1000.toString()).path("logs")
         .queryParam("user.name", user)
-        .accept(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
 
     List<ContainerLogsInfo> responseText = response.getEntity(new GenericType<
@@ -915,7 +915,7 @@ public class TestAHSWebServices extends JerseyTestBase {
         .path(containerId1000.toString()).path("logs")
         .queryParam(YarnWebServiceParams.NM_ID, "invalid-nm:1234")
         .queryParam("user.name", user)
-        .accept(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
     responseText = response.getEntity(new GenericType<
         List<ContainerLogsInfo>>(){
@@ -958,7 +958,7 @@ public class TestAHSWebServices extends JerseyTestBase {
         .path("applicationhistory").path("containers")
         .path(containerId1.toString()).path("logs")
         .queryParam("user.name", user)
-        .accept(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
     List<ContainerLogsInfo> responseText = response.getEntity(new GenericType<
         List<ContainerLogsInfo>>(){

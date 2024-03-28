@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
-import javax.ws.rs.core.MediaType;
-
 import com.sun.jersey.api.client.ClientResponse;
 
 import java.util.Arrays;
@@ -30,6 +28,7 @@ import org.junit.AfterClass;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.ContentTypes;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
@@ -40,6 +39,8 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+
+import javax.ws.rs.core.MediaType;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.GB;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.assertJsonResponse;
@@ -79,10 +80,10 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     try (MockRM rm = createRM(createConfig())){
       rm.registerNode("h1:1234", 32 * GB, 32);
       assertJsonResponse(resource().path("ws/v1/cluster/scheduler")
-              .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class),
+              .accept(ContentTypes.APPLICATION_JSON).get(ClientResponse.class),
           "webapp/scheduler-response.json");
       assertJsonResponse(resource().path("ws/v1/cluster/scheduler/")
-              .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class),
+              .accept(ContentTypes.APPLICATION_JSON).get(ClientResponse.class),
           "webapp/scheduler-response.json");
       assertJsonResponse(resource().path("ws/v1/cluster/scheduler").get(ClientResponse.class),
           "webapp/scheduler-response.json");
@@ -118,7 +119,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
               .accept(MediaType.APPLICATION_XML).get(ClientResponse.class),
           "webapp/scheduler-response-PerUserResources.xml");
       assertJsonResponse(resource().path("ws/v1/cluster/scheduler")
-          .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class),
+          .accept(ContentTypes.APPLICATION_JSON).get(ClientResponse.class),
           "webapp/scheduler-response-PerUserResources.json");
 
     }
@@ -141,7 +142,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
     try (MockRM rm = createRM(createConfig())) {
       rm.registerNode("h1:1234", 32 * GB, 32);
       ClientResponse response = resource().path("ws/v1/cluster/scheduler-overview")
-          .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+          .accept(ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
       assertJsonType(response);
       JSONObject json = response.getEntity(JSONObject.class);
       TestRMWebServices.verifyClusterSchedulerOverView(json, "Capacity Scheduler");

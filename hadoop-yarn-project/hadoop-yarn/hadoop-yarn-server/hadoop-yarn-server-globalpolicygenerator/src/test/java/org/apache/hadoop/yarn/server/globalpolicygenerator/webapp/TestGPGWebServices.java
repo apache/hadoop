@@ -22,6 +22,7 @@ import com.google.inject.servlet.ServletModule;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 import com.sun.jersey.test.framework.WebAppDescriptor;
+import org.apache.hadoop.http.ContentTypes;
 import org.apache.hadoop.yarn.server.globalpolicygenerator.GPGContext;
 import org.apache.hadoop.yarn.server.globalpolicygenerator.GlobalPolicyGenerator;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.JAXBContextResolver;
@@ -33,8 +34,6 @@ import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 import org.junit.Before;
 import org.junit.Test;
-
-import javax.ws.rs.core.MediaType;
 
 import static org.junit.Assert.assertNotNull;
 
@@ -82,7 +81,7 @@ public class TestGPGWebServices extends JerseyTestBase {
   public void testGetGPG() throws JSONException, Exception {
     WebResource r = resource();
     JSONObject json = r.path("ws").path("v1").path("gpg")
-        .accept(MediaType.APPLICATION_JSON).get(JSONObject.class);
+        .accept(ContentTypes.APPLICATION_JSON).get(JSONObject.class);
     assertNotNull(json);
   }
 
@@ -90,7 +89,7 @@ public class TestGPGWebServices extends JerseyTestBase {
   public void testGetGPGInfo() throws JSONException, Exception {
     WebResource r = resource();
     JSONObject json = r.path("ws").path("v1").path("gpg").path("info")
-        .accept(MediaType.APPLICATION_JSON).get(JSONObject.class);
+        .accept(ContentTypes.APPLICATION_JSON).get(JSONObject.class);
     assertNotNull(json);
   }
 }

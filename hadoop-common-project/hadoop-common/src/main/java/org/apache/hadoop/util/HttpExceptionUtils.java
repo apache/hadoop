@@ -19,9 +19,9 @@ package org.apache.hadoop.util;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.http.ContentTypes;
 
 import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.io.InputStream;
@@ -93,7 +93,7 @@ public class HttpExceptionUtils {
     json.put(ERROR_EXCEPTION_JSON, ex.getClass().getSimpleName());
     json.put(ERROR_CLASSNAME_JSON, ex.getClass().getName());
     Map<String, Object> response = Collections.singletonMap(ERROR_JSON, json);
-    return Response.status(status).type(MediaType.APPLICATION_JSON).
+    return Response.status(status).type(ContentTypes.APPLICATION_JSON).
         entity(response).build();
   }
 

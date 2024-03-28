@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.yarn.client.cli;
 
-import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.classification.VisibleForTesting;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientRequest;
@@ -48,7 +46,6 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
-import javax.ws.rs.core.MediaType;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
@@ -61,8 +58,11 @@ import org.apache.commons.math3.util.Pair;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
+import org.apache.hadoop.http.ContentTypes;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -458,7 +458,7 @@ public class LogsCLI extends Configured implements Tool {
       Builder builder = webServiceClient.resource(webAppAddress)
           .path("ws").path("v1").path("cluster")
           .path("apps").path(appId).path("appattempts")
-          .accept(MediaType.APPLICATION_JSON);
+          .accept(ContentTypes.APPLICATION_JSON);
       response = builder.get(ClientResponse.class);
       JSONObject json = response.getEntity(JSONObject.class)
           .getJSONObject("appAttempts");
@@ -485,7 +485,7 @@ public class LogsCLI extends Configured implements Tool {
     ClientResponse response =
         webResource.path("ws").path("v1").path("applicationhistory")
           .path("apps").path(appId).path("appattempts")
-          .accept(MediaType.APPLICATION_JSON)
+          .accept(ContentTypes.APPLICATION_JSON)
           .get(ClientResponse.class);
     JSONObject json = response.getEntity(JSONObject.class);
     JSONArray requests = json.getJSONArray("appAttempt");
@@ -535,7 +535,7 @@ public class LogsCLI extends Configured implements Tool {
       ClientResponse response =
           webResource.path("ws").path("v1").path("node").path("containers")
               .path(containerIdStr).path("logs")
-              .accept(MediaType.APPLICATION_JSON)
+              .accept(ContentTypes.APPLICATION_JSON)
               .get(ClientResponse.class);
       if (response.getStatusInfo().getStatusCode() ==
           ClientResponse.Status.OK.getStatusCode()) {
@@ -837,7 +837,7 @@ public class LogsCLI extends Configured implements Tool {
             .path(conf.get(YarnConfiguration.RM_CLUSTER_ID)).path("apps")
             .path(appId).path("entities")
             .path(TimelineEntityType.YARN_APPLICATION_ATTEMPT.toString())
-            .queryParam("fields", "INFO").accept(MediaType.APPLICATION_JSON)
+            .queryParam("fields", "INFO").accept(ContentTypes.APPLICATION_JSON)
             .get(ClientResponse.class);
 
     if (response == null

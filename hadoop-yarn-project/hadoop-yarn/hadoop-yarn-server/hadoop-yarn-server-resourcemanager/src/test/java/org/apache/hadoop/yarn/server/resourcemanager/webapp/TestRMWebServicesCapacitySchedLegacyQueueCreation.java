@@ -22,13 +22,13 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import javax.ws.rs.core.MediaType;
 
 import com.sun.jersey.api.client.ClientResponse;
 
 import org.junit.AfterClass;
 import org.junit.Test;
 
+import org.apache.hadoop.http.ContentTypes;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
@@ -112,7 +112,7 @@ public class TestRMWebServicesCapacitySchedLegacyQueueCreation extends
 
   private ClientResponse sendRequest() {
     return resource().path("ws").path("v1").path("cluster")
-        .path("scheduler").accept(MediaType.APPLICATION_JSON)
+        .path("scheduler").accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
   }
 

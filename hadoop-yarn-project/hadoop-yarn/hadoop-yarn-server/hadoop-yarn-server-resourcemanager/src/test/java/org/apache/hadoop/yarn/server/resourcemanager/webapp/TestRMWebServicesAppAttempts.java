@@ -24,6 +24,7 @@ import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 import com.sun.jersey.test.framework.WebAppDescriptor;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.ContentTypes;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.util.XMLUtils;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -53,7 +54,6 @@ import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
-import javax.ws.rs.core.MediaType;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.StringReader;
@@ -122,7 +122,7 @@ public class TestRMWebServicesAppAttempts extends JerseyTestBase {
     RMApp app1 = MockRMAppSubmitter.submit(rm, data);
     amNodeManager.nodeHeartbeat(true);
     testAppAttemptsHelper(app1.getApplicationId().toString(), app1,
-            MediaType.APPLICATION_JSON);
+            ContentTypes.APPLICATION_JSON);
     rm.stop();
   }
 
@@ -150,7 +150,7 @@ public class TestRMWebServicesAppAttempts extends JerseyTestBase {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("cluster")
         .path("apps").path(app1.getApplicationId().toString())
-        .path("appattempts").accept(MediaType.APPLICATION_JSON)
+        .path("appattempts").accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
     JSONObject json = response.getEntity(JSONObject.class);
     JSONObject jsonAppAttempts = json.getJSONObject("appAttempts");
@@ -198,7 +198,7 @@ public class TestRMWebServicesAppAttempts extends JerseyTestBase {
     assertEquals("incorrect number of attempts", maxAppAttempts,
             app1.getAppAttempts().values().size());
     testAppAttemptsHelper(app1.getApplicationId().toString(), app1,
-            MediaType.APPLICATION_JSON);
+            ContentTypes.APPLICATION_JSON);
     rm.stop();
   }
 
@@ -209,7 +209,7 @@ public class TestRMWebServicesAppAttempts extends JerseyTestBase {
     RMApp app1 = MockRMAppSubmitter.submitWithMemory(CONTAINER_MB, rm);
     amNodeManager.nodeHeartbeat(true);
     testAppAttemptsHelper(app1.getApplicationId().toString() + "/", app1,
-            MediaType.APPLICATION_JSON);
+            ContentTypes.APPLICATION_JSON);
     rm.stop();
   }
 
@@ -234,7 +234,7 @@ public class TestRMWebServicesAppAttempts extends JerseyTestBase {
     try {
       r.path("ws").path("v1").path("cluster").path("apps")
               .path("application_invalid_12").path("appattempts")
-              .accept(MediaType.APPLICATION_JSON)
+              .accept(ContentTypes.APPLICATION_JSON)
               .get(JSONObject.class);
       fail("should have thrown exception on invalid appAttempt");
     } catch (UniformInterfaceException ue) {
@@ -242,7 +242,7 @@ public class TestRMWebServicesAppAttempts extends JerseyTestBase {
 
       assertResponseStatusCode(ClientResponse.Status.BAD_REQUEST,
           response.getStatusInfo());
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
               response.getType().toString());
       JSONObject msg = response.getEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");
@@ -276,14 +276,14 @@ public class TestRMWebServicesAppAttempts extends JerseyTestBase {
       r.path("ws").path("v1").path("cluster").path("apps")
               .path(app.getApplicationId().toString()).path("appattempts")
               .path("appattempt_invalid_12_000001")
-              .accept(MediaType.APPLICATION_JSON).get(JSONObject.class);
+              .accept(ContentTypes.APPLICATION_JSON).get(JSONObject.class);
       fail("should have thrown exception on invalid appAttempt");
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
 
       assertResponseStatusCode(ClientResponse.Status.BAD_REQUEST,
           response.getStatusInfo());
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
               response.getType().toString());
       JSONObject msg = response.getEntity(JSONObject.class);
       JSONObject exception = msg.getJSONObject("RemoteException");
@@ -320,7 +320,7 @@ public class TestRMWebServicesAppAttempts extends JerseyTestBase {
 
     try {
       r.path("ws").path("v1").path("cluster").path("apps")
-              .path("application_00000_0099").accept(MediaType.APPLICATION_JSON)
+              .path("application_00000_0099").accept(ContentTypes.APPLICATION_JSON)
               .get(JSONObject.class);
       fail("should have thrown exception on invalid appid");
     } catch (UniformInterfaceException ue) {
@@ -328,7 +328,7 @@ public class TestRMWebServicesAppAttempts extends JerseyTestBase {
 
       assertResponseStatusCode(ClientResponse.Status.NOT_FOUND,
           response.getStatusInfo());
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
               response.getType().toString());
 
       JSONObject msg = response.getEntity(JSONObject.class);
@@ -355,7 +355,7 @@ public class TestRMWebServicesAppAttempts extends JerseyTestBase {
     ClientResponse response = r.path("ws").path("v1").path("cluster")
             .path("apps").path(path).path("appattempts").accept(media)
             .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
             response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     assertEquals("incorrect number of elements", 1, json.length());
@@ -390,9 +390,9 @@ public class TestRMWebServicesAppAttempts extends JerseyTestBase {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("cluster")
             .path("apps").path(app1.getApplicationId().toString())
-            .path("appattempts").accept(MediaType.APPLICATION_XML)
+            .path("appattempts").accept(ContentTypes.APPLICATION_XML)
             .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_XML + "; " + JettyUtils.UTF_8,
             response.getType().toString());
     String xml = response.getEntity(String.class);
 

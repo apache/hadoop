@@ -17,7 +17,7 @@
 
 package org.apache.hadoop.yarn.service.conf;
 
-import javax.ws.rs.core.MediaType;
+import org.apache.hadoop.http.ContentTypes;
 
 public interface RestApiConstants {
 
@@ -45,7 +45,7 @@ public interface RestApiConstants {
   String PARAM_VERSION = "version";
   String PARAM_CONTAINER_STATE = "containerState";
 
-  String MEDIA_TYPE_JSON_UTF8 = MediaType.APPLICATION_JSON + ";charset=utf-8";
+  String MEDIA_TYPE_JSON_UTF8 = ContentTypes.APPLICATION_JSON + ";charset=utf-8";
 
   Long DEFAULT_UNLIMITED_LIFETIME = -1l;
 
