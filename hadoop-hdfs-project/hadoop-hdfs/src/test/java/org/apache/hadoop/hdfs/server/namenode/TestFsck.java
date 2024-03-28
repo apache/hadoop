@@ -18,6 +18,10 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MIN_OUTLIER_DETECTION_NODES_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PEER_METRICS_MIN_OUTLIER_DETECTION_SAMPLES_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CORRUPT_BLOCK_DELETE_IMMEDIATELY_ENABLED;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_KEY;
 import static org.junit.Assert.assertEquals;
@@ -58,6 +62,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import java.util.function.Supplier;
+
+import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -107,6 +114,7 @@ import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
 import org.apache.hadoop.hdfs.server.namenode.NamenodeFsck.ErasureCodingResult;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
+import org.apache.hadoop.hdfs.server.protocol.OutlierMetrics;
 import org.apache.hadoop.hdfs.tools.DFSck;
 import org.apache.hadoop.hdfs.util.HostsFileWriter;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
@@ -1746,6 +1754,54 @@ public class TestFsck {
       if (cluster != null) {
         cluster.shutdown();
       }
+    }
+  }
+
+  @Test
+  public void testBlockIdSlowNode() throws Exception {
+    conf = new Configuration();
+    conf.setBoolean(DFS_DATANODE_PEER_STATS_ENABLED_KEY, true);
+    conf.set(DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_KEY, "1000");
+    conf.set(DFS_DATANODE_MIN_OUTLIER_DETECTION_NODES_KEY, "1");
+    conf.set(DFS_DATANODE_PEER_METRICS_MIN_OUTLIER_DETECTION_SAMPLES_KEY, "1");
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build()) {
+      cluster.waitActive();
+      final DistributedFileSystem fs = cluster.getFileSystem();
+
+      Path file = new Path("/testFile");
+      long fileLength = 512;
+      DFSTestUtil.createFile(fs, file, fileLength, (short) 3, 0L);
+      DFSTestUtil.waitReplication(fs, file, (short) 3);
+
+      List<DataNode> dataNodes = cluster.getDataNodes();
+      assertEquals(3, dataNodes.size());
+      dataNodes.get(0).getPeerMetrics().setTestOutliers(ImmutableMap.of(
+          dataNodes.get(1).getDatanodeHostname() + ":" + dataNodes.get(1).getIpcPort(),
+          new OutlierMetrics(1.0, 2.0, 3.0, 4.0)));
+      dataNodes.get(1).getPeerMetrics().setTestOutliers(ImmutableMap.of(
+          dataNodes.get(2).getDatanodeHostname() + ":" + dataNodes.get(2).getIpcPort(),
+          new OutlierMetrics(1.0, 2.0, 3.0, 4.0)));
+      dataNodes.get(2).getPeerMetrics().setTestOutliers(ImmutableMap.of(
+          dataNodes.get(0).getDatanodeHostname() + ":" + dataNodes.get(0).getIpcPort(),
+          new OutlierMetrics(1.0, 2.0, 3.0, 4.0)));
+
+      GenericTestUtils.waitFor(() -> {
+        try {
+          DatanodeInfo[] slowNodeInfo = fs.getSlowDatanodeStats();
+          LOG.info("Slow Datanode report: {}", Arrays.asList(slowNodeInfo));
+          return slowNodeInfo.length == 3;
+        } catch (IOException e) {
+          LOG.error("Failed to retrieve SlowNode report", e);
+          return false;
+        }
+      }, 1000, 60000, "Slow nodes could not be detected");
+
+      List<LocatedBlock> locatedBlocks = DFSTestUtil.getAllBlocks(fs, file);
+      assertEquals(1, locatedBlocks.size());
+      String blockName = locatedBlocks.get(0).getBlock().getBlockName();
+
+      String outStr = runFsck(conf, 0, true, "/", "-blockId", blockName);
+      assertTrue(outStr.contains(NamenodeFsck.SLOW_STATUS));
     }
   }
 
