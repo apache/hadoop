@@ -163,6 +163,37 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
     }
   }
 
+  /**
+   * Test use of Invalid STS for requesting temporary credentials.
+   *
+   * The property test.sts.endpoint can be set to point this at different
+   * STS endpoints. This test will use the AWS credentials (if provided) for
+   * S3A tests to request temporary credentials, then attempt to use those
+   * credentials instead.
+   *
+   * @throws IOException failure
+   */
+  @Test
+  public void testSTSInvalid() throws IOException {
+    Configuration conf = getContract().getConf();
+    S3AFileSystem testFS = getFileSystem();
+    credentials = getS3AInternals().shareCredentials("testSTS");
+
+    String bucket = testFS.getBucket();
+    try {
+      StsClientBuilder builder = STSClientFactory.builder(
+          conf,
+          bucket,
+          credentials,
+          "https://Invalid-STS",
+          getStsRegion(conf));
+      fail("Expected " + E_INVALID_STS_ENDPOINT_PATTERN);
+    }
+    catch(IOException ioe) {
+      LOG.info("Expected Exception: {}", ioe.toString());
+    }
+  }
+
   protected String getStsEndpoint(final Configuration conf) {
     return conf.getTrimmed(ASSUMED_ROLE_STS_ENDPOINT,
             DEFAULT_ASSUMED_ROLE_STS_ENDPOINT);
@@ -325,16 +356,13 @@ public class ITestS3ATemporaryCredentials extends AbstractS3ATestBase {
   @Test
   public void testSessionCredentialsRegionBadEndpoint() throws Throwable {
     describe("Create a session with a bad region and expect fast failure");
-    IllegalArgumentException ex
+    IOException ex
         = expectedSessionRequestFailure(
-        IllegalArgumentException.class,
+        IOException.class,
         " ",
         EU_IRELAND,
         "");
     LOG.info("Outcome: ", ex);
-    if (!(ex.getCause() instanceof URISyntaxException)) {
-      throw ex;
-    }
   }
 
   @Test
