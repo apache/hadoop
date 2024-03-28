@@ -867,8 +867,10 @@ public class NNStorage extends Storage implements Closeable,
    * @param sds A list of storage directories to mark as errored.
    */
   void reportErrorsOnDirectories(List<StorageDirectory> sds) {
-    for (StorageDirectory sd : sds) {
-      reportErrorsOnDirectory(sd);
+    synchronized(sds) {
+      for (StorageDirectory sd : sds) {
+        reportErrorsOnDirectory(sd);
+      }
     }
   }
 
