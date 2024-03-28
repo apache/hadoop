@@ -224,13 +224,25 @@ public abstract class TestCoderBase {
     int idx = 0;
 
     for (int i = 0; i < erasedDataIndexes.length; i++) {
-      toEraseChunks[idx ++] = dataChunks[erasedDataIndexes[i]];
-      dataChunks[erasedDataIndexes[i]] = null;
+      if (erasedDataIndexes[i] < dataChunks.length) {
+        toEraseChunks[idx ++] = dataChunks[erasedDataIndexes[i]];
+        dataChunks[erasedDataIndexes[i]] = null;
+      } else {
+        throw new IllegalArgumentException(
+            "The erased index is out of bound: erasedDataIndex="
+                + erasedDataIndexes[i]);
+      }
     }
 
     for (int i = 0; i < erasedParityIndexes.length; i++) {
-      toEraseChunks[idx ++] = parityChunks[erasedParityIndexes[i]];
-      parityChunks[erasedParityIndexes[i]] = null;
+      if (erasedParityIndexes[i] < parityChunks.length) {
+        toEraseChunks[idx ++] = parityChunks[erasedParityIndexes[i]];
+        parityChunks[erasedParityIndexes[i]] = null;
+      } else {
+        throw new IllegalArgumentException(
+            "The erased index is out of bound: erasedParityIndex="
+                + erasedParityIndexes[i]);
+      }
     }
 
     return toEraseChunks;
