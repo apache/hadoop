@@ -392,4 +392,26 @@ public class TestRouterTrash {
     assertEquals("/.Trash/Current", MountTableResolver.
         subtractTrashCurrentPath("/.Trash/Current"));
   }
+
+  @Test
+  public void testListStatusTrashPath() throws IOException, URISyntaxException {
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+    MountTable addEntry1 =
+        MountTable.newInstance("/user/a", Collections.singletonMap(ns0, "/user/a"));
+    MountTable addEntry2 =
+        MountTable.newInstance("/user/b", Collections.singletonMap(ns0, "/user/b"));
+    assertTrue(addMountTable(addEntry1));
+    assertTrue(addMountTable(addEntry2));
+
+    // Current user client
+    DFSClient client = nnContext.getClient();
+    String trashPath = "/user/" + ugi.getShortUserName() + "/.Trash/Current/user/c";
+    client.mkdirs(trashPath, new FsPermission("777"), true);
+    assertTrue(client.exists(trashPath));
+
+    // Request to the router
+    String trashPathParent = "/user/" + ugi.getShortUserName() + "/.Trash/Current/user";
+    FileStatus[] fileStatuses = routerFs.listStatus(new Path(trashPathParent));
+    assertEquals(1, fileStatuses.length);
+  }
 }
