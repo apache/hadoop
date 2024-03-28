@@ -1124,6 +1124,30 @@ public class DFSTestUtil {
       return BlockOpResponseProto.parseDelimitedFrom(in);
     }
   }
+
+  public static boolean transferFinalizedBlock(
+      final ExtendedBlock b, final Token<BlockTokenIdentifier> blockToken,
+      final DFSClient dfsClient, final DatanodeInfo... datanodes) throws IOException {
+    assertEquals(2, datanodes.length);
+    final long writeTimeout = dfsClient.getDatanodeWriteTimeout(datanodes.length);
+    try (Socket s = DataStreamer.createSocketForPipeline(datanodes[0],
+        datanodes.length, dfsClient);
+         DataOutputStream out = new DataOutputStream(new BufferedOutputStream(
+             NetUtils.getOutputStream(s, writeTimeout),
+             DFSUtilClient.getSmallBufferSize(dfsClient.getConfiguration())));
+         DataInputStream in = new DataInputStream(NetUtils.getInputStream(s))) {
+      // send the request
+      new Sender(out).transferBlock(b, blockToken,
+          dfsClient.clientName, new DatanodeInfo[]{datanodes[1]},
+          new StorageType[]{StorageType.DEFAULT},
+          new String[0]);
+      out.flush();
+      BlockOpResponseProto.parseDelimitedFrom(in).getStatus();
+      return true;
+    } catch (Throwable ie) {
+      return false;
+    }
+  }
   
   public static void setFederatedConfiguration(MiniDFSCluster cluster,
       Configuration conf) {

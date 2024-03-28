@@ -102,6 +102,8 @@ public class DataNodeMetrics {
   final MutableQuantiles[]   ramDiskBlocksLazyPersistWindowMsQuantiles;
 
   @Metric MutableCounterLong fsyncCount;
+
+  @Metric MutableCounterLong invalidTokenCount;
   
   @Metric MutableCounterLong volumeFailures;
 
@@ -353,6 +355,10 @@ public class DataNodeMetrics {
     blocksWritten.incr();
   }
 
+  public long getBlocksWrittenCount() {
+    return blocksWritten.value();
+  }
+
   public void incrBlocksRemoved(int delta) {
     blocksRemoved.incr(delta);
   }
@@ -412,6 +418,14 @@ public class DataNodeMetrics {
 
   public void incrFsyncCount() {
     fsyncCount.incr();
+  }
+
+  public void incrInvalidTokenCount() {
+    invalidTokenCount.incr();
+  }
+
+  public long getInvalidTokenCount() {
+    return invalidTokenCount.value();
   }
 
   public void incrTotalWriteTime(long timeTaken) {
