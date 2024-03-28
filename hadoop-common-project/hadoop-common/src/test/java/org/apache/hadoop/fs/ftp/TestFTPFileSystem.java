@@ -43,11 +43,13 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestName;
 import org.junit.rules.Timeout;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Test basic @{link FTPFileSystem} class methods. Contract tests are in
@@ -59,6 +61,9 @@ public class TestFTPFileSystem {
   private java.nio.file.Path testDir;
   @Rule
   public Timeout testTimeout = new Timeout(180000, TimeUnit.MILLISECONDS);
+
+  @Rule
+  public TestName name = new TestName();
 
   @Before
   public void setUp() throws Exception {
@@ -236,4 +241,52 @@ public class TestFTPFileSystem {
     ftp.setTimeout(client, conf);
     assertEquals(client.getControlKeepAliveTimeout(), timeout);
   }
+
+
+  private static void touch(FileSystem fs, Path filePath)
+          throws IOException {
+    touch(fs, filePath, null);
+  }
+
+  private static void touch(FileSystem fs, Path path, byte[] data)
+          throws IOException {
+    FSDataOutputStream out = null;
+    try {
+      out = fs.create(path);
+      if (data != null) {
+        out.write(data);
+      }
+    } finally {
+      if (out != null) {
+        out.close();
+      }
+    }
+  }
+
+  /**
+   * Test renaming a file.
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testRenameFileWithFullQualifiedPath() throws Exception {
+    BaseUser user = server.addUser("test", "password", new WritePermission());
+    Configuration configuration = new Configuration();
+    configuration.set("fs.defaultFS", "ftp:///");
+    configuration.set("fs.ftp.host", "localhost");
+    configuration.setInt("fs.ftp.host.port", server.getPort());
+    configuration.set("fs.ftp.user.localhost", user.getName());
+    configuration.set("fs.ftp.password.localhost", user.getPassword());
+    configuration.setBoolean("fs.ftp.impl.disable.cache", true);
+
+    FileSystem fs = FileSystem.get(configuration);
+
+
+    Path ftpDir = fs.makeQualified(new Path(testDir.toAbsolutePath().toString()));
+    Path file1 = fs.makeQualified(new Path(ftpDir, name.getMethodName().toLowerCase() + "1"));
+    Path file2 = fs.makeQualified(new Path(ftpDir, name.getMethodName().toLowerCase() + "2"));
+    touch(fs, file1);
+    assertTrue(fs.rename(file1, file2));
+  }
+
 }
