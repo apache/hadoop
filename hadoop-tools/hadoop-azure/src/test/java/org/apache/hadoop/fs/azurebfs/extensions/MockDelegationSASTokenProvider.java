@@ -43,7 +43,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.D
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_HTTP_READ_TIMEOUT;
 
 /**
- * A mock SAS token provider implementation
+ * A mock SAS token provider implementation.
  */
 public class MockDelegationSASTokenProvider implements SASTokenProvider {
 

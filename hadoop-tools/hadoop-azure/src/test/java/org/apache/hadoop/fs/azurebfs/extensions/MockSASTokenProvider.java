@@ -20,7 +20,11 @@ package org.apache.hadoop.fs.azurebfs.extensions;
 
 import java.io.IOException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
 import org.apache.hadoop.security.AccessControlException;
 
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
@@ -28,17 +32,25 @@ import org.apache.hadoop.fs.azurebfs.utils.Base64;
 import org.apache.hadoop.fs.azurebfs.utils.ServiceSASGenerator;
 
 /**
- * A mock SAS token provider implementation
+ * A mock SAS token provider implementation.
  */
 public class MockSASTokenProvider implements SASTokenProvider {
 
   private byte[] accountKey;
   private ServiceSASGenerator generator;
   private boolean skipAuthorizationForTestSetup = false;
+  private static final Logger LOG = LoggerFactory.getLogger(MockSASTokenProvider.class);
 
   // For testing we use a container SAS for all operations.
   private String generateSAS(byte[] accountKey, String accountName, String fileSystemName) {
-     return generator.getContainerSASWithFullControl(accountName, fileSystemName);
+    String containerSAS = "";
+    try {
+      containerSAS = generator.getContainerSASWithFullControl(accountName, fileSystemName);
+    } catch (InvalidConfigurationValueException e) {
+      LOG.debug(e.getMessage());
+      containerSAS = "";
+    }
+    return containerSAS;
   }
 
   @Override
