@@ -40,7 +40,7 @@ RUN pkg-resolver/set-vault-as-baseurl-centos.sh centos:8
 ######
 # Install packages from yum
 ######
-# hadolint ignore=DL3008,SC2046
+# hadolint ignore=DL3008,SC2046,DL3033,DL3032
 RUN yum update -y \
     && yum install -y python3 \
     && yum install -y $(pkg-resolver/resolve.py centos:8)
@@ -50,11 +50,13 @@ RUN yum update -y \
 ####
 RUN pkg-resolver/install-epel.sh centos:8
 
+# hadolint ignore=DL3033,DL3041,DL3040
 RUN dnf --enablerepo=powertools install -y \
     doxygen \
     snappy-devel \
     yasm
 
+# hadolint ignore=DL3041,DL3040
 RUN dnf install -y \
     bouncycastle \
     gcc-toolset-9-gcc \

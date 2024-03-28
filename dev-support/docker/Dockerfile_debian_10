@@ -86,7 +86,7 @@ RUN pkg-resolver/install-cmake.sh debian:10
 RUN pkg-resolver/install-spotbugs.sh debian:10
 RUN pkg-resolver/install-boost.sh debian:10
 RUN pkg-resolver/install-protobuf.sh debian:10
-RUN pkg-resolver/install-hadolint.sh debian:10
+RUN pkg-resolver/install-hadolint.sh debian:10 2.10.0
 RUN pkg-resolver/install-intel-isa-l.sh debian:10
 
 ###
