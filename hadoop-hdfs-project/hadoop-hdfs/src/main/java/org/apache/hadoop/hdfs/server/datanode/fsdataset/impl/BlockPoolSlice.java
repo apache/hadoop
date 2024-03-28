@@ -723,7 +723,7 @@ public class BlockPoolSlice {
     }
   }
 
-
+  private static int scanBlockCnt = 0;
   /**
    * Add replicas under the given directory to the volume map
    * @param volumeMap the replicas map
@@ -749,6 +749,8 @@ public class BlockPoolSlice {
             lazyWriteReplicaMap, isFinalized, exceptions, subTaskQueue);
         subTask.fork();
         subTaskQueue.add(subTask);
+      } else if (isFinalized && ++scanBlockCnt % 10000 == 0) {
+          LOG.info(scanBlockCnt + " blocks (finalize state) have been scanned.");
       }
 
       if (isFinalized && FsDatasetUtil.isUnlinkTmpFile(file)) {
