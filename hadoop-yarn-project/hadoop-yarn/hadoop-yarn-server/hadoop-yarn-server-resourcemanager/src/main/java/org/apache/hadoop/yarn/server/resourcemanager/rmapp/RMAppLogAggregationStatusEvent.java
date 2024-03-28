@@ -18,33 +18,27 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 
-public enum RMAppEventType {
-  // Source: ClientRMService
-  START,
-  RECOVER,
-  KILL,
+import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
 
-  // Source: Scheduler and RMAppManager
-  APP_REJECTED,
+public class RMAppLogAggregationStatusEvent extends RMAppEvent {
 
-  // Source: Scheduler
-  APP_ACCEPTED,
+  private final NodeId node;
+  private final LogAggregationReport report;
 
-  // Source: RMAppAttempt
-  ATTEMPT_REGISTERED,
-  ATTEMPT_UNREGISTERED,
-  ATTEMPT_FINISHED, // Will send the final state
-  ATTEMPT_FAILED,
-  ATTEMPT_KILLED,
-  NODE_UPDATE,
-  ATTEMPT_LAUNCHED,
-  
-  // Source: Container and ResourceTracker
-  APP_RUNNING_ON_NODE,
-  APP_LOG_AGG_STATUS_UPDATE,
+  public RMAppLogAggregationStatusEvent(ApplicationId appId, NodeId node,
+      LogAggregationReport report) {
+    super(appId, RMAppEventType.APP_LOG_AGG_STATUS_UPDATE);
+    this.node = node;
+    this.report = report;
+  }
 
-  // Source: RMStateStore
-  APP_NEW_SAVED,
-  APP_UPDATE_SAVED,
-  APP_SAVE_FAILED,
+  public NodeId getNodeId() {
+    return node;
+  }
+
+  public LogAggregationReport getReport() {
+    return report;
+  }
 }
