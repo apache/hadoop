@@ -148,17 +148,16 @@ public class TestWordStats {
         }
       }
 
-      int medianIndex1 = (int) Math.ceil((this.wordsRead / 2.0));
-      int medianIndex2 = (int) Math.floor((this.wordsRead / 2.0));
+      double medianIndex = this.wordsRead / 2.0;
 
       for (Integer key : this.map.navigableKeySet()) {
         int prevNum = num;
         num += this.map.get(key);
 
-        if (medianIndex2 >= prevNum && medianIndex1 <= num) {
+        if (medianIndex >= prevNum && medianIndex < num) {
           return key;
-        } else if (medianIndex2 >= prevNum && medianIndex1 < num) {
-          Integer nextCurrLen = this.map.navigableKeySet().iterator().next();
+        } else if (medianIndex >= prevNum && medianIndex == num) {
+          Integer nextCurrLen = this.map.higherKey(key);
           double median = (key + nextCurrLen) / 2.0;
           return median;
         }
