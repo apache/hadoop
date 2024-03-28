@@ -121,7 +121,7 @@ SPS can be enabled as an external service outside Namenode or disabled dynamical
 
 Detailed design documentation can be found at [Storage Policy Satisfier(SPS) (HDFS-10285)](https://issues.apache.org/jira/browse/HDFS-10285)
 
-* **Note**: When user invokes `satisfyStoragePolicy()` API on a directory, SPS will scan all sub-directories and consider all the files for satisfy the policy..
+* **Note**: When user invokes `satisfyStoragePolicy()` API on a directory, SPS will scan all sub-directories and consider all the files for satisfy the policy.
 
 * HdfsAdmin API :
         `public void satisfyStoragePolicy(final Path path) throws IOException`
