@@ -83,6 +83,11 @@ public class TestNMWebTerminal {
       public boolean isPmemCheckEnabled() {
         return true;
       }
+
+      @Override
+      public boolean isPcoreCheckEnabled() {
+        return false;
+      }
     };
     conf.set(YarnConfiguration.NM_LOCAL_DIRS, TESTROOTDIR.getAbsolutePath());
     conf.set(YarnConfiguration.NM_LOG_DIRS, TESTLOGDIR.getAbsolutePath());
