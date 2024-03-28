@@ -59,6 +59,19 @@ public class TestCopyFilter {
   }
 
   @Test
+  public void testGetDirCopyFilter(){
+    final String filterName =
+            "org.apache.hadoop.tools.DirCopyFilter";
+    Configuration configuration = new Configuration(false);
+    configuration.set(DistCpConstants.CONF_LABEL_FILTERS_CLASS, filterName);
+    CopyFilter copyFilter = CopyFilter.getCopyFilter(configuration);
+    assertTrue("copyFilter should be instance of DirCopyFilter",
+            copyFilter instanceof DirCopyFilter);
+    assertTrue("copyFilter should be instance of FileStatusCopyFilter too",
+            copyFilter instanceof FileStatusCopyFilter);
+  }
+
+  @Test
   public void testGetCopyFilterNonExistingClass() throws Exception {
     final String filterName =
             "org.apache.hadoop.tools.RegexpInConfigurationWrongFilter";
