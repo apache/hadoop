@@ -92,7 +92,7 @@ public class AbfsManifestStoreOperations extends
       etagsPreserved = true;
       LOG.debug("Bonded to filesystem with resilient commits under path {}", path);
     } catch (UnsupportedOperationException e) {
-      LOG.debug("No resilient commit support under path {}", path);
+      LOG.warn("No resilient commit support under path {}", path);
     }
   }
 

@@ -144,6 +144,13 @@ public final class ManifestCommitterConstants {
   public static final boolean OPT_CLEANUP_PARALLEL_DELETE_DIRS_DEFAULT = true;
 
   /**
+   * How much write capacity to request when deleting any directory
+   * Value: {@value}.
+   */
+  public static final String OPT_DELETE_DIR_CAPACITY =
+      OPT_PREFIX + "delete.dir.capacity";
+
+  /**
    * Threads to use for IO.
    */
   public static final String OPT_IO_PROCESSORS = OPT_PREFIX + "io.threads";

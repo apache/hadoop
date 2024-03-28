@@ -35,6 +35,7 @@ import org.apache.hadoop.util.functional.TaskPool;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.retrieveIOStatistics;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_DELETE_DIR;
 import static org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter.FILEOUTPUTCOMMITTER_CLEANUP_FAILURES_IGNORED;
 import static org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter.FILEOUTPUTCOMMITTER_CLEANUP_FAILURES_IGNORED_DEFAULT;
 import static org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter.FILEOUTPUTCOMMITTER_CLEANUP_SKIPPED;
@@ -49,7 +50,7 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
  * Returns: the outcome of the overall operation
  * The result is detailed purely for the benefit of tests, which need
  * to make assertions about error handling and fallbacks.
- *
+ * <p>
  * There's a few known issues with the azure and GCS stores which
  * this stage tries to address.
  * - Google GCS directory deletion is O(entries), so is slower for big jobs.
@@ -57,19 +58,21 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
  *   when not the store owner triggers a scan down the tree to verify the
  *   caller has the permission to delete each subdir.
  *   If this scan takes over 90s, the operation can time out.
- *
+ * - Azure storage requires IO capacity based on the number of subdirectories.
+ * <p>
  * The main solution for both of these is that task attempts are
  * deleted in parallel, in different threads.
  * This will speed up GCS cleanup and reduce the risk of
  * abfs related timeouts.
+ * <p>
  * Exceptions during cleanup can be suppressed,
  * so that these do not cause the job to fail.
- *
+ * <p>
  * Also, some users want to be able to run multiple independent jobs
  * targeting the same output directory simultaneously.
  * If one job deletes the directory `__temporary` all the others
  * will fail.
- *
+ * <p>
  * This can be addressed by disabling cleanup entirely.
  *
  */
@@ -219,7 +222,7 @@ public class CleanupJobStage extends
    * Delete a single TA dir in a parallel task.
    * Updates the audit context.
    * Exceptions are swallowed so that attempts are still made
-   * to delete the others, but the first exception
+   * to delete the others, but one of any exceptions raised.
    * caught is saved in a field which can be retrieved
    * via {@link #getLastDeleteException()}.
    *
@@ -246,7 +249,7 @@ public class CleanupJobStage extends
       throws IOException {
 
     deleteDirCount.incrementAndGet();
-    IOException ex = deleteDir(dir, true);
+    final IOException ex = deleteDirSuppressingExceptions(dir, OP_DELETE_DIR);
     if (ex != null) {
       deleteFailure(ex);
     }
@@ -258,8 +261,9 @@ public class CleanupJobStage extends
    * @param ex exception
    */
   private synchronized void deleteFailure(IOException ex) {
-    // excaption: add the count
+    // exception: add the count
     deleteFailureCount.incrementAndGet();
+    // and save the exception, overwriting any predecessor.
     lastDeleteException = ex;
   }
 
@@ -343,8 +347,7 @@ public class CleanupJobStage extends
   public static final Arguments DISABLED = new Arguments(OP_STAGE_JOB_CLEANUP,
       false,
       false,
-      false
-  );
+      false);
 
   /**
    * Build an options argument from a configuration, using the

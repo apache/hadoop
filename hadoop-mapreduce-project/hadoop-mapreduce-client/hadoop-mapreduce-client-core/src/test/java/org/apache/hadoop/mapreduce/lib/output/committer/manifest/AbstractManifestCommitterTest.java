@@ -1013,8 +1013,12 @@ public abstract class AbstractManifestCommitterTest
       final int expectedDirsDeleted) throws IOException {
     StageConfig stageConfig = getJobStageConfig();
     CleanupJobStage.Result result = new CleanupJobStage(stageConfig)
-        .apply(new CleanupJobStage.Arguments(OP_STAGE_JOB_CLEANUP,
-            enabled, deleteTaskAttemptDirsInParallel, suppressExceptions));
+        .apply(new CleanupJobStage.Arguments(
+            OP_STAGE_JOB_CLEANUP,
+            enabled,
+            deleteTaskAttemptDirsInParallel,
+            suppressExceptions
+        ));
     assertCleanupResult(result, outcome, expectedDirsDeleted);
     return result;
   }

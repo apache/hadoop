@@ -41,6 +41,7 @@ import org.apache.hadoop.util.functional.CloseableTaskPoolSubmitter;
 
 import static org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter.SUCCESSFUL_JOB_OUTPUT_DIR_MARKER;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.*;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.DELETE_DIR_CAPACITY;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport.buildJobUUID;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport.getAppAttemptId;
 
@@ -154,6 +155,11 @@ public final class ManifestCommitterConfig implements IOStatisticsSource {
   private final int writerQueueCapacity;
 
   /**
+   * Capacity for directory delete operations.
+   */
+  private int deleteDirCapacity = DELETE_DIR_CAPACITY;
+
+  /**
    * Constructor.
    * @param outputPath destination path of the job.
    * @param role role for log messages.
@@ -198,6 +204,9 @@ public final class ManifestCommitterConfig implements IOStatisticsSource {
     this.writerQueueCapacity = conf.getInt(
         OPT_WRITER_QUEUE_CAPACITY,
         DEFAULT_WRITER_QUEUE_CAPACITY);
+    this.deleteDirCapacity = conf.getInt(
+        OPT_DELETE_DIR_CAPACITY,
+        DELETE_DIR_CAPACITY);
 
     // if constructed with a task attempt, build the task ID and path.
     if (context instanceof TaskAttemptContext) {
@@ -272,7 +281,9 @@ public final class ManifestCommitterConfig implements IOStatisticsSource {
         .withTaskAttemptDir(taskAttemptDir)
         .withTaskAttemptId(taskAttemptId)
         .withTaskId(taskId)
-        .withWriterQueueCapacity(writerQueueCapacity);
+        .withWriterQueueCapacity(writerQueueCapacity)
+        .withDeleteDirCapacity(deleteDirCapacity);
+
     return stageConfig;
   }
 
@@ -338,6 +349,10 @@ public final class ManifestCommitterConfig implements IOStatisticsSource {
    */
   public int getWriterQueueCapacity() {
     return writerQueueCapacity;
+  }
+
+  public int getDeleteDirCapacity() {
+    return deleteDirCapacity;
   }
 
   @Override

@@ -28,8 +28,10 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.IORateLimiter;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.impl.IORateLimiterSupport;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.AbstractManifestData;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
@@ -45,7 +47,7 @@ import org.apache.hadoop.util.JsonSerialization;
  */
 @InterfaceAudience.LimitedPrivate("mapreduce, object-stores")
 @InterfaceStability.Unstable
-public abstract class ManifestStoreOperations implements Closeable {
+public abstract class ManifestStoreOperations implements Closeable, IORateLimiter {
 
   /**
    * Bind to the filesystem.
@@ -95,6 +97,35 @@ public abstract class ManifestStoreOperations implements Closeable {
    * @throws IOException failure.
    */
   public abstract boolean delete(Path path, boolean recursive)
+      throws IOException;
+
+  /**
+   * Forward to {@code delete(Path, true)}
+   * unless overridden.
+   * <p>
+   * If it returns without an error: there is nothing at
+   * the end of the path.
+   * @param path path
+   * @return outcome
+   * @throws IOException failure.
+   */
+  public boolean deleteFile(Path path)
+      throws IOException {
+    return delete(path, true);
+  }
+
+  /**
+   * Acquire the delete capacity then call {@code FileSystem#delete(Path, true)}
+   * or equivalent.
+   * <p>
+   * If it returns without an error: there is nothing at
+   * the end of the path.
+   * @param path path
+   * @param capacity IO capacity to ask for.
+   * @return outcome
+   * @throws IOException failure.
+   */
+  public abstract boolean rmdir(Path path, int capacity)
       throws IOException;
 
   /**
@@ -286,6 +317,24 @@ public abstract class ManifestStoreOperations implements Closeable {
     public Duration getWaitTime() {
       return waitTime;
     }
+  }
+
+  /**
+   * Get the rate limiter source.
+   * Shall never be null; may be unlimited.
+   * @return the rate limiter source.
+   */
+  public IORateLimiter rateLimiterSource() {
+    return IORateLimiterSupport.unlimited();
+  }
+
+  /**
+   * Delegate to {@link #rateLimiterSource()}.
+   * {@inheritDoc}
+   */
+  @Override
+  public Duration acquireIOCapacity(final String operation, final Path path, final int requestedCapacity) {
+    return rateLimiterSource().acquireIOCapacity(operation, new Path("/"), requestedCapacity);
   }
 
 }

@@ -237,7 +237,6 @@ public class CreateOutputDirectoriesStage extends
     addToDirectoryMap(dir, DirMapState.fileNowDeleted);
   }
 
-
   /**
    * Create a directory is required, updating the directory map
    * and, if the operation took place, the list of created dirs.
@@ -323,7 +322,7 @@ public class CreateOutputDirectoriesStage extends
         // is bad: delete a file
         LOG.info("{}: Deleting file where a directory should go: {}",
             getName(), st);
-        delete(path, false, OP_DELETE_FILE_UNDER_DESTINATION);
+        deleteFile(path, OP_DELETE_FILE_UNDER_DESTINATION);
       } else {
         // is good.
         LOG.warn("{}: Even though mkdirs({}) failed, there is now a directory there",

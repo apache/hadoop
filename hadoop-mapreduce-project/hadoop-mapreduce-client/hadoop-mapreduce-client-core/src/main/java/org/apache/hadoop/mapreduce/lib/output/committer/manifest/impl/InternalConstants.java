@@ -40,6 +40,7 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
  */
 @InterfaceAudience.Private
 public final class InternalConstants {
+
   private InternalConstants() {
   }
 
@@ -127,4 +128,45 @@ public final class InternalConstants {
   /** Schemas of filesystems we know to not work with this committer. */
   public static final Set<String> UNSUPPORTED_FS_SCHEMAS =
       ImmutableSet.of("s3a", "wasb");
+
+  /**
+   * How many attempts to commit the task by save and rename
+   * before giving up: {@value}.
+   */
+  public static final int TASK_COMMIT_RETRY_COUNT = 3;
+
+  /**
+   * Capacity for getFileStatus and similar HEAD requests: {@value}.
+   */
+  public static final int GET_FILE_STATUS_CAPACITY = 1;
+
+  /**
+   * Capacity for deleting a single file: {@value}.
+   */
+  public static final int DELETE_FILE_CAPACITY = 1;
+
+  /**
+   * Capacity for deleting a directory.
+   * This is considered more expensive, and may be configured.
+   * Value: {@value}.
+   */
+  public static final int DELETE_DIR_CAPACITY = 100;
+
+  /**
+   * Capacity for listing: {@value}.
+   */
+  public static final int LIST_CAPACITY = 1;
+
+  /**
+   * Capacity for mkdirs: {@value}.
+   */
+  public static final int MKDIRS_CAPACITY = 1;
+
+  /**
+   * Capacity for rename, includes optional LIST request;
+   * does not worry about total depth or file count.
+   * Value: {@value}.
+   */
+  public static final int RENAME_CAPACITY = 1;
+
 }

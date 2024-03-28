@@ -45,6 +45,7 @@ import org.apache.hadoop.util.functional.TaskPool;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_DELETE;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_DELETE_DIR;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_GET_FILE_STATUS;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_IS_FILE;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OP_LIST_STATUS;
@@ -299,12 +300,12 @@ public abstract class AbstractJobOrTaskStage<IN, OUT>
 
   /**
    * Note any rate limiting to the given timing statistic.
-   * If the wait was 0, no statistics are updated.
+   * If the wait was null/0, no statistics are updated.
    * @param statistic statistic key.
    * @param wait wait duration.
    */
-  private void noteAnyRateLimiting(String statistic, Duration wait) {
-    if (!wait.isZero()) {
+  protected void noteAnyRateLimiting(String statistic, Duration wait) {
+    if (wait != null && !wait.isZero()) {
       // rate limiting took place
       getIOStatistics().addTimedOperation(
           statistic,
@@ -412,9 +413,8 @@ public abstract class AbstractJobOrTaskStage<IN, OUT>
       final Path path)
       throws IOException {
     LOG.trace("{}: isFile('{}')", getName(), path);
-    return trackDuration(getIOStatistics(), OP_IS_FILE, () -> {
-      return operations.isFile(path);
-    });
+    return trackDuration(getIOStatistics(), OP_IS_FILE, () ->
+        operations.isFile(path));
   }
 
   /**
@@ -445,9 +445,29 @@ public abstract class AbstractJobOrTaskStage<IN, OUT>
       final boolean recursive,
       final String statistic)
       throws IOException {
-    return trackDuration(getIOStatistics(), statistic, () -> {
-      return operations.delete(path, recursive);
-    });
+    if (recursive) {
+      return deleteDir(path, statistic);
+    } else {
+      return deleteFile(path, statistic);
+    }
+  }
+
+  /**
+   * Delete a file at a path.
+   * <p>
+   * If it returns without an error: there is nothing at
+   * the end of the path.
+   * @param path path
+   * @param statistic statistic to update
+   * @return outcome.
+   * @throws IOException IO Failure.
+   */
+  protected boolean deleteFile(
+      final Path path,
+      final String statistic)
+      throws IOException {
+    return trackDuration(getIOStatistics(), statistic, () ->
+        operations.deleteFile(path));
   }
 
   /**
@@ -690,6 +710,8 @@ public abstract class AbstractJobOrTaskStage<IN, OUT>
    * Maybe delete the destination.
    * This routine is optimized for the data not existing, as HEAD seems to cost less
    * than a DELETE; assuming most calls don't have data, this is faster.
+   * If the destination exists, {@link #deleteDir(Path, String)} is invoked
+   * so as to require more IO capacity.
    * @param deleteDest should an attempt to delete the dest be made?
    * @param dest destination path
    * @throws IOException IO failure, including permissions.
@@ -697,11 +719,14 @@ public abstract class AbstractJobOrTaskStage<IN, OUT>
   private void maybeDeleteDest(final boolean deleteDest, final Path dest) throws IOException {
 
     if (deleteDest && getFileStatusOrNull(dest) != null) {
-
-      boolean deleted = delete(dest, true);
-      // log the outcome in case of emergency diagnostics traces
-      // being needed.
-      LOG.debug("{}: delete('{}') returned {}'", getName(), dest, deleted);
+      final FileStatus st = getFileStatusOrNull(dest);
+      if (st != null) {
+        if (st.isDirectory()) {
+          deleteDir(dest, OP_DELETE_DIR);
+        } else {
+          deleteFile(dest, OP_DELETE);
+        }
+      }
     }
   }
 
@@ -915,26 +940,36 @@ public abstract class AbstractJobOrTaskStage<IN, OUT>
   }
 
   /**
-   * Delete a directory, possibly suppressing exceptions.
+   * Delete a directory.
    * @param dir directory.
-   * @param suppressExceptions should exceptions be suppressed?
+   * @param statistic statistic to use
+   * @return true if the path is no longer present.
    * @throws IOException exceptions raised in delete if not suppressed.
-   * @return any exception caught and suppressed
    */
-  protected IOException deleteDir(
+  protected boolean deleteDir(
       final Path dir,
-      final Boolean suppressExceptions)
+      final String statistic)
+      throws IOException {
+    return trackDuration(getIOStatistics(), statistic, () ->
+        operations.rmdir(dir, stageConfig.getDeleteDirCapacity()));
+  }
+
+  /**
+   * Delete a directory, suprressing exceptions.
+   * @param dir directory.
+   * @param statistic statistic to use
+   * @return any exception caught.
+   */
+  protected IOException deleteDirSuppressingExceptions(
+      final Path dir,
+      final String statistic)
       throws IOException {
     try {
-      delete(dir, true);
+      deleteDir(dir, statistic);
       return null;
     } catch (IOException ex) {
       LOG.info("Error deleting {}: {}", dir, ex.toString());
-      if (!suppressExceptions) {
-        throw ex;
-      } else {
-        return ex;
-      }
+      return ex;
     }
   }
 

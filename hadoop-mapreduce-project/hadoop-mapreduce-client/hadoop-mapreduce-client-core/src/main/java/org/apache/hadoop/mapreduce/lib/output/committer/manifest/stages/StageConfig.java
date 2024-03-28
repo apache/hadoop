@@ -32,6 +32,7 @@ import org.apache.hadoop.util.functional.TaskPool;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.DEFAULT_WRITER_QUEUE_CAPACITY;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.SUCCESS_MARKER;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.SUCCESS_MARKER_FILE_LIMIT;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.DELETE_DIR_CAPACITY;
 
 /**
  * Stage Config.
@@ -171,6 +172,11 @@ public class StageConfig {
    * Number of marker files to include in success file.
    */
   private int successMarkerFileLimit = SUCCESS_MARKER_FILE_LIMIT;
+
+  /**
+   * Capacity for directory delete operations.
+   */
+  private int deleteDirCapacity = DELETE_DIR_CAPACITY;
 
   public StageConfig() {
   }
@@ -602,6 +608,24 @@ public class StageConfig {
 
   public int getSuccessMarkerFileLimit() {
     return successMarkerFileLimit;
+  }
+
+  /**
+   * Get the capacity for delete operations.
+   * @return the capacity
+   */
+  public int getDeleteDirCapacity() {
+    return deleteDirCapacity;
+  }
+
+  /**
+   * Set builder value.
+   * @param value new value
+   * @return the builder
+   */
+  public StageConfig withDeleteDirCapacity(final int value) {
+    deleteDirCapacity = value;
+    return this;
   }
 
   /**
