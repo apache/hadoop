@@ -509,10 +509,10 @@ public class DistCpUtils {
    * @throws XAttrsNotSupportedException if fs does not support XAttrs
    */
   public static void checkFileSystemXAttrSupport(FileSystem fs)
-      throws XAttrsNotSupportedException {
+      throws XAttrsNotSupportedException, IOException {
     try {
       fs.getXAttrs(new Path(Path.SEPARATOR));
-    } catch (Exception e) {
+    } catch (UnsupportedOperationException e) {
       throw new XAttrsNotSupportedException("XAttrs not supported for file system: "
         + fs.getUri());
     }
