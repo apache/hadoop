@@ -80,6 +80,12 @@ public class INodeDirectory extends INodeWithAdditionalFields
       long mtime) {
     super(id, name, permissions, mtime, 0L);
   }
+
+  /** constructor */
+  public INodeDirectory(long id, byte[] name, PermissionStatus permissions,
+      long mtime, long atime) {
+    super(id, name, permissions, mtime, atime);
+  }
   
   /**
    * Copy constructor

@@ -150,7 +150,7 @@ public final class FSImageFormatPBINode {
       final PermissionStatus permissions = loadPermission(d.getPermission(),
           state.getStringTable());
       final INodeDirectory dir = new INodeDirectory(n.getId(), n.getName()
-          .toByteArray(), permissions, d.getModificationTime());
+          .toByteArray(), permissions, d.getModificationTime(), d.getAccessTime());
       final long nsQuota = d.getNsQuota(), dsQuota = d.getDsQuota();
       if (nsQuota >= 0 || dsQuota >= 0) {
         dir.addDirectoryWithQuotaFeature(new DirectoryWithQuotaFeature.Builder().
@@ -707,7 +707,8 @@ public final class FSImageFormatPBINode {
           .newBuilder().setModificationTime(dir.getModificationTime())
           .setNsQuota(quota.getNameSpace())
           .setDsQuota(quota.getStorageSpace())
-          .setPermission(buildPermissionStatus(dir));
+          .setPermission(buildPermissionStatus(dir))
+          .setAccessTime(dir.getAccessTime());
 
       if (quota.getTypeSpaces().anyGreaterOrEqual(0)) {
         b.setTypeQuotas(buildQuotaByStorageTypeEntries(quota));
