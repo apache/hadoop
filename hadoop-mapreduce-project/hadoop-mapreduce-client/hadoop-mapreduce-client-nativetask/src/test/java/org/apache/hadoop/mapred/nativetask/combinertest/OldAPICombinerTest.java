@@ -38,11 +38,11 @@ import org.apache.hadoop.mapred.nativetask.testutil.ScenarioConfiguration;
 import org.apache.hadoop.mapred.nativetask.testutil.TestConstants;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.TaskCounter;
-import org.junit.AfterClass;
 import org.apache.hadoop.util.NativeCodeLoader;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 
@@ -51,26 +51,26 @@ public class OldAPICombinerTest {
   private String inputpath;
 
   @Test
-  public void testWordCountCombinerWithOldAPI() throws Exception {
+  void testWordCountCombinerWithOldAPI() throws Exception {
     final Configuration nativeConf = ScenarioConfiguration.getNativeConfiguration();
     nativeConf.addResource(TestConstants.COMBINER_CONF_PATH);
     final String nativeoutput = TestConstants.NATIVETASK_OLDAPI_COMBINER_TEST_NATIVE_OUTPUTPATH;
     final JobConf nativeJob = getOldAPIJobconf(nativeConf, "nativeCombinerWithOldAPI",
-                                               inputpath, nativeoutput);
+        inputpath, nativeoutput);
     RunningJob nativeRunning = JobClient.runJob(nativeJob);
 
     Counter nativeReduceGroups = nativeRunning.getCounters().findCounter(
-      TaskCounter.REDUCE_INPUT_RECORDS);
+        TaskCounter.REDUCE_INPUT_RECORDS);
 
     final Configuration normalConf = ScenarioConfiguration.getNormalConfiguration();
     normalConf.addResource(TestConstants.COMBINER_CONF_PATH);
     final String normaloutput = TestConstants.NATIVETASK_OLDAPI_COMBINER_TEST_NORMAL_OUTPUTPATH;
     final JobConf normalJob = getOldAPIJobconf(normalConf, "normalCombinerWithOldAPI",
-                                               inputpath, normaloutput);
+        inputpath, normaloutput);
 
     RunningJob normalRunning = JobClient.runJob(normalJob);
     Counter normalReduceGroups = normalRunning.getCounters().findCounter(
-      TaskCounter.REDUCE_INPUT_RECORDS);
+        TaskCounter.REDUCE_INPUT_RECORDS);
 
     final boolean compareRet = ResultVerifier.verify(nativeoutput, normaloutput);
     assertThat(compareRet)
@@ -83,10 +83,10 @@ public class OldAPICombinerTest {
         .isEqualTo(normalReduceGroups.getValue());
   }
 
-  @Before
+  @BeforeEach
   public void startUp() throws Exception {
-    Assume.assumeTrue(NativeCodeLoader.isNativeCodeLoaded());
-    Assume.assumeTrue(NativeRuntime.isNativeLibraryLoaded());
+    Assumptions.assumeTrue(NativeCodeLoader.isNativeCodeLoaded());
+    Assumptions.assumeTrue(NativeRuntime.isNativeLibraryLoaded());
     final ScenarioConfiguration conf = new ScenarioConfiguration();
     conf.addcombinerConf();
     this.fs = FileSystem.get(conf);
@@ -99,7 +99,7 @@ public class OldAPICombinerTest {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanUp() throws IOException {
     final FileSystem fs = FileSystem.get(new ScenarioConfiguration());
     fs.delete(new Path(TestConstants.NATIVETASK_COMBINER_TEST_DIR), true);
