@@ -56,7 +56,7 @@ ENV PYTHONIOENCODING=utf-8
 ######
 # Set env vars required to build Hadoop
 ######
-ENV MAVEN_HOME /usr
+ENV MAVEN_HOME /opt/maven
 # JAVA_HOME must be set in Maven >= 3.5.0 (MNG-6003)
 ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64
 
@@ -83,6 +83,7 @@ ENV HADOOP_SKIP_YETUS_VERIFICATION true
 # Install packages
 ####
 RUN pkg-resolver/install-common-pkgs.sh
+RUN pkg-resolver/install-maven.sh ubuntu:focal
 RUN pkg-resolver/install-spotbugs.sh ubuntu:focal
 RUN pkg-resolver/install-boost.sh ubuntu:focal
 RUN pkg-resolver/install-protobuf.sh ubuntu:focal
