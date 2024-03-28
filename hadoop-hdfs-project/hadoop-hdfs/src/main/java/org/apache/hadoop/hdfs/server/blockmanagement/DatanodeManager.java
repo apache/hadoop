@@ -69,6 +69,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.*;
+import java.util.Map.Entry;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -1325,6 +1326,57 @@ public class DatanodeManager {
       dnsToSwitchMapping.reloadCachedMappings(invalidNodeNames);
       throw e;
     }
+  }
+
+  /**
+   * refresh the network topology of this cluster based on the mapping_topology.data file.
+   */
+  public void refreshTopology() throws IOException {
+    long start = System.currentTimeMillis();
+    int datanodeNums = 0;
+    Set<String> storageIds = datanodeMap.keySet();
+    Set<String> forIterations = new HashSet<>();
+    List<String> datanodeIpAddrs = new ArrayList<>();
+    List<DatanodeDescriptor> datanodeDescriptors = new ArrayList<>();
+    // To avoid ConcurrentModificationException
+    forIterations.addAll(storageIds);
+
+    for (String storageId : forIterations) {
+      DatanodeDescriptor dnDescriptor = datanodeMap.get(storageId);
+      String ipAddr = dnDescriptor.getIpAddr();
+      datanodeIpAddrs.add(ipAddr);
+      datanodeDescriptors.add(dnDescriptor);
+      datanodeNums++;
+    }
+    dnsToSwitchMapping.reloadCachedMappings(datanodeIpAddrs);
+    List<String> rNameList = dnsToSwitchMapping.resolve(datanodeIpAddrs);
+
+    for (int i = 0; i < datanodeNums; i++) {
+      DatanodeDescriptor dnDescriptor = datanodeDescriptors.get(i);
+      String originNetwork = dnDescriptor.getNetworkLocation();
+      String resolvedNetwork = rNameList.get(i);
+
+      if (dnDescriptor.getNetworkLocation().equals(resolvedNetwork)) {
+        continue;
+      }
+      try {
+        synchronized (this) {
+          dnDescriptor.setNetworkLocation(resolvedNetwork);
+          networktopology.add(dnDescriptor); // may throw InvalidTopologyException
+        }
+      } catch (Throwable e) {
+        LOG.error(getClass().getSimpleName() + ".refreshTopology: update datanode " + dnDescriptor +
+                      " failed. reset from Rack: " + resolvedNetwork + " to Rack: " + originNetwork);
+        dnDescriptor.setNetworkLocation(originNetwork);
+        throw new IOException(getClass().getSimpleName() + ".refreshTopology: update datanode " + dnDescriptor +
+                                  " failed. reset from Rack: " + resolvedNetwork + " to Rack: " + originNetwork);
+      }
+      LOG.info(getClass().getSimpleName() + ".refreshTopology: update datanode :" + dnDescriptor +
+                   " from Rack: " + dnDescriptor.getNetworkLocation() + " to Rack: " + resolvedNetwork);
+      checkIfClusterIsNowMultiRack(dnDescriptor);
+    }
+    long end = System.currentTimeMillis() - start;
+    LOG.info(getClass().getSimpleName() + ".refreshTopology: " + "costs " + end + "ms");
   }
 
   /**

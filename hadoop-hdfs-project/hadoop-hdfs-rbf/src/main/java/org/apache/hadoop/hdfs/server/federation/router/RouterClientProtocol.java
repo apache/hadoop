@@ -1215,6 +1215,14 @@ public class RouterClientProtocol implements ClientProtocol {
   }
 
   @Override
+  public void refreshTopology() throws IOException {
+    // Router not support this operation, because this maybe refresh multi namespaces
+    String methodName = RouterRpcServer.getMethodName();
+    throw new UnsupportedOperationException(
+        "Operation \"" + methodName + "\" is not supported");
+  }
+
+  @Override
   public void finalizeUpgrade() throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.UNCHECKED);
 
