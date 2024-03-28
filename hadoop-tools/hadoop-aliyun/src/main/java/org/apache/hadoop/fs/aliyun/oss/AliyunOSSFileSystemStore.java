@@ -112,6 +112,7 @@ public class AliyunOSSFileSystemStore {
     clientConf.setUserAgent(
         conf.get(USER_AGENT_PREFIX, USER_AGENT_PREFIX_DEFAULT) + ", Hadoop/"
             + VersionInfo.getVersion());
+    clientConf.setSupportCname(conf.getBoolean(CNAME_SUPPORT_KEY, CNAME_SUPPORT_DEFAULT));
 
     String proxyHost = conf.getTrimmed(PROXY_HOST_KEY, "");
     int proxyPort = conf.getInt(PROXY_PORT_KEY, -1);

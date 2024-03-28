@@ -75,6 +75,10 @@ public final class Constants {
       "fs.oss.connection.establish.timeout";
   public static final int ESTABLISH_TIMEOUT_DEFAULT = 50000;
 
+  // cname support
+  public static final String CNAME_SUPPORT_KEY = "fs.oss.cname.support.enabled";
+  public static final boolean CNAME_SUPPORT_DEFAULT = true;
+
   // Time until we give up on a connection to oss
   public static final String SOCKET_TIMEOUT_KEY = "fs.oss.connection.timeout";
   public static final int SOCKET_TIMEOUT_DEFAULT = 200000;
