@@ -819,7 +819,8 @@ class DataXceiver extends Receiver implements Runnable {
           DataEncryptionKeyFactory keyFactory =
             datanode.getDataEncryptionKeyFactoryForBlock(block);
           SecretKey secretKey = null;
-          if (dnConf.overwriteDownstreamDerivedQOP) {
+          if (dnConf.overwriteDownstreamDerivedQOP &&
+                  datanode.blockPoolTokenSecretManager != null) {
             String bpid = block.getBlockPoolId();
             BlockKey blockKey = datanode.blockPoolTokenSecretManager
                 .get(bpid).getCurrentKey();
