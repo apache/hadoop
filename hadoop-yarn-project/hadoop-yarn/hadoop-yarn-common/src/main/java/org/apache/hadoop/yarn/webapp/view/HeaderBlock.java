@@ -33,7 +33,7 @@ public class HeaderBlock extends HtmlBlock {
         div("#user").
         __(loggedIn).__().
         div("#logo").
-          img("/static/hadoop-st.png").__().
+          img(root_url("static/hadoop-st.png")).__().
         h1($(TITLE)).__();
   }
 }
