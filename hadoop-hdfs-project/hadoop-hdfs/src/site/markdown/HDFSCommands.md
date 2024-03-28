@@ -297,7 +297,7 @@ Usage:
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
-| `-policy` \<policy\> | `datanode` (default): Cluster is balanced if each datanode is balanced.<br/> `blockpool`: Cluster is balanced if each block pool in each datanode is balanced. |
+| `-policy` \<policy\> | `datanode` (default): Cluster is balanced if each datanode is balanced.<br/> `blockpool`: Cluster is balanced if each block pool in each datanode is balanced.<br/> `datanode-actual`: Cluster is balanced if each datanode is balanced. Unlike `datanode`, this policy take into account non-DFS usage. |
 | `-threshold` \<threshold\> | Percentage of disk capacity. This overwrites the default threshold. |
 | `-exclude -f` \<hosts-file\> \| \<comma-separated list of hosts\> | Excludes the specified datanodes from being balanced by the balancer. |
 | `-include -f` \<hosts-file\> \| \<comma-separated list of hosts\> | Includes only the specified datanodes to be balanced by the balancer. |
