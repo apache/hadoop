@@ -2102,4 +2102,28 @@ public class TestFsDatasetImpl {
       DataNodeFaultInjector.set(oldDnInjector);
     }
   }
+
+  /**
+   * My patch only adds a log print. Therefore, I cannot write assert judgments.
+   * I can only verify the normal function of addVolume.
+   */
+  @Test
+  public void testLog4AddToReplicasMap() throws IOException {
+    List<NamespaceInfo> nsInfos = Lists.newArrayList();
+    for (String bpid : BLOCK_POOL_IDS) {
+      nsInfos.add(new NamespaceInfo(0, CLUSTER_ID, bpid, 1));
+    }
+    String path = BASE_DIR + "/newData0";
+    String pathUri = new Path(path).toUri().toString();
+    StorageLocation loc = StorageLocation.parse(pathUri);
+    Storage.StorageDirectory sd = createStorageDirectory(
+        new File(path), conf);
+    DataStorage.VolumeBuilder builder =
+        new DataStorage.VolumeBuilder(storage, sd);
+    when(storage.prepareVolume(eq(datanode), eq(loc),
+        anyList()))
+        .thenReturn(builder);
+    dataset.addVolume(loc, nsInfos);
+  }
+
 }
