@@ -470,6 +470,8 @@ public class DataNode extends ReconfigurableBase
   private DataSetLockManager dataSetLockManager;
 
   private final ExecutorService xferService;
+  private final Set<ExtendedBlock> transferringBlock = Sets
+      .newConcurrentHashSet();
 
   @Nullable
   private final StorageLocationChecker storageLocationChecker;
@@ -2879,16 +2881,22 @@ public class DataNode extends ReconfigurableBase
     
     int numTargets = xferTargets.length;
     if (numTargets > 0) {
-      final String xferTargetsString =
-          StringUtils.join(" ", Arrays.asList(xferTargets));
-      LOG.info("{} Starting thread to transfer {} to {}", bpReg, block,
-          xferTargetsString);
+      if (transferringBlock.contains(block)) {
+        LOG.warn(
+            "Thread for transfer {} was already running，ignore this block.",
+            block);
+      } else {
+        final String xferTargetsString =
+            StringUtils.join(" ", Arrays.asList(xferTargets));
+        LOG.info("{} Starting thread to transfer {} to {}", bpReg, block,
+            xferTargetsString);
 
-      final DataTransfer dataTransferTask = new DataTransfer(xferTargets,
-          xferTargetStorageTypes, xferTargetStorageIDs, block,
-          BlockConstructionStage.PIPELINE_SETUP_CREATE, "");
+        final DataTransfer dataTransferTask = new DataTransfer(xferTargets,
+            xferTargetStorageTypes, xferTargetStorageIDs, block,
+            BlockConstructionStage.PIPELINE_SETUP_CREATE, "");
 
-      this.xferService.execute(dataTransferTask);
+        this.xferService.execute(dataTransferTask);
+      }
     }
   }
 
@@ -3056,6 +3064,7 @@ public class DataNode extends ReconfigurableBase
       final boolean isClient = clientname.length() > 0;
       
       try {
+        transferringBlock.add(b);
         final String dnAddr = targets[0].getXferAddr(connectToDnViaHostname);
         InetSocketAddress curTarget = NetUtils.createSocketAddr(dnAddr);
         LOG.debug("Connecting to datanode {}", dnAddr);
@@ -3131,6 +3140,7 @@ public class DataNode extends ReconfigurableBase
       } catch (Throwable t) {
         LOG.error("Failed to transfer block {}", b, t);
       } finally {
+        transferringBlock.remove(b);
         decrementXmitsInProgress();
         IOUtils.closeStream(blockSender);
         IOUtils.closeStream(out);
