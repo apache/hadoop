@@ -41,6 +41,7 @@ import static org.hamcrest.CoreMatchers.not;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
@@ -72,6 +73,7 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.server.blockmanagement.HostSet;
 import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider;
@@ -1205,5 +1207,25 @@ public class TestDFSUtil {
         assertEquals(inetSocketAddress.getPort(), 8020);
       });
     });
+  }
+
+  @Test
+  public void testGetHostSet() {
+    String[] testAddrs = new String[] {"unreachable-host1.com:9000", "unreachable-host2.com:9000"};
+    HostSet hostSet = DFSUtil.getHostSet(testAddrs);
+    assertNotNull(hostSet);
+    assertEquals(0, hostSet.size());
+
+    String strAddress = "localhost";
+    testAddrs = new String[] {strAddress};
+    hostSet = DFSUtil.getHostSet(testAddrs);
+    assertEquals(0, hostSet.size());
+
+    strAddress = "localhost:9000";
+    InetSocketAddress inetSocketAddress = new InetSocketAddress("localhost", 9000);
+    testAddrs = new String[] {strAddress};
+    hostSet = DFSUtil.getHostSet(testAddrs);
+    assertNotNull(hostSet);
+    assertTrue(hostSet.match(inetSocketAddress));
   }
 }
