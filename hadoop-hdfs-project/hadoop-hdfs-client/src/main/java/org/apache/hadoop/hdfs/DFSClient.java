@@ -2618,16 +2618,17 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       throws IOException {
     checkOpen();
     // sanity check
-    if ((namespaceQuota <= 0 &&
-          namespaceQuota != HdfsConstants.QUOTA_DONT_SET &&
-          namespaceQuota != HdfsConstants.QUOTA_RESET) ||
-        (storagespaceQuota < 0 &&
+    if (namespaceQuota <= 0 &&
+            namespaceQuota != HdfsConstants.QUOTA_DONT_SET &&
+            namespaceQuota != HdfsConstants.QUOTA_RESET){
+      throw new IllegalArgumentException("Invalid values for " +
+              "namespace quota : " + namespaceQuota);
+    }
+    if (storagespaceQuota < 0 &&
             storagespaceQuota != HdfsConstants.QUOTA_DONT_SET &&
-            storagespaceQuota != HdfsConstants.QUOTA_RESET)) {
-      throw new IllegalArgumentException("Invalid values for quota : " +
-          namespaceQuota + " and " +
-          storagespaceQuota);
-
+            storagespaceQuota != HdfsConstants.QUOTA_RESET) {
+      throw new IllegalArgumentException("Invalid values for " +
+              "storagespace quota : " + storagespaceQuota);
     }
     try (TraceScope ignored = newPathTraceScope("setQuota", src)) {
       // Pass null as storage type for traditional namespace/storagespace quota.
