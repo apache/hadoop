@@ -507,6 +507,7 @@ public abstract class AbstractYarnScheduler
   private void killOrphanContainerOnNode(RMNode node,
       NMContainerStatus container) {
     if (!container.getContainerState().equals(ContainerState.COMPLETE)) {
+      LOG.warn("Killing container " + container + " for unknown application");
       this.rmContext.getDispatcher().getEventHandler().handle(
         new RMNodeCleanContainerEvent(node.getNodeID(),
           container.getContainerId()));
@@ -529,17 +530,12 @@ public abstract class AbstractYarnScheduler
                 .getApplicationId();
         RMApp rmApp = rmContext.getRMApps().get(appId);
         if (rmApp == null) {
-          LOG.error("Skip recovering container " + container
-              + " for unknown application.");
           killOrphanContainerOnNode(nm, container);
           continue;
         }
 
         SchedulerApplication<T> schedulerApp = applications.get(appId);
         if (schedulerApp == null) {
-          LOG.info("Skip recovering container  " + container
-              + " for unknown SchedulerApplication. "
-              + "Application current state is " + rmApp.getState());
           killOrphanContainerOnNode(nm, container);
           continue;
         }
