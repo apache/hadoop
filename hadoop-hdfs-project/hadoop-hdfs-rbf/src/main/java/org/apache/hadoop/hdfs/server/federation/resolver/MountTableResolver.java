@@ -113,7 +113,7 @@ public class MountTableResolver
   private final Lock writeLock = readWriteLock.writeLock();
 
   /** Trash Current matching pattern. */
-  private static final String TRASH_PATTERN = "/(Current|[0-9]+)";
+  private static final String TRASH_PATTERN = "/(Current|[0-9]{12})";
 
   @VisibleForTesting
   public MountTableResolver(Configuration conf) {
