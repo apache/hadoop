@@ -1217,6 +1217,8 @@ public class Dispatcher {
       p.proxySource.removePendingBlock(p);
       return;
     }
+    // add target DDatanode only when moveExecutor available;
+    targets.add(p.target);
     moveExecutor.execute(p::dispatch);
   }
 
@@ -1422,6 +1424,12 @@ public class Dispatcher {
     targets.clear();
     globalBlocks.removeAllButRetain(movedBlocks);
     movedBlocks.cleanup();
+  }
+
+  public void reset4Mover() {
+    for(StorageGroup t : targets) {
+      t.getDDatanode().shutdownMoveExecutor();
+    }
   }
 
   @VisibleForTesting
