@@ -27,6 +27,7 @@ import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -600,6 +601,19 @@ public class DFSInputStream extends FSInputStream
    */
   private synchronized DatanodeInfo blockSeekTo(long target)
       throws IOException {
+    return blockSeekTo(target, null);
+  }
+
+  /**
+   * Open a DataInputStream to a DataNode so that it can be read from.
+   * We get block ID and the IDs of the destinations at startup, from the namenode.
+   *
+   * @param target block corresponding to this target offset in file is returned.
+   * @param ignoredNodes Ignored nodes inside.
+   * @return best DataNode for desired Block, with potential offset.
+   */
+  private synchronized DatanodeInfo blockSeekTo(
+      long target, Collection<DatanodeInfo> ignoredNodes) throws IOException {
     if (target >= getFileLength()) {
       throw new IOException("Attempted to read past end of file");
     }
@@ -633,7 +647,7 @@ public class DFSInputStream extends FSInputStream
 
       long offsetIntoBlock = target - targetBlock.getStartOffset();
 
-      DNAddrPair retval = chooseDataNode(targetBlock, null);
+      DNAddrPair retval = chooseDataNode(targetBlock, ignoredNodes);
       chosenNode = retval.info;
       InetSocketAddress targetAddr = retval.addr;
       StorageType storageType = retval.storageType;
@@ -1694,16 +1708,10 @@ public class DFSInputStream extends FSInputStream
     if (currentNode == null) {
       return seekToBlockSource(targetPos);
     }
-    boolean markedDead = dfsClient.isDeadNode(this, currentNode);
-    addToLocalDeadNodes(currentNode);
-    DatanodeInfo oldNode = currentNode;
-    DatanodeInfo newNode = blockSeekTo(targetPos);
-    if (!markedDead) {
-      /* remove it from deadNodes. blockSeekTo could have cleared
-       * deadNodes and added currentNode again. Thats ok. */
-      removeFromLocalDeadNodes(oldNode);
-    }
-    if (!oldNode.getDatanodeUuid().equals(newNode.getDatanodeUuid())) {
+    List<DatanodeInfo> ignoredNodes = new ArrayList<>(1);
+    ignoredNodes.add(currentNode);
+    DatanodeInfo newNode = blockSeekTo(targetPos, ignoredNodes);
+    if (!currentNode.getDatanodeUuid().equals(newNode.getDatanodeUuid())) {
       currentNode = newNode;
       return true;
     } else {
