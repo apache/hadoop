@@ -23,6 +23,7 @@ import javax.crypto.spec.SecretKeySpec;
 import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -97,12 +98,7 @@ public class SharedKeyCredentials {
   }
 
   private String computeHmac256(final String stringToSign) {
-    byte[] utf8Bytes;
-    try {
-      utf8Bytes = stringToSign.getBytes(AbfsHttpConstants.UTF_8);
-    } catch (final UnsupportedEncodingException e) {
-      throw new IllegalArgumentException(e);
-    }
+    byte[] utf8Bytes = stringToSign.getBytes(StandardCharsets.UTF_8);
     byte[] hmac;
     synchronized (this) {
       hmac = hmacSha256.doFinal(utf8Bytes);
