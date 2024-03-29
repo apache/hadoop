@@ -92,8 +92,6 @@ public class AbfsRestOperation {
    */
   private TracingContext lastUsedTracingContext;
 
-  private final String clientId;
-
   private int apacheHttpClientIoExceptions = 0;
   private boolean checkApacheHttpClientIoExceptionCount = true;
 
@@ -151,10 +149,9 @@ public class AbfsRestOperation {
                     final String method,
                     final URL url,
                     final List<AbfsHttpHeader> requestHeaders,
-                    final AbfsConfiguration abfsConfiguration,
-                    final String clientId) {
-    this(operationType, client, method, url, requestHeaders, null, abfsConfiguration,
-        clientId);
+                    final AbfsConfiguration abfsConfiguration) {
+    this(operationType, client, method, url, requestHeaders, null, abfsConfiguration
+    );
   }
 
   /**
@@ -172,9 +169,7 @@ public class AbfsRestOperation {
                     final URL url,
                     final List<AbfsHttpHeader> requestHeaders,
                     final String sasToken,
-                    final AbfsConfiguration abfsConfiguration,
-                    final String clientId) {
-    this.clientId = clientId;
+                    final AbfsConfiguration abfsConfiguration) {
     this.operationType = operationType;
     this.client = client;
     this.method = method;
@@ -199,7 +194,7 @@ public class AbfsRestOperation {
    * @param url The full URL including query string parameters.
    * @param requestHeaders The HTTP request headers.
    * @param buffer For uploads, this is the request entity body.  For downloads,
-   *               this will hold the response entity body.
+   * this will hold the response entity body.
    * @param bufferOffset An offset into the buffer where the data beings.
    * @param bufferLength The length of the data in the buffer.
    * @param sasToken A sasToken for optional re-use by AbfsInputStream/AbfsOutputStream.
@@ -213,10 +208,9 @@ public class AbfsRestOperation {
                     int bufferOffset,
                     int bufferLength,
                     String sasToken,
-                    final AbfsConfiguration abfsConfiguration,
-                    final String clientId) {
-    this(operationType, client, method, url, requestHeaders, sasToken, abfsConfiguration,
-        clientId);
+                    final AbfsConfiguration abfsConfiguration) {
+    this(operationType, client, method, url, requestHeaders, sasToken, abfsConfiguration
+    );
     this.buffer = buffer;
     this.bufferOffset = bufferOffset;
     this.bufferLength = bufferLength;
@@ -484,7 +478,7 @@ public class AbfsRestOperation {
   AbfsAHCHttpOperation createAbfsAHCHttpOperation() {
     return new AbfsAHCHttpOperation(url, method, requestHeaders,
         abfsConfiguration,
-        clientId, operationType);
+        operationType);
   }
 
   /**

@@ -72,8 +72,7 @@ public final class AbfsClientTestUtil {
         HTTP_METHOD_GET,
         null,
         new ArrayList<>(),
-        spiedClient.getAbfsConfiguration(),
-        "clientId"
+        spiedClient.getAbfsConfiguration()
     ));
 
     Mockito.doReturn(abfsRestOperation).when(spiedClient).getAbfsRestOperation(

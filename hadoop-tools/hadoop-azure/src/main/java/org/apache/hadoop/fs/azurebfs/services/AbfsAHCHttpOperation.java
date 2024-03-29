@@ -72,14 +72,7 @@ public class AbfsAHCHttpOperation extends HttpOperation {
   private static final Logger LOG = LoggerFactory.getLogger(
       AbfsAHCHttpOperation.class);
 
-  /**
-   * Map to store the AbfsApacheHttpClient. Each instance of AbfsClient to have
-   * a unique AbfsApacheHttpClient instance. The key of the map is the UUID of the client.
-   */
-  private static final Map<String, AbfsApacheHttpClient>
-      ABFS_APACHE_HTTP_CLIENT_MAP = new HashMap<>();
-
-  private AbfsApacheHttpClient abfsApacheHttpClient;
+  private static AbfsApacheHttpClient ABFS_APACHE_HTTP_CLIENT;
 
   private HttpRequestBase httpRequestBase;
 
@@ -111,12 +104,11 @@ public class AbfsAHCHttpOperation extends HttpOperation {
       final String method,
       final List<AbfsHttpHeader> requestHeaders,
       final AbfsConfiguration abfsConfiguration,
-      final String clientId,
       final AbfsRestOperationType abfsRestOperationType) {
     super(LOG, url, method);
     this.abfsRestOperationType = abfsRestOperationType;
     this.requestHeaders = requestHeaders;
-    setAbfsApacheHttpClient(abfsConfiguration, clientId);
+    setAbfsApacheHttpClient(abfsConfiguration);
     this.isPayloadRequest = isPayloadRequest(method);
   }
 
@@ -128,27 +120,15 @@ public class AbfsAHCHttpOperation extends HttpOperation {
     setStatusCode(httpStatus);
   }
 
-  private void setAbfsApacheHttpClient(final AbfsConfiguration abfsConfiguration,
-      final String clientId) {
-    AbfsApacheHttpClient client = ABFS_APACHE_HTTP_CLIENT_MAP.get(clientId);
-    if (client == null) {
-      synchronized (ABFS_APACHE_HTTP_CLIENT_MAP) {
-        client = ABFS_APACHE_HTTP_CLIENT_MAP.get(clientId);
-        if (client == null) {
-          client = new AbfsApacheHttpClient(
+  private void setAbfsApacheHttpClient(final AbfsConfiguration abfsConfiguration) {
+    if (ABFS_APACHE_HTTP_CLIENT == null) {
+      synchronized (this) {
+        if (ABFS_APACHE_HTTP_CLIENT == null) {
+          ABFS_APACHE_HTTP_CLIENT = new AbfsApacheHttpClient(
               DelegatingSSLSocketFactory.getDefaultFactory(),
               abfsConfiguration);
-          ABFS_APACHE_HTTP_CLIENT_MAP.put(clientId, client);
         }
       }
-    }
-    abfsApacheHttpClient = client;
-  }
-
-  static void removeClient(final String clientId) throws IOException {
-    AbfsApacheHttpClient client = ABFS_APACHE_HTTP_CLIENT_MAP.remove(clientId);
-    if (client != null) {
-      client.close();
     }
   }
 
@@ -253,7 +233,7 @@ public class AbfsAHCHttpOperation extends HttpOperation {
   @VisibleForTesting
   HttpResponse executeRequest() throws IOException {
     abfsHttpClientContext = setFinalAbfsClientContext();
-    HttpResponse response = abfsApacheHttpClient.execute(httpRequestBase,
+    HttpResponse response = ABFS_APACHE_HTTP_CLIENT.execute(httpRequestBase,
         abfsHttpClientContext);
     setConnectionTimeMs(abfsHttpClientContext.getConnectTime());
     setSendRequestTimeMs(abfsHttpClientContext.getSendTime());

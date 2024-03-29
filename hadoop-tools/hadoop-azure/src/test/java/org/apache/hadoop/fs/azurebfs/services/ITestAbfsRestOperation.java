@@ -225,7 +225,7 @@ public class ITestAbfsRestOperation extends AbstractAbfsIntegrationTest {
         url,
         requestHeaders, buffer,
         appendRequestParameters.getoffset(),
-        appendRequestParameters.getLength(), null, abfsConfig, "clientId"));
+        appendRequestParameters.getLength(), null, abfsConfig));
 
     Mockito.doAnswer(answer -> {
       HttpOperation httpOperation = Mockito.spy(

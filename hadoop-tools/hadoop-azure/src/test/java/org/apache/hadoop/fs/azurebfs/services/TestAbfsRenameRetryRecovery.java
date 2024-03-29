@@ -99,14 +99,14 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     // SuccessFul Result.
     AbfsRestOperation successOp =
         new AbfsRestOperation(AbfsRestOperationType.RenamePath, mockClient,
-            HTTP_METHOD_PUT, null, null, mockClient.getAbfsConfiguration(), "clientId");
+            HTTP_METHOD_PUT, null, null, mockClient.getAbfsConfiguration());
     AbfsClientRenameResult successResult = mock(AbfsClientRenameResult.class);
     doReturn(successOp).when(successResult).getOp();
     when(successResult.isIncompleteMetadataState()).thenReturn(false);
 
     // Failed Result.
     AbfsRestOperation failedOp = new AbfsRestOperation(AbfsRestOperationType.RenamePath, mockClient,
-        HTTP_METHOD_PUT, null, null, mockClient.getAbfsConfiguration(), "clientId");
+        HTTP_METHOD_PUT, null, null, mockClient.getAbfsConfiguration());
     AbfsClientRenameResult recoveredMetaDataIncompleteResult =
         mock(AbfsClientRenameResult.class);
 
@@ -171,7 +171,7 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
               AbfsRestOperationType.RenamePath,
               spyClient, HTTP_METHOD_PUT, answer.getArgument(0),
               answer.getArgument(1),
-              spyClient.getAbfsConfiguration(), "clientId");
+              spyClient.getAbfsConfiguration());
           AbfsRestOperation spiedOp = Mockito.spy(op);
           addSpyBehavior(spiedOp, op, spyClient);
           return spiedOp;
