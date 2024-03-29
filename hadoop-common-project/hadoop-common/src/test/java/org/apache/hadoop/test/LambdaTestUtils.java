@@ -383,6 +383,7 @@ public final class LambdaTestUtils {
       Callable<T> eval)
       throws Exception {
     return intercept(clazz,
+        (String) null,
         "Expected a " + clazz.getName() + " to be thrown," +
             " but got the result: ",
         eval);
