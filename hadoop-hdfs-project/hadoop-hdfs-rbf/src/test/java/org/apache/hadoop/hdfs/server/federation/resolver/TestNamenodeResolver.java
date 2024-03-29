@@ -371,7 +371,7 @@ public class TestNamenodeResolver {
         NAMESERVICES[0], NAMENODES[1], HAServiceState.STANDBY)));
 
     stateStore.refreshCaches(true);
-    verifyFirstRegistration(NAMESERVICES[0], NAMENODES[1], 3,
+    verifyFirstRegistration(NAMESERVICES[0], NAMENODES[0], 3,
         FederationNamenodeServiceState.STANDBY);
   }
 
