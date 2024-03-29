@@ -581,9 +581,8 @@ function makearelease
   fi
 
   # Create SRC and BIN tarballs for release,
-  # shellcheck disable=SC2046
+  # shellcheck disable=SC2046,SC2086
   run_and_redirect "${LOGDIR}/mvn_${target}.log" \
-    # shellcheck disable=SC2086
     "${MVN}" ${MVN_ARGS[*]} ${target} \
       -Pdist,src,yarn-ui \
       "${signflags[@]}" \
@@ -613,7 +612,7 @@ function makearelease
   # we need to do install again so that jdiff and
   # a few other things get registered in the maven
   # universe correctly
-  # shellcheck disable=SC2206
+  # shellcheck disable=SC2206,SC2086
   run_and_redirect "${LOGDIR}/mvn_site.log" \
     "${MVN}" ${MVN_ARGS[*]} install \
       site site:stage \
