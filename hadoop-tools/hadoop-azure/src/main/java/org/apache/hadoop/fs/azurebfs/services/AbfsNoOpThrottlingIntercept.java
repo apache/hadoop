@@ -27,7 +27,7 @@ final class AbfsNoOpThrottlingIntercept implements AbfsThrottlingIntercept {
 
   @Override
   public void updateMetrics(final AbfsRestOperationType operationType,
-      final HttpOperation abfsHttpOperation) {
+      final HttpOperation httpOperation) {
   }
 
   @Override

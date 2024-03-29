@@ -54,6 +54,7 @@ import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.util.EntityUtils;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APACHE_IMPL;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_DELETE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_GET;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_HEAD;
@@ -200,11 +201,13 @@ public class AbfsAHCHttpOperation extends HttpOperation {
       parseResponseHeaderAndBody(buffer, offset, length);
     } finally {
       if (httpResponse != null) {
-        EntityUtils.consume(httpResponse.getEntity());
-      }
-      if (httpResponse != null
-          && httpResponse instanceof CloseableHttpResponse) {
-        ((CloseableHttpResponse) httpResponse).close();
+        try {
+          EntityUtils.consume(httpResponse.getEntity());
+          } finally {
+          if(httpResponse instanceof CloseableHttpResponse) {
+            ((CloseableHttpResponse) httpResponse).close();
+          }
+        }
       }
     }
   }
@@ -285,14 +288,10 @@ public class AbfsAHCHttpOperation extends HttpOperation {
   @Override
   InputStream getContentInputStream()
       throws IOException {
-    if (httpResponse == null) {
+    if(httpResponse == null || httpResponse.getEntity() == null) {
       return null;
     }
-    HttpEntity entity = httpResponse.getEntity();
-    if (entity != null) {
-      return httpResponse.getEntity().getContent();
-    }
-    return null;
+    return httpResponse.getEntity().getContent();
   }
 
   public void sendPayload(final byte[] buffer,
@@ -326,7 +325,9 @@ public class AbfsAHCHttpOperation extends HttpOperation {
       httpResponse = executeRequest();
     } catch (AbfsApacheHttpExpect100Exception ex) {
       LOG.debug(
-          "Getting output stream failed with expect header enabled, returning back ",
+          "Getting output stream failed with expect header enabled, returning back."
+              + "Expect 100 assertion failed for uri {} with status code: {}",
+          getMaskedUrl(), ex.getHttpResponse().getStatusLine().getStatusCode(),
           ex);
       connectionDisconnectedOnError = true;
       httpResponse = ex.getHttpResponse();
@@ -397,6 +398,6 @@ public class AbfsAHCHttpOperation extends HttpOperation {
         return header.getValue();
       }
     }
-    return "";
+    return EMPTY_STRING;
   }
 }

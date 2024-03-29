@@ -130,17 +130,18 @@ public final class AbfsClientThrottlingIntercept implements AbfsThrottlingInterc
 
   /**
    * Updates the metrics for successful and failed read and write operations.
+   *
    * @param operationType Only applicable for read and write operations.
-   * @param abfsHttpOperation Used for status code and data transferred.
+   * @param httpOperation Used for status code and data transferred.
    */
   @Override
   public void updateMetrics(AbfsRestOperationType operationType,
-      HttpOperation abfsHttpOperation) {
-    if (abfsHttpOperation == null) {
+      HttpOperation httpOperation) {
+    if (httpOperation == null) {
       return;
     }
 
-    int status = abfsHttpOperation.getStatusCode();
+    int status = httpOperation.getStatusCode();
     long contentLength = 0;
     // If the socket is terminated prior to receiving a response, the HTTP
     // status may be 0 or -1.  A status less than 200 or greater than or equal
@@ -153,15 +154,15 @@ public final class AbfsClientThrottlingIntercept implements AbfsThrottlingInterc
 
     switch (operationType) {
       case Append:
-        contentLength = abfsHttpOperation.getBytesSent();
+        contentLength = httpOperation.getBytesSent();
         if (contentLength == 0) {
           /*
             Signifies the case where we could not update the bytesSent due to
             throttling but there were some expectedBytesToBeSent.
            */
-          if (updateBytesTransferred(isThrottledOperation, abfsHttpOperation)) {
-            LOG.debug("Updating metrics due to throttling for path {}", abfsHttpOperation.getConnUrl().getPath());
-            contentLength = abfsHttpOperation.getExpectedBytesToBeSent();
+          if (updateBytesTransferred(isThrottledOperation, httpOperation)) {
+            LOG.debug("Updating metrics due to throttling for path {}", httpOperation.getConnUrl().getPath());
+            contentLength = httpOperation.getExpectedBytesToBeSent();
           }
         }
         if (contentLength > 0) {
@@ -170,7 +171,7 @@ public final class AbfsClientThrottlingIntercept implements AbfsThrottlingInterc
         }
         break;
       case ReadFile:
-        String range = abfsHttpOperation.getRequestProperty(HttpHeaderConfigurations.RANGE);
+        String range = httpOperation.getRequestProperty(HttpHeaderConfigurations.RANGE);
         contentLength = getContentLengthIfKnown(range);
         if (contentLength > 0) {
           readThrottler.addBytesTransferred(contentLength,
