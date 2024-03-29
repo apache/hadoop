@@ -46,6 +46,7 @@ import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
 import org.apache.hadoop.hdfs.protocol.OpenFilesIterator;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
+import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Time;
@@ -284,7 +285,7 @@ public class LeaseManager {
    */
   public BatchedListEntries<OpenFileEntry> getUnderConstructionFiles(
       final long prevId, final String path) throws IOException {
-    assert fsnamesystem.hasReadLock();
+    assert fsnamesystem.hasReadLock(FSNamesystemLockMode.FS);
     SortedMap<Long, Lease> remainingLeases;
     synchronized (this) {
       remainingLeases = leasesById.tailMap(prevId, false);
