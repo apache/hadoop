@@ -425,6 +425,12 @@ public class TestFSPermissionChecker {
       assertTrue("Permission denied messages must carry the path parent",
               e.getMessage().contains(
                   new Path(path).getParent().toUri().getPath()));
+
+      // in HDFS unit test, AccessControlEnforcer's Implementation class
+      // only be FSPermissionChecker
+      assertTrue("Permission denied messages must carry the ACEnforcer",
+              e.getMessage().contains("ACEnforcer") 
+              && e.getMessage().contains("FSPermissionChecker"));
     }
   }
 

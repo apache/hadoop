@@ -74,7 +74,8 @@ public class FSPermissionChecker implements AccessControlEnforcer {
       .append(inodeAttrib.getUserName()).append(':')
       .append(inodeAttrib.getGroupName()).append(':')
       .append(inodeAttrib.isDirectory() ? 'd' : '-')
-      .append(inodeAttrib.getFsPermission());
+      .append(inodeAttrib.getFsPermission()).append(", ")
+      .append("ACEnforcer=").append(enforcerName);
     if (deniedFromAcl) {
       sb.append("+");
     }
@@ -93,6 +94,9 @@ public class FSPermissionChecker implements AccessControlEnforcer {
   private final long accessControlEnforcerReportingThresholdMs;
 
   private static ThreadLocal<String> operationType = new ThreadLocal<>();
+
+  // enforcerName, such as RangerAccessControlEnforcer、FSPermissionChecker
+  private String enforcerName;
 
   protected FSPermissionChecker(String fsOwner, String supergroup,
       UserGroupInformation callerUgi,
@@ -124,6 +128,9 @@ public class FSPermissionChecker implements AccessControlEnforcer {
     }
     this.accessControlEnforcerReportingThresholdMs
         = accessControlEnforcerReportingThresholdMs;
+    if (attributeProvider != null) {
+      enforcerName = attributeProvider.getClass().getSimpleName();
+    }
   }
 
   private String checkAccessControlEnforcerSlowness(
