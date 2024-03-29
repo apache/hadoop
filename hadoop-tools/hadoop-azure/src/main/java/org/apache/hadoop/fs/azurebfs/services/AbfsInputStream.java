@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
@@ -130,7 +131,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   /** ABFS instance to be held by the input stream to avoid GC close. */
   private final BackReference fsBackRef;
 
-  private final Boolean fileStatusInformationAlreadyPresent;
+  private Boolean fileStatusInformationPresent;
 
   private final AtomicInteger successfulUsage = new AtomicInteger(0);
 
@@ -151,11 +152,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     this.readAheadQueueDepth = abfsInputStreamContext.getReadAheadQueueDepth();
     this.tolerateOobAppends = abfsInputStreamContext.isTolerateOobAppends();
     this.eTag = eTag;
-    if (StringUtils.isNotEmpty(eTag)) {
-      fileStatusInformationAlreadyPresent = true;
-    } else {
-      fileStatusInformationAlreadyPresent = false;
-    }
+    this.fileStatusInformationPresent = StringUtils.isNotEmpty(eTag);
     this.readAheadRange = abfsInputStreamContext.getReadAheadRange();
     this.readAheadEnabled = abfsInputStreamContext.isReadAheadEnabled();
     this.alwaysReadBufferSize
@@ -328,8 +325,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   }
 
   private boolean shouldReadFully(int lengthToRead) {
-    if (StringUtils.isEmpty(eTag)) {
-      return this.fCursor > 0 && lengthToRead <= this.bufferSize
+    if (!fileStatusInformationPresent) {
+      return this.fCursor > 0 && (lengthToRead + fCursor) <= this.bufferSize
           && this.firstRead && this.context.readSmallFilesCompletely();
     }
 
@@ -338,7 +335,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   }
 
   private boolean shouldReadLastBlock(int lengthToRead) {
-    if (StringUtils.isEmpty(eTag)) {
+    if (!fileStatusInformationPresent) {
       return this.fCursor > 0 && lengthToRead <= FOOTER_SIZE && this.firstRead
           && this.context.optimizeFooterRead();
     }
@@ -499,8 +496,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     Preconditions.checkNotNull(b);
     LOG.debug("read one block requested b.length = {} off {} len {}", b.length,
         off, len);
-
-    if (this.available() == 0) {
+    if (fileStatusInformationPresent && this.available() == 0) {
       return false;
     }
 
@@ -645,6 +641,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     contentLength = Long.parseLong(
         result.getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH));
     eTag = result.getResponseHeader(HttpHeaderConfigurations.ETAG);
+    fileStatusInformationPresent = true;
   }
 
   /**
@@ -671,7 +668,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     if (n < 0) {
       throw new EOFException(FSExceptionMessages.NEGATIVE_SEEK);
     }
-    if (n > contentLength) {
+    if (fileStatusInformationPresent && n > contentLength) {
       throw new EOFException(FSExceptionMessages.CANNOT_SEEK_PAST_EOF);
     }
 
@@ -722,6 +719,11 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     if (closed) {
       throw new IOException(
           FSExceptionMessages.STREAM_IS_CLOSED);
+    }
+    if (!fileStatusInformationPresent) {
+      AbfsRestOperation op = client.getPathStatus(path, false, tracingContext,
+          null);
+      initPathProperties(op);
     }
     final long remaining = this.contentLength - this.getPos();
     return remaining <= Integer.MAX_VALUE
