@@ -85,8 +85,6 @@ public class AbfsAHCHttpOperation extends HttpOperation {
 
   private boolean connectionDisconnectedOnError = false;
 
-  private AbfsApacheHttpExpect100Exception abfsApacheHttpExpect100Exception;
-
   private final boolean isPayloadRequest;
 
   private List<AbfsHttpHeader> requestHeaders;
@@ -302,14 +300,16 @@ public class AbfsAHCHttpOperation extends HttpOperation {
       return;
     }
 
-    if (HTTP_METHOD_PUT.equals(getMethod())) {
+    switch (getMethod()) {
+    case HTTP_METHOD_PUT:
       httpRequestBase = new HttpPut(getUri());
-    }
-    if (HTTP_METHOD_PATCH.equals(getMethod())) {
+      break;
+    case HTTP_METHOD_PATCH:
       httpRequestBase = new HttpPatch(getUri());
-    }
-    if (HTTP_METHOD_POST.equals(getMethod())) {
+      break;
+    case HTTP_METHOD_POST:
       httpRequestBase = new HttpPost(getUri());
+      break;
     }
 
     setExpectedBytesToBeSent(length);
@@ -331,7 +331,6 @@ public class AbfsAHCHttpOperation extends HttpOperation {
           ex);
       connectionDisconnectedOnError = true;
       httpResponse = ex.getHttpResponse();
-      abfsApacheHttpExpect100Exception = ex;
     } finally {
       if (!connectionDisconnectedOnError
           && httpRequestBase instanceof HttpEntityEnclosingRequestBase) {
@@ -341,14 +340,16 @@ public class AbfsAHCHttpOperation extends HttpOperation {
   }
 
   private void prepareRequest() throws IOException {
-    if (HTTP_METHOD_GET.equals(getMethod())) {
+    switch (getMethod()) {
+    case HTTP_METHOD_GET:
       httpRequestBase = new HttpGet(getUri());
-    }
-    if (HTTP_METHOD_DELETE.equals(getMethod())) {
+      break;
+    case HTTP_METHOD_DELETE:
       httpRequestBase = new HttpDelete(getUri());
-    }
-    if (HTTP_METHOD_HEAD.equals(getMethod())) {
+      break;
+    case HTTP_METHOD_HEAD:
       httpRequestBase = new HttpHead(getUri());
+      break;
     }
     translateHeaders(httpRequestBase, requestHeaders);
   }

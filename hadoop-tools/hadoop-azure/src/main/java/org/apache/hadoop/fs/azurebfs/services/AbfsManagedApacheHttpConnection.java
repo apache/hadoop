@@ -36,7 +36,7 @@ import org.apache.http.conn.routing.HttpRoute;
  * This class wraps the {@link ManagedHttpClientConnection} and provides
  * insights onto the connection level activity.
  */
-public class AbfsManagedApacheHttpConnection
+class AbfsManagedApacheHttpConnection
     implements ManagedHttpClientConnection {
 
   private final ManagedHttpClientConnection httpClientConnection;

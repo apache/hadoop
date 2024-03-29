@@ -42,7 +42,7 @@ import org.apache.http.util.Asserts;
  * This implementation manages connection-pooling heuristics and custom implementation
  * of {@link ManagedHttpClientConnectionFactory}.
  */
-public class AbfsConnectionManager implements HttpClientConnectionManager {
+class AbfsConnectionManager implements HttpClientConnectionManager {
 
   private final KeepAliveCache kac = KeepAliveCache.getInstance();
 
@@ -67,9 +67,12 @@ public class AbfsConnectionManager implements HttpClientConnectionManager {
           throws InterruptedException, ExecutionException,
           ConnectionPoolTimeoutException {
         try {
-          HttpClientConnection client = kac.get(route);
-          if (client != null && client.isOpen()) {
-            return client;
+          HttpClientConnection clientConn = kac.get(route);
+          if (clientConn != null) {
+            if(!clientConn.isStale()) {
+              return clientConn;
+            }
+            clientConn.close();
           }
           return httpConnectionFactory.create(route, null);
         } catch (IOException ex) {
@@ -114,8 +117,6 @@ public class AbfsConnectionManager implements HttpClientConnectionManager {
       final HttpRoute route,
       final int connectTimeout,
       final HttpContext context) throws IOException {
-    Asserts.check(conn instanceof AbfsManagedApacheHttpConnection,
-        "Connection not obtained from this manager");
     long start = System.currentTimeMillis();
     connectionOperator.connect((AbfsManagedApacheHttpConnection) conn,
         route.getTargetHost(), route.getLocalSocketAddress(),
@@ -130,8 +131,6 @@ public class AbfsConnectionManager implements HttpClientConnectionManager {
   public void upgrade(final HttpClientConnection conn,
       final HttpRoute route,
       final HttpContext context) throws IOException {
-    Asserts.check(conn instanceof AbfsManagedApacheHttpConnection,
-        "Connection not obtained from this manager");
     connectionOperator.upgrade((AbfsManagedApacheHttpConnection) conn,
         route.getTargetHost(), context);
   }
@@ -140,8 +139,7 @@ public class AbfsConnectionManager implements HttpClientConnectionManager {
   public void routeComplete(final HttpClientConnection conn,
       final HttpRoute route,
       final HttpContext context) throws IOException {
-    Asserts.check(conn instanceof AbfsManagedApacheHttpConnection,
-        "Connection not obtained from this manager");
+
   }
 
   @Override

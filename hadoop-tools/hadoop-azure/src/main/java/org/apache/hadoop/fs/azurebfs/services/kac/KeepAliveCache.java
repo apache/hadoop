@@ -53,8 +53,6 @@ public final class KeepAliveCache
 
   private boolean threadShouldPause = true;
 
-  private boolean threadShouldRun = true;
-
   private int maxConn;
 
   private KeepAliveCache() {
@@ -100,7 +98,7 @@ public final class KeepAliveCache
 
   @Override
   public void run() {
-    while (threadShouldRun) {
+    while (true) {
       if (threadShouldPause) {
         kacCleanup();
       }
