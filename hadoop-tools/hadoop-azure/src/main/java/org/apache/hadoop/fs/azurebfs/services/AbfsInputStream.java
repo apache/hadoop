@@ -23,6 +23,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
@@ -131,7 +132,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   private final Boolean fileStatusInformationAlreadyPresent;
 
-  private int usage;
+  private final AtomicInteger successfulUsage = new AtomicInteger(0);
 
   public AbfsInputStream(
           final AbfsClient client,
@@ -209,15 +210,16 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
      * reads will be non-synchronized.
      */
     synchronized (this) {
-      if (usage == 0) {
-        try {
-          return readOnPosition(position, buffer, offset, length);
-        } finally {
-          usage++;
-        }
+      if (successfulUsage.get() == 0) {
+        int result = readOnPosition(position, buffer, offset, length);
+        successfulUsage.incrementAndGet();
+        return result;
       }
     }
-    return readOnPosition(position, buffer, offset, length);
+
+    int result = readOnPosition(position, buffer, offset, length);
+    successfulUsage.incrementAndGet();
+    return result;
   }
 
   private int readOnPosition(final long position,
@@ -258,12 +260,11 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   }
 
   @Override
-  public synchronized int read(final byte[] b, final int off, final int len) throws IOException {
-    try {
-      return synchronizedRead(b, off, len);
-    } finally {
-      usage++;
-    }
+  public synchronized int read(final byte[] b, final int off, final int len)
+      throws IOException {
+    int result = synchronizedRead(b, off, len);
+    successfulUsage.incrementAndGet();
+    return result;
   }
 
   private int synchronizedRead(final byte[] b, final int off, final int len)
@@ -307,10 +308,10 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         limit = 0;
         bCursor = 0;
       }
-      if (shouldReadFully()) {
-        lastReadBytes = readFileCompletely(b, currentOff, currentLen);
-      } else if (shouldReadLastBlock()) {
+      if (shouldReadLastBlock(currentLen)) {
         lastReadBytes = readLastBlock(b, currentOff, currentLen);
+      } else if (shouldReadFully(currentLen)) {
+        lastReadBytes = readFileCompletely(b, currentOff, currentLen);
       } else {
         lastReadBytes = readOneBlock(b, currentOff, currentLen);
       }
@@ -326,12 +327,22 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     return totalReadBytes > 0 ? totalReadBytes : lastReadBytes;
   }
 
-  private boolean shouldReadFully() {
+  private boolean shouldReadFully(int lengthToRead) {
+    if (StringUtils.isEmpty(eTag)) {
+      return this.fCursor > 0 && lengthToRead <= this.bufferSize
+          && this.firstRead && this.context.readSmallFilesCompletely();
+    }
+
     return this.firstRead && this.context.readSmallFilesCompletely()
         && this.contentLength <= this.bufferSize;
   }
 
-  private boolean shouldReadLastBlock() {
+  private boolean shouldReadLastBlock(int lengthToRead) {
+    if (StringUtils.isEmpty(eTag)) {
+      return this.fCursor > 0 && lengthToRead <= FOOTER_SIZE && this.firstRead
+          && this.context.optimizeFooterRead();
+    }
+
     long footerStart = max(0, this.contentLength - FOOTER_SIZE);
     return this.firstRead && this.context.optimizeFooterRead()
         && this.fCursor >= footerStart;
@@ -520,7 +531,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   private int readInternal(final long position, final byte[] b, final int offset, final int length,
                            final boolean bypassReadAhead) throws IOException {
-    if (readAheadEnabled && !bypassReadAhead) {
+    if (readAheadEnabled && !bypassReadAhead && successfulUsage.get() > 0) {
       // try reading from read-ahead
       if (offset != 0) {
         throw new IllegalArgumentException("readahead buffers cannot have non-zero buffer offsets");
@@ -611,7 +622,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       }
       throw new IOException(ex);
     }
-    if (usage == 0) {
+    if (successfulUsage.get() == 0) {
       initPathProperties(op);
     }
     long bytesRead = op.getResult().getBytesReceived();
