@@ -31,6 +31,7 @@ import java.io.OutputStream;
 import java.io.StringWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.concurrent.Callable;
@@ -250,7 +251,7 @@ public class TestRMWebServicesDelegationTokenAuthentication {
       InputStream errorStream = conn.getErrorStream();
       String error = "";
       BufferedReader reader = null;
-      reader = new BufferedReader(new InputStreamReader(errorStream, "UTF8"));
+      reader = new BufferedReader(new InputStreamReader(errorStream, StandardCharsets.UTF_8));
       for (String line; (line = reader.readLine()) != null;) {
         error += line;
       }
@@ -356,7 +357,7 @@ public class TestRMWebServicesDelegationTokenAuthentication {
         assertEquals(Status.OK.getStatusCode(), conn.getResponseCode());
         BufferedReader reader = null;
         try {
-          reader = new BufferedReader(new InputStreamReader(response, "UTF8"));
+          reader = new BufferedReader(new InputStreamReader(response, StandardCharsets.UTF_8));
           for (String line; (line = reader.readLine()) != null;) {
             JSONObject obj = new JSONObject(line);
             if (obj.has("token")) {
@@ -432,7 +433,7 @@ public class TestRMWebServicesDelegationTokenAuthentication {
         InputStream response = conn.getInputStream();
         assertEquals(Status.OK.getStatusCode(), conn.getResponseCode());
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(
-            response, "UTF8"))) {
+            response, StandardCharsets.UTF_8))) {
           String line;
           while ((line = reader.readLine()) != null) {
             JSONObject obj = new JSONObject(line);
@@ -490,7 +491,7 @@ public class TestRMWebServicesDelegationTokenAuthentication {
       conn.setRequestProperty("Content-Type", contentType + ";charset=UTF8");
       if (body != null && !body.isEmpty()) {
         OutputStream stream = conn.getOutputStream();
-        stream.write(body.getBytes("UTF8"));
+        stream.write(body.getBytes(StandardCharsets.UTF_8));
         stream.close();
       }
     }

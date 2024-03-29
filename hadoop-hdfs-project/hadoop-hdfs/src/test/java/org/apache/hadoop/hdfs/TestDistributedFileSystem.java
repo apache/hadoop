@@ -45,6 +45,7 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.SocketTimeoutException;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
@@ -1885,7 +1886,7 @@ public class TestDistributedFileSystem {
           .replication((short) 1)
           .blockSize(4096)
           .build()) {
-        byte[] contentOrigin = content.getBytes("UTF8");
+        byte[] contentOrigin = content.getBytes(StandardCharsets.UTF_8);
         out1.write(contentOrigin);
       }
 
