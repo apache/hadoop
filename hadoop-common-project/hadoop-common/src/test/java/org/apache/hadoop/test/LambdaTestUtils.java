@@ -28,6 +28,7 @@ import org.apache.hadoop.util.Time;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
+import java.util.Collection;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
@@ -382,7 +383,6 @@ public final class LambdaTestUtils {
       Callable<T> eval)
       throws Exception {
     return intercept(clazz,
-        null,
         "Expected a " + clazz.getName() + " to be thrown," +
             " but got the result: ",
         eval);
@@ -509,6 +509,61 @@ public final class LambdaTestUtils {
   }
 
   /**
+   * Intercept an exception; throw an {@code AssertionError} if one not raised.
+   * The caught exception is rethrown if it is of the wrong class or
+   * does not contain the text defined in {@code contained}.
+   * <p>
+   * Example: expect deleting a nonexistent file to raise a
+   * {@code FileNotFoundException} with the {@code toString()} value
+   * containing the text {@code "missing"}.
+   * <pre>
+   * FileNotFoundException ioe = intercept(FileNotFoundException.class,
+   *   "missing",
+   *   "path should not be found",
+   *   () -> {
+   *     filesystem.delete(new Path("/missing"), false);
+   *   });
+   * </pre>
+   *
+   * @param clazz class of exception; the raised exception must be this class
+   * <i>or a subclass</i>.
+   * @param contains strings which must be in the {@code toString()} value
+   * of the exception (order does not matter)
+   * @param message any message tho include in exception/log messages
+   * @param eval expression to eval
+   * @param <T> return type of expression
+   * @param <E> exception class
+   * @return the caught exception if it was of the expected type and contents
+   * @throws Exception any other exception raised
+   * @throws AssertionError if the evaluation call didn't raise an exception.
+   * The error includes the {@code toString()} value of the result, if this
+   * can be determined.
+   * @see GenericTestUtils#assertExceptionContains(String, Throwable)
+   */
+  public static <T, E extends Throwable> E intercept(
+          Class<E> clazz,
+          Collection<String> contains,
+          String message,
+          Callable<T> eval)
+          throws Exception {
+    E ex;
+    try {
+      T result = eval.call();
+      throw new AssertionError(message + ": " + robustToString(result));
+    } catch (Throwable e) {
+      if (!clazz.isAssignableFrom(e.getClass())) {
+        throw e;
+      } else {
+        ex = (E) e;
+      }
+    }
+    for (String contained : contains) {
+      GenericTestUtils.assertExceptionContains(contained, ex, message);
+    }
+    return ex;
+  }
+
+  /**
    * Variant of {@link #intercept(Class, Callable)} to simplify void
    * invocations.
    * @param clazz class of exception; the raised exception must be this class
@@ -528,12 +583,40 @@ public final class LambdaTestUtils {
       throws Exception {
     return intercept(clazz, contained,
         "Expecting " + clazz.getName()
-        + (contained != null? (" with text " + contained) : "")
+        + (contained != null ? (" with text " + contained) : "")
         + " but got ",
         () -> {
           eval.call();
           return "void";
         });
+  }
+
+  /**
+   * Variant of {@link #intercept(Class, Callable)} to simplify void
+   * invocations.
+   * @param clazz class of exception; the raised exception must be this class
+   * <i>or a subclass</i>.
+   * @param contains string which must be in the {@code toString()} value
+   * of the exception (order does not matter)
+   * @param eval expression to eval
+   * @param <E> exception class
+   * @return the caught exception if it was of the expected type
+   * @throws Exception any other exception raised
+   * @throws AssertionError if the evaluation call didn't raise an exception.
+   */
+  public static <E extends Throwable> E intercept(
+          Class<E> clazz,
+          Collection<String> contains,
+          VoidCallable eval)
+          throws Exception {
+    return intercept(clazz, contains,
+            "Expecting " + clazz.getName()
+                    + (contains.isEmpty() ? "" : (" with text values " + toString(contains)))
+                    + " but got ",
+            () -> {
+              eval.call();
+              return "void";
+            });
   }
 
   /**
@@ -607,7 +690,6 @@ public final class LambdaTestUtils {
    * Assert that an optional value matches an expected one;
    * checks include null and empty on the actual value.
    * @param message message text
-   * @param expected expected value
    * @param actual actual optional value
    * @param <T> type
    */
@@ -641,7 +723,6 @@ public final class LambdaTestUtils {
    * Invoke a callable; wrap all checked exceptions with an
    * AssertionError.
    * @param closure closure to execute
-   * @return the value of the closure
    * @throws AssertionError if the operation raised an IOE or
    * other checked exception.
    */
@@ -804,6 +885,19 @@ public final class LambdaTestUtils {
           }
         });
    }
+
+  private static String toString(Collection<String> strings) {
+    StringBuilder sb = new StringBuilder();
+    sb.append('[');
+    int pos = 0;
+    for (String s : strings) {
+      if (pos++ > 0)
+        sb.append(", ");
+      sb.append(s);
+    }
+    sb.append(']');
+    return sb.toString();
+  }
 
   /**
    * Verify that the cause of an exception is of the given type.

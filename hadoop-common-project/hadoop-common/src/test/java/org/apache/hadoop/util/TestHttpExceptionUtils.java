@@ -34,8 +34,11 @@ import java.io.StringWriter;
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class TestHttpExceptionUtils {
 
@@ -107,8 +110,11 @@ public class TestHttpExceptionUtils {
     Mockito.when(conn.getResponseMessage()).thenReturn("msg");
     Mockito.when(conn.getResponseCode()).thenReturn(
         HttpURLConnection.HTTP_BAD_REQUEST);
+    Collection<String> expectedValues =
+            Stream.of(Integer.toString(HttpURLConnection.HTTP_BAD_REQUEST), "msg", "com.fasterxml.jackson.core.JsonParseException")
+                    .collect(Collectors.toList());
     LambdaTestUtils.intercept(IOException.class,
-            "HTTP status [400], message [msg], URL [null], exception [com.fasterxml.jackson.core.JsonParseException",
+            expectedValues,
             () -> HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_CREATED));
   }
 
@@ -150,8 +156,11 @@ public class TestHttpExceptionUtils {
     Mockito.when(conn.getResponseMessage()).thenReturn("msg");
     Mockito.when(conn.getResponseCode()).thenReturn(
         HttpURLConnection.HTTP_BAD_REQUEST);
+    Collection<String> expectedValues =
+            Stream.of(Integer.toString(HttpURLConnection.HTTP_BAD_REQUEST), "foo.FooException", "EX")
+                    .collect(Collectors.toList());
     LambdaTestUtils.intercept(IOException.class,
-            "HTTP status [400], exception [foo.FooException], message [EX], URL [null]",
+            expectedValues,
             () -> HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_CREATED));
   }
 
@@ -172,8 +181,11 @@ public class TestHttpExceptionUtils {
     Mockito.when(conn.getResponseMessage()).thenReturn("msg");
     Mockito.when(conn.getResponseCode()).thenReturn(
             HttpURLConnection.HTTP_BAD_REQUEST);
+    Collection<String> expectedValues =
+            Stream.of(Integer.toString(HttpURLConnection.HTTP_BAD_REQUEST), "java.lang.String", "EX")
+                    .collect(Collectors.toList());
     LambdaTestUtils.intercept(IOException.class,
-            "HTTP status [400], exception [java.lang.String], message [EX], URL [null]",
+            expectedValues,
             () -> HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_CREATED));
   }
 
