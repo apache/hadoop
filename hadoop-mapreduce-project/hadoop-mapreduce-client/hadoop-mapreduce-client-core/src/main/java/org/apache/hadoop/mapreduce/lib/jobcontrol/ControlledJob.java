@@ -90,7 +90,7 @@ public class ControlledJob {
 	
   @Override
   public String toString() {
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     sb.append("job name:\t").append(this.job.getJobName()).append("\n");
     sb.append("job id:\t").append(this.controlID).append("\n");
     sb.append("job state:\t").append(this.state).append("\n");

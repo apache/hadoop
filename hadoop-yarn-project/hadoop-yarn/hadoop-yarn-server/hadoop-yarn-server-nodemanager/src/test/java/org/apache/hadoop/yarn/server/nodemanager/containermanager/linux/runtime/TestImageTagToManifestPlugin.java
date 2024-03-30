@@ -54,7 +54,7 @@ public class TestImageTagToManifestPlugin {
   private MockImageTagToManifestPlugin mockImageTagToManifestPlugin;
   private Configuration conf;
   private String tmpPath =
-      new StringBuffer(System.getProperty("test.build.data"))
+      new StringBuilder(System.getProperty("test.build.data"))
       .append('/').append("hadoop.tmp.dir").toString();
   private ObjectMapper mapper;
 

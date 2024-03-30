@@ -87,7 +87,7 @@ public class Apps {
   private static void setEnvFromString(Map<String, String> env,
       String envVar, String varString, String classPathSeparator) {
     Matcher m = VAR_SUBBER.matcher(varString);
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     while (m.find()) {
       String var = m.group(1);
       // do variable substitution of $var from passed in environment or from

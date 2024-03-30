@@ -175,7 +175,7 @@ public class TestFileOutputCommitter {
   private void validateContent(Path dir) throws IOException {
     File fdir = new File(dir.toUri().getPath());
     File expectedFile = new File(fdir, partFile);
-    StringBuffer expectedOutput = new StringBuffer();
+    StringBuilder expectedOutput = new StringBuilder();
     expectedOutput.append(key1).append('\t').append(val1).append("\n");
     expectedOutput.append(val1).append("\n");
     expectedOutput.append(val2).append("\n");

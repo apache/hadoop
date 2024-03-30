@@ -773,7 +773,7 @@ public class JHLogAnalyzer {
     /**
      * Read lines until one ends with a " ." or "\" "
      */
-    private StringBuffer resBuffer = new StringBuffer();
+    private StringBuilder resBuffer = new StringBuilder();
     private String readLine(BufferedReader reader) throws IOException {
       resBuffer.setLength(0);
       reader.mark(maxJobDelimiterLineLength);

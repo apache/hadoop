@@ -94,7 +94,7 @@ public class TestTextOutputFormat {
       theRecordWriter.close(reporter);
     }
     File expectedFile = new File(new Path(workDir, file).toString());
-    StringBuffer expectedOutput = new StringBuffer();
+    StringBuilder expectedOutput = new StringBuilder();
     expectedOutput.append(key1).append('\t').append(val1).append("\n");
     expectedOutput.append(val1).append("\n");
     expectedOutput.append(val2).append("\n");
@@ -147,7 +147,7 @@ public class TestTextOutputFormat {
       theRecordWriter.close(reporter);
     }
     File expectedFile = new File(new Path(workDir, file).toString());
-    StringBuffer expectedOutput = new StringBuffer();
+    StringBuilder expectedOutput = new StringBuilder();
     expectedOutput.append(key1).append(separator).append(val1).append("\n");
     expectedOutput.append(val1).append("\n");
     expectedOutput.append(val2).append("\n");
@@ -202,7 +202,7 @@ public class TestTextOutputFormat {
    } finally {
      theRecordWriter.close(reporter);
    }
-   StringBuffer expectedOutput = new StringBuffer();
+   StringBuilder expectedOutput = new StringBuilder();
    expectedOutput.append(key1).append("\t").append(val1).append("\n");
    expectedOutput.append(val1).append("\n");
    expectedOutput.append(val2).append("\n");

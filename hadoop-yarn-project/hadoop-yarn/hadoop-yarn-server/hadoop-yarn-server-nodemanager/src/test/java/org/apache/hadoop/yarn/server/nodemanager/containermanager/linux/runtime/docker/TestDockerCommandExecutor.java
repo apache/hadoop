@@ -85,7 +85,7 @@ public class TestDockerCommandExecutor {
     mockExecutor = mock(PrivilegedOperationExecutor.class);
     mockCGroupsHandler = mock(CGroupsHandler.class);
     configuration = new Configuration();
-    String tmpPath = new StringBuffer(System.getProperty("test.build.data"))
+    String tmpPath = new StringBuilder(System.getProperty("test.build.data"))
         .append('/').append("hadoop.tmp.dir").toString();
     configuration.set("hadoop.tmp.dir", tmpPath);
     runtime = new DockerLinuxContainerRuntime(mockExecutor, mockCGroupsHandler);
@@ -115,7 +115,7 @@ public class TestDockerCommandExecutor {
     LocalDirsHandlerService localDirsHandler =
         mock(LocalDirsHandlerService.class);
 
-    String tmpPath = new StringBuffer(System.getProperty("test.build.data"))
+    String tmpPath = new StringBuilder(System.getProperty("test.build.data"))
         .append('/').append("hadoop.tmp.dir").toString();
 
     ConcurrentMap<ContainerId, Container> containerMap =
