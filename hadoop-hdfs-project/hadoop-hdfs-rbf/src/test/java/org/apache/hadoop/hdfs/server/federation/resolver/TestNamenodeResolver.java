@@ -359,11 +359,12 @@ public class TestNamenodeResolver {
         FederationNamenodeServiceState.ACTIVE);
 
     // 1) ns0:nn0 - Standby (oldest)
-    // 2) ns0:nn1 - Standby (newest)
-    // 3) ns0:nn2 - Standby
-    // Verify the selected entry is the newest standby entry
+    // 2) ns0:nn1 - Standby
+    // 3) ns0:nn2 - Standby (newest)
+    // Verify the selected entry is the oldest standby entry
     assertTrue(namenodeResolver.registerNamenode(createNamenodeReport(
         NAMESERVICES[0], NAMENODES[0], HAServiceState.STANDBY)));
+    Thread.sleep(1500);
     assertTrue(namenodeResolver.registerNamenode(createNamenodeReport(
         NAMESERVICES[0], NAMENODES[2], HAServiceState.STANDBY)));
     Thread.sleep(1500);
@@ -373,6 +374,35 @@ public class TestNamenodeResolver {
     stateStore.refreshCaches(true);
     verifyFirstRegistration(NAMESERVICES[0], NAMENODES[0], 3,
         FederationNamenodeServiceState.STANDBY);
+
+    // 1) ns0:nn0 - Observer (oldest)
+    // 2) ns0:nn1 - Observer (newest)
+    // Verify the selected entry is the newest Observer entry
+    assertTrue(namenodeResolver.registerNamenode(createNamenodeReport(
+        NAMESERVICES[0], NAMENODES[0], HAServiceState.OBSERVER)));
+    Thread.sleep(1500);
+    assertTrue(namenodeResolver.registerNamenode(createNamenodeReport(
+        NAMESERVICES[0], NAMENODES[1], HAServiceState.OBSERVER)));
+
+    stateStore.refreshCaches(true);
+    verifyFirstRegistration(NAMESERVICES[0], NAMENODES[1], 3,
+        FederationNamenodeServiceState.OBSERVER);
+
+    // 1) ns0:nn0 - Unavailable (oldest)
+    // 2) ns0:nn1 - Unavailable
+    // 3) ns0:nn2 - Unavailable (newest)
+    // Verify the selected entry is the oldest Unavailable entry
+    assertTrue(namenodeResolver.registerNamenode(createNamenodeReport(
+        NAMESERVICES[0], NAMENODES[0], null)));
+    Thread.sleep(1500);
+    assertTrue(namenodeResolver.registerNamenode(createNamenodeReport(
+        NAMESERVICES[0], NAMENODES[1], null)));
+    Thread.sleep(1500);
+    assertTrue(namenodeResolver.registerNamenode(createNamenodeReport(
+        NAMESERVICES[0], NAMENODES[2], null)));
+    stateStore.refreshCaches(true);
+    verifyFirstRegistration(NAMESERVICES[0], NAMENODES[0], 3,
+        FederationNamenodeServiceState.UNAVAILABLE);
   }
 
   @Test

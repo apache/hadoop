@@ -59,8 +59,8 @@ public class NamenodePriorityComparator
    * @param o2 Context 2.
    * @return Comparison between dates.
    */
-  private int compareModDates(FederationNamenodeServiceState state, FederationNamenodeContext o1,
-      FederationNamenodeContext o2) {
+  private int compareModDates(FederationNamenodeServiceState state,
+      FederationNamenodeContext o1, FederationNamenodeContext o2) {
     // Reverse sort, lowest position is highest priority.
     if (state == FederationNamenodeServiceState.ACTIVE
         || state == FederationNamenodeServiceState.OBSERVER) {
