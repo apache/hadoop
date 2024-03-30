@@ -29,14 +29,6 @@
   <name>Apache Hadoop FTP/SFTP support</name>
   <packaging>jar</packaging>
 
-  <properties>
-    <hadoop.component>common</hadoop.component>
-    <is.hadoop.component>true</is.hadoop.component>
-    <is.hadoop.common.component>true</is.hadoop.common.component>
-    <wsce.config.dir>../etc/hadoop</wsce.config.dir>
-    <wsce.config.file>wsce-site.xml</wsce.config.file>
-  </properties>
-
   <dependencies>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
