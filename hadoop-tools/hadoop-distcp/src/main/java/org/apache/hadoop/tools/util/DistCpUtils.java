@@ -155,7 +155,7 @@ public class DistCpUtils {
    * @return - String containing first letters of each attribute to preserve
    */
   public static String packAttributes(EnumSet<FileAttribute> attributes) {
-    StringBuffer buffer = new StringBuffer(FileAttribute.values().length);
+    StringBuilder buffer = new StringBuilder(FileAttribute.values().length);
     int len = 0;
     for (FileAttribute attribute : attributes) {
       buffer.append(attribute.name().charAt(0));
