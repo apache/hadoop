@@ -23,6 +23,7 @@ import java.util.HashSet;
 import org.apache.hadoop.crypto.key.kms.KMSClientProvider;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.fs.ftp.FtpConfigKeys;
 import org.apache.hadoop.fs.local.LocalConfigKeys;
 import org.apache.hadoop.ha.SshFenceByTcpPort;
 import org.apache.hadoop.ha.ZKFailoverController;
@@ -39,6 +40,7 @@ import org.apache.hadoop.security.ssl.SSLFactory;
  * {@link org.apache.hadoop.fs.AbstractFileSystem}
  * {@link org.apache.hadoop.fs.CommonConfigurationKeys}
  * {@link org.apache.hadoop.fs.CommonConfigurationKeysPublic}
+ * {@link org.apache.hadoop.fs.ftp.FtpConfigKeys}
  * {@link org.apache.hadoop.fs.local.LocalConfigKeys}
  * {@link org.apache.hadoop.ha.SshFenceByTcpPort}
  * {@link org.apache.hadoop.http.HttpServer2}
@@ -53,7 +55,7 @@ import org.apache.hadoop.security.ssl.SSLFactory;
  * Refer to {@link org.apache.hadoop.conf.TestConfigurationFieldsBase}
  * for how this class works.
  */
-public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
+public class TestFtpConfigurationFields extends TestConfigurationFieldsBase {
 
   @SuppressWarnings("deprecation")
   @Override
@@ -63,6 +65,7 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
         CommonConfigurationKeys.class,
         CommonConfigurationKeysPublic.class,
         LocalConfigKeys.class,
+        FtpConfigKeys.class,
         SshFenceByTcpPort.class,
         LdapGroupsMapping.class,
         ZKFailoverController.class,
@@ -82,6 +85,11 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     errorIfMissingXmlProps = false;
 
     // Lots of properties not in the above classes
+    xmlPropsToSkipCompare.add("fs.ftp.password.localhost");
+    xmlPropsToSkipCompare.add("fs.ftp.user.localhost");
+    xmlPropsToSkipCompare.add("fs.ftp.data.connection.mode");
+    xmlPropsToSkipCompare.add("fs.ftp.transfer.mode");
+    xmlPropsToSkipCompare.add("fs.ftp.timeout");
     xmlPropsToSkipCompare.add("hadoop.tmp.dir");
     xmlPropsToSkipCompare.add("nfs3.mountd.port");
     xmlPropsToSkipCompare.add("nfs3.server.port");
