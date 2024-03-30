@@ -290,10 +290,6 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>com.jcraft</groupId>
-      <artifactId>jsch</artifactId>
-    </dependency>
-    <dependency>
       <groupId>org.apache.curator</groupId>
       <artifactId>curator-test</artifactId>
       <scope>test</scope>
@@ -310,21 +306,6 @@
       <groupId>com.google.code.findbugs</groupId>
       <artifactId>jsr305</artifactId>
       <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.sshd</groupId>
-      <artifactId>sshd-core</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.sshd</groupId>
-      <artifactId>sshd-sftp</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.ftpserver</groupId>
-      <artifactId>ftpserver-core</artifactId>
-      <scope>test</scope>
     </dependency>
 
     <dependency>

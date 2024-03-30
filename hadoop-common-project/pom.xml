@@ -38,6 +38,7 @@
     <module>hadoop-minikdc</module>
     <module>hadoop-kms</module>
     <module>hadoop-registry</module>
+    <module>hadoop-ftp</module>
   </modules>
 
   <build>
