@@ -27,15 +27,20 @@ import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 public class FederationGuavaCache extends FederationCache {
 
+  private static final Logger LOG = LoggerFactory.getLogger(FederationCache.class);
+
   private Cache<String, CacheRequest<String, ?>> cache;
 
   private int cacheTimeToLive;
+  private long cacheEntityNums;
 
   private String className = this.getClass().getSimpleName();
 
@@ -52,6 +57,8 @@ public class FederationGuavaCache extends FederationCache {
     // no conflict or pick up a specific one in the future.
     cacheTimeToLive = pConf.getInt(YarnConfiguration.FEDERATION_CACHE_TIME_TO_LIVE_SECS,
         YarnConfiguration.DEFAULT_FEDERATION_CACHE_TIME_TO_LIVE_SECS);
+    cacheEntityNums = pConf.getLong(YarnConfiguration.FEDERATION_CACHE_ENTITY_NUMS,
+        YarnConfiguration.DEFAULT_FEDERATION_CACHE_ENTITY_NUMS);
     if (cacheTimeToLive <= 0) {
       isCachingEnabled = false;
       return;
@@ -59,8 +66,11 @@ public class FederationGuavaCache extends FederationCache {
     this.setStateStore(pStateStore);
 
     // Initialize Cache.
+    LOG.info("Creating a JCache Manager with name {}. " +
+        "Cache TTL Time = {} secs. Cache Entity Nums = {}.", className, cacheTimeToLive,
+        cacheEntityNums);
     cache = CacheBuilder.newBuilder().expireAfterWrite(cacheTimeToLive,
-        TimeUnit.MILLISECONDS).build();
+        TimeUnit.SECONDS).maximumSize(cacheEntityNums).build();
     isCachingEnabled = true;
   }
 
