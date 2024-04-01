@@ -40,6 +40,7 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsInvalidChecksumException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsDriverException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
+import org.apache.hadoop.fs.azurebfs.services.kac.KeepAliveCache;
 import org.apache.hadoop.fs.azurebfs.utils.NamespaceUtil;
 import org.apache.hadoop.fs.store.LogExactlyOnce;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.Permissions;
@@ -172,6 +173,10 @@ public class AbfsClient implements Closeable {
         LOG.trace("NonCritFailure: DelegatingSSLSocketFactory Init failed : "
             + "{}", e.getMessage());
       }
+    }
+    if (abfsConfiguration.getPreferredHttpOperationType()
+        == HttpOperationType.APACHE_HTTP_CLIENT) {
+      KeepAliveCache.getInstance().setAbfsConfig(abfsConfiguration);
     }
 
     this.userAgent = initializeUserAgent(abfsConfiguration, sslProviderName);

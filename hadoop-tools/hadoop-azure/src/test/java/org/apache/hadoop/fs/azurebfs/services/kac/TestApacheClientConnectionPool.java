@@ -31,7 +31,6 @@ import org.apache.http.conn.routing.HttpRoute;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DEFAULT_MAX_CONN_SYS_PROP;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_MAX_CONN_SYS_PROP;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.KAC_CONN_TTL;
 
 public class TestApacheClientConnectionPool extends
     AbstractAbfsTestWithTimeout {
@@ -104,7 +103,7 @@ public class TestApacheClientConnectionPool extends
     HttpClientConnection connection = Mockito.mock(HttpClientConnection.class);
     keepAliveCache.put(routes, connection);
 
-    Thread.sleep(2 * KAC_CONN_TTL);
+    Thread.sleep(2 * keepAliveCache.getConnectionIdleTTL());
     Mockito.verify(connection, Mockito.times(1)).close();
     Assert.assertNull(keepAliveCache.get(routes));
     Mockito.verify(connection, Mockito.times(1)).close();
@@ -119,7 +118,7 @@ public class TestApacheClientConnectionPool extends
     HttpClientConnection connection = Mockito.mock(HttpClientConnection.class);
     keepAliveCache.put(routes, connection);
 
-    Thread.sleep(2 * KAC_CONN_TTL);
+    Thread.sleep(2 * keepAliveCache.getConnectionIdleTTL());
     Mockito.verify(connection, Mockito.times(0)).close();
     Assert.assertNull(keepAliveCache.get(routes));
     Mockito.verify(connection, Mockito.times(1)).close();

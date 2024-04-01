@@ -25,12 +25,13 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.http.HttpClientConnection;
 import org.apache.http.conn.routing.HttpRoute;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DEFAULT_MAX_CONN_SYS_PROP;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_MAX_CONN_SYS_PROP;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.KAC_CONN_TTL;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.KAC_DEFAULT_CONN_TTL;
 
 /**
  * Connection-pooling heuristics adapted from JDK's connection pooling `KeepAliveCache`
@@ -55,6 +56,8 @@ public final class KeepAliveCache
 
   private int maxConn;
 
+  private long connectionIdleTTL = KAC_DEFAULT_CONN_TTL;
+
   private KeepAliveCache() {
     Thread thread = new Thread(this);
     thread.start();
@@ -68,6 +71,15 @@ public final class KeepAliveCache
     } else {
       maxConn = Integer.parseInt(sysPropMaxConn);
     }
+  }
+
+  public void setAbfsConfig(AbfsConfiguration abfsConfiguration) {
+    this.maxConn = abfsConfiguration.getMaxApacheHttpClientCacheConnections();
+    this.connectionIdleTTL = abfsConfiguration.getMaxApacheHttpClientConnectionIdleTime();
+  }
+
+  public long getConnectionIdleTTL() {
+    return connectionIdleTTL;
   }
 
   private static final KeepAliveCache INSTANCE = new KeepAliveCache();
@@ -107,7 +119,7 @@ public final class KeepAliveCache
 
   private void kacCleanup() {
     try {
-      Thread.sleep(KAC_CONN_TTL);
+      Thread.sleep(connectionIdleTTL);
     } catch (InterruptedException ex) {
       return;
     }
@@ -165,7 +177,7 @@ public final class KeepAliveCache
     KeepAliveKey key = new KeepAliveKey(httpRoute);
     ClientVector v = super.get(key);
     if (v == null) {
-      v = new ClientVector(KAC_CONN_TTL);
+      v = new ClientVector((int) connectionIdleTTL);
       v.put(httpClientConnection);
       super.put(key, v);
     } else {

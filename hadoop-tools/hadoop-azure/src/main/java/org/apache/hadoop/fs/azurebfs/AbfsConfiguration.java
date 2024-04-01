@@ -368,6 +368,14 @@ public class AbfsConfiguration{
       FS_AZURE_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES, DefaultValue = DEFAULT_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES)
   private int maxApacheHttpClientIoExceptions;
 
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_APACHE_HTTP_CLIENT_MAX_CACHE_CONNECTION_SIZE,
+      DefaultValue = DEFAULT_HTTP_CLIENT_CONN_MAX_IDLE_CONNECTIONS)
+  private int maxApacheHttpClientCacheConnections;
+
+  @LongConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_APACHE_HTTP_CLIENT_IDLE_CONNECTION_TTL,
+      DefaultValue = DEFAULT_HTTP_CLIENT_CONN_MAX_IDLE_TIME)
+  private long maxApacheHttpClientConnectionIdleTime;
+
   private String clientProvidedEncryptionKey;
   private String clientProvidedEncryptionKeySHA;
 
@@ -856,6 +864,14 @@ public class AbfsConfiguration{
 
   public int getMaxApacheHttpClientIoExceptions() {
     return maxApacheHttpClientIoExceptions;
+  }
+
+  public int getMaxApacheHttpClientCacheConnections() {
+    return maxApacheHttpClientCacheConnections;
+  }
+
+  public long getMaxApacheHttpClientConnectionIdleTime() {
+    return maxApacheHttpClientConnectionIdleTime;
   }
 
   /**

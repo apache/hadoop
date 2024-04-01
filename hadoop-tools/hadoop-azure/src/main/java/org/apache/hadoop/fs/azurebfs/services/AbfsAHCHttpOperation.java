@@ -73,7 +73,7 @@ public class AbfsAHCHttpOperation extends HttpOperation {
   private static final Logger LOG = LoggerFactory.getLogger(
       AbfsAHCHttpOperation.class);
 
-  private static AbfsApacheHttpClient ABFS_APACHE_HTTP_CLIENT;
+  private static volatile AbfsApacheHttpClient ABFS_APACHE_HTTP_CLIENT;
 
   private HttpRequestBase httpRequestBase;
 

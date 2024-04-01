@@ -307,5 +307,7 @@ public final class ConfigurationKeys {
   /**Defines what network library to use for server IO calls {@value }*/
   public static final String FS_AZURE_NETWORKING_LIBRARY = "fs.azure.networking.library";
   public static final String FS_AZURE_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES = "fs.azure.apache.http.client.max.io.exception.retries";
+  public static final String FS_AZURE_APACHE_HTTP_CLIENT_MAX_CACHE_CONNECTION_SIZE = "fs.azure.apache.http.client.max.cache.connection.size";
+  public static final String FS_AZURE_APACHE_HTTP_CLIENT_IDLE_CONNECTION_TTL = "fs.azure.apache.http.client.idle.connection.ttl";
   private ConfigurationKeys() {}
 }
