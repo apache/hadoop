@@ -79,6 +79,7 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
     pos += appendWithOffsetHelper(client, path, data, fs, pos, ONE_MB);
     pos += appendWithOffsetHelper(client, path, data, fs, pos, MB_2);
     appendWithOffsetHelper(client, path, data, fs, pos, MB_4 - 1);
+    fs.close();
   }
 
   @Test
@@ -94,6 +95,7 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
     readWithOffsetAndPositionHelper(client, path, data, fs, MB_4, ONE_MB);
     readWithOffsetAndPositionHelper(client, path, data, fs, MB_8, MB_2);
     readWithOffsetAndPositionHelper(client, path, data, fs, MB_15, MB_4 - 1);
+    fs.close();
   }
 
   @Test
@@ -120,6 +122,7 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
     Assertions.assertThat(ex.getErrorCode())
         .describedAs("Exception Message should contain MD5Mismatch")
         .isEqualTo(AzureServiceErrorCode.MD5_MISMATCH);
+    fs.close();
   }
 
   @Test
@@ -138,6 +141,7 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
     intercept(AbfsInvalidChecksumException.class, () -> {
       readWithOffsetAndPositionHelper(spiedClient, path, data, fs, 0, 0);
     });
+    fs.close();
   }
 
   private void testWriteReadWithChecksumInternal(final boolean readAheadEnabled)
@@ -158,6 +162,7 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
               .describedAs("Bytes read with checksum enabled are not as expected")
               .containsExactly(bytesUploaded);
     }
+    fs.close();
   }
 
   /**
@@ -233,6 +238,7 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
               .describedAs("Bytes read with checksum enabled are not as expected")
               .containsExactly(Arrays.copyOfRange(bytesUploaded, 1, MB_4));
     }
+    fs.close();
   }
 
   private void createFileWithData(Path path, byte[] data, AzureBlobFileSystem fs) throws Exception {
