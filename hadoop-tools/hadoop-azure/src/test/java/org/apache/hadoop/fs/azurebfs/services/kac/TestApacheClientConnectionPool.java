@@ -19,12 +19,18 @@
 package org.apache.hadoop.fs.azurebfs.services.kac;
 
 import java.io.IOException;
+import java.util.Stack;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsTestWithTimeout;
+import org.apache.hadoop.util.functional.FutureIO;
 import org.apache.http.HttpClientConnection;
 import org.apache.http.HttpHost;
 import org.apache.http.conn.routing.HttpRoute;
@@ -54,8 +60,10 @@ public class TestApacheClientConnectionPool extends
 
   private void validatePoolSize(int size) throws IOException {
     KeepAliveCache keepAliveCache = KeepAliveCache.getInstance();
+    keepAliveCache.clearThread();
     final HttpRoute routes = new HttpRoute(new HttpHost("localhost"));
-    final HttpClientConnection[] connections = new HttpClientConnection[size * 2];
+    final HttpClientConnection[] connections = new HttpClientConnection[size
+        * 2];
 
     for (int i = 0; i < size * 2; i++) {
       connections[i] = Mockito.mock(HttpClientConnection.class);
@@ -77,12 +85,12 @@ public class TestApacheClientConnectionPool extends
       }
     }
     System.clearProperty(HTTP_MAX_CONN_SYS_PROP);
-    keepAliveCache.close();
   }
 
   @Test
   public void testKeepAliveCache() throws IOException {
     KeepAliveCache keepAliveCache = KeepAliveCache.getInstance();
+    keepAliveCache.clearThread();
     final HttpRoute routes = new HttpRoute(new HttpHost("localhost"));
     HttpClientConnection connection = Mockito.mock(HttpClientConnection.class);
 
@@ -93,12 +101,12 @@ public class TestApacheClientConnectionPool extends
 
     final HttpRoute routes1 = new HttpRoute(new HttpHost("localhost1"));
     Assert.assertNull(keepAliveCache.get(routes1));
-    keepAliveCache.close();
   }
 
   @Test
   public void testKeepAliveCacheCleanup() throws Exception {
     KeepAliveCache keepAliveCache = KeepAliveCache.getInstance();
+    keepAliveCache.clearThread();
     final HttpRoute routes = new HttpRoute(new HttpHost("localhost"));
     HttpClientConnection connection = Mockito.mock(HttpClientConnection.class);
     keepAliveCache.put(routes, connection);
@@ -107,13 +115,13 @@ public class TestApacheClientConnectionPool extends
     Mockito.verify(connection, Mockito.times(1)).close();
     Assert.assertNull(keepAliveCache.get(routes));
     Mockito.verify(connection, Mockito.times(1)).close();
-    keepAliveCache.close();
   }
 
   @Test
   public void testKeepAliveCacheCleanupWithConnections() throws Exception {
     KeepAliveCache keepAliveCache = KeepAliveCache.getInstance();
     keepAliveCache.pauseThread();
+    keepAliveCache.clearThread();
     final HttpRoute routes = new HttpRoute(new HttpHost("localhost"));
     HttpClientConnection connection = Mockito.mock(HttpClientConnection.class);
     keepAliveCache.put(routes, connection);
@@ -122,7 +130,138 @@ public class TestApacheClientConnectionPool extends
     Mockito.verify(connection, Mockito.times(0)).close();
     Assert.assertNull(keepAliveCache.get(routes));
     Mockito.verify(connection, Mockito.times(1)).close();
-    keepAliveCache.close();
+    keepAliveCache.resumeThread();
+  }
+
+  @Test
+  public void testKeepAliveCacheParallelismAtSingleRoute() throws Exception {
+    KeepAliveCache keepAliveCache = KeepAliveCache.getInstance();
+    keepAliveCache.clearThread();
+    int parallelism = 4;
+    ExecutorService executorService = Executors.newFixedThreadPool(parallelism);
+    /*
+     * Verify the correctness of KeepAliveCache at single route level state
+     * in a multi-threaded environment.
+     */
+    try {
+      Stack<HttpClientConnection> stack = new Stack<>();
+      HttpRoute routes = new HttpRoute(new HttpHost("host"));
+      Future<?>[] futures = new Future[parallelism];
+      for (int i = 0; i < parallelism; i++) {
+        final boolean putRequest = i % 2 == 0;
+        futures[i] = executorService.submit(() -> {
+          for (int j = 0; j < DEFAULT_MAX_CONN_SYS_PROP * 4; j++) {
+            synchronized (this) {
+              if (putRequest) {
+                HttpClientConnection connection = Mockito.mock(
+                    HttpClientConnection.class);
+                stack.add(connection);
+                try {
+                  Mockito.doAnswer(answer -> {
+                    Assertions.assertThat(connection).isEqualTo(stack.pop());
+                    return null;
+                  }).when(connection).close();
+                } catch (IOException e) {
+                  throw new RuntimeException(e);
+                }
+                keepAliveCache.put(routes, connection);
+              } else {
+                try {
+                  if (stack.empty()) {
+                    Assertions.assertThat(keepAliveCache.get(routes)).isNull();
+                  } else {
+                    Assertions.assertThat(keepAliveCache.get(routes))
+                        .isEqualTo(stack.pop());
+                  }
+                } catch (IOException e) {
+                  throw new RuntimeException(e);
+                }
+              }
+            }
+          }
+        });
+      }
+      for (int i = 0; i < parallelism; i++) {
+        FutureIO.awaitFuture(futures[i]);
+      }
+      while (!stack.empty()) {
+        Assertions.assertThat(keepAliveCache.get(routes))
+            .isEqualTo(stack.pop());
+      }
+    } finally {
+      executorService.shutdownNow();
+    }
+  }
+
+  @Test
+  public void testKeepAliveCacheParallelismAtWithMultipleRoute()
+      throws Exception {
+    KeepAliveCache keepAliveCache = KeepAliveCache.getInstance();
+    keepAliveCache.clearThread();
+    ExecutorService executorService = Executors.newFixedThreadPool(4);
+    try {
+      /*
+       * Verify that KeepAliveCache maintains connection at route level.
+       */
+      Future<?>[] futures = new Future[4];
+      for (int i = 0; i < 4; i++) {
+        /*
+         * Create a route for each thread. Iteratively call put and get methods
+         * on the KeepAliveCache for the same route. Verify that the connections
+         * are being returned in the order they were put in the cache. Also, verify
+         * that the cache is not holding more than the maximum number of connections.
+         */
+        final HttpRoute routes = new HttpRoute(new HttpHost("host" + i));
+        futures[i] = executorService.submit(() -> {
+          final Stack<HttpClientConnection> connections = new Stack<>();
+          for (int j = 0; j < 3 * DEFAULT_MAX_CONN_SYS_PROP; j++) {
+            if ((j / DEFAULT_MAX_CONN_SYS_PROP) % 2 == 0) {
+              HttpClientConnection connection = Mockito.mock(
+                  HttpClientConnection.class);
+              connections.add(connection);
+              try {
+                Mockito.doAnswer(answer -> {
+                  Assertions.assertThat(connection)
+                      .isEqualTo(connections.pop());
+                  return null;
+                }).when(connection).close();
+              } catch (IOException e) {
+                throw new RuntimeException(e);
+              }
+              keepAliveCache.put(routes, connection);
+            } else {
+              try {
+                Assertions.assertThat(keepAliveCache.get(routes))
+                    .isEqualTo(connections.pop());
+              } catch (IOException e) {
+                throw new RuntimeException(e);
+              }
+            }
+
+          }
+          Assertions.assertThat(connections).hasSize(DEFAULT_MAX_CONN_SYS_PROP);
+        });
+      }
+
+      for (int i = 0; i < 4; i++) {
+        FutureIO.awaitFuture(futures[i]);
+      }
+    } finally {
+      executorService.shutdownNow();
+    }
+  }
+
+  @Test
+  public void testKeepAliveCacheConnectionRecache() throws Exception {
+    KeepAliveCache keepAliveCache = KeepAliveCache.getInstance();
+    keepAliveCache.clearThread();
+    final HttpRoute routes = new HttpRoute(new HttpHost("localhost"));
+    HttpClientConnection connection = Mockito.mock(HttpClientConnection.class);
+    keepAliveCache.put(routes, connection);
+
+    Assert.assertNotNull(keepAliveCache.get(routes));
+    keepAliveCache.put(routes, connection);
+    Assert.assertNotNull(keepAliveCache.get(routes));
   }
 }
 

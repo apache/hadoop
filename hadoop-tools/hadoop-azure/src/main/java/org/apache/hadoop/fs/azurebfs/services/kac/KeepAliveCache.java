@@ -58,10 +58,19 @@ public final class KeepAliveCache
 
   private Thread keepAliveTimer = null;
 
+  private boolean isPaused = false;
+
   private KeepAliveCache() {
-    Thread thread = new Thread(this);
-    thread.start();
     setMaxConn();
+  }
+
+  synchronized void pauseThread() {
+    isPaused = true;
+  }
+
+  synchronized void resumeThread() {
+    isPaused = false;
+    notify();
   }
 
   private void setMaxConn() {
@@ -84,19 +93,14 @@ public final class KeepAliveCache
 
   private static final KeepAliveCache INSTANCE = new KeepAliveCache();
 
-  @VisibleForTesting
-  void close() {
-    clear();
-    setMaxConn();
-  }
-
   public static KeepAliveCache getInstance() {
     return INSTANCE;
   }
 
   @VisibleForTesting
-  void pauseThread() {
+  void clearThread() {
     clear();
+    setMaxConn();
   }
 
   private int getKacSize() {
@@ -106,6 +110,17 @@ public final class KeepAliveCache
   @Override
   public void run() {
     do {
+      synchronized (this) {
+        while (isPaused) {
+          try {
+            wait();
+          } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            // Handle the exception
+            e.printStackTrace();
+          }
+        }
+      }
       kacCleanup();
     } while (size() > 0);
   }
