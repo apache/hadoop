@@ -38,6 +38,7 @@ import org.apache.http.HttpClientConnection;
 import org.apache.http.HttpEntityEnclosingRequest;
 import org.apache.http.HttpException;
 import org.apache.http.HttpRequest;
+import org.apache.http.client.protocol.HttpClientContext;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_NETWORKING_LIBRARY;
 import static org.apache.hadoop.fs.azurebfs.services.HttpOperationType.APACHE_HTTP_CLIENT;
@@ -50,6 +51,10 @@ public class ITestAbfsHttpClientRequestExecutor extends
     super();
   }
 
+  /**
+   * Verify the correctness of expect 100 continue handling by ApacheHttpClient
+   * with AbfsManagedHttpRequestExecutor.
+   */
   @Test
   public void testExpect100ContinueHandling() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
@@ -73,36 +78,57 @@ public class ITestAbfsHttpClientRequestExecutor extends
       final int[] sendHeadersInvocation = {0};
       final int[] sendBodyInvocation = {0};
       final int[] receiveResponseInvocation = {0};
-      Mockito.doAnswer(httpOpCreationAnswer -> {
-        AbfsAHCHttpOperation httpOperation = Mockito.spy(
-            (AbfsAHCHttpOperation) httpOpCreationAnswer.callRealMethod());
-        Mockito.doAnswer(createContextAnswer -> {
-              AbfsManagedHttpContext context = Mockito.spy(
-                  (AbfsManagedHttpContext) createContextAnswer.callRealMethod());
-              Mockito.doAnswer(connectionSpyIntercept -> {
-                return interceptedConn(invocation[0], sendHeadersInvocation,
-                    sendBodyInvocation, receiveResponseInvocation,
-                    (HttpClientConnection) connectionSpyIntercept.getArgument(0));
-              }).when(context).interceptConnectionActivity(Mockito.any(
-                  HttpClientConnection.class));
-              return context;
-            })
-            .when(httpOperation).setFinalAbfsClientContext();
-        return httpOperation;
-      }).when(op).createHttpOperation();
+
+      /*
+      * Assert that correct actions are taking place over the connection to handle
+      * expect100 assertions, failure and success.
+      *
+      * The test would make two calls to the server. The first two calls would
+      * be because of attempt to write in a non-existing file. The first call would have
+      * expect100 header, and the server would respond with 404. The second call would
+      * be a retry from AbfsOutputStream, and would not have expect100 header.
+      *
+      * The third call would be because of attempt to write in an existing file. The call
+      * would have expect100 assertion pass and would send the data.
+      *
+      * Following is the expectation from the first attempt:
+      * 1. sendHeaders should be called once. This is for expect100 assertion invocation.
+      * 2. receiveResponse should be called once. This is to receive expect100 assertion.
+      * 2. sendBody should not be called.
+      *
+      * Following is the expectation from the second attempt:
+      * 1. sendHeaders should be called once. This is not for expect100 assertion invocation.
+      * 2. sendBody should be called once. It will not have any expect100 assertion.
+      * Once headers are sent, body is sent.
+      * 3. receiveResponse should be called once. This is to receive the response from the server.
+      *
+      * Following is the expectation from the third attempt:
+      * 1. sendHeaders should be called once. This is for expect100 assertion invocation.
+      * 2. receiveResponse should be called. This is to receive the response from the server for expect100 assertion.
+      * 3. sendBody called as expect100 assertion is pass.
+      * 4. receiveResponse should be called. This is to receive the response from the server.
+      */
+      mockHttpOperationBehavior(invocation, op, sendHeadersInvocation, sendBodyInvocation,
+          receiveResponseInvocation);
       Mockito.doAnswer(executeAnswer -> {
-        Throwable throwable = intercept(IOException.class, () -> {
-          try {
-            executeAnswer.callRealMethod();
-          } catch (IOException ex) {
-            //This exception is expected to be thrown by the op.execute() method.
-            throw ex;
-          } catch (Throwable interceptedAssertedThrowable) {
-            //Any other throwable thrown by Mockito's callRealMethod would be
-            //considered as an assertion error.
-          }
-        });
         invocation[0]++;
+        final Throwable throwable;
+        if(invocation[0] == 3) {
+          executeAnswer.callRealMethod();
+          throwable = null;
+        } else {
+          throwable = intercept(IOException.class, () -> {
+            try {
+              executeAnswer.callRealMethod();
+            } catch (IOException ex) {
+              //This exception is expected to be thrown by the op.execute() method.
+              throw ex;
+            } catch (Throwable interceptedAssertedThrowable) {
+              //Any other throwable thrown by Mockito's callRealMethod would be
+              //considered as an assertion error.
+            }
+          });
+        }
         /*
          * The first call would be with expect headers, and expect 100 continue assertion has to happen which would fail.
          * For expect100 assertion to happen, header IO happens before body IO. If assertion fails, no body IO happens.
@@ -123,7 +149,7 @@ public class ITestAbfsHttpClientRequestExecutor extends
         if (invocation[0] == 3) {
           Assertions.assertThat(sendHeadersInvocation[0]).isEqualTo(1);
           Assertions.assertThat(sendBodyInvocation[0]).isEqualTo(1);
-          Assertions.assertThat(receiveResponseInvocation[0]).isEqualTo(1);
+          Assertions.assertThat(receiveResponseInvocation[0]).isEqualTo(2);
         }
         Assertions.assertThat(invocation[0]).isLessThanOrEqualTo(3);
         if (throwable != null) {
@@ -145,13 +171,57 @@ public class ITestAbfsHttpClientRequestExecutor extends
     final OutputStream os = fs2.create(path);
     fs.delete(path, true);
     intercept(FileNotFoundException.class, () -> {
+      /*
+      * This would lead to two server calls.
+      * First call would be with expect headers, and expect 100 continue
+      *  assertion has to happen which would fail with 404.
+      * Second call would be a retry from AbfsOutputStream, and would not be using expect headers.
+      */
       os.write(1);
       os.close();
     });
 
     final OutputStream os2 = fs2.create(path);
+    /*
+    * This would lead to third server call. This would be with expect headers,
+    * and the expect 100 continue assertion would pass.
+    */
     os2.write(1);
-    os.close();
+    os2.close();
+  }
+
+  /**
+   * Creates a mock of HttpOperation that would be returned for AbfsRestOperation
+   * to use to execute server call. To make call via ApacheHttpClient, an object
+   * of {@link HttpClientContext} is required. This method would create a mock
+   * of HttpClientContext that would be able to register the actions taken on
+   * {@link HttpClientConnection} object. This would help in asserting the
+   * order of actions taken on the connection object for making an append call with
+   * expect100 header.
+   */
+  private void mockHttpOperationBehavior(final int[] invocation,
+      final AbfsRestOperation op,
+      final int[] sendHeadersInvocation,
+      final int[] sendBodyInvocation,
+      final int[] receiveResponseInvocation) throws IOException {
+    Mockito.doAnswer(httpOpCreationAnswer -> {
+      AbfsAHCHttpOperation httpOperation = Mockito.spy(
+          (AbfsAHCHttpOperation) httpOpCreationAnswer.callRealMethod());
+
+      Mockito.doAnswer(createContextAnswer -> {
+            AbfsManagedHttpContext context = Mockito.spy(
+                (AbfsManagedHttpContext) createContextAnswer.callRealMethod());
+            Mockito.doAnswer(connectionSpyIntercept -> {
+              return interceptedConn(invocation[0], sendHeadersInvocation,
+                  sendBodyInvocation, receiveResponseInvocation,
+                  (HttpClientConnection) connectionSpyIntercept.getArgument(0));
+            }).when(context).interceptConnectionActivity(Mockito.any(
+                HttpClientConnection.class));
+            return context;
+          })
+          .when(httpOperation).setFinalAbfsClientContext();
+      return httpOperation;
+    }).when(op).createHttpOperation();
   }
 
   private HttpClientConnection interceptedConn(final int i,

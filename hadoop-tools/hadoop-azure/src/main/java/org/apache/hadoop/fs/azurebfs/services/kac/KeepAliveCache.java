@@ -217,6 +217,19 @@ public final class KeepAliveCache
     return v.get();
   }
 
+  /*
+   * Do not serialize this class!
+   */
+  private void writeObject(java.io.ObjectOutputStream stream)
+      throws IOException {
+    throw new NotSerializableException();
+  }
+
+  private void readObject(java.io.ObjectInputStream stream)
+      throws IOException, ClassNotFoundException {
+    throw new NotSerializableException();
+  }
+
   class ClientVector extends java.util.Stack<KeepAliveEntry> {
 
     private static final long serialVersionUID = -8680532108106489459L;
