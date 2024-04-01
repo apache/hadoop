@@ -69,10 +69,7 @@ class AbfsConnectionManager implements HttpClientConnectionManager {
         try {
           HttpClientConnection clientConn = kac.get(route);
           if (clientConn != null) {
-            if(!clientConn.isStale()) {
-              return clientConn;
-            }
-            clientConn.close();
+            return clientConn;
           }
           return httpConnectionFactory.create(route, null);
         } catch (IOException ex) {

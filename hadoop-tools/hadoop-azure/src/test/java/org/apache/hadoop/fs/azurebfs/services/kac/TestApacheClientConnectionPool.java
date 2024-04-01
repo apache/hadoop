@@ -263,5 +263,29 @@ public class TestApacheClientConnectionPool extends
     keepAliveCache.put(routes, connection);
     Assert.assertNotNull(keepAliveCache.get(routes));
   }
-}
 
+  @Test
+  public void testKeepAliveCacheRemoveStaleConnection() throws Exception {
+    KeepAliveCache keepAliveCache = KeepAliveCache.getInstance();
+    keepAliveCache.clearThread();
+    final HttpRoute routes = new HttpRoute(new HttpHost("localhost"));
+    HttpClientConnection[] connections = new HttpClientConnection[5];
+    for (int i = 0; i < 5; i++) {
+      connections[i] = Mockito.mock(HttpClientConnection.class);
+      keepAliveCache.put(routes, connections[i]);
+    }
+
+    for (int i = 0; i < 3; i++) {
+      Mockito.doReturn(true).when(connections[i]).isStale();
+    }
+
+    for (int i = 4; i >= 0; i--) {
+      if (i >= 3) {
+        Assert.assertNotNull(keepAliveCache.get(routes));
+      } else {
+        Assert.assertNull(keepAliveCache.get(routes));
+        Mockito.verify(connections[i], Mockito.times(1)).close();
+      }
+    }
+  }
+}

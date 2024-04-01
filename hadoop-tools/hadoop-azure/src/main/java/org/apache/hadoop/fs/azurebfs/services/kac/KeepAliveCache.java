@@ -142,7 +142,8 @@ public final class KeepAliveCache
 
           for (i = 0; i < v.size(); i++) {
             KeepAliveEntry e = v.elementAt(i);
-            if ((currentTime - e.idleStartTime) > v.nap) {
+            if ((currentTime - e.idleStartTime) > v.nap
+                || e.httpClientConnection.isStale()) {
               HttpClientConnection hc = e.httpClientConnection;
               closeHtpClientConnection(hc);
             } else {
@@ -236,7 +237,8 @@ public final class KeepAliveCache
         long currentTime = System.currentTimeMillis();
         do {
           KeepAliveEntry e = pop();
-          if ((currentTime - e.idleStartTime) > nap) {
+          if ((currentTime - e.idleStartTime) > nap
+              || e.httpClientConnection.isStale()) {
             e.httpClientConnection.close();
           } else {
             hc = e.httpClientConnection;
