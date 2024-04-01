@@ -26,13 +26,12 @@ import java.util.List;
 import java.util.Map;
 import java.security.PrivilegedExceptionAction;
 
-import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.UriBuilder;
 
+import org.apache.hadoop.thirdparty.com.google.common.net.HttpHeaders;
 import org.apache.hadoop.util.Preconditions;
 
-import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -76,7 +75,6 @@ import static org.apache.hadoop.yarn.service.exceptions.LauncherExitCodes.*;
 public class ApiServiceClient extends AppAdminClient {
   private static final Logger LOG =
       LoggerFactory.getLogger(ApiServiceClient.class);
-  private static final Base64 BASE_64_CODEC = new Base64(0);
   protected YarnClient yarnClient;
 
   public ApiServiceClient() {

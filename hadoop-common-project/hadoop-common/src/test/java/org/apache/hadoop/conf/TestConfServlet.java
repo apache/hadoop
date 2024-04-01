@@ -27,10 +27,10 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletContext;
-import javax.ws.rs.core.HttpHeaders;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
+import org.apache.hadoop.thirdparty.com.google.common.net.HttpHeaders;
 import org.eclipse.jetty.util.ajax.JSON;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
