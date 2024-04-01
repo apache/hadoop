@@ -201,5 +201,3 @@ init() {
 logOutput() {
   echo -e "$outputFormatOn" "$1" "$outputFormatOff"
 }
-
-
