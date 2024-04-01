@@ -33,6 +33,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
@@ -214,7 +215,7 @@ public class AbfsAHCHttpOperation extends HttpOperation {
   void parseResponseHeaderAndBody(final byte[] buffer,
       final int offset,
       final int length) throws IOException {
-    setStatusCode(httpResponse.getStatusLine().getStatusCode());
+    setStatusCode(parseStatusCode(httpResponse));
 
     setStatusDescription(httpResponse.getStatusLine().getReasonPhrase());
 
@@ -229,6 +230,11 @@ public class AbfsAHCHttpOperation extends HttpOperation {
     AbfsIoUtils.dumpHeadersToDebugLog("Response Headers",
         getResponseHeaders(httpResponse));
     parseResponse(buffer, offset, length);
+  }
+
+  @VisibleForTesting
+  int parseStatusCode(HttpResponse httpResponse) {
+    return httpResponse.getStatusLine().getStatusCode();
   }
 
   @VisibleForTesting
@@ -310,6 +316,12 @@ public class AbfsAHCHttpOperation extends HttpOperation {
     case HTTP_METHOD_POST:
       httpRequestBase = new HttpPost(getUri());
       break;
+    default:
+      /*
+       * This should never happen as the method is already validated in
+       * isPayloadRequest.
+       */
+      return;
     }
 
     setExpectedBytesToBeSent(length);
@@ -327,7 +339,7 @@ public class AbfsAHCHttpOperation extends HttpOperation {
       LOG.debug(
           "Getting output stream failed with expect header enabled, returning back."
               + "Expect 100 assertion failed for uri {} with status code: {}",
-          getMaskedUrl(), ex.getHttpResponse().getStatusLine().getStatusCode(),
+          getMaskedUrl(), parseStatusCode(ex.getHttpResponse()),
           ex);
       connectionDisconnectedOnError = true;
       httpResponse = ex.getHttpResponse();
@@ -350,6 +362,13 @@ public class AbfsAHCHttpOperation extends HttpOperation {
     case HTTP_METHOD_HEAD:
       httpRequestBase = new HttpHead(getUri());
       break;
+    default:
+      /*
+       * This would not happen as the AbfsClient would always be sending valid
+       * method.
+       */
+      throw new PathIOException(getUrl().toString(),
+          "Unsupported HTTP method: " + getMethod());
     }
     translateHeaders(httpRequestBase, requestHeaders);
   }

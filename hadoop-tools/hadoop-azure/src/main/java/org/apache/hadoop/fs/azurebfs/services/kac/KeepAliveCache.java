@@ -52,11 +52,11 @@ public final class KeepAliveCache
     extends HashMap<KeepAliveCache.KeepAliveKey, KeepAliveCache.ClientVector>
     implements Runnable {
 
-  private boolean threadShouldPause = true;
-
   private int maxConn;
 
   private long connectionIdleTTL = KAC_DEFAULT_CONN_TTL;
+
+  private Thread keepAliveTimer = null;
 
   private KeepAliveCache() {
     Thread thread = new Thread(this);
@@ -96,12 +96,7 @@ public final class KeepAliveCache
 
   @VisibleForTesting
   void pauseThread() {
-    threadShouldPause = false;
-  }
-
-  @VisibleForTesting
-  void resumeThread() {
-    threadShouldPause = true;
+    clear();
   }
 
   private int getKacSize() {
@@ -110,11 +105,9 @@ public final class KeepAliveCache
 
   @Override
   public void run() {
-    while (true) {
-      if (threadShouldPause) {
-        kacCleanup();
-      }
-    }
+    do {
+      kacCleanup();
+    } while (size() > 0);
   }
 
   private void kacCleanup() {
@@ -174,6 +167,31 @@ public final class KeepAliveCache
 
   public synchronized void put(final HttpRoute httpRoute,
       final HttpClientConnection httpClientConnection) {
+    boolean startThread = (keepAliveTimer == null);
+    if (!startThread) {
+      if (!keepAliveTimer.isAlive()) {
+        startThread = true;
+      }
+    }
+    if (startThread) {
+      clear();
+      final KeepAliveCache cache = this;
+      ThreadGroup grp = Thread.currentThread().getThreadGroup();
+      ThreadGroup parent = null;
+      while ((parent = grp.getParent()) != null) {
+        grp = parent;
+      }
+
+      keepAliveTimer = new Thread(grp, cache, "Keep-Alive-Timer");
+      keepAliveTimer.setDaemon(true);
+      keepAliveTimer.setPriority(Thread.MAX_PRIORITY - 2);
+      // Set the context class loader to null in order to avoid
+      // keeping a strong reference to an application classloader.
+      keepAliveTimer.setContextClassLoader(null);
+      keepAliveTimer.start();
+    }
+
+
     KeepAliveKey key = new KeepAliveKey(httpRoute);
     ClientVector v = super.get(key);
     if (v == null) {

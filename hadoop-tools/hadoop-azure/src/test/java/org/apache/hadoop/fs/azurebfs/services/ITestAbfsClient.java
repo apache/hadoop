@@ -50,6 +50,7 @@ import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderFormat;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
+import org.apache.http.HttpResponse;
 
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APPEND_ACTION;
@@ -626,6 +627,10 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
             .when((AbfsAHCHttpOperation) httpOperation)
             .parseResponseHeaderAndBody(Mockito.any(byte[].class),
                 Mockito.anyInt(), Mockito.anyInt());
+        Mockito.doReturn(HTTP_NOT_FOUND)
+            .when((AbfsAHCHttpOperation) httpOperation)
+            .parseStatusCode(Mockito.nullable(
+                HttpResponse.class));
         Mockito.doThrow(
                 new AbfsApacheHttpExpect100Exception(EXPECT_100_JDK_ERROR,
                     null))
