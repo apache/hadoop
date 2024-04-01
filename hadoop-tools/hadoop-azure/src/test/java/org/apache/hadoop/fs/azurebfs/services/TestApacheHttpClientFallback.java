@@ -48,7 +48,8 @@ public class TestApacheHttpClientFallback extends AbstractAbfsTestWithTimeout {
     super();
   }
 
-  private TracingContext getSampleTracingContext() {
+  private TracingContext getSampleTracingContext(int[] jdkCallsRegister,
+      int[] apacheCallsRegister) {
     String correlationId, fsId;
     TracingHeaderFormat format;
     correlationId = "test-corr-id";
@@ -61,8 +62,10 @@ public class TestApacheHttpClientFallback extends AbstractAbfsTestWithTimeout {
           HttpOperation op = answer.getArgument(0);
           if (op instanceof AbfsAHCHttpOperation) {
             Assertions.assertThat(tc.getHeader()).endsWith(APACHE_IMPL);
+            apacheCallsRegister[0]++;
           }
           if (op instanceof AbfsHttpOperation) {
+            jdkCallsRegister[0]++;
             if (ApacheHttpClientHealthMonitor.usable()) {
               Assertions.assertThat(tc.getHeader()).endsWith(JDK_IMPL);
             } else {
@@ -80,14 +83,29 @@ public class TestApacheHttpClientFallback extends AbstractAbfsTestWithTimeout {
   @Test
   public void testMultipleFailureLeadToFallback()
       throws Exception {
-    TracingContext tc = getSampleTracingContext();
-    int[] retryIteration = {0};
+    int[] apacheCallsTest1 = {0};
+    int[] jdkCallsTest1 = {0};
+    TracingContext tcTest1 = getSampleTracingContext(jdkCallsTest1,
+        apacheCallsTest1);
+    int[] retryIterationTest1 = {0};
     intercept(IOException.class, () -> {
-      getMockRestOperation(retryIteration).execute(tc);
+      getMockRestOperation(retryIterationTest1).execute(tcTest1);
     });
+    Assertions.assertThat(apacheCallsTest1[0])
+        .isEqualTo(DEFAULT_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES);
+    Assertions.assertThat(jdkCallsTest1[0]).isEqualTo(1);
+
+    int[] retryIteration1 = {0};
+    int[] apacheCallsTest2 = {0};
+    int[] jdkCallsTest2 = {0};
+    TracingContext tcTest2 = getSampleTracingContext(jdkCallsTest2,
+        apacheCallsTest2);
     intercept(IOException.class, () -> {
-      getMockRestOperation(retryIteration).execute(tc);
+      getMockRestOperation(retryIteration1).execute(tcTest2);
     });
+    Assertions.assertThat(apacheCallsTest2[0]).isEqualTo(0);
+    Assertions.assertThat(jdkCallsTest2[0])
+        .isEqualTo(DEFAULT_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES + 1);
   }
 
   private AbfsRestOperation getMockRestOperation(int[] retryIteration)
@@ -165,8 +183,9 @@ public class TestApacheHttpClientFallback extends AbstractAbfsTestWithTimeout {
       HttpOperation operation = Mockito.spy(
           (HttpOperation) answer.callRealMethod());
       Assertions.assertThat(operation).isInstanceOf(
-          retryIteration[0]
+          (retryIteration[0]
               < DEFAULT_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES
+              && ApacheHttpClientHealthMonitor.usable())
               ? AbfsAHCHttpOperation.class
               : AbfsHttpOperation.class);
       Mockito.doReturn(HTTP_OK).when(operation).getStatusCode();
@@ -196,7 +215,10 @@ public class TestApacheHttpClientFallback extends AbstractAbfsTestWithTimeout {
 
   @Test
   public void testTcHeaderOnJDKClientUse() {
-    TracingContext tc = getSampleTracingContext();
+    int[] jdkCallsRegister = {0};
+    int[] apacheCallsRegister = {0};
+    TracingContext tc = getSampleTracingContext(jdkCallsRegister,
+        apacheCallsRegister);
     AbfsHttpOperation op = Mockito.mock(AbfsHttpOperation.class);
     Mockito.doCallRealMethod().when(op).getTracingContextSuffix();
     tc.constructHeader(op, null, null);
