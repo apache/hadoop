@@ -114,10 +114,7 @@ public final class KeepAliveCache
         while (isPaused) {
           try {
             wait();
-          } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            // Handle the exception
-            e.printStackTrace();
+          } catch (InterruptedException ignored) {
           }
         }
       }
@@ -132,16 +129,6 @@ public final class KeepAliveCache
       return;
     }
     synchronized (this) {
-      /* Remove all unused HttpClients.  Starting from the
-       * bottom of the stack (the least-recently used first).
-       * REMIND: It'd be nice to not remove *all* connections
-       * that aren't presently in use.  One could have been added
-       * a second ago that's still perfectly valid, and we're
-       * needlessly axing it.  But it's not clear how to do this
-       * cleanly, and doing it right may be more trouble than it's
-       * worth.
-       */
-
       long currentTime = System.currentTimeMillis();
 
       ArrayList<KeepAliveKey> keysToRemove
