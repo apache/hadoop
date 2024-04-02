@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.fs.azurebfs.services.HttpOperationType;
+import org.apache.hadoop.fs.azurebfs.constants.HttpOperationType;
 import org.apache.hadoop.util.Preconditions;
 
 import org.apache.commons.lang3.StringUtils;

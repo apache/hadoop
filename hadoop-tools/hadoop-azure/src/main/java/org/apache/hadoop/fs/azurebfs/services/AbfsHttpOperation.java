@@ -55,41 +55,26 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
 
   private static final int ONE_MILLION = ONE_THOUSAND * ONE_THOUSAND;
 
-  private String method;
-
-  private URL url;
-
+  private final String method;
+  private final URL url;
   private String maskedUrl;
-
   private String maskedEncodedUrl;
-
   private int statusCode;
-
   private String statusDescription;
-
   private String storageErrorCode = "";
-
   private String storageErrorMessage = "";
-
   private String requestId = "";
-
   private String expectedAppendPos = "";
-
   private ListResultSchema listResultSchema = null;
 
   // metrics
   private int bytesSent;
-
   private int expectedBytesToBeSent;
-
   private long bytesReceived;
 
   private long connectionTimeMs;
-
   private long sendRequestTimeMs;
-
   private long recvResponseTimeMs;
-
   private boolean shouldMask = false;
 
   public AbfsHttpOperation(Logger logger,
@@ -235,29 +220,29 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
 
     final StringBuilder sb = new StringBuilder();
     sb.append("s=")
-        .append(statusCode)
-        .append(" e=")
-        .append(storageErrorCode)
-        .append(" ci=")
-        .append(getClientRequestId())
-        .append(" ri=")
-        .append(requestId)
+      .append(statusCode)
+      .append(" e=")
+      .append(storageErrorCode)
+      .append(" ci=")
+      .append(getClientRequestId())
+      .append(" ri=")
+      .append(requestId)
 
-        .append(" ct=")
-        .append(connectionTimeMs)
-        .append(" st=")
-        .append(sendRequestTimeMs)
-        .append(" rt=")
-        .append(recvResponseTimeMs)
+      .append(" ct=")
+      .append(connectionTimeMs)
+      .append(" st=")
+      .append(sendRequestTimeMs)
+      .append(" rt=")
+      .append(recvResponseTimeMs)
 
-        .append(" bs=")
-        .append(bytesSent)
-        .append(" br=")
-        .append(bytesReceived)
-        .append(" m=")
-        .append(method)
-        .append(" u=")
-        .append(getMaskedEncodedUrl());
+      .append(" bs=")
+      .append(bytesSent)
+      .append(" br=")
+      .append(bytesReceived)
+      .append(" m=")
+      .append(method)
+      .append(" u=")
+      .append(getMaskedEncodedUrl());
 
     return sb.toString();
   }
@@ -398,17 +383,17 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
             jp.nextToken();
             fieldValue = jp.getText();
             switch (fieldName) {
-            case "code":
-              storageErrorCode = fieldValue;
-              break;
-            case "message":
-              storageErrorMessage = fieldValue;
-              break;
-            case "ExpectedAppendPos":
-              expectedAppendPos = fieldValue;
-              break;
-            default:
-              break;
+              case "code":
+                storageErrorCode = fieldValue;
+                break;
+              case "message":
+                storageErrorMessage = fieldValue;
+                break;
+              case "ExpectedAppendPos":
+                expectedAppendPos = fieldValue;
+                break;
+              default:
+                break;
             }
           }
           jp.nextToken();

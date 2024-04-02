@@ -39,7 +39,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APACHE_I
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.JDK_FALLBACK;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.JDK_IMPL;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES;
-import static org.apache.hadoop.fs.azurebfs.services.HttpOperationType.APACHE_HTTP_CLIENT;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpOperationType.APACHE_HTTP_CLIENT;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 

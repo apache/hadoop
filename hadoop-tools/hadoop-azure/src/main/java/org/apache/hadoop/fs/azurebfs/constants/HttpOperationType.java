@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azurebfs.services;
+package org.apache.hadoop.fs.azurebfs.constants;
 
 public enum HttpOperationType {
   JDK_HTTP_URL_CONNECTION,

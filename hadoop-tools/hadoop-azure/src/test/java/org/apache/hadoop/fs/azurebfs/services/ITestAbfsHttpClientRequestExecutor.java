@@ -44,7 +44,7 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.protocol.HttpClientContext;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_NETWORKING_LIBRARY;
-import static org.apache.hadoop.fs.azurebfs.services.HttpOperationType.APACHE_HTTP_CLIENT;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpOperationType.APACHE_HTTP_CLIENT;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 public class ITestAbfsHttpClientRequestExecutor extends

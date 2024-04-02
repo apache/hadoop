@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.azurebfs.constants;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.azurebfs.services.HttpOperationType;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
