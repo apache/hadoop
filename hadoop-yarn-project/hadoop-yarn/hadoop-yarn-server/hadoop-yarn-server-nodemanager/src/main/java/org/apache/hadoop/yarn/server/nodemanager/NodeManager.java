@@ -1057,7 +1057,8 @@ public class NodeManager extends CompositeService
     NodeManager nodeManager = new NodeManager();
     Configuration conf = new YarnConfiguration();
     new GenericOptionsParser(conf, args);
-    CallerContext.setCurrent(new CallerContext.Builder("nodemanager_" + NetUtils.getLocalHostname()).build());
+    CallerContext.setCurrent(new CallerContext.Builder(
+        "nodemanager_" + NetUtils.getLocalHostname()).build());
     nodeManager.initAndStartNodeManager(conf, false);
   }
 
