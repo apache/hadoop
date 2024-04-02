@@ -150,6 +150,9 @@ public final class AbfsHttpConstants {
     }
   }
 
+  @Deprecated
+  public static final String DECEMBER_2019_API_VERSION = ApiVersion.DEC_12_2019.toString();
+
   /**
    * Value that differentiates categories of the http_status.
    * <pre>

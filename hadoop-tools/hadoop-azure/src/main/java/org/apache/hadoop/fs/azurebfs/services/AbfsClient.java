@@ -122,7 +122,6 @@ public class AbfsClient implements Closeable {
   private final ListeningScheduledExecutorService executorService;
   private Boolean isNamespaceEnabled;
 
-
   private boolean renameResilience;
 
   /**
@@ -259,13 +258,18 @@ public class AbfsClient implements Closeable {
     return intercept;
   }
 
-  List<AbfsHttpHeader> createDefaultHeaders(ApiVersion xMsVersion) {
+  @VisibleForTesting
+  protected List<AbfsHttpHeader> createDefaultHeaders() {
+    return createDefaultHeaders(this.xMsVersion);
+  }
+
+  private List<AbfsHttpHeader> createDefaultHeaders(ApiVersion xMsVersion) {
     final List<AbfsHttpHeader> requestHeaders = new ArrayList<AbfsHttpHeader>();
     requestHeaders.add(new AbfsHttpHeader(X_MS_VERSION, xMsVersion.toString()));
     requestHeaders.add(new AbfsHttpHeader(ACCEPT, APPLICATION_JSON
-            + COMMA + SINGLE_WHITE_SPACE + APPLICATION_OCTET_STREAM));
+        + COMMA + SINGLE_WHITE_SPACE + APPLICATION_OCTET_STREAM));
     requestHeaders.add(new AbfsHttpHeader(ACCEPT_CHARSET,
-            UTF_8));
+        UTF_8));
     requestHeaders.add(new AbfsHttpHeader(CONTENT_TYPE, EMPTY_STRING));
     requestHeaders.add(new AbfsHttpHeader(USER_AGENT, userAgent));
     return requestHeaders;
@@ -331,7 +335,7 @@ public class AbfsClient implements Closeable {
 
   public AbfsRestOperation createFilesystem(TracingContext tracingContext)
       throws AzureBlobFileSystemException {
-    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders(xMsVersion);
+    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = new AbfsUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE, FILESYSTEM);
@@ -346,7 +350,7 @@ public class AbfsClient implements Closeable {
 
   public AbfsRestOperation setFilesystemProperties(final String properties,
       TracingContext tracingContext) throws AzureBlobFileSystemException {
-    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders(xMsVersion);
+    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     // JDK7 does not support PATCH, so to work around the issue we will use
     // PUT and specify the real method in the X-Http-Method-Override header.
     requestHeaders.add(new AbfsHttpHeader(X_HTTP_METHOD_OVERRIDE,
@@ -371,7 +375,7 @@ public class AbfsClient implements Closeable {
   public AbfsRestOperation listPath(final String relativePath, final boolean recursive, final int listMaxResults,
                                     final String continuation, TracingContext tracingContext)
       throws IOException {
-    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders(xMsVersion);
+    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE, FILESYSTEM);
@@ -393,7 +397,7 @@ public class AbfsClient implements Closeable {
   }
 
   public AbfsRestOperation getFilesystemProperties(TracingContext tracingContext) throws AzureBlobFileSystemException {
-    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders(xMsVersion);
+    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE, FILESYSTEM);
@@ -409,7 +413,7 @@ public class AbfsClient implements Closeable {
   }
 
   public AbfsRestOperation deleteFilesystem(TracingContext tracingContext) throws AzureBlobFileSystemException {
-    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders(xMsVersion);
+    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE, FILESYSTEM);
@@ -460,7 +464,7 @@ public class AbfsClient implements Closeable {
       final ContextEncryptionAdapter contextEncryptionAdapter,
       final TracingContext tracingContext)
       throws AzureBlobFileSystemException {
-    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders(xMsVersion);
+    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     if (isFile) {
       addEncryptionKeyRequestHeaders(path, requestHeaders, true,
           contextEncryptionAdapter, tracingContext);
@@ -521,7 +525,7 @@ public class AbfsClient implements Closeable {
   }
 
   public AbfsRestOperation acquireLease(final String path, int duration, TracingContext tracingContext) throws AzureBlobFileSystemException {
-    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders(xMsVersion);
+    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
 
     requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_ACTION, ACQUIRE_LEASE_ACTION));
     requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_DURATION, Integer.toString(duration)));
@@ -541,7 +545,7 @@ public class AbfsClient implements Closeable {
 
   public AbfsRestOperation renewLease(final String path, final String leaseId,
       TracingContext tracingContext) throws AzureBlobFileSystemException {
-    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders(xMsVersion);
+    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
 
     requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_ACTION, RENEW_LEASE_ACTION));
     requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_ID, leaseId));
@@ -560,7 +564,7 @@ public class AbfsClient implements Closeable {
 
   public AbfsRestOperation releaseLease(final String path,
       final String leaseId, TracingContext tracingContext) throws AzureBlobFileSystemException {
-    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders(xMsVersion);
+    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
 
     requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_ACTION, RELEASE_LEASE_ACTION));
     requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_ID, leaseId));
@@ -579,7 +583,7 @@ public class AbfsClient implements Closeable {
 
   public AbfsRestOperation breakLease(final String path,
       TracingContext tracingContext) throws AzureBlobFileSystemException {
-    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders(xMsVersion);
+    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
 
     requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_ACTION, BREAK_LEASE_ACTION));
     requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_BREAK_PERIOD, DEFAULT_LEASE_BREAK_PERIOD));
@@ -627,7 +631,7 @@ public class AbfsClient implements Closeable {
           boolean isMetadataIncompleteState,
           boolean isNamespaceEnabled)
       throws IOException {
-    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders(xMsVersion);
+    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
 
     final boolean hasEtag = !isEmpty(sourceEtag);
 
@@ -823,7 +827,7 @@ public class AbfsClient implements Closeable {
       AppendRequestParameters reqParams, final String cachedSasToken,
       ContextEncryptionAdapter contextEncryptionAdapter, TracingContext tracingContext)
       throws AzureBlobFileSystemException {
-    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders(xMsVersion);
+    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     addEncryptionKeyRequestHeaders(path, requestHeaders, false,
         contextEncryptionAdapter, tracingContext);
     if (reqParams.isExpectHeaderEnabled()) {
@@ -982,7 +986,7 @@ public class AbfsClient implements Closeable {
       final String cachedSasToken, final String leaseId,
       ContextEncryptionAdapter contextEncryptionAdapter, TracingContext tracingContext)
       throws AzureBlobFileSystemException {
-    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders(xMsVersion);
+    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     addEncryptionKeyRequestHeaders(path, requestHeaders, false,
         contextEncryptionAdapter, tracingContext);
     // JDK7 does not support PATCH, so to workaround the issue we will use
@@ -1015,7 +1019,7 @@ public class AbfsClient implements Closeable {
   public AbfsRestOperation setPathProperties(final String path, final String properties,
                                              final TracingContext tracingContext, final ContextEncryptionAdapter contextEncryptionAdapter)
       throws AzureBlobFileSystemException {
-    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders(xMsVersion);
+    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     addEncryptionKeyRequestHeaders(path, requestHeaders, false,
         contextEncryptionAdapter, tracingContext);
     // JDK7 does not support PATCH, so to workaround the issue we will use
@@ -1043,7 +1047,7 @@ public class AbfsClient implements Closeable {
       final boolean includeProperties, final TracingContext tracingContext,
       final ContextEncryptionAdapter contextEncryptionAdapter)
       throws AzureBlobFileSystemException {
-    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders(xMsVersion);
+    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     String operation = SASTokenProvider.GET_PROPERTIES_OPERATION;
@@ -1080,7 +1084,7 @@ public class AbfsClient implements Closeable {
       String cachedSasToken,
       ContextEncryptionAdapter contextEncryptionAdapter,
       TracingContext tracingContext) throws AzureBlobFileSystemException {
-    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders(xMsVersion);
+    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     addEncryptionKeyRequestHeaders(path, requestHeaders, false,
         contextEncryptionAdapter, tracingContext);
     AbfsHttpHeader rangeHeader = new AbfsHttpHeader(RANGE,
@@ -1119,16 +1123,17 @@ public class AbfsClient implements Closeable {
 
   public AbfsRestOperation deletePath(final String path, final boolean recursive,
                                       final String continuation,
-                                      TracingContext tracingContext)
+                                      TracingContext tracingContext,
+                                      final boolean isNamespaceEnabled)
           throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders
-        = (isPaginatedDelete(tracingContext, recursive)
+        = (isPaginatedDelete(recursive, isNamespaceEnabled)
         && xMsVersion.compareTo(ApiVersion.AUG_03_2023) < 0)
         ? createDefaultHeaders(ApiVersion.AUG_03_2023)
-        : createDefaultHeaders(xMsVersion);
+        : createDefaultHeaders();
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
 
-    if (isPaginatedDelete(tracingContext, recursive)) {
+    if (isPaginatedDelete(recursive, isNamespaceEnabled)) {
       // Add paginated query parameter
       abfsUriQueryBuilder.addQuery(QUERY_PARAM_PAGINATED, TRUE);
     }
@@ -1204,7 +1209,7 @@ public class AbfsClient implements Closeable {
   public AbfsRestOperation setOwner(final String path, final String owner, final String group,
                                     TracingContext tracingContext)
       throws AzureBlobFileSystemException {
-    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders(xMsVersion);
+    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     // JDK7 does not support PATCH, so to workaround the issue we will use
     // PUT and specify the real method in the X-Http-Method-Override header.
     requestHeaders.add(new AbfsHttpHeader(X_HTTP_METHOD_OVERRIDE,
@@ -1234,7 +1239,7 @@ public class AbfsClient implements Closeable {
   public AbfsRestOperation setPermission(final String path, final String permission,
                                          TracingContext tracingContext)
       throws AzureBlobFileSystemException {
-    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders(xMsVersion);
+    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     // JDK7 does not support PATCH, so to workaround the issue we will use
     // PUT and specify the real method in the X-Http-Method-Override header.
     requestHeaders.add(new AbfsHttpHeader(X_HTTP_METHOD_OVERRIDE,
@@ -1264,7 +1269,7 @@ public class AbfsClient implements Closeable {
   public AbfsRestOperation setAcl(final String path, final String aclSpecString, final String eTag,
                                   TracingContext tracingContext)
       throws AzureBlobFileSystemException {
-    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders(xMsVersion);
+    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     // JDK7 does not support PATCH, so to workaround the issue we will use
     // PUT and specify the real method in the X-Http-Method-Override header.
     requestHeaders.add(new AbfsHttpHeader(X_HTTP_METHOD_OVERRIDE,
@@ -1297,7 +1302,7 @@ public class AbfsClient implements Closeable {
 
   public AbfsRestOperation getAclStatus(final String path, final boolean useUPN,
                                         TracingContext tracingContext) throws AzureBlobFileSystemException {
-    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders(xMsVersion);
+    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(HttpQueryParams.QUERY_PARAM_ACTION, AbfsHttpConstants.GET_ACCESS_CONTROL);
@@ -1335,7 +1340,7 @@ public class AbfsClient implements Closeable {
         AbfsRestOperationType.CheckAccess,
         AbfsHttpConstants.HTTP_METHOD_HEAD,
         url,
-        createDefaultHeaders(xMsVersion));
+        createDefaultHeaders());
     op.execute(tracingContext);
     return op;
   }
@@ -1479,10 +1484,8 @@ public class AbfsClient implements Closeable {
     return abfsConfiguration.isPaginatedDeleteEnabled();
   }
 
-  private Boolean isPaginatedDelete(TracingContext tracingContext,
-      boolean isRecursiveDelete) throws AzureBlobFileSystemException {
-    return getIsPaginatedDeleteEnabled()
-        && getIsNamespaceEnabled(tracingContext) && isRecursiveDelete;
+  private Boolean isPaginatedDelete(boolean isRecursiveDelete, boolean isNamespaceEnabled) {
+    return getIsPaginatedDeleteEnabled() && isNamespaceEnabled && isRecursiveDelete;
   }
 
   public AuthType getAuthType() {
