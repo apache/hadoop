@@ -34,6 +34,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.functional.RemoteIterators;
 import org.apache.hadoop.util.functional.FutureIO;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Assert;
 import org.junit.AssumptionViolatedException;
 import org.slf4j.Logger;
@@ -1113,11 +1114,14 @@ public class ContractTestUtils extends Assert {
    * Utility to validate vectored read results.
    * @param fileRanges input ranges.
    * @param originalData original data.
+   * @param baseOffset base offset of the original data
    * @throws IOException any ioe.
    */
-  public static void validateVectoredReadResult(List<FileRange> fileRanges,
-                                                byte[] originalData)
-          throws IOException, TimeoutException {
+  public static void validateVectoredReadResult(
+      final List<FileRange> fileRanges,
+      final byte[] originalData,
+      final long baseOffset)
+      throws IOException, TimeoutException {
     CompletableFuture<?>[] completableFutures = new CompletableFuture<?>[fileRanges.size()];
     int i = 0;
     for (FileRange res : fileRanges) {
@@ -1133,8 +1137,8 @@ public class ContractTestUtils extends Assert {
       ByteBuffer buffer = FutureIO.awaitFuture(data,
               VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS,
               TimeUnit.SECONDS);
-      assertDatasetEquals((int) res.getOffset(), "vecRead",
-              buffer, res.getLength(), originalData);
+      assertDatasetEquals((int) (res.getOffset() - baseOffset), "vecRead",
+          buffer, res.getLength(), originalData);
     }
   }
 
@@ -1169,15 +1173,19 @@ public class ContractTestUtils extends Assert {
    * @param originalData original data.
    */
   public static void assertDatasetEquals(
-          final int readOffset,
-          final String operation,
-          final ByteBuffer data,
-          int length, byte[] originalData) {
+      final int readOffset,
+      final String operation,
+      final ByteBuffer data,
+      final int length,
+      final byte[] originalData) {
     for (int i = 0; i < length; i++) {
       int o = readOffset + i;
-      assertEquals(operation + " with read offset " + readOffset
-                      + ": data[" + i + "] != DATASET[" + o + "]",
-              originalData[o], data.get());
+      final byte orig = originalData[o];
+      final byte current = data.get();
+      Assertions.assertThat(current)
+          .describedAs("%s with read offset %d: data[0x%02X] != DATASET[0x%02X]",
+                      operation, o, i, current)
+          .isEqualTo(orig);
     }
   }
 
@@ -1738,6 +1746,43 @@ public class ContractTestUtils extends Assert {
     }
   }
 
+  /**
+   * Create a range list with a single range within it.
+   * @param offset offset
+   * @param length length
+   * @return the list.
+   */
+  public static List<FileRange> range(
+      final long offset,
+      final int length) {
+    return range(new ArrayList<>(), offset, length);
+  }
+
+  /**
+   * Create a range and add it to the supplied list.
+   * @param fileRanges list of ranges
+   * @param offset offset
+   * @param length length
+   * @return the list.
+   */
+  public static List<FileRange> range(
+      final List<FileRange> fileRanges,
+      final long offset,
+      final int length) {
+    fileRanges.add(FileRange.createFileRange(offset, length));
+    return fileRanges;
+  }
+
+  /**
+   * Given a list of ranges, calculate the total size.
+   * @param fileRanges range list.
+   * @return total size of all reads.
+   */
+  public static long totalReadSize(final List<FileRange> fileRanges) {
+    return fileRanges.stream()
+        .mapToLong(FileRange::getLength)
+        .sum();
+  }
 
   /**
    * Results of recursive directory creation/scan operations.

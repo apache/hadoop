@@ -20,11 +20,13 @@ package org.apache.hadoop.fs.contract.s3a;
 
 import java.io.EOFException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,18 +40,30 @@ import org.apache.hadoop.fs.contract.AbstractContractVectoredReadTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.s3a.S3AInputPolicy;
+import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.StoreStatisticNames;
 import org.apache.hadoop.fs.statistics.StreamStatisticNames;
 import org.apache.hadoop.test.LambdaTestUtils;
 
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_LENGTH;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_ADAPTIVE;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_VECTOR;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.range;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.returnBuffersToPoolPostRead;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.validateVectoredReadResult;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
 import static org.apache.hadoop.test.MoreAsserts.assertEqual;
 
+/**
+ * S3A contract tests for vectored reads.
+ * This is a complex suite as it really is testing the store, so measurements of
+ * what IO took place is also performed if the input stream is suitable for this.
+ */
 public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTest {
 
   private static final Logger LOG = LoggerFactory.getLogger(ITestS3AContractVectoredRead.class);
@@ -61,18 +75,6 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
   @Override
   protected AbstractFSContract createContract(Configuration conf) {
     return new S3AContract(conf);
-  }
-
-  /**
-   * Overriding in S3 vectored read api fails fast in case of EOF
-   * requested range.
-   */
-  @Override
-  public void testEOFRanges() throws Exception {
-    FileSystem fs = getFileSystem();
-    List<FileRange> fileRanges = new ArrayList<>();
-    fileRanges.add(FileRange.createFileRange(DATASET_LEN, 100));
-    verifyExceptionalVectoredRead(fs, fileRanges, EOFException.class);
   }
 
   @Test
@@ -87,7 +89,7 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
     conf.set(Constants.AWS_S3_VECTOR_READS_MIN_SEEK_SIZE, "2K");
     conf.set(Constants.AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE, "10M");
     try (S3AFileSystem fs = S3ATestUtils.createTestFileSystem(conf)) {
-      try (FSDataInputStream fis = fs.open(path(VECTORED_READ_FILE_NAME))) {
+      try (FSDataInputStream fis = openVectorFile(fs)) {
         int newMinSeek = fis.minSeekForVectorReads();
         int newMaxSize = fis.maxReadSizeForVectorReads();
         assertEqual(newMinSeek, configuredMinSeek,
@@ -105,7 +107,7 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
             Constants.AWS_S3_VECTOR_READS_MIN_SEEK_SIZE,
             Constants.AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE);
     try (S3AFileSystem fs = S3ATestUtils.createTestFileSystem(conf)) {
-      try (FSDataInputStream fis = fs.open(path(VECTORED_READ_FILE_NAME))) {
+      try (FSDataInputStream fis = openVectorFile(fs)) {
         int minSeek = fis.minSeekForVectorReads();
         int maxSize = fis.maxReadSizeForVectorReads();
         assertEqual(minSeek, Constants.DEFAULT_AWS_S3_VECTOR_READS_MIN_SEEK_SIZE,
@@ -118,56 +120,40 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
 
   @Test
   public void testStopVectoredIoOperationsCloseStream() throws Exception {
-    FileSystem fs = getFileSystem();
+
     List<FileRange> fileRanges = createSampleNonOverlappingRanges();
-    try (FSDataInputStream in = fs.open(path(VECTORED_READ_FILE_NAME))){
+    try (FSDataInputStream in = openVectorFile()){
       in.readVectored(fileRanges, getAllocate());
       in.close();
       LambdaTestUtils.intercept(InterruptedIOException.class,
-          () -> validateVectoredReadResult(fileRanges, DATASET));
+          () -> validateVectoredReadResult(fileRanges, DATASET, 0));
     }
     // reopening the stream should succeed.
-    try (FSDataInputStream in = fs.open(path(VECTORED_READ_FILE_NAME))){
+    try (FSDataInputStream in = openVectorFile()){
       in.readVectored(fileRanges, getAllocate());
-      validateVectoredReadResult(fileRanges, DATASET);
+      validateVectoredReadResult(fileRanges, DATASET, 0);
     }
   }
 
+  /**
+   * Verify that unbuffer() stops vectored IO operations.
+   * There's a small risk of a race condition where the unbuffer() call
+   * is made after the vector reads have completed.
+   */
   @Test
   public void testStopVectoredIoOperationsUnbuffer() throws Exception {
-    FileSystem fs = getFileSystem();
+
     List<FileRange> fileRanges = createSampleNonOverlappingRanges();
-    try (FSDataInputStream in = fs.open(path(VECTORED_READ_FILE_NAME))){
+    try (FSDataInputStream in = openVectorFile()){
       in.readVectored(fileRanges, getAllocate());
       in.unbuffer();
       LambdaTestUtils.intercept(InterruptedIOException.class,
-          () -> validateVectoredReadResult(fileRanges, DATASET));
+          () -> validateVectoredReadResult(fileRanges, DATASET, 0));
       // re-initiating the vectored reads after unbuffer should succeed.
       in.readVectored(fileRanges, getAllocate());
-      validateVectoredReadResult(fileRanges, DATASET);
+      validateVectoredReadResult(fileRanges, DATASET, 0);
     }
 
-  }
-
-  /**
-   * S3 vectored IO doesn't support overlapping ranges.
-   */
-  @Override
-  public void testOverlappingRanges() throws Exception {
-    FileSystem fs = getFileSystem();
-    List<FileRange> fileRanges = getSampleOverlappingRanges();
-    verifyExceptionalVectoredRead(fs, fileRanges, UnsupportedOperationException.class);
-  }
-
-  /**
-   * S3 vectored IO doesn't support overlapping ranges.
-   */
-  @Override
-  public void testSameRanges() throws Exception {
-    // Same ranges are special case of overlapping only.
-    FileSystem fs = getFileSystem();
-    List<FileRange> fileRanges = getSampleSameRanges();
-    verifyExceptionalVectoredRead(fs, fileRanges, UnsupportedOperationException.class);
   }
 
   /**
@@ -179,21 +165,35 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
 
     try (S3AFileSystem fs = getTestFileSystemWithReadAheadDisabled()) {
       List<FileRange> fileRanges = new ArrayList<>();
-      fileRanges.add(FileRange.createFileRange(10 * 1024, 100));
-      fileRanges.add(FileRange.createFileRange(8 * 1024, 100));
-      fileRanges.add(FileRange.createFileRange(14 * 1024, 100));
-      fileRanges.add(FileRange.createFileRange(2 * 1024 - 101, 100));
-      fileRanges.add(FileRange.createFileRange(40 * 1024, 1024));
+      range(fileRanges, 10 * 1024, 100);
+      range(fileRanges, 8 * 1024, 100);
+      range(fileRanges, 14 * 1024, 100);
+      range(fileRanges, 2 * 1024 - 101, 100);
+      range(fileRanges, 40 * 1024, 1024);
 
       FileStatus fileStatus = fs.getFileStatus(path(VECTORED_READ_FILE_NAME));
       CompletableFuture<FSDataInputStream> builder =
-              fs.openFile(path(VECTORED_READ_FILE_NAME))
-                      .withFileStatus(fileStatus)
-                      .build();
+          fs.openFile(path(VECTORED_READ_FILE_NAME))
+              .withFileStatus(fileStatus)
+              .opt(FS_OPTION_OPENFILE_READ_POLICY,
+                  FS_OPTION_OPENFILE_READ_POLICY_VECTOR)
+              .build();
       try (FSDataInputStream in = builder.get()) {
         in.readVectored(fileRanges, getAllocate());
-        validateVectoredReadResult(fileRanges, DATASET);
+        validateVectoredReadResult(fileRanges, DATASET, 0);
         returnBuffersToPoolPostRead(fileRanges, getPool());
+        final InputStream wrappedStream = in.getWrappedStream();
+
+        // policy will be random.
+        if (wrappedStream instanceof S3AInputStream) {
+          S3AInputStream inner = (S3AInputStream) wrappedStream;
+          Assertions.assertThat(inner.getInputPolicy())
+              .describedAs("Input policy of %s", inner)
+              .isEqualTo(S3AInputPolicy.Random);
+          Assertions.assertThat(inner.isObjectStreamOpen())
+              .describedAs("Object stream open in %s", inner)
+              .isFalse();
+        }
 
         // audit the io statistics for this stream
         IOStatistics st = in.getIOStatistics();
@@ -292,8 +292,8 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
       try (FSDataInputStream in = builder.get()) {
         in.readVectored(ranges1, getAllocate());
         in.readVectored(ranges2, getAllocate());
-        validateVectoredReadResult(ranges1, DATASET);
-        validateVectoredReadResult(ranges2, DATASET);
+        validateVectoredReadResult(ranges1, DATASET, 0);
+        validateVectoredReadResult(ranges2, DATASET, 0);
         returnBuffersToPoolPostRead(ranges1, getPool());
         returnBuffersToPoolPostRead(ranges2, getPool());
 
