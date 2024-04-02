@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URL;
 
@@ -271,6 +272,73 @@ public class ITestAbfsHttpClientRequestExecutor extends
     }).when(interceptedConn).receiveResponseEntity(Mockito.any(
         HttpResponse.class));
     return interceptedConn;
+  }
+
+  @Test
+  public void testConnectionReadRecords() throws Exception {
+    AzureBlobFileSystem fs = getFileSystem();
+    Path path = new Path("/testConnectionRecords");
+
+    Configuration conf = new Configuration(fs.getConf());
+    conf.set(FS_AZURE_NETWORKING_LIBRARY, APACHE_HTTP_CLIENT.toString());
+    AzureBlobFileSystem fs2 = Mockito.spy(
+        (AzureBlobFileSystem) FileSystem.newInstance(conf));
+
+    AzureBlobFileSystemStore store = Mockito.spy(fs2.getAbfsStore());
+    Mockito.doReturn(store).when(fs2).getAbfsStore();
+
+    AbfsClient client = Mockito.spy(store.getClient());
+    Mockito.doReturn(client).when(store).getClient();
+
+    try (OutputStream os = fs.create(path)) {
+      os.write(1);
+    }
+
+    InputStream is = fs2.open(path);
+
+    Mockito.doAnswer(answer -> {
+      AbfsRestOperation op = Mockito.spy(
+          (AbfsRestOperation) answer.callRealMethod());
+      final ConnectionInfo connectionInfo = new ConnectionInfo();
+      mockHttpOperationBehavior(connectionInfo, op);
+      Mockito.doAnswer(executeAnswer -> {
+        executeAnswer.callRealMethod();
+        Assertions.assertThat(connectionInfo.getSendHeaderInvocation())
+            .isEqualTo(1);
+        Assertions.assertThat(connectionInfo.getSendBodyInvocation())
+            .isEqualTo(0);
+        Assertions.assertThat(connectionInfo.getReceiveResponseInvocation())
+            .isEqualTo(1);
+        Assertions.assertThat(connectionInfo.getReceiveResponseBodyInvocation())
+            .isEqualTo(1);
+
+        Assertions.assertThat(latencyDifferencePerentage(connectionInfo.getSendTime(), op.getResult().getSendLatency()))
+            .isLessThan(1);
+        Assertions.assertThat(latencyDifferencePerentage(connectionInfo.getReadTime(), op.getResult().getRecvLatency()))
+            .isLessThan(1);
+        return null;
+      }).when(op).execute(Mockito.any(TracingContext.class));
+      return op;
+    }).when(client).getAbfsRestOperation(
+        Mockito.any(AbfsRestOperationType.class),
+        Mockito.anyString(),
+        Mockito.any(URL.class),
+        Mockito.anyList(),
+        Mockito.any(byte[].class),
+        Mockito.anyInt(),
+        Mockito.anyInt(),
+        Mockito.nullable(String.class));
+
+    is.read();
+    is.close();
+  }
+
+  private long latencyDifferencePerentage(final long expectationLatency,
+      final long observationLatency) {
+    if(expectationLatency == 0) {
+      return 0;
+    }
+    return Math.abs(expectationLatency - observationLatency) * 100 / expectationLatency;
   }
 
   private static class ConnectionInfo {

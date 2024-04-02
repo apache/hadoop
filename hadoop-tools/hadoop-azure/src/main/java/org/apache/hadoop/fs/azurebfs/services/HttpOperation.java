@@ -507,4 +507,12 @@ public abstract class HttpOperation implements AbfsPerfLoggable {
   abstract boolean getConnectionDisconnectedOnError();
 
   public abstract String getTracingContextSuffix();
+
+  public long getSendLatency() {
+    return sendRequestTimeMs;
+  }
+
+  public long getRecvLatency() {
+    return recvResponseTimeMs;
+  }
 }
