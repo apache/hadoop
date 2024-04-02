@@ -235,6 +235,12 @@ public interface ContractOptions {
   String TEST_ROOT_TESTS_ENABLED = "test.root-tests-enabled";
 
   /**
+   * Indicates that FS is incompatible with root delete.
+   * {@value}
+   */
+  String ROOT_DELETE_INCOMPATIBLE_FS = "root-delete-incompatible-fs";
+
+  /**
    * Limit for #of random seeks to perform.
    * Keep low for remote filesystems for faster tests
    * {@value}
