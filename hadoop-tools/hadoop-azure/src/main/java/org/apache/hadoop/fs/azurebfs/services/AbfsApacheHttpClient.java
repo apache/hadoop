@@ -34,6 +34,9 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.HTTPS_SCHEME;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.HTTP_SCHEME;
 import static org.apache.http.conn.ssl.SSLConnectionSocketFactory.getDefaultHostnameVerifier;
 
 public class AbfsApacheHttpClient {
@@ -48,7 +51,7 @@ public class AbfsApacheHttpClient {
         createSocketFactoryRegistry(
             new SSLConnectionSocketFactory(delegatingSSLSocketFactory,
                 getDefaultHostnameVerifier())),
-        new org.apache.hadoop.fs.azurebfs.services.AbfsConnFactory());
+        new AbfsConnFactory());
     final HttpClientBuilder builder = HttpClients.custom();
     builder.setConnectionManager(connMgr)
         .setRequestExecutor(new AbfsManagedHttpRequestExecutor(
@@ -56,7 +59,12 @@ public class AbfsApacheHttpClient {
         .disableContentCompression()
         .disableRedirectHandling()
         .disableAutomaticRetries()
-        .setUserAgent(""); //To prevent the default user agent (http.agent) from being set
+        /*
+        * To prevent the read of system property http.agent. The agent is set
+        * in request headers by AbfsClient. System property read is an
+        * overhead.
+        */
+        .setUserAgent(EMPTY_STRING);
     httpClient = builder.build();
   }
 
@@ -81,12 +89,12 @@ public class AbfsApacheHttpClient {
       ConnectionSocketFactory sslSocketFactory) {
     if (sslSocketFactory == null) {
       return RegistryBuilder.<ConnectionSocketFactory>create()
-          .register("http", PlainConnectionSocketFactory.getSocketFactory())
+          .register(HTTP_SCHEME, PlainConnectionSocketFactory.getSocketFactory())
           .build();
     }
     return RegistryBuilder.<ConnectionSocketFactory>create()
-        .register("http", PlainConnectionSocketFactory.getSocketFactory())
-        .register("https", sslSocketFactory)
+        .register(HTTP_SCHEME, PlainConnectionSocketFactory.getSocketFactory())
+        .register(HTTPS_SCHEME, sslSocketFactory)
         .build();
   }
 }

@@ -1518,7 +1518,9 @@ public class AbfsClient implements Closeable {
       sb.append(HUNDRED_CONTINUE);
       sb.append(SEMICOLON);
     }
-    sb.append(" ").append(abfsConfiguration.getPreferredHttpOperationType()).append(";");
+    sb.append(SINGLE_WHITE_SPACE)
+        .append(abfsConfiguration.getPreferredHttpOperationType())
+        .append(SEMICOLON);
 
     sb.append(SINGLE_WHITE_SPACE);
     sb.append(abfsConfiguration.getClusterName());

@@ -265,7 +265,7 @@ public class AbfsRestOperation {
         ++retryCount;
         if (checkApacheHttpClientIoExceptionCount
             && apacheHttpClientIoExceptions
-            >= abfsConfiguration.getMaxApacheHttpClientIoExceptions()) {
+            >= abfsConfiguration.getMaxApacheHttpClientIoExceptionsRetries()) {
           checkApacheHttpClientIoExceptionCount = false;
           ApacheHttpClientHealthMonitor.registerFallback();
         }

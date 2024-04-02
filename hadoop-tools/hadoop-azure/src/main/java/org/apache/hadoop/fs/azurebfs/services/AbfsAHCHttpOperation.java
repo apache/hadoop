@@ -89,7 +89,7 @@ public class AbfsAHCHttpOperation extends HttpOperation {
 
   private final boolean isPayloadRequest;
 
-  private List<AbfsHttpHeader> requestHeaders;
+  private final List<AbfsHttpHeader> requestHeaders;
 
   private AbfsAHCHttpOperation(final URL url,
       final String method,
@@ -400,7 +400,7 @@ public class AbfsAHCHttpOperation extends HttpOperation {
         return header.getValue();
       }
     }
-    return "";
+    return EMPTY_STRING;
   }
 
   @Override

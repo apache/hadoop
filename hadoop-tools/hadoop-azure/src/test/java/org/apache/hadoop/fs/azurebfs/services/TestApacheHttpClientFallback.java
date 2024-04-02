@@ -117,7 +117,7 @@ public class TestApacheHttpClientFallback extends AbstractAbfsTestWithTimeout {
         .getPreferredHttpOperationType();
     Mockito.doReturn(DEFAULT_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES)
         .when(configuration)
-        .getMaxApacheHttpClientIoExceptions();
+        .getMaxApacheHttpClientIoExceptionsRetries();
     AbfsClient client = Mockito.mock(AbfsClient.class);
     Mockito.doReturn(Mockito.mock(ExponentialRetryPolicy.class))
         .when(client)

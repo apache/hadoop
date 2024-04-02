@@ -366,7 +366,7 @@ public class AbfsConfiguration{
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
       FS_AZURE_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES, DefaultValue = DEFAULT_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES)
-  private int maxApacheHttpClientIoExceptions;
+  private int maxApacheHttpClientIoExceptionsRetries;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_APACHE_HTTP_CLIENT_MAX_CACHE_CONNECTION_SIZE,
       DefaultValue = DEFAULT_HTTP_CLIENT_CONN_MAX_IDLE_CONNECTIONS)
@@ -862,8 +862,8 @@ public class AbfsConfiguration{
     return getEnum(FS_AZURE_NETWORKING_LIBRARY, DEFAULT_NETWORKING_LIBRARY);
   }
 
-  public int getMaxApacheHttpClientIoExceptions() {
-    return maxApacheHttpClientIoExceptions;
+  public int getMaxApacheHttpClientIoExceptionsRetries() {
+    return maxApacheHttpClientIoExceptionsRetries;
   }
 
   public int getMaxApacheHttpClientCacheConnections() {
