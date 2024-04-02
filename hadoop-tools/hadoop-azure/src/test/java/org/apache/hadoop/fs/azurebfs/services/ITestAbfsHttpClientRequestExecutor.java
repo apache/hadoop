@@ -38,6 +38,7 @@ import org.apache.http.HttpClientConnection;
 import org.apache.http.HttpEntityEnclosingRequest;
 import org.apache.http.HttpException;
 import org.apache.http.HttpRequest;
+import org.apache.http.HttpResponse;
 import org.apache.http.client.protocol.HttpClientContext;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_NETWORKING_LIBRARY;
@@ -75,45 +76,42 @@ public class ITestAbfsHttpClientRequestExecutor extends
     Mockito.doAnswer(answer -> {
       AbfsRestOperation op = Mockito.spy(
           (AbfsRestOperation) answer.callRealMethod());
-      final int[] sendHeadersInvocation = {0};
-      final int[] sendBodyInvocation = {0};
-      final int[] receiveResponseInvocation = {0};
+      final ConnectionInfo connectionInfo = new ConnectionInfo();
 
       /*
-      * Assert that correct actions are taking place over the connection to handle
-      * expect100 assertions, failure and success.
-      *
-      * The test would make two calls to the server. The first two calls would
-      * be because of attempt to write in a non-existing file. The first call would have
-      * expect100 header, and the server would respond with 404. The second call would
-      * be a retry from AbfsOutputStream, and would not have expect100 header.
-      *
-      * The third call would be because of attempt to write in an existing file. The call
-      * would have expect100 assertion pass and would send the data.
-      *
-      * Following is the expectation from the first attempt:
-      * 1. sendHeaders should be called once. This is for expect100 assertion invocation.
-      * 2. receiveResponse should be called once. This is to receive expect100 assertion.
-      * 2. sendBody should not be called.
-      *
-      * Following is the expectation from the second attempt:
-      * 1. sendHeaders should be called once. This is not for expect100 assertion invocation.
-      * 2. sendBody should be called once. It will not have any expect100 assertion.
-      * Once headers are sent, body is sent.
-      * 3. receiveResponse should be called once. This is to receive the response from the server.
-      *
-      * Following is the expectation from the third attempt:
-      * 1. sendHeaders should be called once. This is for expect100 assertion invocation.
-      * 2. receiveResponse should be called. This is to receive the response from the server for expect100 assertion.
-      * 3. sendBody called as expect100 assertion is pass.
-      * 4. receiveResponse should be called. This is to receive the response from the server.
-      */
-      mockHttpOperationBehavior(invocation, op, sendHeadersInvocation, sendBodyInvocation,
-          receiveResponseInvocation);
+       * Assert that correct actions are taking place over the connection to handle
+       * expect100 assertions, failure and success.
+       *
+       * The test would make two calls to the server. The first two calls would
+       * be because of attempt to write in a non-existing file. The first call would have
+       * expect100 header, and the server would respond with 404. The second call would
+       * be a retry from AbfsOutputStream, and would not have expect100 header.
+       *
+       * The third call would be because of attempt to write in an existing file. The call
+       * would have expect100 assertion pass and would send the data.
+       *
+       * Following is the expectation from the first attempt:
+       * 1. sendHeaders should be called once. This is for expect100 assertion invocation.
+       * 2. receiveResponse should be called once. This is to receive expect100 assertion.
+       * 2. sendBody should not be called.
+       *
+       * Following is the expectation from the second attempt:
+       * 1. sendHeaders should be called once. This is not for expect100 assertion invocation.
+       * 2. sendBody should be called once. It will not have any expect100 assertion.
+       * Once headers are sent, body is sent.
+       * 3. receiveResponse should be called once. This is to receive the response from the server.
+       *
+       * Following is the expectation from the third attempt:
+       * 1. sendHeaders should be called once. This is for expect100 assertion invocation.
+       * 2. receiveResponse should be called. This is to receive the response from the server for expect100 assertion.
+       * 3. sendBody called as expect100 assertion is pass.
+       * 4. receiveResponse should be called. This is to receive the response from the server.
+       */
+      mockHttpOperationBehavior(connectionInfo, op);
       Mockito.doAnswer(executeAnswer -> {
         invocation[0]++;
         final Throwable throwable;
-        if(invocation[0] == 3) {
+        if (invocation[0] == 3) {
           executeAnswer.callRealMethod();
           throwable = null;
         } else {
@@ -137,19 +135,34 @@ public class ITestAbfsHttpClientRequestExecutor extends
          * The third call would be with expect headers, and expect 100 continue assertion has to happen which would pass.
          */
         if (invocation[0] == 1) {
-          Assertions.assertThat(sendHeadersInvocation[0]).isEqualTo(1);
-          Assertions.assertThat(sendBodyInvocation[0]).isEqualTo(0);
-          Assertions.assertThat(receiveResponseInvocation[0]).isEqualTo(1);
+          Assertions.assertThat(connectionInfo.getSendHeaderInvocation())
+              .isEqualTo(1);
+          Assertions.assertThat(connectionInfo.getSendBodyInvocation())
+              .isEqualTo(0);
+          Assertions.assertThat(connectionInfo.getReceiveResponseInvocation())
+              .isEqualTo(1);
+          Assertions.assertThat(connectionInfo.getReceiveResponseBodyInvocation())
+              .isEqualTo(1);
         }
         if (invocation[0] == 2) {
-          Assertions.assertThat(sendHeadersInvocation[0]).isEqualTo(1);
-          Assertions.assertThat(sendBodyInvocation[0]).isEqualTo(1);
-          Assertions.assertThat(receiveResponseInvocation[0]).isEqualTo(1);
+          Assertions.assertThat(connectionInfo.getSendHeaderInvocation())
+              .isEqualTo(1);
+          Assertions.assertThat(connectionInfo.getSendBodyInvocation())
+              .isEqualTo(1);
+          Assertions.assertThat(connectionInfo.getReceiveResponseInvocation())
+              .isEqualTo(1);
+          Assertions.assertThat(connectionInfo.getReceiveResponseBodyInvocation())
+              .isEqualTo(1);
         }
         if (invocation[0] == 3) {
-          Assertions.assertThat(sendHeadersInvocation[0]).isEqualTo(1);
-          Assertions.assertThat(sendBodyInvocation[0]).isEqualTo(1);
-          Assertions.assertThat(receiveResponseInvocation[0]).isEqualTo(2);
+          Assertions.assertThat(connectionInfo.getSendHeaderInvocation())
+              .isEqualTo(1);
+          Assertions.assertThat(connectionInfo.getSendBodyInvocation())
+              .isEqualTo(1);
+          Assertions.assertThat(connectionInfo.getReceiveResponseInvocation())
+              .isEqualTo(2);
+          Assertions.assertThat(connectionInfo.getReceiveResponseBodyInvocation())
+              .isEqualTo(1);
         }
         Assertions.assertThat(invocation[0]).isLessThanOrEqualTo(3);
         if (throwable != null) {
@@ -172,20 +185,20 @@ public class ITestAbfsHttpClientRequestExecutor extends
     fs.delete(path, true);
     intercept(FileNotFoundException.class, () -> {
       /*
-      * This would lead to two server calls.
-      * First call would be with expect headers, and expect 100 continue
-      *  assertion has to happen which would fail with 404.
-      * Second call would be a retry from AbfsOutputStream, and would not be using expect headers.
-      */
+       * This would lead to two server calls.
+       * First call would be with expect headers, and expect 100 continue
+       *  assertion has to happen which would fail with 404.
+       * Second call would be a retry from AbfsOutputStream, and would not be using expect headers.
+       */
       os.write(1);
       os.close();
     });
 
     final OutputStream os2 = fs2.create(path);
     /*
-    * This would lead to third server call. This would be with expect headers,
-    * and the expect 100 continue assertion would pass.
-    */
+     * This would lead to third server call. This would be with expect headers,
+     * and the expect 100 continue assertion would pass.
+     */
     os2.write(1);
     os2.close();
   }
@@ -199,11 +212,8 @@ public class ITestAbfsHttpClientRequestExecutor extends
    * order of actions taken on the connection object for making an append call with
    * expect100 header.
    */
-  private void mockHttpOperationBehavior(final int[] invocation,
-      final AbfsRestOperation op,
-      final int[] sendHeadersInvocation,
-      final int[] sendBodyInvocation,
-      final int[] receiveResponseInvocation) throws IOException {
+  private void mockHttpOperationBehavior(final ConnectionInfo connectionInfo,
+      final AbfsRestOperation op) throws IOException {
     Mockito.doAnswer(httpOpCreationAnswer -> {
       AbfsAHCHttpOperation httpOperation = Mockito.spy(
           (AbfsAHCHttpOperation) httpOpCreationAnswer.callRealMethod());
@@ -212,8 +222,7 @@ public class ITestAbfsHttpClientRequestExecutor extends
             AbfsManagedHttpContext context = Mockito.spy(
                 (AbfsManagedHttpContext) createContextAnswer.callRealMethod());
             Mockito.doAnswer(connectionSpyIntercept -> {
-              return interceptedConn(invocation[0], sendHeadersInvocation,
-                  sendBodyInvocation, receiveResponseInvocation,
+              return interceptedConn(connectionInfo,
                   (HttpClientConnection) connectionSpyIntercept.getArgument(0));
             }).when(context).interceptConnectionActivity(Mockito.any(
                 HttpClientConnection.class));
@@ -224,25 +233,116 @@ public class ITestAbfsHttpClientRequestExecutor extends
     }).when(op).createHttpOperation();
   }
 
-  private HttpClientConnection interceptedConn(final int i,
-      final int[] sendHeadersInvocation,
-      final int[] sendBodyInvocation,
-      final int[] receiveResponseInvocation,
+  private HttpClientConnection interceptedConn(final ConnectionInfo connectionInfo,
       final HttpClientConnection connection) throws IOException, HttpException {
     HttpClientConnection interceptedConn = Mockito.spy(connection);
+
     Mockito.doAnswer(answer -> {
-      sendHeadersInvocation[0]++;
-      return answer.callRealMethod();
+      connectionInfo.incrementSendHeaderInvocation();
+      long start = System.currentTimeMillis();
+      Object result = answer.callRealMethod();
+      connectionInfo.addSendTime(System.currentTimeMillis() - start);
+      return result;
     }).when(interceptedConn).sendRequestHeader(Mockito.any(HttpRequest.class));
+
     Mockito.doAnswer(answer -> {
-      sendBodyInvocation[0]++;
-      return answer.callRealMethod();
+      connectionInfo.incrementSendBodyInvocation();
+      long start = System.currentTimeMillis();
+      Object result = answer.callRealMethod();
+      connectionInfo.addSendTime(System.currentTimeMillis() - start);
+      return result;
     }).when(interceptedConn).sendRequestEntity(Mockito.any(
         HttpEntityEnclosingRequest.class));
+
     Mockito.doAnswer(answer -> {
-      receiveResponseInvocation[0]++;
-      return answer.callRealMethod();
+      connectionInfo.incrementReceiveResponseInvocation();
+      long start = System.currentTimeMillis();
+      Object result = answer.callRealMethod();
+      connectionInfo.addReadTime(System.currentTimeMillis() - start);
+      return result;
     }).when(interceptedConn).receiveResponseHeader();
+
+    Mockito.doAnswer(answer -> {
+      connectionInfo.incrementReceiveResponseBodyInvocation();
+      long start = System.currentTimeMillis();
+      Object result = answer.callRealMethod();
+      connectionInfo.addReadTime(System.currentTimeMillis() - start);
+      return result;
+    }).when(interceptedConn).receiveResponseEntity(Mockito.any(
+        HttpResponse.class));
     return interceptedConn;
+  }
+
+  private static class ConnectionInfo {
+
+    private long connectTime;
+
+    private long readTime;
+
+    private long sendTime;
+
+    private int sendHeaderInvocation;
+
+    private int sendBodyInvocation;
+
+    private int receiveResponseInvocation;
+
+    private int receiveResponseBodyInvocation;
+
+    private void incrementSendHeaderInvocation() {
+      sendHeaderInvocation++;
+    }
+
+    private void incrementSendBodyInvocation() {
+      sendBodyInvocation++;
+    }
+
+    private void incrementReceiveResponseInvocation() {
+      receiveResponseInvocation++;
+    }
+
+    private void incrementReceiveResponseBodyInvocation() {
+      receiveResponseBodyInvocation++;
+    }
+
+    private void addConnectTime(long connectTime) {
+      this.connectTime += connectTime;
+    }
+
+    private void addReadTime(long readTime) {
+      this.readTime += readTime;
+    }
+
+    private void addSendTime(long sendTime) {
+      this.sendTime += sendTime;
+    }
+
+    private long getConnectTime() {
+      return connectTime;
+    }
+
+    private long getReadTime() {
+      return readTime;
+    }
+
+    private long getSendTime() {
+      return sendTime;
+    }
+
+    private int getSendHeaderInvocation() {
+      return sendHeaderInvocation;
+    }
+
+    private int getSendBodyInvocation() {
+      return sendBodyInvocation;
+    }
+
+    private int getReceiveResponseInvocation() {
+      return receiveResponseInvocation;
+    }
+
+    private int getReceiveResponseBodyInvocation() {
+      return receiveResponseBodyInvocation;
+    }
   }
 }
