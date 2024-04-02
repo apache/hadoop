@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsRestOperationType;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.http.HttpClientConnection;
 import org.apache.http.HttpEntityEnclosingRequest;
@@ -220,8 +221,8 @@ public class ITestAbfsHttpClientRequestExecutor extends
           (AbfsAHCHttpOperation) httpOpCreationAnswer.callRealMethod());
 
       Mockito.doAnswer(createContextAnswer -> {
-            AbfsManagedHttpContext context = Mockito.spy(
-                (AbfsManagedHttpContext) createContextAnswer.callRealMethod());
+            AbfsManagedHttpClientContext context = Mockito.spy(
+                (AbfsManagedHttpClientContext) createContextAnswer.callRealMethod());
             Mockito.doAnswer(connectionSpyIntercept -> {
               return interceptedConn(connectionInfo,
                   (HttpClientConnection) connectionSpyIntercept.getArgument(0));

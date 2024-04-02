@@ -43,7 +43,7 @@ class AbfsManagedApacheHttpConnection
 
   private final HttpRoute httpRoute;
 
-  private AbfsManagedHttpContext managedHttpContext;
+  private AbfsManagedHttpClientContext managedHttpContext;
 
   private final int hashCode;
 
@@ -59,7 +59,7 @@ class AbfsManagedApacheHttpConnection
     return httpRoute;
   }
 
-  void setManagedHttpContext(AbfsManagedHttpContext managedHttpContext) {
+  void setManagedHttpContext(AbfsManagedHttpClientContext managedHttpContext) {
     this.managedHttpContext = managedHttpContext;
   }
 

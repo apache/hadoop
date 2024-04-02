@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsApacheHttpExpect100Exception;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsRestOperationType;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
@@ -80,7 +81,7 @@ public class AbfsAHCHttpOperation extends HttpOperation {
 
   private HttpResponse httpResponse;
 
-  private AbfsManagedHttpContext abfsHttpClientContext;
+  private AbfsManagedHttpClientContext abfsHttpClientContext;
 
   private final AbfsRestOperationType abfsRestOperationType;
 
@@ -133,8 +134,8 @@ public class AbfsAHCHttpOperation extends HttpOperation {
   }
 
   @VisibleForTesting
-  AbfsManagedHttpContext setFinalAbfsClientContext() {
-    return new AbfsManagedHttpContext();
+  AbfsManagedHttpClientContext setFinalAbfsClientContext() {
+    return new AbfsManagedHttpClientContext();
   }
 
   private boolean isPayloadRequest(final String method) {

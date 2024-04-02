@@ -27,6 +27,7 @@ import java.time.Duration;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsRestOperationType;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;

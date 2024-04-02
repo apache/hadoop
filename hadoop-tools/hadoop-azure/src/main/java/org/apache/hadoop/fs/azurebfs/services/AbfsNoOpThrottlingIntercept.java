@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import org.apache.hadoop.fs.azurebfs.constants.AbfsRestOperationType;
+
 final class AbfsNoOpThrottlingIntercept implements AbfsThrottlingIntercept {
 
   public static final AbfsNoOpThrottlingIntercept INSTANCE = new AbfsNoOpThrottlingIntercept();

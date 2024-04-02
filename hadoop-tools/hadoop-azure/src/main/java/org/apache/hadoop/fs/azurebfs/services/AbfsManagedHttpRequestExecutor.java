@@ -41,10 +41,10 @@ public class AbfsManagedHttpRequestExecutor extends HttpRequestExecutor {
   public HttpResponse execute(final HttpRequest request,
       final HttpClientConnection conn,
       final HttpContext context) throws IOException, HttpException {
-    if (context instanceof AbfsManagedHttpContext
+    if (context instanceof AbfsManagedHttpClientContext
         && conn instanceof AbfsManagedApacheHttpConnection) {
       ((AbfsManagedApacheHttpConnection) conn).setManagedHttpContext(
-          (AbfsManagedHttpContext) context);
+          (AbfsManagedHttpClientContext) context);
     }
     return super.execute(request, conn, context);
   }
@@ -54,9 +54,9 @@ public class AbfsManagedHttpRequestExecutor extends HttpRequestExecutor {
       final HttpClientConnection conn,
       final HttpContext context) throws IOException, HttpException {
     final HttpClientConnection inteceptedConnection;
-    if (context instanceof AbfsManagedHttpContext) {
+    if (context instanceof AbfsManagedHttpClientContext) {
       inteceptedConnection
-          = ((AbfsManagedHttpContext) context).interceptConnectionActivity(
+          = ((AbfsManagedHttpClientContext) context).interceptConnectionActivity(
           conn);
     } else {
       inteceptedConnection = conn;
@@ -87,9 +87,9 @@ public class AbfsManagedHttpRequestExecutor extends HttpRequestExecutor {
       final HttpClientConnection conn,
       final HttpContext context) throws HttpException, IOException {
     final HttpClientConnection interceptedConnection;
-    if (context instanceof AbfsManagedHttpContext) {
+    if (context instanceof AbfsManagedHttpClientContext) {
       interceptedConnection
-          = ((AbfsManagedHttpContext) context).interceptConnectionActivity(
+          = ((AbfsManagedHttpClientContext) context).interceptConnectionActivity(
           conn);
     } else {
       interceptedConnection = conn;

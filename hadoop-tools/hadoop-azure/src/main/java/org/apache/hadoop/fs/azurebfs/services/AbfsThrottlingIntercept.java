@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsRestOperationType;
 
 /**
  * An interface for Abfs Throttling Interface.

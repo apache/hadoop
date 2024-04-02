@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.azurebfs.services;
 import org.apache.http.HttpClientConnection;
 import org.apache.http.client.protocol.HttpClientContext;
 
-public class AbfsManagedHttpContext extends HttpClientContext {
+public class AbfsManagedHttpClientContext extends HttpClientContext {
 
   private long connectTime = 0L;
 
@@ -29,7 +29,7 @@ public class AbfsManagedHttpContext extends HttpClientContext {
 
   private long sendTime = 0L;
 
-  public AbfsManagedHttpContext() {
+  public AbfsManagedHttpClientContext() {
   }
 
   /**

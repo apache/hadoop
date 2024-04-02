@@ -35,7 +35,6 @@ import org.apache.http.conn.socket.ConnectionSocketFactory;
 import org.apache.http.impl.conn.DefaultHttpClientConnectionOperator;
 import org.apache.http.impl.conn.ManagedHttpClientConnectionFactory;
 import org.apache.http.protocol.HttpContext;
-import org.apache.http.util.Asserts;
 
 /**
  * AbfsConnectionManager is a custom implementation of {@link HttpClientConnectionManager}.
@@ -118,8 +117,8 @@ class AbfsConnectionManager implements HttpClientConnectionManager {
     connectionOperator.connect((AbfsManagedApacheHttpConnection) conn,
         route.getTargetHost(), route.getLocalSocketAddress(),
         connectTimeout, SocketConfig.DEFAULT, context);
-    if (context instanceof AbfsManagedHttpContext) {
-      ((AbfsManagedHttpContext) context).setConnectTime(
+    if (context instanceof AbfsManagedHttpClientContext) {
+      ((AbfsManagedHttpClientContext) context).setConnectTime(
           System.currentTimeMillis() - start);
     }
   }

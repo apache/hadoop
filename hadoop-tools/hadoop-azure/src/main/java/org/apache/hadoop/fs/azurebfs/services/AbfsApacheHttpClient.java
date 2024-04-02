@@ -56,8 +56,7 @@ public class AbfsApacheHttpClient {
         .disableContentCompression()
         .disableRedirectHandling()
         .disableAutomaticRetries()
-        .setUserAgent(
-            ""); // SDK will set the user agent header in the pipeline. Don't let Apache waste time
+        .setUserAgent(""); //To prevent the default user agent (http.agent) from being set
     httpClient = builder.build();
   }
 
@@ -68,7 +67,7 @@ public class AbfsApacheHttpClient {
   }
 
   public HttpResponse execute(HttpRequestBase httpRequest,
-      final AbfsManagedHttpContext abfsHttpClientContext) throws IOException {
+      final AbfsManagedHttpClientContext abfsHttpClientContext) throws IOException {
     RequestConfig.Builder requestConfigBuilder = RequestConfig
         .custom()
         .setConnectTimeout(abfsConfiguration.getHttpConnectionTimeout())
