@@ -57,11 +57,16 @@ import org.apache.hadoop.tracing.Tracer;
 import org.apache.hadoop.tracing.TraceUtils;
 
 import org.apache.hadoop.thirdparty.protobuf.Message;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 /** Sender */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class Sender implements DataTransferProtocol {
+  private static final Logger LOG = LoggerFactory.getLogger(Sender.class);
+
   private final DataOutputStream out;
 
   /** Create a sender for DataTransferProtocol with a output stream. */

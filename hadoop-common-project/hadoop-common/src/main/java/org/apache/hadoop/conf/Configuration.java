@@ -3565,7 +3565,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @throws IOException raised on errors performing I/O.
    */
   public void writeXml(OutputStream out) throws IOException {
-    writeXml(new OutputStreamWriter(out, "UTF-8"));
+    writeXml(new OutputStreamWriter(out, StandardCharsets.UTF_8));
   }
 
   public void writeXml(Writer out) throws IOException {
