@@ -405,6 +405,28 @@ public abstract class GenericTestUtils {
   }
 
   /**
+   * Wait at least {@code atLeastWaitForMillis} from start to end of the test.
+   *
+   * @param check the test to perform.
+   * @param atLeastWaitForMillis the minimum waiting time from the beginning
+   * to the end of the test.
+   * @throws InterruptedException if the method is interrupted while waiting.
+   */
+  public static <T> T atLeastWaitFor(final Supplier<T> check,
+      long atLeastWaitForMillis) throws InterruptedException {
+    if (atLeastWaitForMillis < 0) {
+      atLeastWaitForMillis = 0;
+    }
+    long st = Time.monotonicNow();
+    T result = check.get();
+    long runTime = Time.monotonicNow() - st;
+    if (runTime < atLeastWaitForMillis) {
+      Thread.sleep(atLeastWaitForMillis - runTime);
+    }
+    return result;
+  }
+
+  /**
    * Prints output to one {@link PrintStream} while copying to the other.
    * <p>
    * Closing the main {@link PrintStream} will NOT close the other.
