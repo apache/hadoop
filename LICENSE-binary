@@ -300,7 +300,7 @@ net.minidev:accessors-smart:1.2
 org.apache.avro:avro:1.9.2
 org.apache.commons:commons-collections4:4.2
 org.apache.commons:commons-compress:1.24.0
-org.apache.commons:commons-configuration2:2.8.0
+org.apache.commons:commons-configuration2:2.10.1
 org.apache.commons:commons-csv:1.9.0
 org.apache.commons:commons-digester:1.8.1
 org.apache.commons:commons-lang3:3.12.0
