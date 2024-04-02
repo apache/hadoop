@@ -52,7 +52,7 @@ import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNEC
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.EGRESS_LIMIT_BREACH_ABBREVIATION;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.INGRESS_LIMIT_BREACH_ABBREVIATION;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.IO_EXCEPTION_ABBREVIATION;
-import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.OPERATION_LIMIT_BREACH_ABBREVIATION;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.TPS_LIMIT_BREACH_ABBREVIATION;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.OTHER_SERVER_THROTTLING_ABBREVIATION;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.READ_TIMEOUT_ABBREVIATION;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.READ_TIMEOUT_JDK_MESSAGE;
@@ -167,7 +167,7 @@ public class TestAbfsRestOperationMockFailures {
     testClientRequestIdForStatusRetry(
             HTTP_UNAVAILABLE,
             TPS_OVER_ACCOUNT_LIMIT.getErrorMessage(),
-            OPERATION_LIMIT_BREACH_ABBREVIATION,
+        TPS_LIMIT_BREACH_ABBREVIATION,
             2);
   }
 

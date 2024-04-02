@@ -26,7 +26,7 @@ import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceError
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.TPS_OVER_ACCOUNT_LIMIT;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.EGRESS_LIMIT_BREACH_ABBREVIATION;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.INGRESS_LIMIT_BREACH_ABBREVIATION;
-import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.OPERATION_LIMIT_BREACH_ABBREVIATION;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.TPS_LIMIT_BREACH_ABBREVIATION;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.OTHER_SERVER_THROTTLING_ABBREVIATION;
 
 /**
@@ -60,7 +60,7 @@ public class ServerErrorRetryReason extends RetryReasonCategory {
       }
       if (TPS_OVER_ACCOUNT_LIMIT.getErrorMessage().equalsIgnoreCase(
           splitedServerErrorMessage)) {
-        return OPERATION_LIMIT_BREACH_ABBREVIATION;
+        return TPS_LIMIT_BREACH_ABBREVIATION;
       }
       if (OTHER_SERVER_THROTTLING.getErrorMessage().equalsIgnoreCase(
           splitedServerErrorMessage)) {

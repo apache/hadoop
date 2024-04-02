@@ -41,7 +41,7 @@ import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_CONTINUE;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.EGRESS_LIMIT_BREACH_ABBREVIATION;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.INGRESS_LIMIT_BREACH_ABBREVIATION;
-import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.OPERATION_LIMIT_BREACH_ABBREVIATION;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.TPS_LIMIT_BREACH_ABBREVIATION;
 
 /**
  * The AbfsRestOperation for Rest AbfsClient.
@@ -285,7 +285,8 @@ public class AbfsRestOperation {
   private boolean executeHttpOperation(final int retryCount,
     TracingContext tracingContext) throws AzureBlobFileSystemException {
     AbfsHttpOperation httpOperation;
-    boolean wasExceptionThrown = false;
+    // Used to avoid CST Metric Update in Case of UnknownHost/IO Exception.
+    boolean wasKnownExceptionThrown = false;
 
     try {
       // initialize the HTTP request and open the connection
@@ -327,7 +328,7 @@ public class AbfsRestOperation {
       // If no exception occurred till here it means http operation was successfully complete and
       // a response from server has been received which might be failure or success.
       // If any kind of exception has occurred it will be caught below.
-      // If request failed determine failure reason and retry policy here.
+      // If request failed to determine failure reason and retry policy here.
       // else simply return with success after saving the result.
       LOG.debug("HttpRequest: {}: {}", operationType, httpOperation);
 
@@ -343,7 +344,7 @@ public class AbfsRestOperation {
       result = httpOperation;
 
     } catch (UnknownHostException ex) {
-      wasExceptionThrown = true;
+      wasKnownExceptionThrown = true;
       String hostname = null;
       hostname = httpOperation.getHost();
       failureReason = RetryReason.getAbbreviation(ex, null, null);
@@ -355,7 +356,7 @@ public class AbfsRestOperation {
       }
       return false;
     } catch (IOException ex) {
-      wasExceptionThrown = true;
+      wasKnownExceptionThrown = true;
       if (LOG.isDebugEnabled()) {
         LOG.debug("HttpRequestFailure: {}, {}", httpOperation, ex);
       }
@@ -368,27 +369,10 @@ public class AbfsRestOperation {
 
       return false;
     } finally {
-      /*
-        Updating Client Side Throttling Metrics for relevant response status codes.
-        1. Status code in 2xx range: Successful Operations should contribute
-        2. Status code in 3xx range: Redirection Operations should not contribute
-        3. Status code in 4xx range: User Errors should not contribute
-        4. Status code is 503: Throttling Error should contribute as following:
-          a. 503, Ingress Over Account Limit: Should Contribute
-          b. 503, Egress Over Account Limit: Should Contribute
-          c. 503, TPS Over Account Limit: Should Contribute
-          d. 503, Other Server Throttling: Should not contribute
-        5. Status code in 5xx range other than 503: Should not contribute
-        6. IOException and UnknownHostExceptions: Should not contribute
-       */
       int statusCode = httpOperation.getStatusCode();
-      boolean shouldUpdateCSTMetrics = (statusCode <  HttpURLConnection.HTTP_MULT_CHOICE // Case 1
-              || INGRESS_LIMIT_BREACH_ABBREVIATION.equals(failureReason) // Case 4.a
-              || EGRESS_LIMIT_BREACH_ABBREVIATION.equals(failureReason) // Case 4.b
-              || OPERATION_LIMIT_BREACH_ABBREVIATION.equals(failureReason)) // Case 4.c
-              && !wasExceptionThrown; // Case 6
-
-      if (shouldUpdateCSTMetrics) {
+      // Update Metrics only if Succeeded or Throttled due to account limits.
+      // Also Update in case of any unhandled exception is thrown.
+      if (shouldUpdateCSTMetrics(statusCode) && !wasKnownExceptionThrown) {
         intercept.updateMetrics(operationType, httpOperation);
       }
     }
@@ -450,6 +434,34 @@ public class AbfsRestOperation {
     if (abfsCounters != null) {
       abfsCounters.incrementCounter(statistic, value);
     }
+  }
+
+  /**
+   * Updating Client Side Throttling Metrics for relevant response status codes.
+   * Following criteria is used to decide based on status code and failure reason.
+   * <ol>
+   *   <li>Case 1: Status code in 2xx range: Successful Operations should contribute</li>
+   *   <li>Case 2: Status code in 3xx range: Redirection Operations should not contribute</li>
+   *   <li>Case 3: Status code in 4xx range: User Errors should not contribute</li>
+   *   <li>
+   *     Case 4: Status code is 503: Throttling Error should contribute as following:
+   *     <ol>
+   *       <li>Case 4.a: Ingress Over Account Limit: Should Contribute</li>
+   *       <li>Case 4.b: Egress Over Account Limit: Should Contribute</li>
+   *       <li>Case 4.c: TPS Over Account Limit: Should Contribute</li>
+   *       <li>Case 4.d: Other Server Throttling: Should not contribute</li>
+   *     </ol>
+   *   </li>
+   *   <li>Case 5: Status code in 5xx range other than 503: Should not contribute</li>
+   * </ol>
+   * @param statusCode
+   * @return
+   */
+  private boolean shouldUpdateCSTMetrics(final int statusCode) {
+    return statusCode <  HttpURLConnection.HTTP_MULT_CHOICE // Case 1
+        || INGRESS_LIMIT_BREACH_ABBREVIATION.equals(failureReason) // Case 4.a
+        || EGRESS_LIMIT_BREACH_ABBREVIATION.equals(failureReason) // Case 4.b
+        || TPS_LIMIT_BREACH_ABBREVIATION.equals(failureReason); // Case 4.c
   }
 
   /**

@@ -31,7 +31,7 @@ public final class RetryReasonConstants {
   public static final String READ_TIMEOUT_ABBREVIATION = "RT";
   public static final String INGRESS_LIMIT_BREACH_ABBREVIATION = "ING";
   public static final String EGRESS_LIMIT_BREACH_ABBREVIATION = "EGR";
-  public static final String OPERATION_LIMIT_BREACH_ABBREVIATION = "OPR";
+  public static final String TPS_LIMIT_BREACH_ABBREVIATION = "OPR";
   public static final String OTHER_SERVER_THROTTLING_ABBREVIATION = "OTH";
   public static final String UNKNOWN_HOST_EXCEPTION_ABBREVIATION = "UH";
   public static final String IO_EXCEPTION_ABBREVIATION = "IOE";
