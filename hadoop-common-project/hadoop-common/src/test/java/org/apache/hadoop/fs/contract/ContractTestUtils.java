@@ -37,7 +37,6 @@ import org.apache.hadoop.util.functional.FutureIO;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Assert;
-import org.junit.AssumptionViolatedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -65,6 +64,7 @@ import java.util.concurrent.TimeoutException;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
 import static org.apache.hadoop.util.functional.RemoteIterators.foreach;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Utilities used across test cases.
@@ -98,11 +98,13 @@ public class ContractTestUtils extends Assert {
                                           String expected) {
     String val = props.getProperty(key);
     if (expected == null) {
-      assertNull("Non null property " + key + " = " + val, val);
+      Assertions.assertThat(val)
+          .withFailMessage("Non null property " + key + " = " + val)
+          .isNull();
     } else {
-      assertEquals("property " + key + " = " + val,
-                          expected,
-                          val);
+      Assertions.assertThat(val)
+          .withFailMessage("property " + key + " = " + val)
+          .isEqualTo(expected);
     }
   }
 
@@ -146,7 +148,9 @@ public class ContractTestUtils extends Assert {
     if (delete) {
       rejectRootOperation(path);
       boolean deleted = fs.delete(path, false);
-      assertTrue("Deleted", deleted);
+      Assertions.assertThat(deleted)
+          .withFailMessage("Deleted")
+          .isTrue();
       assertPathDoesNotExist(fs, "Cleanup failed", path);
     }
   }
@@ -186,9 +190,9 @@ public class ContractTestUtils extends Assert {
   public static void writeDataset(FileSystem fs, Path path, byte[] src,
       int len, int buffersize, boolean overwrite, boolean useBuilder)
       throws IOException {
-    assertTrue(
-      "Not enough data in source array to write " + len + " bytes",
-      src.length >= len);
+    Assertions.assertThat(src)
+        .withFailMessage("Not enough data in source array to write " + len + " bytes")
+        .hasSizeGreaterThanOrEqualTo(len);
     FSDataOutputStream out;
     if (useBuilder) {
       out = fs.createFile(path)
@@ -254,7 +258,9 @@ public class ContractTestUtils extends Assert {
     FileStatus stat = fs.getFileStatus(path);
     assertIsFile(path, stat);
     String statText = stat.toString();
-    assertEquals("wrong length " + statText, original.length, stat.getLen());
+    Assertions.assertThat(stat.getLen())
+        .withFailMessage("wrong length " + statText)
+        .isEqualTo(original.length);
     byte[] bytes = readDataset(fs, path, original.length);
     compareByteArrays(original, bytes, original.length);
   }
@@ -289,8 +295,9 @@ public class ContractTestUtils extends Assert {
   public static void compareByteArrays(byte[] original,
                                        byte[] received,
                                        int len) {
-    assertEquals("Number of bytes read != number written",
-                        len, received.length);
+    Assertions.assertThat(received)
+        .withFailMessage("Number of bytes read != number written")
+        .hasSize(len);
     int errors = 0;
     int firstErrorByte = -1;
     for (int i = 0; i < len; i++) {
@@ -326,7 +333,7 @@ public class ContractTestUtils extends Assert {
         }
         LOG.warn(line);
       }
-      fail(message);
+      Assertions.fail(message);
     }
   }
 
@@ -434,8 +441,9 @@ public class ContractTestUtils extends Assert {
   public static void rename(FileSystem fileSystem, Path src, Path dst)
       throws IOException {
     rejectRootOperation(src, false);
-    assertTrue("rename(" + src + ", " + dst + ") failed",
-        fileSystem.rename(src, dst));
+    Assertions.assertThat(fileSystem.rename(src, dst))
+        .withFailMessage("rename(" + src + ", " + dst + ") failed")
+        .isTrue();
     assertPathDoesNotExist(fileSystem, "renamed source dir", src);
   }
 
@@ -514,19 +522,19 @@ public class ContractTestUtils extends Assert {
    * exception for the Junit test runner to mark as failed.
    * @param message text message
    * @param failure what failed
-   * @throws AssumptionViolatedException always
+   * @throws AssumptionViolatedException or similar always
    */
   public static void downgrade(String message, Throwable failure) {
     LOG.warn("Downgrading test " + message, failure);
-    AssumptionViolatedException ave =
-        new AssumptionViolatedException(failure, null);
-    throw ave;
+    assumeThat(false)
+        .withFailMessage(message)
+        .isTrue();
   }
 
   /**
    * report an overridden test as unsupported.
    * @param message message to use in the text
-   * @throws AssumptionViolatedException always
+   * @throws AssumptionViolatedException or similar always
    */
   public static void unsupported(String message) {
     skip(message);
@@ -535,11 +543,13 @@ public class ContractTestUtils extends Assert {
   /**
    * report a test has been skipped for some reason.
    * @param message message to use in the text
-   * @throws AssumptionViolatedException always
+   * @throws AssumptionViolatedException or similar always
    */
   public static void skip(String message) {
     LOG.info("Skipping: {}", message);
-    throw new AssumptionViolatedException(message);
+    assumeThat(false)
+        .withFailMessage(message)
+        .isTrue();
   }
 
   /**
@@ -562,10 +572,9 @@ public class ContractTestUtils extends Assert {
   public static void assertFileHasLength(FileSystem fs, Path path,
                                          int expected) throws IOException {
     FileStatus status = fs.getFileStatus(path);
-    assertEquals(
-        "Wrong file length of file " + path + " status: " + status,
-        expected,
-        status.getLen());
+    Assertions.assertThat(status.getLen())
+        .withFailMessage("Wrong file length of file " + path + " status: " + status)
+        .isEqualTo(expected);
   }
 
   /**
@@ -586,8 +595,9 @@ public class ContractTestUtils extends Assert {
    * @param fileStatus stats to check
    */
   public static void assertIsDirectory(FileStatus fileStatus) {
-    assertTrue("Should be a directory -but isn't: " + fileStatus,
-               fileStatus.isDirectory());
+    Assertions.assertThat(fileStatus.isDirectory())
+        .withFailMessage("Should be a directory -but isn't: " + fileStatus)
+        .isTrue();
   }
 
   /**
@@ -600,7 +610,9 @@ public class ContractTestUtils extends Assert {
   public static void assertErasureCoded(final FileSystem fs, final Path path)
       throws IOException {
     FileStatus fileStatus = fs.getFileStatus(path);
-    assertTrue(path + " must be erasure coded!", fileStatus.isErasureCoded());
+    Assertions.assertThat(fileStatus.isErasureCoded())
+        .withFailMessage(path + " must be erasure coded!")
+        .isTrue();
   }
 
   /**
@@ -613,8 +625,9 @@ public class ContractTestUtils extends Assert {
   public static void assertNotErasureCoded(final FileSystem fs,
       final Path path) throws IOException {
     FileStatus fileStatus = fs.getFileStatus(path);
-    assertFalse(path + " should not be erasure coded!",
-        fileStatus.isErasureCoded());
+    Assertions.assertThat(fileStatus.isErasureCoded())
+        .withFailMessage(path + " should not be erasure coded!")
+        .isFalse();
   }
 
   /**
@@ -746,7 +759,7 @@ public class ContractTestUtils extends Assert {
     boolean deleted = fs.delete(file, recursive);
     if (!deleted) {
       String dir = ls(fs, file.getParent());
-      assertTrue("Delete failed on " + file + ": " + dir, deleted);
+      Assertions.fail("Delete failed on " + file + ": " + dir);
     }
     assertPathDoesNotExist(fs, "Deleted file", file);
   }
@@ -766,10 +779,10 @@ public class ContractTestUtils extends Assert {
       Path dest,
       boolean expectedResult) throws IOException {
     boolean result = fs.rename(source, dest);
-    if (expectedResult != result) {
-      fail(String.format("Expected rename(%s, %s) to return %b,"
-              + " but result was %b", source, dest, expectedResult, result));
-    }
+    Assertions.assertThat(result)
+        .withFailMessage(String.format("Expected rename(%s, %s) to return %b,"
+            + " but result was %b", source, dest, expectedResult, result))
+        .isEqualTo(expectedResult);
   }
 
   /**
@@ -896,10 +909,12 @@ public class ContractTestUtils extends Assert {
    */
   public static void assertIsFile(Path filename, FileStatus status) {
     String fileInfo = filename + "  " + status;
-    assertFalse("File claims to be a directory " + fileInfo,
-                status.isDirectory());
-    assertFalse("File claims to be a symlink " + fileInfo,
-                       status.isSymlink());
+    Assertions.assertThat(status.isDirectory())
+        .withFailMessage("File claims to be a directory " + fileInfo)
+        .isFalse();
+    Assertions.assertThat(status.isSymlink())
+        .withFailMessage("File claims to be a symlink " + fileInfo)
+        .isFalse();
   }
 
   /**
@@ -1019,7 +1034,7 @@ public class ContractTestUtils extends Assert {
                                             Path path) throws IOException {
     try {
       FileStatus status = fileSystem.getFileStatus(path);
-      fail(message + ": unexpectedly found " + path + " as  " + status);
+      Assertions.fail(message + ": unexpectedly found " + path + " as  " + status);
     } catch (FileNotFoundException expected) {
       //this is expected
 
@@ -1038,7 +1053,7 @@ public class ContractTestUtils extends Assert {
       String message, Path path) throws IOException {
     try {
       FileStatus status = fileContext.getFileStatus(path);
-      fail(message + ": unexpectedly found " + path + " as  " + status);
+      Assertions.fail(message + ": unexpectedly found " + path + " as  " + status);
     } catch (FileNotFoundException expected) {
       //this is expected
 
@@ -1064,9 +1079,10 @@ public class ContractTestUtils extends Assert {
         found = true;
       }
     }
-    assertTrue("Path " + subdir
-                      + " not found in directory " + dir + ":" + builder,
-                      found);
+    Assertions.assertThat(found)
+        .withFailMessage("Path " + subdir
+            + " not found in directory " + dir + ":" + builder)
+        .isTrue();
   }
 
   /**
@@ -1078,7 +1094,9 @@ public class ContractTestUtils extends Assert {
    * @throws IOException IO Problem
    */
   public static void assertMkdirs(FileSystem fs, Path dir) throws IOException {
-    assertTrue("mkdirs(" + dir + ") returned false", fs.mkdirs(dir));
+    Assertions.assertThat(fs.mkdirs(dir))
+        .withFailMessage("mkdirs(" + dir + ") returned false")
+        .isTrue();
   }
 
   /**
@@ -1109,8 +1127,9 @@ public class ContractTestUtils extends Assert {
         break;
       }
     }
-    assertFalse("File content of file is not as expected at offset " + idx,
-                mismatch);
+    Assertions.assertThat(mismatch)
+        .withFailMessage("File content of file is not as expected at offset " + idx)
+        .isFalse();
   }
 
   /**
@@ -1179,9 +1198,10 @@ public class ContractTestUtils extends Assert {
           int length, byte[] originalData) {
     for (int i = 0; i < length; i++) {
       int o = readOffset + i;
-      assertEquals(operation + " with read offset " + readOffset
-                      + ": data[" + i + "] != DATASET[" + o + "]",
-              originalData[o], data.get());
+      Assertions.assertThat(data.get())
+          .withFailMessage(operation + " with read offset " + readOffset
+              + ": data[" + i + "] != DATASET[" + o + "]")
+          .isEqualTo(originalData[o]);
     }
   }
 
@@ -1303,8 +1323,8 @@ public class ContractTestUtils extends Assert {
 
     // Write test file in a specific pattern
     NanoTimer timer = new NanoTimer();
-    assertEquals(fileSize,
-        generateTestFile(fs, objectPath, fileSize, testBufferSize, modulus));
+    Assertions.assertThat(generateTestFile(fs, objectPath, fileSize, testBufferSize, modulus))
+        .isEqualTo(fileSize);
     assertPathExists(fs, "not created successful", objectPath);
     timer.end("Time to write %d bytes", fileSize);
     bandwidth(timer, fileSize);
@@ -1638,23 +1658,26 @@ public class ContractTestUtils extends Assert {
   public static void assertCapabilities(
       Object stream, String[] shouldHaveCapabilities,
       String[] shouldNotHaveCapabilities) {
-    assertTrue("Stream should be instanceof StreamCapabilities",
-        stream instanceof StreamCapabilities);
+    Assertions.assertThat(stream)
+        .withFailMessage("Stream should be instanceof StreamCapabilities")
+        .isInstanceOf(StreamCapabilities.class);
 
     StreamCapabilities source = (StreamCapabilities) stream;
     if (shouldHaveCapabilities != null) {
       for (String shouldHaveCapability : shouldHaveCapabilities) {
-        assertTrue("Should have capability: " + shouldHaveCapability
-                + " in " + source,
-            source.hasCapability(shouldHaveCapability));
+        Assertions.assertThat(source.hasCapability(shouldHaveCapability))
+            .withFailMessage("Should have capability: " + shouldHaveCapability
+                + " in " + source)
+            .isTrue();
       }
     }
 
     if (shouldNotHaveCapabilities != null) {
       for (String shouldNotHaveCapability : shouldNotHaveCapabilities) {
-        assertFalse("Should not have capability: " + shouldNotHaveCapability
-                + " in " + source,
-            source.hasCapability(shouldNotHaveCapability));
+        Assertions.assertThat(source.hasCapability(shouldNotHaveCapability))
+            .withFailMessage("Should not have capability: " + shouldNotHaveCapability
+                + " in " + source)
+            .isFalse();
       }
     }
   }
@@ -1700,10 +1723,10 @@ public class ContractTestUtils extends Assert {
       final String...capabilities) throws IOException {
 
     for (String shouldHaveCapability: capabilities) {
-      assertTrue("Should have capability: " + shouldHaveCapability
-              + " under " + path
-              + " in " + source,
-          source.hasPathCapability(path, shouldHaveCapability));
+      Assertions.assertThat(source.hasPathCapability(path, shouldHaveCapability))
+          .withFailMessage("Should have capability: " + shouldHaveCapability
+              + " under " + path + " in " + source)
+              .isTrue();
     }
   }
 
@@ -1721,9 +1744,10 @@ public class ContractTestUtils extends Assert {
       final String...capabilities) throws IOException {
 
     for (String shouldHaveCapability: capabilities) {
-      assertFalse("Path  must not support capability: " + shouldHaveCapability
-              + " under " + path,
-          source.hasPathCapability(path, shouldHaveCapability));
+      Assertions.assertThat(source.hasPathCapability(path, shouldHaveCapability))
+          .withFailMessage("Path must not support capability: "
+              + shouldHaveCapability + " under " + path)
+          .isFalse();
     }
   }
 
@@ -1798,7 +1822,9 @@ public class ContractTestUtils extends Assert {
      * @param stats statistics array. Must not be null.
      */
     public TreeScanResults(FileStatus[] stats) {
-      assertNotNull("Null file status array", stats);
+      Assertions.assertThat(stats)
+          .withFailMessage("Null file status array")
+          .isNotNull();
       for (FileStatus stat : stats) {
         add(stat);
       }
@@ -1910,12 +1936,15 @@ public class ContractTestUtils extends Assert {
      */
     public void assertSizeEquals(String text, long f, long d, long o) {
       String self = dump();
-      Assert.assertEquals(text + ": file count in " + self,
-          f, getFileCount());
-      Assert.assertEquals(text + ": directory count in " + self,
-          d, getDirCount());
-      Assert.assertEquals(text + ": 'other' count in " + self,
-          o, getOtherCount());
+      Assertions.assertThat(getFileCount())
+          .withFailMessage(text + ": file count in " + self)
+          .isEqualTo(f);
+      Assertions.assertThat(getDirCount())
+          .withFailMessage(text + ": directory count in " + self)
+          .isEqualTo(d);
+      Assertions.assertThat(getOtherCount())
+          .withFailMessage(text + ": 'other' count in " + self)
+          .isEqualTo(o);
     }
 
     /**

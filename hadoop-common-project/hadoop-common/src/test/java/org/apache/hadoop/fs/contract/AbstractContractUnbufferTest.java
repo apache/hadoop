@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.contract;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -115,16 +116,18 @@ public abstract class AbstractContractUnbufferTest extends AbstractFSContractTes
       unbuffer(stream);
       validateFileContents(stream, TEST_FILE_LEN / 2, TEST_FILE_LEN / 2);
       unbuffer(stream);
-      assertEquals("stream should be at end of file", TEST_FILE_LEN,
-              stream.getPos());
+      Assertions.assertThat(stream.getPos())
+          .withFailMessage("stream should be at end of file")
+          .isEqualTo(TEST_FILE_LEN);
     }
   }
 
   private void unbuffer(FSDataInputStream stream) throws IOException {
     long pos = stream.getPos();
     stream.unbuffer();
-    assertEquals("unbuffer unexpectedly changed the stream position", pos,
-            stream.getPos());
+    Assertions.assertThat(stream.getPos())
+        .withFailMessage("unbuffer unexpectedly changed the stream position")
+        .isEqualTo(pos);
   }
 
   protected void validateFullFileContents(FSDataInputStream stream)
@@ -136,9 +139,9 @@ public abstract class AbstractContractUnbufferTest extends AbstractFSContractTes
                                       int startIndex)
           throws IOException {
     byte[] streamData = new byte[length];
-    assertEquals("failed to read expected number of bytes from "
-            + "stream. This may be transient",
-        length, stream.read(streamData));
+    Assertions.assertThat(stream.read(streamData))
+        .withFailMessage("failed to read expected number of bytes from stream. This may be transient")
+        .isEqualTo(length);
     byte[] validateFileBytes;
     if (startIndex == 0 && length == fileBytes.length) {
       validateFileBytes = fileBytes;
@@ -146,7 +149,9 @@ public abstract class AbstractContractUnbufferTest extends AbstractFSContractTes
       validateFileBytes = Arrays.copyOfRange(fileBytes, startIndex,
               startIndex + length);
     }
-    assertArrayEquals("invalid file contents", validateFileBytes, streamData);
+    Assertions.assertThat(streamData)
+        .withFailMessage("invalid file contents")
+        .isEqualTo(validateFileBytes);
   }
 
   protected Path getFile() {

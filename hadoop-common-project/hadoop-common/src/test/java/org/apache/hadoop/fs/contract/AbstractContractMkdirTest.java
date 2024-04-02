@@ -22,6 +22,7 @@ import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.ParentNotDirectoryException;
 import org.apache.hadoop.fs.Path;
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -125,7 +126,7 @@ public abstract class AbstractContractMkdirTest extends AbstractFSContractTestBa
         new Path(getContract().getTestPath() + "/testMkdirSlashHandling/e///")
     };
     for (Path path : paths) {
-      assertTrue(fs.mkdirs(path));
+      Assertions.assertThat(fs.mkdirs(path)).isTrue();
       assertPathExists(path + " does not exist after mkdirs", path);
       assertIsDirectory(path);
       if (path.toString().endsWith("/")) {
@@ -141,11 +142,11 @@ public abstract class AbstractContractMkdirTest extends AbstractFSContractTestBa
     final FileSystem fs = getFileSystem();
 
     final Path parent = path("testMkdirsPopulatingAllNonexistentAncestors");
-    assertTrue(fs.mkdirs(parent));
+    Assertions.assertThat(fs.mkdirs(parent)).isTrue();
     assertPathExists(parent + " should exist before making nested dir", parent);
 
     Path nested = path(parent + "/a/b/c/d/e/f/g/h/i/j/k/L");
-    assertTrue(fs.mkdirs(nested));
+    Assertions.assertThat(fs.mkdirs(nested)).isTrue();
     while (nested != null && !nested.equals(parent) && !nested.isRoot()) {
       assertPathExists(nested + " nested dir should exist", nested);
       nested = nested.getParent();
@@ -158,11 +159,11 @@ public abstract class AbstractContractMkdirTest extends AbstractFSContractTestBa
     final FileSystem fs = getFileSystem();
 
     final Path parent = path("testMkdirsDoesNotRemoveParentDirectories");
-    assertTrue(fs.mkdirs(parent));
+    Assertions.assertThat(fs.mkdirs(parent)).isTrue();
 
     Path p = parent;
     for (int i = 0; i < 10; i++) {
-      assertTrue(fs.mkdirs(p));
+      Assertions.assertThat(fs.mkdirs(p)).isTrue();
       assertPathExists(p + " should exist after mkdir(" + p + ")", p);
       p = path(p + "/dir-" + i);
     }

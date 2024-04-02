@@ -230,18 +230,19 @@ public abstract class AbstractContractRootDirectoryTest extends AbstractFSContra
         fs.listLocatedStatus(root));
     String locatedStatusResult = join(locatedStatusList, "\n");
 
-    assertEquals("listStatus(/) vs listLocatedStatus(/) with \n"
+    Assertions.assertThat(locatedStatusList)
+        .withFailMessage("listStatus(/) vs listLocatedStatus(/) with \n"
             + "listStatus =" + listStatusResult
-            +" listLocatedStatus = " + locatedStatusResult,
-        statuses.length, locatedStatusList.size());
+            +" listLocatedStatus = " + locatedStatusResult)
+        .hasSize(statuses.length);
     List<LocatedFileStatus> fileList = toList(fs.listFiles(root, false));
     String listFilesResult = join(fileList, "\n");
-    assertTrue("listStatus(/) vs listFiles(/, false) with \n"
+    Assertions.assertThat(fileList)
+        .withFailMessage("listStatus(/) vs listFiles(/, false) with \n"
             + "listStatus = " + listStatusResult
-            + "listFiles = " + listFilesResult,
-        fileList.size() <= statuses.length);
-    List<FileStatus> statusList = (List<FileStatus>) iteratorToList(
-            fs.listStatusIterator(root));
+            + "listFiles = " + listFilesResult)
+        .hasSizeLessThanOrEqualTo(statuses.length);
+    List<FileStatus> statusList = iteratorToList(fs.listStatusIterator(root));
     Assertions.assertThat(statusList)
             .describedAs("Result of listStatus(/) and listStatusIterator(/)"
                     + " must match")

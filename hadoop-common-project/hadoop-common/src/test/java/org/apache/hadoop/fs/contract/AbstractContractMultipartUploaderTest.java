@@ -30,7 +30,6 @@ import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Assume;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,6 +54,7 @@ import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 import static org.apache.hadoop.test.LambdaTestUtils.eventually;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 /**
  * Tests of multipart uploads.
@@ -89,9 +89,9 @@ public abstract class AbstractContractMultipartUploaderTest extends
 
     final FileSystem fs = getFileSystem();
     Path testPath = getContract().getTestPath();
-    Assume.assumeTrue("Multipart uploader is not supported",
-        fs.hasPathCapability(testPath,
-            CommonPathCapabilities.FS_MULTIPART_UPLOADER));
+    assumeThat(fs.hasPathCapability(testPath, CommonPathCapabilities.FS_MULTIPART_UPLOADER))
+        .withFailMessage("Multipart uploader is not supported")
+        .isTrue();
     uploader0 = fs.createMultipartUploader(testPath).build();
     uploader1 = fs.createMultipartUploader(testPath).build();
   }
@@ -264,8 +264,9 @@ public abstract class AbstractContractMultipartUploaderTest extends
     } else {
       // otherwise, the same or other uploader can try again.
       PathHandle fd2 = complete(completer, uploadHandle, file, partHandles);
-      assertArrayEquals("Path handles differ", fd.toByteArray(),
-          fd2.toByteArray());
+      Assertions.assertThat(fd2.toByteArray())
+          .withFailMessage("Path handles differ")
+          .isEqualTo(fd.toByteArray());
     }
   }
 
@@ -785,9 +786,9 @@ public abstract class AbstractContractMultipartUploaderTest extends
     UploadHandle upload2;
     try {
       upload2 = startUpload(file);
-      Assume.assumeTrue(
-          "The Filesystem is unexpectedly supporting concurrent uploads",
-          concurrent);
+      assumeThat(concurrent)
+          .withFailMessage("The Filesystem is unexpectedly supporting concurrent uploads")
+          .isTrue();
     } catch (IOException e) {
       if (!concurrent) {
         // this is expected, so end the test
@@ -799,7 +800,9 @@ public abstract class AbstractContractMultipartUploaderTest extends
     }
     Map<Integer, PartHandle> partHandles2 = new HashMap<>();
 
-    assertNotEquals("Upload handles match", upload1, upload2);
+    Assertions.assertThat(upload2)
+        .withFailMessage("Upload handles match")
+        .isNotEqualTo(upload1);
 
     // put part 1
     partHandles1.put(partId1, putPart(file, upload1, partId1, payload1));
