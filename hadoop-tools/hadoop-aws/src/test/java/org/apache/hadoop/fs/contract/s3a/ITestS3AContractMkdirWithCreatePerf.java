@@ -18,18 +18,19 @@
 
 package org.apache.hadoop.fs.contract.s3a;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
-
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.AbstractContractMkdirTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 
+import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
-import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Test mkdir operations on S3A with create performance mode.
@@ -54,22 +55,19 @@ public class ITestS3AContractMkdirWithCreatePerf extends AbstractContractMkdirTe
 
   @Test
   public void testMkdirOverParentFile() throws Throwable {
-    intercept(
-        UncheckedIOException.class,
-        MKDIRS_NOT_FAILED_OVER_FILE,
-        "Dir creation should not have failed. "
-            + "Creation performance mode is expected "
-            + "to create dir without checking file "
-            + "status of parent dir.",
-        this::callTestMkdirOverParentFile);
-  }
-
-  private void callTestMkdirOverParentFile() {
-    try {
-      super.testMkdirOverParentFile();
-    } catch (Throwable e) {
-      throw new UncheckedIOException(new IOException(e));
-    }
+    describe("try to mkdir where a parent is a file, should pass");
+    FileSystem fs = getFileSystem();
+    Path path = methodPath();
+    byte[] dataset = dataset(1024, ' ', 'z');
+    createFile(getFileSystem(), path, false, dataset);
+    Path child = new Path(path, "child-to-mkdir");
+    boolean childCreated = fs.mkdirs(child);
+    assertTrue("Child dir is created", childCreated);
+    assertIsFile(path);
+    byte[] bytes = ContractTestUtils.readDataset(getFileSystem(), path, dataset.length);
+    ContractTestUtils.compareByteArrays(dataset, bytes, dataset.length);
+    assertPathExists("mkdir failed", child);
+    assertDeleted(child, true);
   }
 
 }
