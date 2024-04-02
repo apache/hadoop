@@ -23,7 +23,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.oauth2.AzureADAuthenticator.HttpException;
-import org.apache.hadoop.fs.azurebfs.services.HttpOperation;
+import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 
 /**
  * Exception to wrap Azure service error responses.
@@ -52,7 +52,7 @@ public class AbfsRestOperationException extends AzureBlobFileSystemException {
       final String errorCode,
       final String errorMessage,
       final Exception innerException,
-      final HttpOperation abfsHttpOperation) {
+      final AbfsHttpOperation abfsHttpOperation) {
     super(formatMessage(abfsHttpOperation), innerException);
 
     this.statusCode = statusCode;
@@ -80,7 +80,7 @@ public class AbfsRestOperationException extends AzureBlobFileSystemException {
     return this.errorMessage;
   }
 
-  private static String formatMessage(final HttpOperation abfsHttpOperation) {
+  private static String formatMessage(final AbfsHttpOperation abfsHttpOperation) {
     // HEAD request response doesn't have StorageErrorCode, StorageErrorMessage.
     if (abfsHttpOperation.getMethod().equals("HEAD")) {
       return String.format(

@@ -60,12 +60,12 @@ public class TestApacheHttpClientFallback extends AbstractAbfsTestWithTimeout {
         FSOperationType.TEST_OP, true, format, null));
     Mockito.doAnswer(answer -> {
           answer.callRealMethod();
-          HttpOperation op = answer.getArgument(0);
+          AbfsHttpOperation op = answer.getArgument(0);
           if (op instanceof AbfsAHCHttpOperation) {
             Assertions.assertThat(tc.getHeader()).endsWith(APACHE_IMPL);
             apacheCallsRegister[0]++;
           }
-          if (op instanceof AbfsHttpOperation) {
+          if (op instanceof AbfsJdkHttpOperation) {
             jdkCallsRegister[0]++;
             if (ApacheHttpClientHealthMonitor.usable()) {
               Assertions.assertThat(tc.getHeader()).endsWith(JDK_IMPL);
@@ -76,7 +76,7 @@ public class TestApacheHttpClientFallback extends AbstractAbfsTestWithTimeout {
           return null;
         })
         .when(tc)
-        .constructHeader(Mockito.any(HttpOperation.class),
+        .constructHeader(Mockito.any(AbfsHttpOperation.class),
             Mockito.nullable(String.class), Mockito.nullable(String.class));
     return tc;
   }
@@ -145,7 +145,7 @@ public class TestApacheHttpClientFallback extends AbstractAbfsTestWithTimeout {
     Mockito.doNothing()
         .when(abfsThrottlingIntercept)
         .updateMetrics(Mockito.any(AbfsRestOperationType.class),
-            Mockito.any(HttpOperation.class));
+            Mockito.any(AbfsHttpOperation.class));
     Mockito.doNothing()
         .when(abfsThrottlingIntercept)
         .sendingRequest(Mockito.any(AbfsRestOperationType.class),
@@ -178,17 +178,17 @@ public class TestApacheHttpClientFallback extends AbstractAbfsTestWithTimeout {
 
     Mockito.doNothing()
         .when(op)
-        .signRequest(Mockito.any(HttpOperation.class), Mockito.anyInt());
+        .signRequest(Mockito.any(AbfsHttpOperation.class), Mockito.anyInt());
 
     Mockito.doAnswer(answer -> {
-      HttpOperation operation = Mockito.spy(
-          (HttpOperation) answer.callRealMethod());
+      AbfsHttpOperation operation = Mockito.spy(
+          (AbfsHttpOperation) answer.callRealMethod());
       Assertions.assertThat(operation).isInstanceOf(
           (retryIteration[0]
               < DEFAULT_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES
               && ApacheHttpClientHealthMonitor.usable())
               ? AbfsAHCHttpOperation.class
-              : AbfsHttpOperation.class);
+              : AbfsJdkHttpOperation.class);
       Mockito.doReturn(HTTP_OK).when(operation).getStatusCode();
       Mockito.doThrow(new IOException("Test Exception"))
           .when(operation)
@@ -206,8 +206,8 @@ public class TestApacheHttpClientFallback extends AbstractAbfsTestWithTimeout {
     return ahcOp;
   }
 
-  private AbfsHttpOperation createApacheHttpOp() {
-    AbfsHttpOperation httpOperationMock = Mockito.mock(AbfsHttpOperation.class);
+  private AbfsJdkHttpOperation createApacheHttpOp() {
+    AbfsJdkHttpOperation httpOperationMock = Mockito.mock(AbfsJdkHttpOperation.class);
     Mockito.doCallRealMethod()
         .when(httpOperationMock)
         .getTracingContextSuffix();
@@ -220,7 +220,7 @@ public class TestApacheHttpClientFallback extends AbstractAbfsTestWithTimeout {
     int[] apacheCallsRegister = {0};
     TracingContext tc = getSampleTracingContext(jdkCallsRegister,
         apacheCallsRegister);
-    AbfsHttpOperation op = Mockito.mock(AbfsHttpOperation.class);
+    AbfsJdkHttpOperation op = Mockito.mock(AbfsJdkHttpOperation.class);
     Mockito.doCallRealMethod().when(op).getTracingContextSuffix();
     tc.constructHeader(op, null, null);
   }

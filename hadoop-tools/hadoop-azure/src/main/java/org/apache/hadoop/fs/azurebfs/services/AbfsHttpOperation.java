@@ -20,286 +20,450 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.HttpURLConnection;
-import java.net.ProtocolException;
 import java.net.URL;
 import java.util.List;
 import java.util.Map;
 
-import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLSocketFactory;
-
-import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
-
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
-
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EXPECT_100_JDK_ERROR;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HUNDRED_CONTINUE;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.JDK_FALLBACK;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.JDK_IMPL;
-import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.EXPECT;
+import org.apache.hadoop.fs.azurebfs.contracts.services.AbfsPerfLoggable;
+import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
+import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
 
 /**
- * Implementation of {@link HttpOperation} for orchestrating calls using JDK's HttpURLConnection.
+ * Base Http operation class for orchestrating server IO calls. Child classes would
+ * define the certain orchestration implementation on the basis of network library used.
+ * <p>
+ * For JDK netlib usage, the child class would be {@link AbfsJdkHttpOperation}. <br>
+ * For ApacheHttpClient netlib usage, the child class would be {@link AbfsAHCHttpOperation}.
+ * </p>
  */
-public class AbfsHttpOperation extends HttpOperation {
+public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
 
-  private static final Logger LOG = LoggerFactory.getLogger(
-      AbfsHttpOperation.class);
+  private final Logger log;
 
-  private HttpURLConnection connection;
+  private static final int CLEAN_UP_BUFFER_SIZE = 64 * 1024;
 
-  private boolean connectionDisconnectedOnError = false;
+  private static final int ONE_THOUSAND = 1000;
 
-  public static AbfsHttpOperation getAbfsHttpOperationWithFixedResult(
+  private static final int ONE_MILLION = ONE_THOUSAND * ONE_THOUSAND;
+
+  private String method;
+
+  private URL url;
+
+  private String maskedUrl;
+
+  private String maskedEncodedUrl;
+
+  private int statusCode;
+
+  private String statusDescription;
+
+  private String storageErrorCode = "";
+
+  private String storageErrorMessage = "";
+
+  private String requestId = "";
+
+  private String expectedAppendPos = "";
+
+  private ListResultSchema listResultSchema = null;
+
+  // metrics
+  private int bytesSent;
+
+  private int expectedBytesToBeSent;
+
+  private long bytesReceived;
+
+  private long connectionTimeMs;
+
+  private long sendRequestTimeMs;
+
+  private long recvResponseTimeMs;
+
+  private boolean shouldMask = false;
+
+  public AbfsHttpOperation(Logger logger,
       final URL url,
       final String method,
       final int httpStatus) {
-    AbfsHttpOperationWithFixedResult httpOp
-        = new AbfsHttpOperationWithFixedResult(url, method, httpStatus);
-    return httpOp;
+    this.log = logger;
+    this.url = url;
+    this.method = method;
+    this.statusCode = httpStatus;
   }
 
-  /**
-   * Constructor for FixedResult instance, avoiding connection init.
-   * @param url request url
-   * @param method Http method
-   * @param httpStatus HttpStatus
-   */
-  protected AbfsHttpOperation(final URL url,
-      final String method,
-      final int httpStatus) {
-    super(LOG, url, method, httpStatus);
+  public AbfsHttpOperation(final Logger log, final URL url, final String method) {
+    this.log = log;
+    this.url = url;
+    this.method = method;
   }
 
-  protected HttpURLConnection getConnection() {
-    return connection;
+  public String getMethod() {
+    return method;
   }
 
-  public String getClientRequestId() {
-    return this.connection
-        .getRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID);
+  public String getHost() {
+    return url.getHost();
   }
 
-  public String getResponseHeader(String httpHeader) {
-    return connection.getHeaderField(httpHeader);
+  public int getStatusCode() {
+    return statusCode;
   }
 
-  /**
-   * Initializes a new HTTP request and opens the connection.
-   *
-   * @param url The full URL including query string parameters.
-   * @param method The HTTP method (PUT, PATCH, POST, GET, HEAD, or DELETE).
-   * @param requestHeaders The HTTP request headers.READ_TIMEOUT
-   * @param connectionTimeout The Connection Timeout value to be used while establishing http connection
-   * @param readTimeout The Read Timeout value to be used with http connection while making a request
-   * @throws IOException if an error occurs.
-   */
-  public AbfsHttpOperation(final URL url,
-      final String method,
-      final List<AbfsHttpHeader> requestHeaders,
-      final int connectionTimeout,
-      final int readTimeout)
-      throws IOException {
-    super(LOG, url, method);
-
-    this.connection = openConnection();
-    if (this.connection instanceof HttpsURLConnection) {
-      HttpsURLConnection secureConn = (HttpsURLConnection) this.connection;
-      SSLSocketFactory sslSocketFactory
-          = DelegatingSSLSocketFactory.getDefaultFactory();
-      if (sslSocketFactory != null) {
-        secureConn.setSSLSocketFactory(sslSocketFactory);
-      }
-    }
-
-    this.connection.setConnectTimeout(connectionTimeout);
-    this.connection.setReadTimeout(readTimeout);
-    this.connection.setRequestMethod(method);
-
-    for (AbfsHttpHeader header : requestHeaders) {
-      setRequestProperty(header.getName(), header.getValue());
-    }
+  public String getStatusDescription() {
+    return statusDescription;
   }
 
-  /**
-   * Sends the HTTP request.  Note that HttpUrlConnection requires that an
-   * empty buffer be sent in order to set the "Content-Length: 0" header, which
-   * is required by our endpoint.
-   *
-   * @param buffer the request entity body.
-   * @param offset an offset into the buffer where the data beings.
-   * @param length the length of the data in the buffer.
-   *
-   * @throws IOException if an error occurs.
-   */
-  public void sendPayload(byte[] buffer, int offset, int length)
-      throws IOException {
-    this.connection.setDoOutput(true);
-    this.connection.setFixedLengthStreamingMode(length);
-    if (buffer == null) {
-      // An empty buffer is sent to set the "Content-Length: 0" header, which
-      // is required by our endpoint.
-      buffer = new byte[]{};
-      offset = 0;
-      length = 0;
-    }
-
-    // send the request body
-
-    long startTime = 0;
-    startTime = System.nanoTime();
-    OutputStream outputStream = null;
-    // Updates the expected bytes to be sent based on length.
-    setExpectedBytesToBeSent(length);
-    try {
-      try {
-        /* Without expect header enabled, if getOutputStream() throws
-           an exception, it gets caught by the restOperation. But with
-           expect header enabled we return back without throwing an exception
-           for the correct response code processing.
-         */
-        outputStream = getConnOutputStream();
-      } catch (IOException e) {
-        connectionDisconnectedOnError = true;
-        /* If getOutputStream fails with an expect-100 exception , we return back
-           without throwing an exception to the caller. Else, we throw back the exception.
-         */
-        String expectHeader = getConnProperty(EXPECT);
-        if (expectHeader != null && expectHeader.equals(HUNDRED_CONTINUE)
-            && e instanceof ProtocolException
-            && EXPECT_100_JDK_ERROR.equals(e.getMessage())) {
-          LOG.debug(
-              "Getting output stream failed with expect header enabled, returning back ",
-              e);
-          /*
-           * In case expect-100 assertion has failed, headers and inputStream should not
-           * be parsed. Reason being, conn.getHeaderField(), conn.getHeaderFields(),
-           * conn.getInputStream() will lead to repeated server call.
-           * ref: https://bugs.openjdk.org/browse/JDK-8314978.
-           * Reading conn.responseCode() and conn.getResponseMessage() is safe in
-           * case of Expect-100 error. Reason being, in JDK, it stores the responseCode
-           * in the HttpUrlConnection object before throwing exception to the caller.
-           */
-          setStatusCode(getConnResponseCode());
-          setStatusDescription(getConnResponseMessage());
-          return;
-        } else {
-          LOG.debug(
-              "Getting output stream failed without expect header enabled, throwing exception ",
-              e);
-          throw e;
-        }
-      }
-      // update bytes sent for successful as well as failed attempts via the
-      // accompanying statusCode.
-      setBytesSent(length);
-
-      // If this fails with or without expect header enabled,
-      // it throws an IOException.
-      outputStream.write(buffer, offset, length);
-    } finally {
-      // Closing the opened output stream
-      if (outputStream != null) {
-        outputStream.close();
-      }
-      setSendRequestTimeMs(elapsedTimeMs(startTime));
-    }
+  public String getStorageErrorCode() {
+    return storageErrorCode;
   }
 
+  public String getStorageErrorMessage() {
+    return storageErrorMessage;
+  }
+
+  public abstract String getClientRequestId();
+
+  public String getExpectedAppendPos() {
+    return expectedAppendPos;
+  }
+
+  public String getRequestId() {
+    return requestId;
+  }
+
+  public void setMaskForSAS() {
+    shouldMask = true;
+  }
+
+  public int getBytesSent() {
+    return bytesSent;
+  }
+
+  public int getExpectedBytesToBeSent() {
+    return expectedBytesToBeSent;
+  }
+
+  public long getBytesReceived() {
+    return bytesReceived;
+  }
+
+  public URL getUrl() {
+    return url;
+  }
+
+  public ListResultSchema getListResultSchema() {
+    return listResultSchema;
+  }
+
+  public abstract String getResponseHeader(String httpHeader);
+
+  void setExpectedBytesToBeSent(int expectedBytesToBeSent) {
+    this.expectedBytesToBeSent = expectedBytesToBeSent;
+  }
+
+  void setStatusCode(int statusCode) {
+    this.statusCode = statusCode;
+  }
+
+  void setStatusDescription(String statusDescription) {
+    this.statusDescription = statusDescription;
+  }
+
+  void setBytesSent(int bytesSent) {
+    this.bytesSent = bytesSent;
+  }
+
+  void setSendRequestTimeMs(long sendRequestTimeMs) {
+    this.sendRequestTimeMs = sendRequestTimeMs;
+  }
+
+  void setRecvResponseTimeMs(long recvResponseTimeMs) {
+    this.recvResponseTimeMs = recvResponseTimeMs;
+  }
+
+  void setRequestId(String requestId) {
+    this.requestId = requestId;
+  }
+
+  void setConnectionTimeMs(long connectionTimeMs) {
+    this.connectionTimeMs = connectionTimeMs;
+  }
+
+  // Returns a trace message for the request
   @Override
-  String getRequestProperty(final String headerName) {
-    return connection.getRequestProperty(headerName);
+  public String toString() {
+    final StringBuilder sb = new StringBuilder();
+    sb.append(statusCode);
+    sb.append(",");
+    sb.append(storageErrorCode);
+    sb.append(",");
+    sb.append(expectedAppendPos);
+    sb.append(",cid=");
+    sb.append(getClientRequestId());
+    sb.append(",rid=");
+    sb.append(requestId);
+    sb.append(",connMs=");
+    sb.append(connectionTimeMs);
+    sb.append(",sendMs=");
+    sb.append(sendRequestTimeMs);
+    sb.append(",recvMs=");
+    sb.append(recvResponseTimeMs);
+    sb.append(",sent=");
+    sb.append(bytesSent);
+    sb.append(",recv=");
+    sb.append(bytesReceived);
+    sb.append(",");
+    sb.append(method);
+    sb.append(",");
+    sb.append(getMaskedUrl());
+    return sb.toString();
   }
 
-  @Override
-  Map<String, List<String>> getRequestProperties() {
-    return connection.getRequestProperties();
+  // Returns a trace message for the ABFS API logging service to consume
+  public String getLogString() {
+
+    final StringBuilder sb = new StringBuilder();
+    sb.append("s=")
+        .append(statusCode)
+        .append(" e=")
+        .append(storageErrorCode)
+        .append(" ci=")
+        .append(getClientRequestId())
+        .append(" ri=")
+        .append(requestId)
+
+        .append(" ct=")
+        .append(connectionTimeMs)
+        .append(" st=")
+        .append(sendRequestTimeMs)
+        .append(" rt=")
+        .append(recvResponseTimeMs)
+
+        .append(" bs=")
+        .append(bytesSent)
+        .append(" br=")
+        .append(bytesReceived)
+        .append(" m=")
+        .append(method)
+        .append(" u=")
+        .append(getMaskedEncodedUrl());
+
+    return sb.toString();
   }
 
-  @Override
-  InputStream getContentInputStream() throws IOException {
-    return connection.getInputStream();
+  public String getMaskedUrl() {
+    if (!shouldMask) {
+      return url.toString();
+    }
+    if (maskedUrl != null) {
+      return maskedUrl;
+    }
+    maskedUrl = UriUtils.getMaskedUrl(url);
+    return maskedUrl;
   }
 
-  /**
-   * Gets and processes the HTTP response.
-   *
-   * @param buffer a buffer to hold the response entity body
-   * @param offset an offset in the buffer where the data will being.
-   * @param length the number of bytes to be written to the buffer.
-   *
-   * @throws IOException if an error occurs.
-   */
-  public void processResponse(final byte[] buffer,
+  public String getMaskedEncodedUrl() {
+    if (maskedEncodedUrl != null) {
+      return maskedEncodedUrl;
+    }
+    maskedEncodedUrl = UriUtils.encodedUrlStr(getMaskedUrl());
+    return maskedEncodedUrl;
+  }
+
+  public abstract void sendPayload(byte[] buffer, int offset, int length) throws
+      IOException;
+
+  public abstract void processResponse(byte[] buffer,
+      int offset,
+      int length) throws IOException;
+
+  public abstract void setRequestProperty(String key, String value);
+
+  void parseResponse(final byte[] buffer,
       final int offset,
       final int length) throws IOException {
-    if (connectionDisconnectedOnError) {
-      LOG.debug("This connection was not successful or has been disconnected, "
-          + "hence not parsing headers and inputStream");
-      return;
-    }
-    processConnHeadersAndInputStreams(buffer, offset, length);
-  }
-
-  void processConnHeadersAndInputStreams(final byte[] buffer,
-      final int offset,
-      final int length) throws IOException {
-    // get the response
-    long startTime = 0;
-    startTime = System.nanoTime();
-
-    setStatusCode(getConnResponseCode());
-    setRecvResponseTimeMs(elapsedTimeMs(startTime));
-
-    setStatusDescription(getConnResponseMessage());
-
-    String requestId = this.connection.getHeaderField(
-        HttpHeaderConfigurations.X_MS_REQUEST_ID);
-    if (requestId == null) {
-      requestId = AbfsHttpConstants.EMPTY_STRING;
-    }
-    setRequestId(requestId);
-
-    // dump the headers
-    AbfsIoUtils.dumpHeadersToDebugLog("Response Headers",
-        connection.getHeaderFields());
-
-    if (AbfsHttpConstants.HTTP_METHOD_HEAD.equals(getMethod())) {
+    long startTime;
+    if (AbfsHttpConstants.HTTP_METHOD_HEAD.equals(this.method)) {
       // If it is HEAD, and it is ERROR
       return;
     }
 
-    parseResponse(buffer, offset, length);
-  }
+    startTime = System.nanoTime();
 
-  public void setRequestProperty(String key, String value) {
-    this.connection.setRequestProperty(key, value);
-  }
+    if (statusCode >= HttpURLConnection.HTTP_BAD_REQUEST) {
+      processStorageErrorResponse();
+      this.recvResponseTimeMs += elapsedTimeMs(startTime);
+      String contentLength = getResponseHeader(
+          HttpHeaderConfigurations.CONTENT_LENGTH);
+      if (contentLength != null) {
+        this.bytesReceived = Long.parseLong(contentLength);
+      } else {
+        this.bytesReceived = 0L;
+      }
 
-  /**
-   * Open the HTTP connection.
-   *
-   * @throws IOException if an error occurs.
-   */
-  private HttpURLConnection openConnection() throws IOException {
-    long start = System.nanoTime();
-    try {
-      return (HttpURLConnection) getUrl().openConnection();
-    } finally {
-      setConnectionTimeMs(elapsedTimeMs(start));
+    } else {
+      // consume the input stream to release resources
+      int totalBytesRead = 0;
+
+      try (InputStream stream = getContentInputStream()) {
+        if (isNullInputStream(stream)) {
+          return;
+        }
+        boolean endOfStream = false;
+
+        // this is a list operation and need to retrieve the data
+        // need a better solution
+        if (AbfsHttpConstants.HTTP_METHOD_GET.equals(this.method)
+            && buffer == null) {
+          parseListFilesResponse(stream);
+        } else {
+          if (buffer != null) {
+            while (totalBytesRead < length) {
+              int bytesRead = stream.read(buffer, offset + totalBytesRead,
+                  length
+                      - totalBytesRead);
+              if (bytesRead == -1) {
+                endOfStream = true;
+                break;
+              }
+              totalBytesRead += bytesRead;
+            }
+          }
+          if (!endOfStream && stream.read() != -1) {
+            // read and discard
+            int bytesRead = 0;
+            byte[] b = new byte[CLEAN_UP_BUFFER_SIZE];
+            while ((bytesRead = stream.read(b)) >= 0) {
+              totalBytesRead += bytesRead;
+            }
+          }
+        }
+      } catch (IOException ex) {
+        log.warn("IO/Network error: {} {}: {}",
+            method, getMaskedUrl(), ex.getMessage());
+        log.debug("IO Error: ", ex);
+        throw ex;
+      } finally {
+        this.recvResponseTimeMs += elapsedTimeMs(startTime);
+        this.bytesReceived = totalBytesRead;
+      }
     }
   }
 
-  @Override
-  protected InputStream getErrorStream() {
-    return connection.getErrorStream();
+  abstract InputStream getContentInputStream() throws IOException;
+
+  /**
+   * When the request fails, this function is used to parse the responseAbfsHttpClient.LOG.debug("ExpectedError: ", ex);
+   * and extract the storageErrorCode and storageErrorMessage.  Any errors
+   * encountered while attempting to process the error response are logged,
+   * but otherwise ignored.
+   *
+   * For storage errors, the response body *usually* has the following format:
+   *
+   * {
+   *   "error":
+   *   {
+   *     "code": "string",
+   *     "message": "string"
+   *   }
+   * }
+   *
+   */
+  protected void processStorageErrorResponse() {
+    try (InputStream stream = getErrorStream()) {
+      if (stream == null) {
+        return;
+      }
+      JsonFactory jf = new JsonFactory();
+      try (JsonParser jp = jf.createParser(stream)) {
+        String fieldName, fieldValue;
+        jp.nextToken();  // START_OBJECT - {
+        jp.nextToken();  // FIELD_NAME - "error":
+        jp.nextToken();  // START_OBJECT - {
+        jp.nextToken();
+        while (jp.hasCurrentToken()) {
+          if (jp.getCurrentToken() == JsonToken.FIELD_NAME) {
+            fieldName = jp.getCurrentName();
+            jp.nextToken();
+            fieldValue = jp.getText();
+            switch (fieldName) {
+            case "code":
+              storageErrorCode = fieldValue;
+              break;
+            case "message":
+              storageErrorMessage = fieldValue;
+              break;
+            case "ExpectedAppendPos":
+              expectedAppendPos = fieldValue;
+              break;
+            default:
+              break;
+            }
+          }
+          jp.nextToken();
+        }
+      }
+    } catch (IOException ex) {
+      // Ignore errors that occur while attempting to parse the storage
+      // error, since the response may have been handled by the HTTP driver
+      // or for other reasons have an unexpected
+      log.debug("ExpectedError: ", ex);
+    }
+  }
+
+  protected abstract InputStream getErrorStream() throws IOException;
+
+  /**
+   * Parse the list file response
+   *
+   * @param stream InputStream contains the list results.
+   * @throws IOException if the response cannot be deserialized.
+   */
+  protected void parseListFilesResponse(final InputStream stream)
+      throws IOException {
+    if (stream == null) {
+      return;
+    }
+
+    if (listResultSchema != null) {
+      // already parse the response
+      return;
+    }
+
+    try {
+      final ObjectMapper objectMapper = new ObjectMapper();
+      this.listResultSchema = objectMapper.readValue(stream,
+          ListResultSchema.class);
+    } catch (IOException ex) {
+      log.error("Unable to deserialize list results", ex);
+      throw ex;
+    }
+  }
+
+  /**
+   * Returns the elapsed time in milliseconds.
+   */
+  long elapsedTimeMs(final long startTime) {
+    return (System.nanoTime() - startTime) / ONE_MILLION;
+  }
+
+  /**
+   * Check null stream, this is to pass findbugs's redundant check for NULL
+   * @param stream InputStream
+   */
+  boolean isNullInputStream(InputStream stream) {
+    return stream == null ? true : false;
   }
 
   /**
@@ -307,83 +471,48 @@ public class AbfsHttpOperation extends HttpOperation {
    * @param key The request property key.
    * @return request peoperty value.
    */
-  String getConnProperty(String key) {
-    return connection.getRequestProperty(key);
-  }
+  abstract String getConnProperty(String key);
 
   /**
    * Gets the connection url.
    * @return url.
    */
-  URL getConnUrl() {
-    return connection.getURL();
-  }
+  abstract URL getConnUrl();
 
   /**
    * Gets the connection request method.
    * @return request method.
    */
-  String getConnRequestMethod() {
-    return connection.getRequestMethod();
-  }
+  abstract String getConnRequestMethod();
 
   /**
    * Gets the connection response code.
    * @return response code.
    * @throws IOException
    */
-  Integer getConnResponseCode() throws IOException {
-    return connection.getResponseCode();
-  }
+  abstract Integer getConnResponseCode() throws IOException;
 
-  /**
-   * Gets the connection output stream.
-   * @return output stream.
-   * @throws IOException
-   */
-  OutputStream getConnOutputStream() throws IOException {
-    return connection.getOutputStream();
-  }
 
   /**
    * Gets the connection response message.
    * @return response message.
    * @throws IOException
    */
-  String getConnResponseMessage() throws IOException {
-    return connection.getResponseMessage();
+  abstract String getConnResponseMessage() throws IOException;
+
+  abstract Map<String, List<String>> getRequestProperties();
+
+  abstract String getRequestProperty(String headerName);
+
+  abstract boolean getConnectionDisconnectedOnError();
+
+  public abstract String getTracingContextSuffix();
+
+  public long getSendLatency() {
+    return sendRequestTimeMs;
   }
 
-  @VisibleForTesting
-  boolean getConnectionDisconnectedOnError() {
-    return connectionDisconnectedOnError;
-  }
-
-  @Override
-  public String getTracingContextSuffix() {
-    return ApacheHttpClientHealthMonitor.usable() ? JDK_IMPL : JDK_FALLBACK;
-  }
-
-  public static class AbfsHttpOperationWithFixedResult
-      extends AbfsHttpOperation {
-
-    /**
-     * Creates an instance to represent fixed results.
-     * This is used in idempotency handling.
-     *
-     * @param url The full URL including query string parameters.
-     * @param method The HTTP method (PUT, PATCH, POST, GET, HEAD, or DELETE).
-     * @param httpStatus StatusCode to hard set
-     */
-    public AbfsHttpOperationWithFixedResult(final URL url,
-        final String method,
-        final int httpStatus) {
-      super(url, method, httpStatus);
-    }
-
-    @Override
-    public String getResponseHeader(final String httpHeader) {
-      return "";
-    }
+  public long getRecvLatency() {
+    return recvResponseTimeMs;
   }
 }

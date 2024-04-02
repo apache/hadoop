@@ -42,7 +42,7 @@ import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.extensions.MockDelegationSASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
-import org.apache.hadoop.fs.azurebfs.services.HttpOperation;
+import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclEntryScope;
 import org.apache.hadoop.fs.permission.AclStatus;
@@ -405,7 +405,7 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
         .renamePath(src, "/testABC" + "/abc.txt", null,
             getTestTracingContext(fs, false), null, false, isHNSEnabled)
         .getOp();
-    HttpOperation result = abfsHttpRestOperation.getResult();
+    AbfsHttpOperation result = abfsHttpRestOperation.getResult();
     String url = result.getMaskedUrl();
     String encodedUrl = result.getMaskedEncodedUrl();
     Assertions.assertThat(url.substring(url.indexOf("sig=")))

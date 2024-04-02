@@ -55,7 +55,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.fs.azurebfs.services.HttpOperation;
+import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
 import org.apache.hadoop.fs.azurebfs.security.ContextProviderEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
@@ -848,7 +848,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
               encryptionContext.getBytes(StandardCharsets.UTF_8));
         }
       } else {
-        HttpOperation op = client.getPathStatus(relativePath, false,
+        AbfsHttpOperation op = client.getPathStatus(relativePath, false,
             tracingContext, null).getResult();
         resourceType = op.getResponseHeader(
             HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
@@ -1117,7 +1117,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
       perfInfo.registerResult(op.getResult());
       final long blockSize = abfsConfiguration.getAzureBlockSize();
-      final HttpOperation result = op.getResult();
+      final AbfsHttpOperation result = op.getResult();
 
       String eTag = extractEtagHeader(result);
       final String lastModified = result.getResponseHeader(HttpHeaderConfigurations.LAST_MODIFIED);
@@ -1622,7 +1622,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
       AbfsRestOperation op = client
           .getAclStatus(getRelativePath(path), tracingContext);
-      HttpOperation result = op.getResult();
+      AbfsHttpOperation result = op.getResult();
       perfInfo.registerResult(result);
 
       final String transformedOwner = identityTransformer.transformIdentityForGetRequest(
@@ -2177,7 +2177,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * @param result response to process.
    * @return the quote-unwrapped etag.
    */
-  public static String extractEtagHeader(HttpOperation result) {
+  public static String extractEtagHeader(AbfsHttpOperation result) {
     String etag = result.getResponseHeader(HttpHeaderConfigurations.ETAG);
     if (etag != null) {
       // strip out any wrapper "" quotes which come back, for consistency with

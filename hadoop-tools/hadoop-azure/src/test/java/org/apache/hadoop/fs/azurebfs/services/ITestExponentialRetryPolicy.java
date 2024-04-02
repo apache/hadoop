@@ -136,7 +136,7 @@ public class ITestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
     rawConfig1.addResource(TEST_CONFIGURATION_FILE_NAME);
 
     AbfsRestOperation successOp = mock(AbfsRestOperation.class);
-    HttpOperation http500Op = mock(HttpOperation.class);
+    AbfsHttpOperation http500Op = mock(AbfsHttpOperation.class);
     when(http500Op.getStatusCode()).thenReturn(HTTP_INTERNAL_ERROR);
     when(successOp.getResult()).thenReturn(http500Op);
 

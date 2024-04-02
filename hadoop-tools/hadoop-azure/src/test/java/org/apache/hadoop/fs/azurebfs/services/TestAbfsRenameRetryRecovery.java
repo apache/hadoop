@@ -197,10 +197,10 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
       final AbfsRestOperation normalRestOp,
       final AbfsClient client)
       throws IOException {
-    HttpOperation failingOperation = Mockito.spy(normalRestOp.createHttpOperation());
-    HttpOperation normalOp1 = normalRestOp.createHttpOperation();
+    AbfsHttpOperation failingOperation = Mockito.spy(normalRestOp.createHttpOperation());
+    AbfsHttpOperation normalOp1 = normalRestOp.createHttpOperation();
     executeThenFail(client, normalRestOp, failingOperation, normalOp1);
-    HttpOperation normalOp2 = normalRestOp.createHttpOperation();
+    AbfsHttpOperation normalOp2 = normalRestOp.createHttpOperation();
     normalOp2.setRequestProperty(HttpHeaderConfigurations.AUTHORIZATION,
             client.getAccessToken());
 
@@ -217,8 +217,8 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
    */
   private void executeThenFail(final AbfsClient client,
       final AbfsRestOperation normalRestOp,
-      final HttpOperation failingOperation,
-      final HttpOperation normalOp)
+      final AbfsHttpOperation failingOperation,
+      final AbfsHttpOperation normalOp)
       throws IOException {
 
     Mockito.doAnswer(answer -> {

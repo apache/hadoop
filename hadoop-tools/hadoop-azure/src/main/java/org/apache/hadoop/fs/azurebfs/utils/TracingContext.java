@@ -26,7 +26,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
-import org.apache.hadoop.fs.azurebfs.services.HttpOperation;
+import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_TIMEOUT_ABBREVIATION;
@@ -67,7 +67,7 @@ public class TracingContext {
   /**
    * If {@link #primaryRequestId} is null, this field shall be set equal
    * to the last part of the {@link #clientRequestId}'s UUID
-   * in {@link #constructHeader(HttpOperation, String, String)} only on the
+   * in {@link #constructHeader(AbfsHttpOperation, String, String)} only on the
    * first API call for an operation. Subsequent retries for that operation
    * will not change this field. In case {@link  #primaryRequestId} is non-null,
    * this field shall not be set.
@@ -172,7 +172,7 @@ public class TracingContext {
    * @param retryPolicyAbbreviation Retry policy used to get retry interval before this
    * API trigger on same operation from AbfsClient
    */
-  public void constructHeader(HttpOperation httpOperation, String previousFailure, String retryPolicyAbbreviation) {
+  public void constructHeader(AbfsHttpOperation httpOperation, String previousFailure, String retryPolicyAbbreviation) {
     clientRequestId = UUID.randomUUID().toString();
     switch (format) {
     case ALL_ID_FORMAT: // Optional IDs (e.g. streamId) may be empty

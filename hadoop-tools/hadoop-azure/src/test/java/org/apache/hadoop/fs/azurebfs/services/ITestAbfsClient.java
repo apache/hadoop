@@ -599,7 +599,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
         appendRequestParameters.getLength(), null, abfsConfig));
 
     Mockito.doAnswer(answer -> {
-      HttpOperation httpOperation = Mockito.spy((HttpOperation) answer.callRealMethod());
+      AbfsHttpOperation httpOperation = Mockito.spy((AbfsHttpOperation) answer.callRealMethod());
       // Sets the expect request property if expect header is enabled.
       if (appendRequestParameters.isExpectHeaderEnabled()) {
         Mockito.doReturn(HUNDRED_CONTINUE).when(httpOperation)
@@ -616,10 +616,10 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
           .when(httpOperation)
           .getConnResponseMessage();
 
-      if (httpOperation instanceof AbfsHttpOperation) {
+      if (httpOperation instanceof AbfsJdkHttpOperation) {
         // Make the getOutputStream throw IOException to see it returns from the sendRequest correctly.
         Mockito.doThrow(new ProtocolException(EXPECT_100_JDK_ERROR))
-            .when((AbfsHttpOperation) httpOperation)
+            .when((AbfsJdkHttpOperation) httpOperation)
             .getConnOutputStream();
       }
 

@@ -80,7 +80,7 @@ public class SharedKeyCredentials {
     initializeMac();
   }
 
-  public void signRequest(HttpOperation connection, final long contentLength) throws UnsupportedEncodingException {
+  public void signRequest(AbfsHttpOperation connection, final long contentLength) throws UnsupportedEncodingException {
 
     String gmtTime = getGMTTime();
     connection.setRequestProperty(HttpHeaderConfigurations.X_MS_DATE, gmtTime);
@@ -112,7 +112,7 @@ public class SharedKeyCredentials {
    * @param conn                the HttpURLConnection for the operation
    * @param canonicalizedString the canonicalized string to add the canonicalized headerst to.
    */
-  private static void addCanonicalizedHeaders(final HttpOperation conn, final StringBuilder canonicalizedString) {
+  private static void addCanonicalizedHeaders(final AbfsHttpOperation conn, final StringBuilder canonicalizedString) {
     // Look for header names that start with
     // HeaderNames.PrefixForStorageHeader
     // Then sort them in case-insensitive manner.
@@ -200,7 +200,7 @@ public class SharedKeyCredentials {
    */
   private static String canonicalizeHttpRequest(final URL address,
       final String accountName, final String method, final String contentType,
-      final long contentLength, final String date, final HttpOperation conn)
+      final long contentLength, final String date, final AbfsHttpOperation conn)
       throws UnsupportedEncodingException {
 
     // The first element should be the Method of the request.
@@ -445,7 +445,7 @@ public class SharedKeyCredentials {
     return value.substring(spaceDex);
   }
 
-  private static String getHeaderValue(final HttpOperation conn, final String headerName, final String defaultValue) {
+  private static String getHeaderValue(final AbfsHttpOperation conn, final String headerName, final String defaultValue) {
     final String headerValue = conn.getRequestProperty(headerName);
     return headerValue == null ? defaultValue : headerValue;
   }
@@ -460,7 +460,7 @@ public class SharedKeyCredentials {
    *                      -1 if unknown
    * @return a canonicalized string.
    */
-  private String canonicalize(final HttpOperation conn,
+  private String canonicalize(final AbfsHttpOperation conn,
                               final String accountName,
                               final Long contentLength) throws UnsupportedEncodingException {
 

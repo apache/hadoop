@@ -125,7 +125,7 @@ public final class AbfsClientThrottlingIntercept implements AbfsThrottlingInterc
    * @return true if the operation is throttled and has some bytes to transfer.
    */
   private boolean updateBytesTransferred(boolean isThrottledOperation,
-      HttpOperation abfsHttpOperation) {
+      AbfsHttpOperation abfsHttpOperation) {
     return isThrottledOperation && abfsHttpOperation.getExpectedBytesToBeSent() > 0;
   }
 
@@ -137,7 +137,7 @@ public final class AbfsClientThrottlingIntercept implements AbfsThrottlingInterc
    */
   @Override
   public void updateMetrics(AbfsRestOperationType operationType,
-      HttpOperation httpOperation) {
+      AbfsHttpOperation httpOperation) {
     if (httpOperation == null) {
       return;
     }

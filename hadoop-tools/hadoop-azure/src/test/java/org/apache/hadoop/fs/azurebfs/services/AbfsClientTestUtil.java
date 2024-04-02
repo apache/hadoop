@@ -61,12 +61,12 @@ public final class AbfsClientTestUtil {
 
   public static void setMockAbfsRestOperationForListPathOperation(
       final AbfsClient spiedClient,
-      FunctionRaisingIOE<AbfsHttpOperation, AbfsHttpOperation> functionRaisingIOE)
+      FunctionRaisingIOE<AbfsJdkHttpOperation, AbfsJdkHttpOperation> functionRaisingIOE)
       throws Exception {
     ExponentialRetryPolicy exponentialRetryPolicy = Mockito.mock(ExponentialRetryPolicy.class);
     StaticRetryPolicy staticRetryPolicy = Mockito.mock(StaticRetryPolicy.class);
     AbfsThrottlingIntercept intercept = Mockito.mock(AbfsThrottlingIntercept.class);
-    AbfsHttpOperation httpOperation = Mockito.mock(AbfsHttpOperation.class);
+    AbfsJdkHttpOperation httpOperation = Mockito.mock(AbfsJdkHttpOperation.class);
     AbfsRestOperation abfsRestOperation = Mockito.spy(new AbfsRestOperation(
         AbfsRestOperationType.ListPaths,
         spiedClient,
@@ -94,7 +94,7 @@ public final class AbfsClientTestUtil {
    * @throws IOException
    */
   public static void addGeneralMockBehaviourToRestOpAndHttpOp(final AbfsRestOperation abfsRestOperation,
-                                                              final AbfsHttpOperation httpOperation) throws IOException {
+                                                              final AbfsJdkHttpOperation httpOperation) throws IOException {
     HttpURLConnection httpURLConnection = Mockito.mock(HttpURLConnection.class);
     Mockito.doNothing().when(httpURLConnection)
         .setRequestProperty(nullable(String.class), nullable(String.class));

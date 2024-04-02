@@ -33,7 +33,7 @@ import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.security.EncodingHelper;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientUtils;
-import org.apache.hadoop.fs.azurebfs.services.HttpOperation;
+import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
@@ -190,7 +190,7 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
     if (op == null) {
       return;
     }
-    HttpOperation httpOp = op.getResult();
+    AbfsHttpOperation httpOp = op.getResult();
     if (isCpkResponseHdrExpected) {
       if (requestEncryptionType == ENCRYPTION_CONTEXT) {
         String encryptionContext = ecp.getEncryptionContextForTest(relativePath);
@@ -274,7 +274,7 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
         if (!fileSystemListStatusResultToBeUsedForOpeningFile
             || fileEncryptionType != ENCRYPTION_CONTEXT) {
           TracingContext tracingContext = getTestTracingContext(fs, true);
-          HttpOperation statusOp = client.getPathStatus(path, false,
+          AbfsHttpOperation statusOp = client.getPathStatus(path, false,
               tracingContext, null).getResult();
           return client.read(path, 0, new byte[5], 0, 5,
               statusOp.getResponseHeader(HttpHeaderConfigurations.ETAG),

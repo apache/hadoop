@@ -67,10 +67,10 @@ import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X
 import static org.apache.http.entity.ContentType.TEXT_PLAIN;
 
 /**
- * Implementation of {@link HttpOperation} for orchestrating server calls using
+ * Implementation of {@link AbfsHttpOperation} for orchestrating server calls using
  * Apache Http Client.
  */
-public class AbfsAHCHttpOperation extends HttpOperation {
+public class AbfsAHCHttpOperation extends AbfsHttpOperation {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       AbfsAHCHttpOperation.class);

@@ -38,7 +38,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationExcep
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientTestUtil;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
-import org.apache.hadoop.fs.azurebfs.services.HttpOperation;
+import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.ITestAbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.TestAbfsPerfTracker;
 import org.apache.hadoop.fs.azurebfs.utils.TestMockHelpers;
@@ -190,7 +190,7 @@ public class ITestAzureBlobFileSystemDelete extends
 
     // Case 1: Mock instance of Http Operation response. This will return
     // HTTP:Not Found
-    HttpOperation http404Op = mock(HttpOperation.class);
+    AbfsHttpOperation http404Op = mock(AbfsHttpOperation.class);
     when(http404Op.getStatusCode()).thenReturn(HTTP_NOT_FOUND);
 
     // Mock delete response to 404
@@ -206,7 +206,7 @@ public class ITestAzureBlobFileSystemDelete extends
 
     // Case 2: Mock instance of Http Operation response. This will return
     // HTTP:Bad Request
-    HttpOperation http400Op = mock(HttpOperation.class);
+    AbfsHttpOperation http400Op = mock(AbfsHttpOperation.class);
     when(http400Op.getStatusCode()).thenReturn(HTTP_BAD_REQUEST);
 
     // Mock delete response to 400

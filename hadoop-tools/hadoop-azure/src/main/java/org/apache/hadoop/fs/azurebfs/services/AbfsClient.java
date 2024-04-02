@@ -646,7 +646,7 @@ public class AbfsClient implements Closeable {
         final AbfsRestOperation srcStatusOp = getPathStatus(source,
                 false, tracingContext, null);
         if (srcStatusOp.hasResult()) {
-          final HttpOperation result = srcStatusOp.getResult();
+          final AbfsHttpOperation result = srcStatusOp.getResult();
           sourceEtag = extractEtagHeader(result);
           // and update the directory status.
           boolean isDir = checkIsDir(result);
@@ -712,7 +712,7 @@ public class AbfsClient implements Closeable {
           isMetadataIncompleteState = true;
           // Extract the sourceEtag, using the status Op, and set it
           // for future rename recovery.
-          HttpOperation sourceStatusResult = sourceStatusOp.getResult();
+          AbfsHttpOperation sourceStatusResult = sourceStatusOp.getResult();
           sourceEtagAfterFailure = extractEtagHeader(sourceStatusResult);
         }
         renamePath(source, destination, continuation, tracingContext,
@@ -738,7 +738,7 @@ public class AbfsClient implements Closeable {
     }
   }
 
-  private boolean checkIsDir(HttpOperation result) {
+  private boolean checkIsDir(AbfsHttpOperation result) {
     String resourceType = result.getResponseHeader(
             HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
     return resourceType != null
@@ -801,7 +801,7 @@ public class AbfsClient implements Closeable {
       try {
         final AbfsRestOperation destStatusOp = getPathStatus(destination,
             false, tracingContext, null);
-        final HttpOperation result = destStatusOp.getResult();
+        final AbfsHttpOperation result = destStatusOp.getResult();
 
         final boolean recovered = result.getStatusCode() == HttpURLConnection.HTTP_OK
                 && sourceEtag.equals(extractEtagHeader(result));
@@ -821,7 +821,7 @@ public class AbfsClient implements Closeable {
   }
 
   @VisibleForTesting
-  boolean isSourceDestEtagEqual(String sourceEtag, HttpOperation result) {
+  boolean isSourceDestEtagEqual(String sourceEtag, AbfsHttpOperation result) {
     return sourceEtag.equals(extractEtagHeader(result));
   }
 
@@ -1569,7 +1569,7 @@ public class AbfsClient implements Closeable {
    * @throws AbfsRestOperationException if Md5Mismatch.
    */
   private void verifyCheckSumForRead(final byte[] buffer,
-      final HttpOperation result, final int bufferOffset)
+      final AbfsHttpOperation result, final int bufferOffset)
       throws AbfsRestOperationException {
     // Number of bytes returned by server could be less than or equal to what
     // caller requests. In case it is less, extra bytes will be initialized to 0

@@ -35,7 +35,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
-import org.apache.hadoop.fs.azurebfs.services.HttpOperation;
+import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientUtils;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -403,8 +403,8 @@ public class ITestAzureBlobFileSystemCreate extends
 
     AbfsRestOperation successOp = mock(
         AbfsRestOperation.class);
-    HttpOperation http200Op = mock(
-        HttpOperation.class);
+    AbfsHttpOperation http200Op = mock(
+        AbfsHttpOperation.class);
     when(http200Op.getStatusCode()).thenReturn(HTTP_OK);
     when(successOp.getResult()).thenReturn(http200Op);
 

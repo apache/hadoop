@@ -199,7 +199,7 @@ public class TestAbfsRestOperationMockFailures {
         Mockito.mock(AbfsConfiguration.class)
     ));
 
-    AbfsHttpOperation httpOperation = Mockito.mock(AbfsHttpOperation.class);
+    AbfsJdkHttpOperation httpOperation = Mockito.mock(AbfsJdkHttpOperation.class);
     addGeneralMockBehaviourToRestOpAndHttpOp(abfsRestOperation, httpOperation);
 
     Stubber stubber = Mockito.doThrow(new SocketTimeoutException(CONNECTION_TIMEOUT_JDK_MESSAGE));
@@ -260,7 +260,8 @@ public class TestAbfsRestOperationMockFailures {
 
     // Assert that intercept.updateMetrics was called only once during second Iteration
     Mockito.verify(intercept, Mockito.times(2))
-        .updateMetrics(nullable(AbfsRestOperationType.class), nullable(AbfsHttpOperation.class));
+        .updateMetrics(nullable(AbfsRestOperationType.class), nullable(
+            AbfsJdkHttpOperation.class));
   }
 
   private void testClientRequestIdForStatusRetry(int status,
@@ -285,7 +286,7 @@ public class TestAbfsRestOperationMockFailures {
         Mockito.mock(AbfsConfiguration.class)
     ));
 
-    AbfsHttpOperation httpOperation = Mockito.mock(AbfsHttpOperation.class);
+    AbfsJdkHttpOperation httpOperation = Mockito.mock(AbfsJdkHttpOperation.class);
     addGeneralMockBehaviourToRestOpAndHttpOp(abfsRestOperation, httpOperation);
 
     Mockito.doNothing()
@@ -348,7 +349,7 @@ public class TestAbfsRestOperationMockFailures {
         Mockito.mock(AbfsConfiguration.class)
     ));
 
-    AbfsHttpOperation httpOperation = Mockito.mock(AbfsHttpOperation.class);
+    AbfsJdkHttpOperation httpOperation = Mockito.mock(AbfsJdkHttpOperation.class);
     addGeneralMockBehaviourToRestOpAndHttpOp(abfsRestOperation, httpOperation);
 
     Stubber stubber = Mockito.doThrow(exceptions[0]);

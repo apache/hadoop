@@ -92,7 +92,7 @@ public class TestAbfsInputStream extends
 
   private AbfsRestOperation getMockRestOp() {
     AbfsRestOperation op = mock(AbfsRestOperation.class);
-    HttpOperation httpOp = mock(HttpOperation.class);
+    AbfsHttpOperation httpOp = mock(AbfsHttpOperation.class);
     when(httpOp.getBytesReceived()).thenReturn(1024L);
     when(op.getResult()).thenReturn(httpOp);
     when(op.getSasToken()).thenReturn(TestCachedSASToken.getTestCachedSASTokenInstance().get());

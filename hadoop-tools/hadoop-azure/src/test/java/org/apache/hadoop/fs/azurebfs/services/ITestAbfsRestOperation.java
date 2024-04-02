@@ -230,8 +230,8 @@ public class ITestAbfsRestOperation extends AbstractAbfsIntegrationTest {
         appendRequestParameters.getLength(), null, abfsConfig));
 
     Mockito.doAnswer(answer -> {
-      HttpOperation httpOperation = Mockito.spy(
-          (HttpOperation) answer.callRealMethod());
+      AbfsHttpOperation httpOperation = Mockito.spy(
+          (AbfsHttpOperation) answer.callRealMethod());
       mockHttpOperation(appendRequestParameters, buffer, url, httpOperation);
       Mockito.doReturn(httpOperation).when(op).getResult();
       return httpOperation;
@@ -242,7 +242,7 @@ public class ITestAbfsRestOperation extends AbstractAbfsIntegrationTest {
   private void mockHttpOperation(final AppendRequestParameters appendRequestParameters,
       final byte[] buffer,
       final URL url,
-      final HttpOperation httpOperation) throws IOException {
+      final AbfsHttpOperation httpOperation) throws IOException {
     // Sets the expect request property if expect header is enabled.
     if (expectHeaderEnabled) {
       Mockito.doReturn(HUNDRED_CONTINUE)
@@ -264,9 +264,9 @@ public class ITestAbfsRestOperation extends AbstractAbfsIntegrationTest {
       Mockito.doReturn(responseMessage)
           .when(httpOperation)
           .getConnResponseMessage();
-      if (httpOperation instanceof AbfsHttpOperation) {
+      if (httpOperation instanceof AbfsJdkHttpOperation) {
         Mockito.doThrow(new ProtocolException(EXPECT_100_JDK_ERROR))
-            .when((AbfsHttpOperation) httpOperation)
+            .when((AbfsJdkHttpOperation) httpOperation)
             .getConnOutputStream();
       }
       if (httpOperation instanceof AbfsAHCHttpOperation) {
@@ -298,7 +298,7 @@ public class ITestAbfsRestOperation extends AbstractAbfsIntegrationTest {
         }
       });
       Mockito.doReturn(outputStream)
-          .when((AbfsHttpOperation) httpOperation)
+          .when((AbfsJdkHttpOperation) httpOperation)
           .getConnOutputStream();
       Mockito.doThrow(new IOException())
           .when(outputStream)

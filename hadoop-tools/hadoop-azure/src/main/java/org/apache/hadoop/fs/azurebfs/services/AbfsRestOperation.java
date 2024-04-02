@@ -76,7 +76,7 @@ public class AbfsRestOperation {
   private int bufferLength;
   private int retryCount = 0;
 
-  private HttpOperation result;
+  private AbfsHttpOperation result;
   private AbfsCounters abfsCounters;
 
   /**
@@ -104,7 +104,7 @@ public class AbfsRestOperation {
     return result != null;
   }
 
-  public HttpOperation getResult() {
+  public AbfsHttpOperation getResult() {
     return result;
   }
 
@@ -117,7 +117,7 @@ public class AbfsRestOperation {
           this.method, httpStatus);
       return;
     }
-    result = AbfsHttpOperation.getAbfsHttpOperationWithFixedResult(this.url,
+    result = AbfsJdkHttpOperation.getAbfsHttpOperationWithFixedResult(this.url,
         this.method, httpStatus);
   }
 
@@ -309,7 +309,7 @@ public class AbfsRestOperation {
    */
   private boolean executeHttpOperation(final int retryCount,
     TracingContext tracingContext) throws AzureBlobFileSystemException {
-    final HttpOperation httpOperation;
+    final AbfsHttpOperation httpOperation;
     boolean wasIOExceptionThrown = false;
 
     try {
@@ -424,7 +424,7 @@ public class AbfsRestOperation {
    * @throws IOException failure
    */
   @VisibleForTesting
-  public void signRequest(final HttpOperation httpOperation, int bytesToSign) throws IOException {
+  public void signRequest(final AbfsHttpOperation httpOperation, int bytesToSign) throws IOException {
     switch(client.getAuthType()) {
       case Custom:
       case OAuth:
@@ -449,11 +449,11 @@ public class AbfsRestOperation {
   }
 
   /**
-   * Creates new object of {@link HttpOperation} with the url, method, and
+   * Creates new object of {@link AbfsHttpOperation} with the url, method, and
    * requestHeaders fields of the AbfsRestOperation object.
    */
   @VisibleForTesting
-  HttpOperation createHttpOperation() throws IOException {
+  AbfsHttpOperation createHttpOperation() throws IOException {
     HttpOperationType httpOperationType
         = abfsConfiguration.getPreferredHttpOperationType();
     if (httpOperationType == HttpOperationType.APACHE_HTTP_CLIENT
@@ -469,8 +469,8 @@ public class AbfsRestOperation {
   }
 
   @VisibleForTesting
-  AbfsHttpOperation createAbfsHttpOperation() throws IOException {
-    return new AbfsHttpOperation(url, method, requestHeaders,
+  AbfsJdkHttpOperation createAbfsHttpOperation() throws IOException {
+    return new AbfsJdkHttpOperation(url, method, requestHeaders,
         client.getAbfsConfiguration().getHttpConnectionTimeout(),
         client.getAbfsConfiguration().getHttpReadTimeout());
   }

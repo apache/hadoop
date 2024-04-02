@@ -33,7 +33,7 @@ import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
 import org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpHeader;
-import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
+import org.apache.hadoop.fs.azurebfs.services.AbfsJdkHttpOperation;
 import org.apache.hadoop.fs.azurebfs.utils.Base64;
 import org.apache.hadoop.fs.azurebfs.utils.DelegationSASGenerator;
 import org.apache.hadoop.fs.azurebfs.utils.SASGenerator;
@@ -106,7 +106,7 @@ public class MockDelegationSASTokenProvider implements SASTokenProvider {
     requestBody.append(ske);
     requestBody.append("</Expiry></KeyInfo>");
 
-    AbfsHttpOperation op = new AbfsHttpOperation(url, method, requestHeaders,
+    AbfsJdkHttpOperation op = new AbfsJdkHttpOperation(url, method, requestHeaders,
             DEFAULT_HTTP_CONNECTION_TIMEOUT, DEFAULT_HTTP_READ_TIMEOUT);
 
     byte[] requestBuffer = requestBody.toString().getBytes(StandardCharsets.UTF_8.toString());
