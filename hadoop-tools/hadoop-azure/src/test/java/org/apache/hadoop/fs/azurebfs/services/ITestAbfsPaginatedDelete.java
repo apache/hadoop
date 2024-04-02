@@ -87,6 +87,10 @@ public class ITestAbfsPaginatedDelete extends AbstractAbfsIntegrationTest {
   public ITestAbfsPaginatedDelete() throws Exception {
   }
 
+  /**
+   * Create file system instances for both super-user and test user.
+   * @throws Exception
+   */
   @Override
   public void setup() throws Exception {
     super.setup();
@@ -273,7 +277,7 @@ public class ITestAbfsPaginatedDelete extends AbstractAbfsIntegrationTest {
   }
 
   /**
-   * Provide test user default ACL permissions on root.
+   * Provide test user with default ACL permissions on root.
    * @param uid
    * @throws IOException
    */
@@ -300,6 +304,11 @@ public class ITestAbfsPaginatedDelete extends AbstractAbfsIntegrationTest {
     return new Path(rootPath);
   }
 
+  /**
+   * Select the filesystem to be used for delete API.
+   * For HNS Disabled accounts, test User FS won't have permissions as ACL is not supported
+   * @return
+   */
   private AzureBlobFileSystem getUserFileSystem() {
     return this.isHnsEnabled ? this.testUserFs : this.superUserFs;
   }
@@ -307,7 +316,7 @@ public class ITestAbfsPaginatedDelete extends AbstractAbfsIntegrationTest {
   private void assertStatusCode(final AbfsRestOperationException e, final int statusCode) {
     Assertions.assertThat(e.getStatusCode())
         .describedAs("Request Should fail with Bad Request instead of %s",
-            e.getMessage())
+            e.toString())
         .isEqualTo(statusCode);
   }
 

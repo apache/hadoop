@@ -258,11 +258,20 @@ public class AbfsClient implements Closeable {
     return intercept;
   }
 
+  /**
+   * Create request headers for Rest Operation using the current API version.
+   * @return default request headers
+   */
   @VisibleForTesting
   protected List<AbfsHttpHeader> createDefaultHeaders() {
     return createDefaultHeaders(this.xMsVersion);
   }
 
+  /**
+   * Create request headers for Rest Operation using the specified API version.
+   * @param xMsVersion
+   * @return default request headers
+   */
   private List<AbfsHttpHeader> createDefaultHeaders(ApiVersion xMsVersion) {
     final List<AbfsHttpHeader> requestHeaders = new ArrayList<AbfsHttpHeader>();
     requestHeaders.add(new AbfsHttpHeader(X_MS_VERSION, xMsVersion.toString()));
@@ -1126,9 +1135,15 @@ public class AbfsClient implements Closeable {
                                       TracingContext tracingContext,
                                       final boolean isNamespaceEnabled)
           throws AzureBlobFileSystemException {
-    final List<AbfsHttpHeader> requestHeaders
-        = (isPaginatedDelete(recursive, isNamespaceEnabled)
-        && xMsVersion.compareTo(ApiVersion.AUG_03_2023) < 0)
+    /*
+     * If Pagination is enabled and current API version is old,
+     * use the minimum required version for pagination.
+     * If Pagination is enabled and current API version is later than minimum required
+     * version for pagination, use current version only as azure service is backward compatible.
+     * If pagination is disabled, use the current API version only.
+     */
+    final List<AbfsHttpHeader> requestHeaders = (isPaginatedDelete(recursive,
+        isNamespaceEnabled) && xMsVersion.compareTo(ApiVersion.AUG_03_2023) < 0)
         ? createDefaultHeaders(ApiVersion.AUG_03_2023)
         : createDefaultHeaders();
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
