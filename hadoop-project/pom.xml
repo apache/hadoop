@@ -132,7 +132,6 @@
     <commons-text.version>1.10.0</commons-text.version>
 
     <kerby.version>2.0.3</kerby.version>
-    <jcache.version>1.0-alpha-1</jcache.version>
     <ehcache.version>3.8.2</ehcache.version>
     <hikari.version>4.0.3</hikari.version>
     <derby.version>10.14.2.0</derby.version>
@@ -1942,11 +1941,6 @@
           <groupId>org.apache.kerby</groupId>
           <artifactId>kerb-core</artifactId>
           <version>${kerby.version}</version>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.geronimo.specs</groupId>
-          <artifactId>geronimo-jcache_1.0_spec</artifactId>
-          <version>${jcache.version}</version>
         </dependency>
         <dependency>
           <groupId>org.ehcache</groupId>
