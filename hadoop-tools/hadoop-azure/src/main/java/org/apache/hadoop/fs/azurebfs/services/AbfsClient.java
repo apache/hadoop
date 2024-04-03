@@ -179,6 +179,9 @@ public class AbfsClient implements Closeable {
     if (abfsConfiguration.getPreferredHttpOperationType()
         == HttpOperationType.APACHE_HTTP_CLIENT) {
       KeepAliveCache.getInstance().setAbfsConfig(abfsConfiguration);
+      AbfsApacheHttpClient.setClient(
+          DelegatingSSLSocketFactory.getDefaultFactory(),
+          abfsConfiguration.getHttpReadTimeout());
     }
 
     this.userAgent = initializeUserAgent(abfsConfiguration, sslProviderName);

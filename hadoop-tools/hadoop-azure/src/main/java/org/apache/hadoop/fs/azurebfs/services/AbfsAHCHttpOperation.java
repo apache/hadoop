@@ -34,12 +34,9 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.PathIOException;
-import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsApacheHttpExpect100Exception;
-import org.apache.hadoop.fs.azurebfs.constants.AbfsRestOperationType;
-import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -75,62 +72,37 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
   private static final Logger LOG = LoggerFactory.getLogger(
       AbfsAHCHttpOperation.class);
 
-  private static volatile AbfsApacheHttpClient ABFS_APACHE_HTTP_CLIENT;
-
   private HttpRequestBase httpRequestBase;
 
   private HttpResponse httpResponse;
 
   private AbfsManagedHttpClientContext abfsHttpClientContext;
-
-  private final AbfsRestOperationType abfsRestOperationType;
-
   private boolean connectionDisconnectedOnError = false;
 
   private final boolean isPayloadRequest;
 
   private final List<AbfsHttpHeader> requestHeaders;
 
+  private final int connectionTimeout, readTimeout;
+
+  public AbfsAHCHttpOperation(final URL url,
+      final String method,
+      final List<AbfsHttpHeader> requestHeaders,
+      final int connectionTimeout,
+      final int readTimeout) {
+    super(LOG, url, method);
+    this.requestHeaders = requestHeaders;
+    this.isPayloadRequest = isPayloadRequest(method);
+    this.readTimeout = readTimeout;
+    this.connectionTimeout = connectionTimeout;
+  }
+
   private AbfsAHCHttpOperation(final URL url,
-      final String method,
-      final List<AbfsHttpHeader> requestHeaders,
-      final AbfsRestOperationType abfsRestOperationType) {
-    super(LOG, url, method);
-    this.abfsRestOperationType = abfsRestOperationType;
-    this.requestHeaders = requestHeaders;
-    this.isPayloadRequest = isPayloadRequest(method);
-  }
-
-  public AbfsAHCHttpOperation(final URL url,
-      final String method,
-      final List<AbfsHttpHeader> requestHeaders,
-      final AbfsConfiguration abfsConfiguration,
-      final AbfsRestOperationType abfsRestOperationType) {
-    super(LOG, url, method);
-    this.abfsRestOperationType = abfsRestOperationType;
-    this.requestHeaders = requestHeaders;
-    setAbfsApacheHttpClient(abfsConfiguration);
-    this.isPayloadRequest = isPayloadRequest(method);
-  }
-
-  public AbfsAHCHttpOperation(final URL url,
       final String method,
       final ArrayList<AbfsHttpHeader> requestHeaders,
       final int httpStatus) {
-    this(url, method, requestHeaders, null);
+    this(url, method, requestHeaders, 0, 0);
     setStatusCode(httpStatus);
-  }
-
-  private void setAbfsApacheHttpClient(final AbfsConfiguration abfsConfiguration) {
-    if (ABFS_APACHE_HTTP_CLIENT == null) {
-      synchronized (this) {
-        if (ABFS_APACHE_HTTP_CLIENT == null) {
-          ABFS_APACHE_HTTP_CLIENT = new AbfsApacheHttpClient(
-              DelegatingSSLSocketFactory.getDefaultFactory(),
-              abfsConfiguration);
-        }
-      }
-    }
   }
 
   @VisibleForTesting
@@ -142,7 +114,6 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
     return HTTP_METHOD_PUT.equals(method) || HTTP_METHOD_PATCH.equals(method)
         || HTTP_METHOD_POST.equals(method);
   }
-
 
   public static AbfsAHCHttpOperation getAbfsApacheHttpClientHttpOperationWithFixedResult(
       final URL url,
@@ -241,8 +212,8 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
   @VisibleForTesting
   HttpResponse executeRequest() throws IOException {
     abfsHttpClientContext = setFinalAbfsClientContext();
-    HttpResponse response = ABFS_APACHE_HTTP_CLIENT.execute(httpRequestBase,
-        abfsHttpClientContext);
+    HttpResponse response = AbfsApacheHttpClient.ABFS_APACHE_HTTP_CLIENT.execute(httpRequestBase,
+        abfsHttpClientContext, connectionTimeout, readTimeout);
     setConnectionTimeMs(abfsHttpClientContext.getConnectTime());
     setSendRequestTimeMs(abfsHttpClientContext.getSendTime());
     setRecvResponseTimeMs(abfsHttpClientContext.getReadTime());

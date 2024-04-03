@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
 
-import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.config.RequestConfig;
@@ -42,11 +41,18 @@ import static org.apache.http.conn.ssl.SSLConnectionSocketFactory.getDefaultHost
 public class AbfsApacheHttpClient {
   private final CloseableHttpClient httpClient;
 
-  private final AbfsConfiguration abfsConfiguration;
+  static AbfsApacheHttpClient ABFS_APACHE_HTTP_CLIENT = null;
 
-  public AbfsApacheHttpClient(DelegatingSSLSocketFactory delegatingSSLSocketFactory,
-      final AbfsConfiguration abfsConfiguration) {
-    this.abfsConfiguration = abfsConfiguration;
+  static synchronized void setClient(DelegatingSSLSocketFactory delegatingSSLSocketFactory,
+      final int readTimeout) {
+    if (ABFS_APACHE_HTTP_CLIENT == null) {
+      ABFS_APACHE_HTTP_CLIENT = new AbfsApacheHttpClient(
+          delegatingSSLSocketFactory, readTimeout);
+    }
+  }
+
+  private AbfsApacheHttpClient(DelegatingSSLSocketFactory delegatingSSLSocketFactory,
+      final int readTimeout) {
     final AbfsConnectionManager connMgr = new AbfsConnectionManager(
         createSocketFactoryRegistry(
             new SSLConnectionSocketFactory(delegatingSSLSocketFactory,
@@ -54,8 +60,7 @@ public class AbfsApacheHttpClient {
         new AbfsConnFactory());
     final HttpClientBuilder builder = HttpClients.custom();
     builder.setConnectionManager(connMgr)
-        .setRequestExecutor(new AbfsManagedHttpRequestExecutor(
-            abfsConfiguration.getHttpReadTimeout()))
+        .setRequestExecutor(new AbfsManagedHttpRequestExecutor(readTimeout))
         .disableContentCompression()
         .disableRedirectHandling()
         .disableAutomaticRetries()
@@ -75,11 +80,13 @@ public class AbfsApacheHttpClient {
   }
 
   public HttpResponse execute(HttpRequestBase httpRequest,
-      final AbfsManagedHttpClientContext abfsHttpClientContext) throws IOException {
+      final AbfsManagedHttpClientContext abfsHttpClientContext,
+      final int connectTimeout,
+      final int readTimeout) throws IOException {
     RequestConfig.Builder requestConfigBuilder = RequestConfig
         .custom()
-        .setConnectTimeout(abfsConfiguration.getHttpConnectionTimeout())
-        .setSocketTimeout(abfsConfiguration.getHttpReadTimeout());
+        .setConnectTimeout(connectTimeout)
+        .setSocketTimeout(readTimeout);
     httpRequest.setConfig(requestConfigBuilder.build());
     return httpClient.execute(httpRequest, abfsHttpClientContext);
   }

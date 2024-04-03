@@ -479,8 +479,9 @@ public class AbfsRestOperation {
   @VisibleForTesting
   AbfsAHCHttpOperation createAbfsAHCHttpOperation() {
     return new AbfsAHCHttpOperation(url, method, requestHeaders,
-        abfsConfiguration,
-        operationType);
+        client.getAbfsConfiguration().getHttpConnectionTimeout(),
+        client.getAbfsConfiguration().getHttpReadTimeout()
+    );
   }
 
   /**
