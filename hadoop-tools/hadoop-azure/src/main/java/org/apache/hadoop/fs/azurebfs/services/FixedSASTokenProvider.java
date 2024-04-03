@@ -50,8 +50,8 @@ public class FixedSASTokenProvider implements SASTokenProvider {
    * @param fileSystem the name of the fileSystem.
    * @param path the file or directory path.
    * @param operation the operation to be performed on the path.
-   * @return
-   * @throws IOException
+   * @return Fixed SAS Token
+   * @throws IOException never
    */
   @Override
   public String getSASToken(final String account,
