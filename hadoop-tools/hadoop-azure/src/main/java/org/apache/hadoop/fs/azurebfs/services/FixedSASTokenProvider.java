@@ -22,12 +22,20 @@ import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
+import org.apache.hadoop.util.Preconditions;
 
+/**
+ * In house implementation of {@link SASTokenProvider} to use a fixed SAS token with ABFS.
+ * Use this to avoid implementing a Custom Token Provider just to return fixed SAS.
+ * Fixed SAS Token to be provided using the config "fs.azure.sas.fixed.token".
+ */
 public class FixedSASTokenProvider implements SASTokenProvider {
   private String fixedSASToken;
 
   public FixedSASTokenProvider(final String fixedSASToken) {
     this.fixedSASToken = fixedSASToken;
+    Preconditions.checkArgument(fixedSASToken != null && !fixedSASToken.isEmpty(),
+        "Configured Fixed SAS Token is Invalid: %s", fixedSASToken);
   }
 
   @Override
@@ -36,6 +44,15 @@ public class FixedSASTokenProvider implements SASTokenProvider {
       throws IOException {
   }
 
+  /**
+   * Returns the fixed SAS Token configured.
+   * @param account the name of the storage account.
+   * @param fileSystem the name of the fileSystem.
+   * @param path the file or directory path.
+   * @param operation the operation to be performed on the path.
+   * @return
+   * @throws IOException
+   */
   @Override
   public String getSASToken(final String account,
       final String fileSystem,

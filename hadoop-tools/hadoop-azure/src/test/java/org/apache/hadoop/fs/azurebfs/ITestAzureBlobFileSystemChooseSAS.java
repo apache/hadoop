@@ -158,8 +158,7 @@ public class ITestAzureBlobFileSystemChooseSAS extends AbstractAbfsIntegrationTe
     removeAnyPresetConfiguration(testAbfsConfig);
 
     intercept(TokenAccessProviderException.class, () -> {
-      AzureBlobFileSystem newTestFs = (AzureBlobFileSystem) FileSystem.newInstance(
-          testAbfsConfig.getRawConfiguration());
+      FileSystem.newInstance(testAbfsConfig.getRawConfiguration());
     });
   }
 
