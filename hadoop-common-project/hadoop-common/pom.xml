@@ -40,7 +40,7 @@
   <dependencies>
     <dependency>
       <groupId>org.apache.hadoop.thirdparty</groupId>
-      <artifactId>hadoop-shaded-protobuf_3_21</artifactId>
+      <artifactId>hadoop-shaded-protobuf_3_23</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -374,7 +374,7 @@
     </dependency>
     <dependency>
       <groupId>org.bouncycastle</groupId>
-      <artifactId>bcprov-jdk15on</artifactId>
+      <artifactId>bcprov-jdk18on</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.kerby</groupId>
@@ -646,6 +646,7 @@
             <exclude>src/main/native/*</exclude>
             <exclude>src/main/native/config/*</exclude>
             <exclude>src/main/native/m4/*</exclude>
+            <exclude>src/main/winutils/winutils.sln</exclude>
             <exclude>src/test/empty-file</exclude>
             <exclude>src/test/all-tests</exclude>
             <exclude>src/main/native/gtest/**/*</exclude>
@@ -655,6 +656,7 @@
             <exclude>src/test/resources/test.har/_masterindex</exclude>
             <exclude>src/test/resources/test.har/part-0</exclude>
             <exclude>src/test/resources/javakeystoreprovider.password</exclude>
+            <exclude>src/test/resources/lz4/sequencefile</exclude>
             <exclude>dev-support/jdiff-workaround.patch</exclude>
           </excludes>
         </configuration>

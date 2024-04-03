@@ -93,17 +93,17 @@
     <!-- Protobuf scope in other modules which explicitly import the libarary -->
     <transient.protobuf2.scope>${common.protobuf2.scope}</transient.protobuf2.scope>
     <!-- ProtocolBuffer version, actually used in Hadoop -->
-    <hadoop.protobuf.version>3.21.12</hadoop.protobuf.version>
+    <hadoop.protobuf.version>3.23.4</hadoop.protobuf.version>
     <protoc.path>${env.HADOOP_PROTOC_PATH}</protoc.path>
 
     <hadoop-thirdparty.version>1.2.0</hadoop-thirdparty.version>
-    <hadoop-thirdparty-protobuf.version>${hadoop-thirdparty.version}</hadoop-thirdparty-protobuf.version>
+    <hadoop-thirdparty-protobuf.version>1.3.0-SNAPSHOT</hadoop-thirdparty-protobuf.version>
     <hadoop-thirdparty-guava.version>${hadoop-thirdparty.version}</hadoop-thirdparty-guava.version>
     <hadoop-thirdparty-shaded-prefix>org.apache.hadoop.thirdparty</hadoop-thirdparty-shaded-prefix>
     <hadoop-thirdparty-shaded-protobuf-prefix>${hadoop-thirdparty-shaded-prefix}.protobuf</hadoop-thirdparty-shaded-protobuf-prefix>
     <hadoop-thirdparty-shaded-guava-prefix>${hadoop-thirdparty-shaded-prefix}.com.google.common</hadoop-thirdparty-shaded-guava-prefix>
 
-    <zookeeper.version>3.8.3</zookeeper.version>
+    <zookeeper.version>3.8.4</zookeeper.version>
     <curator.version>5.2.0</curator.version>
     <findbugs.version>3.0.5</findbugs.version>
     <dnsjava.version>3.4.0</dnsjava.version>
@@ -111,7 +111,7 @@
     <guava.version>27.0-jre</guava.version>
     <guice.version>4.2.3</guice.version>
 
-    <bouncycastle.version>1.70</bouncycastle.version>
+    <bouncycastle.version>1.77</bouncycastle.version>
 
     <!-- Required for testing LDAP integration -->
     <apacheds.version>2.0.0.AM26</apacheds.version>
@@ -126,14 +126,14 @@
     <commons-csv.version>1.9.0</commons-csv.version>
     <commons-io.version>2.14.0</commons-io.version>
     <commons-lang3.version>3.12.0</commons-lang3.version>
-    <commons-logging.version>1.1.3</commons-logging.version>
+    <commons-logging.version>1.2</commons-logging.version>
     <commons-math3.version>3.6.1</commons-math3.version>
     <commons-net.version>3.9.0</commons-net.version>
     <commons-text.version>1.10.0</commons-text.version>
 
     <kerby.version>2.0.3</kerby.version>
     <jcache.version>1.0-alpha-1</jcache.version>
-    <ehcache.version>3.3.1</ehcache.version>
+    <ehcache.version>3.8.2</ehcache.version>
     <hikari.version>4.0.3</hikari.version>
     <derby.version>10.14.2.0</derby.version>
     <mssql.version>6.2.1.jre7</mssql.version>
@@ -187,7 +187,7 @@
     <make-maven-plugin.version>1.0-beta-1</make-maven-plugin.version>
     <surefire.fork.timeout>900</surefire.fork.timeout>
     <aws-java-sdk.version>1.12.599</aws-java-sdk.version>
-    <aws-java-sdk-v2.version>2.23.19</aws-java-sdk-v2.version>
+    <aws-java-sdk-v2.version>2.24.6</aws-java-sdk-v2.version>
     <aws.eventstream.version>1.0.1</aws.eventstream.version>
     <hsqldb.version>2.7.1</hsqldb.version>
     <frontend-maven-plugin.version>1.11.2</frontend-maven-plugin.version>
@@ -216,7 +216,7 @@
     <openssl-wildfly.version>1.1.3.Final</openssl-wildfly.version>
     <jsonschema2pojo.version>1.0.2</jsonschema2pojo.version>
     <woodstox.version>5.4.0</woodstox.version>
-    <nimbus-jose-jwt.version>9.31</nimbus-jose-jwt.version>
+    <nimbus-jose-jwt.version>9.37.2</nimbus-jose-jwt.version>
     <nodejs.version>v12.22.1</nodejs.version>
     <yarnpkg.version>v1.22.5</yarnpkg.version>
     <apache-ant.version>1.10.13</apache-ant.version>
@@ -250,7 +250,7 @@
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop.thirdparty</groupId>
-        <artifactId>hadoop-shaded-protobuf_3_21</artifactId>
+        <artifactId>hadoop-shaded-protobuf_3_23</artifactId>
         <version>${hadoop-thirdparty-protobuf.version}</version>
       </dependency>
       <dependency>
@@ -930,7 +930,7 @@
       <dependency>
         <groupId>com.github.pjfanning</groupId>
         <artifactId>jersey-json</artifactId>
-        <version>1.20</version>
+        <version>1.22.0</version>
         <exclusions>
           <exclusion>
             <groupId>com.fasterxml.jackson.core</groupId>
@@ -1244,7 +1244,7 @@
       <dependency>
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-configuration2</artifactId>
-        <version>2.8.0</version>
+        <version>2.10.1</version>
         <exclusions>
           <exclusion>
             <groupId>org.apache.commons</groupId>
@@ -1435,15 +1435,11 @@
           </exclusion>
           <exclusion>
             <groupId>io.netty</groupId>
-            <artifactId>netty-all</artifactId>
+            <artifactId>*</artifactId>
           </exclusion>
           <exclusion>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-handler</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-transport-native-epoll</artifactId>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
           </exclusion>
           <exclusion>
             <groupId>commons-collections</groupId>
@@ -1507,15 +1503,7 @@
           </exclusion>
           <exclusion>
             <groupId>io.netty</groupId>
-            <artifactId>netty-all</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-handler</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-transport-native-epoll</artifactId>
+            <artifactId>*</artifactId>
           </exclusion>
           <exclusion>
             <groupId>org.eclipse.jetty</groupId>
@@ -1596,6 +1584,12 @@
         <groupId>${leveldbjni.group}</groupId>
         <artifactId>leveldbjni-all</artifactId>
         <version>1.8</version>
+        <exclusions>
+          <exclusion>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.fusesource.hawtjni</groupId>
@@ -1767,12 +1761,12 @@
      </dependency>
      <dependency>
        <groupId>org.bouncycastle</groupId>
-       <artifactId>bcprov-jdk15on</artifactId>
+       <artifactId>bcprov-jdk18on</artifactId>
        <version>${bouncycastle.version}</version>
      </dependency>
       <dependency>
         <groupId>org.bouncycastle</groupId>
-        <artifactId>bcpkix-jdk15on</artifactId>
+        <artifactId>bcpkix-jdk18on</artifactId>
         <version>${bouncycastle.version}</version>
       </dependency>
 
@@ -1784,7 +1778,7 @@
           <exclusions>
           <exclusion>
             <groupId>org.bouncycastle</groupId>
-            <artifactId>bcprov-jdk15on</artifactId>
+            <artifactId>bcprov-jdk18on</artifactId>
           </exclusion>
         </exclusions>
       </dependency>
@@ -1958,11 +1952,23 @@
           <groupId>org.ehcache</groupId>
           <artifactId>ehcache</artifactId>
           <version>${ehcache.version}</version>
+          <exclusions>
+            <exclusion>
+              <groupId>org.slf4j</groupId>
+              <artifactId>slf4j-api</artifactId>
+            </exclusion>
+          </exclusions>
         </dependency>
         <dependency>
           <groupId>com.zaxxer</groupId>
           <artifactId>HikariCP</artifactId>
           <version>${hikari.version}</version>
+          <exclusions>
+            <exclusion>
+              <groupId>org.slf4j</groupId>
+              <artifactId>slf4j-api</artifactId>
+            </exclusion>
+          </exclusions>
         </dependency>
         <dependency>
           <groupId>org.apache.derby</groupId>
@@ -2024,6 +2030,12 @@
          <groupId>org.jsonschema2pojo</groupId>
          <artifactId>jsonschema2pojo-core</artifactId>
          <version>${jsonschema2pojo.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.xerial.snappy</groupId>
@@ -2476,7 +2488,7 @@
                     <include>com.google.inject:guice:4.0</include>
                     <include>com.sun.jersey:jersey-core:1.19.4</include>
                     <include>com.sun.jersey:jersey-servlet:1.19.4</include>
-                    <include>com.github.pjfanning:jersey-json:1.20</include>
+                    <include>com.github.pjfanning:jersey-json:1.22.0</include>
                     <include>com.sun.jersey:jersey-server:1.19.4</include>
                     <include>com.sun.jersey:jersey-client:1.19.4</include>
                     <include>com.sun.jersey:jersey-grizzly2:1.19.4</include>
