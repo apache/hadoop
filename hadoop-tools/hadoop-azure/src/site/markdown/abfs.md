@@ -1314,6 +1314,11 @@ The fix is to mimic the ownership to the local OS user, by adding the below prop
 
 Once the above properties are configured, `hdfs dfs -ls abfs://container1@abfswales1.dfs.core.windows.net/` shows the ADLS Gen2 files/directories are now owned by 'user1'.
 
+## <a name="KnownIssues"></a> Known Issues
+
+Following failures are known and expected to fail as of now.
+1. AzureBlobFileSystem.setXAttr() and AzureBlobFileSystem.getXAttr() will fail when attempted on root ("/") path with `Operation failed: "The request URI is invalid.", HTTP 400 Bad Request`
+
 ## <a name="testing"></a> Testing ABFS
 
 See the relevant section in [Testing Azure](testing_azure.html).

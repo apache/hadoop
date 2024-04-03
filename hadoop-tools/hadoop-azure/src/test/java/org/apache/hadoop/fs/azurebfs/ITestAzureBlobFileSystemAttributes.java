@@ -27,8 +27,11 @@ import org.junit.Test;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 
+import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PATH;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -45,8 +48,7 @@ public class ITestAzureBlobFileSystemAttributes extends AbstractAbfsIntegrationT
   @Test
   public void testSetGetXAttr() throws Exception {
     AzureBlobFileSystem fs = getFileSystem();
-    AbfsConfiguration conf = fs.getAbfsStore().getAbfsConfiguration();
-    final Path testPath = path("setGetXAttr");
+    final Path testPath = path(getMethodName());
     fs.create(testPath);
     testGetSetXAttrHelper(fs, testPath);
   }
@@ -56,7 +58,7 @@ public class ITestAzureBlobFileSystemAttributes extends AbstractAbfsIntegrationT
     AzureBlobFileSystem fs = getFileSystem();
     byte[] attributeValue = fs.getAbfsStore().encodeAttribute("one");
     String attributeName = "user.someAttribute";
-    Path testFile = path("createReplaceXAttr");
+    Path testFile = path(getMethodName());
 
     // after creating a file, it must be possible to create a new xAttr
     touch(testFile);
@@ -75,7 +77,7 @@ public class ITestAzureBlobFileSystemAttributes extends AbstractAbfsIntegrationT
     byte[] attributeValue1 = fs.getAbfsStore().encodeAttribute("one");
     byte[] attributeValue2 = fs.getAbfsStore().encodeAttribute("two");
     String attributeName = "user.someAttribute";
-    Path testFile = path("replaceXAttr");
+    Path testFile = path(getMethodName());
 
     // after creating a file, it must not be possible to replace an xAttr
     intercept(IOException.class, () -> {
@@ -89,13 +91,6 @@ public class ITestAzureBlobFileSystemAttributes extends AbstractAbfsIntegrationT
     Assertions.assertThat(fs.getXAttr(testFile, attributeName))
         .describedAs("Retrieved Attribute Value is Not as Expected")
         .containsExactly(attributeValue2);
-  }
-
-  @Test
-  public void testGetSetXAttrOnRoot() throws Exception {
-    AzureBlobFileSystem fs = getFileSystem();
-    final Path testPath = new Path("/");
-    testGetSetXAttrHelper(fs, testPath);
   }
 
   private void testGetSetXAttrHelper(final AzureBlobFileSystem fs,
@@ -153,5 +148,29 @@ public class ITestAzureBlobFileSystemAttributes extends AbstractAbfsIntegrationT
     Assertions.assertThat(fs.getAbfsStore().decodeAttribute(rv))
         .describedAs("Retrieved Attribute Does not Matches in Decoded Form")
         .isEqualTo(decodedAttributeValue2);
+  }
+
+  @Test
+  public void testGetSetXAttrOnRoot() throws Exception {
+    AzureBlobFileSystem fs = getFileSystem();
+    String attributeName = "user.attribute1";
+    byte[] attributeValue = fs.getAbfsStore().encodeAttribute("hi");
+    final Path testPath = new Path(ROOT_PATH);
+
+    AbfsRestOperationException ex = intercept(AbfsRestOperationException.class, () -> {
+      fs.getXAttr(testPath, attributeName);
+    });
+
+    Assertions.assertThat(ex.getStatusCode())
+        .describedAs("GetXAttr() on root should fail with Bad Request")
+        .isEqualTo(HTTP_BAD_REQUEST);
+
+    ex = intercept(AbfsRestOperationException.class, () -> {
+      fs.setXAttr(testPath, attributeName, attributeValue, CREATE_FLAG);
+    });
+
+    Assertions.assertThat(ex.getStatusCode())
+        .describedAs("SetXAttr() on root should fail with Bad Request")
+        .isEqualTo(HTTP_BAD_REQUEST);
   }
 }

@@ -26,6 +26,7 @@ import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.util.concurrent.TimeUnit;
 
@@ -207,7 +208,7 @@ public class DFSck extends Configured implements Tool {
       }
       InputStream stream = connection.getInputStream();
       BufferedReader input = new BufferedReader(new InputStreamReader(
-          stream, "UTF-8"));
+          stream, StandardCharsets.UTF_8));
       try {
         String line = null;
         while ((line = input.readLine()) != null) {
@@ -376,7 +377,7 @@ public class DFSck extends Configured implements Tool {
     }
     InputStream stream = connection.getInputStream();
     BufferedReader input = new BufferedReader(new InputStreamReader(
-                                              stream, "UTF-8"));
+                                              stream, StandardCharsets.UTF_8));
     String line = null;
     String lastLine = NamenodeFsck.CORRUPT_STATUS;
     int errCode = -1;
