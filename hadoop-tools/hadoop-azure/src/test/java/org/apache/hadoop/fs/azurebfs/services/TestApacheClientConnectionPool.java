@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azurebfs.services.kac;
+package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
 import java.util.Stack;
@@ -30,6 +30,7 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsTestWithTimeout;
+import org.apache.hadoop.fs.azurebfs.services.KeepAliveCache;
 import org.apache.hadoop.util.functional.FutureIO;
 import org.apache.http.HttpClientConnection;
 import org.apache.http.HttpHost;

@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.hadoop.fs.azurebfs.services.kac.KeepAliveCache;
 import org.apache.http.HttpClientConnection;
 import org.apache.http.config.Registry;
 import org.apache.http.config.SocketConfig;

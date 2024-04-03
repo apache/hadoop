@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azurebfs.services.kac;
+package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
 import java.io.NotSerializableException;
