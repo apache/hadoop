@@ -1128,8 +1128,7 @@ public class Client implements AutoCloseable {
             synchronized (ipcStreams.out) {
               if (LOG.isDebugEnabled()) {
                 Call call = pair.getLeft();
-                LOG.debug(getName() + "{} sending #{} {}", getName(), call.id,
-                    call.rpcRequest);
+                LOG.debug("{} sending #{} {}", getName(), call.id, call.rpcRequest);
               }
               // RpcRequestHeader + RpcRequest
               ipcStreams.sendRequest(buf.toByteArray());

@@ -57,6 +57,7 @@ import java.util.stream.Collectors;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.HAUtil;
+import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheLoader;
 import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
@@ -145,6 +146,7 @@ import org.apache.hadoop.hdfs.server.federation.router.security.RouterSecurityMa
 import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
 import org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException;
 import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
+import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.hdfs.server.namenode.NotReplicatedYetException;
 import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
@@ -369,7 +371,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
         RetriableException.class);
 
     this.rpcServer.addSuppressedLoggingExceptions(
-        StandbyException.class);
+        StandbyException.class, UnresolvedPathException.class);
 
     // The RPC-server port can be ephemeral... ensure we have the correct info
     InetSocketAddress listenAddress = this.rpcServer.getListenerAddress();
@@ -1638,6 +1640,12 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   @Override // NamenodeProtocol
   public long getMostRecentCheckpointTxId() throws IOException {
     return nnProto.getMostRecentCheckpointTxId();
+  }
+
+  @Override // NamenodeProtocol
+  public long getMostRecentNameNodeFileTxId(NNStorage.NameNodeFile nnf)
+      throws IOException {
+    return nnProto.getMostRecentNameNodeFileTxId(nnf);
   }
 
   @Override // NamenodeProtocol

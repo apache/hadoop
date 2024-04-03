@@ -1715,7 +1715,18 @@ public class UserGroupInformation {
       return true;
     }
   }
-  
+
+  /**
+   * Remove a named token from this UGI.
+   *
+   * @param alias Name of the token
+   */
+  public void removeToken(Text alias) {
+    synchronized (subject) {
+      getCredentialsInternal().removeToken(alias);
+    }
+  }
+
   /**
    * Obtain the collection of tokens associated with this user.
    * 
