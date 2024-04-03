@@ -326,7 +326,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   private boolean shouldReadFully(int lengthToRead) {
     if (!fileStatusInformationPresent) {
-      return this.fCursor > 0 && (lengthToRead + fCursor) <= this.bufferSize
+      return (lengthToRead + fCursor) <= this.bufferSize
           && this.firstRead && this.context.readSmallFilesCompletely();
     }
 
