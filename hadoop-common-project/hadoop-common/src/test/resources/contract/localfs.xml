@@ -131,9 +131,4 @@ case sensitivity and permission options are determined at run time from OS type
     <value>true</value>
   </property>
 
-  <property>
-    <name>fs.contract.vector-io-early-eof-check</name>
-    <value>true</value>
-  </property>
-
 </configuration>

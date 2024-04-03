@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.impl;
 
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileRange;
 
 import java.util.ArrayList;
@@ -28,32 +27,13 @@ import java.util.List;
  * A file range that represents a set of underlying file ranges.
  * This is used when we combine the user's FileRange objects
  * together into a single read for efficiency.
- * <p>
- * This class is not part of the public API; it MAY BE used as a parameter
- * to vector IO operations in FileSystem implementation code (and is)
  */
-@InterfaceAudience.Private
 public class CombinedFileRange extends FileRangeImpl {
-  private final List<FileRange> underlying = new ArrayList<>();
-
-  /**
-   * Total size of the data in the underlying ranges.
-   */
-  private long dataSize;
+  private List<FileRange> underlying = new ArrayList<>();
 
   public CombinedFileRange(long offset, long end, FileRange original) {
     super(offset, (int) (end - offset), null);
-    append(original);
-  }
-
-  /**
-   * Add a range to the underlying list; update
-   * the {@link #dataSize} field in the process.
-   * @param range range.
-   */
-  private void append(final FileRange range) {
-    this.underlying.add(range);
-    dataSize += range.getLength();
+    this.underlying.add(original);
   }
 
   /**
@@ -84,24 +64,7 @@ public class CombinedFileRange extends FileRangeImpl {
       return false;
     }
     this.setLength((int) (newEnd - this.getOffset()));
-    append(other);
+    underlying.add(other);
     return true;
-  }
-
-  @Override
-  public String toString() {
-    return super.toString()
-        + String.format("; range count=%d, data size=%,d",
-          underlying.size(), dataSize);
-  }
-
-  /**
-   * Get the total amount of data which is actually useful;
-   * the difference between this and {@link #getLength()} records
-   * how much data which will be discarded.
-   * @return a number greater than 0 and less than or equal to {@link #getLength()}.
-   */
-  public long getDataSize() {
-    return dataSize;
   }
 }

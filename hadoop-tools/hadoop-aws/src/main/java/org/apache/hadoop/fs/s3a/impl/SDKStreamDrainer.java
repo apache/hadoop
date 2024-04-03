@@ -171,11 +171,8 @@ public class SDKStreamDrainer<TStream extends InputStream & Abortable>
           "duplicate invocation of drain operation");
     }
     boolean executeAbort = shouldAbort;
-    if (remaining > 0 || executeAbort) {
-      // only log if there is a drain or an abort
-      LOG.debug("drain or abort reason {} remaining={} abort={}",
-          reason, remaining, executeAbort);
-    }
+    LOG.debug("drain or abort reason {} remaining={} abort={}",
+        reason, remaining, executeAbort);
 
     if (!executeAbort) {
       try {

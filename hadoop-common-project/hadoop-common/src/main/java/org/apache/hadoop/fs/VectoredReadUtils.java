@@ -22,56 +22,36 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.IntFunction;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.impl.CombinedFileRange;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.functional.Function4RaisingIOE;
-
-import static java.util.Objects.requireNonNull;
-import static org.apache.hadoop.util.Preconditions.checkArgument;
 
 /**
  * Utility class which implements helper methods used
  * in vectored IO implementation.
  */
-@InterfaceAudience.LimitedPrivate("Filesystems")
-@InterfaceStability.Unstable
 public final class VectoredReadUtils {
 
   private static final int TMP_BUFFER_MAX_SIZE = 64 * 1024;
 
-  private static final Logger LOG =
-        LoggerFactory.getLogger(VectoredReadUtils.class);
-
   /**
    * Validate a single range.
-   * @param range range to validate.
-   * @return the range.
-   * @param <T> range type
-   * @throws IllegalArgumentException the range length is negative or other invalid condition
-   * is met other than the those which raise EOFException or NullPointerException.
-   * @throws EOFException the range offset is negative
-   * @throws NullPointerException if the range is null.
+   * @param range file range.
+   * @throws EOFException any EOF Exception.
    */
-  public static <T extends FileRange> T validateRangeRequest(T range)
+  public static void validateRangeRequest(FileRange range)
           throws EOFException {
 
-    requireNonNull(range, "range is null");
-
-    checkArgument(range.getLength() >= 0, "length is negative in %s", range);
+    Preconditions.checkArgument(range.getLength() >= 0, "length is negative");
     if (range.getOffset() < 0) {
-      throw new EOFException("position is negative in range " + range);
+      throw new EOFException("position is negative");
     }
-    return range;
   }
 
   /**
@@ -81,8 +61,12 @@ public final class VectoredReadUtils {
    */
   public static void validateVectoredReadRanges(List<? extends FileRange> ranges)
           throws EOFException {
-    validateAndSortRanges(ranges, Optional.empty());
+    for (FileRange range : ranges) {
+      validateRangeRequest(range);
+    }
   }
+
+
 
   /**
    * This is the default implementation which iterates through the ranges
@@ -92,13 +76,11 @@ public final class VectoredReadUtils {
    * @param stream the stream to read the data from
    * @param ranges the byte ranges to read
    * @param allocate the byte buffer allocation
-   * @throws IllegalArgumentException if there are overlapping ranges or a range is invalid
-   * @throws EOFException the range offset is negative
    */
   public static void readVectored(PositionedReadable stream,
                                   List<? extends FileRange> ranges,
-                                  IntFunction<ByteBuffer> allocate) throws EOFException {
-    for (FileRange range: validateAndSortRanges(ranges, Optional.empty())) {
+                                  IntFunction<ByteBuffer> allocate) {
+    for (FileRange range: ranges) {
       range.setData(readRangeFrom(stream, range, allocate));
     }
   }
@@ -109,52 +91,33 @@ public final class VectoredReadUtils {
    * @param stream the stream to read from
    * @param range the range to read
    * @param allocate the function to allocate ByteBuffers
-   * @return the CompletableFuture that contains the read data or an exception.
-   * @throws IllegalArgumentException the range is invalid other than by offset or being null.
-   * @throws EOFException the range offset is negative
-   * @throws NullPointerException if the range is null.
+   * @return the CompletableFuture that contains the read data
    */
-  public static CompletableFuture<ByteBuffer> readRangeFrom(
-      PositionedReadable stream,
-      FileRange range,
-      IntFunction<ByteBuffer> allocate) throws EOFException {
-
-    validateRangeRequest(range);
+  public static CompletableFuture<ByteBuffer> readRangeFrom(PositionedReadable stream,
+                                                            FileRange range,
+                                                            IntFunction<ByteBuffer> allocate) {
     CompletableFuture<ByteBuffer> result = new CompletableFuture<>();
     try {
       ByteBuffer buffer = allocate.apply(range.getLength());
       if (stream instanceof ByteBufferPositionedReadable) {
-        LOG.debug("ByteBufferPositionedReadable.readFully of {}", range);
         ((ByteBufferPositionedReadable) stream).readFully(range.getOffset(),
             buffer);
         buffer.flip();
       } else {
-        // no positioned readable support; fall back to
-        // PositionedReadable methods
         readNonByteBufferPositionedReadable(stream, range, buffer);
       }
       result.complete(buffer);
     } catch (IOException ioe) {
-      LOG.debug("Failed to read {}", range, ioe);
       result.completeExceptionally(ioe);
     }
     return result;
   }
 
-  /**
-   * Read into a direct tor indirect buffer using {@code PositionedReadable.readFully()}.
-   * @param stream stream
-   * @param range file range
-   * @param buffer destination buffer
-   * @throws IOException IO problems.
-   */
-  private static void readNonByteBufferPositionedReadable(
-      PositionedReadable stream,
-      FileRange range,
-      ByteBuffer buffer) throws IOException {
+  private static void readNonByteBufferPositionedReadable(PositionedReadable stream,
+                                                          FileRange range,
+                                                          ByteBuffer buffer) throws IOException {
     if (buffer.isDirect()) {
-      LOG.debug("Reading {} into a direct byte buffer from {}", range, stream);
-      readInDirectBuffer(range,
+      readInDirectBuffer(range.getLength(),
           buffer,
           (position, buffer1, offset, length) -> {
             stream.readFully(position, buffer1, offset, length);
@@ -162,8 +125,6 @@ public final class VectoredReadUtils {
           });
       buffer.flip();
     } else {
-      // not a direct buffer, so read straight into the array
-      LOG.debug("Reading {} into a byte buffer from {}", range, stream);
       stream.readFully(range.getOffset(), buffer.array(),
               buffer.arrayOffset(), range.getLength());
     }
@@ -172,42 +133,26 @@ public final class VectoredReadUtils {
   /**
    * Read bytes from stream into a byte buffer using an
    * intermediate byte array.
-   *   <pre>
-   *     (position, buffer, buffer-offset, length): Void
-   *     position:= the position within the file to read data.
-   *     buffer := a buffer to read fully `length` bytes into.
-   *     buffer-offset := the offset within the buffer to write data
-   *     length := the number of bytes to read.
-   *   </pre>
-   * The passed in function MUST block until the required length of
-   * data is read, or an exception is thrown.
-   * @param range range to read
+   * @param length number of bytes to read.
    * @param buffer buffer to fill.
    * @param operation operation to use for reading data.
    * @throws IOException any IOE.
    */
-  public static void readInDirectBuffer(FileRange range,
-      ByteBuffer buffer,
-      Function4RaisingIOE<Long, byte[], Integer, Integer, Void> operation)
-      throws IOException {
-
-    LOG.debug("Reading {} into a direct buffer", range);
-    validateRangeRequest(range);
-    int length = range.getLength();
+  public static void readInDirectBuffer(int length,
+                                        ByteBuffer buffer,
+                                        Function4RaisingIOE<Integer, byte[], Integer,
+                                                Integer, Void> operation) throws IOException {
     if (length == 0) {
-      // no-op
       return;
     }
     int readBytes = 0;
-    long position = range.getOffset();
+    int position = 0;
     int tmpBufferMaxSize = Math.min(TMP_BUFFER_MAX_SIZE, length);
     byte[] tmp = new byte[tmpBufferMaxSize];
     while (readBytes < length) {
       int currentLength = (readBytes + tmpBufferMaxSize) < length ?
               tmpBufferMaxSize
               : (length - readBytes);
-      LOG.debug("Reading {} bytes from position {} (bytes read={}",
-          currentLength, position, readBytes);
       operation.apply(position, tmp, 0, currentLength);
       buffer.put(tmp, 0, currentLength);
       position = position + currentLength;
@@ -260,7 +205,7 @@ public final class VectoredReadUtils {
   }
 
   /**
-   * Calculates the ceiling value of offset based on chunk size.
+   * Calculates the ceil value of offset based on chunk size.
    * @param offset file offset.
    * @param chunkSize file chunk size.
    * @return ceil value.
@@ -275,69 +220,39 @@ public final class VectoredReadUtils {
   }
 
   /**
-   * Validate a list of ranges (including overlapping checks) and
-   * return the sorted list.
-   * <p>
-   * Two ranges overlap when the start offset
+   * Check if the input ranges are overlapping in nature.
+   * We call two ranges to be overlapping when start offset
    * of second is less than the end offset of first.
    * End offset is calculated as start offset + length.
-   * @param input input list
-   * @param fileLength file length if known
-   * @return a new sorted list.
-   * @throws IllegalArgumentException if there are overlapping ranges or
-   * a range element is invalid (other than with negative offset)
-   * @throws EOFException if the last range extends beyond the end of the file supplied
-   *                          or a range offset is negative
+   * @param input list if input ranges.
+   * @return true/false based on logic explained above.
    */
-  public static List<? extends FileRange> validateAndSortRanges(
-      final List<? extends FileRange> input,
-      final Optional<Long> fileLength) throws EOFException {
+  public static List<? extends FileRange> validateNonOverlappingAndReturnSortedRanges(
+          List<? extends FileRange> input) {
 
-    requireNonNull(input, "Null input list");
-    checkArgument(!input.isEmpty(), "Empty input list");
-    final List<? extends FileRange> sortedRanges;
-
-    if (input.size() == 1) {
-      validateRangeRequest(input.get(0));
-      sortedRanges = input;
-    } else {
-      sortedRanges = sortRanges(input);
-      FileRange prev = null;
-      for (final FileRange current : sortedRanges) {
-        validateRangeRequest(current);
-        if (prev != null) {
-          checkArgument(current.getOffset() >= prev.getOffset() + prev.getLength(),
-              "Overlapping ranges %s and %s", prev, current);
-        }
-        prev = current;
-      }
+    if (input.size() <= 1) {
+      return input;
     }
-    // at this point the final element in the list is the last range
-    // so make sure it is not beyond the end of the file, if passed in.
-    // where invalid is: starts at or after the end of the file
-    if (fileLength.isPresent()) {
-      final FileRange last = sortedRanges.get(sortedRanges.size() - 1);
-      final Long l = fileLength.get();
-      // this check is superfluous, but it allows for different exception message.
-      if (last.getOffset() >= l) {
-        throw new EOFException("Range starts beyond the file length (" + l + "): " + last);
+    FileRange[] sortedRanges = sortRanges(input);
+    FileRange prev = sortedRanges[0];
+    for (int i=1; i<sortedRanges.length; i++) {
+      if (sortedRanges[i].getOffset() < prev.getOffset() + prev.getLength()) {
+        throw new UnsupportedOperationException("Overlapping ranges are not supported");
       }
-      if (last.getOffset() + last.getLength() > l) {
-        throw new EOFException("Range extends beyond the file length (" + l + "): " + last);
-      }
+      prev = sortedRanges[i];
     }
-    return sortedRanges;
+    return Arrays.asList(sortedRanges);
   }
 
   /**
-   * Sort the input ranges by offset; no validation is done.
+   * Sort the input ranges by offset.
    * @param input input ranges.
-   * @return a new list of the ranges, sorted by offset.
+   * @return sorted ranges.
    */
-  public static List<? extends FileRange> sortRanges(List<? extends FileRange> input) {
-    final List<? extends FileRange> l = new ArrayList<>(input);
-    l.sort(Comparator.comparingLong(FileRange::getOffset));
-    return l;
+  public static FileRange[] sortRanges(List<? extends FileRange> input) {
+    FileRange[] sortedRanges = input.toArray(new FileRange[0]);
+    Arrays.sort(sortedRanges, Comparator.comparingLong(FileRange::getOffset));
+    return sortedRanges;
   }
 
   /**

@@ -127,7 +127,6 @@ public interface PositionedReadable {
    * @param ranges the byte ranges to read
    * @param allocate the function to allocate ByteBuffer
    * @throws IOException any IOE.
-   * @throws IllegalArgumentException if the any of ranges are invalid, or they overlap.
    */
   default void readVectored(List<? extends FileRange> ranges,
                             IntFunction<ByteBuffer> allocate) throws IOException {

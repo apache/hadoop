@@ -147,9 +147,4 @@
     <value>true</value>
   </property>
 
-  <property>
-    <name>fs.contract.vector-io-early-eof-check</name>
-    <value>true</value>
-  </property>
-
 </configuration>
