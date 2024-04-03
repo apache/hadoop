@@ -613,7 +613,7 @@ public class NodeAttributesManagerImpl extends NodeAttributesManager {
     }
 
     public Host(String hostName) {
-      this(hostName, new HashMap<NodeAttribute, AttributeValue>());
+      this(hostName, new ConcurrentHashMap<NodeAttribute, AttributeValue>());
     }
 
     public Host(String hostName,

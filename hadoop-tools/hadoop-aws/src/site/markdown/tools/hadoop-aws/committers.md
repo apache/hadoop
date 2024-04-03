@@ -362,6 +362,13 @@ the magic directory path rewriting is enabled by default.
 The Magic Committer has not been field tested to the extent of Netflix's committer;
 consider it the least mature of the committers.
 
+When there are less number of files to be written, The Magic committer has an option to store the commit data in-memory which can speed up the TaskCommit operation as well as save S3 cost. This can be enabled by the following property
+```xml
+<property>
+  <name>fs.s3a.committer.magic.track.commits.in.memory.enabled</name>
+  <value>true</value>
+</property>
+```
 
 ### Which Committer to Use?
 

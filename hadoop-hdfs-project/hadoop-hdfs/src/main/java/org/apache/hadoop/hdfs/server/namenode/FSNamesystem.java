@@ -1578,6 +1578,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       standbyCheckpointer = new StandbyCheckpointer(conf, this);
       standbyCheckpointer.start();
     }
+    if (isNoManualAndResourceLowSafeMode()) {
+      LOG.info("Standby should not enter safe mode when resources are low, exiting safe mode.");
+      leaveSafeMode(false);
+    }
   }
 
   /**
@@ -5253,10 +5257,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     String cmd = "Use \"hdfs dfsadmin -safemode leave\" to turn safe mode off.";
     synchronized (this) {
       if (resourceLowSafeMode) {
-        return "Resources are low on NN. Please add or free up more resources"
-            + "then turn off safe mode manually. NOTE:  If you turn off safe "
-            + "mode before adding resources, the NN will immediately return to "
-            + "safe mode. " + cmd;
+        return "Resources are low on NN. Please add or free up more resources. "
+            + "NOTE:  If you turn off safe mode before adding resources, the "
+            + "NN will immediately return to safe mode. ";
       } else if (manualSafeMode) {
         return "It was turned on manually. " + cmd;
       }

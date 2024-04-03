@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.contract.localfs;
 
-import java.io.EOFException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -31,7 +30,6 @@ import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileRange;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.AbstractContractVectoredReadTest;
@@ -57,7 +55,7 @@ public class TestLocalFSContractVectoredRead extends AbstractContractVectoredRea
     Path testPath = path("big_range_checksum_file");
     List<FileRange> someRandomRanges = new ArrayList<>();
     someRandomRanges.add(FileRange.createFileRange(10, 1024));
-    someRandomRanges.add(FileRange.createFileRange(1025, 1024));
+    someRandomRanges.add(FileRange.createFileRange(1040, 1024));
     validateCheckReadException(testPath, DATASET_LEN, someRandomRanges);
   }
 
@@ -91,7 +89,7 @@ public class TestLocalFSContractVectoredRead extends AbstractContractVectoredRea
     CompletableFuture<FSDataInputStream> fis = localFs.openFile(testPath).build();
     try (FSDataInputStream in = fis.get()){
       in.readVectored(ranges, getAllocate());
-      validateVectoredReadResult(ranges, datasetCorrect);
+      validateVectoredReadResult(ranges, datasetCorrect, 0);
     }
     final byte[] datasetCorrupted = ContractTestUtils.dataset(length, 'a', 64);
     try (FSDataOutputStream out = localFs.getRaw().create(testPath, true)){
@@ -103,7 +101,7 @@ public class TestLocalFSContractVectoredRead extends AbstractContractVectoredRea
       // Expect checksum exception when data is updated directly through
       // raw local fs instance.
       intercept(ChecksumException.class,
-          () -> validateVectoredReadResult(ranges, datasetCorrupted));
+          () -> validateVectoredReadResult(ranges, datasetCorrupted, 0));
     }
   }
   @Test
@@ -124,20 +122,8 @@ public class TestLocalFSContractVectoredRead extends AbstractContractVectoredRea
     smallRange.add(FileRange.createFileRange(1000, 71));
     try (FSDataInputStream in = fis.get()){
       in.readVectored(smallRange, getAllocate());
-      validateVectoredReadResult(smallRange, datasetCorrect);
+      validateVectoredReadResult(smallRange, datasetCorrect, 0);
     }
   }
 
-
-  /**
-   * Overriding in checksum fs as vectored read api fails fast
-   * in case of EOF requested range.
-   */
-  @Override
-  public void testEOFRanges() throws Exception {
-    FileSystem fs = getFileSystem();
-    List<FileRange> fileRanges = new ArrayList<>();
-    fileRanges.add(FileRange.createFileRange(DATASET_LEN, 100));
-    verifyExceptionalVectoredRead(fs, fileRanges, EOFException.class);
-  }
 }
