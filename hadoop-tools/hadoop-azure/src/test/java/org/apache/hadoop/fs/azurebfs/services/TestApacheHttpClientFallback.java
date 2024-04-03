@@ -67,7 +67,7 @@ public class TestApacheHttpClientFallback extends AbstractAbfsTestWithTimeout {
           }
           if (op instanceof AbfsJdkHttpOperation) {
             jdkCallsRegister[0]++;
-            if (ApacheHttpClientHealthMonitor.usable()) {
+            if (AbfsApacheHttpClient.usable()) {
               Assertions.assertThat(tc.getHeader()).endsWith(JDK_IMPL);
             } else {
               Assertions.assertThat(tc.getHeader()).endsWith(JDK_FALLBACK);
@@ -186,7 +186,7 @@ public class TestApacheHttpClientFallback extends AbstractAbfsTestWithTimeout {
       Assertions.assertThat(operation).isInstanceOf(
           (retryIteration[0]
               < DEFAULT_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES
-              && ApacheHttpClientHealthMonitor.usable())
+              && AbfsApacheHttpClient.usable())
               ? AbfsAHCHttpOperation.class
               : AbfsJdkHttpOperation.class);
       Mockito.doReturn(HTTP_OK).when(operation).getStatusCode();

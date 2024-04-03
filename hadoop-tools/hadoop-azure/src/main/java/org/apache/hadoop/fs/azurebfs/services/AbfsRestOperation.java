@@ -95,7 +95,6 @@ public class AbfsRestOperation {
   private TracingContext lastUsedTracingContext;
 
   private int apacheHttpClientIoExceptions = 0;
-  private boolean checkApacheHttpClientIoExceptionCount = true;
 
   /**
    * Checks if there is non-null HTTP response.
@@ -264,12 +263,6 @@ public class AbfsRestOperation {
     while (!executeHttpOperation(retryCount, tracingContext)) {
       try {
         ++retryCount;
-        if (checkApacheHttpClientIoExceptionCount
-            && apacheHttpClientIoExceptions
-            >= abfsConfiguration.getMaxApacheHttpClientIoExceptionsRetries()) {
-          checkApacheHttpClientIoExceptionCount = false;
-          ApacheHttpClientHealthMonitor.registerFallback();
-        }
         tracingContext.setRetryCount(retryCount);
         long retryInterval = retryPolicy.getRetryInterval(retryCount);
         LOG.debug("Rest operation {} failed with failureReason: {}. Retrying with retryCount = {}, retryPolicy: {} and sleepInterval: {}",
@@ -355,7 +348,7 @@ public class AbfsRestOperation {
       LOG.warn("Unknown host name: {}. Retrying to resolve the host name...",
           hostname);
       if (httpOperation instanceof AbfsAHCHttpOperation) {
-        apacheHttpClientIoExceptions++;
+        registerApacheHttpClientIoException();
       }
       if (!retryPolicy.shouldRetry(retryCount, -1)) {
         throw new InvalidAbfsRestOperationException(ex, retryCount);
@@ -370,7 +363,7 @@ public class AbfsRestOperation {
       retryPolicy = client.getRetryPolicy(failureReason);
       wasIOExceptionThrown = true;
       if (httpOperation instanceof AbfsAHCHttpOperation) {
-        apacheHttpClientIoExceptions++;
+        registerApacheHttpClientIoException();
       }
       if (!retryPolicy.shouldRetry(retryCount, -1)) {
         throw new InvalidAbfsRestOperationException(ex, retryCount);
@@ -416,6 +409,14 @@ public class AbfsRestOperation {
     result = httpOperation;
 
     return true;
+  }
+
+  private void registerApacheHttpClientIoException() {
+    apacheHttpClientIoExceptions++;
+    if(apacheHttpClientIoExceptions
+        >= abfsConfiguration.getMaxApacheHttpClientIoExceptionsRetries()) {
+      AbfsApacheHttpClient.registerFallback();
+    }
   }
 
   /**
@@ -466,7 +467,7 @@ public class AbfsRestOperation {
 
   @VisibleForTesting
   boolean isApacheClientUsable() {
-    return ApacheHttpClientHealthMonitor.usable();
+    return AbfsApacheHttpClient.usable();
   }
 
   @VisibleForTesting

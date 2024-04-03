@@ -361,7 +361,7 @@ public class AbfsJdkHttpOperation extends AbfsHttpOperation {
 
   @Override
   public String getTracingContextSuffix() {
-    return ApacheHttpClientHealthMonitor.usable() ? JDK_IMPL : JDK_FALLBACK;
+    return AbfsApacheHttpClient.usable() ? JDK_IMPL : JDK_FALLBACK;
   }
 
   public static class AbfsHttpOperationWithFixedResult

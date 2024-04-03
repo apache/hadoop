@@ -38,10 +38,20 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.HTTPS
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.HTTP_SCHEME;
 import static org.apache.http.conn.ssl.SSLConnectionSocketFactory.getDefaultHostnameVerifier;
 
-public class AbfsApacheHttpClient {
+final class AbfsApacheHttpClient {
   private final CloseableHttpClient httpClient;
 
   static AbfsApacheHttpClient ABFS_APACHE_HTTP_CLIENT = null;
+
+  private static boolean usable = true;
+
+  static void registerFallback() {
+    usable = false;
+  }
+
+  static boolean usable() {
+    return usable;
+  }
 
   static synchronized void setClient(DelegatingSSLSocketFactory delegatingSSLSocketFactory,
       final int readTimeout) {
