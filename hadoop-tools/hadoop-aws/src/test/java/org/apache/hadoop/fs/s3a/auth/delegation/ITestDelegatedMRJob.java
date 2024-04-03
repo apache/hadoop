@@ -175,7 +175,7 @@ public class ITestDelegatedMRJob extends AbstractDelegationIT {
     String host = jobResourceUri.getHost();
     // and fix to the main endpoint if the caller has moved
     conf.set(
-        String.format("fs.s3a.bucket.%s.endpoint", host), "us-east-1");
+        String.format("fs.s3a.bucket.%s.endpoint", host), "");
 
     // set up DTs
     enableDelegationTokens(conf, tokenBinding);
