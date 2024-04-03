@@ -24,6 +24,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.RateLimiter;
 
+import static org.apache.hadoop.util.Preconditions.checkArgument;
+
 /**
  * Factory for Rate Limiting.
  * This should be only place in the code where the guava RateLimiter is imported.
@@ -50,6 +52,7 @@ public final class RateLimitingFactory {
 
     @Override
     public Duration acquire(int requestedCapacity) {
+      checkArgument(requestedCapacity >= 0, "requestedCapacity must be >= 0");
       return INSTANTLY;
     }
   }
@@ -70,6 +73,11 @@ public final class RateLimitingFactory {
 
     @Override
     public Duration acquire(int requestedCapacity) {
+      checkArgument(requestedCapacity >= 0, "requestedCapacity must be >= 0");
+      if (requestedCapacity == 0) {
+        // google limiter does not do this.
+        return INSTANTLY;
+      }
       final double delayMillis = limiter.acquire(requestedCapacity);
       return delayMillis == 0
           ? INSTANTLY
