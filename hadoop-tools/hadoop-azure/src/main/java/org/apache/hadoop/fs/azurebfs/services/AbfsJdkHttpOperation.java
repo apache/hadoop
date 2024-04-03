@@ -78,19 +78,6 @@ public class AbfsJdkHttpOperation extends AbfsHttpOperation {
     super(LOG, url, method, httpStatus);
   }
 
-  protected HttpURLConnection getConnection() {
-    return connection;
-  }
-
-  public String getClientRequestId() {
-    return this.connection
-        .getRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID);
-  }
-
-  public String getResponseHeader(String httpHeader) {
-    return connection.getHeaderField(httpHeader);
-  }
-
   /**
    * Initializes a new HTTP request and opens the connection.
    *
@@ -107,7 +94,7 @@ public class AbfsJdkHttpOperation extends AbfsHttpOperation {
       final int connectionTimeout,
       final int readTimeout)
       throws IOException {
-    super(LOG, url, method);
+    super(LOG, url, method, requestHeaders, connectionTimeout, readTimeout);
 
     this.connection = openConnection();
     if (this.connection instanceof HttpsURLConnection) {
@@ -126,6 +113,19 @@ public class AbfsJdkHttpOperation extends AbfsHttpOperation {
     for (AbfsHttpHeader header : requestHeaders) {
       setRequestProperty(header.getName(), header.getValue());
     }
+  }
+
+  protected HttpURLConnection getConnection() {
+    return connection;
+  }
+
+  public String getClientRequestId() {
+    return this.connection
+        .getRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID);
+  }
+
+  public String getResponseHeader(String httpHeader) {
+    return connection.getHeaderField(httpHeader);
   }
 
   /**

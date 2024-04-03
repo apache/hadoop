@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -77,6 +78,10 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
   private long recvResponseTimeMs;
   private boolean shouldMask = false;
 
+  private final List<AbfsHttpHeader> requestHeaders;
+
+  private final int connectionTimeout, readTimeout;
+
   public AbfsHttpOperation(Logger logger,
       final URL url,
       final String method,
@@ -85,12 +90,38 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
     this.url = url;
     this.method = method;
     this.statusCode = httpStatus;
+    this.requestHeaders = new ArrayList<>();
+    this.connectionTimeout = 0;
+    this.readTimeout = 0;
   }
 
-  public AbfsHttpOperation(final Logger log, final URL url, final String method) {
+  public AbfsHttpOperation(final Logger log, final URL url, final String method,
+      final List<AbfsHttpHeader> requestHeaders, final int connectionTimeout,
+      final int readTimeout) {
     this.log = log;
     this.url = url;
     this.method = method;
+    this.requestHeaders = requestHeaders;
+    this.connectionTimeout = connectionTimeout;
+    this.readTimeout = readTimeout;
+  }
+
+  int getConnectionTimeout() {
+    return connectionTimeout;
+  }
+
+  int getReadTimeout() {
+    return readTimeout;
+  }
+
+  List<AbfsHttpHeader> getRequestHeaders() {
+    return requestHeaders;
+  }
+
+  void addHeaderToRequestHeaderList(AbfsHttpHeader abfsHttpHeader) {
+    if (requestHeaders != null) {
+      requestHeaders.add(abfsHttpHeader);
+    }
   }
 
   public String getMethod() {
