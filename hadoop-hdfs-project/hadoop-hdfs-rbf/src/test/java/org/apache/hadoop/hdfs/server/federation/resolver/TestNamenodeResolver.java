@@ -472,7 +472,7 @@ public class TestNamenodeResolver {
     try {
       return namenodeResolver.registerNamenode(
           createNamenodeReport(nsId, nnId, haServiceState));
-    }catch (IOException e) {
+    } catch (IOException e) {
       return false;
     }
   }
