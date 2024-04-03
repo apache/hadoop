@@ -128,7 +128,7 @@ public class ITestAbfsPaginatedDelete extends AbstractAbfsIntegrationTest {
     return (AzureBlobFileSystem) FileSystem.newInstance(testUserConf);
   }
 
-  private void setTestUserConf (Configuration conf, String key, String value) {
+  private void setTestUserConf(Configuration conf, String key, String value) {
     conf.set(key, value);
     conf.set(key + "." + getAccountName(), value);
   }
