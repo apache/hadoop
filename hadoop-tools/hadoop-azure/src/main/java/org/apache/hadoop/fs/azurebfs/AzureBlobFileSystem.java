@@ -555,7 +555,7 @@ public class AzureBlobFileSystem extends FileSystem
 
       // acquire one IO permit
       final Duration waitTime = acquireIOCapacity(StoreStatisticNames.OP_RENAME,
-          qualifiedSrcPath, 1);
+          qualifiedSrcPath, null, 1);
 
       try {
         final boolean recovered = abfsStore.rename(qualifiedSrcPath,
@@ -1679,9 +1679,9 @@ public class AzureBlobFileSystem extends FileSystem
 
   @Override
   public Duration acquireIOCapacity(final String operation,
-      final Path path,
-      final int requestedCapacity) {
-    return abfsStore.acquireIOCapacity(operation, path, requestedCapacity);
+      final Path src,
+      final Path dest, final int requestedCapacity) {
+    return abfsStore.acquireIOCapacity(operation, src, null, requestedCapacity);
   }
 
 }

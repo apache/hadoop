@@ -2232,7 +2232,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport, IORa
    * {@inheritDoc}
    */
   @Override
-  public Duration acquireIOCapacity(final String operation, final Path path, final int requestedCapacity) {
+  public Duration acquireIOCapacity(final String operation, final Path src, final Path dest, final int requestedCapacity) {
 
     double multiplier;
     int lowCost = 1;

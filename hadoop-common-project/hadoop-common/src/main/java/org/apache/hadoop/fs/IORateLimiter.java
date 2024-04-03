@@ -74,11 +74,12 @@ public interface IORateLimiter {
    * @param operation operation being performed. Must not be null, may be "",
    * should be from {@link org.apache.hadoop.fs.statistics.StoreStatisticNames}
    * where there is a matching operation.
-   * @param path path under which the operations will be initiated.
+   * @param src path under which the operations will be initiated.
+   * @param dest destination path for rename operations
    * @param requestedCapacity capacity to acquire.
    * Must be greater than or equal to 0.
    * @return time spent waiting for output.
    */
-  Duration acquireIOCapacity(String operation, final Path path, int requestedCapacity);
+  Duration acquireIOCapacity(String operation, Path src, Path dest, int requestedCapacity);
 
 }

@@ -333,8 +333,8 @@ public abstract class ManifestStoreOperations implements Closeable, IORateLimite
    * {@inheritDoc}
    */
   @Override
-  public Duration acquireIOCapacity(final String operation, final Path path, final int requestedCapacity) {
-    return rateLimiterSource().acquireIOCapacity(operation, new Path("/"), requestedCapacity);
+  public Duration acquireIOCapacity(final String operation, final Path src, final Path dest, final int requestedCapacity) {
+    return rateLimiterSource().acquireIOCapacity(operation, new Path("/"), null, requestedCapacity);
   }
 
 }

@@ -37,7 +37,7 @@ public final class IORateLimiterSupport {
    * @return a rate limiter source which has no rate limiting.
    */
   public static IORateLimiter unlimited() {
-    return (operation, path, requestedCapacity) -> {
+    return (operation, src, dest, requestedCapacity) -> {
       requireNonNull(operation, "operation");
       return RateLimitingFactory.unlimitedRate().acquire(requestedCapacity);
     };
@@ -50,7 +50,7 @@ public final class IORateLimiterSupport {
    */
   public static IORateLimiter create(int capacityPerSecond) {
     final RateLimiting limiting = RateLimitingFactory.create(capacityPerSecond);
-    return (operation, path, requestedCapacity) -> {
+    return (operation, src, dest, requestedCapacity) -> {
       requireNonNull(operation, "operation");
       return limiting.acquire(requestedCapacity);
     };
