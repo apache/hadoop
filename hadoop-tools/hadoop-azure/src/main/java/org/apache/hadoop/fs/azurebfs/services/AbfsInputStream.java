@@ -23,6 +23,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
@@ -133,7 +134,11 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   private Boolean fileStatusInformationPresent;
 
-  private final AtomicInteger successfulUsage = new AtomicInteger(0);
+  /**
+   * Defines if the inputStream has been used successfully once. Prefetches would
+   * start only after the first successful read.
+   */
+  private volatile boolean successfulUsage = false;
 
   public AbfsInputStream(
           final AbfsClient client,
@@ -206,16 +211,17 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
      * ont he inputStream, the first read will be synchronized and the subsequent
      * reads will be non-synchronized.
      */
-    synchronized (this) {
-      if (successfulUsage.get() == 0) {
-        int result = readOnPosition(position, buffer, offset, length);
-        successfulUsage.incrementAndGet();
-        return result;
+    if (!successfulUsage) {
+      synchronized (this) {
+        if (!successfulUsage) {
+          int result = readOnPosition(position, buffer, offset, length);
+          successfulUsage = true;
+          return result;
+        }
       }
     }
 
     int result = readOnPosition(position, buffer, offset, length);
-    successfulUsage.incrementAndGet();
     return result;
   }
 
@@ -260,7 +266,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   public synchronized int read(final byte[] b, final int off, final int len)
       throws IOException {
     int result = synchronizedRead(b, off, len);
-    successfulUsage.incrementAndGet();
+    successfulUsage =  true;
     return result;
   }
 
@@ -527,7 +533,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   private int readInternal(final long position, final byte[] b, final int offset, final int length,
                            final boolean bypassReadAhead) throws IOException {
-    if (readAheadEnabled && !bypassReadAhead && successfulUsage.get() > 0) {
+    if (readAheadEnabled && !bypassReadAhead && successfulUsage) {
       // try reading from read-ahead
       if (offset != 0) {
         throw new IllegalArgumentException("readahead buffers cannot have non-zero buffer offsets");
@@ -618,7 +624,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       }
       throw new IOException(ex);
     }
-    if (successfulUsage.get() == 0) {
+    if (!fileStatusInformationPresent) {
       initPathProperties(op);
     }
     long bytesRead = op.getResult().getBytesReceived();
