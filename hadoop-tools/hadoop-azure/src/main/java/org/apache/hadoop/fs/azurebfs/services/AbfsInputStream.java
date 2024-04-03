@@ -311,10 +311,10 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         limit = 0;
         bCursor = 0;
       }
-      if (shouldReadLastBlock(currentLen)) {
-        lastReadBytes = readLastBlock(b, currentOff, currentLen);
-      } else if (shouldReadFully(currentLen)) {
+      if (shouldReadFully(currentLen)) {
         lastReadBytes = readFileCompletely(b, currentOff, currentLen);
+      } else if (shouldReadLastBlock(currentLen)) {
+        lastReadBytes = readLastBlock(b, currentOff, currentLen);
       } else {
         lastReadBytes = readOneBlock(b, currentOff, currentLen);
       }
@@ -415,6 +415,10 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     // data need to be copied to user buffer from index bCursor, bCursor has
     // to be the current fCusor
     bCursor = (int) fCursor;
+    if (!fileStatusInformationPresent) {
+      //TODO: test on if contentLength is less than buffer size
+      return optimisedRead(b, off, len, 0, bufferSize);
+    }
     return optimisedRead(b, off, len, 0, contentLength);
   }
 
@@ -431,6 +435,12 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     // data need to be copied to user buffer from index bCursor,
     // AbfsInutStream buffer is going to contain data from last block start. In
     // that case bCursor will be set to fCursor - lastBlockStart
+    if (!fileStatusInformationPresent) {
+      //TODO: since we are chaniing the state of bcursor. Tests should be there that check next read behaviour.
+      long lastBlockStart = max(0, footerReadSize - (fCursor + len));
+      bCursor = (int) (fCursor - lastBlockStart);
+      return optimisedRead(b, off, len, lastBlockStart, footerReadSize);
+    }
     long lastBlockStart = max(0, contentLength - footerReadSize);
     bCursor = (int) (fCursor - lastBlockStart);
     // 0 if contentlength is < buffersize
