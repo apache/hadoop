@@ -69,12 +69,15 @@ public class MkdirOperation extends ExecutingStoreOperation<Boolean> {
 
   private final boolean performanceCreation;
 
+  private final boolean isMagicPath;
+
   /**
    * Initialize Mkdir Operation context for S3A.
    *
    * @param storeContext Store context.
    * @param dir Dir path of the directory.
    * @param callbacks MkdirCallbacks object used by the Mkdir operation.
+   * @param isMagicPath True if the path is magic commit path.
    * @param performanceCreation If true, skip validation of the parent directory
    * structure.
    */
@@ -82,10 +85,12 @@ public class MkdirOperation extends ExecutingStoreOperation<Boolean> {
       final StoreContext storeContext,
       final Path dir,
       final MkdirCallbacks callbacks,
+      final boolean isMagicPath,
       final boolean performanceCreation) {
     super(storeContext);
     this.dir = dir;
     this.callbacks = callbacks;
+    this.isMagicPath = isMagicPath;
     this.performanceCreation = performanceCreation;
   }
 
@@ -107,13 +112,14 @@ public class MkdirOperation extends ExecutingStoreOperation<Boolean> {
     }
 
     // get the file status of the path.
-    // this is not done for magic path i.e. performanceCreation mode.
-    // For performanceCreation mode, we would probe for HEAD only.
-    // For non-performance or regular mode, the probe for both HEAD and LIST would
-    // be done.
-    S3AFileStatus fileStatus = performanceCreation
-        ? probePathStatusOrNull(dir, StatusProbeEnum.HEAD_ONLY)
-        : getPathStatusExpectingDir(dir);
+    // this is done even for a magic path, to avoid always  issuing PUT
+    // requests. Doing that without a check wouild seem to be an
+    // optimization, but it is not because
+    // 1. PUT is slower than HEAD
+    // 2. Write capacity is less than read capacity on a shard
+    // 3. It adds needless entries in versioned buckets, slowing
+    //    down subsequent operations.
+    FileStatus fileStatus = getPathStatusExpectingDir(dir);
     if (fileStatus != null) {
       if (fileStatus.isDirectory()) {
         return true;
@@ -122,6 +128,15 @@ public class MkdirOperation extends ExecutingStoreOperation<Boolean> {
       }
     }
     // file status was null
+
+    // is the path magic?
+    // If so, we declare success without looking any further
+    if (isMagicPath) {
+      // Create the marker file immediately,
+      // and don't delete markers
+      callbacks.createFakeDirectory(dir, true);
+      return true;
+    }
 
     // if performance creation mode is set, no need to check
     // whether the closest ancestor is dir.
@@ -134,8 +149,7 @@ public class MkdirOperation extends ExecutingStoreOperation<Boolean> {
 
     // Create the marker file, delete the parent entries
     // if the filesystem isn't configured to retain them
-    callbacks.createFakeDirectory(dir,
-        performanceCreation);
+    callbacks.createFakeDirectory(dir, false);
     return true;
   }
 
@@ -212,7 +226,7 @@ public class MkdirOperation extends ExecutingStoreOperation<Boolean> {
       throws IOException {
     S3AFileStatus status = probePathStatusOrNull(path,
         StatusProbeEnum.DIRECTORIES);
-    if (status == null && !performanceCreation) {
+    if (status == null && !isMagicPath) {
       status = probePathStatusOrNull(path,
           StatusProbeEnum.FILE);
     }

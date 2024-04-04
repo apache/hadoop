@@ -3769,7 +3769,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             createStoreContext(),
             path,
             createMkdirOperationCallbacks(),
-            performanceCreation || isMagicCommitPath(path)));
+            isMagicCommitPath(path),
+            performanceCreation));
   }
 
   /**
@@ -4208,6 +4209,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
               storeContext,
               path,
               createMkdirOperationCallbacks(),
+              false,
               performanceCreation));
     }
   }
