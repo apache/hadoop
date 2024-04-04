@@ -109,6 +109,7 @@ class PendingDataNodeMessages {
     // DataNode. Otherwise, there can be a race condition that causes an old
     // reported block to be kept in the queue until the SNN switches to ANN and
     // the old reported block will be processed and marked as corrupt by the ANN.
+    // See HDFS-17453
     if (!isGenStampInFuture) {
       queue.removeIf(rbi -> rbi.storageInfo.equals(storageInfo) &&
           rbi.block.getGenerationStamp() < genStamp);
