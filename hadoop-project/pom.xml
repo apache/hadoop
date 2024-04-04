@@ -133,6 +133,7 @@
 
     <kerby.version>2.0.3</kerby.version>
     <ehcache.version>3.8.2</ehcache.version>
+    <cache.api.version>1.1.1</cache.api.version>
     <hikari.version>4.0.3</hikari.version>
     <derby.version>10.14.2.0</derby.version>
     <mssql.version>6.2.1.jre7</mssql.version>
@@ -2071,6 +2072,11 @@
         <groupId>org.apache.logging.log4j</groupId>
         <artifactId>log4j-web</artifactId>
         <version>${log4j2.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>javax.cache</groupId>
+        <artifactId>cache-api</artifactId>
+        <version>${cache.api.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>

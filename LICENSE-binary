@@ -506,6 +506,7 @@ com.sun.jersey:jersey-server:1.19.4
 com.sun.jersey:jersey-servlet:1.19.4
 com.sun.xml.bind:jaxb-impl:2.2.3-1
 javax.annotation:javax.annotation-api:1.3.2
+javax.cache:cache-api:1.1.1
 javax.servlet:javax.servlet-api:3.1.0
 javax.servlet.jsp:jsp-api:2.1
 javax.websocket:javax.websocket-api:1.0
