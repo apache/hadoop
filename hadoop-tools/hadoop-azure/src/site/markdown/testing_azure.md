@@ -692,33 +692,33 @@ across all th combinations ran as part of script in following format
     ============================================================
     [ERROR] testAbfsHttpSendStatistics(org.apache.hadoop.fs.azurebfs.ITestAbfsNetworkStatistics)  Time elapsed: 3.137 s  <<< FAILURE!
     [ERROR] testBlobDataContributor(org.apache.hadoop.fs.azurebfs.ITestAzureBlobFileSystemOauth)  Time elapsed: 4.154 s  <<< ERROR!
-  
+
     [WARNING] Tests run: 137, Failures: 0, Errors: 0, Skipped: 2
     [ERROR] Tests run: 623, Failures: 1, Errors: 0, Skipped: 73
     [ERROR] Tests run: 340, Failures: 0, Errors: 1, Skipped: 55
-  
+
     ============================================================
     HNS-SharedKey
     ============================================================
     [ERROR] testAbfsHttpSendStatistics(org.apache.hadoop.fs.azurebfs.ITestAbfsNetworkStatistics)  Time elapsed: 2.175 s  <<< FAILURE!
-  
+
     [WARNING] Tests run: 137, Failures: 0, Errors: 0, Skipped: 3
     [ERROR] Tests run: 623, Failures: 1, Errors: 0, Skipped: 42
     [WARNING] Tests run: 340, Failures: 0, Errors: 0, Skipped: 41
-  
+
     ============================================================
     NonHNS-SharedKey
     ============================================================
     [ERROR] testNonRecursiveDeleteWithPagination(org.apache.hadoop.fs.azurebfs.services.ITestAbfsPaginatedDelete)  Time elapsed: 0.85 s  <<< ERROR!
-  
+
     [WARNING] Tests run: 137, Failures: 0, Errors: 0, Skipped: 9
     [ERROR] Tests run: 607, Failures: 1, Errors: 1, Skipped: 269
     [WARNING] Tests run: 340, Failures: 0, Errors: 0, Skipped: 44
-  
+
     ============================================================
     AppendBlob-HNS-OAuth
     ============================================================
-  
+
     [WARNING] Tests run: 137, Failures: 0, Errors: 0, Skipped: 2
     [ERROR] Tests run: 623, Failures: 0, Errors: 0, Skipped: 73
     [ERROR] Tests run: 340, Failures: 0, Errors: 0, Skipped: 79
