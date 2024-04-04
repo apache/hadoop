@@ -124,7 +124,7 @@
     <commons-collections.version>3.2.2</commons-collections.version>
     <commons-compress.version>1.26.1</commons-compress.version>
     <commons-csv.version>1.9.0</commons-csv.version>
-    <commons-io.version>2.14.0</commons-io.version>
+    <commons-io.version>2.16.0</commons-io.version>
     <commons-lang3.version>3.12.0</commons-lang3.version>
     <commons-logging.version>1.2</commons-logging.version>
     <commons-math3.version>3.6.1</commons-math3.version>
