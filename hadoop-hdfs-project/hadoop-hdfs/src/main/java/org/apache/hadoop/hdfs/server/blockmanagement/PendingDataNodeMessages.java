@@ -95,15 +95,21 @@ class PendingDataNodeMessages {
   
   void enqueueReportedBlock(DatanodeStorageInfo storageInfo, Block block,
       ReplicaState reportedState) {
+    long genStamp = block.getGenerationStamp();
     if (BlockIdManager.isStripedBlockID(block.getBlockId())) {
       Block blkId = new Block(BlockIdManager.convertToStripedID(block
           .getBlockId()));
-      getBlockQueue(blkId).add(
-          new ReportedBlockInfo(storageInfo, new Block(block), reportedState));
+      Queue<ReportedBlockInfo> queue = getBlockQueue(blkId);
+      queue.removeIf(rbi -> rbi.storageInfo.equals(storageInfo) &&
+          rbi.block.getGenerationStamp() < genStamp);
+      queue.add(new ReportedBlockInfo(storageInfo, new Block(block), reportedState));
     } else {
       block = new Block(block);
-      getBlockQueue(block).add(
-          new ReportedBlockInfo(storageInfo, block, reportedState));
+      Queue<ReportedBlockInfo> queue = getBlockQueue(block);
+      // Remove the existing reports for this block since they are probably older and out of date
+      queue.removeIf(rbi -> rbi.storageInfo.equals(storageInfo) &&
+          rbi.block.getGenerationStamp() < genStamp);
+      queue.add(new ReportedBlockInfo(storageInfo, block, reportedState));
     }
     count++;
   }
