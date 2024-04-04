@@ -285,14 +285,14 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
         Path testFilePath = createFileWithContent(fs, fileName, fileContent);
         testPartialReadWithNoData(fs, testFilePath,
             fileSize - AbfsInputStream.FOOTER_SIZE, AbfsInputStream.FOOTER_SIZE,
-            fileContent, footerReadBufferSize);
+            fileContent, footerReadBufferSize, fileSize);
       }
     }
   }
 
   private void testPartialReadWithNoData(final FileSystem fs,
       final Path testFilePath, final int seekPos, final int length,
-      final byte[] fileContent, int footerReadBufferSize) throws IOException {
+      final byte[] fileContent, int footerReadBufferSize, int fileSize) throws IOException {
     FSDataInputStream iStream = fs.open(testFilePath);
     try {
       AbfsInputStream abfsInputStream = (AbfsInputStream) iStream
@@ -304,6 +304,7 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
       doReturn(10).doReturn(10).doCallRealMethod().when(abfsInputStream)
           .readRemote(anyLong(), any(), anyInt(), anyInt(),
               any(TracingContext.class));
+      doReturn((long) fileSize).when(abfsInputStream).getContentLength();
 
       iStream = new FSDataInputStream(abfsInputStream);
       seek(iStream, seekPos);

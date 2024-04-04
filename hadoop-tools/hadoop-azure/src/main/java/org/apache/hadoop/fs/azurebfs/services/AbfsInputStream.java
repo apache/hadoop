@@ -484,11 +484,16 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     //  If the read was partial and the user requested part of data has
     //  not read then fallback to readoneblock. When limit is smaller than
     //  bCursor that means the user requested data has not been read.
-    if (fCursor < contentLength && bCursor > limit) {
+    if (fCursor < getContentLength() && bCursor > limit) {
       restorePointerState();
       return readOneBlock(b, off, len);
     }
     return copyToUserBuffer(b, off, len);
+  }
+
+  @VisibleForTesting
+  long getContentLength() {
+    return contentLength;
   }
 
   private void savePointerState() {
