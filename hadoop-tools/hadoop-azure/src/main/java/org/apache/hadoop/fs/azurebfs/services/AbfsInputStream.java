@@ -441,7 +441,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       //TODO: test when contentLength is more than buffer size -> seek to the middle of the bufferSize, and fire a is.read() on full buffer size.
       //TODO: what if the range sent is wrong
 
-      long lastBlockStart = max(0, footerReadSize - (fCursor + len));
+      long lastBlockStart = max(0, (fCursor + len) - footerReadSize);
       bCursor = (int) (fCursor - lastBlockStart);
       return optimisedRead(b, off, len, lastBlockStart, footerReadSize);
     }
