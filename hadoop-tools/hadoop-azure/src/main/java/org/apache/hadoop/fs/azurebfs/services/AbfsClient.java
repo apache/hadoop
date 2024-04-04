@@ -100,7 +100,7 @@ public class AbfsClient implements Closeable {
 
   private final URL baseUrl;
   private final SharedKeyCredentials sharedKeyCredentials;
-  private String xMsVersion = DECEMBER_2019_API_VERSION;
+  private ApiVersion xMsVersion = ApiVersion.getCurrentVersion();
   private final ExponentialRetryPolicy exponentialRetryPolicy;
   private final StaticRetryPolicy staticRetryPolicy;
   private final String filesystem;
@@ -121,7 +121,6 @@ public class AbfsClient implements Closeable {
 
   private final ListeningScheduledExecutorService executorService;
   private Boolean isNamespaceEnabled;
-
 
   private boolean renameResilience;
 
@@ -149,7 +148,7 @@ public class AbfsClient implements Closeable {
 
     if (encryptionContextProvider != null) {
       this.encryptionContextProvider = encryptionContextProvider;
-      xMsVersion = APRIL_2021_API_VERSION; // will be default once server change deployed
+      xMsVersion = ApiVersion.APR_10_2021; // will be default once server change deployed
       encryptionType = EncryptionType.ENCRYPTION_CONTEXT;
     } else if (abfsConfiguration.getEncodedClientProvidedEncryptionKey() != null) {
       clientProvidedEncryptionKey =
@@ -259,13 +258,27 @@ public class AbfsClient implements Closeable {
     return intercept;
   }
 
-  List<AbfsHttpHeader> createDefaultHeaders() {
+  /**
+   * Create request headers for Rest Operation using the current API version.
+   * @return default request headers
+   */
+  @VisibleForTesting
+  protected List<AbfsHttpHeader> createDefaultHeaders() {
+    return createDefaultHeaders(this.xMsVersion);
+  }
+
+  /**
+   * Create request headers for Rest Operation using the specified API version.
+   * @param xMsVersion
+   * @return default request headers
+   */
+  private List<AbfsHttpHeader> createDefaultHeaders(ApiVersion xMsVersion) {
     final List<AbfsHttpHeader> requestHeaders = new ArrayList<AbfsHttpHeader>();
-    requestHeaders.add(new AbfsHttpHeader(X_MS_VERSION, xMsVersion));
+    requestHeaders.add(new AbfsHttpHeader(X_MS_VERSION, xMsVersion.toString()));
     requestHeaders.add(new AbfsHttpHeader(ACCEPT, APPLICATION_JSON
-            + COMMA + SINGLE_WHITE_SPACE + APPLICATION_OCTET_STREAM));
+        + COMMA + SINGLE_WHITE_SPACE + APPLICATION_OCTET_STREAM));
     requestHeaders.add(new AbfsHttpHeader(ACCEPT_CHARSET,
-            UTF_8));
+        UTF_8));
     requestHeaders.add(new AbfsHttpHeader(CONTENT_TYPE, EMPTY_STRING));
     requestHeaders.add(new AbfsHttpHeader(USER_AGENT, userAgent));
     return requestHeaders;
@@ -1117,12 +1130,29 @@ public class AbfsClient implements Closeable {
     return op;
   }
 
-  public AbfsRestOperation deletePath(final String path, final boolean recursive, final String continuation,
-                                      TracingContext tracingContext)
+  public AbfsRestOperation deletePath(final String path, final boolean recursive,
+                                      final String continuation,
+                                      TracingContext tracingContext,
+                                      final boolean isNamespaceEnabled)
           throws AzureBlobFileSystemException {
-    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-
+    /*
+     * If Pagination is enabled and current API version is old,
+     * use the minimum required version for pagination.
+     * If Pagination is enabled and current API version is later than minimum required
+     * version for pagination, use current version only as azure service is backward compatible.
+     * If pagination is disabled, use the current API version only.
+     */
+    final List<AbfsHttpHeader> requestHeaders = (isPaginatedDelete(recursive,
+        isNamespaceEnabled) && xMsVersion.compareTo(ApiVersion.AUG_03_2023) < 0)
+        ? createDefaultHeaders(ApiVersion.AUG_03_2023)
+        : createDefaultHeaders();
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
+
+    if (isPaginatedDelete(recursive, isNamespaceEnabled)) {
+      // Add paginated query parameter
+      abfsUriQueryBuilder.addQuery(QUERY_PARAM_PAGINATED, TRUE);
+    }
+
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RECURSIVE, String.valueOf(recursive));
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_CONTINUATION, continuation);
     String operation = recursive ? SASTokenProvider.DELETE_RECURSIVE_OPERATION : SASTokenProvider.DELETE_OPERATION;
@@ -1465,6 +1495,14 @@ public class AbfsClient implements Closeable {
     return isNamespaceEnabled;
   }
 
+  protected Boolean getIsPaginatedDeleteEnabled() {
+    return abfsConfiguration.isPaginatedDeleteEnabled();
+  }
+
+  private Boolean isPaginatedDelete(boolean isRecursiveDelete, boolean isNamespaceEnabled) {
+    return getIsPaginatedDeleteEnabled() && isNamespaceEnabled && isRecursiveDelete;
+  }
+
   public AuthType getAuthType() {
     return authType;
   }
@@ -1659,7 +1697,7 @@ public class AbfsClient implements Closeable {
     return abfsCounters;
   }
 
-  public String getxMsVersion() {
+  public ApiVersion getxMsVersion() {
     return xMsVersion;
   }
 
