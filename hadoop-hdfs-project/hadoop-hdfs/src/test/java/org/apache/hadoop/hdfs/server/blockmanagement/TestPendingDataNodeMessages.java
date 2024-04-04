@@ -55,8 +55,8 @@ public class TestPendingDataNodeMessages {
     DatanodeDescriptor fakeDN = DFSTestUtil.getLocalDatanodeDescriptor();
     DatanodeStorage storage = new DatanodeStorage("STORAGE_ID");
     DatanodeStorageInfo storageInfo = new DatanodeStorageInfo(fakeDN, storage);
-    msgs.enqueueReportedBlock(storageInfo, block1Gs1, ReplicaState.FINALIZED);
-    msgs.enqueueReportedBlock(storageInfo, block1Gs2, ReplicaState.FINALIZED);
+    msgs.enqueueReportedBlock(storageInfo, block1Gs1, ReplicaState.FINALIZED, true);
+    msgs.enqueueReportedBlock(storageInfo, block1Gs2, ReplicaState.FINALIZED, true);
 
     assertEquals(2, msgs.count());
     
@@ -72,6 +72,36 @@ public class TestPendingDataNodeMessages {
         Joiner.on(",").join(q));
     assertEquals(0, msgs.count());
     
+    // Should be null if we pull again
+    assertNull(msgs.takeBlockQueue(block1Gs1));
+    assertEquals(0, msgs.count());
+  }
+
+  @Test
+  public void testQueuesKeepLatestNonFutureOnly() {
+    DatanodeDescriptor fakeDN = DFSTestUtil.getLocalDatanodeDescriptor();
+    DatanodeStorage storage = new DatanodeStorage("STORAGE_ID");
+    DatanodeStorageInfo storageInfo = new DatanodeStorageInfo(fakeDN, storage);
+    msgs.enqueueReportedBlock(storageInfo, block1Gs1, ReplicaState.FINALIZED,
+        false);
+    // block1Gs1 should be removed from the queue since it is older than
+    // block1Gs2 and block1Gs2 is not in the future.
+    msgs.enqueueReportedBlock(storageInfo, block1Gs2, ReplicaState.FINALIZED,
+        false);
+
+    assertEquals(1, msgs.count());
+
+    // Nothing queued yet for block 2
+    assertNull(msgs.takeBlockQueue(block2Gs1));
+    assertEquals(1, msgs.count());
+
+    Queue<ReportedBlockInfo> q =
+        msgs.takeBlockQueue(block1Gs2DifferentInstance);
+    assertEquals(
+            "ReportedBlockInfo [block=blk_1_2, dn=/default-rack/127.0.0.1:9866, reportedState=FINALIZED]",
+        Joiner.on(",").join(q));
+    assertEquals(0, msgs.count());
+
     // Should be null if we pull again
     assertNull(msgs.takeBlockQueue(block1Gs1));
     assertEquals(0, msgs.count());
