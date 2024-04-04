@@ -110,12 +110,11 @@ public class TestHttpExceptionUtils {
     Mockito.when(conn.getResponseMessage()).thenReturn("msg");
     Mockito.when(conn.getResponseCode()).thenReturn(
         HttpURLConnection.HTTP_BAD_REQUEST);
-    Collection<String> expectedValues =
-            Stream.of(Integer.toString(HttpURLConnection.HTTP_BAD_REQUEST), "msg", "com.fasterxml.jackson.core.JsonParseException")
-                    .collect(Collectors.toList());
-    LambdaTestUtils.intercept(IOException.class,
-            expectedValues,
+    IOException ex = LambdaTestUtils.intercept(IOException.class,
             () -> HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_CREATED));
+    assertContains(Integer.toString(HttpURLConnection.HTTP_BAD_REQUEST), ex.getMessage());
+    assertContains("msg", ex.getMessage());
+    assertContains("com.fasterxml.jackson.core.JsonParseException", ex.getMessage());
   }
 
   @Test
@@ -156,12 +155,11 @@ public class TestHttpExceptionUtils {
     Mockito.when(conn.getResponseMessage()).thenReturn("msg");
     Mockito.when(conn.getResponseCode()).thenReturn(
         HttpURLConnection.HTTP_BAD_REQUEST);
-    Collection<String> expectedValues =
-            Stream.of(Integer.toString(HttpURLConnection.HTTP_BAD_REQUEST), "foo.FooException", "EX")
-                    .collect(Collectors.toList());
-    LambdaTestUtils.intercept(IOException.class,
-            expectedValues,
+    IOException ex = LambdaTestUtils.intercept(IOException.class,
             () -> HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_CREATED));
+    assertContains(Integer.toString(HttpURLConnection.HTTP_BAD_REQUEST), ex.getMessage());
+    assertContains("foo.FooException", ex.getMessage());
+    assertContains("EX", ex.getMessage());
   }
 
   @Test
@@ -181,12 +179,16 @@ public class TestHttpExceptionUtils {
     Mockito.when(conn.getResponseMessage()).thenReturn("msg");
     Mockito.when(conn.getResponseCode()).thenReturn(
             HttpURLConnection.HTTP_BAD_REQUEST);
-    Collection<String> expectedValues =
-            Stream.of(Integer.toString(HttpURLConnection.HTTP_BAD_REQUEST), "java.lang.String", "EX")
-                    .collect(Collectors.toList());
-    LambdaTestUtils.intercept(IOException.class,
-            expectedValues,
+    IOException ex = LambdaTestUtils.intercept(IOException.class,
             () -> HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_CREATED));
+    assertContains(Integer.toString(HttpURLConnection.HTTP_BAD_REQUEST), ex.getMessage());
+    assertContains("java.lang.String", ex.getMessage());
+    assertContains("EX", ex.getMessage());
+  }
+
+  private static void assertContains(String expected, String actual) {
+    Assert.assertTrue("Expected: " + expected + ", Actual: " + actual,
+        actual.contains(expected));
   }
 
 }
