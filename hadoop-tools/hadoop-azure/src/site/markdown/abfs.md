@@ -627,7 +627,7 @@ is a recommended account type to be used with ABFS.
 
 #### Using User Delegation SAS with ABFS
 
-- **Description**: ABFS allows you to implement your custom SAS Token Provider 
+- **Description**: ABFS allows you to implement your custom SAS Token Provider
 that uses your identity to create a user delegation key which then can be used to
 create SAS instead of storage account key. The declared class must implement
 `org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider`.
@@ -648,7 +648,7 @@ create SAS instead of storage account key. The declared class must implement
           <value>CUSTOM_SAS_TOKEN_PROVIDER_CLASS</value>
         </property>
         ```
-    
+
     Replace `CUSTOM_SAS_TOKEN_PROVIDER_CLASS` with fully qualified class name of
 your custom token provider implementation. Depending upon the implementation you
 might need to specify additional configurations that are required by your custom
@@ -714,7 +714,7 @@ requests. User can specify them as fixed SAS Token to be used across all the req
           <value>FIXED_SAS_TOKEN</value>
         </property>
         ```
-        
+
     Replace `FIXED_SAS_TOKEN` with fixed Account/Service SAS. You can also
 generate SAS from Azure portal. Account -> Security + Networking -> Shared Access Signature
 
