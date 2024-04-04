@@ -19,11 +19,8 @@
 package org.apache.hadoop.streaming;
 
 import java.io.*;
-import java.util.*;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
+import java.nio.charset.StandardCharsets;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.lib.KeyFieldBasedPartitioner;
 
 import org.junit.Test;
@@ -59,7 +56,7 @@ public class TestStreamDataProtocol
   {
     DataOutputStream out = new DataOutputStream(
                                                 new FileOutputStream(INPUT_FILE.getAbsoluteFile()));
-    out.write(input.getBytes("UTF-8"));
+    out.write(input.getBytes(StandardCharsets.UTF_8));
     out.close();
   }
 

@@ -111,9 +111,9 @@ Specific buckets can have auditing disabled, even when it is enabled globally.
 
 ```xml
 <property>
-  <name>fs.s3a.bucket.landsat-pds.audit.enabled</name>
+  <name>fs.s3a.bucket.noaa-isd-pds.audit.enabled</name>
   <value>false</value>
-  <description>Do not audit landsat bucket operations</description>
+  <description>Do not audit bucket operations</description>
 </property>
 ```
 
@@ -342,9 +342,9 @@ either globally or for specific buckets:
 </property>
 
 <property>
-  <name>fs.s3a.bucket.landsat-pds.audit.referrer.enabled</name>
+  <name>fs.s3a.bucket.noaa-isd-pds.audit.referrer.enabled</name>
   <value>false</value>
-  <description>Do not add the referrer header to landsat operations</description>
+  <description>Do not add the referrer header to operations</description>
 </property>
 ```
 

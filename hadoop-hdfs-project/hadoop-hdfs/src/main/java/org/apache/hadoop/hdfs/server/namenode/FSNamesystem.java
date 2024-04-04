@@ -176,7 +176,6 @@ import java.util.TreeMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Supplier;
@@ -662,7 +661,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   private KeyProviderCryptoExtension provider = null;
 
   private volatile boolean imageLoaded = false;
-  private final Condition cond;
 
   private final FSImage fsImage;
 
@@ -704,7 +702,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     try {
       setImageLoaded(true);
       dir.markNameCacheInitialized();
-      cond.signalAll();
     } finally {
       writeUnlock("setImageLoaded");
     }
@@ -875,7 +872,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         conf.get(HADOOP_CALLER_CONTEXT_SEPARATOR_KEY,
             HADOOP_CALLER_CONTEXT_SEPARATOR_DEFAULT);
     fsLock = new FSNamesystemLock(conf, detailedLockHoldTimeMetrics);
-    cond = fsLock.newWriteLockCondition();
     cpLock = new ReentrantLock();
 
     this.fsImage = fsImage;
@@ -1581,6 +1577,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     if (!isObserver && standbyShouldCheckpoint) {
       standbyCheckpointer = new StandbyCheckpointer(conf, this);
       standbyCheckpointer.start();
+    }
+    if (isNoManualAndResourceLowSafeMode()) {
+      LOG.info("Standby should not enter safe mode when resources are low, exiting safe mode.");
+      leaveSafeMode(false);
     }
   }
 
@@ -5257,10 +5257,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     String cmd = "Use \"hdfs dfsadmin -safemode leave\" to turn safe mode off.";
     synchronized (this) {
       if (resourceLowSafeMode) {
-        return "Resources are low on NN. Please add or free up more resources"
-            + "then turn off safe mode manually. NOTE:  If you turn off safe "
-            + "mode before adding resources, the NN will immediately return to "
-            + "safe mode. " + cmd;
+        return "Resources are low on NN. Please add or free up more resources. "
+            + "NOTE:  If you turn off safe mode before adding resources, the "
+            + "NN will immediately return to safe mode. ";
       } else if (manualSafeMode) {
         return "It was turned on manually. " + cmd;
       }

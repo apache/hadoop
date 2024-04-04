@@ -136,7 +136,7 @@
     </dependency>
     <dependency>
       <groupId>org.bouncycastle</groupId>
-      <artifactId>bcprov-jdk15on</artifactId>
+      <artifactId>bcprov-jdk18on</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -203,8 +203,8 @@
       <artifactId>jersey-guice</artifactId>
     </dependency>
     <dependency>
-     <groupId>log4j</groupId>
-     <artifactId>log4j</artifactId>
+     <groupId>ch.qos.reload4j</groupId>
+     <artifactId>reload4j</artifactId>
     </dependency>
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>

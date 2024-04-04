@@ -18,9 +18,13 @@
 
 package org.apache.hadoop.fs.s3a.test;
 
+import org.junit.Assume;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.S3ATestConstants;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 
 import static org.apache.hadoop.fs.s3a.S3ATestConstants.KEY_BUCKET_WITH_MANY_OBJECTS;
@@ -70,6 +74,77 @@ public final class PublicDatasetTestUtils {
       = "s3a://usgs-landsat/collection02/level-1/";
 
   /**
+   * ORC dataset: {@value}.
+   */
+  private static final Path ORC_DATA = new Path("s3a://osm-pds/planet/planet-latest.orc");
+
+  /**
+   * Provide a Path for some ORC data.
+   *
+   * @param conf Hadoop configuration
+   * @return S3A FS URI
+   */
+  public static Path getOrcData(Configuration conf) {
+    return ORC_DATA;
+  }
+
+  /**
+   * Default path for the external test file: {@value}.
+   * This must be: gzipped, large enough for the performance
+   * tests and in a read-only bucket with anonymous access.
+   * */
+  public static final String DEFAULT_EXTERNAL_FILE =
+      "s3a://noaa-cors-pds/raw/2023/017/ohfh/OHFH017d.23_.gz";
+
+  /**
+   * Get the external test file.
+   * <p>
+   * This must be: gzipped, large enough for the performance
+   * tests and in a read-only bucket with anon
+   * @param conf configuration
+   * @return a dataset which meets the requirements.
+   */
+  public static Path getExternalData(Configuration conf) {
+    return new Path(fetchFromConfig(conf,
+        S3ATestConstants.KEY_CSVTEST_FILE, DEFAULT_EXTERNAL_FILE));
+  }
+
+  /**
+   * Get the anonymous dataset..
+   * @param conf configuration
+   * @return a dataset which supports anonymous access.
+   */
+  public static Path requireAnonymousDataPath(Configuration conf) {
+    return requireDefaultExternalData(conf);
+  }
+
+
+  /**
+   * Get the external test file; assume() that it is not modified (i.e. we haven't
+   * switched to a new storage infrastructure where the bucket is no longer
+   * read only).
+   * @return test file.
+   * @param conf test configuration
+   */
+  public static String requireDefaultExternalDataFile(Configuration conf) {
+    String filename = getExternalData(conf).toUri().toString();
+    Assume.assumeTrue("External test file is not the default",
+        DEFAULT_EXTERNAL_FILE.equals(filename));
+    return filename;
+  }
+
+  /**
+   * Get the test external file; assume() that it is not modified (i.e. we haven't
+   * switched to a new storage infrastructure where the bucket is no longer
+   * read only).
+   * @param conf test configuration
+   * @return test file as a path.
+   */
+  public static Path requireDefaultExternalData(Configuration conf) {
+    return new Path(requireDefaultExternalDataFile(conf));
+  }
+
+  /**
    * Provide a URI for a directory containing many objects.
    *
    * Unless otherwise configured,
@@ -97,6 +172,13 @@ public final class PublicDatasetTestUtils {
         KEY_REQUESTER_PAYS_FILE, DEFAULT_REQUESTER_PAYS_FILE);
   }
 
+  /**
+   * Fetch a trimmed configuration value, require it to to be non-empty.
+   * @param conf configuration file
+   * @param key key
+   * @param defaultValue default value.
+   * @return the resolved value.
+   */
   private static String fetchFromConfig(Configuration conf, String key, String defaultValue) {
     String value = conf.getTrimmed(key, defaultValue);
 

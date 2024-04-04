@@ -145,6 +145,9 @@ public abstract class AbstractAbfsIntegrationTest extends
     } else {
       this.isIPAddress = false;
     }
+
+    // For tests, we want to enforce checksum validation so that any regressions can be caught.
+    abfsConfig.setIsChecksumValidationEnabled(true);
   }
 
   protected boolean getIsNamespaceEnabled(AzureBlobFileSystem fs)

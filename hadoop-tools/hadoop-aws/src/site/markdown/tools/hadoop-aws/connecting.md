@@ -284,14 +284,13 @@ a bucket.
 The up to date list of regions is [Available online](https://docs.aws.amazon.com/general/latest/gr/s3.html).
 
 This list can be used to specify the endpoint of individual buckets, for example
-for buckets in the central and EU/Ireland endpoints.
+for buckets in the us-west-2 and EU/Ireland endpoints.
 
 
 ```xml
 <property>
-  <name>fs.s3a.bucket.landsat-pds.endpoint.region</name>
+  <name>fs.s3a.bucket.us-west-2-dataset.endpoint.region</name>
   <value>us-west-2</value>
-  <description>The region for s3a://landsat-pds URLs</description>
 </property>
 
 <property>
@@ -354,14 +353,24 @@ The boolean option `fs.s3a.endpoint.fips` (default `false`) switches the S3A con
 For a single bucket:
 ```xml
 <property>
-  <name>fs.s3a.bucket.landsat-pds.endpoint.fips</name>
+  <name>fs.s3a.bucket.noaa-isd-pds.endpoint.fips</name>
   <value>true</value>
-  <description>Use the FIPS endpoint for the landsat dataset</description>
+  <description>Use the FIPS endpoint for the NOAA dataset</description>
 </property>
 ```
 
-If this option is `true`, the endpoint option `fs.s3a.endpoint` MUST NOT be set:
+If `fs.s3a.endpoint.fips` is `true`, the endpoint option `fs.s3a.endpoint` MUST NOT be set to
+any non-central endpoint value. If `fs.s3a.endpoint.fips` is `true`, the only *optionally* allowed
+value for `fs.s3a.endpoint` is central endpoint `s3.amazonaws.com`.
 
+S3A error message if `s3.eu-west-2.amazonaws.com` endpoint is used with FIPS:
+```
+Non central endpoint cannot be set when fs.s3a.endpoint.fips is true : https://s3.eu-west-2.amazonaws.com
+```
+
+S3A validation is used to fail-fast before the SDK returns error.
+
+AWS SDK error message if S3A does not fail-fast:
 ```
 A custom endpoint cannot be combined with FIPS: https://s3.eu-west-2.amazonaws.com
 ```
@@ -378,6 +387,9 @@ Received an UnknownHostException when attempting to interact with a service.
     example-london-1.s3-fips.eu-west-2.amazonaws.com
 
 ```
+
+For more details on endpoint and region settings, please check
+[S3 endpoint and region settings in detail](connecting.html#s3_endpoint_region_details).
 
 *Important* OpenSSL and FIPS endpoints
 

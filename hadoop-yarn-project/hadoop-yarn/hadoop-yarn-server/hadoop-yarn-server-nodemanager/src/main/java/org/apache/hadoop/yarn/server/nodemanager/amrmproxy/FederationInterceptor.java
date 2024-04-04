@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.nodemanager.amrmproxy;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -585,7 +586,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
         // entry for subClusterId -> UAM AMRMTokenIdentifier
         String scId = key.substring(NMSS_SECONDARY_SC_PREFIX.length());
         Token<AMRMTokenIdentifier> aMRMTokenIdentifier = new Token<>();
-        aMRMTokenIdentifier.decodeFromUrlString(new String(value, STRING_TO_BYTE_FORMAT));
+        aMRMTokenIdentifier.decodeFromUrlString(new String(value, StandardCharsets.UTF_8));
         uamMap.put(scId, aMRMTokenIdentifier);
         LOG.debug("Recovered UAM in {} from NMSS.", scId);
       }
@@ -1345,7 +1346,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
           } else if (getNMStateStore() != null) {
             getNMStateStore().storeAMRMProxyAppContextEntry(attemptId,
                 NMSS_SECONDARY_SC_PREFIX + subClusterId,
-                token.encodeToUrlString().getBytes(STRING_TO_BYTE_FORMAT));
+                token.encodeToUrlString().getBytes(StandardCharsets.UTF_8));
           }
         } catch (Throwable e) {
           LOG.error("Failed to persist UAM token from {} Application {}",
@@ -1884,7 +1885,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
           try {
             getNMStateStore().storeAMRMProxyAppContextEntry(attemptId,
                 NMSS_SECONDARY_SC_PREFIX + subClusterId.getId(),
-                newToken.encodeToUrlString().getBytes(STRING_TO_BYTE_FORMAT));
+                newToken.encodeToUrlString().getBytes(StandardCharsets.UTF_8));
           } catch (IOException e) {
             LOG.error("Error storing UAM token as AMRMProxy "
                 + "context entry in NMSS for {}.", attemptId, e);
