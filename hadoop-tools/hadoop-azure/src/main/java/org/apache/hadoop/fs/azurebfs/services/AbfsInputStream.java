@@ -361,7 +361,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     //If buffer is empty, then fill the buffer.
     if (bCursor == limit) {
       //If EOF, then return -1
-      if (fCursor >= contentLength) {
+      if (fileStatusInformationPresent && fCursor >= contentLength) {
         return -1;
       }
 
@@ -417,6 +417,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     bCursor = (int) fCursor;
     if (!fileStatusInformationPresent) {
       //TODO: test on if contentLength is less than buffer size
+      //TODO: test when contentLength is more than buffer size -> seek to the middle of the bufferSize, and fire a is.read() on full buffer size.
       return optimisedRead(b, off, len, 0, bufferSize);
     }
     return optimisedRead(b, off, len, 0, contentLength);
@@ -437,6 +438,9 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     // that case bCursor will be set to fCursor - lastBlockStart
     if (!fileStatusInformationPresent) {
       //TODO: since we are chaniing the state of bcursor. Tests should be there that check next read behaviour.
+      //TODO: test when contentLength is more than buffer size -> seek to the middle of the bufferSize, and fire a is.read() on full buffer size.
+      //TODO: what if the range sent is wrong
+
       long lastBlockStart = max(0, footerReadSize - (fCursor + len));
       bCursor = (int) (fCursor - lastBlockStart);
       return optimisedRead(b, off, len, lastBlockStart, footerReadSize);
@@ -456,7 +460,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     try {
       buffer = new byte[bufferSize];
       for (int i = 0;
-           i < MAX_OPTIMIZED_READ_ATTEMPTS && fCursor < contentLength; i++) {
+           i < MAX_OPTIMIZED_READ_ATTEMPTS && (!fileStatusInformationPresent || fCursor < contentLength); i++) {
         lastBytesRead = readInternal(fCursor, buffer, limit,
             (int) actualLen - limit, true);
         if (lastBytesRead > 0) {
@@ -595,7 +599,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     if (position < 0) {
       throw new IllegalArgumentException("attempting to read from negative offset");
     }
-    if (position >= contentLength) {
+    if (fileStatusInformationPresent && position >= contentLength) {
       return -1;  // Hadoop prefers -1 to EOFException
     }
     if (b == null) {
@@ -654,10 +658,22 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     if(result == null) {
       return;
     }
-    contentLength = Long.parseLong(
-        result.getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH));
+    //TODO: fix it!!!!
+    contentLength = parseFromRange(
+        result.getResponseHeader(HttpHeaderConfigurations.CONTENT_RANGE));
     eTag = result.getResponseHeader(HttpHeaderConfigurations.ETAG);
     fileStatusInformationPresent = true;
+  }
+
+  private long parseFromRange(final String responseHeader) {
+    if(StringUtils.isEmpty(responseHeader)) {
+      return -1;
+    }
+    String[] parts = responseHeader.split("/");
+    if(parts.length != 2) {
+      return -1;
+    }
+    return Long.parseLong(parts[1]);
   }
 
   /**
@@ -703,7 +719,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       throw new IOException(FSExceptionMessages.STREAM_IS_CLOSED);
     }
     long currentPos = getPos();
-    if (currentPos == contentLength) {
+    if (fileStatusInformationPresent && currentPos == contentLength) {
       if (n > 0) {
         throw new EOFException(FSExceptionMessages.CANNOT_SEEK_PAST_EOF);
       }
@@ -744,21 +760,6 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     final long remaining = this.contentLength - this.getPos();
     return remaining <= Integer.MAX_VALUE
         ? (int) remaining : Integer.MAX_VALUE;
-  }
-
-  /**
-   * Returns the length of the file that this stream refers to. Note that the length returned is the length
-   * as of the time the Stream was opened. Specifically, if there have been subsequent appends to the file,
-   * they wont be reflected in the returned length.
-   *
-   * @return length of the file.
-   * @throws IOException if the stream is closed
-   */
-  public long length() throws IOException {
-    if (closed) {
-      throw new IOException(FSExceptionMessages.STREAM_IS_CLOSED);
-    }
-    return contentLength;
   }
 
   /**
