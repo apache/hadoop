@@ -603,20 +603,20 @@ various test combinations, it will:
 3. Summarize results across all the test combination runs.
 
 Below are the pre-requisite steps to follow:
-1. Copy `./src/test/resources/azure-auth-keys.xml.template` to 
+1. Copy `./src/test/resources/azure-auth-keys.xml.template` to
 `./src/test/resources/azure-auth-keys.xml`
 1. Update account names that should be used in the test run for HNS and non-HNS
 combinations in the 2 properties present in the xml (account name should be
 without domain part), namely
    1. `fs.azure.hnsTestAccountName`: Specify the HNS Enabled Account
    2. `fs.azure.nonHnsTestAccountName`: Specify the HNS Disabled Account
-   
+
    Note: `azure-auth-keys.xml` is listed in .gitignore, so any accidental account name leak is prevented.
 
     ```
     XInclude is supported, so for extra security secrets may be
     kept out of the source tree then referenced through an XInclude element:
-    
+
           <include xmlns="http://www.w3.org/2001/XInclude"
             href="/users/self/.secrets/auth-keys.xml" />
     ```
@@ -692,33 +692,33 @@ across all th combinations ran as part of script in following format
     ============================================================
     [ERROR] testAbfsHttpSendStatistics(org.apache.hadoop.fs.azurebfs.ITestAbfsNetworkStatistics)  Time elapsed: 3.137 s  <<< FAILURE!
     [ERROR] testBlobDataContributor(org.apache.hadoop.fs.azurebfs.ITestAzureBlobFileSystemOauth)  Time elapsed: 4.154 s  <<< ERROR!
-    
+  
     [WARNING] Tests run: 137, Failures: 0, Errors: 0, Skipped: 2
     [ERROR] Tests run: 623, Failures: 1, Errors: 0, Skipped: 73
     [ERROR] Tests run: 340, Failures: 0, Errors: 1, Skipped: 55
-    
+  
     ============================================================
     HNS-SharedKey
     ============================================================
     [ERROR] testAbfsHttpSendStatistics(org.apache.hadoop.fs.azurebfs.ITestAbfsNetworkStatistics)  Time elapsed: 2.175 s  <<< FAILURE!
-    
+  
     [WARNING] Tests run: 137, Failures: 0, Errors: 0, Skipped: 3
     [ERROR] Tests run: 623, Failures: 1, Errors: 0, Skipped: 42
     [WARNING] Tests run: 340, Failures: 0, Errors: 0, Skipped: 41
-    
+  
     ============================================================
     NonHNS-SharedKey
     ============================================================
     [ERROR] testNonRecursiveDeleteWithPagination(org.apache.hadoop.fs.azurebfs.services.ITestAbfsPaginatedDelete)  Time elapsed: 0.85 s  <<< ERROR!
-    
+  
     [WARNING] Tests run: 137, Failures: 0, Errors: 0, Skipped: 9
     [ERROR] Tests run: 607, Failures: 1, Errors: 1, Skipped: 269
     [WARNING] Tests run: 340, Failures: 0, Errors: 0, Skipped: 44
-    
+  
     ============================================================
     AppendBlob-HNS-OAuth
     ============================================================
-    
+  
     [WARNING] Tests run: 137, Failures: 0, Errors: 0, Skipped: 2
     [ERROR] Tests run: 623, Failures: 0, Errors: 0, Skipped: 73
     [ERROR] Tests run: 340, Failures: 0, Errors: 0, Skipped: 79

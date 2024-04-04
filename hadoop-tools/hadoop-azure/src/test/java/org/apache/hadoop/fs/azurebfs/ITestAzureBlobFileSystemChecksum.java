@@ -141,7 +141,6 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
     intercept(AbfsInvalidChecksumException.class, () -> {
       readWithOffsetAndPositionHelper(spiedClient, path, data, fs, 0, 0);
     });
-    fs.close();
   }
 
   private void testWriteReadWithChecksumInternal(final boolean readAheadEnabled)
@@ -162,7 +161,6 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
               .describedAs("Bytes read with checksum enabled are not as expected")
               .containsExactly(bytesUploaded);
     }
-    fs.close();
   }
 
   /**
@@ -238,7 +236,6 @@ public class ITestAzureBlobFileSystemChecksum extends AbstractAbfsIntegrationTes
               .describedAs("Bytes read with checksum enabled are not as expected")
               .containsExactly(Arrays.copyOfRange(bytesUploaded, 1, MB_4));
     }
-    fs.close();
   }
 
   private void createFileWithData(Path path, byte[] data, AzureBlobFileSystem fs) throws Exception {
