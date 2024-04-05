@@ -134,7 +134,7 @@ public class FTPFileSystem extends FileSystem {
 
   /**
    * Connect to the FTP server using configuration parameters *
-   * 
+   *
    * @return An FTPClient instance
    * @throws IOException
    */
@@ -241,7 +241,7 @@ public class FTPFileSystem extends FileSystem {
 
   /**
    * Logout and disconnect the given FTPClient. *
-   * 
+   *
    * @param client
    * @throws IOException
    */
@@ -260,8 +260,8 @@ public class FTPFileSystem extends FileSystem {
   }
 
   /**
-   * Resolve against given working directory. *
-   * 
+   * Resolve against given working directory.
+   *
    * @param workDir
    * @param path
    * @return
@@ -330,7 +330,7 @@ public class FTPFileSystem extends FileSystem {
         throw new FileAlreadyExistsException("File already exists: " + file);
       }
     }
-    
+
     Path parent = absolute.getParent();
     if (parent == null || !mkdirs(client, parent, FsPermission.getDirDefault())) {
       parent = (parent == null) ? new Path("/") : parent;
@@ -381,7 +381,7 @@ public class FTPFileSystem extends FileSystem {
     throw new UnsupportedOperationException("Append is not supported "
         + "by FTPFileSystem");
   }
-  
+
   /**
    * Convenience method, so that we don't open a new connection when using this
    * method from within another method. Otherwise every API invocation incurs
@@ -548,8 +548,8 @@ public class FTPFileSystem extends FileSystem {
   }
 
   /**
-   * Convert the file information in FTPFile to a {@link FileStatus} object. *
-   * 
+   * Convert the file information in FTPFile to a {@link FileStatus} object.
+   *
    * @param ftpFile
    * @param parentPath
    * @return FileStatus
@@ -660,7 +660,7 @@ public class FTPFileSystem extends FileSystem {
    * Convenience method, so that we don't open a new connection when using this
    * method from within another method. Otherwise every API invocation incurs
    * the overhead of opening/closing a TCP connection.
-   * 
+   *
    * @param client
    * @param src
    * @param dst

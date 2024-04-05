@@ -41,22 +41,22 @@ public class FtpFs extends DelegateToFileSystem {
   /**
    * This constructor has the signature needed by
    * {@link AbstractFileSystem#createFileSystem(URI, Configuration)}.
-   * 
+   *
    * @param theUri which must be that of localFs
    * @param conf
    * @throws IOException
-   * @throws URISyntaxException 
+   * @throws URISyntaxException
    */
   FtpFs(final URI theUri, final Configuration conf) throws IOException,
       URISyntaxException {
     super(theUri, new FTPFileSystem(), conf, FsConstants.FTP_SCHEME, true);
   }
-  
+
   @Override
   public int getUriDefaultPort() {
     return FTP.DEFAULT_PORT;
   }
-  
+
   @Override
   @Deprecated
   public FsServerDefaults getServerDefaults() throws IOException {

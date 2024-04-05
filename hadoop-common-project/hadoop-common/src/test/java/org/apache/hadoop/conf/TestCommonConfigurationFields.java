@@ -130,52 +130,13 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     xmlPropsToSkipCompare.add("fs.viewfs.overload.scheme.target.webhdfs.impl");
     xmlPropsToSkipCompare.add("fs.viewfs.overload.scheme.target.wasb.impl");
 
-    // Azure properties are in a different class
-    // - org.apache.hadoop.fs.azure.AzureNativeFileSystemStore
-    // - org.apache.hadoop.fs.azure.SASKeyGeneratorImpl
-    xmlPropsToSkipCompare.add("fs.azure.sas.expiry.period");
-    xmlPropsToSkipCompare.add("fs.azure.local.sas.key.mode");
-    xmlPropsToSkipCompare.add("fs.azure.secure.mode");
-    xmlPropsToSkipCompare.add("fs.azure.authorization");
-    xmlPropsToSkipCompare.add("fs.azure.authorization.caching.enable");
-    xmlPropsToSkipCompare.add("fs.azure.saskey.usecontainersaskeyforallaccess");
-    xmlPropsToSkipCompare.add("fs.azure.user.agent.prefix");
+    addAzureSettings();
 
     // Properties in enable callqueue overflow trigger failover for stateless servers.
     xmlPropsToSkipCompare.add("ipc.[port_number].callqueue.overflow.trigger.failover");
     xmlPropsToSkipCompare.add("ipc.callqueue.overflow.trigger.failover");
 
-    // FairCallQueue configs that includes dynamic ports in its keys
-    xmlPropsToSkipCompare.add("ipc.[port_number].backoff.enable");
-    xmlPropsToSkipCompare.add("ipc.backoff.enable");
-    xmlPropsToSkipCompare.add("ipc.[port_number].callqueue.impl");
-    xmlPropsToSkipCompare.add("ipc.callqueue.impl");
-    xmlPropsToSkipCompare.add("ipc.[port_number].scheduler.impl");
-    xmlPropsToSkipCompare.add("ipc.scheduler.impl");
-    xmlPropsToSkipCompare.add("ipc.[port_number].scheduler.priority.levels");
-    xmlPropsToSkipCompare.add("ipc.[port_number].callqueue.capacity.weights");
-    xmlPropsToSkipCompare.add(
-        "ipc.[port_number].faircallqueue.multiplexer.weights");
-    xmlPropsToSkipCompare.add("ipc.[port_number].identity-provider.impl");
-    xmlPropsToSkipCompare.add("ipc.identity-provider.impl");
-    xmlPropsToSkipCompare.add("ipc.[port_number].cost-provider.impl");
-    xmlPropsToSkipCompare.add("ipc.cost-provider.impl");
-    xmlPropsToSkipCompare.add("ipc.[port_number].decay-scheduler.period-ms");
-    xmlPropsToSkipCompare.add("ipc.[port_number].decay-scheduler.decay-factor");
-    xmlPropsToSkipCompare.add("ipc.[port_number].decay-scheduler.thresholds");
-    xmlPropsToSkipCompare.add(
-        "ipc.[port_number].decay-scheduler.backoff.responsetime.enable");
-    xmlPropsToSkipCompare.add(
-        "ipc.[port_number].decay-scheduler.backoff.responsetime.thresholds");
-    xmlPropsToSkipCompare.add(
-        "ipc.[port_number].decay-scheduler.metrics.top.user.count");
-    xmlPropsToSkipCompare.add(
-        "ipc.[port_number].decay-scheduler.service-users");
-    xmlPropsToSkipCompare.add("ipc.[port_number].weighted-cost.lockshared");
-    xmlPropsToSkipCompare.add("ipc.[port_number].weighted-cost.lockexclusive");
-    xmlPropsToSkipCompare.add("ipc.[port_number].weighted-cost.handler");
-    xmlPropsToSkipCompare.add("ipc.[port_number].weighted-cost.lockfree");
-    xmlPropsToSkipCompare.add("ipc.[port_number].weighted-cost.response");
+    addFairCallQueueSettings();
 
     // Deprecated properties.  These should eventually be removed from the
     // class.
@@ -243,6 +204,57 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
 
     xmlPropsToSkipCompare.add("hadoop.http.sni.host.check.enabled");
 
+    addFtpSettings();
+  }
+
+  private void addAzureSettings() {
+    // Azure properties are in a different class
+    // - org.apache.hadoop.fs.azure.AzureNativeFileSystemStore
+    // - org.apache.hadoop.fs.azure.SASKeyGeneratorImpl
+    xmlPropsToSkipCompare.add("fs.azure.sas.expiry.period");
+    xmlPropsToSkipCompare.add("fs.azure.local.sas.key.mode");
+    xmlPropsToSkipCompare.add("fs.azure.secure.mode");
+    xmlPropsToSkipCompare.add("fs.azure.authorization");
+    xmlPropsToSkipCompare.add("fs.azure.authorization.caching.enable");
+    xmlPropsToSkipCompare.add("fs.azure.saskey.usecontainersaskeyforallaccess");
+    xmlPropsToSkipCompare.add("fs.azure.user.agent.prefix");
+  }
+
+  private void addFairCallQueueSettings() {
+    // FairCallQueue configs that includes dynamic ports in its keys
+    xmlPropsToSkipCompare.add("ipc.[port_number].backoff.enable");
+    xmlPropsToSkipCompare.add("ipc.backoff.enable");
+    xmlPropsToSkipCompare.add("ipc.[port_number].callqueue.impl");
+    xmlPropsToSkipCompare.add("ipc.callqueue.impl");
+    xmlPropsToSkipCompare.add("ipc.[port_number].scheduler.impl");
+    xmlPropsToSkipCompare.add("ipc.scheduler.impl");
+    xmlPropsToSkipCompare.add("ipc.[port_number].scheduler.priority.levels");
+    xmlPropsToSkipCompare.add("ipc.[port_number].callqueue.capacity.weights");
+    xmlPropsToSkipCompare.add(
+            "ipc.[port_number].faircallqueue.multiplexer.weights");
+    xmlPropsToSkipCompare.add("ipc.[port_number].identity-provider.impl");
+    xmlPropsToSkipCompare.add("ipc.identity-provider.impl");
+    xmlPropsToSkipCompare.add("ipc.[port_number].cost-provider.impl");
+    xmlPropsToSkipCompare.add("ipc.cost-provider.impl");
+    xmlPropsToSkipCompare.add("ipc.[port_number].decay-scheduler.period-ms");
+    xmlPropsToSkipCompare.add("ipc.[port_number].decay-scheduler.decay-factor");
+    xmlPropsToSkipCompare.add("ipc.[port_number].decay-scheduler.thresholds");
+    xmlPropsToSkipCompare.add(
+            "ipc.[port_number].decay-scheduler.backoff.responsetime.enable");
+    xmlPropsToSkipCompare.add(
+            "ipc.[port_number].decay-scheduler.backoff.responsetime.thresholds");
+    xmlPropsToSkipCompare.add(
+            "ipc.[port_number].decay-scheduler.metrics.top.user.count");
+    xmlPropsToSkipCompare.add(
+            "ipc.[port_number].decay-scheduler.service-users");
+    xmlPropsToSkipCompare.add("ipc.[port_number].weighted-cost.lockshared");
+    xmlPropsToSkipCompare.add("ipc.[port_number].weighted-cost.lockexclusive");
+    xmlPropsToSkipCompare.add("ipc.[port_number].weighted-cost.handler");
+    xmlPropsToSkipCompare.add("ipc.[port_number].weighted-cost.lockfree");
+    xmlPropsToSkipCompare.add("ipc.[port_number].weighted-cost.response");
+  }
+
+  private void addFtpSettings() {
     // skip all FTP props (some were already skipped above)
     xmlPropsToSkipCompare.add("fs.AbstractFileSystem.ftp.impl");
     xmlPropsToSkipCompare.add("fs.ftp.impl");
