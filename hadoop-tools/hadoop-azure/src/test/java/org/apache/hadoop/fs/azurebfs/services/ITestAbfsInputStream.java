@@ -22,10 +22,12 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.ExecutionException;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FutureDataInputStreamBuilder;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
@@ -130,9 +132,11 @@ public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
   private void testExceptionInOptimization(final FileSystem fs,
       final Path testFilePath,
       final int seekPos, final int length, final byte[] fileContent)
-      throws IOException {
+      throws IOException, ExecutionException, InterruptedException {
 
-    FSDataInputStream iStream = fs.open(testFilePath);
+    FutureDataInputStreamBuilder builder = fs.openFile(testFilePath);
+    builder.withFileStatus(fs.getFileStatus(testFilePath));
+    FSDataInputStream iStream = builder.build().get();
     try {
       AbfsInputStream abfsInputStream = (AbfsInputStream) iStream
           .getWrappedStream();
