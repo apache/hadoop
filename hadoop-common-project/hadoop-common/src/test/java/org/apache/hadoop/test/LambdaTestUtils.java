@@ -927,8 +927,9 @@ public final class LambdaTestUtils {
     sb.append('[');
     int pos = 0;
     for (String s : strings) {
-      if (pos++ > 0)
+      if (pos++ > 0) {
         sb.append(", ");
+      }
       sb.append(s);
     }
     sb.append(']');
