@@ -241,7 +241,7 @@ com.google.guava:guava:20.0
 com.google.guava:guava:27.0-jre
 com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava
 com.microsoft.azure:azure-storage:7.0.0
-com.nimbusds:nimbus-jose-jwt:9.31
+com.nimbusds:nimbus-jose-jwt:9.37.2
 com.zaxxer:HikariCP:4.0.3
 commons-beanutils:commons-beanutils:1.9.4
 commons-cli:commons-cli:1.5.0
@@ -299,8 +299,8 @@ net.java.dev.jna:jna:5.2.0
 net.minidev:accessors-smart:1.2
 org.apache.avro:avro:1.9.2
 org.apache.commons:commons-collections4:4.2
-org.apache.commons:commons-compress:1.24.0
-org.apache.commons:commons-configuration2:2.8.0
+org.apache.commons:commons-compress:1.26.1
+org.apache.commons:commons-configuration2:2.10.1
 org.apache.commons:commons-csv:1.9.0
 org.apache.commons:commons-digester:1.8.1
 org.apache.commons:commons-lang3:3.12.0
@@ -356,7 +356,7 @@ org.eclipse.jetty:jetty-webapp:9.4.53.v20231009
 org.eclipse.jetty:jetty-xml:9.4.53.v20231009
 org.eclipse.jetty.websocket:javax-websocket-client-impl:9.4.53.v20231009
 org.eclipse.jetty.websocket:javax-websocket-server-impl:9.4.53.v20231009
-org.ehcache:ehcache:3.3.1
+org.ehcache:ehcache:3.8.2
 org.ini4j:ini4j:0.5.4
 org.lz4:lz4-java:1.7.1
 org.objenesis:objenesis:2.6
@@ -483,9 +483,9 @@ com.microsoft.azure:azure-cosmosdb-gateway:2.4.5
 com.microsoft.azure:azure-data-lake-store-sdk:2.3.3
 com.microsoft.azure:azure-keyvault-core:1.0.0
 com.microsoft.sqlserver:mssql-jdbc:6.2.1.jre7
-org.bouncycastle:bcpkix-jdk15on:1.70
-org.bouncycastle:bcprov-jdk15on:1.70
-org.bouncycastle:bcutil-jdk15on:1.70
+org.bouncycastle:bcpkix-jdk18on:1.77
+org.bouncycastle:bcprov-jdk18on:1.77
+org.bouncycastle:bcutil-jdk18on:1.77
 org.checkerframework:checker-qual:2.5.2
 org.codehaus.mojo:animal-sniffer-annotations:1.21
 org.jruby.jcodings:jcodings:1.0.13

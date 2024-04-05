@@ -363,6 +363,10 @@ public class AbfsConfiguration{
       FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, DefaultValue = DEFAULT_ENABLE_ABFS_CHECKSUM_VALIDATION)
   private boolean isChecksumValidationEnabled;
 
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_ENABLE_PAGINATED_DELETE, DefaultValue = DEFAULT_ENABLE_PAGINATED_DELETE)
+  private boolean isPaginatedDeleteEnabled;
+
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_HEAD_CALL_OPTIMIZATION_INPUT_STREAM,
       DefaultValue = DEFAULT_HEAD_OPTIMIZATION_INPUT_STREAM)
   private boolean headOptimizationForInputStream;
@@ -1248,8 +1252,8 @@ public class AbfsConfiguration{
     return renameResilience;
   }
 
-  void setRenameResilience(boolean actualResilience) {
-    renameResilience = actualResilience;
+  public boolean isPaginatedDeleteEnabled() {
+    return isPaginatedDeleteEnabled;
   }
 
   public boolean getIsChecksumValidationEnabled() {

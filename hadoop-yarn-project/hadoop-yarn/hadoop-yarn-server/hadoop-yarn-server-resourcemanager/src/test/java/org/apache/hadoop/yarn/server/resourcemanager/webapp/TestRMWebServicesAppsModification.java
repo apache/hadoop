@@ -44,7 +44,6 @@ import java.util.Set;
 
 import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
-import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -57,6 +56,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
 import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
+import org.apache.hadoop.thirdparty.com.google.common.net.HttpHeaders;
 import org.apache.hadoop.util.XMLUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -817,7 +817,7 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
     HashMap<String, String> tokens = new HashMap<>();
     HashMap<String, String> secrets = new HashMap<>();
     secrets.put("secret1", Base64.encodeBase64String(
-        "mysecret".getBytes("UTF8")));
+        "mysecret".getBytes(StandardCharsets.UTF_8)));
     credentials.setSecrets(secrets);
     credentials.setTokens(tokens);
     ApplicationSubmissionContextInfo appInfo = new ApplicationSubmissionContextInfo();
@@ -840,7 +840,7 @@ public class TestRMWebServicesAppsModification extends JerseyTestBase {
     appInfo.getContainerLaunchContextInfo().setEnvironment(environment);
     appInfo.getContainerLaunchContextInfo().setAcls(acls);
     appInfo.getContainerLaunchContextInfo().getAuxillaryServiceData()
-      .put("test", Base64.encodeBase64URLSafeString("value12".getBytes("UTF8")));
+      .put("test", Base64.encodeBase64URLSafeString("value12".getBytes(StandardCharsets.UTF_8)));
     appInfo.getContainerLaunchContextInfo().setCredentials(credentials);
     appInfo.getResource().setMemory(1024);
     appInfo.getResource().setvCores(1);
