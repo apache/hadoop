@@ -242,5 +242,19 @@ public class TestCommonConfigurationFields extends TestConfigurationFieldsBase {
     xmlPropsToSkipCompare.add("io.seqfile.local.dir");
 
     xmlPropsToSkipCompare.add("hadoop.http.sni.host.check.enabled");
+
+    // skip all FTP props (some were already skipped above)
+    xmlPropsToSkipCompare.add("fs.AbstractFileSystem.ftp.impl");
+    xmlPropsToSkipCompare.add("fs.ftp.impl");
+    xmlPropsToSkipCompare.add("fs.ftp.host");
+    xmlPropsToSkipCompare.add("fs.ftp.host.port");
+    xmlPropsToSkipCompare.add("fs.ftp.data.connection.mode");
+    xmlPropsToSkipCompare.add("fs.ftp.transfer.mode");
+    xmlPropsToSkipCompare.add("fs.ftp.timeout");
+    xmlPropsToSkipCompare.add("ftp.stream-buffer-size");
+    xmlPropsToSkipCompare.add("ftp.bytes-per-checksum");
+    xmlPropsToSkipCompare.add("ftp.client-write-packet-size");
+    xmlPropsToSkipCompare.add("ftp.blocksize");
+    xmlPropsToSkipCompare.add("ftp.replication");
   }
 }
