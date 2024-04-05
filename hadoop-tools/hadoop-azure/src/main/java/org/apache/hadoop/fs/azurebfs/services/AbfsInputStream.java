@@ -139,6 +139,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
    * start only after the first successful read.
    */
   private volatile boolean successfulUsage = false;
+  private final boolean pretechTriggerOnFirstRead;
 
   public AbfsInputStream(
           final AbfsClient client,
@@ -158,6 +159,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     this.tolerateOobAppends = abfsInputStreamContext.isTolerateOobAppends();
     this.eTag = eTag;
     this.fileStatusInformationPresent = StringUtils.isNotEmpty(eTag);
+    this.pretechTriggerOnFirstRead = abfsInputStreamContext.isPrefetchTriggerOnFirstRead();
     this.readAheadRange = abfsInputStreamContext.getReadAheadRange();
     this.readAheadEnabled = abfsInputStreamContext.isReadAheadEnabled();
     this.alwaysReadBufferSize
@@ -552,7 +554,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   private int readInternal(final long position, final byte[] b, final int offset, final int length,
                            final boolean bypassReadAhead) throws IOException {
-    if (readAheadEnabled && !bypassReadAhead && successfulUsage) {
+    if (readAheadEnabled && !bypassReadAhead && (pretechTriggerOnFirstRead || successfulUsage)) {
       // try reading from read-ahead
       if (offset != 0) {
         throw new IllegalArgumentException("readahead buffers cannot have non-zero buffer offsets");

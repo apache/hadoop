@@ -363,6 +363,14 @@ public class AbfsConfiguration{
       FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, DefaultValue = DEFAULT_ENABLE_ABFS_CHECKSUM_VALIDATION)
   private boolean isChecksumValidationEnabled;
 
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_HEAD_CALL_OPTIMIZATION_INPUT_STREAM,
+      DefaultValue = DEFAULT_HEAD_OPTIMIZATION_INPUT_STREAM)
+  private boolean headOptimizationForInputStream;
+
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_PREFETCH_FIRST_READ_CALL,
+      DefaultValue = DEFAULT_PREFETCH_READAHEAD_ON_FIRST_READ)
+  private boolean prefetchReadaheadOnFirstRead;
+
   private String clientProvidedEncryptionKey;
   private String clientProvidedEncryptionKeySHA;
 
@@ -1246,6 +1254,14 @@ public class AbfsConfiguration{
 
   public boolean getIsChecksumValidationEnabled() {
     return isChecksumValidationEnabled;
+  }
+
+  public boolean getHeadOptimizationForInputStream() {
+    return headOptimizationForInputStream;
+  }
+
+  public boolean getPrefetchReadaheadOnFirstRead() {
+    return prefetchReadaheadOnFirstRead;
   }
 
   @VisibleForTesting

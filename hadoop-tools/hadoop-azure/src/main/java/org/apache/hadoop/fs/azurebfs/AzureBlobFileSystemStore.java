@@ -848,14 +848,16 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
               encryptionContext.getBytes(StandardCharsets.UTF_8));
         }
       } else {
-        if(client.getEncryptionType() == EncryptionType.ENCRYPTION_CONTEXT) {
-          AbfsHttpOperation op = client.getPathStatus(relativePath, false,
+        if (client.getEncryptionType() == EncryptionType.ENCRYPTION_CONTEXT
+            || !abfsConfiguration.getHeadOptimizationForInputStream()) {
+          final AbfsHttpOperation op = client.getPathStatus(relativePath, false,
               tracingContext, null).getResult();
           resourceType = op.getResponseHeader(
               HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
           contentLength = Long.parseLong(
               op.getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH));
           eTag = op.getResponseHeader(HttpHeaderConfigurations.ETAG);
+
           /*
            * For file created with ENCRYPTION_CONTEXT, client shall receive
            * encryptionContext from header field: X_MS_ENCRYPTION_CONTEXT.
@@ -874,7 +876,15 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           }
         }
       }
-      //TODO: Check on directory in abfsinputstream.
+
+      if (!abfsConfiguration.getHeadOptimizationForInputStream()
+          && parseIsDirectory(resourceType)) {
+        throw new AbfsRestOperationException(
+            AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode(),
+            AzureServiceErrorCode.PATH_NOT_FOUND.getErrorCode(),
+            "openFileForRead must be used with files and not directories",
+            null);
+      }
 
       perfInfo.registerSuccess(true);
 
@@ -911,6 +921,9 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             .withBufferedPreadDisabled(bufferedPreadDisabled)
             .withEncryptionAdapter(contextEncryptionAdapter)
             .withAbfsBackRef(fsBackRef)
+            .withPrefetchTriggerOnFirstRead(
+                abfsConfiguration.getPrefetchReadaheadOnFirstRead() &&
+                !abfsConfiguration.getHeadOptimizationForInputStream())
             .build();
   }
 

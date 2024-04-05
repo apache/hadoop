@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azurebfs.services;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
 import org.apache.hadoop.fs.impl.BackReference;
 import org.apache.hadoop.util.Preconditions;
 
@@ -61,6 +62,8 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
   private BackReference fsBackRef;
 
   private ContextEncryptionAdapter contextEncryptionAdapter = null;
+
+  private boolean prefetchTriggerOnFirstRead;
 
   public AbfsInputStreamContext(final long sasTokenRenewPeriodForStreamsInSeconds) {
     super(sasTokenRenewPeriodForStreamsInSeconds);
@@ -150,6 +153,12 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
       return this;
     }
 
+  public AbfsInputStreamContext withPrefetchTriggerOnFirstRead(
+      final boolean prefetchTriggerOnFirstRead) {
+    this.prefetchTriggerOnFirstRead = prefetchTriggerOnFirstRead;
+    return this;
+  }
+
   public AbfsInputStreamContext build() {
     if (readBufferSize > readAheadBlockSize) {
       LOG.debug(
@@ -220,4 +229,8 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
     public ContextEncryptionAdapter getEncryptionAdapter() {
       return contextEncryptionAdapter;
     }
+
+  public boolean isPrefetchTriggerOnFirstRead() {
+    return prefetchTriggerOnFirstRead;
+  }
 }
