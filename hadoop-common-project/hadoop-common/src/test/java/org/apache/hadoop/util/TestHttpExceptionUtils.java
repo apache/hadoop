@@ -84,18 +84,16 @@ public class TestHttpExceptionUtils {
   @Test
   public void testValidateResponseOK() throws IOException {
     HttpURLConnection conn = Mockito.mock(HttpURLConnection.class);
-    Mockito.when(conn.getResponseCode()).thenReturn(
-        HttpURLConnection.HTTP_CREATED);
+    Mockito.when(conn.getResponseCode()).thenReturn(HttpURLConnection.HTTP_CREATED);
     HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_CREATED);
   }
 
   @Test
   public void testValidateResponseFailNoErrorMessage() throws Exception {
     HttpURLConnection conn = Mockito.mock(HttpURLConnection.class);
-    Mockito.when(conn.getResponseCode()).thenReturn(
-        HttpURLConnection.HTTP_BAD_REQUEST);
+    Mockito.when(conn.getResponseCode()).thenReturn(HttpURLConnection.HTTP_BAD_REQUEST);
     LambdaTestUtils.intercept(IOException.class,
-            () -> HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_CREATED));
+        () -> HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_CREATED));
   }
 
   @Test
@@ -105,10 +103,9 @@ public class TestHttpExceptionUtils {
     HttpURLConnection conn = Mockito.mock(HttpURLConnection.class);
     Mockito.when(conn.getErrorStream()).thenReturn(is);
     Mockito.when(conn.getResponseMessage()).thenReturn("msg");
-    Mockito.when(conn.getResponseCode()).thenReturn(
-        HttpURLConnection.HTTP_BAD_REQUEST);
+    Mockito.when(conn.getResponseCode()).thenReturn(HttpURLConnection.HTTP_BAD_REQUEST);
     IOException ex = LambdaTestUtils.intercept(IOException.class,
-            () -> HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_CREATED));
+        () -> HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_CREATED));
     assertContains(Integer.toString(HttpURLConnection.HTTP_BAD_REQUEST), ex.getMessage());
     assertContains("msg", ex.getMessage());
     assertContains("com.fasterxml.jackson.core.JsonParseException", ex.getMessage());
@@ -128,11 +125,10 @@ public class TestHttpExceptionUtils {
     HttpURLConnection conn = Mockito.mock(HttpURLConnection.class);
     Mockito.when(conn.getErrorStream()).thenReturn(is);
     Mockito.when(conn.getResponseMessage()).thenReturn("msg");
-    Mockito.when(conn.getResponseCode()).thenReturn(
-        HttpURLConnection.HTTP_BAD_REQUEST);
+    Mockito.when(conn.getResponseCode()).thenReturn(HttpURLConnection.HTTP_BAD_REQUEST);
     LambdaTestUtils.intercept(IllegalStateException.class,
-            "EX",
-            () -> HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_CREATED));
+        "EX",
+        () -> HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_CREATED));
   }
 
   @Test
@@ -150,10 +146,9 @@ public class TestHttpExceptionUtils {
     HttpURLConnection conn = Mockito.mock(HttpURLConnection.class);
     Mockito.when(conn.getErrorStream()).thenReturn(is);
     Mockito.when(conn.getResponseMessage()).thenReturn("msg");
-    Mockito.when(conn.getResponseCode()).thenReturn(
-        HttpURLConnection.HTTP_BAD_REQUEST);
+    Mockito.when(conn.getResponseCode()).thenReturn(HttpURLConnection.HTTP_BAD_REQUEST);
     IOException ex = LambdaTestUtils.intercept(IOException.class,
-            () -> HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_CREATED));
+        () -> HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_CREATED));
     assertContains(Integer.toString(HttpURLConnection.HTTP_BAD_REQUEST), ex.getMessage());
     assertContains("foo.FooException", ex.getMessage());
     assertContains("EX", ex.getMessage());
@@ -174,10 +169,9 @@ public class TestHttpExceptionUtils {
     HttpURLConnection conn = Mockito.mock(HttpURLConnection.class);
     Mockito.when(conn.getErrorStream()).thenReturn(is);
     Mockito.when(conn.getResponseMessage()).thenReturn("msg");
-    Mockito.when(conn.getResponseCode()).thenReturn(
-            HttpURLConnection.HTTP_BAD_REQUEST);
+    Mockito.when(conn.getResponseCode()).thenReturn(HttpURLConnection.HTTP_BAD_REQUEST);
     IOException ex = LambdaTestUtils.intercept(IOException.class,
-            () -> HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_CREATED));
+        () -> HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_CREATED));
     assertContains(Integer.toString(HttpURLConnection.HTTP_BAD_REQUEST), ex.getMessage());
     assertContains("java.lang.String", ex.getMessage());
     assertContains("EX", ex.getMessage());
