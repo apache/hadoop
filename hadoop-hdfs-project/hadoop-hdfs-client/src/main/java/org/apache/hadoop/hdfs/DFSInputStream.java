@@ -525,6 +525,10 @@ public class DFSInputStream extends FSInputStream
               newBlocks.getLocatedBlocks());
         }
       }
+      if (targetBlockIdx >= locatedBlocks.locatedBlockCount()) {
+        DFSClient.LOG.debug("Could not find target position " + offset);
+        throw new EOFException("Could not find target position " + offset);
+      }
       return locatedBlocks.get(targetBlockIdx);
     }
   }
@@ -642,6 +646,7 @@ public class DFSInputStream extends FSInputStream
       targetBlock = retval.block;
 
       try {
+        DFSClientFaultInjector.get().failCreateBlockReader();
         blockReader = getBlockReader(targetBlock, offsetIntoBlock,
             targetBlock.getBlockSize() - offsetIntoBlock, targetAddr,
             storageType, chosenNode);
