@@ -28,6 +28,7 @@ import org.apache.hadoop.util.Time;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
+import java.util.Collection;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
@@ -476,7 +477,7 @@ public final class LambdaTestUtils {
    * <i>or a subclass</i>.
    * @param contained string which must be in the {@code toString()} value
    * of the exception
-   * @param message any message tho include in exception/log messages
+   * @param message any message to include in exception/log messages
    * @param eval expression to eval
    * @param <T> return type of expression
    * @param <E> exception class
@@ -543,7 +544,7 @@ public final class LambdaTestUtils {
    * <i>or a subclass</i>.
    * @param contained string which must be in the {@code toString()} value
    * of the exception
-   * @param message any message tho include in exception/log messages
+   * @param message any message to include in exception/log messages
    * @param eval expression to eval
    * @param <E> exception class
    * @return the caught exception if it was of the expected type
@@ -561,6 +562,105 @@ public final class LambdaTestUtils {
           eval.call();
           return "void";
         });
+  }
+
+  /**
+   * Intercept an exception; throw an {@code AssertionError} if one not raised.
+   * The caught exception is rethrown if it is of the wrong class or
+   * does not contain the text defined in {@code contained}.
+   * <p>
+   * Example: expect deleting a nonexistent file to raise a
+   * {@code FileNotFoundException} with the {@code toString()} value
+   * containing the text {@code "missing"}.
+   * <pre>
+   * FileNotFoundException ioe = interceptAndValidateMessageContains(
+   *   FileNotFoundException.class,
+   *   "missing",
+   *   "path should not be found",
+   *   () -> {
+   *     filesystem.delete(new Path("/missing"), false);
+   *   });
+   * </pre>
+   *
+   * @param clazz class of exception; the raised exception must be this class
+   * <i>or a subclass</i>.
+   * @param contains strings which must be in the {@code toString()} value
+   * of the exception (order does not matter)
+   * @param eval expression to eval
+   * @param <T> return type of expression
+   * @param <E> exception class
+   * @return the caught exception if it was of the expected type and contents
+   * @throws Exception any other exception raised
+   * @throws AssertionError if the evaluation call didn't raise an exception.
+   * The error includes the {@code toString()} value of the result, if this
+   * can be determined.
+   * @see GenericTestUtils#assertExceptionContains(String, Throwable)
+   */
+  public static <T, E extends Throwable> E interceptAndValidateMessageContains(
+          Class<E> clazz,
+          Collection<String> contains,
+          VoidCallable eval)
+          throws Exception {
+    String message = "Expecting " + clazz.getName()
+            + (contains.isEmpty() ? "" : (" with text values " + toString(contains)))
+            + " but got ";
+    return interceptAndValidateMessageContains(clazz, contains, message, eval);
+  }
+
+  /**
+   * Intercept an exception; throw an {@code AssertionError} if one not raised.
+   * The caught exception is rethrown if it is of the wrong class or
+   * does not contain the text defined in {@code contained}.
+   * <p>
+   * Example: expect deleting a nonexistent file to raise a
+   * {@code FileNotFoundException} with the {@code toString()} value
+   * containing the text {@code "missing"}.
+   * <pre>
+   * FileNotFoundException ioe = interceptAndValidateMessageContains(
+   *   FileNotFoundException.class,
+   *   "missing",
+   *   "path should not be found",
+   *   () -> {
+   *     filesystem.delete(new Path("/missing"), false);
+   *   });
+   * </pre>
+   *
+   * @param clazz class of exception; the raised exception must be this class
+   * <i>or a subclass</i>.
+   * @param contains strings which must be in the {@code toString()} value
+   * of the exception (order does not matter)
+   * @param message any message to include in exception/log messages
+   * @param eval expression to eval
+   * @param <T> return type of expression
+   * @param <E> exception class
+   * @return the caught exception if it was of the expected type and contents
+   * @throws Exception any other exception raised
+   * @throws AssertionError if the evaluation call didn't raise an exception.
+   * The error includes the {@code toString()} value of the result, if this
+   * can be determined.
+   * @see GenericTestUtils#assertExceptionContains(String, Throwable)
+   */
+  public static <T, E extends Throwable> E interceptAndValidateMessageContains(
+          Class<E> clazz,
+          Collection<String> contains,
+          String message,
+          VoidCallable eval)
+          throws Exception {
+    E ex;
+    try {
+      eval.call();
+      throw new AssertionError(message);
+    } catch (Throwable e) {
+      if (!clazz.isAssignableFrom(e.getClass())) {
+        throw e;
+      } else {
+        ex = (E) e;
+      }
+    }
+    for (String contained : contains) {
+      GenericTestUtils.assertExceptionContains(contained, ex, message);
+    }
+    return ex;
   }
 
   /**
@@ -607,7 +707,6 @@ public final class LambdaTestUtils {
    * Assert that an optional value matches an expected one;
    * checks include null and empty on the actual value.
    * @param message message text
-   * @param expected expected value
    * @param actual actual optional value
    * @param <T> type
    */
@@ -821,6 +920,19 @@ public final class LambdaTestUtils {
     } else {
       return (E) cause;
     }
+  }
+
+  private static String toString(Collection<String> strings) {
+    StringBuilder sb = new StringBuilder();
+    sb.append('[');
+    int pos = 0;
+    for (String s : strings) {
+      if (pos++ > 0)
+        sb.append(", ");
+      sb.append(s);
+    }
+    sb.append(']');
+    return sb.toString();
   }
 
   /**
