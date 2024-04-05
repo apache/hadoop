@@ -633,7 +633,7 @@ The following configuration parameters can be configured in yarn-site.xml to con
 | `yarn.resourcemanager.reservation-system.planfollower.time-step` | *Optional* parameter: the frequency in milliseconds of the `PlanFollower` timer. Long value expected. The default value is *1000*. |
 
 
-The `ReservationSystem` is integrated with the `CapacityScheduler` queue hierachy and can be configured for any **LeafQueue** currently. The `CapacityScheduler` supports the following parameters to tune the `ReservationSystem`:
+The `ReservationSystem` is integrated with the `CapacityScheduler` queue hierarchy and can be configured for any **LeafQueue** currently. The `CapacityScheduler` supports the following parameters to tune the `ReservationSystem`:
 
 | Property | Description |
 |:---- |:---- |
@@ -879,7 +879,7 @@ Changing queue/scheduler properties and adding/removing queues can be done in tw
   Remove the queue configurations from the file and run refresh as described above
 
 ### Enabling periodic configuration refresh
-Enabling queue configuration periodic refresh allows reloading and applying the configuration by editing the *conf/capacity-scheduler.xml* without the necessicity of calling yarn rmadmin -refreshQueues.
+Enabling queue configuration periodic refresh allows reloading and applying the configuration by editing the *conf/capacity-scheduler.xml* without the necessity of calling yarn rmadmin -refreshQueues.
 
 | Property | Description |
 |:---- |:---- |
