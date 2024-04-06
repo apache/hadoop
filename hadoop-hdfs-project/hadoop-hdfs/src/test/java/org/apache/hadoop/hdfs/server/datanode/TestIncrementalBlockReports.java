@@ -271,13 +271,14 @@ public class TestIncrementalBlockReports {
         spies.add(nnSpy);
       }
 
-      Thread.sleep(1000);
       LOG.info("==================================");
+      // Force the DNs to delay report to the SNN
       ibrPhaser.bulkRegister(9);
       DFSTestUtil.writeFile(fs, TEST_FILE_PATH, TEST_FILE_DATA);
       DFSTestUtil.appendFile(fs, TEST_FILE_PATH, TEST_FILE_DATA);
       DFSTestUtil.appendFile(fs, TEST_FILE_PATH, TEST_FILE_DATA);
       HATestUtil.waitForStandbyToCatchUp(nn1, nn2);
+      // SNN has caught up to the latest edit log so we send the IBRs to SNN
       int phase = ibrPhaser.arrive();
       ibrPhaser.awaitAdvanceInterruptibly(phase, 60, TimeUnit.SECONDS);
       for (InvocationOnMock sendIBRs : ibrsToStandby) {
@@ -291,6 +292,8 @@ public class TestIncrementalBlockReports {
       assertEquals("There should be 3 pending messages from DNs", 3,
           nn2.getNamesystem().getBlockManager().getPendingDataNodeMessageCount());
       ibrsToStandby.clear();
+      // We need to trigger another edit log roll so that the pendingDNMessages
+      // are processed.
       ibrPhaser.bulkRegister(6);
       DFSTestUtil.appendFile(fs, TEST_FILE_PATH, TEST_FILE_DATA);
       DFSTestUtil.appendFile(fs, TEST_FILE_PATH, TEST_FILE_DATA);
@@ -309,6 +312,8 @@ public class TestIncrementalBlockReports {
       HATestUtil.waitForStandbyToCatchUp(nn1, nn2);
       LOG.info("==================================");
 
+      // Trigger an active switch to force SNN to mark blocks as corrupt if they
+      // have a bad genstamp in the pendingDNMessages queue.
       cluster.transitionToStandby(0);
       cluster.transitionToActive(1);
       cluster.waitActive(1);
