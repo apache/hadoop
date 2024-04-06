@@ -287,6 +287,9 @@ public class TestIncrementalBlockReports {
           LOG.error("Exception thrown while calling sendIBRs: ", t);
         }
       }
+
+      assertEquals("There should be 3 pending messages from DNs", 3,
+          nn2.getNamesystem().getBlockManager().getPendingDataNodeMessageCount());
       ibrsToStandby.clear();
       ibrPhaser.bulkRegister(6);
       DFSTestUtil.appendFile(fs, TEST_FILE_PATH, TEST_FILE_DATA);
@@ -310,8 +313,9 @@ public class TestIncrementalBlockReports {
       cluster.transitionToActive(1);
       cluster.waitActive(1);
 
-      assertEquals(0, nn2.getNamesystem().getBlockManager()
-          .numCorruptReplicas(block.getLocalBlock()));
+      assertEquals("There should not be any corrupt replicas", 0,
+          nn2.getNamesystem().getBlockManager()
+              .numCorruptReplicas(block.getLocalBlock()));
     } finally {
       cluster.shutdown();
     }

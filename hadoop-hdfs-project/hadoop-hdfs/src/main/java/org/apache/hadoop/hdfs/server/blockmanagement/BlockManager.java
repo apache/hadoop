@@ -3493,8 +3493,7 @@ public class BlockManager implements BlockStatsMXBean {
               " from datanode {} for later processing because {}.",
           block, reportedState, storageInfo.getDatanodeDescriptor(), reason);
     }
-    pendingDNMessages.enqueueReportedBlock(storageInfo, block, reportedState,
-        isGenStampInFuture(block));
+    pendingDNMessages.enqueueReportedBlock(storageInfo, block, reportedState);
   }
 
   /**

@@ -94,7 +94,7 @@ class PendingDataNodeMessages {
   }
   
   void enqueueReportedBlock(DatanodeStorageInfo storageInfo, Block block,
-      ReplicaState reportedState, boolean isGenStampInFuture) {
+      ReplicaState reportedState) {
     long genStamp = block.getGenerationStamp();
     Queue<ReportedBlockInfo> queue = null;
     if (BlockIdManager.isStripedBlockID(block.getBlockId())) {
@@ -110,9 +110,10 @@ class PendingDataNodeMessages {
     // reported block to be kept in the queue until the SNN switches to ANN and
     // the old reported block will be processed and marked as corrupt by the ANN.
     // See HDFS-17453
-    if (!isGenStampInFuture) {
-      queue.removeIf(rbi -> rbi.storageInfo.equals(storageInfo) &&
-          rbi.block.getGenerationStamp() < genStamp);
+    int size = queue.size();
+    if (queue.removeIf(rbi -> rbi.storageInfo.equals(storageInfo) &&
+        rbi.block.getGenerationStamp() < genStamp)) {
+      count -= (size - queue.size());
     }
     queue.add(new ReportedBlockInfo(storageInfo, new Block(block), reportedState));
     count++;

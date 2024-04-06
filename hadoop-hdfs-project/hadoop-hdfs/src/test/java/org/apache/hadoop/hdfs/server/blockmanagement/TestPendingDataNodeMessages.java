@@ -30,6 +30,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.server.blockmanagement.PendingDataNodeMessages.ReportedBlockInfo;
@@ -52,11 +53,15 @@ public class TestPendingDataNodeMessages {
 
   @Test
   public void testQueues() {
-    DatanodeDescriptor fakeDN = DFSTestUtil.getLocalDatanodeDescriptor();
+    DatanodeDescriptor fakeDN1 = DFSTestUtil.getDatanodeDescriptor("localhost", 8898, "/default-rack");
+    DatanodeDescriptor fakeDN2 = DFSTestUtil.getDatanodeDescriptor("localhost", 8899, "/default-rack");
     DatanodeStorage storage = new DatanodeStorage("STORAGE_ID");
-    DatanodeStorageInfo storageInfo = new DatanodeStorageInfo(fakeDN, storage);
-    msgs.enqueueReportedBlock(storageInfo, block1Gs1, ReplicaState.FINALIZED, true);
-    msgs.enqueueReportedBlock(storageInfo, block1Gs2, ReplicaState.FINALIZED, true);
+    DatanodeStorageInfo storageInfo1 = new DatanodeStorageInfo(fakeDN1, storage);
+    DatanodeStorageInfo storageInfo2 = new DatanodeStorageInfo(fakeDN2, storage);
+    msgs.enqueueReportedBlock(storageInfo1, block1Gs1, ReplicaState.FINALIZED);
+    msgs.enqueueReportedBlock(storageInfo2, block1Gs1, ReplicaState.FINALIZED);
+    msgs.enqueueReportedBlock(storageInfo1, block1Gs2, ReplicaState.FINALIZED);
+    msgs.enqueueReportedBlock(storageInfo2, block1Gs2, ReplicaState.FINALIZED);
 
     assertEquals(2, msgs.count());
     
@@ -67,41 +72,11 @@ public class TestPendingDataNodeMessages {
     Queue<ReportedBlockInfo> q =
       msgs.takeBlockQueue(block1Gs2DifferentInstance);
     assertEquals(
-        "ReportedBlockInfo [block=blk_1_1, dn=127.0.0.1:9866, reportedState=FINALIZED]," +
-        "ReportedBlockInfo [block=blk_1_2, dn=127.0.0.1:9866, reportedState=FINALIZED]",
+        "ReportedBlockInfo [block=blk_1_2, dn=/default-rack/localhost:8898, reportedState=FINALIZED]," +
+        "ReportedBlockInfo [block=blk_1_2, dn=/default-rack/localhost:8899, reportedState=FINALIZED]",
         Joiner.on(",").join(q));
     assertEquals(0, msgs.count());
     
-    // Should be null if we pull again
-    assertNull(msgs.takeBlockQueue(block1Gs1));
-    assertEquals(0, msgs.count());
-  }
-
-  @Test
-  public void testQueuesKeepLatestNonFutureOnly() {
-    DatanodeDescriptor fakeDN = DFSTestUtil.getLocalDatanodeDescriptor();
-    DatanodeStorage storage = new DatanodeStorage("STORAGE_ID");
-    DatanodeStorageInfo storageInfo = new DatanodeStorageInfo(fakeDN, storage);
-    msgs.enqueueReportedBlock(storageInfo, block1Gs1, ReplicaState.FINALIZED,
-        false);
-    // block1Gs1 should be removed from the queue since it is older than
-    // block1Gs2 and block1Gs2 is not in the future.
-    msgs.enqueueReportedBlock(storageInfo, block1Gs2, ReplicaState.FINALIZED,
-        false);
-
-    assertEquals(1, msgs.count());
-
-    // Nothing queued yet for block 2
-    assertNull(msgs.takeBlockQueue(block2Gs1));
-    assertEquals(1, msgs.count());
-
-    Queue<ReportedBlockInfo> q =
-        msgs.takeBlockQueue(block1Gs2DifferentInstance);
-    assertEquals(
-            "ReportedBlockInfo [block=blk_1_2, dn=/default-rack/127.0.0.1:9866, reportedState=FINALIZED]",
-        Joiner.on(",").join(q));
-    assertEquals(0, msgs.count());
-
     // Should be null if we pull again
     assertNull(msgs.takeBlockQueue(block1Gs1));
     assertEquals(0, msgs.count());
