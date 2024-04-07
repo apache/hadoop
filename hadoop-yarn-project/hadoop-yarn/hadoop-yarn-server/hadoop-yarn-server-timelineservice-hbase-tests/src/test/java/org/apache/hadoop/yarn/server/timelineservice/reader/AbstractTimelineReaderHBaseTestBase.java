@@ -29,9 +29,10 @@ import java.net.URI;
 import java.net.URL;
 import java.util.List;
 
+import javax.ws.rs.core.MediaType;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.http.ContentTypes;
 import org.apache.hadoop.yarn.api.records.timelineservice.FlowActivityEntity;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.timelineservice.storage.DataGeneratorForTest;
@@ -117,8 +118,8 @@ public abstract class AbstractTimelineReaderHBaseTestBase {
   protected ClientResponse getResponse(Client client, URI uri)
       throws Exception {
     ClientResponse resp =
-        client.resource(uri).accept(ContentTypes.APPLICATION_JSON)
-            .type(ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
+        client.resource(uri).accept(MediaType.APPLICATION_JSON)
+            .type(MediaType.APPLICATION_JSON).get(ClientResponse.class);
     if (resp == null || resp.getStatusInfo()
         .getStatusCode() != ClientResponse.Status.OK.getStatusCode()) {
       String msg = "";
@@ -133,8 +134,8 @@ public abstract class AbstractTimelineReaderHBaseTestBase {
 
   protected void verifyHttpResponse(Client client, URI uri, Status status) {
     ClientResponse resp =
-        client.resource(uri).accept(ContentTypes.APPLICATION_JSON)
-            .type(ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
+        client.resource(uri).accept(MediaType.APPLICATION_JSON)
+            .type(MediaType.APPLICATION_JSON).get(ClientResponse.class);
     assertNotNull(resp);
     assertTrue("Response from server should have been " + status,
         resp.getStatusInfo().getStatusCode() == status.getStatusCode());
