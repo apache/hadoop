@@ -317,7 +317,7 @@ public class TestDFSInputStream {
       long fileLen = 1024 * 64;
       EnumSet<CreateFlag> createFlags = EnumSet.of(CREATE);
       FSDataOutputStream out =  fs.create(path, FsPermission.getFileDefault(), createFlags,
-          fs.getConf().getInt(IO_FILE_BUFFER_SIZE_KEY, 4096),(short) 3,
+          fs.getConf().getInt(IO_FILE_BUFFER_SIZE_KEY, 4096), (short) 3,
           fs.getDefaultBlockSize(path), null);
       int bufferLen = 1024;
       byte[] toWrite = new byte[bufferLen];
