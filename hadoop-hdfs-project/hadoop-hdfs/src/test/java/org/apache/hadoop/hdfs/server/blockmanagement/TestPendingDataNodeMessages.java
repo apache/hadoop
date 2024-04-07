@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Queue;
 
 import org.apache.hadoop.conf.Configuration;
@@ -30,7 +32,6 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
 import org.apache.hadoop.hdfs.protocol.Block;
-import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.server.blockmanagement.PendingDataNodeMessages.ReportedBlockInfo;
@@ -62,6 +63,9 @@ public class TestPendingDataNodeMessages {
     msgs.enqueueReportedBlock(storageInfo2, block1Gs1, ReplicaState.FINALIZED);
     msgs.enqueueReportedBlock(storageInfo1, block1Gs2, ReplicaState.FINALIZED);
     msgs.enqueueReportedBlock(storageInfo2, block1Gs2, ReplicaState.FINALIZED);
+    List<ReportedBlockInfo> rbis = Arrays.asList(
+        new ReportedBlockInfo(storageInfo1, block1Gs2, ReplicaState.FINALIZED),
+        new ReportedBlockInfo(storageInfo2, block1Gs2, ReplicaState.FINALIZED));
 
     assertEquals(2, msgs.count());
     
@@ -71,9 +75,7 @@ public class TestPendingDataNodeMessages {
     
     Queue<ReportedBlockInfo> q =
       msgs.takeBlockQueue(block1Gs2DifferentInstance);
-    assertEquals(
-        "ReportedBlockInfo [block=blk_1_2, dn=/default-rack/localhost:8898, reportedState=FINALIZED]," +
-        "ReportedBlockInfo [block=blk_1_2, dn=/default-rack/localhost:8899, reportedState=FINALIZED]",
+    assertEquals(Joiner.on(",").join(rbis),
         Joiner.on(",").join(q));
     assertEquals(0, msgs.count());
     
