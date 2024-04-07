@@ -1291,7 +1291,9 @@ public class FsVolumeImpl implements FsVolumeSpi {
 
     // rename meta file to rbw directory
     // rename block file to rbw directory
+    long oldReplicaLength = replicaInfo.getMetadataLength() + replicaInfo.getBlockDataLength();
     newReplicaInfo.moveReplicaFrom(replicaInfo, newBlkFile);
+    getBlockPoolSlice(bpid).decDfsUsed(oldReplicaLength);
 
     reserveSpaceForReplica(bytesReserved);
     return newReplicaInfo;
