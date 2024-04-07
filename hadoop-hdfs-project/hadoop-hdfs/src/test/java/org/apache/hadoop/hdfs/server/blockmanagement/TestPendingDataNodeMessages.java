@@ -54,8 +54,10 @@ public class TestPendingDataNodeMessages {
 
   @Test
   public void testQueues() {
-    DatanodeDescriptor fakeDN1 = DFSTestUtil.getDatanodeDescriptor("localhost", 8898, "/default-rack");
-    DatanodeDescriptor fakeDN2 = DFSTestUtil.getDatanodeDescriptor("localhost", 8899, "/default-rack");
+    DatanodeDescriptor fakeDN1 = DFSTestUtil.getDatanodeDescriptor(
+        "localhost", 8898, "/default-rack");
+    DatanodeDescriptor fakeDN2 = DFSTestUtil.getDatanodeDescriptor(
+        "localhost", 8899, "/default-rack");
     DatanodeStorage storage = new DatanodeStorage("STORAGE_ID");
     DatanodeStorageInfo storageInfo1 = new DatanodeStorageInfo(fakeDN1, storage);
     DatanodeStorageInfo storageInfo2 = new DatanodeStorageInfo(fakeDN2, storage);

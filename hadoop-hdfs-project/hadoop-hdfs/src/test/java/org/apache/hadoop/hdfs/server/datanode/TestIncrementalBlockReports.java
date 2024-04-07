@@ -233,7 +233,7 @@ public class TestIncrementalBlockReports {
   @Test
   public void testIBRRaceCondition() throws Exception {
     cluster.shutdown();
-    Configuration conf = new Configuration();
+    conf = new Configuration();
     HAUtil.setAllowStandbyReads(conf, true);
     conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
     cluster = new MiniDFSCluster.Builder(conf)
