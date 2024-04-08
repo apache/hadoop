@@ -555,7 +555,7 @@ public class FSPermissionChecker implements AccessControlEnforcer {
     return inodeAttrs;
   }
 
-  /** Guarded by {@link FSNamesystem#readLock(FSNamesystemLockMode)} */
+  /** Guarded by {@link FSNamesystem#readLock(FSNamesystemLockMode)}. */
   private void checkOwner(INodeAttributes[] inodes, byte[][] components, int i)
       throws AccessControlException {
     if (getUser().equals(inodes[i].getUserName())) {
@@ -566,7 +566,7 @@ public class FSPermissionChecker implements AccessControlEnforcer {
         " is not the owner of inode=" + getPath(components, 0, i));
   }
 
-  /** Guarded by {@link FSNamesystem#readLock(FSNamesystemLockMode)}
+  /** Guarded by {@link FSNamesystem#readLock(FSNamesystemLockMode)}.
    * @throws AccessControlException
    * @throws ParentNotDirectoryException
    * @throws UnresolvedPathException
@@ -580,7 +580,7 @@ public class FSPermissionChecker implements AccessControlEnforcer {
     }
   }
 
-  /** Guarded by {@link FSNamesystem#readLock(FSNamesystemLockMode)} */
+  /** Guarded by {@link FSNamesystem#readLock(FSNamesystemLockMode)}. */
   private void checkSubAccess(byte[][] components, int pathIdx,
       INode inode, int snapshotId, FsAction access, boolean ignoreEmptyDir)
       throws AccessControlException {
@@ -654,7 +654,7 @@ public class FSPermissionChecker implements AccessControlEnforcer {
     }
   }
 
-  /** Guarded by {@link FSNamesystem#readLock(FSNamesystemLockMode)} */
+  /** Guarded by {@link FSNamesystem#readLock(FSNamesystemLockMode)}. */
   private void check(INodeAttributes[] inodes, byte[][] components, int i,
       FsAction access) throws AccessControlException {
     INodeAttributes inode = (i >= 0) ? inodes[i] : null;
@@ -768,7 +768,7 @@ public class FSPermissionChecker implements AccessControlEnforcer {
     return !foundMatch && mode.getOtherAction().implies(access);
   }
 
-  /** Guarded by {@link FSNamesystem#readLock(FSNamesystemLockMode)} */
+  /** Guarded by {@link FSNamesystem#readLock(FSNamesystemLockMode)}. */
   private void checkStickyBit(INodeAttributes[] inodes, byte[][] components,
       int index) throws AccessControlException {
     INodeAttributes parent = inodes[index];
