@@ -7210,7 +7210,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         snapshotPath = FSDirSnapshotOp.createSnapshot(dir, pc,
             snapshotManager, snapshotRoot, snapshotName, logRetryCache);
       } finally {
-        writeUnlock(FSNamesystemLockMode.FS, operationName, getLockReportInfoSupplier(snapshotRoot));
+        writeUnlock(FSNamesystemLockMode.FS, operationName,
+            getLockReportInfoSupplier(snapshotRoot));
       }
     } catch (AccessControlException ace) {
       logAuditEvent(false, operationName, snapshotRoot);
@@ -7471,7 +7472,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         blocksToBeDeleted = FSDirSnapshotOp.deleteSnapshot(dir, pc,
             snapshotManager, snapshotRoot, snapshotName, logRetryCache);
       } finally {
-        writeUnlock(FSNamesystemLockMode.GLOBAL, operationName, getLockReportInfoSupplier(rootPath));
+        writeUnlock(FSNamesystemLockMode.GLOBAL, operationName,
+            getLockReportInfoSupplier(rootPath));
       }
     } catch (AccessControlException ace) {
       logAuditEvent(false, operationName, rootPath, null, null);
