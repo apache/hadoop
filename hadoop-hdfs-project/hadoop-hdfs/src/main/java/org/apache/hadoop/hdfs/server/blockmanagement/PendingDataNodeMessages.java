@@ -115,7 +115,7 @@ class PendingDataNodeMessages {
     // See HDFS-17453
     int size = queue.size();
     if (queue.removeIf(rbi -> storageInfo.equals(rbi.storageInfo) &&
-        rbi.block.getGenerationStamp() < genStamp)) {
+        rbi.block.getGenerationStamp() <= genStamp)) {
       count -= (size - queue.size());
     }
     queue.add(new ReportedBlockInfo(storageInfo, new Block(block), reportedState));
