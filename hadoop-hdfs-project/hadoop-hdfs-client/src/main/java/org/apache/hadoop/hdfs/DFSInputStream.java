@@ -520,14 +520,19 @@ public class DFSInputStream extends FSInputStream
         // Update the LastLocatedBlock, if offset is for last block.
         if (offset >= locatedBlocks.getFileLength()) {
           setLocatedBlocksFields(newBlocks, getLastBlockLength(newBlocks));
+          // Here locatedBlocks has been updated, need to check offset again.
+          // If offset to the portion of the last block, will return the last block,
+          // otherwise the block containing the specified offset needs to be searched again.
+          if (offset >= locatedBlocks.getFileLength()) {
+            return locatedBlocks.getLastLocatedBlock();
+          } else {
+            targetBlockIdx = locatedBlocks.findBlock(offset);
+            assert targetBlockIdx >= 0 && targetBlockIdx < locatedBlocks.locatedBlockCount();
+          }
         } else {
           locatedBlocks.insertRange(targetBlockIdx,
               newBlocks.getLocatedBlocks());
         }
-      }
-      if (targetBlockIdx >= locatedBlocks.locatedBlockCount()) {
-        DFSClient.LOG.debug("Could not find target position " + offset);
-        throw new EOFException("Could not find target position " + offset);
       }
       return locatedBlocks.get(targetBlockIdx);
     }

@@ -305,8 +305,6 @@ public class TestDFSInputStream {
   public void testCreateBlockReaderWhenInvalidBlockTokenException() throws
       IOException, InterruptedException, TimeoutException {
     GenericTestUtils.setLogLevel(DFSClient.LOG, Level.DEBUG);
-    GenericTestUtils.LogCapturer logs =
-        GenericTestUtils.LogCapturer.captureLogs(DFSClient.LOG);
     Configuration conf = new Configuration();
     DFSClientFaultInjector oldFaultInjector = DFSClientFaultInjector.get();
     try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build()) {
@@ -363,9 +361,6 @@ public class TestDFSInputStream {
         int read = in.read(buf, 0, bufLen);
         assertEquals(1024, read);
       }
-
-      assertTrue(logs.getOutput().contains("Could not find target position 1"));
-      logs.clearOutput();
     } finally {
       DFSClientFaultInjector.set(oldFaultInjector);
     }
