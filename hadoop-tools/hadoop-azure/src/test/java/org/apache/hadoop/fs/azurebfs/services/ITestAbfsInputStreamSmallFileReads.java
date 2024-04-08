@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.Map;
 
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.FileSystem;
@@ -248,12 +249,16 @@ public class ITestAbfsInputStreamSmallFileReads extends ITestAbfsInputStream {
       AbfsInputStream abfsInputStream = (AbfsInputStream) iStream
           .getWrappedStream();
       abfsInputStream = spy(abfsInputStream);
-      doReturn(10)
-          .doReturn(10)
-          .doCallRealMethod()
-          .when(abfsInputStream)
-          .readRemote(anyLong(), any(), anyInt(), anyInt(),
-              any(TracingContext.class));
+      Mockito.doReturn((long) length).when(abfsInputStream).getContentLength();
+      int[] readRemoteIteration = {0};
+      Mockito.doAnswer(answer -> {
+        readRemoteIteration[0]++;
+        if(readRemoteIteration[0] <= 2) {
+          return 10;
+        }
+        return answer.callRealMethod();
+      }).when(abfsInputStream).readRemote(anyLong(), any(), anyInt(), anyInt(),
+          any(TracingContext.class));
 
       iStream = new FSDataInputStream(abfsInputStream);
       seek(iStream, seekPos);

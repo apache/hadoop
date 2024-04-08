@@ -341,7 +341,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     }
 
     return this.firstRead && this.context.readSmallFilesCompletely()
-        && this.contentLength <= this.bufferSize;
+        && getContentLength() <= this.bufferSize;
   }
 
   private boolean shouldReadLastBlock(int lengthToRead) {
@@ -350,7 +350,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
           && this.context.optimizeFooterRead();
     }
 
-    long footerStart = max(0, this.contentLength - FOOTER_SIZE);
+    long footerStart = max(0, getContentLength() - FOOTER_SIZE);
     return this.firstRead && this.context.optimizeFooterRead()
         && this.fCursor >= footerStart;
   }
@@ -365,7 +365,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     //If buffer is empty, then fill the buffer.
     if (bCursor == limit) {
       //If EOF, then return -1
-      if (fileStatusInformationPresent && fCursor >= contentLength) {
+      if (fileStatusInformationPresent && fCursor >= getContentLength()) {
         return -1;
       }
 
@@ -424,7 +424,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       //TODO: test when contentLength is more than buffer size -> seek to the middle of the bufferSize, and fire a is.read() on full buffer size.
       return optimisedRead(b, off, len, 0, bufferSize);
     }
-    return optimisedRead(b, off, len, 0, contentLength);
+    return optimisedRead(b, off, len, 0, getContentLength());
   }
 
   // To do footer read of files when enabled.
@@ -449,10 +449,10 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       bCursor = (int) (fCursor - lastBlockStart);
       return optimisedRead(b, off, len, lastBlockStart, footerReadSize);
     }
-    long lastBlockStart = max(0, contentLength - footerReadSize);
+    long lastBlockStart = max(0, getContentLength() - footerReadSize);
     bCursor = (int) (fCursor - lastBlockStart);
     // 0 if contentlength is < buffersize
-    long actualLenToRead = min(footerReadSize, contentLength);
+    long actualLenToRead = min(footerReadSize, getContentLength());
     return optimisedRead(b, off, len, lastBlockStart, actualLenToRead);
   }
 
@@ -463,15 +463,21 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     int lastBytesRead = 0;
     try {
       buffer = new byte[bufferSize];
+      boolean fileStatusInformationPresentBeforeRead = fileStatusInformationPresent;
       for (int i = 0;
-           i < MAX_OPTIMIZED_READ_ATTEMPTS && (!fileStatusInformationPresent || fCursor < contentLength); i++) {
+           i < MAX_OPTIMIZED_READ_ATTEMPTS && (!fileStatusInformationPresent || fCursor < getContentLength()); i++) {
         lastBytesRead = readInternal(fCursor, buffer, limit,
             (int) actualLen - limit, true);
         if (lastBytesRead > 0) {
           totalBytesRead += lastBytesRead;
+          boolean shouldBreak = !fileStatusInformationPresentBeforeRead
+              && totalBytesRead == (int) actualLen;
           limit += lastBytesRead;
           fCursor += lastBytesRead;
           fCursorAfterLastRead = fCursor;
+          if(shouldBreak) {
+            break;
+          }
         }
       }
     } catch (IOException e) {
@@ -568,11 +574,11 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       long nextOffset = position;
       // First read to queue needs to be of readBufferSize and later
       // of readAhead Block size
-      long nextSize = min((long) bufferSize, contentLength - nextOffset);
+      long nextSize = min((long) bufferSize, getContentLength() - nextOffset);
       LOG.debug("read ahead enabled issuing readheads num = {}", numReadAheads);
       TracingContext readAheadTracingContext = new TracingContext(tracingContext);
       readAheadTracingContext.setPrimaryRequestID();
-      while (numReadAheads > 0 && nextOffset < contentLength) {
+      while (numReadAheads > 0 && nextOffset < getContentLength()) {
         LOG.debug("issuing read ahead requestedOffset = {} requested size {}",
             nextOffset, nextSize);
         ReadBufferManager.getBufferManager().queueReadAhead(this, nextOffset, (int) nextSize,
@@ -580,7 +586,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         nextOffset = nextOffset + nextSize;
         numReadAheads--;
         // From next round onwards should be of readahead block size.
-        nextSize = min((long) readAheadBlockSize, contentLength - nextOffset);
+        nextSize = min((long) readAheadBlockSize, getContentLength() - nextOffset);
       }
 
       // try reading from buffers first
@@ -608,7 +614,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     if (position < 0) {
       throw new IllegalArgumentException("attempting to read from negative offset");
     }
-    if (fileStatusInformationPresent && position >= contentLength) {
+    if (fileStatusInformationPresent && position >= getContentLength()) {
       return -1;  // Hadoop prefers -1 to EOFException
     }
     if (b == null) {
@@ -709,7 +715,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     if (n < 0) {
       throw new EOFException(FSExceptionMessages.NEGATIVE_SEEK);
     }
-    if (fileStatusInformationPresent && n > contentLength) {
+    if (fileStatusInformationPresent && n > getContentLength()) {
       throw new EOFException(FSExceptionMessages.CANNOT_SEEK_PAST_EOF);
     }
 
@@ -728,7 +734,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       throw new IOException(FSExceptionMessages.STREAM_IS_CLOSED);
     }
     long currentPos = getPos();
-    if (fileStatusInformationPresent && currentPos == contentLength) {
+    if (fileStatusInformationPresent && currentPos == getContentLength()) {
       if (n > 0) {
         throw new EOFException(FSExceptionMessages.CANNOT_SEEK_PAST_EOF);
       }
@@ -738,8 +744,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       newPos = 0;
       n = newPos - currentPos;
     }
-    if (newPos > contentLength) {
-      newPos = contentLength;
+    if (newPos > getContentLength()) {
+      newPos = getContentLength();
       n = newPos - currentPos;
     }
     seek(newPos);
@@ -766,7 +772,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
           null);
       initPathProperties(op);
     }
-    final long remaining = this.contentLength - this.getPos();
+    final long remaining = getContentLength() - this.getPos();
     return remaining <= Integer.MAX_VALUE
         ? (int) remaining : Integer.MAX_VALUE;
   }
