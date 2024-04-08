@@ -105,7 +105,6 @@ class PendingDataNodeMessages {
           .getBlockId()));
       queue = getBlockQueue(blkId);
     } else {
-      block = new Block(block);
       queue = getBlockQueue(block);
     }
     // We only want the latest non-future reported block to be queued for each
