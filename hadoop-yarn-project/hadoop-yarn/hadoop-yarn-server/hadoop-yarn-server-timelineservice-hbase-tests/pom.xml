@@ -489,6 +489,12 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <forkCount>0</forkCount>
+        </configuration>
+      </plugin>
     </plugins>
   </build>
 </project>
