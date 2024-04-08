@@ -57,15 +57,10 @@ import org.apache.hadoop.util.functional.Tuples;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.s3a.S3AUtils.isThrottleException;
-import static org.apache.hadoop.fs.s3a.Statistic.IGNORED_ERRORS;
-import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_BULK_DELETE_REQUEST;
-import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_DELETE_OBJECTS;
-import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_DELETE_REQUEST;
-import static org.apache.hadoop.fs.s3a.Statistic.STORE_IO_RETRY;
-import static org.apache.hadoop.fs.s3a.Statistic.STORE_IO_THROTTLED;
-import static org.apache.hadoop.fs.s3a.Statistic.STORE_IO_THROTTLE_RATE;
+import static org.apache.hadoop.fs.s3a.Statistic.*;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isObjectNotFound;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.DELETE_CONSIDERED_IDEMPOTENT;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.STORE_IO_RATE_LIMITED_DURATION;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfOperation;
 import static org.apache.hadoop.util.Preconditions.checkArgument;
 
@@ -192,6 +187,10 @@ public class S3AStoreImpl implements S3AStore {
    */
   protected void incrementStatistic(Statistic statistic) {
     incrementStatistic(statistic, 1);
+  }
+
+  protected void incrementDurationStatistic(Statistic statistic, Duration duration) {
+    statisticsContext.addValueToQuantiles(statistic, duration.toMillis());
   }
 
   /**
@@ -335,8 +334,9 @@ public class S3AStoreImpl implements S3AStore {
               // duration is tracked in the bulk delete counters
               trackDurationOfOperation(getDurationTrackerFactory(),
                   OBJECT_BULK_DELETE_REQUEST.getSymbol(), () -> {
-                    acquireWriteCapacity(keyCount);
-                    incrementStatistic(OBJECT_DELETE_OBJECTS, keyCount);
+                        Duration durationToAcquireWriteCapacity = acquireWriteCapacity(keyCount);
+                        instrumentation.recordDuration(STORE_IO_RATE_LIMITED, true, durationToAcquireWriteCapacity);
+                        incrementStatistic(OBJECT_DELETE_OBJECTS, keyCount);
                     return s3Client.deleteObjects(deleteRequest);
                   }));
       if (!response.errors().isEmpty()) {

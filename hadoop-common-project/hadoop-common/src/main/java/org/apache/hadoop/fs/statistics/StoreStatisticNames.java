@@ -197,6 +197,9 @@ public final class StoreStatisticNames {
   public static final String STORE_IO_RETRY
       = "store_io_retry";
 
+  public static final String STORE_IO_RATE_LIMITED_DURATION
+      = "store_io_rate_limited_duration";
+
   /**
    * A store's equivalent of a paged LIST request was initiated: {@value}.
    */

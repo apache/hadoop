@@ -543,6 +543,10 @@ public enum Statistic {
       "retried requests made of the remote store",
       TYPE_COUNTER),
 
+  STORE_IO_RATE_LIMITED(StoreStatisticNames.STORE_IO_RATE_LIMITED_DURATION,
+      "Duration of rate limited operations",
+      TYPE_DURATION),
+
   STORE_IO_THROTTLED(
       StoreStatisticNames.STORE_IO_THROTTLED,
       "Requests throttled and retried",

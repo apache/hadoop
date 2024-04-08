@@ -75,10 +75,11 @@ public class BulkDeleteOperation extends AbstractStoreOperation implements BulkD
     requireNonNull(paths);
     checkArgument(paths.size() <= pageSize,
         "Number of paths (%d) is larger than the page size (%d)", paths.size(), pageSize);
-
     final StoreContext context = getStoreContext();
     final List<ObjectIdentifier> objects = paths.stream().map(p -> {
       checkArgument(p.isAbsolute(), "Path %s is not absolute", p);
+      checkArgument(validatePathIsUnderParent(p),
+              "Path %s is not under the base path %s", p, basePath);
       final String k = context.pathToKey(p);
       return ObjectIdentifier.builder().key(k).build();
     }).collect(toList());
@@ -96,6 +97,16 @@ public class BulkDeleteOperation extends AbstractStoreOperation implements BulkD
       return outcomeElements;
     }
     return emptyList();
+  }
+
+  private boolean validatePathIsUnderParent(Path p) {
+    while (p.getParent() != null) {
+      if (p.getParent().equals(basePath)) {
+        return true;
+      }
+      p = p.getParent();
+    }
+    return false;
   }
 
   @Override

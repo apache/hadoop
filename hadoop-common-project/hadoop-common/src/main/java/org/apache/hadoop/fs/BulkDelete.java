@@ -52,7 +52,7 @@ public interface BulkDelete extends IOStatisticsSource, Closeable {
 
   /**
    * The maximum number of objects/files to delete in a single request.
-   * @return a number greater than or equal to zero.
+   * @return a number greater than zero.
    */
   int pageSize();
 

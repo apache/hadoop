@@ -52,6 +52,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.Nullable;
 
+import org.apache.hadoop.util.*;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.services.s3.S3AsyncClient;
@@ -166,10 +167,6 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.token.DelegationTokenIssuer;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.util.DurationInfo;
-import org.apache.hadoop.util.LambdaUtils;
-import org.apache.hadoop.util.Lists;
-import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -207,12 +204,8 @@ import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.fs.store.EtagChecksum;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
 import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.util.Progressable;
-import org.apache.hadoop.util.ReflectionUtils;
-import org.apache.hadoop.util.SemaphoredDelegatingExecutor;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
 
@@ -760,6 +753,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       LOG.debug("Using optimized copyFromLocal implementation: {}", optimizedCopyFromLocal);
       s3AccessGrantsEnabled = conf.getBoolean(AWS_S3_ACCESS_GRANTS_ENABLED, false);
 
+      int rateLimitCapacity = intOption(conf, S3A_IO_RATE_LIMIT, DEFAULT_S3A_IO_RATE_LIMIT, 0);
       // now create the store
       store = new S3AStoreBuilder()
           .withS3Client(s3Client)
@@ -770,7 +764,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           .withStatisticsContext(statisticsContext)
           .withStorageStatistics(getStorageStatistics())
           .withReadRateLimiter(unlimitedRate())
-          .withWriteRateLimiter(unlimitedRate())
+          .withWriteRateLimiter(RateLimitingFactory.create(rateLimitCapacity))
           .build();
 
       // The filesystem is now ready to perform operations against

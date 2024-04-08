@@ -23,9 +23,14 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.AccessDeniedException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import org.apache.hadoop.fs.*;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.services.s3.model.MultipartUpload;
 import software.amazon.awssdk.services.sts.model.StsException;
@@ -38,10 +43,6 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.LocatedFileStatus;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.AWSBadRequestException;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
@@ -56,6 +57,7 @@ import org.apache.hadoop.fs.s3a.impl.InstantiationIOException;
 import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool;
 import org.apache.hadoop.fs.s3a.statistics.CommitterStatistics;
 
+import static org.apache.hadoop.fs.contract.AbstractContractBulkDeleteTest.assertSuccessfulBulkDelete;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.Constants.S3EXPRESS_CREATE_SESSION;
@@ -700,6 +702,54 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   public void testPartialDeleteSingleDelete() throws Throwable {
     describe("delete with part of the child tree read only");
     executePartialDelete(createAssumedRoleConfig(), true);
+  }
+
+  @Test
+  public void testBulkDelete() throws Throwable {
+    describe("Bulk delete with part of the child tree read only");
+    executeBulkDelete(createAssumedRoleConfig());
+  }
+
+  private void executeBulkDelete(Configuration assumedRoleConfig) throws Exception {
+    Path destDir = methodPath();
+    Path readOnlyDir = new Path(destDir, "readonlyDir");
+
+    // the full FS
+    S3AFileSystem fs = getFileSystem();
+    FileUtil.bulkDelete(fs, destDir, new ArrayList<>());
+
+    bindRolePolicyStatements(assumedRoleConfig, STATEMENT_ALLOW_KMS_RW,
+        statement(true, S3_ALL_BUCKETS, S3_ALL_OPERATIONS),
+        new Statement(Effects.Deny)
+            .addActions(S3_PATH_WRITE_OPERATIONS)
+            .addResources(directory(readOnlyDir))
+    );
+    roleFS = (S3AFileSystem) destDir.getFileSystem(assumedRoleConfig);
+
+    int range = 10;
+    touchFiles(fs, readOnlyDir, range);
+    touchFiles(roleFS, destDir, range);
+    FileStatus[] fileStatuses = roleFS.listStatus(readOnlyDir);
+    List<Path> pathsToDelete = Arrays.stream(fileStatuses)
+            .map(FileStatus::getPath)
+            .collect(Collectors.toList());
+    // bulk delete in the read only FS should fail.
+    BulkDelete bulkDelete = roleFS.createBulkDelete(readOnlyDir);
+    assertAccessDeniedForEachPath(bulkDelete.bulkDelete(pathsToDelete));
+    BulkDelete bulkDelete2 = roleFS.createBulkDelete(destDir);
+    assertAccessDeniedForEachPath(bulkDelete2.bulkDelete(pathsToDelete));
+    // delete the files in the original FS should succeed.
+    BulkDelete bulkDelete3 = fs.createBulkDelete(readOnlyDir);
+    assertSuccessfulBulkDelete(bulkDelete3.bulkDelete(pathsToDelete));
+    BulkDelete bulkDelete4 = fs.createBulkDelete(destDir);
+    assertSuccessfulBulkDelete(bulkDelete4.bulkDelete(pathsToDelete));
+    // we can write a test for some successful and some failure as well.
+  }
+
+  private void assertAccessDeniedForEachPath(List<Map.Entry<Path, String>> entries) {
+    for (Map.Entry<Path, String> entry : entries) {
+      Assertions.assertThat(entry.getValue()).contains("AccessDenied");
+    }
   }
 
   /**

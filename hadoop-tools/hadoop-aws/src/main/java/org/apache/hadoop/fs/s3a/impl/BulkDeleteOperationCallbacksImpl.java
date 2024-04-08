@@ -98,7 +98,7 @@ public class BulkDeleteOperationCallbacksImpl implements
       return emptyList();
     } else {
       return errors.stream()
-          .map(e -> pair(e.key(), e.message()))
+          .map(e -> pair(e.key(), e.toString()))
           .collect(Collectors.toList());
     }
   }
