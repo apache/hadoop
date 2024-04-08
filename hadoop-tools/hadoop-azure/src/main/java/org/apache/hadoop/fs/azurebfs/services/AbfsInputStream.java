@@ -159,7 +159,9 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     this.tolerateOobAppends = abfsInputStreamContext.isTolerateOobAppends();
     this.eTag = eTag;
     this.fileStatusInformationPresent = StringUtils.isNotEmpty(eTag);
-    this.pretechTriggerOnFirstRead = abfsInputStreamContext.isPrefetchTriggerOnFirstRead();
+    this.pretechTriggerOnFirstRead =
+        abfsInputStreamContext.isPrefetchTriggerOnFirstRead()
+            && fileStatusInformationPresent;
     this.readAheadRange = abfsInputStreamContext.getReadAheadRange();
     this.readAheadEnabled = abfsInputStreamContext.isReadAheadEnabled();
     this.alwaysReadBufferSize

@@ -69,7 +69,7 @@ public class ITestAbfsFileSystemContractOpen extends AbstractContractOpenTest {
       return super.getFileSystem();
     }
     try {
-      AzureBlobFileSystem fs = (AzureBlobFileSystem) binding.getFileSystem();
+      AzureBlobFileSystem fs = (AzureBlobFileSystem) getContract().getTestFileSystem();
       AzureBlobFileSystem spiedFs = Mockito.spy(fs);
       Mockito.doAnswer(answer -> {
         Path path = (Path) answer.getArgument(0);
@@ -107,6 +107,7 @@ public class ITestAbfsFileSystemContractOpen extends AbstractContractOpenTest {
         }
       }).when(spiedFs).openFile(Mockito.any(Path.class));
 
+      Mockito.doNothing().when(spiedFs).close();
       return spiedFs;
     } catch (Exception ex) {
       throw new RuntimeException(ex);

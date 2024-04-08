@@ -922,8 +922,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             .withEncryptionAdapter(contextEncryptionAdapter)
             .withAbfsBackRef(fsBackRef)
             .withPrefetchTriggerOnFirstRead(
-                abfsConfiguration.getPrefetchReadaheadOnFirstRead() &&
-                !abfsConfiguration.getHeadOptimizationForInputStream())
+                abfsConfiguration.getPrefetchReadaheadOnFirstRead())
             .build();
   }
 
