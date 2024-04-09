@@ -101,7 +101,7 @@ public abstract class ManifestStoreOperations implements Closeable {
    * Forward to {@code delete(Path, true)}
    * unless overridden.
    * <p>
-   * If it returns without an error: there is nothing at
+   * If it returns without an error: there is no file at
    * the end of the path.
    * @param path path
    * @return outcome
@@ -122,8 +122,10 @@ public abstract class ManifestStoreOperations implements Closeable {
    * @return outcome
    * @throws IOException failure.
    */
-  public abstract boolean rmdir(Path path)
-      throws IOException;
+  public boolean rmdir(Path path)
+      throws IOException {
+    return delete(path, true);
+  }
 
   /**
    * Forward to {@link FileSystem#mkdirs(Path)}.

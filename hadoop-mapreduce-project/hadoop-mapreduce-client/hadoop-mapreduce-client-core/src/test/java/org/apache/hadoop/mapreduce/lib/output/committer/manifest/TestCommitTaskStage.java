@@ -19,13 +19,18 @@
 package org.apache.hadoop.mapreduce.lib.output.committer.manifest;
 
 import java.io.FileNotFoundException;
+import java.net.SocketTimeoutException;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestSuccessData;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestStoreOperations;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.UnreliableManifestStoreOperations;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.CleanupJobStage;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.CommitJobStage;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.CommitTaskStage;
@@ -34,6 +39,10 @@ import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.SetupTas
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.StageConfig;
 
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_CLEANUP;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport.manifestPathForTask;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport.manifestTempPathForTaskAttempt;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.UnreliableManifestStoreOperations.E_TIMEOUT;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.UnreliableManifestStoreOperations.generatedErrorMessage;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -121,6 +130,55 @@ public class TestCommitTaskStage extends AbstractManifestCommitterTest {
     Assertions.assertThat(successData.getFilenames())
         .as("Filenames in _SUCCESS")
         .isEmpty();
+  }
+
+
+  @Test
+  public void testManifestSaveFailures() throws Throwable {
+
+    final ManifestStoreOperations wrappedOperations = getStoreOperations();
+    UnreliableManifestStoreOperations failures =
+        new UnreliableManifestStoreOperations(wrappedOperations);
+    setStoreOperations(failures);
+
+    String tid = String.format("task_%03d", 1);
+    String taskAttemptId = String.format("%s_%02d",
+        tid, 1);
+
+    StageConfig stageConfig = createTaskStageConfig(JOB1, tid,
+        taskAttemptId);
+
+    final SetupTaskStage setupTaskStage = new SetupTaskStage(stageConfig);
+    setupTaskStage.apply("setup");
+    final Path manifestDir = stageConfig.getTaskManifestDir();
+    // final manifest file is by task ID
+    Path manifestFile = manifestPathForTask(manifestDir,
+        stageConfig.getTaskId());
+    Path manifestTempFile = manifestTempPathForTaskAttempt(manifestDir,
+        stageConfig.getTaskAttemptId());
+
+    // manifest save will fail but recover before the task gives up.
+    failures.addSaveToFail(manifestTempFile);
+
+    // will fail because of recovery
+    failures.setFailureLimit(InternalConstants.SAVE_RETRY_COUNT + 1);
+    intercept(PathIOException.class, generatedErrorMessage("save"), () ->
+        new CommitTaskStage(stageConfig).apply(null));
+
+    // will succeed because of recovery
+    failures.setFailureLimit(InternalConstants.SAVE_RETRY_COUNT - 1);
+    new CommitTaskStage(stageConfig).apply(null);
+
+    // now do it for the renames, which will fail after the rename
+    failures.reset();
+    failures.addTimeOutBeforeRename(manifestTempFile);
+    failures.setFailureLimit(InternalConstants.SAVE_RETRY_COUNT + 1);
+    intercept(SocketTimeoutException.class, E_TIMEOUT, () ->
+        new CommitTaskStage(stageConfig).apply(null));
+    // will succeed because of recovery
+    failures.setFailureLimit(InternalConstants.SAVE_RETRY_COUNT - 1);
+    new CommitTaskStage(stageConfig).apply(null);
+
   }
 
 }

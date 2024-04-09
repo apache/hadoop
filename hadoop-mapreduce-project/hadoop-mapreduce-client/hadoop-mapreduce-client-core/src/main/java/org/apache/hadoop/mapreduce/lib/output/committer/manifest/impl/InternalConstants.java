@@ -130,8 +130,15 @@ public final class InternalConstants {
       ImmutableSet.of("s3a", "wasb");
 
   /**
-   * How many attempts to commit the task by save and rename
+   * How many attempts to save a manifest by save and rename
    * before giving up: {@value}.
    */
-  public static final int TASK_COMMIT_RETRY_COUNT = 3;
+  public static final int SAVE_RETRY_COUNT = 5;
+
+  /**
+   * Interval in milliseconds between save retries.
+   * Value {@value} milliseconds.
+   */
+  public static final int SAVE_SLEEP_INTERVAL = 500;
+
 }

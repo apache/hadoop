@@ -771,6 +771,9 @@ public abstract class AbstractManifestCommitterTest
   /**
    * Create the stage config for job or task but don't finalize it.
    * Uses {@link #TASK_IDS} for job/task ID.
+   * The store operations is extracted from
+   * {@link #getStoreOperations()}, which is how fault injection
+   * can be set up.
    * @param jobAttemptNumber job attempt number
    * @param taskIndex task attempt index; -1 for job attempt only.
    * @param taskAttemptNumber task attempt number

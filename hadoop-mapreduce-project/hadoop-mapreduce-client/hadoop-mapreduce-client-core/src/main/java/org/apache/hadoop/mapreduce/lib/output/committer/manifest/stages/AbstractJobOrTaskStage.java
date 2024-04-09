@@ -62,7 +62,8 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_RENAME_FILE;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_SAVE_TASK_MANIFEST;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.AuditingIntegration.enterStageWorker;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.TASK_COMMIT_RETRY_COUNT;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.SAVE_RETRY_COUNT;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.SAVE_SLEEP_INTERVAL;
 
 /**
  * A Stage in Task/Job Commit.
@@ -616,13 +617,11 @@ public abstract class AbstractJobOrTaskStage<IN, OUT>
       final Path tempPath,
       final Path finalPath) throws IOException {
     boolean success = false;
-    IOException lastException = null;
-    int attempts = 0;
-    do {
-      attempts++;
+    int failures = 0;
+    while (!success) {
       try {
         LOG.trace("{}: attempt {} save('{}, {}, {}')",
-            getName(), attempts, manifestData, tempPath, finalPath);
+            getName(), failures, manifestData, tempPath, finalPath);
 
         trackDurationOfInvocation(getIOStatistics(), OP_SAVE_TASK_MANIFEST, () ->
             operations.save(manifestData, tempPath, true));
@@ -632,13 +631,18 @@ public abstract class AbstractJobOrTaskStage<IN, OUT>
       } catch (IOException e) {
         LOG.warn("Failed to save and commit file {} renamed to {}",
             tempPath, finalPath, e);
-        lastException = e;
+        failures++;
+        if (failures >= SAVE_RETRY_COUNT) {
+          // too many failures: escalate.
+          throw e;
+        }
+        // else, sleep
+        try {
+          Thread.sleep(SAVE_SLEEP_INTERVAL);
+        } catch (InterruptedException ie) {
+          Thread.currentThread().interrupt();
+        }
       }
-    } while (!success && attempts <= TASK_COMMIT_RETRY_COUNT);
-    if (!success) {
-      // this is only reached after at least one exception was raised,
-      // therefore lastException is non-null.
-      throw lastException;
     }
 
   }

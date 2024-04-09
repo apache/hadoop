@@ -21,8 +21,10 @@ package org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.net.SocketTimeoutException;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,8 +49,7 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.Int
  * This is for testing. It could be implemented via
  * Mockito 2 spy code but is not so that:
  * 1. It can be backported to Hadoop versions using Mockito 1.x.
- * 2. It can be extended to use in production. This is why it is in
- * the production module -to allow for downstream tests to adopt it.
+ * 2. It can be extended to use in production.
  * 3. You can actually debug what's going on.
  */
 @InterfaceAudience.Private
@@ -68,6 +69,12 @@ public class UnreliableManifestStoreOperations extends ManifestStoreOperations {
    * Text to use in simulated failure exceptions.
    */
   public static final String SIMULATED_FAILURE = "Simulated failure";
+
+  /**
+   * Default failure limit.
+   * Set to a large enough value that most tests don't hit it.
+   */
+  private static final int DEFAULT_FAILURE_LIMIT = Integer.MAX_VALUE;
 
   /**
    * Underlying store operations to wrap.
@@ -111,6 +118,16 @@ public class UnreliableManifestStoreOperations extends ManifestStoreOperations {
   private final Set<Path> renameDestDirsToFail = new HashSet<>();
 
   /**
+   * Paths of rename operations to time out before the rename request is issued.
+   */
+  private final Set<Path> renamePathsToTimeoutBeforeRename = new HashSet<>();
+
+  /**
+   * Paths of rename operations to time out after the rename request has succeeded.
+   */
+  private final Set<Path> renamePathsToTimeoutAfterRename = new HashSet<>();
+
+  /**
    * Path of save() to fail.
    */
   private final Set<Path> saveToFail = new HashSet<>();
@@ -126,6 +143,11 @@ public class UnreliableManifestStoreOperations extends ManifestStoreOperations {
   private boolean renameToFailWithException = true;
 
   /**
+   * How many failures before an operation is passed through.
+   */
+  private final AtomicInteger failureLimit = new AtomicInteger(DEFAULT_FAILURE_LIMIT);
+  
+  /**
    * Constructor.
    * @param wrappedOperations operations to wrap.
    */
@@ -140,9 +162,13 @@ public class UnreliableManifestStoreOperations extends ManifestStoreOperations {
   public void reset() {
     deletePathsToFail.clear();
     deletePathsToTimeOut.clear();
+    failureLimit.set(DEFAULT_FAILURE_LIMIT);
     pathNotFound.clear();
     renameSourceFilesToFail.clear();
     renameDestDirsToFail.clear();
+    renamePathsToTimeoutBeforeRename.clear();
+    renamePathsToTimeoutAfterRename.clear();
+    saveToFail.clear();
     timeoutSleepTimeMillis = 0;
   }
 
@@ -220,6 +246,21 @@ public class UnreliableManifestStoreOperations extends ManifestStoreOperations {
   }
 
   /**
+   * Add a source path to timeout before the rename.
+   * @param path path to add.
+   */
+  public void addTimeOutBeforeRename(Path path) {
+    renamePathsToTimeoutBeforeRename.add(requireNonNull(path));
+  }
+  /**
+   * Add a source path to timeout after the rename.
+   * @param path path to add.
+   */
+  public void addTimeOutAfterRename(Path path) {
+    renamePathsToTimeoutAfterRename.add(requireNonNull(path));
+  }
+
+  /**
    * Add a path to the list of paths where save will fail.
    * @param path path to add.
    */
@@ -228,7 +269,16 @@ public class UnreliableManifestStoreOperations extends ManifestStoreOperations {
   }
 
   /**
-   * Raise an exception if the path is in the set of target paths.
+   * Set the failure limit.
+   * @param limit limit
+   */
+  public void setFailureLimit(int limit) {
+    failureLimit.set(limit);
+  }
+  
+  /**
+   * Raise an exception if the path is in the set of target paths
+   * and the failure limit is not exceeded.
    * @param operation operation which failed.
    * @param path path to check
    * @param paths paths to probe for {@code path} being in.
@@ -236,11 +286,47 @@ public class UnreliableManifestStoreOperations extends ManifestStoreOperations {
    */
   private void maybeRaiseIOE(String operation, Path path, Set<Path> paths)
       throws IOException {
+    if (paths.contains(path) && decrementAndCheckFailureLimit()) {
+      // hand off to the inner check.
+      maybeRaiseIOENoFailureCheck(operation, path, paths);
+    }
+  }
+
+  /**
+   * Raise an exception if the path is in the set of target paths.
+   * No checks on failure count are performed here.
+   * @param operation operation which failed.
+   * @param path path to check
+   * @param paths paths to probe for {@code path} being in.
+   * @throws IOException simulated failure
+   */
+  private void maybeRaiseIOENoFailureCheck(String operation, Path path, Set<Path> paths)
+      throws IOException {
     if (paths.contains(path)) {
       LOG.info("Simulating failure of {} with {}", operation, path);
       throw new PathIOException(path.toString(),
-          SIMULATED_FAILURE + " of " + operation);
+          generatedErrorMessage(operation));
     }
+  }
+
+  /**
+   * Given an operation, return the error message which is used for the simulated
+   * {@link PathIOException}.
+   * @param operation operation name
+   * @return error text
+   */
+  public static String generatedErrorMessage(final String operation) {
+    return SIMULATED_FAILURE + " of " + operation;
+  }
+
+  /**
+   * Check if the failure limit is exceeded.
+   * Call this after any other trigger checks, as it decrements the counter.
+   *
+   * @return true if the limit is not exceeded.
+   */
+  private boolean decrementAndCheckFailureLimit() {
+    return failureLimit.decrementAndGet() > 0;
   }
 
   /**
@@ -249,7 +335,7 @@ public class UnreliableManifestStoreOperations extends ManifestStoreOperations {
    * @throws FileNotFoundException if configured to fail.
    */
   private void verifyExists(Path path) throws FileNotFoundException {
-    if (pathNotFound.contains(path)) {
+    if (pathNotFound.contains(path) && decrementAndCheckFailureLimit()) {
       throw new FileNotFoundException(path.toString());
     }
   }
@@ -260,11 +346,12 @@ public class UnreliableManifestStoreOperations extends ManifestStoreOperations {
    * @param operation operation which failed.
    * @param path path to check
    * @param paths paths to probe for {@code path} being in.
-   * @throws IOException simulated timeout
+   * @throws SocketTimeoutException simulated timeout
+   * @throws InterruptedIOException if the sleep is interrupted.
    */
   private void maybeTimeout(String operation, Path path, Set<Path> paths)
-      throws IOException {
-    if (paths.contains(path)) {
+      throws SocketTimeoutException, InterruptedIOException  {
+    if (paths.contains(path) && decrementAndCheckFailureLimit()) {
       LOG.info("Simulating timeout of {} with {}", operation, path);
       try {
         if (timeoutSleepTimeMillis > 0) {
@@ -273,14 +360,16 @@ public class UnreliableManifestStoreOperations extends ManifestStoreOperations {
       } catch (InterruptedException e) {
         throw new InterruptedIOException(e.toString());
       }
-      throw new PathIOException(path.toString(),
-          "ErrorCode=" + OPERATION_TIMED_OUT
+      throw new SocketTimeoutException(
+          path.toString() + ": " + operation
+              + " ErrorCode=" + OPERATION_TIMED_OUT
               + " ErrorMessage=" + E_TIMEOUT);
     }
   }
 
   @Override
   public FileStatus getFileStatus(final Path path) throws IOException {
+    maybeTimeout("getFileStatus()", path, pathNotFound);
     verifyExists(path);
     return wrappedOperations.getFileStatus(path);
   }
@@ -304,17 +393,22 @@ public class UnreliableManifestStoreOperations extends ManifestStoreOperations {
   public boolean renameFile(final Path source, final Path dest)
       throws IOException {
     String op = "rename";
-    if (renameToFailWithException) {
-      maybeRaiseIOE(op, source, renameSourceFilesToFail);
-      maybeRaiseIOE(op, dest.getParent(), renameDestDirsToFail);
+    maybeTimeout(op, source, renamePathsToTimeoutBeforeRename);
+    if (renameToFailWithException && decrementAndCheckFailureLimit()) {
+      maybeRaiseIOENoFailureCheck(op, source, renameSourceFilesToFail);
+      maybeRaiseIOENoFailureCheck(op, dest.getParent(), renameDestDirsToFail);
     } else {
-      if (renameSourceFilesToFail.contains(source)
-          || renameDestDirsToFail.contains(dest.getParent())) {
+      // logic to determine whether rename should just return false.
+      if ((renameSourceFilesToFail.contains(source)
+          || renameDestDirsToFail.contains(dest.getParent())
+          && decrementAndCheckFailureLimit())) {
         LOG.info("Failing rename({}, {})", source, dest);
         return false;
       }
     }
-    return wrappedOperations.renameFile(source, dest);
+    final boolean b = wrappedOperations.renameFile(source, dest);
+    maybeTimeout(op, source, renamePathsToTimeoutAfterRename);
+    return b;
   }
 
   @Override
