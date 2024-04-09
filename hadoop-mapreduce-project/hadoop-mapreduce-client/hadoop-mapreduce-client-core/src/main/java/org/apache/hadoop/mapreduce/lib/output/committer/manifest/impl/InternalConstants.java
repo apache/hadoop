@@ -73,6 +73,7 @@ public final class InternalConstants {
       OP_CREATE_ONE_DIRECTORY,
       OP_DIRECTORY_SCAN,
       OP_DELETE,
+      OP_DELETE_DIR,
       OP_DELETE_FILE_UNDER_DESTINATION,
       OP_GET_FILE_STATUS,
       OP_IS_DIRECTORY,
@@ -127,4 +128,10 @@ public final class InternalConstants {
   /** Schemas of filesystems we know to not work with this committer. */
   public static final Set<String> UNSUPPORTED_FS_SCHEMAS =
       ImmutableSet.of("s3a", "wasb");
+
+  /**
+   * How many attempts to commit the task by save and rename
+   * before giving up: {@value}.
+   */
+  public static final int TASK_COMMIT_RETRY_COUNT = 3;
 }

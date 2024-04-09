@@ -41,6 +41,7 @@ import static org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter.FILEOUT
 import static org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter.FILEOUTPUTCOMMITTER_CLEANUP_SKIPPED_DEFAULT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_CLEANUP_PARALLEL_DELETE;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_CLEANUP_PARALLEL_DELETE_DIRS_DEFAULT;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_DELETE_DIR;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_JOB_CLEANUP;
 
 /**
@@ -246,21 +247,22 @@ public class CleanupJobStage extends
       throws IOException {
 
     deleteDirCount.incrementAndGet();
-    IOException ex = deleteDir(dir, true);
-    if (ex != null) {
-      deleteFailure(ex);
-    }
-    return ex;
+    return noteAnyDeleteFailure(
+        deleteDirSuppressingExceptions(dir, OP_DELETE_DIR));
   }
 
   /**
-   * Note a failure.
+   * Note a failure if the exception is not null.
    * @param ex exception
+   * @return the exception
    */
-  private synchronized void deleteFailure(IOException ex) {
-    // excaption: add the count
-    deleteFailureCount.incrementAndGet();
-    lastDeleteException = ex;
+  private synchronized IOException noteAnyDeleteFailure(IOException ex) {
+    if (ex != null) {
+      // exception: add the count
+      deleteFailureCount.incrementAndGet();
+      lastDeleteException = ex;
+    }
+    return ex;
   }
 
   /**

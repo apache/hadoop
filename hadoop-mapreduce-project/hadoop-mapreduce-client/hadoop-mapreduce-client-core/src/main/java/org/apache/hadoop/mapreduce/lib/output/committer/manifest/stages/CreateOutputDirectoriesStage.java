@@ -105,7 +105,7 @@ public class CreateOutputDirectoriesStage extends
       throws IOException {
 
     final List<Path> directories = createAllDirectories(manifestDirs);
-    LOG.debug("{}: Created {} directories", getName(), directories.size());
+    LOG.info("{}: Created {} directories", getName(), directories.size());
     return new Result(new HashSet<>(directories), dirMap);
   }
 
@@ -163,8 +163,9 @@ public class CreateOutputDirectoriesStage extends
 
     // Now the real work.
     final int createCount = leaves.size();
-    LOG.info("Preparing {} directory/directories; {} parent dirs implicitly created",
-        createCount, parents.size());
+    LOG.info("Preparing {} directory/directories; {} parent dirs implicitly created."
+            + " Files deleted: {}",
+        createCount, parents.size(), filesToDelete.size());
 
     // now probe for and create the leaf dirs, which are those at the
     // bottom level
@@ -232,7 +233,7 @@ public class CreateOutputDirectoriesStage extends
     // report progress back
     progress();
     LOG.info("{}: Deleting file {}", getName(), dir);
-    delete(dir, false, OP_DELETE);
+    deleteFile(dir, OP_DELETE);
     // note its final state
     addToDirectoryMap(dir, DirMapState.fileNowDeleted);
   }
@@ -323,7 +324,7 @@ public class CreateOutputDirectoriesStage extends
         // is bad: delete a file
         LOG.info("{}: Deleting file where a directory should go: {}",
             getName(), st);
-        delete(path, false, OP_DELETE_FILE_UNDER_DESTINATION);
+        deleteFile(path, OP_DELETE_FILE_UNDER_DESTINATION);
       } else {
         // is good.
         LOG.warn("{}: Even though mkdirs({}) failed, there is now a directory there",

@@ -259,6 +259,9 @@ public final class ManifestCommitterStatisticNames {
   public static final String OP_STAGE_TASK_SCAN_DIRECTORY
       = "task_stage_scan_directory";
 
+  /** Delete a directory: {@value}. */
+  public static final String OP_DELETE_DIR = "op_delete_dir";
+
   private ManifestCommitterStatisticNames() {
   }
 }

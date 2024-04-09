@@ -109,6 +109,11 @@ public class ManifestStoreOperationsThroughFileSystem extends ManifestStoreOpera
   }
 
   @Override
+  public boolean rmdir(final Path path) throws IOException {
+    return fileSystem.delete(path, true);
+  }
+
+  @Override
   public boolean mkdirs(Path path)
       throws IOException {
     return fileSystem.mkdirs(path);

@@ -56,11 +56,13 @@ import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDura
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.MANIFEST_SUFFIX;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_COMMIT_FILE_RENAME;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_COMMIT_FILE_RENAME_RECOVERED;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_DELETE_DIR;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_LOAD_MANIFEST;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_MSYNC;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_RENAME_FILE;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_SAVE_TASK_MANIFEST;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.AuditingIntegration.enterStageWorker;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.TASK_COMMIT_RETRY_COUNT;
 
 /**
  * A Stage in Task/Job Commit.
@@ -445,9 +447,29 @@ public abstract class AbstractJobOrTaskStage<IN, OUT>
       final boolean recursive,
       final String statistic)
       throws IOException {
-    return trackDuration(getIOStatistics(), statistic, () -> {
-      return operations.delete(path, recursive);
-    });
+    if (recursive) {
+      return deleteDir(path, statistic);
+    } else {
+      return deleteFile(path, statistic);
+    }
+  }
+
+  /**
+   * Delete a file at a path.
+   * <p>
+   * If it returns without an error: there is nothing at
+   * the end of the path.
+   * @param path path
+   * @param statistic statistic to update
+   * @return outcome.
+   * @throws IOException IO Failure.
+   */
+  protected boolean deleteFile(
+      final Path path,
+      final String statistic)
+      throws IOException {
+    return trackDuration(getIOStatistics(), statistic, () ->
+        operations.deleteFile(path));
   }
 
   /**
@@ -582,19 +604,43 @@ public abstract class AbstractJobOrTaskStage<IN, OUT>
    * Save a task manifest or summary. This will be done by
    * writing to a temp path and then renaming.
    * If the destination path exists: Delete it.
+   * This will retry so that a rename failure from abfs load or IO errors
+   * will not fail the task.
    * @param manifestData the manifest/success file
    * @param tempPath temp path for the initial save
    * @param finalPath final path for rename.
-   * @throws IOException failure to load/parse
+   * @throws IOException failure to rename after retries.
    */
   @SuppressWarnings("unchecked")
   protected final <T extends AbstractManifestData> void save(T manifestData,
       final Path tempPath,
       final Path finalPath) throws IOException {
-    LOG.trace("{}: save('{}, {}, {}')", getName(), manifestData, tempPath, finalPath);
-    trackDurationOfInvocation(getIOStatistics(), OP_SAVE_TASK_MANIFEST, () ->
-        operations.save(manifestData, tempPath, true));
-    renameFile(tempPath, finalPath);
+    boolean success = false;
+    IOException lastException = null;
+    int attempts = 0;
+    do {
+      attempts++;
+      try {
+        LOG.trace("{}: attempt {} save('{}, {}, {}')",
+            getName(), attempts, manifestData, tempPath, finalPath);
+
+        trackDurationOfInvocation(getIOStatistics(), OP_SAVE_TASK_MANIFEST, () ->
+            operations.save(manifestData, tempPath, true));
+        renameFile(tempPath, finalPath);
+        // success flag is only set after the rename.
+        success = true;
+      } catch (IOException e) {
+        LOG.warn("Failed to save and commit file {} renamed to {}",
+            tempPath, finalPath, e);
+        lastException = e;
+      }
+    } while (!success && attempts <= TASK_COMMIT_RETRY_COUNT);
+    if (!success) {
+      // this is only reached after at least one exception was raised,
+      // therefore lastException is non-null.
+      throw lastException;
+    }
+
   }
 
   /**
@@ -697,11 +743,14 @@ public abstract class AbstractJobOrTaskStage<IN, OUT>
   private void maybeDeleteDest(final boolean deleteDest, final Path dest) throws IOException {
 
     if (deleteDest && getFileStatusOrNull(dest) != null) {
-
-      boolean deleted = delete(dest, true);
-      // log the outcome in case of emergency diagnostics traces
-      // being needed.
-      LOG.debug("{}: delete('{}') returned {}'", getName(), dest, deleted);
+      final FileStatus st = getFileStatusOrNull(dest);
+      if (st != null) {
+        if (st.isDirectory()) {
+          deleteDir(dest, OP_DELETE_DIR);
+        } else {
+          deleteFile(dest, OP_DELETE);
+        }
+      }
     }
   }
 
@@ -915,26 +964,36 @@ public abstract class AbstractJobOrTaskStage<IN, OUT>
   }
 
   /**
-   * Delete a directory, possibly suppressing exceptions.
+   * Delete a directory.
    * @param dir directory.
-   * @param suppressExceptions should exceptions be suppressed?
+   * @param statistic statistic to use
+   * @return true if the path is no longer present.
    * @throws IOException exceptions raised in delete if not suppressed.
-   * @return any exception caught and suppressed
    */
-  protected IOException deleteDir(
+  protected boolean deleteDir(
       final Path dir,
-      final Boolean suppressExceptions)
+      final String statistic)
+      throws IOException {
+    return trackDuration(getIOStatistics(), statistic, () ->
+        operations.rmdir(dir));
+  }
+
+  /**
+   * Delete a directory, suprressing exceptions.
+   * @param dir directory.
+   * @param statistic statistic to use
+   * @return any exception caught.
+   */
+  protected IOException deleteDirSuppressingExceptions(
+      final Path dir,
+      final String statistic)
       throws IOException {
     try {
-      delete(dir, true);
+      deleteDir(dir, statistic);
       return null;
     } catch (IOException ex) {
       LOG.info("Error deleting {}: {}", dir, ex.toString());
-      if (!suppressExceptions) {
-        throw ex;
-      } else {
-        return ex;
-      }
+      return ex;
     }
   }
 
