@@ -402,8 +402,7 @@ public class DelegationTokenSecretManager
       // the secret manager.
       // TODO: delegation token is a very independent system, so
       // it's proper to use an seperated r/w lock instead of fs lock
-      // for getting/renewing/expiring/canceling token or updating
-      // master key.
+      // for getting/renewing/expiring/canceling token or updating master key.
       namesystem.readLockInterruptibly(FSNamesystemLockMode.FS);
       try {
         // this monitor isn't necessary if stopped while holding write lock
