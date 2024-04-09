@@ -95,9 +95,10 @@ class PendingDataNodeMessages {
   
   void enqueueReportedBlock(DatanodeStorageInfo storageInfo, Block block,
       ReplicaState reportedState) {
-    if (storageInfo == null || block == null || reportedState == null) {
+    if (storageInfo == null || block == null) {
       return;
     }
+    block = new Block(block);
     long genStamp = block.getGenerationStamp();
     Queue<ReportedBlockInfo> queue = null;
     if (BlockIdManager.isStripedBlockID(block.getBlockId())) {
@@ -117,7 +118,7 @@ class PendingDataNodeMessages {
         rbi.block.getGenerationStamp() <= genStamp)) {
       count -= (size - queue.size());
     }
-    queue.add(new ReportedBlockInfo(storageInfo, new Block(block), reportedState));
+    queue.add(new ReportedBlockInfo(storageInfo, block, reportedState));
     count++;
   }
   
