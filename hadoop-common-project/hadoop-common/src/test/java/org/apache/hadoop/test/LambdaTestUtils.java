@@ -18,12 +18,12 @@
 
 package org.apache.hadoop.test;
 
-import org.apache.hadoop.util.Preconditions;
 import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.Time;
 
 import java.io.IOException;
@@ -36,6 +36,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
 /**
  * Class containing methods and associated classes to make the most of Lambda
@@ -740,7 +741,6 @@ public final class LambdaTestUtils {
    * Invoke a callable; wrap all checked exceptions with an
    * AssertionError.
    * @param closure closure to execute
-   * @return the value of the closure
    * @throws AssertionError if the operation raised an IOE or
    * other checked exception.
    */
@@ -923,17 +923,8 @@ public final class LambdaTestUtils {
   }
 
   private static String toString(Collection<String> strings) {
-    StringBuilder sb = new StringBuilder();
-    sb.append('[');
-    int pos = 0;
-    for (String s : strings) {
-      if (pos++ > 0) {
-        sb.append(", ");
-      }
-      sb.append(s);
-    }
-    sb.append(']');
-    return sb.toString();
+    return strings.stream()
+        .collect(Collectors.joining(",", "[", "]"));
   }
 
   /**
