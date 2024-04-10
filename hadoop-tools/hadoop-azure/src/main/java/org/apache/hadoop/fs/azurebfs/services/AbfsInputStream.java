@@ -346,7 +346,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   private boolean shouldReadLastBlock(int lengthToRead) {
     if (!fileStatusInformationPresent) {
-      return this.fCursor > 0 && lengthToRead <= FOOTER_SIZE && this.firstRead
+      return this.fCursor >= 0 && lengthToRead <= FOOTER_SIZE && this.firstRead
           && this.context.optimizeFooterRead();
     }
 
@@ -447,7 +447,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
       long lastBlockStart = max(0, (fCursor + len) - footerReadSize);
       bCursor = (int) (fCursor - lastBlockStart);
-      return optimisedRead(b, off, len, lastBlockStart, footerReadSize);
+      return optimisedRead(b, off, len, lastBlockStart, min(fCursor + len, footerReadSize));
     }
     long lastBlockStart = max(0, getContentLength() - footerReadSize);
     bCursor = (int) (fCursor - lastBlockStart);
