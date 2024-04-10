@@ -469,6 +469,8 @@ public class TestLeaseManager {
     when(fsn.hasWriteLock()).thenReturn(true);
     when(fsn.hasReadLock(FSNamesystemLockMode.FS)).thenReturn(true);
     when(fsn.hasWriteLock(FSNamesystemLockMode.FS)).thenReturn(true);
+    when(fsn.hasReadLock(FSNamesystemLockMode.GLOBAL)).thenReturn(true);
+    when(fsn.hasWriteLock(FSNamesystemLockMode.GLOBAL)).thenReturn(true);
     when(fsn.getFSDirectory()).thenReturn(dir);
     when(fsn.getMaxLockHoldToReleaseLeaseMs()).thenReturn(maxLockHoldToReleaseLeaseMs);
     return fsn;

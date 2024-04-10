@@ -176,7 +176,7 @@ final class FSDirTruncateOp {
       final long newLength, final long mtime, final Block truncateBlock)
       throws UnresolvedLinkException, QuotaExceededException,
       SnapshotAccessControlException, IOException {
-    assert fsn.hasWriteLock();
+    assert fsn.hasWriteLock(FSNamesystemLockMode.GLOBAL);
 
     FSDirectory fsd = fsn.getFSDirectory();
     INodeFile file = iip.getLastINode().asFile();
