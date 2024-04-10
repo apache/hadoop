@@ -103,10 +103,8 @@ class ReplicaMap {
    */
   ReplicaInfo get(String bpid, long blockId) {
     checkBlockPool(bpid);
-    try (AutoCloseDataSetLock l = lockManager.readLock(LockLevel.BLOCK_POOl, bpid)) {
-      LightWeightResizableGSet<Block, ReplicaInfo> m = map.get(bpid);
-      return m != null ? m.get(new Block(blockId)) : null;
-    }
+    LightWeightResizableGSet<Block, ReplicaInfo> m = map.get(bpid);
+    return m != null ? m.get(new Block(blockId)) : null;
   }
 
   /**
@@ -120,15 +118,13 @@ class ReplicaMap {
   ReplicaInfo add(String bpid, ReplicaInfo replicaInfo) {
     checkBlockPool(bpid);
     checkBlock(replicaInfo);
-    try (AutoCloseDataSetLock l = lockManager.readLock(LockLevel.BLOCK_POOl, bpid)) {
-      LightWeightResizableGSet<Block, ReplicaInfo> m = map.get(bpid);
-      if (m == null) {
-        // Add an entry for block pool if it does not exist already
-        map.putIfAbsent(bpid, new LightWeightResizableGSet<Block, ReplicaInfo>());
-        m = map.get(bpid);
-      }
-      return  m.put(replicaInfo);
+    LightWeightResizableGSet<Block, ReplicaInfo> m = map.get(bpid);
+    if (m == null) {
+      // Add an entry for block pool if it does not exist already
+      map.putIfAbsent(bpid, new LightWeightResizableGSet<Block, ReplicaInfo>());
+      m = map.get(bpid);
     }
+    return m.put(replicaInfo);
   }
 
   /**
@@ -138,21 +134,19 @@ class ReplicaMap {
   ReplicaInfo addAndGet(String bpid, ReplicaInfo replicaInfo) {
     checkBlockPool(bpid);
     checkBlock(replicaInfo);
-    try (AutoCloseDataSetLock l = lockManager.readLock(LockLevel.BLOCK_POOl, bpid)) {
-      LightWeightResizableGSet<Block, ReplicaInfo> m = map.get(bpid);
-      if (m == null) {
-        // Add an entry for block pool if it does not exist already
-        map.putIfAbsent(bpid, new LightWeightResizableGSet<Block, ReplicaInfo>());
-        m = map.get(bpid);
-      }
-      ReplicaInfo oldReplicaInfo = m.get(replicaInfo);
-      if (oldReplicaInfo != null) {
-        return oldReplicaInfo;
-      } else {
-        m.put(replicaInfo);
-      }
-      return replicaInfo;
+    LightWeightResizableGSet<Block, ReplicaInfo> m = map.get(bpid);
+    if (m == null) {
+      // Add an entry for block pool if it does not exist already
+      map.putIfAbsent(bpid, new LightWeightResizableGSet<Block, ReplicaInfo>());
+      m = map.get(bpid);
     }
+    ReplicaInfo oldReplicaInfo = m.get(replicaInfo);
+    if (oldReplicaInfo != null) {
+      return oldReplicaInfo;
+    } else {
+      m.put(replicaInfo);
+    }
+    return replicaInfo;
   }
 
   /**
@@ -181,7 +175,7 @@ class ReplicaMap {
         if (curSet == null && !replicaSet.isEmpty()) {
           // Add an entry for block pool if it does not exist already
           curSet = new LightWeightResizableGSet<>();
-          map.put(bp, curSet);
+          map.putIfAbsent(bp, curSet);
         }
         for (ReplicaInfo replicaInfo : replicaSet) {
           checkBlock(replicaInfo);
@@ -202,17 +196,14 @@ class ReplicaMap {
   ReplicaInfo remove(String bpid, Block block) {
     checkBlockPool(bpid);
     checkBlock(block);
-    try (AutoCloseDataSetLock l = lockManager.readLock(LockLevel.BLOCK_POOl, bpid)) {
-      LightWeightResizableGSet<Block, ReplicaInfo> m = map.get(bpid);
-      if (m != null) {
-        ReplicaInfo replicaInfo = m.get(block);
-        if (replicaInfo != null &&
-            block.getGenerationStamp() == replicaInfo.getGenerationStamp()) {
-          return m.remove(block);
-        }
+    LightWeightResizableGSet<Block, ReplicaInfo> m = map.get(bpid);
+    if (m != null) {
+      ReplicaInfo replicaInfo = m.get(block);
+      if (replicaInfo != null &&
+          block.getGenerationStamp() == replicaInfo.getGenerationStamp()) {
+        return m.remove(block);
       }
     }
-    
     return null;
   }
   
@@ -224,11 +215,9 @@ class ReplicaMap {
    */
   ReplicaInfo remove(String bpid, long blockId) {
     checkBlockPool(bpid);
-    try (AutoCloseDataSetLock l = lockManager.readLock(LockLevel.BLOCK_POOl, bpid)) {
-      LightWeightResizableGSet<Block, ReplicaInfo> m = map.get(bpid);
-      if (m != null) {
-        return m.remove(new Block(blockId));
-      }
+    LightWeightResizableGSet<Block, ReplicaInfo> m = map.get(bpid);
+    if (m != null) {
+      return m.remove(new Block(blockId));
     }
     return null;
   }
@@ -282,7 +271,7 @@ class ReplicaMap {
       if (m == null) {
         // Add an entry for block pool if it does not exist already
         m = new LightWeightResizableGSet<Block, ReplicaInfo>();
-        map.put(bpid, m);
+        map.putIfAbsent(bpid, m);
       }
     }
   }
