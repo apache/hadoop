@@ -23,9 +23,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
@@ -654,7 +651,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       throw new IOException(ex);
     }
     if (!fileStatusInformationPresent) {
-      initPathProperties(op);
+      initPathPropertiesFromReadPathResponseHeader(op);
     }
     long bytesRead = op.getResult().getBytesReceived();
     if (streamStatistics != null) {
@@ -668,7 +665,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     return (int) bytesRead;
   }
 
-  private void initPathProperties(final AbfsRestOperation op) {
+  private void initPathPropertiesFromReadPathResponseHeader(final AbfsRestOperation op) {
     AbfsHttpOperation result = op.getResult();
     if(result == null) {
       return;
@@ -770,7 +767,10 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     if (!fileStatusInformationPresent) {
       AbfsRestOperation op = client.getPathStatus(path, false, tracingContext,
           null);
-      initPathProperties(op);
+      contentLength = Long.parseLong(
+          op.getResult().getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH));
+      eTag = op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG);
+      fileStatusInformationPresent = true;
     }
     final long remaining = getContentLength() - this.getPos();
     return remaining <= Integer.MAX_VALUE

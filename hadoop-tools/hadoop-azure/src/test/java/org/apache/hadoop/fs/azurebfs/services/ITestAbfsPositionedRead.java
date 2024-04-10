@@ -73,16 +73,26 @@ public class ITestAbfsPositionedRead extends AbstractAbfsIntegrationTest {
       // Read only 10 bytes from offset 0. But by default it will do the seek
       // and read where the entire 100 bytes get read into the
       // AbfsInputStream buffer.
+      boolean isHeadOptimization = getConfiguration().getHeadOptimizationForInputStream();
+      boolean footerReadEnabled = getConfiguration().optimizeFooterRead() && isHeadOptimization;
+      /*
+      * If head optimization is enabled, this test would read the given number of bytes only
+      * in the first read call. Reason being, due to the head optimization it would not
+      * know the contentLength and because the byteLength required is less than the
+      * footerReadThreshold, it would read from the starting of the file to the the given
+      * bytelength only.
+      */
       Assertions
           .assertThat(Arrays.copyOfRange(
               ((AbfsInputStream) inputStream.getWrappedStream()).getBuffer(), 0,
-              TEST_FILE_DATA_SIZE))
+              isHeadOptimization ? bytesToRead : TEST_FILE_DATA_SIZE))
           .describedAs(
               "AbfsInputStream pread did not read more data into its buffer")
-          .containsExactly(data);
+          .containsExactly(isHeadOptimization ? Arrays.copyOfRange(data, 0, bytesToRead)
+              : data);
       // Check statistics
       assertStatistics(inputStream.getIOStatistics(), bytesToRead, 1, 1,
-          TEST_FILE_DATA_SIZE);
+          isHeadOptimization ? bytesToRead : TEST_FILE_DATA_SIZE);
 
       readPos = 50;
       Assertions
@@ -95,8 +105,9 @@ public class ITestAbfsPositionedRead extends AbstractAbfsIntegrationTest {
           .containsExactly(
               Arrays.copyOfRange(data, readPos, readPos + bytesToRead));
       // Check statistics
-      assertStatistics(inputStream.getIOStatistics(), 2 * bytesToRead, 2, 1,
-          TEST_FILE_DATA_SIZE);
+      assertStatistics(inputStream.getIOStatistics(), 2 * bytesToRead, 2,
+          isHeadOptimization ? 2 : 1,
+          isHeadOptimization ? TEST_FILE_DATA_SIZE - 40 : TEST_FILE_DATA_SIZE);
       // Did positioned read from pos 0 and then 50 but the stream pos should
       // remain at 0.
       Assertions.assertThat(inputStream.getPos())

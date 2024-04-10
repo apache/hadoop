@@ -232,8 +232,13 @@ public class ITestAzureBlobFileSystemRandomRead extends
   public void testValidateSeekBounds() throws Exception {
     Path testPath = path(TEST_FILE_PREFIX + "_testValidateSeekBounds");
     long testFileLength = assumeHugeFileExists(testPath);
+    FileStatus status = getFileSystem().getFileStatus(testPath);
 
-    try (FSDataInputStream inputStream = this.getFileSystem().open(testPath)) {
+    try (FSDataInputStream inputStream = this.getFileSystem()
+        .openFile(testPath)
+        .withFileStatus(status)
+        .build()
+        .get()) {
       ContractTestUtils.NanoTimer timer = new ContractTestUtils.NanoTimer();
 
       inputStream.seek(0);
