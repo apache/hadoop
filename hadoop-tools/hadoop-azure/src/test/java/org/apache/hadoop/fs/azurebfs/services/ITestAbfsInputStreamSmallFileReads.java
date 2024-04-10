@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
+import static java.lang.Math.min;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -196,14 +197,21 @@ public class ITestAbfsInputStreamSmallFileReads extends ITestAbfsInputStream {
 
       final int readBufferSize = conf.getReadBufferSize();
       final int fileContentLength = fileContent.length;
-      final boolean smallFile = fileContentLength <= readBufferSize;
+      final boolean smallFile;
+      final boolean headOptimization = getConfiguration().getHeadOptimizationForInputStream();
+
+      if(headOptimization) {
+        smallFile = ((seekPos + length) <= readBufferSize);
+      } else {
+        smallFile = fileContentLength <= readBufferSize;
+      }
       int expectedLimit, expectedFCursor;
       int expectedBCursor;
       if (conf.readSmallFilesCompletely() && smallFile) {
         assertBuffersAreEqual(fileContent, abfsInputStream.getBuffer(), conf, testFilePath);
-        expectedFCursor = fileContentLength;
-        expectedLimit = fileContentLength;
-        expectedBCursor = seekPos + length;
+        expectedFCursor = min(readBufferSize, fileContentLength);
+        expectedLimit = min(readBufferSize, fileContentLength);
+        expectedBCursor = min(readBufferSize, seekPos + length);
       } else {
         if ((seekPos == 0)) {
           assertBuffersAreEqual(fileContent, abfsInputStream.getBuffer(), conf, testFilePath);
