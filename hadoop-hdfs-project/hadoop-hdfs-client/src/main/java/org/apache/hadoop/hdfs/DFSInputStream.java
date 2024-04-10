@@ -520,9 +520,8 @@ public class DFSInputStream extends FSInputStream
         // Update the LastLocatedBlock, if offset is for last block.
         if (offset >= locatedBlocks.getFileLength()) {
           setLocatedBlocksFields(newBlocks, getLastBlockLength(newBlocks));
-          // Here locatedBlocks has been updated, need to check offset again.
-          // If offset to the portion of the last block, will return the last block,
-          // otherwise the block containing the specified offset needs to be searched again.
+          // After updating the locatedBlock, the block to which the offset belongs
+          // should be researched like {@link DFSInputStream#getBlockAt(long)}.
           if (offset >= locatedBlocks.getFileLength()) {
             return locatedBlocks.getLastLocatedBlock();
           } else {
