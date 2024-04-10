@@ -430,7 +430,7 @@ final class FSDirErasureCodingOp {
    */
   static ErasureCodingPolicyInfo[] getErasureCodingPolicies(
       final FSNamesystem fsn) throws IOException {
-    assert fsn.hasReadLock();
+    assert fsn.hasReadLock(FSNamesystemLockMode.FS);
     return fsn.getErasureCodingPolicyManager().getPolicies();
   }
 
