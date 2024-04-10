@@ -703,12 +703,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   void setImageLoaded() {
     if(imageLoaded) return;
-    writeLock();
+    writeLock(FSNamesystemLockMode.GLOBAL);
     try {
       setImageLoaded(true);
       dir.markNameCacheInitialized();
     } finally {
-      writeUnlock("setImageLoaded");
+      writeUnlock(FSNamesystemLockMode.GLOBAL, "setImageLoaded");
     }
   }
 
@@ -1283,7 +1283,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       startOpt = StartupOption.REGULAR;
     }
     boolean success = false;
-    writeLock();
+    writeLock(FSNamesystemLockMode.GLOBAL);
     try {
       // We shouldn't be calling saveNamespace if we've come up in standby state.
       MetaRecoveryContext recovery = startOpt.createRecoveryContext();
@@ -1315,7 +1315,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       if (!success) {
         fsImage.close();
       }
-      writeUnlock("loadFSImage", true);
+      writeUnlock(FSNamesystemLockMode.GLOBAL, "loadFSImage", true);
     }
     imageLoadComplete();
   }
@@ -1386,7 +1386,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * Stop services common to both active and standby states
    */
   void stopCommonServices() {
-    writeLock();
+    writeLock(FSNamesystemLockMode.GLOBAL);
     if (inodeAttributeProvider != null) {
       dir.setINodeAttributeProvider(null);
       inodeAttributeProvider.stop();
@@ -1394,7 +1394,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     try {
       if (blockManager != null) blockManager.close();
     } finally {
-      writeUnlock("stopCommonServices");
+      writeUnlock(FSNamesystemLockMode.GLOBAL, "stopCommonServices");
     }
     RetryCache.clear(retryCache);
   }
@@ -1523,7 +1523,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   void stopActiveServices() {
     LOG.info("Stopping services started for active state");
-    writeLock();
+    writeLock(FSNamesystemLockMode.GLOBAL);
     try {
       if (blockManager != null) {
         blockManager.stopReconstructionInitializer();
@@ -1571,7 +1571,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         blockManager.setInitializedReplQueues(false);
       }
     } finally {
-      writeUnlock("stopActiveServices");
+      writeUnlock(FSNamesystemLockMode.GLOBAL, "stopActiveServices");
     }
   }
   
@@ -4652,7 +4652,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
       List<BlockCollection> filesToDelete = new ArrayList<>();
       boolean changed = false;
-      writeLock();
+      writeLock(FSNamesystemLockMode.GLOBAL);
       try {
         final Iterator<BlockInfo> it =
             blockManager.getCorruptReplicaBlockIterator();
@@ -4683,7 +4683,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           }
         }
       } finally {
-        writeUnlock("clearCorruptLazyPersistFiles");
+        writeUnlock(FSNamesystemLockMode.GLOBAL, "clearCorruptLazyPersistFiles");
       }
       if (changed) {
         getEditLog().logSync();
@@ -4980,12 +4980,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   int getNumberOfDatanodes(DatanodeReportType type) {
-    readLock();
+    readLock(FSNamesystemLockMode.BM);
     try {
       return getBlockManager().getDatanodeManager().getDatanodeListForReport(
           type).size(); 
     } finally {
-      readUnlock("getNumberOfDatanodes");
+      readUnlock(FSNamesystemLockMode.BM, "getNumberOfDatanodes");
     }
   }
 
@@ -5214,12 +5214,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   public long getCompleteBlocksTotal() {
     // Calculate number of blocks under construction
     long numUCBlocks = 0;
-    readLock();
+    readLock(FSNamesystemLockMode.GLOBAL);
     try {
       numUCBlocks = leaseManager.getNumUnderConstructionBlocks();
       return getBlocksTotal() - numUCBlocks;
     } finally {
-      readUnlock("getCompleteBlocksTotal");
+      readUnlock(FSNamesystemLockMode.GLOBAL, "getCompleteBlocksTotal");
     }
   }
 
@@ -7646,7 +7646,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     if (upgradeInfo.createdRollbackImages()) {
       return new RollingUpgradeInfo.Bean(upgradeInfo);
     }
-    readLock();
+    readLock(FSNamesystemLockMode.FS);
     try {
       // check again after acquiring the read lock.
       upgradeInfo = getRollingUpgradeInfo();
@@ -7660,7 +7660,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     } catch (IOException ioe) {
       LOG.warn("Encountered exception setting Rollback Image", ioe);
     } finally {
-      readUnlock("getRollingUpgradeStatus");
+      readUnlock(FSNamesystemLockMode.FS, "getRollingUpgradeStatus");
     }
     return new RollingUpgradeInfo.Bean(upgradeInfo);
   }
@@ -7743,7 +7743,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     final String operationName = "finalizeRollingUpgrade";
     checkSuperuserPrivilege(operationName);
     checkOperation(OperationCategory.WRITE);
-    writeLock();
+    writeLock(FSNamesystemLockMode.FS);
     try {
       checkOperation(OperationCategory.WRITE);
       if (!isRollingUpgrade()) {
@@ -7761,7 +7761,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       getFSImage().renameCheckpoint(NameNodeFile.IMAGE_ROLLBACK,
           NameNodeFile.IMAGE);
     } finally {
-      writeUnlock(operationName, getLockReportInfoSupplier(null));
+      writeUnlock(FSNamesystemLockMode.FS, operationName, getLockReportInfoSupplier(null));
     }
 
     if (!haEnabled) {
@@ -8736,7 +8736,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   @Override
   public void removeXattr(long id, String xattrName) throws IOException {
-    writeLock();
+    writeLock(FSNamesystemLockMode.FS);
     try {
       final INode inode = dir.getInode(id);
       if (inode == null) {
@@ -8752,7 +8752,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         FSDirSatisfyStoragePolicyOp.removeSPSXattr(dir, inode, spsXAttr);
       }
     } finally {
-      writeUnlock("removeXAttr");
+      writeUnlock(FSNamesystemLockMode.FS, "removeXAttr");
     }
     getEditLog().logSync();
   }

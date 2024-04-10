@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.apache.hadoop.ipc.CallerContext;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.util.Preconditions;
@@ -2238,14 +2239,14 @@ public class NameNode extends ReconfigurableBase implements
     
     @Override
     public void writeLock() {
-      namesystem.writeLock();
+      namesystem.writeLock(FSNamesystemLockMode.GLOBAL);
       namesystem.lockRetryCache();
     }
     
     @Override
     public void writeUnlock() {
       namesystem.unlockRetryCache();
-      namesystem.writeUnlock("HAState");
+      namesystem.writeUnlock(FSNamesystemLockMode.GLOBAL, "HAState");
     }
     
     /** Check if an operation of given category is allowed */
@@ -2396,7 +2397,7 @@ public class NameNode extends ReconfigurableBase implements
       final String property) throws ReconfigurationException {
     BlockManager bm = namesystem.getBlockManager();
     int newSetting;
-    namesystem.writeLock();
+    namesystem.writeLock(FSNamesystemLockMode.BM);
     try {
       if (property.equals(DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY)) {
         bm.setMaxReplicationStreams(
@@ -2434,7 +2435,7 @@ public class NameNode extends ReconfigurableBase implements
       throw new ReconfigurationException(property, newVal, getConf().get(
           property), e);
     } finally {
-      namesystem.writeUnlock("reconfReplicationParameters");
+      namesystem.writeUnlock(FSNamesystemLockMode.BM, "reconfReplicationParameters");
     }
   }
 
@@ -2454,7 +2455,7 @@ public class NameNode extends ReconfigurableBase implements
   private String reconfHeartbeatInterval(final DatanodeManager datanodeManager,
       final String property, final String newVal)
       throws ReconfigurationException {
-    namesystem.writeLock();
+    namesystem.writeLock(FSNamesystemLockMode.BM);
     try {
       if (newVal == null) {
         // set to default
@@ -2471,7 +2472,7 @@ public class NameNode extends ReconfigurableBase implements
       throw new ReconfigurationException(property, newVal, getConf().get(
           property), nfe);
     } finally {
-      namesystem.writeUnlock("reconfHeartbeatInterval");
+      namesystem.writeUnlock(FSNamesystemLockMode.BM, "reconfHeartbeatInterval");
       LOG.info("RECONFIGURE* changed heartbeatInterval to "
           + datanodeManager.getHeartbeatInterval());
     }
@@ -2480,7 +2481,7 @@ public class NameNode extends ReconfigurableBase implements
   private String reconfHeartbeatRecheckInterval(
       final DatanodeManager datanodeManager, final String property,
       final String newVal) throws ReconfigurationException {
-    namesystem.writeLock();
+    namesystem.writeLock(FSNamesystemLockMode.BM);
     try {
       if (newVal == null) {
         // set to default
@@ -2495,7 +2496,7 @@ public class NameNode extends ReconfigurableBase implements
       throw new ReconfigurationException(property, newVal, getConf().get(
           property), nfe);
     } finally {
-      namesystem.writeUnlock("reconfHeartbeatRecheckInterval");
+      namesystem.writeUnlock(FSNamesystemLockMode.BM, "reconfHeartbeatRecheckInterval");
       LOG.info("RECONFIGURE* changed heartbeatRecheckInterval to "
           + datanodeManager.getHeartbeatRecheckInterval());
     }
@@ -2620,7 +2621,7 @@ public class NameNode extends ReconfigurableBase implements
   String reconfigureSlowNodesParameters(final DatanodeManager datanodeManager,
       final String property, final String newVal) throws ReconfigurationException {
     BlockManager bm = namesystem.getBlockManager();
-    namesystem.writeLock();
+    namesystem.writeLock(FSNamesystemLockMode.BM);
     String result;
     try {
       switch (property) {
@@ -2697,13 +2698,13 @@ public class NameNode extends ReconfigurableBase implements
       throw new ReconfigurationException(property, newVal, getConf().get(
           property), e);
     } finally {
-      namesystem.writeUnlock("reconfigureSlowNodesParameters");
+      namesystem.writeUnlock(FSNamesystemLockMode.BM, "reconfigureSlowNodesParameters");
     }
   }
 
   private String reconfigureBlockInvalidateLimit(final DatanodeManager datanodeManager,
       final String property, final String newVal) throws ReconfigurationException {
-    namesystem.writeLock();
+    namesystem.writeLock(FSNamesystemLockMode.BM);
     try {
       if (newVal == null) {
         datanodeManager.setBlockInvalidateLimit(DFSConfigKeys.DFS_BLOCK_INVALIDATE_LIMIT_DEFAULT);
@@ -2717,7 +2718,7 @@ public class NameNode extends ReconfigurableBase implements
     } catch (NumberFormatException e) {
       throw new ReconfigurationException(property, newVal, getConf().get(property), e);
     } finally {
-      namesystem.writeUnlock("reconfigureBlockInvalidateLimit");
+      namesystem.writeUnlock(FSNamesystemLockMode.BM, "reconfigureBlockInvalidateLimit");
     }
   }
 

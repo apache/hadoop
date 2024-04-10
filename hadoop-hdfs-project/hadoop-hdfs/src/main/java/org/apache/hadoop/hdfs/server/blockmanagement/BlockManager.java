@@ -2788,7 +2788,7 @@ public class BlockManager implements BlockStatsMXBean {
    *               list of blocks that need to be removed from blocksMap
    */
   public void removeBlocksAndUpdateSafemodeTotal(BlocksMapUpdateInfo blocks) {
-    assert namesystem.hasWriteLock();
+    assert namesystem.hasWriteLock(FSNamesystemLockMode.BM);
     // In the case that we are a Standby tailing edits from the
     // active while in safe-mode, we need to track the total number
     // of blocks and safe blocks in the system.
@@ -4112,7 +4112,7 @@ public class BlockManager implements BlockStatsMXBean {
               && !Thread.currentThread().isInterrupted()
               && iter.hasNext()) {
         int limit = processed + numBlocksPerIteration;
-        namesystem.writeLockInterruptibly();
+        namesystem.writeLockInterruptibly(FSNamesystemLockMode.GLOBAL);
         try {
           while (iter.hasNext() && processed < limit) {
             BlockInfo blk = iter.next();
@@ -4122,7 +4122,7 @@ public class BlockManager implements BlockStatsMXBean {
                 blk, r);
           }
         } finally {
-          namesystem.writeUnlock("processMisReplicatedBlocks");
+          namesystem.writeUnlock(FSNamesystemLockMode.GLOBAL, "processMisReplicatedBlocks");
         }
       }
     } catch (InterruptedException ex) {
@@ -5660,7 +5660,7 @@ public class BlockManager implements BlockStatsMXBean {
           // batch as many operations in the write lock until the queue
           // runs dry, or the max lock hold is reached.
           int processed = 0;
-          namesystem.writeLock();
+          namesystem.writeLock(FSNamesystemLockMode.GLOBAL);
           metrics.setBlockOpsQueued(queue.size() + 1);
           try {
             long start = Time.monotonicNow();
@@ -5673,7 +5673,7 @@ public class BlockManager implements BlockStatsMXBean {
               action = queue.poll();
             } while (action != null);
           } finally {
-            namesystem.writeUnlock("processQueue");
+            namesystem.writeUnlock(FSNamesystemLockMode.GLOBAL, "processQueue");
             metrics.addBlockOpsBatched(processed - 1);
           }
         } catch (InterruptedException e) {
