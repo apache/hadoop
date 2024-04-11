@@ -235,7 +235,8 @@ public class ITestAbfsInputStreamStatistics
           stats.getBytesRead());
       assertEquals("Mismatch in readOps value", OPERATIONS,
           stats.getReadOperations());
-      assertEquals("Mismatch in remoteReadOps value", 1,
+      assertEquals("Mismatch in remoteReadOps value",
+          getConfiguration().getHeadOptimizationForInputStream() ? 2 : 1,
           stats.getRemoteReadOperations());
 
       in.close();
