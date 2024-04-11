@@ -176,7 +176,7 @@ public class TestLoadManifestsStage extends AbstractManifestCommitterTest {
     // and skipping the rename stage (which is going to fail),
     // go straight to cleanup
     new CleanupJobStage(stageConfig).apply(
-        new CleanupJobStage.Arguments("", true, true, false));
+        new CleanupJobStage.Arguments("", true, true, false, false));
     heapinfo(heapInfo, "cleanup");
 
     ManifestSuccessData success = createManifestOutcome(stageConfig, OP_STAGE_JOB_COMMIT);

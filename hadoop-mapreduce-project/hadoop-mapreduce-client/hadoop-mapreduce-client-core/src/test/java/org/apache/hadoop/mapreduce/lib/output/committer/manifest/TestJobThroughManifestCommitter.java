@@ -598,7 +598,7 @@ public class TestJobThroughManifestCommitter
   public void test_0900_cleanupJob() throws Throwable {
     describe("Cleanup job");
     CleanupJobStage.Arguments arguments = new CleanupJobStage.Arguments(
-        OP_STAGE_JOB_CLEANUP, true, true, false);
+        OP_STAGE_JOB_CLEANUP, true, true, false, false);
     // the first run will list the three task attempt dirs and delete each
     // one before the toplevel dir.
     CleanupJobStage.Result result = new CleanupJobStage(

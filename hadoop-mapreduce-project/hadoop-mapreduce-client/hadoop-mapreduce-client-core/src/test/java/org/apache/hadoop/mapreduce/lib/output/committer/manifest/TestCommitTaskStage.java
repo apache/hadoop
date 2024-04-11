@@ -117,7 +117,7 @@ public class TestCommitTaskStage extends AbstractManifestCommitterTest {
                 OP_STAGE_JOB_CLEANUP,
                 true,
                 true,
-                false
+                false, false
             )));
 
     // review success file

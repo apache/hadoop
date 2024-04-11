@@ -1001,7 +1001,9 @@ public abstract class AbstractManifestCommitterTest
    * Create and execute a cleanup stage.
    * @param enabled is the stage enabled?
    * @param deleteTaskAttemptDirsInParallel delete task attempt dirs in
-   *        parallel?
+   * parallel?
+   * @param attemptBaseDeleteFirst Make an initial attempt to
+   * delete the base directory
    * @param suppressExceptions suppress exceptions?
    * @param outcome expected outcome.
    * @param expectedDirsDeleted #of directories deleted. -1 for no checks
@@ -1011,13 +1013,14 @@ public abstract class AbstractManifestCommitterTest
   protected CleanupJobStage.Result cleanup(
       final boolean enabled,
       final boolean deleteTaskAttemptDirsInParallel,
+      boolean attemptBaseDeleteFirst,
       final boolean suppressExceptions,
       final CleanupJobStage.Outcome outcome,
       final int expectedDirsDeleted) throws IOException {
     StageConfig stageConfig = getJobStageConfig();
     CleanupJobStage.Result result = new CleanupJobStage(stageConfig)
         .apply(new CleanupJobStage.Arguments(OP_STAGE_JOB_CLEANUP,
-            enabled, deleteTaskAttemptDirsInParallel, suppressExceptions));
+            enabled, deleteTaskAttemptDirsInParallel, attemptBaseDeleteFirst, suppressExceptions));
     assertCleanupResult(result, outcome, expectedDirsDeleted);
     return result;
   }

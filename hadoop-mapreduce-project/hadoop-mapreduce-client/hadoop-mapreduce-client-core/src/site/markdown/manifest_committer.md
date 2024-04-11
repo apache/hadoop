@@ -15,14 +15,16 @@
 
 # The Manifest Committer for Azure and Google Cloud Storage
 
-This document how to use the _Manifest Committer_.
+<!-- MACRO{toc|fromDepth=0|toDepth=2} -->
+
+This documents how to use the _Manifest Committer_.
 
 The _Manifest_ committer is a committer for work which provides
 performance on ABFS for "real world" queries,
 and performance and correctness on GCS.
 It also works with other filesystems, including HDFS.
 However, the design is optimized for object stores where
-listing operatons are slow and expensive.
+listing operations are slow and expensive.
 
 The architecture and implementation of the committer is covered in
 [Manifest Committer Architecture](manifest_committer_architecture.html).
@@ -31,8 +33,9 @@ The architecture and implementation of the committer is covered in
 The protocol and its correctness are covered in
 [Manifest Committer Protocol](manifest_committer_protocol.html).
 
-It was added in March 2022, and should be considered unstable
-in early releases.
+It was added in March 2022.
+As of April 2024, the only problems have been scale related, rather than
+algorithm correctness.
 
 <!-- MACRO{toc|fromDepth=0|toDepth=2} -->
 
@@ -70,10 +73,13 @@ This committer uses the extension point which came in for the S3A committers.
 Users can declare a new committer factory for abfs:// and gcs:// URLs.
 A suitably configured spark deployment will pick up the new committer.
 
-Directory performance issues in job cleanup can be addressed by two options
+Directory performance issues in job cleanup can be addressed by some options
 1. The committer will parallelize deletion of task attempt directories before
    deleting the `_temporary` directory.
-1. Cleanup can be disabled. .
+2. An initial attempt to delete the  `_temporary` directory before the parallel
+   attempt is made.
+3. Exceptions can be supressed, so that cleanup failures do not fail the job
+4. Cleanup can be disabled.
 
 The committer can be used with any filesystem client which has a "real" file rename()
 operation.
@@ -184,6 +190,7 @@ Here are the main configuration options of the committer.
 | `mapreduce.manifest.committer.io.threads` | Thread count for parallel operations | `64` |
 | `mapreduce.manifest.committer.summary.report.directory` | directory to save reports. | `""` |
 | `mapreduce.manifest.committer.cleanup.parallel.delete` | Delete temporary directories in parallel | `true` |
+| `mapreduce.manifest.committer.cleanup.parallel.delete.base.first` | Attempt to delete the base directory before parallel task attempts | `true` |
 | `mapreduce.fileoutputcommitter.cleanup.skipped` | Skip cleanup of `_temporary` directory| `false` |
 | `mapreduce.fileoutputcommitter.cleanup-failures.ignored` | Ignore errors during cleanup | `false` |
 | `mapreduce.fileoutputcommitter.marksuccessfuljobs` | Create a `_SUCCESS` marker file on successful completion. (and delete any existing one in job setup) | `true` |
@@ -447,30 +454,40 @@ may surface in cloud storage.
 | `mapreduce.fileoutputcommitter.cleanup.skipped` | Skip cleanup of `_temporary` directory| `false` |
 | `mapreduce.fileoutputcommitter.cleanup-failures.ignored` | Ignore errors during cleanup | `false` |
 | `mapreduce.manifest.committer.cleanup.parallel.delete` | Delete task attempt directories in parallel | `true` |
+| `mapreduce.manifest.committer.cleanup.parallel.delete.base.first` | Attempt to delete the base directory before parallel task attempts | `true` |
 
 The algorithm is:
 
-```
-if `mapreduce.fileoutputcommitter.cleanup.skipped`:
+```python
+if "mapreduce.fileoutputcommitter.cleanup.skipped":
   return
-if `mapreduce.manifest.committer.cleanup.parallel.delete`:
-  attempt parallel delete of task directories; catch any exception
-if not `mapreduce.fileoutputcommitter.cleanup.skipped`:
-  delete(`_temporary`); catch any exception
-if caught-exception and not `mapreduce.fileoutputcommitter.cleanup-failures.ignored`:
-  throw caught-exception
+if "mapreduce.manifest.committer.cleanup.parallel.delete":
+  if "mapreduce.manifest.committer.cleanup.parallel.delete.base.first" :
+    if delete("_temporary"):
+      return
+  delete(list("$task-directories")) catch any exception
+if not "mapreduce.fileoutputcommitter.cleanup.skipped":
+  delete("_temporary"); catch any exception
+if caught-exception and not "mapreduce.fileoutputcommitter.cleanup-failures.ignored":
+  raise caught-exception
 ```
 
 It's a bit complicated, but the goal is to perform a fast/scalable delete and
 throw a meaningful exception if that didn't work.
 
-When working with ABFS and GCS, these settings should normally be left alone.
-If somehow errors surface during cleanup, enabling the option to
-ignore failures will ensure the job still completes.
+For ABFS the default settings should normally be left alone.
+
+For GCS, setting `mapreduce.manifest.committer.cleanup.parallel.delete.base.first`
+to `false` may speed up cleanup.
+
+If somehow errors surface during cleanup, ignoring failures will ensure the job
+is still considered a success.
+`mapreduce.fileoutputcommitter.cleanup-failures.ignored = true`
+
 Disabling cleanup even avoids the overhead of cleanup, but
 requires a workflow or manual operation to clean up all
-`_temporary` directories on a regular basis.
-
+`_temporary` directories on a regular basis:
+`mapreduce.fileoutputcommitter.cleanup.skipped = true`.
 
 # <a name="abfs"></a> Working with Azure ADLS Gen2 Storage
 
@@ -505,7 +522,7 @@ The core set of Azure-optimized options becomes
 
 <property>
   <name>spark.hadoop.fs.azure.io.rate.limit</name>
-  <value>10000</value>
+  <value>1000</value>
 </property>
 ```
 
@@ -523,7 +540,7 @@ And optional settings for debugging/performance analysis
 
 ```
 spark.hadoop.mapreduce.outputcommitter.factory.scheme.abfs org.apache.hadoop.fs.azurebfs.commit.AzureManifestCommitterFactory
-spark.hadoop.fs.azure.io.rate.limit 10000
+spark.hadoop.fs.azure.io.rate.limit 1000
 spark.sql.parquet.output.committer.class org.apache.spark.internal.io.cloud.BindingParquetOutputCommitter
 spark.sql.sources.commitProtocolClass org.apache.spark.internal.io.cloud.PathOutputCommitProtocol
 
@@ -544,13 +561,12 @@ may issue.
 
 Set the option to `0` remove all rate limiting.
 
-The default value of this is set to 10000, which is the default IO capacity for
-an ADLS storage account.
+The default value of this is set to 1000.
 
 ```xml
 <property>
   <name>fs.azure.io.rate.limit</name>
-  <value>10000</value>
+  <value>1000</value>
   <description>maximum number of renames attempted per second</description>
 </property>
 ```
@@ -569,7 +585,7 @@ If server-side throttling took place, signs of this can be seen in
 * The store service's logs and their throttling status codes (usually 503 or 500).
 * The job statistic `commit_file_rename_recovered`. This statistic indicates that
   ADLS throttling manifested as failures in renames, failures which were recovered
-  from in the comitter.
+  from in the committer.
 
 If these are seen -or other applications running at the same time experience
 throttling/throttling-triggered problems, consider reducing the value of
@@ -598,13 +614,14 @@ The Spark settings to switch to this committer are
 spark.hadoop.mapreduce.outputcommitter.factory.scheme.gs org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterFactory
 spark.sql.parquet.output.committer.class org.apache.spark.internal.io.cloud.BindingParquetOutputCommitter
 spark.sql.sources.commitProtocolClass org.apache.spark.internal.io.cloud.PathOutputCommitProtocol
-
+spark.hadoop.mapreduce.manifest.committer.cleanup.parallel.delete.base.first false
 spark.hadoop.mapreduce.manifest.committer.summary.report.directory  (optional: URI of a directory for job summaries)
 ```
 
 The store's directory delete operations are `O(files)` so the value
 of `mapreduce.manifest.committer.cleanup.parallel.delete`
-SHOULD be left at the default of `true`.
+SHOULD be left at the default of `true`, but
+`mapreduce.manifest.committer.cleanup.parallel.delete.base.first` changed to `false`
 
 For mapreduce, declare the binding in `core-site.xml`or `mapred-site.xml`
 ```xml

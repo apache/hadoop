@@ -132,7 +132,9 @@ public final class ManifestCommitterConstants {
    * Should dir cleanup do parallel deletion of task attempt dirs
    * before trying to delete the toplevel dirs.
    * For GCS this may deliver speedup, while on ABFS it may avoid
-   * timeouts in certain deployments.
+   * timeouts in certain deployments, something
+   * {@link #OPT_CLEANUP_PARALLEL_DELETE_BASE_FIRST}
+   * can alleviate.
    * Value: {@value}.
    */
   public static final String OPT_CLEANUP_PARALLEL_DELETE =
@@ -142,6 +144,20 @@ public final class ManifestCommitterConstants {
    * Default value:  {@value}.
    */
   public static final boolean OPT_CLEANUP_PARALLEL_DELETE_DIRS_DEFAULT = true;
+
+  /**
+   * Should parallel cleanup try to delete teh base first?
+   * Best for azure as it skips the task attempt deletions unless
+   * the toplevel delete fails.
+   * Value: {@value}.
+   */
+  public static final String OPT_CLEANUP_PARALLEL_DELETE_BASE_FIRST =
+      OPT_PREFIX + "cleanup.parallel.delete.base.first";
+
+  /**
+   * Default value of option {@link #OPT_CLEANUP_PARALLEL_DELETE_BASE_FIRST}:  {@value}.
+   */
+  public static final boolean OPT_CLEANUP_PARALLEL_DELETE_BASE_FIRST_DEFAULT = true;
 
   /**
    * Threads to use for IO.
