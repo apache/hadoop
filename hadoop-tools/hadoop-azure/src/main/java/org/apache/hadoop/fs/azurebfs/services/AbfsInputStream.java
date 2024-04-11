@@ -627,6 +627,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       throw new IllegalArgumentException("requested read length is more than will fit after requested offset in buffer");
     }
     final AbfsRestOperation op;
+    AbfsHttpOperation abfsHttpOperation = null;
     AbfsPerfTracker tracker = client.getAbfsPerfTracker();
     try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker, "readRemote", "read")) {
       if (streamStatistics != null) {
@@ -636,6 +637,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       op = client.read(path, position, b, offset, length,
           tolerateOobAppends ? "*" : eTag, cachedSasToken.get(),
           contextEncryptionAdapter, tracingContext);
+      abfsHttpOperation = op.getResult();
       cachedSasToken.update(op.getSasToken());
       LOG.debug("issuing HTTP GET request params position = {} b.length = {} "
           + "offset = {} length = {}", position, b.length, offset, length);
@@ -644,14 +646,22 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     } catch (AzureBlobFileSystemException ex) {
       if (ex instanceof AbfsRestOperationException) {
         AbfsRestOperationException ere = (AbfsRestOperationException) ex;
+        abfsHttpOperation = ((AbfsRestOperationException) ex).getAbfsHttpOperation();
         if (ere.getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
           throw new FileNotFoundException(ere.getMessage());
         }
+        /*
+        * Status 416 is sent when read is done on an empty file.
+        */
+        if(ere.getStatusCode() == 416 && !fileStatusInformationPresent) {
+          return -1;
+        }
       }
       throw new IOException(ex);
-    }
-    if (!fileStatusInformationPresent) {
-      initPathPropertiesFromReadPathResponseHeader(op);
+    } finally {
+      if (!fileStatusInformationPresent && abfsHttpOperation != null) {
+        initPathPropertiesFromReadPathResponseHeader(abfsHttpOperation);
+      }
     }
     long bytesRead = op.getResult().getBytesReceived();
     if (streamStatistics != null) {
@@ -665,15 +675,10 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     return (int) bytesRead;
   }
 
-  private void initPathPropertiesFromReadPathResponseHeader(final AbfsRestOperation op) {
-    AbfsHttpOperation result = op.getResult();
-    if(result == null) {
-      return;
-    }
-    //TODO: fix it!!!!
+  private void initPathPropertiesFromReadPathResponseHeader(final AbfsHttpOperation op) {
     contentLength = parseFromRange(
-        result.getResponseHeader(HttpHeaderConfigurations.CONTENT_RANGE));
-    eTag = result.getResponseHeader(HttpHeaderConfigurations.ETAG);
+        op.getResponseHeader(HttpHeaderConfigurations.CONTENT_RANGE));
+    eTag = op.getResponseHeader(HttpHeaderConfigurations.ETAG);
     fileStatusInformationPresent = true;
   }
 

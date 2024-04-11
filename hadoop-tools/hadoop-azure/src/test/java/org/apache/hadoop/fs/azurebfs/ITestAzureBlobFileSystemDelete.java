@@ -19,9 +19,11 @@
 package org.apache.hadoop.fs.azurebfs;
 
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -32,7 +34,9 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FutureDataInputStreamBuilder;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
@@ -76,6 +80,34 @@ public class ITestAzureBlobFileSystemDelete extends
 
   public ITestAzureBlobFileSystemDelete() throws Exception {
     super();
+  }
+
+
+  @Override
+  public AzureBlobFileSystem getFileSystem() throws IOException {
+    if (!getConfiguration().getHeadOptimizationForInputStream()) {
+      return super.getFileSystem();
+    }
+    try {
+      AzureBlobFileSystem fs = super.getFileSystem();
+      AzureBlobFileSystem spiedFs = Mockito.spy(fs);
+      Mockito.doAnswer(answer -> {
+        Path path = (Path) answer.getArgument(0);
+        FileStatus status = fs.getFileStatus(path);
+        if (status.isDirectory()) {
+          throw new FileNotFoundException(path.toString());
+        }
+        return fs.openFile(path)
+            .withFileStatus(status)
+            .build()
+            .join();
+      }).when(spiedFs).open(Mockito.any(Path.class));
+
+      Mockito.doNothing().when(spiedFs).close();
+      return spiedFs;
+    } catch (Exception ex) {
+      throw new RuntimeException(ex);
+    }
   }
 
   @Test
