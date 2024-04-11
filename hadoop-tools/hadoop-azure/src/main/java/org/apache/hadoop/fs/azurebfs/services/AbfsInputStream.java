@@ -478,7 +478,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         }
       }
     } catch (IOException e) {
-      if (e instanceof FileNotFoundException) {
+      if (isNonRetriableOptimizedReadException(e)) {
         throw e;
       }
       LOG.debug("Optimized read failed. Defaulting to readOneBlock {}", e);
@@ -499,6 +499,12 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       return readOneBlock(b, off, len);
     }
     return copyToUserBuffer(b, off, len);
+  }
+
+  private boolean isNonRetriableOptimizedReadException(final IOException e) {
+    return e instanceof AbfsRestOperationException
+        || e instanceof FileNotFoundException
+        || (e.getCause() instanceof AbfsRestOperationException);
   }
 
   @VisibleForTesting
