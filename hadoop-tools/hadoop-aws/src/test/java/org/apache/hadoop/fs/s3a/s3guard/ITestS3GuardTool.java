@@ -37,6 +37,7 @@ import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.StringUtils;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
+import static org.apache.hadoop.fs.s3a.Constants.ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.FIPS_ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.assertNoUploadsAt;
@@ -60,8 +61,11 @@ public class ITestS3GuardTool extends AbstractS3GuardToolTestBase {
 
   @Test
   public void testExternalBucketRequireUnencrypted() throws Throwable {
-    removeBaseAndBucketOverrides(getConfiguration(), S3_ENCRYPTION_ALGORITHM);
-    run(BucketInfo.NAME,
+    Configuration conf = getConfiguration();
+    removeBaseAndBucketOverrides(conf,
+        S3_ENCRYPTION_ALGORITHM,
+        ENDPOINT);
+    run(conf, BucketInfo.NAME,
         "-" + BucketInfo.ENCRYPTION_FLAG, "none",
         externalBucket());
   }
@@ -81,10 +85,15 @@ public class ITestS3GuardTool extends AbstractS3GuardToolTestBase {
 
   @Test
   public void testExternalBucketRequireEncrypted() throws Throwable {
+    Configuration conf = getConfiguration();
+    removeBaseAndBucketOverrides(conf,
+        ENDPOINT);
     runToFailure(E_BAD_STATE,
+        conf,
         BucketInfo.NAME,
         "-" + BucketInfo.ENCRYPTION_FLAG,
-        "AES256", externalBucket());
+        "AES256",
+        externalBucket());
   }
 
   @Test
@@ -212,9 +221,13 @@ public class ITestS3GuardTool extends AbstractS3GuardToolTestBase {
 
   @Test
   public void testUploadNegativeExpect() throws Throwable {
-    runToFailure(E_BAD_STATE, Uploads.NAME, "-expect", "1",
-        path("/we/are/almost/postive/this/doesnt/exist/fhfsadfoijew")
-            .toString());
+    Configuration conf = getConfiguration();
+    runToFailure(E_BAD_STATE,
+        conf,
+        Uploads.NAME,
+        "-expect",
+        "1",
+        path("/we/are/almost/postive/this/doesnt/exist/fhfsadfoijew").toString());
   }
 
   private void assertNumUploads(Path path, int numUploads) throws Exception {

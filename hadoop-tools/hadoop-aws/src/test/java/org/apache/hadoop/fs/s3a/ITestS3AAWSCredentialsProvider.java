@@ -207,6 +207,9 @@ public class ITestS3AAWSCredentialsProvider {
   @Test
   public void testAnonymousProvider() throws Exception {
     Configuration conf = createConf(AnonymousAWSCredentialsProvider.class);
+    removeBaseAndBucketOverrides(conf,
+        ENDPOINT);
+    conf.set(ENDPOINT, CENTRAL_ENDPOINT);
     Path testFile = getExternalData(conf);
     try (FileSystem fs = FileSystem.newInstance(testFile.toUri(), conf)) {
       Assertions.assertThat(fs)

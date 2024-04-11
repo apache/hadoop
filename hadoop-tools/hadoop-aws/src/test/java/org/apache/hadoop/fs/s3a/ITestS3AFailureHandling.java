@@ -45,6 +45,7 @@ import java.util.stream.Collectors;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.createFiles;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.isBulkDeleteEnabled;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.test.ExtraAssertions.failIf;
 import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.requireDefaultExternalData;
 import static org.apache.hadoop.test.LambdaTestUtils.*;
@@ -63,6 +64,7 @@ public class ITestS3AFailureHandling extends AbstractS3ATestBase {
     Configuration conf = super.createConfiguration();
     S3ATestUtils.disableFilesystemCaching(conf);
     conf.setBoolean(Constants.ENABLE_MULTI_DELETE, true);
+    removeBaseAndBucketOverrides(conf, Constants.ENDPOINT);
     return conf;
   }
 
