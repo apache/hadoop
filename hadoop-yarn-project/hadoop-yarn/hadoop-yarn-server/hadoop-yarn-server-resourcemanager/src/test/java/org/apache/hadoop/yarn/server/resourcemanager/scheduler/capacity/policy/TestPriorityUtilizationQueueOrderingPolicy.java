@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.policy;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 
 import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueResourceQuotas;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueCapacities;
@@ -28,9 +29,13 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -249,5 +254,90 @@ public class TestPriorityUtilizationQueueOrderingPolicy {
         new float[] { 0.0f, 0.0f, 0.1f, 0.3f, 0.3f }, "x"));
     verifyOrder(policy, "x", new String[] { "e", "c", "d", "b", "a" });
 
+  }
+
+  @Test
+  public void testComparatorDoesNotValidateGeneralContract() {
+    final String []nodeLabels = {"x", "y", "z"};
+    PriorityUtilizationQueueOrderingPolicy policy =
+        new PriorityUtilizationQueueOrderingPolicy(true);
+
+    final String partition = nodeLabels[randInt(0, nodeLabels.length - 1)];
+    List<CSQueue> list = new ArrayList<>();
+    for (int i = 0; i < 1000; i++) {
+      CSQueue q = mock(CSQueue.class);
+      when(q.getQueuePath()).thenReturn(String.format("%d", i));
+
+      // simulating change in queueCapacities
+      when(q.getQueueCapacities())
+          .thenReturn(randomQueueCapacities(partition))
+          .thenReturn(randomQueueCapacities(partition))
+          .thenReturn(randomQueueCapacities(partition))
+          .thenReturn(randomQueueCapacities(partition))
+          .thenReturn(randomQueueCapacities(partition));
+
+      // simulating change in the priority
+      when(q.getPriority())
+          .thenReturn(Priority.newInstance(randInt(0, 10)))
+          .thenReturn(Priority.newInstance(randInt(0, 10)))
+          .thenReturn(Priority.newInstance(randInt(0, 10)))
+          .thenReturn(Priority.newInstance(randInt(0, 10)))
+          .thenReturn(Priority.newInstance(randInt(0, 10)));
+
+      if (randInt(0, nodeLabels.length) == 1) {
+        // simulating change in nodeLabels
+        when(q.getAccessibleNodeLabels())
+            .thenReturn(randomNodeLabels(nodeLabels))
+            .thenReturn(randomNodeLabels(nodeLabels))
+            .thenReturn(randomNodeLabels(nodeLabels))
+            .thenReturn(randomNodeLabels(nodeLabels))
+            .thenReturn(randomNodeLabels(nodeLabels));
+      }
+
+      // simulating change in configuredMinResource
+      when(q.getQueueResourceQuotas())
+          .thenReturn(randomResourceQuotas(partition))
+          .thenReturn(randomResourceQuotas(partition))
+          .thenReturn(randomResourceQuotas(partition))
+          .thenReturn(randomResourceQuotas(partition))
+          .thenReturn(randomResourceQuotas(partition));
+      list.add(q);
+    }
+
+    policy.setQueues(list);
+    // java.lang.IllegalArgumentException: Comparison method violates its general contract!
+    assertDoesNotThrow(() -> policy.getAssignmentIterator(partition));
+  }
+
+  private QueueCapacities randomQueueCapacities(String partition) {
+    QueueCapacities qc = new QueueCapacities(false);
+    qc.setAbsoluteCapacity(partition, (float) randFloat(0.0d, 100.0d));
+    qc.setUsedCapacity(partition, (float) randFloat(0.0d, 100.0d));
+    qc.setAbsoluteUsedCapacity(partition, (float) randFloat(0.0d, 100.0d));
+    return qc;
+  }
+
+  private Set<String> randomNodeLabels(String []availableNodeLabels) {
+    Set<String> nodeLabels = new HashSet<>();
+    for (String label : availableNodeLabels) {
+      if (randInt(0, 1) == 1) {
+        nodeLabels.add(label);
+      }
+    }
+    return nodeLabels;
+  }
+
+  private QueueResourceQuotas randomResourceQuotas(String partition) {
+    QueueResourceQuotas qr = new QueueResourceQuotas();
+    qr.setConfiguredMinResource(partition, Resource.newInstance(randInt(1, 10) * 1024, randInt(1, 10)));
+    return qr;
+  }
+
+  private static double randFloat(double min, double max) {
+    return min + ThreadLocalRandom.current().nextFloat() * (max - min);
+  }
+
+  private static int randInt(int min, int max) {
+    return ThreadLocalRandom.current().nextInt(min, max + 1);
   }
 }
