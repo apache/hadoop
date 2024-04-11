@@ -256,11 +256,9 @@ class ReplicaMap {
    */
   void replicas(String bpid, Consumer<Iterator<ReplicaInfo>> consumer) {
     LightWeightResizableGSet<Block, ReplicaInfo> m = null;
-    try (AutoCloseDataSetLock l = lockManager.readLock(LockLevel.BLOCK_POOl, bpid)) {
-      m = map.get(bpid);
-      if (m !=null) {
-        m.getIterator(consumer);
-      }
+    m = map.get(bpid);
+    if (m !=null) {
+      m.getIterator(consumer);
     }
   }
 
