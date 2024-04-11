@@ -146,7 +146,7 @@ public class UnreliableManifestStoreOperations extends ManifestStoreOperations {
    * How many failures before an operation is passed through.
    */
   private final AtomicInteger failureLimit = new AtomicInteger(DEFAULT_FAILURE_LIMIT);
-  
+
   /**
    * Constructor.
    * @param wrappedOperations operations to wrap.
@@ -275,7 +275,7 @@ public class UnreliableManifestStoreOperations extends ManifestStoreOperations {
   public void setFailureLimit(int limit) {
     failureLimit.set(limit);
   }
-  
+
   /**
    * Raise an exception if the path is in the set of target paths
    * and the failure limit is not exceeded.
