@@ -109,7 +109,7 @@ public abstract class ManifestStoreOperations implements Closeable {
    */
   public boolean deleteFile(Path path)
       throws IOException {
-    return delete(path, true);
+    return delete(path, false);
   }
 
   /**

@@ -746,7 +746,7 @@ public abstract class AbstractJobOrTaskStage<IN, OUT>
    */
   private void maybeDeleteDest(final boolean deleteDest, final Path dest) throws IOException {
 
-    if (deleteDest && getFileStatusOrNull(dest) != null) {
+    if (deleteDest) {
       final FileStatus st = getFileStatusOrNull(dest);
       if (st != null) {
         if (st.isDirectory()) {
