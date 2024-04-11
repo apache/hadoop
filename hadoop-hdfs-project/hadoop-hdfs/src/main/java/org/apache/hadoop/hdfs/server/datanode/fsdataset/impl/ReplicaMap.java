@@ -269,7 +269,7 @@ class ReplicaMap {
       if (m == null) {
         // Add an entry for block pool if it does not exist already
         m = new LightWeightResizableGSet<Block, ReplicaInfo>();
-        map.putIfAbsent(bpid, m);
+        map.put(bpid, m);
       }
     }
   }
