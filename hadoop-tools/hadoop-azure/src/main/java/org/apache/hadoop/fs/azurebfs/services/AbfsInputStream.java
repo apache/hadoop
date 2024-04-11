@@ -478,6 +478,9 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         }
       }
     } catch (IOException e) {
+      if (e instanceof FileNotFoundException) {
+        throw e;
+      }
       LOG.debug("Optimized read failed. Defaulting to readOneBlock {}", e);
       restorePointerState();
       return readOneBlock(b, off, len);
