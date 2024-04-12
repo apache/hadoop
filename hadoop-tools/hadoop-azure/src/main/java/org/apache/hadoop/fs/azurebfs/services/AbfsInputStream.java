@@ -23,6 +23,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
@@ -129,7 +130,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   /** ABFS instance to be held by the input stream to avoid GC close. */
   private final BackReference fsBackRef;
 
-  private Boolean fileStatusInformationPresent;
+  private AtomicBoolean fileStatusInformationPresent;
 
   /**
    * Defines if the inputStream has been used successfully once. Prefetches would
@@ -155,10 +156,10 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     this.readAheadQueueDepth = abfsInputStreamContext.getReadAheadQueueDepth();
     this.tolerateOobAppends = abfsInputStreamContext.isTolerateOobAppends();
     this.eTag = eTag;
-    this.fileStatusInformationPresent = StringUtils.isNotEmpty(eTag);
+    this.fileStatusInformationPresent = new AtomicBoolean(StringUtils.isNotEmpty(eTag));
     this.pretechTriggerOnFirstRead =
         abfsInputStreamContext.isPrefetchTriggerOnFirstRead()
-            && fileStatusInformationPresent;
+            && fileStatusInformationPresent.get();
     this.readAheadRange = abfsInputStreamContext.getReadAheadRange();
     this.readAheadEnabled = abfsInputStreamContext.isReadAheadEnabled();
     this.alwaysReadBufferSize
@@ -332,7 +333,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   }
 
   private boolean shouldReadFully(int lengthToRead) {
-    if (!fileStatusInformationPresent) {
+    if (!fileStatusInformationPresent.get()) {
       return (lengthToRead + fCursor) <= this.bufferSize
           && this.firstRead && this.context.readSmallFilesCompletely();
     }
@@ -342,7 +343,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   }
 
   private boolean shouldReadLastBlock(int lengthToRead) {
-    if (!fileStatusInformationPresent) {
+    if (!fileStatusInformationPresent.get()) {
       return this.fCursor >= 0 && lengthToRead <= FOOTER_SIZE && this.firstRead
           && this.context.optimizeFooterRead();
     }
@@ -362,7 +363,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     //If buffer is empty, then fill the buffer.
     if (bCursor == limit) {
       //If EOF, then return -1
-      if (fileStatusInformationPresent && fCursor >= getContentLength()) {
+      if (fileStatusInformationPresent.get() && fCursor >= getContentLength()) {
         return -1;
       }
 
@@ -416,7 +417,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     // data need to be copied to user buffer from index bCursor, bCursor has
     // to be the current fCusor
     bCursor = (int) fCursor;
-    if (!fileStatusInformationPresent) {
+    if (!fileStatusInformationPresent.get()) {
       //TODO: test on if contentLength is less than buffer size
       //TODO: test when contentLength is more than buffer size -> seek to the middle of the bufferSize, and fire a is.read() on full buffer size.
       return optimisedRead(b, off, len, 0, bufferSize);
@@ -437,7 +438,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     // data need to be copied to user buffer from index bCursor,
     // AbfsInutStream buffer is going to contain data from last block start. In
     // that case bCursor will be set to fCursor - lastBlockStart
-    if (!fileStatusInformationPresent) {
+    if (!fileStatusInformationPresent.get()) {
       //TODO: since we are chaniing the state of bcursor. Tests should be there that check next read behaviour.
       //TODO: test when contentLength is more than buffer size -> seek to the middle of the bufferSize, and fire a is.read() on full buffer size.
       //TODO: what if the range sent is wrong
@@ -460,9 +461,10 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     int lastBytesRead = 0;
     try {
       buffer = new byte[bufferSize];
-      boolean fileStatusInformationPresentBeforeRead = fileStatusInformationPresent;
+      boolean fileStatusInformationPresentBeforeRead = fileStatusInformationPresent.get();
       for (int i = 0;
-           i < MAX_OPTIMIZED_READ_ATTEMPTS && (!fileStatusInformationPresent || fCursor < getContentLength()); i++) {
+           i < MAX_OPTIMIZED_READ_ATTEMPTS && (!fileStatusInformationPresent.get()
+               || fCursor < getContentLength()); i++) {
         lastBytesRead = readInternal(fCursor, buffer, limit,
             (int) actualLen - limit, true);
         if (lastBytesRead > 0) {
@@ -537,7 +539,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     Preconditions.checkNotNull(b);
     LOG.debug("read one block requested b.length = {} off {} len {}", b.length,
         off, len);
-    if (fileStatusInformationPresent && this.available() == 0) {
+    if (fileStatusInformationPresent.get() && this.available() == 0) {
       return false;
     }
 
@@ -620,7 +622,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     if (position < 0) {
       throw new IllegalArgumentException("attempting to read from negative offset");
     }
-    if (getFileStatusInformationPresent() && position >= getContentLength()) {
+    if (fileStatusInformationPresent.get() && position >= getContentLength()) {
       return -1;  // Hadoop prefers -1 to EOFException
     }
     if (b == null) {
@@ -662,13 +664,13 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         /*
         * Status 416 is sent when read is done on an empty file.
         */
-        if(ere.getStatusCode() == 416 && !getFileStatusInformationPresent()) {
+        if(ere.getStatusCode() == 416 && !fileStatusInformationPresent.get()) {
           return -1;
         }
       }
       throw new IOException(ex);
     } finally {
-      if (!getFileStatusInformationPresent() && abfsHttpOperation != null) {
+      if (!fileStatusInformationPresent.get() && abfsHttpOperation != null) {
         initPathPropertiesFromReadPathResponseHeader(abfsHttpOperation);
       }
     }
@@ -684,14 +686,11 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     return (int) bytesRead;
   }
 
-  private synchronized void initPathPropertiesFromReadPathResponseHeader(final AbfsHttpOperation op) {
-    if (fileStatusInformationPresent) {
-      return;
-    }
+  private void initPathPropertiesFromReadPathResponseHeader(final AbfsHttpOperation op) {
     contentLength = parseFromRange(
         op.getResponseHeader(HttpHeaderConfigurations.CONTENT_RANGE));
     eTag = op.getResponseHeader(HttpHeaderConfigurations.ETAG);
-    fileStatusInformationPresent = true;
+    fileStatusInformationPresent.set(true);
   }
 
   private long parseFromRange(final String responseHeader) {
@@ -729,7 +728,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     if (n < 0) {
       throw new EOFException(FSExceptionMessages.NEGATIVE_SEEK);
     }
-    if (fileStatusInformationPresent && n > getContentLength()) {
+    if (fileStatusInformationPresent.get() && n > getContentLength()) {
       throw new EOFException(FSExceptionMessages.CANNOT_SEEK_PAST_EOF);
     }
 
@@ -748,7 +747,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       throw new IOException(FSExceptionMessages.STREAM_IS_CLOSED);
     }
     long currentPos = getPos();
-    if (fileStatusInformationPresent && currentPos == getContentLength()) {
+    if (fileStatusInformationPresent.get() && currentPos == getContentLength()) {
       if (n > 0) {
         throw new EOFException(FSExceptionMessages.CANNOT_SEEK_PAST_EOF);
       }
@@ -781,26 +780,17 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       throw new IOException(
           FSExceptionMessages.STREAM_IS_CLOSED);
     }
-    if (!fileStatusInformationPresent) {
+    if (!fileStatusInformationPresent.get()) {
       AbfsRestOperation op = client.getPathStatus(path, false, tracingContext,
           null);
       contentLength = Long.parseLong(
           op.getResult().getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH));
       eTag = op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG);
-      fileStatusInformationPresent = true;
+      fileStatusInformationPresent.set(true);
     }
     final long remaining = getContentLength() - this.getPos();
     return remaining <= Integer.MAX_VALUE
         ? (int) remaining : Integer.MAX_VALUE;
-  }
-
-  /**
-   * For giving synchronized access to the {@link AbfsInputStream#fileStatusInformationPresent}
-   * in non-synchronized methods. This field is being accessed by both synchronized and
-   * non-synchronized methods.
-   */
-  private synchronized boolean getFileStatusInformationPresent() {
-    return fileStatusInformationPresent;
   }
 
   /**
