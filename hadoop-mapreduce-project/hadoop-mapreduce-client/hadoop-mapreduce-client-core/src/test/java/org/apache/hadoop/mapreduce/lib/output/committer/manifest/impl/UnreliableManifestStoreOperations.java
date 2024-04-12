@@ -155,7 +155,6 @@ public class UnreliableManifestStoreOperations extends ManifestStoreOperations {
     this.wrappedOperations = wrappedOperations;
   }
 
-
   /**
    * Reset everything.
    */
