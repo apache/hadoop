@@ -83,7 +83,6 @@ public class ITestAzureBlobFileSystemDelegationSAS extends AbstractAbfsIntegrati
     // The test uses shared key to create a random filesystem and then creates another
     // instance of this filesystem using SAS authorization.
     Assume.assumeTrue(this.getAuthType() == AuthType.SharedKey);
-    Assume.assumeTrue(false);
   }
 
   @Override
