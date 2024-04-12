@@ -393,7 +393,7 @@ public class AbfsRestOperation {
                     AzureServiceErrorCode.EGRESS_OVER_ACCOUNT_LIMIT)) {
               abfsBackoffMetrics.incrementNumberOfBandwidthThrottledRequests();
             } else if (serviceErrorCode.equals(
-                    AzureServiceErrorCode.REQUEST_OVER_ACCOUNT_LIMIT)) {
+                    AzureServiceErrorCode.TPS_OVER_ACCOUNT_LIMIT)) {
               abfsBackoffMetrics.incrementNumberOfIOPSThrottledRequests();
             } else {
               abfsBackoffMetrics.incrementNumberOfOtherThrottledRequests();
@@ -536,6 +536,7 @@ public class AbfsRestOperation {
     }
   }
 
+  /**
    * Updates the count metrics based on the provided retry count.
    * @param retryCount The retry count used to determine the metrics category.
    *
@@ -587,7 +588,9 @@ public class AbfsRestOperation {
     } else {
       return "25AndAbove";
     }
+  }
 
+  /**
    * Updating Client Side Throttling Metrics for relevant response status codes.
    * Following criteria is used to decide based on status code and failure reason.
    * <ol>
