@@ -38,8 +38,12 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TRUE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_FOOTER_READ_BUFFER_SIZE;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_READ_OPTIMIZE_FOOTER_READ;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_HEAD_CALL_OPTIMIZATION_INPUT_STREAM;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_FOOTER_READ_BUFFER_SIZE;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsInputStream.FOOTER_SIZE;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -79,7 +83,7 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
             optimizeFooterRead, fileSize);
         Path testFilePath = createPathAndFileWithContent(
             fs, fileIdx++, fileSize);
-        int length = AbfsInputStream.FOOTER_SIZE;
+        int length = FOOTER_SIZE;
         FutureDataInputStreamBuilder builder = getParameterizedBuilder(
             testFilePath, fs, footerReadBufferSize);
         try (FSDataInputStream iStream = builder.build().get()) {
@@ -193,16 +197,16 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
       return 0;
     }
     if (seekTo == SeekTo.BEFORE_FOOTER_START) {
-      return fileSize - AbfsInputStream.FOOTER_SIZE - 1;
+      return fileSize - FOOTER_SIZE - 1;
     }
     if (seekTo == SeekTo.AT_FOOTER_START) {
-      return fileSize - AbfsInputStream.FOOTER_SIZE;
+      return fileSize - FOOTER_SIZE;
     }
     if (seekTo == SeekTo.END) {
       return fileSize - 1;
     }
     //seekTo == SeekTo.AFTER_FOOTER_START
-    return fileSize - AbfsInputStream.FOOTER_SIZE + 1;
+    return fileSize - FOOTER_SIZE + 1;
   }
 
   private void seekReadAndTest(final AzureBlobFileSystem fs,
@@ -224,10 +228,10 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
       long actualLength;
 
       if(getConfiguration().getHeadOptimizationForInputStream()) {
-        optimizationOn = conf.optimizeFooterRead() && length <= AbfsInputStream.FOOTER_SIZE;
+        optimizationOn = conf.optimizeFooterRead() && length <= FOOTER_SIZE;
       } else {
         long footerStart= max(0,
-            actualContentLength - AbfsInputStream.FOOTER_SIZE);
+            actualContentLength - FOOTER_SIZE);
         optimizationOn =
             conf.optimizeFooterRead() && seekPos >= footerStart;
       }
@@ -322,7 +326,7 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
         byte[] fileContent = getRandomBytesArray(fileSize);
         Path testFilePath = createFileWithContent(fs, fileName, fileContent);
         testPartialReadWithNoData(fs, testFilePath,
-            fileSize - AbfsInputStream.FOOTER_SIZE, AbfsInputStream.FOOTER_SIZE,
+            fileSize - FOOTER_SIZE, FOOTER_SIZE,
             fileContent, footerReadBufferSize, fileSize);
       }
     }
@@ -371,7 +375,7 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
         byte[] fileContent = getRandomBytesArray(fileSize);
         Path testFilePath = createFileWithContent(fs, fileName, fileContent);
         testPartialReadWithSomeData(fs, testFilePath,
-            fileSize - AbfsInputStream.FOOTER_SIZE, AbfsInputStream.FOOTER_SIZE,
+            fileSize - FOOTER_SIZE, FOOTER_SIZE,
             fileContent, footerReadBufferSize);
       }
     }
@@ -455,6 +459,45 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
       builder = fs.openFile(testFilePath);
       iStream = builder.build().get();
       verifyConfigValueInStream(iStream, footerReadBufferSizeConfig);
+    }
+  }
+
+  @Test
+  public void testHeadOptimizationPerformingOutOfRangeRead() throws Exception {
+    Configuration configuration = new Configuration(getRawConfiguration());
+    configuration.set(FS_AZURE_HEAD_CALL_OPTIMIZATION_INPUT_STREAM, TRUE);
+    configuration.set(AZURE_READ_OPTIMIZE_FOOTER_READ, TRUE);
+
+    try (AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(configuration)) {
+      int footerBufferRead = getConfiguration().getFooterReadBufferSize();
+      Path testFilePath = createPathAndFileWithContent(fs, 0, footerBufferRead);
+      try (FSDataInputStream iStream = fs.open(testFilePath)) {
+        iStream.seek(2 * footerBufferRead - FOOTER_SIZE + 1);
+        byte[] buffer = new byte[FOOTER_SIZE];
+        int bytesRead = iStream.read(buffer, 0, FOOTER_SIZE);
+        assertEquals(-1, bytesRead);
+      }
+
+      try (FSDataInputStream iStream = fs.open(testFilePath)) {
+        iStream.seek(footerBufferRead + FOOTER_SIZE);
+        byte[] buffer = new byte[FOOTER_SIZE];
+        int bytesRead = iStream.read(buffer, 0, FOOTER_SIZE);
+        assertEquals(-1, bytesRead);
+        assertEquals(footerBufferRead, iStream.getPos());
+
+        int expectedReadLen = footerBufferRead - (2 * FOOTER_SIZE);
+        iStream.seek(2 * FOOTER_SIZE);
+        buffer = new byte[expectedReadLen];
+        bytesRead = iStream.read(buffer, 0, expectedReadLen);
+        assertEquals(expectedReadLen, bytesRead);
+
+        AbfsInputStream abfsInputStream
+            = (AbfsInputStream) iStream.getWrappedStream();
+        AbfsInputStreamStatisticsImpl streamStatistics =
+            (AbfsInputStreamStatisticsImpl) abfsInputStream.getStreamStatistics();
+        assertEquals(1, streamStatistics.getSeekInBuffer());
+        assertEquals(1, streamStatistics.getRemoteReadOperations());
+      }
     }
   }
 

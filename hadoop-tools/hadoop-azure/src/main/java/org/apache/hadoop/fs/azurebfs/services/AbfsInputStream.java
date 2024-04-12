@@ -402,7 +402,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       fCursor += bytesRead;
       fCursorAfterLastRead = fCursor;
     }
-    return copyToUserBuffer(b, off, len);
+    return copyToUserBuffer(b, off, len, false);
   }
 
   private int readFileCompletely(final byte[] b, final int off, final int len)
@@ -418,11 +418,9 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     // to be the current fCusor
     bCursor = (int) fCursor;
     if (!fileStatusInformationPresent.get()) {
-      //TODO: test on if contentLength is less than buffer size
-      //TODO: test when contentLength is more than buffer size -> seek to the middle of the bufferSize, and fire a is.read() on full buffer size.
-      return optimisedRead(b, off, len, 0, bufferSize);
+      return optimisedRead(b, off, len, 0, bufferSize, false);
     }
-    return optimisedRead(b, off, len, 0, getContentLength());
+    return optimisedRead(b, off, len, 0, getContentLength(), false);
   }
 
   // To do footer read of files when enabled.
@@ -439,23 +437,20 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     // AbfsInutStream buffer is going to contain data from last block start. In
     // that case bCursor will be set to fCursor - lastBlockStart
     if (!fileStatusInformationPresent.get()) {
-      //TODO: since we are chaniing the state of bcursor. Tests should be there that check next read behaviour.
-      //TODO: test when contentLength is more than buffer size -> seek to the middle of the bufferSize, and fire a is.read() on full buffer size.
-      //TODO: what if the range sent is wrong
-
       long lastBlockStart = max(0, (fCursor + len) - footerReadSize);
       bCursor = (int) (fCursor - lastBlockStart);
-      return optimisedRead(b, off, len, lastBlockStart, min(fCursor + len, footerReadSize));
+      return optimisedRead(b, off, len, lastBlockStart, min(fCursor + len, footerReadSize), true);
     }
     long lastBlockStart = max(0, getContentLength() - footerReadSize);
     bCursor = (int) (fCursor - lastBlockStart);
     // 0 if contentlength is < buffersize
     long actualLenToRead = min(footerReadSize, getContentLength());
-    return optimisedRead(b, off, len, lastBlockStart, actualLenToRead);
+    return optimisedRead(b, off, len, lastBlockStart, actualLenToRead, false);
   }
 
   private int optimisedRead(final byte[] b, final int off, final int len,
-      final long readFrom, final long actualLen) throws IOException {
+      final long readFrom, final long actualLen,
+      final boolean isReadWithoutContentLengthInformation) throws IOException {
     fCursor = readFrom;
     int totalBytesRead = 0;
     int lastBytesRead = 0;
@@ -500,7 +495,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       restorePointerState();
       return readOneBlock(b, off, len);
     }
-    return copyToUserBuffer(b, off, len);
+    return copyToUserBuffer(b, off, len, isReadWithoutContentLengthInformation);
   }
 
   private boolean isNonRetriableOptimizedReadException(final IOException e) {
@@ -549,7 +544,21 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     return true;
   }
 
-  private int copyToUserBuffer(byte[] b, int off, int len){
+  private int copyToUserBuffer(byte[] b, int off, int len,
+      final boolean isFooterReadWithoutContentLengthInformation){
+    /*
+     * If the ABFS is running with head optimization for opening InputStream, the
+     * application can give invalid indexes such that the required data is out of file length,
+     * but there can be a part of footer which can be in the file, and can be
+     * read in the AbfsInputStream buffer. But since, the application has asked for
+     * invalid indexes, it will receive a -1.
+     */
+    if (isFooterReadWithoutContentLengthInformation && bCursor > limit) {
+      bCursor = limit;
+      nextReadPos = contentLength;
+      return -1;
+    }
+
     //If there is anything in the buffer, then return lesser of (requested bytes) and (bytes in buffer)
     //(bytes returned may be less than requested)
     int bytesRemaining = limit - bCursor;
