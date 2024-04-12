@@ -620,7 +620,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     if (position < 0) {
       throw new IllegalArgumentException("attempting to read from negative offset");
     }
-    if (fileStatusInformationPresent && position >= getContentLength()) {
+    if (getFileStatusInformationPresent() && position >= getContentLength()) {
       return -1;  // Hadoop prefers -1 to EOFException
     }
     if (b == null) {
@@ -662,13 +662,13 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         /*
         * Status 416 is sent when read is done on an empty file.
         */
-        if(ere.getStatusCode() == 416 && !fileStatusInformationPresent) {
+        if(ere.getStatusCode() == 416 && !getFileStatusInformationPresent()) {
           return -1;
         }
       }
       throw new IOException(ex);
     } finally {
-      if (!fileStatusInformationPresent && abfsHttpOperation != null) {
+      if (!getFileStatusInformationPresent() && abfsHttpOperation != null) {
         initPathPropertiesFromReadPathResponseHeader(abfsHttpOperation);
       }
     }
@@ -684,7 +684,10 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     return (int) bytesRead;
   }
 
-  private void initPathPropertiesFromReadPathResponseHeader(final AbfsHttpOperation op) {
+  private synchronized void initPathPropertiesFromReadPathResponseHeader(final AbfsHttpOperation op) {
+    if (fileStatusInformationPresent) {
+      return;
+    }
     contentLength = parseFromRange(
         op.getResponseHeader(HttpHeaderConfigurations.CONTENT_RANGE));
     eTag = op.getResponseHeader(HttpHeaderConfigurations.ETAG);
@@ -789,6 +792,15 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     final long remaining = getContentLength() - this.getPos();
     return remaining <= Integer.MAX_VALUE
         ? (int) remaining : Integer.MAX_VALUE;
+  }
+
+  /**
+   * For giving synchronized access to the {@link AbfsInputStream#fileStatusInformationPresent}
+   * in non-synchronized methods. This field is being accessed by both synchronized and
+   * non-synchronized methods.
+   */
+  private synchronized boolean getFileStatusInformationPresent() {
+    return fileStatusInformationPresent;
   }
 
   /**
