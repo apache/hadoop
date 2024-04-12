@@ -18,8 +18,8 @@
 
 See also:
 
-* [ABFS](./abfs.md)
-* [Testing](./testing_azure.md)
+* [ABFS](./abfs.html)
+* [Testing](./testing_azure.html)
 
 ## Introduction
 

@@ -126,8 +126,7 @@ public class ITestS3AContractVectoredRead extends AbstractContractVectoredReadTe
       final FileRange range = FileRange.createFileRange(0, extendedLen);
       in.readVectored(Arrays.asList(range), getAllocate());
       CompletableFuture<ByteBuffer> data = range.getData();
-      interceptFuture(RangeNotSatisfiableEOFException.class,
-          "",
+      interceptFuture(EOFException.class, "",
           ContractTestUtils.VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS,
           TimeUnit.SECONDS,
           data);

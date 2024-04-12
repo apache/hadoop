@@ -21,9 +21,16 @@ combtestfile=$resourceDir
 combtestfile+=abfs-combination-test-configs.xml
 logdir=dev-support/testlogs/
 
+# Regex to filter out final test stats
 testresultsregex="Tests run: [0-9]+, Failures: [0-9]+, Errors: [0-9]+, Skipped: [0-9]+$"
+
+# Regex to filter out the test that failed due to unexpected output or error.
 failedTestRegex1="<<< FAILURE!$"
+
+# Regex to filter out the test that failed due to runtime exception.
 failedTestRegex2="<<< ERROR!$"
+
+# Regex to remove the formatting used by mvn output for better regex matching.
 removeFormattingRegex="s/\x1b\[[0-9;]*m//g"
 accountConfigFileSuffix="_settings.xml"
 separatorbar1="============================================================"

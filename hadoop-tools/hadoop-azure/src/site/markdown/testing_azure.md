@@ -631,7 +631,7 @@ without domain part), namely
    New files created in folder accountSettings is listed in .gitignore to
    prevent accidental cred leaks.
 
-You are all set to run the test srcipt.
+You are all set to run the test script.
 
 **To run PR validation:** Running command
 * `dev-support/testrun-scripts/runtests.sh` will prompt as below:

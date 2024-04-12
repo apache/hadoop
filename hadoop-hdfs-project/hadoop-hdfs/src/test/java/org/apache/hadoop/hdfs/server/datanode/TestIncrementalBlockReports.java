@@ -17,14 +17,25 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.times;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Phaser;
+import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
+import org.mockito.invocation.InvocationOnMock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -55,6 +66,9 @@ public class TestIncrementalBlockReports {
   private static final long DUMMY_BLOCK_ID = 5678;
   private static final long DUMMY_BLOCK_LENGTH = 1024 * 1024;
   private static final long DUMMY_BLOCK_GENSTAMP = 1000;
+  private static final String TEST_FILE_DATA = "hello world";
+  private static final String TEST_FILE = "/TestStandbyBlockManagement";
+  private static final Path TEST_FILE_PATH = new Path(TEST_FILE);
 
   private MiniDFSCluster cluster = null;
   private Configuration conf;
@@ -213,6 +227,102 @@ public class TestIncrementalBlockReports {
     } finally {
       cluster.shutdown();
       cluster = null;
+    }
+  }
+
+  @Test
+  public void testIBRRaceCondition() throws Exception {
+    cluster.shutdown();
+    conf = new Configuration();
+    HAUtil.setAllowStandbyReads(conf, true);
+    conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, 1);
+    cluster = new MiniDFSCluster.Builder(conf)
+        .nnTopology(MiniDFSNNTopology.simpleHATopology())
+        .numDataNodes(3)
+        .build();
+    try {
+      cluster.waitActive();
+      cluster.transitionToActive(0);
+
+      NameNode nn1 = cluster.getNameNode(0);
+      NameNode nn2 = cluster.getNameNode(1);
+      FileSystem fs = HATestUtil.configureFailoverFs(cluster, conf);
+      List<InvocationOnMock> ibrsToStandby = new ArrayList<>();
+      List<DatanodeProtocolClientSideTranslatorPB> spies = new ArrayList<>();
+      Phaser ibrPhaser = new Phaser(1);
+      for (DataNode dn : cluster.getDataNodes()) {
+        DatanodeProtocolClientSideTranslatorPB nnSpy =
+            InternalDataNodeTestUtils.spyOnBposToNN(dn, nn2);
+        doAnswer((inv) -> {
+          for (StorageReceivedDeletedBlocks srdb :
+              inv.getArgument(2, StorageReceivedDeletedBlocks[].class)) {
+            for (ReceivedDeletedBlockInfo block : srdb.getBlocks()) {
+              if (block.getStatus().equals(BlockStatus.RECEIVED_BLOCK)) {
+                ibrPhaser.arriveAndDeregister();
+              }
+            }
+          }
+          ibrsToStandby.add(inv);
+          return null;
+        }).when(nnSpy).blockReceivedAndDeleted(
+            any(DatanodeRegistration.class),
+            anyString(),
+            any(StorageReceivedDeletedBlocks[].class));
+        spies.add(nnSpy);
+      }
+
+      LOG.info("==================================");
+      // Force the DNs to delay report to the SNN
+      ibrPhaser.bulkRegister(9);
+      DFSTestUtil.writeFile(fs, TEST_FILE_PATH, TEST_FILE_DATA);
+      DFSTestUtil.appendFile(fs, TEST_FILE_PATH, TEST_FILE_DATA);
+      DFSTestUtil.appendFile(fs, TEST_FILE_PATH, TEST_FILE_DATA);
+      HATestUtil.waitForStandbyToCatchUp(nn1, nn2);
+      // SNN has caught up to the latest edit log so we send the IBRs to SNN
+      int phase = ibrPhaser.arrive();
+      ibrPhaser.awaitAdvanceInterruptibly(phase, 60, TimeUnit.SECONDS);
+      for (InvocationOnMock sendIBRs : ibrsToStandby) {
+        try {
+          sendIBRs.callRealMethod();
+        } catch (Throwable t) {
+          LOG.error("Exception thrown while calling sendIBRs: ", t);
+        }
+      }
+
+      assertEquals("There should be 3 pending messages from DNs", 3,
+          nn2.getNamesystem().getBlockManager().getPendingDataNodeMessageCount());
+      ibrsToStandby.clear();
+      // We need to trigger another edit log roll so that the pendingDNMessages
+      // are processed.
+      ibrPhaser.bulkRegister(6);
+      DFSTestUtil.appendFile(fs, TEST_FILE_PATH, TEST_FILE_DATA);
+      DFSTestUtil.appendFile(fs, TEST_FILE_PATH, TEST_FILE_DATA);
+      phase = ibrPhaser.arrive();
+      ibrPhaser.awaitAdvanceInterruptibly(phase, 60, TimeUnit.SECONDS);
+      for (InvocationOnMock sendIBRs : ibrsToStandby) {
+        try {
+          sendIBRs.callRealMethod();
+        } catch (Throwable t) {
+          LOG.error("Exception thrown while calling sendIBRs: ", t);
+        }
+      }
+      ibrsToStandby.clear();
+      ibrPhaser.arriveAndDeregister();
+      ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, TEST_FILE_PATH);
+      HATestUtil.waitForStandbyToCatchUp(nn1, nn2);
+      LOG.info("==================================");
+
+      // Trigger an active switch to force SNN to mark blocks as corrupt if they
+      // have a bad genstamp in the pendingDNMessages queue.
+      cluster.transitionToStandby(0);
+      cluster.transitionToActive(1);
+      cluster.waitActive(1);
+
+      assertEquals("There should not be any corrupt replicas", 0,
+          nn2.getNamesystem().getBlockManager()
+              .numCorruptReplicas(block.getLocalBlock()));
+    } finally {
+      cluster.shutdown();
     }
   }
 }
