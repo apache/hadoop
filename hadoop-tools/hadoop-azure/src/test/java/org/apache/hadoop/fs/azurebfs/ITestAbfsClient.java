@@ -120,10 +120,10 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
                 expectedListResultsSize, listMaxResults, fileCount)
             .hasSize(expectedListResultsSize);
       } else {
-        // Listing is incomplete and number of objects can be lesser than expected
+        // Listing is incomplete and number of objects can be less than expected
         Assertions.assertThat(list)
             .describedAs("AbfsClient.listPath() should return %d items"
-                + " or lesser when listMaxResults is %d,  directory contains"
+                + " or less when listMaxResults is %d,  directory contains"
                 + " %d items and listing is incomplete",
                 expectedListResultsSize, listMaxResults, fileCount)
             .hasSizeLessThanOrEqualTo(expectedListResultsSize);
@@ -155,10 +155,10 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
               LIST_MAX_RESULTS_SERVER, LIST_MAX_RESULTS_SERVER)
           .hasSize(LIST_MAX_RESULTS_SERVER);
     } else {
-      // Listing is incomplete and number of objects can be lesser than expected
+      // Listing is incomplete and number of objects can be less than expected
       Assertions.assertThat(list)
           .describedAs("AbfsClient.listPath() should return %d items"
-              + " or lesser when listMaxResults is %d, directory contains"
+              + " or less when listMaxResults is %d, directory contains"
               + " %d items and listing is complete", LIST_MAX_RESULTS_SERVER,
               LIST_MAX_RESULTS_SERVER, LIST_MAX_RESULTS_SERVER)
           .hasSizeLessThanOrEqualTo(LIST_MAX_RESULTS_SERVER);

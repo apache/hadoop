@@ -530,9 +530,10 @@ public abstract class AbstractAbfsIntegrationTest extends
   }
 
   protected void assumeValidTestConfigPresent(final Configuration conf, final String key) {
-    String configuredValue = conf.get(key);
+    String configuredValue = conf.get(accountProperty(key, accountName),
+        conf.get(key, ""));
     Assume.assumeTrue(String.format("Missing Required Test Config: %s.", key),
-        configuredValue != null && !configuredValue.isEmpty());
+        !configuredValue.isEmpty());
   }
 
   protected void assumeValidAuthConfigsPresent() {
