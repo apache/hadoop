@@ -257,7 +257,7 @@ public class ITestAbfsInputStreamSmallFileReads extends ITestAbfsInputStream {
       AbfsInputStream abfsInputStream = (AbfsInputStream) iStream
           .getWrappedStream();
       abfsInputStream = spy(abfsInputStream);
-      Mockito.doReturn((long) length).when(abfsInputStream).getContentLength();
+      Mockito.doReturn((long) fileContent.length).when(abfsInputStream).getContentLength();
       int[] readRemoteIteration = {0};
       Mockito.doAnswer(answer -> {
         readRemoteIteration[0]++;

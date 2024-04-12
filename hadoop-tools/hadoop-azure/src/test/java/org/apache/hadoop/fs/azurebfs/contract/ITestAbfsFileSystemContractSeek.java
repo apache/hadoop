@@ -186,27 +186,65 @@ public class ITestAbfsFileSystemContractSeek extends AbstractContractSeekTest{
       assertDataAtPos(newSeek, (byte) in.read());
       assertSeekBufferStats(1, streamStatistics.getSeekInBuffer());
       remoteReadOperationsNewVal = streamStatistics.getRemoteReadOperations();
-      assertNoIncrementInRemoteReadOps(remoteReadOperationsOldVal,
-              remoteReadOperationsNewVal);
+      boolean isPrefetchSwitchedOffForFirstRead
+          = !((AzureBlobFileSystem) getFileSystem()).getAbfsStore()
+          .getAbfsConfiguration()
+          .getPrefetchReadaheadOnFirstRead();
+      /*
+       * If prefetchReadaheadOnFirstRead is switched off, there will be no
+       * prefetch on the first read call. So the process would be having only data
+       * 0 to readAheadRange in memory. There would not have been any prefetch
+       * for [readAheadRange, 2*readAheadRange] range. So, for the read of [readAheadRange,
+       * readAheadRange + 1] range, there would be 2 remote read operation, as the
+       * prefetch logic will get switched on.
+       */
+      assertNoIncrementInRemoteReadOps(remoteReadOperationsOldVal + (
+              isPrefetchSwitchedOffForFirstRead
+                  ? 2 : 0),
+          remoteReadOperationsNewVal);
       remoteReadOperationsOldVal = remoteReadOperationsNewVal;
+
+      if(isPrefetchSwitchedOffForFirstRead) {
+        newSeek = 2 * inStream.getReadAheadRange() + 1;
+        /*
+         * This read will be getting data for [2 * readAheadRange, 2 * readAheadRange + 1] from
+         * readAheadBuffers. But the read will execute a prefetch for [3 * readAheadRange, 4 * readAheadRange - 1].
+         */
+        inStream.seek(newSeek);
+        assertGetPosition(newSeek, in.getPos());
+        assertDataAtPos(newSeek, (byte) in.read());
+        assertSeekBufferStats(1, streamStatistics.getSeekInBuffer());
+        remoteReadOperationsNewVal = streamStatistics.getRemoteReadOperations();
+        assertNoIncrementInRemoteReadOps(remoteReadOperationsOldVal + 1,
+            remoteReadOperationsNewVal);
+        remoteReadOperationsOldVal = remoteReadOperationsNewVal;
+      }
 
       // Seeking just after read ahead range. Read from buffer.
       newSeek = inStream.getReadAheadRange() + 1;
+      /*
+      * If the testcase for switched off prefetchReadAheadOnFirstRead is run, then
+      * the memory would have data from [2 * readAheadRange, 4 * ReadAheadRange - 1].
+      * So, when read has to be done on [readAheadRange + 1, readAheadRange + 2],
+      * it would be a new read and not from already buffered data.
+      */
+      int seekCounter = isPrefetchSwitchedOffForFirstRead ? 1 : 2;
       in.seek(newSeek);
       assertGetPosition(newSeek, in.getPos());
       assertDataAtPos(newSeek, (byte) in.read());
-      assertSeekBufferStats(2, streamStatistics.getSeekInBuffer());
+      assertSeekBufferStats(seekCounter, streamStatistics.getSeekInBuffer());
       remoteReadOperationsNewVal = streamStatistics.getRemoteReadOperations();
-      assertNoIncrementInRemoteReadOps(remoteReadOperationsOldVal,
+      assertNoIncrementInRemoteReadOps(remoteReadOperationsOldVal + (isPrefetchSwitchedOffForFirstRead ? 1:0),
               remoteReadOperationsNewVal);
       remoteReadOperationsOldVal = remoteReadOperationsNewVal;
 
       // Seeking just 10 more bytes such that data is read from buffer.
       newSeek += 10;
+      seekCounter++;
       in.seek(newSeek);
       assertGetPosition(newSeek, in.getPos());
       assertDataAtPos(newSeek, (byte) in.read());
-      assertSeekBufferStats(3, streamStatistics.getSeekInBuffer());
+      assertSeekBufferStats(seekCounter, streamStatistics.getSeekInBuffer());
       remoteReadOperationsNewVal = streamStatistics.getRemoteReadOperations();
       assertNoIncrementInRemoteReadOps(remoteReadOperationsOldVal,
               remoteReadOperationsNewVal);
@@ -217,7 +255,7 @@ public class ITestAbfsFileSystemContractSeek extends AbstractContractSeekTest{
       in.seek(newSeek);
       assertGetPosition(newSeek, in.getPos());
       assertDataAtPos(newSeek, (byte) in.read());
-      assertSeekBufferStats(3, streamStatistics.getSeekInBuffer());
+      assertSeekBufferStats(seekCounter, streamStatistics.getSeekInBuffer());
       remoteReadOperationsNewVal = streamStatistics.getRemoteReadOperations();
       assertIncrementInRemoteReadOps(remoteReadOperationsOldVal,
               remoteReadOperationsNewVal);
@@ -225,10 +263,11 @@ public class ITestAbfsFileSystemContractSeek extends AbstractContractSeekTest{
 
       // Seeking just 10 more bytes such that data is read from buffer.
       newSeek += 10;
+      seekCounter++;
       in.seek(newSeek);
       assertGetPosition(newSeek, in.getPos());
       assertDataAtPos(newSeek, (byte) in.read());
-      assertSeekBufferStats(4, streamStatistics.getSeekInBuffer());
+      assertSeekBufferStats(seekCounter, streamStatistics.getSeekInBuffer());
       remoteReadOperationsNewVal = streamStatistics.getRemoteReadOperations();
       assertNoIncrementInRemoteReadOps(remoteReadOperationsOldVal,
               remoteReadOperationsNewVal);
@@ -243,7 +282,7 @@ public class ITestAbfsFileSystemContractSeek extends AbstractContractSeekTest{
       // Adding one as one byte is already read
       // after the last seek is done.
       assertGetPosition(oldSeek + 1, in.getPos());
-      assertSeekBufferStats(4, streamStatistics.getSeekInBuffer());
+      assertSeekBufferStats(seekCounter, streamStatistics.getSeekInBuffer());
       assertDatasetEquals(newSeek, "Read across read ahead ",
               bytes, bytes.length);
       remoteReadOperationsNewVal = streamStatistics.getRemoteReadOperations();
