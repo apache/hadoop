@@ -29,7 +29,7 @@ Some of the pain points for current device plugin development and integration
  are listed below:
 
 
-* At least 6 classes to be implemented (If you wanna support
+* At least 6 classes to be implemented (If you want to support
 Docker, you’ll implement one more “DockerCommandPlugin”).
 * When implementing the “ResourceHandler” interface,
 the developer must understand the YARN NM internal concepts like container

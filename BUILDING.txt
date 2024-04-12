@@ -315,12 +315,12 @@ Controlling the redistribution of the protobuf-2.5 dependency
 
     The protobuf 2.5.0 library is used at compile time to compile the class
     org.apache.hadoop.ipc.ProtobufHelper; this class known to have been used by
-    external projects in the past. Protobuf 2.5 is not used elsewhere in
+    external projects in the past. Protobuf 2.5 is not used directly in
     the Hadoop codebase; alongside the move to Protobuf 3.x a private successor
     class, org.apache.hadoop.ipc.internal.ShadedProtobufHelper is now used.
 
     The hadoop-common module no longer exports its compile-time dependency on
-    protobuf-2.5. Hadoop distributions no longer include it.
+    protobuf-java-2.5.
     Any application declaring a dependency on hadoop-commmon will no longer get
     the artifact added to their classpath.
     If is still required, then they must explicitly declare it:
@@ -337,9 +337,13 @@ Controlling the redistribution of the protobuf-2.5 dependency
 
            -Dcommon.protobuf2.scope=compile
 
-    If this is done then protobuf-2.5.0.jar will again be exported as a
+    If this is done then protobuf-java-2.5.0.jar will again be exported as a
     hadoop-common dependency, and included in the share/hadoop/common/lib/
     directory of any Hadoop distribution built.
+
+    Note that protobuf-java-2.5.0.jar is still placed in
+    share/hadoop/yarn/timelineservice/lib; this is needed by the hbase client
+    library.
 
 ----------------------------------------------------------------------------------
 Building components separately
@@ -648,6 +652,20 @@ container.
     -Dcmake.prefix.path=C:\vcpkg\installed\x64-windows^
     -Dwindows.cmake.toolchain.file=C:\vcpkg\scripts\buildsystems\vcpkg.cmake -Dwindows.cmake.build.type=RelWithDebInfo^
     -Dwindows.build.hdfspp.dll=off -Dwindows.no.sasl=on -Duse.platformToolsetVersion=v142
+
+Building the release tarball:
+Assuming that we're still running in the Docker container hadoop-windows-10-builder, run the
+following command to create the Apache Hadoop release tarball -
+
+> set IS_WINDOWS=1
+> set MVN_ARGS="-Dshell-executable=C:\Git\bin\bash.exe -Dhttps.protocols=TLSv1.2 -Pnative-win -Drequire.openssl -Dopenssl.prefix=C:\vcpkg\installed\x64-windows -Dcmake.prefix.path=C:\vcpkg\installed\x64-windows -Dwindows.cmake.toolchain.file=C:\vcpkg\scripts\buildsystems\vcpkg.cmake -Dwindows.cmake.build.type=RelWithDebInfo -Dwindows.build.hdfspp.dll=off -Duse.platformToolsetVersion=v142 -Dwindows.no.sasl=on -DskipTests -DskipDocs -Drequire.test.libhadoop"
+> C:\Git\bin\bash.exe C:\hadoop\dev-support\bin\create-release --mvnargs=%MVN_ARGS%
+
+Note:
+If the building fails due to an issue with long paths, rename the Hadoop root directory to just a
+letter (like 'h') and rebuild -
+
+> C:\Git\bin\bash.exe C:\h\dev-support\bin\create-release --mvnargs=%MVN_ARGS%
 
 ----------------------------------------------------------------------------------
 Building distributions:

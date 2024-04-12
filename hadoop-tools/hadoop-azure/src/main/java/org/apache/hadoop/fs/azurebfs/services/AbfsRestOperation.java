@@ -47,7 +47,9 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.Z
 import static org.apache.hadoop.util.Time.now;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_CONTINUE;
-import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_TIMEOUT_ABBREVIATION;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.EGRESS_LIMIT_BREACH_ABBREVIATION;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.INGRESS_LIMIT_BREACH_ABBREVIATION;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.TPS_LIMIT_BREACH_ABBREVIATION;
 
 /**
  * The AbfsRestOperation for Rest AbfsClient.
@@ -341,7 +343,8 @@ public class AbfsRestOperation {
   private boolean executeHttpOperation(final int retryCount,
     TracingContext tracingContext) throws AzureBlobFileSystemException {
     AbfsHttpOperation httpOperation;
-    boolean wasIOExceptionThrown = false;
+    // Used to avoid CST Metric Update in Case of UnknownHost/IO Exception.
+    boolean wasKnownExceptionThrown = false;
 
     try {
       // initialize the HTTP request and open the connection
@@ -407,7 +410,27 @@ public class AbfsRestOperation {
       } else if (httpOperation.getStatusCode() == HttpURLConnection.HTTP_UNAVAILABLE) {
         incrementCounter(AbfsStatistic.SERVER_UNAVAILABLE, 1);
       }
+
+      // If no exception occurred till here it means http operation was successfully complete and
+      // a response from server has been received which might be failure or success.
+      // If any kind of exception has occurred it will be caught below.
+      // If request failed to determine failure reason and retry policy here.
+      // else simply return with success after saving the result.
+      LOG.debug("HttpRequest: {}: {}", operationType, httpOperation);
+
+      int status = httpOperation.getStatusCode();
+      failureReason = RetryReason.getAbbreviation(null, status, httpOperation.getStorageErrorMessage());
+      retryPolicy = client.getRetryPolicy(failureReason);
+
+      if (retryPolicy.shouldRetry(retryCount, httpOperation.getStatusCode())) {
+        return false;
+      }
+
+      // If the request has succeeded or failed with non-retrial error, save the operation and return.
+      result = httpOperation;
+
     } catch (UnknownHostException ex) {
+      wasKnownExceptionThrown = true;
       String hostname = null;
       hostname = httpOperation.getHost();
       failureReason = RetryReason.getAbbreviation(ex, null, null);
@@ -425,6 +448,7 @@ public class AbfsRestOperation {
       }
       return false;
     } catch (IOException ex) {
+      wasKnownExceptionThrown = true;
       if (LOG.isDebugEnabled()) {
         LOG.debug("HttpRequestFailure: {}, {}", httpOperation, ex);
       }
@@ -435,50 +459,19 @@ public class AbfsRestOperation {
       }
       failureReason = RetryReason.getAbbreviation(ex, -1, "");
       retryPolicy = client.getRetryPolicy(failureReason);
-      wasIOExceptionThrown = true;
       if (!retryPolicy.shouldRetry(retryCount, -1)) {
         updateBackoffMetrics(retryCount, httpOperation.getStatusCode());
         throw new InvalidAbfsRestOperationException(ex, retryCount);
       }
       return false;
     } finally {
-      int status = httpOperation.getStatusCode();
-      /*
-       A status less than 300 (2xx range) or greater than or equal
-       to 500 (5xx range) should contribute to throttling metrics being updated.
-       Less than 200 or greater than or equal to 500 show failed operations. 2xx
-       range contributes to successful operations. 3xx range is for redirects
-       and 4xx range is for user errors. These should not be a part of
-       throttling backoff computation.
-       */
-      boolean updateMetricsResponseCode = (status < HttpURLConnection.HTTP_MULT_CHOICE
-              || status >= HttpURLConnection.HTTP_INTERNAL_ERROR);
-
-      /*
-       Connection Timeout failures should not contribute to throttling
-       In case the current request fails with Connection Timeout we will have
-       ioExceptionThrown true and failure reason as CT
-       In case the current request failed with 5xx, failure reason will be
-       updated after finally block but wasIOExceptionThrown will be false;
-       */
-      boolean isCTFailure = CONNECTION_TIMEOUT_ABBREVIATION.equals(failureReason) && wasIOExceptionThrown;
-
-      if (updateMetricsResponseCode && !isCTFailure) {
+      int statusCode = httpOperation.getStatusCode();
+      // Update Metrics only if Succeeded or Throttled due to account limits.
+      // Also Update in case of any unhandled exception is thrown.
+      if (shouldUpdateCSTMetrics(statusCode) && !wasKnownExceptionThrown) {
         intercept.updateMetrics(operationType, httpOperation);
       }
     }
-
-    LOG.debug("HttpRequest: {}: {}", operationType, httpOperation);
-
-    int status = httpOperation.getStatusCode();
-    failureReason = RetryReason.getAbbreviation(null, status, httpOperation.getStorageErrorMessage());
-    retryPolicy = client.getRetryPolicy(failureReason);
-
-    if (retryPolicy.shouldRetry(retryCount, httpOperation.getStatusCode())) {
-      return false;
-    }
-
-    result = httpOperation;
 
     return true;
   }
@@ -543,7 +536,6 @@ public class AbfsRestOperation {
     }
   }
 
-  /**
    * Updates the count metrics based on the provided retry count.
    * @param retryCount The retry count used to determine the metrics category.
    *
@@ -595,6 +587,32 @@ public class AbfsRestOperation {
     } else {
       return "25AndAbove";
     }
+
+   * Updating Client Side Throttling Metrics for relevant response status codes.
+   * Following criteria is used to decide based on status code and failure reason.
+   * <ol>
+   *   <li>Case 1: Status code in 2xx range: Successful Operations should contribute</li>
+   *   <li>Case 2: Status code in 3xx range: Redirection Operations should not contribute</li>
+   *   <li>Case 3: Status code in 4xx range: User Errors should not contribute</li>
+   *   <li>
+   *     Case 4: Status code is 503: Throttling Error should contribute as following:
+   *     <ol>
+   *       <li>Case 4.a: Ingress Over Account Limit: Should Contribute</li>
+   *       <li>Case 4.b: Egress Over Account Limit: Should Contribute</li>
+   *       <li>Case 4.c: TPS Over Account Limit: Should Contribute</li>
+   *       <li>Case 4.d: Other Server Throttling: Should not contribute</li>
+   *     </ol>
+   *   </li>
+   *   <li>Case 5: Status code in 5xx range other than 503: Should not contribute</li>
+   * </ol>
+   * @param statusCode
+   * @return
+   */
+  private boolean shouldUpdateCSTMetrics(final int statusCode) {
+    return statusCode <  HttpURLConnection.HTTP_MULT_CHOICE // Case 1
+        || INGRESS_LIMIT_BREACH_ABBREVIATION.equals(failureReason) // Case 4.a
+        || EGRESS_LIMIT_BREACH_ABBREVIATION.equals(failureReason) // Case 4.b
+        || TPS_LIMIT_BREACH_ABBREVIATION.equals(failureReason); // Case 4.c
   }
 
   /**

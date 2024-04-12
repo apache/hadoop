@@ -26,6 +26,7 @@ import java.util.UUID;
 import java.util.concurrent.Callable;
 
 import org.junit.After;
+import org.junit.Assume;
 import org.junit.Before;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -215,6 +216,7 @@ public abstract class AbstractAbfsIntegrationTest extends
       wasb = new NativeAzureFileSystem(azureNativeFileSystemStore);
       wasb.initialize(wasbUri, rawConfig);
     }
+    // Todo: To be fixed in HADOOP-19137
     AbfsClientUtils.setIsNamespaceEnabled(abfs.getAbfsClient(), true);
   }
 
@@ -531,5 +533,11 @@ public abstract class AbstractAbfsIntegrationTest extends
     assertEquals("Mismatch in " + statistic.getStatName(), expectedValue,
         (long) metricMap.get(statistic.getStatName()));
     return expectedValue;
+  }
+
+  protected void assumeValidTestConfigPresent(final Configuration conf, final String key) {
+    String configuredValue = conf.get(key);
+    Assume.assumeTrue(String.format("Missing Required Test Config: %s.", key),
+        configuredValue != null && !configuredValue.isEmpty());
   }
 }

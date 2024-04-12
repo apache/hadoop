@@ -154,6 +154,12 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
   }
 
   @Override
+  public ReplicaHandler createRbw(StorageType storageType, String storageId,
+      ExtendedBlock b, boolean allowLazyPersist, long newGS) throws IOException {
+    return createRbw(storageType, storageId, b, allowLazyPersist);
+  }
+
+  @Override
   public ReplicaHandler recoverRbw(ExtendedBlock b, long newGS,
       long minBytesRcvd, long maxBytesRcvd) throws IOException {
     return new ReplicaHandler(new ExternalReplicaInPipeline(), null);
