@@ -163,7 +163,7 @@ public final class FileSystemConfigurations {
 
   public static final boolean DEFAULT_HEAD_OPTIMIZATION_INPUT_STREAM = false;
 
-  public static final boolean DEFAULT_PREFETCH_READAHEAD_ON_FIRST_READ = true;
+  public static final boolean DEFAULT_PREFETCH_READAHEAD_ON_FIRST_READ = false;
 
   private FileSystemConfigurations() {}
 }
