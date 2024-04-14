@@ -222,6 +222,10 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
       // Network stats calculation: For Creating AbfsInputStream:
       // 1 GetFileStatus request to fetch file size = 1 connection and 1 get response
       if (!getConfiguration().getHeadOptimizationForInputStream()) {
+        /*
+         * If head optimization is enabled, getFileStatus is not called. Hence, there
+         * would be no connection made and get response for the operation 'open'.
+         */
         expectedConnectionsMade++;
         expectedGetResponses++;
       }
@@ -236,6 +240,12 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
       if (!getConfiguration().getHeadOptimizationForInputStream()) {
         expectedBytesReceived += bytesWrittenToFile;
       } else {
+        /*
+         * With head optimization enabled, the abfsInputStream is not aware
+         * of the contentLength and hence, it would only read data for which the range
+         * is provided. With the first remote call done, the inputStream will get
+         * aware of the contentLength and would be able to use it for further reads.
+         */
         expectedBytesReceived += 1;
       }
       // --------------------------------------------------------------------
@@ -278,6 +288,10 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
       // Network stats calculation: For Creating AbfsInputStream:
       // 1 GetFileStatus for file size = 1 connection and 1 get response
       if (!getConfiguration().getHeadOptimizationForInputStream()) {
+        /*
+         * If head optimization is enabled, getFileStatus is not called. Hence, there
+         * would be no connection made and get response for the operation 'open'.
+         */
         expectedConnectionsMade++;
         expectedGetResponses++;
       }

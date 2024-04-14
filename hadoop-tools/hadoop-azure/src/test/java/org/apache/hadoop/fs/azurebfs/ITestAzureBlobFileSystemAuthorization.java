@@ -327,7 +327,7 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
     case ReadFile:
       fs.open(reqPath);
       break;
-    case Open: {
+    case Open:
       InputStream is = fs.open(reqPath);
       if (getConfiguration().getHeadOptimizationForInputStream()) {
         try {
@@ -338,7 +338,6 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
         }
       }
       break;
-    }
     case DeletePath:
       fs.delete(reqPath, false);
       break;

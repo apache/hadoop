@@ -247,7 +247,7 @@ public class TestAbfsInputStream extends
         source)))).getPathStatus(anyString(), anyBoolean(), any(TracingContext.class), any(
         ContextEncryptionAdapter.class));
 
-    // verify GetPathStatus invoked when FileStatus not provided
+    // verify GetPathStatus invoked when FileStatus not provided and the head optimization is disabled
     abfsStore.openFileForRead(testFile,
         Optional.empty(), null,
         tracingContext);

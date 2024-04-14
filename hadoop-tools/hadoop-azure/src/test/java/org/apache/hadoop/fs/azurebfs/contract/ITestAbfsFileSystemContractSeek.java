@@ -189,7 +189,7 @@ public class ITestAbfsFileSystemContractSeek extends AbstractContractSeekTest{
           .getAbfsConfiguration()
           .getPrefetchReadaheadOnFirstRead();
       /*
-       * If prefetchReadaheadOnFirstRead is switched off, there will be no
+       * If prefetchReadAheadOnFirstRead is switched off, there will be no
        * prefetch on the first read call. So the process would be having only data
        * 0 to readAheadRange in memory. There would not have been any prefetch
        * for [readAheadRange, 2*readAheadRange] range. So, for the read of [readAheadRange,
