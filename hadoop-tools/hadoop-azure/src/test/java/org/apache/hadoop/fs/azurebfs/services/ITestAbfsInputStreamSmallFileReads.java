@@ -204,7 +204,7 @@ public class ITestAbfsInputStreamSmallFileReads extends ITestAbfsInputStream {
       final boolean smallFile;
       final boolean headOptimization = getConfiguration().getHeadOptimizationForInputStream();
 
-      if(headOptimization) {
+      if (headOptimization) {
         smallFile = ((seekPos + length) <= readBufferSize);
       } else {
         smallFile = fileContentLength <= readBufferSize;
@@ -265,7 +265,7 @@ public class ITestAbfsInputStreamSmallFileReads extends ITestAbfsInputStream {
       int[] readRemoteIteration = {0};
       Mockito.doAnswer(answer -> {
         readRemoteIteration[0]++;
-        if(readRemoteIteration[0] <= 2) {
+        if (readRemoteIteration[0] <= 2) {
           return 10;
         }
         return answer.callRealMethod();

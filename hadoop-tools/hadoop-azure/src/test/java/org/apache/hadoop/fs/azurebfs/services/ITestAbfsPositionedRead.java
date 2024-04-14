@@ -107,7 +107,9 @@ public class ITestAbfsPositionedRead extends AbstractAbfsIntegrationTest {
       // Check statistics
       assertStatistics(inputStream.getIOStatistics(), 2 * bytesToRead, 2,
           isHeadOptimization ? 2 : 1,
-          isHeadOptimization ? TEST_FILE_DATA_SIZE - 40 : TEST_FILE_DATA_SIZE);
+          isHeadOptimization
+              ? TEST_FILE_DATA_SIZE - readPos + bytesToRead
+              : TEST_FILE_DATA_SIZE);
       // Did positioned read from pos 0 and then 50 but the stream pos should
       // remain at 0.
       Assertions.assertThat(inputStream.getPos())

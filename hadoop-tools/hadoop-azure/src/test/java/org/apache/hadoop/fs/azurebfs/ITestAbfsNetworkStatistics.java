@@ -233,7 +233,7 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
       // 1 read request = 1 connection and 1 get response
       expectedConnectionsMade++;
       expectedGetResponses++;
-      if(!getConfiguration().getHeadOptimizationForInputStream()) {
+      if (!getConfiguration().getHeadOptimizationForInputStream()) {
         expectedBytesReceived += bytesWrittenToFile;
       } else {
         expectedBytesReceived += 1;

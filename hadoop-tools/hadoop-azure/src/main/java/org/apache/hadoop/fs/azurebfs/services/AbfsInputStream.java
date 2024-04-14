@@ -52,6 +52,8 @@ import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FORWARD_SLASH;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.READ_PATH_REQUEST_NOT_SATISFIABLE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_KB;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.STREAM_ID_LEN;
 import static org.apache.hadoop.fs.azurebfs.constants.InternalConstants.CAPABILITY_SAFE_READAHEAD;
@@ -469,7 +471,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
           limit += lastBytesRead;
           fCursor += lastBytesRead;
           fCursorAfterLastRead = fCursor;
-          if(shouldBreak) {
+          if (shouldBreak) {
             break;
           }
         }
@@ -555,7 +557,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
      */
     if (isFooterReadWithoutContentLengthInformation && bCursor > limit) {
       bCursor = limit;
-      nextReadPos = contentLength;
+      nextReadPos = getContentLength();
       return -1;
     }
 
@@ -671,9 +673,12 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
           throw new FileNotFoundException(ere.getMessage());
         }
         /*
-        * Status 416 is sent when read is done on an empty file.
-        */
-        if(ere.getStatusCode() == 416 && !fileStatusInformationPresent.get()) {
+         * Status 416 is sent when read range is out of contentLength range.
+         * This would happen only in the case if contentLength is not known before
+         * opening the inputStream.
+         */
+        if (ere.getStatusCode() == READ_PATH_REQUEST_NOT_SATISFIABLE
+            && !fileStatusInformationPresent.get()) {
           return -1;
         }
       }
@@ -703,11 +708,11 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   }
 
   private long parseFromRange(final String responseHeader) {
-    if(StringUtils.isEmpty(responseHeader)) {
+    if (StringUtils.isEmpty(responseHeader)) {
       return -1;
     }
-    String[] parts = responseHeader.split("/");
-    if(parts.length != 2) {
+    String[] parts = responseHeader.split(FORWARD_SLASH);
+    if (parts.length != 2) {
       return -1;
     }
     return Long.parseLong(parts[1]);

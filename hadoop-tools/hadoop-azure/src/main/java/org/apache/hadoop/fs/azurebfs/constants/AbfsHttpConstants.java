@@ -165,5 +165,7 @@ public final class AbfsHttpConstants {
    */
   public static final Integer HTTP_STATUS_CATEGORY_QUOTIENT = 100;
 
+  public static final Integer READ_PATH_REQUEST_NOT_SATISFIABLE = 416;
+
   private AbfsHttpConstants() {}
 }

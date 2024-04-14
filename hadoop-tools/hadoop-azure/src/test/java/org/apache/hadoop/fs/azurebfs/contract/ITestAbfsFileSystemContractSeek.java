@@ -21,11 +21,9 @@ package org.apache.hadoop.fs.azurebfs.contract;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Future;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
-import org.mockito.Mock;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.conf.Configuration;
@@ -204,7 +202,7 @@ public class ITestAbfsFileSystemContractSeek extends AbstractContractSeekTest{
           remoteReadOperationsNewVal);
       remoteReadOperationsOldVal = remoteReadOperationsNewVal;
 
-      if(isPrefetchSwitchedOffForFirstRead) {
+      if (isPrefetchSwitchedOffForFirstRead) {
         newSeek = 2 * inStream.getReadAheadRange() + 1;
         /*
          * This read will be getting data for [2 * readAheadRange, 2 * readAheadRange + 1] from

@@ -227,10 +227,10 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
       final boolean optimizationOn;
       long actualLength;
 
-      if(getConfiguration().getHeadOptimizationForInputStream()) {
+      if (getConfiguration().getHeadOptimizationForInputStream()) {
         optimizationOn = conf.optimizeFooterRead() && length <= FOOTER_SIZE;
       } else {
-        long footerStart= max(0,
+        long footerStart = max(0,
             actualContentLength - FOOTER_SIZE);
         optimizationOn =
             conf.optimizeFooterRead() && seekPos >= footerStart;
@@ -245,9 +245,9 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
       long expectedBCursor;
       long expectedFCursor;
       if (optimizationOn) {
-        if(getConfiguration().getHeadOptimizationForInputStream()) {
-          if(seekPos + actualLength <= footerReadBufferSize) {
-            if(seekPos + length > actualContentLength) {
+        if (getConfiguration().getHeadOptimizationForInputStream()) {
+          if (seekPos + actualLength <= footerReadBufferSize) {
+            if (seekPos + length > actualContentLength) {
               long footerReadStart = max(0, seekPos + length - footerReadBufferSize);
               expectedLimit = actualContentLength - footerReadStart;
               expectedBCursor = seekPos - footerReadStart;
@@ -256,7 +256,7 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
               expectedBCursor = seekPos;
             }
           } else {
-            if(seekPos + length > actualContentLength) {
+            if (seekPos + length > actualContentLength) {
               long footerReadStart = max(0, seekPos + length - footerReadBufferSize);
               expectedLimit = actualContentLength - footerReadStart;
               expectedBCursor = seekPos - footerReadStart;
@@ -302,7 +302,7 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
       //  Verify data read to AbfsInputStream buffer
       int from = seekPos;
       if (optimizationOn) {
-        if(!getConfiguration().getHeadOptimizationForInputStream()) {
+        if (!getConfiguration().getHeadOptimizationForInputStream()) {
           from = (int) max(0, actualContentLength - footerReadBufferSize);
         } else {
           from = (int) (expectedFCursor - expectedLimit);
