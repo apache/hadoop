@@ -52,6 +52,7 @@ import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DIRECTORY;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FORWARD_SLASH;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.READ_PATH_REQUEST_NOT_SATISFIABLE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_KB;
@@ -700,7 +701,12 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     return (int) bytesRead;
   }
 
-  private void initPathPropertiesFromReadPathResponseHeader(final AbfsHttpOperation op) {
+  private void initPathPropertiesFromReadPathResponseHeader(final AbfsHttpOperation op) throws IOException {
+    if (DIRECTORY.equals(
+        op.getResponseHeader(HttpHeaderConfigurations.X_MS_RESOURCE_TYPE))) {
+      throw new FileNotFoundException(
+          "read must be used with files and not directories. Path: " + path);
+    }
     contentLength = parseFromRange(
         op.getResponseHeader(HttpHeaderConfigurations.CONTENT_RANGE));
     eTag = op.getResponseHeader(HttpHeaderConfigurations.ETAG);
@@ -797,6 +803,13 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     if (!fileStatusInformationPresent.get()) {
       AbfsRestOperation op = client.getPathStatus(path, false, tracingContext,
           null);
+      if (DIRECTORY.equals(
+          op.getResult()
+              .getResponseHeader(
+                  HttpHeaderConfigurations.X_MS_RESOURCE_TYPE))) {
+        throw new FileNotFoundException(
+            "read must be used with files and not directories. Path: " + path);
+      }
       contentLength = Long.parseLong(
           op.getResult().getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH));
       eTag = op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG);

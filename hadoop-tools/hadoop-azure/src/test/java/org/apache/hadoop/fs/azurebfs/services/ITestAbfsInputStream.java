@@ -18,12 +18,14 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ExecutionException;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -38,7 +40,9 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_HEAD_CALL_OPTIMIZATION_INPUT_STREAM;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -126,6 +130,29 @@ public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
       Assertions.assertThat(abfsInputStream.getFsBackRef().isNull())
           .describedAs("BackReference in input stream should not be null")
           .isFalse();
+    }
+  }
+
+  @Test
+  public void testDirectoryReadWithHeadOptimization() throws Exception {
+    Configuration configuration = new Configuration(getRawConfiguration());
+    configuration.setBoolean(FS_AZURE_HEAD_CALL_OPTIMIZATION_INPUT_STREAM, true);
+    AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(configuration);
+    Path path = new Path("/testPath");
+    fs.mkdirs(path);
+    try (FSDataInputStream in = fs.open(path)) {
+      intercept(FileNotFoundException.class, () -> in.read());
+    }
+  }
+
+  @Test
+  public void testInvalidPathReadWithHeadOptimization() throws Exception {
+    Configuration configuration = new Configuration(getRawConfiguration());
+    configuration.setBoolean(FS_AZURE_HEAD_CALL_OPTIMIZATION_INPUT_STREAM, true);
+    AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(configuration);
+    Path path = new Path("/testPath");
+    try (FSDataInputStream in = fs.open(path)) {
+      intercept(FileNotFoundException.class, () -> in.read());
     }
   }
 
