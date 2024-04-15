@@ -82,6 +82,7 @@ public class ResourceHandlerModule {
     if (cGroupsHandler == null) {
       synchronized (CGroupsHandler.class) {
         if (cGroupsHandler == null) {
+          // TODO determine cgroup version
           cGroupsHandler = new CGroupsHandlerImpl(conf,
               PrivilegedOperationExecutor.getInstance(conf));
           LOG.debug("Value of CGroupsHandler is: {}", cGroupsHandler);
