@@ -676,4 +676,21 @@ public class DistCpUtils {
         + ".____distcpSplit____" + srcFileStatus.getChunkOffset()
         + "." + srcFileStatus.getChunkLength());
   }
+
+  /**
+   * Return the target temp file prefix.
+   *
+   * The FTPFilesystem can't work well when the file name is starts with dot.
+   *
+   * @param targetPath target path
+   * @return temp file path prefix
+   */
+  public static String getTargetTempFilePrefix(Path targetPath) {
+    String schema = targetPath.toUri().getScheme();
+    if (StringUtils.equalsIgnoreCase("ftp", schema)) {
+      return DistCpConstants.TARGET_TEMP_FILE_PREFIX_FTP;
+    } else {
+      return DistCpConstants.TARGET_TEMP_FILE_PREFIX_DOT;
+    }
+  }
 }
