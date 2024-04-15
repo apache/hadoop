@@ -245,37 +245,6 @@ Caveats
   are made against the store. The rate throttling option
   `mapreduce.manifest.committer.io.rate` can help avoid this.
 
-
-### `mapreduce.manifest.committer.writer.queue.capacity`
-
-This is a secondary scale option.
-It controls the size of the queue for storing lists of files to rename from
-the manifests loaded from the target filesystem, manifests loaded
-from a pool of worker threads, and the single thread which saves
-the entries from each manifest to an intermediate file in the local filesystem.
-
-Once the queue is full, all manifest loading threads will block.
-
-```xml
-<property>
-  <name>mapreduce.manifest.committer.writer.queue.capacity</name>
-  <value>32</value>
-</property>
-```
-
-As the local filesystem is usually much faster to write to than any cloud store,
-this queue size should not be a limit on manifest load performance.
-
-It can help limit the amount of memory consumed during manifest load during
-job commit.
-The maximum number of loaded manifests will be:
-
-```
-mapreduce.manifest.committer.writer.queue.capacity + mapreduce.manifest.committer.io.threads
-```
-
-
-
 ## <a name="deleting"></a> Optional: deleting target files in Job Commit
 
 The classic `FileOutputCommitter` deletes files at the destination paths
@@ -444,8 +413,8 @@ overwriting the markers.
 Job cleanup is convoluted as it is designed to address a number of issues which
 may surface in cloud storage.
 
-* Slow performance for deletion of directories.
-* Timeout when deleting very deep and wide directory trees.
+* Slow performance for deletion of directories (GCS).
+* Timeout when deleting very deep and wide directory trees (Azure).
 * General resilience to cleanup issues escalating to job failures.
 
 
@@ -665,10 +634,26 @@ rather than production use.
 
 | Option | Meaning                                      | Default Value |
 |--------|----------------------------------------------|---------------|
+| `mapreduce.manifest.committer.manifest.save.attempts` | How many attempts should be made to commit a task manifest? | `5` |
 | `mapreduce.manifest.committer.store.operations.classname` | Classname for Manifest Store Operations      | `""`          |
 | `mapreduce.manifest.committer.validate.output` | Perform output validation?                   | `false`       |
 | `mapreduce.manifest.committer.writer.queue.capacity` | Queue capacity for writing intermediate file | `32`          |
 
+### `mapreduce.manifest.committer.manifest.save.attempts`
+
+The number of attempts which should be made to save a task attempt manifest, which is done by
+1. Writing the file to a temporary file in the job attempt directory.
+2. Deleting any existing task manifest
+3. Renaming the temporary file to the final filename.
+
+This may fail for unrecoverable reasons (permissions, permanent loss of network, service down,...) or it may be
+a transient problem which may not reoccur if another attempt is made to write the data.
+
+The number of attempts to make is set by `mapreduce.manifest.committer.manifest.save.attempts`;
+the sleep time increases with each attempt.
+
+Consider increasing the default value if task attempts fail to commit their work
+and fail to recover from network problems.
 
 ### Validating output  `mapreduce.manifest.committer.validate.output`
 
@@ -707,6 +692,34 @@ The default implementation may also be configured.
 There is no need to alter these values, except when writing new implementations for other stores,
 something which is only needed if the store provides extra integration support for the
 committer.
+
+### `mapreduce.manifest.committer.writer.queue.capacity`
+
+This is a secondary scale option.
+It controls the size of the queue for storing lists of files to rename from
+the manifests loaded from the target filesystem, manifests loaded
+from a pool of worker threads, and the single thread which saves
+the entries from each manifest to an intermediate file in the local filesystem.
+
+Once the queue is full, all manifest loading threads will block.
+
+```xml
+<property>
+  <name>mapreduce.manifest.committer.writer.queue.capacity</name>
+  <value>32</value>
+</property>
+```
+
+As the local filesystem is usually much faster to write to than any cloud store,
+this queue size should not be a limit on manifest load performance.
+
+It can help limit the amount of memory consumed during manifest load during
+job commit.
+The maximum number of loaded manifests will be:
+
+```
+mapreduce.manifest.committer.writer.queue.capacity + mapreduce.manifest.committer.io.threads
+```
 
 ## <a name="concurrent"></a> Support for concurrent jobs to the same directory
 

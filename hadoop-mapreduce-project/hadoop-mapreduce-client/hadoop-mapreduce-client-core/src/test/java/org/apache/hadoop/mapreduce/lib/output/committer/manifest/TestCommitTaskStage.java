@@ -28,7 +28,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestSuccessData;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
-import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestStoreOperations;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.UnreliableManifestStoreOperations;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.CleanupJobStage;
@@ -135,6 +134,7 @@ public class TestCommitTaskStage extends AbstractManifestCommitterTest {
 
   @Test
   public void testManifestSaveFailures() throws Throwable {
+    describe("Test recovery of manifest save/rename failures");
 
     final ManifestStoreOperations wrappedOperations = getStoreOperations();
     UnreliableManifestStoreOperations failures =
@@ -147,6 +147,10 @@ public class TestCommitTaskStage extends AbstractManifestCommitterTest {
 
     StageConfig stageConfig = createTaskStageConfig(JOB1, tid,
         taskAttemptId);
+    // small attempt count for a faster test and to verify
+    // its propagation
+    final int attempts = 3;
+    stageConfig.withManifestSaveAttempts(attempts);
 
     final SetupTaskStage setupTaskStage = new SetupTaskStage(stageConfig);
     setupTaskStage.apply("setup");
@@ -161,22 +165,25 @@ public class TestCommitTaskStage extends AbstractManifestCommitterTest {
     failures.addSaveToFail(manifestTempFile);
 
     // will fail because of recovery
-    failures.setFailureLimit(InternalConstants.SAVE_RETRY_COUNT + 1);
+    failures.setFailureLimit(attempts + 1);
     intercept(PathIOException.class, generatedErrorMessage("save"), () ->
         new CommitTaskStage(stageConfig).apply(null));
 
     // will succeed because of recovery
-    failures.setFailureLimit(InternalConstants.SAVE_RETRY_COUNT - 1);
+    failures.setFailureLimit(attempts - 1);
     new CommitTaskStage(stageConfig).apply(null);
 
+    describe("Testing timeouts on rename operations.");
     // now do it for the renames, which will fail after the rename
     failures.reset();
     failures.addTimeOutBeforeRename(manifestTempFile);
-    failures.setFailureLimit(InternalConstants.SAVE_RETRY_COUNT + 1);
+
+    // first verify that if too many attempts fail, the task will fail
+    failures.setFailureLimit(attempts + 1);
     intercept(SocketTimeoutException.class, E_TIMEOUT, () ->
         new CommitTaskStage(stageConfig).apply(null));
-    // will succeed because of recovery
-    failures.setFailureLimit(InternalConstants.SAVE_RETRY_COUNT - 1);
+    // reduce the limit and expect the stage to succeed.
+    failures.setFailureLimit(attempts - 1);
     new CommitTaskStage(stageConfig).apply(null);
 
   }

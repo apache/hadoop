@@ -276,6 +276,19 @@ public final class ManifestCommitterConstants {
    */
   public static final int DEFAULT_WRITER_QUEUE_CAPACITY = OPT_IO_PROCESSORS_DEFAULT;
 
+  /**
+   * How many attempts to save a task manifest by save and rename
+   * before giving up.
+   * Value: {@value}.
+   */
+  public static final String OPT_MANIFEST_SAVE_ATTEMPTS =
+      OPT_PREFIX + "manifest.save.attempts";
+
+  /**
+   * Default value of {@link #OPT_MANIFEST_SAVE_ATTEMPTS}: {@value}.
+   */
+  public static final int OPT_MANIFEST_SAVE_ATTEMPTS_DEFAULT = 5;
+
   private ManifestCommitterConstants() {
   }
 

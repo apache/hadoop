@@ -21,6 +21,7 @@ package org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.slf4j.Logger;
@@ -33,6 +34,7 @@ import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
+import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.AbstractManifestData;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.FileEntry;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
@@ -53,6 +55,7 @@ import static org.apache.hadoop.fs.statistics.StoreStatisticNames.STORE_IO_RATE_
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.createTracker;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDuration;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfInvocation;
+import static org.apache.hadoop.io.retry.RetryPolicies.retryUpToMaximumCountWithProportionalSleep;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.MANIFEST_SUFFIX;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_COMMIT_FILE_RENAME;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_COMMIT_FILE_RENAME_RECOVERED;
@@ -62,7 +65,6 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_RENAME_FILE;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_SAVE_TASK_MANIFEST;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.AuditingIntegration.enterStageWorker;
-import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.SAVE_RETRY_COUNT;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.InternalConstants.SAVE_SLEEP_INTERVAL;
 
 /**
@@ -616,12 +618,17 @@ public abstract class AbstractJobOrTaskStage<IN, OUT>
   protected final <T extends AbstractManifestData> void save(T manifestData,
       final Path tempPath,
       final Path finalPath) throws IOException {
+
+    int retryCount = 0;
+    RetryPolicy retryPolicy = retryUpToMaximumCountWithProportionalSleep(
+        getStageConfig().getManifestSaveAttempts(),
+        SAVE_SLEEP_INTERVAL,
+        TimeUnit.MILLISECONDS);
     boolean success = false;
-    int failures = 0;
     while (!success) {
       try {
-        LOG.trace("{}: attempt {} save('{}, {}, {}')",
-            getName(), failures, manifestData, tempPath, finalPath);
+        LOG.info("{}: save manifest to {} then rename as {}'); retry count={}",
+            getName(), tempPath, finalPath, retryCount);
 
         trackDurationOfInvocation(getIOStatistics(), OP_SAVE_TASK_MANIFEST, () ->
             operations.save(manifestData, tempPath, true));
@@ -629,15 +636,28 @@ public abstract class AbstractJobOrTaskStage<IN, OUT>
         // success flag is only set after the rename.
         success = true;
       } catch (IOException e) {
-        LOG.warn("Failed to save and commit file {} renamed to {}",
-            tempPath, finalPath, e);
-        failures++;
-        if (failures >= SAVE_RETRY_COUNT) {
+        // failure.
+        // log then decide whether to sleep and retry or give up.
+        LOG.warn("{}: Failed to save and commit file {} renamed to {}; retry count={}",
+            getName(), tempPath, finalPath, retryCount, e);
+        retryCount++;
+        RetryPolicy.RetryAction retryAction;
+        try {
+          retryAction = retryPolicy.shouldRetry(e, retryCount, 0, true);
+        } catch (Exception ex) {
+          // it's not clear why this probe can raise an exception; it is just
+          // caught and mapped to a fail.
+          LOG.debug("Failure in retry policy", ex);
+          retryAction = RetryPolicy.RetryAction.FAIL;
+        }
+        if (retryAction.action == RetryPolicy.RetryAction.RetryDecision.FAIL) {
           // too many failures: escalate.
           throw e;
         }
         // else, sleep
         try {
+          LOG.info("{}: Sleeping for {} ms before retrying",
+              getName(), retryAction.delayMillis);
           Thread.sleep(SAVE_SLEEP_INTERVAL);
         } catch (InterruptedException ie) {
           Thread.currentThread().interrupt();

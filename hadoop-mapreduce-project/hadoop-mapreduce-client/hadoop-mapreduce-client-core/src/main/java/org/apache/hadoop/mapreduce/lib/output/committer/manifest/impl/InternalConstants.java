@@ -130,12 +130,6 @@ public final class InternalConstants {
       ImmutableSet.of("s3a", "wasb");
 
   /**
-   * How many attempts to save a manifest by save and rename
-   * before giving up: {@value}.
-   */
-  public static final int SAVE_RETRY_COUNT = 5;
-
-  /**
    * Interval in milliseconds between save retries.
    * Value {@value} milliseconds.
    */

@@ -406,6 +406,7 @@ public class UnreliableManifestStoreOperations extends ManifestStoreOperations {
       }
     }
     final boolean b = wrappedOperations.renameFile(source, dest);
+    // post rename timeout.
     maybeTimeout(op, source, renamePathsToTimeoutAfterRename);
     return b;
   }
