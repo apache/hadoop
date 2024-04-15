@@ -15,14 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.fs;
-
-import java.net.URI;
+package org.apache.hadoop.fs.ftp;
 
 import org.apache.commons.net.ftp.FTP;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.AbstractFileSystem;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.net.URI;
 
 public class TestDelegateToFileSystem {
 
