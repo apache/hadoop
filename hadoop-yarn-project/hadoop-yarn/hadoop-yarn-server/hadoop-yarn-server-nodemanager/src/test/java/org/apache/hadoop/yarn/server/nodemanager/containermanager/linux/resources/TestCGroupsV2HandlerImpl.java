@@ -75,7 +75,7 @@ public class TestCGroupsV2HandlerImpl extends TestCGroupsHandlerBase {
 
     String enabledControllers = "cpuset cpu io memory hugetlb pids rdma misc\n";
 
-    File controllersFile = new File(parentDir, "cgroup.controllers");
+    File controllersFile = new File(parentDir, CGroupsHandler.CGROUP_CONTROLLERS_FILE);
     FileWriter controllerWriter = new FileWriter(controllersFile.getAbsoluteFile());
     controllerWriter.write(enabledControllers);
     controllerWriter.close();
@@ -238,7 +238,7 @@ public class TestCGroupsV2HandlerImpl extends TestCGroupsHandlerBase {
     conf.set(YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_HIERARCHY,
         "/hadoop-yarn");
     File subCgroup = new File(tmpPath, "/hadoop-yarn");
-    File controllersFile = new File(subCgroup.getAbsolutePath(), "cgroup.controllers");
+    File controllersFile = new File(subCgroup.getAbsolutePath(), CGroupsHandler.CGROUP_CONTROLLERS_FILE);
 
     try {
       Assert.assertTrue("temp dir should be created", subCgroup.mkdirs());
