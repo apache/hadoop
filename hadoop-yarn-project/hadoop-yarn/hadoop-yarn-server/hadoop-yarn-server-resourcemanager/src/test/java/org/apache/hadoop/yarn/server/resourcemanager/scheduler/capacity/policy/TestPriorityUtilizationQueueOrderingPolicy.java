@@ -258,7 +258,7 @@ public class TestPriorityUtilizationQueueOrderingPolicy {
 
   @Test
   public void testComparatorDoesNotValidateGeneralContract() {
-    final String []nodeLabels = {"x", "y", "z"};
+    final String[] nodeLabels = {"x", "y", "z"};
     PriorityUtilizationQueueOrderingPolicy policy =
         new PriorityUtilizationQueueOrderingPolicy(true);
 
@@ -317,7 +317,7 @@ public class TestPriorityUtilizationQueueOrderingPolicy {
     return qc;
   }
 
-  private Set<String> randomNodeLabels(String []availableNodeLabels) {
+  private Set<String> randomNodeLabels(String[] availableNodeLabels) {
     Set<String> nodeLabels = new HashSet<>();
     for (String label : availableNodeLabels) {
       if (randInt(0, 1) == 1) {
@@ -329,7 +329,8 @@ public class TestPriorityUtilizationQueueOrderingPolicy {
 
   private QueueResourceQuotas randomResourceQuotas(String partition) {
     QueueResourceQuotas qr = new QueueResourceQuotas();
-    qr.setConfiguredMinResource(partition, Resource.newInstance(randInt(1, 10) * 1024, randInt(1, 10)));
+    qr.setConfiguredMinResource(partition,
+        Resource.newInstance(randInt(1, 10) * 1024, randInt(1, 10)));
     return qr;
   }
 

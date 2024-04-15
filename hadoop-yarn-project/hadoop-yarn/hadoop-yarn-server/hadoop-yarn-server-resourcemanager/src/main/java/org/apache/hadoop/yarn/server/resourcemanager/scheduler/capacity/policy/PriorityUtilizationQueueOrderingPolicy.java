@@ -91,10 +91,10 @@ public class PriorityUtilizationQueueOrderingPolicy
   /**
    * Comparator that both looks at priority and utilization
    */
-  private class PriorityQueueComparator
+  final private class PriorityQueueComparator
       implements Comparator<PriorityQueueResourcesForSorting> {
 
-    final String partition;
+    final private String partition;
 
     private PriorityQueueComparator(String partition) {
       this.partition = partition;
@@ -103,7 +103,9 @@ public class PriorityUtilizationQueueOrderingPolicy
     @Override
     public int compare(PriorityQueueResourcesForSorting q1Sort,
         PriorityQueueResourcesForSorting q2Sort) {
-      int rc = compareQueueAccessToPartition(q1Sort.nodeLabelAccessible, q2Sort.nodeLabelAccessible, partition);
+      int rc = compareQueueAccessToPartition(
+          q1Sort.nodeLabelAccessible,
+          q2Sort.nodeLabelAccessible);
       if (0 != rc) {
         return rc;
       }
@@ -175,8 +177,7 @@ public class PriorityUtilizationQueueOrderingPolicy
       return rc;
     }
 
-    private int compareQueueAccessToPartition(boolean q1Accessible, boolean q2Accessible,
-        String partition) {
+    private int compareQueueAccessToPartition(boolean q1Accessible, boolean q2Accessible) {
       // Everybody has access to default partition
       if (StringUtils.equals(partition, RMNodeLabelsManager.NO_LABEL)) {
         return 0;
@@ -223,9 +224,9 @@ public class PriorityUtilizationQueueOrderingPolicy
           queue.getQueueResourceQuotas().
               getConfiguredMinResource(partition);
       this.priority = queue.getPriority();
-      this.nodeLabelAccessible = queue.getAccessibleNodeLabels() != null && queue.getAccessibleNodeLabels()
-          .contains(partition) || queue.getAccessibleNodeLabels().contains(
-          RMNodeLabelsManager.ANY);
+      this.nodeLabelAccessible = queue.getAccessibleNodeLabels() != null &&
+          queue.getAccessibleNodeLabels().contains(partition) ||
+          queue.getAccessibleNodeLabels().contains(RMNodeLabelsManager.ANY);
     }
 
     static PriorityQueueResourcesForSorting create(CSQueue queue, String partition) {
@@ -250,9 +251,11 @@ public class PriorityUtilizationQueueOrderingPolicy
   public Iterator<CSQueue> getAssignmentIterator(String partition) {
     // Copy (for thread safety) and sort the snapshot of the queues in order to avoid breaking
     // the prerequisites of TimSort. See YARN-10178 for details.
-    return new ArrayList<>(queues).stream().map(queue -> PriorityQueueResourcesForSorting.create(queue, partition)).sorted(
-        new PriorityQueueComparator(partition)).map(PriorityQueueResourcesForSorting::getQueue).collect(
-            Collectors.toList()).iterator();
+    return new ArrayList<>(queues).stream()
+        .map(queue -> PriorityQueueResourcesForSorting.create(queue, partition))
+        .sorted(new PriorityQueueComparator(partition))
+        .map(PriorityQueueResourcesForSorting::getQueue)
+        .collect(Collectors.toList()).iterator();
   }
 
   @Override
