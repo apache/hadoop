@@ -27,22 +27,22 @@ if [ $? -eq 1 ]; then
   exit 1
 fi
 
-default_version="2.29.0"
+default_version="2.31.0"
 version_to_install=$default_version
 if [ -n "$2" ]; then
   version_to_install="$2"
 fi
 
-if [ "$version_to_install" != "2.29.0" ]; then
+if [ "$version_to_install" != "2.31.0" ]; then
   echo "WARN: Don't know how to install version $version_to_install, installing the default version $default_version instead"
   version_to_install=$default_version
 fi
 
-if [ "$version_to_install" == "2.29.0" ]; then
+if [ "$version_to_install" == "2.31.0" ]; then
   # hadolint ignore=DL3003,DL3008
   mkdir -p /opt/isa-l-src &&
     curl -L -s -S \
-      https://github.com/intel/isa-l/archive/v2.29.0.tar.gz \
+      https://github.com/intel/isa-l/archive/v2.31.0.tar.gz \
       -o /opt/isa-l.tar.gz &&
     tar xzf /opt/isa-l.tar.gz --strip-components 1 -C /opt/isa-l-src &&
     cd /opt/isa-l-src &&
