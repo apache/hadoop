@@ -3623,6 +3623,9 @@ The switch to turn S3A auditing on or off.
   <value></value>
   <description>
     The JCE provider name used in CryptoCodec.
+    If this value is set, the corresponding provider must be added to the provider list.
+    The provider may be added statically in the java.security file, or
+    added dynamically by calling the java.security.Security.addProvider(..) method.
   </description>
 </property>
 
