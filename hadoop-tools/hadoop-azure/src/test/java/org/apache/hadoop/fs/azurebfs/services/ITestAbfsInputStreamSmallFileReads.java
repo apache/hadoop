@@ -222,15 +222,15 @@ public class ITestAbfsInputStreamSmallFileReads extends
       int expectedLimit, expectedFCursor;
       int expectedBCursor;
       if (conf.readSmallFilesCompletely() && smallFile) {
-        abfsInputStreamTestUtils.assertBuffersAreEqual(fileContent, abfsInputStream.getBuffer(), conf, testFilePath);
+        abfsInputStreamTestUtils.assertAbfsInputStreamBufferNotEqualToContentStartSubsequence(fileContent, abfsInputStream, conf, testFilePath);
         expectedFCursor = fileContentLength;
         expectedLimit = fileContentLength;
         expectedBCursor = seekPos + length;
       } else {
         if ((seekPos == 0)) {
-          abfsInputStreamTestUtils.assertBuffersAreEqual(fileContent, abfsInputStream.getBuffer(), conf, testFilePath);
+          abfsInputStreamTestUtils.assertAbfsInputStreamBufferNotEqualToContentStartSubsequence(fileContent, abfsInputStream, conf, testFilePath);
         } else {
-          abfsInputStreamTestUtils.assertBuffersAreNotEqual(fileContent, abfsInputStream.getBuffer(),
+          abfsInputStreamTestUtils.assertAbfsInputStreamBufferEqualToContentStartSubsequence(fileContent, abfsInputStream,
               conf, testFilePath);
         }
         expectedBCursor = length;

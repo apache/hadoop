@@ -153,39 +153,71 @@ public class AbfsInputStreamTestUtils {
   }
 
   /**
-   * Assert that the content read is not equal to the actual content of the file.
+   * Assert that the readBuffer in AbfsInputStream contain the correct starting
+   * subsequence of the file content.
    *
    * @param actualContent actual content of the file
-   * @param contentRead content read from the file
+   * @param abfsInputStream abfsInputStream whose buffer to be asserted
    * @param conf configuration
    * @param testFilePath path of the file
    */
-  public void assertBuffersAreNotEqual(byte[] actualContent,
-      byte[] contentRead, AbfsConfiguration conf, Path testFilePath) {
-    assertBufferEquality(actualContent, contentRead, conf, false, testFilePath);
+  public void assertAbfsInputStreamBufferEqualToContentStartSubsequence(byte[] actualContent,
+      AbfsInputStream abfsInputStream,
+      AbfsConfiguration conf,
+      Path testFilePath) {
+    Assertions.assertThat(abfsInputStream.getBuffer().length)
+        .describedAs("ReadBuffer should be lesser than or equal to "
+            + "readBufferSize")
+        .isLessThanOrEqualTo(conf.getReadBufferSize());
+    assertAbfsInputStreamBufferEqualityWithContentStartingSubSequence(
+        actualContent, abfsInputStream.getBuffer(), conf,
+        false, testFilePath);
   }
 
   /**
-   * Assert that the content read is equal to the actual content of the file.
+   * Assert that the readBuffer in AbfsInputStream contain the incorrect starting
+   * subsequence of the file content.
    *
    * @param actualContent actual content of the file
-   * @param contentRead content read from the file
+   * @param abfsInputStream abfsInputStream whose buffer to be asserted
    * @param conf configuration
    * @param testFilePath path of the file
    */
-  public void assertBuffersAreEqual(byte[] actualContent, byte[] contentRead,
-      AbfsConfiguration conf, Path testFilePath) {
-    assertBufferEquality(actualContent, contentRead, conf, true, testFilePath);
+  public void assertAbfsInputStreamBufferNotEqualToContentStartSubsequence(byte[] actualContent,
+      AbfsInputStream abfsInputStream,
+      AbfsConfiguration conf,
+      Path testFilePath) {
+    Assertions.assertThat(abfsInputStream.getBuffer().length)
+        .describedAs("ReadBuffer should be lesser than or equal to "
+            + "readBufferSize")
+        .isLessThanOrEqualTo(conf.getReadBufferSize());
+    assertAbfsInputStreamBufferEqualityWithContentStartingSubSequence(
+        actualContent, abfsInputStream.getBuffer(), conf, true,
+        testFilePath);
   }
 
-  private void assertBufferEquality(byte[] actualContent, byte[] contentRead,
-      AbfsConfiguration conf, boolean assertEqual, Path testFilePath) {
+  /**
+   * Assert the equality or inequality of abfsInputStreamReadBuffer with the
+   * starting subsequence of the fileContent.
+   *
+   * @param actualContent actual content of the file
+   * @param abfsInputStreamReadBuffer buffer read from the abfsInputStream
+   * @param conf configuration
+   * @param assertEqual whether to assert equality or inequality
+   * @param testFilePath path of the file
+   */
+  private void assertAbfsInputStreamBufferEqualityWithContentStartingSubSequence(
+      byte[] actualContent,
+      byte[] abfsInputStreamReadBuffer,
+      AbfsConfiguration conf,
+      boolean assertEqual,
+      Path testFilePath) {
     int bufferSize = conf.getReadBufferSize();
     int actualContentSize = actualContent.length;
     int n = Math.min(actualContentSize, bufferSize);
     int matches = 0;
-    for (int i = 0; i < n && i < contentRead.length; i++) {
-      if (actualContent[i] == contentRead[i]) {
+    for (int i = 0; i < n && i < abfsInputStreamReadBuffer.length; i++) {
+      if (actualContent[i] == abfsInputStreamReadBuffer[i]) {
         matches++;
       }
     }
