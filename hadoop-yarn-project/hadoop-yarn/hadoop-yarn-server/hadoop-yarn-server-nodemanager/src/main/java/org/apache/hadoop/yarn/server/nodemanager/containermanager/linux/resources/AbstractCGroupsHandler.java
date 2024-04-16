@@ -407,8 +407,9 @@ public abstract class AbstractCGroupsHandler implements CGroupsHandler {
     String str;
     if (LOG.isDebugEnabled()) {
       try (BufferedReader inl =
-               new BufferedReader(new InputStreamReader(new FileInputStream(
-                   cgf + Path.SEPARATOR + CGROUP_PROCS_FILE), StandardCharsets.UTF_8))) {
+               new BufferedReader(new InputStreamReader(
+                   Files.newInputStream(Paths.get(cgf + Path.SEPARATOR + CGROUP_PROCS_FILE)),
+                   StandardCharsets.UTF_8))) {
         str = inl.readLine();
         if (str != null) {
           LOG.debug("First line in cgroup tasks file: {} {}", cgf, str);

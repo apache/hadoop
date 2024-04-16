@@ -36,17 +36,23 @@ import java.util.Set;
 public interface CGroupsHandler {
 
   /**
-   * List of supported cgroup subsystem types.
+   * List of supported cgroup v1 and v2 subsystem types.
    */
   enum CGroupController {
-    CPU("cpu"),
+    // v1 specific
     NET_CLS("net_cls"),
     BLKIO("blkio"),
-    MEMORY("memory"),
     CPUACCT("cpuacct"),
-    CPUSET("cpuset"),
     FREEZER("freezer"),
-    DEVICES("devices");
+    DEVICES("devices"),
+
+    // v2 specific
+    IO("io"),
+
+    // present in v1 and v2
+    CPU("cpu"),
+    CPUSET("cpuset"),
+    MEMORY("memory");
 
     private final String name;
 
@@ -59,7 +65,7 @@ public interface CGroupsHandler {
     }
 
     /**
-     * Get the list of valid cgroup names.
+     * Get the list of valid cgroup controllers (both v1 and v2).
      * @return The set of cgroup name strings
      */
     public static Set<String> getValidCGroups() {
@@ -71,11 +77,7 @@ public interface CGroupsHandler {
     }
   }
 
-  String CGROUP_CONTROLLERS_FILE = "cgroup.controllers";
-  String CGROUP_PROCS_FILE = "cgroup.procs";
-  String CGROUP_PARAM_CLASSID = "classid";
-  String CGROUP_PARAM_BLKIO_WEIGHT = "weight";
-
+  // v1 specific params
   String CGROUP_PARAM_MEMORY_HARD_LIMIT_BYTES = "limit_in_bytes";
   String CGROUP_PARAM_MEMORY_SWAP_HARD_LIMIT_BYTES = "memsw.limit_in_bytes";
   String CGROUP_PARAM_MEMORY_SOFT_LIMIT_BYTES = "soft_limit_in_bytes";
@@ -85,11 +87,17 @@ public interface CGroupsHandler {
   String CGROUP_PARAM_MEMORY_MEMSW_USAGE_BYTES = "memsw.usage_in_bytes";
   String CGROUP_NO_LIMIT = "-1";
   String UNDER_OOM = "under_oom 1";
-
-
   String CGROUP_CPU_PERIOD_US = "cfs_period_us";
   String CGROUP_CPU_QUOTA_US = "cfs_quota_us";
   String CGROUP_CPU_SHARES = "shares";
+
+  // v2 specific params
+  String CGROUP_CONTROLLERS_FILE = "cgroup.controllers";
+
+  // present in v1 and v2
+  String CGROUP_PROCS_FILE = "cgroup.procs";
+  String CGROUP_PARAM_CLASSID = "classid";
+  String CGROUP_PARAM_BLKIO_WEIGHT = "weight";
 
   /**
    * Mounts or initializes a cgroup controller.
