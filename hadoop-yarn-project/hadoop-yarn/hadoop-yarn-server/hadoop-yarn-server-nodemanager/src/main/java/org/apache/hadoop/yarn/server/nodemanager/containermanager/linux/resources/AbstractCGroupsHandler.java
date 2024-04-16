@@ -368,7 +368,19 @@ public abstract class AbstractCGroupsHandler implements CGroupsHandler {
           yarnHierarchy.getAbsolutePath()
       ));
     }
+
+    try {
+      updateEnabledControllersInHierarchy(yarnHierarchy);
+    } catch (ResourceHandlerException e) {
+      throw new ResourceHandlerException(getErrorWithDetails(
+          "Failed to update cgroup.subtree_control in yarn hierarchy",
+          subsystemName,
+          yarnHierarchy.getAbsolutePath()
+      ));
+    }
   }
+
+  protected abstract void updateEnabledControllersInHierarchy(File yarnHierarchy) throws ResourceHandlerException;
 
   /**
    * Creates an actionable error message for mtab parsing.

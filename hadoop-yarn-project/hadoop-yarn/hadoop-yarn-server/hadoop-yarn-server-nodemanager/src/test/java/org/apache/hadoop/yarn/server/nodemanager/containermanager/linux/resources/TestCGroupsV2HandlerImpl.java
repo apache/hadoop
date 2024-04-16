@@ -81,6 +81,14 @@ public class TestCGroupsV2HandlerImpl extends TestCGroupsHandlerBase {
     controllerWriter.close();
     controllersFile.deleteOnExit();
 
+    File hierarchyDir = new File(parentDir, hierarchy);
+    if (!hierarchyDir.mkdirs()) {
+      String message = "Could not create directory " + hierarchyDir.getAbsolutePath();
+      throw new IOException(message);
+    }
+    hierarchyDir.deleteOnExit();
+    FileUtils.copyFile(controllersFile, new File(hierarchyDir, CGroupsHandler.CGROUP_CONTROLLERS_FILE));
+
     return mockMtab;
   }
 
@@ -91,7 +99,7 @@ public class TestCGroupsV2HandlerImpl extends TestCGroupsHandlerBase {
     File parentDir = new File(tmpPath);
     File mtab = createPremountedCgroups(parentDir);
     assertTrue("Sample subsystem should be created",
-        new File(controllerPath).mkdirs());
+        new File(controllerPath).exists());
 
     try {
       cGroupsHandler = new CGroupsV2HandlerImpl(createNoMountConfiguration(hierarchy),
@@ -143,7 +151,7 @@ public class TestCGroupsV2HandlerImpl extends TestCGroupsHandlerBase {
     File parentDir = new File(tmpPath);
     File mtab = createPremountedCgroups(parentDir);
     assertTrue("Sample subsystem should be created",
-            new File(controllerPath).mkdirs());
+            new File(controllerPath).exists());
 
     try {
       cGroupsHandler = new CGroupsV2HandlerImpl(createNoMountConfiguration(hierarchy),
@@ -219,7 +227,7 @@ public class TestCGroupsV2HandlerImpl extends TestCGroupsHandlerBase {
             newMtab);
 
     // Verify
-    Assert.assertEquals(3, controllerPaths.size());
+    Assert.assertEquals(4, controllerPaths.size());
     assertTrue(controllerPaths
         .containsKey(CGroupsHandler.CGroupController.CPU));
     assertTrue(controllerPaths

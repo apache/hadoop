@@ -93,6 +93,7 @@ public interface CGroupsHandler {
 
   // v2 specific params
   String CGROUP_CONTROLLERS_FILE = "cgroup.controllers";
+  String CGROUP_SUBTREE_CONTROL_FILE = "cgroup.subtree_control";
 
   // present in v1 and v2
   String CGROUP_PROCS_FILE = "cgroup.procs";

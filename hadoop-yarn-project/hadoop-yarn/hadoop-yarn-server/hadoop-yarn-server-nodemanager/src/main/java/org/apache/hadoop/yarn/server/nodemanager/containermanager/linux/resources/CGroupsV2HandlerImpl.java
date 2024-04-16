@@ -31,7 +31,11 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.io.Writer;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -125,4 +129,37 @@ class CGroupsV2HandlerImpl extends AbstractCGroupsHandler {
 
     return controllerSet;
   }
+
+  /**
+   * Update the subtree_control file to enable subsequent container based cgroups to use the same controllers.
+   * @param yarnHierarchy path to the yarn cgroup under which the container cgroups will be created
+   * @throws ResourceHandlerException if the controllers file cannot be updated
+   */
+  @Override
+  protected void updateEnabledControllersInHierarchy(File yarnHierarchy) throws ResourceHandlerException {
+    PrintWriter pw = null;
+    try {
+      Set<String> enabledControllers = parseControllersFile(yarnHierarchy.getAbsolutePath());
+      if (enabledControllers.isEmpty()) {
+        throw new ResourceHandlerException("No valid controllers found in the cgroup hierarchy: " +
+                yarnHierarchy.getAbsolutePath());
+      }
+
+      File subtreeControlFile = new File(yarnHierarchy.getAbsolutePath()
+          + Path.SEPARATOR + CGROUP_SUBTREE_CONTROL_FILE);
+
+      Writer w = new OutputStreamWriter(Files.newOutputStream(subtreeControlFile.toPath()), StandardCharsets.UTF_8);
+      pw = new PrintWriter(w);
+      pw.write(String.join(" ", enabledControllers));
+
+    } catch (IOException e) {
+      throw new ResourceHandlerException("Failed to update the controllers file in the cgroup hierarchy: " +
+              yarnHierarchy.getAbsolutePath(), e);
+    } finally {
+      if (pw != null) {
+        pw.close();
+      }
+    }
+  }
+
 }

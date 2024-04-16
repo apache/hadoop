@@ -144,4 +144,9 @@ class CGroupsHandlerImpl extends AbstractCGroupsHandler {
       LOG.info("CGroup controller already mounted at: " + existingMountPath);
     }
   }
+
+  @Override
+  protected void updateEnabledControllersInHierarchy(File yarnHierarchy) throws ResourceHandlerException {
+    // no-op in cgroup v1
+  }
 }
