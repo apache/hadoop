@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Queue;
 
 import org.apache.hadoop.conf.Configuration;
@@ -52,11 +54,21 @@ public class TestPendingDataNodeMessages {
 
   @Test
   public void testQueues() {
-    DatanodeDescriptor fakeDN = DFSTestUtil.getLocalDatanodeDescriptor();
-    DatanodeStorage storage = new DatanodeStorage("STORAGE_ID");
-    DatanodeStorageInfo storageInfo = new DatanodeStorageInfo(fakeDN, storage);
-    msgs.enqueueReportedBlock(storageInfo, block1Gs1, ReplicaState.FINALIZED);
-    msgs.enqueueReportedBlock(storageInfo, block1Gs2, ReplicaState.FINALIZED);
+    DatanodeDescriptor fakeDN1 = DFSTestUtil.getDatanodeDescriptor(
+        "localhost", 8898, "/default-rack");
+    DatanodeDescriptor fakeDN2 = DFSTestUtil.getDatanodeDescriptor(
+        "localhost", 8899, "/default-rack");
+    DatanodeStorage storage1 = new DatanodeStorage("STORAGE_ID_1");
+    DatanodeStorage storage2 = new DatanodeStorage("STORAGE_ID_2");
+    DatanodeStorageInfo storageInfo1 = new DatanodeStorageInfo(fakeDN1, storage1);
+    DatanodeStorageInfo storageInfo2 = new DatanodeStorageInfo(fakeDN2, storage2);
+    msgs.enqueueReportedBlock(storageInfo1, block1Gs1, ReplicaState.FINALIZED);
+    msgs.enqueueReportedBlock(storageInfo2, block1Gs1, ReplicaState.FINALIZED);
+    msgs.enqueueReportedBlock(storageInfo1, block1Gs2, ReplicaState.FINALIZED);
+    msgs.enqueueReportedBlock(storageInfo2, block1Gs2, ReplicaState.FINALIZED);
+    List<ReportedBlockInfo> rbis = Arrays.asList(
+        new ReportedBlockInfo(storageInfo1, block1Gs2, ReplicaState.FINALIZED),
+        new ReportedBlockInfo(storageInfo2, block1Gs2, ReplicaState.FINALIZED));
 
     assertEquals(2, msgs.count());
     
@@ -66,9 +78,7 @@ public class TestPendingDataNodeMessages {
     
     Queue<ReportedBlockInfo> q =
       msgs.takeBlockQueue(block1Gs2DifferentInstance);
-    assertEquals(
-        "ReportedBlockInfo [block=blk_1_1, dn=127.0.0.1:9866, reportedState=FINALIZED]," +
-        "ReportedBlockInfo [block=blk_1_2, dn=127.0.0.1:9866, reportedState=FINALIZED]",
+    assertEquals(Joiner.on(",").join(rbis),
         Joiner.on(",").join(q));
     assertEquals(0, msgs.count());
     

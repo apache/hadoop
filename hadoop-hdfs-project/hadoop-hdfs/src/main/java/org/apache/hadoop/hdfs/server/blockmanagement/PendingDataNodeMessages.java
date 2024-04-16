@@ -95,16 +95,30 @@ class PendingDataNodeMessages {
   
   void enqueueReportedBlock(DatanodeStorageInfo storageInfo, Block block,
       ReplicaState reportedState) {
+    if (storageInfo == null || block == null) {
+      return;
+    }
+    block = new Block(block);
+    long genStamp = block.getGenerationStamp();
+    Queue<ReportedBlockInfo> queue = null;
     if (BlockIdManager.isStripedBlockID(block.getBlockId())) {
       Block blkId = new Block(BlockIdManager.convertToStripedID(block
           .getBlockId()));
-      getBlockQueue(blkId).add(
-          new ReportedBlockInfo(storageInfo, new Block(block), reportedState));
+      queue = getBlockQueue(blkId);
     } else {
-      block = new Block(block);
-      getBlockQueue(block).add(
-          new ReportedBlockInfo(storageInfo, block, reportedState));
+      queue = getBlockQueue(block);
     }
+    // We only want the latest non-future reported block to be queued for each
+    // DataNode. Otherwise, there can be a race condition that causes an old
+    // reported block to be kept in the queue until the SNN switches to ANN and
+    // the old reported block will be processed and marked as corrupt by the ANN.
+    // See HDFS-17453
+    int size = queue.size();
+    if (queue.removeIf(rbi -> storageInfo.equals(rbi.storageInfo) &&
+        rbi.block.getGenerationStamp() <= genStamp)) {
+      count -= (size - queue.size());
+    }
+    queue.add(new ReportedBlockInfo(storageInfo, block, reportedState));
     count++;
   }
   

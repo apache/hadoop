@@ -28,6 +28,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.HashMap;
 
@@ -181,7 +182,7 @@ public class TestRMWebServicesHttpStaticUserPermissions {
         InputStream errorStream = conn.getErrorStream();
         String error = "";
         BufferedReader reader = new BufferedReader(
-            new InputStreamReader(errorStream, "UTF8"));
+            new InputStreamReader(errorStream, StandardCharsets.UTF_8));
         for (String line; (line = reader.readLine()) != null;) {
           error += line;
         }

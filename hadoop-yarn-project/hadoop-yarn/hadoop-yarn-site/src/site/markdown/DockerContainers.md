@@ -216,7 +216,7 @@ The following properties should be set in yarn-site.xml:
       Optional. This configuration setting determines the capabilities
       assigned to docker containers when they are launched. While these may not
       be case-sensitive from a docker perspective, it is best to keep these
-      uppercase. To run without any capabilites, set this value to
+      uppercase. To run without any capabilities, set this value to
       "none" or "NONE"
     </description>
   </property>
@@ -568,7 +568,7 @@ There are several challenges with this bind mount approach that need to be
 considered.
 
 1. Any users and groups defined in the image will be overwritten by the host's users and groups
-2. No users and groups can be added once the container is started, as /etc/passwd and /etc/group are immutible in the container. Do not mount these read-write as it can render the host inoperable.
+2. No users and groups can be added once the container is started, as /etc/passwd and /etc/group are immutable in the container. Do not mount these read-write as it can render the host inoperable.
 
 This approach is not recommended beyond testing given the inflexibility to
 modify running containers.
@@ -715,7 +715,7 @@ Fine grained access control can also be defined using `docker.privileged-contain
   docker.trusted.registries=library
 ```
 
-In development environment, local images can be tagged with a repository name prefix to enable trust.  The recommendation of choosing a repository name is using a local hostname and port number to prevent accidentially pulling docker images from Docker Hub or use reserved Docker Hub keyword: "local".  Docker run will look for docker images on Docker Hub, if the image does not exist locally.  Using a local hostname and port in image name can prevent accidental pulling of canonical images from docker hub.  Example of tagging image with localhost:5000 as trusted registry:
+In development environment, local images can be tagged with a repository name prefix to enable trust.  The recommendation of choosing a repository name is using a local hostname and port number to prevent accidentally pulling docker images from Docker Hub or use reserved Docker Hub keyword: "local".  Docker run will look for docker images on Docker Hub, if the image does not exist locally.  Using a local hostname and port in image name can prevent accidental pulling of canonical images from docker hub.  Example of tagging image with localhost:5000 as trusted registry:
 
 ```
 docker tag centos:latest localhost:5000/centos:latest
