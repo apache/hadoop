@@ -1401,7 +1401,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         editLogTailer.catchupDuringFailover();
         
         blockManager.setPostponeBlocksFromFuture(false);
-        blockManager.getDatanodeManager().markAllDatanodesStale();
+        blockManager.getDatanodeManager().markAllDatanodesStaleAndSetKeyUpdateIfNeed();
         blockManager.clearQueues();
         blockManager.processAllPendingDNMessages();
         blockManager.getBlockIdManager().applyImpendingGenerationStamp();

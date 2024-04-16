@@ -167,7 +167,7 @@ public class AbfsClient implements Closeable {
         DelegatingSSLSocketFactory.initializeDefaultFactory(this.abfsConfiguration.getPreferredSSLFactoryOption());
         sslProviderName = DelegatingSSLSocketFactory.getDefaultFactory().getProviderName();
       } catch (IOException e) {
-        // Suppress exception. Failure to init DelegatingSSLSocketFactory would have only performance impact.
+        // Suppress exception, failure to init DelegatingSSLSocketFactory would have only performance impact.
         LOG.trace("NonCritFailure: DelegatingSSLSocketFactory Init failed : "
             + "{}", e.getMessage());
       }

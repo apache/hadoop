@@ -581,7 +581,7 @@ This will delete the containers; the output log of the test run will
 provide the details and summary of the operation.
 
 
-## Testing the Azure ABFS Client
+# Testing the Azure ABFS Client
 
 Azure Data Lake Storage Gen 2 (ADLS Gen 2) is a set of capabilities dedicated to
 big data analytics, built on top of Azure Blob Storage. The ABFS and ABFSS
@@ -602,29 +602,26 @@ various test combinations, it will:
 2. Run tests for all combinations
 3. Summarize results across all the test combination runs.
 
-Below are the pre-requiste steps to follow:
-1. Copy
+Below are the pre-requisite steps to follow:
+1. Copy `./src/test/resources/azure-auth-keys.xml.template` to
+`./src/test/resources/azure-auth-keys.xml`
+1. Update account names that should be used in the test run for HNS and non-HNS
+combinations in the 2 properties present in the xml (account name should be
+without domain part), namely
+   1. `fs.azure.hnsTestAccountName`: Specify the HNS Enabled Account
+   2. `fs.azure.nonHnsTestAccountName`: Specify the HNS Disabled Account
 
-        ./src/test/resources/azure-auth-keys.xml.template
-        TO
-        ./src/test/resources/azure-auth-keys.xml
-  Update account names that should be used in the test run for HNS and non-HNS
-  combinations in the 2 properties present in the xml (account name should be
-  without domain part), namely
+   Note: `azure-auth-keys.xml` is listed in .gitignore, so any accidental account name leak is prevented.
 
-    fs.azure.hnsTestAccountName
-    fs.azure.nonHnsTestAccountName
-  azure-auth-keys.xml is listed in .gitignore, so any accidental account name leak is prevented.
+    ```
+    XInclude is supported, so for extra security secrets may be
+    kept out of the source tree then referenced through an XInclude element:
 
-```
-XInclude is supported, so for extra security secrets may be
-kept out of the source tree then referenced through an XInclude element:
+          <include xmlns="http://www.w3.org/2001/XInclude"
+            href="/users/self/.secrets/auth-keys.xml" />
+    ```
 
-      <include xmlns="http://www.w3.org/2001/XInclude"
-        href="/users/self/.secrets/auth-keys.xml" />
-```
-
-2. Create account config files (one config file per account) in folder:
+1. Create account config files (one config file per account) in folder:
 
         ./src/test/resources/accountSettings/
    Follow the instruction in the start of the template file
@@ -633,6 +630,8 @@ kept out of the source tree then referenced through an XInclude element:
    within accountSettings folder while creating account config file.
    New files created in folder accountSettings is listed in .gitignore to
    prevent accidental cred leaks.
+
+You are all set to run the test script.
 
 **To run PR validation:** Running command
 * `dev-support/testrun-scripts/runtests.sh` will prompt as below:
@@ -664,6 +663,9 @@ Set the active test combination to run the action:
 2) HNS-SharedKey           4) AppendBlob-HNS-OAuth    6) Quit
 #? 1
 
+============================================================
+HNS-OAuth
+============================================================
 Combination specific property setting: [ key=fs.azure.account.auth.type , value=OAuth ]
 
 Activated [src/test/resources/abfs-combination-test-configs.xml] - for account: snvijayacontracttest for combination HNS-OAuth
@@ -681,6 +683,46 @@ will have the failure exception stack. At the end of the test run, the
 consolidated results of all the combination runs will be saved into a file as
 Test-Results.log in the same folder. When run for PR validation, the
 consolidated test results needs to be pasted into the PR comment section.
+
+**Aggregated Test Results**: `Test-Results.txt` file will show the aggregated results
+across all th combinations ran as part of script in following format
+```bash
+    ============================================================
+    HNS-OAuth
+    ============================================================
+    [ERROR] testAbfsHttpSendStatistics(org.apache.hadoop.fs.azurebfs.ITestAbfsNetworkStatistics)  Time elapsed: 3.137 s  <<< FAILURE!
+    [ERROR] testBlobDataContributor(org.apache.hadoop.fs.azurebfs.ITestAzureBlobFileSystemOauth)  Time elapsed: 4.154 s  <<< ERROR!
+
+    [WARNING] Tests run: 137, Failures: 0, Errors: 0, Skipped: 2
+    [ERROR] Tests run: 623, Failures: 1, Errors: 0, Skipped: 73
+    [ERROR] Tests run: 340, Failures: 0, Errors: 1, Skipped: 55
+
+    ============================================================
+    HNS-SharedKey
+    ============================================================
+    [ERROR] testAbfsHttpSendStatistics(org.apache.hadoop.fs.azurebfs.ITestAbfsNetworkStatistics)  Time elapsed: 2.175 s  <<< FAILURE!
+
+    [WARNING] Tests run: 137, Failures: 0, Errors: 0, Skipped: 3
+    [ERROR] Tests run: 623, Failures: 1, Errors: 0, Skipped: 42
+    [WARNING] Tests run: 340, Failures: 0, Errors: 0, Skipped: 41
+
+    ============================================================
+    NonHNS-SharedKey
+    ============================================================
+    [ERROR] testNonRecursiveDeleteWithPagination(org.apache.hadoop.fs.azurebfs.services.ITestAbfsPaginatedDelete)  Time elapsed: 0.85 s  <<< ERROR!
+
+    [WARNING] Tests run: 137, Failures: 0, Errors: 0, Skipped: 9
+    [ERROR] Tests run: 607, Failures: 1, Errors: 1, Skipped: 269
+    [WARNING] Tests run: 340, Failures: 0, Errors: 0, Skipped: 44
+
+    ============================================================
+    AppendBlob-HNS-OAuth
+    ============================================================
+
+    [WARNING] Tests run: 137, Failures: 0, Errors: 0, Skipped: 2
+    [ERROR] Tests run: 623, Failures: 0, Errors: 0, Skipped: 73
+    [ERROR] Tests run: 340, Failures: 0, Errors: 0, Skipped: 79
+```
 
 **To add a new test combination:** Templates for mandatory test combinations
 for PR validation are present in `dev-support/testrun-scripts/runtests.sh`.

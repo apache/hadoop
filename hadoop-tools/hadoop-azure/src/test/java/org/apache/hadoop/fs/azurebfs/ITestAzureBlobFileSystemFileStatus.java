@@ -18,9 +18,7 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
-import java.io.File;
 import java.io.IOException;
-import java.io.OutputStream;
 
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.junit.Test;
