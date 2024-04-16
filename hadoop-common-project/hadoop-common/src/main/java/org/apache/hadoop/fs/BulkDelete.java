@@ -20,6 +20,7 @@ package org.apache.hadoop.fs;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -58,7 +59,7 @@ public interface BulkDelete extends IOStatisticsSource, Closeable {
 
   /**
    * Base path of a bulk delete operation.
-   * All paths submitted in {@link #bulkDelete(List)} must be under this path.
+   * All paths submitted in {@link #bulkDelete(Collection)} must be under this path.
    */
   Path basePath();
 
@@ -82,7 +83,7 @@ public interface BulkDelete extends IOStatisticsSource, Closeable {
    * @throws IOException IO problems including networking, authentication and more.
    * @throws IllegalArgumentException if a path argument is invalid.
    */
-  List<Map.Entry<Path, String>> bulkDelete(List<Path> paths)
+  List<Map.Entry<Path, String>> bulkDelete(Collection<Path> paths)
       throws IOException, IllegalArgumentException;
 
 }
