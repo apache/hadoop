@@ -18,18 +18,24 @@
 
 package org.apache.hadoop.fs.contract;
 
-import org.apache.hadoop.fs.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
 import org.assertj.core.api.Assertions;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import org.apache.hadoop.fs.CommonPathCapabilities;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.wrappedio.WrappedIO;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
+import static org.apache.hadoop.io.wrappedio.WrappedIO.bulkDelete;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 public abstract class AbstractContractBulkDeleteTest extends AbstractFSContractTestBase {
@@ -47,7 +53,7 @@ public abstract class AbstractContractBulkDeleteTest extends AbstractFSContractT
     public void setUp() throws Exception {
         fs = getFileSystem();
         basePath = path(getClass().getName());
-        pageSize = FileUtil.bulkDeletePageSize(getFileSystem(), basePath);
+        pageSize = WrappedIO.bulkDeletePageSize(getFileSystem(), basePath);
         fs.mkdirs(basePath);
     }
 
@@ -70,21 +76,21 @@ public abstract class AbstractContractBulkDeleteTest extends AbstractFSContractT
     public void testPathsSizeEqualsPageSizePrecondition() throws Exception {
         List<Path> listOfPaths = createListOfPaths(pageSize, basePath);
         // Bulk delete call should pass with no exception.
-        FileUtil.bulkDelete(getFileSystem(), basePath, listOfPaths);
+        bulkDelete(getFileSystem(), basePath, listOfPaths);
     }
 
     @Test
     public void testPathsSizeGreaterThanPageSizePrecondition() throws Exception {
         List<Path> listOfPaths = createListOfPaths(pageSize + 1, basePath);
         intercept(IllegalArgumentException.class,
-                () -> FileUtil.bulkDelete(getFileSystem(), basePath, listOfPaths));
+                () -> bulkDelete(getFileSystem(), basePath, listOfPaths));
     }
 
     @Test
     public void testPathsSizeLessThanPageSizePrecondition() throws Exception {
         List<Path> listOfPaths = createListOfPaths(pageSize - 1, basePath);
         // Bulk delete call should pass with no exception.
-        FileUtil.bulkDelete(getFileSystem(), basePath, listOfPaths);
+        bulkDelete(getFileSystem(), basePath, listOfPaths);
     }
 
     @Test
@@ -97,7 +103,8 @@ public abstract class AbstractContractBulkDeleteTest extends AbstractFSContractT
         Assertions.assertThat(fileStatuses)
                 .describedAs("File count after create")
                 .hasSize(pageSize);
-        assertSuccessfulBulkDelete(FileUtil.bulkDelete(getFileSystem(), basePath, listOfPaths));
+        assertSuccessfulBulkDelete(
+            bulkDelete(getFileSystem(), basePath, listOfPaths));
         FileStatus[] fileStatusesAfterDelete = fs.listStatus(basePath);
         Assertions.assertThat(fileStatusesAfterDelete)
                 .describedAs("File statuses should be empty after delete")
@@ -118,7 +125,7 @@ public abstract class AbstractContractBulkDeleteTest extends AbstractFSContractT
         paths.add(pathNotUnderBase);
         // Should fail as path is not under the base path.
         intercept(IllegalArgumentException.class,
-                () -> FileUtil.bulkDelete(getFileSystem(), basePath, paths));
+                () -> bulkDelete(getFileSystem(), basePath, paths));
     }
 
     @Test
@@ -127,7 +134,7 @@ public abstract class AbstractContractBulkDeleteTest extends AbstractFSContractT
         Path pathNotExists = new Path(basePath, "not-exists");
         paths.add(pathNotExists);
         // bulk delete call doesn't verify if a path exist or not before deleting.
-        assertSuccessfulBulkDelete(FileUtil.bulkDelete(getFileSystem(), basePath, paths));
+        assertSuccessfulBulkDelete(bulkDelete(getFileSystem(), basePath, paths));
     }
 
     @Test
@@ -140,7 +147,7 @@ public abstract class AbstractContractBulkDeleteTest extends AbstractFSContractT
         touch(fs, filePath);
         paths.add(filePath);
         // Outcome is undefined. But call shouldn't fail. In case of S3 directories will still be present.
-        assertSuccessfulBulkDelete(FileUtil.bulkDelete(getFileSystem(), basePath, paths));
+        assertSuccessfulBulkDelete(bulkDelete(getFileSystem(), basePath, paths));
     }
 
     @Test
@@ -150,14 +157,14 @@ public abstract class AbstractContractBulkDeleteTest extends AbstractFSContractT
         fs.mkdirs(emptyDirPath);
         paths.add(emptyDirPath);
         // Should pass as empty directory.
-        assertSuccessfulBulkDelete(FileUtil.bulkDelete(getFileSystem(), basePath, paths));
+        assertSuccessfulBulkDelete(bulkDelete(getFileSystem(), basePath, paths));
     }
 
     @Test
     public void testDeleteEmptyList() throws Exception {
         List<Path> paths = new ArrayList<>();
         // Empty list should pass.
-        assertSuccessfulBulkDelete(FileUtil.bulkDelete(getFileSystem(), basePath, paths));
+        assertSuccessfulBulkDelete(bulkDelete(getFileSystem(), basePath, paths));
     }
 
     @Test
@@ -170,7 +177,7 @@ public abstract class AbstractContractBulkDeleteTest extends AbstractFSContractT
         Path another = new Path(basePath, "another-file");
         touch(fs, another);
         paths.add(another);
-        assertSuccessfulBulkDelete(FileUtil.bulkDelete(getFileSystem(), basePath, paths));
+        assertSuccessfulBulkDelete(bulkDelete(getFileSystem(), basePath, paths));
     }
 
     /**
@@ -187,7 +194,7 @@ public abstract class AbstractContractBulkDeleteTest extends AbstractFSContractT
         Path file1 = new Path(dir3, "file1");
         touch(fs, file1);
         paths.add(file1);
-        assertSuccessfulBulkDelete(FileUtil.bulkDelete(getFileSystem(), basePath, paths));
+        assertSuccessfulBulkDelete(bulkDelete(getFileSystem(), basePath, paths));
     }
 
 
@@ -201,7 +208,7 @@ public abstract class AbstractContractBulkDeleteTest extends AbstractFSContractT
         touch(fs, filePath);
         paths.add(filePath);
         // Should pass as both paths are under the base path.
-        assertSuccessfulBulkDelete(FileUtil.bulkDelete(getFileSystem(), basePath, paths));
+        assertSuccessfulBulkDelete(bulkDelete(getFileSystem(), basePath, paths));
     }
 
 

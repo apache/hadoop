@@ -56,6 +56,7 @@ import org.apache.hadoop.fs.s3a.commit.impl.CommitOperations;
 import org.apache.hadoop.fs.s3a.impl.InstantiationIOException;
 import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool;
 import org.apache.hadoop.fs.s3a.statistics.CommitterStatistics;
+import org.apache.hadoop.io.wrappedio.WrappedIO;
 
 import static org.apache.hadoop.fs.contract.AbstractContractBulkDeleteTest.assertSuccessfulBulkDelete;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
@@ -716,7 +717,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
 
     // the full FS
     S3AFileSystem fs = getFileSystem();
-    FileUtil.bulkDelete(fs, destDir, new ArrayList<>());
+    WrappedIO.bulkDelete(fs, destDir, new ArrayList<>());
 
     bindRolePolicyStatements(assumedRoleConfig, STATEMENT_ALLOW_KMS_RW,
         statement(true, S3_ALL_BUCKETS, S3_ALL_OPERATIONS),

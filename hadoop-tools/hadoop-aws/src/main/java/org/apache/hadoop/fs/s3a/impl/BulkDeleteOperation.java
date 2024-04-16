@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a.impl;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -70,7 +71,7 @@ public class BulkDeleteOperation extends AbstractStoreOperation implements BulkD
   }
 
   @Override
-  public List<Map.Entry<Path, String>> bulkDelete(final List<Path> paths)
+  public List<Map.Entry<Path, String>> bulkDelete(final Collection<Path> paths)
       throws IOException, IllegalArgumentException {
     requireNonNull(paths);
     checkArgument(paths.size() <= pageSize,

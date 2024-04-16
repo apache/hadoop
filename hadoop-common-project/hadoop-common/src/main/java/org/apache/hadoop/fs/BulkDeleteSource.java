@@ -52,4 +52,13 @@ public interface BulkDeleteSource {
     throw new UnsupportedOperationException("Bulk delete not supported");
   }
 
+  /**
+   * Is bulk delete available on this path for this source?
+   * @param path path to delete under.
+   * @return true if bulk delete is available.
+   */
+  default boolean isBulkDeleteAvailable(Path path) {
+    return true;
+  }
+
 }
