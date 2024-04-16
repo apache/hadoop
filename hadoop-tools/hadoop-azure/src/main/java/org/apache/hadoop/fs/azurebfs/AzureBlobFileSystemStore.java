@@ -814,7 +814,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       LOG.debug("openFileForRead filesystem: {} path: {}",
           client.getFileSystem(), path);
 
-      FileStatus fileStatus = parameters.map(OpenFileParameters::getStatus)
+      final FileStatus fileStatus = parameters.map(OpenFileParameters::getStatus)
           .orElse(null);
       String relativePath = getRelativePath(path);
       String resourceType = null, eTag = null;
@@ -877,7 +877,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         }
       }
 
-      if (!abfsConfiguration.getHeadOptimizationForInputStream()
+      if ((fileStatus != null || !abfsConfiguration.getHeadOptimizationForInputStream())
           && parseIsDirectory(resourceType)) {
         throw new AbfsRestOperationException(
             AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode(),

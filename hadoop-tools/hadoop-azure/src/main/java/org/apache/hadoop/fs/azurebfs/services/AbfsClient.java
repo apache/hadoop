@@ -36,6 +36,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsInvalidChecksumException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsDriverException;
@@ -1099,7 +1100,7 @@ public class AbfsClient implements Closeable {
     AbfsHttpHeader rangeHeader = new AbfsHttpHeader(RANGE,
         String.format("bytes=%d-%d", position, position + bufferLength - 1));
     requestHeaders.add(rangeHeader);
-    if (eTag == null || !eTag.isEmpty()) {
+    if (!StringUtils.isEmpty(eTag)) {
       requestHeaders.add(new AbfsHttpHeader(IF_MATCH, eTag));
     }
 
