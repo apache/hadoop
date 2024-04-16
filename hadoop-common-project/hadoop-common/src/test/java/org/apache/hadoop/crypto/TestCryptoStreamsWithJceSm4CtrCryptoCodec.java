@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.crypto;
 
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.junit.BeforeClass;
@@ -26,7 +25,6 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.
     HADOOP_SECURITY_CRYPTO_CIPHER_SUITE_KEY;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_KEY;
 
 public class TestCryptoStreamsWithJceSm4CtrCryptoCodec extends
     TestCryptoStreams {
@@ -35,8 +33,7 @@ public class TestCryptoStreamsWithJceSm4CtrCryptoCodec extends
   public static void init() throws Exception {
     Configuration conf = new Configuration();
     conf.set(HADOOP_SECURITY_CRYPTO_CIPHER_SUITE_KEY, "SM4/CTR/NoPadding");
-    conf.set(HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_KEY,
-            BouncyCastleProvider.PROVIDER_NAME);
+    TestCryptoCodec.initBouncyCastleProvider(conf);
     conf.set(
          CommonConfigurationKeysPublic.
              HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_SM4_CTR_NOPADDING_KEY,
