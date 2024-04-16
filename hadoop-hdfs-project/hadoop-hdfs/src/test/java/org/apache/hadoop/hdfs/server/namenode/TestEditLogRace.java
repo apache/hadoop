@@ -41,6 +41,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import java.util.function.Supplier;
+
+import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -523,11 +525,11 @@ public class TestEditLogRace {
         public void run() {
           try {
             LOG.info("Starting setOwner");
-            namesystem.writeLock();
+            namesystem.writeLock(FSNamesystemLockMode.FS);
             try {
               editLog.logSetOwner("/","test","test");
             } finally {
-              namesystem.writeUnlock();
+              namesystem.writeUnlock(FSNamesystemLockMode.FS, "testSaveRightBeforeSync");
             }
             sleepingBeforeSync.countDown();
             LOG.info("edit thread: sleeping for " + BLOCK_TIME + "secs");

@@ -81,6 +81,7 @@ import org.apache.hadoop.hdfs.server.common.Storage;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.AccessControlException;
@@ -783,14 +784,14 @@ public class TestDFSAdmin {
       LocatedStripedBlock bg =
           (LocatedStripedBlock)(lbs.get(0));
 
-      miniCluster.getNamesystem().writeLock();
+      miniCluster.getNamesystem().writeLock(FSNamesystemLockMode.BM);
       try {
         BlockManager bm = miniCluster.getNamesystem().getBlockManager();
         bm.findAndMarkBlockAsCorrupt(bg.getBlock(), bg.getLocations()[0],
             "STORAGE_ID", "TEST");
         BlockManagerTestUtil.updateState(bm);
       } finally {
-        miniCluster.getNamesystem().writeUnlock();
+        miniCluster.getNamesystem().writeUnlock(FSNamesystemLockMode.BM, "testReportCommand");
       }
       waitForCorruptBlock(miniCluster, client, file);
 

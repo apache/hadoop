@@ -32,6 +32,7 @@ import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -338,7 +339,7 @@ public class TestListOpenFiles {
     FSDirectory dir = fsNamesystem.getFSDirectory();
     List<INode> removedINodes = new ChunkedArrayList<>();
     removedINodes.add(dir.getINode(path));
-    fsNamesystem.writeLock();
+    fsNamesystem.writeLock(FSNamesystemLockMode.FS);
     try {
       dir.removeFromInodeMap(removedINodes);
       openFileEntryBatchedEntries = nnRpc
@@ -349,7 +350,7 @@ public class TestListOpenFiles {
     } catch (NullPointerException e) {
       Assert.fail("Should not throw NPE when the file is deleted but has lease!");
     } finally {
-      fsNamesystem.writeUnlock();
+      fsNamesystem.writeUnlock(FSNamesystemLockMode.FS, "testListOpenFilesWithDeletedPath");
     }
   }
 }

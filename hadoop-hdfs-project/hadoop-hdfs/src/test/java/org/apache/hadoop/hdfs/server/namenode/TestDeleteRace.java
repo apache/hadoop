@@ -29,6 +29,7 @@ import java.util.Set;
 import java.util.concurrent.Semaphore;
 
 import org.apache.hadoop.fs.Options;
+import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -471,7 +472,7 @@ public class TestDeleteRace {
         } catch (InterruptedException e) {
         }
       });
-      fsn.writeLock();
+      fsn.writeLock(FSNamesystemLockMode.GLOBAL);
       open.start();
       openSem.acquire();
       Thread.yield();
@@ -479,7 +480,7 @@ public class TestDeleteRace {
       rename.start();
       renameSem.acquire();
       Thread.yield();
-      fsn.writeUnlock();
+      fsn.writeUnlock(FSNamesystemLockMode.GLOBAL, "testOpenRenameRace");
 
       // wait open and rename threads finish.
       open.join();
