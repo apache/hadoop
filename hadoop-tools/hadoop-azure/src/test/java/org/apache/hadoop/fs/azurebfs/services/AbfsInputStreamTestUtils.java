@@ -134,8 +134,13 @@ public class AbfsInputStreamTestUtils {
   public void assertContentReadCorrectly(byte[] actualFileContent, int from,
       int len, byte[] contentRead, Path testFilePath) {
     Assertions.assertThat(actualFileContent.length)
-        .describedAs("From + len should be less than the actual file content length")
+        .describedAs("From + len should be less than or equal to "
+            + "the actual file content length")
         .isGreaterThanOrEqualTo(from + len);
+    Assertions.assertThat(contentRead.length)
+        .describedAs("Content read length should be greater than or "
+            + "equal to the len")
+        .isGreaterThanOrEqualTo(len);
     for (int i = 0; i < len; i++) {
       Assertions.assertThat(contentRead[i])
           .describedAs(
