@@ -366,6 +366,14 @@ public abstract class AbstractAbfsIntegrationTest extends
     return abfsConfig;
   }
 
+  public AbfsConfiguration getConfiguration(AzureBlobFileSystem fs) {
+    return fs.getAbfsStore().getAbfsConfiguration();
+  }
+
+  public Map<String, Long> getInstrumentationMap(AzureBlobFileSystem fs) {
+    return fs.getInstrumentationMap();
+  }
+
   public Configuration getRawConfiguration() {
     return abfsConfig.getRawConfiguration();
   }

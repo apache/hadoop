@@ -150,7 +150,7 @@ public class ITestAbfsInputStreamReadFooter extends AbstractAbfsScaleTest {
       });
       futureList.add(future);
     }
-    FutureIO.awaitFuture(futureList);
+    FutureIO.awaitAllFutures(futureList);
   }
 
   private void validateNumBackendCalls(final AzureBlobFileSystem spiedFs,
@@ -166,7 +166,7 @@ public class ITestAbfsInputStreamReadFooter extends AbstractAbfsScaleTest {
           byte[] buffer = new byte[length];
 
           Map<String, Long> metricMap =
-              abfsInputStreamTestUtils.getInstrumentationMap(spiedFs);
+              getInstrumentationMap(spiedFs);
           long requestsMadeBeforeTest = metricMap
               .get(CONNECTIONS_MADE.getStatName());
 
@@ -179,7 +179,7 @@ public class ITestAbfsInputStreamReadFooter extends AbstractAbfsScaleTest {
           iStream.seek(fileSize - (TWENTY * ONE_KB));
           iStream.read(buffer, 0, length);
 
-          metricMap = abfsInputStreamTestUtils.getInstrumentationMap(spiedFs);
+          metricMap = getInstrumentationMap(spiedFs);
           long requestsMadeAfterTest = metricMap
               .get(CONNECTIONS_MADE.getStatName());
 
@@ -273,7 +273,7 @@ public class ITestAbfsInputStreamReadFooter extends AbstractAbfsScaleTest {
         }
       }));
     }
-    FutureIO.awaitFuture(futureList);
+    FutureIO.awaitAllFutures(futureList);
   }
 
   private void validateSeekAndReadWithConf(final AzureBlobFileSystem spiedFs,
@@ -401,7 +401,7 @@ public class ITestAbfsInputStreamReadFooter extends AbstractAbfsScaleTest {
           throw new RuntimeException(ex);
         }
       }));
-      FutureIO.awaitFuture(futureList);
+      FutureIO.awaitAllFutures(futureList);
     }
   }
 
@@ -474,7 +474,7 @@ public class ITestAbfsInputStreamReadFooter extends AbstractAbfsScaleTest {
         }
       }));
     }
-    FutureIO.awaitFuture(futureList);
+    FutureIO.awaitAllFutures(futureList);
   }
 
   private void validatePartialReadWithSomeData(final AzureBlobFileSystem spiedFs,

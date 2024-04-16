@@ -140,7 +140,7 @@ public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
               any(TracingContext.class));
 
       iStream = new FSDataInputStream(abfsInputStream);
-      abfsInputStreamTestUtils.verifyBeforeSeek(abfsInputStream);
+      abfsInputStreamTestUtils.verifyAbfsInputStreamBaseStateBeforeSeek(abfsInputStream);
       abfsInputStreamTestUtils.seek(iStream, seekPos);
       byte[] buffer = new byte[length];
       int bytesRead = iStream.read(buffer, 0, length);

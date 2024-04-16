@@ -24,7 +24,10 @@ import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
 
+import org.assertj.core.api.Assertions;
+
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -32,12 +35,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
-import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
 import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
 
 import static org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest.SHORTENED_GUID_LEN;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_READ_OPTIMIZE_FOOTER_READ;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_READ_SMALL_FILES_COMPLETELY;
 
 public class AbfsInputStreamTestUtils {
 
@@ -72,24 +74,46 @@ public class AbfsInputStreamTestUtils {
         .right(UUID.randomUUID().toString(), SHORTENED_GUID_LEN));
   }
 
+  /**
+   * Returns AzureBlobFileSystem instance with the required
+   * readFullFileOptimization configuration.
+   *
+   * @param readSmallFilesCompletely whether to read small files completely
+   * @return AzureBlobFileSystem instance
+   * @throws IOException exception in creating fileSystem
+   */
   public AzureBlobFileSystem getFileSystem(boolean readSmallFilesCompletely)
       throws IOException {
-    final AzureBlobFileSystem fs = abstractAbfsIntegrationTest.getFileSystem();
-    abstractAbfsIntegrationTest.getAbfsStore(fs).getAbfsConfiguration()
-        .setReadSmallFilesCompletely(readSmallFilesCompletely);
-    abstractAbfsIntegrationTest.getAbfsStore(fs).getAbfsConfiguration()
-        .setOptimizeFooterRead(false);
-    abstractAbfsIntegrationTest.getAbfsStore(fs).getAbfsConfiguration()
-        .setIsChecksumValidationEnabled(true);
-    return fs;
+    Configuration configuration = new Configuration(
+        abstractAbfsIntegrationTest.getRawConfiguration());
+    configuration.setBoolean(AZURE_READ_SMALL_FILES_COMPLETELY,
+        readSmallFilesCompletely);
+    configuration.setBoolean(AZURE_READ_OPTIMIZE_FOOTER_READ, false);
+    return (AzureBlobFileSystem) FileSystem.newInstance(configuration);
   }
 
+  /**
+   * Return array of random bytes of the given length.
+   *
+   * @param length length of the byte array
+   * @return byte array
+   */
   public byte[] getRandomBytesArray(int length) {
     final byte[] b = new byte[length];
     new Random().nextBytes(b);
     return b;
   }
 
+  /**
+   * Create a file on the file system with the given file name and content.
+   *
+   * @param fs fileSystem that stores the file
+   * @param fileName name of the file
+   * @param fileContent content of the file
+   *
+   * @return path of the file created
+   * @throws IOException exception in writing file on fileSystem
+   */
   public Path createFileWithContent(FileSystem fs, String fileName,
       byte[] fileContent) throws IOException {
     Path testFilePath = path(fileName);
@@ -100,38 +124,52 @@ public class AbfsInputStreamTestUtils {
     return testFilePath;
   }
 
-  public AzureBlobFileSystemStore getAbfsStore(FileSystem fs)
-      throws NoSuchFieldException, IllegalAccessException {
-    AzureBlobFileSystem abfs = (AzureBlobFileSystem) fs;
-    Field abfsStoreField = AzureBlobFileSystem.class
-        .getDeclaredField("abfsStore");
-    abfsStoreField.setAccessible(true);
-    return (AzureBlobFileSystemStore) abfsStoreField.get(abfs);
-  }
-
-  public Map<String, Long> getInstrumentationMap(FileSystem fs)
-      throws NoSuchFieldException, IllegalAccessException {
-    AzureBlobFileSystem abfs = (AzureBlobFileSystem) fs;
-    Field abfsCountersField = AzureBlobFileSystem.class
-        .getDeclaredField("abfsCounters");
-    abfsCountersField.setAccessible(true);
-    AbfsCounters abfsCounters = (AbfsCounters) abfsCountersField.get(abfs);
-    return abfsCounters.toMap();
-  }
-
+  /**
+   * Assert that the content read from the subsection of a file is correct.
+   *
+   * @param actualFileContent actual content of the file
+   * @param from start index of the content read
+   * @param len length of the content read
+   * @param contentRead content read from the file
+   * @param testFilePath path of the file
+   */
   public void assertContentReadCorrectly(byte[] actualFileContent, int from,
       int len, byte[] contentRead, Path testFilePath) {
+    Assertions.assertThat(actualFileContent.length)
+        .describedAs("From + len should be less than the actual file content length")
+        .isGreaterThanOrEqualTo(from + len);
     for (int i = 0; i < len; i++) {
-      assertEquals("The test file path is " + testFilePath, contentRead[i],
-          actualFileContent[i + from]);
+      Assertions.assertThat(contentRead[i])
+          .describedAs(
+              "The test file path is " + testFilePath + ". Equality failed"
+                  + "at index " + i
+                  + " of the contentRead array. ActualFileContent is being compared from index "
+                  + from)
+          .isEqualTo(actualFileContent[i + from]);
     }
   }
 
+  /**
+   * Assert that the content read is not equal to the actual content of the file.
+   *
+   * @param actualContent actual content of the file
+   * @param contentRead content read from the file
+   * @param conf configuration
+   * @param testFilePath path of the file
+   */
   public void assertBuffersAreNotEqual(byte[] actualContent,
       byte[] contentRead, AbfsConfiguration conf, Path testFilePath) {
     assertBufferEquality(actualContent, contentRead, conf, false, testFilePath);
   }
 
+  /**
+   * Assert that the content read is equal to the actual content of the file.
+   *
+   * @param actualContent actual content of the file
+   * @param contentRead content read from the file
+   * @param conf configuration
+   * @param testFilePath path of the file
+   */
   public void assertBuffersAreEqual(byte[] actualContent, byte[] contentRead,
       AbfsConfiguration conf, Path testFilePath) {
     assertBufferEquality(actualContent, contentRead, conf, true, testFilePath);
@@ -141,41 +179,80 @@ public class AbfsInputStreamTestUtils {
       AbfsConfiguration conf, boolean assertEqual, Path testFilePath) {
     int bufferSize = conf.getReadBufferSize();
     int actualContentSize = actualContent.length;
-    int n = (actualContentSize < bufferSize) ? actualContentSize : bufferSize;
+    int n = Math.min(actualContentSize, bufferSize);
     int matches = 0;
-    for (int i = 0; i < n; i++) {
+    for (int i = 0; i < n && i < contentRead.length; i++) {
       if (actualContent[i] == contentRead[i]) {
         matches++;
       }
     }
     if (assertEqual) {
-      assertEquals("The test file path is " + testFilePath, n, matches);
+      Assertions.assertThat(matches).describedAs(
+          "The test file path is " + testFilePath).isEqualTo(n);
     } else {
-      assertNotEquals("The test file path is " + testFilePath, n, matches);
+      Assertions.assertThat(matches).describedAs(
+          "The test file path is " + testFilePath).isNotEqualTo(n);
     }
   }
 
+  /**
+   * Seek inputStream to the given seekPos.
+   *
+   * @param iStream inputStream to seek
+   * @param seekPos position to seek
+   * @throws IOException exception in seeking inputStream
+   */
   public void seek(FSDataInputStream iStream, long seekPos)
       throws IOException {
     AbfsInputStream abfsInputStream
         = (AbfsInputStream) iStream.getWrappedStream();
-    verifyBeforeSeek(abfsInputStream);
+    verifyAbfsInputStreamBaseStateBeforeSeek(abfsInputStream);
     iStream.seek(seekPos);
-    verifyAfterSeek(abfsInputStream, seekPos);
+    verifyAbfsInputSteramStateAfterSeek(abfsInputStream, seekPos);
   }
 
-  public void verifyBeforeSeek(AbfsInputStream abfsInputStream) {
-    assertEquals(0, abfsInputStream.getFCursor());
-    assertEquals(-1, abfsInputStream.getFCursorAfterLastRead());
-    assertEquals(0, abfsInputStream.getLimit());
-    assertEquals(0, abfsInputStream.getBCursor());
+  /**
+   * Verifies that the pointers in AbfsInputStream state are unchanged and are
+   * equal to that of a newly created inputStream.
+   *
+   * @param abfsInputStream inputStream to verify
+   */
+  public void verifyAbfsInputStreamBaseStateBeforeSeek(AbfsInputStream abfsInputStream) {
+    Assertions.assertThat(abfsInputStream.getFCursor())
+        .describedAs("FCursor should be 0 at the inputStream open")
+        .isEqualTo(0);
+    Assertions.assertThat(abfsInputStream.getFCursorAfterLastRead())
+        .describedAs(
+            "FCursorAfterLastRead should be -1 at the inputStream open")
+        .isEqualTo(-1);
+    Assertions.assertThat(abfsInputStream.getLimit())
+        .describedAs("Limit should be 0 at the inputStream open")
+        .isEqualTo(0);
+    Assertions.assertThat(abfsInputStream.getBCursor())
+        .describedAs("BCursor should be 0 at the inputStream open")
+        .isEqualTo(0);
   }
 
-  public void verifyAfterSeek(AbfsInputStream abfsInputStream, long seekPos)
-      throws IOException {
-    assertEquals(seekPos, abfsInputStream.getPos());
-    assertEquals(-1, abfsInputStream.getFCursorAfterLastRead());
-    assertEquals(0, abfsInputStream.getLimit());
-    assertEquals(0, abfsInputStream.getBCursor());
+  /**
+   * Verifies that only the FCursor is updated after seek and all other pointers
+   * are in their initial state.
+   *
+   * @param abfsInputStream inputStream to verify
+   * @param seekPos position to seek
+   */
+  public void verifyAbfsInputSteramStateAfterSeek(AbfsInputStream abfsInputStream,
+      long seekPos) {
+    Assertions.assertThat(abfsInputStream.getFCursor())
+        .describedAs("FCursor should be " + seekPos + " after seek")
+        .isEqualTo(seekPos);
+    Assertions.assertThat(abfsInputStream.getFCursorAfterLastRead())
+        .describedAs("FCursorAfterLastRead should be -1 after seek")
+        .isEqualTo(-1);
+    Assertions.assertThat(abfsInputStream.getLimit())
+        .describedAs("Limit should be 0 after seek")
+        .isEqualTo(0);
+    Assertions.assertThat(abfsInputStream.getBCursor())
+        .describedAs("BCursor should be 0 after seek")
+        .isEqualTo(0);
   }
 }

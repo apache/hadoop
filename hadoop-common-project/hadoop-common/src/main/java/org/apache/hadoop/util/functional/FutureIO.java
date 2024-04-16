@@ -21,6 +21,7 @@ package org.apache.hadoop.util.functional;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.UncheckedIOException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -31,6 +32,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -58,6 +61,7 @@ import org.apache.hadoop.fs.FSBuilder;
 @InterfaceStability.Unstable
 public final class FutureIO {
 
+  private static final Logger log = LoggerFactory.getLogger(FutureIO.class.getName());
   private FutureIO() {
   }
 
@@ -132,7 +136,7 @@ public final class FutureIO {
    * @throws IOException if something went wrong
    * @throws RuntimeException any nested RTE thrown
    */
-  public static <T> List<T> awaitFuture(final Collection<Future<T>> collection)
+  public static <T> List<T> awaitAllFutures(final Collection<Future<T>> collection)
       throws InterruptedIOException, IOException, RuntimeException {
     List<T> results = new ArrayList<>();
     try {
@@ -141,9 +145,11 @@ public final class FutureIO {
       }
       return results;
     } catch (InterruptedException e) {
+      log.error("Execution of future interrupted ", e);
       throw (InterruptedIOException) new InterruptedIOException(e.toString())
           .initCause(e);
     } catch (ExecutionException e) {
+      log.error("Execution of future failed with exception", e.getCause());
       return raiseInnerCause(e);
     }
   }
@@ -158,8 +164,7 @@ public final class FutureIO {
    * </p>
    *
    * @param collection collection of futures to be evaluated
-   * @param timeout timeout to wait
-   * @param unit time unit.
+   * @param duration timeout duration
    * @param <T> type of the result.
    * @return the list of future's result, if all went well.
    * @throws InterruptedIOException future was interrupted
@@ -167,21 +172,22 @@ public final class FutureIO {
    * @throws RuntimeException any nested RTE thrown
    * @throws TimeoutException the future timed out.
    */
-  public static <T> List<T> awaitFuture(final Collection<Future<T>> collection,
-      final long timeout,
-      final TimeUnit unit)
+  public static <T> List<T> awaitAllFutures(final Collection<Future<T>> collection,
+      final Duration duration)
       throws InterruptedIOException, IOException, RuntimeException,
       TimeoutException {
     List<T> results = new ArrayList<>();
     try {
       for (Future<T> future : collection) {
-        results.add(future.get(timeout, unit));
+        results.add(future.get(duration.toMillis(), TimeUnit.MILLISECONDS));
       }
       return results;
     } catch (InterruptedException e) {
+      log.error("Execution of future interrupted ", e);
       throw (InterruptedIOException) new InterruptedIOException(e.toString())
           .initCause(e);
     } catch (ExecutionException e) {
+      log.error("Execution of future failed with exception", e.getCause());
       return raiseInnerCause(e);
     }
   }
