@@ -6486,7 +6486,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       "the DT manager before entering safemode!";
     // edit log rolling is not thread-safe and must be protected by the
     // fsn lock.  not updating namespace so read lock is sufficient.
-    assert hasReadLock();
+    assert hasReadLock(FSNamesystemLockMode.FS);
     getEditLog().logUpdateMasterKey(key);
     getEditLog().logSync();
   }
@@ -6502,7 +6502,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       "the DT manager before entering safemode!";
     // edit log rolling is not thread-safe and must be protected by the
     // fsn lock.  not updating namespace so read lock is sufficient.
-    assert hasReadLock();
+    assert hasReadLock(FSNamesystemLockMode.FS);
     // do not logSync so expiration edits are batched
     getEditLog().logCancelDelegationToken(id);
   }  

@@ -27,6 +27,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 
+import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.apache.hadoop.util.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -372,7 +373,7 @@ public class DelegationTokenSecretManager
       // closes the edit log files. Doing this inside the
       // fsn lock will prevent being interrupted when stopping
       // the secret manager.
-      namesystem.readLockInterruptibly();
+      namesystem.readLockInterruptibly(FSNamesystemLockMode.FS);
       try {
         // this monitor isn't necessary if stopped while holding write lock
         // but for safety, guard against a stop with read lock.
@@ -383,7 +384,7 @@ public class DelegationTokenSecretManager
           namesystem.logUpdateMasterKey(key);
         }
       } finally {
-        namesystem.readUnlock("logUpdateMasterKey");
+        namesystem.readUnlock(FSNamesystemLockMode.FS, "logUpdateMasterKey");
       }
     } catch (InterruptedException ie) {
       // AbstractDelegationTokenManager may crash if an exception is thrown.
@@ -401,7 +402,7 @@ public class DelegationTokenSecretManager
       // closes the edit log files. Doing this inside the
       // fsn lock will prevent being interrupted when stopping
       // the secret manager.
-      namesystem.readLockInterruptibly();
+      namesystem.readLockInterruptibly(FSNamesystemLockMode.FS);
       try {
         // this monitor isn't necessary if stopped while holding write lock
         // but for safety, guard against a stop with read lock.
@@ -412,7 +413,7 @@ public class DelegationTokenSecretManager
           namesystem.logExpireDelegationToken(dtId);
         }
       } finally {
-        namesystem.readUnlock("logExpireToken");
+        namesystem.readUnlock(FSNamesystemLockMode.FS, "logExpireToken");
       }
     } catch (InterruptedException ie) {
       // AbstractDelegationTokenManager may crash if an exception is thrown.
