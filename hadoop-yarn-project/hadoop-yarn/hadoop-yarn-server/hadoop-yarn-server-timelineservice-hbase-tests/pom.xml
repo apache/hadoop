@@ -489,6 +489,8 @@
           </execution>
         </executions>
       </plugin>
+      <!-- The fork value is deliberately set to 0 to avoid VM crash while running tests
+       on Jenkins, removing this leads to tests crashing silently due to VM crash -->
       <plugin>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
