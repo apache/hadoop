@@ -61,7 +61,7 @@ import org.apache.hadoop.fs.FSBuilder;
 @InterfaceStability.Unstable
 public final class FutureIO {
 
-  private static final Logger log = LoggerFactory.getLogger(FutureIO.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(FutureIO.class.getName());
   private FutureIO() {
   }
 
@@ -145,11 +145,11 @@ public final class FutureIO {
       }
       return results;
     } catch (InterruptedException e) {
-      log.error("Execution of future interrupted ", e);
+      LOG.error("Execution of future interrupted ", e);
       throw (InterruptedIOException) new InterruptedIOException(e.toString())
           .initCause(e);
     } catch (ExecutionException e) {
-      log.error("Execution of future failed with exception", e.getCause());
+      LOG.error("Execution of future failed with exception", e.getCause());
       return raiseInnerCause(e);
     }
   }
@@ -183,11 +183,11 @@ public final class FutureIO {
       }
       return results;
     } catch (InterruptedException e) {
-      log.error("Execution of future interrupted ", e);
+      LOG.error("Execution of future interrupted ", e);
       throw (InterruptedIOException) new InterruptedIOException(e.toString())
           .initCause(e);
     } catch (ExecutionException e) {
-      log.error("Execution of future failed with exception", e.getCause());
+      LOG.error("Execution of future failed with exception", e.getCause());
       return raiseInnerCause(e);
     }
   }
