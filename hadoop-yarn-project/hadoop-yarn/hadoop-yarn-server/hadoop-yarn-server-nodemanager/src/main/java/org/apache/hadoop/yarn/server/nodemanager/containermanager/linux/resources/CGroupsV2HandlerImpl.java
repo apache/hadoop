@@ -84,14 +84,14 @@ class CGroupsV2HandlerImpl extends AbstractCGroupsHandler {
   protected Map<String, Set<String>> parsePreConfiguredMountPath() throws IOException {
     Map<String, Set<String>> controllerMappings = new HashMap<>();
     String controllerPath = this.cGroupsMountConfig.getMountPath() + Path.SEPARATOR + this.cGroupPrefix;
-    controllerMappings.put(this.cGroupsMountConfig.getMountPath(), parseControllersFile(controllerPath));
+    controllerMappings.put(this.cGroupsMountConfig.getMountPath(), readControllersFile(controllerPath));
     return controllerMappings;
   }
 
   @Override
   protected Set<String> handleMtabEntry(String path, String type, String options) throws IOException {
     if (type.equals(CGROUP2_FSTYPE)) {
-      return parseControllersFile(path);
+      return readControllersFile(path);
     }
 
     return null;
@@ -108,7 +108,7 @@ class CGroupsV2HandlerImpl extends AbstractCGroupsHandler {
    * @return set of enabled and YARN supported controllers.
    * @throws IOException if the file is not found or cannot be read
    */
-  public Set<String> parseControllersFile(String cgroupPath) throws IOException {
+  public Set<String> readControllersFile(String cgroupPath) throws IOException {
     File cgroupControllersFile = new File(cgroupPath + Path.SEPARATOR + CGROUP_CONTROLLERS_FILE);
     if (!cgroupControllersFile.exists()) {
       throw new IOException("No cgroup controllers file found in the directory specified: " +
@@ -139,7 +139,7 @@ class CGroupsV2HandlerImpl extends AbstractCGroupsHandler {
   protected void updateEnabledControllersInHierarchy(File yarnHierarchy) throws ResourceHandlerException {
     PrintWriter pw = null;
     try {
-      Set<String> enabledControllers = parseControllersFile(yarnHierarchy.getAbsolutePath());
+      Set<String> enabledControllers = readControllersFile(yarnHierarchy.getAbsolutePath());
       if (enabledControllers.isEmpty()) {
         throw new ResourceHandlerException("No valid controllers found in the cgroup hierarchy: " +
                 yarnHierarchy.getAbsolutePath());
@@ -147,7 +147,18 @@ class CGroupsV2HandlerImpl extends AbstractCGroupsHandler {
 
       File subtreeControlFile = new File(yarnHierarchy.getAbsolutePath()
           + Path.SEPARATOR + CGROUP_SUBTREE_CONTROL_FILE);
+      if (!subtreeControlFile.exists()) {
+        throw new ResourceHandlerException("No subtree control file found in the cgroup hierarchy: " +
+                yarnHierarchy.getAbsolutePath());
+      }
 
+      String subtreeControllers = FileUtils.readFileToString(subtreeControlFile, StandardCharsets.UTF_8);
+      Set<String> subtreeControllerSet = new HashSet<>(Arrays.asList(subtreeControllers.split(" ")));
+      subtreeControllerSet.retainAll(CGroupsHandler.CGroupController.getValidCGroups());
+
+      if (subtreeControllerSet.containsAll(enabledControllers)) {
+        return;
+      }
       Writer w = new OutputStreamWriter(Files.newOutputStream(subtreeControlFile.toPath()), StandardCharsets.UTF_8);
       pw = new PrintWriter(w);
       pw.write(String.join(" ", enabledControllers));

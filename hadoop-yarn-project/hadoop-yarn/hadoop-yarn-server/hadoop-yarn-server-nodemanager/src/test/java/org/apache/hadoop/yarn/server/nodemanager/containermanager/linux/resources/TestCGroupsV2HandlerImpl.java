@@ -31,10 +31,14 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -81,6 +85,9 @@ public class TestCGroupsV2HandlerImpl extends TestCGroupsHandlerBase {
     controllerWriter.close();
     controllersFile.deleteOnExit();
 
+    File subtreeControlFile = new File(parentDir, CGroupsHandler.CGROUP_SUBTREE_CONTROL_FILE);
+    Assert.assertTrue("empty subtree_control file should be created", subtreeControlFile.createNewFile());
+
     File hierarchyDir = new File(parentDir, hierarchy);
     if (!hierarchyDir.mkdirs()) {
       String message = "Could not create directory " + hierarchyDir.getAbsolutePath();
@@ -88,6 +95,7 @@ public class TestCGroupsV2HandlerImpl extends TestCGroupsHandlerBase {
     }
     hierarchyDir.deleteOnExit();
     FileUtils.copyFile(controllersFile, new File(hierarchyDir, CGroupsHandler.CGROUP_CONTROLLERS_FILE));
+    FileUtils.copyFile(subtreeControlFile, new File(hierarchyDir, CGroupsHandler.CGROUP_SUBTREE_CONTROL_FILE));
 
     return mockMtab;
   }
@@ -247,11 +255,13 @@ public class TestCGroupsV2HandlerImpl extends TestCGroupsHandlerBase {
         "/hadoop-yarn");
     File subCgroup = new File(tmpPath, "/hadoop-yarn");
     File controllersFile = new File(subCgroup.getAbsolutePath(), CGroupsHandler.CGROUP_CONTROLLERS_FILE);
+    File subtreeControlFile = new File(subCgroup.getAbsolutePath(), CGroupsHandler.CGROUP_SUBTREE_CONTROL_FILE);
 
     try {
       Assert.assertTrue("temp dir should be created", subCgroup.mkdirs());
-      String enabledControllers = "cpuset cpu io memory hugetlb pids rdma misc\n";
+      Assert.assertTrue("empty subtree_control file should be created", subtreeControlFile.createNewFile());
 
+      String enabledControllers = "cpuset cpu io memory hugetlb pids rdma misc\n";
       FileWriter controllerWriter = new FileWriter(controllersFile.getAbsoluteFile());
       controllerWriter.write(enabledControllers);
       controllerWriter.close();
@@ -263,9 +273,15 @@ public class TestCGroupsV2HandlerImpl extends TestCGroupsHandlerBase {
               new File(cGroupsHandler.getPathForCGroup(
                   CGroupsHandler.CGroupController.CPU, "")).getAbsolutePath());
 
+      // Verify that the subtree control file was updated
+      String subtreeControllersEnabledString = FileUtils.readFileToString(subtreeControlFile, StandardCharsets.UTF_8);
+      Set<String> subtreeControllersEnabled = new HashSet<>(Arrays.asList(subtreeControllersEnabledString.split(" ")));
+      Assert.assertTrue("Controllers not enabled in subtree control file",
+          CGroupsHandler.CGroupController.getValidCGroups().containsAll(subtreeControllersEnabled));
     } finally {
       FileUtils.deleteQuietly(subCgroup);
       FileUtils.deleteQuietly(controllersFile);
+      FileUtils.deleteQuietly(subtreeControlFile);
     }
   }
 }
