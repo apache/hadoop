@@ -40,7 +40,7 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_HEAD_CALL_OPTIMIZATION_INPUT_STREAM;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_INPUT_STREAM_LAZY_OPEN_OPTIMIZATION_ENABLED;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.mockito.ArgumentMatchers.any;
@@ -136,7 +136,8 @@ public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
   @Test
   public void testDirectoryReadWithHeadOptimization() throws Exception {
     Configuration configuration = new Configuration(getRawConfiguration());
-    configuration.setBoolean(FS_AZURE_HEAD_CALL_OPTIMIZATION_INPUT_STREAM, true);
+    configuration.setBoolean(
+        FS_AZURE_INPUT_STREAM_LAZY_OPEN_OPTIMIZATION_ENABLED, true);
     AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(configuration);
     Path path = new Path("/testPath");
     fs.mkdirs(path);
@@ -148,7 +149,8 @@ public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
   @Test
   public void testInvalidPathReadWithHeadOptimization() throws Exception {
     Configuration configuration = new Configuration(getRawConfiguration());
-    configuration.setBoolean(FS_AZURE_HEAD_CALL_OPTIMIZATION_INPUT_STREAM, true);
+    configuration.setBoolean(
+        FS_AZURE_INPUT_STREAM_LAZY_OPEN_OPTIMIZATION_ENABLED, true);
     AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(configuration);
     Path path = new Path("/testPath");
     try (FSDataInputStream in = fs.open(path)) {

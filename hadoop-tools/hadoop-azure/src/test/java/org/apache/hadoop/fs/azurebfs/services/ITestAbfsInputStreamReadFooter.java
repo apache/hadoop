@@ -41,7 +41,7 @@ import static java.lang.Math.min;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TRUE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_FOOTER_READ_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_READ_OPTIMIZE_FOOTER_READ;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_HEAD_CALL_OPTIMIZATION_INPUT_STREAM;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_INPUT_STREAM_LAZY_OPEN_OPTIMIZATION_ENABLED;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_FOOTER_READ_BUFFER_SIZE;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -226,7 +226,7 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
       final boolean optimizationOn;
       long actualLength;
 
-      if (getConfiguration().getHeadOptimizationForInputStream()) {
+      if (getConfiguration().getInputStreamLazyOptimizationEnabled()) {
         optimizationOn = conf.optimizeFooterRead() && length <= AbfsInputStream.FOOTER_SIZE;
       } else {
         long footerStart = max(0,
@@ -244,7 +244,7 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
       long expectedBCursor;
       long expectedFCursor;
       if (optimizationOn) {
-        if (getConfiguration().getHeadOptimizationForInputStream()) {
+        if (getConfiguration().getInputStreamLazyOptimizationEnabled()) {
           if (seekPos + actualLength <= footerReadBufferSize) {
             if (seekPos + length > actualContentLength) {
               long footerReadStart = max(0, seekPos + length - footerReadBufferSize);
@@ -301,7 +301,7 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
       //  Verify data read to AbfsInputStream buffer
       int from = seekPos;
       if (optimizationOn) {
-        if (!getConfiguration().getHeadOptimizationForInputStream()) {
+        if (!getConfiguration().getInputStreamLazyOptimizationEnabled()) {
           from = (int) max(0, actualContentLength - footerReadBufferSize);
         } else {
           from = (int) (expectedFCursor - expectedLimit);
@@ -464,7 +464,7 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
   @Test
   public void testHeadOptimizationPerformingOutOfRangeRead() throws Exception {
     Configuration configuration = new Configuration(getRawConfiguration());
-    configuration.set(FS_AZURE_HEAD_CALL_OPTIMIZATION_INPUT_STREAM, TRUE);
+    configuration.set(FS_AZURE_INPUT_STREAM_LAZY_OPEN_OPTIMIZATION_ENABLED, TRUE);
     configuration.set(AZURE_READ_OPTIMIZE_FOOTER_READ, TRUE);
 
     try (AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(configuration)) {

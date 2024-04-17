@@ -315,13 +315,14 @@ public final class ConfigurationKeys {
    * would give the contentLength and eTag which would be used in subsequent calls
    * for if-match headers.
    */
-  public static final String FS_AZURE_HEAD_CALL_OPTIMIZATION_INPUT_STREAM = "fs.azure.head.call.optimization.input.stream";
+  public static final String
+      FS_AZURE_INPUT_STREAM_LAZY_OPEN_OPTIMIZATION_ENABLED = "fs.azure.input.stream.lazy.open.optimization.enabled";
 
   /**
    * Enable prefetch on the first read to {@link org.apache.hadoop.fs.azurebfs.services.AbfsInputStream}.
    * If disabled, first call would not trigger prefetch. Prefetch would be switched on
    * after first read call.
    */
-  public static final String FS_AZURE_PREFETCH_FIRST_READ_CALL = "fs.azure.prefetch.first.read.call";
+  public static final String FS_AZURE_PREFETCH_ON_FIRST_READ_CALL = "fs.azure.prefetch.on.first.read.call";
   private ConfigurationKeys() {}
 }

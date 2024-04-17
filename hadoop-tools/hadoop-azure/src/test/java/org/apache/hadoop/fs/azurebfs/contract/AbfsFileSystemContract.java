@@ -18,12 +18,10 @@
 
 package org.apache.hadoop.fs.azurebfs.contract;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
-import com.sun.org.apache.xpath.internal.operations.Bool;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.conf.Configuration;
@@ -37,7 +35,7 @@ import org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes;
 import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
 import org.apache.hadoop.fs.contract.AbstractBondedFSContract;
 
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_HEAD_CALL_OPTIMIZATION_INPUT_STREAM;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_INPUT_STREAM_LAZY_OPEN_OPTIMIZATION_ENABLED;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_HEAD_OPTIMIZATION_INPUT_STREAM;
 
 /**
@@ -81,7 +79,8 @@ public class AbfsFileSystemContract extends AbstractBondedFSContract {
   @Override
   public FileSystem getTestFileSystem() throws IOException {
     final FileSystem fileSystem = super.getTestFileSystem();
-    if (!getConf().getBoolean(FS_AZURE_HEAD_CALL_OPTIMIZATION_INPUT_STREAM, DEFAULT_HEAD_OPTIMIZATION_INPUT_STREAM)) {
+    if (!getConf().getBoolean(
+        FS_AZURE_INPUT_STREAM_LAZY_OPEN_OPTIMIZATION_ENABLED, DEFAULT_HEAD_OPTIMIZATION_INPUT_STREAM)) {
       return fileSystem;
     }
     try {

@@ -35,7 +35,7 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import static java.lang.Math.min;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TRUE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_READ_SMALL_FILES_COMPLETELY;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_HEAD_CALL_OPTIMIZATION_INPUT_STREAM;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_INPUT_STREAM_LAZY_OPEN_OPTIMIZATION_ENABLED;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -202,7 +202,7 @@ public class ITestAbfsInputStreamSmallFileReads extends ITestAbfsInputStream {
       final int readBufferSize = conf.getReadBufferSize();
       final int fileContentLength = fileContent.length;
       final boolean smallFile;
-      final boolean headOptimization = getConfiguration().getHeadOptimizationForInputStream();
+      final boolean headOptimization = getConfiguration().getInputStreamLazyOptimizationEnabled();
 
       if (headOptimization) {
         smallFile = ((seekPos + length) <= readBufferSize);
@@ -361,7 +361,7 @@ public class ITestAbfsInputStreamSmallFileReads extends ITestAbfsInputStream {
   @Test
   public void testHeadOptimizationOnFileLessThanBufferSize() throws Exception {
     Configuration configuration = new Configuration(getRawConfiguration());
-    configuration.set(FS_AZURE_HEAD_CALL_OPTIMIZATION_INPUT_STREAM, TRUE);
+    configuration.set(FS_AZURE_INPUT_STREAM_LAZY_OPEN_OPTIMIZATION_ENABLED, TRUE);
     configuration.set(AZURE_READ_SMALL_FILES_COMPLETELY, TRUE);
     try (FileSystem fs = FileSystem.newInstance(configuration)) {
       int readBufferSize = getConfiguration().getReadBufferSize();
@@ -401,7 +401,7 @@ public class ITestAbfsInputStreamSmallFileReads extends ITestAbfsInputStream {
   public void testHeadOptimizationOnFileBiggerThanBufferSize()
       throws Exception {
     Configuration configuration = new Configuration(getRawConfiguration());
-    configuration.set(FS_AZURE_HEAD_CALL_OPTIMIZATION_INPUT_STREAM, TRUE);
+    configuration.set(FS_AZURE_INPUT_STREAM_LAZY_OPEN_OPTIMIZATION_ENABLED, TRUE);
     configuration.set(AZURE_READ_SMALL_FILES_COMPLETELY, TRUE);
     try (FileSystem fs = FileSystem.newInstance(configuration)) {
       int readBufferSize = getConfiguration().getReadBufferSize();

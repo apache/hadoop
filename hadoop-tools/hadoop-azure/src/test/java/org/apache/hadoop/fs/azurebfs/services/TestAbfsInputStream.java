@@ -252,7 +252,7 @@ public class TestAbfsInputStream extends
         Optional.empty(), null,
         tracingContext);
     verify(mockClient, times(
-        getConfiguration().getHeadOptimizationForInputStream()
+        getConfiguration().getInputStreamLazyOptimizationEnabled()
             ? 0
             : 1).description(
         "GetPathStatus should be invoked when FileStatus not provided"))

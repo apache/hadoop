@@ -367,13 +367,13 @@ public class AbfsConfiguration{
       FS_AZURE_ENABLE_PAGINATED_DELETE, DefaultValue = DEFAULT_ENABLE_PAGINATED_DELETE)
   private boolean isPaginatedDeleteEnabled;
 
-  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_HEAD_CALL_OPTIMIZATION_INPUT_STREAM,
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_INPUT_STREAM_LAZY_OPEN_OPTIMIZATION_ENABLED,
       DefaultValue = DEFAULT_HEAD_OPTIMIZATION_INPUT_STREAM)
-  private boolean headOptimizationForInputStream;
+  private boolean isInputStreamLazyOptimizationEnabled;
 
-  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_PREFETCH_FIRST_READ_CALL,
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_PREFETCH_ON_FIRST_READ_CALL,
       DefaultValue = DEFAULT_PREFETCH_READAHEAD_ON_FIRST_READ)
-  private boolean prefetchReadaheadOnFirstRead;
+  private boolean isPrefetchOnFirstReadEnabled;
 
   private String clientProvidedEncryptionKey;
   private String clientProvidedEncryptionKeySHA;
@@ -1260,12 +1260,12 @@ public class AbfsConfiguration{
     return isChecksumValidationEnabled;
   }
 
-  public boolean getHeadOptimizationForInputStream() {
-    return headOptimizationForInputStream;
+  public boolean getInputStreamLazyOptimizationEnabled() {
+    return isInputStreamLazyOptimizationEnabled;
   }
 
-  public boolean getPrefetchReadaheadOnFirstRead() {
-    return prefetchReadaheadOnFirstRead;
+  public boolean getPrefetchOnFirstReadEnabled() {
+    return isPrefetchOnFirstReadEnabled;
   }
 
   @VisibleForTesting

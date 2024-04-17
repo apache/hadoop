@@ -211,8 +211,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     }
 
     /*
-     * When the inputStream is started, if the application tries to parallelly read
-     * ont he inputStream, the first read will be synchronized and the subsequent
+     * When the inputStream is started, if the application tries to do a parallel read
+     * on the inputStream, the first read will be synchronized and the subsequent
      * reads will be non-synchronized.
      */
     if (!successfulUsage) {
@@ -336,6 +336,16 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   private boolean shouldReadFully(int lengthToRead) {
     if (!getFileStatusInformationPresent()) {
+      /*
+       * In case the fileStatus information is not available, the content length
+       * of the file is not known at this instant. In such cases, it would be marked
+       * for full read optimization if the length to read is less than the difference
+       * between the buffer size and the current cursor position. This implies that
+       * in such case a read of first block of file can be done.
+       *
+       * After the read, the contentLength would be updated and that would be used
+       * in future reads.
+       */
       return (lengthToRead + fCursor) <= this.bufferSize
           && this.firstRead && this.context.readSmallFilesCompletely();
     }
@@ -346,6 +356,11 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   private boolean shouldReadLastBlock(int lengthToRead) {
     if (!getFileStatusInformationPresent()) {
+      /*
+       * In case the fileStatus information is not available, the content length
+       * of the file is not known at this instant. In such cases, it would be marked
+       * for footer read optimization if the length to read is less than the footer size
+       */
       return this.fCursor >= 0 && lengthToRead <= FOOTER_SIZE && this.firstRead
           && this.context.optimizeFooterRead();
     }
@@ -452,13 +467,19 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   private int optimisedRead(final byte[] b, final int off, final int len,
       final long readFrom, final long actualLen,
-      final boolean isReadWithoutContentLengthInformation) throws IOException {
+      final boolean isFooterReadWithoutContentLengthInformation) throws IOException {
     fCursor = readFrom;
     int totalBytesRead = 0;
     int lastBytesRead = 0;
     try {
       buffer = new byte[bufferSize];
       boolean fileStatusInformationPresentBeforeRead = getFileStatusInformationPresent();
+      /*
+       * Content length would not be available for the first optimized read in case
+       * of lazy head optimization in inputStream. In such case, read of the first optimized read
+       * would be done without the contentLength constraint. Post first call, the contentLength
+       * would be present and should be used for further reads.
+       */
       for (int i = 0;
            i < MAX_OPTIMIZED_READ_ATTEMPTS && (!getFileStatusInformationPresent()
                || fCursor < getContentLength()); i++) {
@@ -497,13 +518,14 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       restorePointerState();
       return readOneBlock(b, off, len);
     }
-    return copyToUserBuffer(b, off, len, isReadWithoutContentLengthInformation);
+    return copyToUserBuffer(b, off, len, isFooterReadWithoutContentLengthInformation);
   }
 
   private boolean isNonRetriableOptimizedReadException(final IOException e) {
-    return e instanceof AbfsRestOperationException
-        || e instanceof FileNotFoundException
-        || (e.getCause() instanceof AbfsRestOperationException);
+    return e instanceof FileNotFoundException;
+//    return e instanceof AbfsRestOperationException
+//        || e instanceof FileNotFoundException
+//        || (e.getCause() instanceof AbfsRestOperationException);
   }
 
   @VisibleForTesting
