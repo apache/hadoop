@@ -93,6 +93,7 @@ fi
 ###
 if [[ -n "${YETUS_HOME}" && -x "${YETUS_HOME}/bin/${WANTED}" ]]; then
   exec "${YETUS_HOME}/bin/${WANTED}" "${ARGV[@]}"
+  exit 0
 fi
 
 #
@@ -117,6 +118,7 @@ HADOOP_PATCHPROCESS=${mytmpdir}
 ##
 if [[ -x "${HADOOP_PATCHPROCESS}/${YETUS_PREFIX}-${HADOOP_YETUS_VERSION}/bin/${WANTED}" ]]; then
   exec "${HADOOP_PATCHPROCESS}/${YETUS_PREFIX}-${HADOOP_YETUS_VERSION}/bin/${WANTED}" "${ARGV[@]}"
+  exit 0
 fi
 
 ##
