@@ -155,7 +155,7 @@ public class TestPendingDataNodeMessages {
         msgs.takeBlockQueue(block1Gs2DifferentInstance);
     assertEquals(Joiner.on(",").join(rbis),
         Joiner.on(",").join(q));
-    assertEquals(2, msgs.count());
+    assertEquals(0, msgs.count());
 
     // Should be null if we pull again;
     assertNull(msgs.takeBlockQueue(block1Gs2));
