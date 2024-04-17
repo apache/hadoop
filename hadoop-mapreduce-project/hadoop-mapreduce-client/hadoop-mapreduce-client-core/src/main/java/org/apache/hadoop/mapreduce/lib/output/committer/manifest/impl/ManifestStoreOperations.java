@@ -113,8 +113,7 @@ public abstract class ManifestStoreOperations implements Closeable {
   }
 
   /**
-   * Acquire the delete capacity then call {@code FileSystem#delete(Path, true)}
-   * or equivalent.
+   * Call {@code FileSystem#delete(Path, true)} or equivalent.
    * <p>
    * If it returns without an error: there is nothing at
    * the end of the path.
@@ -122,7 +121,7 @@ public abstract class ManifestStoreOperations implements Closeable {
    * @return outcome
    * @throws IOException failure.
    */
-  public boolean rmdir(Path path)
+  public boolean deleteRecursive(Path path)
       throws IOException {
     return delete(path, true);
   }

@@ -451,7 +451,7 @@ public abstract class AbstractJobOrTaskStage<IN, OUT>
       final String statistic)
       throws IOException {
     if (recursive) {
-      return deleteDir(path, statistic);
+      return deleteRecursive(path, statistic);
     } else {
       return deleteFile(path, statistic);
     }
@@ -630,8 +630,15 @@ public abstract class AbstractJobOrTaskStage<IN, OUT>
         LOG.info("{}: save manifest to {} then rename as {}'); retry count={}",
             getName(), tempPath, finalPath, retryCount);
 
+        // save the temp file, overwriting any which remains from an earlier attempt
         trackDurationOfInvocation(getIOStatistics(), OP_SAVE_TASK_MANIFEST, () ->
             operations.save(manifestData, tempPath, true));
+
+        // delete the destination in case it exists either from a failed previous
+        // attempt or from a concurrent task commit.
+        deleteFile(finalPath, OP_DELETE);
+
+        // rename temp to final
         renameFile(tempPath, finalPath);
         // success flag is only set after the rename.
         success = true;
@@ -650,6 +657,7 @@ public abstract class AbstractJobOrTaskStage<IN, OUT>
           LOG.debug("Failure in retry policy", ex);
           retryAction = RetryPolicy.RetryAction.FAIL;
         }
+        LOG.debug("{}: Retry action: {}", getName(), retryAction.action);
         if (retryAction.action == RetryPolicy.RetryAction.RetryDecision.FAIL) {
           // too many failures: escalate.
           throw e;
@@ -679,8 +687,10 @@ public abstract class AbstractJobOrTaskStage<IN, OUT>
   }
 
   /**
-   * Rename a file from source to dest; if the underlying FS API call
-   * returned false that's escalated to an IOE.
+   * Rename a file from source to dest.
+   * <p>
+   * The destination is always deleted through a call to
+   * {@link #maybeDeleteDest(boolean, Path)}.
    * @param source source file.
    * @param dest dest file
    * @throws IOException failure
@@ -688,7 +698,6 @@ public abstract class AbstractJobOrTaskStage<IN, OUT>
    */
   protected final void renameFile(final Path source, final Path dest)
       throws IOException {
-    maybeDeleteDest(true, dest);
     executeRenamingOperation("renameFile", source, dest,
         OP_RENAME_FILE, () ->
             operations.renameFile(source, dest));
@@ -770,7 +779,7 @@ public abstract class AbstractJobOrTaskStage<IN, OUT>
       final FileStatus st = getFileStatusOrNull(dest);
       if (st != null) {
         if (st.isDirectory()) {
-          deleteDir(dest, OP_DELETE_DIR);
+          deleteRecursive(dest, OP_DELETE_DIR);
         } else {
           deleteFile(dest, OP_DELETE);
         }
@@ -988,32 +997,32 @@ public abstract class AbstractJobOrTaskStage<IN, OUT>
   }
 
   /**
-   * Delete a directory.
+   * Delete a directory (or a file)
    * @param dir directory.
    * @param statistic statistic to use
    * @return true if the path is no longer present.
    * @throws IOException exceptions raised in delete if not suppressed.
    */
-  protected boolean deleteDir(
+  protected boolean deleteRecursive(
       final Path dir,
       final String statistic)
       throws IOException {
     return trackDuration(getIOStatistics(), statistic, () ->
-        operations.rmdir(dir));
+        operations.deleteRecursive(dir));
   }
 
   /**
-   * Delete a directory, suprressing exceptions.
+   * Delete a directory or file, catching exceptions.
    * @param dir directory.
    * @param statistic statistic to use
    * @return any exception caught.
    */
-  protected IOException deleteDirSuppressingExceptions(
+  protected IOException deleteRecursiveSuppressingExceptions(
       final Path dir,
       final String statistic)
       throws IOException {
     try {
-      deleteDir(dir, statistic);
+      deleteRecursive(dir, statistic);
       return null;
     } catch (IOException ex) {
       LOG.info("Error deleting {}: {}", dir, ex.toString());

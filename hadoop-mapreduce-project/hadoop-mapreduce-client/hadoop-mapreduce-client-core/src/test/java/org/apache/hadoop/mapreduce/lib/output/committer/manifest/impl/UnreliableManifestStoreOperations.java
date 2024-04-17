@@ -118,12 +118,12 @@ public class UnreliableManifestStoreOperations extends ManifestStoreOperations {
   private final Set<Path> renameDestDirsToFail = new HashSet<>();
 
   /**
-   * Paths of rename operations to time out before the rename request is issued.
+   * Source paths of rename operations to time out before the rename request is issued.
    */
   private final Set<Path> renamePathsToTimeoutBeforeRename = new HashSet<>();
 
   /**
-   * Paths of rename operations to time out after the rename request has succeeded.
+   * Source paths of rename operations to time out after the rename request has succeeded.
    */
   private final Set<Path> renamePathsToTimeoutAfterRename = new HashSet<>();
 
@@ -248,14 +248,14 @@ public class UnreliableManifestStoreOperations extends ManifestStoreOperations {
    * Add a source path to timeout before the rename.
    * @param path path to add.
    */
-  public void addTimeOutBeforeRename(Path path) {
+  public void addTimeoutBeforeRename(Path path) {
     renamePathsToTimeoutBeforeRename.add(requireNonNull(path));
   }
   /**
    * Add a source path to timeout after the rename.
    * @param path path to add.
    */
-  public void addTimeOutAfterRename(Path path) {
+  public void addTimeoutAfterRename(Path path) {
     renamePathsToTimeoutAfterRename.add(requireNonNull(path));
   }
 
@@ -287,19 +287,19 @@ public class UnreliableManifestStoreOperations extends ManifestStoreOperations {
       throws IOException {
     if (paths.contains(path) && decrementAndCheckFailureLimit()) {
       // hand off to the inner check.
-      maybeRaiseIOENoFailureCheck(operation, path, paths);
+      maybeRaiseIOENoFailureLimitCheck(operation, path, paths);
     }
   }
 
   /**
    * Raise an exception if the path is in the set of target paths.
-   * No checks on failure count are performed here.
+   * No checks on failure count are performed.
    * @param operation operation which failed.
    * @param path path to check
    * @param paths paths to probe for {@code path} being in.
    * @throws IOException simulated failure
    */
-  private void maybeRaiseIOENoFailureCheck(String operation, Path path, Set<Path> paths)
+  private void maybeRaiseIOENoFailureLimitCheck(String operation, Path path, Set<Path> paths)
       throws IOException {
     if (paths.contains(path)) {
       LOG.info("Simulating failure of {} with {}", operation, path);
@@ -393,9 +393,9 @@ public class UnreliableManifestStoreOperations extends ManifestStoreOperations {
       throws IOException {
     String op = "rename";
     maybeTimeout(op, source, renamePathsToTimeoutBeforeRename);
-    if (renameToFailWithException && decrementAndCheckFailureLimit()) {
-      maybeRaiseIOENoFailureCheck(op, source, renameSourceFilesToFail);
-      maybeRaiseIOENoFailureCheck(op, dest.getParent(), renameDestDirsToFail);
+    if (renameToFailWithException) {
+      maybeRaiseIOE(op, source, renameSourceFilesToFail);
+      maybeRaiseIOE(op, dest.getParent(), renameDestDirsToFail);
     } else {
       // logic to determine whether rename should just return false.
       if ((renameSourceFilesToFail.contains(source)

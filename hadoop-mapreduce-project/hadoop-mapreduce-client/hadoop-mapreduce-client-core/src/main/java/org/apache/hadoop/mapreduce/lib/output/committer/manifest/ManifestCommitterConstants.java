@@ -146,7 +146,7 @@ public final class ManifestCommitterConstants {
   public static final boolean OPT_CLEANUP_PARALLEL_DELETE_DIRS_DEFAULT = true;
 
   /**
-   * Should parallel cleanup try to delete teh base first?
+   * Should parallel cleanup try to delete the base first?
    * Best for azure as it skips the task attempt deletions unless
    * the toplevel delete fails.
    * Value: {@value}.
@@ -157,7 +157,7 @@ public final class ManifestCommitterConstants {
   /**
    * Default value of option {@link #OPT_CLEANUP_PARALLEL_DELETE_BASE_FIRST}:  {@value}.
    */
-  public static final boolean OPT_CLEANUP_PARALLEL_DELETE_BASE_FIRST_DEFAULT = true;
+  public static final boolean OPT_CLEANUP_PARALLEL_DELETE_BASE_FIRST_DEFAULT = false;
 
   /**
    * Threads to use for IO.

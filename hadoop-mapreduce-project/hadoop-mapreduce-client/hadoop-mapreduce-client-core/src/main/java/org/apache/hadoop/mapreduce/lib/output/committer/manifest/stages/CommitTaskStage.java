@@ -111,5 +111,9 @@ public class CommitTaskStage extends
       return taskManifest;
     }
 
+    @Override
+    public String toString() {
+      return "Result{path=" + path + '}';
+    }
   }
 }

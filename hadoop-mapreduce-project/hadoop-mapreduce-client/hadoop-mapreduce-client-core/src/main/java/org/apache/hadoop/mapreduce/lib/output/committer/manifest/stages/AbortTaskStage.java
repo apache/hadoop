@@ -57,9 +57,9 @@ public class AbortTaskStage extends
     if (dir != null) {
       LOG.info("{}: Deleting task attempt directory {}", getName(), dir);
       if (suppressExceptions) {
-        deleteDirSuppressingExceptions(dir, OP_DELETE_DIR);
+        deleteRecursiveSuppressingExceptions(dir, OP_DELETE_DIR);
       } else {
-        deleteDir(dir, OP_DELETE_DIR);
+        deleteRecursive(dir, OP_DELETE_DIR);
       }
     }
     return dir;

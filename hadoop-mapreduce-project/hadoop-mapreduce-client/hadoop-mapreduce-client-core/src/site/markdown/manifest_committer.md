@@ -190,7 +190,7 @@ Here are the main configuration options of the committer.
 | `mapreduce.manifest.committer.io.threads` | Thread count for parallel operations | `64` |
 | `mapreduce.manifest.committer.summary.report.directory` | directory to save reports. | `""` |
 | `mapreduce.manifest.committer.cleanup.parallel.delete` | Delete temporary directories in parallel | `true` |
-| `mapreduce.manifest.committer.cleanup.parallel.delete.base.first` | Attempt to delete the base directory before parallel task attempts | `true` |
+| `mapreduce.manifest.committer.cleanup.parallel.delete.base.first` | Attempt to delete the base directory before parallel task attempts | `false` |
 | `mapreduce.fileoutputcommitter.cleanup.skipped` | Skip cleanup of `_temporary` directory| `false` |
 | `mapreduce.fileoutputcommitter.cleanup-failures.ignored` | Ignore errors during cleanup | `false` |
 | `mapreduce.fileoutputcommitter.marksuccessfuljobs` | Create a `_SUCCESS` marker file on successful completion. (and delete any existing one in job setup) | `true` |
@@ -423,7 +423,7 @@ may surface in cloud storage.
 | `mapreduce.fileoutputcommitter.cleanup.skipped` | Skip cleanup of `_temporary` directory| `false` |
 | `mapreduce.fileoutputcommitter.cleanup-failures.ignored` | Ignore errors during cleanup | `false` |
 | `mapreduce.manifest.committer.cleanup.parallel.delete` | Delete task attempt directories in parallel | `true` |
-| `mapreduce.manifest.committer.cleanup.parallel.delete.base.first` | Attempt to delete the base directory before parallel task attempts | `true` |
+| `mapreduce.manifest.committer.cleanup.parallel.delete.base.first` | Attempt to delete the base directory before parallel task attempts | `false` |
 
 The algorithm is:
 
@@ -444,7 +444,15 @@ if caught-exception and not "mapreduce.fileoutputcommitter.cleanup-failures.igno
 It's a bit complicated, but the goal is to perform a fast/scalable delete and
 throw a meaningful exception if that didn't work.
 
-For ABFS the default settings should normally be left alone.
+For ABFS set `mapreduce.manifest.committer.cleanup.parallel.delete.base.first` to `true`
+which should normally result in less network IO and a faster cleanup.
+
+```
+spark.hadoop.mapreduce.manifest.committer.cleanup.parallel.delete.base.first true
+```
+
+
+
 
 For GCS, setting `mapreduce.manifest.committer.cleanup.parallel.delete.base.first`
 to `false` may speed up cleanup.
@@ -490,9 +498,15 @@ The core set of Azure-optimized options becomes
 </property>
 
 <property>
-  <name>spark.hadoop.fs.azure.io.rate.limit</name>
+  <name>fs.azure.io.rate.limit</name>
   <value>1000</value>
 </property>
+
+<property>
+  <name>mapreduce.manifest.committer.cleanup.parallel.delete.base.first</name>
+  <value>true</value>
+</property>
+
 ```
 
 And optional settings for debugging/performance analysis
@@ -510,6 +524,7 @@ And optional settings for debugging/performance analysis
 ```
 spark.hadoop.mapreduce.outputcommitter.factory.scheme.abfs org.apache.hadoop.fs.azurebfs.commit.AzureManifestCommitterFactory
 spark.hadoop.fs.azure.io.rate.limit 1000
+spark.hadoop.mapreduce.manifest.committer.cleanup.parallel.delete.base.first true
 spark.sql.parquet.output.committer.class org.apache.spark.internal.io.cloud.BindingParquetOutputCommitter
 spark.sql.sources.commitProtocolClass org.apache.spark.internal.io.cloud.PathOutputCommitProtocol
 

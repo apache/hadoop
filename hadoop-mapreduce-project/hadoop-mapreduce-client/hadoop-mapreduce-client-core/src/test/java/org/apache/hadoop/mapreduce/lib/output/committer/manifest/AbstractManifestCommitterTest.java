@@ -168,6 +168,12 @@ public abstract class AbstractManifestCommitterTest
   private static final int MAX_LEN = 64_000;
 
   /**
+   * How many attempts to save manifests before giving up.
+   * Kept small to reduce sleep times and network delays.
+   */
+  public static final int SAVE_ATTEMPTS = 3;
+
+  /**
    * Submitter for tasks; may be null.
    */
   private CloseableTaskPoolSubmitter submitter;
@@ -799,6 +805,7 @@ public abstract class AbstractManifestCommitterTest
         .withJobAttemptNumber(jobAttemptNumber)
         .withJobDirectories(attemptDirs)
         .withName(String.format(NAME_FORMAT_JOB_ATTEMPT, jobId))
+        .withManifestSaveAttempts(SAVE_ATTEMPTS)
         .withOperations(getStoreOperations())
         .withProgressable(getProgressCounter())
         .withSuccessMarkerFileLimit(100_000)

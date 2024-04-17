@@ -174,9 +174,9 @@ public class CleanupJobStage extends
             "Initial delete of %s", baseDir)) {
           exception = deleteOneDir(baseDir);
           if (exception == null) {
-            // success: record this as the outcome, which
-            // will skip the parallel delete.
+            // success: record this as the outcome,
             outcome = Outcome.DELETED;
+            // and will skip the parallel delete
             baseDirDeleted = true;
           } else {
             // failure: log and continue
@@ -276,7 +276,7 @@ public class CleanupJobStage extends
   }
 
   /**
-   * Delete a directory.
+   * Delete a directory suppressing exceptions.
    * The {@link #deleteFailureCount} counter.
    * is incremented on every failure.
    * @param dir directory
@@ -288,7 +288,7 @@ public class CleanupJobStage extends
 
     deleteDirCount.incrementAndGet();
     return noteAnyDeleteFailure(
-        deleteDirSuppressingExceptions(dir, OP_DELETE_DIR));
+        deleteRecursiveSuppressingExceptions(dir, OP_DELETE_DIR));
   }
 
   /**

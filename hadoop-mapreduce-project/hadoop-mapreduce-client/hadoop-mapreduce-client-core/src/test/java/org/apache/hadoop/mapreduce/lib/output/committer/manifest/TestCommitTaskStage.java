@@ -49,6 +49,11 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  */
 public class TestCommitTaskStage extends AbstractManifestCommitterTest {
 
+  public static final String TASK1 = String.format("task_%03d", 1);
+
+  public static final String TASK1_ATTEMPT1 = String.format("%s_%02d",
+      TASK1, 1);
+
   @Override
   public void setup() throws Exception {
     super.setup();
@@ -136,24 +141,12 @@ public class TestCommitTaskStage extends AbstractManifestCommitterTest {
   public void testManifestSaveFailures() throws Throwable {
     describe("Test recovery of manifest save/rename failures");
 
-    final ManifestStoreOperations wrappedOperations = getStoreOperations();
-    UnreliableManifestStoreOperations failures =
-        new UnreliableManifestStoreOperations(wrappedOperations);
-    setStoreOperations(failures);
+    UnreliableManifestStoreOperations failures = makeStoreOperationsUnreliable();
 
-    String tid = String.format("task_%03d", 1);
-    String taskAttemptId = String.format("%s_%02d",
-        tid, 1);
+    StageConfig stageConfig = createTaskStageConfig(JOB1, TASK1, TASK1_ATTEMPT1);
 
-    StageConfig stageConfig = createTaskStageConfig(JOB1, tid,
-        taskAttemptId);
-    // small attempt count for a faster test and to verify
-    // its propagation
-    final int attempts = 3;
-    stageConfig.withManifestSaveAttempts(attempts);
+    new SetupTaskStage(stageConfig).apply("setup");
 
-    final SetupTaskStage setupTaskStage = new SetupTaskStage(stageConfig);
-    setupTaskStage.apply("setup");
     final Path manifestDir = stageConfig.getTaskManifestDir();
     // final manifest file is by task ID
     Path manifestFile = manifestPathForTask(manifestDir,
@@ -164,28 +157,137 @@ public class TestCommitTaskStage extends AbstractManifestCommitterTest {
     // manifest save will fail but recover before the task gives up.
     failures.addSaveToFail(manifestTempFile);
 
-    // will fail because of recovery
-    failures.setFailureLimit(attempts + 1);
+    // will fail because too many attempts failed.
+    failures.setFailureLimit(SAVE_ATTEMPTS + 1);
     intercept(PathIOException.class, generatedErrorMessage("save"), () ->
         new CommitTaskStage(stageConfig).apply(null));
 
-    // will succeed because of recovery
-    failures.setFailureLimit(attempts - 1);
+    // will succeed because the failure limit is set lower
+    failures.setFailureLimit(SAVE_ATTEMPTS - 1);
     new CommitTaskStage(stageConfig).apply(null);
 
     describe("Testing timeouts on rename operations.");
     // now do it for the renames, which will fail after the rename
     failures.reset();
-    failures.addTimeOutBeforeRename(manifestTempFile);
+    failures.addTimeoutBeforeRename(manifestTempFile);
 
     // first verify that if too many attempts fail, the task will fail
-    failures.setFailureLimit(attempts + 1);
+    failures.setFailureLimit(SAVE_ATTEMPTS + 1);
     intercept(SocketTimeoutException.class, E_TIMEOUT, () ->
         new CommitTaskStage(stageConfig).apply(null));
     // reduce the limit and expect the stage to succeed.
-    failures.setFailureLimit(attempts - 1);
+    failures.setFailureLimit(SAVE_ATTEMPTS - 1);
     new CommitTaskStage(stageConfig).apply(null);
+  }
 
+  @Test
+  public void testManifestRenameTimeouts() throws Throwable {
+    describe("Testing timeouts on rename operations.");
+
+    UnreliableManifestStoreOperations failures = makeStoreOperationsUnreliable();
+    StageConfig stageConfig = createTaskStageConfig(JOB1, TASK1, TASK1_ATTEMPT1);
+
+    new SetupTaskStage(stageConfig).apply("setup");
+
+    final Path manifestDir = stageConfig.getTaskManifestDir();
+    // final manifest file is by task ID
+    Path manifestFile = manifestPathForTask(manifestDir,
+        stageConfig.getTaskId());
+    Path manifestTempFile = manifestTempPathForTaskAttempt(manifestDir,
+        stageConfig.getTaskAttemptId());
+
+
+    // configure for which will fail after the rename
+    failures.reset();
+    failures.addTimeoutBeforeRename(manifestTempFile);
+
+    // first verify that if too many attempts fail, the task will fail
+    failures.setFailureLimit(SAVE_ATTEMPTS + 1);
+    intercept(SocketTimeoutException.class, E_TIMEOUT, () ->
+        new CommitTaskStage(stageConfig).apply(null));
+    // reduce the limit and expect the stage to succeed.
+    failures.setFailureLimit(SAVE_ATTEMPTS - 1);
+    new CommitTaskStage(stageConfig).apply(null);
+  }
+
+  @Test
+  public void testManifestRenameLateTimeouts() throws Throwable {
+    describe("Testing timeouts on rename operations.");
+
+    UnreliableManifestStoreOperations failures = makeStoreOperationsUnreliable();
+    StageConfig stageConfig = createTaskStageConfig(JOB1, TASK1, TASK1_ATTEMPT1);
+
+    new SetupTaskStage(stageConfig).apply("setup");
+
+    final Path manifestDir = stageConfig.getTaskManifestDir();
+    // final manifest file is by task ID
+    Path manifestFile = manifestPathForTask(manifestDir,
+        stageConfig.getTaskId());
+    Path manifestTempFile = manifestTempPathForTaskAttempt(manifestDir,
+        stageConfig.getTaskAttemptId());
+
+
+    // configure for which will fail after the rename
+    failures.reset();
+    failures.addTimeoutAfterRename(manifestTempFile);
+
+    // first verify that if too many attempts fail, the task will fail
+    failures.setFailureLimit(SAVE_ATTEMPTS + 1);
+    intercept(SocketTimeoutException.class, E_TIMEOUT, () ->
+        new CommitTaskStage(stageConfig).apply(null));
+
+    // reduce the limit and expect the stage to succeed.
+    failures.setFailureLimit(SAVE_ATTEMPTS - 1);
+    new CommitTaskStage(stageConfig).apply(null);
+  }
+
+  @Test
+  public void testManifestDeleteInRenameErrorHandlerFailure() throws Throwable {
+    describe("Testing failure in the delete call made during cleanup");
+
+    UnreliableManifestStoreOperations failures = makeStoreOperationsUnreliable();
+    StageConfig stageConfig = createTaskStageConfig(JOB1, TASK1, TASK1_ATTEMPT1);
+
+    new SetupTaskStage(stageConfig).apply("setup");
+
+    final Path manifestDir = stageConfig.getTaskManifestDir();
+    // final manifest file is by task ID
+    Path manifestFile = manifestPathForTask(manifestDir,
+        stageConfig.getTaskId());
+    Path manifestTempFile = manifestTempPathForTaskAttempt(manifestDir,
+        stageConfig.getTaskAttemptId());
+
+
+    // configure for which will fail after the rename
+    failures.reset();
+    failures.addTimeoutAfterRename(manifestTempFile);
+
+    // first verify that if too many attempts fail, the task will fail
+    failures.setFailureLimit(SAVE_ATTEMPTS + 1);
+    intercept(SocketTimeoutException.class, E_TIMEOUT, () ->
+        new CommitTaskStage(stageConfig).apply(null));
+
+    // reduce the limit and expect the stage to succeed.
+    failures.setFailureLimit(SAVE_ATTEMPTS - 1);
+    new CommitTaskStage(stageConfig).apply(null);
+  }
+
+  /**
+   * Make the store operations unreliable.
+   * If it already was then reset the failure options.
+   * @return the store operations
+   */
+  private UnreliableManifestStoreOperations makeStoreOperationsUnreliable() {
+    UnreliableManifestStoreOperations failures;
+    final ManifestStoreOperations wrappedOperations = getStoreOperations();
+    if (wrappedOperations instanceof UnreliableManifestStoreOperations) {
+      failures = (UnreliableManifestStoreOperations) wrappedOperations;
+      failures.reset();
+    } else {
+      failures = new UnreliableManifestStoreOperations(wrappedOperations);
+      setStoreOperations(failures);
+    }
+    return failures;
   }
 
 }
