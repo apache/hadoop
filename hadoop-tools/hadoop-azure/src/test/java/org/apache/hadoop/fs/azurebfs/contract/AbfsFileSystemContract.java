@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azurebfs.contract;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 
 import com.sun.org.apache.xpath.internal.operations.Bool;
 import org.mockito.Mockito;
@@ -89,13 +90,15 @@ public class AbfsFileSystemContract extends AbstractBondedFSContract {
       Mockito.doAnswer(answer -> {
         Path path = (Path) answer.getArgument(0);
         FileStatus status = fs.getFileStatus(path);
-        if (status.isDirectory()) {
-          throw new FileNotFoundException(path.toString());
+
+        try {
+          return fs.openFile(path)
+              .withFileStatus(status)
+              .build()
+              .join();
+        } catch (CompletionException ex) {
+          throw ex.getCause();
         }
-        return fs.openFile(path)
-            .withFileStatus(status)
-            .build()
-            .join();
       }).when(spiedFs).open(Mockito.any(Path.class));
 
       Mockito.doAnswer(answer -> {
