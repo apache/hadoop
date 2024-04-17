@@ -26,7 +26,7 @@ Overview
 HDFS relies on a single master, the Namenode (NN), as its metadata center.
 From an architectural point of view, a few elements make NN the bottleneck of an HDFS cluster:
 * NN keeps the entire namespace in memory (directory tree, blocks, Datanode related info, etc.)
-* Read requests (`getListing`, `getFileInfo`, `getBlockLocations`) are served from memory. 
+* Read requests (`getListing`, `getFileInfo`, `getBlockLocations`) are served from memory.
 Write requests (`mkdir`, `create`, `addBlock`, `complete`) update the memory state and write a journal transaction into QJM.
 Both types of requests need a locking mechanism to ensure data consistency and correctness.
 * All requests are funneled into NN and have to go through the global FS lock.
@@ -81,8 +81,8 @@ For type 2, NN acquires full path locks in a predefined order, such as the lexic
 For type 3, NN acquires a full path lock by in the following fashion:
 - Unsafely obtains full path recursively
 - Acquires the full path lock according to the lock mode
-- Rechecks whether the last node of the full path is equal to the INodeID given 
-  - If not, that means that the `INodeFile` might have been renamed or concatenated, need to retry 
+- Rechecks whether the last node of the full path is equal to the INodeID given
+  - If not, that means that the `INodeFile` might have been renamed or concatenated, need to retry
   - If the max retry attempts have been reached, throw a `RetryException` to client to let client retry
 
 ### `INodeFile` Lock
@@ -124,7 +124,7 @@ Possible lock combinations are as follows:
 
 ### Lock Pools
 
-NN allocates locks as needed to the INodes used by active threads, and deletes them after the locks are no longer in use. Locks for commonly accessed `INode`s like the root are cached. 
+NN allocates locks as needed to the INodes used by active threads, and deletes them after the locks are no longer in use. Locks for commonly accessed `INode`s like the root are cached.
 
 NN uses an `INodeLockPool` to manage these locks. The lock pool:
 - Returns a closeable lock for an INode based on the lock type,
@@ -185,7 +185,7 @@ JIRA: [HDFS-17386](https://issues.apache.org/jira/browse/HDFS-17386)
 Configuration
 -------------
 
-NN FGL implementation can be used by adding this configuration to ``hdfs-site.xml``. 
+NN FGL implementation can be used by adding this configuration to `hdfs-site.xml`.
 
     <property>
       <name>dfs.namenode.lock.model.provider.class</name>
