@@ -730,6 +730,29 @@ Usage: `hdfs debug verifyEC -file <file> [-blockId <blk_Id>] [-skipFailureBlocks
 
 Verify the correctness of erasure coding on an erasure coded file.
 
+
+### `verifyReadable`
+
+Usage: `hdfs debug verifyReadable
+            [-path <HDFS path> | -input <input>]
+            [-output <output>]
+            [-concurrency <concurrency>]
+            [-suppressed]`
+
+| COMMAND\_OPTION | Description                                                                                                    |
+|:----------------|:---------------------------------------------------------------------------------------------------------------|
+| *HDFS path*     | HDFS path to check. Will take priority over `-input`.                                                          |
+| *input*         | Input file with paths to check, one path per line     .                                                        |
+| *output*        | Output file with results, one result per line containing a path with an integer: 0 = readable, 1 = unreadable. |
+| *concurrency*   | Maximum number of paths to process simultaneously at any time.                                                 |
+| *suppressed*    | Do not print if there is no issue with a path. Still print errors.                                             |
+
+Check if one or multiple paths are readable:
+* File path exists.
+* User has read access to the file.
+* No missing block.
+* All blocks have at least 1 readable replica.
+
 dfsadmin with ViewFsOverloadScheme
 ----------------------------------
 
