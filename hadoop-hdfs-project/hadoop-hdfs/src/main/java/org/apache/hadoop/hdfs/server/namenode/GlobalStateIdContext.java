@@ -143,22 +143,23 @@ class GlobalStateIdContext implements AlignmentContext {
     FSNamesystem.LOG.trace("Client State ID= {} and Server State ID= {}",
         clientStateId, serverStateId);
 
-    if (clientStateId > serverStateId &&
-        HAServiceState.ACTIVE.equals(namesystem.getState())) {
-      FSNamesystem.LOG.warn("The client stateId: {} is greater than "
-          + "the server stateId: {} This is unexpected. "
-          + "Resetting client stateId to server stateId",
-          clientStateId, serverStateId);
-      return serverStateId;
-    }
-    if (HAServiceState.OBSERVER.equals(namesystem.getState()) &&
-        clientStateId - serverStateId >
-        ESTIMATED_TRANSACTIONS_PER_SECOND
-            * TimeUnit.MILLISECONDS.toSeconds(clientWaitTime)
-            * ESTIMATED_SERVER_TIME_MULTIPLIER) {
-      throw new RetriableException(
-          "Observer Node is too far behind: serverStateId = "
-              + serverStateId + " clientStateId = " + clientStateId);
+    if (clientStateId > serverStateId) {
+      if (HAServiceState.ACTIVE.equals(namesystem.getState())) {
+        FSNamesystem.LOG.warn("The client stateId: {} is greater than "
+                + "the server stateId: {} This is unexpected. "
+                + "Resetting client stateId to server stateId",
+            clientStateId, serverStateId);
+        return serverStateId;
+      }
+      if (HAServiceState.OBSERVER.equals(namesystem.getState()) &&
+          clientStateId - serverStateId >
+              ESTIMATED_TRANSACTIONS_PER_SECOND
+                  * TimeUnit.MILLISECONDS.toSeconds(clientWaitTime)
+                  * ESTIMATED_SERVER_TIME_MULTIPLIER) {
+        throw new RetriableException(
+            "Observer Node is too far behind: serverStateId = "
+                + serverStateId + " clientStateId = " + clientStateId);
+      }
     }
     return clientStateId;
   }
