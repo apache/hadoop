@@ -3349,6 +3349,7 @@ public class BlockManager implements BlockStatsMXBean {
     // scan the report and process newly reported blocks
     for (BlockReportReplica iblk : newReport) {
       ReplicaState iState = iblk.getState();
+      removeQueuedBlock(storageInfo, iblk);
       LOG.debug("Reported block {} on {} size {} replicaState = {}", iblk, dn,
           iblk.getNumBytes(), iState);
       BlockInfo storedBlock = processReportedBlock(storageInfo,
@@ -3417,8 +3418,6 @@ public class BlockManager implements BlockStatsMXBean {
 
     LOG.debug("Reported block {} on {} size {} replicaState = {}", block, dn,
         block.getNumBytes(), reportedState);
-
-    removeQueuedBlock(storageInfo, block);
     if (shouldPostponeBlocksFromFuture && isGenStampInFuture(block)) {
       queueReportedBlock(storageInfo, block, reportedState,
           QUEUE_REASON_FUTURE_GENSTAMP);
@@ -4570,6 +4569,7 @@ public class BlockManager implements BlockStatsMXBean {
 
     final DatanodeDescriptor node = storageInfo.getDatanodeDescriptor();
 
+    removeQueuedBlock(storageInfo, block);
     LOG.debug("Reported block {} on {} size {} replicaState = {}",
         block, node, block.getNumBytes(), reportedState);
 
