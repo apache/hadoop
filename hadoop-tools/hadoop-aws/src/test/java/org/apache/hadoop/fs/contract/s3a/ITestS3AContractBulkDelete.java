@@ -18,6 +18,17 @@
 
 package org.apache.hadoop.fs.contract.s3a;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+import org.assertj.core.api.Assertions;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BulkDelete;
 import org.apache.hadoop.fs.FileStatus;
@@ -27,19 +38,23 @@ import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
-import org.assertj.core.api.Assertions;
-import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.Arrays;
-import java.util.List;
+import org.apache.hadoop.fs.statistics.MeanStatistic;
+import org.apache.hadoop.io.wrappedio.WrappedIO;
 
 import static java.util.stream.Collectors.toList;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.createFiles;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.lookupMeanStatistic;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.STORE_IO_RATE_LIMITED_DURATION;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_MEAN;
+import static org.apache.hadoop.io.wrappedio.WrappedIO.bulkDelete;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
+/**
+ * Contract tests for bulk delete operation for S3A Implementation.
+ */
+@RunWith(Parameterized.class)
 public class ITestS3AContractBulkDelete extends AbstractContractBulkDeleteTest {
 
     private static final Logger LOG = LoggerFactory.getLogger(ITestS3AContractBulkDelete.class);
@@ -52,6 +67,20 @@ public class ITestS3AContractBulkDelete extends AbstractContractBulkDeleteTest {
      */
     private static final int DELETE_PAGE_SIZE = 20;
 
+    private final boolean enableMultiObjectDelete;
+
+    @Parameterized.Parameters(name = "enableMultiObjectDelete = {0}")
+    public static Iterable<Object[]> enableMultiObjectDelete() {
+        return Arrays.asList(new Object[][] {
+                {true},
+                {false}
+        });
+    }
+
+    public ITestS3AContractBulkDelete(boolean enableMultiObjectDelete) {
+        this.enableMultiObjectDelete = enableMultiObjectDelete;
+    }
+
     @Override
     protected Configuration createConfiguration() {
         Configuration conf = super.createConfiguration();
@@ -59,6 +88,7 @@ public class ITestS3AContractBulkDelete extends AbstractContractBulkDeleteTest {
         S3ATestUtils.removeBaseAndBucketOverrides(conf,
                 Constants.BULK_DELETE_PAGE_SIZE);
         conf.setInt(Constants.BULK_DELETE_PAGE_SIZE, DELETE_PAGE_SIZE);
+        conf.setBoolean(Constants.ENABLE_MULTI_DELETE, enableMultiObjectDelete);
         return conf;
     }
 
@@ -69,13 +99,23 @@ public class ITestS3AContractBulkDelete extends AbstractContractBulkDeleteTest {
 
     @Override
     public void validatePageSize() throws Exception {
+        int targetPageSize = DELETE_PAGE_SIZE;
+        if (!enableMultiObjectDelete) {
+            // if multi-object delete is disabled, page size should be 1.
+            targetPageSize = 1;
+        }
         Assertions.assertThat(pageSize)
                 .describedAs("Page size should match the configured page size")
-                .isEqualTo(DELETE_PAGE_SIZE);
+                .isEqualTo(targetPageSize);
     }
 
     @Test
     public void testBulkDeleteZeroPageSizePrecondition() throws Exception {
+        if(!enableMultiObjectDelete) {
+            // if multi-object delete is disabled, skip this test as
+            // page size is always 1.
+            skip("Multi-object delete is disabled");
+        }
         Configuration conf = getContract().getConf();
         conf.setInt(Constants.BULK_DELETE_PAGE_SIZE, 0);
         Path testPath = path(getMethodName());
@@ -98,6 +138,21 @@ public class ITestS3AContractBulkDelete extends AbstractContractBulkDeleteTest {
         }
     }
 
+    @Override
+    public void testDeletePathsDirectory() throws Exception {
+        List<Path> paths = new ArrayList<>();
+        Path dirPath = new Path(basePath, "dir");
+        fs.mkdirs(dirPath);
+        paths.add(dirPath);
+        Path filePath = new Path(dirPath, "file");
+        touch(fs, filePath);
+        paths.add(filePath);
+        pageSizePreconditionForTest(paths.size());
+        assertSuccessfulBulkDelete(bulkDelete(getFileSystem(), basePath, paths));
+        // During the bulk delete operation, the directories are not deleted in S3A.
+        assertIsDirectory(dirPath);
+    }
+
     @Test
     public void testRateLimiting() throws Exception {
         Configuration conf = getContract().getConf();
@@ -109,16 +164,20 @@ public class ITestS3AContractBulkDelete extends AbstractContractBulkDeleteTest {
             List<Path> paths = Arrays.stream(fileStatuses)
                     .map(FileStatus::getPath)
                     .collect(toList());
+            pageSizePreconditionForTest(paths.size());
             BulkDelete bulkDelete = fs.createBulkDelete(basePath);
             bulkDelete.bulkDelete(paths);
-            String mean = STORE_IO_RATE_LIMITED_DURATION + ".mean";
-            Assertions.assertThat(fs.getIOStatistics().meanStatistics().get(mean).mean())
+            MeanStatistic meanStatisticBefore = lookupMeanStatistic(fs.getIOStatistics(),
+                    STORE_IO_RATE_LIMITED_DURATION + SUFFIX_MEAN);
+            Assertions.assertThat(meanStatisticBefore.mean())
                     .describedAs("Rate limiting should not have happened during first delete call")
                     .isEqualTo(0.0);
             bulkDelete.bulkDelete(paths);
             bulkDelete.bulkDelete(paths);
             bulkDelete.bulkDelete(paths);
-            Assertions.assertThat(fs.getIOStatistics().meanStatistics().get(mean).mean())
+            MeanStatistic meanStatisticAfter = lookupMeanStatistic(fs.getIOStatistics(),
+                    STORE_IO_RATE_LIMITED_DURATION + SUFFIX_MEAN);
+            Assertions.assertThat(meanStatisticAfter.mean())
                     .describedAs("Rate limiting should have happened during multiple delete calls")
                     .isGreaterThan(0.0);
         }

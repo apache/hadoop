@@ -20,6 +20,9 @@ package org.apache.hadoop.fs.s3a.impl;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 
+/**
+ * Factory for creating store contexts.
+ */
 @InterfaceAudience.Private
 public interface StoreContextFactory {
 

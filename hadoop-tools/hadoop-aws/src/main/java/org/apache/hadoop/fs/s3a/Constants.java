@@ -1641,7 +1641,16 @@ public final class Constants {
    */
   public static final String AWS_S3_ACCESS_GRANTS_FALLBACK_TO_IAM_ENABLED =
           "fs.s3a.access.grants.fallback.to.iam";
+  /**
+   * Default value for {@link #S3A_IO_RATE_LIMIT}.
+   * Value: {@value}.
+   * 0 means no rate limiting.
+   */
   public static final int DEFAULT_S3A_IO_RATE_LIMIT = 0;
 
+  /**
+   * Config to set the rate limit for S3A IO operations.
+   * Value: {@value}.
+   */
   public static final String S3A_IO_RATE_LIMIT = "fs.s3a.io.rate.limit";
 }

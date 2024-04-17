@@ -30,7 +30,6 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import org.apache.hadoop.fs.*;
 import software.amazon.awssdk.auth.credentials.AwsCredentials;
 import software.amazon.awssdk.services.s3.model.MultipartUpload;
 import software.amazon.awssdk.services.sts.model.StsException;
@@ -40,9 +39,14 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BulkDelete;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.AWSBadRequestException;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
@@ -706,12 +710,21 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   }
 
   @Test
-  public void testBulkDelete() throws Throwable {
+  public void testBulkDeleteOnReadOnlyAccess() throws Throwable {
     describe("Bulk delete with part of the child tree read only");
-    executeBulkDelete(createAssumedRoleConfig());
+    executeBulkDeleteOnReadOnlyFiles(createAssumedRoleConfig());
   }
 
-  private void executeBulkDelete(Configuration assumedRoleConfig) throws Exception {
+  @Test
+  public void testBulkDeleteWithReadWriteAccess() throws Throwable {
+    describe("Bulk delete with read write access");
+    executeBulkDeleteOnSomeReadOnlyFiles(createAssumedRoleConfig());
+  }
+
+  /**
+   * Execute bulk delete on read only files and some read write files.
+   */
+  private void executeBulkDeleteOnReadOnlyFiles(Configuration assumedRoleConfig) throws Exception {
     Path destDir = methodPath();
     Path readOnlyDir = new Path(destDir, "readonlyDir");
 
@@ -719,12 +732,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     S3AFileSystem fs = getFileSystem();
     WrappedIO.bulkDelete(fs, destDir, new ArrayList<>());
 
-    bindRolePolicyStatements(assumedRoleConfig, STATEMENT_ALLOW_KMS_RW,
-        statement(true, S3_ALL_BUCKETS, S3_ALL_OPERATIONS),
-        new Statement(Effects.Deny)
-            .addActions(S3_PATH_WRITE_OPERATIONS)
-            .addResources(directory(readOnlyDir))
-    );
+    bindReadOnlyRolePolicy(assumedRoleConfig, readOnlyDir);
     roleFS = (S3AFileSystem) destDir.getFileSystem(assumedRoleConfig);
 
     int range = 10;
@@ -742,14 +750,73 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     // delete the files in the original FS should succeed.
     BulkDelete bulkDelete3 = fs.createBulkDelete(readOnlyDir);
     assertSuccessfulBulkDelete(bulkDelete3.bulkDelete(pathsToDelete));
+    FileStatus[] fileStatusesUnderDestDir = roleFS.listStatus(destDir);
+    List<Path> pathsToDeleteUnderDestDir = Arrays.stream(fileStatusesUnderDestDir)
+            .map(FileStatus::getPath)
+            .collect(Collectors.toList());
     BulkDelete bulkDelete4 = fs.createBulkDelete(destDir);
-    assertSuccessfulBulkDelete(bulkDelete4.bulkDelete(pathsToDelete));
-    // we can write a test for some successful and some failure as well.
+    assertSuccessfulBulkDelete(bulkDelete4.bulkDelete(pathsToDeleteUnderDestDir));
   }
 
+  /**
+   * Execute bulk delete on some read only files and some read write files.
+   */
+  private void executeBulkDeleteOnSomeReadOnlyFiles(Configuration assumedRoleConfig)
+          throws IOException {
+    Path destDir = methodPath();
+    Path readOnlyDir = new Path(destDir, "readonlyDir");
+    bindReadOnlyRolePolicy(assumedRoleConfig, readOnlyDir);
+    roleFS = (S3AFileSystem) destDir.getFileSystem(assumedRoleConfig);
+    S3AFileSystem fs = getFileSystem();
+    WrappedIO.bulkDelete(fs, destDir, new ArrayList<>());
+    // creating 5 files in the read only dir.
+    int readOnlyRange = 5;
+    int readWriteRange = 3;
+    touchFiles(fs, readOnlyDir, readOnlyRange);
+    // creating 3 files in the base destination dir.
+    touchFiles(roleFS, destDir, readWriteRange);
+    RemoteIterator<LocatedFileStatus> locatedFileStatusRemoteIterator = roleFS.listFiles(destDir, true);
+    List<Path> pathsToDelete2 = new ArrayList<>();
+    while (locatedFileStatusRemoteIterator.hasNext()) {
+      pathsToDelete2.add(locatedFileStatusRemoteIterator.next().getPath());
+    }
+    Assertions.assertThat(pathsToDelete2.size())
+            .describedAs("Number of paths to delete in base destination dir")
+            .isEqualTo(readOnlyRange + readWriteRange);
+    BulkDelete bulkDelete5 = roleFS.createBulkDelete(destDir);
+    List<Map.Entry<Path, String>> entries = bulkDelete5.bulkDelete(pathsToDelete2);
+    Assertions.assertThat(entries.size())
+            .describedAs("Number of error entries in bulk delete result")
+            .isEqualTo(readOnlyRange);
+    assertAccessDeniedForEachPath(entries);
+    // delete the files in the original FS should succeed.
+    BulkDelete bulkDelete6 = fs.createBulkDelete(destDir);
+    assertSuccessfulBulkDelete(bulkDelete6.bulkDelete(pathsToDelete2));
+  }
+
+  /**
+   * Bind a read only role policy to a directory to the FS conf.
+   */
+  private static void bindReadOnlyRolePolicy(Configuration assumedRoleConfig,
+                                      Path readOnlyDir)
+          throws JsonProcessingException {
+    bindRolePolicyStatements(assumedRoleConfig, STATEMENT_ALLOW_KMS_RW,
+        statement(true, S3_ALL_BUCKETS, S3_ALL_OPERATIONS),
+        new Statement(Effects.Deny)
+            .addActions(S3_PATH_WRITE_OPERATIONS)
+            .addResources(directory(readOnlyDir))
+    );
+  }
+
+  /**
+   * Validate delete results for each path in the list
+   * has access denied error.
+   */
   private void assertAccessDeniedForEachPath(List<Map.Entry<Path, String>> entries) {
     for (Map.Entry<Path, String> entry : entries) {
-      Assertions.assertThat(entry.getValue()).contains("AccessDenied");
+      Assertions.assertThat(entry.getValue())
+              .describedAs("Error message for path %s is %s", entry.getKey(), entry.getValue())
+              .contains("AccessDenied");
     }
   }
 
@@ -770,12 +837,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     S3AFileSystem fs = getFileSystem();
     fs.delete(destDir, true);
 
-    bindRolePolicyStatements(conf, STATEMENT_ALLOW_KMS_RW,
-        statement(true, S3_ALL_BUCKETS, S3_ALL_OPERATIONS),
-        new Statement(Effects.Deny)
-            .addActions(S3_PATH_WRITE_OPERATIONS)
-            .addResources(directory(readOnlyDir))
-    );
+    bindReadOnlyRolePolicy(conf, readOnlyDir);
     roleFS = (S3AFileSystem) destDir.getFileSystem(conf);
 
     int range = 10;

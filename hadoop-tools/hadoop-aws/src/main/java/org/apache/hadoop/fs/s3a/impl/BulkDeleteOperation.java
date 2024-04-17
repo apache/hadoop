@@ -100,6 +100,11 @@ public class BulkDeleteOperation extends AbstractStoreOperation implements BulkD
     return emptyList();
   }
 
+  /**
+   * Validate that the path is under the base path.
+   * @param p path to validate.
+   * @return true if the path is under the base path else false.
+   */
   private boolean validatePathIsUnderParent(Path p) {
     while (p.getParent() != null) {
       if (p.getParent().equals(basePath)) {

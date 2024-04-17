@@ -34,10 +34,14 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.wrappedio.WrappedIO;
 
+import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.io.wrappedio.WrappedIO.bulkDelete;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
+/**
+ * Contract tests for bulk delete operation.
+ */
 public abstract class AbstractContractBulkDeleteTest extends AbstractFSContractTestBase {
 
     private static final Logger LOG =
@@ -146,6 +150,7 @@ public abstract class AbstractContractBulkDeleteTest extends AbstractFSContractT
         Path filePath = new Path(dirPath, "file");
         touch(fs, filePath);
         paths.add(filePath);
+        pageSizePreconditionForTest(paths.size());
         // Outcome is undefined. But call shouldn't fail. In case of S3 directories will still be present.
         assertSuccessfulBulkDelete(bulkDelete(getFileSystem(), basePath, paths));
     }
@@ -177,7 +182,17 @@ public abstract class AbstractContractBulkDeleteTest extends AbstractFSContractT
         Path another = new Path(basePath, "another-file");
         touch(fs, another);
         paths.add(another);
+        pageSizePreconditionForTest(paths.size());
         assertSuccessfulBulkDelete(bulkDelete(getFileSystem(), basePath, paths));
+    }
+
+    /**
+     * Skip test if paths size is greater than page size.
+     */
+    protected void pageSizePreconditionForTest(int size) {
+        if (size > pageSize) {
+            skip("Test requires paths size less than or equal to page size");
+        }
     }
 
     /**
@@ -207,6 +222,7 @@ public abstract class AbstractContractBulkDeleteTest extends AbstractFSContractT
         Path filePath = new Path(dirPath, "file");
         touch(fs, filePath);
         paths.add(filePath);
+        pageSizePreconditionForTest(paths.size());
         // Should pass as both paths are under the base path.
         assertSuccessfulBulkDelete(bulkDelete(getFileSystem(), basePath, paths));
     }
