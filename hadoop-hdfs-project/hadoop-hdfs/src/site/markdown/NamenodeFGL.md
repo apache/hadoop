@@ -105,7 +105,7 @@ DNs have nothing to do with the namespace tree, so NN uses a separate DN lock fo
 
 Used for operations requiring the entire namespace locked.
 
-There are some operations that need to lock the entire namespace, e.g. safe mode related operations, HA service related, etc. NN uses the global lock to make these operations thread-safe. Outside of these infrequent operations that require the global write lock, all other operations have to acquire the global read lock.
+There are some operations that need to lock the entire namespace, e.g. safe mode related operations, HA service related, etc. NN uses the global lock to make these operations thread-safe. Outside of these infrequent operations that require the global write lock, all other operations have to acquire the global read lock. The only exception to this rule is JMX operations being allowed to bypass locking entirely to ensure that metrics can be collected regardless of long write lock holding.
 
 ### Lock Order
 
@@ -155,7 +155,7 @@ Four lock modes (plus no locking):
 Roadmap
 -------
 
-#### Step 1: Split the global lock into FSLock and BMLock
+#### Stage 1: Split the global lock into FSLock and BMLock
 
 Split the global lock into two global locks, FSLock and BMLock.
 - FSLock for operations that relate to namespace tree.
@@ -165,25 +165,25 @@ After this step, FGL contains global FSLock and global BMLock.
 
 No big logic changes in this step. The original logic with the global lock retains. This step aims to make the lock mode configurable.
 
-JIRA: [HDFS-17384](https://issues.apache.org/jira/browse/HDFS-17384)
+JIRA: [HDFS-17384](https://issues.apache.org/jira/browse/HDFS-17384) [Progress: Done]
 
-#### Step 2: Split the global FSLock
+#### Stage 2: Split the global FSLock
 
 After splitting the global lock into FSLock and BMLock, this step aims to split the global FSLock into full path locks so that fully independent operations that only involve namespace tree can be processed concurrently.
 In this step, NN still uses the global BMLock to protect block related operations and DN related operations.
 After this step, FGL contains global FSLock, full path lock, and global BMLock.
 
-JIRA: [HDFS-17385](https://issues.apache.org/jira/browse/HDFS-17385)
+JIRA: [HDFS-17385](https://issues.apache.org/jira/browse/HDFS-17385) [Progress: Ongoing]
 
-#### Step 3: Split the global BMLock
+#### Stage 3: Split the global BMLock
 
 This step aims to split the global BMLock into full path locks and DN locks.
 After this step, FGL contains global FSLock, DN lock, and full path lock.
 
-JIRA: [HDFS-17386](https://issues.apache.org/jira/browse/HDFS-17386)
+JIRA: [HDFS-17386](https://issues.apache.org/jira/browse/HDFS-17386) [Progress: Ongoing]
 
 Configuration
--------------
+------------
 
 NN FGL implementation can be used by adding this configuration to `hdfs-site.xml`.
 
@@ -199,3 +199,12 @@ NN FGL implementation can be used by adding this configuration to `hdfs-site.xml
 The lock manager class must implement the interface defined by `org.apache.hadoop.hdfs.server.namenode.fgl.FSNLockManager`. Currently, there are two implementations:
 * `org.apache.hadoop.hdfs.server.namenode.fgl.GlobalFSNamesystemLock`: the original lock mode that utilizes one global FS lock, also the default value for this config;
 * `org.apache.hadoop.hdfs.server.namenode.fgl.FineGrainedFSNamesystemLock`: FGL implementation.
+
+Adding RPC
+----------
+
+For developers adding a new RPC operation, the operation should follow FGL locking schematic to ensure data integrity:
+* Global FSLock should be acquired in read mode, unless it is an administrative operation (related to HA, edit logs, etc.)
+* If the operation requires access/modification of `DatanodeDescriptor` and/or `DatanodeStorageInfo`, DN lock should be acquired in read/write mode accordingly.
+  * Only applicable in stage 3 once DN lock is implemented. During stage 1 and stage 2, global BMLock is to be used instead.
+* If the operation deals with one or more paths/blocks, the full path lock(s) should be acquired based on the implementation details described above. It is best to check an existing RPC operation that has a similar method of access to the new operation to consult the lock implementation.
