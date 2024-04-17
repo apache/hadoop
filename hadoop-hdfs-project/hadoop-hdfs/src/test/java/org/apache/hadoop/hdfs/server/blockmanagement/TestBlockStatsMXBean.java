@@ -298,8 +298,8 @@ public class TestBlockStatsMXBean {
     String result = readOutput(new URL(baseUrl, "/jmx"));
 
     Map<String, Object> stat = (Map<String, Object>) JSON.parse(result);
-    Object[] beans =(Object[]) stat.get("beans");
-    Map<String, Object> blockStats  = null;
+    Object[] beans = (Object[]) stat.get("beans");
+    Map<String, Object> blockStats = null;
     for (Object bean : beans) {
       Map<String, Object> map = (Map<String, Object>) bean;
       if (map.get("name").equals("Hadoop:service=NameNode,name=BlockStats")) {
@@ -308,7 +308,7 @@ public class TestBlockStatsMXBean {
     }
     assertNotNull(blockStats);
     Object[] storageTypeStatsList =
-        (Object[])blockStats.get("StorageTypeStats");
+        (Object[]) blockStats.get("StorageTypeStats");
     assertNotNull(storageTypeStatsList);
     Map<String, Object> entry = (Map<String, Object>) storageTypeStatsList[0];
     Map<String, Object> storageTypeStats = (Map<String, Object>) entry.get("value");
