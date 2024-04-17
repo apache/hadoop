@@ -135,11 +135,11 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   private boolean fileStatusInformationPresent;
 
   /**
-   * Defines if the inputStream has been used successfully once. Prefetches would
-   * start only after the first successful read.
+   * Defines if the inputStream has been read sequentially. Prefetches would
+   * start only after the first successful sequential read.
    */
-  private volatile boolean successfulUsage = false;
-  private final boolean pretechTriggerOnFirstRead;
+  private boolean sequentialReadStarted = false;
+  private final boolean prefetchTriggerOnFirstRead;
 
   public AbfsInputStream(
           final AbfsClient client,
@@ -159,7 +159,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     this.tolerateOobAppends = abfsInputStreamContext.isTolerateOobAppends();
     this.eTag = eTag;
     this.fileStatusInformationPresent = StringUtils.isNotEmpty(eTag);
-    this.pretechTriggerOnFirstRead =
+    this.prefetchTriggerOnFirstRead =
         abfsInputStreamContext.isPrefetchTriggerOnFirstRead()
             && getFileStatusInformationPresent();
     this.readAheadRange = abfsInputStreamContext.getReadAheadRange();
@@ -210,29 +210,6 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       }
     }
 
-    /*
-     * When the inputStream is started, if the application tries to do a parallel read
-     * on the inputStream, the first read will be synchronized and the subsequent
-     * reads will be non-synchronized.
-     */
-    if (!successfulUsage) {
-      synchronized (this) {
-        if (!successfulUsage) {
-          int result = readOnPosition(position, buffer, offset, length);
-          successfulUsage = true;
-          return result;
-        }
-      }
-    }
-
-    int result = readOnPosition(position, buffer, offset, length);
-    return result;
-  }
-
-  private int readOnPosition(final long position,
-      final byte[] buffer,
-      final int offset,
-      final int length) throws IOException {
     LOG.debug("pread requested offset = {} len = {} bufferedPreadDisabled = {}",
         offset, length, bufferedPreadDisabled);
     if (!bufferedPreadDisabled) {
@@ -268,13 +245,6 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   @Override
   public synchronized int read(final byte[] b, final int off, final int len)
-      throws IOException {
-    int result = synchronizedRead(b, off, len);
-    successfulUsage =  true;
-    return result;
-  }
-
-  private int synchronizedRead(final byte[] b, final int off, final int len)
       throws IOException {
     // check if buffer is null before logging the length
     if (b != null) {
@@ -331,7 +301,9 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         break;
       }
     } while (lastReadBytes > 0);
-    return totalReadBytes > 0 ? totalReadBytes : lastReadBytes;
+    int result = totalReadBytes > 0 ? totalReadBytes : lastReadBytes;
+    sequentialReadStarted =  true;
+    return result;
   }
 
   private boolean shouldReadFully(int lengthToRead) {
@@ -607,7 +579,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   private int readInternal(final long position, final byte[] b, final int offset, final int length,
                            final boolean bypassReadAhead) throws IOException {
-    if (readAheadEnabled && !bypassReadAhead && (pretechTriggerOnFirstRead || successfulUsage)) {
+    if (readAheadEnabled && !bypassReadAhead && (prefetchTriggerOnFirstRead || sequentialReadStarted)) {
       // try reading from read-ahead
       if (offset != 0) {
         throw new IllegalArgumentException("readahead buffers cannot have non-zero buffer offsets");
@@ -711,7 +683,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       throw new IOException(ex);
     } finally {
       if (!getFileStatusInformationPresent() && abfsHttpOperation != null) {
-        initPathPropertiesFromReadPathResponseHeader(abfsHttpOperation);
+        initPropertiesFromReadResponseHeader(abfsHttpOperation);
       }
     }
     long bytesRead = op.getResult().getBytesReceived();
@@ -726,7 +698,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     return (int) bytesRead;
   }
 
-  private void initPathPropertiesFromReadPathResponseHeader(final AbfsHttpOperation op) throws IOException {
+  private void initPropertiesFromReadResponseHeader(final AbfsHttpOperation op) throws IOException {
     if (DIRECTORY.equals(
         op.getResponseHeader(HttpHeaderConfigurations.X_MS_RESOURCE_TYPE))) {
       throw new FileNotFoundException(

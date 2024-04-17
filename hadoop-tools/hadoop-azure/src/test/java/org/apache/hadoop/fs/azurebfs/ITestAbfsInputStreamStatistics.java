@@ -230,7 +230,7 @@ public class ITestAbfsInputStreamStatistics
        * remoteReadOps -
        * In case of Head Optimization for InputStream, the first read operation
        * would read only the asked range and would not be able to read the entire file
-       * ras it has no information on the contentLength of the file. The second
+       * as it has no information on the contentLength of the file. The second
        * read would be able to read entire file (1MB) in buffer. Hence, total remote read ops
        * would be 2.
        * In case of no Head Optimization for InputStream, it is aware of the contentLength and

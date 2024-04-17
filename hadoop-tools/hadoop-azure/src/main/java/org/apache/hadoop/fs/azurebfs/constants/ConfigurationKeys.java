@@ -311,7 +311,8 @@ public final class ConfigurationKeys {
   public static final String FS_AZURE_BUFFERED_PREAD_DISABLE = "fs.azure.buffered.pread.disable";
 
   /**
-   * Disable the call of HEAD call for opening a inputStream. ReadPath API of server
+   * Enable lazy opening of an inputStream. Lazy opening would not call HEAD call
+   * to get file metadata before creating inputStream. ReadPath API of server
    * would give the contentLength and eTag which would be used in subsequent calls
    * for if-match headers.
    */

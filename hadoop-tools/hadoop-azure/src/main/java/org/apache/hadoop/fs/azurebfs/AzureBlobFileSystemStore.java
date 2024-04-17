@@ -823,7 +823,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       /*
       * GetPathStatus API has to be called in case of:
       *   1.  fileStatus is null or not an object of VersionedFileStatus: as eTag
-      *       would not be there in the fileStatus object.
+      *       would not be there in the fileStatus object. This shall be called
+      *       only if inputStream's lazy optimization is disabled.
       *   2.  fileStatus is an object of VersionedFileStatus and the object doesn't
       *       have encryptionContext field when client's encryptionType is
       *       ENCRYPTION_CONTEXT.
