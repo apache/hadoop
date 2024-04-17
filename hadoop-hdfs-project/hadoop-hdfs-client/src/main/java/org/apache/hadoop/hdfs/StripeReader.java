@@ -235,7 +235,8 @@ abstract class StripeReader {
 
   private int readToBuffer(BlockReader blockReader,
       DatanodeInfo currentNode, ByteBufferStrategy strategy,
-      LocatedBlock currentBlock, int chunkIndex) throws IOException {
+      LocatedBlock currentBlock, int chunkIndex, long offsetInBlock)
+      throws IOException {
     final int targetLength = strategy.getTargetLength();
     int curAttempts = 0;
     while (curAttempts < readDNMaxAttempts) {
@@ -267,7 +268,7 @@ abstract class StripeReader {
             readerInfos[chunkIndex].reader.close();
           }
           if (dfsStripedInputStream.createBlockReader(currentBlock,
-              alignedStripe.getOffsetInBlock(), targetBlocks,
+              offsetInBlock, targetBlocks,
               readerInfos, chunkIndex, readTo)) {
             blockReader = readerInfos[chunkIndex].reader;
             String msg = "Reconnect to " + currentNode.getInfoAddr()
@@ -307,9 +308,9 @@ abstract class StripeReader {
 
       int ret = 0;
       for (ByteBufferStrategy strategy : strategies) {
-        int bytesReead = readToBuffer(reader, datanode, strategy, currentBlock,
-            chunkIndex);
-        ret += bytesReead;
+        int bytesRead = readToBuffer(reader, datanode, strategy, currentBlock,
+            chunkIndex, alignedStripe.getOffsetInBlock() + ret);
+        ret += bytesRead;
       }
       return new BlockReadStats(ret, reader.isShortCircuit(),
           reader.getNetworkDistance());
