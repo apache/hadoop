@@ -41,6 +41,7 @@ import org.apache.hadoop.security.AccessControlException;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_IS_HNS_ENABLED;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_CLIENT_ENDPOINT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENABLE_CHECK_ACCESS;
@@ -86,25 +87,26 @@ public class ITestAzureBlobFileSystemCheckAccess
     }
     checkIfConfigIsSet(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ENDPOINT
         + "." + getAccountName());
-    Configuration conf = getRawConfiguration();
+    Configuration conf = new Configuration(getRawConfiguration());
     setTestFsConf(FS_AZURE_BLOB_FS_CLIENT_ID,
-        FS_AZURE_BLOB_FS_CHECKACCESS_TEST_CLIENT_ID);
+        FS_AZURE_BLOB_FS_CHECKACCESS_TEST_CLIENT_ID, conf);
     setTestFsConf(FS_AZURE_BLOB_FS_CLIENT_SECRET,
-        FS_AZURE_BLOB_FS_CHECKACCESS_TEST_CLIENT_SECRET);
+        FS_AZURE_BLOB_FS_CHECKACCESS_TEST_CLIENT_SECRET, conf);
     conf.set(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.OAuth.name());
     conf.set(FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME + "."
         + getAccountName(), ClientCredsTokenProvider.class.getName());
     conf.setBoolean(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION,
         false);
-    this.testUserFs = FileSystem.newInstance(getRawConfiguration());
+    conf.unset(FS_AZURE_ACCOUNT_IS_HNS_ENABLED);
+    this.testUserFs = FileSystem.newInstance(conf);
   }
 
   private void setTestFsConf(final String fsConfKey,
-      final String testFsConfKey) {
+      final String testFsConfKey, Configuration conf) {
     final String confKeyWithAccountName = fsConfKey + "." + getAccountName();
     final String confValue = getConfiguration()
         .getString(testFsConfKey, "");
-    getRawConfiguration().set(confKeyWithAccountName, confValue);
+    conf.set(confKeyWithAccountName, confValue);
   }
 
   @Test(expected = IllegalArgumentException.class)
