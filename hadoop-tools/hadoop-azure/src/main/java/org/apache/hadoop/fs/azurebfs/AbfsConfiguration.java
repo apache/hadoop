@@ -371,7 +371,7 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_HEAD_OPTIMIZATION_INPUT_STREAM)
   private boolean isInputStreamLazyOptimizationEnabled;
 
-  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_PREFETCH_ON_FIRST_READ_CALL,
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_PREFETCH_ON_FIRST_READ_ENABLED,
       DefaultValue = DEFAULT_PREFETCH_READAHEAD_ON_FIRST_READ)
   private boolean isPrefetchOnFirstReadEnabled;
 

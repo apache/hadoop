@@ -324,6 +324,6 @@ public final class ConfigurationKeys {
    * If disabled, first call would not trigger prefetch. Prefetch would be switched on
    * after first read call.
    */
-  public static final String FS_AZURE_PREFETCH_ON_FIRST_READ_CALL = "fs.azure.prefetch.on.first.read.call";
+  public static final String FS_AZURE_PREFETCH_ON_FIRST_READ_ENABLED = "fs.azure.prefetch.on.first.read.enabled";
   private ConfigurationKeys() {}
 }

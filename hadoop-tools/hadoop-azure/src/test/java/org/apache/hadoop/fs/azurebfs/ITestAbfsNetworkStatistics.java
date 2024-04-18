@@ -237,14 +237,16 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
       // 1 read request = 1 connection and 1 get response
       expectedConnectionsMade++;
       expectedGetResponses++;
-      if (!getConfiguration().getInputStreamLazyOptimizationEnabled()) {
+      if (!getConfiguration().getInputStreamLazyOptimizationEnabled()
+          || !getConfiguration().optimizeFooterRead()) {
         expectedBytesReceived += bytesWrittenToFile;
       } else {
         /*
-         * With head optimization enabled, the abfsInputStream is not aware
-         * of the contentLength and hence, it would only read data for which the range
-         * is provided. With the first remote call done, the inputStream will get
-         * aware of the contentLength and would be able to use it for further reads.
+         * With head optimization enabled and read fullFile optimization enabled,
+         * the abfsInputStream is not aware of the contentLength and hence,
+         * it would only read data for which the range is provided. With the first
+         * remote call done, the inputStream will get aware of the contentLength
+         * and would be able to use it for further reads.
          */
         expectedBytesReceived += 1;
       }

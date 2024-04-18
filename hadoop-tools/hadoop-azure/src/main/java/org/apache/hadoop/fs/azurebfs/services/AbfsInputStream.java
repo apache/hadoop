@@ -459,11 +459,24 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
             (int) actualLen - limit, true);
         if (lastBytesRead > 0) {
           totalBytesRead += lastBytesRead;
-          boolean shouldBreak = !fileStatusInformationPresentBeforeRead
-              && totalBytesRead == (int) actualLen;
           limit += lastBytesRead;
           fCursor += lastBytesRead;
           fCursorAfterLastRead = fCursor;
+
+          /*
+           * In non-lazily opened inputStream, the contentLength would be available before
+           * opening the inputStream. In such case, optimized read would always be done
+           * on the last part of the file.
+           *
+           * In lazily opened inputStream, the contentLength would not be available before
+           * opening the inputStream. In such case, contentLength conditioning would not be
+           * applied to execute optimizedRead. Hence, the optimized read may not be done on the
+           * last part of the file. If the optimized read is done on the non-last part of the
+           * file, inputStream should read only the amount of data requested by optimizedRead,
+           * as the buffer supplied would be only of the size of the data requested by optimizedRead.
+           */
+          boolean shouldBreak = !fileStatusInformationPresentBeforeRead
+              && totalBytesRead == (int) actualLen;
           if (shouldBreak) {
             break;
           }
@@ -497,7 +510,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   long getContentLength() {
     return contentLength;
   }
-  
+
   boolean getFileStatusInformationPresent() {
     return fileStatusInformationPresent;
   }
