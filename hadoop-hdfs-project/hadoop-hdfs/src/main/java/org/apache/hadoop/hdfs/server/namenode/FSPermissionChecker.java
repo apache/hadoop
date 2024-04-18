@@ -89,7 +89,7 @@ public class FSPermissionChecker implements AccessControlEnforcer {
   private final Collection<String> groups;
   private final boolean isSuper;
   private final INodeAttributeProvider attributeProvider;
-  private final AccessControlEnforcer  accessControlEnforcer;
+  private final AccessControlEnforcer accessControlEnforcer;
   private final boolean authorizeWithContext;
   private final long accessControlEnforcerReportingThresholdMs;
 
