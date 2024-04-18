@@ -368,7 +368,9 @@ public class TestClientToAMTokens extends ParameterizedSchedulerTestBase {
           .getCanonicalName(), e.getClass().getCanonicalName());
       Assert.assertTrue(e
         .getMessage()
-        .contains("digest response format violation. Mismatched response."));
+        .contains(
+          "DIGEST-MD5: digest response format violation. "
+              + "Mismatched response."));
       Assert.assertFalse(am.pinged);
     }
   }

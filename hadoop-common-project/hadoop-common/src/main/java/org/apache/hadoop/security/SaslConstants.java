@@ -40,4 +40,6 @@ public class SaslConstants {
     SASL_MECHANISM = mechanism != null? mechanism : SASL_MECHANISM_DEFAULT;
     LOG.debug("{} = {} (effective)", SASL_MECHANISM_ENV, SASL_MECHANISM);
   }
+
+  private SaslConstants() {}
 }

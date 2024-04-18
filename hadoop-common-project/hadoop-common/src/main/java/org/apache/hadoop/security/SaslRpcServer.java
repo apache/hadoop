@@ -273,7 +273,7 @@ public class SaslRpcServer {
     }
   };
 
-  /** CallbackHandler for SASL mechanism */
+  /** CallbackHandler for SASL mechanism. */
   @InterfaceStability.Evolving
   public static class SaslDigestCallbackHandler implements CallbackHandler {
     private SecretManager<TokenIdentifier> secretManager;
@@ -319,10 +319,8 @@ public class SaslRpcServer {
         UserGroupInformation user = null;
         user = tokenIdentifier.getUser(); // may throw exception
         connection.attemptingUser = user;
-        
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("SASL server callback: setting password for client: " + tokenIdentifier.getUser());
-        }
+
+        LOG.debug("SASL server callback: setting password for client: {}", user);
         pc.setPassword(password);
       }
       if (ac != null) {
@@ -338,7 +336,7 @@ public class SaslRpcServer {
             UserGroupInformation logUser =
               getIdentifier(authzid, secretManager).getUser();
             String username = logUser == null ? null : logUser.getUserName();
-            LOG.debug("SASL server callback: setting authorizedID: " + username);
+            LOG.debug("SASL server callback: setting authorizedID: {}", username);
           }
           ac.setAuthorizedID(authzid);
         }
