@@ -34,6 +34,7 @@ import org.apache.hadoop.util.functional.Tuples;
 import static java.util.Collections.emptyList;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
+import static org.apache.hadoop.fs.BulkDeleteUtils.validatePathIsUnderParent;
 import static org.apache.hadoop.util.Preconditions.checkArgument;
 
 /**
@@ -79,7 +80,7 @@ public class BulkDeleteOperation extends AbstractStoreOperation implements BulkD
     final StoreContext context = getStoreContext();
     final List<ObjectIdentifier> objects = paths.stream().map(p -> {
       checkArgument(p.isAbsolute(), "Path %s is not absolute", p);
-      checkArgument(validatePathIsUnderParent(p),
+      checkArgument(validatePathIsUnderParent(p, basePath),
               "Path %s is not under the base path %s", p, basePath);
       final String k = context.pathToKey(p);
       return ObjectIdentifier.builder().key(k).build();
@@ -98,21 +99,6 @@ public class BulkDeleteOperation extends AbstractStoreOperation implements BulkD
       return outcomeElements;
     }
     return emptyList();
-  }
-
-  /**
-   * Validate that the path is under the base path.
-   * @param p path to validate.
-   * @return true if the path is under the base path else false.
-   */
-  private boolean validatePathIsUnderParent(Path p) {
-    while (p.getParent() != null) {
-      if (p.getParent().equals(basePath)) {
-        return true;
-      }
-      p = p.getParent();
-    }
-    return false;
   }
 
   @Override

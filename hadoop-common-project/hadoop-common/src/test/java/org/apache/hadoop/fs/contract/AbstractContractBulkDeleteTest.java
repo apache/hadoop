@@ -133,6 +133,16 @@ public abstract class AbstractContractBulkDeleteTest extends AbstractFSContractT
     }
 
     @Test
+    public void testDeletePathsNotAbsolute() throws Exception {
+        List<Path> paths = new ArrayList<>();
+        Path pathNotAbsolute = new Path("not-absolute");
+        paths.add(pathNotAbsolute);
+        // Should fail as path is not absolute.
+        intercept(IllegalArgumentException.class,
+                () -> bulkDelete(getFileSystem(), basePath, paths));
+    }
+
+    @Test
     public void testDeletePathsNotExists() throws Exception {
         List<Path> paths = new ArrayList<>();
         Path pathNotExists = new Path(basePath, "not-exists");

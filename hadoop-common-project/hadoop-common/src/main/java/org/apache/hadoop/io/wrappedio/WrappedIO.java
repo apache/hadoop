@@ -27,6 +27,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.BulkDelete;
 import org.apache.hadoop.fs.BulkDeleteSource;
+import org.apache.hadoop.fs.DefalutBulkDeleteSource;
+import org.apache.hadoop.fs.DefaultBulkDeleteOperation;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
@@ -79,10 +81,10 @@ public final class WrappedIO {
    * @throws UnsupportedOperationException FS doesn't implement the interface.
    */
   private static BulkDeleteSource toBulkDeleteSource(final FileSystem fs) {
-    if (!(fs instanceof BulkDeleteSource)) {
-      throw new UnsupportedOperationException("Bulk delete not supported");
+    if (fs instanceof BulkDeleteSource) {
+        return (BulkDeleteSource) fs;
     }
-    return (BulkDeleteSource) fs;
+    return new DefalutBulkDeleteSource(fs);
   }
 
   /**
