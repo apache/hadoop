@@ -470,7 +470,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
         }
       }
     } catch (IOException e) {
-      if (isNonRetriableOptimizedReadException(e)) {
+      if (e instanceof FileNotFoundException) {
         throw e;
       }
       LOG.debug("Optimized read failed. Defaulting to readOneBlock {}", e);
@@ -491,13 +491,6 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       return readOneBlock(b, off, len);
     }
     return copyToUserBuffer(b, off, len, isFooterReadWithoutContentLengthInformation);
-  }
-
-  private boolean isNonRetriableOptimizedReadException(final IOException e) {
-    return e instanceof FileNotFoundException;
-//    return e instanceof AbfsRestOperationException
-//        || e instanceof FileNotFoundException
-//        || (e.getCause() instanceof AbfsRestOperationException);
   }
 
   @VisibleForTesting
@@ -707,7 +700,9 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     contentLength = parseFromRange(
         op.getResponseHeader(HttpHeaderConfigurations.CONTENT_RANGE));
     eTag = op.getResponseHeader(HttpHeaderConfigurations.ETAG);
-    fileStatusInformationPresent = true;
+    if (eTag != null && contentLength >= 0) {
+      fileStatusInformationPresent = true;
+    }
   }
 
   private long parseFromRange(final String responseHeader) {
@@ -774,7 +769,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       newPos = 0;
       n = newPos - currentPos;
     }
-    if (newPos > getContentLength()) {
+    if (getFileStatusInformationPresent() && newPos > getContentLength()) {
       newPos = getContentLength();
       n = newPos - currentPos;
     }
