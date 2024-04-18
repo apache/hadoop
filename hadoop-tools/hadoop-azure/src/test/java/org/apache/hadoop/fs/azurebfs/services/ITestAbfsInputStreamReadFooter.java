@@ -243,42 +243,40 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
       long expectedLimit;
       long expectedBCursor;
       long expectedFCursor;
-      if (optimizationOn) {
-        if (getConfiguration().getInputStreamLazyOptimizationEnabled()) {
-          if (seekPos + actualLength <= footerReadBufferSize) {
-            if (seekPos + length > actualContentLength) {
-              long footerReadStart = max(0, seekPos + length - footerReadBufferSize);
-              expectedLimit = actualContentLength - footerReadStart;
-              expectedBCursor = seekPos - footerReadStart;
-            } else {
-              expectedLimit = seekPos + actualLength;
-              expectedBCursor = seekPos;
-            }
+      if(getConfiguration().getInputStreamLazyOptimizationEnabled() && optimizationOn) {
+        if (seekPos + actualLength <= footerReadBufferSize) {
+          if (seekPos + length > actualContentLength) {
+            long footerReadStart = max(0, seekPos + length - footerReadBufferSize);
+            expectedLimit = actualContentLength - footerReadStart;
+            expectedBCursor = seekPos - footerReadStart;
           } else {
-            if (seekPos + length > actualContentLength) {
-              long footerReadStart = max(0, seekPos + length - footerReadBufferSize);
-              expectedLimit = actualContentLength - footerReadStart;
-              expectedBCursor = seekPos - footerReadStart;
-            } else {
-              expectedLimit = footerReadBufferSize;
-              expectedBCursor = footerReadBufferSize - actualLength;
-            }
+            expectedLimit = seekPos + actualLength;
+            expectedBCursor = seekPos;
           }
-          long bytesRemaining = expectedLimit - expectedBCursor;
-          long bytesToRead = min(actualLength, bytesRemaining);
-          expectedBCursor += bytesToRead;
-          expectedFCursor = seekPos + actualLength;
         } else {
-          if (actualContentLength <= footerReadBufferSize) {
-            expectedLimit = actualContentLength;
-            expectedBCursor = seekPos + actualLength;
+          if (seekPos + length > actualContentLength) {
+            long footerReadStart = max(0, seekPos + length - footerReadBufferSize);
+            expectedLimit = actualContentLength - footerReadStart;
+            expectedBCursor = seekPos - footerReadStart;
           } else {
             expectedLimit = footerReadBufferSize;
-            long lastBlockStart = max(0, actualContentLength - footerReadBufferSize);
-            expectedBCursor = seekPos - lastBlockStart + actualLength;
+            expectedBCursor = footerReadBufferSize - actualLength;
           }
-          expectedFCursor = actualContentLength;
         }
+        long bytesRemaining = expectedLimit - expectedBCursor;
+        long bytesToRead = min(actualLength, bytesRemaining);
+        expectedBCursor += bytesToRead;
+        expectedFCursor = seekPos + actualLength;
+      } else if(!getConfiguration().getInputStreamLazyOptimizationEnabled() && optimizationOn) {
+        if (actualContentLength <= footerReadBufferSize) {
+          expectedLimit = actualContentLength;
+          expectedBCursor = seekPos + actualLength;
+        } else {
+          expectedLimit = footerReadBufferSize;
+          long lastBlockStart = max(0, actualContentLength - footerReadBufferSize);
+          expectedBCursor = seekPos - lastBlockStart + actualLength;
+        }
+        expectedFCursor = actualContentLength;
       } else {
         if (seekPos + readBufferSize < actualContentLength) {
           expectedLimit = readBufferSize;
@@ -289,7 +287,6 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
         }
         expectedBCursor = actualLength;
       }
-
 
       assertEquals(expectedFCursor, abfsInputStream.getFCursor());
       assertEquals(expectedFCursor, abfsInputStream.getFCursorAfterLastRead());
