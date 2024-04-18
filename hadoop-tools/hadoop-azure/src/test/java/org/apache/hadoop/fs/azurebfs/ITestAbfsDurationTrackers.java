@@ -109,5 +109,4 @@ public class ITestAbfsDurationTrackers extends AbstractAbfsIntegrationTest {
           .isGreaterThan(0.0);
       }
     }
-  }
 }
