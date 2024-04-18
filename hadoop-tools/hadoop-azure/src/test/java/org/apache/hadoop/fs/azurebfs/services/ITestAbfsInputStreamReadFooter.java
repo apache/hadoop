@@ -38,9 +38,11 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FALSE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TRUE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_FOOTER_READ_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_READ_OPTIMIZE_FOOTER_READ;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_READ_SMALL_FILES_COMPLETELY;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_INPUT_STREAM_LAZY_OPEN_OPTIMIZATION_ENABLED;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_FOOTER_READ_BUFFER_SIZE;
 import static org.mockito.ArgumentMatchers.any;
@@ -497,6 +499,7 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
   public void testHeadOptimizationPerformingOutOfRangeRead() throws Exception {
     Configuration configuration = new Configuration(getRawConfiguration());
     configuration.set(FS_AZURE_INPUT_STREAM_LAZY_OPEN_OPTIMIZATION_ENABLED, TRUE);
+    configuration.set(AZURE_READ_SMALL_FILES_COMPLETELY, FALSE);
     configuration.set(AZURE_READ_OPTIMIZE_FOOTER_READ, TRUE);
 
     try (AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(configuration)) {

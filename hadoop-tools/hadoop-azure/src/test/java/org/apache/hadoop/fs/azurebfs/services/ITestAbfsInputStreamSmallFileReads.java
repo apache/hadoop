@@ -33,7 +33,9 @@ import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 import static java.lang.Math.min;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FALSE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TRUE;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_READ_OPTIMIZE_FOOTER_READ;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_READ_SMALL_FILES_COMPLETELY;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_INPUT_STREAM_LAZY_OPEN_OPTIMIZATION_ENABLED;
 import static org.mockito.ArgumentMatchers.any;
@@ -442,6 +444,42 @@ public class ITestAbfsInputStreamSmallFileReads extends ITestAbfsInputStream {
         byte[] zeroBuffer = new byte[readBufferSize / 2];
         assertContentReadCorrectly(buffer, readBufferSize / 2,
             readBufferSize / 2, zeroBuffer, path);
+      }
+    }
+  }
+
+  @Test
+  public void testHeadOptimizationPerformingOutOfRangeRead()
+      throws Exception {
+    Configuration configuration = new Configuration(getRawConfiguration());
+    configuration.set(FS_AZURE_INPUT_STREAM_LAZY_OPEN_OPTIMIZATION_ENABLED,
+        TRUE);
+    configuration.set(AZURE_READ_SMALL_FILES_COMPLETELY, TRUE);
+    configuration.set(AZURE_READ_OPTIMIZE_FOOTER_READ, FALSE);
+
+    try (AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(
+        configuration)) {
+      int readBufferSize = getConfiguration().getReadBufferSize();
+      byte[] fileContent = getRandomBytesArray(readBufferSize / 2);
+      Path path = createFileWithContent(fs, methodName.getMethodName(),
+          fileContent);
+
+      try (FSDataInputStream is = fs.open(path)) {
+        is.seek(readBufferSize / 2 + 1);
+        byte[] buffer = new byte[readBufferSize / 2];
+        int readLength = is.read(buffer, 0, readBufferSize / 2 - 1);
+        assertEquals(readLength, -1);
+
+        is.seek(0);
+        readLength = is.read(buffer, 0, readBufferSize / 2);
+        assertEquals(readLength, readBufferSize / 2);
+
+        AbfsInputStream abfsInputStream
+            = (AbfsInputStream) is.getWrappedStream();
+        AbfsInputStreamStatisticsImpl streamStatistics =
+            (AbfsInputStreamStatisticsImpl) abfsInputStream.getStreamStatistics();
+        assertEquals(1, streamStatistics.getSeekInBuffer());
+        assertEquals(1, streamStatistics.getRemoteReadOperations());
       }
     }
   }

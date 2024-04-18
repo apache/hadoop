@@ -407,7 +407,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     // to be the current fCusor
     bCursor = (int) fCursor;
     if (!getFileStatusInformationPresent()) {
-      return optimisedRead(b, off, len, 0, bufferSize, false);
+      return optimisedRead(b, off, len, 0, bufferSize, true);
     }
     return optimisedRead(b, off, len, 0, getContentLength(), false);
   }
@@ -439,7 +439,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   private int optimisedRead(final byte[] b, final int off, final int len,
       final long readFrom, final long actualLen,
-      final boolean isFooterReadWithoutContentLengthInformation) throws IOException {
+      final boolean isOptimizedReadWithoutContentLengthInformation) throws IOException {
     fCursor = readFrom;
     int totalBytesRead = 0;
     int lastBytesRead = 0;
@@ -503,7 +503,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       restorePointerState();
       return readOneBlock(b, off, len);
     }
-    return copyToUserBuffer(b, off, len, isFooterReadWithoutContentLengthInformation);
+    return copyToUserBuffer(b, off, len, isOptimizedReadWithoutContentLengthInformation);
   }
 
   @VisibleForTesting
@@ -551,15 +551,15 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   }
 
   private int copyToUserBuffer(byte[] b, int off, int len,
-      final boolean isFooterReadWithoutContentLengthInformation){
+      final boolean isOptimizedReadWithoutContentLengthInformation){
     /*
      * If the ABFS is running with head optimization for opening InputStream, the
      * application can give invalid indexes such that the required data is out of file length,
-     * but there can be a part of footer which can be in the file, and can be
+     * but there can be a part of optimized read which can be in the file, and can be
      * read in the AbfsInputStream buffer. But since, the application has asked for
      * invalid indexes, it will receive a -1.
      */
-    if (isFooterReadWithoutContentLengthInformation && bCursor > limit) {
+    if (isOptimizedReadWithoutContentLengthInformation && bCursor > limit) {
       bCursor = limit;
       nextReadPos = getContentLength();
       return -1;
