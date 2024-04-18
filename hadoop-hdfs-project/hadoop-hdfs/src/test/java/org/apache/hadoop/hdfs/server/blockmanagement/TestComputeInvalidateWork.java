@@ -292,7 +292,7 @@ public class TestComputeInvalidateWork {
         assertEquals("Expected number of invalidate blocks to decrease",
             (long) expected, invalidateBlocks.numBlocks());
       } finally {
-          namesystem.writeUnlock(FSNamesystemLockMode.BM, "testDatanodeReRegistration");
+        namesystem.writeUnlock(FSNamesystemLockMode.BM, "testDatanodeReRegistration");
       }
     }
   }

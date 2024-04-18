@@ -29,7 +29,6 @@ import java.util.Set;
 import java.util.concurrent.Semaphore;
 
 import org.apache.hadoop.fs.Options;
-import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -53,6 +52,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.InternalDataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.Node;
