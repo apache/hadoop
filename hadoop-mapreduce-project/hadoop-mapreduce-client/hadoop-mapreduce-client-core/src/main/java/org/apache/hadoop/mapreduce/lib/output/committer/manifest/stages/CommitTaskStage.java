@@ -23,6 +23,7 @@ import java.io.IOException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
@@ -69,19 +70,21 @@ public class CommitTaskStage extends
     // the saving, but ...
     scanStage.addExecutionDurationToStatistics(getIOStatistics(), OP_STAGE_TASK_COMMIT);
 
-    // save a snapshot of the IO Statistics
-    final IOStatisticsSnapshot manifestStats = snapshotIOStatistics();
-    manifestStats.aggregate(getIOStatistics());
-    manifest.setIOStatistics(manifestStats);
-
-    // Now save with rename
-    Path manifestPath = new SaveTaskManifestStage(getStageConfig())
-        .apply(manifest);
-    return new CommitTaskStage.Result(manifestPath, manifest);
+    // Now save with retry, updating the statistics on every attempt.
+    Pair<Path, TaskManifest> p = new SaveTaskManifestStage(getStageConfig())
+        .apply(() -> {
+              // save a snapshot of the IO Statistics
+              final IOStatisticsSnapshot manifestStats = snapshotIOStatistics();
+              manifestStats.aggregate(getIOStatistics());
+              manifest.setIOStatistics(manifestStats);
+              return manifest;
+            });
+    return new CommitTaskStage.Result(p.getLeft(), p.getRight());
   }
 
   /**
-   * Result of the stage.
+   * Result of the stage: the path the manifest was saved to
+   * and the manifest which was successfully saved.
    */
   public static final class Result {
     /** The path the manifest was saved to. */

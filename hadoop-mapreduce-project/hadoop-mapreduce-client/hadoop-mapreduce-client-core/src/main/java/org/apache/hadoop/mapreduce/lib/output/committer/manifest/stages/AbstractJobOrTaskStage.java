@@ -23,6 +23,8 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,6 +64,7 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.Manifest
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_DELETE_DIR;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_LOAD_MANIFEST;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_MSYNC;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_RENAME_DIR;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_RENAME_FILE;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_SAVE_TASK_MANIFEST;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.AuditingIntegration.enterStageWorker;
@@ -371,6 +374,7 @@ public abstract class AbstractJobOrTaskStage<IN, OUT>
    */
   protected final void progress() {
     if (stageConfig.getProgressable() != null) {
+      LOG.trace("{}: Progressing", getName());
       stageConfig.getProgressable().progress();
     }
   }
@@ -429,7 +433,7 @@ public abstract class AbstractJobOrTaskStage<IN, OUT>
    * @return status or null
    * @throws IOException IO Failure.
    */
-  protected final boolean delete(
+  public final boolean delete(
       final Path path,
       final boolean recursive)
       throws IOException {
@@ -445,7 +449,7 @@ public abstract class AbstractJobOrTaskStage<IN, OUT>
    * @return status or null
    * @throws IOException IO Failure.
    */
-  protected Boolean delete(
+  public Boolean delete(
       final Path path,
       final boolean recursive,
       final String statistic)
@@ -467,7 +471,7 @@ public abstract class AbstractJobOrTaskStage<IN, OUT>
    * @return outcome.
    * @throws IOException IO Failure.
    */
-  protected boolean deleteFile(
+  public boolean deleteFile(
       final Path path,
       final String statistic)
       throws IOException {
@@ -482,7 +486,7 @@ public abstract class AbstractJobOrTaskStage<IN, OUT>
    * @return true if the directory was created/exists.
    * @throws IOException IO Failure.
    */
-  protected final boolean mkdirs(
+  public final boolean mkdirs(
       final Path path,
       final boolean escalateFailure)
       throws IOException {
@@ -519,7 +523,7 @@ public abstract class AbstractJobOrTaskStage<IN, OUT>
    * @return the manifest.
    * @throws IOException IO Failure.
    */
-  protected final TaskManifest loadManifest(
+  public final TaskManifest loadManifest(
       final FileStatus status)
       throws IOException {
     LOG.trace("{}: loadManifest('{}')", getName(), status);
@@ -612,45 +616,84 @@ public abstract class AbstractJobOrTaskStage<IN, OUT>
    * @param manifestData the manifest/success file
    * @param tempPath temp path for the initial save
    * @param finalPath final path for rename.
+   * @return the manifest saved.
    * @throws IOException failure to rename after retries.
    */
   @SuppressWarnings("unchecked")
-  protected final <T extends AbstractManifestData> void save(T manifestData,
+  protected final <T extends AbstractManifestData> T save(
+      final T manifestData,
       final Path tempPath,
       final Path finalPath) throws IOException {
+    return saveManifest(() -> manifestData, tempPath, finalPath, OP_SAVE_TASK_MANIFEST);
+  }
 
-    int retryCount = 0;
+  /**
+   * Generate and save a task manifest or summary file.
+   * This is be done by writing to a temp path and then renaming.
+   * <p>
+   * If the destination path exists: Delete it before the rename.
+   * <p>
+   * This will retry so that a rename failure from abfs load or IO errors
+   * such as delete or save failure will not fail the task.
+   * <p>
+   * The {@code manifestSource} supplier is invoked to get the manifest data
+   * on every attempt.
+   * This permits statistics to be updated, <i>including those of failures</i>.
+   * @param manifestSource supplier the manifest/success file
+   * @param tempPath temp path for the initial save
+   * @param finalPath final path for rename.
+   * @param statistic statistic to use for timing
+   * @return the manifest saved.
+   * @throws IOException failure to save/delete/rename after retries.
+   */
+  @SuppressWarnings("unchecked")
+  protected final <T extends AbstractManifestData> T saveManifest(
+      final Supplier<T> manifestSource,
+      final Path tempPath,
+      final Path finalPath,
+      String statistic) throws IOException {
+
+    AtomicInteger retryCount = new AtomicInteger(0);
     RetryPolicy retryPolicy = retryUpToMaximumCountWithProportionalSleep(
         getStageConfig().getManifestSaveAttempts(),
         SAVE_SLEEP_INTERVAL,
         TimeUnit.MILLISECONDS);
-    boolean success = false;
-    while (!success) {
+
+    // loop until returning a value or raising an exception
+    while (true) {
       try {
-        LOG.info("{}: save manifest to {} then rename as {}'); retry count={}",
-            getName(), tempPath, finalPath, retryCount);
+        T manifestData = requireNonNull(manifestSource.get());
+        trackDurationOfInvocation(getIOStatistics(), statistic, () -> {
+          LOG.info("{}: save manifest to {} then rename as {}'); retry count={}",
+              getName(), tempPath, finalPath, retryCount);
 
-        // save the temp file, overwriting any which remains from an earlier attempt
-        trackDurationOfInvocation(getIOStatistics(), OP_SAVE_TASK_MANIFEST, () ->
-            operations.save(manifestData, tempPath, true));
+          // delete temp path.
+          // even though this is written with overwrite=true, this extra recursive
+          // delete also handles a directory being there.
+          deleteRecursive(tempPath, OP_DELETE);
 
-        // delete the destination in case it exists either from a failed previous
-        // attempt or from a concurrent task commit.
-        deleteFile(finalPath, OP_DELETE);
+          // save the temp file, overwriting any which remains from an earlier attempt
+          operations.save(manifestData, tempPath, true);
 
-        // rename temp to final
-        renameFile(tempPath, finalPath);
-        // success flag is only set after the rename.
-        success = true;
+          // delete the destination in case it exists either from a failed previous
+          // attempt or from a concurrent task commit.
+          delete(finalPath, true, OP_DELETE);
+
+          // rename temp to final
+          renameFile(tempPath, finalPath);
+        });
+        // success: exit and return the final manifest data.
+        return manifestData;
       } catch (IOException e) {
         // failure.
         // log then decide whether to sleep and retry or give up.
         LOG.warn("{}: Failed to save and commit file {} renamed to {}; retry count={}",
             getName(), tempPath, finalPath, retryCount, e);
-        retryCount++;
+        // increment that count.
+        retryCount.incrementAndGet();
         RetryPolicy.RetryAction retryAction;
         try {
-          retryAction = retryPolicy.shouldRetry(e, retryCount, 0, true);
+          retryAction = retryPolicy.shouldRetry(e, retryCount.get(), 0, true);
         } catch (Exception ex) {
           // it's not clear why this probe can raise an exception; it is just
           // caught and mapped to a fail.
@@ -716,7 +759,7 @@ public abstract class AbstractJobOrTaskStage<IN, OUT>
 
     maybeDeleteDest(true, dest);
     executeRenamingOperation("renameDir", source, dest,
-        OP_RENAME_FILE, () ->
+        OP_RENAME_DIR, () ->
         operations.renameDir(source, dest)
     );
   }
@@ -1019,8 +1062,7 @@ public abstract class AbstractJobOrTaskStage<IN, OUT>
    */
   protected IOException deleteRecursiveSuppressingExceptions(
       final Path dir,
-      final String statistic)
-      throws IOException {
+      final String statistic) {
     try {
       deleteRecursive(dir, statistic);
       return null;

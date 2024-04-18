@@ -86,6 +86,7 @@ public final class InternalConstants {
       OP_MSYNC,
       OP_PREPARE_DIR_ANCESTORS,
       OP_RENAME_FILE,
+      OP_SAVE_SUMMARY_FILE,
       OP_SAVE_TASK_MANIFEST,
 
       OBJECT_LIST_REQUEST,

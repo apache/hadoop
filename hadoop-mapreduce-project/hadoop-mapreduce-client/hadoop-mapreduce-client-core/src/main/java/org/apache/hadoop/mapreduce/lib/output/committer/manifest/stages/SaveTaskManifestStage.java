@@ -19,13 +19,16 @@
 package org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages;
 
 import java.io.IOException;
+import java.util.function.Supplier;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_SAVE_TASK_MANIFEST;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_STAGE_TASK_SAVE_MANIFEST;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport.manifestPathForTask;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport.manifestTempPathForTaskAttempt;
@@ -64,10 +67,10 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.Man
  * The overwrite with retry loop is an attempt to ensure that the second attempt will report
  * success, if a partitioned cluster means that the original TA commit is still in progress.
  * <p>
- * Returns the path where the manifest was saved.
+ * Returns (the path where the manifest was saved, the manifest).
  */
 public class SaveTaskManifestStage extends
-    AbstractJobOrTaskStage<TaskManifest, Path> {
+    AbstractJobOrTaskStage<Supplier<TaskManifest>, Pair<Path, TaskManifest>> {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       SaveTaskManifestStage.class);
@@ -77,14 +80,16 @@ public class SaveTaskManifestStage extends
   }
 
   /**
-   * Save the manifest to a temp file and rename to the final
+   * Generate and save a manifest to a temp file and rename to the final
    * manifest destination.
-   * @param manifest manifest
+   * The manifest is generated on each retried attempt.
+   * @param manifestSource supplier the manifest/success file
+   *
    * @return the path to the final entry
    * @throws IOException IO failure.
    */
   @Override
-  protected Path executeStage(final TaskManifest manifest)
+  protected Pair<Path, TaskManifest> executeStage(Supplier<TaskManifest> manifestSource)
       throws IOException {
 
     final Path manifestDir = getTaskManifestDir();
@@ -94,8 +99,9 @@ public class SaveTaskManifestStage extends
     Path manifestTempFile = manifestTempPathForTaskAttempt(manifestDir,
         getRequiredTaskAttemptId());
     LOG.info("{}: Saving manifest file to {}", getName(), manifestFile);
-    save(manifest, manifestTempFile, manifestFile);
-    return manifestFile;
+    final TaskManifest manifest =
+        saveManifest(manifestSource, manifestTempFile, manifestFile, OP_SAVE_TASK_MANIFEST);
+    return Pair.of(manifestFile, manifest);
   }
 
 }

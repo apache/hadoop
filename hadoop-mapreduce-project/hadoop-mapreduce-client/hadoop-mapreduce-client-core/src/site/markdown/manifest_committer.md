@@ -118,8 +118,8 @@ These can be done in `core-site.xml`, if it is not defined in the `mapred-defaul
 
 ## Binding to the manifest committer in Spark.
 
-In Apache Spark, the configuration can be done either with command line options (after the '--conf') or by using the `spark-defaults.conf` file. The following is an example of using `spark-defaults.conf` also including the configuration for Parquet with a subclass of the parquet
-committer which uses the factory mechansim internally.
+In Apache Spark, the configuration can be done either with command line options (after the `--conf`) or by using the `spark-defaults.conf` file.
+The following is an example of using `spark-defaults.conf` also including the configuration for Parquet with a subclass of the parquet committer which uses the factory mechanism internally.
 
 ```
 spark.hadoop.mapreduce.outputcommitter.factory.scheme.abfs org.apache.hadoop.fs.azurebfs.commit.AzureManifestCommitterFactory
@@ -379,6 +379,153 @@ hadoop org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestP
 This works for the files saved at the base of an output directory, and
 any reports saved to a report directory.
 
+Example from a run of the `ITestAbfsTerasort` MapReduce terasort.
+
+```
+bin/mapred successfile abfs://testing@ukwest.dfs.core.windows.net/terasort/_SUCCESS
+
+Manifest file: abfs://testing@ukwest.dfs.core.windows.net/terasort/_SUCCESS
+succeeded: true
+created: 2024-04-18T18:34:34.003+01:00[Europe/London]
+committer: org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitter
+hostname: pi5
+jobId: job_1713461587013_0003
+jobIdSource: JobID
+Diagnostics
+  mapreduce.manifest.committer.io.threads = 192
+  principal = alice
+  stage = committer_commit_job
+
+Statistics:
+counters=((commit_file_rename=1)
+(committer_bytes_committed=21)
+(committer_commit_job=1)
+(committer_files_committed=1)
+(committer_task_directory_depth=2)
+(committer_task_file_count=2)
+(committer_task_file_size=21)
+(committer_task_manifest_file_size=37157)
+(job_stage_cleanup=1)
+(job_stage_create_target_dirs=1)
+(job_stage_load_manifests=1)
+(job_stage_optional_validate_output=1)
+(job_stage_rename_files=1)
+(job_stage_save_success_marker=1)
+(job_stage_setup=1)
+(op_create_directories=1)
+(op_delete=3)
+(op_delete_dir=1)
+(op_get_file_status=9)
+(op_get_file_status.failures=6)
+(op_list_status=3)
+(op_load_all_manifests=1)
+(op_load_manifest=2)
+(op_mkdirs=4)
+(op_msync=1)
+(op_rename=2)
+(op_rename.failures=1)
+(task_stage_commit=2)
+(task_stage_save_task_manifest=1)
+(task_stage_scan_directory=2)
+(task_stage_setup=2));
+
+gauges=();
+
+minimums=((commit_file_rename.min=141)
+(committer_commit_job.min=2306)
+(committer_task_directory_count=0)
+(committer_task_directory_depth=1)
+(committer_task_file_count=0)
+(committer_task_file_size=0)
+(committer_task_manifest_file_size=18402)
+(job_stage_cleanup.min=196)
+(job_stage_create_target_dirs.min=2)
+(job_stage_load_manifests.min=687)
+(job_stage_optional_validate_output.min=66)
+(job_stage_rename_files.min=161)
+(job_stage_save_success_marker.min=653)
+(job_stage_setup.min=571)
+(op_create_directories.min=1)
+(op_delete.min=57)
+(op_delete_dir.min=129)
+(op_get_file_status.failures.min=57)
+(op_get_file_status.min=55)
+(op_list_status.min=202)
+(op_load_all_manifests.min=445)
+(op_load_manifest.min=171)
+(op_mkdirs.min=67)
+(op_msync.min=0)
+(op_rename.failures.min=266)
+(op_rename.min=139)
+(task_stage_commit.min=206)
+(task_stage_save_task_manifest.min=651)
+(task_stage_scan_directory.min=206)
+(task_stage_setup.min=127));
+
+maximums=((commit_file_rename.max=141)
+(committer_commit_job.max=2306)
+(committer_task_directory_count=0)
+(committer_task_directory_depth=1)
+(committer_task_file_count=1)
+(committer_task_file_size=21)
+(committer_task_manifest_file_size=18755)
+(job_stage_cleanup.max=196)
+(job_stage_create_target_dirs.max=2)
+(job_stage_load_manifests.max=687)
+(job_stage_optional_validate_output.max=66)
+(job_stage_rename_files.max=161)
+(job_stage_save_success_marker.max=653)
+(job_stage_setup.max=571)
+(op_create_directories.max=1)
+(op_delete.max=113)
+(op_delete_dir.max=129)
+(op_get_file_status.failures.max=231)
+(op_get_file_status.max=61)
+(op_list_status.max=300)
+(op_load_all_manifests.max=445)
+(op_load_manifest.max=436)
+(op_mkdirs.max=123)
+(op_msync.max=0)
+(op_rename.failures.max=266)
+(op_rename.max=139)
+(task_stage_commit.max=302)
+(task_stage_save_task_manifest.max=651)
+(task_stage_scan_directory.max=302)
+(task_stage_setup.max=157));
+
+means=((commit_file_rename.mean=(samples=1, sum=141, mean=141.0000))
+(committer_commit_job.mean=(samples=1, sum=2306, mean=2306.0000))
+(committer_task_directory_count=(samples=4, sum=0, mean=0.0000))
+(committer_task_directory_depth=(samples=2, sum=2, mean=1.0000))
+(committer_task_file_count=(samples=4, sum=2, mean=0.5000))
+(committer_task_file_size=(samples=2, sum=21, mean=10.5000))
+(committer_task_manifest_file_size=(samples=2, sum=37157, mean=18578.5000))
+(job_stage_cleanup.mean=(samples=1, sum=196, mean=196.0000))
+(job_stage_create_target_dirs.mean=(samples=1, sum=2, mean=2.0000))
+(job_stage_load_manifests.mean=(samples=1, sum=687, mean=687.0000))
+(job_stage_optional_validate_output.mean=(samples=1, sum=66, mean=66.0000))
+(job_stage_rename_files.mean=(samples=1, sum=161, mean=161.0000))
+(job_stage_save_success_marker.mean=(samples=1, sum=653, mean=653.0000))
+(job_stage_setup.mean=(samples=1, sum=571, mean=571.0000))
+(op_create_directories.mean=(samples=1, sum=1, mean=1.0000))
+(op_delete.mean=(samples=3, sum=240, mean=80.0000))
+(op_delete_dir.mean=(samples=1, sum=129, mean=129.0000))
+(op_get_file_status.failures.mean=(samples=6, sum=614, mean=102.3333))
+(op_get_file_status.mean=(samples=3, sum=175, mean=58.3333))
+(op_list_status.mean=(samples=3, sum=671, mean=223.6667))
+(op_load_all_manifests.mean=(samples=1, sum=445, mean=445.0000))
+(op_load_manifest.mean=(samples=2, sum=607, mean=303.5000))
+(op_mkdirs.mean=(samples=4, sum=361, mean=90.2500))
+(op_msync.mean=(samples=1, sum=0, mean=0.0000))
+(op_rename.failures.mean=(samples=1, sum=266, mean=266.0000))
+(op_rename.mean=(samples=1, sum=139, mean=139.0000))
+(task_stage_commit.mean=(samples=2, sum=508, mean=254.0000))
+(task_stage_save_task_manifest.mean=(samples=1, sum=651, mean=651.0000))
+(task_stage_scan_directory.mean=(samples=2, sum=508, mean=254.0000))
+(task_stage_setup.mean=(samples=2, sum=284, mean=142.0000)));
+
+```
+
 ## <a name="summaries"></a> Collecting Job Summaries `mapreduce.manifest.committer.summary.report.directory`
 
 The committer can be configured to save the `_SUCCESS` summary files to a report directory,
@@ -406,6 +553,8 @@ spark.hadoop.mapreduce.manifest.committer.summary.report.directory file:///tmp/r
 This allows for the statistics of jobs to be collected irrespective of their outcome, Whether or not
 saving the `_SUCCESS` marker is enabled, and without problems caused by a chain of queries
 overwriting the markers.
+
+The, `mapred successfile` operation can be used to print these reports. 
 
 
 # <a name="cleanup"></a> Cleanup
@@ -450,9 +599,6 @@ which should normally result in less network IO and a faster cleanup.
 ```
 spark.hadoop.mapreduce.manifest.committer.cleanup.parallel.delete.base.first true
 ```
-
-
-
 
 For GCS, setting `mapreduce.manifest.committer.cleanup.parallel.delete.base.first`
 to `false` may speed up cleanup.
@@ -514,7 +660,7 @@ And optional settings for debugging/performance analysis
 ```xml
 <property>
   <name>mapreduce.manifest.committer.summary.report.directory</name>
-  <value>abfs:// Path within same store/separate store</value>
+  <value>Path within same store/separate store</value>
   <description>Optional: path to where job summaries are saved</description>
 </property>
 ```
@@ -531,7 +677,7 @@ spark.sql.sources.commitProtocolClass org.apache.spark.internal.io.cloud.PathOut
 spark.hadoop.mapreduce.manifest.committer.summary.report.directory  (optional: URI of a directory for job summaries)
 ```
 
-## Experimental: ABFS Rename Rate Limiting `fs.azure.io.rate.limit`
+## <a name="abfs-rate-limit"></a> ABFS Rename Rate Limiting `fs.azure.io.rate.limit`
 
 To avoid triggering store throttling and backoff delays, as well as other
 throttling-related failure conditions file renames during job commit
@@ -640,9 +786,7 @@ spark.sql.sources.commitProtocolClass org.apache.spark.internal.io.cloud.PathOut
 spark.hadoop.mapreduce.manifest.committer.summary.report.directory  (optional: URI of a directory for job summaries)
 ```
 
-# <a name="advanced"></a> Advanced Topics
-
-## Advanced Configuration options
+# <a name="advanced"></a> Advanced Configuration options
 
 There are some advanced options which are intended for development and testing,
 rather than production use.

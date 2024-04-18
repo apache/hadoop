@@ -38,6 +38,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.RecordWriter;
@@ -55,6 +56,7 @@ import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.LoadedMani
 import org.apache.hadoop.util.functional.RemoteIterators;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticCounter;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.MANIFEST_COMMITTER_CLASSNAME;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.SUCCESS_MARKER;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.EntryFileIO.toPath;
@@ -312,6 +314,21 @@ public final class ManifestCommitterTestSupport {
     assertThat(fileOrDir.getType())
         .describedAs("type of " + entry)
         .isEqualTo(type);
+  }
+
+  /**
+   * Assert that none of the named statistics have any failure counts,
+   * which may be from being null or 0.
+   * @param iostats statistics
+   * @param names base name of the statistics (i.e. without ".failures" suffix)
+   */
+  public static void assertNoFailureStatistics(IOStatistics iostats, String... names) {
+    final Map<String, Long> counters = iostats.counters();
+    for (String name : names) {
+      Assertions.assertThat(counters.get(name + ".failures"))
+          .describedAs("Failure count of %s", name)
+          .matches(f -> f == null || f == 0);
+    }
   }
 
   /**

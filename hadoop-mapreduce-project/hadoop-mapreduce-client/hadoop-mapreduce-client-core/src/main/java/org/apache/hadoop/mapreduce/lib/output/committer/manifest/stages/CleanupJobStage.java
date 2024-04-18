@@ -160,10 +160,18 @@ public class CleanupJobStage extends
 
     // to delete.
     LOG.info("{}: Deleting job directory {}", getName(), baseDir);
+    final long directoryCount = args.directoryCount;
+    if (directoryCount > 0) {
+      // log the expected directory count, which drives duration in GCS
+      // and may cause timeouts on azure if the count is too high for a
+      // timely permissions tree scan.
+      LOG.info("{}: Expected directory count: {}", getName(), directoryCount);
+    }
 
+    progress();
+    // check and maybe execute parallel delete of task attempt dirs.
     if (args.deleteTaskAttemptDirsInParallel) {
 
-      // parallel delete of task attempt dirs.
 
       if (args.parallelDeleteAttemptBaseDeleteFirst) {
         // attempt to delete the base dir first.
@@ -180,9 +188,9 @@ public class CleanupJobStage extends
             baseDirDeleted = true;
           } else {
             // failure: log and continue
-            LOG.warn("{}: Exception on initial attempt at deleting base dir {}\n"
-                    + "attempting parallel delete",
-                getName(), baseDir, exception);
+            LOG.warn("{}: Exception on initial attempt at deleting base dir {} and directory count {}"
+                    + "\nFalling back to parallel delete",
+                getName(), baseDir, directoryCount, exception);
           }
         }
       }
@@ -340,26 +348,36 @@ public class CleanupJobStage extends
     private final boolean suppressExceptions;
 
     /**
+     * Non-final count of directories.
+     * Default value, "0", means "unknown".
+     * This can be dynamically updated during job commit.
+     */
+    private long directoryCount;
+
+    /**
      * Arguments to the stage.
      * @param statisticName stage name to report
      * @param enabled is the stage enabled?
      * @param deleteTaskAttemptDirsInParallel delete task attempt dirs in
      * parallel?
      * @param parallelDeleteAttemptBaseDeleteFirst Make an initial attempt to
-     *         delete the base directory in a parallel delete?
+     * delete the base directory in a parallel delete?
      * @param suppressExceptions suppress exceptions?
+     * @param directoryCount directories under job dir; 0 means unknown.
      */
     public Arguments(
         final String statisticName,
         final boolean enabled,
         final boolean deleteTaskAttemptDirsInParallel,
         final boolean parallelDeleteAttemptBaseDeleteFirst,
-        final boolean suppressExceptions) {
+        final boolean suppressExceptions,
+        long directoryCount) {
       this.statisticName = statisticName;
       this.enabled = enabled;
       this.deleteTaskAttemptDirsInParallel = deleteTaskAttemptDirsInParallel;
       this.suppressExceptions = suppressExceptions;
       this.parallelDeleteAttemptBaseDeleteFirst = parallelDeleteAttemptBaseDeleteFirst;
+      this.directoryCount = directoryCount;
     }
 
     public String getStatisticName() {
@@ -382,6 +400,14 @@ public class CleanupJobStage extends
       return parallelDeleteAttemptBaseDeleteFirst;
     }
 
+    public long getDirectoryCount() {
+      return directoryCount;
+    }
+
+    public void setDirectoryCount(final long directoryCount) {
+      this.directoryCount = directoryCount;
+    }
+
     @Override
     public String toString() {
       return "Arguments{" +
@@ -401,8 +427,9 @@ public class CleanupJobStage extends
   public static final Arguments DISABLED = new Arguments(OP_STAGE_JOB_CLEANUP,
       false,
       false,
-      false, false
-  );
+      false,
+      false,
+      0);
 
   /**
    * Build an options argument from a configuration, using the
@@ -430,7 +457,8 @@ public class CleanupJobStage extends
         enabled,
         deleteTaskAttemptDirsInParallel,
         parallelDeleteAttemptBaseDeleteFirst,
-        suppressExceptions);
+        suppressExceptions,
+        0);
   }
 
   /**

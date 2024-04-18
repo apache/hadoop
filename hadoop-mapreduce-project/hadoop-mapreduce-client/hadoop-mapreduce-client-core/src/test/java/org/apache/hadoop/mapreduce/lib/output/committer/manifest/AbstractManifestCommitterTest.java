@@ -57,6 +57,7 @@ import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestS
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestStoreOperations;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.UnreliableManifestStoreOperations;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.CleanupJobStage;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.SaveTaskManifestStage;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.SetupTaskStage;
@@ -171,7 +172,7 @@ public abstract class AbstractManifestCommitterTest
    * How many attempts to save manifests before giving up.
    * Kept small to reduce sleep times and network delays.
    */
-  public static final int SAVE_ATTEMPTS = 3;
+  public static final int SAVE_ATTEMPTS = 4;
 
   /**
    * Submitter for tasks; may be null.
@@ -934,7 +935,7 @@ public abstract class AbstractManifestCommitterTest
     }
 
     // save the manifest for this stage.
-    new SaveTaskManifestStage(taskStageConfig).apply(manifest);
+    new SaveTaskManifestStage(taskStageConfig).apply(() -> manifest);
     return manifest;
   }
 
@@ -1027,7 +1028,7 @@ public abstract class AbstractManifestCommitterTest
     StageConfig stageConfig = getJobStageConfig();
     CleanupJobStage.Result result = new CleanupJobStage(stageConfig)
         .apply(new CleanupJobStage.Arguments(OP_STAGE_JOB_CLEANUP,
-            enabled, deleteTaskAttemptDirsInParallel, attemptBaseDeleteFirst, suppressExceptions));
+            enabled, deleteTaskAttemptDirsInParallel, attemptBaseDeleteFirst, suppressExceptions, 0));
     assertCleanupResult(result, outcome, expectedDirsDeleted);
     return result;
   }
@@ -1049,6 +1050,24 @@ public abstract class AbstractManifestCommitterTest
     return new String(
         readDataset(fs, path, (int) st.getLen()),
         StandardCharsets.UTF_8);
+  }
+
+  /**
+   * Make the store operations unreliable.
+   * If it already was then reset the failure options.
+   * @return the store operations
+   */
+  protected UnreliableManifestStoreOperations makeStoreOperationsUnreliable() {
+    UnreliableManifestStoreOperations failures;
+    final ManifestStoreOperations wrappedOperations = getStoreOperations();
+    if (wrappedOperations instanceof UnreliableManifestStoreOperations) {
+      failures = (UnreliableManifestStoreOperations) wrappedOperations;
+      failures.reset();
+    } else {
+      failures = new UnreliableManifestStoreOperations(wrappedOperations);
+      setStoreOperations(failures);
+    }
+    return failures;
   }
 
   /**

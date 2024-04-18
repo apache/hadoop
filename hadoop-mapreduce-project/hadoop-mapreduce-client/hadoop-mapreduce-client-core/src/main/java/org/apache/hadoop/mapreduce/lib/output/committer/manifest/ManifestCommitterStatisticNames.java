@@ -188,6 +188,12 @@ public final class ManifestCommitterStatisticNames {
       "task_stage_save_task_manifest";
 
   /**
+   * Save a summary file: {@value}.
+   */
+  public static final String OP_SAVE_SUMMARY_FILE =
+      "task_stage_save_summary_file";
+
+  /**
    * Task abort: {@value}.
    */
   public static final String OP_STAGE_TASK_ABORT_TASK
