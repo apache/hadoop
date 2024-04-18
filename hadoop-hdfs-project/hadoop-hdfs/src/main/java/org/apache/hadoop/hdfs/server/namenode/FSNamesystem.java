@@ -6337,7 +6337,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     String tokenId = null;
     Token<DelegationTokenIdentifier> token;
     checkOperation(OperationCategory.WRITE);
-    writeLock();
+    writeLock(FSNamesystemLockMode.FS);
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot issue delegation token");
@@ -6365,7 +6365,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       getEditLog().logGetDelegationToken(dtId, expiryTime);
       tokenId = dtId.toStringStable();
     } finally {
-      writeUnlock(operationName, getLockReportInfoSupplier(tokenId));
+      writeUnlock(FSNamesystemLockMode.FS, operationName, getLockReportInfoSupplier(tokenId));
     }
     getEditLog().logSync();
     logAuditEvent(true, operationName, tokenId);
@@ -7500,7 +7500,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     final INode.BlocksMapUpdateInfo blocksToBeDeleted;
 
     checkOperation(OperationCategory.WRITE);
-    writeLock();
+    writeLock(FSNamesystemLockMode.GLOBAL);
     try {
       checkOperation(OperationCategory.WRITE);
       rootPath = Snapshot.getSnapshotPath(snapshotRoot, snapshotName);
@@ -7512,7 +7512,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       blocksToBeDeleted = FSDirSnapshotOp.deleteSnapshot(
           dir, snapshotManager, iip, snapshotName, now, snapshotRoot, false);
     } finally {
-      writeUnlock(operationName, getLockReportInfoSupplier(rootPath));
+      writeUnlock(FSNamesystemLockMode.GLOBAL, operationName, getLockReportInfoSupplier(rootPath));
     }
     blockManager.addBLocksToMarkedDeleteQueue(
         blocksToBeDeleted.getToDeleteList());
