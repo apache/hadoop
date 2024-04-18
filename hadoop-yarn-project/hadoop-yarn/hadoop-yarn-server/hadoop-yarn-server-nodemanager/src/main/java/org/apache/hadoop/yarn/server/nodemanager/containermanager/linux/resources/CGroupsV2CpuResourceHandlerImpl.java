@@ -18,14 +18,9 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.VisibleForTesting;
-
-import java.io.File;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 
 /**
  * An implementation for using CGroups to restrict CPU usage on Linux. The
@@ -44,29 +39,31 @@ import java.nio.charset.StandardCharsets;
  */
 @InterfaceStability.Unstable
 @InterfaceAudience.Private
-public class CGroupsCpuResourceHandlerImpl extends AbstractCGroupsCpuResourceHandler {
+public class CGroupsV2CpuResourceHandlerImpl extends AbstractCGroupsCpuResourceHandler {
   private static final CGroupsHandler.CGroupController CPU =
       CGroupsHandler.CGroupController.CPU;
 
   @VisibleForTesting
-  static final int CPU_DEFAULT_WEIGHT = 1024; // set by kernel
-  static final int CPU_DEFAULT_WEIGHT_OPPORTUNISTIC = 2;
+  static final int CPU_DEFAULT_WEIGHT = 100; // cgroup v2 default
+  static final int CPU_DEFAULT_WEIGHT_OPPORTUNISTIC = 1;
+  static final int CPU_MAX_WEIGHT = 10000;
+  static final String NO_LIMIT = "max";
 
 
-  CGroupsCpuResourceHandlerImpl(CGroupsHandler cGroupsHandler) {
+  CGroupsV2CpuResourceHandlerImpl(CGroupsHandler cGroupsHandler) {
     super(cGroupsHandler);
   }
 
   @Override
-  protected void updateCgroupMaxCpuLimit(String cgroupId, String quota, String period) throws ResourceHandlerException {
-    if (quota != null) {
-      cGroupsHandler
-          .updateCGroupParam(CPU, cgroupId, CGroupsHandler.CGROUP_CPU_QUOTA_US, quota);
-    }
-    if (period != null) {
-      cGroupsHandler
-          .updateCGroupParam(CPU, cgroupId, CGroupsHandler.CGROUP_CPU_PERIOD_US, period);
-    }
+  protected void updateCgroupMaxCpuLimit(String cgroupId, String max, String period) throws ResourceHandlerException {
+    String cpuMaxLimit = cGroupsHandler.getCGroupParam(CPU, cgroupId, CGroupsHandler.CGROUP_CPU_MAX);
+
+    String[] cpuMaxLimitArray = cpuMaxLimit.split(" ");
+    String maxToSet = max != null ? max : cpuMaxLimitArray[0];
+    maxToSet = maxToSet.equals("-1") ? NO_LIMIT : maxToSet;
+    String periodToSet = period != null ? period : cpuMaxLimitArray[1];
+    cGroupsHandler
+        .updateCGroupParam(CPU, cgroupId, CGroupsHandler.CGROUP_CPU_MAX, maxToSet + " " + periodToSet);
   }
 
   @Override
@@ -74,32 +71,25 @@ public class CGroupsCpuResourceHandlerImpl extends AbstractCGroupsCpuResourceHan
     return CPU_DEFAULT_WEIGHT_OPPORTUNISTIC;
   }
   protected int getCpuWeightByContainerVcores(int containerVCores) {
-    return containerVCores * CPU_DEFAULT_WEIGHT;
+    return Math.max(containerVCores * CPU_DEFAULT_WEIGHT, CPU_MAX_WEIGHT);
   }
 
   @Override
   protected void updateCgroupCpuWeight(String cgroupId, int weight) throws ResourceHandlerException {
-    cGroupsHandler.updateCGroupParam(CPU, cgroupId, CGroupsHandler.CGROUP_CPU_SHARES,
+    cGroupsHandler.updateCGroupParam(CPU, cgroupId, CGroupsHandler.CGROUP_PARAM_WEIGHT,
             String.valueOf(weight));
   }
 
   @Override
   public boolean cpuLimitExists(String cgroupPath) throws ResourceHandlerException {
-    try {
-      return checkCgroupV1CPULimitExists(cgroupPath);
-    } catch (IOException e) {
-      throw new ResourceHandlerException("Failed to check CPU limit", e);
-    }
+    return checkCgroupV2CPULimitExists();
   }
 
-  @InterfaceAudience.Private
-  public static boolean checkCgroupV1CPULimitExists(String path) throws IOException {
-    File quotaFile = new File(path,
-        CPU.getName() + "." + CGroupsHandler.CGROUP_CPU_QUOTA_US);
-    if (quotaFile.exists()) {
-      String contents = FileUtils.readFileToString(quotaFile, StandardCharsets.UTF_8);
-      return Integer.parseInt(contents.trim()) != -1;
-    }
-    return false;
+  private boolean checkCgroupV2CPULimitExists()
+      throws ResourceHandlerException {
+    String globalCpuMaxLimit = cGroupsHandler.getCGroupParam(CPU, "", CGroupsHandler.CGROUP_CPU_MAX);
+    String[] cpuMaxLimitArray = globalCpuMaxLimit.split(" ");
+
+    return !cpuMaxLimitArray[0].equals(NO_LIMIT);
   }
 }
