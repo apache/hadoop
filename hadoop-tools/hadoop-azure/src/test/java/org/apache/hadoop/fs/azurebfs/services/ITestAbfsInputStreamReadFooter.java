@@ -244,21 +244,56 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
       long expectedBCursor;
       long expectedFCursor;
       if(getConfiguration().getInputStreamLazyOptimizationEnabled() && optimizationOn) {
+        // For file smaller than the footerReadBufferSize.
         if (seekPos + actualLength <= footerReadBufferSize) {
+          /*
+           * If the intended length of read is such that the intended read end
+           * will go outside the contentLength range. Now, on the footer read,
+           * it would be able to read only the data allowed in contentLength range.
+           *
+           * If the intended length of read is such that the intended read will
+           * end be in the contentLength range. Then, the read would be allowed
+           * to read whole required data.
+           */
           if (seekPos + length > actualContentLength) {
-            long footerReadStart = max(0, seekPos + length - footerReadBufferSize);
+            /*
+             * The ending of the required data would be more than the contentLength.
+             * So, the footer read would be able to read only the data allowed in
+             * contentLength range. This would be represented in the expectedLimit
+             * of the buffer read.
+             */
+            long footerReadStart = max(0,
+                seekPos + length - footerReadBufferSize);
+            /*
+             * Amount of data filled in buffer is equal to number of bytes from
+             * footerReadStart and contentLength.
+             */
             expectedLimit = actualContentLength - footerReadStart;
+            /*
+             * Pointer in buffer which represent the starting of actual required data
+             * is equal to the bytes between footerReadStart and seekPos.
+             */
             expectedBCursor = seekPos - footerReadStart;
           } else {
+            /*
+             * This would execute a read from the start of the file to (seekPos + actualLength)
+             * The reason of this is that footerReadBufferSize is bigger than
+             * (seekPos + actualLength).
+             */
             expectedLimit = seekPos + actualLength;
             expectedBCursor = seekPos;
           }
         } else {
+          // FileSize is bigger than footerReadBufferSize.
+
           if (seekPos + length > actualContentLength) {
-            long footerReadStart = max(0, seekPos + length - footerReadBufferSize);
+            // Partial data of footerReadBufferSize range is read as part of the
+            // required data is out of contentLength range.
+            long footerReadStart = seekPos + length - footerReadBufferSize;
             expectedLimit = actualContentLength - footerReadStart;
             expectedBCursor = seekPos - footerReadStart;
           } else {
+            // full data of footerReadBufferSize range is read.
             expectedLimit = footerReadBufferSize;
             expectedBCursor = footerReadBufferSize - actualLength;
           }
