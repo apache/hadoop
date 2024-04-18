@@ -97,7 +97,6 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
-import org.apache.hadoop.util.Timer;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -665,8 +664,8 @@ public class DebugAdmin extends Configured implements Tool {
   }
 
   private class VerifyReadableCommand extends DebugCommand {
-    DistributedFileSystem dfs;
-    boolean suppressed = false;
+    private DistributedFileSystem dfs;
+    private boolean suppressed = false;
 
     VerifyReadableCommand() {
       super("verifyReadable",

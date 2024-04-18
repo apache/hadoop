@@ -101,51 +101,43 @@ public class TestVerifyReadable {
     DistributedFileSystem fs = cluster.getFileSystem();
 
     // Successful case with various block lengths and replications
-    {
-      Path testPath = new Path("/testReadable1Repl.txt");
-      DFSTestUtil.createFile(fs, testPath, BLOCK_SIZE, (short) 1, 1234);
-      Assert.assertEquals(0, runDebugCommand(testPath, null, null, 1));
+    Path testPath = new Path("/testReadable1Repl.txt");
+    DFSTestUtil.createFile(fs, testPath, BLOCK_SIZE, (short) 1, 1234);
+    Assert.assertEquals(0, runDebugCommand(testPath, null, null, 1));
 
-      testPath = new Path("/testReadable3Repl.txt");
-      DFSTestUtil.createFile(fs, testPath, BLOCK_SIZE, (short) 3, 1234);
-      Assert.assertEquals(0, runDebugCommand(testPath, null, null, 1));
+    testPath = new Path("/testReadable3Repl.txt");
+    DFSTestUtil.createFile(fs, testPath, BLOCK_SIZE, (short) 3, 1234);
+    Assert.assertEquals(0, runDebugCommand(testPath, null, null, 1));
 
-      testPath = new Path("/testReadableLong3Repl.txt");
-      DFSTestUtil.createFile(fs, testPath, BLOCK_SIZE * 16, (short) 3, 1234);
-      Assert.assertEquals(0, runDebugCommand(testPath, null, null, 1));
-    }
+    testPath = new Path("/testReadableLong3Repl.txt");
+    DFSTestUtil.createFile(fs, testPath, BLOCK_SIZE * 16, (short) 3, 1234);
+    Assert.assertEquals(0, runDebugCommand(testPath, null, null, 1));
 
     // Simple failure cases
-    {
-      // File not found
-      Path testPath = new Path("/test404.txt");
-      Assert.assertEquals(1, runDebugCommand(testPath, null, null, 1));
-    }
+    // File not found
+    testPath = new Path("/test404.txt");
+    Assert.assertEquals(1, runDebugCommand(testPath, null, null, 1));
 
     // Missing replicas
-    {
-      // Deleted replica
-      Path testPath = new Path("/testMissingBlocks.txt");
-      DFSTestUtil.createFile(fs, testPath, BLOCK_SIZE * 3, (short) 2, 1234);
-      // Still readable with 1 replica left
-      deleteReplica(fs, testPath, 1, 1);
-      Assert.assertEquals(0, runDebugCommand(testPath, null, null, 1));
-      // Unreadable when all replicas are gone for a block
-      deleteReplica(fs, testPath, 1, 0);
-      Assert.assertEquals(1, runDebugCommand(testPath, null, null, 1));
-    }
+    // Deleted replica
+    testPath = new Path("/testMissingBlocks.txt");
+    DFSTestUtil.createFile(fs, testPath, BLOCK_SIZE * 3, (short) 2, 1234);
+    // Still readable with 1 replica left
+    deleteReplica(fs, testPath, 1, 1);
+    Assert.assertEquals(0, runDebugCommand(testPath, null, null, 1));
+    // Unreadable when all replicas are gone for a block
+    deleteReplica(fs, testPath, 1, 0);
+    Assert.assertEquals(1, runDebugCommand(testPath, null, null, 1));
 
     // Down DNs
-    {
-      Path testPath = new Path("/testMissingDNs.txt");
-      DFSTestUtil.createFile(fs, testPath, BLOCK_SIZE * 3, (short) 2, 1234);
-      // Still readable with 1 replica left
-      shutdownDn(fs, testPath, 1, 1);
-      Assert.assertEquals(0, runDebugCommand(testPath, null, null, 1));
-      // Unreadable when all replicas are gone for a block
-      shutdownDn(fs, testPath, 1, 0);
-      Assert.assertEquals(1, runDebugCommand(testPath, null, null, 1));
-    }
+    testPath = new Path("/testMissingDNs.txt");
+    DFSTestUtil.createFile(fs, testPath, BLOCK_SIZE * 3, (short) 2, 1234);
+    // Still readable with 1 replica left
+    shutdownDn(fs, testPath, 1, 1);
+    Assert.assertEquals(0, runDebugCommand(testPath, null, null, 1));
+    // Unreadable when all replicas are gone for a block
+    shutdownDn(fs, testPath, 1, 0);
+    Assert.assertEquals(1, runDebugCommand(testPath, null, null, 1));
   }
 
   @Test
@@ -218,7 +210,7 @@ public class TestVerifyReadable {
     }
     FsDatasetSpi fsdataset = matchedDn.getFSDataset();
     fsdataset.invalidate(cluster.getNamesystem().getBlockPoolId(),
-        new Block[] { locs.getLocatedBlocks().get(blkIdx).getBlock().getLocalBlock() });
+        new Block[] {locs.getLocatedBlocks().get(blkIdx).getBlock().getLocalBlock()});
   }
 
   private void shutdownDn(FileSystem fs, Path path, int blkIdx, int dnIndex) throws IOException {
