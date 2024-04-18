@@ -102,9 +102,12 @@ public class ITestAbfsDurationTrackers extends AbstractAbfsIntegrationTest {
    */
   private void assertDurationTracker(IOStatistics ioStatistics) {
     for (AbfsStatistic abfsStatistic : HTTP_DURATION_TRACKER_LIST) {
-      AbstractDoubleAssert doubleAssert = Assertions.assertThat(lookupMeanStatistic(ioStatistics,
-          abfsStatistic.getStatName() + StoreStatisticNames.SUFFIX_MEAN).mean())
-          .describedAs("The DurationTracker Named " + abfsStatistic.getStatName()
+      AbstractDoubleAssert doubleAssert = Assertions.assertThat(
+              lookupMeanStatistic(ioStatistics,
+                  abfsStatistic.getStatName()
+                      + StoreStatisticNames.SUFFIX_MEAN).mean())
+          .describedAs(
+              "The DurationTracker Named " + abfsStatistic.getStatName()
                   + " Doesn't match the expected value.");
       if (abfsStatistic == HTTP_HEAD_REQUEST
           && getConfiguration().getInputStreamLazyOptimizationEnabled()) {
@@ -113,4 +116,5 @@ public class ITestAbfsDurationTrackers extends AbstractAbfsIntegrationTest {
         doubleAssert.isGreaterThan(0.0);
       }
     }
+  }
 }
