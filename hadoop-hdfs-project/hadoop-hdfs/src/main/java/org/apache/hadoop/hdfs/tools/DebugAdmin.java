@@ -34,6 +34,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -117,6 +118,7 @@ public class DebugAdmin extends Configured implements Tool {
       new ComputeMetaCommand(),
       new RecoverLeaseCommand(),
       new VerifyECCommand(),
+      new VerifyReadableCommand(),
       new HelpCommand()
   };
 
@@ -711,12 +713,8 @@ public class DebugAdmin extends Configured implements Tool {
       try {
         if (outputStr != null) {
           File output = new File(outputStr);
-          // Move the old file out if it already exists
-          if (output.exists()) {
-            output.renameTo(new File(outputStr + ".old." + new Timer().now()));
-          }
-          writer =
-              new BufferedWriter(new OutputStreamWriter(Files.newOutputStream(output.toPath())));
+          writer = new BufferedWriter(new OutputStreamWriter(Files.newOutputStream(output.toPath()),
+              StandardCharsets.UTF_8));
         }
 
         // -path takes priority over -input
@@ -731,13 +729,14 @@ public class DebugAdmin extends Configured implements Tool {
         if (!input.exists()) {
           return 1;
         }
-        BufferedReader reader =
-            new BufferedReader(new InputStreamReader(Files.newInputStream(input.toPath())));
+        BufferedReader reader = new BufferedReader(
+            new InputStreamReader(Files.newInputStream(input.toPath()), StandardCharsets.UTF_8));
         Set<Path> paths = new HashSet<>();
         String line;
         while ((line = reader.readLine()) != null) {
           paths.add(new Path(line.trim()));
         }
+        reader.close();
         int concurrency = concurrencyStr == null ? 1 : Integer.parseInt(concurrencyStr);
         return handlePaths(paths, writer, concurrency);
       } finally {
