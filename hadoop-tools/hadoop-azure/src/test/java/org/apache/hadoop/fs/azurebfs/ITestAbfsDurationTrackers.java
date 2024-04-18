@@ -105,12 +105,8 @@ public class ITestAbfsDurationTrackers extends AbstractAbfsIntegrationTest {
       AbstractDoubleAssert doubleAssert = Assertions.assertThat(lookupMeanStatistic(ioStatistics,
           abfsStatistic.getStatName() + StoreStatisticNames.SUFFIX_MEAN).mean())
           .describedAs("The DurationTracker Named " + abfsStatistic.getStatName()
-                  + " Doesn't match the expected value.");
-      if (abfsStatistic == HTTP_HEAD_REQUEST
-          && getConfiguration().getInputStreamLazyOptimizationEnabled()) {
-        doubleAssert.isEqualTo(0.0);
-      } else {
-        doubleAssert.isGreaterThan(0.0);
+                  + " Doesn't match the expected value.")
+          .isGreaterThan(0.0);
       }
     }
 }
