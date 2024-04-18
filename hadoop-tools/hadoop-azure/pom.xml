@@ -619,7 +619,6 @@
                     <exclude>**/azurebfs/ITestSmallWriteOptimization.java</exclude>
                     <exclude>**/azurebfs/ITestAbfsStreamStatistics*.java</exclude>
                     <exclude>**/azurebfs/services/ITestReadBufferManager.java</exclude>
-                    <exclude>**/azurebfs/ITestAbfsDurationTrackers.java</exclude>
                     <exclude>**/azurebfs/commit/*.java</exclude>
                   </excludes>
 
@@ -663,7 +662,6 @@
                     <include>**/azurebfs/ITestSmallWriteOptimization.java</include>
                     <include>**/azurebfs/services/ITestReadBufferManager.java</include>
                     <include>**/azurebfs/ITestAbfsStreamStatistics*.java</include>
-                    <exclude>**/azurebfs/ITestAbfsDurationTrackers.java</exclude>
                     <include>**/azurebfs/commit/*.java</include>
                   </includes>
                 </configuration>
