@@ -103,7 +103,7 @@ class CGroupsV2HandlerImpl extends AbstractCGroupsHandler {
   }
 
   /**
-   * Parse the cgroup v2 controllers file to check the enabled controllers.
+   * Parse the cgroup v2 controllers file (cgroup.controllers) to check the enabled controllers.
    * @param cgroupPath path to the cgroup directory
    * @return set of enabled and YARN supported controllers.
    * @throws IOException if the file is not found or cannot be read
@@ -137,7 +137,6 @@ class CGroupsV2HandlerImpl extends AbstractCGroupsHandler {
    */
   @Override
   protected void updateEnabledControllersInHierarchy(File yarnHierarchy) throws ResourceHandlerException {
-    PrintWriter pw = null;
     try {
       Set<String> enabledControllers = readControllersFile(yarnHierarchy.getAbsolutePath());
       if (enabledControllers.isEmpty()) {
@@ -160,16 +159,12 @@ class CGroupsV2HandlerImpl extends AbstractCGroupsHandler {
         return;
       }
       Writer w = new OutputStreamWriter(Files.newOutputStream(subtreeControlFile.toPath()), StandardCharsets.UTF_8);
-      pw = new PrintWriter(w);
-      pw.write(String.join(" ", enabledControllers));
-
+      try(PrintWriter pw = new PrintWriter(w)) {
+        pw.write(String.join(" ", enabledControllers));
+      }
     } catch (IOException e) {
       throw new ResourceHandlerException("Failed to update the controllers file in the cgroup hierarchy: " +
               yarnHierarchy.getAbsolutePath(), e);
-    } finally {
-      if (pw != null) {
-        pw.close();
-      }
     }
   }
 
