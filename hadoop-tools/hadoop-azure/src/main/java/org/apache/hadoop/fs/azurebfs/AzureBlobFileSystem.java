@@ -224,12 +224,13 @@ public class AzureBlobFileSystem extends FileSystem
       }
     }
 
-    if (!getIsNamespaceEnabled(
-        new TracingContext(clientCorrelationId, fileSystemId,
-            FSOperationType.GET_FILESTATUS, tracingHeaderFormat, listener)) && (
+    if ((
         abfsConfiguration.createEncryptionContextProvider() != null
             || StringUtils.isNotEmpty(
-            abfsConfiguration.getEncodedClientProvidedEncryptionKey()))) {
+            abfsConfiguration.getEncodedClientProvidedEncryptionKey()))
+        && !getIsNamespaceEnabled(
+        new TracingContext(clientCorrelationId, fileSystemId,
+            FSOperationType.GET_FILESTATUS, tracingHeaderFormat, listener))) {
       close();
       throw new PathIOException(uri.getPath(),
           "Non HNS account can not have CPK configs enabled.");
