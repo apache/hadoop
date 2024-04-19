@@ -251,9 +251,8 @@ abstract class StripeReader {
         }
         return length;
       } catch (ChecksumException ce) {
-        DFSClient.LOG.warn("Found Checksum error for "
-            + currentBlock + " from " + currentNode
-            + " at " + ce.getPos());
+        DFSClient.LOG.warn("Found Checksum error for {} from {} at {}",
+             currentBlock, currentNode, ce.getPos());
         //Clear buffer to make next decode success
         strategy.getReadBuffer().clear();
         // we want to remember which block replicas we have tried
@@ -274,15 +273,13 @@ abstract class StripeReader {
               offsetInBlock, targetBlocks,
               readerInfos, chunkIndex, readTo)) {
             blockReader = readerInfos[chunkIndex].reader;
-            String msg = "Reconnect to " + currentNode.getInfoAddr()
-                + " for block " + currentBlock.getBlock();
-            DFSClient.LOG.warn(msg);
+            DFSClient.LOG.warn("Reconnect to {} for block {}",
+                currentNode.getInfoAddr(), currentBlock.getBlock());
             continue;
           }
         }
-        DFSClient.LOG.warn("Exception while reading from "
-            + currentBlock + " of " + dfsStripedInputStream.getSrc() + " from "
-            + currentNode, e);
+        DFSClient.LOG.warn("Exception while reading from {} of {} from {}",
+             currentBlock, dfsStripedInputStream.getSrc(), currentNode, e);
         throw e;
       }
     }
