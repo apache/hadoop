@@ -216,13 +216,13 @@ public class ITestAbfsInputStreamSmallFileReads extends ITestAbfsInputStream {
       if (conf.readSmallFilesCompletely() && smallFile) {
         assertBuffersAreEqual(fileContent, abfsInputStream.getBuffer(), conf, testFilePath);
         /*
-        * If head optimization is enabled. The stream can do full read file optimization on the first read if
-        * the seekPos is less than readBufferSize and the length is such that (seekPos + length) < readBufferSize.
-        * Since it is unaware of the contentLength, it would try to read the full buffer size.
-        *
-        * In case of the head optimization is enabled, and readBufferSize < fileContentLength, the stream will
-        * read only the readBuffer and would set internal pointers to the end of readBufferLength.
-        */
+         * If head optimization is enabled. The stream can do full read file optimization on the first read if
+         * the seekPos is less than readBufferSize and the length is such that (seekPos + length) < readBufferSize.
+         * Since it is unaware of the contentLength, it would try to read the full buffer size.
+         *
+         * In case of the head optimization is enabled, and readBufferSize < fileContentLength, the stream will
+         * read only the readBuffer and would set internal pointers to the end of readBufferLength.
+         */
         expectedFCursor = min(readBufferSize, fileContentLength);
         expectedLimit = min(readBufferSize, fileContentLength);
         expectedBCursor = min(readBufferSize, seekPos + length);

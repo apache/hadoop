@@ -242,7 +242,7 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
         expectedBytesReceived += bytesWrittenToFile;
       } else {
         /*
-         * With head optimization enabled and read fullFile optimization enabled,
+         * With head optimization enabled and footer optimization enabled,
          * the abfsInputStream is not aware of the contentLength and hence,
          * it would only read data for which the range is provided. With the first
          * remote call done, the inputStream will get aware of the contentLength

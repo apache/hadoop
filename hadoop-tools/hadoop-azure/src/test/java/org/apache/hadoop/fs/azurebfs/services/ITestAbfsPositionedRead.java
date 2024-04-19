@@ -75,12 +75,12 @@ public class ITestAbfsPositionedRead extends AbstractAbfsIntegrationTest {
       // AbfsInputStream buffer.
       boolean isHeadOptimization = getConfiguration().getInputStreamLazyOptimizationEnabled();
       /*
-      * If head optimization is enabled, this test would read the given number of bytes only
-      * in the first read call. Reason being, due to the head optimization it would not
-      * know the contentLength and because the byteLength required is less than the
-      * footerReadThreshold, it would read from the starting of the file to the given
-      * byteLength only.
-      */
+       * If head optimization is enabled, this test would read the given number of bytes only
+       * in the first read call. Reason being, due to the head optimization it would not
+       * know the contentLength and because the byteLength required is less than the
+       * footerReadThreshold, it would read from the starting of the file to the given
+       * byteLength only.
+       */
       Assertions
           .assertThat(Arrays.copyOfRange(
               ((AbfsInputStream) inputStream.getWrappedStream()).getBuffer(), 0,
