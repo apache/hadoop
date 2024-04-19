@@ -4388,4 +4388,11 @@ public class DataNode extends ReconfigurableBase
   public BlockPoolManager getBlockPoolManager() {
     return blockPoolManager;
   }
+
+  @VisibleForTesting
+  public void closeDataXceiverServer() {
+    if (xserver != null) {
+      xserver.closeAllPeers();
+    }
+  }
 }

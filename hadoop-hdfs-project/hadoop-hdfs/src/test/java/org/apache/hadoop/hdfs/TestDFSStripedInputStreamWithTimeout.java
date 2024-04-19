@@ -173,7 +173,10 @@ public class TestDFSStripedInputStreamWithTimeout {
       in.seek(readTotal);
       int nread = in.read(buf, 0, bufLen);
       // Simulated time-consuming processing operations, such as UDF.
-      Thread.sleep(10000);
+      // And datanodes close connect because of socket timeout.
+      cluster.dataNodes.forEach(dn -> {
+          dn.getDatanode().closeDataXceiverServer();
+      });
       in.seek(nread);
       // StripeRange 6MB
       bufLen = 1024 * 1024 * 6;
