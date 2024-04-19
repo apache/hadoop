@@ -73,12 +73,12 @@ public class CommitTaskStage extends
     // Now save with retry, updating the statistics on every attempt.
     Pair<Path, TaskManifest> p = new SaveTaskManifestStage(getStageConfig())
         .apply(() -> {
-              // save a snapshot of the IO Statistics
-              final IOStatisticsSnapshot manifestStats = snapshotIOStatistics();
-              manifestStats.aggregate(getIOStatistics());
-              manifest.setIOStatistics(manifestStats);
-              return manifest;
-            });
+          /* save a snapshot of the IO Statistics */
+          final IOStatisticsSnapshot manifestStats = snapshotIOStatistics();
+          manifestStats.aggregate(getIOStatistics());
+          manifest.setIOStatistics(manifestStats);
+          return manifest;
+        });
     return new CommitTaskStage.Result(p.getLeft(), p.getRight());
   }
 

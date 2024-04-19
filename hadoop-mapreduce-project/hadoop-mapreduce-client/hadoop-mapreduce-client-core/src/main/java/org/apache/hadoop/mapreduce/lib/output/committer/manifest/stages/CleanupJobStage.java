@@ -188,8 +188,8 @@ public class CleanupJobStage extends
             baseDirDeleted = true;
           } else {
             // failure: log and continue
-            LOG.warn("{}: Exception on initial attempt at deleting base dir {} and directory count {}"
-                    + "\nFalling back to parallel delete",
+            LOG.warn("{}: Exception on initial attempt at deleting base dir {}"
+                    + " and directory count {}. Falling back to parallel delete",
                 getName(), baseDir, directoryCount, exception);
           }
         }

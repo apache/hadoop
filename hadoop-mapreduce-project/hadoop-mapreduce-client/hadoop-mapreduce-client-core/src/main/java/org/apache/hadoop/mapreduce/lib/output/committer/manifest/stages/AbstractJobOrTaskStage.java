@@ -991,7 +991,7 @@ public abstract class AbstractJobOrTaskStage<IN, OUT>
   }
 
   /**
-   * Get the task attemptDir; raise an NPE
+   * Get the task attemptDir and raise an NPE
    * if it is null.
    * @return a non-null task attempt dir.
    */

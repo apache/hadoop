@@ -554,8 +554,7 @@ This allows for the statistics of jobs to be collected irrespective of their out
 saving the `_SUCCESS` marker is enabled, and without problems caused by a chain of queries
 overwriting the markers.
 
-The, `mapred successfile` operation can be used to print these reports. 
-
+The `mapred successfile` operation can be used to print these reports.
 
 # <a name="cleanup"></a> Cleanup
 
