@@ -126,8 +126,8 @@ public final class ZKCuratorManager {
    * Start the connection to the ZooKeeper ensemble.
    * @throws IOException If the connection cannot be started.
    */
-  public void start() throws IOException{
-    this.start(new ArrayList<>());
+  public void start(String zkHostPort) throws IOException{
+    this.start(new ArrayList<>(), zkHostPort);
   }
 
   /**
@@ -135,8 +135,8 @@ public final class ZKCuratorManager {
    * @param authInfos List of authentication keys.
    * @throws IOException If the connection cannot be started.
    */
-  public void start(List<AuthInfo> authInfos) throws IOException {
-    this.start(authInfos, false);
+  public void start(List<AuthInfo> authInfos, String zkHostPort) throws IOException {
+    this.start(authInfos, false, zkHostPort);
   }
 
   /**
@@ -146,19 +146,12 @@ public final class ZKCuratorManager {
    * @param sslEnabled If the connection should be SSL/TLS encrypted.
    * @throws IOException            If the connection cannot be started.
    */
-  public void start(List<AuthInfo> authInfos, boolean sslEnabled)
+  public void start(List<AuthInfo> authInfos, boolean sslEnabled, String zkHostPort)
       throws IOException{
 
     ZKClientConfig zkClientConfig = new ZKClientConfig();
 
     // Connect to the ZooKeeper ensemble
-    String zkHostPort = conf.get(CommonConfigurationKeys.ZK_ADDRESS);
-    if (zkHostPort == null) {
-      throw new IOException(
-          CommonConfigurationKeys.ZK_ADDRESS + " is not configured.");
-    }
-    LOG.debug("Configured {} as {}", CommonConfigurationKeys.ZK_ADDRESS, zkHostPort);
-
     int numRetries = conf.getInt(CommonConfigurationKeys.ZK_NUM_RETRIES,
         CommonConfigurationKeys.ZK_NUM_RETRIES_DEFAULT);
     int zkSessionTimeout = conf.getInt(CommonConfigurationKeys.ZK_TIMEOUT_MS,

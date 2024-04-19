@@ -22,7 +22,6 @@ import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.RetryNTimes;
 import org.apache.curator.test.TestingServer;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.store.RouterStore;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
@@ -40,6 +39,7 @@ import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.waitStateStore;
+import static org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreZooKeeperImpl.FEDERATION_STORE_ZK_ADDRESS;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -74,7 +74,7 @@ public class TestRouterHeartbeatService {
         .retryPolicy(new RetryNTimes(100, 100))
         .build();
     curatorFramework.start();
-    routerConfig.set(CommonConfigurationKeys.ZK_ADDRESS, connectStr);
+    routerConfig.set(FEDERATION_STORE_ZK_ADDRESS, connectStr);
     router.init(routerConfig);
     router.start();
 

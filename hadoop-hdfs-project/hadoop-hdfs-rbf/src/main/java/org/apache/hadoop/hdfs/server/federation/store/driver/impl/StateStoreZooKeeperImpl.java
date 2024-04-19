@@ -104,9 +104,14 @@ public class StateStoreZooKeeperImpl extends StateStoreSerializableImpl {
     } else {
       LOG.info("Init StateStoreZookeeperImpl by sync mode.");
     }
+    String zkHostPort = conf.get(RBFConfigKeys.FEDERATION_STORE_ZK_ADDRESS);
+    if (zkHostPort == null) {
+      LOG.error("{} is not configured.", RBFConfigKeys.FEDERATION_STORE_ZK_ADDRESS);
+      return false;
+    }
     try {
       this.zkManager = new ZKCuratorManager(conf);
-      this.zkManager.start();
+      this.zkManager.start(zkHostPort);
       this.zkAcl = ZKCuratorManager.getZKAcls(conf);
     } catch (IOException e) {
       LOG.error("Cannot initialize the ZK connection", e);
