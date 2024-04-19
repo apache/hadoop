@@ -212,17 +212,6 @@ public class AzureBlobFileSystem extends FileSystem
     tracingHeaderFormat = abfsConfiguration.getTracingHeaderFormat();
     this.setWorkingDirectory(this.getHomeDirectory());
 
-    if (!getIsNamespaceEnabled(
-        new TracingContext(clientCorrelationId, fileSystemId,
-            FSOperationType.GET_FILESTATUS, tracingHeaderFormat, listener)) && (
-        abfsConfiguration.createEncryptionContextProvider() != null
-            || StringUtils.isNotEmpty(
-            abfsConfiguration.getEncodedClientProvidedEncryptionKey()))) {
-      close();
-      throw new PathIOException(
-          "Non HNS account " + uri.getPath() + " can not have CPK configs enabled.");
-    }
-
     TracingContext tracingContext = new TracingContext(clientCorrelationId,
             fileSystemId, FSOperationType.CREATE_FILESYSTEM, tracingHeaderFormat, listener);
     if (abfsConfiguration.getCreateRemoteFileSystemDuringInitialization()) {
@@ -233,6 +222,17 @@ public class AzureBlobFileSystem extends FileSystem
           checkException(null, ex, AzureServiceErrorCode.FILE_SYSTEM_ALREADY_EXISTS);
         }
       }
+    }
+
+    if (!getIsNamespaceEnabled(
+        new TracingContext(clientCorrelationId, fileSystemId,
+            FSOperationType.GET_FILESTATUS, tracingHeaderFormat, listener)) && (
+        abfsConfiguration.createEncryptionContextProvider() != null
+            || StringUtils.isNotEmpty(
+            abfsConfiguration.getEncodedClientProvidedEncryptionKey()))) {
+      close();
+      throw new PathIOException(
+          "Non HNS account " + uri.getPath() + " can not have CPK configs enabled.");
     }
 
     LOG.trace("Initiate check for delegation token manager");
