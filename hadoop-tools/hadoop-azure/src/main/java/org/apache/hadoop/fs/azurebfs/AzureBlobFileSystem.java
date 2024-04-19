@@ -229,7 +229,11 @@ public class AzureBlobFileSystem extends FileSystem
         abfsConfiguration.getEncodedClientProvidedEncryptionKey()))
         && !getIsNamespaceEnabled(
         new TracingContext(clientCorrelationId, fileSystemId,
-            FSOperationType.GET_FILESTATUS, tracingHeaderFormat, listener))) {
+            FSOperationType.CREATE_FILESYSTEM, tracingHeaderFormat, listener))) {
+      /*
+       * Close the filesystem gracefully before throwing exception. Graceful close
+       * will ensure that all resources are released properly.
+       */
       close();
       throw new PathIOException(uri.getPath(),
           "Non HNS account can not have CPK configs enabled.");
