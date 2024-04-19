@@ -184,6 +184,9 @@ class CGroupsV2HandlerImpl extends AbstractCGroupsHandler {
       enabledControllers.removeAll(subtreeControllerSet);
       Writer w = new OutputStreamWriter(Files.newOutputStream(subtreeControlFile.toPath(), StandardOpenOption.APPEND), StandardCharsets.UTF_8);
       try(PrintWriter pw = new PrintWriter(w)) {
+        LOG.info("Appending the following controllers to the cgroup.subtree_control file: {}, " +
+                "for the cgroup hierarchy: {}", String.join(" ", enabledControllers),
+            yarnHierarchy.getAbsolutePath());
         if (!subtreeControllers.isEmpty()) {
           pw.write(" ");
         }
