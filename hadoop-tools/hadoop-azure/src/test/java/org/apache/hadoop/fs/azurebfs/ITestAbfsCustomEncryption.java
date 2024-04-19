@@ -171,9 +171,6 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
   }
 
   public ITestAbfsCustomEncryption() throws Exception {
-    Assume.assumeTrue("Account should be HNS enabled for CPK",
-        getConfiguration().getBoolean(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT,
-            false));
     new Random().nextBytes(cpk);
     cpkSHAEncoded = EncodingHelper.getBase64EncodedString(
         EncodingHelper.getSHA256Hash(cpk));
@@ -181,11 +178,36 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
 
   @Test
   public void testCustomEncryptionCombinations() throws Exception {
-    AzureBlobFileSystem fs = getOrCreateFS();
+    final AzureBlobFileSystem fs;
+    try {
+      fs = getOrCreateFS();
+    } catch (PathIOException ex) {
+      if (ex.getMessage()
+          .contains("Non HNS account can not have CPK configs enabled.")) {
+        return;
+      } else {
+        throw ex;
+      }
+    }
     Path testPath = path("/testFile");
     String relativePath = fs.getAbfsStore().getRelativePath(testPath);
-    MockEncryptionContextProvider ecp =
-        (MockEncryptionContextProvider) createEncryptedFile(testPath);
+    final MockEncryptionContextProvider ecp;
+    try {
+      ecp = (MockEncryptionContextProvider) createEncryptedFile(testPath);
+    } catch (PathIOException ex) {
+      if (ex.getMessage()
+          .contains("Non HNS account can not have CPK configs enabled.")) {
+        return;
+      } else {
+        throw ex;
+      }
+    }
+    Assertions.assertThat(
+            getConfiguration().getBoolean(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT,
+                false))
+        .describedAs(
+            "Encryption tests should run only on namespace enabled account")
+        .isTrue();
     AbfsRestOperation op = callOperation(fs, new Path(relativePath), ecp);
     if (op == null) {
       return;

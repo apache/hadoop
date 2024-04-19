@@ -231,8 +231,8 @@ public class AzureBlobFileSystem extends FileSystem
             || StringUtils.isNotEmpty(
             abfsConfiguration.getEncodedClientProvidedEncryptionKey()))) {
       close();
-      throw new PathIOException(
-          "Non HNS account " + uri.getPath() + " can not have CPK configs enabled.");
+      throw new PathIOException(uri.getPath(),
+          "Non HNS account can not have CPK configs enabled.");
     }
 
     LOG.trace("Initiate check for delegation token manager");
