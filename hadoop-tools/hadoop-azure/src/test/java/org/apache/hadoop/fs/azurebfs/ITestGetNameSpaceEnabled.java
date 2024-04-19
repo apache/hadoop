@@ -135,8 +135,6 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
   public void testFailedRequestWhenFSNotExist() throws Exception {
     AbfsConfiguration config = this.getConfiguration();
     config.setBoolean(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION, false);
-    config.setBoolean(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, config.getBoolean(
-        FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false));
     String testUri = this.getTestUrl();
     String nonExistingFsUrl = getAbfsScheme() + "://" + UUID.randomUUID()
             + testUri.substring(testUri.indexOf("@"));
