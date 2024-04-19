@@ -204,7 +204,7 @@ public class ITestAbfsInputStreamSmallFileReads extends ITestAbfsInputStream {
       final int readBufferSize = conf.getReadBufferSize();
       final int fileContentLength = fileContent.length;
       final boolean smallFile;
-      final boolean headOptimization = getConfiguration().getInputStreamLazyOptimizationEnabled();
+      final boolean headOptimization = getConfiguration().isInputStreamLazyOptimizationEnabled();
 
       if (headOptimization) {
         smallFile = ((seekPos + length) <= readBufferSize);

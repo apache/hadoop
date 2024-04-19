@@ -73,7 +73,7 @@ public class ITestAbfsPositionedRead extends AbstractAbfsIntegrationTest {
       // Read only 10 bytes from offset 0. But by default it will do the seek
       // and read where the entire 100 bytes get read into the
       // AbfsInputStream buffer.
-      boolean isHeadOptimization = getConfiguration().getInputStreamLazyOptimizationEnabled();
+      boolean isHeadOptimization = getConfiguration().isInputStreamLazyOptimizationEnabled();
       /*
        * If head optimization is enabled, this test would read the given number of bytes only
        * in the first read call. Reason being, due to the head optimization it would not

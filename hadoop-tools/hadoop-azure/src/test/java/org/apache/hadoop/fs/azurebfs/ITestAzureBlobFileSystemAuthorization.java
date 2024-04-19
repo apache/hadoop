@@ -329,7 +329,7 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
       break;
     case Open:
       try(InputStream is = fs.open(reqPath)) {
-        if (getConfiguration().getInputStreamLazyOptimizationEnabled()) {
+        if (getConfiguration().isInputStreamLazyOptimizationEnabled()) {
           try {
             is.read();
           } catch (IOException ex) {

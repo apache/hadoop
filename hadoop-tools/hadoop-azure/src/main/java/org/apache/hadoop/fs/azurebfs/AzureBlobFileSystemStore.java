@@ -850,7 +850,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         }
       } else {
         if (client.getEncryptionType() == EncryptionType.ENCRYPTION_CONTEXT
-            || !abfsConfiguration.getInputStreamLazyOptimizationEnabled()) {
+            || !abfsConfiguration.isInputStreamLazyOptimizationEnabled()) {
           final AbfsHttpOperation op = client.getPathStatus(relativePath, false,
               tracingContext, null).getResult();
           resourceType = op.getResponseHeader(
@@ -878,7 +878,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         }
       }
 
-      if ((fileStatus != null || !abfsConfiguration.getInputStreamLazyOptimizationEnabled())
+      if ((fileStatus != null || !abfsConfiguration.isInputStreamLazyOptimizationEnabled())
           && parseIsDirectory(resourceType)) {
         throw new AbfsRestOperationException(
             AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode(),
@@ -923,7 +923,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             .withEncryptionAdapter(contextEncryptionAdapter)
             .withAbfsBackRef(fsBackRef)
             .withPrefetchTriggerOnFirstRead(
-                abfsConfiguration.getPrefetchOnFirstReadEnabled())
+                abfsConfiguration.isPrefetchOnFirstReadEnabled())
             .build();
   }
 

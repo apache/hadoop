@@ -106,7 +106,7 @@ public class ITestAbfsDurationTrackers extends AbstractAbfsIntegrationTest {
           abfsStatistic.getStatName() + StoreStatisticNames.SUFFIX_MEAN).mean())
           .describedAs("The DurationTracker Named " + abfsStatistic.getStatName()
                   + " Doesn't match the expected value.");
-      if (abfsStatistic == HTTP_HEAD_REQUEST && getConfiguration().getInputStreamLazyOptimizationEnabled()) {
+      if (abfsStatistic == HTTP_HEAD_REQUEST && getConfiguration().isInputStreamLazyOptimizationEnabled()) {
         /*
          * In an environment where this is the only test running, there would be no
          * head call for the fileSystem as the inputStream would be lazily opened.

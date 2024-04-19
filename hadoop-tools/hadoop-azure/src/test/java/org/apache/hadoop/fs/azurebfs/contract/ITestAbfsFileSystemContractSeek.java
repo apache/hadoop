@@ -131,7 +131,7 @@ public class ITestAbfsFileSystemContractSeek extends AbstractContractSeekTest{
       boolean isPrefetchSwitchedOffForFirstRead
           = !((AzureBlobFileSystem) getFileSystem()).getAbfsStore()
           .getAbfsConfiguration()
-          .getPrefetchOnFirstReadEnabled();
+          .isPrefetchOnFirstReadEnabled();
       /*
        * If prefetchReadAheadOnFirstRead is switched off, there will be no
        * prefetch on the first read call. So the process would be having only data

@@ -1260,11 +1260,11 @@ public class AbfsConfiguration{
     return isChecksumValidationEnabled;
   }
 
-  public boolean getInputStreamLazyOptimizationEnabled() {
+  public boolean isInputStreamLazyOptimizationEnabled() {
     return isInputStreamLazyOptimizationEnabled;
   }
 
-  public boolean getPrefetchOnFirstReadEnabled() {
+  public boolean isPrefetchOnFirstReadEnabled() {
     return isPrefetchOnFirstReadEnabled;
   }
 

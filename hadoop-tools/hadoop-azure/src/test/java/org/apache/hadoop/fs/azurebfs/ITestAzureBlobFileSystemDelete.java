@@ -82,7 +82,7 @@ public class ITestAzureBlobFileSystemDelete extends
 
   @Override
   public AzureBlobFileSystem getFileSystem() throws IOException {
-    if (!getConfiguration().getInputStreamLazyOptimizationEnabled()) {
+    if (!getConfiguration().isInputStreamLazyOptimizationEnabled()) {
       return super.getFileSystem();
     }
     try {

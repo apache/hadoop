@@ -228,7 +228,7 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
       final boolean optimizationOn;
       long actualLength;
 
-      if (getConfiguration().getInputStreamLazyOptimizationEnabled()) {
+      if (getConfiguration().isInputStreamLazyOptimizationEnabled()) {
         optimizationOn = conf.optimizeFooterRead() && length <= AbfsInputStream.FOOTER_SIZE;
       } else {
         long footerStart = max(0,
@@ -245,7 +245,7 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
       long expectedLimit;
       long expectedBCursor;
       long expectedFCursor;
-      if (getConfiguration().getInputStreamLazyOptimizationEnabled()
+      if (getConfiguration().isInputStreamLazyOptimizationEnabled()
           && optimizationOn) {
         // For file smaller than the footerReadBufferSize.
         if (seekPos + actualLength <= footerReadBufferSize) {
@@ -305,7 +305,7 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
         long bytesToRead = min(actualLength, bytesRemaining);
         expectedBCursor += bytesToRead;
         expectedFCursor = seekPos + actualLength;
-      } else if (!getConfiguration().getInputStreamLazyOptimizationEnabled()
+      } else if (!getConfiguration().isInputStreamLazyOptimizationEnabled()
           && optimizationOn) {
         if (actualContentLength <= footerReadBufferSize) {
           expectedLimit = actualContentLength;
@@ -337,7 +337,7 @@ public class ITestAbfsInputStreamReadFooter extends ITestAbfsInputStream {
       //  Verify data read to AbfsInputStream buffer
       int from = seekPos;
       if (optimizationOn) {
-        if (!getConfiguration().getInputStreamLazyOptimizationEnabled()) {
+        if (!getConfiguration().isInputStreamLazyOptimizationEnabled()) {
           from = (int) max(0, actualContentLength - footerReadBufferSize);
         } else {
           from = (int) (expectedFCursor - expectedLimit);

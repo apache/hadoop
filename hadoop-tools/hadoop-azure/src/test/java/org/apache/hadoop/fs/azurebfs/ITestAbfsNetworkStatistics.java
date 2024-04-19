@@ -221,7 +221,7 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
       in = fs.open(getResponsePath);
       // Network stats calculation: For Creating AbfsInputStream:
       // 1 GetFileStatus request to fetch file size = 1 connection and 1 get response
-      if (!getConfiguration().getInputStreamLazyOptimizationEnabled()) {
+      if (!getConfiguration().isInputStreamLazyOptimizationEnabled()) {
         /*
          * If head optimization is enabled, getFileStatus is not called. Hence, there
          * would be no connection made and get response for the operation 'open'.
@@ -237,7 +237,7 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
       // 1 read request = 1 connection and 1 get response
       expectedConnectionsMade++;
       expectedGetResponses++;
-      if (!getConfiguration().getInputStreamLazyOptimizationEnabled()
+      if (!getConfiguration().isInputStreamLazyOptimizationEnabled()
           || !getConfiguration().optimizeFooterRead()) {
         expectedBytesReceived += bytesWrittenToFile;
       } else {
@@ -289,7 +289,7 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
       in = fs.open(getResponsePath);
       // Network stats calculation: For Creating AbfsInputStream:
       // 1 GetFileStatus for file size = 1 connection and 1 get response
-      if (!getConfiguration().getInputStreamLazyOptimizationEnabled()) {
+      if (!getConfiguration().isInputStreamLazyOptimizationEnabled()) {
         /*
          * If head optimization is enabled, getFileStatus is not called. Hence, there
          * would be no connection made and get response for the operation 'open'.
