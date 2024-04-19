@@ -396,7 +396,7 @@
     <dependency>
       <groupId>org.jmockit</groupId>
       <artifactId>jmockit</artifactId>
-      <version>1.24</version>
+      <version>${jmockit.version}</version>
       <scope>test</scope>
     </dependency>
 
@@ -494,6 +494,18 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <argLine>
+            -javaagent:"${settings.localRepository}"/org/jmockit/jmockit/${jmockit.version}/jmockit-${jmockit.version}.jar
+            -Xmx2048m
+            -XX:+HeapDumpOnOutOfMemoryError
+          </argLine>
+        </configuration>
+      </plugin>
+
     </plugins>
   </build>
 
