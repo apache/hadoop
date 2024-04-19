@@ -400,7 +400,7 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
     Map<String, Set<String>> ret = new HashMap<String, Set<String>>();
     BufferedReader in = null;
     Set<String> validCgroups =
-        CGroupsHandler.CGroupController.getValidCGroups();
+        CGroupsHandler.CGroupController.getValidV1CGroups();
 
     try {
       FileInputStream fis = new FileInputStream(new File(getMtabFileName()));

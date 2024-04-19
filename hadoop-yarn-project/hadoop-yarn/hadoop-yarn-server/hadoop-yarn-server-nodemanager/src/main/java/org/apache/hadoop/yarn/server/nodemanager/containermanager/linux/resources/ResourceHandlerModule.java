@@ -378,7 +378,7 @@ public class ResourceHandlerModule {
 
     Map<String, Set<String>> pathSubsystemMappings = new HashMap<>();
     Set<String> validCGroups =
-        CGroupsHandler.CGroupController.getValidCGroups();
+        CGroupsHandler.CGroupController.getValidV1CGroups();
     for (File candidate: list) {
       Set<String> cgroupList =
           new HashSet<>(Arrays.asList(candidate.getName().split(",")));

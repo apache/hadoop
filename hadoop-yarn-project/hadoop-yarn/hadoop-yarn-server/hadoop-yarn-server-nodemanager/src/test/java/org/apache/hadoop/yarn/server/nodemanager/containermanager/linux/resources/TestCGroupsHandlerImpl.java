@@ -24,15 +24,11 @@ import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperation;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationException;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
-import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -40,7 +36,6 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.security.Permission;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -51,7 +46,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.verifyZeroInteractions;
@@ -121,7 +115,7 @@ public class TestCGroupsHandlerImpl extends TestCGroupsHandlerBase {
     //Since we enabled (deferred) cgroup controller mounting, no interactions
     //should have occurred, with this mock
     verifyZeroInteractions(privilegedOperationExecutorMock);
-    File emptyMtab = createEmptyCgroups();
+    File emptyMtab = createEmptyMtabFile();
 
     try {
       CGroupsHandler cGroupsHandler = new CGroupsHandlerImpl(
@@ -167,7 +161,7 @@ public class TestCGroupsHandlerImpl extends TestCGroupsHandlerBase {
     //in this test.
     verifyZeroInteractions(privilegedOperationExecutorMock);
     CGroupsHandler cGroupsHandler = null;
-    File mtab = createEmptyCgroups();
+    File mtab = createEmptyMtabFile();
 
     // Let's manually create a path to (partially) simulate a controller mounted
     // later in the test. This is required because the handler uses a mocked
@@ -208,7 +202,7 @@ public class TestCGroupsHandlerImpl extends TestCGroupsHandlerBase {
     //in this test.
     verifyZeroInteractions(privilegedOperationExecutorMock);
     CGroupsHandler cGroupsHandler = null;
-    File mtab = createEmptyCgroups();
+    File mtab = createEmptyMtabFile();
 
     // Lets manually create a path to (partially) simulate a controller mounted
     // later in the test. This is required because the handler uses a mocked

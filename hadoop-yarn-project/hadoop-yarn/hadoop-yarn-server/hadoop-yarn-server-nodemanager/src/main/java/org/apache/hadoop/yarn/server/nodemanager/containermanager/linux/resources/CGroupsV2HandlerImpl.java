@@ -36,11 +36,14 @@ import java.io.PrintWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Support for interacting with various CGroup v2 subsystems. Thread-safe.
@@ -81,6 +84,17 @@ class CGroupsV2HandlerImpl extends AbstractCGroupsHandler {
   }
 
   @Override
+  public Set<String> getValidCGroups() {
+    return CGroupController.getValidV2CGroups();
+  }
+
+  @Override
+  protected List<CGroupController> getCGroupControllers() {
+    return Arrays.stream(CGroupController.values()).filter(CGroupController::isInV2)
+            .collect(Collectors.toList());
+  }
+
+  @Override
   protected Map<String, Set<String>> parsePreConfiguredMountPath() throws IOException {
     Map<String, Set<String>> controllerMappings = new HashMap<>();
     String controllerPath = this.cGroupsMountConfig.getMountPath() + Path.SEPARATOR + this.cGroupPrefix;
@@ -116,8 +130,7 @@ class CGroupsV2HandlerImpl extends AbstractCGroupsHandler {
     }
 
     String enabledControllers = FileUtils.readFileToString(cgroupControllersFile, StandardCharsets.UTF_8);
-    Set<String> validCGroups =
-            CGroupsHandler.CGroupController.getValidCGroups();
+    Set<String> validCGroups = getValidCGroups();
     Set<String> controllerSet =
             new HashSet<>(Arrays.asList(enabledControllers.split(" ")));
     // Collect the valid subsystem names
@@ -131,7 +144,17 @@ class CGroupsV2HandlerImpl extends AbstractCGroupsHandler {
   }
 
   /**
+   * The cgroup.subtree_control file is used to enable controllers for a subtree of the cgroup hierarchy
+   * (the current level excluded).
+   * From the documentation: A read-write space separated values file which exists on all
+   *  cgroups. Starts out empty. When read, it shows space separated list of the controllers which
+   *  are enabled to control resource distribution from the cgroup to its children.
+   *  Space separated list of controllers prefixed with '+' or '-'
+   * 	can be written to enable or disable controllers.
+   * Since YARN will create a sub-cgroup for each container, we need to enable the controllers for the subtree.
    * Update the subtree_control file to enable subsequent container based cgroups to use the same controllers.
+   * If a cgroup.subtree_control file is present, but it doesn't contain all the controllers enabled in the
+   * cgroup.controllers file, this method will update the subtree_control file to include all the controllers.
    * @param yarnHierarchy path to the yarn cgroup under which the container cgroups will be created
    * @throws ResourceHandlerException if the controllers file cannot be updated
    */
@@ -153,14 +176,19 @@ class CGroupsV2HandlerImpl extends AbstractCGroupsHandler {
 
       String subtreeControllers = FileUtils.readFileToString(subtreeControlFile, StandardCharsets.UTF_8);
       Set<String> subtreeControllerSet = new HashSet<>(Arrays.asList(subtreeControllers.split(" ")));
-      subtreeControllerSet.retainAll(CGroupsHandler.CGroupController.getValidCGroups());
+      subtreeControllerSet.retainAll(getValidCGroups());
 
       if (subtreeControllerSet.containsAll(enabledControllers)) {
         return;
       }
-      Writer w = new OutputStreamWriter(Files.newOutputStream(subtreeControlFile.toPath()), StandardCharsets.UTF_8);
+      enabledControllers.removeAll(subtreeControllerSet);
+      Writer w = new OutputStreamWriter(Files.newOutputStream(subtreeControlFile.toPath(), StandardOpenOption.APPEND), StandardCharsets.UTF_8);
       try(PrintWriter pw = new PrintWriter(w)) {
-        pw.write(String.join(" ", enabledControllers));
+        if (!subtreeControllers.isEmpty()) {
+          pw.write(" ");
+        }
+        pw.write("+");
+        pw.write(String.join(" +", enabledControllers));
       }
     } catch (IOException e) {
       throw new ResourceHandlerException("Failed to update the controllers file in the cgroup hierarchy: " +

@@ -32,12 +32,9 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.security.Permission;
-import java.util.UUID;
 
 import static org.junit.Assert.assertTrue;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 
 /**
  * Tests for the CGroups handler implementation.
@@ -117,9 +114,33 @@ public abstract class TestCGroupsHandlerBase {
    * @return mtab file
    * @throws IOException could not create file
    */
-  protected File createEmptyCgroups() throws IOException {
+  protected File createEmptyMtabFile() throws IOException {
     File emptyMtab = new File(tmpPath, "mtab");
     assertTrue("New file should have been created", emptyMtab.createNewFile());
     return emptyMtab;
+  }
+
+  /**
+   * Create a new file with supplied content.
+   * @param parentDir parent directory
+   * @param fileName name of the file
+   * @param content content to write in the file
+   * @return file created
+   * @throws IOException if file could not be created
+   */
+  public File createFileWithContent(File parentDir, String fileName, String content) throws IOException {
+    File fileToCreate = new File(parentDir, fileName);
+    if (!fileToCreate.exists()) {
+      if (!fileToCreate.createNewFile()) {
+        String message = "Could not create file " + fileToCreate.getAbsolutePath();
+        throw new IOException(message);
+      }
+    }
+    FileWriter fWriter = new FileWriter(fileToCreate.getAbsoluteFile());
+    fWriter.write(content);
+    fWriter.close();
+    fileToCreate.deleteOnExit();
+
+    return fileToCreate;
   }
 }

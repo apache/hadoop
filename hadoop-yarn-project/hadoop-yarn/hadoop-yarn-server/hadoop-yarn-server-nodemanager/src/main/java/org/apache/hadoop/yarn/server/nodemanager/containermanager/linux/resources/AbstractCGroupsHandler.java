@@ -44,6 +44,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -157,11 +158,10 @@ public abstract class AbstractCGroupsHandler implements CGroupsHandler {
 
   protected abstract Map<String, Set<String>> parsePreConfiguredMountPath() throws IOException;
 
-  protected Map<CGroupController, String> initializeControllerPathsFromMtab(
-      Map<String, Set<String>> parsedMtab) throws ResourceHandlerException {
+  protected Map<CGroupController, String> initializeControllerPathsFromMtab(Map<String, Set<String>> parsedMtab) {
     Map<CGroupController, String> ret = new HashMap<>();
 
-    for (CGroupController controller : CGroupController.values()) {
+    for (CGroupController controller : getCGroupControllers()) {
       String subsystemName = controller.getName();
       String controllerPath = findControllerInMtab(subsystemName, parsedMtab);
 
@@ -171,6 +171,8 @@ public abstract class AbstractCGroupsHandler implements CGroupsHandler {
     }
     return ret;
   }
+
+  protected abstract List<CGroupController> getCGroupControllers();
 
   /* We are looking for entries of the form:
    * none /cgroup/path/mem cgroup rw,memory 0 0

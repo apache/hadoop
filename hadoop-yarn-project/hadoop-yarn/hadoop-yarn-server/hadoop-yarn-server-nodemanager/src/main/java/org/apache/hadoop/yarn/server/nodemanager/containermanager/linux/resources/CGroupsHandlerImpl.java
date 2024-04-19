@@ -23,7 +23,6 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resourc
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperation;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationException;
@@ -35,8 +34,10 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Support for interacting with various CGroup v1 subsystems. Thread-safe.
@@ -76,6 +77,17 @@ class CGroupsHandlerImpl extends AbstractCGroupsHandler {
   }
 
   @Override
+  public Set<String> getValidCGroups() {
+    return CGroupController.getValidV1CGroups();
+  }
+
+  @Override
+  protected List<CGroupController> getCGroupControllers() {
+    return Arrays.stream(CGroupController.values()).filter(CGroupController::isInV1)
+        .collect(Collectors.toList());
+  }
+
+  @Override
   protected Map<String, Set<String>> parsePreConfiguredMountPath() throws IOException {
     return ResourceHandlerModule.
             parseConfiguredCGroupPath(this.cGroupsMountConfig.getMountPath());
@@ -83,8 +95,7 @@ class CGroupsHandlerImpl extends AbstractCGroupsHandler {
 
   @Override
   protected Set<String> handleMtabEntry(String path, String type, String options) {
-    Set<String> validCgroups =
-            CGroupsHandler.CGroupController.getValidCGroups();
+    Set<String> validCgroups = getValidCGroups();
 
     if (type.equals(CGROUP_FSTYPE)) {
       Set<String> controllerSet =

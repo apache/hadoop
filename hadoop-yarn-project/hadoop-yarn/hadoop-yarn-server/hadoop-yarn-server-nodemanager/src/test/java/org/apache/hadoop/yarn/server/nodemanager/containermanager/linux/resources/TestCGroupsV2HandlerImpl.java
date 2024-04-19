@@ -21,15 +21,13 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.junit.Assert;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -38,52 +36,42 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 import static org.mockito.Mockito.verifyZeroInteractions;
 
 /**
  * Tests for the CGroups handler implementation.
  */
 public class TestCGroupsV2HandlerImpl extends TestCGroupsHandlerBase {
-  private static final Logger LOG =
-      LoggerFactory.getLogger(TestCGroupsV2HandlerImpl.class);
-
   // Create a controller file in the unified hierarchy of cgroup v2
   @Override
   protected String getControllerFilePath(String controllerName) {
     return new File(tmpPath, hierarchy).getAbsolutePath();
   }
 
+  /*
+    * Create a mock mtab file with the following content:
+    * cgroup2 /path/to/parentDir cgroup2 rw,nosuid,nodev,noexec,relatime,nsdelegate,memory_recursiveprot 0 0
+    *
+    * Create the following cgroup v2 file hierarchy:
+    *                      parentDir
+    *                  ___________________________________________________
+    *                 /                \                                  \
+    *          cgroup.controllers   cgroup.subtree_control             test-hadoop-yarn (hierarchyDir)
+    *                                                                    _________________
+    *                                                                   /                 \
+    *                                                             cgroup.controllers   cgroup.subtree_control
+   */
   public File createPremountedCgroups(File parentDir)
           throws IOException {
-    // Format:
-    // cgroup2 /sys/fs/cgroup cgroup2 rw,nosuid,nodev,noexec,relatime,nsdelegate,memory_recursiveprot 0 0
     String baseCgroup2Line =
             "cgroup2 " + parentDir.getAbsolutePath()
                     + " cgroup2 rw,nosuid,nodev,noexec,relatime,nsdelegate,memory_recursiveprot 0 0\n";
-
-    File mockMtab = new File(parentDir, UUID.randomUUID().toString());
-    if (!mockMtab.exists()) {
-      if (!mockMtab.createNewFile()) {
-        String message = "Could not create file " + mockMtab.getAbsolutePath();
-        throw new IOException(message);
-      }
-    }
-    FileWriter mtabWriter = new FileWriter(mockMtab.getAbsoluteFile());
-    mtabWriter.write(baseCgroup2Line);
-    mtabWriter.close();
-    mockMtab.deleteOnExit();
+    File mockMtab = createFileWithContent(parentDir, UUID.randomUUID().toString(), baseCgroup2Line);
 
     String enabledControllers = "cpuset cpu io memory hugetlb pids rdma misc\n";
-
-    File controllersFile = new File(parentDir, CGroupsHandler.CGROUP_CONTROLLERS_FILE);
-    FileWriter controllerWriter = new FileWriter(controllersFile.getAbsoluteFile());
-    controllerWriter.write(enabledControllers);
-    controllerWriter.close();
-    controllersFile.deleteOnExit();
+    File controllersFile = createFileWithContent(parentDir, CGroupsHandler.CGROUP_CONTROLLERS_FILE, enabledControllers);
 
     File subtreeControlFile = new File(parentDir, CGroupsHandler.CGROUP_SUBTREE_CONTROL_FILE);
     Assert.assertTrue("empty subtree_control file should be created", subtreeControlFile.createNewFile());
@@ -94,6 +82,7 @@ public class TestCGroupsV2HandlerImpl extends TestCGroupsHandlerBase {
       throw new IOException(message);
     }
     hierarchyDir.deleteOnExit();
+
     FileUtils.copyFile(controllersFile, new File(hierarchyDir, CGroupsHandler.CGROUP_CONTROLLERS_FILE));
     FileUtils.copyFile(subtreeControlFile, new File(hierarchyDir, CGroupsHandler.CGROUP_SUBTREE_CONTROL_FILE));
 
@@ -101,22 +90,16 @@ public class TestCGroupsV2HandlerImpl extends TestCGroupsHandlerBase {
   }
 
   @Test
-  public void testCGroupPaths() throws IOException {
+  public void testCGroupPaths() throws IOException, ResourceHandlerException {
     verifyZeroInteractions(privilegedOperationExecutorMock);
-    CGroupsHandler cGroupsHandler = null;
     File parentDir = new File(tmpPath);
     File mtab = createPremountedCgroups(parentDir);
     assertTrue("Sample subsystem should be created",
         new File(controllerPath).exists());
 
-    try {
-      cGroupsHandler = new CGroupsV2HandlerImpl(createNoMountConfiguration(hierarchy),
-              privilegedOperationExecutorMock, mtab.getAbsolutePath());
-      cGroupsHandler.initializeCGroupController(controller);
-    } catch (ResourceHandlerException e) {
-      LOG.error("Caught exception: " + e);
-      fail("Unexpected ResourceHandlerException when initializing controller!");
-    }
+    CGroupsHandler cGroupsHandler = new CGroupsV2HandlerImpl(createNoMountConfiguration(hierarchy),
+        privilegedOperationExecutorMock, mtab.getAbsolutePath());
+    cGroupsHandler.initializeCGroupController(controller);
 
     String testCGroup = "container_01";
     String expectedPath =
@@ -142,7 +125,7 @@ public class TestCGroupsV2HandlerImpl extends TestCGroupsHandlerBase {
     //in this test.
     verifyZeroInteractions(privilegedOperationExecutorMock);
     CGroupsHandler cGroupsHandler;
-    File mtab = createEmptyCgroups();
+    File mtab = createEmptyMtabFile();
 
     assertTrue("Sample subsystem should be created",
             new File(controllerPath).mkdirs());
@@ -153,63 +136,39 @@ public class TestCGroupsV2HandlerImpl extends TestCGroupsHandlerBase {
     }
 
   @Test
-  public void testCGroupOperations() throws IOException {
+  public void testCGroupOperations() throws IOException, ResourceHandlerException {
     verifyZeroInteractions(privilegedOperationExecutorMock);
-    CGroupsHandler cGroupsHandler = null;
     File parentDir = new File(tmpPath);
     File mtab = createPremountedCgroups(parentDir);
     assertTrue("Sample subsystem should be created",
             new File(controllerPath).exists());
 
-    try {
-      cGroupsHandler = new CGroupsV2HandlerImpl(createNoMountConfiguration(hierarchy),
-          privilegedOperationExecutorMock, mtab.getAbsolutePath());
-      cGroupsHandler.initializeCGroupController(controller);
-    } catch (ResourceHandlerException e) {
-      LOG.error("Caught exception: " + e);
-        fail("Unexpected ResourceHandlerException when mounting controller!");
-    }
+    CGroupsHandler cGroupsHandler = new CGroupsV2HandlerImpl(createNoMountConfiguration(hierarchy),
+        privilegedOperationExecutorMock, mtab.getAbsolutePath());
+    cGroupsHandler.initializeCGroupController(controller);
 
     String testCGroup = "container_01";
     String expectedPath = controllerPath
         + Path.SEPARATOR + testCGroup;
-    try {
-      String path = cGroupsHandler.createCGroup(controller, testCGroup);
+    String path = cGroupsHandler.createCGroup(controller, testCGroup);
 
-      assertTrue(new File(expectedPath).exists());
-      Assert.assertEquals(expectedPath, path);
+    assertTrue(new File(expectedPath).exists());
+    Assert.assertEquals(expectedPath, path);
 
-      //update param and read param tests.
-      //We don't use net_cls.classid because as a test param here because
-      //cgroups provides very specific read/write semantics for classid (only
-      //numbers can be written - potentially as hex but can be read out only
-      //as decimal)
-      String param = "test_param";
-      String paramValue = "test_param_value";
+    String param = "test_param";
+    String paramValue = "test_param_value";
 
-      cGroupsHandler
-          .updateCGroupParam(controller, testCGroup, param, paramValue);
-      String paramPath = expectedPath
-          + Path.SEPARATOR + controller.getName()
-          + "." + param;
-      File paramFile = new File(paramPath);
+    cGroupsHandler
+        .updateCGroupParam(controller, testCGroup, param, paramValue);
+    String paramPath = expectedPath + Path.SEPARATOR + controller.getName()
+        + "." + param;
+    File paramFile = new File(paramPath);
 
-      assertTrue(paramFile.exists());
-      try {
-        Assert.assertEquals(paramValue, new String(Files.readAllBytes(
-            paramFile.toPath())));
-      } catch (IOException e) {
-        LOG.error("Caught exception: " + e);
-        Assert.fail("Unexpected IOException trying to read cgroup param!");
-      }
-
-      Assert.assertEquals(paramValue,
-          cGroupsHandler.getCGroupParam(controller, testCGroup, param));
-    } catch (ResourceHandlerException e) {
-      LOG.error("Caught exception: " + e);
-      Assert
-        .fail("Unexpected ResourceHandlerException during cgroup operations!");
-    }
+    assertTrue(paramFile.exists());
+    Assert.assertEquals(paramValue, new String(Files.readAllBytes(
+        paramFile.toPath())));
+    Assert.assertEquals(paramValue,
+        cGroupsHandler.getCGroupParam(controller, testCGroup, param));
   }
 
   /**
@@ -253,35 +212,50 @@ public class TestCGroupsV2HandlerImpl extends TestCGroupsHandlerBase {
     conf.set(YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_MOUNT_PATH, tmpPath);
     conf.set(YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_HIERARCHY,
         "/hadoop-yarn");
+
     File subCgroup = new File(tmpPath, "/hadoop-yarn");
-    File controllersFile = new File(subCgroup.getAbsolutePath(), CGroupsHandler.CGROUP_CONTROLLERS_FILE);
+    Assert.assertTrue("temp dir should be created", subCgroup.mkdirs());
+    subCgroup.deleteOnExit();
+
+    String enabledControllers = "cpuset cpu io memory hugetlb pids rdma misc\n";
+    createFileWithContent(subCgroup, CGroupsHandler.CGROUP_CONTROLLERS_FILE, enabledControllers);
+
     File subtreeControlFile = new File(subCgroup.getAbsolutePath(), CGroupsHandler.CGROUP_SUBTREE_CONTROL_FILE);
+    Assert.assertTrue("empty subtree_control file should be created", subtreeControlFile.createNewFile());
 
-    try {
-      Assert.assertTrue("temp dir should be created", subCgroup.mkdirs());
-      Assert.assertTrue("empty subtree_control file should be created", subtreeControlFile.createNewFile());
+    CGroupsV2HandlerImpl cGroupsHandler = new CGroupsV2HandlerImpl(conf, null);
+    cGroupsHandler.initializeCGroupController(CGroupsHandler.CGroupController.CPU);
 
-      String enabledControllers = "cpuset cpu io memory hugetlb pids rdma misc\n";
-      FileWriter controllerWriter = new FileWriter(controllersFile.getAbsoluteFile());
-      controllerWriter.write(enabledControllers);
-      controllerWriter.close();
+    Assert.assertEquals("CPU cgroup path was not set", subCgroup.getAbsolutePath(),
+            new File(cGroupsHandler.getPathForCGroup(
+                CGroupsHandler.CGroupController.CPU, "")).getAbsolutePath());
 
-      CGroupsV2HandlerImpl cGroupsHandler = new CGroupsV2HandlerImpl(conf, null);
-      cGroupsHandler.initializeCGroupController(CGroupsHandler.CGroupController.CPU);
+    // Verify that the subtree control file was updated
+    String subtreeControllersEnabledString = FileUtils.readFileToString(subtreeControlFile, StandardCharsets.UTF_8);
+    Set<String> subtreeControllersEnabled = new HashSet<>(Arrays.asList(
+        subtreeControllersEnabledString.replace("+", "").split(" ")));
 
-      Assert.assertEquals("CPU cgroup path was not set", subCgroup.getAbsolutePath(),
-              new File(cGroupsHandler.getPathForCGroup(
-                  CGroupsHandler.CGroupController.CPU, "")).getAbsolutePath());
+    Assert.assertEquals("The newly added controllers doesn't contain + signs",
+        cGroupsHandler.getValidCGroups().size(),
+        StringUtils.countMatches(subtreeControllersEnabledString, "+"));
+    Assert.assertEquals(cGroupsHandler.getValidCGroups().size(), subtreeControllersEnabled.size());
+    Assert.assertTrue("Controllers not enabled in subtree control file",
+        cGroupsHandler.getValidCGroups().containsAll(subtreeControllersEnabled));
 
-      // Verify that the subtree control file was updated
-      String subtreeControllersEnabledString = FileUtils.readFileToString(subtreeControlFile, StandardCharsets.UTF_8);
-      Set<String> subtreeControllersEnabled = new HashSet<>(Arrays.asList(subtreeControllersEnabledString.split(" ")));
-      Assert.assertTrue("Controllers not enabled in subtree control file",
-          CGroupsHandler.CGroupController.getValidCGroups().containsAll(subtreeControllersEnabled));
-    } finally {
-      FileUtils.deleteQuietly(subCgroup);
-      FileUtils.deleteQuietly(controllersFile);
-      FileUtils.deleteQuietly(subtreeControlFile);
-    }
+    // Test that the subtree control file is updated correctly even if it doesn't contain all the controllers
+    subtreeControlFile.delete();
+    createFileWithContent(subCgroup, CGroupsHandler.CGROUP_SUBTREE_CONTROL_FILE, "cpu io");
+    cGroupsHandler.initializeCGroupController(CGroupsHandler.CGroupController.CPU);
+
+    subtreeControllersEnabledString = FileUtils.readFileToString(subtreeControlFile, StandardCharsets.UTF_8);
+    subtreeControllersEnabled = new HashSet<>(Arrays.asList(
+        subtreeControllersEnabledString.replace("+", "").split(" ")));
+
+    Assert.assertEquals("The newly added controllers doesn't contain + signs",
+        cGroupsHandler.getValidCGroups().size() - 2,
+        StringUtils.countMatches(subtreeControllersEnabledString, "+"));
+    Assert.assertEquals(cGroupsHandler.getValidCGroups().size(), subtreeControllersEnabled.size());
+    Assert.assertTrue("Controllers not enabled in subtree control file",
+        cGroupsHandler.getValidCGroups().containsAll(subtreeControllersEnabled));
   }
 }
