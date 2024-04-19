@@ -72,7 +72,8 @@ public class TestVerifyReadable {
     }
   }
 
-  private int runDebugCommand(Path path, String input, String output, int concurrency) {
+  private int runDebugCommand(Path path, String input, String output, int concurrency,
+      boolean verbose) {
     List<String> args = new ArrayList<>();
     args.add("verifyReadable");
     if (path != null) {
@@ -91,6 +92,9 @@ public class TestVerifyReadable {
       args.add("-concurrency");
       args.add(String.valueOf(concurrency));
     }
+    if (verbose) {
+      args.add("-verbose");
+    }
     return admin.run(args.toArray(new String[0]));
   }
 
@@ -103,20 +107,20 @@ public class TestVerifyReadable {
     // Successful case with various block lengths and replications
     Path testPath = new Path("/testReadable1Repl.txt");
     DFSTestUtil.createFile(fs, testPath, BLOCK_SIZE, (short) 1, 1234);
-    Assert.assertEquals(0, runDebugCommand(testPath, null, null, 1));
+    Assert.assertEquals(0, runDebugCommand(testPath, null, null, 1, false));
 
     testPath = new Path("/testReadable3Repl.txt");
     DFSTestUtil.createFile(fs, testPath, BLOCK_SIZE, (short) 3, 1234);
-    Assert.assertEquals(0, runDebugCommand(testPath, null, null, 1));
+    Assert.assertEquals(0, runDebugCommand(testPath, null, null, 1, false));
 
     testPath = new Path("/testReadableLong3Repl.txt");
     DFSTestUtil.createFile(fs, testPath, BLOCK_SIZE * 16, (short) 3, 1234);
-    Assert.assertEquals(0, runDebugCommand(testPath, null, null, 1));
+    Assert.assertEquals(0, runDebugCommand(testPath, null, null, 1, false));
 
     // Simple failure cases
     // File not found
     testPath = new Path("/test404.txt");
-    Assert.assertEquals(1, runDebugCommand(testPath, null, null, 1));
+    Assert.assertEquals(1, runDebugCommand(testPath, null, null, 1, false));
 
     // Missing replicas
     // Deleted replica
@@ -124,20 +128,20 @@ public class TestVerifyReadable {
     DFSTestUtil.createFile(fs, testPath, BLOCK_SIZE * 3, (short) 2, 1234);
     // Still readable with 1 replica left
     deleteReplica(fs, testPath, 1, 1);
-    Assert.assertEquals(0, runDebugCommand(testPath, null, null, 1));
+    Assert.assertEquals(0, runDebugCommand(testPath, null, null, 1, false));
     // Unreadable when all replicas are gone for a block
     deleteReplica(fs, testPath, 1, 0);
-    Assert.assertEquals(1, runDebugCommand(testPath, null, null, 1));
+    Assert.assertEquals(1, runDebugCommand(testPath, null, null, 1, false));
 
     // Down DNs
     testPath = new Path("/testMissingDNs.txt");
     DFSTestUtil.createFile(fs, testPath, BLOCK_SIZE * 3, (short) 2, 1234);
     // Still readable with 1 replica left
     shutdownDn(fs, testPath, 1, 1);
-    Assert.assertEquals(0, runDebugCommand(testPath, null, null, 1));
+    Assert.assertEquals(0, runDebugCommand(testPath, null, null, 1, false));
     // Unreadable when all replicas are gone for a block
     shutdownDn(fs, testPath, 1, 0);
-    Assert.assertEquals(1, runDebugCommand(testPath, null, null, 1));
+    Assert.assertEquals(1, runDebugCommand(testPath, null, null, 1, false));
   }
 
   @Test
@@ -171,30 +175,37 @@ public class TestVerifyReadable {
     // Missing replicas
     // Deleted replica
     testPath = new Path("/testMissingBlocks.txt");
-    DFSTestUtil.createFile(fs, testPath, BLOCK_SIZE * 3, (short) 2, 1234);
-    deleteReplica(fs, testPath, 1, 1);
-    deleteReplica(fs, testPath, 1, 0);
+    DFSTestUtil.createFile(fs, testPath, BLOCK_SIZE * 10, (short) 2, 1234);
+    deleteReplica(fs, testPath, 5, 1);
+    deleteReplica(fs, testPath, 5, 0);
     inputWriter.write("/testMissingBlocks.txt\n");
 
     inputWriter.flush();
     inputWriter.close();
-    runDebugCommand(null, inputPath.getAbsolutePath(), outputPath.getAbsolutePath(), 2);
+    runDebugCommand(null, inputPath.getAbsolutePath(), outputPath.getAbsolutePath(), 2, true);
     Map<String, Integer> results = new HashMap<>();
+    Map<String, String> blocksChecked = new HashMap<>();
 
     BufferedReader outputReader =
         new BufferedReader(new InputStreamReader(Files.newInputStream(outputPath.toPath())));
     String line;
     while ((line = outputReader.readLine()) != null) {
-      String[] split = line.split("\\s");
+      String[] split = line.split("\\|");
       results.put(split[0], Integer.parseInt(split[1]));
+      blocksChecked.put(split[0], split[2]);
     }
     outputReader.close();
 
     Assert.assertEquals(0, results.get("/testReadable1Repl.txt").intValue());
+    Assert.assertEquals("1/1", blocksChecked.get("/testReadable1Repl.txt"));
     Assert.assertEquals(0, results.get("/testReadable3Repl.txt").intValue());
+    Assert.assertEquals("1/1", blocksChecked.get("/testReadable3Repl.txt"));
     Assert.assertEquals(0, results.get("/testReadableLong3Repl.txt").intValue());
+    Assert.assertEquals("16/16", blocksChecked.get("/testReadableLong3Repl.txt"));
     Assert.assertEquals(1, results.get("/test404.txt").intValue());
+    Assert.assertEquals("0/0", blocksChecked.get("/test404.txt"));
     Assert.assertEquals(1, results.get("/testMissingBlocks.txt").intValue());
+    Assert.assertEquals("5/10", blocksChecked.get("/testMissingBlocks.txt"));
   }
 
   private void deleteReplica(FileSystem fs, Path path, int blkIdx, int dnIndex) throws IOException {
