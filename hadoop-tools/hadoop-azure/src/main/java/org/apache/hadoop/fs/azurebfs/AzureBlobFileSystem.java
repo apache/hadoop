@@ -224,10 +224,9 @@ public class AzureBlobFileSystem extends FileSystem
       }
     }
 
-    if ((
-        abfsConfiguration.createEncryptionContextProvider() != null
-            || StringUtils.isNotEmpty(
-            abfsConfiguration.getEncodedClientProvidedEncryptionKey()))
+    if ((abfsConfiguration.createEncryptionContextProvider() != null
+        || StringUtils.isNotEmpty(
+        abfsConfiguration.getEncodedClientProvidedEncryptionKey()))
         && !getIsNamespaceEnabled(
         new TracingContext(clientCorrelationId, fileSystemId,
             FSOperationType.GET_FILESTATUS, tracingHeaderFormat, listener))) {
