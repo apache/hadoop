@@ -310,7 +310,9 @@ public abstract class AbstractCGroupsHandler implements CGroupsHandler {
    * There are two options.
    * 1. YARN hierarchy already exists. We verify, whether we have write access
    * in this case.
-   * 2. YARN hierarchy does not exist, yet. We create it in this case.
+   * 2. YARN hierarchy does not exist, yet. We create it in this case. If cgroup v2 is used
+   * an additional step is required to update the cgroup.subtree_control file, see
+   * {@link CGroupsV2HandlerImpl#updateEnabledControllersInHierarchy updateEnabledControllersInHierarchy}
    *
    * @param controller the controller being initialized
    * @throws ResourceHandlerException yarn hierarchy cannot be created or
