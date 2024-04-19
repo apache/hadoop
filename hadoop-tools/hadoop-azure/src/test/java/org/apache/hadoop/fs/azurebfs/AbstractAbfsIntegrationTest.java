@@ -209,8 +209,6 @@ public abstract class AbstractAbfsIntegrationTest extends
       wasb = new NativeAzureFileSystem(azureNativeFileSystemStore);
       wasb.initialize(wasbUri, rawConfig);
     }
-    // Todo: To be fixed in HADOOP-19137
-    AbfsClientUtils.setIsNamespaceEnabled(abfs.getAbfsClient(), true);
   }
 
   @After

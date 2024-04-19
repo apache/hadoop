@@ -44,6 +44,7 @@ import java.util.concurrent.Future;
 
 import javax.annotation.Nullable;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.impl.BackReference;
 import org.apache.hadoop.security.ProviderUtils;
@@ -210,6 +211,17 @@ public class AzureBlobFileSystem extends FileSystem
         abfsConfiguration.getClientCorrelationId());
     tracingHeaderFormat = abfsConfiguration.getTracingHeaderFormat();
     this.setWorkingDirectory(this.getHomeDirectory());
+
+    if (!getIsNamespaceEnabled(
+        new TracingContext(clientCorrelationId, fileSystemId,
+            FSOperationType.GET_FILESTATUS, tracingHeaderFormat, listener)) && (
+        abfsConfiguration.createEncryptionContextProvider() != null
+            || StringUtils.isNotEmpty(
+            abfsConfiguration.getEncodedClientProvidedEncryptionKey()))) {
+      close();
+      throw new PathIOException(
+          "Non HNS account " + uri.getPath() + " can not have CPK configs enabled.");
+    }
 
     TracingContext tracingContext = new TracingContext(clientCorrelationId,
             fileSystemId, FSOperationType.CREATE_FILESYSTEM, tracingHeaderFormat, listener);

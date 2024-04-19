@@ -26,9 +26,6 @@ public final class AbfsClientUtils {
   private AbfsClientUtils() {
 
   }
-  public static void setIsNamespaceEnabled(final AbfsClient abfsClient, final Boolean isNamespaceEnabled) {
-    abfsClient.setIsNamespaceEnabled(isNamespaceEnabled);
-  }
 
   public static void setEncryptionContextProvider(final AbfsClient abfsClient, final EncryptionContextProvider provider) {
     abfsClient.setEncryptionContextProvider(provider);

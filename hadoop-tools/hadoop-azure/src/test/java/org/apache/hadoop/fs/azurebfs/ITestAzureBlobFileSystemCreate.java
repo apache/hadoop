@@ -281,7 +281,6 @@ public class ITestAzureBlobFileSystemCreate extends
     final AzureBlobFileSystem fs =
         (AzureBlobFileSystem) FileSystem.newInstance(currentFs.getUri(),
             config);
-    AbfsClientUtils.setIsNamespaceEnabled(fs.getAbfsClient(), true);
 
     long totalConnectionMadeBeforeTest = fs.getInstrumentationMap()
         .get(CONNECTIONS_MADE.getStatName());
