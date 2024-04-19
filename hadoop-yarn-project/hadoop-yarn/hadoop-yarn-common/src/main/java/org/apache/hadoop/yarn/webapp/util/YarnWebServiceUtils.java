@@ -22,11 +22,11 @@ import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.UniformInterfaceException;
 import com.sun.jersey.api.client.WebResource.Builder;
-import javax.ws.rs.core.MediaType;
 
 import com.sun.jersey.api.json.JSONJAXBContext;
 import com.sun.jersey.api.json.JSONMarshaller;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.ContentTypes;
 import org.codehaus.jettison.json.JSONObject;
 
 import java.io.StringWriter;
@@ -74,7 +74,7 @@ public final class YarnWebServiceUtils {
     try {
       Builder builder = webServiceClient.resource(webAppAddress)
           .path("ws").path("v1").path("cluster")
-          .path("nodes").path(nodeId).accept(MediaType.APPLICATION_JSON);
+          .path("nodes").path(nodeId).accept(ContentTypes.APPLICATION_JSON);
       response = builder.get(ClientResponse.class);
       return response.getEntity(JSONObject.class);
     } finally {

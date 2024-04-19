@@ -44,11 +44,11 @@ import java.util.concurrent.TimeoutException;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
+import org.apache.hadoop.http.ContentTypes;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.commons.io.FileUtils;
@@ -183,7 +183,7 @@ public class TestRMWebServices extends JerseyTestBase {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("cluster")
         .path("info").accept("application/xml").get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_XML + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     String xml = response.getEntity(String.class);
     verifyClusterInfoXML(xml);
@@ -195,7 +195,7 @@ public class TestRMWebServices extends JerseyTestBase {
     String responseStr = "";
     try {
       responseStr = r.path("ws").path("v1").path("cluster").path("bogus")
-          .accept(MediaType.APPLICATION_JSON).get(String.class);
+          .accept(ContentTypes.APPLICATION_JSON).get(String.class);
       fail("should have thrown exception on invalid uri");
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
@@ -211,7 +211,7 @@ public class TestRMWebServices extends JerseyTestBase {
     WebResource r = resource();
     String responseStr = "";
     try {
-      responseStr = r.accept(MediaType.APPLICATION_JSON).get(String.class);
+      responseStr = r.accept(ContentTypes.APPLICATION_JSON).get(String.class);
       fail("should have thrown exception on invalid uri");
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
@@ -227,7 +227,7 @@ public class TestRMWebServices extends JerseyTestBase {
     String responseStr = "";
     try {
       responseStr = r.path("ws").path("v1").path("cluster")
-          .accept(MediaType.TEXT_PLAIN).get(String.class);
+          .accept(ContentTypes.TEXT_PLAIN).get(String.class);
       fail("should have thrown exception on invalid uri");
     } catch (UniformInterfaceException ue) {
       ClientResponse response = ue.getResponse();
@@ -242,9 +242,9 @@ public class TestRMWebServices extends JerseyTestBase {
   public void testCluster() throws JSONException, Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("cluster")
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+        .accept(ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
 
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     verifyClusterInfo(json);
@@ -255,9 +255,9 @@ public class TestRMWebServices extends JerseyTestBase {
     WebResource r = resource();
     // test with trailing "/" to make sure acts same as without slash
     ClientResponse response = r.path("ws").path("v1").path("cluster/")
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+        .accept(ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
 
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     verifyClusterInfo(json);
@@ -270,7 +270,7 @@ public class TestRMWebServices extends JerseyTestBase {
     ClientResponse response = r.path("ws").path("v1").path("cluster")
         .get(ClientResponse.class);
 
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     verifyClusterInfo(json);
@@ -280,10 +280,10 @@ public class TestRMWebServices extends JerseyTestBase {
   public void testInfo() throws JSONException, Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("cluster")
-        .path("info").accept(MediaType.APPLICATION_JSON)
+        .path("info").accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
 
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     verifyClusterInfo(json);
@@ -294,10 +294,10 @@ public class TestRMWebServices extends JerseyTestBase {
     // test with trailing "/" to make sure acts same as without slash
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("cluster")
-        .path("info/").accept(MediaType.APPLICATION_JSON)
+        .path("info/").accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
 
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     verifyClusterInfo(json);
@@ -309,7 +309,7 @@ public class TestRMWebServices extends JerseyTestBase {
     ClientResponse response = r.path("ws").path("v1").path("cluster")
         .path("info").get(ClientResponse.class);
 
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     verifyClusterInfo(json);
@@ -395,10 +395,10 @@ public class TestRMWebServices extends JerseyTestBase {
   public void testClusterMetrics() throws JSONException, Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("cluster")
-        .path("metrics").accept(MediaType.APPLICATION_JSON)
+        .path("metrics").accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
 
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     verifyClusterMetricsJSON(json);
@@ -408,10 +408,10 @@ public class TestRMWebServices extends JerseyTestBase {
   public void testClusterMetricsSlash() throws JSONException, Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("cluster")
-        .path("metrics/").accept(MediaType.APPLICATION_JSON)
+        .path("metrics/").accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
 
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     verifyClusterMetricsJSON(json);
@@ -423,7 +423,7 @@ public class TestRMWebServices extends JerseyTestBase {
     ClientResponse response = r.path("ws").path("v1").path("cluster")
         .path("metrics").get(ClientResponse.class);
 
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     verifyClusterMetricsJSON(json);
@@ -434,7 +434,7 @@ public class TestRMWebServices extends JerseyTestBase {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("cluster")
         .path("metrics").accept("application/xml").get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_XML + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     String xml = response.getEntity(String.class);
     verifyClusterMetricsXML(xml);
@@ -564,10 +564,10 @@ public class TestRMWebServices extends JerseyTestBase {
   public void testClusterSchedulerFifo() throws JSONException, Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("cluster")
-        .path("scheduler").accept(MediaType.APPLICATION_JSON)
+        .path("scheduler").accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
 
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     verifyClusterSchedulerFifo(json);
@@ -577,10 +577,10 @@ public class TestRMWebServices extends JerseyTestBase {
   public void testClusterSchedulerFifoSlash() throws JSONException, Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("cluster")
-        .path("scheduler/").accept(MediaType.APPLICATION_JSON)
+        .path("scheduler/").accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
 
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     verifyClusterSchedulerFifo(json);
@@ -592,7 +592,7 @@ public class TestRMWebServices extends JerseyTestBase {
     ClientResponse response = r.path("ws").path("v1").path("cluster")
         .path("scheduler").get(ClientResponse.class);
 
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     verifyClusterSchedulerFifo(json);
@@ -602,10 +602,10 @@ public class TestRMWebServices extends JerseyTestBase {
   public void testClusterSchedulerFifoXML() throws JSONException, Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("cluster")
-        .path("scheduler").accept(MediaType.APPLICATION_XML)
+        .path("scheduler").accept(ContentTypes.APPLICATION_XML)
         .get(ClientResponse.class);
 
-    assertEquals(MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_XML + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     String xml = response.getEntity(String.class);
     verifySchedulerFifoXML(xml);
@@ -960,7 +960,7 @@ public class TestRMWebServices extends JerseyTestBase {
 
     HttpServletRequest mockHsr = mock(HttpServletRequest.class);
     when(mockHsr.getHeader(HttpHeaders.ACCEPT)).
-         thenReturn(MediaType.APPLICATION_XML);
+         thenReturn(ContentTypes.APPLICATION_XML);
     Set<String> emptySet = Collections.unmodifiableSet(Collections.emptySet());
 
     AppsInfo appsInfo = webSvc.getApps(mockHsr, null, emptySet, null,
@@ -1109,10 +1109,10 @@ public class TestRMWebServices extends JerseyTestBase {
   public void testClusterSchedulerOverviewFifo() throws JSONException, Exception {
     WebResource r = resource();
     ClientResponse response = r.path("ws").path("v1").path("cluster")
-        .path("scheduler-overview").accept(MediaType.APPLICATION_JSON)
+        .path("scheduler-overview").accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
 
-    assertEquals(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     JSONObject json = response.getEntity(JSONObject.class);
     verifyClusterSchedulerOverView(json, "Fifo Scheduler");

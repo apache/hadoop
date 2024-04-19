@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.webapp.helper;
 
 import com.sun.jersey.api.client.WebResource;
+import org.apache.hadoop.http.ContentTypes;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.util.XMLUtils;
 import org.codehaus.jettison.json.JSONObject;
@@ -28,7 +29,6 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.xml.sax.InputSource;
 
-import javax.ws.rs.core.MediaType;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.transform.*;
 import javax.xml.transform.dom.DOMSource;
@@ -72,7 +72,7 @@ public class XmlCustomResourceTypeTestCase {
   }
 
   public void verify(Consumer<Document> verifier) {
-    assertEquals(MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_XML + "; " + JettyUtils.UTF_8,
         response.getType().toString());
 
     parsedResponse = parseXml(response);

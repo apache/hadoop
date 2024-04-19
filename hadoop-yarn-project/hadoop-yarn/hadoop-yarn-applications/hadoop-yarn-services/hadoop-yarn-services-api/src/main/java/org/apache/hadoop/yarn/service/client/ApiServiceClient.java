@@ -26,18 +26,17 @@ import java.util.List;
 import java.util.Map;
 import java.security.PrivilegedExceptionAction;
 
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.UriBuilder;
 
-import org.apache.hadoop.thirdparty.com.google.common.net.HttpHeaders;
-import org.apache.hadoop.util.Preconditions;
-
-import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
+import org.apache.hadoop.thirdparty.com.google.common.net.HttpHeaders;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.http.ContentTypes;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
@@ -129,7 +128,7 @@ public class ApiServiceClient extends AppAdminClient {
             }
           }
           Builder builder = client
-              .resource(sb.toString()).type(MediaType.APPLICATION_JSON);
+              .resource(sb.toString()).type(ContentTypes.APPLICATION_JSON);
           if (useKerberos) {
             String[] server = host.split(":");
             String challenge = YarnClientUtils.generateToken(server[0]);
@@ -245,7 +244,7 @@ public class ApiServiceClient extends AppAdminClient {
     Client client = Client.create(getClientConfig());
     client.setChunkedEncodingSize(null);
     Builder builder = client
-        .resource(requestPath).type(MediaType.APPLICATION_JSON);
+        .resource(requestPath).type(ContentTypes.APPLICATION_JSON);
     if (UserGroupInformation.isSecurityEnabled()) {
       try {
         URI url = new URI(requestPath);

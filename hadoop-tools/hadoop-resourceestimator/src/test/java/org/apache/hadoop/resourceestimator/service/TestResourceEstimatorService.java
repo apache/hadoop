@@ -24,8 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import javax.ws.rs.core.MediaType;
-
+import org.apache.hadoop.http.ContentTypes;
 import org.apache.hadoop.resourceestimator.common.api.RecurrenceId;
 import org.apache.hadoop.resourceestimator.common.api.ResourceSkyline;
 import org.apache.hadoop.resourceestimator.common.serialization.RLESparseResourceAllocationSerDe;
@@ -197,7 +196,7 @@ public class TestResourceEstimatorService extends JerseyTest {
     // first, parse the log
     final String logFile = "resourceEstimatorService.txt";
     WebResource webResource = resource();
-    webResource.path(parseLogCommand).type(MediaType.APPLICATION_XML_TYPE)
+    webResource.path(parseLogCommand).type(ContentTypes.APPLICATION_XML)
         .post(logFile);
     webResource = resource().path(getHistorySkylineCommand);
     String response = webResource.get(String.class);

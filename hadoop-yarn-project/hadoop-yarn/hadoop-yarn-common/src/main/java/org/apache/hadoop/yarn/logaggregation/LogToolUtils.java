@@ -35,9 +35,8 @@ import com.sun.jersey.api.client.WebResource;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.http.ContentTypes;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
-
-import javax.ws.rs.core.MediaType;
 
 /**
  * This class contains several utility function which could be used in different
@@ -210,6 +209,6 @@ public final class LogToolUtils {
         .path("containers").path(request.getContainerId()).path("logs")
         .path(logFile)
         .queryParam("size", Long.toString(request.getBytes()))
-        .accept(MediaType.TEXT_PLAIN).get(ClientResponse.class);
+        .accept(ContentTypes.TEXT_PLAIN).get(ClientResponse.class);
   }
 }

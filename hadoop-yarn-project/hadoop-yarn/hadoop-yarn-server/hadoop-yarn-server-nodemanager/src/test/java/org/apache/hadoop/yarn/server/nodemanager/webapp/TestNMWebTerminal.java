@@ -22,9 +22,8 @@ import static org.junit.Assert.assertEquals;
 import java.io.File;
 import java.io.IOException;
 
-import javax.ws.rs.core.MediaType;
-
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.ContentTypes;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
@@ -112,9 +111,9 @@ public class TestNMWebTerminal {
   public void testWebTerminal() {
     Client client = Client.create();
     Builder builder = client.resource("http://127.0.0.1:" + port +
-        "/terminal/terminal.template").accept("text/html");
+        "/terminal/terminal.template").accept(ContentTypes.TEXT_HTML);
     ClientResponse response = builder.get(ClientResponse.class);
-    assertEquals(MediaType.TEXT_HTML + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.TEXT_HTML + "; " + JettyUtils.UTF_8,
         response.getType().toString());
   }
 }

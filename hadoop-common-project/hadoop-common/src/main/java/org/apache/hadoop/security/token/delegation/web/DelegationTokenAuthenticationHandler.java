@@ -29,11 +29,11 @@ import java.util.Set;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.core.MediaType;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.ContentTypes;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
@@ -333,7 +333,7 @@ public abstract class DelegationTokenAuthenticationHandler
           if (requestContinues) {
             response.setStatus(HttpServletResponse.SC_OK);
             if (map != null) {
-              response.setContentType(MediaType.APPLICATION_JSON);
+              response.setContentType(ContentTypes.APPLICATION_JSON);
               Writer writer = response.getWriter();
               ObjectMapper jsonMapper = new ObjectMapper(jsonFactory);
               jsonMapper.writeValue(writer, map);

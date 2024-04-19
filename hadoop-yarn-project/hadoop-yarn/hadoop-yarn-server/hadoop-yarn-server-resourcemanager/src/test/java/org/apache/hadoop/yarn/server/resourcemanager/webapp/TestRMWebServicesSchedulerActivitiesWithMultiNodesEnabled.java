@@ -24,6 +24,7 @@ import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.core.util.MultivaluedMapImpl;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 import com.sun.jersey.test.framework.WebAppDescriptor;
+import org.apache.hadoop.http.ContentTypes;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -54,7 +55,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import javax.ws.rs.core.MediaType;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -190,8 +190,8 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
       WebResource r = resource();
       ClientResponse response = r.path("ws").path("v1").path("cluster").path(
           "scheduler/activities").accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       //Trigger scheduling for this app
       CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
@@ -202,8 +202,8 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
       // final allocation state is ALLOCATED
       response = r.path("ws").path("v1").path("cluster").path(
           "scheduler/activities").accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       JSONObject json = response.getEntity(JSONObject.class);
 
@@ -233,8 +233,8 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
       WebResource r = resource();
       ClientResponse response = r.path("ws").path("v1").path("cluster").path(
           "scheduler/activities").accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       //Trigger scheduling for this app
       CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
@@ -245,8 +245,8 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
       // final allocation state is SKIPPED
       response = r.path("ws").path("v1").path("cluster").path(
           "scheduler/activities").accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       JSONObject json = response.getEntity(JSONObject.class);
 
@@ -357,8 +357,8 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
       WebResource r = resource();
       ClientResponse response =
           r.path("ws").path("v1").path("cluster").path("scheduler/activities")
-              .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+              .accept(ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       JSONObject json = response.getEntity(JSONObject.class);
       assertEquals("waiting for next allocation",
@@ -371,8 +371,8 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
 
       response =
           r.path("ws").path("v1").path("cluster").path("scheduler/activities")
-              .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+              .accept(ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       json = response.getEntity(JSONObject.class);
 

@@ -25,6 +25,7 @@ import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 import com.sun.jersey.test.framework.WebAppDescriptor;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.ContentTypes;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
@@ -35,11 +36,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
-
-import org.apache.hadoop.yarn.util.resource.CustomResourceTypesConfigurationProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.helper.BufferedClientResponse;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.helper.JsonCustomResourceTypeTestcase;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.helper.XmlCustomResourceTypeTestCase;
+import org.apache.hadoop.yarn.util.resource.CustomResourceTypesConfigurationProvider;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
@@ -52,7 +52,6 @@ import org.junit.Test;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 
-import javax.ws.rs.core.MediaType;
 import java.util.ArrayList;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp
@@ -131,7 +130,7 @@ public class TestRMWebServicesAppsCustomResourceTypes extends JerseyTestBase {
     WebResource r = resource();
     WebResource path = r.path("ws").path("v1").path("cluster").path("apps");
     ClientResponse response =
-        path.accept(MediaType.APPLICATION_XML).get(ClientResponse.class);
+        path.accept(ContentTypes.APPLICATION_XML).get(ClientResponse.class);
 
     XmlCustomResourceTypeTestCase testCase =
             new XmlCustomResourceTypeTestCase(path,
@@ -167,7 +166,7 @@ public class TestRMWebServicesAppsCustomResourceTypes extends JerseyTestBase {
     WebResource r = resource();
     WebResource path = r.path("ws").path("v1").path("cluster").path("apps");
     ClientResponse response =
-        path.accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+        path.accept(ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
 
     JsonCustomResourceTypeTestcase testCase =
         new JsonCustomResourceTypeTestcase(path,

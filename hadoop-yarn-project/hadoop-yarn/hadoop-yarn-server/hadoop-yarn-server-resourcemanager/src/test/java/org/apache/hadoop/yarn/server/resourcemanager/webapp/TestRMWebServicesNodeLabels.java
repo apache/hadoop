@@ -29,16 +29,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 
 import org.apache.commons.lang3.tuple.Pair;
-import org.apache.hadoop.util.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.hadoop.http.ContentTypes;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
@@ -156,7 +156,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     return getClusterWebResource()
         .path(path)
         .queryParam(QUERY_USER_NAME, userName)
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+        .accept(ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
   }
 
   private ClientResponse get(String path, MultivaluedMapImpl queryParams) {
@@ -164,7 +164,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
         .path(path)
         .queryParam(QUERY_USER_NAME, userName)
         .queryParams(queryParams)
-        .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+        .accept(ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
   }
 
   private ClientResponse post(String path, String userName, Object payload,
@@ -172,9 +172,9 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
     return getClusterWebResource()
         .path(path)
         .queryParam(QUERY_USER_NAME, userName)
-        .accept(MediaType.APPLICATION_JSON)
+        .accept(ContentTypes.APPLICATION_JSON)
         .entity(toJson(payload, payloadClass),
-            MediaType.APPLICATION_JSON)
+            ContentTypes.APPLICATION_JSON)
         .post(ClientResponse.class);
   }
 
@@ -184,10 +184,10 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
         .path(path)
         .queryParam(QUERY_USER_NAME, userName)
         .queryParams(queryParams)
-        .accept(MediaType.APPLICATION_JSON);
+        .accept(ContentTypes.APPLICATION_JSON);
 
     if (payload != null && payloadClass != null) {
-      builder.entity(toJson(payload, payloadClass), MediaType.APPLICATION_JSON);
+      builder.entity(toJson(payload, payloadClass), ContentTypes.APPLICATION_JSON);
     }
     return builder.post(ClientResponse.class);
   }
@@ -541,7 +541,7 @@ public class TestRMWebServicesNodeLabels extends JerseyTestBase {
   }
 
   private void assertApplicationJsonUtf8Response(ClientResponse response) {
-    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
   }
 

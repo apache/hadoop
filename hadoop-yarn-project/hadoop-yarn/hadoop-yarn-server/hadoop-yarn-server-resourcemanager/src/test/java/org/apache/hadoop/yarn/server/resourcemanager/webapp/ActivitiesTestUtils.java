@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
+import org.apache.hadoop.http.ContentTypes;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
@@ -35,7 +36,6 @@ import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
 
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -298,9 +298,9 @@ public final class ActivitiesTestUtils {
     if (params != null) {
       webResource = webResource.queryParams(params);
     }
-    ClientResponse response = webResource.accept(MediaType.APPLICATION_JSON)
+    ClientResponse response = webResource.accept(ContentTypes.APPLICATION_JSON)
         .get(ClientResponse.class);
-    assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+    assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     return response.getEntity(JSONObject.class);
   }

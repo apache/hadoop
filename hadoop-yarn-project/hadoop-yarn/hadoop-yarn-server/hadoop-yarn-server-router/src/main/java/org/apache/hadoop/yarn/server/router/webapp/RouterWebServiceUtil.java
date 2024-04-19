@@ -37,13 +37,13 @@ import java.util.HashSet;
 import java.util.concurrent.TimeUnit;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.ResponseBuilder;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.http.ContentTypes;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
@@ -550,16 +550,16 @@ public final class RouterWebServiceUtil {
       HttpServletRequest request, final Class<T> returnType) {
     if (request == null) {
       // By default, we return XML for REST call without HttpServletRequest
-      return MediaType.APPLICATION_XML;
+      return ContentTypes.APPLICATION_XML;
     }
     // TODO
     if (!returnType.equals(Response.class)) {
-      return MediaType.APPLICATION_XML;
+      return ContentTypes.APPLICATION_XML;
     }
     String header = request.getHeader(HttpHeaders.ACCEPT);
     if (header == null || header.equals("*")) {
       // By default, we return JSON
-      return MediaType.APPLICATION_JSON;
+      return ContentTypes.APPLICATION_JSON;
     }
     return header;
   }

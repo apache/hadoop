@@ -24,6 +24,7 @@ import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.core.util.MultivaluedMapImpl;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.ContentTypes;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -56,8 +57,6 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONObject;
 import org.junit.Test;
-
-import javax.ws.rs.core.MediaType;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -194,8 +193,8 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
       params.add("nodeId", "127.0.0.1:1234");
       ClientResponse response = r.path("ws").path("v1").path("cluster").path(
           "scheduler/activities").queryParams(params).accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       JSONObject json = response.getEntity(JSONObject.class);
 
@@ -205,8 +204,8 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
       //Get JSON
       response = r.path("ws").path("v1").path("cluster").path(
           "scheduler/activities").queryParams(params).accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       json = response.getEntity(JSONObject.class);
 
@@ -258,8 +257,8 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
       params.add("nodeId", "127.0.0.1");
       ClientResponse response = r.path("ws").path("v1").path("cluster").path(
           "scheduler/activities").queryParams(params).accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       JSONObject json = response.getEntity(JSONObject.class);
 
@@ -269,8 +268,8 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
       //Get JSON
       response = r.path("ws").path("v1").path("cluster").path(
           "scheduler/activities").queryParams(params).accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       json = response.getEntity(JSONObject.class);
 
@@ -299,8 +298,8 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
       params.add("nodeId", "127.0.0.1:1234");
       ClientResponse response = r.path("ws").path("v1").path("cluster").path(
           "scheduler/activities").queryParams(params).accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       JSONObject json = response.getEntity(JSONObject.class);
 
@@ -309,8 +308,8 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
       //Get JSON
       response = r.path("ws").path("v1").path("cluster").path(
           "scheduler/activities").queryParams(params).accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       json = response.getEntity(JSONObject.class);
 
@@ -354,8 +353,8 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
       params.add("nodeId", "127.0.0.0");
       ClientResponse response = r.path("ws").path("v1").path("cluster").path(
           "scheduler/activities").queryParams(params).accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       JSONObject json = response.getEntity(JSONObject.class);
 
@@ -365,8 +364,8 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
       //Get JSON
       response = r.path("ws").path("v1").path("cluster").path(
           "scheduler/activities").queryParams(params).accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       json = response.getEntity(JSONObject.class);
 
@@ -422,8 +421,8 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
       params.add("nodeId", "127.0.0.2");
       ClientResponse response = r.path("ws").path("v1").path("cluster").path(
           "scheduler/activities").queryParams(params).accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       JSONObject json = response.getEntity(JSONObject.class);
 
@@ -432,8 +431,8 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
 
       response = r.path("ws").path("v1").path("cluster").path(
           "scheduler/activities").queryParams(params).accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       json = response.getEntity(JSONObject.class);
 
@@ -452,8 +451,8 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
       params.add("nodeId", "127.0.0.2");
       response = r.path("ws").path("v1").path("cluster").path(
           "scheduler/activities").queryParams(params).accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       json = response.getEntity(JSONObject.class);
 
@@ -462,8 +461,8 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
 
       response = r.path("ws").path("v1").path("cluster").path(
           "scheduler/activities").queryParams(params).accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       json = response.getEntity(JSONObject.class);
 
@@ -489,8 +488,8 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
       params.add("nodeId", "127.0.0.2");
       response = r.path("ws").path("v1").path("cluster").path(
           "scheduler/activities").queryParams(params).accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       json = response.getEntity(JSONObject.class);
 
@@ -499,8 +498,8 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
 
       response = r.path("ws").path("v1").path("cluster").path(
           "scheduler/activities").queryParams(params).accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       json = response.getEntity(JSONObject.class);
 
@@ -542,8 +541,8 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
       params.add("nodeId", "127.0.0.1");
       ClientResponse response = r.path("ws").path("v1").path("cluster").path(
           "scheduler/activities").queryParams(params).accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       JSONObject json = response.getEntity(JSONObject.class);
 
@@ -553,8 +552,8 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
       //Get JSON
       response = r.path("ws").path("v1").path("cluster").path(
           "scheduler/activities").queryParams(params).accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       json = response.getEntity(JSONObject.class);
 
@@ -868,8 +867,8 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
 
       ClientResponse response =
           r.path("ws").path("v1").path("cluster").path("scheduler/activities")
-              .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+              .accept(ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       JSONObject json = response.getEntity(JSONObject.class);
       assertEquals("waiting for next allocation",
@@ -886,8 +885,8 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
 
       response =
           r.path("ws").path("v1").path("cluster").path("scheduler/activities")
-              .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+              .accept(ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       json = response.getEntity(JSONObject.class);
 
@@ -941,8 +940,8 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
       WebResource r = resource();
       ClientResponse response =
           r.path("ws").path("v1").path("cluster").path("scheduler/activities")
-              .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+              .accept(ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       JSONObject json = response.getEntity(JSONObject.class);
       assertEquals("waiting for next allocation",
@@ -955,8 +954,8 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
 
       response =
           r.path("ws").path("v1").path("cluster").path("scheduler/activities")
-              .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+              .accept(ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
+      assertEquals(ContentTypes.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
           response.getType().toString());
       json = response.getEntity(JSONObject.class);
 
@@ -1726,9 +1725,9 @@ public class TestRMWebServicesSchedulerActivities extends JerseyTestBase {
 
       ClientResponse response = r.path("ws").path("v1").path("cluster")
           .path(RMWSConsts.SCHEDULER_BULK_ACTIVITIES).queryParams(params)
-          .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+          .accept(ContentTypes.APPLICATION_JSON).get(ClientResponse.class);
 
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; "
+      assertEquals(ContentTypes.APPLICATION_JSON + "; "
           + JettyUtils.UTF_8, response.getType().toString());
       json = response.getEntity(JSONObject.class);
       done = true;

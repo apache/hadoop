@@ -36,12 +36,12 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.concurrent.Callable;
 
-import javax.ws.rs.core.MediaType;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.Marshaller;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.http.ContentTypes;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.AuthenticationFilterInitializer;
@@ -241,7 +241,7 @@ public class TestRMWebServicesDelegationTokenAuthentication {
 
     conn = (HttpURLConnection) url.openConnection();
     conn.setRequestProperty(delegationTokenHeader, token);
-    setupConn(conn, "POST", MediaType.APPLICATION_XML, requestBody);
+    setupConn(conn, "POST", ContentTypes.APPLICATION_XML, requestBody);
 
     // this should not fail
     try {
@@ -286,7 +286,7 @@ public class TestRMWebServicesDelegationTokenAuthentication {
     URL url = new URL("http://localhost:8088/ws/v1/cluster/apps");
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
     conn.setRequestProperty(delegationTokenHeader, token);
-    setupConn(conn, "POST", MediaType.APPLICATION_XML, requestBody);
+    setupConn(conn, "POST", ContentTypes.APPLICATION_XML, requestBody);
 
     // this should fail with unauthorized because only
     // auth is kerberos or delegation token
@@ -312,7 +312,7 @@ public class TestRMWebServicesDelegationTokenAuthentication {
       URL url = new URL("http://localhost:8088/ws/v1/cluster/delegation-token");
       HttpURLConnection conn = (HttpURLConnection) url.openConnection();
       conn.setRequestProperty(delegationTokenHeader, token);
-      setupConn(conn, "POST", MediaType.APPLICATION_JSON, requestBody);
+      setupConn(conn, "POST", ContentTypes.APPLICATION_JSON, requestBody);
       try {
         conn.getInputStream();
         fail("Creation/Renewing delegation tokens should not be "
@@ -352,7 +352,7 @@ public class TestRMWebServicesDelegationTokenAuthentication {
         URL url =
             new URL("http://localhost:8088/ws/v1/cluster/delegation-token?doAs=client2");
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        setupConn(conn, "POST", MediaType.APPLICATION_JSON, body);
+        setupConn(conn, "POST", ContentTypes.APPLICATION_JSON, body);
         InputStream response = conn.getInputStream();
         assertEquals(Status.OK.getStatusCode(), conn.getResponseCode());
         BufferedReader reader = null;
@@ -387,7 +387,7 @@ public class TestRMWebServicesDelegationTokenAuthentication {
         new URL("http://localhost:8088/ws/v1/cluster/delegation-token?doAs=client2");
     HttpURLConnection conn = (HttpURLConnection) url.openConnection();
     conn.setRequestProperty(delegationTokenHeader, token);
-    setupConn(conn, "POST", MediaType.APPLICATION_JSON, body);
+    setupConn(conn, "POST", ContentTypes.APPLICATION_JSON, body);
     try {
       conn.getInputStream();
       fail("Client should not be allowed to impersonate using delegation tokens");
@@ -406,7 +406,7 @@ public class TestRMWebServicesDelegationTokenAuthentication {
             new URL(
                 "http://localhost:8088/ws/v1/cluster/delegation-token?doAs=client");
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        setupConn(conn, "POST", MediaType.APPLICATION_JSON, body);
+        setupConn(conn, "POST", ContentTypes.APPLICATION_JSON, body);
         try {
           conn.getInputStream();
           fail("Non superuser client should not be allowed to carry out doAs");
@@ -429,7 +429,7 @@ public class TestRMWebServicesDelegationTokenAuthentication {
         URL url =
             new URL("http://localhost:8088/ws/v1/cluster/delegation-token");
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        setupConn(conn, "POST", MediaType.APPLICATION_JSON, body);
+        setupConn(conn, "POST", ContentTypes.APPLICATION_JSON, body);
         InputStream response = conn.getInputStream();
         assertEquals(Status.OK.getStatusCode(), conn.getResponseCode());
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(
