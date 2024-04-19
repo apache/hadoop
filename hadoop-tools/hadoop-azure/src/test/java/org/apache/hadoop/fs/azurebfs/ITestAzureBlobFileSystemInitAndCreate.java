@@ -26,6 +26,9 @@ import org.junit.Test;
 
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_IS_HNS_ENABLED;
+import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT;
+
 /**
  * Test filesystem initialization and creation.
  */
@@ -34,6 +37,9 @@ public class ITestAzureBlobFileSystemInitAndCreate extends
 
   public ITestAzureBlobFileSystemInitAndCreate() throws Exception {
     this.getConfiguration().unset(ConfigurationKeys.AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION);
+    this.getConfiguration().setBoolean(FS_AZURE_ACCOUNT_IS_HNS_ENABLED,
+        getConfiguration().getBoolean(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT,
+            false));
   }
 
   @Override

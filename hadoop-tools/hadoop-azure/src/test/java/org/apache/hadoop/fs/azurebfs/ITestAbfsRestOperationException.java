@@ -33,8 +33,10 @@ import org.apache.hadoop.fs.Path;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DOT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_IS_HNS_ENABLED;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ABFS_ACCOUNT_NAME;
+import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -151,6 +153,9 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
     // Stop filesystem creation as it will lead to calls to store.
     config.set("fs.azure.createRemoteFileSystemDuringInitialization", "false");
 
+    config.setBoolean(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, config.getBoolean(
+        FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false));
+
     try (final AzureBlobFileSystem fs1 =
         (AzureBlobFileSystem) FileSystem.newInstance(fs.getUri(),
         config)) {
@@ -185,6 +190,8 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
         RETRY_TEST_TOKEN_PROVIDER);
     // Stop filesystem creation as it will lead to calls to store.
     config.set(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION, "false");
+    config.setBoolean(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, config.getBoolean(
+        FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false));
 
     final AzureBlobFileSystem fs = getFileSystem(config);
     try {
