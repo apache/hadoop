@@ -49,6 +49,7 @@ import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.BucketInfo;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.E_BAD_STATE;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.Uploads;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardToolTestHelper.exec;
+import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.isUsingDefaultExternalDataFile;
 
 /**
  * Test S3Guard Tool CLI commands.
@@ -62,9 +63,11 @@ public class ITestS3GuardTool extends AbstractS3GuardToolTestBase {
   @Test
   public void testExternalBucketRequireUnencrypted() throws Throwable {
     Configuration conf = getConfiguration();
-    removeBaseAndBucketOverrides(conf,
-        S3_ENCRYPTION_ALGORITHM,
-        ENDPOINT);
+    if (isUsingDefaultExternalDataFile(conf)) {
+      removeBaseAndBucketOverrides(conf,
+          S3_ENCRYPTION_ALGORITHM,
+          ENDPOINT);
+    }
     run(conf, BucketInfo.NAME,
         "-" + BucketInfo.ENCRYPTION_FLAG, "none",
         externalBucket());
@@ -86,8 +89,10 @@ public class ITestS3GuardTool extends AbstractS3GuardToolTestBase {
   @Test
   public void testExternalBucketRequireEncrypted() throws Throwable {
     Configuration conf = getConfiguration();
-    removeBaseAndBucketOverrides(conf,
-        ENDPOINT);
+    if (isUsingDefaultExternalDataFile(conf)) {
+      removeBaseAndBucketOverrides(conf,
+          ENDPOINT);
+    }
     runToFailure(E_BAD_STATE,
         conf,
         BucketInfo.NAME,

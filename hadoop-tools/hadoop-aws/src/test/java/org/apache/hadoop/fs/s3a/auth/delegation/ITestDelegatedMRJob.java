@@ -61,6 +61,7 @@ import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.*;
 import static org.apache.hadoop.fs.s3a.auth.delegation.MiniKerberizedHadoopCluster.assertSecurityEnabled;
 import static org.apache.hadoop.fs.s3a.auth.delegation.MiniKerberizedHadoopCluster.closeUserFileSystems;
 import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.getOrcData;
+import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.isUsingDefaultExternalDataFile;
 import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.requireAnonymousDataPath;
 
 /**
@@ -253,8 +254,10 @@ public class ITestDelegatedMRJob extends AbstractDelegationIT {
   public void testJobSubmissionCollectsTokens() throws Exception {
     describe("Mock Job test");
     JobConf conf = new JobConf(getConfiguration());
-    removeBaseAndBucketOverrides(conf,
-        Constants.ENDPOINT);
+    if (isUsingDefaultExternalDataFile(conf)) {
+      removeBaseAndBucketOverrides(conf,
+          Constants.ENDPOINT);
+    }
 
     // the input here is the external file; which lets
     // us differentiate source URI from dest URI
