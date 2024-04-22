@@ -239,7 +239,6 @@ public class TestCGroupsV2HandlerImpl extends TestCGroupsHandlerBase {
     // Verify that the subtree control file was updated
     String subtreeControllersEnabledString = FileUtils.readFileToString(subtreeControlFile,
         StandardCharsets.UTF_8);
-
     Assert.assertEquals("The newly added controller doesn't contain + sign",
         1, StringUtils.countMatches(subtreeControllersEnabledString, "+"));
     Assert.assertEquals("Controller is not enabled in subtree control file",
@@ -249,11 +248,11 @@ public class TestCGroupsV2HandlerImpl extends TestCGroupsHandlerBase {
 
     subtreeControllersEnabledString = FileUtils.readFileToString(subtreeControlFile,
         StandardCharsets.UTF_8);
-    Set<String> subtreeControllersEnabled = new HashSet<>(Arrays.asList(
-        subtreeControllersEnabledString.replace("+", " ").trim().split(" ")));
-
     Assert.assertEquals("The newly added controllers doesn't contain + signs",
         2, StringUtils.countMatches(subtreeControllersEnabledString, "+"));
+
+    Set<String> subtreeControllersEnabled = new HashSet<>(Arrays.asList(
+        subtreeControllersEnabledString.replace("+", " ").trim().split(" ")));
     Assert.assertEquals(2, subtreeControllersEnabled.size());
     Assert.assertTrue("Controller is not enabled in subtree control file",
         cGroupsHandler.getValidCGroups().containsAll(subtreeControllersEnabled));
@@ -266,11 +265,11 @@ public class TestCGroupsV2HandlerImpl extends TestCGroupsHandlerBase {
 
     subtreeControllersEnabledString = FileUtils.readFileToString(subtreeControlFile,
         StandardCharsets.UTF_8);
-    subtreeControllersEnabled = new HashSet<>(Arrays.asList(
-        subtreeControllersEnabledString.replace("+", " ").split(" ")));
-
     Assert.assertEquals("The newly added controller doesn't contain + sign",
         1, StringUtils.countMatches(subtreeControllersEnabledString, "+"));
+
+    subtreeControllersEnabled = new HashSet<>(Arrays.asList(
+        subtreeControllersEnabledString.replace("+", " ").split(" ")));
     Assert.assertEquals(3, subtreeControllersEnabled.size());
     Assert.assertTrue("Controllers not enabled in subtree control file",
         cGroupsHandler.getValidCGroups().containsAll(subtreeControllersEnabled));
