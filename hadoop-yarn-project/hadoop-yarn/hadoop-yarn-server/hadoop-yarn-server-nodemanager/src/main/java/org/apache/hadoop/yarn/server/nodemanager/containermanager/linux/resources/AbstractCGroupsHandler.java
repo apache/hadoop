@@ -353,7 +353,9 @@ public abstract class AbstractCGroupsHandler implements CGroupsHandler {
       LOG.info("Yarn control group does not exist. Creating " +
           yarnHierarchy.getAbsolutePath());
       try {
-        if (!yarnHierarchy.mkdir()) {
+        if (yarnHierarchy.mkdir()) {
+          updateEnabledControllersInHierarchy(rootHierarchy, controller);
+        } else {
           // Unexpected: we just checked that it was missing
           throw new ResourceHandlerException(getErrorWithDetails(
               "Unexpected: Cannot create yarn cgroup",
