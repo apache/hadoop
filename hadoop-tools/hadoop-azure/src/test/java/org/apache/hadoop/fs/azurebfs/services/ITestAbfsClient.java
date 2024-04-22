@@ -413,7 +413,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     return client;
   }
 
-  private static AbfsClient setAbfsClientField(
+  static AbfsClient setAbfsClientField(
       final AbfsClient client,
       final String fieldName,
       Object fieldObject) throws Exception {
