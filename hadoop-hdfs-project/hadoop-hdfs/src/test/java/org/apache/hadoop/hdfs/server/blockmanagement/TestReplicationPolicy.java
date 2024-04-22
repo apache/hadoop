@@ -1662,6 +1662,7 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
     when(node.getXceiverCount()).thenReturn(1);
 
     final Configuration conf = new Configuration();
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_MINLOAD_KEY, 1);
     final Class<? extends BlockPlacementPolicy> replicatorClass = conf
         .getClass(DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_KEY,
             DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_DEFAULT,
