@@ -187,21 +187,18 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
     config.set(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION, "false");
 
     final AzureBlobFileSystem fs = getFileSystem(config);
-    try {
-      intercept(Exception.class,
-              () -> {
-                fs.getFileStatus(new Path("/"));
-              });
-    } catch (AbfsRestOperationException e) {
-      String errorDesc = "Should throw RestOp exception on AAD failure";
-      Assertions.assertThat(e.getStatusCode())
-          .describedAs("Incorrect status code. " + errorDesc).isEqualTo(-1);
-      Assertions.assertThat(e.getErrorCode())
-          .describedAs("Incorrect error code. " + errorDesc)
-          .isEqualTo(AzureServiceErrorCode.UNKNOWN);
-      Assertions.assertThat(e.getErrorMessage())
-          .describedAs("Incorrect error message. " + errorDesc)
-          .contains("Auth failure: ");
-    }
+    AbfsRestOperationException e = intercept(AbfsRestOperationException.class, () -> {
+      fs.getFileStatus(new Path("/"));
+    });
+
+    String errorDesc = "Should throw RestOp exception on AAD failure";
+    Assertions.assertThat(e.getStatusCode())
+        .describedAs("Incorrect status code. " + errorDesc).isEqualTo(-1);
+    Assertions.assertThat(e.getErrorCode())
+        .describedAs("Incorrect error code. " + errorDesc)
+        .isEqualTo(AzureServiceErrorCode.UNKNOWN);
+    Assertions.assertThat(e.getErrorMessage())
+        .describedAs("Incorrect error message. " + errorDesc)
+        .contains("Auth failure: ");
   }
 }
