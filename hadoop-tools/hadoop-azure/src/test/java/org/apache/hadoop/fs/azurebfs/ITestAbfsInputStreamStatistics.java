@@ -247,8 +247,8 @@ public class ITestAbfsInputStreamStatistics
           stats.getReadOperations());
       assertEquals("Mismatch in remoteReadOps value",
           getConfiguration().isInputStreamLazyOptimizationEnabled()
-              && !getConfiguration().readSmallFilesCompletely() &&
-              getConfiguration().optimizeFooterRead() ? 2 : 1,
+              && !getConfiguration().readSmallFilesCompletely()
+              && getConfiguration().optimizeFooterRead() ? 2 : 1,
           stats.getRemoteReadOperations());
 
       in.close();

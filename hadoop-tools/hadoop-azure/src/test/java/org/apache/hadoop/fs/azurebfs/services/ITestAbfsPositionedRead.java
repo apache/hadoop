@@ -75,8 +75,8 @@ public class ITestAbfsPositionedRead extends AbstractAbfsIntegrationTest {
       // AbfsInputStream buffer.
 
       boolean readOnlyBytesToReadData =
-          getConfiguration().isInputStreamLazyOptimizationEnabled() &&
-              !getConfiguration().readSmallFilesCompletely()
+          getConfiguration().isInputStreamLazyOptimizationEnabled()
+              && !getConfiguration().readSmallFilesCompletely()
               && getConfiguration().optimizeFooterRead();
       /*
        * If the head optimization and footer optimization is enabled, and readSmallFile
