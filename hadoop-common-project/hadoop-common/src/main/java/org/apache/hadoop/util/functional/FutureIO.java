@@ -32,13 +32,14 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSBuilder;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Future IO Helper methods.
@@ -145,11 +146,11 @@ public final class FutureIO {
       }
       return results;
     } catch (InterruptedException e) {
-      LOG.error("Execution of future interrupted ", e);
+      LOG.debug("Execution of future interrupted ", e);
       throw (InterruptedIOException) new InterruptedIOException(e.toString())
           .initCause(e);
     } catch (ExecutionException e) {
-      LOG.error("Execution of future failed with exception", e.getCause());
+      LOG.debug("Execution of future failed with exception", e.getCause());
       return raiseInnerCause(e);
     }
   }
@@ -183,11 +184,11 @@ public final class FutureIO {
       }
       return results;
     } catch (InterruptedException e) {
-      LOG.error("Execution of future interrupted ", e);
+      LOG.debug("Execution of future interrupted ", e);
       throw (InterruptedIOException) new InterruptedIOException(e.toString())
           .initCause(e);
     } catch (ExecutionException e) {
-      LOG.error("Execution of future failed with exception", e.getCause());
+      LOG.debug("Execution of future failed with exception", e.getCause());
       return raiseInnerCause(e);
     }
   }
