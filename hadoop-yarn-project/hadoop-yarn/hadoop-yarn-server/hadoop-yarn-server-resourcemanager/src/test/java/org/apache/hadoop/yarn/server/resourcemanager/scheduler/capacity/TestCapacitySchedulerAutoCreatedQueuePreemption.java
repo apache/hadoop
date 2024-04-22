@@ -27,6 +27,8 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
     .capacity.TestCapacitySchedulerAutoCreatedQueueBase.E;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
+    .capacity.TestCapacitySchedulerAutoCreatedQueueBase.ROOT;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
     .capacity.TestCapacitySchedulerAutoCreatedQueueBase.USER0;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
     .capacity.TestCapacitySchedulerAutoCreatedQueueBase.USER1;
@@ -60,7 +62,7 @@ public class TestCapacitySchedulerAutoCreatedQueuePreemption
     //setup new queues with one of them auto enabled
     // Define top-level queues
     // Set childQueue for root
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] { "c" });
+    conf.setQueues(ROOT, new String[] {"c"});
     conf.setCapacity(C, 100f);
 
     conf.setUserLimitFactor(C, 1.0f);
@@ -91,7 +93,7 @@ public class TestCapacitySchedulerAutoCreatedQueuePreemption
     //setup new queues with one of them auto enabled
     // Define top-level queues
     // Set childQueue for root
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT,
+    conf.setQueues(ROOT,
         new String[] { "c", "d", "e" });
     conf.setCapacity(C, 45f);
     conf.setCapacity(D, 45f);
@@ -120,8 +122,8 @@ public class TestCapacitySchedulerAutoCreatedQueuePreemption
     conf.setAutoCreatedLeafQueueConfigUserLimit(E, 100);
     conf.setAutoCreatedLeafQueueConfigUserLimitFactor(E, 3.0f);
 
-    conf.setQueuePriority(CapacitySchedulerConfiguration.ROOT + ".c", 1);
-    conf.setQueuePriority(CapacitySchedulerConfiguration.ROOT + ".d", 2);
+    conf.setQueuePriority(C, 1);
+    conf.setQueuePriority(D, 2);
 
     return conf;
   }

@@ -371,6 +371,14 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
   }
 
   /**
+   * Always run a metrics operation.
+   * @return a probe.
+   */
+  protected OperationCostValidator.ExpectedProbe always() {
+    return OperationCostValidator.always();
+  }
+
+  /**
    * A metric diff which must hold when the fs is keeping markers.
    * @param cost expected cost
    * @return the diff.

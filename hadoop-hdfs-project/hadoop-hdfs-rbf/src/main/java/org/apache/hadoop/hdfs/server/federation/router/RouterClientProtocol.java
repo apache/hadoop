@@ -1101,10 +1101,15 @@ public class RouterClientProtocol implements ClientProtocol {
         DatanodeInfo dnInfo = dn.getDatanodeInfo();
         String nodeId = dnInfo.getXferAddr();
         DatanodeStorageReport oldDn = datanodesMap.get(nodeId);
-        if (oldDn == null ||
-            dnInfo.getLastUpdate() > oldDn.getDatanodeInfo().getLastUpdate()) {
+        if (oldDn == null) {
+          datanodesMap.put(nodeId, dn);
+        } else if (dnInfo.getLastUpdate() > oldDn.getDatanodeInfo().getLastUpdate()) {
+          dnInfo.setNumBlocks(dnInfo.getNumBlocks() +
+              oldDn.getDatanodeInfo().getNumBlocks());
           datanodesMap.put(nodeId, dn);
         } else {
+          oldDn.getDatanodeInfo().setNumBlocks(
+              oldDn.getDatanodeInfo().getNumBlocks() + dnInfo.getNumBlocks());
           LOG.debug("{} is in multiple subclusters", nodeId);
         }
       }

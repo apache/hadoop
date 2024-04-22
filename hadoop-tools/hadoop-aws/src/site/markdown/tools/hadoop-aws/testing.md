@@ -22,9 +22,6 @@ connection to S3 to interact with a bucket.  Unit test suites follow the naming
 convention `Test*.java`.  Integration tests follow the naming convention
 `ITest*.java`.
 
-Due to eventual consistency, integration tests may fail without reason.
-Transient failures, which no longer occur upon rerunning the test, should thus
-be ignored.
 
 ## <a name="policy"></a> Policy for submitting patches which affect the `hadoop-aws` module.
 
@@ -55,7 +52,6 @@ make for a slow iterative development.
 
 Please: run the tests. And if you don't, we are sorry for declining your
 patch, but we have to.
-
 
 ### What if there's an intermittent failure of a test?
 
@@ -147,7 +143,7 @@ Example:
 </configuration>
 ```
 
-### <a name="encryption"></a> Configuring S3a Encryption
+## <a name="encryption"></a> Configuring S3a Encryption
 
 For S3a encryption tests to run correctly, the
 `fs.s3a.encryption.key` must be configured in the s3a contract xml
@@ -174,6 +170,21 @@ Buckets can be configured with [default encryption](https://docs.aws.amazon.com/
 on the AWS side. Some S3AFileSystem tests are skipped when default encryption is
 enabled due to unpredictability in how [ETags](https://docs.aws.amazon.com/AmazonS3/latest/API/RESTCommonResponseHeaders.html)
 are generated.
+
+### Disabling the encryption tests
+
+If the S3 store/storage class doesn't support server-side-encryption, these will fail. They
+can be turned off.
+
+```xml
+<property>
+  <name>test.fs.s3a.encryption.enabled</name>
+  <value>false</value>
+</property>
+```
+
+Encryption is only used for those specific test suites with `Encryption` in
+their classname.
 
 ## <a name="running"></a> Running the Tests
 
@@ -241,36 +252,28 @@ define the target region in `auth-keys.xml`.
 
 ```xml
 <property>
-  <name>fs.s3a.endpoint</name>
-  <value>s3.eu-central-1.amazonaws.com</value>
+  <name>fs.s3a.endpoint.region</name>
+  <value>eu-central-1</value>
 </property>
 ```
-
-Alternatively you can use endpoints defined in [core-site.xml](../../../../test/resources/core-site.xml).
-
-```xml
-<property>
-  <name>fs.s3a.endpoint</name>
-  <value>${frankfurt.endpoint}</value>
-</property>
-```
-
-This is used for all tests expect for scale tests using a Public CSV.gz file
-(see below)
 
 ### <a name="csv"></a> CSV Data Tests
 
 The `TestS3AInputStreamPerformance` tests require read access to a multi-MB
-text file. The default file for these tests is one published by amazon,
-[s3a://landsat-pds.s3.amazonaws.com/scene_list.gz](http://landsat-pds.s3.amazonaws.com/scene_list.gz).
-This is a gzipped CSV index of other files which amazon serves for open use.
+text file. The default file for these tests is a public one.
+`s3a://noaa-cors-pds/raw/2023/001/akse/AKSE001a.23_.gz`
+from the [NOAA Continuously Operating Reference Stations (CORS) Network (NCN)](https://registry.opendata.aws/noaa-ncn/)
+
+Historically it was required to be a `csv.gz` file to validate S3 Select
+support. Now that S3 Select support has been removed, other large files
+may be used instead.
 
 The path to this object is set in the option `fs.s3a.scale.test.csvfile`,
 
 ```xml
 <property>
   <name>fs.s3a.scale.test.csvfile</name>
-  <value>s3a://landsat-pds/scene_list.gz</value>
+  <value>s3a://noaa-cors-pds/raw/2023/001/akse/AKSE001a.23_.gz</value>
 </property>
 ```
 
@@ -280,23 +283,25 @@ is hosted in Amazon's US-east datacenter.
 1. If the data cannot be read for any reason then the test will fail.
 1. If the property is set to a different path, then that data must be readable
 and "sufficiently" large.
+1. If a `.gz` file, expect decompression-related test failures.
 
 (the reason the space or newline is needed is to add "an empty entry"; an empty
 `<value/>` would be considered undefined and pick up the default)
 
-Of using a test file in an S3 region requiring a different endpoint value
-set in `fs.s3a.endpoint`, a bucket-specific endpoint must be defined.
-For the default test dataset, hosted in the `landsat-pds` bucket, this is:
+
+If using a test file in a different AWS S3 region then
+a bucket-specific region must be defined.
+For the default test dataset, hosted in the `noaa-cors-pds` bucket, this is:
 
 ```xml
-<property>
-  <name>fs.s3a.bucket.landsat-pds.endpoint</name>
-  <value>s3.amazonaws.com</value>
-  <description>The endpoint for s3a://landsat-pds URLs</description>
-</property>
+  <property>
+    <name>fs.s3a.bucket.noaa-cors-pds.endpoint.region</name>
+    <value>us-east-1</value>
+  </property>
 ```
 
-### <a name="csv"></a> Testing Access Point Integration
+### <a name="access"></a> Testing Access Point Integration
+
 S3a supports using Access Point ARNs to access data in S3. If you think your changes affect VPC
 integration, request signing, ARN manipulation, or any code path that deals with the actual
 sending and retrieving of data to/from S3, make sure you run the entire integration test suite with
@@ -551,9 +556,9 @@ They do not run automatically: they must be explicitly run from the command line
 
 Look in the source for these and reads the Javadocs before executing.
 
-## <a name="alternate_s3"></a> Testing against non AWS S3 endpoints.
+## <a name="alternate_s3"></a> Testing against non-AWS S3 Stores.
 
-The S3A filesystem is designed to work with storage endpoints which implement
+The S3A filesystem is designed to work with S3 stores which implement
 the S3 protocols to the extent that the amazon S3 SDK is capable of talking
 to it. We encourage testing against other filesystems and submissions of patches
 which address issues. In particular, we encourage testing of Hadoop release
@@ -573,18 +578,16 @@ on third party stores.
     <value>false</value>
   </property>
   <property>
-    <name>fs.s3a.select.enabled</name>
-    <value>false</value>
-  </property>
-  <property>
     <name>test.fs.s3a.sts.enabled</name>
     <value>false</value>
   </property>
   <property>
     <name>test.fs.s3a.create.create.acl.enabled</name>
     <value>false</value>
- < /property>
+  </property>
 ```
+
+See [Third Party Stores](third_party_stores.html) for more on this topic.
 
 ### Public datasets used in tests
 
@@ -599,20 +602,6 @@ store that supports these tests.
 An example of this might be the MarkerTools tests which require a bucket with a large number of
 objects or the requester pays tests that require requester pays to be enabled for the bucket.
 
-### Disabling the encryption tests
-
-If the endpoint doesn't support server-side-encryption, these will fail. They
-can be turned off.
-
-```xml
-<property>
-  <name>test.fs.s3a.encryption.enabled</name>
-  <value>false</value>
-</property>
-```
-
-Encryption is only used for those specific test suites with `Encryption` in
-their classname.
 
 ### Disabling the storage class tests
 
@@ -643,23 +632,10 @@ the `fs.s3a.scale.test.csvfile` option set to its path.
 (yes, the space is necessary. The Hadoop `Configuration` class treats an empty
 value as "do not override the default").
 
-### Turning off S3 Select
+### <a name="enabling-prefetch"></a> Enabling prefetch for all tests
 
-The S3 select tests are skipped when the S3 endpoint doesn't support S3 Select.
-
-```xml
-<property>
-  <name>fs.s3a.select.enabled</name>
-  <value>false</value>
-</property>
-```
-
-If your endpoint doesn't support that feature, this option should be in
-your `core-site.xml` file, so that trying to use S3 select fails fast with
-a meaningful error ("S3 Select not supported") rather than a generic Bad Request
-exception.
-
-### Disabling V1 List API tests
+The tests are run with prefetch if the `prefetch` property is set in the
+maven build. This can be combined with the scale tests as well.
 
 
 If `ITestS3AContractGetFileStatusV1List` fails with any error about unsupported API.
@@ -671,7 +647,7 @@ If `ITestS3AContractGetFileStatusV1List` fails with any error about unsupported 
 ```
 
 Note: there's no equivalent for turning off v2 listing API, which all stores are now
-expected to support.
+required to support.
 
 
 ### Testing Requester Pays
@@ -762,12 +738,8 @@ after setting this rerun the tests
 log4j.logger.org.apache.hadoop.fs.s3a=DEBUG
 ```
 
-There are also some logging options for debug logging of the AWS client
-```properties
-log4j.logger.com.amazonaws=DEBUG
-log4j.logger.com.amazonaws.http.conn.ssl=INFO
-log4j.logger.com.amazonaws.internal=INFO
-```
+There are also some logging options for debug logging of the AWS client;
+consult the file.
 
 There is also the option of enabling logging on a bucket; this could perhaps
 be used to diagnose problems from that end. This isn't something actively
@@ -883,19 +855,19 @@ the tests become skipped, rather than fail with a trace which is really a false 
 The ordered test case mechanism of `AbstractSTestS3AHugeFiles` is probably
 the most elegant way of chaining test setup/teardown.
 
-Regarding reusing existing data, we tend to use the landsat archive of
+Regarding reusing existing data, we tend to use the noaa-cors-pds archive of
 AWS US-East for our testing of input stream operations. This doesn't work
 against other regions, or with third party S3 implementations. Thus the
 URL can be overridden for testing elsewhere.
 
 
-### Works With Other S3 Endpoints
+### Works With Other S3 Stored
 
 Don't assume AWS S3 US-East only, do allow for working with external S3 implementations.
 Those may be behind the latest S3 API features, not support encryption, session
 APIs, etc.
 
-They won't have the same CSV test files as some of the input tests rely on.
+They won't have the same CSV/large test files as some of the input tests rely on.
 Look at `ITestS3AInputStreamPerformance` to see how tests can be written
 to support the declaration of a specific large test file on alternate filesystems.
 
@@ -952,6 +924,8 @@ modifying the config. As an example from `AbstractTestS3AEncryption`:
 protected Configuration createConfiguration() {
   Configuration conf = super.createConfiguration();
   S3ATestUtils.disableFilesystemCaching(conf);
+  removeBaseAndBucketOverrides(conf,
+      SERVER_SIDE_ENCRYPTION_ALGORITHM);  
   conf.set(Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM,
           getSSEAlgorithm().getMethod());
   return conf;
@@ -1008,9 +982,8 @@ than on the maven command line:
 
 ### Keeping AWS Costs down
 
-Most of the base S3 tests are designed to use public AWS data
-(the landsat-pds bucket) for read IO, so you don't have to pay for bytes
-downloaded or long term storage costs. The scale tests do work with more data
+Most of the base S3 tests are designed delete files after test runs,
+so you don't have to pay for storage costs. The scale tests do work with more data
 so will cost more as well as generally take more time to execute.
 
 You are however billed for
@@ -1119,7 +1092,7 @@ The usual credentials needed to log in to the bucket will be used, but now
 the credentials used to interact with S3 will be temporary
 role credentials, rather than the full credentials.
 
-## <a name="qualifiying_sdk_updates"></a> Qualifying an AWS SDK Update
+## <a name="qualifying_sdk_updates"></a> Qualifying an AWS SDK Update
 
 Updating the AWS SDK is something which does need to be done regularly,
 but is rarely without complications, major or minor.
@@ -1142,7 +1115,7 @@ as it may take a couple of SDK updates before it is ready.
 1. Identify the latest AWS SDK [available for download](https://aws.amazon.com/sdk-for-java/).
 1. Create a private git branch of trunk for JIRA, and in
   `hadoop-project/pom.xml` update the `aws-java-sdk.version` to the new SDK version.
-1. Update AWS SDK versions in NOTICE.txt.
+1. Update AWS SDK versions in NOTICE.txt and LICENSE.binary
 1. Do a clean build and rerun all the `hadoop-aws` tests.
   This includes the `-Pscale` set, with a role defined for the assumed role tests.
   in `fs.s3a.assumed.role.arn` for testing assumed roles,
@@ -1164,11 +1137,18 @@ your IDE or via maven.
   `mvn dependency:tree -Dverbose > target/dependencies.txt`.
   Examine the `target/dependencies.txt` file to verify that no new
   artifacts have unintentionally been declared as dependencies
-  of the shaded `aws-java-sdk-bundle` artifact.
+  of the shaded `software.amazon.awssdk:bundle:jar` artifact.
 1. Run a full AWS-test suite with S3 client-side encryption enabled by
  setting `fs.s3a.encryption.algorithm` to 'CSE-KMS' and setting up AWS-KMS
   Key ID in `fs.s3a.encryption.key`.
 
+The dependency chain of the `hadoop-aws` module should be similar to this, albeit
+with different version numbers:
+```
+[INFO] +- org.apache.hadoop:hadoop-aws:jar:3.4.0-SNAPSHOT:compile
+[INFO] |  +- software.amazon.awssdk:bundle:jar:2.23.5:compile
+[INFO] |  \- org.wildfly.openssl:wildfly-openssl:jar:1.1.3.Final:compile
+```
 ### Basic command line regression testing
 
 We need a run through of the CLI to see if there have been changes there
@@ -1290,19 +1270,6 @@ mkdir tmp
 time bin/hadoop fs -copyToLocal -t 10  $BUCKET/\*aws\* tmp
 
 # ---------------------------------------------------
-# S3 Select on Landsat
-# this will fail with a ClassNotFoundException unless
-# eventstore JAR is added to the classpath
-# ---------------------------------------------------
-
-export LANDSATGZ=s3a://landsat-pds/scene_list.gz
-
-
-bin/hadoop s3guard select -header use -compression gzip $LANDSATGZ \
- "SELECT s.entityId,s.cloudCover FROM S3OBJECT s WHERE s.cloudCover < '0.0' LIMIT 100"
-
-
-# ---------------------------------------------------
 # Cloudstore
 # check out and build https://github.com/steveloughran/cloudstore
 # then for these tests, set CLOUDSTORE env var to point to the JAR
@@ -1365,5 +1332,5 @@ Don't be surprised if this happens, don't worry too much, and,
 while that rollback option is there to be used, ideally try to work forwards.
 
 If the problem is with the SDK, file issues with the
- [AWS SDK Bug tracker](https://github.com/aws/aws-sdk-java/issues).
+ [AWS V2 SDK Bug tracker](https://github.com/aws/aws-sdk-java-v2/issues).
 If the problem can be fixed or worked around in the Hadoop code, do it there too.

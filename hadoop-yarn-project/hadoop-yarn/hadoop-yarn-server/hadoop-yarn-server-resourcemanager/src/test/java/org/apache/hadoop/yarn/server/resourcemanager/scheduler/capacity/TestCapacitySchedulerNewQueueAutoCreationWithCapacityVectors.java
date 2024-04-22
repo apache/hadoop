@@ -90,14 +90,14 @@ public class TestCapacitySchedulerNewQueueAutoCreationWithCapacityVectors
     // root
     // - a 25%
     // a and root has AQCv2 enabled
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[]{"a"});
+    csConf.setQueues(ROOT, new String[]{"a"});
     csConf.setCapacity(A, 25f);
 
-    csConf.setAutoQueueCreationV2Enabled(CapacitySchedulerConfiguration.ROOT, true);
+    csConf.setAutoQueueCreationV2Enabled(ROOT, true);
     csConf.setAutoQueueCreationV2Enabled(A, true);
 
     // Set up dynamic queue templates
-    csConf.set(getTemplateKey(CapacitySchedulerConfiguration.ROOT, "capacity"), "6.25");
+    csConf.set(getTemplateKey(ROOT, "capacity"), "6.25");
     csConf.set(getLeafTemplateKey(A, "capacity"), "[memory=25%, vcores=50%]");
   }
 
@@ -105,14 +105,14 @@ public class TestCapacitySchedulerNewQueueAutoCreationWithCapacityVectors
     // root
     // - a [memory=8000, vcores=8]
     // a and root has AQCv2 enabled
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[]{"a"});
+    csConf.setQueues(ROOT, new String[]{"a"});
     csConf.setCapacity(A, "[memory=8000, vcores=8]");
 
-    csConf.setAutoQueueCreationV2Enabled(CapacitySchedulerConfiguration.ROOT, true);
+    csConf.setAutoQueueCreationV2Enabled(ROOT, true);
     csConf.setAutoQueueCreationV2Enabled(A, true);
 
     // Set up dynamic queue templates
-    csConf.set(getTemplateKey(CapacitySchedulerConfiguration.ROOT, "capacity"),
+    csConf.set(getTemplateKey(ROOT, "capacity"),
             "[memory=2000mb, vcores=2]");
     csConf.set(getLeafTemplateKey(A, "capacity"),
             "[memory=2000, vcores=4]");
@@ -131,23 +131,23 @@ public class TestCapacitySchedulerNewQueueAutoCreationWithCapacityVectors
     //   - e1-auto [memory=2048, vcores=2]
 
     // Set up static queues
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[]{"a", "b", "d"});
+    csConf.setQueues(ROOT, new String[]{"a", "b", "d"});
     csConf.setCapacityVector(A, NL, "[memory=10%, vcores=2]");
     csConf.setCapacityVector(B, NL, "[memory=2000, vcores=10%]");
     csConf.setCapacityVector(D, NL, "[memory=10%, vcores=10%]");
     csConf.setQueues(A, new String[]{"a1"});
     csConf.setCapacityVector(A1, NL, "[memory=100%, vcores=100%]");
-    csConf.setAutoQueueCreationV2Enabled(CapacitySchedulerConfiguration.ROOT, true);
+    csConf.setAutoQueueCreationV2Enabled(ROOT, true);
     csConf.setAutoQueueCreationV2Enabled(A, true);
     csConf.setAutoQueueCreationV2Enabled(D, true);
 
     // Set up dynamic queue templates
-    csConf.set(getTemplateKey(CapacitySchedulerConfiguration.ROOT, "capacity"),
+    csConf.set(getTemplateKey(ROOT, "capacity"),
             "[memory=2w, vcores=5w]");
-    csConf.set(getParentTemplateKey(CapacitySchedulerConfiguration.ROOT, "capacity"),
+    csConf.set(getParentTemplateKey(ROOT, "capacity"),
             "[memory=2w, vcores=10]");
-    csConf.set(getLeafTemplateKey(CapacitySchedulerConfiguration.ROOT + ".*", "capacity"),
-            "[memory=2000, vcores=2]");
+    csConf.set(getLeafTemplateKey(new QueuePath(CapacitySchedulerConfiguration.ROOT + ".*"),
+            "capacity"), "[memory=2000, vcores=2]");
     csConf.set(getLeafTemplateKey(D, "capacity"), "[memory=1000, vcores=1]");
 
   }
@@ -185,7 +185,7 @@ public class TestCapacitySchedulerNewQueueAutoCreationWithCapacityVectors
   }
 
   private void validateBasicConfiguration() throws Exception {
-    CSQueue a = cs.getQueue(A);
+    CSQueue a = cs.getQueue(A_PATH);
     Assert.assertEquals(8 / 32f, a.getAbsoluteCapacity(), EPSILON);
     Assert.assertEquals(-1f, a.getQueueCapacities().getWeight(), EPSILON);
     Assert.assertEquals(8000,
@@ -316,18 +316,18 @@ public class TestCapacitySchedulerNewQueueAutoCreationWithCapacityVectors
     return autoQueueHandler.createQueue(new QueuePath(queuePath));
   }
 
-  private String getTemplateKey(String queuePath, String entryKey) {
-    return CapacitySchedulerConfiguration.getQueuePrefix(queuePath)
+  private String getTemplateKey(QueuePath queuePath, String entryKey) {
+    return QueuePrefixes.getQueuePrefix(queuePath)
             + AutoCreatedQueueTemplate.AUTO_QUEUE_TEMPLATE_PREFIX + entryKey;
   }
 
-  private String getParentTemplateKey(String queuePath, String entryKey) {
-    return CapacitySchedulerConfiguration.getQueuePrefix(queuePath)
+  private String getParentTemplateKey(QueuePath queuePath, String entryKey) {
+    return QueuePrefixes.getQueuePrefix(queuePath)
             + AutoCreatedQueueTemplate.AUTO_QUEUE_PARENT_TEMPLATE_PREFIX + entryKey;
   }
 
-  private String getLeafTemplateKey(String queuePath, String entryKey) {
-    return CapacitySchedulerConfiguration.getQueuePrefix(queuePath)
+  private String getLeafTemplateKey(QueuePath queuePath, String entryKey) {
+    return QueuePrefixes.getQueuePrefix(queuePath)
             + AutoCreatedQueueTemplate.AUTO_QUEUE_LEAF_TEMPLATE_PREFIX + entryKey;
   }
 }

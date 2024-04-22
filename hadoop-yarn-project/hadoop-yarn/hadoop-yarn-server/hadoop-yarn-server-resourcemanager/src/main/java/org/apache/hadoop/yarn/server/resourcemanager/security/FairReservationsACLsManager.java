@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.security;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.AllocationConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 
@@ -35,7 +36,7 @@ public class FairReservationsACLsManager extends ReservationsACLsManager {
     AllocationConfiguration aConf = ((FairScheduler) scheduler)
         .getAllocationConfiguration();
     for (String planQueue : scheduler.getPlanQueues()) {
-      reservationAcls.put(planQueue, aConf.getReservationAcls(planQueue));
+      reservationAcls.put(planQueue, aConf.getReservationAcls(new QueuePath(planQueue)));
     }
   }
 

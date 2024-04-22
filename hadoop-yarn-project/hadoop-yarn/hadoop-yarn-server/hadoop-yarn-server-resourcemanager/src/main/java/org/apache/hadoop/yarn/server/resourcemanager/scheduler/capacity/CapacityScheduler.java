@@ -2537,7 +2537,7 @@ public class CapacityScheduler extends
         if (queue == null) {
           // reservation has terminated during failover
           if (isRecovering && conf.getMoveOnExpiry(
-              getQueue(queueName).getQueuePath())) {
+              getQueue(queueName).getQueuePathObject())) {
             // move to the default child queue of the plan
             return getDefaultReservationQueueName(queueName);
           }

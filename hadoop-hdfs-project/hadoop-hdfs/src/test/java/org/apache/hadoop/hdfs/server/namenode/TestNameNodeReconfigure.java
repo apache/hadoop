@@ -36,6 +36,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_NODES_TO_REP
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_IMAGE_PARALLEL_LOAD_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LOCK_DETAILED_METRICS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_READ_LOCK_REPORTING_THRESHOLD_MS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SLOWPEER_COLLECT_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_WRITE_LOCK_REPORTING_THRESHOLD_MS_KEY;
 import static org.junit.Assert.*;
 
@@ -820,6 +821,45 @@ public class TestNameNodeReconfigure {
           DFS_NAMENODE_WRITE_LOCK_REPORTING_THRESHOLD_MS_KEY, "100000");
       assertEquals(fsNamesystem.getWriteLockReportingThresholdMs(), 100000);
     }
+  }
+
+  @Test
+  public void testReconfigureSlowPeerCollectInterval() throws Exception {
+    final NameNode nameNode = cluster.getNameNode();
+    final DatanodeManager datanodeManager =
+        nameNode.namesystem.getBlockManager().getDatanodeManager();
+
+    assertFalse("SlowNode tracker is already enabled. It should be disabled by default",
+        datanodeManager.getSlowPeerTracker().isSlowPeerTrackerEnabled());
+    assertTrue(datanodeManager.isSlowPeerCollectorInitialized());
+
+    try {
+      nameNode.reconfigureProperty(DFS_NAMENODE_SLOWPEER_COLLECT_INTERVAL_KEY, "10m");
+    } catch (NullPointerException e) {
+      assertEquals("slowPeerCollectorDaemon thread is null, not support restart", e.getMessage());
+    }
+
+    nameNode.reconfigureProperty(DFS_DATANODE_PEER_STATS_ENABLED_KEY, "True");
+    assertTrue("SlowNode tracker is still disabled. Reconfiguration could not be successful",
+        datanodeManager.getSlowPeerTracker().isSlowPeerTrackerEnabled());
+    assertFalse(datanodeManager.isSlowPeerCollectorInitialized());
+    assertEquals(1800000, datanodeManager.getSlowPeerCollectionInterval());
+
+    try {
+      nameNode.reconfigureProperty(DFS_NAMENODE_SLOWPEER_COLLECT_INTERVAL_KEY, "non-numeric");
+    } catch (ReconfigurationException e) {
+      assertEquals("Could not change property dfs.namenode.slowpeer.collect.interval from "
+          + "'30m' to 'non-numeric'", e.getMessage());
+    }
+
+    nameNode.reconfigureProperty(DFS_NAMENODE_SLOWPEER_COLLECT_INTERVAL_KEY, "10m");
+    assertFalse(datanodeManager.isSlowPeerCollectorInitialized());
+    assertEquals(600000, datanodeManager.getSlowPeerCollectionInterval());
+
+    nameNode.reconfigureProperty(DFS_NAMENODE_SLOWPEER_COLLECT_INTERVAL_KEY, null);
+    assertFalse(datanodeManager.isSlowPeerCollectorInitialized());
+    // set to the value of the current system
+    assertEquals(600000, datanodeManager.getSlowPeerCollectionInterval());
   }
 
   @After

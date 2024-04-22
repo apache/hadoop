@@ -584,7 +584,7 @@ public class TestCapacitySchedulerAutoQueueCreation
     //And weight mode, to allow dynamic auto queue creation for root
     CapacitySchedulerConfiguration conf = setupSchedulerConfiguration();
     conf.setAutoQueueCreationV2Enabled(ROOT, true);
-    conf.setCapacity("root.default", "1w");
+    conf.setCapacity(DEFAULT, "1w");
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
         ResourceScheduler.class);
 
@@ -1006,15 +1006,14 @@ public class TestCapacitySchedulerAutoQueueCreation
     try {
       CapacitySchedulerConfiguration csConf
           = new CapacitySchedulerConfiguration();
-      csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
-          new String[] {"a", "b"});
-      csConf.setCapacity("root.a", 90);
-      csConf.setCapacity("root.b", 10);
-      csConf.setAutoCreateChildQueueEnabled("root.a", true);
-      csConf.setAutoCreatedLeafQueueConfigCapacity("root.a", 50);
-      csConf.setAutoCreatedLeafQueueConfigMaxCapacity("root.a", 100);
-      csConf.setAcl("root.a", QueueACL.ADMINISTER_QUEUE, "*");
-      csConf.setAcl("root.a", QueueACL.SUBMIT_APPLICATIONS, "*");
+      csConf.setQueues(ROOT, new String[] {"a", "b"});
+      csConf.setCapacity(A, 90);
+      csConf.setCapacity(B, 10);
+      csConf.setAutoCreateChildQueueEnabled(A, true);
+      csConf.setAutoCreatedLeafQueueConfigCapacity(A, 50);
+      csConf.setAutoCreatedLeafQueueConfigMaxCapacity(A, 100);
+      csConf.setAcl(A, QueueACL.ADMINISTER_QUEUE, "*");
+      csConf.setAcl(A, QueueACL.SUBMIT_APPLICATIONS, "*");
       csConf.setBoolean(YarnConfiguration
           .APPLICATION_TAG_BASED_PLACEMENT_ENABLED, true);
       csConf.setStrings(YarnConfiguration

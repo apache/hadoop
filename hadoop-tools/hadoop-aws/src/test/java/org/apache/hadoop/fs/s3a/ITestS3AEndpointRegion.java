@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.s3a;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.nio.file.AccessDeniedException;
 import java.util.ArrayList;
@@ -36,16 +35,26 @@ import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
 import software.amazon.awssdk.core.interceptor.ExecutionInterceptor;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
+import software.amazon.awssdk.services.s3.model.HeadBucketResponse;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
+import org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils;
 
+import static org.apache.hadoop.fs.s3a.Constants.ALLOW_REQUESTER_PAYS;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
-import static org.apache.hadoop.fs.s3a.Constants.PATH_STYLE_ACCESS;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
-import static org.apache.hadoop.io.IOUtils.closeStream;
 import static org.apache.hadoop.fs.s3a.Constants.CENTRAL_ENDPOINT;
-
+import static org.apache.hadoop.fs.s3a.Constants.ENDPOINT;
+import static org.apache.hadoop.fs.s3a.Constants.FIPS_ENDPOINT;
+import static org.apache.hadoop.fs.s3a.Constants.PATH_STYLE_ACCESS;
+import static org.apache.hadoop.fs.s3a.DefaultS3ClientFactory.ERROR_ENDPOINT_WITH_FIPS;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
+import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.DEFAULT_REQUESTER_PAYS_BUCKET_NAME;
+import static org.apache.hadoop.io.IOUtils.closeStream;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -68,6 +77,12 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
 
   private static final String US_GOV_EAST_1 = "us-gov-east-1";
 
+  private static final String US_REGION_PREFIX = "us-";
+
+  private static final String CA_REGION_PREFIX = "ca-";
+
+  private static final String US_DUAL_STACK_PREFIX = "dualstack.us-";
+
   /**
    * If anyone were ever to create a bucket with this UUID pair it would break the tests.
    */
@@ -81,6 +96,8 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
   private static final String GOV_ENDPOINT = "s3-fips.us-gov-east-1.amazonaws.com";
 
   private static final String VPC_ENDPOINT = "vpce-1a2b3c4d-5e6f.s3.us-west-2.vpce.amazonaws.com";
+
+  public static final String EXCEPTION_THROWN_BY_INTERCEPTOR = "Exception thrown by interceptor";
 
   /**
    * New FS instance which will be closed in teardown.
@@ -134,10 +151,9 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
     describe("Create a client with a configured endpoint");
     Configuration conf = getConfiguration();
 
-    S3Client client = createS3Client(conf, AWS_ENDPOINT_TEST, null, US_EAST_2);
+    S3Client client = createS3Client(conf, AWS_ENDPOINT_TEST, null, US_EAST_2, false);
 
-    intercept(AwsServiceException.class, "Exception thrown by interceptor", () -> client.headBucket(
-        HeadBucketRequest.builder().bucket(getFileSystem().getBucket()).build()));
+    expectInterceptorException(client);
   }
 
   @Test
@@ -145,10 +161,41 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
     describe("Create a client with the central endpoint");
     Configuration conf = getConfiguration();
 
-    S3Client client = createS3Client(conf, CENTRAL_ENDPOINT, null, US_EAST_1);
+    S3Client client = createS3Client(conf, CENTRAL_ENDPOINT, null, US_EAST_2, false);
 
-    intercept(AwsServiceException.class, "Exception thrown by interceptor", () -> client.headBucket(
-        HeadBucketRequest.builder().bucket(getFileSystem().getBucket()).build()));
+    expectInterceptorException(client);
+
+    client = createS3Client(conf, CENTRAL_ENDPOINT, null,
+        US_EAST_2, true);
+
+    expectInterceptorException(client);
+  }
+
+  @Test
+  public void testCentralEndpointWithRegion() throws Throwable {
+    describe("Create a client with the central endpoint but also specify region");
+    Configuration conf = getConfiguration();
+
+    S3Client client = createS3Client(conf, CENTRAL_ENDPOINT, US_WEST_2,
+        US_WEST_2, false);
+
+    expectInterceptorException(client);
+
+    client = createS3Client(conf, CENTRAL_ENDPOINT, US_WEST_2,
+        US_WEST_2, true);
+
+    expectInterceptorException(client);
+
+    client = createS3Client(conf, CENTRAL_ENDPOINT, US_EAST_1,
+        US_EAST_1, false);
+
+    expectInterceptorException(client);
+
+    client = createS3Client(conf, CENTRAL_ENDPOINT, US_EAST_1,
+        US_EAST_1, true);
+
+    expectInterceptorException(client);
+
   }
 
   @Test
@@ -156,21 +203,40 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
     describe("Create a client with a configured region");
     Configuration conf = getConfiguration();
 
-    S3Client client = createS3Client(conf, null, EU_WEST_2, EU_WEST_2);
+    S3Client client = createS3Client(conf, null, EU_WEST_2, EU_WEST_2, false);
 
-    intercept(AwsServiceException.class, "Exception thrown by interceptor", () -> client.headBucket(
-        HeadBucketRequest.builder().bucket(getFileSystem().getBucket()).build()));
+    expectInterceptorException(client);
   }
 
+  @Test
+  public void testWithFips() throws Throwable {
+    describe("Create a client with fips enabled");
 
+    S3Client client = createS3Client(getConfiguration(),
+        null, EU_WEST_2, EU_WEST_2, true);
+    expectInterceptorException(client);
+  }
+
+  /**
+   * Attempting to create a client with fips enabled and an endpoint specified
+   * fails during client construction.
+   */
+  @Test
+  public void testWithFipsAndEndpoint() throws Throwable {
+    describe("Create a client with fips and an endpoint");
+
+    intercept(IllegalArgumentException.class, ERROR_ENDPOINT_WITH_FIPS, () ->
+        createS3Client(getConfiguration(), US_WEST_2, null, US_EAST_1, true));
+  }
+
+  @Test
   public void testEUWest2Endpoint() throws Throwable {
     describe("Create a client with the eu west 2 endpoint");
     Configuration conf = getConfiguration();
 
-    S3Client client = createS3Client(conf, EU_WEST_2_ENDPOINT, null, EU_WEST_2);
+    S3Client client = createS3Client(conf, EU_WEST_2_ENDPOINT, null, EU_WEST_2, false);
 
-    intercept(AwsServiceException.class, "Exception thrown by interceptor", () -> client.headBucket(
-        HeadBucketRequest.builder().bucket(getFileSystem().getBucket()).build()));
+    expectInterceptorException(client);
   }
 
   @Test
@@ -178,10 +244,9 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
     describe("Test that when both region and endpoint are configured, region takes precedence");
     Configuration conf = getConfiguration();
 
-    S3Client client = createS3Client(conf, EU_WEST_2_ENDPOINT, US_WEST_2, US_WEST_2);
+    S3Client client = createS3Client(conf, EU_WEST_2_ENDPOINT, US_WEST_2, US_WEST_2, false);
 
-    intercept(AwsServiceException.class, "Exception thrown by interceptor", () -> client.headBucket(
-        HeadBucketRequest.builder().bucket(getFileSystem().getBucket()).build()));
+    expectInterceptorException(client);
   }
 
   @Test
@@ -189,21 +254,43 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
     describe("Test with a china endpoint");
     Configuration conf = getConfiguration();
 
-    S3Client client = createS3Client(conf, CN_ENDPOINT, null, CN_NORTHWEST_1);
+    S3Client client = createS3Client(conf, CN_ENDPOINT, null, CN_NORTHWEST_1, false);
 
-    intercept(AwsServiceException.class, "Exception thrown by interceptor", () -> client.headBucket(
-        HeadBucketRequest.builder().bucket(getFileSystem().getBucket()).build()));
+    expectInterceptorException(client);
+  }
+
+  /**
+   * Expect an exception to be thrown by the interceptor with the message
+   * {@link #EXCEPTION_THROWN_BY_INTERCEPTOR}.
+   * @param client client to issue a head request against.
+   * @return the expected exception.
+   * @throws Exception any other exception.
+   */
+  private AwsServiceException expectInterceptorException(final S3Client client)
+      throws Exception {
+
+    return intercept(AwsServiceException.class, EXCEPTION_THROWN_BY_INTERCEPTOR,
+        () -> head(client));
+  }
+
+  /**
+   * Issue a head request against the bucket.
+   * @param client client to use
+   * @return the response.
+   */
+  private HeadBucketResponse head(final S3Client client) {
+    return client.headBucket(
+        HeadBucketRequest.builder().bucket(getFileSystem().getBucket()).build());
   }
 
   @Test
   public void testWithGovCloudEndpoint() throws Throwable {
-    describe("Test with a gov cloud endpoint");
+    describe("Test with a gov cloud endpoint; enable fips");
     Configuration conf = getConfiguration();
 
-    S3Client client = createS3Client(conf, GOV_ENDPOINT, null, US_GOV_EAST_1);
+    S3Client client = createS3Client(conf, GOV_ENDPOINT, null, US_GOV_EAST_1, false);
 
-    intercept(AwsServiceException.class, "Exception thrown by interceptor", () -> client.headBucket(
-        HeadBucketRequest.builder().bucket(getFileSystem().getBucket()).build()));
+    expectInterceptorException(client);
   }
 
   @Test
@@ -212,26 +299,232 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
     describe("Test with vpc endpoint");
     Configuration conf = getConfiguration();
 
-    S3Client client = createS3Client(conf, VPC_ENDPOINT, null, US_WEST_2);
+    S3Client client = createS3Client(conf, VPC_ENDPOINT, null, US_WEST_2, false);
 
-    intercept(AwsServiceException.class, "Exception thrown by interceptor", () -> client.headBucket(
-        HeadBucketRequest.builder().bucket(getFileSystem().getBucket()).build()));
+    expectInterceptorException(client);
   }
 
-  class RegionInterceptor implements ExecutionInterceptor {
-    private String endpoint;
-    private String region;
+  @Test
+  public void testCentralEndpointAndDifferentRegionThanBucket() throws Throwable {
+    describe("Access public bucket using central endpoint and region "
+        + "different than that of the public bucket");
+    final Configuration conf = getConfiguration();
+    final Configuration newConf = new Configuration(conf);
 
-    RegionInterceptor(String endpoint, String region) {
+    removeBaseAndBucketOverrides(
+        newConf,
+        ENDPOINT,
+        AWS_REGION,
+        ALLOW_REQUESTER_PAYS,
+        KEY_REQUESTER_PAYS_FILE,
+        FIPS_ENDPOINT);
+
+    removeBaseAndBucketOverrides(
+        DEFAULT_REQUESTER_PAYS_BUCKET_NAME,
+        newConf,
+        ENDPOINT,
+        AWS_REGION,
+        ALLOW_REQUESTER_PAYS,
+        KEY_REQUESTER_PAYS_FILE,
+        FIPS_ENDPOINT);
+
+    newConf.set(ENDPOINT, CENTRAL_ENDPOINT);
+    newConf.set(AWS_REGION, EU_WEST_1);
+    newConf.setBoolean(ALLOW_REQUESTER_PAYS, true);
+
+    assertRequesterPaysFileExistence(newConf);
+  }
+
+  @Test
+  public void testCentralEndpointAndSameRegionAsBucket() throws Throwable {
+    describe("Access public bucket using central endpoint and region "
+        + "same as that of the public bucket");
+    final Configuration conf = getConfiguration();
+    final Configuration newConf = new Configuration(conf);
+
+    removeBaseAndBucketOverrides(
+        newConf,
+        ENDPOINT,
+        AWS_REGION,
+        ALLOW_REQUESTER_PAYS,
+        KEY_REQUESTER_PAYS_FILE,
+        FIPS_ENDPOINT);
+
+    removeBaseAndBucketOverrides(
+        DEFAULT_REQUESTER_PAYS_BUCKET_NAME,
+        newConf,
+        ENDPOINT,
+        AWS_REGION,
+        ALLOW_REQUESTER_PAYS,
+        KEY_REQUESTER_PAYS_FILE,
+        FIPS_ENDPOINT);
+
+    newConf.set(ENDPOINT, CENTRAL_ENDPOINT);
+    newConf.set(AWS_REGION, US_WEST_2);
+    newConf.setBoolean(ALLOW_REQUESTER_PAYS, true);
+
+    assertRequesterPaysFileExistence(newConf);
+  }
+
+  @Test
+  public void testCentralEndpointAndFipsForPublicBucket() throws Throwable {
+    describe("Access public bucket using central endpoint and region "
+        + "same as that of the public bucket with fips enabled");
+    final Configuration conf = getConfiguration();
+    final Configuration newConf = new Configuration(conf);
+
+    removeBaseAndBucketOverrides(
+        newConf,
+        ENDPOINT,
+        AWS_REGION,
+        ALLOW_REQUESTER_PAYS,
+        KEY_REQUESTER_PAYS_FILE,
+        FIPS_ENDPOINT);
+
+    removeBaseAndBucketOverrides(
+        DEFAULT_REQUESTER_PAYS_BUCKET_NAME,
+        newConf,
+        ENDPOINT,
+        AWS_REGION,
+        ALLOW_REQUESTER_PAYS,
+        KEY_REQUESTER_PAYS_FILE,
+        FIPS_ENDPOINT);
+
+    newConf.set(ENDPOINT, CENTRAL_ENDPOINT);
+    newConf.set(AWS_REGION, US_WEST_2);
+    newConf.setBoolean(ALLOW_REQUESTER_PAYS, true);
+    newConf.setBoolean(FIPS_ENDPOINT, true);
+
+    assertRequesterPaysFileExistence(newConf);
+  }
+
+  /**
+   * Assert that the file exists on the requester pays public bucket.
+   *
+   * @param conf the configuration object.
+   * @throws IOException if file system operations encounter errors.
+   */
+  private void assertRequesterPaysFileExistence(Configuration conf)
+      throws IOException {
+    Path filePath = new Path(PublicDatasetTestUtils
+        .getRequesterPaysObject(conf));
+    newFS = (S3AFileSystem) filePath.getFileSystem(conf);
+
+    Assertions
+        .assertThat(newFS.exists(filePath))
+        .describedAs("Existence of path: " + filePath)
+        .isTrue();
+  }
+
+  @Test
+  public void testCentralEndpointAndNullRegionWithCRUD() throws Throwable {
+    describe("Access the test bucket using central endpoint and"
+        + " null region, perform file system CRUD operations");
+    final Configuration conf = getConfiguration();
+
+    final Configuration newConf = new Configuration(conf);
+
+    removeBaseAndBucketOverrides(
+        newConf,
+        ENDPOINT,
+        AWS_REGION,
+        FIPS_ENDPOINT);
+
+    newConf.set(ENDPOINT, CENTRAL_ENDPOINT);
+
+    newFS = new S3AFileSystem();
+    newFS.initialize(getFileSystem().getUri(), newConf);
+
+    assertOpsUsingNewFs();
+  }
+
+  @Test
+  public void testCentralEndpointAndNullRegionFipsWithCRUD() throws Throwable {
+    describe("Access the test bucket using central endpoint and"
+        + " null region and fips enabled, perform file system CRUD operations");
+
+    final String bucketLocation = getFileSystem().getBucketLocation();
+    assume("FIPS can be enabled to access buckets from US or Canada endpoints only",
+        bucketLocation.startsWith(US_REGION_PREFIX)
+            || bucketLocation.startsWith(CA_REGION_PREFIX)
+            || bucketLocation.startsWith(US_DUAL_STACK_PREFIX));
+
+    final Configuration conf = getConfiguration();
+    final Configuration newConf = new Configuration(conf);
+
+    removeBaseAndBucketOverrides(
+        newConf,
+        ENDPOINT,
+        AWS_REGION,
+        FIPS_ENDPOINT);
+
+    newConf.set(ENDPOINT, CENTRAL_ENDPOINT);
+    newConf.setBoolean(FIPS_ENDPOINT, true);
+
+    newFS = new S3AFileSystem();
+    newFS.initialize(getFileSystem().getUri(), newConf);
+
+    assertOpsUsingNewFs();
+  }
+
+  private void assertOpsUsingNewFs() throws IOException {
+    final String file = getMethodName();
+    final Path basePath = methodPath();
+    final Path srcDir = new Path(basePath, "srcdir");
+    newFS.mkdirs(srcDir);
+    Path srcFilePath = new Path(srcDir, file);
+
+    try (FSDataOutputStream out = newFS.create(srcFilePath)) {
+      out.write(new byte[] {1, 2, 3});
+    }
+
+    Assertions
+        .assertThat(newFS.exists(srcFilePath))
+        .describedAs("Existence of file: " + srcFilePath)
+        .isTrue();
+    Assertions
+        .assertThat(getFileSystem().exists(srcFilePath))
+        .describedAs("Existence of file: " + srcFilePath)
+        .isTrue();
+
+    byte[] buffer = new byte[3];
+
+    try (FSDataInputStream in = newFS.open(srcFilePath)) {
+      in.readFully(buffer);
+      Assertions
+          .assertThat(buffer)
+          .describedAs("Contents read from " + srcFilePath)
+          .containsExactly(1, 2, 3);
+    }
+
+    newFS.delete(srcDir, true);
+
+    Assertions
+        .assertThat(newFS.exists(srcFilePath))
+        .describedAs("Existence of file: " + srcFilePath + " using new FS")
+        .isFalse();
+    Assertions
+        .assertThat(getFileSystem().exists(srcFilePath))
+        .describedAs("Existence of file: " + srcFilePath + " using original FS")
+        .isFalse();
+  }
+
+  private final class RegionInterceptor implements ExecutionInterceptor {
+    private final String endpoint;
+    private final String region;
+    private final boolean isFips;
+
+    RegionInterceptor(String endpoint, String region, final boolean isFips) {
       this.endpoint = endpoint;
       this.region = region;
+      this.isFips = isFips;
     }
 
     @Override
     public void beforeExecution(Context.BeforeExecution context,
         ExecutionAttributes executionAttributes)  {
 
-      if (endpoint != null) {
+      if (endpoint != null && !endpoint.endsWith(CENTRAL_ENDPOINT)) {
         Assertions.assertThat(
                 executionAttributes.getAttribute(AwsExecutionAttribute.ENDPOINT_OVERRIDDEN))
             .describedAs("Endpoint not overridden").isTrue();
@@ -249,8 +542,15 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
               executionAttributes.getAttribute(AwsExecutionAttribute.AWS_REGION).toString())
           .describedAs("Incorrect region set").isEqualTo(region);
 
+      // verify the fips state matches expectation.
+      Assertions.assertThat(executionAttributes.getAttribute(
+          AwsExecutionAttribute.FIPS_ENDPOINT_ENABLED))
+          .describedAs("Incorrect FIPS flag set in execution attributes")
+          .isNotNull()
+          .isEqualTo(isFips);
+
       // We don't actually want to make a request, so exit early.
-      throw AwsServiceException.builder().message("Exception thrown by interceptor").build();
+      throw AwsServiceException.builder().message(EXCEPTION_THROWN_BY_INTERCEPTOR).build();
     }
   }
 
@@ -261,17 +561,17 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
    * @param conf configuration to use.
    * @param endpoint endpoint.
    * @param expectedRegion the region that should be set in the client.
+   * @param isFips is this a FIPS endpoint?
    * @return the client.
-   * @throws URISyntaxException parse problems.
    * @throws IOException IO problems
    */
   @SuppressWarnings("deprecation")
   private S3Client createS3Client(Configuration conf,
-      String endpoint, String configuredRegion, String expectedRegion)
+      String endpoint, String configuredRegion, String expectedRegion, boolean isFips)
       throws IOException {
 
     List<ExecutionInterceptor> interceptors = new ArrayList<>();
-    interceptors.add(new RegionInterceptor(endpoint, expectedRegion));
+    interceptors.add(new RegionInterceptor(endpoint, expectedRegion, isFips));
 
     DefaultS3ClientFactory factory
         = new DefaultS3ClientFactory();
@@ -283,8 +583,8 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
         .withMetrics(new EmptyS3AStatisticsContext()
             .newStatisticsFromAwsSdk())
         .withExecutionInterceptors(interceptors)
-        .withRegion(configuredRegion);
-
+        .withRegion(configuredRegion)
+        .withFipsEnabled(isFips);
 
     S3Client client = factory.createS3Client(
         getFileSystem().getUri(),

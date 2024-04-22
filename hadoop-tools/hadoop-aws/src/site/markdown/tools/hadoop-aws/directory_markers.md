@@ -314,9 +314,8 @@ All releases of Hadoop which have been updated to be marker aware will support t
 Example: `s3guard bucket-info -markers aware` on a compatible release.
 
 ```
-> hadoop s3guard bucket-info -markers aware s3a://landsat-pds/
-Filesystem s3a://landsat-pds
-Location: us-west-2
+> hadoop s3guard bucket-info -markers aware s3a://noaa-isd-pds/
+Filesystem s3a://noaa-isd-pds
 
 ...
 
@@ -326,13 +325,14 @@ Directory Markers
         Authoritative paths: fs.s3a.authoritative.path=
         The S3A connector is compatible with buckets where directory markers are not deleted
 
+...
 ```
 
 The same command will fail on older releases, because the `-markers` option
 is unknown
 
 ```
-> hadoop s3guard bucket-info -markers aware s3a://landsat-pds/
+> hadoop s3guard bucket-info -markers aware s3a://noaa-isd-pds/
 Illegal option -markers
 Usage: hadoop bucket-info [OPTIONS] s3a://BUCKET
     provide/check information about a specific bucket
@@ -354,9 +354,8 @@ Generic options supported are:
 A specific policy check verifies that the connector is configured as desired
 
 ```
-> hadoop s3guard bucket-info -markers keep s3a://landsat-pds/
-Filesystem s3a://landsat-pds
-Location: us-west-2
+> hadoop s3guard bucket-info -markers keep s3a://noaa-isd-pds/
+Filesystem s3a://noaa-isd-pds
 
 ...
 
@@ -371,9 +370,8 @@ When probing for a specific policy, the error code "46" is returned if the activ
 does not match that requested:
 
 ```
-> hadoop s3guard bucket-info -markers delete s3a://landsat-pds/
-Filesystem s3a://landsat-pds
-Location: us-west-2
+> hadoop s3guard bucket-info -markers delete s3a://noaa-isd-pds/
+Filesystem s3a://noaa-isd-pds
 
 S3A Client
         Signing Algorithm: fs.s3a.signing-algorithm=(unset)
@@ -398,7 +396,7 @@ Directory Markers
         Authoritative paths: fs.s3a.authoritative.path=
 
 2021-11-22 16:03:59,175 [main] INFO  util.ExitUtil (ExitUtil.java:terminate(210))
- -Exiting with status 46: 46: Bucket s3a://landsat-pds: required marker polic is
+ -Exiting with status 46: 46: Bucket s3a://noaa-isd-pds: required marker polic is
   "keep" but actual policy is "delete"
 
 ```
@@ -450,10 +448,10 @@ Audit the path and fail if any markers were found.
 
 
 ```
-> hadoop s3guard markers -limit 8000 -audit s3a://landsat-pds/
+> hadoop s3guard markers -limit 8000 -audit s3a://noaa-isd-pds/
 
-The directory marker policy of s3a://landsat-pds is "Keep"
-2020-08-05 13:42:56,079 [main] INFO  tools.MarkerTool (DurationInfo.java:<init>(77)) - Starting: marker scan s3a://landsat-pds/
+The directory marker policy of s3a://noaa-isd-pds is "Keep"
+2020-08-05 13:42:56,079 [main] INFO  tools.MarkerTool (DurationInfo.java:<init>(77)) - Starting: marker scan s3a://noaa-isd-pds/
 Scanned 1,000 objects
 Scanned 2,000 objects
 Scanned 3,000 objects
@@ -463,8 +461,8 @@ Scanned 6,000 objects
 Scanned 7,000 objects
 Scanned 8,000 objects
 Limit of scan reached - 8,000 objects
-2020-08-05 13:43:01,184 [main] INFO  tools.MarkerTool (DurationInfo.java:close(98)) - marker scan s3a://landsat-pds/: duration 0:05.107s
-No surplus directory markers were found under s3a://landsat-pds/
+2020-08-05 13:43:01,184 [main] INFO  tools.MarkerTool (DurationInfo.java:close(98)) - marker scan s3a://noaa-isd-pds/: duration 0:05.107s
+No surplus directory markers were found under s3a://noaa-isd-pds/
 Listing limit reached before completing the scan
 2020-08-05 13:43:01,187 [main] INFO  util.ExitUtil (ExitUtil.java:terminate(210)) - Exiting with status 3:
 ```

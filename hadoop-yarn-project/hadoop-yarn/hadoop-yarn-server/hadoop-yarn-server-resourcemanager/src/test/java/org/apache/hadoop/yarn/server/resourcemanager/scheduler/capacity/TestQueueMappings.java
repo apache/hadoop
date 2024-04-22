@@ -43,6 +43,9 @@ public class TestQueueMappings {
       CapacitySchedulerConfiguration.ROOT + "." + Q1;
   private final static String Q2_PATH =
       CapacitySchedulerConfiguration.ROOT + "." + Q2;
+  private static final QueuePath ROOT = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+  private static final QueuePath Q1_QUEUE_PATH = new QueuePath(Q1_PATH);
+  private static final QueuePath Q2_QUEUE_PATH = new QueuePath(Q2_PATH);
 
   private CapacityScheduler cs;
   private YarnConfiguration conf;
@@ -71,10 +74,10 @@ public class TestQueueMappings {
 
   private void setupQueueConfiguration(CapacitySchedulerConfiguration conf) {
     // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] { Q1, Q2 });
+    conf.setQueues(ROOT, new String[] {Q1, Q2});
 
-    conf.setCapacity(Q1_PATH, 10);
-    conf.setCapacity(Q2_PATH, 90);
+    conf.setCapacity(Q1_QUEUE_PATH, 10);
+    conf.setCapacity(Q2_QUEUE_PATH, 90);
 
     LOG.info("Setup top-level queues q1 and q2");
   }

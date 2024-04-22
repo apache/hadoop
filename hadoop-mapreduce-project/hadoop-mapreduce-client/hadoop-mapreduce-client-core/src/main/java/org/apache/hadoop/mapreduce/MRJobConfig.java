@@ -312,7 +312,7 @@ public interface MRJobConfig {
   public static final String MAPREDUCE_JVM_ADD_OPENS_JAVA_OPT =
     "mapreduce.jvm.add-opens-as-default";
 
-  public static final boolean MAPREDUCE_JVM_ADD_OPENS_JAVA_OPT_DEFAULT = true;
+  public static final boolean MAPREDUCE_JVM_ADD_OPENS_JAVA_OPT_DEFAULT = false;
 
   public static final String IO_SORT_FACTOR = "mapreduce.task.io.sort.factor";
 

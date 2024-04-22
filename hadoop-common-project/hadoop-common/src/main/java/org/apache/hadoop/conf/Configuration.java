@@ -2339,8 +2339,8 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     }
     return StringUtils.getTrimmedStringCollection(valueString);
   }
-  
-  /** 
+
+  /**
    * Get the comma delimited values of the <code>name</code> property as 
    * an array of <code>String</code>s, trimmed of the leading and trailing whitespace.
    * If no such property is specified then an empty array is returned.
@@ -3565,7 +3565,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @throws IOException raised on errors performing I/O.
    */
   public void writeXml(OutputStream out) throws IOException {
-    writeXml(new OutputStreamWriter(out, "UTF-8"));
+    writeXml(new OutputStreamWriter(out, StandardCharsets.UTF_8));
   }
 
   public void writeXml(Writer out) throws IOException {

@@ -37,6 +37,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PMEM_CACHE_RECOV
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PMEM_CACHE_RECOVERY_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PROCESS_COMMANDS_THRESHOLD_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PROCESS_COMMANDS_THRESHOLD_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_OVERWRITE_DOWNSTREAM_DERIVED_QOP_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ENCRYPT_DATA_OVERWRITE_DOWNSTREAM_DERIVED_QOP_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_SOCKET_TIMEOUT_KEY;
@@ -114,7 +115,7 @@ public class DNConf {
   final long ibrInterval;
   volatile long initialBlockReportDelayMs;
   volatile long cacheReportInterval;
-  final long datanodeSlowIoWarningThresholdMs;
+  private volatile long datanodeSlowIoWarningThresholdMs;
 
   final String minimumNameNodeVersion;
   final String encryptionAlgorithm;
@@ -521,5 +522,11 @@ public class DNConf {
     outliersReportIntervalMs = getConf().getTimeDuration(
         DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_KEY,
         DFS_DATANODE_OUTLIERS_REPORT_INTERVAL_DEFAULT, TimeUnit.MILLISECONDS);
+  }
+
+  public void setDatanodeSlowIoWarningThresholdMs(long threshold) {
+    Preconditions.checkArgument(threshold > 0,
+        DFS_DATANODE_SLOW_IO_WARNING_THRESHOLD_KEY + " should be greater than 0");
+    datanodeSlowIoWarningThresholdMs = threshold;
   }
 }

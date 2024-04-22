@@ -39,9 +39,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.TimeoutException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ReadBufferStatus;
+import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.utils.TestCachedSASToken;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.impl.OpenFileParameters;
@@ -49,6 +49,7 @@ import org.apache.hadoop.fs.impl.OpenFileParameters;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -168,14 +169,14 @@ public class TestAbfsInputStream extends
             inputStream.getTracingContext());
   }
 
-  private void verifyReadCallCount(AbfsClient client, int count) throws
-      AzureBlobFileSystemException, InterruptedException {
+  private void verifyReadCallCount(AbfsClient client, int count)
+      throws IOException, InterruptedException {
     // ReadAhead threads are triggered asynchronously.
     // Wait a second before verifying the number of total calls.
     Thread.sleep(1000);
     verify(client, times(count)).read(any(String.class), any(Long.class),
         any(byte[].class), any(Integer.class), any(Integer.class),
-        any(String.class), any(String.class), any(TracingContext.class));
+        any(String.class), any(String.class), any(), any(TracingContext.class));
   }
 
   private void checkEvictedStatus(AbfsInputStream inputStream, int position, boolean expectedToThrowException)
@@ -241,7 +242,8 @@ public class TestAbfsInputStream extends
         .ofNullable(new OpenFileParameters().withStatus(fileStatus)), null, tracingContext);
     verify(mockClient, times(0).description((String.format(
         "FileStatus [from %s result] provided, GetFileStatus should not be invoked",
-        source)))).getPathStatus(anyString(), anyBoolean(), any(TracingContext.class));
+        source)))).getPathStatus(anyString(), anyBoolean(), any(TracingContext.class), any(
+        ContextEncryptionAdapter.class));
 
     // verify GetPathStatus invoked when FileStatus not provided
     abfsStore.openFileForRead(testFile,
@@ -249,7 +251,8 @@ public class TestAbfsInputStream extends
         tracingContext);
     verify(mockClient, times(1).description(
         "GetPathStatus should be invoked when FileStatus not provided"))
-        .getPathStatus(anyString(), anyBoolean(), any(TracingContext.class));
+        .getPathStatus(anyString(), anyBoolean(), any(TracingContext.class), nullable(
+            ContextEncryptionAdapter.class));
 
     Mockito.reset(mockClient); //clears invocation count for next test case
   }
@@ -330,7 +333,7 @@ public class TestAbfsInputStream extends
         .when(client)
         .read(any(String.class), any(Long.class), any(byte[].class),
             any(Integer.class), any(Integer.class), any(String.class),
-            any(String.class), any(TracingContext.class));
+            any(String.class), any(), any(TracingContext.class));
 
     AbfsInputStream inputStream = getAbfsInputStream(client, "testFailedReadAhead.txt");
 
@@ -364,7 +367,7 @@ public class TestAbfsInputStream extends
         .when(client)
         .read(any(String.class), any(Long.class), any(byte[].class),
             any(Integer.class), any(Integer.class), any(String.class),
-            any(String.class), any(TracingContext.class));
+            any(String.class), any(), any(TracingContext.class));
 
     AbfsInputStream inputStream = getAbfsInputStream(client, "testFailedReadAheadEviction.txt");
 
@@ -409,7 +412,7 @@ public class TestAbfsInputStream extends
         .when(client)
         .read(any(String.class), any(Long.class), any(byte[].class),
             any(Integer.class), any(Integer.class), any(String.class),
-            any(String.class), any(TracingContext.class));
+            any(String.class), any(), any(TracingContext.class));
 
     AbfsInputStream inputStream = getAbfsInputStream(client, "testOlderReadAheadFailure.txt");
 
@@ -463,7 +466,7 @@ public class TestAbfsInputStream extends
         .when(client)
         .read(any(String.class), any(Long.class), any(byte[].class),
             any(Integer.class), any(Integer.class), any(String.class),
-            any(String.class), any(TracingContext.class));
+            any(String.class), any(), any(TracingContext.class));
 
     AbfsInputStream inputStream = getAbfsInputStream(client, "testSuccessfulReadAhead.txt");
     int beforeReadCompletedListSize = ReadBufferManager.getBufferManager().getCompletedReadListSize();
@@ -518,7 +521,8 @@ public class TestAbfsInputStream extends
         .when(client)
         .read(any(String.class), any(Long.class), any(byte[].class),
             any(Integer.class), any(Integer.class), any(String.class),
-            any(String.class), any(TracingContext.class));
+            any(String.class), nullable(ContextEncryptionAdapter.class),
+            any(TracingContext.class));
 
     final ReadBufferManager readBufferManager
         = ReadBufferManager.getBufferManager();
@@ -584,7 +588,7 @@ public class TestAbfsInputStream extends
         .when(client)
         .read(any(String.class), any(Long.class), any(byte[].class),
             any(Integer.class), any(Integer.class), any(String.class),
-            any(String.class), any(TracingContext.class));
+            any(String.class), any(), any(TracingContext.class));
 
     AbfsInputStream inputStream = getAbfsInputStream(client, "testReadAheadManagerForFailedReadAhead.txt");
 
@@ -637,7 +641,7 @@ public class TestAbfsInputStream extends
         .when(client)
         .read(any(String.class), any(Long.class), any(byte[].class),
             any(Integer.class), any(Integer.class), any(String.class),
-            any(String.class), any(TracingContext.class));
+            any(String.class), any(), any(TracingContext.class));
 
     AbfsInputStream inputStream = getAbfsInputStream(client, "testReadAheadManagerForOlderReadAheadFailure.txt");
 
@@ -691,7 +695,7 @@ public class TestAbfsInputStream extends
         .when(client)
         .read(any(String.class), any(Long.class), any(byte[].class),
             any(Integer.class), any(Integer.class), any(String.class),
-            any(String.class), any(TracingContext.class));
+            any(String.class), any(), any(TracingContext.class));
 
     AbfsInputStream inputStream = getAbfsInputStream(client, "testSuccessfulReadAhead.txt");
 

@@ -642,6 +642,10 @@ public class ECAdmin extends Configured implements Tool {
           throw e;
         }
       } else {
+        if (args.size() > 0) {
+          System.err.println(getName() + ": Too many arguments");
+          return 1;
+        }
         result = dfs.getECTopologyResultForPolicies();
       }
       System.out.println(result.getResultMessage());

@@ -66,6 +66,7 @@ import java.nio.file.AccessDeniedException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -167,12 +168,19 @@ public final class S3AUtils {
    */
   @SuppressWarnings("ThrowableInstanceNeverThrown")
   public static IOException translateException(@Nullable String operation,
-      String path,
+      @Nullable String path,
       SdkException exception) {
     String message = String.format("%s%s: %s",
         operation,
         StringUtils.isNotEmpty(path)? (" on " + path) : "",
         exception);
+
+    if (path == null || path.isEmpty()) {
+      // handle null path by giving it a stub value.
+      // not ideal/informative, but ensures that the path is never null in
+      // exceptions constructed.
+      path = "/";
+    }
 
     if (!(exception instanceof AwsServiceException)) {
       // exceptions raised client-side: connectivity, auth, network problems...
@@ -196,7 +204,7 @@ public final class S3AUtils {
         return ioe;
       }
       // network problems covered by an IOE inside the exception chain.
-      ioe = maybeExtractIOException(path, exception);
+      ioe = maybeExtractIOException(path, exception, message);
       if (ioe != null) {
         return ioe;
       }
@@ -300,10 +308,13 @@ public final class S3AUtils {
         break;
 
       // out of range. This may happen if an object is overwritten with
-      // a shorter one while it is being read.
+      // a shorter one while it is being read or openFile() was invoked
+      // passing a FileStatus or file length less than that of the object.
+      // although the HTTP specification says that the response should
+      // include a range header specifying the actual range available,
+      // this isn't picked up here.
       case SC_416_RANGE_NOT_SATISFIABLE:
-        ioe = new EOFException(message);
-        ioe.initCause(ase);
+        ioe = new RangeNotSatisfiableEOFException(message, ase);
         break;
 
       // this has surfaced as a "no response from server" message.
@@ -673,7 +684,7 @@ public final class S3AUtils {
       if (targetException instanceof IOException) {
         throw (IOException) targetException;
       } else if (targetException instanceof SdkException) {
-        throw translateException("Instantiate " + className, "", (SdkException) targetException);
+        throw translateException("Instantiate " + className, "/", (SdkException) targetException);
       } else {
         // supported constructor or factory method found, but the call failed
         throw instantiationException(uri, className, configKey, targetException);
@@ -1658,6 +1669,49 @@ public final class S3AUtils {
    */
   public static String formatRange(long rangeStart, long rangeEnd) {
     return String.format("bytes=%d-%d", rangeStart, rangeEnd);
+  }
+
+  /**
+   * Get the equal op (=) delimited key-value pairs of the <code>name</code> property as
+   * a collection of pair of <code>String</code>s, trimmed of the leading and trailing whitespace
+   * after delimiting the <code>name</code> by comma and new line separator.
+   * If no such property is specified then empty <code>Map</code> is returned.
+   *
+   * @param configuration the configuration object.
+   * @param name property name.
+   * @return property value as a <code>Map</code> of <code>String</code>s, or empty
+   * <code>Map</code>.
+   */
+  public static Map<String, String> getTrimmedStringCollectionSplitByEquals(
+      final Configuration configuration,
+      final String name) {
+    String valueString = configuration.get(name);
+    if (null == valueString) {
+      return new HashMap<>();
+    }
+    return org.apache.hadoop.util.StringUtils
+        .getTrimmedStringCollectionSplitByEquals(valueString);
+  }
+
+
+  /**
+   * If classloader isolation is {@code true}
+   * (through {@link Constants#AWS_S3_CLASSLOADER_ISOLATION}) or not
+   * explicitly set, then the classLoader of the input configuration object
+   * will be set to the input classloader, otherwise nothing will happen.
+   * @param conf configuration object.
+   * @param classLoader isolated classLoader.
+   */
+  static void maybeIsolateClassloader(Configuration conf, ClassLoader classLoader) {
+    if (conf.getBoolean(Constants.AWS_S3_CLASSLOADER_ISOLATION,
+            Constants.DEFAULT_AWS_S3_CLASSLOADER_ISOLATION)) {
+      LOG.debug("Configuration classloader set to S3AFileSystem classloader: {}", classLoader);
+      conf.setClassLoader(classLoader);
+    } else {
+      LOG.debug("Configuration classloader not changed, support classes needed will be loaded " +
+                      "from the classloader that instantiated the Configuration object: {}",
+              conf.getClassLoader());
+    }
   }
 
 }

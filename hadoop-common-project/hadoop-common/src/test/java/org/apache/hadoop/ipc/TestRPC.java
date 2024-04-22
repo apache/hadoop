@@ -1528,6 +1528,7 @@ public class TestRPC extends TestRpcBase {
         IOException unwrapExeption = re.unwrapRemoteException();
         if (unwrapExeption instanceof RetriableException) {
           succeeded = true;
+          assertEquals(1L, server.getRpcMetrics().getClientBackoffDisconnected());
         } else {
           lastException = unwrapExeption;
         }

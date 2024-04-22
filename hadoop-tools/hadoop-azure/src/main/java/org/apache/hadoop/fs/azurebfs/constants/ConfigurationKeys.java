@@ -48,9 +48,22 @@ public final class ConfigurationKeys {
   // Retry strategy defined by the user
   public static final String AZURE_MIN_BACKOFF_INTERVAL = "fs.azure.io.retry.min.backoff.interval";
   public static final String AZURE_MAX_BACKOFF_INTERVAL = "fs.azure.io.retry.max.backoff.interval";
+  public static final String AZURE_STATIC_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED = "fs.azure.static.retry.for.connection.timeout.enabled";
+  public static final String AZURE_STATIC_RETRY_INTERVAL = "fs.azure.static.retry.interval";
   public static final String AZURE_BACKOFF_INTERVAL = "fs.azure.io.retry.backoff.interval";
   public static final String AZURE_MAX_IO_RETRIES = "fs.azure.io.retry.max.retries";
   public static final String AZURE_CUSTOM_TOKEN_FETCH_RETRY_COUNT = "fs.azure.custom.token.fetch.retry.count";
+
+  /**
+   * Config to set HTTP Connection Timeout Value for Rest Operations.
+   * Value: {@value}.
+   */
+  public static final String AZURE_HTTP_CONNECTION_TIMEOUT = "fs.azure.http.connection.timeout";
+  /**
+   * Config to set HTTP Read Timeout Value for Rest Operations.
+   * Value: {@value}.
+   */
+  public static final String AZURE_HTTP_READ_TIMEOUT = "fs.azure.http.read.timeout";
 
   //  Retry strategy for getToken calls
   public static final String AZURE_OAUTH_TOKEN_FETCH_RETRY_COUNT = "fs.azure.oauth.token.fetch.retry.max.retries";
@@ -104,7 +117,22 @@ public final class ConfigurationKeys {
   public static final String AZURE_ENABLE_SMALL_WRITE_OPTIMIZATION = "fs.azure.write.enableappendwithflush";
   public static final String AZURE_READ_BUFFER_SIZE = "fs.azure.read.request.size";
   public static final String AZURE_READ_SMALL_FILES_COMPLETELY = "fs.azure.read.smallfilescompletely";
+  /**
+   * When parquet files are read, first few read are metadata reads before
+   * reading the actual data. First the read is done of last 8 bytes of parquet
+   * file to get the postion of metadta and next read is done for reading that
+   * metadata. With this optimization these two reads can be combined into 1.
+   * Value: {@value}
+   */
   public static final String AZURE_READ_OPTIMIZE_FOOTER_READ = "fs.azure.read.optimizefooterread";
+  /**
+   * In case of footer reads it was not required to read full buffer size.
+   * Most of the metadata information required was within 256 KB and it will be
+   * more performant to read less. 512 KB is a sweet spot.
+   * This config is used to define how much footer length the user wants to read.
+   * Value: {@value}
+   */
+  public static final String AZURE_FOOTER_READ_BUFFER_SIZE = "fs.azure.footer.read.request.size";
 
   /**
    * Read ahead range parameter which can be set by user.
@@ -203,8 +231,14 @@ public final class ConfigurationKeys {
 
   /** Setting this true will make the driver use it's own RemoteIterator implementation */
   public static final String FS_AZURE_ENABLE_ABFS_LIST_ITERATOR = "fs.azure.enable.abfslistiterator";
-  /** Server side encryption key */
-  public static final String FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY = "fs.azure.client-provided-encryption-key";
+  /** Server side encryption key encoded in Base6format {@value}.*/
+  public static final String FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY =
+      "fs.azure.encryption.encoded.client-provided-key";
+  /** SHA256 hash of encryption key encoded in Base64format */
+  public static final String FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY_SHA =
+      "fs.azure.encryption.encoded.client-provided-key-sha";
+  /** Custom EncryptionContextProvider type */
+  public static final String FS_AZURE_ENCRYPTION_CONTEXT_PROVIDER_TYPE = "fs.azure.encryption.context.provider.type";
 
   /** End point of ABFS account: {@value}. */
   public static final String AZURE_ABFS_ENDPOINT = "fs.azure.abfs.endpoint";
@@ -240,6 +274,14 @@ public final class ConfigurationKeys {
 
   /** Add extra resilience to rename failures, at the expense of performance. */
   public static final String FS_AZURE_ABFS_RENAME_RESILIENCE = "fs.azure.enable.rename.resilience";
+
+  /**
+   * Specify whether paginated behavior is to be expected or not in delete path. {@value}
+   */
+  public static final String FS_AZURE_ENABLE_PAGINATED_DELETE = "fs.azure.enable.paginated.delete";
+
+  /** Add extra layer of verification of the integrity of the request content during transport: {@value}. */
+  public static final String FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION = "fs.azure.enable.checksum.validation";
 
   public static String accountProperty(String property, String account) {
     return property + "." + account;

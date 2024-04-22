@@ -508,7 +508,7 @@ public class ITestAzureBlobFileSystemRandomRead extends
         1 * MEGABYTE, config);
     String eTag = fs.getAbfsClient()
         .getPathStatus(testFile.toUri().getPath(), false,
-            getTestTracingContext(fs, false))
+            getTestTracingContext(fs, false), null)
         .getResult()
         .getResponseHeader(ETAG);
 

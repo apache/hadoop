@@ -2232,6 +2232,13 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_CONTAINER_LOCALIZER_JAVA_OPTS_DEFAULT =
       "-Xmx256m";
 
+  /** The admin JVM options used on forking ContainerLocalizer process
+      by container executor. */
+  public static final String NM_CONTAINER_LOCALIZER_ADMIN_JAVA_OPTS_KEY =
+      NM_PREFIX + "container-localizer.admin.java.opts";
+
+  public static final String NM_CONTAINER_LOCALIZER_ADMIN_JAVA_OPTS_DEFAULT = "";
+
   /*
    * Flag to indicate whether JDK17's required add-exports flags should be added to
    * container localizers regardless of the user specified JAVA_OPTS.
@@ -4023,6 +4030,10 @@ public class YarnConfiguration extends Configuration {
       FEDERATION_PREFIX + "cache-ttl.secs";
   // 5 minutes
   public static final int DEFAULT_FEDERATION_CACHE_TIME_TO_LIVE_SECS = 5 * 60;
+
+  public static final String FEDERATION_CACHE_ENTITY_NUMS =
+      FEDERATION_PREFIX + "cache-entity.nums";
+  public static final int DEFAULT_FEDERATION_CACHE_ENTITY_NUMS = 1000;
 
   public static final String FEDERATION_FLUSH_CACHE_FOR_RM_ADDR =
       FEDERATION_PREFIX + "flush-cache-for-rm-addr";

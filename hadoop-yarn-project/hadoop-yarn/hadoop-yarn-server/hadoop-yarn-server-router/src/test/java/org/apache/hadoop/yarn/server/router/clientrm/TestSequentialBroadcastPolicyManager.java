@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.router.clientrm;
 
 import org.apache.hadoop.yarn.server.federation.policies.amrmproxy.BroadcastAMRMProxyPolicy;
+import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
 import org.apache.hadoop.yarn.server.federation.policies.manager.AbstractPolicyManager;
 
 /**
@@ -35,5 +36,19 @@ public class TestSequentialBroadcastPolicyManager extends AbstractPolicyManager 
     // AMRMProxy.
     routerFederationPolicy = TestSequentialRouterPolicy.class;
     amrmProxyFederationPolicy = BroadcastAMRMProxyPolicy.class;
+  }
+
+  @Override
+  public WeightedPolicyInfo getWeightedPolicyInfo() {
+    return null;
+  }
+
+  @Override
+  public void setWeightedPolicyInfo(WeightedPolicyInfo weightedPolicyInfo) {
+  }
+
+  @Override
+  public boolean isSupportWeightedPolicyInfo() {
+    return false;
   }
 }

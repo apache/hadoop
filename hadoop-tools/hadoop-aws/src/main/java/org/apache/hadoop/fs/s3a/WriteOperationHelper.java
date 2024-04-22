@@ -22,7 +22,6 @@ import javax.annotation.Nullable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -33,8 +32,6 @@ import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.MultipartUpload;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
-import software.amazon.awssdk.services.s3.model.SelectObjectContentRequest;
-import software.amazon.awssdk.services.s3.model.SelectObjectContentResponseHandler;
 import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 import org.slf4j.Logger;
@@ -49,16 +46,11 @@ import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.api.RequestFactory;
 import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
-import org.apache.hadoop.fs.s3a.select.SelectEventStreamPublisher;
-import org.apache.hadoop.fs.s3a.select.SelectObjectContentHelper;
 import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
-import org.apache.hadoop.fs.s3a.select.SelectBinding;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.fs.store.audit.AuditSpanSource;
-import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
-import org.apache.hadoop.util.Preconditions;
 
 import static org.apache.hadoop.util.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.s3a.Invoker.*;
@@ -82,7 +74,6 @@ import static org.apache.hadoop.fs.store.audit.AuditingFunctions.withinAuditSpan
  *   <li>Other low-level access to S3 functions, for private use.</li>
  *   <li>Failure handling, including converting exceptions to IOEs.</li>
  *   <li>Integration with instrumentation.</li>
- *   <li>Evolution to add more low-level operations, such as S3 select.</li>
  * </ul>
  *
  * This API is for internal use only.
@@ -615,63 +606,6 @@ public class WriteOperationHelper implements WriteOperations {
     return conf;
   }
 
-  public SelectObjectContentRequest.Builder newSelectRequestBuilder(Path path) {
-    try (AuditSpan span = getAuditSpan()) {
-      return getRequestFactory().newSelectRequestBuilder(
-          storeContext.pathToKey(path));
-    }
-  }
-
-  /**
-   * Execute an S3 Select operation.
-   * On a failure, the request is only logged at debug to avoid the
-   * select exception being printed.
-   *
-   * @param source  source for selection
-   * @param request Select request to issue.
-   * @param action  the action for use in exception creation
-   * @return response
-   * @throws IOException failure
-   */
-  @Retries.RetryTranslated
-  public SelectEventStreamPublisher select(
-      final Path source,
-      final SelectObjectContentRequest request,
-      final String action)
-      throws IOException {
-    // no setting of span here as the select binding is (statically) created
-    // without any span.
-    String bucketName = request.bucket();
-    Preconditions.checkArgument(bucket.equals(bucketName),
-        "wrong bucket: %s", bucketName);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Initiating select call {} {}",
-          source, request.expression());
-      LOG.debug(SelectBinding.toString(request));
-    }
-    return invoker.retry(
-        action,
-        source.toString(),
-        true,
-        withinAuditSpan(getAuditSpan(), () -> {
-          try (DurationInfo ignored =
-                   new DurationInfo(LOG, "S3 Select operation")) {
-            try {
-              return SelectObjectContentHelper.select(
-                  writeOperationHelperCallbacks, source, request, action);
-            } catch (Throwable e) {
-              LOG.error("Failure of S3 Select request against {}",
-                  source);
-              LOG.debug("S3 Select request against {}:\n{}",
-                  source,
-                  SelectBinding.toString(request),
-                  e);
-              throw e;
-            }
-          }
-        }));
-  }
-
   @Override
   public AuditSpan createSpan(final String operation,
       @Nullable final String path1,
@@ -704,15 +638,6 @@ public class WriteOperationHelper implements WriteOperations {
    * Callbacks for writeOperationHelper.
    */
   public interface WriteOperationHelperCallbacks {
-
-    /**
-     * Initiates a select request.
-     * @param request selectObjectContent request
-     * @param t selectObjectContent request handler
-     * @return selectObjectContentResult
-     */
-    CompletableFuture<Void> selectObjectContent(SelectObjectContentRequest request,
-        SelectObjectContentResponseHandler t);
 
     /**
      * Initiates a complete multi-part upload request.

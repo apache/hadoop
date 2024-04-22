@@ -56,4 +56,9 @@ public class NoRouterRpcFairnessPolicyController implements
   public int getAvailablePermits(String nsId) {
     return 0;
   }
+
+  @Override
+  public boolean contains(String nsId) {
+    return true;
+  }
 }

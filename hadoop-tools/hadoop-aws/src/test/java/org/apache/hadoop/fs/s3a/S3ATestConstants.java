@@ -111,14 +111,16 @@ public interface S3ATestConstants {
   String KEY_CSVTEST_FILE = S3A_SCALE_TEST + "csvfile";
 
   /**
-   * The landsat bucket: {@value}.
+   * Default path for the multi MB test file: {@value}.
+   * @deprecated retrieve via {@link PublicDatasetTestUtils}.
    */
-  String LANDSAT_BUCKET = "s3a://landsat-pds/";
+  @Deprecated
+  String DEFAULT_CSVTEST_FILE = PublicDatasetTestUtils.DEFAULT_EXTERNAL_FILE;
 
   /**
-   * Default path for the multi MB test file: {@value}.
+   * Example path for unit tests; this is never accessed: {@value}.
    */
-  String DEFAULT_CSVTEST_FILE = LANDSAT_BUCKET + "scene_list.gz";
+  String UNIT_TEST_EXAMPLE_PATH = "s3a://example/data/";
 
   /**
    * Configuration key for an existing object in a requester pays bucket: {@value}.

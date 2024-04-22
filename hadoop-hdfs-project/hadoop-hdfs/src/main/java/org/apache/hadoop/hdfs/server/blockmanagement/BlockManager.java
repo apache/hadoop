@@ -789,7 +789,7 @@ public class BlockManager implements BlockStatsMXBean {
     checkNSRunning = false;
   }
 
-  private boolean isBlockTokenEnabled() {
+  protected boolean isBlockTokenEnabled() {
     return blockTokenSecretManager != null;
   }
 
@@ -3263,6 +3263,7 @@ public class BlockManager implements BlockStatsMXBean {
     for (BlockReportReplica iblk : report) {
       ReplicaState reportedState = iblk.getState();
 
+      removeQueuedBlock(storageInfo, iblk);
       if (LOG.isDebugEnabled()) {
         LOG.debug("Initial report of block {} on {} size {} replicaState = {}",
             iblk.getBlockName(), storageInfo.getDatanodeDescriptor(),
@@ -3348,6 +3349,7 @@ public class BlockManager implements BlockStatsMXBean {
     // scan the report and process newly reported blocks
     for (BlockReportReplica iblk : newReport) {
       ReplicaState iState = iblk.getState();
+      removeQueuedBlock(storageInfo, iblk);
       LOG.debug("Reported block {} on {} size {} replicaState = {}", iblk, dn,
           iblk.getNumBytes(), iState);
       BlockInfo storedBlock = processReportedBlock(storageInfo,
@@ -3416,7 +3418,6 @@ public class BlockManager implements BlockStatsMXBean {
 
     LOG.debug("Reported block {} on {} size {} replicaState = {}", block, dn,
         block.getNumBytes(), reportedState);
-
     if (shouldPostponeBlocksFromFuture && isGenStampInFuture(block)) {
       queueReportedBlock(storageInfo, block, reportedState,
           QUEUE_REASON_FUTURE_GENSTAMP);
@@ -3425,7 +3426,7 @@ public class BlockManager implements BlockStatsMXBean {
 
     // find block by blockId
     BlockInfo storedBlock = getStoredBlock(block);
-    if(storedBlock == null) {
+    if (storedBlock == null) {
       // If blocksMap does not contain reported block id,
       // The replica should be removed from Datanode, and set NumBytes to BlockCommand.No_ACK to
       // avoid useless report to NameNode from Datanode when complete to process it.
@@ -3439,8 +3440,8 @@ public class BlockManager implements BlockStatsMXBean {
     // Block is on the NN
     LOG.debug("In memory blockUCState = {}", ucState);
 
-    // Ignore replicas already scheduled to be removed from the DN
-    if(invalidateBlocks.contains(dn, block)) {
+    // Ignore replicas already scheduled to be removed from the DN or had been deleted
+    if (invalidateBlocks.contains(dn, block) || storedBlock.isDeleted()) {
       return storedBlock;
     }
 
@@ -3494,6 +3495,16 @@ public class BlockManager implements BlockStatsMXBean {
           block, reportedState, storageInfo.getDatanodeDescriptor(), reason);
     }
     pendingDNMessages.enqueueReportedBlock(storageInfo, block, reportedState);
+  }
+
+  /**
+   * Queue the given reported block for later processing in the
+   * standby node. @see PendingDataNodeMessages.
+   */
+  private void removeQueuedBlock(DatanodeStorageInfo storageInfo, Block block) {
+    LOG.debug("Removing queued block {} from datanode {} from pending queue.",
+        block, storageInfo.getDatanodeDescriptor());
+    pendingDNMessages.removeQueuedBlock(storageInfo, block);
   }
 
   /**
@@ -4558,6 +4569,7 @@ public class BlockManager implements BlockStatsMXBean {
 
     final DatanodeDescriptor node = storageInfo.getDatanodeDescriptor();
 
+    removeQueuedBlock(storageInfo, block);
     LOG.debug("Reported block {} on {} size {} replicaState = {}",
         block, node, block.getNumBytes(), reportedState);
 

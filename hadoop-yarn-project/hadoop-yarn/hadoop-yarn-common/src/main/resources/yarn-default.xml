@@ -1489,6 +1489,15 @@
   </property>
 
   <property>
+    <description>
+      The admin JVM options used on forking ContainerLocalizer process
+      by the container executor.
+    </description>
+    <name>yarn.nodemanager.container-localizer.admin.java.opts</name>
+    <value></value>
+  </property>
+
+  <property>
     <name>yarn.nodemanager.container-localizer.java.opts.add-exports-as-default</name>
     <value>true</value>
     <description>Since on JDK17 it is no longer possible to use the reflection API to
@@ -3776,6 +3785,15 @@
    </description>
    <name>yarn.federation.cache-ttl.secs</name>
    <value>300</value>
+  </property>
+
+  <property>
+    <description>
+      The number of entries in the Federation cache.
+      default is 1000.
+    </description>
+    <name>yarn.federation.cache-entity.nums</name>
+    <value>1000</value>
   </property>
 
   <property>

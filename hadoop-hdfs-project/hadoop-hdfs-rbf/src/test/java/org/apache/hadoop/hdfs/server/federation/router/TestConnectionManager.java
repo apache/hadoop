@@ -363,6 +363,29 @@ public class TestConnectionManager {
     testConnectionCleanup(0.8f, 10, 6, 8);
   }
 
+  @Test
+  public void testConnectionCreatorWithSamePool() throws IOException {
+    Configuration tmpConf = new Configuration();
+    // Set DFS_ROUTER_MAX_CONCURRENCY_PER_CONNECTION_KEY to 0
+    // for ensuring a pool will be offered in the creatorQueue
+    tmpConf.setInt(
+        RBFConfigKeys.DFS_ROUTER_MAX_CONCURRENCY_PER_CONNECTION_KEY, 0);
+    ConnectionManager tmpConnManager = new ConnectionManager(tmpConf);
+    tmpConnManager.start();
+    // Close ConnectionCreator thread to make sure that new connection will not initialize.
+    tmpConnManager.closeConnectionCreator();
+    // Create same connection pool for simulating concurrency scenario
+    for (int i = 0; i < 3; i++) {
+      tmpConnManager.getConnection(TEST_USER1, TEST_NN_ADDRESS,
+          NamenodeProtocol.class, "ns0");
+    }
+    assertEquals(1, tmpConnManager.getNumCreatingConnections());
+
+    tmpConnManager.getConnection(TEST_USER2, TEST_NN_ADDRESS,
+        NamenodeProtocol.class, "ns0");
+    assertEquals(2, tmpConnManager.getNumCreatingConnections());
+  }
+
   private void testConnectionCleanup(float ratio, int totalConns,
       int activeConns, int leftConns) throws IOException {
     Configuration tmpConf = new Configuration();

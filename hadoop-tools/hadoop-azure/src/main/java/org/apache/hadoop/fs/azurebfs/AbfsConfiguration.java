@@ -49,6 +49,7 @@ import org.apache.hadoop.fs.azurebfs.diagnostics.LongConfigurationBasicValidator
 import org.apache.hadoop.fs.azurebfs.diagnostics.StringConfigurationBasicValidator;
 import org.apache.hadoop.fs.azurebfs.enums.Trilean;
 import org.apache.hadoop.fs.azurebfs.extensions.CustomTokenProviderAdaptee;
+import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
 import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider;
@@ -117,6 +118,11 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_OPTIMIZE_FOOTER_READ)
   private boolean optimizeFooterRead;
 
+  @IntegerConfigurationValidatorAnnotation(
+          ConfigurationKey = AZURE_FOOTER_READ_BUFFER_SIZE,
+          DefaultValue = DEFAULT_FOOTER_READ_BUFFER_SIZE)
+  private int footerReadBufferSize;
+
   @BooleanConfigurationValidatorAnnotation(
       ConfigurationKey = FS_AZURE_ACCOUNT_IS_EXPECT_HEADER_ENABLED,
       DefaultValue = DEFAULT_FS_AZURE_ACCOUNT_IS_EXPECT_HEADER_ENABLED)
@@ -146,6 +152,14 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_MAX_BACKOFF_INTERVAL)
   private int maxBackoffInterval;
 
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = AZURE_STATIC_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED,
+      DefaultValue = DEFAULT_STATIC_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED)
+  private boolean staticRetryForConnectionTimeoutEnabled;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_STATIC_RETRY_INTERVAL,
+      DefaultValue = DEFAULT_STATIC_RETRY_INTERVAL)
+  private int staticRetryInterval;
+
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_BACKOFF_INTERVAL,
       DefaultValue = DEFAULT_BACKOFF_INTERVAL)
   private int backoffInterval;
@@ -159,6 +173,14 @@ public class AbfsConfiguration{
       MinValue = 0,
       DefaultValue = DEFAULT_CUSTOM_TOKEN_FETCH_RETRY_COUNT)
   private int customTokenFetchRetryCount;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_HTTP_CONNECTION_TIMEOUT,
+          DefaultValue = DEFAULT_HTTP_CONNECTION_TIMEOUT)
+  private int httpConnectionTimeout;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_HTTP_READ_TIMEOUT,
+          DefaultValue = DEFAULT_HTTP_READ_TIMEOUT)
+  private int httpReadTimeout;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_OAUTH_TOKEN_FETCH_RETRY_COUNT,
       MinValue = 0,
@@ -336,6 +358,17 @@ public class AbfsConfiguration{
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey =
           FS_AZURE_ABFS_RENAME_RESILIENCE, DefaultValue = DEFAULT_ENABLE_ABFS_RENAME_RESILIENCE)
   private boolean renameResilience;
+
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, DefaultValue = DEFAULT_ENABLE_ABFS_CHECKSUM_VALIDATION)
+  private boolean isChecksumValidationEnabled;
+
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_ENABLE_PAGINATED_DELETE, DefaultValue = DEFAULT_ENABLE_PAGINATED_DELETE)
+  private boolean isPaginatedDeleteEnabled;
+
+  private String clientProvidedEncryptionKey;
+  private String clientProvidedEncryptionKeySHA;
 
   public AbfsConfiguration(final Configuration rawConfig, String accountName)
       throws IllegalAccessException, InvalidConfigurationValueException, IOException {
@@ -643,6 +676,10 @@ public class AbfsConfiguration{
     return this.optimizeFooterRead;
   }
 
+  public int getFooterReadBufferSize() {
+    return this.footerReadBufferSize;
+  }
+
   public int getReadBufferSize() {
     return this.readBufferSize;
   }
@@ -655,6 +692,14 @@ public class AbfsConfiguration{
     return this.maxBackoffInterval;
   }
 
+  public boolean getStaticRetryForConnectionTimeoutEnabled() {
+    return staticRetryForConnectionTimeoutEnabled;
+  }
+
+  public int getStaticRetryInterval() {
+    return staticRetryInterval;
+  }
+
   public int getBackoffIntervalMilliseconds() {
     return this.backoffInterval;
   }
@@ -665,6 +710,14 @@ public class AbfsConfiguration{
 
   public int getCustomTokenFetchRetryCount() {
     return this.customTokenFetchRetryCount;
+  }
+
+  public int getHttpConnectionTimeout() {
+    return this.httpConnectionTimeout;
+  }
+
+  public int getHttpReadTimeout() {
+    return this.httpReadTimeout;
   }
 
   public long getAzureBlockSize() {
@@ -957,6 +1010,32 @@ public class AbfsConfiguration{
     }
   }
 
+  public EncryptionContextProvider createEncryptionContextProvider() {
+    try {
+      String configKey = FS_AZURE_ENCRYPTION_CONTEXT_PROVIDER_TYPE;
+      if (get(configKey) == null) {
+        return null;
+      }
+      Class<? extends EncryptionContextProvider> encryptionContextClass =
+          getAccountSpecificClass(configKey, null,
+              EncryptionContextProvider.class);
+      Preconditions.checkArgument(encryptionContextClass != null, String.format(
+          "The configuration value for %s is invalid, or config key is not account-specific",
+          configKey));
+
+      EncryptionContextProvider encryptionContextProvider =
+          ReflectionUtils.newInstance(encryptionContextClass, rawConfig);
+      Preconditions.checkArgument(encryptionContextProvider != null,
+          String.format("Failed to initialize %s", encryptionContextClass));
+
+      LOG.trace("{} init complete", encryptionContextClass.getName());
+      return encryptionContextProvider;
+    } catch (Exception e) {
+      throw new IllegalArgumentException(
+          "Unable to load encryption context provider class: ", e);
+    }
+  }
+
   public boolean isReadAheadEnabled() {
     return this.enabledReadAhead;
   }
@@ -1068,9 +1147,22 @@ public class AbfsConfiguration{
     return this.enableAbfsListIterator;
   }
 
-  public String getClientProvidedEncryptionKey() {
-    String accSpecEncKey = accountConf(FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY);
-    return rawConfig.get(accSpecEncKey, null);
+  public String getEncodedClientProvidedEncryptionKey() {
+    if (clientProvidedEncryptionKey == null) {
+      String accSpecEncKey = accountConf(
+          FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY);
+      clientProvidedEncryptionKey = rawConfig.get(accSpecEncKey, null);
+    }
+    return clientProvidedEncryptionKey;
+  }
+
+  public String getEncodedClientProvidedEncryptionKeySHA() {
+    if (clientProvidedEncryptionKeySHA == null) {
+      String accSpecEncKey = accountConf(
+          FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY_SHA);
+      clientProvidedEncryptionKeySHA = rawConfig.get(accSpecEncKey, null);
+    }
+    return clientProvidedEncryptionKeySHA;
   }
 
   @VisibleForTesting
@@ -1139,6 +1231,11 @@ public class AbfsConfiguration{
   }
 
   @VisibleForTesting
+  public void setFooterReadBufferSize(int footerReadBufferSize) {
+    this.footerReadBufferSize = footerReadBufferSize;
+  }
+
+  @VisibleForTesting
   public void setEnableAbfsListIterator(boolean enableAbfsListIterator) {
     this.enableAbfsListIterator = enableAbfsListIterator;
   }
@@ -1147,7 +1244,16 @@ public class AbfsConfiguration{
     return renameResilience;
   }
 
-  void setRenameResilience(boolean actualResilience) {
-    renameResilience = actualResilience;
+  public boolean isPaginatedDeleteEnabled() {
+    return isPaginatedDeleteEnabled;
+  }
+
+  public boolean getIsChecksumValidationEnabled() {
+    return isChecksumValidationEnabled;
+  }
+
+  @VisibleForTesting
+  public void setIsChecksumValidationEnabled(boolean isChecksumValidationEnabled) {
+    this.isChecksumValidationEnabled = isChecksumValidationEnabled;
   }
 }

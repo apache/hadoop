@@ -48,9 +48,11 @@ import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APPEND_ACTION;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EXPECT_100_JDK_ERROR;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PATCH;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PUT;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HUNDRED_CONTINUE;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.*;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.EXPECT;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_HTTP_METHOD_OVERRIDE;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_ACTION;
@@ -76,7 +78,6 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SEMICOLO
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SINGLE_WHITE_SPACE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLUSTER_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLUSTER_TYPE;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_VALUE_UNKNOWN;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_CONFIGURATION_FILE_NAME;
 
 /**
@@ -135,7 +136,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
       boolean includeSSLProvider) throws IOException {
     AbfsClientContext abfsClientContext = new AbfsClientContextBuilder().build();
     AbfsClient client = new AbfsClient(new URL("https://azure.com"), null,
-        config, (AccessTokenProvider) null, abfsClientContext);
+        config, (AccessTokenProvider) null, null, abfsClientContext);
     String sslProviderName = null;
     if (includeSSLProvider) {
       sslProviderName = DelegatingSSLSocketFactory.getDefaultFactory()
@@ -341,6 +342,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
         (currentAuthType == AuthType.OAuth
             ? abfsConfig.getTokenProvider()
             : null),
+            null,
         abfsClientContext);
 
     return testClient;
@@ -363,7 +365,9 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.getAuthType()).thenReturn(currentAuthType);
-    when(client.getRetryPolicy()).thenReturn(
+    when(client.getExponentialRetryPolicy()).thenReturn(
+        new ExponentialRetryPolicy(1));
+    when(client.getRetryPolicy(any())).thenReturn(
         new ExponentialRetryPolicy(1));
 
     when(client.createDefaultUriQueryBuilder()).thenCallRealMethod();
@@ -384,6 +388,10 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     client = ITestAbfsClient.setAbfsClientField(client, "baseUrl",
         baseAbfsClientInstance.getBaseUrl());
 
+    // override xMsVersion
+    client = ITestAbfsClient.setAbfsClientField(client, "xMsVersion",
+        baseAbfsClientInstance.getxMsVersion());
+
     // override auth provider
     if (currentAuthType == AuthType.SharedKey) {
       client = ITestAbfsClient.setAbfsClientField(client, "sharedKeyCredentials",
@@ -397,7 +405,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     }
 
     // override user agent
-    String userAgent = "APN/1.0 Azure Blob FS/3.4.0-SNAPSHOT (PrivateBuild "
+    String userAgent = "APN/1.0 Azure Blob FS/3.5.0-SNAPSHOT (PrivateBuild "
         + "JavaJRE 1.8.0_252; Linux 5.3.0-59-generic/amd64; openssl-1.0; "
         + "UNKNOWN/UNKNOWN) MSFT";
     client = ITestAbfsClient.setAbfsClientField(client, "userAgent", userAgent);
@@ -405,7 +413,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     return client;
   }
 
-  private static AbfsClient setAbfsClientField(
+  static AbfsClient setAbfsClientField(
       final AbfsClient client,
       final String fieldName,
       Object fieldObject) throws Exception {
@@ -554,7 +562,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
         appendRequestParameters.getLength(), null));
 
     AbfsHttpOperation abfsHttpOperation = Mockito.spy(new AbfsHttpOperation(url,
-        HTTP_METHOD_PUT, requestHeaders));
+        HTTP_METHOD_PUT, requestHeaders, DEFAULT_HTTP_CONNECTION_TIMEOUT, DEFAULT_HTTP_READ_TIMEOUT));
 
     // Sets the expect request property if expect header is enabled.
     if (appendRequestParameters.isExpectHeaderEnabled()) {
@@ -581,7 +589,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
         .getConnResponseMessage();
 
     // Make the getOutputStream throw IOException to see it returns from the sendRequest correctly.
-    Mockito.doThrow(new ProtocolException("Server rejected Operation"))
+    Mockito.doThrow(new ProtocolException(EXPECT_100_JDK_ERROR))
         .when(abfsHttpOperation)
         .getConnOutputStream();
 
@@ -608,7 +616,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
             .isTrue();
 
     intercept(AzureBlobFileSystemException.class,
-        () -> testClient.append(finalTestPath, buffer, appendRequestParameters, null, tracingContext));
+        () -> testClient.append(finalTestPath, buffer, appendRequestParameters, null, null, tracingContext));
 
     // Verify that the request was not exponentially retried because of user error.
     Assertions.assertThat(tracingContext.getRetryCount())

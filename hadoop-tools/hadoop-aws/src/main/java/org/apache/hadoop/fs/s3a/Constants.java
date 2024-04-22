@@ -69,6 +69,13 @@ public final class Constants {
       "fs.s3a.aws.credentials.provider";
 
   /**
+   * AWS credentials providers mapping with key/value pairs.
+   * Value = {@value}
+   */
+  public static final String AWS_CREDENTIALS_PROVIDER_MAPPING =
+      "fs.s3a.aws.credentials.provider.mapping";
+
+  /**
    * Extra set of security credentials which will be prepended to that
    * set in {@code "hadoop.security.credential.provider.path"}.
    * This extra option allows for per-bucket overrides.
@@ -173,7 +180,7 @@ public final class Constants {
    * Future releases are likely to increase this value.
    * Keep in sync with the value in {@code core-default.xml}
    */
-  public static final int DEFAULT_MAXIMUM_CONNECTIONS = 200;
+  public static final int DEFAULT_MAXIMUM_CONNECTIONS = 500;
 
   /**
    * Configuration option to configure expiration time of
@@ -337,16 +344,33 @@ public final class Constants {
   public static final int DEFAULT_SOCKET_TIMEOUT = (int)DEFAULT_SOCKET_TIMEOUT_DURATION.toMillis();
 
   /**
-   * Time until a request is timed-out: {@value}.
-   * If zero, there is no timeout.
+   * How long should the SDK retry/wait on a response from an S3 store: {@value}
+   * <i>including the time needed to sign the request</i>.
+   * <p>
+   * This is time to response, so for a GET request it is "time to 200 response"
+   * not the time limit to download the requested data.
+   * This makes it different from {@link #REQUEST_TIMEOUT}, which is for total
+   * HTTP request.
+   * <p>
+   * Default unit is milliseconds.
+   * <p>
+   * There is a minimum duration set in {@link #MINIMUM_NETWORK_OPERATION_DURATION};
+   * it is impossible to set a delay less than this, even for testing.
+   * Why so? Too many deployments where the configuration assumed the timeout was in seconds
+   * and that "120" was a reasonable value rather than "too short to work reliably"
+   * <p>
+   * Note for anyone writing tests which need to set a low value for this:
+   * to avoid the minimum duration overrides, call
+   * {@code AWSClientConfig.setMinimumOperationDuration()} and set a low value
+   * before creating the filesystem.
    */
   public static final String REQUEST_TIMEOUT =
       "fs.s3a.connection.request.timeout";
 
   /**
-   * Default duration of a request before it is timed out: Zero.
+   * Default duration of a request before it is timed out: 60s.
    */
-  public static final Duration DEFAULT_REQUEST_TIMEOUT_DURATION = Duration.ZERO;
+  public static final Duration DEFAULT_REQUEST_TIMEOUT_DURATION = Duration.ofSeconds(60);
 
   /**
    * Default duration of a request before it is timed out: Zero.
@@ -1336,6 +1360,15 @@ public final class Constants {
   public static final String AWS_S3_DEFAULT_REGION = "us-east-2";
 
   /**
+   * Is the endpoint a FIPS endpoint?
+   * Can be queried as a path capability.
+   * Value {@value}.
+   */
+  public static final String FIPS_ENDPOINT = "fs.s3a.endpoint.fips";
+
+  public static final boolean ENDPOINT_FIPS_DEFAULT = false;
+
+  /**
    * Require that all S3 access is made through Access Points.
    */
   public static final String AWS_S3_ACCESSPOINT_REQUIRED = "fs.s3a.accesspoint.required";
@@ -1390,12 +1423,12 @@ public final class Constants {
   /**
    * Default minimum seek in bytes during vectored reads : {@value}.
    */
-  public static final int DEFAULT_AWS_S3_VECTOR_READS_MIN_SEEK_SIZE = 4896; // 4K
+  public static final int DEFAULT_AWS_S3_VECTOR_READS_MIN_SEEK_SIZE = 4096; // 4K
 
   /**
    * Default maximum read size in bytes during vectored reads : {@value}.
    */
-  public static final int DEFAULT_AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE = 1253376; //1M
+  public static final int DEFAULT_AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE = 1048576; //1M
 
   /**
    * Maximum number of range reads a single input stream can have
@@ -1543,4 +1576,69 @@ public final class Constants {
    * Value: {@value}.
    */
   public static final boolean S3EXPRESS_CREATE_SESSION_DEFAULT = true;
+
+  /**
+   * Flag to switch to a v2 SDK HTTP signer. Value {@value}.
+   */
+  public static final String HTTP_SIGNER_ENABLED = "fs.s3a.http.signer.enabled";
+
+  /**
+   * Default value of {@link #HTTP_SIGNER_ENABLED}: {@value}.
+   */
+  public static final boolean HTTP_SIGNER_ENABLED_DEFAULT = false;
+
+  /**
+   * Classname of the http signer to use when {@link #HTTP_SIGNER_ENABLED}
+   * is true: {@value}.
+   */
+  public static final String HTTP_SIGNER_CLASS_NAME = "fs.s3a.http.signer.class";
+
+  /**
+   * Should checksums be validated on download?
+   * This is slower and not needed on TLS connections.
+   * Value: {@value}.
+   */
+  public static final String CHECKSUM_VALIDATION =
+      "fs.s3a.checksum.validation";
+
+  /**
+   * Default value of {@link #CHECKSUM_VALIDATION}.
+   * Value: {@value}.
+   */
+  public static final boolean CHECKSUM_VALIDATION_DEFAULT = false;
+
+  /**
+   * Are extensions classes, such as {@code fs.s3a.aws.credentials.provider},
+   * going to be loaded from the same classloader that loaded
+   * the {@link S3AFileSystem}?
+   * It is useful to turn classloader isolation off for Apache Spark applications
+   * that might load {@link S3AFileSystem} from the Spark distribution (Launcher classloader)
+   * while users might want to provide custom extensions (loaded by Spark MutableClassloader).
+   * Value: {@value}.
+   */
+  public static final String AWS_S3_CLASSLOADER_ISOLATION =
+            "fs.s3a.classloader.isolation";
+
+  /**
+   * Default value for {@link #AWS_S3_CLASSLOADER_ISOLATION}.
+   * Value: {@value}.
+   */
+  public static final boolean DEFAULT_AWS_S3_CLASSLOADER_ISOLATION = true;
+
+  /**
+   * Flag {@value}
+   * to enable S3 Access Grants to control authorization to S3 data. More information:
+   * https://aws.amazon.com/s3/features/access-grants/
+   * and
+   * https://github.com/aws/aws-s3-accessgrants-plugin-java-v2/
+   */
+  public static final String AWS_S3_ACCESS_GRANTS_ENABLED = "fs.s3a.access.grants.enabled";
+
+  /**
+   * Flag {@value} to enable jobs fall back to the Job Execution IAM role in
+   * case they get Access Denied from the S3 Access Grants call. More information:
+   * https://github.com/aws/aws-s3-accessgrants-plugin-java-v2/
+   */
+  public static final String AWS_S3_ACCESS_GRANTS_FALLBACK_TO_IAM_ENABLED =
+          "fs.s3a.access.grants.fallback.to.iam";
 }

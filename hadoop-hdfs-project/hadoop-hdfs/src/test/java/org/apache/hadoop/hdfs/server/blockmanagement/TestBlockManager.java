@@ -522,7 +522,7 @@ public class TestBlockManager {
     try {
       cluster.waitActive();
       BlockManager blockManager = cluster.getNamesystem().getBlockManager();
-      blockManager.getDatanodeManager().markAllDatanodesStale();
+      blockManager.getDatanodeManager().markAllDatanodesStaleAndSetKeyUpdateIfNeed();
       FileSystem fs = cluster.getFileSystem();
       FSDataOutputStream out = fs.create(file);
       for (int i = 0; i < 1024 * 1024 * 1; i++) {

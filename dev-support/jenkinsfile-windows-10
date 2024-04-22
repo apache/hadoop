@@ -1,0 +1,200 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
+def getGithubCreds() {
+    return [usernamePassword(credentialsId: 'apache-hadoop-at-github.com',
+                                passwordVariable: 'GITHUB_TOKEN',
+                                usernameVariable: 'GITHUB_USER')]
+}
+
+// Publish JUnit results only if there are XML files under surefire-reports
+def publishJUnitResults() {
+    def findCmdExitCode = sh script: "find ${SOURCEDIR} -wholename */target/surefire-reports/*.xml | egrep .", returnStatus: true
+    boolean surefireReportsExist = findCmdExitCode == 0
+    if (surefireReportsExist) {
+        echo "XML files found under surefire-reports, running junit"
+        // The path should be relative to WORKSPACE for the junit.
+        SRC = "${SOURCEDIR}/**/target/surefire-reports/*.xml".replace("$WORKSPACE/","")
+        try {
+            junit "${SRC}"
+        } catch(e) {
+            echo 'junit processing: ' + e.toString()
+        }
+    } else {
+        echo "No XML files found under surefire-reports, skipping junit"
+    }
+}
+
+pipeline {
+    agent {
+        label 'Windows'
+    }
+
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '15'))
+        timeout (time: 72, unit: 'HOURS')
+        timestamps()
+        checkoutToSubdirectory('src')
+    }
+
+    environment {
+        YETUS='yetus'
+        // Branch or tag name.  Yetus release tags are 'rel/X.Y.Z'
+        YETUS_VERSION='rel/0.14.0'
+    }
+
+    parameters {
+        string(name: 'JIRA_ISSUE_KEY',
+               defaultValue: '',
+               description: 'The JIRA issue that has a patch needing pre-commit testing. Example: HADOOP-1234')
+    }
+
+    stages {
+        stage ('Install Yetus') {
+            steps {
+                dir("${WORKSPACE}/${YETUS}") {
+                    checkout([
+                        $class: 'GitSCM',
+                        branches: [[name: "${env.YETUS_VERSION}"]],
+                        userRemoteConfigs: [[ url: 'https://github.com/apache/yetus.git']]]
+                    )
+                }
+            }
+        }
+
+        stage ('Windows 10') {
+            environment {
+                SOURCEDIR = "${WORKSPACE}/src"
+                PATCHDIR = "${WORKSPACE}/out"
+                DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile_windows_10"
+                DOCKER_BUILDKIT = 0
+                IS_OPTIONAL = 0
+                IS_NIGHTLY_BUILD = 0
+                IS_WINDOWS = 1
+            }
+
+            steps {
+                withCredentials(getGithubCreds()) {
+                    bat 'if not exist %WORKSPACE%\\out mkdir %WORKSPACE%\\out'
+                    bat 'if not exist F:\\maven\\repository mkdir F:\\maven\\repository'
+                    bat '''docker build --label org.apache.yetus=""^
+                            --label org.apache.yetus.testpatch.project=hadoop^
+                            --tag hadoop-windows-10-builder^
+                            -f %DOCKERFILE% %SOURCEDIR%\\dev-support\\docker'''
+                    bat '''docker run --rm -v %WORKSPACE%\\out:C:\\out^
+                            -v %WORKSPACE%\\src:C:\\src^
+                            -v %WORKSPACE%\\yetus:C:\\yetus^
+                            -v F:\\maven\\repository:C:\\Users\\%BUILD_USER%\\.m2^
+                            -e BUILD_URL=%BUILD_URL% -e BRANCH_NAME=%BRANCH_NAME%^
+                            -e JOB_NAME=%JOB_NAME% -e JENKINS_URL=%JENKINS_URL%^
+                            -e CHANGE_URL=%CHANGE_URL% -e WORKSPACE=/c -e YETUS=yetus^
+                            -e BUILD_NUMBER=%BUILD_NUMBER% -e EXECUTOR_NUMBER=%EXECUTOR_NUMBER%^
+                            -e BUILD_ID=%BUILD_ID% -e GIT_COMMIT=%GIT_COMMIT%^
+                            -e NODE_NAME=%NODE_NAME% -e GIT_URL=%GIT_URL%^
+                            -e BUILD_TAG=%BUILD_TAG% -e GIT_BRANCH=%GIT_BRANCH%^
+                            -e PATCH_OR_ISSUE=%CHANGE_URL% -e JIRA_ISSUE_KEY=%JIRA_ISSUE_KEY%^
+                            -e IS_OPTIONAL=0 -e SOURCEDIR=/c/hadoop -e PATCHDIR=/c/out^
+                            -e GITHUB_TOKEN=%GITHUB_TOKEN% -e GITHUB_USER=%GITHUB_USER%^
+                            -e IS_NIGHTLY_BUILD=%IS_NIGHTLY_BUILD% -e IS_WINDOWS=%IS_WINDOWS%^
+                            -e BASH_EXECUTABLE=/c/Git/bin/bash.exe^
+                            -e VCPKG_INSTALLED_PACKAGES=/c/vcpkg/installed/x64-windows^
+                            -e CMAKE_TOOLCHAIN_FILE=/c/vcpkg/scripts/buildsystems/vcpkg.cmake^
+                            hadoop-windows-10-builder "/c" "xcopy" "/s" "/e" "/h" "/y" "/i" "/q" "C:\\src" "C:\\hadoop"^
+                                "&&" "C:\\Git\\bin\\bash.exe" "-c" \'"/c/src/dev-support/jenkins.sh" "run_ci"\'
+                        '''
+                }
+            }
+
+            post {
+                always {
+                    script {
+                        bat '''docker run --rm --user ContainerAdministrator^
+                            -v %WORKSPACE%\\out:C:\\out^
+                            hadoop-windows-10-builder "/c" "icacls" "C:\\out" "/c" "/t" "/q" "/grant" "Users:F"
+                        '''
+                        bat '''docker run --rm --user ContainerAdministrator^
+                            -v F:\\maven\\repository:C:\\Users\\%BUILD_USER%\\.m2^
+                            hadoop-windows-10-builder "/c" "icacls" "C:\\Users\\%BUILD_USER%\\.m2" "/c" "/t" "/q" "/grant" "Users:F"
+                        '''
+
+                        // Publish status if it was missed (YETUS-1059)
+                        withCredentials(
+                            [usernamePassword(credentialsId: '683f5dcf-5552-4b28-9fb1-6a6b77cf53dd',
+                                              passwordVariable: 'GITHUB_TOKEN',
+                                              usernameVariable: 'GITHUB_USER')]) {
+                            bat '''docker run --rm -v %WORKSPACE%\\out:C:\\out^
+                                -v %WORKSPACE%\\src:C:\\src^
+                                -v %WORKSPACE%\\yetus:C:\\yetus^
+                                -v F:\\maven\\repository:C:\\Users\\%BUILD_USER%\\.m2^
+                                -e BUILD_URL=%BUILD_URL% -e BRANCH_NAME=%BRANCH_NAME%^
+                                -e JOB_NAME=%JOB_NAME% -e JENKINS_URL=%JENKINS_URL%^
+                                -e CHANGE_URL=%CHANGE_URL% -e WORKSPACE=/c -e YETUS=yetus^
+                                -e BUILD_NUMBER=%BUILD_NUMBER% -e EXECUTOR_NUMBER=%EXECUTOR_NUMBER%^
+                                -e BUILD_ID=%BUILD_ID% -e GIT_COMMIT=%GIT_COMMIT%^
+                                -e NODE_NAME=%NODE_NAME% -e GIT_URL=%GIT_URL%^
+                                -e BUILD_TAG=%BUILD_TAG% -e GIT_BRANCH=%GIT_BRANCH%^
+                                -e PATCH_OR_ISSUE=%CHANGE_URL% -e JIRA_ISSUE_KEY=%JIRA_ISSUE_KEY%^
+                                -e IS_OPTIONAL=0 -e SOURCEDIR=/c/hadoop -e PATCHDIR=/c/out^
+                                -e GITHUB_TOKEN=%GITHUB_TOKEN% -e GITHUB_USER=%GITHUB_USER%^
+                                -e IS_NIGHTLY_BUILD=%IS_NIGHTLY_BUILD% -e IS_WINDOWS=%IS_WINDOWS%^
+                                -e BASH_EXECUTABLE=/c/Git/bin/bash.exe^
+                                -e VCPKG_INSTALLED_PACKAGES=/c/vcpkg/installed/x64-windows^
+                                -e CMAKE_TOOLCHAIN_FILE=/c/vcpkg/scripts/buildsystems/vcpkg.cmake^
+                                hadoop-windows-10-builder "/c"^
+                                    "C:\\Git\\bin\\bash.exe" "-c" \'"/c/src/dev-support/jenkins.sh" "github_status_recovery"\'
+                            '''
+                        }
+
+                        archiveArtifacts "out/**"
+
+                        publishJUnitResults()
+
+                        // Publish the HTML report so that it can be looked at
+                        // Has to be relative to WORKSPACE.
+                        publishHTML (target: [
+                                      allowMissing: true,
+                                      keepAll: true,
+                                      alwaysLinkToLastBuild: true,
+                                      // Has to be relative to WORKSPACE
+                                      reportDir: "out",
+                                      reportFiles: 'report.html',
+                                      reportName: 'Yetus Report'
+                        ])
+                    }
+                }
+
+                cleanup() {
+                    script {
+                        bat '''
+                        C:\\PROGRA~1\\Git\\bin\\bash.exe -c "chmod u+x ${SOURCEDIR}/dev-support/jenkins.sh"
+                        C:\\PROGRA~1\\Git\\bin\\bash.exe -c "${SOURCEDIR}/dev-support/jenkins.sh cleanup_ci_proc"
+                        '''
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        // Jenkins pipeline jobs fill slaves on PRs without this :(
+        cleanup() {
+            script {
+                deleteDir()
+            }
+        }
+    }
+}

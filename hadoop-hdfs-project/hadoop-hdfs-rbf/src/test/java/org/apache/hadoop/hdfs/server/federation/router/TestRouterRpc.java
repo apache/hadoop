@@ -137,6 +137,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -263,6 +264,12 @@ public class TestRouterRpc {
         .getDatanodeManager().setHeartbeatExpireInterval(3000);
     cluster.getCluster().getNamesystem(1).getBlockManager()
         .getDatanodeManager().setHeartbeatExpireInterval(3000);
+  }
+
+  @After
+  public void cleanup() {
+    // clear client context
+    CallerContext.setCurrent(null);
   }
 
   @AfterClass
@@ -2088,10 +2095,10 @@ public class TestRouterRpc {
 
     // The audit log should contains "callerContext=clientIp:...,clientContext"
     final String logOutput = auditlog.getOutput();
-    assertTrue(logOutput.contains("callerContext=clientIp:"));
-    assertTrue(logOutput.contains(",clientContext"));
-    assertTrue(logOutput.contains(",clientId"));
-    assertTrue(logOutput.contains(",clientCallId"));
+    assertTrue(logOutput.contains("clientIp:"));
+    assertTrue(logOutput.contains("clientContext"));
+    assertTrue(logOutput.contains("clientId"));
+    assertTrue(logOutput.contains("clientCallId"));
     assertTrue(verifyFileExists(routerFS, dirPath));
   }
 
@@ -2103,7 +2110,6 @@ public class TestRouterRpc {
 
     // Current callerContext is null
     assertNull(CallerContext.getCurrent());
-
     UserGroupInformation loginUser = UserGroupInformation.getLoginUser();
     UserGroupInformation realUser = UserGroupInformation
         .createUserForTesting("testRealUser", new String[]{"group"});

@@ -65,4 +65,8 @@ public class WeightedLocalityPolicyManager
     this.weightedPolicyInfo = weightedPolicyInfo;
   }
 
+  @Override
+  public boolean isSupportWeightedPolicyInfo() {
+    return true;
+  }
 }

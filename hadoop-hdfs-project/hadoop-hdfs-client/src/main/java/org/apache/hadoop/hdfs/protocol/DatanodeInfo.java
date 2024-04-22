@@ -143,7 +143,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
       final int xceiverCount, final String networkLocation,
       final AdminStates adminState, final String upgradeDomain,
       final long lastBlockReportTime, final long lastBlockReportMonotonic,
-                       final int blockCount) {
+      final int blockCount, final String softwareVersion) {
     super(ipAddr, hostName, datanodeUuid, xferPort, infoPort, infoSecurePort,
         ipcPort);
     this.capacity = capacity;
@@ -162,6 +162,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
     this.lastBlockReportTime = lastBlockReportTime;
     this.lastBlockReportMonotonic = lastBlockReportMonotonic;
     this.numBlocks = blockCount;
+    this.softwareVersion =  softwareVersion;
   }
 
   /** Network location name. */
@@ -699,6 +700,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
     private long lastBlockReportTime = 0L;
     private long lastBlockReportMonotonic = 0L;
     private int numBlocks = 0;
+    private String softwareVersion;
 
     // Please use setNumBlocks explicitly to set numBlocks as this method doesn't have
     // sufficient info about numBlocks
@@ -718,6 +720,9 @@ public class DatanodeInfo extends DatanodeID implements Node {
       this.upgradeDomain = from.getUpgradeDomain();
       this.lastBlockReportTime = from.getLastBlockReportTime();
       this.lastBlockReportMonotonic = from.getLastBlockReportMonotonic();
+      if (from.getSoftwareVersion() != null) {
+        this.softwareVersion = from.getSoftwareVersion();
+      }
       setNodeID(from);
       return this;
     }
@@ -844,8 +849,14 @@ public class DatanodeInfo extends DatanodeID implements Node {
       this.lastBlockReportMonotonic = time;
       return this;
     }
+
     public DatanodeInfoBuilder setNumBlocks(int blockCount) {
       this.numBlocks = blockCount;
+      return this;
+    }
+
+    public DatanodeInfoBuilder setSoftwareVersion(String dnVersion) {
+      this.softwareVersion = dnVersion;
       return this;
     }
 
@@ -855,7 +866,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
           remaining, blockPoolUsed, cacheCapacity, cacheUsed, lastUpdate,
           lastUpdateMonotonic, xceiverCount, location, adminState,
           upgradeDomain, lastBlockReportTime, lastBlockReportMonotonic,
-          numBlocks);
+          numBlocks, softwareVersion);
     }
   }
 }

@@ -1962,7 +1962,7 @@ public class TestFsDatasetImpl {
    *     4. block would be recovered when disk back to normal.
    */
   @Test
-  public void tesInvalidateMissingBlock() throws Exception {
+  public void testInvalidateMissingBlock() throws Exception {
     long blockSize = 1024;
     int heartbeatInterval = 1;
     HdfsConfiguration c = new HdfsConfiguration();
@@ -1988,7 +1988,7 @@ public class TestFsDatasetImpl {
       File metaFile = new File(metaPath);
 
       // Mock local block file not found when disk with some exception.
-      fsdataset.invalidateMissingBlock(bpid, replicaInfo);
+      fsdataset.invalidateMissingBlock(bpid, replicaInfo, false);
 
       // Assert local block file wouldn't be deleted from disk.
       assertTrue(blockFile.exists());
@@ -2009,6 +2009,97 @@ public class TestFsDatasetImpl {
           blockManager.getLowRedundancyBlocksCount() == 0, 100, 5000);
     } finally {
       cluster.shutdown();
+    }
+  }
+
+  @Test
+  public void testCheckFilesWhenInvalidateMissingBlock() throws Exception {
+    long blockSize = 1024;
+    int heartbeatInterval = 1;
+    HdfsConfiguration c = new HdfsConfiguration();
+    c.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, heartbeatInterval);
+    c.setLong(DFS_BLOCK_SIZE_KEY, blockSize);
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(c).
+        numDataNodes(1).build();
+    DataNodeFaultInjector oldDnInjector = DataNodeFaultInjector.get();
+    try {
+      cluster.waitActive();
+      GenericTestUtils.LogCapturer logCapturer = GenericTestUtils.LogCapturer.
+          captureLogs(DataNode.LOG);
+      BlockReaderTestUtil util = new BlockReaderTestUtil(cluster, new
+          HdfsConfiguration(conf));
+      Path path = new Path("/testFile");
+      util.writeFile(path, 1);
+      String bpid = cluster.getNameNode().getNamesystem().getBlockPoolId();
+      DataNode dn = cluster.getDataNodes().get(0);
+      FsDatasetImpl dnFSDataset = (FsDatasetImpl) dn.getFSDataset();
+      List<ReplicaInfo> replicaInfos = dnFSDataset.getFinalizedBlocks(bpid);
+      assertEquals(1, replicaInfos.size());
+      DFSTestUtil.readFile(cluster.getFileSystem(), path);
+      LocatedBlock blk = util.getFileBlocks(path, 512).get(0);
+      ExtendedBlock block = blk.getBlock();
+
+      // Append a new block with an incremented generation stamp.
+      long newGS = block.getGenerationStamp() + 1;
+      dnFSDataset.append(block, newGS, 1024);
+      block.setGenerationStamp(newGS);
+      ReplicaInfo tmpReplicaInfo = dnFSDataset.getReplicaInfo(blk.getBlock());
+
+      DataNodeFaultInjector injector = new DataNodeFaultInjector() {
+        @Override
+        public void delayGetMetaDataInputStream() {
+          try {
+            Thread.sleep(8000);
+          } catch (InterruptedException e) {
+            // Ignore exception.
+          }
+        }
+      };
+      // Delay to getMetaDataInputStream.
+      DataNodeFaultInjector.set(injector);
+
+      ExecutorService executorService = Executors.newFixedThreadPool(2);
+      try {
+        Future<?> blockReaderFuture = executorService.submit(() -> {
+          try {
+            // Submit tasks for reading block.
+            BlockReader blockReader = BlockReaderTestUtil.getBlockReader(
+                cluster.getFileSystem(), blk, 0, 512);
+            blockReader.close();
+          } catch (IOException e) {
+            // Ignore exception.
+          }
+        });
+
+        Future<?> finalizeBlockFuture = executorService.submit(() -> {
+          try {
+            // Submit tasks for finalizing block.
+            Thread.sleep(1000);
+            dnFSDataset.finalizeBlock(block, false);
+          } catch (Exception e) {
+            // Ignore exception
+          }
+        });
+
+        // Wait for both tasks to complete.
+        blockReaderFuture.get();
+        finalizeBlockFuture.get();
+      } finally {
+        executorService.shutdown();
+      }
+
+      // Validate the replica is exits.
+      assertNotNull(dnFSDataset.getReplicaInfo(blk.getBlock()));
+
+      // Check DN log for FileNotFoundException.
+      String expectedMsg = String.format("opReadBlock %s received exception " +
+              "java.io.FileNotFoundException: %s (No such file or directory)",
+          blk.getBlock(), tmpReplicaInfo.getMetadataURI().getPath());
+      assertTrue("Expected log message not found in DN log.",
+          logCapturer.getOutput().contains(expectedMsg));
+    } finally {
+      cluster.shutdown();
+      DataNodeFaultInjector.set(oldDnInjector);
     }
   }
 }
