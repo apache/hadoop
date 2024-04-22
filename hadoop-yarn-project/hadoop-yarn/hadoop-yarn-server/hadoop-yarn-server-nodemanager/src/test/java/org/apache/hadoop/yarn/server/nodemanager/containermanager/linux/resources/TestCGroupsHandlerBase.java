@@ -128,7 +128,8 @@ public abstract class TestCGroupsHandlerBase {
    * @return file created
    * @throws IOException if file could not be created
    */
-  public File createFileWithContent(File parentDir, String fileName, String content) throws IOException {
+  public File createFileWithContent(File parentDir, String fileName, String content)
+      throws IOException {
     File fileToCreate = new File(parentDir, fileName);
     if (!fileToCreate.exists()) {
       if (!fileToCreate.createNewFile()) {

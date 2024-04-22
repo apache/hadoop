@@ -157,7 +157,7 @@ class CGroupsHandlerImpl extends AbstractCGroupsHandler {
   }
 
   @Override
-  protected void updateEnabledControllersInHierarchy(File yarnHierarchy) throws ResourceHandlerException {
+  protected void updateEnabledControllersInHierarchy(File yarnHierarchy) {
     // no-op in cgroup v1
   }
 }

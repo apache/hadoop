@@ -97,13 +97,16 @@ class CGroupsV2HandlerImpl extends AbstractCGroupsHandler {
   @Override
   protected Map<String, Set<String>> parsePreConfiguredMountPath() throws IOException {
     Map<String, Set<String>> controllerMappings = new HashMap<>();
-    String controllerPath = this.cGroupsMountConfig.getMountPath() + Path.SEPARATOR + this.cGroupPrefix;
-    controllerMappings.put(this.cGroupsMountConfig.getMountPath(), readControllersFile(controllerPath));
+    String controllerPath = this.cGroupsMountConfig.getMountPath() +
+        Path.SEPARATOR + this.cGroupPrefix;
+    controllerMappings.put(this.cGroupsMountConfig.getMountPath(),
+        readControllersFile(controllerPath));
     return controllerMappings;
   }
 
   @Override
-  protected Set<String> handleMtabEntry(String path, String type, String options) throws IOException {
+  protected Set<String> handleMtabEntry(String path, String type, String options)
+      throws IOException {
     if (type.equals(CGROUP2_FSTYPE)) {
       return readControllersFile(path);
     }
@@ -113,7 +116,8 @@ class CGroupsV2HandlerImpl extends AbstractCGroupsHandler {
 
   @Override
   protected void mountCGroupController(CGroupController controller) {
-    throw new UnsupportedOperationException("Mounting cgroup controllers is not supported in cgroup v2");
+    throw new UnsupportedOperationException("Mounting cgroup controllers is not supported in " +
+        "cgroup v2");
   }
 
   /**
@@ -129,7 +133,8 @@ class CGroupsV2HandlerImpl extends AbstractCGroupsHandler {
               cgroupPath);
     }
 
-    String enabledControllers = FileUtils.readFileToString(cgroupControllersFile, StandardCharsets.UTF_8);
+    String enabledControllers = FileUtils.readFileToString(cgroupControllersFile,
+        StandardCharsets.UTF_8);
     Set<String> validCGroups = getValidCGroups();
     Set<String> controllerSet =
             new HashSet<>(Arrays.asList(enabledControllers.split(" ")));
@@ -144,45 +149,53 @@ class CGroupsV2HandlerImpl extends AbstractCGroupsHandler {
   }
 
   /**
-   * The cgroup.subtree_control file is used to enable controllers for a subtree of the cgroup hierarchy
-   * (the current level excluded).
+   * The cgroup.subtree_control file is used to enable controllers for a subtree of the cgroup
+   * hierarchy (the current level excluded).
    * From the documentation: A read-write space separated values file which exists on all
    *  cgroups. Starts out empty. When read, it shows space separated list of the controllers which
    *  are enabled to control resource distribution from the cgroup to its children.
    *  Space separated list of controllers prefixed with '+' or '-'
    *  can be written to enable or disable controllers.
-   * Since YARN will create a sub-cgroup for each container, we need to enable the controllers for the subtree.
-   * Update the subtree_control file to enable subsequent container based cgroups to use the same controllers.
-   * If a cgroup.subtree_control file is present, but it doesn't contain all the controllers enabled in the
-   * cgroup.controllers file, this method will update the subtree_control file to include all the controllers.
+   * Since YARN will create a sub-cgroup for each container, we need to enable the controllers
+   * for the subtree. Update the subtree_control file to enable subsequent container based cgroups
+   * to use the same controllers.
+   * If a cgroup.subtree_control file is present, but it doesn't contain all the controllers
+   * enabled in the cgroup.controllers file, this method will update the subtree_control file
+   * to include all the controllers.
    * @param yarnHierarchy path to the yarn cgroup under which the container cgroups will be created
    * @throws ResourceHandlerException if the controllers file cannot be updated
    */
   @Override
-  protected void updateEnabledControllersInHierarchy(File yarnHierarchy) throws ResourceHandlerException {
+  protected void updateEnabledControllersInHierarchy(File yarnHierarchy)
+      throws ResourceHandlerException {
     try {
       Set<String> enabledControllers = readControllersFile(yarnHierarchy.getAbsolutePath());
       if (enabledControllers.isEmpty()) {
-        throw new ResourceHandlerException("No valid controllers found in the cgroup hierarchy: " +
+        throw new ResourceHandlerException(
+            "No valid controllers found in the cgroup hierarchy: " +
                 yarnHierarchy.getAbsolutePath());
       }
 
       File subtreeControlFile = new File(yarnHierarchy.getAbsolutePath()
           + Path.SEPARATOR + CGROUP_SUBTREE_CONTROL_FILE);
       if (!subtreeControlFile.exists()) {
-        throw new ResourceHandlerException("No subtree control file found in the cgroup hierarchy: " +
+        throw new ResourceHandlerException(
+            "No subtree control file found in the cgroup hierarchy: " +
                 yarnHierarchy.getAbsolutePath());
       }
 
-      String subtreeControllers = FileUtils.readFileToString(subtreeControlFile, StandardCharsets.UTF_8);
-      Set<String> subtreeControllerSet = new HashSet<>(Arrays.asList(subtreeControllers.split(" ")));
+      String subtreeControllers = FileUtils.readFileToString(subtreeControlFile,
+          StandardCharsets.UTF_8);
+      Set<String> subtreeControllerSet = new HashSet<>(Arrays.asList(
+          subtreeControllers.split(" ")));
       subtreeControllerSet.retainAll(getValidCGroups());
 
       if (subtreeControllerSet.containsAll(enabledControllers)) {
         return;
       }
       enabledControllers.removeAll(subtreeControllerSet);
-      Writer w = new OutputStreamWriter(Files.newOutputStream(subtreeControlFile.toPath(), StandardOpenOption.APPEND), StandardCharsets.UTF_8);
+      Writer w = new OutputStreamWriter(Files.newOutputStream(subtreeControlFile.toPath(),
+          StandardOpenOption.APPEND), StandardCharsets.UTF_8);
       try(PrintWriter pw = new PrintWriter(w)) {
         LOG.info("Appending the following controllers to the cgroup.subtree_control file: {}, " +
                 "for the cgroup hierarchy: {}", String.join(" ", enabledControllers),
@@ -194,7 +207,8 @@ class CGroupsV2HandlerImpl extends AbstractCGroupsHandler {
         pw.write(String.join(" +", enabledControllers));
       }
     } catch (IOException e) {
-      throw new ResourceHandlerException("Failed to update the controllers file in the cgroup hierarchy: " +
+      throw new ResourceHandlerException(
+          "Failed to update the controllers file in the cgroup hierarchy: " +
               yarnHierarchy.getAbsolutePath(), e);
     }
   }

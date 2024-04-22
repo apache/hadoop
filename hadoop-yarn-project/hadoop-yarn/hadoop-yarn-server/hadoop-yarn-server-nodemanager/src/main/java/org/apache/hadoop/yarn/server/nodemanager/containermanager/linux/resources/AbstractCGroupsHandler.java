@@ -158,12 +158,13 @@ public abstract class AbstractCGroupsHandler implements CGroupsHandler {
 
   protected abstract Map<String, Set<String>> parsePreConfiguredMountPath() throws IOException;
 
-  protected Map<CGroupController, String> initializeControllerPathsFromMtab(Map<String, Set<String>> parsedMtab) {
+  protected Map<CGroupController, String> initializeControllerPathsFromMtab(
+      Map<String, Set<String>> mtab) {
     Map<CGroupController, String> ret = new HashMap<>();
 
     for (CGroupController controller : getCGroupControllers()) {
       String subsystemName = controller.getName();
-      String controllerPath = findControllerInMtab(subsystemName, parsedMtab);
+      String controllerPath = findControllerInMtab(subsystemName, mtab);
 
       if (controllerPath != null) {
         ret.put(controller, controllerPath);
@@ -227,7 +228,8 @@ public abstract class AbstractCGroupsHandler implements CGroupsHandler {
     return ret;
   }
 
-  protected abstract Set<String> handleMtabEntry(String path, String type, String options) throws IOException;
+  protected abstract Set<String> handleMtabEntry(String path, String type, String options)
+      throws IOException;
 
   /**
    * Find the hierarchy of the subsystem.
@@ -255,7 +257,8 @@ public abstract class AbstractCGroupsHandler implements CGroupsHandler {
     return null;
   }
 
-  protected abstract void mountCGroupController(CGroupController controller) throws ResourceHandlerException;
+  protected abstract void mountCGroupController(CGroupController controller)
+      throws ResourceHandlerException;
 
   @Override
   public String getRelativePathForCGroup(String cGroupId) {
@@ -312,7 +315,7 @@ public abstract class AbstractCGroupsHandler implements CGroupsHandler {
    * in this case.
    * 2. YARN hierarchy does not exist, yet. We create it in this case. If cgroup v2 is used
    * an additional step is required to update the cgroup.subtree_control file, see
-   * {@link CGroupsV2HandlerImpl#updateEnabledControllersInHierarchy updateEnabledControllersInHierarchy}
+   * {@link CGroupsV2HandlerImpl#updateEnabledControllersInHierarchy}
    *
    * @param controller the controller being initialized
    * @throws ResourceHandlerException yarn hierarchy cannot be created or
@@ -384,7 +387,8 @@ public abstract class AbstractCGroupsHandler implements CGroupsHandler {
     }
   }
 
-  protected abstract void updateEnabledControllersInHierarchy(File yarnHierarchy) throws ResourceHandlerException;
+  protected abstract void updateEnabledControllersInHierarchy(File yarnHierarchy)
+      throws ResourceHandlerException;
 
   /**
    * Creates an actionable error message for mtab parsing.
@@ -510,7 +514,8 @@ public abstract class AbstractCGroupsHandler implements CGroupsHandler {
 
     try {
       File file = new File(cGroupParamPath);
-      Writer w = new OutputStreamWriter(Files.newOutputStream(file.toPath()), StandardCharsets.UTF_8);
+      Writer w = new OutputStreamWriter(Files.newOutputStream(file.toPath()),
+          StandardCharsets.UTF_8);
       pw = new PrintWriter(w);
       pw.write(value);
     } catch (IOException e) {

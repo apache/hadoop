@@ -71,10 +71,12 @@ public class TestCGroupsV2HandlerImpl extends TestCGroupsHandlerBase {
     File mockMtab = createFileWithContent(parentDir, UUID.randomUUID().toString(), baseCgroup2Line);
 
     String enabledControllers = "cpuset cpu io memory hugetlb pids rdma misc\n";
-    File controllersFile = createFileWithContent(parentDir, CGroupsHandler.CGROUP_CONTROLLERS_FILE, enabledControllers);
+    File controllersFile = createFileWithContent(parentDir, CGroupsHandler.CGROUP_CONTROLLERS_FILE,
+        enabledControllers);
 
     File subtreeControlFile = new File(parentDir, CGroupsHandler.CGROUP_SUBTREE_CONTROL_FILE);
-    Assert.assertTrue("empty subtree_control file should be created", subtreeControlFile.createNewFile());
+    Assert.assertTrue("empty subtree_control file should be created",
+        subtreeControlFile.createNewFile());
 
     File hierarchyDir = new File(parentDir, hierarchy);
     if (!hierarchyDir.mkdirs()) {
@@ -83,8 +85,10 @@ public class TestCGroupsV2HandlerImpl extends TestCGroupsHandlerBase {
     }
     hierarchyDir.deleteOnExit();
 
-    FileUtils.copyFile(controllersFile, new File(hierarchyDir, CGroupsHandler.CGROUP_CONTROLLERS_FILE));
-    FileUtils.copyFile(subtreeControlFile, new File(hierarchyDir, CGroupsHandler.CGROUP_SUBTREE_CONTROL_FILE));
+    FileUtils.copyFile(controllersFile, new File(hierarchyDir,
+        CGroupsHandler.CGROUP_CONTROLLERS_FILE));
+    FileUtils.copyFile(subtreeControlFile, new File(hierarchyDir,
+        CGroupsHandler.CGROUP_SUBTREE_CONTROL_FILE));
 
     return mockMtab;
   }
@@ -133,7 +137,7 @@ public class TestCGroupsV2HandlerImpl extends TestCGroupsHandlerBase {
     cGroupsHandler = new CGroupsV2HandlerImpl(createMountConfiguration(),
             privilegedOperationExecutorMock, mtab.getAbsolutePath());
     cGroupsHandler.initializeCGroupController(controller);
-    }
+  }
 
   @Test
   public void testCGroupOperations() throws IOException, ResourceHandlerException {
@@ -220,8 +224,10 @@ public class TestCGroupsV2HandlerImpl extends TestCGroupsHandlerBase {
     String enabledControllers = "cpuset cpu io memory hugetlb pids rdma misc\n";
     createFileWithContent(subCgroup, CGroupsHandler.CGROUP_CONTROLLERS_FILE, enabledControllers);
 
-    File subtreeControlFile = new File(subCgroup.getAbsolutePath(), CGroupsHandler.CGROUP_SUBTREE_CONTROL_FILE);
-    Assert.assertTrue("empty subtree_control file should be created", subtreeControlFile.createNewFile());
+    File subtreeControlFile = new File(subCgroup.getAbsolutePath(),
+        CGroupsHandler.CGROUP_SUBTREE_CONTROL_FILE);
+    Assert.assertTrue("empty subtree_control file should be created",
+        subtreeControlFile.createNewFile());
 
     CGroupsV2HandlerImpl cGroupsHandler = new CGroupsV2HandlerImpl(conf, null);
     cGroupsHandler.initializeCGroupController(CGroupsHandler.CGroupController.CPU);
@@ -231,7 +237,8 @@ public class TestCGroupsV2HandlerImpl extends TestCGroupsHandlerBase {
                 CGroupsHandler.CGroupController.CPU, "")).getAbsolutePath());
 
     // Verify that the subtree control file was updated
-    String subtreeControllersEnabledString = FileUtils.readFileToString(subtreeControlFile, StandardCharsets.UTF_8);
+    String subtreeControllersEnabledString = FileUtils.readFileToString(subtreeControlFile,
+        StandardCharsets.UTF_8);
     Set<String> subtreeControllersEnabled = new HashSet<>(Arrays.asList(
         subtreeControllersEnabledString.replace("+", "").split(" ")));
 
@@ -242,12 +249,14 @@ public class TestCGroupsV2HandlerImpl extends TestCGroupsHandlerBase {
     Assert.assertTrue("Controllers not enabled in subtree control file",
         cGroupsHandler.getValidCGroups().containsAll(subtreeControllersEnabled));
 
-    // Test that the subtree control file is updated correctly even if it doesn't contain all the controllers
+    // Test that the subtree control file is updated correctly even
+    // if it doesn't contain all the controllers
     subtreeControlFile.delete();
     createFileWithContent(subCgroup, CGroupsHandler.CGROUP_SUBTREE_CONTROL_FILE, "cpu io");
     cGroupsHandler.initializeCGroupController(CGroupsHandler.CGroupController.CPU);
 
-    subtreeControllersEnabledString = FileUtils.readFileToString(subtreeControlFile, StandardCharsets.UTF_8);
+    subtreeControllersEnabledString = FileUtils.readFileToString(subtreeControlFile,
+        StandardCharsets.UTF_8);
     subtreeControllersEnabled = new HashSet<>(Arrays.asList(
         subtreeControllersEnabledString.replace("+", "").split(" ")));
 
