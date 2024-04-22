@@ -169,11 +169,17 @@ class IncrementalBlockReportManager {
         : pendingIBRs.entrySet()) {
       final PerStorageIBR perStorage = entry.getValue();
 
-        // Send newly-received and deleted blockids to namenode
+      // Send newly-received and deleted blockids to namenode
       final ReceivedDeletedBlockInfo[] rdbi = perStorage.removeAll();
-      if (rdbi != null) {
-        reports.add(new StorageReceivedDeletedBlocks(entry.getKey(), rdbi));
+      if (rdbi == null) {
+        continue;
       }
+      // Null storage, should not happen
+      if (entry.getKey() == null) {
+        dnMetrics.incrNullStorageBlockReports();
+        continue;
+      }
+      reports.add(new StorageReceivedDeletedBlocks(entry.getKey(), rdbi));
     }
 
     /* set blocks to zero */

@@ -2745,12 +2745,16 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       curDirScannerNotifyCount = 0;
       lastDirScannerNotifyTime = startTimeMs;
     }
-    try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.VOLUME, bpid,
-        vol.getStorageID())) {
+    String storageUuid = vol.getStorageID();
+    try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.VOLUME, bpid, storageUuid)) {
       memBlockInfo = volumeMap.get(bpid, blockId);
       if (memBlockInfo != null &&
           memBlockInfo.getState() != ReplicaState.FINALIZED) {
         // Block is not finalized - ignore the difference
+        return;
+      }
+      if (!storageMap.containsKey(storageUuid)) {
+        // Storage was already removed
         return;
       }
 
@@ -2833,7 +2837,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           maxDirScannerNotifyCount++;
           datanode.notifyNamenodeReceivedBlock(
               new ExtendedBlock(bpid, diskBlockInfo), null,
-              vol.getStorageID(), vol.isTransientStorage());
+              storageUuid, vol.isTransientStorage());
         }
         if (vol.isTransientStorage()) {
           long lockedBytesReserved =

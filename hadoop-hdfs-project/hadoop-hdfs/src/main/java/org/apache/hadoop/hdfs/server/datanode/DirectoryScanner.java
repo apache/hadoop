@@ -466,7 +466,7 @@ public class DirectoryScanner implements Runnable {
   public void reconcile() throws IOException {
     LOG.debug("reconcile start DirectoryScanning");
     scan();
-
+    DataNodeFaultInjector.get().waitUntilStorageRemoved();
     // HDFS-14476: run checkAndUpdate with batch to avoid holding the lock too
     // long
     int loopCount = 0;
