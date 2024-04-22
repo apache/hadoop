@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.azurebfs.security.EncodingHelper;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientUtils;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.assertj.core.api.Assertions;
+import org.assertj.core.api.Assumptions;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -59,6 +60,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Lists;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FS_INIT_FAILED_CPK_CONFIG_IN_NON_HNS_ACCOUNT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENCRYPTION_CONTEXT_PROVIDER_TYPE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY_SHA;
@@ -177,36 +179,11 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
 
   @Test
   public void testCustomEncryptionCombinations() throws Exception {
-    final AzureBlobFileSystem fs;
-    try {
-      fs = getOrCreateFS();
-    } catch (PathIOException ex) {
-      if (ex.getMessage()
-          .contains("Non HNS account can not have CPK configs enabled.")) {
-        return;
-      } else {
-        throw ex;
-      }
-    }
+    AzureBlobFileSystem fs = getOrCreateFS();
     Path testPath = path("/testFile");
     String relativePath = fs.getAbfsStore().getRelativePath(testPath);
-    final MockEncryptionContextProvider ecp;
-    try {
-      ecp = (MockEncryptionContextProvider) createEncryptedFile(testPath);
-    } catch (PathIOException ex) {
-      if (ex.getMessage()
-          .contains("Non HNS account can not have CPK configs enabled.")) {
-        return;
-      } else {
-        throw ex;
-      }
-    }
-    Assertions.assertThat(
-            getConfiguration().getBoolean(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT,
-                false))
-        .describedAs(
-            "Encryption tests should run only on namespace enabled account")
-        .isTrue();
+    MockEncryptionContextProvider ecp
+        = (MockEncryptionContextProvider) createEncryptedFile(testPath);
     AbfsRestOperation op = callOperation(fs, new Path(relativePath), ecp);
     if (op == null) {
       return;
@@ -396,9 +373,7 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
         + getAccountName());
     configuration.unset(FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY_SHA + "."
         + getAccountName());
-    AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(configuration);
-    fileSystemsOpenedInTest.add(fs);
-    return fs;
+    return getAzureBlobFileSystem(configuration);
   }
 
   private AzureBlobFileSystem getCPKEnabledFS() throws IOException {
@@ -411,9 +386,34 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
     conf.set(FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY_SHA + "."
         + getAccountName(), cpkEncodedSHA);
     conf.unset(FS_AZURE_ENCRYPTION_CONTEXT_PROVIDER_TYPE);
-    AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(conf);
-    fileSystemsOpenedInTest.add(fs);
-    return fs;
+    return getAzureBlobFileSystem(conf);
+  }
+
+  private AzureBlobFileSystem getAzureBlobFileSystem(final Configuration conf) {
+    try {
+      AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(
+          conf);
+      fileSystemsOpenedInTest.add(fs);
+      Assertions.assertThat(
+          getConfiguration().getBoolean(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT,
+              false))
+          .describedAs("Encryption tests should run only on namespace enabled account")
+          .isTrue();
+      return fs;
+    } catch (IOException ex) {
+      Assertions.assertThat(ex.getMessage())
+          .describedAs("Exception message should contain the expected message")
+          .contains(FS_INIT_FAILED_CPK_CONFIG_IN_NON_HNS_ACCOUNT);
+      Assertions.assertThat(
+              getConfiguration().getBoolean(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT,
+                  false))
+          .describedAs("Encryption tests should run only on namespace enabled account")
+          .isFalse();
+
+      //Skip the test
+      Assumptions.assumeThat(true).isFalse();
+      return null;
+    }
   }
 
   private AzureBlobFileSystem getOrCreateFS() throws Exception {
