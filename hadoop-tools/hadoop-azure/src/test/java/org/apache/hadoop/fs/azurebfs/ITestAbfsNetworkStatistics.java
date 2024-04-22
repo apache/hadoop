@@ -238,15 +238,23 @@ public class ITestAbfsNetworkStatistics extends AbstractAbfsIntegrationTest {
       expectedConnectionsMade++;
       expectedGetResponses++;
       if (!getConfiguration().isInputStreamLazyOptimizationEnabled()
-          || !getConfiguration().optimizeFooterRead()) {
+          || !getConfiguration().optimizeFooterRead()
+          || (getConfiguration().readSmallFilesCompletely()
+          && getConfiguration().getReadBufferSize() >= bytesWrittenToFile)) {
         expectedBytesReceived += bytesWrittenToFile;
       } else {
         /*
-         * With head optimization enabled and footer optimization enabled,
-         * the abfsInputStream is not aware of the contentLength and hence,
-         * it would only read data for which the range is provided. With the first
-         * remote call done, the inputStream will get aware of the contentLength
-         * and would be able to use it for further reads.
+         * With head optimization enabled and footer optimization enabled
+         * and read full optimization disabled, the abfsInputStream is not aware
+         * of the contentLength and hence, it would only read data for which the
+         * range is provided. With the first remote call done, the inputStream will
+         * get aware of the contentLength and would be able to use it for further reads.
+         *
+         * At this point, the inputStream is at position 0 and the read request from
+         * application is 1 Byte. If the read full-file optimization is enabled,
+         * the inputStream would attempt to read the first readBuffer block
+         * from the file, which would read the whole file as the fileContentLength
+         * is smaller than the readBuffer size.
          */
         expectedBytesReceived += 1;
       }
