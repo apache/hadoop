@@ -43,32 +43,19 @@ import java.util.List;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class CGroupsMemoryResourceHandlerImpl implements MemoryResourceHandler {
+public class CGroupsMemoryResourceHandlerImpl extends AbstractCGroupsMemoryResourceHandler {
 
-  static final Logger LOG =
-       LoggerFactory.getLogger(CGroupsMemoryResourceHandlerImpl.class);
-  private static final CGroupsHandler.CGroupController MEMORY =
-      CGroupsHandler.CGroupController.MEMORY;
   private static final int OPPORTUNISTIC_SWAPPINESS = 100;
-  private static final int OPPORTUNISTIC_SOFT_LIMIT = 0;
-
-  private CGroupsHandler cGroupsHandler;
-  private boolean enforce = true;
   private int swappiness = 0;
-  // multiplier to set the soft limit - value should be between 0 and 1
-  private float softLimit = 0.0f;
 
   CGroupsMemoryResourceHandlerImpl(CGroupsHandler cGroupsHandler) {
-    this.cGroupsHandler = cGroupsHandler;
+    super(cGroupsHandler);
   }
 
   @Override
   public List<PrivilegedOperation> bootstrap(Configuration conf)
       throws ResourceHandlerException {
-    this.cGroupsHandler.initializeCGroupController(MEMORY);
-    enforce = conf.getBoolean(
-        YarnConfiguration.NM_MEMORY_RESOURCE_ENFORCED,
-        YarnConfiguration.DEFAULT_NM_MEMORY_RESOURCE_ENFORCED);
+    super.bootstrap(conf);
     swappiness = conf
         .getInt(YarnConfiguration.NM_MEMORY_RESOURCE_CGROUPS_SWAPPINESS,
             YarnConfiguration.DEFAULT_NM_MEMORY_RESOURCE_CGROUPS_SWAPPINESS);
@@ -76,18 +63,6 @@ public class CGroupsMemoryResourceHandlerImpl implements MemoryResourceHandler {
       throw new ResourceHandlerException(
           "Illegal value '" + swappiness + "' for "
               + YarnConfiguration.NM_MEMORY_RESOURCE_CGROUPS_SWAPPINESS
-              + ". Value must be between 0 and 100.");
-    }
-    float softLimitPerc = conf.getFloat(
-        YarnConfiguration.NM_MEMORY_RESOURCE_CGROUPS_SOFT_LIMIT_PERCENTAGE,
-        YarnConfiguration.
-            DEFAULT_NM_MEMORY_RESOURCE_CGROUPS_SOFT_LIMIT_PERCENTAGE);
-    softLimit = softLimitPerc / 100.0f;
-    if (softLimitPerc < 0.0f || softLimitPerc > 100.0f) {
-      throw new ResourceHandlerException(
-          "Illegal value '" + softLimitPerc + "' "
-              + YarnConfiguration.
-                NM_MEMORY_RESOURCE_CGROUPS_SOFT_LIMIT_PERCENTAGE
               + ". Value must be between 0 and 100.");
     }
     return null;
@@ -99,81 +74,31 @@ public class CGroupsMemoryResourceHandlerImpl implements MemoryResourceHandler {
   }
 
   @Override
-  public List<PrivilegedOperation> reacquireContainer(ContainerId containerId)
+  protected void updateMemoryHardLimit(String cgroupId, long containerHardLimit)
       throws ResourceHandlerException {
-    return null;
+    cGroupsHandler.updateCGroupParam(MEMORY, cgroupId,
+        CGroupsHandler.CGROUP_PARAM_MEMORY_HARD_LIMIT_BYTES,
+        String.valueOf(containerHardLimit) + "M");
   }
 
   @Override
-  public List<PrivilegedOperation> updateContainer(Container container)
+  protected void updateOpportunisticMemoryLimits(String cgroupId) throws ResourceHandlerException {
+    cGroupsHandler.updateCGroupParam(MEMORY, cgroupId,
+        CGroupsHandler.CGROUP_PARAM_MEMORY_SOFT_LIMIT_BYTES,
+        String.valueOf(OPPORTUNISTIC_SOFT_LIMIT) + "M");
+    cGroupsHandler.updateCGroupParam(MEMORY, cgroupId,
+        CGroupsHandler.CGROUP_PARAM_MEMORY_SWAPPINESS,
+        String.valueOf(OPPORTUNISTIC_SWAPPINESS));
+  }
+
+  @Override
+  protected void updateGuaranteedMemoryLimits(String cgroupId, long containerSoftLimit)
       throws ResourceHandlerException {
-    String cgroupId = container.getContainerId().toString();
-    File cgroup = new File(cGroupsHandler.getPathForCGroup(MEMORY, cgroupId));
-    if (cgroup.exists()) {
-      //memory is in MB
-      long containerSoftLimit =
-          (long) (container.getResource().getMemorySize() * this.softLimit);
-      long containerHardLimit = container.getResource().getMemorySize();
-      if (enforce) {
-        try {
-          cGroupsHandler.updateCGroupParam(MEMORY, cgroupId,
-              CGroupsHandler.CGROUP_PARAM_MEMORY_HARD_LIMIT_BYTES,
-              String.valueOf(containerHardLimit) + "M");
-          ContainerTokenIdentifier id = container.getContainerTokenIdentifier();
-          if (id != null && id.getExecutionType() ==
-              ExecutionType.OPPORTUNISTIC) {
-            cGroupsHandler.updateCGroupParam(MEMORY, cgroupId,
-                CGroupsHandler.CGROUP_PARAM_MEMORY_SOFT_LIMIT_BYTES,
-                String.valueOf(OPPORTUNISTIC_SOFT_LIMIT) + "M");
-            cGroupsHandler.updateCGroupParam(MEMORY, cgroupId,
-                CGroupsHandler.CGROUP_PARAM_MEMORY_SWAPPINESS,
-                String.valueOf(OPPORTUNISTIC_SWAPPINESS));
-          } else {
-            cGroupsHandler.updateCGroupParam(MEMORY, cgroupId,
-                CGroupsHandler.CGROUP_PARAM_MEMORY_SOFT_LIMIT_BYTES,
-                String.valueOf(containerSoftLimit) + "M");
-            cGroupsHandler.updateCGroupParam(MEMORY, cgroupId,
-                CGroupsHandler.CGROUP_PARAM_MEMORY_SWAPPINESS,
-                String.valueOf(swappiness));
-          }
-        } catch (ResourceHandlerException re) {
-          cGroupsHandler.deleteCGroup(MEMORY, cgroupId);
-          LOG.warn("Could not update cgroup for container", re);
-          throw re;
-        }
-      }
-    }
-    return null;
-  }
-
-  @Override
-  public List<PrivilegedOperation> preStart(Container container)
-      throws ResourceHandlerException {
-    String cgroupId = container.getContainerId().toString();
-    cGroupsHandler.createCGroup(MEMORY, cgroupId);
-    updateContainer(container);
-    List<PrivilegedOperation> ret = new ArrayList<>();
-    ret.add(new PrivilegedOperation(
-        PrivilegedOperation.OperationType.ADD_PID_TO_CGROUP,
-        PrivilegedOperation.CGROUP_ARG_PREFIX
-            + cGroupsHandler.getPathForCGroupTasks(MEMORY, cgroupId)));
-    return ret;
-  }
-
-  @Override
-  public List<PrivilegedOperation> postComplete(ContainerId containerId)
-      throws ResourceHandlerException {
-    cGroupsHandler.deleteCGroup(MEMORY, containerId.toString());
-    return null;
-  }
-
-  @Override
-  public List<PrivilegedOperation> teardown() throws ResourceHandlerException {
-    return null;
-  }
-
-  @Override
-  public String toString() {
-    return CGroupsMemoryResourceHandlerImpl.class.getName();
+    cGroupsHandler.updateCGroupParam(MEMORY, cgroupId,
+        CGroupsHandler.CGROUP_PARAM_MEMORY_SOFT_LIMIT_BYTES,
+        String.valueOf(containerSoftLimit) + "M");
+    cGroupsHandler.updateCGroupParam(MEMORY, cgroupId,
+        CGroupsHandler.CGROUP_PARAM_MEMORY_SWAPPINESS,
+        String.valueOf(swappiness));
   }
 }
