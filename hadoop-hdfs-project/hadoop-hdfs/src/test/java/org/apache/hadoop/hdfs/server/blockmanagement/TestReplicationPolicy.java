@@ -1710,6 +1710,32 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
   }
 
   @Test
+  public void testMinLoad() {
+    FSClusterStats statistics = mock(FSClusterStats.class);
+    DatanodeDescriptor node = mock(DatanodeDescriptor.class);
+
+    when(statistics.getInServiceXceiverAverage()).thenReturn(5D);
+    when(node.getXceiverCount()).thenReturn(12);
+
+    final Configuration conf = new Configuration();
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_MINLOAD_KEY, 16);
+    final Class<? extends BlockPlacementPolicy> replicatorClass = conf
+        .getClass(DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_KEY,
+            DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_DEFAULT,
+            BlockPlacementPolicy.class);
+    BlockPlacementPolicy bpp = ReflectionUtils.
+        newInstance(replicatorClass, conf);
+    assertTrue(bpp instanceof  BlockPlacementPolicyDefault);
+
+    BlockPlacementPolicyDefault bppd = (BlockPlacementPolicyDefault) bpp;
+    bppd.initialize(conf, statistics, null, null);
+    assertFalse(bppd.excludeNodeByLoad(node));
+
+    when(node.getXceiverCount()).thenReturn(17);
+    assertTrue(bppd.excludeNodeByLoad(node));
+  }
+  
+  @Test
   public void testChosenFailureForStorageType() {
     final LogVerificationAppender appender = new LogVerificationAppender();
     final Logger logger = Logger.getRootLogger();
