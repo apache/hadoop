@@ -166,14 +166,16 @@ class CGroupsV2HandlerImpl extends AbstractCGroupsHandler {
    * @throws ResourceHandlerException if the controllers file cannot be updated
    */
   @Override
-  protected void updateEnabledControllersInHierarchy(File yarnHierarchy)
-      throws ResourceHandlerException {
+  protected void updateEnabledControllersInHierarchy(
+      File yarnHierarchy, CGroupController controller) throws ResourceHandlerException {
     try {
       Set<String> enabledControllers = readControllersFile(yarnHierarchy.getAbsolutePath());
-      if (enabledControllers.isEmpty()) {
-        throw new ResourceHandlerException(
-            "No valid controllers found in the cgroup hierarchy: " +
-                yarnHierarchy.getAbsolutePath());
+      if (!enabledControllers.contains(controller.getName())) {
+        throw new ResourceHandlerException(String.format(
+            "The controller %s is not enabled in the cgroup hierarchy: %s. Please enable it in " +
+                "in the %s/cgroup.subtree_control file.",
+            controller.getName(), yarnHierarchy.getAbsolutePath(),
+            yarnHierarchy.getParentFile().getAbsolutePath()));
       }
 
       File subtreeControlFile = new File(yarnHierarchy.getAbsolutePath()
@@ -184,31 +186,22 @@ class CGroupsV2HandlerImpl extends AbstractCGroupsHandler {
                 yarnHierarchy.getAbsolutePath());
       }
 
-      String subtreeControllers = FileUtils.readFileToString(subtreeControlFile,
-          StandardCharsets.UTF_8);
-      Set<String> subtreeControllerSet = new HashSet<>(Arrays.asList(
-          subtreeControllers.split(" ")));
-      subtreeControllerSet.retainAll(getValidCGroups());
-
-      if (subtreeControllerSet.containsAll(enabledControllers)) {
-        return;
-      }
-      enabledControllers.removeAll(subtreeControllerSet);
       Writer w = new OutputStreamWriter(Files.newOutputStream(subtreeControlFile.toPath(),
           StandardOpenOption.APPEND), StandardCharsets.UTF_8);
       try(PrintWriter pw = new PrintWriter(w)) {
-        LOG.info("Appending the following controllers to the cgroup.subtree_control file: {}, " +
-                "for the cgroup hierarchy: {}", String.join(" ", enabledControllers),
+        LOG.info("Appending the following controller to the cgroup.subtree_control file: {}, " +
+                "for the cgroup hierarchy: {}", controller.getName(),
             yarnHierarchy.getAbsolutePath());
-        if (!subtreeControllers.isEmpty()) {
-          pw.write(" ");
+        pw.write("+" + controller.getName());
+        if (pw.checkError()) {
+          throw new ResourceHandlerException("Failed to add the controller to the " +
+              "cgroup.subtree_control file in the cgroup hierarchy: " +
+              yarnHierarchy.getAbsolutePath());
         }
-        pw.write("+");
-        pw.write(String.join(" +", enabledControllers));
       }
     } catch (IOException e) {
       throw new ResourceHandlerException(
-          "Failed to update the controllers file in the cgroup hierarchy: " +
+          "Failed to update the cgroup.subtree_control file in the cgroup hierarchy: " +
               yarnHierarchy.getAbsolutePath(), e);
     }
   }

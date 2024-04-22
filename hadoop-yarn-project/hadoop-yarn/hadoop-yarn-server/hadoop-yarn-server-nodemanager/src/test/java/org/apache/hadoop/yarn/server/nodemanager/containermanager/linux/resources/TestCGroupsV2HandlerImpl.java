@@ -239,31 +239,39 @@ public class TestCGroupsV2HandlerImpl extends TestCGroupsHandlerBase {
     // Verify that the subtree control file was updated
     String subtreeControllersEnabledString = FileUtils.readFileToString(subtreeControlFile,
         StandardCharsets.UTF_8);
+
+    Assert.assertEquals("The newly added controller doesn't contain + sign",
+        1, StringUtils.countMatches(subtreeControllersEnabledString, "+"));
+    Assert.assertEquals("Controller is not enabled in subtree control file",
+        controller.getName(), subtreeControllersEnabledString.replace("+", "").trim());
+
+    cGroupsHandler.initializeCGroupController(CGroupsHandler.CGroupController.MEMORY);
+
+    subtreeControllersEnabledString = FileUtils.readFileToString(subtreeControlFile,
+        StandardCharsets.UTF_8);
     Set<String> subtreeControllersEnabled = new HashSet<>(Arrays.asList(
-        subtreeControllersEnabledString.replace("+", "").split(" ")));
+        subtreeControllersEnabledString.replace("+", " ").trim().split(" ")));
 
     Assert.assertEquals("The newly added controllers doesn't contain + signs",
-        cGroupsHandler.getValidCGroups().size(),
-        StringUtils.countMatches(subtreeControllersEnabledString, "+"));
-    Assert.assertEquals(cGroupsHandler.getValidCGroups().size(), subtreeControllersEnabled.size());
-    Assert.assertTrue("Controllers not enabled in subtree control file",
+        2, StringUtils.countMatches(subtreeControllersEnabledString, "+"));
+    Assert.assertEquals(2, subtreeControllersEnabled.size());
+    Assert.assertTrue("Controller is not enabled in subtree control file",
         cGroupsHandler.getValidCGroups().containsAll(subtreeControllersEnabled));
 
-    // Test that the subtree control file is updated correctly even
-    // if it doesn't contain all the controllers
+    // Test that the subtree control file is appended correctly
+    // even if some controllers are present
     subtreeControlFile.delete();
     createFileWithContent(subCgroup, CGroupsHandler.CGROUP_SUBTREE_CONTROL_FILE, "cpu io");
-    cGroupsHandler.initializeCGroupController(CGroupsHandler.CGroupController.CPU);
+    cGroupsHandler.initializeCGroupController(CGroupsHandler.CGroupController.MEMORY);
 
     subtreeControllersEnabledString = FileUtils.readFileToString(subtreeControlFile,
         StandardCharsets.UTF_8);
     subtreeControllersEnabled = new HashSet<>(Arrays.asList(
-        subtreeControllersEnabledString.replace("+", "").split(" ")));
+        subtreeControllersEnabledString.replace("+", " ").split(" ")));
 
-    Assert.assertEquals("The newly added controllers doesn't contain + signs",
-        cGroupsHandler.getValidCGroups().size() - 2,
-        StringUtils.countMatches(subtreeControllersEnabledString, "+"));
-    Assert.assertEquals(cGroupsHandler.getValidCGroups().size(), subtreeControllersEnabled.size());
+    Assert.assertEquals("The newly added controller doesn't contain + sign",
+        1, StringUtils.countMatches(subtreeControllersEnabledString, "+"));
+    Assert.assertEquals(3, subtreeControllersEnabled.size());
     Assert.assertTrue("Controllers not enabled in subtree control file",
         cGroupsHandler.getValidCGroups().containsAll(subtreeControllersEnabled));
   }

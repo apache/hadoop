@@ -157,7 +157,8 @@ class CGroupsHandlerImpl extends AbstractCGroupsHandler {
   }
 
   @Override
-  protected void updateEnabledControllersInHierarchy(File yarnHierarchy) {
+  protected void updateEnabledControllersInHierarchy(
+      File yarnHierarchy, CGroupController controller) {
     // no-op in cgroup v1
   }
 }

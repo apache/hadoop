@@ -377,7 +377,7 @@ public abstract class AbstractCGroupsHandler implements CGroupsHandler {
     }
 
     try {
-      updateEnabledControllersInHierarchy(yarnHierarchy);
+      updateEnabledControllersInHierarchy(yarnHierarchy, controller);
     } catch (ResourceHandlerException e) {
       throw new ResourceHandlerException(getErrorWithDetails(
           "Failed to update cgroup.subtree_control in yarn hierarchy",
@@ -387,7 +387,8 @@ public abstract class AbstractCGroupsHandler implements CGroupsHandler {
     }
   }
 
-  protected abstract void updateEnabledControllersInHierarchy(File yarnHierarchy)
+  protected abstract void updateEnabledControllersInHierarchy(
+      File yarnHierarchy, CGroupController controller)
       throws ResourceHandlerException;
 
   /**
