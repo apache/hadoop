@@ -31,7 +31,6 @@ import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import org.slf4j.Logger;
 
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_JAVA_SECURE_RANDOM_ALGORITHM_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_JAVA_SECURE_RANDOM_ALGORITHM_DEFAULT;
 
@@ -44,10 +43,6 @@ public abstract class JceCtrCryptoCodec extends CryptoCodec{
 
   public String getProvider() {
     return provider;
-  }
-
-  public void setProvider(String provider) {
-    this.provider = provider;
   }
 
   public void calculateIV(byte[] initIV, long counter,
@@ -80,7 +75,8 @@ public abstract class JceCtrCryptoCodec extends CryptoCodec{
 
   public void setConf(Configuration conf) {
     this.conf = conf;
-    setProvider(conf.get(HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_KEY));
+    this.provider = CryptoUtils.getJceProvider(conf);
+
     final String secureRandomAlg =
           conf.get(
               HADOOP_SECURITY_JAVA_SECURE_RANDOM_ALGORITHM_KEY,

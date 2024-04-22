@@ -39,6 +39,7 @@ import com.google.gson.stream.JsonWriter;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.CryptoUtils;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 
 import javax.crypto.KeyGenerator;
@@ -407,6 +408,7 @@ public abstract class KeyProvider implements Closeable {
                       JCEKS_KEY_SERIALFILTER_DEFAULT);
       System.setProperty(JCEKS_KEY_SERIAL_FILTER, serialFilter);
     }
+    CryptoUtils.getJceProvider(conf);
   }
 
   /**

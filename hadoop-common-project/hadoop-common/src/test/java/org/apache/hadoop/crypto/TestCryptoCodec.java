@@ -32,7 +32,6 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
-import java.security.Security;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -105,11 +104,6 @@ public class TestCryptoCodec {
         jceAesCodecClass, opensslAesCodecClass, iv);
   }
 
-  static void initBouncyCastleProvider(Configuration conf) {
-    conf.set(HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_KEY, BouncyCastleProvider.PROVIDER_NAME);
-    Security.addProvider(new BouncyCastleProvider());
-  }
-
   @Test(timeout=120000)
   public void testJceSm4CtrCryptoCodec() throws Exception {
     GenericTestUtils.assumeInNativeProfile();
@@ -120,7 +114,8 @@ public class TestCryptoCodec {
     conf.set(HADOOP_SECURITY_CRYPTO_CIPHER_SUITE_KEY, "SM4/CTR/NoPadding");
     conf.set(HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_SM4_CTR_NOPADDING_KEY,
         JceSm4CtrCryptoCodec.class.getName());
-    initBouncyCastleProvider(conf);
+    conf.set(HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_KEY,
+            BouncyCastleProvider.PROVIDER_NAME);
     Assert.assertEquals(null, OpensslCipher.getLoadingFailureReason());
     cryptoCodecTest(conf, seed, 0,
         jceSm4CodecClass, jceSm4CodecClass, iv);
@@ -169,7 +164,8 @@ public class TestCryptoCodec {
       LOG.warn("Skipping test since openSSL library not loaded");
       Assume.assumeTrue(false);
     }
-    initBouncyCastleProvider(conf);
+    conf.set(HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_KEY,
+            BouncyCastleProvider.PROVIDER_NAME);
     Assert.assertEquals(null, OpensslCipher.getLoadingFailureReason());
     cryptoCodecTest(conf, seed, 0,
         opensslSm4CodecClass, opensslSm4CodecClass, iv);
