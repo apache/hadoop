@@ -150,7 +150,7 @@ class CGroupsV2HandlerImpl extends AbstractCGroupsHandler {
    *  cgroups. Starts out empty. When read, it shows space separated list of the controllers which
    *  are enabled to control resource distribution from the cgroup to its children.
    *  Space separated list of controllers prefixed with '+' or '-'
-   * 	can be written to enable or disable controllers.
+   *  can be written to enable or disable controllers.
    * Since YARN will create a sub-cgroup for each container, we need to enable the controllers for the subtree.
    * Update the subtree_control file to enable subsequent container based cgroups to use the same controllers.
    * If a cgroup.subtree_control file is present, but it doesn't contain all the controllers enabled in the
