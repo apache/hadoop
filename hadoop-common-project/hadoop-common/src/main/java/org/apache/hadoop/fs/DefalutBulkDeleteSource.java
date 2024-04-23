@@ -33,6 +33,6 @@ public class DefalutBulkDeleteSource implements BulkDeleteSource {
     @Override
     public BulkDelete createBulkDelete(Path base)
             throws UnsupportedOperationException, IllegalArgumentException, IOException {
-        return new DefaultBulkDeleteOperation(1, base, fs);
+        return new DefaultBulkDeleteOperation(base, fs);
     }
 }

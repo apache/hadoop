@@ -87,6 +87,10 @@ public interface S3AStore extends IOStatisticsSource {
    * the store when updating its load counters on a specific partition
    * of an S3 bucket.
    * If only the request was measured, this operation would under-report.
+   * A write capacity will be requested proportional to the number of keys
+   * preset in the request and will be re-requested during retries such that
+   * retries throttle better. If the request is throttled, the time spent is
+   * recorded in a duration IOStat named {@code STORE_IO_RATE_LIMITED_DURATION}.
    * @param deleteRequest keys to delete on the s3-backend
    * @return the AWS response
    * @throws MultiObjectDeleteException one or more of the keys could not
@@ -105,6 +109,10 @@ public interface S3AStore extends IOStatisticsSource {
    * 404 errors other than bucket not found are swallowed;
    * this can be raised by third party stores (GCS).
    * <p>
+   * A write capacity of 1 ( as it is signle object delete) will be requested before
+   * the delete call and will be re-requested during retries such that
+   * retries throttle better. If the request is throttled, the time spent is
+   * recorded in a duration IOStat named {@code STORE_IO_RATE_LIMITED_DURATION}.
    * If an exception is caught and swallowed, the response will be empty;
    * otherwise it will be the response from the delete operation.
    * @param request request to make

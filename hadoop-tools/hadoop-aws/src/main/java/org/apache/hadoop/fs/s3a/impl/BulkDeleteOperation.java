@@ -71,6 +71,9 @@ public class BulkDeleteOperation extends AbstractStoreOperation implements BulkD
     return basePath;
   }
 
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public List<Map.Entry<Path, String>> bulkDelete(final Collection<Path> paths)
       throws IOException, IllegalArgumentException {

@@ -122,3 +122,16 @@ through reflection.
 
   public static List<Map.Entry<Path, String>> bulkDelete(FileSystem fs, Path base, Collection<Path> paths);
 ```
+
+### Implementations
+
+#### Default Implementation
+
+The default implementation of the `BulkDelete` interface is `org.apache.hadoop.fs.DefaultBulkDeleteOperation`
+which fixes the page size to be 1 and calls `FileSystem.delete(path, false)` on the single path in the list.
+
+
+#### S3A Implementation
+The S3A implementation is `org.apache.hadoop.fs.s3a.impl.BulkDeleteOperation` which implements the 
+multi object delete semantics of the AWS S3 API [Bulk Delete](https://docs.aws.amazon.com/AmazonS3/latest/API/API_DeleteObjects.html)
+For more details please refer to the S3A Performance documentation.

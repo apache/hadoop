@@ -80,9 +80,11 @@ public interface BulkDelete extends IOStatisticsSource, Closeable {
    * </ul>
    * @param paths list of paths which must be absolute and under the base path.
    * provided in {@link #basePath()}.
+   * @return a list of paths which failed to delete, with the exception message.
    * @throws IOException IO problems including networking, authentication and more.
    * @throws IllegalArgumentException if a path argument is invalid.
    */
+
   List<Map.Entry<Path, String>> bulkDelete(Collection<Path> paths)
       throws IOException, IllegalArgumentException;
 

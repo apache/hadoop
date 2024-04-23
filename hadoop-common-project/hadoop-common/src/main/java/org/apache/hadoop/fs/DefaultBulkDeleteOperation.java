@@ -17,11 +17,15 @@
  */
 package org.apache.hadoop.fs;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.util.functional.Tuples;
 
@@ -34,24 +38,23 @@ import static org.apache.hadoop.util.Preconditions.checkArgument;
  */
 public class DefaultBulkDeleteOperation implements BulkDelete {
 
-    private final int pageSize;
+    private static Logger LOG = LoggerFactory.getLogger(DefaultBulkDeleteOperation.class);
+
+    private static final int DEFAULT_PAGE_SIZE = 1;
 
     private final Path basePath;
 
     private final FileSystem fs;
 
-    public DefaultBulkDeleteOperation(int pageSize,
-                                      Path basePath,
+    public DefaultBulkDeleteOperation(Path basePath,
                                       FileSystem fs) {
-        checkArgument(pageSize == 1, "Page size must be equal to 1");
-        this.pageSize = pageSize;
         this.basePath = requireNonNull(basePath);
         this.fs = fs;
     }
 
     @Override
     public int pageSize() {
-        return pageSize;
+        return DEFAULT_PAGE_SIZE;
     }
 
     @Override
@@ -59,19 +62,39 @@ public class DefaultBulkDeleteOperation implements BulkDelete {
         return basePath;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public List<Map.Entry<Path, String>> bulkDelete(Collection<Path> paths)
             throws IOException, IllegalArgumentException {
-        validateBulkDeletePaths(paths, pageSize, basePath);
+        validateBulkDeletePaths(paths, DEFAULT_PAGE_SIZE, basePath);
         List<Map.Entry<Path, String>> result = new ArrayList<>();
-        // this for loop doesn't make sense as pageSize must be 1.
-        for (Path path : paths) {
+        if (!paths.isEmpty()) {
+            // As the page size is always 1, this should be the only one
+            // path in the collection.
+            Path pathToDelete = paths.iterator().next();
             try {
-                fs.delete(path, false);
-                // What to do if this return false?
-                // I think we should add the path to the result list with value "Not Deleted".
-            } catch (IOException e) {
-                result.add(Tuples.pair(path, e.toString()));
+                boolean deleted = fs.delete(pathToDelete, false);
+                if (deleted) {
+                    return result;
+                } else {
+                    try {
+                        FileStatus fileStatus = fs.getFileStatus(pathToDelete);
+                        if (fileStatus.isDirectory()) {
+                            result.add(Tuples.pair(pathToDelete, "Path is a directory"));
+                        }
+                    } catch (FileNotFoundException e) {
+                        // Ignore FNFE and don't add to the result list.
+                        LOG.debug("Couldn't delete {} - does not exist: {}", pathToDelete, e.toString());
+                    } catch (Exception e) {
+                        LOG.debug("Couldn't delete {} - exception occurred: {}", pathToDelete, e.toString());
+                        result.add(Tuples.pair(pathToDelete, e.toString()));
+                    }
+                }
+            } catch (Exception ex) {
+                LOG.debug("Couldn't delete {} - exception occurred: {}", pathToDelete, ex.toString());
+                result.add(Tuples.pair(pathToDelete, ex.toString()));
             }
         }
         return result;

@@ -73,17 +73,22 @@ public class S3AStoreImpl implements S3AStore {
 
   private static final Logger LOG = LoggerFactory.getLogger(S3AStoreImpl.class);
 
+  /** Factory to create store contexts. */
   private final StoreContextFactory storeContextFactory;
 
+  /** The S3 client used to communicate with S3 bucket. */
   private final S3Client s3Client;
 
+  /** The S3 bucket to communicate with. */
   private final String bucket;
 
+  /** Request factory for creating requests. */
   private final RequestFactory requestFactory;
 
   /** Async client is used for transfer manager. */
   private S3AsyncClient s3AsyncClient;
 
+  /** Duration tracker factory. */
   private final DurationTrackerFactory durationTrackerFactory;
 
   /** The core instrumentation. */
@@ -95,16 +100,22 @@ public class S3AStoreImpl implements S3AStore {
   /** Storage Statistics Bonded to the instrumentation. */
   private final S3AStorageStatistics storageStatistics;
 
+  /** Rate limiter for read operations. */
   private final RateLimiting readRateLimiter;
 
+  /** Rate limiter for write operations. */
   private final RateLimiting writeRateLimiter;
 
+  /** Store context. */
   private final StoreContext storeContext;
 
+  /** Invoker for retry operations. */
   private final Invoker invoker;
 
+  /** Audit span source. */
   private final AuditSpanSource<AuditSpanS3A> auditSpanSource;
 
+  /** Constructor to create S3A store. */
   S3AStoreImpl(StoreContextFactory storeContextFactory,
       S3Client s3Client,
       DurationTrackerFactory durationTrackerFactory,
@@ -129,11 +140,13 @@ public class S3AStoreImpl implements S3AStore {
     this.requestFactory = storeContext.getRequestFactory();
   }
 
+  /** Acquire write capacity for rate limiting {@inheritDoc}. */
   @Override
   public Duration acquireWriteCapacity(final int capacity) {
     return writeRateLimiter.acquire(capacity);
   }
 
+  /** Acquire read capacity for rate limiting {@inheritDoc}. */
   @Override
   public Duration acquireReadCapacity(final int capacity) {
     return readRateLimiter.acquire(capacity);
@@ -187,10 +200,6 @@ public class S3AStoreImpl implements S3AStore {
    */
   protected void incrementStatistic(Statistic statistic) {
     incrementStatistic(statistic, 1);
-  }
-
-  protected void incrementDurationStatistic(Statistic statistic, Duration duration) {
-    statisticsContext.addValueToQuantiles(statistic, duration.toMillis());
   }
 
   /**
@@ -284,26 +293,7 @@ public class S3AStoreImpl implements S3AStore {
   }
 
   /**
-   * Perform a bulk object delete operation against S3.
-   * Increments the {@code OBJECT_DELETE_REQUESTS} and write
-   * operation statistics
-   * <p>
-   * {@code OBJECT_DELETE_OBJECTS} is updated with the actual number
-   * of objects deleted in the request.
-   * <p>
-   * Retry policy: retry untranslated; delete considered idempotent.
-   * If the request is throttled, this is logged in the throttle statistics,
-   * with the counter set to the number of keys, rather than the number
-   * of invocations of the delete operation.
-   * This is because S3 considers each key as one mutating operation on
-   * the store when updating its load counters on a specific partition
-   * of an S3 bucket.
-   * If only the request was measured, this operation would under-report.
-   * @param deleteRequest keys to delete on the s3-backend
-   * @return the AWS response
-   * @throws IllegalArgumentException if the request was rejected due to
-   * a mistaken attempt to delete the root directory
-   * @throws SdkException amazon-layer failure.
+   * {@inheritDoc}.
    */
   @Override
   @Retries.RetryRaw
@@ -334,6 +324,7 @@ public class S3AStoreImpl implements S3AStore {
               // duration is tracked in the bulk delete counters
               trackDurationOfOperation(getDurationTrackerFactory(),
                   OBJECT_BULK_DELETE_REQUEST.getSymbol(), () -> {
+                        // acquire the write capacity for the number of keys to delete and record the duration.
                         Duration durationToAcquireWriteCapacity = acquireWriteCapacity(keyCount);
                         instrumentation.recordDuration(STORE_IO_RATE_LIMITED, true, durationToAcquireWriteCapacity);
                         incrementStatistic(OBJECT_DELETE_OBJECTS, keyCount);
@@ -361,19 +352,7 @@ public class S3AStoreImpl implements S3AStore {
   }
 
   /**
-   * Delete an object.
-   * Increments the {@code OBJECT_DELETE_REQUESTS} statistics.
-   * <p>
-   * Retry policy: retry untranslated; delete considered idempotent.
-   * 404 errors other than bucket not found are swallowed;
-   * this can be raised by third party stores (GCS).
-   * If an exception is caught and swallowed, the response will be empty;
-   * otherwise it will be the response from the delete operation.
-   * @param request request to make
-   * @return the total duration and response.
-   * @throws SdkException problems working with S3
-   * @throws IllegalArgumentException if the request was rejected due to
-   * a mistaken attempt to delete the root directory.
+   * {@inheritDoc}.
    */
   @Override
   @Retries.RetryRaw
@@ -389,7 +368,9 @@ public class S3AStoreImpl implements S3AStore {
               DELETE_CONSIDERED_IDEMPOTENT, trackDurationOfOperation(getDurationTrackerFactory(),
                   OBJECT_DELETE_REQUEST.getSymbol(), () -> {
                     incrementStatistic(OBJECT_DELETE_OBJECTS);
-                    acquireWriteCapacity(1);
+                    // We try to acquire write capacity just before delete call.
+                    Duration durationToAcquireWriteCapacity = acquireWriteCapacity(1);
+                    instrumentation.recordDuration(STORE_IO_RATE_LIMITED, true, durationToAcquireWriteCapacity);
                     return s3Client.deleteObject(request);
                   }));
       d.close();

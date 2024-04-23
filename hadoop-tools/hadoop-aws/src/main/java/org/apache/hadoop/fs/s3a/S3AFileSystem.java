@@ -5739,6 +5739,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     return isMultipartUploadEnabled;
   }
 
+  /**
+   * S3A implementation to create a bulk delete operation using
+   * which actual bulk delete calls can be made.
+   * @return an implementation of the bulk delete.
+   */
   @Override
   public BulkDelete createBulkDelete(final Path path)
       throws IllegalArgumentException, IOException {

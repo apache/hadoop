@@ -23,6 +23,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.assertj.core.api.Assertions;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -44,7 +45,8 @@ import org.apache.hadoop.io.wrappedio.WrappedIO;
 import static java.util.stream.Collectors.toList;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.createFiles;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
+import static org.apache.hadoop.fs.s3a.S3AUtils.propagateBucketOptions;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.lookupMeanStatistic;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.STORE_IO_RATE_LIMITED_DURATION;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_MEAN;
@@ -85,6 +87,9 @@ public class ITestS3AContractBulkDelete extends AbstractContractBulkDeleteTest {
     protected Configuration createConfiguration() {
         Configuration conf = super.createConfiguration();
         S3ATestUtils.disableFilesystemCaching(conf);
+        conf = propagateBucketOptions(conf, getTestBucketName(conf));
+        skipIfNotEnabled(conf, Constants.ENABLE_MULTI_DELETE,
+                "Bulk delete is explicitly disabled for this bucket");
         S3ATestUtils.removeBaseAndBucketOverrides(conf,
                 Constants.BULK_DELETE_PAGE_SIZE);
         conf.setInt(Constants.BULK_DELETE_PAGE_SIZE, DELETE_PAGE_SIZE);
@@ -98,15 +103,19 @@ public class ITestS3AContractBulkDelete extends AbstractContractBulkDeleteTest {
     }
 
     @Override
-    public void validatePageSize() throws Exception {
-        int targetPageSize = DELETE_PAGE_SIZE;
+    protected int getExpectedPageSize() {
         if (!enableMultiObjectDelete) {
             // if multi-object delete is disabled, page size should be 1.
-            targetPageSize = 1;
+            return 1;
         }
+        return DELETE_PAGE_SIZE;
+    }
+
+    @Override
+    public void validatePageSize() throws Exception {
         Assertions.assertThat(pageSize)
                 .describedAs("Page size should match the configured page size")
-                .isEqualTo(targetPageSize);
+                .isEqualTo(getExpectedPageSize());
     }
 
     @Test
@@ -146,15 +155,35 @@ public class ITestS3AContractBulkDelete extends AbstractContractBulkDeleteTest {
         paths.add(dirPath);
         Path filePath = new Path(dirPath, "file");
         touch(fs, filePath);
-        paths.add(filePath);
-        pageSizePreconditionForTest(paths.size());
+        if (enableMultiObjectDelete) {
+            // Adding more paths only if multi-object delete is enabled.
+            paths.add(filePath);
+        }
         assertSuccessfulBulkDelete(bulkDelete(getFileSystem(), basePath, paths));
         // During the bulk delete operation, the directories are not deleted in S3A.
         assertIsDirectory(dirPath);
     }
 
     @Test
+    public void testBulkDeleteParentDirectory() throws Exception {
+        List<Path> paths = new ArrayList<>();
+        Path dirPath = new Path(basePath, "dir");
+        fs.mkdirs(dirPath);
+        Path subDir = new Path(dirPath, "subdir");
+        fs.mkdirs(subDir);
+        // adding parent directory to the list of paths.
+        paths.add(dirPath);
+        assertSuccessfulBulkDelete(bulkDelete(getFileSystem(), basePath, paths));
+        // During the bulk delete operation, the directories are not deleted in S3A.
+        assertIsDirectory(dirPath);
+        assertIsDirectory(subDir);
+    }
+
+    @Test
     public void testRateLimiting() throws Exception {
+        if (!enableMultiObjectDelete) {
+            skip("Multi-object delete is disabled so hard to trigger rate limiting");
+        }
         Configuration conf = getContract().getConf();
         conf.setInt(Constants.S3A_IO_RATE_LIMIT, 5);
         Path basePath = path(getMethodName());

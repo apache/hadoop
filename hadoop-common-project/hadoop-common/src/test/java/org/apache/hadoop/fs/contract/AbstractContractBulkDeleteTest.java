@@ -65,6 +65,10 @@ public abstract class AbstractContractBulkDeleteTest extends AbstractFSContractT
         return basePath;
     }
 
+    protected int getExpectedPageSize() {
+        return 1;
+    }
+
     /**
      * Validate the page size for bulk delete operation. Different stores can have different
      * implementations for bulk delete operation thus different page size.
@@ -161,7 +165,19 @@ public abstract class AbstractContractBulkDeleteTest extends AbstractFSContractT
         touch(fs, filePath);
         paths.add(filePath);
         pageSizePreconditionForTest(paths.size());
-        // Outcome is undefined. But call shouldn't fail. In case of S3 directories will still be present.
+        // Outcome is undefined. But call shouldn't fail.
+        assertSuccessfulBulkDelete(bulkDelete(getFileSystem(), basePath, paths));
+    }
+
+    @Test
+    public void testBulkDeleteParentDirectory() throws Exception {
+        List<Path> paths = new ArrayList<>();
+        Path dirPath = new Path(basePath, "dir");
+        fs.mkdirs(dirPath);
+        Path subDir = new Path(dirPath, "subdir");
+        fs.mkdirs(subDir);
+        // adding parent directory to the list of paths.
+        paths.add(dirPath);
         assertSuccessfulBulkDelete(bulkDelete(getFileSystem(), basePath, paths));
     }
 

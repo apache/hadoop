@@ -59,7 +59,7 @@ To make most efficient use of S3, care is needed.
 The S3A FileSystem supports implementation of vectored read api using which
 a client can provide a list of file ranges to read returning a future read
 object associated with each range. For full api specification please see
-[FSDataInputStream](../../hadoop-common-project/hadoop-common/filesystem/fsdatainputstream.html).
+[FSDataInputStream](../../../../../../hadoop-common-project/hadoop-common/target/site/filesystem/fsdatainputstream.html).
 
 The following properties can be configured to optimise vectored reads based
 on the client requirements.
@@ -96,7 +96,7 @@ on the client requirements.
 
 ## <a name="bulkdelete"></a> Improving delete performance through bulkdelete API.
 
-For bulk delete API spec refer to [BulkDelete](bulkdelete.html).
+For bulk delete API spec refer to File System specification. [BulkDelete](../../../../../../hadoop-common-project/hadoop-common/target/site/filesystem/bulkdelete.html)
 
 The S3A client exports this API.
 
@@ -171,7 +171,7 @@ That is: bulk delete requests of paths which do not exist will hurt future queri
 Avoid this. Note also that TPC-DS Benchmark do not create the right load to make the
 performance problems observable -but they can surface in production.
 * Configure buckets to have a limited number of days for tombstones to be preserved.
-* Do not delete which you know do not contain objects.
+* Do not delete paths which you know reference nonexistent files or directories.
 
 ## <a name="fadvise"></a> Improving data input performance through fadvise
 
