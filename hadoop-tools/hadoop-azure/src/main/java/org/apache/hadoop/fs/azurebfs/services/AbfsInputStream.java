@@ -154,7 +154,10 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     this.path = path;
     this.contentLength = contentLength;
     this.bufferSize = abfsInputStreamContext.getReadBufferSize();
-    this.footerReadSize = abfsInputStreamContext.getFooterReadBufferSize();
+    /*
+    * FooterReadSize should not be more than bufferSize.
+    */
+    this.footerReadSize = Math.min(bufferSize, abfsInputStreamContext.getFooterReadBufferSize());
     this.readAheadQueueDepth = abfsInputStreamContext.getReadAheadQueueDepth();
     this.tolerateOobAppends = abfsInputStreamContext.isTolerateOobAppends();
     this.eTag = eTag;

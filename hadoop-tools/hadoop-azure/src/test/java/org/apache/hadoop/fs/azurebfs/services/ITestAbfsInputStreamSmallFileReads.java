@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
@@ -48,9 +49,12 @@ import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CONNECTIONS_MADE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_KB;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
 
-public class ITestAbfsInputStreamSmallFileReads extends ITestAbfsInputStream {
+public class ITestAbfsInputStreamSmallFileReads extends
+    AbstractAbfsIntegrationTest {
 
+  private final AbfsInputStreamTestUtils abfsInputStreamTestUtils;
   public ITestAbfsInputStreamSmallFileReads() throws Exception {
+    this.abfsInputStreamTestUtils = new AbfsInputStreamTestUtils(this);
   }
 
   @Test
@@ -66,12 +70,20 @@ public class ITestAbfsInputStreamSmallFileReads extends ITestAbfsInputStream {
 
   private void testNumBackendCalls(boolean readSmallFilesCompletely)
       throws Exception {
-    final AzureBlobFileSystem fs = getFileSystem(readSmallFilesCompletely);
+    try (AzureBlobFileSystem fs = abfsInputStreamTestUtils.getFileSystem(
+        readSmallFilesCompletely)) {
+      validateNumBackendCalls(readSmallFilesCompletely, fs);
+    }
+  }
+
+  private void validateNumBackendCalls(final boolean readSmallFilesCompletely,
+      final AzureBlobFileSystem fs)
+      throws IOException, NoSuchFieldException, IllegalAccessException {
     for (int i = 1; i <= 4; i++) {
       String fileName = methodName.getMethodName() + i;
       int fileSize = i * ONE_MB;
-      byte[] fileContent = getRandomBytesArray(fileSize);
-      Path testFilePath = createFileWithContent(fs, fileName, fileContent);
+      byte[] fileContent = abfsInputStreamTestUtils.getRandomBytesArray(fileSize);
+      Path testFilePath = abfsInputStreamTestUtils.createFileWithContent(fs, fileName, fileContent);
       int length = ONE_KB;
       try (FSDataInputStream iStream = fs.open(testFilePath)) {
         byte[] buffer = new byte[length];
@@ -166,12 +178,23 @@ public class ITestAbfsInputStreamSmallFileReads extends ITestAbfsInputStream {
 
   private void testSeekAndReadWithConf(SeekTo seekTo, int startFileSizeInMB,
       int endFileSizeInMB, boolean readSmallFilesCompletely) throws Exception {
-    final AzureBlobFileSystem fs = getFileSystem(readSmallFilesCompletely);
+    try (AzureBlobFileSystem fs = abfsInputStreamTestUtils.getFileSystem(
+        readSmallFilesCompletely)) {
+      validateSeekAndReadWithConf(seekTo, startFileSizeInMB, endFileSizeInMB,
+          fs);
+    }
+  }
+
+  private void validateSeekAndReadWithConf(final SeekTo seekTo,
+      final int startFileSizeInMB,
+      final int endFileSizeInMB,
+      final AzureBlobFileSystem fs)
+      throws IOException, NoSuchFieldException, IllegalAccessException {
     for (int i = startFileSizeInMB; i <= endFileSizeInMB; i++) {
       String fileName = methodName.getMethodName() + i;
       int fileSize = i * ONE_MB;
-      byte[] fileContent = getRandomBytesArray(fileSize);
-      Path testFilePath = createFileWithContent(fs, fileName, fileContent);
+      byte[] fileContent = abfsInputStreamTestUtils.getRandomBytesArray(fileSize);
+      Path testFilePath = abfsInputStreamTestUtils.createFileWithContent(fs, fileName, fileContent);
       int length = ONE_KB;
       int seekPos = seekPos(seekTo, fileSize, length);
       seekReadAndTest(fs, testFilePath, seekPos, length, fileContent);
@@ -191,13 +214,13 @@ public class ITestAbfsInputStreamSmallFileReads extends ITestAbfsInputStream {
   private void seekReadAndTest(FileSystem fs, Path testFilePath, int seekPos,
       int length, byte[] fileContent)
       throws IOException, NoSuchFieldException, IllegalAccessException {
-    AbfsConfiguration conf = getAbfsStore(fs).getAbfsConfiguration();
+    AbfsConfiguration conf = getConfiguration((AzureBlobFileSystem) fs);
     try (FSDataInputStream iStream = fs.open(testFilePath)) {
-      seek(iStream, seekPos);
+      abfsInputStreamTestUtils.seek(iStream, seekPos);
       byte[] buffer = new byte[length];
       int bytesRead = iStream.read(buffer, 0, length);
       assertEquals(bytesRead, length);
-      assertContentReadCorrectly(fileContent, seekPos, length, buffer, testFilePath);
+      abfsInputStreamTestUtils.assertContentReadCorrectly(fileContent, seekPos, length, buffer, testFilePath);
       AbfsInputStream abfsInputStream = (AbfsInputStream) iStream
           .getWrappedStream();
 
@@ -214,7 +237,7 @@ public class ITestAbfsInputStreamSmallFileReads extends ITestAbfsInputStream {
       int expectedLimit, expectedFCursor;
       int expectedBCursor;
       if (conf.readSmallFilesCompletely() && smallFile) {
-        assertBuffersAreEqual(fileContent, abfsInputStream.getBuffer(), conf, testFilePath);
+        abfsInputStreamTestUtils.assertAbfsInputStreamBufferNotEqualToContentStartSubsequence(fileContent, abfsInputStream, conf, testFilePath);
         /*
          * If head optimization is enabled. The stream can do full read file optimization on the first read if
          * the seekPos is less than readBufferSize and the length is such that (seekPos + length) < readBufferSize.
@@ -228,9 +251,9 @@ public class ITestAbfsInputStreamSmallFileReads extends ITestAbfsInputStream {
         expectedBCursor = min(readBufferSize, seekPos + length);
       } else {
         if ((seekPos == 0)) {
-          assertBuffersAreEqual(fileContent, abfsInputStream.getBuffer(), conf, testFilePath);
+          abfsInputStreamTestUtils.assertAbfsInputStreamBufferNotEqualToContentStartSubsequence(fileContent, abfsInputStream, conf, testFilePath);
         } else {
-          assertBuffersAreNotEqual(fileContent, abfsInputStream.getBuffer(),
+          abfsInputStreamTestUtils.assertAbfsInputStreamBufferEqualToContentStartSubsequence(fileContent, abfsInputStream,
               conf, testFilePath);
         }
         expectedBCursor = length;
@@ -252,12 +275,16 @@ public class ITestAbfsInputStreamSmallFileReads extends ITestAbfsInputStream {
   public void testPartialReadWithNoData() throws Exception {
     for (int i = 2; i <= 4; i++) {
       int fileSize = i * ONE_MB;
-      final AzureBlobFileSystem fs = getFileSystem(true);
-      String fileName = methodName.getMethodName() + i;
-      byte[] fileContent = getRandomBytesArray(fileSize);
-      Path testFilePath = createFileWithContent(fs, fileName, fileContent);
-      partialReadWithNoData(fs, testFilePath, fileSize / 2, fileSize / 4,
-          fileContent);
+      try (AzureBlobFileSystem fs = abfsInputStreamTestUtils.getFileSystem(
+          true)) {
+        String fileName = methodName.getMethodName() + i;
+        byte[] fileContent = abfsInputStreamTestUtils.getRandomBytesArray(
+            fileSize);
+        Path testFilePath = abfsInputStreamTestUtils.createFileWithContent(fs,
+            fileName, fileContent);
+        partialReadWithNoData(fs, testFilePath, fileSize / 2, fileSize / 4,
+            fileContent);
+      }
     }
   }
 
@@ -283,11 +310,11 @@ public class ITestAbfsInputStreamSmallFileReads extends ITestAbfsInputStream {
           any(TracingContext.class));
 
       iStream = new FSDataInputStream(abfsInputStream);
-      seek(iStream, seekPos);
+      abfsInputStreamTestUtils.seek(iStream, seekPos);
       byte[] buffer = new byte[length];
       int bytesRead = iStream.read(buffer, 0, length);
       assertEquals(bytesRead, length);
-      assertContentReadCorrectly(fileContent, seekPos, length, buffer, testFilePath);
+      abfsInputStreamTestUtils.assertContentReadCorrectly(fileContent, seekPos, length, buffer, testFilePath);
       assertEquals(fileContent.length, abfsInputStream.getFCursor());
       assertEquals(fileContent.length,
           abfsInputStream.getFCursorAfterLastRead());
@@ -302,12 +329,16 @@ public class ITestAbfsInputStreamSmallFileReads extends ITestAbfsInputStream {
   public void testPartialReadWithSomeData() throws Exception {
     for (int i = 2; i <= 4; i++) {
       int fileSize = i * ONE_MB;
-      final AzureBlobFileSystem fs = getFileSystem(true);
-      String fileName = methodName.getMethodName() + i;
-      byte[] fileContent = getRandomBytesArray(fileSize);
-      Path testFilePath = createFileWithContent(fs, fileName, fileContent);
-      partialReadWithSomeData(fs, testFilePath, fileSize / 2,
-          fileSize / 4, fileContent);
+      try (AzureBlobFileSystem fs = abfsInputStreamTestUtils.getFileSystem(
+          true)) {
+        String fileName = methodName.getMethodName() + i;
+        byte[] fileContent = abfsInputStreamTestUtils.getRandomBytesArray(
+            fileSize);
+        Path testFilePath = abfsInputStreamTestUtils.createFileWithContent(fs,
+            fileName, fileContent);
+        partialReadWithSomeData(fs, testFilePath, fileSize / 2,
+            fileSize / 4, fileContent);
+      }
     }
   }
 
@@ -334,7 +365,7 @@ public class ITestAbfsInputStreamSmallFileReads extends ITestAbfsInputStream {
               any(TracingContext.class));
 
       iStream = new FSDataInputStream(abfsInputStream);
-      seek(iStream, seekPos);
+      abfsInputStreamTestUtils.seek(iStream, seekPos);
 
       byte[] buffer = new byte[length];
       int bytesRead = iStream.read(buffer, 0, length);
@@ -367,22 +398,25 @@ public class ITestAbfsInputStreamSmallFileReads extends ITestAbfsInputStream {
     configuration.set(AZURE_READ_SMALL_FILES_COMPLETELY, TRUE);
     try (FileSystem fs = FileSystem.newInstance(configuration)) {
       int readBufferSize = getConfiguration().getReadBufferSize();
-      byte[] fileContent = getRandomBytesArray(readBufferSize / 2);
-      Path path = createFileWithContent(fs, methodName.getMethodName(),
-          fileContent);
+      byte[] fileContent = abfsInputStreamTestUtils.getRandomBytesArray(
+          readBufferSize / 2);
+      Path path = abfsInputStreamTestUtils.createFileWithContent(fs,
+          methodName.getMethodName(), fileContent);
 
       try (FSDataInputStream is = fs.open(path)) {
         is.seek(readBufferSize / 4);
         byte[] buffer = new byte[readBufferSize / 2];
         int readLength = is.read(buffer, 0, readBufferSize / 2);
         assertEquals(readLength, readBufferSize / 4);
-        assertContentReadCorrectly(fileContent, readBufferSize / 4, readLength,
+        abfsInputStreamTestUtils.assertContentReadCorrectly(fileContent,
+            readBufferSize / 4, readLength,
             buffer, path);
 
         is.seek(0);
         readLength = is.read(buffer, 0, readBufferSize / 2);
         assertEquals(readLength, readBufferSize / 2);
-        assertContentReadCorrectly(fileContent, 0, readLength, buffer, path);
+        abfsInputStreamTestUtils.assertContentReadCorrectly(fileContent, 0,
+            readLength, buffer, path);
 
         AbfsInputStream abfsInputStream
             = (AbfsInputStream) is.getWrappedStream();
@@ -407,22 +441,23 @@ public class ITestAbfsInputStreamSmallFileReads extends ITestAbfsInputStream {
     configuration.set(AZURE_READ_SMALL_FILES_COMPLETELY, TRUE);
     try (FileSystem fs = FileSystem.newInstance(configuration)) {
       int readBufferSize = getConfiguration().getReadBufferSize();
-      byte[] fileContent = getRandomBytesArray(readBufferSize);
-      Path path = createFileWithContent(fs, methodName.getMethodName(),
-          fileContent);
+      byte[] fileContent = abfsInputStreamTestUtils.getRandomBytesArray(
+          readBufferSize);
+      Path path = abfsInputStreamTestUtils.createFileWithContent(fs,
+          methodName.getMethodName(), fileContent);
 
       try (FSDataInputStream is = fs.open(path)) {
         is.seek(readBufferSize / 4);
         byte[] buffer = new byte[readBufferSize / 2];
         int readLength = is.read(buffer, 0, readBufferSize / 2);
         assertEquals(readLength, readBufferSize / 2);
-        assertContentReadCorrectly(fileContent, readBufferSize / 4, readLength,
-            buffer, path);
+        abfsInputStreamTestUtils.assertContentReadCorrectly(fileContent,
+            readBufferSize / 4, readLength, buffer, path);
 
         readLength = is.read(buffer, 0, readBufferSize / 4);
         assertEquals(readLength, readBufferSize / 4);
-        assertContentReadCorrectly(fileContent, 3 * readBufferSize / 4,
-            readLength, buffer, path);
+        abfsInputStreamTestUtils.assertContentReadCorrectly(fileContent,
+            3 * readBufferSize / 4, readLength, buffer, path);
 
         AbfsInputStream abfsInputStream
             = (AbfsInputStream) is.getWrappedStream();
@@ -438,12 +473,12 @@ public class ITestAbfsInputStreamSmallFileReads extends ITestAbfsInputStream {
         int readLength = is.read(buffer, 0, readBufferSize / 2);
 
         assertEquals(readLength, readBufferSize / 2);
-        assertContentReadCorrectly(fileContent, readBufferSize / 2, readLength,
-            buffer, path);
+        abfsInputStreamTestUtils.assertContentReadCorrectly(fileContent,
+            readBufferSize / 2, readLength, buffer, path);
 
         byte[] zeroBuffer = new byte[readBufferSize / 2];
-        assertContentReadCorrectly(buffer, readBufferSize / 2,
-            readBufferSize / 2, zeroBuffer, path);
+        abfsInputStreamTestUtils.assertContentReadCorrectly(buffer,
+            readBufferSize / 2, readBufferSize / 2, zeroBuffer, path);
       }
     }
   }
@@ -460,9 +495,10 @@ public class ITestAbfsInputStreamSmallFileReads extends ITestAbfsInputStream {
     try (AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(
         configuration)) {
       int readBufferSize = getConfiguration().getReadBufferSize();
-      byte[] fileContent = getRandomBytesArray(readBufferSize / 2);
-      Path path = createFileWithContent(fs, methodName.getMethodName(),
-          fileContent);
+      byte[] fileContent = abfsInputStreamTestUtils.getRandomBytesArray(
+          readBufferSize / 2);
+      Path path = abfsInputStreamTestUtils.createFileWithContent(fs,
+          methodName.getMethodName(), fileContent);
 
       try (FSDataInputStream is = fs.open(path)) {
         is.seek(readBufferSize / 2 + 1);

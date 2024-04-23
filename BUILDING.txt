@@ -163,14 +163,7 @@ Maven build goals:
  YARN Application Timeline Service V2 build options:
 
    YARN Timeline Service v.2 chooses Apache HBase as the primary backing storage. The supported
-   versions of Apache HBase are 1.7.1 (default) and 2.2.4.
-
-  * HBase 1.7.1 is used by default to build Hadoop. The official releases are ready to use if you
-    plan on running Timeline Service v2 with HBase 1.7.1.
-
-  * Use -Dhbase.profile=2.0 to build Hadoop with HBase 2.2.4. Provide this option if you plan
-    on running Timeline Service v2 with HBase 2.x.
-
+   version of Apache HBase is 2.5.8.
 
  Snappy build options:
 
