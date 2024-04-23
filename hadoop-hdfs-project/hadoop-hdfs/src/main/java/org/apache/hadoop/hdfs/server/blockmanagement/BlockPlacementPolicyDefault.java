@@ -141,7 +141,8 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
         DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOADBYVOLUME_KEY,
         DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOADBYVOLUME_DEFAULT
     );
-    this.considerLoadMinLoad = conf.getInt(DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_MINLOAD_KEY,
+    this.considerLoadMinLoad = conf.getInt(
+        DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_MINLOAD_KEY,
         DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSIDERLOAD_MINLOAD_DEFAULT);
     this.stats = stats;
     this.clusterMap = clusterMap;
