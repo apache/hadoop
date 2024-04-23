@@ -101,6 +101,10 @@
             </exclusions>
         </dependency>
         <dependency>
+            <groupId>com.github.pjfanning</groupId>
+            <artifactId>jsr311-compat</artifactId>
+        </dependency>
+        <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <scope>test</scope>

@@ -69,8 +69,8 @@
     <jersey.version>1.19.4</jersey.version>
 
     <!-- jackson versions -->
-    <jackson2.version>2.12.7</jackson2.version>
-    <jackson2.databind.version>2.12.7.1</jackson2.databind.version>
+    <jackson2.version>2.14.3</jackson2.version>
+    <jackson2.databind.version>2.14.3</jackson2.databind.version>
 
     <!-- httpcomponents versions -->
     <httpclient.version>4.5.13</httpclient.version>
@@ -954,6 +954,11 @@
             <artifactId>jettison</artifactId>
           </exclusion>
         </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>com.github.pjfanning</groupId>
+        <artifactId>jsr311-compat</artifactId>
+        <version>0.1.0</version>
       </dependency>
       <dependency>
         <groupId>com.sun.jersey</groupId>
