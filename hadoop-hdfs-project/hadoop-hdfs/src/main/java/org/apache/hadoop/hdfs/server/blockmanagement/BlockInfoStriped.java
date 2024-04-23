@@ -81,7 +81,7 @@ public class BlockInfoStriped extends BlockInfo {
    * Otherwise it returns the number of data units specified by erasure coding policy.
    */
   public short getRealDataBlockNum() {
-    if (isComplete() || getBlockUCState() == BlockUCState.COMMITTED) {
+    if (isCompleteOrCommitted()) {
       return (short) Math.min(getDataBlockNum(),
           (getNumBytes() - 1) / ecPolicy.getCellSize() + 1);
     } else {
