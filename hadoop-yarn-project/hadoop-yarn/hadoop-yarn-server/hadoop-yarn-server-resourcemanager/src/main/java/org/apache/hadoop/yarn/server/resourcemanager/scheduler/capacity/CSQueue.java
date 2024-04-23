@@ -177,10 +177,10 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
   public List<CSQueue> getChildQueues();
 
   /**
-   * Get child queues By tryLock
+   * Get child queues By tryLock.
    * @return child queues
    */
-  public List<CSQueue> getChildQueuesByTryLock();
+  List<CSQueue> getChildQueuesByTryLock();
   
   /**
    * Check if the <code>user</code> has permission to perform the operation
