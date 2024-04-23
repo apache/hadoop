@@ -138,7 +138,6 @@ import org.slf4j.LoggerFactory;
 class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   static final Logger LOG = LoggerFactory.getLogger(FsDatasetImpl.class);
   private final static boolean isNativeIOAvailable;
-  private static final String SEP = System.getProperty("file.separator");
   private Timer timer;
   static {
     isNativeIOAvailable = NativeIO.isAvailable();
