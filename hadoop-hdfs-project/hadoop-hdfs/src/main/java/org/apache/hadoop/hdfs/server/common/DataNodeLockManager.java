@@ -29,7 +29,8 @@ public interface DataNodeLockManager<T extends AutoCloseDataSetLock> {
    */
   enum LockLevel {
     BLOCK_POOl,
-    VOLUME
+    VOLUME,
+    DIR
   }
 
   /**
