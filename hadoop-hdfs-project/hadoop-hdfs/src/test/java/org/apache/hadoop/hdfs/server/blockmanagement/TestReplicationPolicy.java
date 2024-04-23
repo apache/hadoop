@@ -1734,7 +1734,7 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
     when(node.getXceiverCount()).thenReturn(17);
     assertTrue(bppd.excludeNodeByLoad(node));
   }
-  
+
   @Test
   public void testChosenFailureForStorageType() {
     final LogVerificationAppender appender = new LogVerificationAppender();
