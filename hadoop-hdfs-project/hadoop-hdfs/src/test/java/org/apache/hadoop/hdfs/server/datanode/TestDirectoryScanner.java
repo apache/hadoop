@@ -1425,6 +1425,8 @@ public class TestDirectoryScanner {
 
   @Test(timeout = 30000)
   public void testNullStorage() throws Exception {
+    DataNodeFaultInjector oldInjector = DataNodeFaultInjector.get();
+
     Configuration conf = getConfiguration();
     conf.setInt(DFSConfigKeys.DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY, 1);
     cluster = new MiniDFSCluster.Builder(conf).build();
@@ -1463,6 +1465,7 @@ public class TestDirectoryScanner {
         scanner = null;
       }
       cluster.shutdown();
+      DataNodeFaultInjector.set(oldInjector);
     }
   }
 }
