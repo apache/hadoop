@@ -22,6 +22,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.TestBlockStoragePolicy;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
+import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.junit.Test;
 
@@ -91,7 +92,7 @@ public class TestReplicationPolicyRatioConsiderLoadWithStorage
    */
   @Test
   public void testChooseTargetWithRatioConsiderLoad() {
-    namenode.getNamesystem().writeLock();
+    namenode.getNamesystem().writeLock(FSNamesystemLockMode.BM);
     try {
       // After heartbeat has been processed, the total load should be 200.
       // And average load per node should be 40. The max load should be 2 * 40;
@@ -163,7 +164,8 @@ public class TestReplicationPolicyRatioConsiderLoadWithStorage
       assertTrue(targetSet.contains(dataNodes[3]));
       assertTrue(targetSet.contains(dataNodes[4]));
     } finally {
-      namenode.getNamesystem().writeUnlock();
+      namenode.getNamesystem().writeUnlock(FSNamesystemLockMode.BM,
+          "testChooseTargetWithRatioConsiderLoad");
     }
   }
 }

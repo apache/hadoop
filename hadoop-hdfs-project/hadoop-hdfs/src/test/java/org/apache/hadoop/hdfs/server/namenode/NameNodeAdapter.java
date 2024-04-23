@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
+import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 
 
@@ -50,8 +51,15 @@ import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.test.Whitebox;
+import org.mockito.ArgumentMatcher;
+import org.mockito.ArgumentMatchers;
+import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 import static org.apache.hadoop.hdfs.server.namenode.NameNodeHttpServer.FSIMAGE_ATTRIBUTE_KEY;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.spy;
 
 /**
  * This is a utility class to expose NameNode functionality for unit tests.
@@ -82,13 +90,13 @@ public class NameNodeAdapter {
     // consistent with FSNamesystem#getFileInfo()
     final String operationName = needBlockToken ? "open" : "getfileinfo";
     FSPermissionChecker.setOperationType(operationName);
-    namenode.getNamesystem().readLock();
+    namenode.getNamesystem().readLock(FSNamesystemLockMode.FS);
     try {
       return FSDirStatAndListingOp.getFileInfo(namenode.getNamesystem()
           .getFSDirectory(), pc, src, resolveLink, needLocation,
           needBlockToken);
     } finally {
-      namenode.getNamesystem().readUnlock();
+      namenode.getNamesystem().readUnlock(FSNamesystemLockMode.FS, "getFileInfo");
     }
   }
   
@@ -201,11 +209,11 @@ public class NameNodeAdapter {
    */
   public static DatanodeDescriptor getDatanode(final FSNamesystem ns,
       DatanodeID id) throws IOException {
-    ns.readLock();
+    ns.readLock(FSNamesystemLockMode.BM);
     try {
       return ns.getBlockManager().getDatanodeManager().getDatanode(id);
     } finally {
-      ns.readUnlock();
+      ns.readUnlock(FSNamesystemLockMode.BM, "getDatanode");
     }
   }
   
@@ -229,7 +237,7 @@ public class NameNodeAdapter {
   public static BlockInfo addBlockNoJournal(final FSNamesystem fsn,
       final String src, final DatanodeStorageInfo[] targets)
       throws IOException {
-    fsn.writeLock();
+    fsn.writeLock(FSNamesystemLockMode.GLOBAL);
     try {
       INodeFile file = (INodeFile)fsn.getFSDirectory().getINode(src);
       Block newBlock = fsn.createNewBlock(BlockType.CONTIGUOUS);
@@ -238,17 +246,17 @@ public class NameNodeAdapter {
           fsn, src, inodesInPath, newBlock, targets, BlockType.CONTIGUOUS);
       return file.getLastBlock();
     } finally {
-      fsn.writeUnlock();
+      fsn.writeUnlock(FSNamesystemLockMode.GLOBAL, "addBlockNoJournal");
     }
   }
 
   public static void persistBlocks(final FSNamesystem fsn,
       final String src, final INodeFile file) throws IOException {
-    fsn.writeLock();
+    fsn.writeLock(FSNamesystemLockMode.FS);
     try {
       FSDirWriteFileOp.persistBlocks(fsn.getFSDirectory(), src, file, true);
     } finally {
-      fsn.writeUnlock();
+      fsn.writeUnlock(FSNamesystemLockMode.FS, "persistBlocks");
     }
   }
 

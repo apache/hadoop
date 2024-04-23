@@ -46,6 +46,7 @@ import org.apache.hadoop.hdfs.server.namenode.INode;
 import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.DirectoryWithSnapshotFeature.DirectoryDiff;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.slf4j.event.Level;
@@ -297,10 +298,10 @@ public class TestINodeFileUnderConstructionWithSnapshot {
       hdfs.delete(foo, true);
       Thread.sleep(1000);
       try {
-        fsn.writeLock();
+        fsn.writeLock(FSNamesystemLockMode.GLOBAL);
         NameNodeAdapter.getLeaseManager(fsn).runLeaseChecks();
       } finally {
-        fsn.writeUnlock();
+        fsn.writeUnlock(FSNamesystemLockMode.GLOBAL, "testLease");
       }
     } finally {
       NameNodeAdapter.setLeasePeriod(fsn, HdfsConstants.LEASE_SOFTLIMIT_PERIOD,

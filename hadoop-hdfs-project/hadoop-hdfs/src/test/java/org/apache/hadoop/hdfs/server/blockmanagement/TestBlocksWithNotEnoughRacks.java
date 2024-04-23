@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 import org.apache.hadoop.hdfs.server.datanode.InternalDataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -602,11 +603,11 @@ public class TestBlocksWithNotEnoughRacks {
 
   static BlockReconstructionWork scheduleReconstruction(
       FSNamesystem fsn, BlockInfo block, int priority) {
-    fsn.writeLock();
+    fsn.writeLock(FSNamesystemLockMode.BM);
     try {
       return fsn.getBlockManager().scheduleReconstruction(block, priority);
     } finally {
-      fsn.writeUnlock();
+      fsn.writeUnlock(FSNamesystemLockMode.BM, "scheduleReconstruction");
     }
   }
 

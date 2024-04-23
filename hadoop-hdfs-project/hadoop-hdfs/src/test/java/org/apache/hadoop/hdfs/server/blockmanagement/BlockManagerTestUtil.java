@@ -31,6 +31,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManagerSafeMode.BMSafeModeStatus;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.test.Whitebox;
@@ -50,23 +51,23 @@ public class BlockManagerTestUtil {
   /** @return the datanode descriptor for the given the given storageID. */
   public static DatanodeDescriptor getDatanode(final FSNamesystem ns,
       final String storageID) {
-    ns.readLock();
+    ns.readLock(FSNamesystemLockMode.BM);
     try {
       return ns.getBlockManager().getDatanodeManager().getDatanode(storageID);
     } finally {
-      ns.readUnlock();
+      ns.readUnlock(FSNamesystemLockMode.BM, "getDatanode");
     }
   }
 
   public static Iterator<BlockInfo> getBlockIterator(final FSNamesystem ns,
       final String storageID, final int startBlock) {
-    ns.readLock();
+    ns.readLock(FSNamesystemLockMode.BM);
     try {
       DatanodeDescriptor dn =
           ns.getBlockManager().getDatanodeManager().getDatanode(storageID);
       return dn.getBlockIterator(startBlock);
     } finally {
-      ns.readUnlock();
+      ns.readUnlock(FSNamesystemLockMode.BM, "getBlockIterator");
     }
   }
 
@@ -88,7 +89,7 @@ public class BlockManagerTestUtil {
    */
   public static int[] getReplicaInfo(final FSNamesystem namesystem, final Block b) {
     final BlockManager bm = namesystem.getBlockManager();
-    namesystem.readLock();
+    namesystem.readLock(FSNamesystemLockMode.BM);
     try {
       final BlockInfo storedBlock = bm.getStoredBlock(b);
       return new int[]{getNumberOfRacks(bm, b),
@@ -96,7 +97,7 @@ public class BlockManagerTestUtil {
           bm.neededReconstruction.contains(storedBlock) ? 1 : 0,
           getNumberOfDomains(bm, b)};
     } finally {
-      namesystem.readUnlock();
+      namesystem.readUnlock(FSNamesystemLockMode.BM, "getReplicaInfo");
     }
   }
 
@@ -247,7 +248,7 @@ public class BlockManagerTestUtil {
    */
   public static void noticeDeadDatanode(NameNode nn, String dnName) {
     FSNamesystem namesystem = nn.getNamesystem();
-    namesystem.writeLock();
+    namesystem.writeLock(FSNamesystemLockMode.BM);
     try {
       DatanodeManager dnm = namesystem.getBlockManager().getDatanodeManager();
       HeartbeatManager hbm = dnm.getHeartbeatManager();
@@ -265,7 +266,7 @@ public class BlockManagerTestUtil {
         hbm.heartbeatCheck();
       }
     } finally {
-      namesystem.writeUnlock();
+      namesystem.writeUnlock(FSNamesystemLockMode.BM, "noticeDeadDatanode");
     }
   }
   
@@ -302,12 +303,13 @@ public class BlockManagerTestUtil {
    */
   public static int checkHeartbeatAndGetUnderReplicatedBlocksCount(
       FSNamesystem namesystem, BlockManager bm) {
-    namesystem.writeLock();
+    namesystem.writeLock(FSNamesystemLockMode.BM);
     try {
       bm.getDatanodeManager().getHeartbeatManager().heartbeatCheck();
       return bm.getUnderReplicatedNotMissingBlocks();
     } finally {
-      namesystem.writeUnlock();
+      namesystem.writeUnlock(FSNamesystemLockMode.BM,
+          "checkHeartbeatAndGetUnderReplicatedBlocksCount");
     }
   }
 
