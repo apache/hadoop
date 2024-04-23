@@ -100,10 +100,11 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
   @Override
   protected Configuration createScaleConfiguration() {
     Configuration conf = super.createScaleConfiguration();
+    S3ATestUtils.removeBaseAndBucketOverrides(conf,
+        PREFETCH_ENABLED_KEY);
     if (isUsingDefaultExternalDataFile(conf)) {
       S3ATestUtils.removeBaseAndBucketOverrides(
           conf,
-          PREFETCH_ENABLED_KEY,
           ENDPOINT);
     }
     conf.setBoolean(PREFETCH_ENABLED_KEY, false);
