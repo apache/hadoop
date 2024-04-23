@@ -1231,11 +1231,6 @@ public class AbfsConfiguration{
   }
 
   @VisibleForTesting
-  public void setFooterReadBufferSize(int footerReadBufferSize) {
-    this.footerReadBufferSize = footerReadBufferSize;
-  }
-
-  @VisibleForTesting
   public void setEnableAbfsListIterator(boolean enableAbfsListIterator) {
     this.enableAbfsListIterator = enableAbfsListIterator;
   }
