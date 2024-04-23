@@ -141,7 +141,7 @@ public abstract class AbstractCGroupsHandler implements CGroupsHandler {
       // find cgroup controller paths
       cPaths = initializeControllerPathsFromMtab(newMtab);
     } catch (IOException e) {
-      LOG.warn("Failed to initialize controller paths! Exception: " + e);
+      LOG.warn("Failed to initialize controller paths! Exception: ", e);
       throw new ResourceHandlerException(
           "Failed to initialize controller paths!");
     }
