@@ -88,7 +88,7 @@ public abstract class AbstractAbfsIntegrationTest extends
   private AuthType authType;
   private boolean useConfiguredFileSystem = false;
   private boolean usingFilesystemForSASTests = false;
-  private static final int SHORTENED_GUID_LEN = 12;
+  public static final int SHORTENED_GUID_LEN = 12;
 
   protected AbstractAbfsIntegrationTest() throws Exception {
     fileSystemName = TEST_CONTAINER_PREFIX + UUID.randomUUID().toString();
@@ -361,6 +361,14 @@ public abstract class AbstractAbfsIntegrationTest extends
 
   public AbfsConfiguration getConfiguration() {
     return abfsConfig;
+  }
+
+  public AbfsConfiguration getConfiguration(AzureBlobFileSystem fs) {
+    return fs.getAbfsStore().getAbfsConfiguration();
+  }
+
+  public Map<String, Long> getInstrumentationMap(AzureBlobFileSystem fs) {
+    return fs.getInstrumentationMap();
   }
 
   public Configuration getRawConfiguration() {
