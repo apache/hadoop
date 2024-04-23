@@ -36,6 +36,7 @@ import org.apache.hadoop.hdfs.server.datanode.InternalDataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.namenode.Namesystem;
+import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.apache.hadoop.hdfs.server.protocol.BlockCommand;
 import org.apache.hadoop.hdfs.server.protocol.BlockRecoveryCommand;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
@@ -91,7 +92,7 @@ public class TestHeartbeatHandling {
       final DatanodeStorageInfo[] ONE_TARGET = {dd.getStorageInfo(storageID)};
 
       try {
-        namesystem.writeLock();
+        namesystem.writeLock(FSNamesystemLockMode.BM);
         synchronized(hm) {
           for (int i=0; i<MAX_REPLICATE_BLOCKS; i++) {
             dd.addBlockToBeReplicated(
@@ -136,7 +137,7 @@ public class TestHeartbeatHandling {
           assertEquals(0, cmds.length);
         }
       } finally {
-        namesystem.writeUnlock();
+        namesystem.writeUnlock(FSNamesystemLockMode.BM, "testHeartbeat");
       }
     } finally {
       cluster.shutdown();
@@ -176,7 +177,7 @@ public class TestHeartbeatHandling {
       dd3.updateStorage(new DatanodeStorage(DatanodeStorage.generateUuid()));
 
       try {
-        namesystem.writeLock();
+        namesystem.writeLock(FSNamesystemLockMode.BM);
         synchronized(hm) {
           NameNodeAdapter.sendHeartBeat(nodeReg1, dd1, namesystem);
           NameNodeAdapter.sendHeartBeat(nodeReg2, dd2, namesystem);
@@ -255,7 +256,7 @@ public class TestHeartbeatHandling {
           assertEquals(recoveringNodes[2], dd3);
         }
       } finally {
-        namesystem.writeUnlock();
+        namesystem.writeUnlock(FSNamesystemLockMode.BM, "testHeartbeat");
       }
     } finally {
       cluster.shutdown();

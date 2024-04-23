@@ -41,6 +41,7 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
+import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAState;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
@@ -194,12 +195,12 @@ public class TestFSNamesystem {
   }
 
   private void clearNamesystem(FSNamesystem fsn) {
-    fsn.writeLock();
+    fsn.writeLock(FSNamesystemLockMode.GLOBAL);
     try {
       fsn.clear();
       assertFalse(fsn.isImageLoaded());
     } finally {
-      fsn.writeUnlock();
+      fsn.writeUnlock(FSNamesystemLockMode.GLOBAL, "clearNamesystem");
     }
   }
 

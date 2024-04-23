@@ -44,6 +44,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 import org.apache.commons.lang3.time.DateUtils;
+import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -762,7 +763,7 @@ public class TestCacheDirectives {
       @Override
       public Boolean get() {
         int numCachedBlocks = 0, numCachedReplicas = 0;
-        namesystem.readLock();
+        namesystem.readLock(FSNamesystemLockMode.BM);
         try {
           GSet<CachedBlock, CachedBlock> cachedBlocks =
               cacheManager.getCachedBlocks();
@@ -775,7 +776,7 @@ public class TestCacheDirectives {
             }
           }
         } finally {
-          namesystem.readUnlock();
+          namesystem.readUnlock(FSNamesystemLockMode.BM, "checkBlocks");
         }
 
         LOG.info(logString + " cached blocks: have " + numCachedBlocks +
@@ -1506,7 +1507,7 @@ public class TestCacheDirectives {
   private void checkPendingCachedEmpty(MiniDFSCluster cluster)
       throws Exception {
     Thread.sleep(1000);
-    cluster.getNamesystem().readLock();
+    cluster.getNamesystem().readLock(FSNamesystemLockMode.BM);
     try {
       final DatanodeManager datanodeManager =
           cluster.getNamesystem().getBlockManager().getDatanodeManager();
@@ -1519,7 +1520,7 @@ public class TestCacheDirectives {
             descriptor.getPendingCached().isEmpty());
       }
     } finally {
-      cluster.getNamesystem().readUnlock();
+      cluster.getNamesystem().readUnlock(FSNamesystemLockMode.BM, "checkPendingCachedEmpty");
     }
   }
 
@@ -1666,9 +1667,9 @@ public class TestCacheDirectives {
     HATestUtil.waitForStandbyToCatchUp(ann, sbn);
     GenericTestUtils.waitFor(() -> {
       boolean isConsistence = false;
-      ann.getNamesystem().readLock();
+      ann.getNamesystem().readLock(FSNamesystemLockMode.FS);
       try {
-        sbn.getNamesystem().readLock();
+        sbn.getNamesystem().readLock(FSNamesystemLockMode.FS);
         try {
           Iterator<CacheDirective> annDirectivesIt = annCachemanager.
               getCacheDirectives().iterator();
@@ -1683,10 +1684,10 @@ public class TestCacheDirectives {
             }
           }
         } finally {
-          sbn.getNamesystem().readUnlock();
+          sbn.getNamesystem().readUnlock(FSNamesystemLockMode.FS, "expiryTimeConsistency");
         }
       } finally {
-        ann.getNamesystem().readUnlock();
+        ann.getNamesystem().readUnlock(FSNamesystemLockMode.FS, "expiryTimeConsistency");
       }
       if (!isConsistence) {
         LOG.info("testEexpiryTimeConsistency:"

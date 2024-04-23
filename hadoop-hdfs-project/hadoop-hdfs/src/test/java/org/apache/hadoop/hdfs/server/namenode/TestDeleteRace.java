@@ -52,6 +52,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.InternalDataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.Node;
@@ -471,7 +472,7 @@ public class TestDeleteRace {
         } catch (InterruptedException e) {
         }
       });
-      fsn.writeLock();
+      fsn.writeLock(FSNamesystemLockMode.GLOBAL);
       open.start();
       openSem.acquire();
       Thread.yield();
@@ -479,7 +480,7 @@ public class TestDeleteRace {
       rename.start();
       renameSem.acquire();
       Thread.yield();
-      fsn.writeUnlock();
+      fsn.writeUnlock(FSNamesystemLockMode.GLOBAL, "testOpenRenameRace");
 
       // wait open and rename threads finish.
       open.join();
