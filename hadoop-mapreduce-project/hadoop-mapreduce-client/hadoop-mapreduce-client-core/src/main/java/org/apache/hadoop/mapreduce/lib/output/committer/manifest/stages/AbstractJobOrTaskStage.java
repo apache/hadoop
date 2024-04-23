@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
 import org.slf4j.Logger;
@@ -653,23 +652,28 @@ public abstract class AbstractJobOrTaskStage<IN, OUT>
       final Path finalPath,
       String statistic) throws IOException {
 
-    AtomicInteger retryCount = new AtomicInteger(0);
+    int retryCount = 0;
     RetryPolicy retryPolicy = retryUpToMaximumCountWithProportionalSleep(
         getStageConfig().getManifestSaveAttempts(),
         SAVE_SLEEP_INTERVAL,
         TimeUnit.MILLISECONDS);
 
+    boolean success = false;
+    T savedManifest = null;
     // loop until returning a value or raising an exception
-    while (true) {
+    while (!success) {
       try {
-        T manifestData = requireNonNull(manifestSource.get());
+        // get the latest manifest, which may include updated statistics
+        final T manifestData = requireNonNull(manifestSource.get());
+        LOG.info("{}: save manifest to {} then rename as {}'); retry count={}",
+            getName(), tempPath, finalPath, retryCount);
         trackDurationOfInvocation(getIOStatistics(), statistic, () -> {
-          LOG.info("{}: save manifest to {} then rename as {}'); retry count={}",
-              getName(), tempPath, finalPath, retryCount);
 
           // delete temp path.
           // even though this is written with overwrite=true, this extra recursive
           // delete also handles a directory being there.
+          // this should not happen as no part of the commit protocol creates a directory
+          // -this is just a little bit of due diligence.
           deleteRecursive(tempPath, OP_DELETE);
 
           // save the temp file, overwriting any which remains from an earlier attempt
@@ -679,21 +683,22 @@ public abstract class AbstractJobOrTaskStage<IN, OUT>
           // attempt or from a concurrent task commit.
           delete(finalPath, true, OP_DELETE);
 
-          // rename temp to final
+          // rename temporary file to the final path.
           renameFile(tempPath, finalPath);
         });
-        // success: exit and return the final manifest data.
-        return manifestData;
+        // success: save the manifest and declare success
+        savedManifest = manifestData;
+        success = true;
       } catch (IOException e) {
         // failure.
         // log then decide whether to sleep and retry or give up.
         LOG.warn("{}: Failed to save and commit file {} renamed to {}; retry count={}",
             getName(), tempPath, finalPath, retryCount, e);
         // increment that count.
-        retryCount.incrementAndGet();
+        retryCount++;
         RetryPolicy.RetryAction retryAction;
         try {
-          retryAction = retryPolicy.shouldRetry(e, retryCount.get(), 0, true);
+          retryAction = retryPolicy.shouldRetry(e, retryCount, 0, true);
         } catch (Exception ex) {
           // it's not clear why this probe can raise an exception; it is just
           // caught and mapped to a fail.
@@ -709,13 +714,14 @@ public abstract class AbstractJobOrTaskStage<IN, OUT>
         try {
           LOG.info("{}: Sleeping for {} ms before retrying",
               getName(), retryAction.delayMillis);
-          Thread.sleep(SAVE_SLEEP_INTERVAL);
+          Thread.sleep(retryAction.delayMillis);
         } catch (InterruptedException ie) {
           Thread.currentThread().interrupt();
         }
       }
     }
-
+    // success: return the manifest which was saved.
+    return savedManifest;
   }
 
   /**
@@ -1040,7 +1046,7 @@ public abstract class AbstractJobOrTaskStage<IN, OUT>
   }
 
   /**
-   * Delete a directory (or a file)
+   * Delete a directory (or a file).
    * @param dir directory.
    * @param statistic statistic to use
    * @return true if the path is no longer present.
