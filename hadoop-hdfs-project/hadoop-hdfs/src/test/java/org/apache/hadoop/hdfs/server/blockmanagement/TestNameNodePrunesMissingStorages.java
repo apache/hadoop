@@ -39,6 +39,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi.FsVolumeReferences;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
+import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
@@ -184,7 +185,7 @@ public class TestNameNodePrunesMissingStorages {
         DataNodeTestUtils.triggerBlockReport(dn);
       }
       ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, new Path("/foo1"));
-      cluster.getNamesystem().writeLock();
+      cluster.getNamesystem().writeLock(FSNamesystemLockMode.BM);
       final String storageIdToRemove;
       String datanodeUuid;
       // Find the first storage which this block is in.
@@ -200,7 +201,8 @@ public class TestNameNodePrunesMissingStorages {
         storageIdToRemove = info.getStorageID();
         datanodeUuid = info.getDatanodeDescriptor().getDatanodeUuid();
       } finally {
-        cluster.getNamesystem().writeUnlock();
+        cluster.getNamesystem().writeUnlock(FSNamesystemLockMode.BM,
+            "testRemovingStorageDoesNotProduceZombies");
       }
       // Find the DataNode which holds that first storage.
       final DataNode datanodeToRemoveStorageFrom;
@@ -345,7 +347,7 @@ public class TestNameNodePrunesMissingStorages {
       GenericTestUtils.waitFor(new Supplier<Boolean>() {
         @Override
         public Boolean get() {
-          cluster.getNamesystem().writeLock();
+          cluster.getNamesystem().writeLock(FSNamesystemLockMode.BM);
           try {
             Iterator<DatanodeStorageInfo> storageInfoIter =
                 cluster.getNamesystem().getBlockManager().
@@ -367,7 +369,7 @@ public class TestNameNodePrunesMissingStorages {
             LOG.info("Successfully found " + block.getBlockName() + " in " +
                 "be in storage id " + newStorageId);
           } finally {
-            cluster.getNamesystem().writeUnlock();
+            cluster.getNamesystem().writeUnlock(FSNamesystemLockMode.BM, "testRenamingStorageIds");
           }
           return true;
         }

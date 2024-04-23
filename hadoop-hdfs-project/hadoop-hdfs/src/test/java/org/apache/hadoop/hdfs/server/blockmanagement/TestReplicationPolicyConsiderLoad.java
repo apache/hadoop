@@ -31,6 +31,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.TestBlockStoragePolicy;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -72,7 +73,7 @@ public class TestReplicationPolicyConsiderLoad
    */
   @Test
   public void testChooseTargetWithDecomNodes() throws IOException {
-    namenode.getNamesystem().writeLock();
+    namenode.getNamesystem().writeLock(FSNamesystemLockMode.BM);
     try {
       dnManager.getHeartbeatManager().updateHeartbeat(dataNodes[3],
           BlockManagerTestUtil.getStorageReportsForDatanode(dataNodes[3]),
@@ -124,14 +125,15 @@ public class TestReplicationPolicyConsiderLoad
       dataNodes[0].stopDecommission();
       dataNodes[1].stopDecommission();
       dataNodes[2].stopDecommission();
-      namenode.getNamesystem().writeUnlock();
+      namenode.getNamesystem().writeUnlock(FSNamesystemLockMode.BM,
+          "testChooseTargetWithDecomNodes");
     }
     NameNode.LOG.info("Done working on it");
   }
 
   @Test
   public void testConsiderLoadFactor() throws IOException {
-    namenode.getNamesystem().writeLock();
+    namenode.getNamesystem().writeLock(FSNamesystemLockMode.BM);
     try {
       dnManager.getHeartbeatManager().updateHeartbeat(dataNodes[0],
           BlockManagerTestUtil.getStorageReportsForDatanode(dataNodes[0]),
@@ -178,7 +180,7 @@ public class TestReplicationPolicyConsiderLoad
             info.getDatanodeDescriptor().getXceiverCount() <= (load/6)*1.2);
       }
     } finally {
-      namenode.getNamesystem().writeUnlock();
+      namenode.getNamesystem().writeUnlock(FSNamesystemLockMode.BM, "testConsiderLoadFactor");
     }
   }
 }

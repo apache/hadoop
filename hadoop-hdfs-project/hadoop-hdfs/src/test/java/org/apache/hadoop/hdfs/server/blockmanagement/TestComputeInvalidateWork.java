@@ -40,6 +40,7 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.test.Whitebox;
 import org.apache.hadoop.util.VersionInfo;
@@ -131,7 +132,7 @@ public class TestComputeInvalidateWork {
   public void testComputeInvalidateReplicas() throws Exception {
     final int blockInvalidateLimit = bm.getDatanodeManager()
         .getBlockInvalidateLimit();
-    namesystem.writeLock();
+    namesystem.writeLock(FSNamesystemLockMode.BM);
     try {
       for (int i=0; i<nodes.length; i++) {
         for(int j=0; j<3*blockInvalidateLimit+1; j++) {
@@ -142,7 +143,7 @@ public class TestComputeInvalidateWork {
       }
       verifyInvalidationWorkCounts(blockInvalidateLimit);
     } finally {
-      namesystem.writeUnlock();
+      namesystem.writeUnlock(FSNamesystemLockMode.BM, "testComputeInvalidateReplicas");
     }
   }
 
@@ -154,7 +155,7 @@ public class TestComputeInvalidateWork {
   public void testComputeInvalidateStripedBlockGroups() throws Exception {
     final int blockInvalidateLimit =
         bm.getDatanodeManager().getBlockInvalidateLimit();
-    namesystem.writeLock();
+    namesystem.writeLock(FSNamesystemLockMode.BM);
     try {
       int nodeCount = ecPolicy.getNumDataUnits() + ecPolicy.getNumParityUnits();
       for (int i = 0; i < nodeCount; i++) {
@@ -167,7 +168,7 @@ public class TestComputeInvalidateWork {
       }
       verifyInvalidationWorkCounts(blockInvalidateLimit);
     } finally {
-      namesystem.writeUnlock();
+      namesystem.writeUnlock(FSNamesystemLockMode.BM, "testComputeInvalidateStripedBlockGroups");
     }
   }
 
@@ -181,7 +182,7 @@ public class TestComputeInvalidateWork {
     final int blockInvalidateLimit =
         bm.getDatanodeManager().getBlockInvalidateLimit();
     final Random random = new Random(System.currentTimeMillis());
-    namesystem.writeLock();
+    namesystem.writeLock(FSNamesystemLockMode.BM);
     try {
       int nodeCount = ecPolicy.getNumDataUnits() + ecPolicy.getNumParityUnits();
       for (int i = 0; i < nodeCount; i++) {
@@ -201,7 +202,7 @@ public class TestComputeInvalidateWork {
       }
       verifyInvalidationWorkCounts(blockInvalidateLimit);
     } finally {
-      namesystem.writeUnlock();
+      namesystem.writeUnlock(FSNamesystemLockMode.BM, "testComputeInvalidate");
     }
   }
 
@@ -212,7 +213,7 @@ public class TestComputeInvalidateWork {
    */
   @Test(timeout=120000)
   public void testDatanodeReformat() throws Exception {
-    namesystem.writeLock();
+    namesystem.writeLock(FSNamesystemLockMode.BM);
     try {
       // Change the datanode UUID to emulate a reformat
       String poolId = cluster.getNamesystem().getBlockPoolId();
@@ -234,7 +235,7 @@ public class TestComputeInvalidateWork {
       assertEquals(0, bm.computeInvalidateWork(1));
       assertEquals(0, bm.getPendingDeletionBlocksCount());
     } finally {
-      namesystem.writeUnlock();
+      namesystem.writeUnlock(FSNamesystemLockMode.BM, "testDatanodeReformat");
     }
   }
 
@@ -255,7 +256,7 @@ public class TestComputeInvalidateWork {
     dfs.delete(ecFile, false);
     BlockManagerTestUtil.waitForMarkedDeleteQueueIsEmpty(
         cluster.getNamesystem(0).getBlockManager());
-    namesystem.writeLock();
+    namesystem.writeLock(FSNamesystemLockMode.BM);
     InvalidateBlocks invalidateBlocks;
     int totalStripedDataBlocks = totalBlockGroups * (ecPolicy.getNumDataUnits()
         + ecPolicy.getNumParityUnits());
@@ -272,7 +273,7 @@ public class TestComputeInvalidateWork {
       assertEquals("Unexpected invalidate count for striped block groups!",
           totalStripedDataBlocks, invalidateBlocks.getECBlocks());
     } finally {
-      namesystem.writeUnlock();
+      namesystem.writeUnlock(FSNamesystemLockMode.BM, "testDatanodeReRegistration");
     }
     // Re-register each DN and see that it wipes the invalidation work
     int totalBlockGroupsPerDataNode = totalBlockGroups;
@@ -284,14 +285,14 @@ public class TestComputeInvalidateWork {
           new StorageInfo(HdfsServerConstants.NodeType.DATA_NODE),
           new ExportedBlockKeys(),
           VersionInfo.getVersion());
-      namesystem.writeLock();
+      namesystem.writeLock(FSNamesystemLockMode.BM);
       try {
         bm.getDatanodeManager().registerDatanode(reg);
         expected -= (totalReplicasPerDataNode + totalBlockGroupsPerDataNode);
         assertEquals("Expected number of invalidate blocks to decrease",
             (long) expected, invalidateBlocks.numBlocks());
       } finally {
-          namesystem.writeUnlock();
+        namesystem.writeUnlock(FSNamesystemLockMode.BM, "testDatanodeReRegistration");
       }
     }
   }

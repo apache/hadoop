@@ -33,6 +33,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoStriped;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
+import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -204,12 +205,13 @@ public class TestAddOverReplicatedStripedBlocks {
     BlockManager bm = cluster.getNamesystem().getBlockManager();
     List<DatanodeInfo> infos = Arrays.asList(bg.getLocations());
     List<String> storages = Arrays.asList(bg.getStorageIDs());
-    cluster.getNamesystem().writeLock();
+    cluster.getNamesystem().writeLock(FSNamesystemLockMode.BM);
     try {
       bm.findAndMarkBlockAsCorrupt(lbs.getLastLocatedBlock().getBlock(),
           infos.get(0), storages.get(0), "TEST");
     } finally {
-      cluster.getNamesystem().writeUnlock();
+      cluster.getNamesystem().writeUnlock(FSNamesystemLockMode.BM,
+          "testProcessOverReplicatedAndCorruptStripedBlock");
     }
     assertEquals(1, bm.countNodes(bm.getStoredBlock(blockInfo))
         .corruptReplicas());
