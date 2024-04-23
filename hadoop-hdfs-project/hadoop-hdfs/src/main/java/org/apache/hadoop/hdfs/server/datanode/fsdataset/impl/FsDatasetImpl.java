@@ -2747,14 +2747,14 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     }
     String storageUuid = vol.getStorageID();
     try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.VOLUME, bpid, storageUuid)) {
+      if (!storageMap.containsKey(storageUuid)) {
+        // Storage was already removed
+        return;
+      }
       memBlockInfo = volumeMap.get(bpid, blockId);
       if (memBlockInfo != null &&
           memBlockInfo.getState() != ReplicaState.FINALIZED) {
         // Block is not finalized - ignore the difference
-        return;
-      }
-      if (!storageMap.containsKey(storageUuid)) {
-        // Storage was already removed
         return;
       }
 
