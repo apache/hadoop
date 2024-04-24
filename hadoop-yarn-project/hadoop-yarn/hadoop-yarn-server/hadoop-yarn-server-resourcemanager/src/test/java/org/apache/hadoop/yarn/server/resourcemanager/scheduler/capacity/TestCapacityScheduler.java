@@ -3047,4 +3047,58 @@ public class TestCapacityScheduler {
     Assert.assertEquals(0, desQueue.getUsedResources().getMemorySize());
     rm1.close();
   }
+
+  @Test(timeout = 30000)
+  public void testReleaseReservedContainerOnBlacklistedNode() throws Exception {
+    MockRM rm = new MockRM();
+    rm.start();
+    MockNM nm1 = rm.registerNode("h1:1234", 8 * GB);
+    MockNM nm2 = rm.registerNode("h2:1234", 8 * GB);
+    rm.drainEvents();
+
+    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+    RMNode rmNode1 = rm.getRMContext().getRMNodes().get(nm1.getNodeId());
+    RMNode rmNode2 = rm.getRMContext().getRMNodes().get(nm2.getNodeId());
+    LeafQueue defaultQueue = (LeafQueue) cs.getQueue("default");
+
+    // launch an app to queue, AM container should be launched in nm1
+    MockRMAppSubmissionData data =
+        MockRMAppSubmissionData.Builder.createWithMemory(4 * GB, rm)
+            .withAppName("app")
+            .withUser("user")
+            .withAcls(null)
+            .withQueue("default")
+            .withUnmanagedAM(false)
+            .build();
+    RMApp app1 = MockRMAppSubmitter.submit(rm, data);
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
+    Resource allocateResource = Resources.createResource(5 * GB);
+    am1.allocate("*", (int) allocateResource.getMemorySize(), 1, 0,
+        new ArrayList<>(), "");
+    FiCaSchedulerApp schedulerApp1 =
+        cs.getApplicationAttempt(am1.getApplicationAttemptId());
+
+    cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
+    // one reserved container on nm1
+    Assert.assertEquals(1, schedulerApp1.getReservedContainers().size());
+    Assert.assertEquals(9 * GB,
+        defaultQueue.getQueueResourceUsage().getUsed().getMemorySize());
+
+    // add the NM1 to app1's blacklist
+    cs.allocate(schedulerApp1.getApplicationAttemptId(), Collections.emptyList(), null,
+        Collections.emptyList(),
+        Collections.singletonList("h1"), null, NULL_UPDATE_REQUESTS);
+
+    // the reserved container on blacklist node(nm1) should be released
+    cs.handle(new NodeUpdateSchedulerEvent(rmNode1));
+    Assert.assertEquals(0, schedulerApp1.getReservedContainers().size());
+
+    // the requested container will be allocated on nm2
+    cs.handle(new NodeUpdateSchedulerEvent(rmNode2));
+    Assert.assertEquals(0, schedulerApp1.getReservedContainers().size());
+    Assert.assertEquals(9 * GB,
+        defaultQueue.getQueueResourceUsage().getUsed().getMemorySize());
+
+    rm.close();
+  }
 }
