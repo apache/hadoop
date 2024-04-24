@@ -38,11 +38,10 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.s3a.performance.AbstractS3ACostTest;
 
 import static org.apache.hadoop.fs.s3a.Constants.BUFFER_DIR;
-import static org.apache.hadoop.fs.s3a.Constants.ENDPOINT;
+import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_BLOCK_COUNT_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_BLOCK_SIZE_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_ENABLED_KEY;
 import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.getExternalData;
-import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.isUsingDefaultExternalDataFile;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 
 /**
@@ -57,6 +56,11 @@ public class ITestS3APrefetchingCacheFiles extends AbstractS3ACostTest {
   public static final int BLOCK_SIZE = 128 * 1024;
 
   public static final int PREFETCH_OFFSET = 10240;
+
+  /**
+   * Block prefetch count: {@value}.
+   */
+  public static final int BLOCK_COUNT = 8;
 
   private Path testFile;
 
@@ -86,16 +90,18 @@ public class ITestS3APrefetchingCacheFiles extends AbstractS3ACostTest {
   @Override
   public Configuration createConfiguration() {
     Configuration configuration = super.createConfiguration();
-    if (isUsingDefaultExternalDataFile(configuration)) {
-      S3ATestUtils.removeBaseAndBucketOverrides(configuration,
-          PREFETCH_ENABLED_KEY,
-          ENDPOINT);
-    }
+    S3ATestUtils.removeBaseAndBucketOverrides(configuration,
+        PREFETCH_ENABLED_KEY,
+        PREFETCH_BLOCK_COUNT_KEY,
+        PREFETCH_BLOCK_SIZE_KEY);
     configuration.setBoolean(PREFETCH_ENABLED_KEY, true);
     // use a small block size unless explicitly set in the test config.
     configuration.setInt(PREFETCH_BLOCK_SIZE_KEY, BLOCK_SIZE);
+    configuration.setInt(PREFETCH_BLOCK_COUNT_KEY, BLOCK_COUNT);
+
     // patch buffer dir with a unique path for test isolation.
-    final String bufferDirBase = configuration.get(BUFFER_DIR);
+
+    final String bufferDirBase = "target/prefetch";
     bufferDir = bufferDirBase + "/" + UUID.randomUUID();
     configuration.set(BUFFER_DIR, bufferDir);
     return configuration;
@@ -131,7 +137,7 @@ public class ITestS3APrefetchingCacheFiles extends AbstractS3ACostTest {
       in.read(prefetchBlockSize * 2, buffer, 0, prefetchBlockSize);
 
 
-      File tmpFileDir = new File(conf.get(BUFFER_DIR));
+      File tmpFileDir = new File(bufferDir);
       final LocalFileSystem localFs = FileSystem.getLocal(conf);
       Path bufferDirPath = new Path(tmpFileDir.toURI());
       ContractTestUtils.assertIsDirectory(localFs, bufferDirPath);

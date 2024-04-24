@@ -128,15 +128,15 @@ public abstract class CachingBlockManager extends BlockManager {
 
     Validate.checkPositiveInteger(blockManagerParameters.getBufferPoolSize(), "bufferPoolSize");
 
-    this.path = requireNonNull(blockManagerParameters.getPath());
-    this.futurePool = requireNonNull(blockManagerParameters.getFuturePool());
+    this.path = requireNonNull(blockManagerParameters.getPath(), "block manager path");
+    this.futurePool = requireNonNull(blockManagerParameters.getFuturePool(), "future pool");
     this.bufferPoolSize = blockManagerParameters.getBufferPoolSize();
     this.numCachingErrors = new AtomicInteger();
     this.numReadErrors = new AtomicInteger();
     this.cachingDisabled = new AtomicBoolean();
     this.prefetchingStatistics = requireNonNull(
-        blockManagerParameters.getPrefetchingStatistics());
-    this.conf = requireNonNull(blockManagerParameters.getConf());
+        blockManagerParameters.getPrefetchingStatistics(), "prefetching statistics");
+    this.conf = requireNonNull(blockManagerParameters.getConf(), "configuratin");
 
     if (getBlockData().getFileSize() > 0) {
       this.bufferPool = new BufferPool(bufferPoolSize, getBlockData().getBlockSize(),
@@ -365,6 +365,9 @@ public abstract class CachingBlockManager extends BlockManager {
     DurationTracker tracker = null;
 
     int bytesFetched = 0;
+    // to be filled in later.
+    long offset = 0;
+    int size = 0;
     synchronized (data) {
       try {
         if (data.stateEqualsOneOf(BufferData.State.DONE, BufferData.State.READY)) {
@@ -375,6 +378,10 @@ public abstract class CachingBlockManager extends BlockManager {
 
         data.throwIfStateIncorrect(expectedState);
         int blockNumber = data.getBlockNumber();
+        final BlockData blockData = getBlockData();
+
+        offset = blockData.getStartOffset(data.getBlockNumber());
+        size = blockData.getSize(data.getBlockNumber());
 
         // Prefer reading from cache over reading from network.
         if (cache.containsBlock(blockNumber)) {
@@ -392,15 +399,23 @@ public abstract class CachingBlockManager extends BlockManager {
           op = ops.getRead(data.getBlockNumber());
         }
 
-        long offset = getBlockData().getStartOffset(data.getBlockNumber());
-        int size = getBlockData().getSize(data.getBlockNumber());
+
         ByteBuffer buffer = data.getBuffer();
         buffer.clear();
         read(buffer, offset, size);
         buffer.flip();
         data.setReady(expectedState);
         bytesFetched = size;
+        LOG.debug("Completed {} of block {} [{}-{}]",
+            isPrefetch ? "prefetch" : "read",
+            data.getBlockNumber(),
+            offset, offset + size);
       } catch (Exception e) {
+        LOG.debug("Failure in {} of block {} [{}-{}]",
+            isPrefetch ? "prefetch" : "read",
+            data.getBlockNumber(),
+            offset, offset + size,
+            e);
         if (isPrefetch && tracker != null) {
           tracker.failed();
         }

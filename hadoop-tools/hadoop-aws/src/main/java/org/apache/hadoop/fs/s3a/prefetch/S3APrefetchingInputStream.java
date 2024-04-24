@@ -115,7 +115,7 @@ public class S3APrefetchingInputStream
           client,
           streamStatistics);
     } else {
-      LOG.debug("Creating in caching input stream for {}", context.getPath());
+      LOG.debug("Creating caching input stream for {}", context.getPath());
       this.inputStream = new S3ACachingInputStream(
           context,
           s3Attributes,

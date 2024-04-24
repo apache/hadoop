@@ -146,7 +146,7 @@ public class SingleFilePerBlockCache implements BlockCache {
     @Override
     public String toString() {
       return String.format(
-          "([%03d] %s: size = %d, checksum = %d)",
+          "([%03d] %s: size = %,d, checksum = %d)",
           blockNumber, path, size, checksum);
     }
 
@@ -316,37 +316,39 @@ public class SingleFilePerBlockCache implements BlockCache {
   private void addToLinkedListHead(Entry entry) {
     blocksLock.writeLock().lock();
     try {
-      addToHeadOfLinkedList(entry);
+      maybePushToHeadOfBlockList(entry);
     } finally {
       blocksLock.writeLock().unlock();
     }
   }
 
   /**
-   * Add the given entry to the head of the linked list.
-   *
+   * Maybe Add the given entry to the head of the block list.
+   * No-op if the block is already in the list.
    * @param entry Block entry to add.
+   * @return true if the block was added.
    */
-  private void addToHeadOfLinkedList(Entry entry) {
+  private boolean maybePushToHeadOfBlockList(Entry entry) {
     if (head == null) {
       head = entry;
       tail = entry;
     }
     LOG.debug(
-        "Block num {} to be added to the head. Current head block num: {} and tail block num: {}",
-        entry.blockNumber, head.blockNumber, tail.blockNumber);
+        "Block {} to be added to the head. Current head block {} and tail block {}; {}",
+        entry.blockNumber, head.blockNumber, tail.blockNumber, entry);
     if (entry != head) {
       Entry prev = entry.getPrevious();
-      Entry nxt = entry.getNext();
-      // no-op if the block is already evicted
+      Entry next = entry.getNext();
+      // no-op if the block is already block list
       if (!blocks.containsKey(entry.blockNumber)) {
-        return;
+        LOG.debug("Block {} is already in block list", entry.blockNumber);
+        return false;
       }
       if (prev != null) {
-        prev.setNext(nxt);
+        prev.setNext(next);
       }
-      if (nxt != null) {
-        nxt.setPrevious(prev);
+      if (next != null) {
+        next.setPrevious(prev);
       }
       entry.setPrevious(null);
       entry.setNext(head);
@@ -356,6 +358,7 @@ public class SingleFilePerBlockCache implements BlockCache {
         tail = prev;
       }
     }
+    return true;
   }
 
   /**
@@ -424,8 +427,9 @@ public class SingleFilePerBlockCache implements BlockCache {
   private void addToLinkedListAndEvictIfRequired(Entry entry) {
     blocksLock.writeLock().lock();
     try {
-      addToHeadOfLinkedList(entry);
-      entryListSize++;
+      if (maybePushToHeadOfBlockList(entry)) {
+        entryListSize++;
+      }
       if (entryListSize > maxBlocksCount && !closed.get()) {
         Entry elementToPurge = tail;
         tail = tail.getPrevious();
@@ -447,12 +451,13 @@ public class SingleFilePerBlockCache implements BlockCache {
    * @param elementToPurge Block entry to evict.
    */
   private void deleteBlockFileAndEvictCache(Entry elementToPurge) {
+    LOG.debug("Evicting block {} from cache: {}", elementToPurge.blockNumber, elementToPurge);
     try (DurationTracker ignored = trackerFactory.trackDuration(STREAM_FILE_CACHE_EVICTION)) {
       boolean lockAcquired = elementToPurge.takeLock(Entry.LockType.WRITE,
           PrefetchConstants.PREFETCH_WRITE_LOCK_TIMEOUT,
           PrefetchConstants.PREFETCH_WRITE_LOCK_TIMEOUT_UNIT);
       if (!lockAcquired) {
-        LOG.error("Cache file {} deletion would not be attempted as write lock could not"
+        LOG.warn("Cache file {} deletion would not be attempted as write lock could not"
                 + " be acquired within {} {}", elementToPurge.path,
             PrefetchConstants.PREFETCH_WRITE_LOCK_TIMEOUT,
             PrefetchConstants.PREFETCH_WRITE_LOCK_TIMEOUT_UNIT);
@@ -463,9 +468,11 @@ public class SingleFilePerBlockCache implements BlockCache {
             prefetchingStatistics.blockRemovedFromFileCache();
             blocks.remove(elementToPurge.blockNumber);
             prefetchingStatistics.blockEvictedFromFileCache();
+          } else {
+            LOG.debug("Cache file {} not found for deletion: {}", elementToPurge.path, elementToPurge);
           }
         } catch (IOException e) {
-          LOG.warn("Failed to delete cache file {}", elementToPurge.path, e);
+          LOG.warn("Failed to delete cache file {} for {}", elementToPurge.path, elementToPurge, e);
         } finally {
           elementToPurge.releaseLock(Entry.LockType.WRITE);
         }
@@ -481,7 +488,7 @@ public class SingleFilePerBlockCache implements BlockCache {
   protected void writeFile(Path path, ByteBuffer buffer) throws IOException {
     buffer.rewind();
     try (WritableByteChannel writeChannel = Files.newByteChannel(path, CREATE_OPTIONS);
-             DurationInfo d = new DurationInfo(LOG, "Writing %d bytes to %s",
+             DurationInfo d = new DurationInfo(LOG, "save %d bytes to %s",
                  buffer.remaining(), path)) {
       while (buffer.hasRemaining()) {
         writeChannel.write(buffer);

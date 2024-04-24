@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.LocalDirAllocator;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.impl.prefetch.BlockData;
 import org.apache.hadoop.fs.impl.prefetch.BlockManagerParameters;
 import org.apache.hadoop.fs.impl.prefetch.BlockManager;
@@ -67,6 +68,11 @@ public class TestS3ACachingBlockManager extends AbstractHadoopTestBase {
 
   private ExecutorServiceFuturePool futurePool;
 
+  /**
+   * only used for logging.
+   */
+  private Path testPath;
+
   private final S3AInputStreamStatistics streamStatistics =
       new EmptyS3AStatisticsContext().newInputStreamStatistics();
 
@@ -76,6 +82,7 @@ public class TestS3ACachingBlockManager extends AbstractHadoopTestBase {
   public void setup() {
     threadPool = Executors.newFixedThreadPool(4);
     futurePool = new ExecutorServiceFuturePool(threadPool);
+    testPath = new Path("/");
   }
 
   @After
@@ -92,13 +99,14 @@ public class TestS3ACachingBlockManager extends AbstractHadoopTestBase {
   public void testFuturePoolNull() throws Exception {
     MockS3ARemoteObject s3File = new MockS3ARemoteObject(FILE_SIZE, false);
     Configuration conf = new Configuration();
+    BlockManagerParameters blockManagerParams =
+        new BlockManagerParameters()
+            .withBlockData(blockData)
+            .withBufferPoolSize(POOL_SIZE)
+            .withConf(conf)
+            .withPath(testPath)
+            .withPrefetchingStatistics(streamStatistics);
     try (S3ARemoteObjectReader reader = new S3ARemoteObjectReader(s3File)) {
-      BlockManagerParameters blockManagerParams =
-          new BlockManagerParameters()
-              .withBlockData(blockData)
-              .withBufferPoolSize(POOL_SIZE)
-              .withPrefetchingStatistics(streamStatistics)
-              .withConf(conf);
 
       intercept(NullPointerException.class,
           () -> new S3ACachingBlockManager(blockManagerParams, reader));
@@ -110,13 +118,15 @@ public class TestS3ACachingBlockManager extends AbstractHadoopTestBase {
     Configuration conf = new Configuration();
     BlockManagerParameters blockManagerParams =
         new BlockManagerParameters()
-            .withFuturePool(futurePool)
             .withBlockData(blockData)
             .withBufferPoolSize(POOL_SIZE)
-            .withPrefetchingStatistics(streamStatistics)
             .withConf(conf)
+            .withFuturePool(futurePool)
             .withMaxBlocksCount(
-                conf.getInt(PREFETCH_MAX_BLOCKS_COUNT, DEFAULT_PREFETCH_MAX_BLOCKS_COUNT));
+                conf.getInt(PREFETCH_MAX_BLOCKS_COUNT, DEFAULT_PREFETCH_MAX_BLOCKS_COUNT))
+            .withPath(testPath)
+            .withPrefetchingStatistics(streamStatistics);
+
 
     intercept(IllegalArgumentException.class, "'reader' must not be null",
         () -> new S3ACachingBlockManager(blockManagerParams, null));
@@ -194,13 +204,15 @@ public class TestS3ACachingBlockManager extends AbstractHadoopTestBase {
     Configuration conf = new Configuration();
     BlockManagerParameters blockManagerParams =
         new BlockManagerParameters()
-            .withFuturePool(futurePool)
             .withBlockData(blockData)
             .withBufferPoolSize(POOL_SIZE)
-            .withPrefetchingStatistics(streamStatistics)
             .withConf(conf)
+            .withFuturePool(futurePool)
             .withMaxBlocksCount(
-                conf.getInt(PREFETCH_MAX_BLOCKS_COUNT, DEFAULT_PREFETCH_MAX_BLOCKS_COUNT));
+                conf.getInt(PREFETCH_MAX_BLOCKS_COUNT, DEFAULT_PREFETCH_MAX_BLOCKS_COUNT))
+            .withPath(testPath)
+            .withPrefetchingStatistics(streamStatistics);
+
 
     // Should not throw.
     S3ACachingBlockManager blockManager =
@@ -370,14 +382,15 @@ public class TestS3ACachingBlockManager extends AbstractHadoopTestBase {
 
   private BlockManagerParameters getBlockManagerParameters() {
     return new BlockManagerParameters()
-        .withFuturePool(futurePool)
         .withBlockData(blockData)
         .withBufferPoolSize(POOL_SIZE)
-        .withPrefetchingStatistics(streamStatistics)
-        .withLocalDirAllocator(new LocalDirAllocator(HADOOP_TMP_DIR))
         .withConf(CONF)
+        .withFuturePool(futurePool)
+        .withLocalDirAllocator(new LocalDirAllocator(HADOOP_TMP_DIR))
         .withMaxBlocksCount(
-            CONF.getInt(PREFETCH_MAX_BLOCKS_COUNT, DEFAULT_PREFETCH_MAX_BLOCKS_COUNT));
+            CONF.getInt(PREFETCH_MAX_BLOCKS_COUNT, DEFAULT_PREFETCH_MAX_BLOCKS_COUNT))
+        .withPath(testPath)
+        .withPrefetchingStatistics(streamStatistics);
   }
 
   // @Ignore
@@ -389,15 +402,17 @@ public class TestS3ACachingBlockManager extends AbstractHadoopTestBase {
     Configuration conf = new Configuration();
     BlockManagerParameters blockManagerParamsBuilder =
         new BlockManagerParameters()
-            .withFuturePool(futurePool)
             .withBlockData(blockData)
             .withBufferPoolSize(POOL_SIZE)
-            .withPrefetchingStatistics(streamStatistics)
+            .withConf(conf)
+            .withFuturePool(futurePool)
             .withLocalDirAllocator(
                 new LocalDirAllocator(conf.get(BUFFER_DIR) != null ? BUFFER_DIR : HADOOP_TMP_DIR))
-            .withConf(conf)
             .withMaxBlocksCount(
-                conf.getInt(PREFETCH_MAX_BLOCKS_COUNT, DEFAULT_PREFETCH_MAX_BLOCKS_COUNT));
+                conf.getInt(PREFETCH_MAX_BLOCKS_COUNT, DEFAULT_PREFETCH_MAX_BLOCKS_COUNT))
+            .withPath(testPath)
+            .withPrefetchingStatistics(streamStatistics);
+
     S3ACachingBlockManager blockManager =
         new S3ACachingBlockManager(blockManagerParamsBuilder, reader);
     assertInitialState(blockManager);

@@ -129,7 +129,7 @@ public class S3ARemoteObjectReader implements Closeable {
 
     final String path = this.remoteObject.getPath();
     EOFException invokerResponse =
-        invoker.retry(String.format("read %s [%d-%d]", path, offset, size),
+        invoker.retry(String.format("read %s [%d-%d]", path, offset, offset + size),
             path, true,
             trackDurationOfOperation(streamStatistics,
                 STREAM_READ_REMOTE_BLOCK_READ, () -> {
