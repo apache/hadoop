@@ -2256,7 +2256,7 @@ public class TestDistributedFileSystem {
 
       // This file contains three committed blocks
       Assert.assertEquals(3, locatedBlocks.getLocatedBlocks().size());
-      locatedBlocks.getLocatedBlocks().forEach( k -> {
+      locatedBlocks.getLocatedBlocks().forEach(k -> {
         Block block = k.getBlock().getLocalBlock();
         BlockInfo storedBlock = blockManager.getStoredBlock(block);
         Assert.assertEquals(HdfsServerConstants.BlockUCState.COMMITTED,
@@ -2272,7 +2272,7 @@ public class TestDistributedFileSystem {
       // the bytes of the last committed block.
       Assert.assertTrue(locatedBlocks.isLastBlockComplete());
 
-      try (final DFSInputStream inputStream = dfs.getClient()
+      try (DFSInputStream inputStream = dfs.getClient()
           .open(filePath, 4096, true)) {
         assertEquals(3 * blockSize, inputStream.getFileLength());
         assertEquals(inputStream.getLocatedBlocks().getFileLength(), inputStream.getFileLength());

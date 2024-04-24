@@ -1586,8 +1586,8 @@ public class BlockManager implements BlockStatsMXBean {
             : fileSizeExcludeBlocksUnderConstruction - last.getNumBytes();
 
         locatedBlocks
-          .lastBlock(createLocatedBlock(locatedBlocks, last, lastPos, mode))
-          .lastComplete(!last.isUnderConstructionOrRecovery());
+            .lastBlock(createLocatedBlock(locatedBlocks, last, lastPos, mode))
+            .lastComplete(!last.isUnderConstructionOrRecovery());
       } else {
         locatedBlocks
           .lastBlock(createLocatedBlock(locatedBlocks, blocks,
