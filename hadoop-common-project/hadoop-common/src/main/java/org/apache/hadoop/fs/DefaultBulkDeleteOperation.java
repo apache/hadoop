@@ -31,7 +31,6 @@ import org.apache.hadoop.util.functional.Tuples;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.BulkDeleteUtils.validateBulkDeletePaths;
-import static org.apache.hadoop.util.Preconditions.checkArgument;
 
 /**
  * Default implementation of the {@link BulkDelete} interface.

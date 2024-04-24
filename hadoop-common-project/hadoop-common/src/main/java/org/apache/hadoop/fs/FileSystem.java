@@ -3485,12 +3485,16 @@ public abstract class FileSystem extends Configured
   public boolean hasPathCapability(final Path path, final String capability)
       throws IOException {
     switch (validatePathCapabilityArgs(makeQualified(path), capability)) {
-    case CommonPathCapabilities.FS_SYMLINKS:
-      // delegate to the existing supportsSymlinks() call.
-      return supportsSymlinks() && areSymlinksEnabled();
-    default:
-      // the feature is not implemented.
-      return false;
+      case CommonPathCapabilities.BULK_DELETE:
+        // bulk delete has default implementation which
+        // can called on any FileSystem.
+        return true;
+      case CommonPathCapabilities.FS_SYMLINKS:
+        // delegate to the existing supportsSymlinks() call.
+        return supportsSymlinks() && areSymlinksEnabled();
+      default:
+        // the feature is not implemented.
+        return false;
     }
   }
 

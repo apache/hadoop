@@ -256,7 +256,8 @@ public abstract class AbstractContractBulkDeleteTest extends AbstractFSContractT
 
     public static void assertSuccessfulBulkDelete(List<Map.Entry<Path, String>> entries) {
         Assertions.assertThat(entries)
-                .describedAs("return entries should be empty after successful delete")
+                .describedAs("Bulk delete failed, " +
+                        "return entries should be empty after successful delete")
                 .isEmpty();
     }
 

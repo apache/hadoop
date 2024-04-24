@@ -5447,11 +5447,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     case STORE_CAPABILITY_DIRECTORY_MARKER_AWARE:
       return true;
 
-    // this is always true, even if multi object
-    // delete is disabled -the page size is simply reduced to 1.
-    case CommonPathCapabilities.BULK_DELETE:
-      return true;
-
     case ENABLE_MULTI_DELETE:
       return enableMultiObjectsDelete;
 
