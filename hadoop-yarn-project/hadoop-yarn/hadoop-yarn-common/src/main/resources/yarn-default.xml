@@ -1918,6 +1918,19 @@
   </property>
 
   <property>
+    <description>Flag to enable the container process monitor which enforces
+      container process number limits.</description>
+    <name>yarn.nodemanager.container-process-monitor.enable</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>The max process number limit for a single container.</description>
+    <name>yarn.nodemanager.container-process-monitor.max-limit-num</name>
+    <value>10000</value>
+  </property>
+
+  <property>
     <description>The disk space limit, in bytes, for all of a container's
       logs</description>
     <name>yarn.nodemanager.container-log-monitor.total-size-limit-bytes</name>
