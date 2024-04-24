@@ -47,10 +47,21 @@ public abstract class AbstractContractBulkDeleteTest extends AbstractFSContractT
     private static final Logger LOG =
             LoggerFactory.getLogger(AbstractContractBulkDeleteTest.class);
 
+    /**
+     * Page size for bulk delete. This is calculated based
+     * on the store implementation.
+     */
     protected int pageSize;
 
+    /**
+     * Base path for the bulk delete tests.
+     * All the paths to be deleted should be under this base path.
+     */
     protected Path basePath;
 
+    /**
+     * Test file system.
+     */
     protected FileSystem fs;
 
     @Before
@@ -77,7 +88,7 @@ public abstract class AbstractContractBulkDeleteTest extends AbstractFSContractT
     public void validatePageSize() throws Exception {
         Assertions.assertThat(pageSize)
                 .describedAs("Page size should be 1 by default for all stores")
-                .isEqualTo(1);
+                .isEqualTo(getExpectedPageSize());
     }
 
     @Test
@@ -159,18 +170,18 @@ public abstract class AbstractContractBulkDeleteTest extends AbstractFSContractT
     public void testDeletePathsDirectory() throws Exception {
         List<Path> paths = new ArrayList<>();
         Path dirPath = new Path(basePath, "dir");
-        fs.mkdirs(dirPath);
         paths.add(dirPath);
         Path filePath = new Path(dirPath, "file");
-        touch(fs, filePath);
         paths.add(filePath);
         pageSizePreconditionForTest(paths.size());
+        fs.mkdirs(dirPath);
+        touch(fs, filePath);
         // Outcome is undefined. But call shouldn't fail.
         assertSuccessfulBulkDelete(bulkDelete(getFileSystem(), basePath, paths));
     }
 
     @Test
-    public void testBulkDeleteParentDirectory() throws Exception {
+    public void testBulkDeleteParentDirectoryWithDirectories() throws Exception {
         List<Path> paths = new ArrayList<>();
         Path dirPath = new Path(basePath, "dir");
         fs.mkdirs(dirPath);
@@ -178,8 +189,32 @@ public abstract class AbstractContractBulkDeleteTest extends AbstractFSContractT
         fs.mkdirs(subDir);
         // adding parent directory to the list of paths.
         paths.add(dirPath);
-        assertSuccessfulBulkDelete(bulkDelete(getFileSystem(), basePath, paths));
+        List<Map.Entry<Path, String>> entries = bulkDelete(getFileSystem(), basePath, paths);
+        Assertions.assertThat(entries)
+                .describedAs("Parent non empty directory should not be deleted")
+                .hasSize(1);
+        // During the bulk delete operation, the non-empty directories are not deleted in default implementation.
+        assertIsDirectory(dirPath);
     }
+
+    @Test
+    public void testBulkDeleteParentDirectoryWithFiles() throws Exception {
+        List<Path> paths = new ArrayList<>();
+        Path dirPath = new Path(basePath, "dir");
+        fs.mkdirs(dirPath);
+        Path file = new Path(dirPath, "file");
+        touch(fs, file);
+        // adding parent directory to the list of paths.
+        paths.add(dirPath);
+        List<Map.Entry<Path, String>> entries = bulkDelete(getFileSystem(), basePath, paths);
+        Assertions.assertThat(entries)
+                .describedAs("Parent non empty directory should not be deleted")
+                .hasSize(1);
+        // During the bulk delete operation, the non-empty directories are not deleted in default implementation.
+        assertIsDirectory(dirPath);
+    }
+
+
 
     @Test
     public void testDeleteEmptyDirectory() throws Exception {
@@ -202,13 +237,13 @@ public abstract class AbstractContractBulkDeleteTest extends AbstractFSContractT
     public void testDeleteSamePathsMoreThanOnce() throws Exception {
         List<Path> paths = new ArrayList<>();
         Path path = new Path(basePath, "file");
-        touch(fs, path);
         paths.add(path);
         paths.add(path);
         Path another = new Path(basePath, "another-file");
-        touch(fs, another);
         paths.add(another);
         pageSizePreconditionForTest(paths.size());
+        touch(fs, path);
+        touch(fs, another);
         assertSuccessfulBulkDelete(bulkDelete(getFileSystem(), basePath, paths));
     }
 
@@ -217,7 +252,7 @@ public abstract class AbstractContractBulkDeleteTest extends AbstractFSContractT
      */
     protected void pageSizePreconditionForTest(int size) {
         if (size > pageSize) {
-            skip("Test requires paths size less than or equal to page size");
+            skip("Test requires paths size less than or equal to page size: " + pageSize);
         }
     }
 
@@ -254,6 +289,10 @@ public abstract class AbstractContractBulkDeleteTest extends AbstractFSContractT
     }
 
 
+    /**
+     * Assert on returned entries after bulk delete operation.
+     * Entries should be empty after successful delete.
+     */
     public static void assertSuccessfulBulkDelete(List<Map.Entry<Path, String>> entries) {
         Assertions.assertThat(entries)
                 .describedAs("Bulk delete failed, " +
@@ -261,6 +300,10 @@ public abstract class AbstractContractBulkDeleteTest extends AbstractFSContractT
                 .isEmpty();
     }
 
+    /**
+     * Create a list of paths with the given count
+     * under the given base path.
+     */
     private List<Path> createListOfPaths(int count, Path basePath) {
         List<Path> paths = new ArrayList<>();
         for (int i=0; i < count; i++) {

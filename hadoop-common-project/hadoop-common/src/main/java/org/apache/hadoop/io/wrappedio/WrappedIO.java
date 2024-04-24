@@ -77,8 +77,7 @@ public final class WrappedIO {
   /**
    * Convert a filesystem to a bulk delete source.
    * @param fs filesystem
-   * @return cast fs.
-   * @throws UnsupportedOperationException FS doesn't implement the interface.
+   * @return cast fs or a default implementation.
    */
   private static BulkDeleteSource toBulkDeleteSource(final FileSystem fs) {
     if (fs instanceof BulkDeleteSource) {

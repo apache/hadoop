@@ -94,8 +94,10 @@ No other restrictions are placed upon the outcome.
 ### Availability
 
 The `BulkDeleteSource` interface is exported by `FileSystem` and `FileContext` storage clients
-which MAY support the API; it may still be unsupported by the
-specific instance.
+which is available for all FS via `org.apache.hadoop.fs.DefalutBulkDeleteSource` 
+Some FS MAY still decide to not support the API by overwriting the `createBulkDelete()` method
+with an UnsupportedOperationException. While doing so they must also declare the path 
+capability `fs.capability.bulk.delete` as false.
 
 Use the `PathCapabilities` probe `fs.capability.bulk.delete`.
 
@@ -127,8 +129,9 @@ through reflection.
 
 #### Default Implementation
 
-The default implementation of the `BulkDelete` interface is `org.apache.hadoop.fs.DefaultBulkDeleteOperation`
-which fixes the page size to be 1 and calls `FileSystem.delete(path, false)` on the single path in the list.
+The default implementation which will be used by all implementation of `FileSystem` of the
+`BulkDelete` interface is `org.apache.hadoop.fs.DefaultBulkDeleteOperation` which fixes the page
+size to be 1 and calls `FileSystem.delete(path, false)` on the single path in the list.
 
 
 #### S3A Implementation

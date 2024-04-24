@@ -39,10 +39,13 @@ public class DefaultBulkDeleteOperation implements BulkDelete {
 
     private static Logger LOG = LoggerFactory.getLogger(DefaultBulkDeleteOperation.class);
 
+    /** Default page size for bulk delete. */
     private static final int DEFAULT_PAGE_SIZE = 1;
 
+    /** Base path for the bulk delete operation. */
     private final Path basePath;
 
+    /** Delegate File system make actual delete calls. */
     private final FileSystem fs;
 
     public DefaultBulkDeleteOperation(Path basePath,

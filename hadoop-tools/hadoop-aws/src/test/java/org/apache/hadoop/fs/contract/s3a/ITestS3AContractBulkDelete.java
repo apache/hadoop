@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.contract.s3a;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Before;
@@ -165,7 +166,7 @@ public class ITestS3AContractBulkDelete extends AbstractContractBulkDeleteTest {
     }
 
     @Test
-    public void testBulkDeleteParentDirectory() throws Exception {
+    public void testBulkDeleteParentDirectoryWithDirectories() throws Exception {
         List<Path> paths = new ArrayList<>();
         Path dirPath = new Path(basePath, "dir");
         fs.mkdirs(dirPath);
@@ -178,6 +179,21 @@ public class ITestS3AContractBulkDelete extends AbstractContractBulkDeleteTest {
         assertIsDirectory(dirPath);
         assertIsDirectory(subDir);
     }
+
+    public void testBulkDeleteParentDirectoryWithFiles() throws Exception {
+        List<Path> paths = new ArrayList<>();
+        Path dirPath = new Path(basePath, "dir");
+        fs.mkdirs(dirPath);
+        Path file = new Path(dirPath, "file");
+        touch(fs, file);
+        // adding parent directory to the list of paths.
+        paths.add(dirPath);
+        assertSuccessfulBulkDelete(bulkDelete(getFileSystem(), basePath, paths));
+        // During the bulk delete operation,
+        // the directories are not deleted in S3A.
+        assertIsDirectory(dirPath);
+    }
+
 
     @Test
     public void testRateLimiting() throws Exception {
