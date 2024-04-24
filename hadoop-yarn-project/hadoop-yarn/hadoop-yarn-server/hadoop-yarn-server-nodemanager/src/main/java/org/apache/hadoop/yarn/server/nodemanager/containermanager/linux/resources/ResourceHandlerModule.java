@@ -55,6 +55,7 @@ import java.util.Set;
 public class ResourceHandlerModule {
   static final Logger LOG =
        LoggerFactory.getLogger(ResourceHandlerModule.class);
+  private static boolean cgroupsV2Enabled;
   private static volatile ResourceHandlerChain resourceHandlerChain;
 
   /**
@@ -69,9 +70,9 @@ public class ResourceHandlerModule {
   private static volatile CGroupsHandler cGroupsHandler;
   private static volatile CGroupsBlkioResourceHandlerImpl
       cGroupsBlkioResourceHandler;
-  private static volatile CGroupsMemoryResourceHandlerImpl
+  private static volatile AbstractCGroupsMemoryResourceHandler
       cGroupsMemoryResourceHandler;
-  private static volatile CGroupsCpuResourceHandlerImpl
+  private static volatile AbstractCGroupsCpuResourceHandler
       cGroupsCpuResourceHandler;
 
   /**
@@ -82,9 +83,9 @@ public class ResourceHandlerModule {
     if (cGroupsHandler == null) {
       synchronized (CGroupsHandler.class) {
         if (cGroupsHandler == null) {
-          // TODO determine cgroup version
-          cGroupsHandler = new CGroupsHandlerImpl(conf,
-              PrivilegedOperationExecutor.getInstance(conf));
+          cGroupsHandler = cgroupsV2Enabled
+              ? new CGroupsV2HandlerImpl(conf, PrivilegedOperationExecutor.getInstance(conf))
+              : new CGroupsHandlerImpl(conf, PrivilegedOperationExecutor.getInstance(conf));
           LOG.debug("Value of CGroupsHandler is: {}", cGroupsHandler);
         }
       }
@@ -138,7 +139,7 @@ public class ResourceHandlerModule {
     return cGroupsCpuResourceHandler;
   }
 
-  private static CGroupsCpuResourceHandlerImpl initCGroupsCpuResourceHandler(
+  private static AbstractCGroupsCpuResourceHandler initCGroupsCpuResourceHandler(
       Configuration conf) throws ResourceHandlerException {
     boolean cgroupsCpuEnabled =
         conf.getBoolean(YarnConfiguration.NM_CPU_RESOURCE_ENABLED,
@@ -152,9 +153,9 @@ public class ResourceHandlerModule {
         synchronized (CpuResourceHandler.class) {
           if (cGroupsCpuResourceHandler == null) {
             LOG.debug("Creating new cgroups cpu handler");
-            cGroupsCpuResourceHandler =
-                new CGroupsCpuResourceHandlerImpl(
-                    getInitializedCGroupsHandler(conf));
+            cGroupsCpuResourceHandler = cgroupsV2Enabled
+                ? new CGroupsV2CpuResourceHandlerImpl(getInitializedCGroupsHandler(conf))
+                : new CGroupsCpuResourceHandlerImpl(getInitializedCGroupsHandler(conf));
             return cGroupsCpuResourceHandler;
           }
         }
@@ -256,15 +257,15 @@ public class ResourceHandlerModule {
     return null;
   }
 
-  private static CGroupsMemoryResourceHandlerImpl
+  private static AbstractCGroupsMemoryResourceHandler
       getCgroupsMemoryResourceHandler(
       Configuration conf) throws ResourceHandlerException {
     if (cGroupsMemoryResourceHandler == null) {
       synchronized (MemoryResourceHandler.class) {
         if (cGroupsMemoryResourceHandler == null) {
-          cGroupsMemoryResourceHandler =
-              new CGroupsMemoryResourceHandlerImpl(
-                  getInitializedCGroupsHandler(conf));
+          cGroupsMemoryResourceHandler = cgroupsV2Enabled
+              ? new CGroupsV2MemoryResourceHandlerImpl(getInitializedCGroupsHandler(conf))
+              : new CGroupsMemoryResourceHandlerImpl(getInitializedCGroupsHandler(conf));
         }
       }
     }
@@ -335,6 +336,10 @@ public class ResourceHandlerModule {
 
   public static ResourceHandlerChain getConfiguredResourceHandlerChain(
       Configuration conf, Context nmContext) throws ResourceHandlerException {
+    cgroupsV2Enabled =
+        conf.getBoolean(YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_V2_ENABLED,
+            YarnConfiguration.DEFAULT_NM_LINUX_CONTAINER_CGROUPS_V2_ENABLED);
+
     if (resourceHandlerChain == null) {
       synchronized (ResourceHandlerModule.class) {
         if (resourceHandlerChain == null) {
