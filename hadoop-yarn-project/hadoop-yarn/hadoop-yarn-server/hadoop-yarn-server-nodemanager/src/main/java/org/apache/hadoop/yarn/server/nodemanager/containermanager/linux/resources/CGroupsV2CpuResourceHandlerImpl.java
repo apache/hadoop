@@ -23,19 +23,17 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.VisibleForTesting;
 
 /**
- * An implementation for using CGroups to restrict CPU usage on Linux. The
+ * An implementation for using CGroups V2 to restrict CPU usage on Linux. The
  * implementation supports 3 different controls - restrict usage of all YARN
  * containers, restrict relative usage of individual YARN containers and
  * restrict usage of individual YARN containers. Admins can set the overall CPU
  * to be used by all YARN containers - this is implemented by setting
- * cpu.cfs_period_us and cpu.cfs_quota_us to the ratio desired. If strict
- * resource usage mode is not enabled, cpu.shares is set for individual
- * containers - this prevents containers from exceeding the overall limit for
- * YARN containers but individual containers can use as much of the CPU as
- * available(under the YARN limit). If strict resource usage is enabled, then
- * container can only use the percentage of CPU allocated to them and this is
- * again implemented using cpu.cfs_period_us and cpu.cfs_quota_us.
- *
+ * cpu.max to the value desired. If strict resource usage mode is not enabled,
+ * cpu.weight is set for individual containers - this prevents containers from
+ * exceeding the overall limit for YARN containers but individual containers
+ * can use as much of the CPU as available(under the YARN limit). If strict
+ * resource usage is enabled, then container can only use the percentage of
+ * CPU allocated to them and this is again implemented using cpu.max.
  */
 @InterfaceStability.Unstable
 @InterfaceAudience.Private
@@ -55,15 +53,22 @@ public class CGroupsV2CpuResourceHandlerImpl extends AbstractCGroupsCpuResourceH
   }
 
   @Override
-  protected void updateCgroupMaxCpuLimit(String cgroupId, String max, String period) throws ResourceHandlerException {
-    String cpuMaxLimit = cGroupsHandler.getCGroupParam(CPU, cgroupId, CGroupsHandler.CGROUP_CPU_MAX);
+  protected void updateCgroupMaxCpuLimit(String cgroupId, String max, String period)
+      throws ResourceHandlerException {
+    String cpuMaxLimit = cGroupsHandler.getCGroupParam(CPU, cgroupId,
+        CGroupsHandler.CGROUP_CPU_MAX);
+
+    if (cpuMaxLimit == null) {
+      cpuMaxLimit = "";
+    }
 
     String[] cpuMaxLimitArray = cpuMaxLimit.split(" ");
     String maxToSet = max != null ? max : cpuMaxLimitArray[0];
     maxToSet = maxToSet.equals("-1") ? NO_LIMIT : maxToSet;
     String periodToSet = period != null ? period : cpuMaxLimitArray[1];
     cGroupsHandler
-        .updateCGroupParam(CPU, cgroupId, CGroupsHandler.CGROUP_CPU_MAX, maxToSet + " " + periodToSet);
+        .updateCGroupParam(CPU, cgroupId, CGroupsHandler.CGROUP_CPU_MAX,
+            maxToSet + " " + periodToSet);
   }
 
   @Override
@@ -71,7 +76,7 @@ public class CGroupsV2CpuResourceHandlerImpl extends AbstractCGroupsCpuResourceH
     return CPU_DEFAULT_WEIGHT_OPPORTUNISTIC;
   }
   protected int getCpuWeightByContainerVcores(int containerVCores) {
-    return Math.max(containerVCores * CPU_DEFAULT_WEIGHT, CPU_MAX_WEIGHT);
+    return Math.min(containerVCores * CPU_DEFAULT_WEIGHT, CPU_MAX_WEIGHT);
   }
 
   @Override
@@ -82,12 +87,11 @@ public class CGroupsV2CpuResourceHandlerImpl extends AbstractCGroupsCpuResourceH
 
   @Override
   public boolean cpuLimitExists(String cgroupPath) throws ResourceHandlerException {
-    return checkCgroupV2CPULimitExists();
-  }
-
-  private boolean checkCgroupV2CPULimitExists()
-      throws ResourceHandlerException {
-    String globalCpuMaxLimit = cGroupsHandler.getCGroupParam(CPU, "", CGroupsHandler.CGROUP_CPU_MAX);
+    String globalCpuMaxLimit = cGroupsHandler.getCGroupParam(CPU, "",
+        CGroupsHandler.CGROUP_CPU_MAX);
+    if (globalCpuMaxLimit == null) {
+      return false;
+    }
     String[] cpuMaxLimitArray = globalCpuMaxLimit.split(" ");
 
     return !cpuMaxLimitArray[0].equals(NO_LIMIT);
