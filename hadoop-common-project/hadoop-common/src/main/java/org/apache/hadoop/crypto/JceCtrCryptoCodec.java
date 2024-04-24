@@ -83,7 +83,7 @@ public abstract class JceCtrCryptoCodec extends CryptoCodec{
               HADOOP_SECURITY_JAVA_SECURE_RANDOM_ALGORITHM_DEFAULT);
 
     try {
-      random = (provider != null)
+      random = (provider != null && !provider.isEmpty())
             ? SecureRandom.getInstance(secureRandomAlg, provider)
             : SecureRandom.getInstance(secureRandomAlg);
     } catch(GeneralSecurityException e) {

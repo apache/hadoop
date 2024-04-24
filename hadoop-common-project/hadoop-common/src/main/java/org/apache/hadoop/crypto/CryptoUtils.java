@@ -17,20 +17,21 @@
  */
 package org.apache.hadoop.crypto;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
-import org.apache.hadoop.fs.store.LogExactlyOnce;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.lang.reflect.Field;
 import java.security.Provider;
 import java.security.Security;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.fs.store.LogExactlyOnce;
+
 /** Utility methods for the crypto related features. */
 @InterfaceAudience.Private
-public class CryptoUtils {
+public final class CryptoUtils {
   static final Logger LOG = LoggerFactory.getLogger(CryptoUtils.class);
   private static final LogExactlyOnce LOG_FAILED_TO_LOAD_CLASS = new LogExactlyOnce(LOG);
   private static final LogExactlyOnce LOG_FAILED_TO_GET_FIELD = new LogExactlyOnce(LOG);
@@ -39,6 +40,8 @@ public class CryptoUtils {
   private static final String BOUNCY_CASTLE_PROVIDER_CLASS
       = "org.bouncycastle.jce.provider.BouncyCastleProvider";
   private static final String PROVIDER_NAME_FIELD = "PROVIDER_NAME";
+
+  static final String PROVIDER_NAME = "BC";
 
   /**
    * Get the security provider value specified in
@@ -55,15 +58,18 @@ public class CryptoUtils {
         CommonConfigurationKeysPublic.HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_AUTO_ADD_KEY,
         CommonConfigurationKeysPublic.HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_AUTO_ADD_DEFAULT);
 
-    // For backward compatible, auto-add BOUNCY_CASTLE_PROVIDER_CLASS.
-    if (autoAdd && !provider.isEmpty()) {
+    // For backward compatible, auto-add BOUNCY_CASTLE_PROVIDER_CLASS when the provider is "BC".
+    if (autoAdd && PROVIDER_NAME.equals(provider)) {
       try {
         // Use reflection in order to avoid statically loading the class.
         final Class<?> clazz = Class.forName(BOUNCY_CASTLE_PROVIDER_CLASS);
-        final Field provider_name = clazz.getField("PROVIDER_NAME");
-        if (provider.equals(provider_name.get(null))) {
+        final Field providerName = clazz.getField("PROVIDER_NAME");
+        if (provider.equals(providerName.get(null))) {
           Security.addProvider((Provider) clazz.getConstructor().newInstance());
           LOG.debug("Successfully added security provider {}", provider);
+          if (LOG.isTraceEnabled()) {
+            LOG.trace("Trace", new Throwable());
+          }
         }
       } catch (ClassNotFoundException e) {
         LOG_FAILED_TO_LOAD_CLASS.warn("Failed to load " + BOUNCY_CASTLE_PROVIDER_CLASS, e);
@@ -77,5 +83,5 @@ public class CryptoUtils {
     return provider;
   }
 
-  private CryptoUtils() {}
+  private CryptoUtils() { }
 }
