@@ -378,7 +378,12 @@ public class LeafQueue extends AbstractCSQueue {
   public List<CSQueue> getChildQueues() {
     return null;
   }
-  
+
+  @Override
+  public List<CSQueue> getChildQueuesByTryLock() {
+    return null;
+  }
+
   /**
    * Set user limit - used only for testing.
    * @param userLimit new user limit
