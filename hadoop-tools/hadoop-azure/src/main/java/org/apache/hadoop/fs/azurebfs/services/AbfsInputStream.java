@@ -487,6 +487,13 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       }
     } catch (IOException e) {
       if (e instanceof FileNotFoundException) {
+        /*
+         * FileNotFoundException in AbfsInputStream read can happen only in case of
+         * lazy optimization enabled. In such case, the contentLength is not known
+         * before opening the inputStream, and the first read can give a
+         * FileNotFoundException, and if this exception is raised, it has to be
+         * thrown back to the application and make a readOneBlock call.
+         */
         throw e;
       }
       LOG.debug("Optimized read failed. Defaulting to readOneBlock {}", e);
