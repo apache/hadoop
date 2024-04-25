@@ -3056,12 +3056,10 @@ public class TestCapacityScheduler {
   @Test (timeout = 20000)
   public void testRefreshQueueWithOpenPreemption() throws Exception {
     CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration();
-    csConf.setQueues(new QueuePath(CapacitySchedulerConfiguration.ROOT), new String[]{"a"});
-    QueuePath a = new QueuePath("root.a");
-    csConf.setCapacity(a, 100);
-    csConf.setQueues(a, new String[]{"b"});
-    QueuePath b = new QueuePath("root.a.b");
-    csConf.setCapacity(b, 100);
+    csConf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[]{"a"});
+    csConf.setCapacity("root.a", 100);
+    csConf.setQueues("root.a", new String[]{"b"});
+    csConf.setCapacity("root.a.b", 100);
 
     YarnConfiguration conf = new YarnConfiguration(csConf);
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
