@@ -70,7 +70,8 @@ public class TestCryptoUtils {
     assertRemoveProvider();
 
     final Configuration conf = new Configuration();
-    Assert.assertTrue("true".equalsIgnoreCase(conf.get(HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_AUTO_ADD_KEY)));
+    Assert.assertTrue("true".equalsIgnoreCase(
+        conf.get(HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_AUTO_ADD_KEY)));
     Assert.assertTrue(HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_AUTO_ADD_DEFAULT);
 
     conf.set(HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_KEY, CryptoUtils.PROVIDER_NAME);
