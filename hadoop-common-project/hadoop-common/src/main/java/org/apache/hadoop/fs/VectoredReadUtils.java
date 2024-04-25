@@ -22,6 +22,7 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -35,6 +36,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.impl.CombinedFileRange;
 import org.apache.hadoop.util.functional.Function4RaisingIOE;
+import org.apache.hadoop.util.functional.FutureIO;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.util.Preconditions.checkArgument;
@@ -404,6 +406,64 @@ public final class VectoredReadUtils {
     readData = readData.slice();
     return readData;
   }
+
+  /**
+   * Implement {@link ByteBufferPositionedReadable#readFully(long, ByteBuffer)} by
+   * converting to a vector read.
+   * @param stream stream
+   * @param position position within file
+   * @param buf the ByteBuffer to receive the results of the read operation.
+   * @throws IOException if there is some error performing the read
+   * @throws EOFException the end of the data was reached before
+   * the read operation completed
+   */
+  public static void implementByteBufferPositionedReadableReadFully(
+      final PositionedReadable stream,
+      final long position,
+      final ByteBuffer buf) throws IOException {
+    final int length = buf.remaining();
+    if (length == 0) {
+      // exit fast on zero-length read
+      return;
+    }
+    final FileRange range = FileRange.createFileRange(position, length);
+    readVectored(
+        stream,
+        Collections.singletonList(range),
+        len -> {
+          checkArgument(len == length,
+              "Read length must match buffer length: %s != %s",
+              length, len);
+          return buf;
+        });
+    FutureIO.awaitFuture(range.getData());
+  }
+
+  /**
+   * Implement {@link ByteBufferPositionedReadable#read(long, ByteBuffer)} by
+   * converting to a vector read.
+   * This attempts to read the whole buffer and fails on partial reads,
+   * returning -1.
+   * @param stream stream
+   * @param position position within file
+   * @param buf the ByteBuffer to receive the results of the read operation.
+   * @return the number of bytes read, possibly zero, or -1 if reached
+   *         end-of-stream
+   * @throws IOException if there is some error performing the read
+   */
+  public static int implementByteBufferPositionedReadableRead(
+      final PositionedReadable stream,
+      final long position,
+      final ByteBuffer buf) throws IOException {
+    final int length = buf.remaining();
+    try {
+      implementByteBufferPositionedReadableReadFully(stream, position, buf);
+      return length;
+    } catch (EOFException e) {
+      return length - buf.remaining();
+    }
+  }
+
 
   /**
    * private constructor.
