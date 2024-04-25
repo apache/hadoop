@@ -242,7 +242,7 @@ static int write_pid_to_cgroup_as_root(const char* cgroup_file, pid_t pid) {
            strerror(errno));
     rc = -1;
     goto cleanup;
-  } else if (buf.f_type != CGROUP_SUPER_MAGIC || buf.f_type != CGROUP2_SUPER_MAGIC) {
+  } else if (buf.f_type != CGROUP_SUPER_MAGIC && buf.f_type != CGROUP2_SUPER_MAGIC) {
     fprintf(LOGFILE, "Pid file %s is not located on cgroup/cgroup2 filesystem\n", cgroup_file);
     rc = -1;
     goto cleanup;
