@@ -329,7 +329,7 @@ Each metrics record contains tags such as HAState and Hostname as additional inf
 BlockManager
 -------------
 
-BlockManager metrics indicate each StorageType's usage in the cluster with detailed entries.
+The metrics present statistics from the BlockManager's perspective.
 
 | Name | Description                                                                                                                     |
 |:---- |:--------------------------------------------------------------------------------------------------------------------------------|
