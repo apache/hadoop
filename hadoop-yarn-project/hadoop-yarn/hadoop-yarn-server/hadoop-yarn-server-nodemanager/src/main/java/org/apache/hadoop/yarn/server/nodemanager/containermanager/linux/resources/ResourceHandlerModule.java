@@ -82,6 +82,7 @@ public class ResourceHandlerModule {
     if (cGroupsHandler == null) {
       synchronized (CGroupsHandler.class) {
         if (cGroupsHandler == null) {
+          // TODO determine cgroup version
           cGroupsHandler = new CGroupsHandlerImpl(conf,
               PrivilegedOperationExecutor.getInstance(conf));
           LOG.debug("Value of CGroupsHandler is: {}", cGroupsHandler);
@@ -377,7 +378,7 @@ public class ResourceHandlerModule {
 
     Map<String, Set<String>> pathSubsystemMappings = new HashMap<>();
     Set<String> validCGroups =
-        CGroupsHandler.CGroupController.getValidCGroups();
+        CGroupsHandler.CGroupController.getValidV1CGroups();
     for (File candidate: list) {
       Set<String> cgroupList =
           new HashSet<>(Arrays.asList(candidate.getName().split(",")));
