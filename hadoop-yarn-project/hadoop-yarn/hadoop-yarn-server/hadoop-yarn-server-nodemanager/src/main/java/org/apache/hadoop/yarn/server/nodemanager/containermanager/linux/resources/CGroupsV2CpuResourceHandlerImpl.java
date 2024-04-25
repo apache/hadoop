@@ -55,17 +55,23 @@ public class CGroupsV2CpuResourceHandlerImpl extends AbstractCGroupsCpuResourceH
   @Override
   protected void updateCgroupMaxCpuLimit(String cgroupId, String max, String period)
       throws ResourceHandlerException {
-    String cpuMaxLimit = cGroupsHandler.getCGroupParam(CPU, cgroupId,
+    // The cpu.max file in cgroup v2 is a read-write two value file which exists on
+    // non-root cgroups. The default is “max 100000”.
+    // It is the maximum bandwidth limit. It’s in the following format:
+    // $MAX $PERIOD
+    // which indicates that the group may consume up to $MAX in each $PERIOD duration.
+    // “max” for $MAX indicates no limit. If only one number is written, $MAX is updated.
+    String currentCpuMax = cGroupsHandler.getCGroupParam(CPU, cgroupId,
         CGroupsHandler.CGROUP_CPU_MAX);
 
-    if (cpuMaxLimit == null) {
-      cpuMaxLimit = "";
+    if (currentCpuMax == null) {
+      currentCpuMax = "";
     }
 
-    String[] cpuMaxLimitArray = cpuMaxLimit.split(" ");
-    String maxToSet = max != null ? max : cpuMaxLimitArray[0];
+    String[] currentCpuMaxArray = currentCpuMax.split(" ");
+    String maxToSet = max != null ? max : currentCpuMaxArray[0];
     maxToSet = maxToSet.equals("-1") ? NO_LIMIT : maxToSet;
-    String periodToSet = period != null ? period : cpuMaxLimitArray[1];
+    String periodToSet = period != null ? period : currentCpuMaxArray[1];
     cGroupsHandler
         .updateCGroupParam(CPU, cgroupId, CGroupsHandler.CGROUP_CPU_MAX,
             maxToSet + " " + periodToSet);
