@@ -30,6 +30,12 @@ public final class BulkDeleteUtils {
     private BulkDeleteUtils() {
     }
 
+    /**
+     * Preconditions for bulk delete paths.
+     * @param paths paths to delete.
+     * @param pageSize maximum number of paths to delete in a single operation.
+     * @param basePath base path for the delete operation.
+     */
     public static void validateBulkDeletePaths(Collection<Path> paths, int pageSize, Path basePath) {
         requireNonNull(paths);
         checkArgument(paths.size() <= pageSize,
@@ -41,6 +47,12 @@ public final class BulkDeleteUtils {
         });
     }
 
+    /**
+     * Check if a path is under a base path.
+     * @param p path to check.
+     * @param basePath base path.
+     * @return true if the path is under the base path.
+     */
     public static boolean validatePathIsUnderParent(Path p, Path basePath) {
         while (p.getParent() != null) {
             if (p.getParent().equals(basePath)) {

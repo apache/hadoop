@@ -770,7 +770,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     roleFS = (S3AFileSystem) destDir.getFileSystem(assumedRoleConfig);
     S3AFileSystem fs = getFileSystem();
     if (WrappedIO.bulkDeletePageSize(fs, destDir) == 1) {
-      String msg = "Skipping as this requires more than one paths to be deleted in bulk";
+      String msg = "Skipping as this test requires more than one paths to be deleted in bulk";
       LOG.debug(msg);
       skip(msg);
     }
