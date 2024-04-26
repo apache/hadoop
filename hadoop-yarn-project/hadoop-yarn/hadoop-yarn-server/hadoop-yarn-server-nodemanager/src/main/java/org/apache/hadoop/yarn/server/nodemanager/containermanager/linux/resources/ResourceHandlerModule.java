@@ -360,6 +360,21 @@ public class ResourceHandlerModule {
     resourceHandlerChain = null;
   }
 
+  @VisibleForTesting
+  static void resetCgroupsHandler() {
+    cGroupsHandler = null;
+  }
+
+  @VisibleForTesting
+  static void resetCpuResourceHandler() {
+    cGroupsCpuResourceHandler = null;
+  }
+
+  @VisibleForTesting
+  static void resetMemoryResourceHandler() {
+    cGroupsMemoryResourceHandler = null;
+  }
+
   /**
    * If a cgroup mount directory is specified, it returns cgroup directories
    * with valid names.
