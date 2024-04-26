@@ -3608,6 +3608,14 @@
 </property>
 
 <property>
+  <name>dfs.namenode.edekcacheloader.max-retries</name>
+  <value>10</value>
+  <description>When KeyProvider is configured, the max retries allowed to attempt
+    warm up edek cache if none of key successful on NN start up / become active.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.reencrypt.sleep.interval</name>
   <value>1m</value>
   <description>Interval the re-encrypt EDEK thread sleeps in the main loop. The
