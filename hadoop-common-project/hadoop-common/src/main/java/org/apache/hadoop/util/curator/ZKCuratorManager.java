@@ -124,6 +124,8 @@ public final class ZKCuratorManager {
 
   /**
    * Start the connection to the ZooKeeper ensemble.
+   * 
+   * @param zkHostPort Host:Port of the ZooKeeper.
    * @throws IOException If the connection cannot be started.
    */
   public void start(String zkHostPort) throws IOException{
@@ -133,6 +135,7 @@ public final class ZKCuratorManager {
   /**
    * Start the connection to the ZooKeeper ensemble.
    * @param authInfos List of authentication keys.
+   * @param zkHostPort Host:Port of the ZooKeeper.
    * @throws IOException If the connection cannot be started.
    */
   public void start(List<AuthInfo> authInfos, String zkHostPort) throws IOException {
@@ -144,6 +147,7 @@ public final class ZKCuratorManager {
    *
    * @param authInfos  List of authentication keys.
    * @param sslEnabled If the connection should be SSL/TLS encrypted.
+   * @param zkHostPort Host:Port of the ZooKeeper.
    * @throws IOException            If the connection cannot be started.
    */
   public void start(List<AuthInfo> authInfos, boolean sslEnabled, String zkHostPort)

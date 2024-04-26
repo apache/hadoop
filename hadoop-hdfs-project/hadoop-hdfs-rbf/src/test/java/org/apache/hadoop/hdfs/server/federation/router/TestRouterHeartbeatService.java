@@ -39,7 +39,6 @@ import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.waitStateStore;
-import static org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreZooKeeperImpl.FEDERATION_STORE_ZK_ADDRESS;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -74,7 +73,7 @@ public class TestRouterHeartbeatService {
         .retryPolicy(new RetryNTimes(100, 100))
         .build();
     curatorFramework.start();
-    routerConfig.set(FEDERATION_STORE_ZK_ADDRESS, connectStr);
+    routerConfig.set(RBFConfigKeys.FEDERATION_STORE_ZK_ADDRESS, connectStr);
     router.init(routerConfig);
     router.start();
 

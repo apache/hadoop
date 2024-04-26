@@ -4023,7 +4023,7 @@ public class YarnConfiguration extends Configuration {
 
   public static final String DEFAULT_FEDERATION_STATESTORE_CLIENT_CLASS =
       "org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore";
-  
+
   public static final String FEDERATION_STATESTORE_ZK_ADDRESS =
       FEDERATION_PREFIX + "state-store.zk.address";
 
