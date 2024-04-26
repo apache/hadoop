@@ -68,17 +68,17 @@ public class CGroupsMemoryResourceHandlerImpl extends AbstractCGroupsMemoryResou
   @Override
   protected void updateMemoryHardLimit(String cgroupId, long containerHardLimit)
       throws ResourceHandlerException {
-    cGroupsHandler.updateCGroupParam(MEMORY, cgroupId,
+    getCGroupsHandler().updateCGroupParam(MEMORY, cgroupId,
         CGroupsHandler.CGROUP_PARAM_MEMORY_HARD_LIMIT_BYTES,
         String.valueOf(containerHardLimit) + "M");
   }
 
   @Override
   protected void updateOpportunisticMemoryLimits(String cgroupId) throws ResourceHandlerException {
-    cGroupsHandler.updateCGroupParam(MEMORY, cgroupId,
+    getCGroupsHandler().updateCGroupParam(MEMORY, cgroupId,
         CGroupsHandler.CGROUP_PARAM_MEMORY_SOFT_LIMIT_BYTES,
         String.valueOf(OPPORTUNISTIC_SOFT_LIMIT) + "M");
-    cGroupsHandler.updateCGroupParam(MEMORY, cgroupId,
+    getCGroupsHandler().updateCGroupParam(MEMORY, cgroupId,
         CGroupsHandler.CGROUP_PARAM_MEMORY_SWAPPINESS,
         String.valueOf(OPPORTUNISTIC_SWAPPINESS));
   }
@@ -86,10 +86,10 @@ public class CGroupsMemoryResourceHandlerImpl extends AbstractCGroupsMemoryResou
   @Override
   protected void updateGuaranteedMemoryLimits(String cgroupId, long containerSoftLimit)
       throws ResourceHandlerException {
-    cGroupsHandler.updateCGroupParam(MEMORY, cgroupId,
+    getCGroupsHandler().updateCGroupParam(MEMORY, cgroupId,
         CGroupsHandler.CGROUP_PARAM_MEMORY_SOFT_LIMIT_BYTES,
         String.valueOf(containerSoftLimit) + "M");
-    cGroupsHandler.updateCGroupParam(MEMORY, cgroupId,
+    getCGroupsHandler().updateCGroupParam(MEMORY, cgroupId,
         CGroupsHandler.CGROUP_PARAM_MEMORY_SWAPPINESS,
         String.valueOf(swappiness));
   }

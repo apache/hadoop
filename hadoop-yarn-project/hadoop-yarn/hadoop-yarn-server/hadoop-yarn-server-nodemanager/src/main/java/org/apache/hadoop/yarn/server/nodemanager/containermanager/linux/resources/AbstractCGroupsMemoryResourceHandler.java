@@ -36,21 +36,26 @@ import java.util.List;
 
 @InterfaceStability.Unstable
 @InterfaceAudience.Private
-public abstract class AbstractCGroupsMemoryResourceHandler  implements MemoryResourceHandler {
+public abstract class AbstractCGroupsMemoryResourceHandler implements MemoryResourceHandler {
 
   static final Logger LOG =
       LoggerFactory.getLogger(CGroupsMemoryResourceHandlerImpl.class);
   protected static final CGroupsHandler.CGroupController MEMORY =
       CGroupsHandler.CGroupController.MEMORY;
-  protected CGroupsHandler cGroupsHandler;
+
+  private CGroupsHandler cGroupsHandler;
 
   protected static final int OPPORTUNISTIC_SOFT_LIMIT = 0;
   // multiplier to set the soft limit - value should be between 0 and 1
-  protected float softLimit = 0.0f;
-  protected boolean enforce = true;
+  private float softLimit = 0.0f;
+  private boolean enforce = true;
 
   public AbstractCGroupsMemoryResourceHandler(CGroupsHandler cGroupsHandler) {
     this.cGroupsHandler = cGroupsHandler;
+  }
+
+  protected CGroupsHandler getCGroupsHandler() {
+    return cGroupsHandler;
   }
 
   @Override

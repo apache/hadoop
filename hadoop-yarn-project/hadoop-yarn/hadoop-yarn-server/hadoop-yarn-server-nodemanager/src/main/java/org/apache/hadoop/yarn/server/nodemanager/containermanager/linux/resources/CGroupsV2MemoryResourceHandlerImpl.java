@@ -33,20 +33,20 @@ public class CGroupsV2MemoryResourceHandlerImpl extends AbstractCGroupsMemoryRes
   @Override
   protected void updateMemoryHardLimit(String cgroupId, long containerHardLimit)
       throws ResourceHandlerException {
-    cGroupsHandler.updateCGroupParam(MEMORY, cgroupId,
+    getCGroupsHandler().updateCGroupParam(MEMORY, cgroupId,
         CGroupsHandler.CGROUP_MEMORY_MAX, String.valueOf(containerHardLimit) + "M");
   }
 
   @Override
   protected void updateOpportunisticMemoryLimits(String cgroupId) throws ResourceHandlerException {
-    cGroupsHandler.updateCGroupParam(MEMORY, cgroupId,
+    getCGroupsHandler().updateCGroupParam(MEMORY, cgroupId,
         CGroupsHandler.CGROUP_MEMORY_LOW, String.valueOf(OPPORTUNISTIC_SOFT_LIMIT) + "M");
   }
 
   @Override
   protected void updateGuaranteedMemoryLimits(String cgroupId, long containerSoftLimit)
       throws ResourceHandlerException {
-    cGroupsHandler.updateCGroupParam(MEMORY, cgroupId,
+    getCGroupsHandler().updateCGroupParam(MEMORY, cgroupId,
         CGroupsHandler.CGROUP_MEMORY_LOW, String.valueOf(containerSoftLimit) + "M");
   }
 }
