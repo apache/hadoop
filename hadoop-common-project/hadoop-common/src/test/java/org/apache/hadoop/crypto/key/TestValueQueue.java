@@ -21,18 +21,26 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Queue;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.hadoop.crypto.key.kms.ValueQueue;
 import org.apache.hadoop.crypto.key.kms.ValueQueue.QueueRefiller;
 import org.apache.hadoop.crypto.key.kms.ValueQueue.SyncGenerationPolicy;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
 import org.junit.Assert;
 import org.junit.Test;
+
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.spy;
 
 
 public class TestValueQueue {
@@ -108,6 +116,41 @@ public class TestValueQueue {
         new HashSet<>(Arrays.asList(fillInfos[0].key,
             fillInfos[1].key,
             fillInfos[2].key)));
+    vq.shutdown();
+  }
+
+  /**
+   * Verifies that Queue is initialized (Warmed-up) for partial keys.
+   */
+  @Test(timeout = 30000)
+  public void testPartialWarmUp() throws Exception {
+    MockFiller filler = new MockFiller();
+    ValueQueue<String> vq =
+        new ValueQueue<>(10, 0.5f, 30000, 1,
+            SyncGenerationPolicy.ALL, filler);
+
+    @SuppressWarnings("unchecked")
+    LoadingCache<String, LinkedBlockingQueue<KeyProviderCryptoExtension.EncryptedKeyVersion>> kq =
+        (LoadingCache<String, LinkedBlockingQueue<KeyProviderCryptoExtension.EncryptedKeyVersion>>)
+            FieldUtils.getField(ValueQueue.class, "keyQueues", true).get(vq);
+
+    LoadingCache<String, LinkedBlockingQueue<KeyProviderCryptoExtension.EncryptedKeyVersion>>
+        kqSpy = spy(kq);
+    doThrow(new ExecutionException(new Exception())).when(kqSpy).get("k2");
+    FieldUtils.writeField(vq, "keyQueues", kqSpy, true);
+
+    Assert.assertThrows(IOException.class, () -> vq.initializeQueuesForKeys("k1", "k2", "k3"));
+    verify(kqSpy, times(1)).get("k2");
+
+    FillInfo[] fillInfos =
+        {filler.getTop(), filler.getTop(), filler.getTop()};
+    Assert.assertEquals(5, fillInfos[0].num);
+    Assert.assertEquals(5, fillInfos[1].num);
+    Assert.assertNull(fillInfos[2]);
+
+    Assert.assertEquals(new HashSet<>(Arrays.asList("k1", "k3")),
+        new HashSet<>(Arrays.asList(fillInfos[0].key,
+            fillInfos[1].key)));
     vq.shutdown();
   }
 
