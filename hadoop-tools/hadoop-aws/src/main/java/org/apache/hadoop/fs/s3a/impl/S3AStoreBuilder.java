@@ -52,48 +52,57 @@ public class S3AStoreBuilder {
 
   private AuditSpanSource<AuditSpanS3A> auditSpanSource;
 
-  public S3AStoreBuilder withStoreContextFactory(final StoreContextFactory storeContextFactory) {
-    this.storeContextFactory = storeContextFactory;
+  public S3AStoreBuilder withStoreContextFactory(
+          final StoreContextFactory storeContextFactoryValue) {
+    this.storeContextFactory = storeContextFactoryValue;
     return this;
   }
 
-  public S3AStoreBuilder withS3Client(final S3Client s3Client) {
-    this.s3Client = s3Client;
+  public S3AStoreBuilder withS3Client(
+          final S3Client s3ClientValue) {
+    this.s3Client = s3ClientValue;
     return this;
   }
 
-  public S3AStoreBuilder withDurationTrackerFactory(final DurationTrackerFactory durationTrackerFactory) {
-    this.durationTrackerFactory = durationTrackerFactory;
+  public S3AStoreBuilder withDurationTrackerFactory(
+          final DurationTrackerFactory durationTrackerFactoryValue) {
+    this.durationTrackerFactory = durationTrackerFactoryValue;
     return this;
   }
 
-  public S3AStoreBuilder withInstrumentation(final S3AInstrumentation instrumentation) {
-    this.instrumentation = instrumentation;
+  public S3AStoreBuilder withInstrumentation(
+          final S3AInstrumentation instrumentationValue) {
+    this.instrumentation = instrumentationValue;
     return this;
   }
 
-  public S3AStoreBuilder withStatisticsContext(final S3AStatisticsContext statisticsContext) {
-    this.statisticsContext = statisticsContext;
+  public S3AStoreBuilder withStatisticsContext(
+          final S3AStatisticsContext statisticsContextValue) {
+    this.statisticsContext = statisticsContextValue;
     return this;
   }
 
-  public S3AStoreBuilder withStorageStatistics(final S3AStorageStatistics storageStatistics) {
-    this.storageStatistics = storageStatistics;
+  public S3AStoreBuilder withStorageStatistics(
+          final S3AStorageStatistics storageStatisticsValue) {
+    this.storageStatistics = storageStatisticsValue;
     return this;
   }
 
-  public S3AStoreBuilder withReadRateLimiter(final RateLimiting readRateLimiter) {
-    this.readRateLimiter = readRateLimiter;
+  public S3AStoreBuilder withReadRateLimiter(
+          final RateLimiting readRateLimiterValue) {
+    this.readRateLimiter = readRateLimiterValue;
     return this;
   }
 
-  public S3AStoreBuilder withWriteRateLimiter(final RateLimiting writeRateLimiter) {
-    this.writeRateLimiter = writeRateLimiter;
+  public S3AStoreBuilder withWriteRateLimiter(
+          final RateLimiting writeRateLimiterValue) {
+    this.writeRateLimiter = writeRateLimiterValue;
     return this;
   }
 
-  public S3AStoreBuilder withAuditSpanSource(final AuditSpanSource<AuditSpanS3A> auditSpanSource) {
-    this.auditSpanSource = auditSpanSource;
+  public S3AStoreBuilder withAuditSpanSource(
+          final AuditSpanSource<AuditSpanS3A> auditSpanSourceValue) {
+    this.auditSpanSource = auditSpanSourceValue;
     return this;
   }
 

@@ -44,272 +44,271 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  */
 public abstract class AbstractContractBulkDeleteTest extends AbstractFSContractTestBase {
 
-    private static final Logger LOG =
-            LoggerFactory.getLogger(AbstractContractBulkDeleteTest.class);
+  private static final Logger LOG =
+          LoggerFactory.getLogger(AbstractContractBulkDeleteTest.class);
 
-    /**
-     * Page size for bulk delete. This is calculated based
-     * on the store implementation.
-     */
-    protected int pageSize;
+  /**
+   * Page size for bulk delete. This is calculated based
+   * on the store implementation.
+   */
+  protected int pageSize;
 
-    /**
-     * Base path for the bulk delete tests.
-     * All the paths to be deleted should be under this base path.
-     */
-    protected Path basePath;
+  /**
+   * Base path for the bulk delete tests.
+   * All the paths to be deleted should be under this base path.
+   */
+  protected Path basePath;
 
-    /**
-     * Test file system.
-     */
-    protected FileSystem fs;
+  /**
+   * Test file system.
+   */
+  protected FileSystem fs;
 
-    @Before
-    public void setUp() throws Exception {
-        fs = getFileSystem();
-        basePath = path(getClass().getName());
-        pageSize = WrappedIO.bulkDeletePageSize(getFileSystem(), basePath);
-        fs.mkdirs(basePath);
+  @Before
+  public void setUp() throws Exception {
+    fs = getFileSystem();
+    basePath = path(getClass().getName());
+    pageSize = WrappedIO.bulkDeletePageSize(getFileSystem(), basePath);
+    fs.mkdirs(basePath);
+  }
+
+  public Path getBasePath() {
+    return basePath;
+  }
+
+  protected int getExpectedPageSize() {
+    return 1;
+  }
+
+  /**
+   * Validate the page size for bulk delete operation. Different stores can have different
+   * implementations for bulk delete operation thus different page size.
+   */
+  @Test
+  public void validatePageSize() throws Exception {
+    Assertions.assertThat(pageSize)
+            .describedAs("Page size should be 1 by default for all stores")
+            .isEqualTo(getExpectedPageSize());
+  }
+
+  @Test
+  public void testPathsSizeEqualsPageSizePrecondition() throws Exception {
+    List<Path> listOfPaths = createListOfPaths(pageSize, basePath);
+    // Bulk delete call should pass with no exception.
+    bulkDelete(getFileSystem(), basePath, listOfPaths);
+  }
+
+  @Test
+  public void testPathsSizeGreaterThanPageSizePrecondition() throws Exception {
+    List<Path> listOfPaths = createListOfPaths(pageSize + 1, basePath);
+    intercept(IllegalArgumentException.class,
+            () -> bulkDelete(getFileSystem(), basePath, listOfPaths));
+  }
+
+  @Test
+  public void testPathsSizeLessThanPageSizePrecondition() throws Exception {
+    List<Path> listOfPaths = createListOfPaths(pageSize - 1, basePath);
+    // Bulk delete call should pass with no exception.
+    bulkDelete(getFileSystem(), basePath, listOfPaths);
+  }
+
+  @Test
+  public void testBulkDeleteSuccessful() throws Exception {
+    List<Path> listOfPaths = createListOfPaths(pageSize, basePath);
+    for (Path path : listOfPaths) {
+      touch(fs, path);
     }
-
-    public Path getBasePath() {
-        return basePath;
-    }
-
-    protected int getExpectedPageSize() {
-        return 1;
-    }
-
-    /**
-     * Validate the page size for bulk delete operation. Different stores can have different
-     * implementations for bulk delete operation thus different page size.
-     */
-    @Test
-    public void validatePageSize() throws Exception {
-        Assertions.assertThat(pageSize)
-                .describedAs("Page size should be 1 by default for all stores")
-                .isEqualTo(getExpectedPageSize());
-    }
-
-    @Test
-    public void testPathsSizeEqualsPageSizePrecondition() throws Exception {
-        List<Path> listOfPaths = createListOfPaths(pageSize, basePath);
-        // Bulk delete call should pass with no exception.
-        bulkDelete(getFileSystem(), basePath, listOfPaths);
-    }
-
-    @Test
-    public void testPathsSizeGreaterThanPageSizePrecondition() throws Exception {
-        List<Path> listOfPaths = createListOfPaths(pageSize + 1, basePath);
-        intercept(IllegalArgumentException.class,
-                () -> bulkDelete(getFileSystem(), basePath, listOfPaths));
-    }
-
-    @Test
-    public void testPathsSizeLessThanPageSizePrecondition() throws Exception {
-        List<Path> listOfPaths = createListOfPaths(pageSize - 1, basePath);
-        // Bulk delete call should pass with no exception.
-        bulkDelete(getFileSystem(), basePath, listOfPaths);
-    }
-
-    @Test
-    public void testBulkDeleteSuccessful() throws Exception {
-        List<Path> listOfPaths = createListOfPaths(pageSize, basePath);
-        for (Path path : listOfPaths) {
-            touch(fs, path);
-        }
-        FileStatus[] fileStatuses = fs.listStatus(basePath);
-        Assertions.assertThat(fileStatuses)
-                .describedAs("File count after create")
-                .hasSize(pageSize);
-        assertSuccessfulBulkDelete(
+    FileStatus[] fileStatuses = fs.listStatus(basePath);
+    Assertions.assertThat(fileStatuses)
+            .describedAs("File count after create")
+            .hasSize(pageSize);
+    assertSuccessfulBulkDelete(
             bulkDelete(getFileSystem(), basePath, listOfPaths));
-        FileStatus[] fileStatusesAfterDelete = fs.listStatus(basePath);
-        Assertions.assertThat(fileStatusesAfterDelete)
-                .describedAs("File statuses should be empty after delete")
-                .isEmpty();
+    FileStatus[] fileStatusesAfterDelete = fs.listStatus(basePath);
+    Assertions.assertThat(fileStatusesAfterDelete)
+            .describedAs("File statuses should be empty after delete")
+            .isEmpty();
+  }
+
+  @Test
+  public void validatePathCapabilityDeclared() throws Exception {
+    Assertions.assertThat(fs.hasPathCapability(basePath, CommonPathCapabilities.BULK_DELETE))
+            .describedAs("Path capability BULK_DELETE should be declared")
+            .isTrue();
+  }
+
+  @Test
+  public void testDeletePathsNotUnderBase() throws Exception {
+    List<Path> paths = new ArrayList<>();
+    Path pathNotUnderBase = path("not-under-base");
+    paths.add(pathNotUnderBase);
+    // Should fail as path is not under the base path.
+    intercept(IllegalArgumentException.class,
+            () -> bulkDelete(getFileSystem(), basePath, paths));
+  }
+
+  @Test
+  public void testDeletePathsNotAbsolute() throws Exception {
+    List<Path> paths = new ArrayList<>();
+    Path pathNotAbsolute = new Path("not-absolute");
+    paths.add(pathNotAbsolute);
+    // Should fail as path is not absolute.
+    intercept(IllegalArgumentException.class,
+            () -> bulkDelete(getFileSystem(), basePath, paths));
+  }
+
+  @Test
+  public void testDeletePathsNotExists() throws Exception {
+    List<Path> paths = new ArrayList<>();
+    Path pathNotExists = new Path(basePath, "not-exists");
+    paths.add(pathNotExists);
+    // bulk delete call doesn't verify if a path exist or not before deleting.
+    assertSuccessfulBulkDelete(bulkDelete(getFileSystem(), basePath, paths));
+  }
+
+  @Test
+  public void testDeletePathsDirectory() throws Exception {
+    List<Path> paths = new ArrayList<>();
+    Path dirPath = new Path(basePath, "dir");
+    paths.add(dirPath);
+    Path filePath = new Path(dirPath, "file");
+    paths.add(filePath);
+    pageSizePreconditionForTest(paths.size());
+    fs.mkdirs(dirPath);
+    touch(fs, filePath);
+    // Outcome is undefined. But call shouldn't fail.
+    assertSuccessfulBulkDelete(bulkDelete(getFileSystem(), basePath, paths));
+  }
+
+  @Test
+  public void testBulkDeleteParentDirectoryWithDirectories() throws Exception {
+    List<Path> paths = new ArrayList<>();
+    Path dirPath = new Path(basePath, "dir");
+    fs.mkdirs(dirPath);
+    Path subDir = new Path(dirPath, "subdir");
+    fs.mkdirs(subDir);
+    // adding parent directory to the list of paths.
+    paths.add(dirPath);
+    List<Map.Entry<Path, String>> entries = bulkDelete(getFileSystem(), basePath, paths);
+    Assertions.assertThat(entries)
+            .describedAs("Parent non empty directory should not be deleted")
+            .hasSize(1);
+    // During the bulk delete operation, the non-empty directories are not deleted in default implementation.
+    assertIsDirectory(dirPath);
+  }
+
+  @Test
+  public void testBulkDeleteParentDirectoryWithFiles() throws Exception {
+    List<Path> paths = new ArrayList<>();
+    Path dirPath = new Path(basePath, "dir");
+    fs.mkdirs(dirPath);
+    Path file = new Path(dirPath, "file");
+    touch(fs, file);
+    // adding parent directory to the list of paths.
+    paths.add(dirPath);
+    List<Map.Entry<Path, String>> entries = bulkDelete(getFileSystem(), basePath, paths);
+    Assertions.assertThat(entries)
+            .describedAs("Parent non empty directory should not be deleted")
+            .hasSize(1);
+    // During the bulk delete operation, the non-empty directories are not deleted in default implementation.
+    assertIsDirectory(dirPath);
+  }
+
+
+  @Test
+  public void testDeleteEmptyDirectory() throws Exception {
+    List<Path> paths = new ArrayList<>();
+    Path emptyDirPath = new Path(basePath, "empty-dir");
+    fs.mkdirs(emptyDirPath);
+    paths.add(emptyDirPath);
+    // Should pass as empty directory.
+    assertSuccessfulBulkDelete(bulkDelete(getFileSystem(), basePath, paths));
+  }
+
+  @Test
+  public void testDeleteEmptyList() throws Exception {
+    List<Path> paths = new ArrayList<>();
+    // Empty list should pass.
+    assertSuccessfulBulkDelete(bulkDelete(getFileSystem(), basePath, paths));
+  }
+
+  @Test
+  public void testDeleteSamePathsMoreThanOnce() throws Exception {
+    List<Path> paths = new ArrayList<>();
+    Path path = new Path(basePath, "file");
+    paths.add(path);
+    paths.add(path);
+    Path another = new Path(basePath, "another-file");
+    paths.add(another);
+    pageSizePreconditionForTest(paths.size());
+    touch(fs, path);
+    touch(fs, another);
+    assertSuccessfulBulkDelete(bulkDelete(getFileSystem(), basePath, paths));
+  }
+
+  /**
+   * Skip test if paths size is greater than page size.
+   */
+  protected void pageSizePreconditionForTest(int size) {
+    if (size > pageSize) {
+      skip("Test requires paths size less than or equal to page size: " + pageSize);
     }
+  }
 
-    @Test
-    public void validatePathCapabilityDeclared() throws Exception {
-        Assertions.assertThat(fs.hasPathCapability(basePath, CommonPathCapabilities.BULK_DELETE))
-                .describedAs("Path capability BULK_DELETE should be declared")
-                .isTrue();
+  /**
+   * This test validates that files to be deleted don't have
+   * to be direct children of the base path.
+   */
+  @Test
+  public void testDeepDirectoryFilesDelete() throws Exception {
+    List<Path> paths = new ArrayList<>();
+    Path dir1 = new Path(basePath, "dir1");
+    Path dir2 = new Path(dir1, "dir2");
+    Path dir3 = new Path(dir2, "dir3");
+    fs.mkdirs(dir3);
+    Path file1 = new Path(dir3, "file1");
+    touch(fs, file1);
+    paths.add(file1);
+    assertSuccessfulBulkDelete(bulkDelete(getFileSystem(), basePath, paths));
+  }
+
+
+  @Test
+  public void testChildPaths() throws Exception {
+    List<Path> paths = new ArrayList<>();
+    Path dirPath = new Path(basePath, "dir");
+    fs.mkdirs(dirPath);
+    paths.add(dirPath);
+    Path filePath = new Path(dirPath, "file");
+    touch(fs, filePath);
+    paths.add(filePath);
+    pageSizePreconditionForTest(paths.size());
+    // Should pass as both paths are under the base path.
+    assertSuccessfulBulkDelete(bulkDelete(getFileSystem(), basePath, paths));
+  }
+
+
+  /**
+   * Assert on returned entries after bulk delete operation.
+   * Entries should be empty after successful delete.
+   */
+  public static void assertSuccessfulBulkDelete(List<Map.Entry<Path, String>> entries) {
+    Assertions.assertThat(entries)
+            .describedAs("Bulk delete failed, " +
+                    "return entries should be empty after successful delete")
+            .isEmpty();
+  }
+
+  /**
+   * Create a list of paths with the given count
+   * under the given base path.
+   */
+  private List<Path> createListOfPaths(int count, Path basePath) {
+    List<Path> paths = new ArrayList<>();
+    for (int i = 0; i < count; i++) {
+      Path path = new Path(basePath, "file-" + i);
+      paths.add(path);
     }
-
-    @Test
-    public void testDeletePathsNotUnderBase() throws Exception {
-        List<Path> paths = new ArrayList<>();
-        Path pathNotUnderBase = path("not-under-base");
-        paths.add(pathNotUnderBase);
-        // Should fail as path is not under the base path.
-        intercept(IllegalArgumentException.class,
-                () -> bulkDelete(getFileSystem(), basePath, paths));
-    }
-
-    @Test
-    public void testDeletePathsNotAbsolute() throws Exception {
-        List<Path> paths = new ArrayList<>();
-        Path pathNotAbsolute = new Path("not-absolute");
-        paths.add(pathNotAbsolute);
-        // Should fail as path is not absolute.
-        intercept(IllegalArgumentException.class,
-                () -> bulkDelete(getFileSystem(), basePath, paths));
-    }
-
-    @Test
-    public void testDeletePathsNotExists() throws Exception {
-        List<Path> paths = new ArrayList<>();
-        Path pathNotExists = new Path(basePath, "not-exists");
-        paths.add(pathNotExists);
-        // bulk delete call doesn't verify if a path exist or not before deleting.
-        assertSuccessfulBulkDelete(bulkDelete(getFileSystem(), basePath, paths));
-    }
-
-    @Test
-    public void testDeletePathsDirectory() throws Exception {
-        List<Path> paths = new ArrayList<>();
-        Path dirPath = new Path(basePath, "dir");
-        paths.add(dirPath);
-        Path filePath = new Path(dirPath, "file");
-        paths.add(filePath);
-        pageSizePreconditionForTest(paths.size());
-        fs.mkdirs(dirPath);
-        touch(fs, filePath);
-        // Outcome is undefined. But call shouldn't fail.
-        assertSuccessfulBulkDelete(bulkDelete(getFileSystem(), basePath, paths));
-    }
-
-    @Test
-    public void testBulkDeleteParentDirectoryWithDirectories() throws Exception {
-        List<Path> paths = new ArrayList<>();
-        Path dirPath = new Path(basePath, "dir");
-        fs.mkdirs(dirPath);
-        Path subDir = new Path(dirPath, "subdir");
-        fs.mkdirs(subDir);
-        // adding parent directory to the list of paths.
-        paths.add(dirPath);
-        List<Map.Entry<Path, String>> entries = bulkDelete(getFileSystem(), basePath, paths);
-        Assertions.assertThat(entries)
-                .describedAs("Parent non empty directory should not be deleted")
-                .hasSize(1);
-        // During the bulk delete operation, the non-empty directories are not deleted in default implementation.
-        assertIsDirectory(dirPath);
-    }
-
-    @Test
-    public void testBulkDeleteParentDirectoryWithFiles() throws Exception {
-        List<Path> paths = new ArrayList<>();
-        Path dirPath = new Path(basePath, "dir");
-        fs.mkdirs(dirPath);
-        Path file = new Path(dirPath, "file");
-        touch(fs, file);
-        // adding parent directory to the list of paths.
-        paths.add(dirPath);
-        List<Map.Entry<Path, String>> entries = bulkDelete(getFileSystem(), basePath, paths);
-        Assertions.assertThat(entries)
-                .describedAs("Parent non empty directory should not be deleted")
-                .hasSize(1);
-        // During the bulk delete operation, the non-empty directories are not deleted in default implementation.
-        assertIsDirectory(dirPath);
-    }
-
-
-
-    @Test
-    public void testDeleteEmptyDirectory() throws Exception {
-        List<Path> paths = new ArrayList<>();
-        Path emptyDirPath = new Path(basePath, "empty-dir");
-        fs.mkdirs(emptyDirPath);
-        paths.add(emptyDirPath);
-        // Should pass as empty directory.
-        assertSuccessfulBulkDelete(bulkDelete(getFileSystem(), basePath, paths));
-    }
-
-    @Test
-    public void testDeleteEmptyList() throws Exception {
-        List<Path> paths = new ArrayList<>();
-        // Empty list should pass.
-        assertSuccessfulBulkDelete(bulkDelete(getFileSystem(), basePath, paths));
-    }
-
-    @Test
-    public void testDeleteSamePathsMoreThanOnce() throws Exception {
-        List<Path> paths = new ArrayList<>();
-        Path path = new Path(basePath, "file");
-        paths.add(path);
-        paths.add(path);
-        Path another = new Path(basePath, "another-file");
-        paths.add(another);
-        pageSizePreconditionForTest(paths.size());
-        touch(fs, path);
-        touch(fs, another);
-        assertSuccessfulBulkDelete(bulkDelete(getFileSystem(), basePath, paths));
-    }
-
-    /**
-     * Skip test if paths size is greater than page size.
-     */
-    protected void pageSizePreconditionForTest(int size) {
-        if (size > pageSize) {
-            skip("Test requires paths size less than or equal to page size: " + pageSize);
-        }
-    }
-
-    /**
-     * This test validates that files to be deleted don't have
-     * to be direct children of the base path.
-     */
-    @Test
-    public void testDeepDirectoryFilesDelete() throws Exception {
-        List<Path> paths = new ArrayList<>();
-        Path dir1 = new Path(basePath, "dir1");
-        Path dir2 = new Path(dir1, "dir2");
-        Path dir3 = new Path(dir2, "dir3");
-        fs.mkdirs(dir3);
-        Path file1 = new Path(dir3, "file1");
-        touch(fs, file1);
-        paths.add(file1);
-        assertSuccessfulBulkDelete(bulkDelete(getFileSystem(), basePath, paths));
-    }
-
-
-    @Test
-    public void testChildPaths() throws Exception {
-        List<Path> paths = new ArrayList<>();
-        Path dirPath = new Path(basePath, "dir");
-        fs.mkdirs(dirPath);
-        paths.add(dirPath);
-        Path filePath = new Path(dirPath, "file");
-        touch(fs, filePath);
-        paths.add(filePath);
-        pageSizePreconditionForTest(paths.size());
-        // Should pass as both paths are under the base path.
-        assertSuccessfulBulkDelete(bulkDelete(getFileSystem(), basePath, paths));
-    }
-
-
-    /**
-     * Assert on returned entries after bulk delete operation.
-     * Entries should be empty after successful delete.
-     */
-    public static void assertSuccessfulBulkDelete(List<Map.Entry<Path, String>> entries) {
-        Assertions.assertThat(entries)
-                .describedAs("Bulk delete failed, " +
-                        "return entries should be empty after successful delete")
-                .isEmpty();
-    }
-
-    /**
-     * Create a list of paths with the given count
-     * under the given base path.
-     */
-    private List<Path> createListOfPaths(int count, Path basePath) {
-        List<Path> paths = new ArrayList<>();
-        for (int i=0; i < count; i++) {
-            Path path = new Path(basePath, "file-" + i);
-            paths.add(path);
-        }
-        return paths;
-    }
+    return paths;
+  }
 }

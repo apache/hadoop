@@ -32,18 +32,18 @@ import org.apache.hadoop.fs.contract.AbstractFSContract;
  */
 public class TestHDFSContractBulkDelete extends AbstractContractBulkDeleteTest {
 
-    @Override
-    protected AbstractFSContract createContract(Configuration conf) {
-        return new HDFSContract(conf);
-    }
+  @Override
+  protected AbstractFSContract createContract(Configuration conf) {
+    return new HDFSContract(conf);
+  }
 
-    @BeforeClass
-    public static void createCluster() throws IOException {
-        HDFSContract.createCluster();
-    }
+  @BeforeClass
+  public static void createCluster() throws IOException {
+    HDFSContract.createCluster();
+  }
 
-    @AfterClass
-    public static void teardownCluster() throws IOException {
-        HDFSContract.destroyCluster();
-    }
+  @AfterClass
+  public static void teardownCluster() throws IOException {
+    HDFSContract.destroyCluster();
+  }
 }

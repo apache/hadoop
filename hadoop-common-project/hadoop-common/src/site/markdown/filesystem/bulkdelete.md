@@ -45,7 +45,6 @@ it supports the API.
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 public interface BulkDeleteSource {
-    
   default BulkDelete createBulkDelete(Path path)
       throws UnsupportedOperationException, IllegalArgumentException, IOException;
 
@@ -61,11 +60,8 @@ This is the bulk delete implementation returned by the `createBulkDelete()` call
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 public interface BulkDelete extends IOStatisticsSource, Closeable {
-    
   int pageSize();
-  
   Path basePath();
-  
   List<Map.Entry<Path, String>> bulkDelete(List<Path> paths)
       throws IOException, IllegalArgumentException;
 
@@ -94,9 +90,9 @@ No other restrictions are placed upon the outcome.
 ### Availability
 
 The `BulkDeleteSource` interface is exported by `FileSystem` and `FileContext` storage clients
-which is available for all FS via `org.apache.hadoop.fs.DefalutBulkDeleteSource` 
+which is available for all FS via `org.apache.hadoop.fs.DefalutBulkDeleteSource`
 Some FS MAY still decide to not support the API by overwriting the `createBulkDelete()` method
-with an UnsupportedOperationException. While doing so they must also declare the path 
+with an UnsupportedOperationException. While doing so they must also declare the path
 capability `fs.capability.bulk.delete` as false.
 
 Use the `PathCapabilities` probe `fs.capability.bulk.delete`.
@@ -119,7 +115,7 @@ through reflection.
 ```java
 
   public static int bulkDeletePageSize(FileSystem fs, Path path) throws IOException;
-  
+
   public static int bulkDeletePageSize(FileSystem fs, Path path) throws IOException;
 
   public static List<Map.Entry<Path, String>> bulkDelete(FileSystem fs, Path base, Collection<Path> paths);
@@ -135,6 +131,6 @@ size to be 1 and calls `FileSystem.delete(path, false)` on the single path in th
 
 
 #### S3A Implementation
-The S3A implementation is `org.apache.hadoop.fs.s3a.impl.BulkDeleteOperation` which implements the 
+The S3A implementation is `org.apache.hadoop.fs.s3a.impl.BulkDeleteOperation` which implements the
 multi object delete semantics of the AWS S3 API [Bulk Delete](https://docs.aws.amazon.com/AmazonS3/latest/API/API_DeleteObjects.html)
 For more details please refer to the S3A Performance documentation.
