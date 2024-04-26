@@ -65,8 +65,8 @@ import org.apache.hadoop.util.functional.CallableRaisingIOE;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
-import static org.apache.hadoop.fs.VectoredReadUtils.implementByteBufferPositionedReadableRead;
-import static org.apache.hadoop.fs.VectoredReadUtils.implementByteBufferPositionedReadableReadFully;
+import static org.apache.hadoop.fs.VectoredReadUtils.vectorizeByteBufferPositionedReadableRead;
+import static org.apache.hadoop.fs.VectoredReadUtils.vectorizeByteBufferPositionedReadableReadFully;
 import static org.apache.hadoop.fs.VectoredReadUtils.isOrderedDisjoint;
 import static org.apache.hadoop.fs.VectoredReadUtils.mergeSortedRanges;
 import static org.apache.hadoop.fs.VectoredReadUtils.validateAndSortRanges;
@@ -889,7 +889,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    */
   @Override
   public int read(long position, ByteBuffer buf) throws IOException {
-    return implementByteBufferPositionedReadableRead(this, position, buf);
+    return vectorizeByteBufferPositionedReadableRead(this, contentLength, position, buf);
   }
 
   /**
@@ -898,7 +898,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    */
   @Override
   public void readFully(long position, ByteBuffer buf) throws IOException {
-    implementByteBufferPositionedReadableReadFully(this, position, buf);
+    vectorizeByteBufferPositionedReadableReadFully(this, position, buf);
   }
 
   /**

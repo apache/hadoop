@@ -27,6 +27,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.IntFunction;
 
 import org.slf4j.Logger;
@@ -417,7 +418,7 @@ public final class VectoredReadUtils {
    * @throws EOFException the end of the data was reached before
    * the read operation completed
    */
-  public static void implementByteBufferPositionedReadableReadFully(
+  public static void vectorizeByteBufferPositionedReadableReadFully(
       final PositionedReadable stream,
       final long position,
       final ByteBuffer buf) throws IOException {
@@ -427,16 +428,33 @@ public final class VectoredReadUtils {
       return;
     }
     final FileRange range = FileRange.createFileRange(position, length);
+    // read with an allocator which returns the buffer passed in
+    // rejecting a second attempt or any attempt to read a different length.
     readVectored(
         stream,
         Collections.singletonList(range),
-        len -> {
-          checkArgument(len == length,
-              "Read length must match buffer length: %s != %s",
-              length, len);
-          return buf;
-        });
+        allocateExistingBuffer(buf));
     FutureIO.awaitFuture(range.getData());
+  }
+
+  /**
+   * Special allocator which always returns the same buffer.
+   * It will reject any request for a buffer of a different size,
+   * or any attempt to issue a second buffer.
+   * @param buf buffer
+   * @return an allocator which serves up the buffer, once.
+   */
+  private static IntFunction<ByteBuffer> allocateExistingBuffer(final ByteBuffer buf) {
+    final AtomicBoolean issued = new AtomicBoolean(false);
+    final int length = buf.remaining();
+    return len -> {
+      checkArgument(len == length,
+          "Read length must match buffer length: %s != %s",
+          length, len);
+      checkArgument(!issued.getAndSet(true),
+          "buffer already issued");
+      return buf;
+    };
   }
 
   /**
@@ -445,22 +463,38 @@ public final class VectoredReadUtils {
    * This attempts to read the whole buffer and fails on partial reads,
    * returning -1.
    * @param stream stream
+   * @param fileLength known file length
    * @param position position within file
    * @param buf the ByteBuffer to receive the results of the read operation.
    * @return the number of bytes read, possibly zero, or -1 if reached
-   *         end-of-stream
+   * end-of-stream
    * @throws IOException if there is some error performing the read
    */
-  public static int implementByteBufferPositionedReadableRead(
+  public static int vectorizeByteBufferPositionedReadableRead(
       final PositionedReadable stream,
+      final long fileLength,
       final long position,
       final ByteBuffer buf) throws IOException {
-    final int length = buf.remaining();
+    final int remaining = buf.remaining();
+    if (remaining == 0) {
+      // exit fast on zero-length read
+      return 0;
+    }
+    if (position >= fileLength) {
+      // EOF
+      return -1;
+    }
+
+    long toEOF = fileLength - position;
+    int length = (int)(Math.min(remaining, toEOF));
     try {
-      implementByteBufferPositionedReadableReadFully(stream, position, buf);
+      vectorizeByteBufferPositionedReadableReadFully(stream, position, buf);
       return length;
     } catch (EOFException e) {
-      return length - buf.remaining();
+      final int bytesRead = length - buf.remaining();
+      LOG.debug("EOF reading from {} at position {} bytesRead {}",
+          stream, position, bytesRead, e);
+      return bytesRead;
     }
   }
 
