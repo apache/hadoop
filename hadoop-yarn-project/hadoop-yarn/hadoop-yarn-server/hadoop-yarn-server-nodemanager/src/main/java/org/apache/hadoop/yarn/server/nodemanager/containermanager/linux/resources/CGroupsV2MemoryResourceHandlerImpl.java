@@ -39,8 +39,7 @@ public class CGroupsV2MemoryResourceHandlerImpl extends AbstractCGroupsMemoryRes
 
   @Override
   protected void updateOpportunisticMemoryLimits(String cgroupId) throws ResourceHandlerException {
-    getCGroupsHandler().updateCGroupParam(MEMORY, cgroupId,
-        CGroupsHandler.CGROUP_MEMORY_LOW, String.valueOf(OPPORTUNISTIC_SOFT_LIMIT) + "M");
+    updateGuaranteedMemoryLimits(cgroupId, OPPORTUNISTIC_SOFT_LIMIT);
   }
 
   @Override
