@@ -80,11 +80,6 @@ enum operations {
 #define ROOT_VAR_TMP_DIR "private_var_slash_tmp"
 #define COMMAND_FILE_SECTION "command-execution"
 
-// include cgroup2 super magic number if not defined
-#ifndef CGROUP2_SUPER_MAGIC
-#define CGROUP2_SUPER_MAGIC 0x63677270
-#endif
-
 extern struct passwd *user_detail;
 extern struct section executor_cfg;
 

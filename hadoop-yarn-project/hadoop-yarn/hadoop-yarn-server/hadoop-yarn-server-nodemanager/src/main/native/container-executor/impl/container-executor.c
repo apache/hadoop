@@ -74,6 +74,11 @@
 #include "compat/unlinkat.h"
 #endif
 
+// include cgroup2 super magic number if not defined
+#ifndef CGROUP2_SUPER_MAGIC
+#define CGROUP2_SUPER_MAGIC 0x63677270
+#endif
+
 static const int DEFAULT_MIN_USERID = 1000;
 
 static const char* DEFAULT_BANNED_USERS[] = {"yarn", "mapred", "hdfs", "bin", 0};
