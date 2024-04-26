@@ -77,7 +77,7 @@ public class TestCGroupsBlkioResourceHandlerImpl {
         CGroupsHandler.CGroupController.BLKIO, id);
     verify(mockCGroupsHandler, times(1)).updateCGroupParam(
         CGroupsHandler.CGroupController.BLKIO, id,
-        CGroupsHandler.CGROUP_PARAM_BLKIO_WEIGHT,
+        CGroupsHandler.CGROUP_PARAM_WEIGHT,
         CGroupsBlkioResourceHandlerImpl.DEFAULT_WEIGHT);
     Assert.assertNotNull(ret);
     Assert.assertEquals(1, ret.size());

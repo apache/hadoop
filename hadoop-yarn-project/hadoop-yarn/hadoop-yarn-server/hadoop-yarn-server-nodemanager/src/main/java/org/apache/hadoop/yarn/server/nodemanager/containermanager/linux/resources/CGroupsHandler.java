@@ -122,11 +122,12 @@ public interface CGroupsHandler {
   // v2 specific params
   String CGROUP_CONTROLLERS_FILE = "cgroup.controllers";
   String CGROUP_SUBTREE_CONTROL_FILE = "cgroup.subtree_control";
+  String CGROUP_CPU_MAX = "max";
 
   // present in v1 and v2
   String CGROUP_PROCS_FILE = "cgroup.procs";
   String CGROUP_PARAM_CLASSID = "classid";
-  String CGROUP_PARAM_BLKIO_WEIGHT = "weight";
+  String CGROUP_PARAM_WEIGHT = "weight";
 
   /**
    * Mounts or initializes a cgroup controller.
