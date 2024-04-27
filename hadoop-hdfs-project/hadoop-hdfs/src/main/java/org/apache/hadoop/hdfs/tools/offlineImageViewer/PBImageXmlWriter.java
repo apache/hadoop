@@ -28,12 +28,14 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
 
 import org.apache.commons.codec.binary.Hex;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
@@ -43,7 +45,6 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheD
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CachePoolInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
-import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf.SectionName;
@@ -62,6 +63,7 @@ import org.apache.hadoop.hdfs.server.namenode.FsImageProto.NameSystemSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SecretManagerSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SnapshotDiffSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.SnapshotSection;
+import org.apache.hadoop.hdfs.server.namenode.QuotaByStorageTypeEntry;
 import org.apache.hadoop.hdfs.server.namenode.SerialNumberManager;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.util.XMLUtils;
@@ -72,13 +74,6 @@ import org.apache.hadoop.util.VersionInfo;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.thirdparty.protobuf.ByteString;
-
-import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.XATTR_NAMESPACE_MASK;
-import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.XATTR_NAMESPACE_OFFSET;
-import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.XATTR_NAMESPACE_EXT_MASK;
-import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.XATTR_NAMESPACE_EXT_OFFSET;
-import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.XATTR_NAME_OFFSET;
-import static org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode.XATTR_NAME_MASK;
 
 /**
  * PBImageXmlWriter walks over an fsimage structure and writes out
@@ -427,18 +422,14 @@ public final class PBImageXmlWriter {
   }
 
   private void dumpXattrs(INodeSection.XAttrFeatureProto xattrs) {
+    List<XAttr> xattrList = FSImageFormatPBINode.Loader
+        .loadXAttrs(xattrs, stringTable);
     out.print("<" + INODE_SECTION_XATTRS + ">");
-    for (INodeSection.XAttrCompactProto xattr : xattrs.getXAttrsList()) {
+    for (XAttr xattr : xattrList) {
       out.print("<" + INODE_SECTION_XATTR + ">");
-      int encodedName = xattr.getName();
-      int ns = (XATTR_NAMESPACE_MASK & (encodedName >> XATTR_NAMESPACE_OFFSET)) |
-          ((XATTR_NAMESPACE_EXT_MASK & (encodedName >> XATTR_NAMESPACE_EXT_OFFSET)) << 2);
-      o(INODE_SECTION_NS, XAttrProtos.XAttrProto.
-          XAttrNamespaceProto.forNumber(ns).toString());
-      o(SECTION_NAME, SerialNumberManager.XATTR.getString(
-          XATTR_NAME_MASK & (encodedName >> XATTR_NAME_OFFSET),
-          stringTable));
-      ByteString val = xattr.getValue();
+      o(INODE_SECTION_NS, xattr.getNameSpace().toString());
+      o(SECTION_NAME, xattr.getName());
+      ByteString val = ByteString.copyFrom(xattr.getValue());
       if (val.isValidUtf8()) {
         o(INODE_SECTION_VAL, val.toStringUtf8());
       } else {
@@ -463,8 +454,10 @@ public final class PBImageXmlWriter {
     INodeSection.QuotaByStorageTypeFeatureProto typeQuotas =
       d.getTypeQuotas();
     if (typeQuotas != null) {
-      for (INodeSection.QuotaByStorageTypeEntryProto entry:
-            typeQuotas.getQuotasList()) {
+      List <QuotaByStorageTypeEntry> quotaByStorageTypeEntryList = FSImageFormatPBINode
+          .Loader.loadQuotaByStorageTypeEntries(typeQuotas);
+      for (QuotaByStorageTypeEntry entry:
+              quotaByStorageTypeEntryList) {
         out.print("<" + INODE_SECTION_TYPE_QUOTA + ">");
         o(INODE_SECTION_TYPE, entry.getStorageType().toString());
         o(INODE_SECTION_QUOTA, entry.getQuota());
