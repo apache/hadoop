@@ -2710,6 +2710,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
     HdfsFileStatus status;
     try {
+      FSPermissionChecker.setOperationType("create");
       status = startFileInt(src, permissions, holder, clientMachine, flag,
           createParent, replication, blockSize, supportedVersions, ecPolicyName,
           storagePolicy, logRetryCache);
@@ -2764,7 +2765,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
     checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = getPermissionChecker();
-    FSPermissionChecker.setOperationType(null);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -3224,7 +3224,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     boolean success = false;
     checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = getPermissionChecker();
-    FSPermissionChecker.setOperationType(null);
+    FSPermissionChecker.setOperationType("completeFile");
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
