@@ -790,13 +790,13 @@ public class FSEditLog implements LogsPurgeable {
     StringBuilder buf = new StringBuilder();
     buf.append("Number of transactions: ")
         .append(numTransactions)
-        .append(" Total time for transactions(ms): ")
+        .append(", Total time for transactions(ms): ")
         .append(totalTimeTransactions)
-        .append(" Number of transactions batched in Syncs: ")
+        .append(", Number of transactions batched in Syncs: ")
         .append(numTransactionsBatchedInSync.longValue())
-        .append(" Number of syncs: ")
+        .append(", Number of syncs: ")
         .append(editLogStream.getNumSync())
-        .append(" SyncTimes(ms): ")
+        .append(", SyncTimes(ms): ")
         .append(journalSet.getSyncTimes());
     LOG.info(buf.toString());
   }
