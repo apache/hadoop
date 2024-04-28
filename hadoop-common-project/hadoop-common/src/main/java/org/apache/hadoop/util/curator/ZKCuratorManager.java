@@ -124,7 +124,6 @@ public final class ZKCuratorManager {
 
   /**
    * Start the connection to the ZooKeeper ensemble.
-   * 
    * @param zkHostPort Host:Port of the ZooKeeper.
    * @throws IOException If the connection cannot be started.
    */
