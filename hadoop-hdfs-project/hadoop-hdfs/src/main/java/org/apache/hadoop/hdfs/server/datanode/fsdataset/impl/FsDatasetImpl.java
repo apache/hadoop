@@ -1977,7 +1977,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         b.getBlockPoolId(), getStorageUuidForLock(b))) {
       if (Thread.interrupted()) {
         // Don't allow data modifications from interrupted threads
-        throw new IOException("Cannot finalize block:" + b + "from Interrupted Thread");
+        throw new IOException("Cannot finalize block: " + b + " from Interrupted Thread");
       }
       replicaInfo = getReplicaInfo(b);
       if (replicaInfo.getState() == ReplicaState.FINALIZED) {
@@ -2016,7 +2016,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       if (volumeMap.get(bpid, replicaInfo.getBlockId()).getGenerationStamp()
           > replicaInfo.getGenerationStamp()) {
         throw new IOException("Generation Stamp should be monotonically "
-            + "increased. bpid:" + bpid + ", block:" + replicaInfo.getBlockName());
+            + "increased. bpid: " + bpid + " , block: " + replicaInfo);
       }
 
       ReplicaInfo newReplicaInfo = null;
@@ -2028,8 +2028,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       } else {
         FsVolumeImpl v = (FsVolumeImpl)replicaInfo.getVolume();
         if (v == null) {
-          throw new IOException("No volume for block " + replicaInfo +
-              " bpid:" + bpid);
+          throw new IOException("No volume for bpid: " + bpid + " , block: " + replicaInfo);
         }
 
         newReplicaInfo = v.addFinalizedBlock(
@@ -2095,13 +2094,11 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   private boolean delBlockFromDisk(ReplicaInfo info, String bpid) {
     
     if (!info.deleteBlockData()) {
-      LOG.warn("Not able to delete the block data for replica " + info +
-          " bpid:" + bpid);
+      LOG.warn("Not able to delete the block data for replica {}, bpid: {}", info, bpid);
       return false;
     } else { // remove the meta file
       if (!info.deleteMetadata()) {
-        LOG.warn("Not able to delete the meta data for replica " + info +
-            " bpid:" + bpid);
+        LOG.warn("Not able to delete the meta data for replica {}, bpid: {}", info, bpid);
         return false;
       }
     }
