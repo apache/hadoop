@@ -1089,13 +1089,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   DatanodeInfo[] getCachedDatanodeReport(DatanodeReportType type)
       throws IOException {
     try {
-      DatanodeInfo[] dns = this.dnCache.get(type);
-      if (dns == null) {
-        LOG.debug("Get null DN report from cache");
-        dns = getCachedDatanodeReportImpl(type);
-        this.dnCache.put(type, dns);
-      }
-      return dns;
+      return this.dnCache.get(type);
     } catch (ExecutionException e) {
       LOG.error("Cannot get the DN report for {}", type, e);
       Throwable cause = e.getCause();

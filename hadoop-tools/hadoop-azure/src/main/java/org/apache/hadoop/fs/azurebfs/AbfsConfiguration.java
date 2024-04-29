@@ -364,6 +364,10 @@ public class AbfsConfiguration{
       FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, DefaultValue = DEFAULT_ENABLE_ABFS_CHECKSUM_VALIDATION)
   private boolean isChecksumValidationEnabled;
 
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_ENABLE_PAGINATED_DELETE, DefaultValue = DEFAULT_ENABLE_PAGINATED_DELETE)
+  private boolean isPaginatedDeleteEnabled;
+
   private String clientProvidedEncryptionKey;
   private String clientProvidedEncryptionKeySHA;
 
@@ -1255,11 +1259,6 @@ public class AbfsConfiguration{
   }
 
   @VisibleForTesting
-  public void setFooterReadBufferSize(int footerReadBufferSize) {
-    this.footerReadBufferSize = footerReadBufferSize;
-  }
-
-  @VisibleForTesting
   public void setEnableAbfsListIterator(boolean enableAbfsListIterator) {
     this.enableAbfsListIterator = enableAbfsListIterator;
   }
@@ -1268,8 +1267,8 @@ public class AbfsConfiguration{
     return renameResilience;
   }
 
-  void setRenameResilience(boolean actualResilience) {
-    renameResilience = actualResilience;
+  public boolean isPaginatedDeleteEnabled() {
+    return isPaginatedDeleteEnabled;
   }
 
   public boolean getIsChecksumValidationEnabled() {

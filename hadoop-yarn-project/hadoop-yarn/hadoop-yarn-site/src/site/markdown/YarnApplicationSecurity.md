@@ -576,7 +576,7 @@ system property in AM).
 
 `[ ]` Web browser interaction verified in secure cluster.
 
-`[ ]` REST client interation (GET operations) tested.
+`[ ]` REST client integration (GET operations) tested.
 
 `[ ]` Application continues to run after Kerberos Token expiry.
 
