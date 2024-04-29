@@ -193,12 +193,12 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
 
     String errorDesc = "Should throw RestOp exception on AAD failure";
     Assertions.assertThat(e.getStatusCode())
-        .describedAs("Incorrect status code. " + errorDesc).isEqualTo(-1);
+        .describedAs("Incorrect status code: " + errorDesc).isEqualTo(-1);
     Assertions.assertThat(e.getErrorCode())
-        .describedAs("Incorrect error code. " + errorDesc)
+        .describedAs("Incorrect error code: " + errorDesc)
         .isEqualTo(AzureServiceErrorCode.UNKNOWN);
     Assertions.assertThat(e.getErrorMessage())
-        .describedAs("Incorrect error message. " + errorDesc)
+        .describedAs("Incorrect error message: " + errorDesc)
         .contains("Auth failure: ");
   }
 }
