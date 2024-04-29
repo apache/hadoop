@@ -328,6 +328,8 @@ class BPOfferService {
     if (storage == null) {
       LOG.warn("Trying to add RDBI for null storage UUID {}. Trace: {}", storageUuid,
           Joiner.on("\n").join(Thread.currentThread().getStackTrace()));
+      getDataNode().getMetrics().incrNullStorageBlockReports();
+      return;
     }
 
     for (BPServiceActor actor : bpServices) {
