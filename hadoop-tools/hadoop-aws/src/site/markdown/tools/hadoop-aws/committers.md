@@ -713,7 +713,7 @@ such use case, The "MAGIC PATH" for each job is unique of the format `__magic_jo
 multiple job running simultaneously do not step into each other.
 
 Before attempting this, the committers must be set to not delete all incomplete uploads on job commit,
-by setting `fs.s3a.committer.abort.pending.uploads` to `false`. This is set to `false`by default
+by setting `fs.s3a.committer.abort.pending.uploads` to `false`. This is set to `true` by default.
 
 ```xml
 <property>
