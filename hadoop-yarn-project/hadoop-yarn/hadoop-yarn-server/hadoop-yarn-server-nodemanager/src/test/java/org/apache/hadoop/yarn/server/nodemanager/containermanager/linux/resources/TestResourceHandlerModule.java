@@ -164,7 +164,7 @@ public class TestResourceHandlerModule {
     conf.setBoolean(YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_V2_ENABLED, true);
 
     initResourceHandlerChain(conf);
- 
+
     Assert.assertTrue(ResourceHandlerModule.getMemoryResourceHandler()
         instanceof CGroupsV2MemoryResourceHandlerImpl);
     Assert.assertTrue(ResourceHandlerModule.getCGroupsHandler()
