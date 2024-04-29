@@ -39,7 +39,7 @@ public class TestCryptoUtils {
 
   @Test(timeout = 1_000)
   public void testProviderName() {
-    Assert.assertEquals(CryptoUtils.PROVIDER_NAME, BouncyCastleProvider.PROVIDER_NAME);
+    Assert.assertEquals(CryptoUtils.BOUNCY_CASTLE_PROVIDER_NAME, BouncyCastleProvider.PROVIDER_NAME);
   }
 
   static void assertRemoveProvider() {
@@ -48,9 +48,9 @@ public class TestCryptoUtils {
   }
 
   static void assertSetProvider(Configuration conf) {
-    conf.set(HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_KEY, CryptoUtils.PROVIDER_NAME);
+    conf.set(HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_KEY, CryptoUtils.BOUNCY_CASTLE_PROVIDER_NAME);
     final String providerFromConf = CryptoUtils.getJceProvider(conf);
-    Assert.assertEquals(CryptoUtils.PROVIDER_NAME, providerFromConf);
+    Assert.assertEquals(CryptoUtils.BOUNCY_CASTLE_PROVIDER_NAME, providerFromConf);
   }
 
   @Test(timeout = 5_000)
@@ -74,9 +74,9 @@ public class TestCryptoUtils {
         conf.get(HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_AUTO_ADD_KEY)));
     Assert.assertTrue(HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_AUTO_ADD_DEFAULT);
 
-    conf.set(HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_KEY, CryptoUtils.PROVIDER_NAME);
+    conf.set(HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_KEY, CryptoUtils.BOUNCY_CASTLE_PROVIDER_NAME);
     final String providerFromConf = CryptoUtils.getJceProvider(conf);
-    Assert.assertEquals(CryptoUtils.PROVIDER_NAME, providerFromConf);
+    Assert.assertEquals(CryptoUtils.BOUNCY_CASTLE_PROVIDER_NAME, providerFromConf);
 
     final Provider provider = Security.getProvider(BouncyCastleProvider.PROVIDER_NAME);
     Assert.assertTrue(provider instanceof BouncyCastleProvider);

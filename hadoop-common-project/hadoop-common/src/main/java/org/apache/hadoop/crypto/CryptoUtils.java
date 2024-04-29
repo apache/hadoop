@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.crypto;
 
-import java.lang.reflect.Field;
 import java.security.Provider;
 import java.security.Security;
 
@@ -34,14 +33,11 @@ import org.apache.hadoop.fs.store.LogExactlyOnce;
 public final class CryptoUtils {
   static final Logger LOG = LoggerFactory.getLogger(CryptoUtils.class);
   private static final LogExactlyOnce LOG_FAILED_TO_LOAD_CLASS = new LogExactlyOnce(LOG);
-  private static final LogExactlyOnce LOG_FAILED_TO_GET_FIELD = new LogExactlyOnce(LOG);
   private static final LogExactlyOnce LOG_FAILED_TO_ADD_PROVIDER = new LogExactlyOnce(LOG);
 
   private static final String BOUNCY_CASTLE_PROVIDER_CLASS
       = "org.bouncycastle.jce.provider.BouncyCastleProvider";
-  private static final String PROVIDER_NAME_FIELD = "PROVIDER_NAME";
-
-  static final String PROVIDER_NAME = "BC";
+  static final String BOUNCY_CASTLE_PROVIDER_NAME = "BC";
 
   /**
    * Get the security provider value specified in
@@ -59,23 +55,17 @@ public final class CryptoUtils {
         CommonConfigurationKeysPublic.HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_AUTO_ADD_DEFAULT);
 
     // For backward compatible, auto-add BOUNCY_CASTLE_PROVIDER_CLASS when the provider is "BC".
-    if (autoAdd && PROVIDER_NAME.equals(provider)) {
+    if (autoAdd && BOUNCY_CASTLE_PROVIDER_NAME.equals(provider)) {
       try {
         // Use reflection in order to avoid statically loading the class.
         final Class<?> clazz = Class.forName(BOUNCY_CASTLE_PROVIDER_CLASS);
-        final Field providerName = clazz.getField("PROVIDER_NAME");
-        if (provider.equals(providerName.get(null))) {
-          Security.addProvider((Provider) clazz.getConstructor().newInstance());
-          LOG.debug("Successfully added security provider {}", provider);
-          if (LOG.isTraceEnabled()) {
-            LOG.trace("Trace", new Throwable());
-          }
+        Security.addProvider((Provider) clazz.getConstructor().newInstance());
+        LOG.debug("Successfully added security provider {}", provider);
+        if (LOG.isTraceEnabled()) {
+          LOG.trace("Trace", new Throwable());
         }
       } catch (ClassNotFoundException e) {
         LOG_FAILED_TO_LOAD_CLASS.warn("Failed to load " + BOUNCY_CASTLE_PROVIDER_CLASS, e);
-      } catch (NoSuchFieldException e) {
-        LOG_FAILED_TO_GET_FIELD.warn("Failed to get field " + PROVIDER_NAME_FIELD
-            + " from class " + BOUNCY_CASTLE_PROVIDER_CLASS, e);
       } catch (Exception e) {
         LOG_FAILED_TO_ADD_PROVIDER.warn("Failed to add security provider for {}", provider, e);
       }
