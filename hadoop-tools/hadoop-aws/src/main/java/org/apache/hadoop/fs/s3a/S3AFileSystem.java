@@ -5756,6 +5756,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   /**
    * Create the callbacks for the bulk delete operation.
+   * @param path path to delete.
+   * @param pageSize page size.
    * @param span span for operations.
    * @return an instance of the Bulk Delete callbacks.
    */

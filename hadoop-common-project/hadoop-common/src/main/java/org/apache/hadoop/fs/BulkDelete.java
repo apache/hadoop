@@ -45,7 +45,6 @@ import static java.util.Objects.requireNonNull;
  * are attempts at parallel submissions across multiple threads.
  * @see <a href="https://issues.apache.org/jira/browse/HADOOP-16823">HADOOP-16823.
  *  Large DeleteObject requests are their own Thundering Herd</a>
- * <p>
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
@@ -60,6 +59,7 @@ public interface BulkDelete extends IOStatisticsSource, Closeable {
   /**
    * Base path of a bulk delete operation.
    * All paths submitted in {@link #bulkDelete(Collection)} must be under this path.
+   * @return base path of a bulk delete operation.
    */
   Path basePath();
 
@@ -84,7 +84,6 @@ public interface BulkDelete extends IOStatisticsSource, Closeable {
    * @throws IOException IO problems including networking, authentication and more.
    * @throws IllegalArgumentException if a path argument is invalid.
    */
-
   List<Map.Entry<Path, String>> bulkDelete(Collection<Path> paths)
       throws IOException, IllegalArgumentException;
 

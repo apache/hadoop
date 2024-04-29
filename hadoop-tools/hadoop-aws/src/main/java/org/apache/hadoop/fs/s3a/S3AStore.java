@@ -96,6 +96,7 @@ public interface S3AStore extends IOStatisticsSource {
    * @throws MultiObjectDeleteException one or more of the keys could not
    * be deleted.
    * @throws SdkException amazon-layer failure.
+   * @throws IOException IO problems.
    */
   @Retries.RetryRaw
   Map.Entry<Duration, DeleteObjectsResponse> deleteObjects(DeleteObjectsRequest deleteRequest)

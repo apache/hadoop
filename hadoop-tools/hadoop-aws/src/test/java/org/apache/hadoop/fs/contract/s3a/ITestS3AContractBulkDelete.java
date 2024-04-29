@@ -86,8 +86,11 @@ public class ITestS3AContractBulkDelete extends AbstractContractBulkDeleteTest {
     Configuration conf = super.createConfiguration();
     S3ATestUtils.disableFilesystemCaching(conf);
     conf = propagateBucketOptions(conf, getTestBucketName(conf));
-    skipIfNotEnabled(conf, Constants.ENABLE_MULTI_DELETE,
-            "Bulk delete is explicitly disabled for this bucket");
+    if (enableMultiObjectDelete) {
+      // if multi-object delete is disabled, skip the test.
+      skipIfNotEnabled(conf, Constants.ENABLE_MULTI_DELETE,
+              "Bulk delete is explicitly disabled for this bucket");
+    }
     S3ATestUtils.removeBaseAndBucketOverrides(conf,
             Constants.BULK_DELETE_PAGE_SIZE);
     conf.setInt(Constants.BULK_DELETE_PAGE_SIZE, DELETE_PAGE_SIZE);

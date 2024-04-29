@@ -90,10 +90,10 @@ No other restrictions are placed upon the outcome.
 ### Availability
 
 The `BulkDeleteSource` interface is exported by `FileSystem` and `FileContext` storage clients
-which is available for all FS via `org.apache.hadoop.fs.DefalutBulkDeleteSource`
-Some FS MAY still decide to not support the API by overwriting the `createBulkDelete()` method
-with an UnsupportedOperationException. While doing so they must also declare the path
-capability `fs.capability.bulk.delete` as false.
+which is available for all FS via `org.apache.hadoop.fs.DefalutBulkDeleteSource`. For the
+ICEBERG integration to work seamlessly, all FS which supports delete() MUST leave the
+default implementation in place by NEVER overwriting the `createBulkDelete()` method
+with an UnsupportedOperationException.
 
 Use the `PathCapabilities` probe `fs.capability.bulk.delete`.
 

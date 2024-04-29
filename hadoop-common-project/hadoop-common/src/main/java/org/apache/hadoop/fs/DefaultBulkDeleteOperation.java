@@ -89,12 +89,12 @@ public class DefaultBulkDeleteOperation implements BulkDelete {
                     } catch (FileNotFoundException e) {
                         // Ignore FNFE and don't add to the result list.
                         LOG.debug("Couldn't delete {} - does not exist: {}", pathToDelete, e.toString());
-                    } catch (Exception e) {
+                    } catch (IOException e) {
                         LOG.debug("Couldn't delete {} - exception occurred: {}", pathToDelete, e.toString());
                         result.add(Tuples.pair(pathToDelete, e.toString()));
                     }
                 }
-            } catch (Exception ex) {
+            } catch (IOException ex) {
                 LOG.debug("Couldn't delete {} - exception occurred: {}", pathToDelete, ex.toString());
                 result.add(Tuples.pair(pathToDelete, ex.toString()));
             }
