@@ -724,7 +724,7 @@ public class BlockPoolSlice {
     }
   }
 
-
+  private AtomicLong scanBlockCnt = new AtomicLong(0L);
   /**
    * Add replicas under the given directory to the volume map
    * @param volumeMap the replicas map
@@ -750,6 +750,11 @@ public class BlockPoolSlice {
             lazyWriteReplicaMap, isFinalized, exceptions, subTaskQueue);
         subTask.fork();
         subTaskQueue.add(subTask);
+      } else {
+        long num = scanBlockCnt.get();
+        if (num > 0 && num % 10000 == 0) {
+          LOG.info("Scan process: " + num + " blocks have been scanned.");
+        }
       }
 
       if (isFinalized && FsDatasetUtil.isUnlinkTmpFile(file)) {
@@ -769,6 +774,7 @@ public class BlockPoolSlice {
       Block block = new Block(blockId, file.length(), genStamp);
       addReplicaToReplicasMap(block, volumeMap, lazyWriteReplicaMap,
           isFinalized);
+      scanBlockCnt.incrementAndGet();
     }
   }
 
