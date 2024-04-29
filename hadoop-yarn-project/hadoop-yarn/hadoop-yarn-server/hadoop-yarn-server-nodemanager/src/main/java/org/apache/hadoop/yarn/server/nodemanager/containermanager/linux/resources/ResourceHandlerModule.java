@@ -70,9 +70,9 @@ public class ResourceHandlerModule {
   private static volatile CGroupsHandler cGroupsHandler;
   private static volatile CGroupsBlkioResourceHandlerImpl
       cGroupsBlkioResourceHandler;
-  private static volatile AbstractCGroupsMemoryResourceHandler
+  private static volatile MemoryResourceHandler
       cGroupsMemoryResourceHandler;
-  private static volatile AbstractCGroupsCpuResourceHandler
+  private static volatile CpuResourceHandler
       cGroupsCpuResourceHandler;
 
   /**
@@ -139,7 +139,7 @@ public class ResourceHandlerModule {
     return cGroupsCpuResourceHandler;
   }
 
-  private static AbstractCGroupsCpuResourceHandler initCGroupsCpuResourceHandler(
+  private static CpuResourceHandler initCGroupsCpuResourceHandler(
       Configuration conf) throws ResourceHandlerException {
     boolean cgroupsCpuEnabled =
         conf.getBoolean(YarnConfiguration.NM_CPU_RESOURCE_ENABLED,
@@ -257,7 +257,7 @@ public class ResourceHandlerModule {
     return null;
   }
 
-  private static AbstractCGroupsMemoryResourceHandler
+  private static MemoryResourceHandler
       getCgroupsMemoryResourceHandler(
       Configuration conf) throws ResourceHandlerException {
     if (cGroupsMemoryResourceHandler == null) {
