@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.azurebfs.utils.Base64;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PATH;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_SAS_FIXED_TOKEN;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_SAS_TOKEN_PROVIDER_TYPE;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.accountProperty;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -116,17 +117,26 @@ public class ITestAzureBlobFileSystemChooseSAS extends AbstractAbfsIntegrationTe
   /**
    * Tests the scenario where only the fixed token is configured, and no token provider class is set.
    * Account SAS Token configured as fixed SAS should be used.
+   * Also verifies that Account Specific as well as Account Agnostic Fixed SAS Token Works.
    * @throws IOException
    */
   @Test
   public void testOnlyFixedTokenConfigured() throws Exception {
     AbfsConfiguration testAbfsConfig = new AbfsConfiguration(
         getRawConfiguration(), this.getAccountName());
+
+    // setting an Account Specific Fixed SAS token.
     removeAnyPresetConfiguration(testAbfsConfig);
+    testAbfsConfig.set(accountProperty(FS_AZURE_SAS_FIXED_TOKEN, this.getAccountName()), accountSAS);
+    testOnlyFixedTokenConfiguredInternal(testAbfsConfig);
 
-    // setting an account SAS token in the fixed token field.
+    // setting an Account Agnostic Fixed SAS token.
+    removeAnyPresetConfiguration(testAbfsConfig);
     testAbfsConfig.set(FS_AZURE_SAS_FIXED_TOKEN, accountSAS);
+    testOnlyFixedTokenConfiguredInternal(testAbfsConfig);
+  }
 
+  private void testOnlyFixedTokenConfiguredInternal(AbfsConfiguration testAbfsConfig) throws Exception {
     // Creating a new filesystem with updated configs.
     try (AzureBlobFileSystem newTestFs = (AzureBlobFileSystem)
         FileSystem.newInstance(testAbfsConfig.getRawConfiguration())) {
@@ -164,5 +174,8 @@ public class ITestAzureBlobFileSystemChooseSAS extends AbstractAbfsIntegrationTe
 
   private void removeAnyPresetConfiguration(AbfsConfiguration testAbfsConfig) {
     testAbfsConfig.unset(FS_AZURE_SAS_TOKEN_PROVIDER_TYPE);
-    testAbfsConfig.unset(FS_AZURE_SAS_FIXED_TOKEN);  }
+    testAbfsConfig.unset(FS_AZURE_SAS_FIXED_TOKEN);
+    testAbfsConfig.unset(accountProperty(FS_AZURE_SAS_TOKEN_PROVIDER_TYPE, this.getAccountName()));
+    testAbfsConfig.unset(accountProperty(FS_AZURE_SAS_FIXED_TOKEN, this.getAccountName()));
+  }
 }

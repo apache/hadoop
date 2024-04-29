@@ -1007,8 +1007,7 @@ public class AbfsConfiguration{
       Class<? extends SASTokenProvider> customSasTokenProviderImplementation =
           getTokenProviderClass(authType, FS_AZURE_SAS_TOKEN_PROVIDER_TYPE,
               null, SASTokenProvider.class);
-      String configuredFixedToken = this.rawConfig.get(FS_AZURE_SAS_FIXED_TOKEN,
-          null);
+      String configuredFixedToken = this.getString(FS_AZURE_SAS_FIXED_TOKEN, null);
 
       Preconditions.checkArgument(
           customSasTokenProviderImplementation != null || configuredFixedToken != null,
