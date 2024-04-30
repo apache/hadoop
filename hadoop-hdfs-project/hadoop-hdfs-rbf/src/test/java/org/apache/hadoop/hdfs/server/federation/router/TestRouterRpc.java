@@ -1224,6 +1224,17 @@ public class TestRouterRpc {
     String badPath = "/unknownlocation/unknowndir";
     compareResponses(routerProtocol, nnProtocol, m,
         new Object[] {badPath, new String[] {routerFile}});
+
+    // Test when concat trg is a empty file
+    createFile(routerFS, existingFile, existingFileSize);
+    String sameRouterEmptyFile =
+        cluster.getFederatedTestDirectoryForNS(sameNameservice) +
+            "_newemptyfile";
+    createFile(routerFS, sameRouterEmptyFile, 0);
+    // Concat in same namespaces, succeeds
+    testConcat(existingFile, sameRouterEmptyFile, false);
+    FileStatus mergedStatus = getFileStatus(routerFS, sameRouterEmptyFile);
+    assertEquals(existingFileSize, mergedStatus.getLen());
   }
 
   @Test
