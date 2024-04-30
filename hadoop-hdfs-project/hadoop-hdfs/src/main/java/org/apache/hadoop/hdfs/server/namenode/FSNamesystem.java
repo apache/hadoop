@@ -2618,9 +2618,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @throws  IOException
    */
   BlockStoragePolicy getStoragePolicy(String src) throws IOException {
+    final String operationName = "getStoragePolicy";
     checkOperation(OperationCategory.READ);
     final FSPermissionChecker pc = getPermissionChecker();
-    FSPermissionChecker.setOperationType(null);
+    FSPermissionChecker.setOperationType(operationName);
     readLock();
     try {
       checkOperation(OperationCategory.READ);
@@ -2646,9 +2647,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   long getPreferredBlockSize(String src) throws IOException {
+    final String operationName = "getPreferredBlockSize";
     checkOperation(OperationCategory.READ);
     final FSPermissionChecker pc = getPermissionChecker();
-    FSPermissionChecker.setOperationType(null);
+    FSPermissionChecker.setOperationType(operationName);
     readLock();
     try {
       checkOperation(OperationCategory.READ);
@@ -2709,8 +2711,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       String storagePolicy, boolean logRetryCache) throws IOException {
 
     HdfsFileStatus status;
+    final String operationName = "create";
+    FSPermissionChecker.setOperationType(operationName);
     try {
-      FSPermissionChecker.setOperationType("create");
       status = startFileInt(src, permissions, holder, clientMachine, flag,
           createParent, replication, blockSize, supportedVersions, ecPolicyName,
           storagePolicy, logRetryCache);
@@ -2857,9 +2860,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   boolean recoverLease(String src, String holder, String clientMachine)
       throws IOException {
     boolean skipSync = false;
+    final String operationName = "recoverLease";
     checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = getPermissionChecker();
-    FSPermissionChecker.setOperationType(null);
+    FSPermissionChecker.setOperationType(operationName);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -3105,9 +3109,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     final byte storagePolicyID;
     final List<DatanodeStorageInfo> chosen;
     final BlockType blockType;
+    final String operationName = "getAdditionalDatanode";
     checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = getPermissionChecker();
-    FSPermissionChecker.setOperationType(null);
+    FSPermissionChecker.setOperationType(operationName);
     readLock();
     try {
       // Changing this operation category to WRITE instead of making getAdditionalDatanode as a
@@ -3155,10 +3160,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   void abandonBlock(ExtendedBlock b, long fileId, String src, String holder)
       throws IOException {
+    final String operationName = "abandonBlock";
     NameNode.stateChangeLog.debug("BLOCK* NameSystem.abandonBlock: {} of file {}", b, src);
     checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = getPermissionChecker();
-    FSPermissionChecker.setOperationType(null);
+    FSPermissionChecker.setOperationType(operationName);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -3222,9 +3228,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
                        ExtendedBlock last, long fileId)
     throws IOException {
     boolean success = false;
+    final String operationName = "completeFile";
     checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = getPermissionChecker();
-    FSPermissionChecker.setOperationType("completeFile");
+    FSPermissionChecker.setOperationType(operationName);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -3666,10 +3673,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   void fsync(String src, long fileId, String clientName, long lastBlockLength)
       throws IOException {
+    final String operationName = "fsync";
     NameNode.stateChangeLog.info("BLOCK* fsync: " + src + " for " + clientName);
     checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = getPermissionChecker();
-    FSPermissionChecker.setOperationType(null);
+    FSPermissionChecker.setOperationType(operationName);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
