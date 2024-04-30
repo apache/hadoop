@@ -1216,10 +1216,11 @@ public class RouterClientProtocol implements ClientProtocol {
 
   @Override
   public void refreshTopology() throws IOException {
-    // Router not support this operation, because this maybe refresh multi namespaces
-    String methodName = RouterRpcServer.getMethodName();
-    throw new UnsupportedOperationException(
-        "Operation \"" + methodName + "\" is not supported");
+    rpcServer.checkOperation(NameNode.OperationCategory.UNCHECKED);
+
+    RemoteMethod method = new RemoteMethod("refreshTopology", new Class<?>[] {});
+    final Set<FederationNamespaceInfo> nss = namenodeResolver.getNamespaces();
+    rpcClient.invokeConcurrent(nss, method, true, true);
   }
 
   @Override
