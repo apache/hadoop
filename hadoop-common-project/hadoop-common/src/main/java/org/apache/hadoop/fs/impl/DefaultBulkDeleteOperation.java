@@ -15,9 +15,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.fs;
+package org.apache.hadoop.fs.impl;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -27,6 +26,9 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.fs.BulkDelete;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.functional.Tuples;
 
 import static java.util.Objects.requireNonNull;
@@ -65,7 +67,9 @@ public class DefaultBulkDeleteOperation implements BulkDelete {
     }
 
     /**
-     * {@inheritDoc}
+     * {@inheritDoc}.
+     * The default impl just calls {@code FileSystem.delete(path, false)}
+     * on the single path in the list.
      */
     @Override
     public List<Map.Entry<Path, String>> bulkDelete(Collection<Path> paths)
@@ -77,25 +81,9 @@ public class DefaultBulkDeleteOperation implements BulkDelete {
             // path in the collection.
             Path pathToDelete = paths.iterator().next();
             try {
-                boolean deleted = fs.delete(pathToDelete, false);
-                if (deleted) {
-                    return result;
-                } else {
-                    try {
-                        FileStatus fileStatus = fs.getFileStatus(pathToDelete);
-                        if (fileStatus.isDirectory()) {
-                            result.add(Tuples.pair(pathToDelete, "Path is a directory"));
-                        }
-                    } catch (FileNotFoundException e) {
-                        // Ignore FNFE and don't add to the result list.
-                        LOG.debug("Couldn't delete {} - does not exist: {}", pathToDelete, e.toString());
-                    } catch (IOException e) {
-                        LOG.debug("Couldn't delete {} - exception occurred: {}", pathToDelete, e.toString());
-                        result.add(Tuples.pair(pathToDelete, e.toString()));
-                    }
-                }
+                fs.delete(pathToDelete, false);
             } catch (IOException ex) {
-                LOG.debug("Couldn't delete {} - exception occurred: {}", pathToDelete, ex.toString());
+                LOG.debug("Couldn't delete {} - exception occurred: {}", pathToDelete, ex);
                 result.add(Tuples.pair(pathToDelete, ex.toString()));
             }
         }

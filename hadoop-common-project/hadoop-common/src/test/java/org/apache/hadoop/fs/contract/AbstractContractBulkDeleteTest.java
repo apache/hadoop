@@ -137,22 +137,26 @@ public abstract class AbstractContractBulkDeleteTest extends AbstractFSContractT
             .isTrue();
   }
 
+  /**
+   * This test should fail as path is not under the base path.
+   */
   @Test
   public void testDeletePathsNotUnderBase() throws Exception {
     List<Path> paths = new ArrayList<>();
     Path pathNotUnderBase = path("not-under-base");
     paths.add(pathNotUnderBase);
-    // Should fail as path is not under the base path.
     intercept(IllegalArgumentException.class,
             () -> bulkDelete(getFileSystem(), basePath, paths));
   }
 
+  /**
+   * This test should fail as path is not absolute.
+   */
   @Test
   public void testDeletePathsNotAbsolute() throws Exception {
     List<Path> paths = new ArrayList<>();
     Path pathNotAbsolute = new Path("not-absolute");
     paths.add(pathNotAbsolute);
-    // Should fail as path is not absolute.
     intercept(IllegalArgumentException.class,
             () -> bulkDelete(getFileSystem(), basePath, paths));
   }

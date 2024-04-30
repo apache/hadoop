@@ -90,10 +90,10 @@ No other restrictions are placed upon the outcome.
 ### Availability
 
 The `BulkDeleteSource` interface is exported by `FileSystem` and `FileContext` storage clients
-which is available for all FS via `org.apache.hadoop.fs.DefalutBulkDeleteSource`. For the
-ICEBERG integration to work seamlessly, all FS which supports delete() MUST leave the
-default implementation in place by NEVER overwriting the `createBulkDelete()` method
-with an UnsupportedOperationException.
+which is available for all FS via `org.apache.hadoop.fs.impl.DefaultBulkDeleteSource`. For
+integration in applications like Apache Iceberg to work seamlessly, all implementations
+of this interface MUST NOT reject the request but instead return a BulkDelete instance
+of size >= 1.
 
 Use the `PathCapabilities` probe `fs.capability.bulk.delete`.
 
@@ -126,7 +126,7 @@ through reflection.
 #### Default Implementation
 
 The default implementation which will be used by all implementation of `FileSystem` of the
-`BulkDelete` interface is `org.apache.hadoop.fs.DefaultBulkDeleteOperation` which fixes the page
+`BulkDelete` interface is `org.apache.hadoop.fs.impl.DefaultBulkDeleteOperation` which fixes the page
 size to be 1 and calls `FileSystem.delete(path, false)` on the single path in the list.
 
 

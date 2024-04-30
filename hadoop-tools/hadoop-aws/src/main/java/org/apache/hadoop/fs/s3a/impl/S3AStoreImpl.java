@@ -154,7 +154,7 @@ public class S3AStoreImpl implements S3AStore {
   }
 
   /**
-   * Create the store context.
+   * Create a new store context.
    * @return a new store context.
    */
   private StoreContext createStoreContext() {

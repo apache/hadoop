@@ -15,18 +15,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.fs;
+package org.apache.hadoop.fs.impl;
 
 import java.io.IOException;
+
+import org.apache.hadoop.fs.BulkDelete;
+import org.apache.hadoop.fs.BulkDeleteSource;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 
 /**
  * Default implementation of {@link BulkDeleteSource}.
  */
-public class DefalutBulkDeleteSource implements BulkDeleteSource {
+public class DefaultBulkDeleteSource implements BulkDeleteSource {
 
     private final FileSystem fs;
 
-    public DefalutBulkDeleteSource(FileSystem fs) {
+    public DefaultBulkDeleteSource(FileSystem fs) {
         this.fs = fs;
     }
 

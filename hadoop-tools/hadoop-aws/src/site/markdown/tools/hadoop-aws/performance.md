@@ -153,11 +153,12 @@ However, the repeated request will still include the same number of objects and
 
 This can lead to a pathological situation where the repeated requests will
 never be satisfied because the request itself is sufficient to overload the store.
-See [HADOOP-16823.Large DeleteObject requests are their own Thundering Herd](https://issues.apache.org/jira/browse/HADOOP-16823)
+See [HADOOP-16823.Large DeleteObject requests are their own Thundering Herd]
+(https://issues.apache.org/jira/browse/HADOOP-16823)
 for an example of where this did actually surface in production.
 
 This is why the default page size of S3A clients is 250 paths, not the store limit of 1000 entries.
-It is also why the S3A delete/rename Operations do not attempt to do massive parallel deletions,
+It is also why the S3A delete/rename operations do not attempt to do massive parallel deletions,
 Instead bulk delete requests are queued for a single blocking thread to issue.
 Consider a similar design.
 
