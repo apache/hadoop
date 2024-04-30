@@ -18,7 +18,10 @@
 
 package org.apache.hadoop.mapreduce;
 
+import org.junit.After;
 import org.junit.Assert;
+
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.RawComparator;
@@ -26,6 +29,8 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Test;
 
 import java.io.BufferedReader;
@@ -36,12 +41,9 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.UUID;
 
 public class TestNewCombinerGrouping {
-  private static String TEST_ROOT_DIR = new File(System.getProperty(
-      "test.build.data", "build/test/data"), UUID.randomUUID().toString())
-          .getAbsolutePath();
+  private static File TEST_ROOT_DIR = GenericTestUtils.getRandomizedTestDir();
 
   public static class Map extends
       Mapper<LongWritable, Text, Text, LongWritable> {
@@ -103,9 +105,14 @@ public class TestNewCombinerGrouping {
 
   }
 
+  @After
+  public void cleanup() {
+    FileUtil.fullyDelete(TEST_ROOT_DIR);
+  }
+  
   @Test
   public void testCombiner() throws Exception {
-    if (!new File(TEST_ROOT_DIR).mkdirs()) {
+    if (!TEST_ROOT_DIR.mkdirs()) {
       throw new RuntimeException("Could not create test dir: " + TEST_ROOT_DIR);
     }
     File in = new File(TEST_ROOT_DIR, "input");
