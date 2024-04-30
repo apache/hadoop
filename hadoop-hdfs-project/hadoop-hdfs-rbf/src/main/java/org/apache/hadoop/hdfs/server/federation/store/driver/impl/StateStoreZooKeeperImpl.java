@@ -105,10 +105,6 @@ public class StateStoreZooKeeperImpl extends StateStoreSerializableImpl {
       LOG.info("Init StateStoreZookeeperImpl by sync mode.");
     }
     String zkHostPort = conf.get(RBFConfigKeys.FEDERATION_STORE_ZK_ADDRESS);
-    if (zkHostPort == null) {
-      LOG.error("{} is not configured.", RBFConfigKeys.FEDERATION_STORE_ZK_ADDRESS);
-      return false;
-    }
     try {
       this.zkManager = new ZKCuratorManager(conf);
       this.zkManager.start(zkHostPort);

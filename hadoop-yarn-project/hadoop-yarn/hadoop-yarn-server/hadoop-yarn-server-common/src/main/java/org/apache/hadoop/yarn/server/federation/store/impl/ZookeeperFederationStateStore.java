@@ -267,10 +267,6 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
         YarnConfiguration.FEDERATION_STATESTORE_ZK_PARENT_PATH,
         YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_ZK_PARENT_PATH);
     String zkHostPort = conf.get(YarnConfiguration.FEDERATION_STATESTORE_ZK_ADDRESS);
-    if (zkHostPort == null) {
-      throw new YarnRuntimeException(
-              YarnConfiguration.FEDERATION_STATESTORE_ZK_ADDRESS + " is not configured.");
-    }
     try {
       this.zkManager = new ZKCuratorManager(conf);
       this.zkManager.start(zkHostPort);

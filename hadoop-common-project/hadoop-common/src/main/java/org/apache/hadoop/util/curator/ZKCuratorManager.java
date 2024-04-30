@@ -124,21 +124,38 @@ public final class ZKCuratorManager {
 
   /**
    * Start the connection to the ZooKeeper ensemble.
-   * @param zkHostPort Host:Port of the ZooKeeper.
    * @throws IOException If the connection cannot be started.
    */
-  public void start(String zkHostPort) throws IOException{
-    this.start(new ArrayList<>(), zkHostPort);
+  public void start() throws IOException{
+    this.start(new ArrayList<>());
   }
 
   /**
    * Start the connection to the ZooKeeper ensemble.
    * @param authInfos List of authentication keys.
+   * @throws IOException If the connection cannot be started.
+   */
+  public void start(List<AuthInfo> authInfos) throws IOException{
+    this.start(authInfos, false);
+  }
+
+  /**
+   * Start the connection to the ZooKeeper ensemble.
    * @param zkHostPort Host:Port of the ZooKeeper.
    * @throws IOException If the connection cannot be started.
    */
-  public void start(List<AuthInfo> authInfos, String zkHostPort) throws IOException {
-    this.start(authInfos, false, zkHostPort);
+  public void start(String zkHostPort) throws IOException{
+    this.start(new ArrayList<>(), false, zkHostPort);
+  }
+
+  /**
+   * Start the connection to the ZooKeeper ensemble.
+   * @param authInfos  List of authentication keys.
+   * @param sslEnabled If the connection should be SSL/TLS encrypted.
+   * @throws IOException If the connection cannot be started.
+   */
+  public void start(List<AuthInfo> authInfos, boolean sslEnabled) throws IOException{
+    this.start(authInfos, sslEnabled, null);
   }
 
   /**
@@ -155,6 +172,15 @@ public final class ZKCuratorManager {
     ZKClientConfig zkClientConfig = new ZKClientConfig();
 
     // Connect to the ZooKeeper ensemble
+    if (zkHostPort == null) {
+      zkHostPort = conf.get(CommonConfigurationKeys.ZK_ADDRESS);
+      if (zkHostPort == null) {
+        throw new IOException(
+            CommonConfigurationKeys.ZK_ADDRESS + " is not configured.");
+      }
+      LOG.debug("Configured {} as {}", CommonConfigurationKeys.ZK_ADDRESS, zkHostPort);
+    }
+
     int numRetries = conf.getInt(CommonConfigurationKeys.ZK_NUM_RETRIES,
         CommonConfigurationKeys.ZK_NUM_RETRIES_DEFAULT);
     int zkSessionTimeout = conf.getInt(CommonConfigurationKeys.ZK_TIMEOUT_MS,

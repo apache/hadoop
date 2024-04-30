@@ -411,10 +411,6 @@ public class ResourceManager extends CompositeService
   public ZKCuratorManager createAndStartZKManager(Configuration
       config) throws IOException {
     String zkHostPort = config.get(YarnConfiguration.RM_ZK_ADDRESS);
-    if (zkHostPort == null) {
-      throw new YarnRuntimeException(
-              YarnConfiguration.RM_ZK_ADDRESS + " is not configured.");
-    }
     ZKCuratorManager manager = new ZKCuratorManager(config);
 
     // Get authentication
