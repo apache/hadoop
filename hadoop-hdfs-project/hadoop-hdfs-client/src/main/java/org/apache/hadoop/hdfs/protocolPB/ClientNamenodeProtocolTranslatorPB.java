@@ -775,11 +775,7 @@ public class ClientNamenodeProtocolTranslatorPB implements
 
   @Override
   public void refreshTopology() throws IOException {
-    try {
-      rpcProxy.refreshTopology(null, VOID_REFRESH_TOPOLOGY_REQUEST);
-    } catch (ServiceException e) {
-      throw ProtobufHelper.getRemoteException(e);
-    }
+    ipc(() -> rpcProxy.refreshTopology(null, VOID_REFRESH_TOPOLOGY_REQUEST));
   }
 
   @Override
