@@ -452,13 +452,19 @@ public class UnreliableManifestStoreOperations extends ManifestStoreOperations {
   @Override
   public CommitFileResult commitFile(final FileEntry entry)
       throws IOException {
+    final String op = "commitFile";
+    final Path source = entry.getSourcePath();
+    maybeTimeout(op, source, renamePathsToTimeoutBeforeRename);
     if (renameToFailWithException) {
-      maybeRaiseIOE("commitFile",
-          entry.getSourcePath(), renameSourceFilesToFail);
-      maybeRaiseIOE("commitFile",
+      maybeRaiseIOE(op,
+          source, renameSourceFilesToFail);
+      maybeRaiseIOE(op,
           entry.getDestPath().getParent(), renameDestDirsToFail);
     }
-    return wrappedOperations.commitFile(entry);
+    final CommitFileResult result = wrappedOperations.commitFile(entry);
+    // post rename timeout.
+    maybeTimeout(op, source, renamePathsToTimeoutAfterRename);
+    return result;
   }
 
   @Override

@@ -34,10 +34,15 @@ The protocol and its correctness are covered in
 [Manifest Committer Protocol](manifest_committer_protocol.html).
 
 It was added in March 2022.
-As of April 2024, the only problems have been scale related, rather than
-algorithm correctness.
+As of April 2024, the problems which surfaced have been
+* Memory use at scale.
+* Directory deletion scalability.
+* Resilience to task commit to rename failures.
 
-<!-- MACRO{toc|fromDepth=0|toDepth=2} -->
+That is: the core algorithms is correct, but task commit
+robustness was insufficient to some failure conditions.
+And scale is always a challenge, even with components tested through
+large TPC-DS test runs.
 
 ## Problem:
 
@@ -566,12 +571,12 @@ may surface in cloud storage.
 * General resilience to cleanup issues escalating to job failures.
 
 
-| Option | Meaning | Default Value |
-|--------|---------|---------------|
-| `mapreduce.fileoutputcommitter.cleanup.skipped` | Skip cleanup of `_temporary` directory| `false` |
-| `mapreduce.fileoutputcommitter.cleanup-failures.ignored` | Ignore errors during cleanup | `false` |
-| `mapreduce.manifest.committer.cleanup.parallel.delete` | Delete task attempt directories in parallel | `true` |
-| `mapreduce.manifest.committer.cleanup.parallel.delete.base.first` | Attempt to delete the base directory before parallel task attempts | `false` |
+| Option                                                            | Meaning                                                            | Default Value |
+|-------------------------------------------------------------------|--------------------------------------------------------------------|---------------|
+| `mapreduce.fileoutputcommitter.cleanup.skipped`                   | Skip cleanup of `_temporary` directory                             | `false`       |
+| `mapreduce.fileoutputcommitter.cleanup-failures.ignored`          | Ignore errors during cleanup                                       | `false`       |
+| `mapreduce.manifest.committer.cleanup.parallel.delete`            | Delete task attempt directories in parallel                        | `true`        |
+| `mapreduce.manifest.committer.cleanup.parallel.delete.base.first` | Attempt to delete the base directory before parallel task attempts | `false`       |
 
 The algorithm is:
 
@@ -790,12 +795,12 @@ spark.hadoop.mapreduce.manifest.committer.summary.report.directory  (optional: U
 There are some advanced options which are intended for development and testing,
 rather than production use.
 
-| Option | Meaning                                      | Default Value |
-|--------|----------------------------------------------|---------------|
-| `mapreduce.manifest.committer.manifest.save.attempts` | How many attempts should be made to commit a task manifest? | `5` |
-| `mapreduce.manifest.committer.store.operations.classname` | Classname for Manifest Store Operations      | `""`          |
-| `mapreduce.manifest.committer.validate.output` | Perform output validation?                   | `false`       |
-| `mapreduce.manifest.committer.writer.queue.capacity` | Queue capacity for writing intermediate file | `32`          |
+| Option                                                    | Meaning                                                     | Default Value |
+|-----------------------------------------------------------|-------------------------------------------------------------|---------------|
+| `mapreduce.manifest.committer.manifest.save.attempts`     | How many attempts should be made to commit a task manifest? | `5`           |
+| `mapreduce.manifest.committer.store.operations.classname` | Classname for Manifest Store Operations                     | `""`          |
+| `mapreduce.manifest.committer.validate.output`            | Perform output validation?                                  | `false`       |
+| `mapreduce.manifest.committer.writer.queue.capacity`      | Queue capacity for writing intermediate file                | `32`          |
 
 ### `mapreduce.manifest.committer.manifest.save.attempts`
 

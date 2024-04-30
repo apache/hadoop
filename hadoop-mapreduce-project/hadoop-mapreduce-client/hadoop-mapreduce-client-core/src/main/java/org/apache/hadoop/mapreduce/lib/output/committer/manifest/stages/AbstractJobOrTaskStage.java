@@ -676,15 +676,20 @@ public abstract class AbstractJobOrTaskStage<IN, OUT>
           // -this is just a little bit of due diligence.
           deleteRecursive(tempPath, OP_DELETE);
 
-          // save the temp file, overwriting any which remains from an earlier attempt
+          // save the temp file.
           operations.save(manifestData, tempPath, true);
+          // get the length and etag.
+          final FileStatus st = getFileStatus(tempPath);
 
-          // delete the destination in case it exists either from a failed previous
-          // attempt or from a concurrent task commit.
-          delete(finalPath, true, OP_DELETE);
+          // commit rename of temporary file to the final path; deleting the destination first.
+          final CommitOutcome outcome = commitFile(
+              new FileEntry(tempPath, finalPath, st.getLen(), getEtag(st)),
+              true);
+          if (outcome.recovered) {
+            LOG.warn("Task manifest file {} committed using rename recovery",
+                manifestData);
+          }
 
-          // rename temporary file to the final path.
-          renameFile(tempPath, finalPath);
         });
         // success: save the manifest and declare success
         savedManifest = manifestData;
@@ -797,13 +802,14 @@ public abstract class AbstractJobOrTaskStage<IN, OUT>
         // note any delay which took place
         noteAnyRateLimiting(STORE_IO_RATE_LIMITED, result.getWaitTime());
       }
+      return new CommitOutcome(result.recovered());
     } else {
       // commit with a simple rename; failures will be escalated.
       executeRenamingOperation("renameFile", source, dest,
           OP_COMMIT_FILE_RENAME, () ->
               operations.renameFile(source, dest));
+      return new CommitOutcome(false);
     }
-    return new CommitOutcome();
   }
 
   /**
@@ -923,6 +929,14 @@ public abstract class AbstractJobOrTaskStage<IN, OUT>
    */
   public static final class CommitOutcome {
 
+    /**
+     * Dit the commit recover from a failure?
+     */
+    public final boolean recovered;
+
+    public CommitOutcome(final boolean recovered) {
+      this.recovered = recovered;
+    }
   }
 
   /**

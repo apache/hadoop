@@ -52,7 +52,8 @@ import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.Unr
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
- * Test committing a task.
+ * Test committing a task, with lots of fault injection to validate
+ * resilience to transient failures.
  */
 public class TestCommitTaskStage extends AbstractManifestCommitterTest {
 
@@ -303,8 +304,8 @@ public class TestCommitTaskStage extends AbstractManifestCommitterTest {
   }
 
   @Test
-  public void testManifestDeleteInRenameErrorHandlerFailure() throws Throwable {
-    describe("Testing failure in the delete call made during cleanup");
+  public void testFailureToDeleteManifestPath() throws Throwable {
+    describe("Testing failure in the delete call made before renaming the manifest");
 
     UnreliableManifestStoreOperations failures = makeStoreOperationsUnreliable();
     StageConfig stageConfig = createStageConfig();
@@ -315,6 +316,9 @@ public class TestCommitTaskStage extends AbstractManifestCommitterTest {
     // final manifest file is by task ID
     Path manifestFile = manifestPathForTask(manifestDir,
         stageConfig.getTaskId());
+    // put a file in as there is a check for it before the delete
+    ContractTestUtils.touch(getFileSystem(), manifestFile);
+    /* and the delete shall fail */
     failures.addDeletePathToFail(manifestFile);
     Path manifestTempFile = manifestTempPathForTaskAttempt(manifestDir,
         stageConfig.getTaskAttemptId());
@@ -332,10 +336,10 @@ public class TestCommitTaskStage extends AbstractManifestCommitterTest {
 
 
   /**
-   * Failure of delete before rename.
+   * Failure of delete before saving the manifest to a temporary path.
    */
   @Test
-  public void testFailureOfDeleteBeforeRename() throws Throwable {
+  public void testFailureOfDeleteBeforeSavingTemporaryFile() throws Throwable {
     describe("Testing failure in the delete call made before rename");
 
     UnreliableManifestStoreOperations failures = makeStoreOperationsUnreliable();
@@ -344,14 +348,11 @@ public class TestCommitTaskStage extends AbstractManifestCommitterTest {
     new SetupTaskStage(stageConfig).apply("setup");
 
     final Path manifestDir = stageConfig.getTaskManifestDir();
-    // final manifest file is by task ID
-    Path manifestFile = manifestPathForTask(manifestDir,
-        stageConfig.getTaskId());
     Path manifestTempFile = manifestTempPathForTaskAttempt(manifestDir,
         stageConfig.getTaskAttemptId());
 
     // delete will fail
-    failures.addDeletePathToFail(manifestFile);
+    failures.addDeletePathToFail(manifestTempFile);
 
     // first verify that if too many attempts fail, the task will fail
     failures.setFailureLimit(SAVE_ATTEMPTS + 1);

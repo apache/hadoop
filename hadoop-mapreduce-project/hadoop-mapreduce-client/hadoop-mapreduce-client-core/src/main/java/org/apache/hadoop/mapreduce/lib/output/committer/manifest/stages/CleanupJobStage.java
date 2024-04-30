@@ -184,7 +184,8 @@ public class CleanupJobStage extends
           if (exception == null) {
             // success: record this as the outcome,
             outcome = Outcome.DELETED;
-            // and will skip the parallel delete
+            // and flag that the the parallel delete should be skipped because the
+            // base directory is alredy deleted.
             baseDirDeleted = true;
           } else {
             // failure: log and continue
