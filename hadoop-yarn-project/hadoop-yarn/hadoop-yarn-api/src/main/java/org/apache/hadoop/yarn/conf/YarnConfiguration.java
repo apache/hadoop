@@ -2815,6 +2815,14 @@ public class YarnConfiguration extends Configuration {
       20;
 
   /**
+   * Boolean indicating whether cgroup v2 is enabled.
+   */
+  public static final String NM_LINUX_CONTAINER_CGROUPS_V2_ENABLED =
+      NM_PREFIX + "linux-container-executor.cgroups.v2.enabled";
+
+  public static final boolean DEFAULT_NM_LINUX_CONTAINER_CGROUPS_V2_ENABLED = false;
+
+  /**
    * Indicates if memory and CPU limits will be set for the Windows Job
    * Object for the containers launched by the default container executor.
    */
