@@ -320,8 +320,7 @@ What can be changed is what secrets/credentials are used to authenticate the cal
 
 The authentication mechanism is set in `fs.azure.account.auth.type` (or the
 account specific variant). The possible values are SharedKey, OAuth, Custom
-and SAS. For the various OAuth options use the config `fs.azure.account
-.oauth.provider.type`. Following are the implementations supported
+and SAS. For the various OAuth options use the config `fs.azure.account.oauth.provider.type`. Following are the implementations supported
 ClientCredsTokenProvider, UserPasswordTokenProvider, MsiTokenProvider,
 RefreshTokenBasedTokenProvider and WorkloadIdentityTokenProvider. An IllegalArgumentException is thrown if
 the specified provider type is not one of the supported.

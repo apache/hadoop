@@ -939,17 +939,18 @@ public class AbfsConfiguration{
               clientId, refreshToken);
           LOG.trace("RefreshTokenBasedTokenProvider initialized");
         } else if (tokenProviderClass == WorkloadIdentityTokenProvider.class) {
-          String authority = getTrimmedPasswordString(
-              FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY,
-              AuthConfigurations.DEFAULT_FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY);
-          authority = appendSlashIfNeeded(authority);
-          String tenantId = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT);
-          String clientId = getPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID);
-          String tokenFile = getTrimmedPasswordString(
-              FS_AZURE_ACCOUNT_OAUTH_TOKEN_FILE,
+          String authority = appendSlashIfNeeded(
+              getTrimmedPasswordString(FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY,
+              AuthConfigurations.DEFAULT_FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY));
+          String tenantGuid =
+              getMandatoryPasswordString(FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT);
+          String clientId =
+              getMandatoryPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID);
+          String tokenFile =
+              getTrimmedPasswordString(FS_AZURE_ACCOUNT_OAUTH_TOKEN_FILE,
               AuthConfigurations.DEFAULT_FS_AZURE_ACCOUNT_OAUTH_TOKEN_FILE);
-          tokenProvider = new WorkloadIdentityTokenProvider(authority, tenantId,
-              clientId, tokenFile);
+          tokenProvider = new WorkloadIdentityTokenProvider(
+              authority, tenantGuid, clientId, tokenFile);
           LOG.trace("WorkloadIdentityTokenProvider initialized");
         } else {
           throw new IllegalArgumentException("Failed to initialize " + tokenProviderClass);

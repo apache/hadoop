@@ -18,14 +18,18 @@
 
 package org.apache.hadoop.fs.azurebfs.oauth2;
 
-import org.apache.commons.io.FileUtils;
-import org.apache.hadoop.fs.azurebfs.AbstractAbfsTestWithTimeout;
-import org.junit.Test;
-import org.mockito.Mockito;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+
+import org.assertj.core.api.Assertions;
+import org.junit.Test;
+import org.mockito.Mockito;
+
+import org.apache.commons.io.FileUtils;
+import org.apache.hadoop.fs.azurebfs.AbstractAbfsTestWithTimeout;
+
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Test the refresh logic of workload identity tokens.
@@ -38,7 +42,7 @@ public class TestWorkloadIdentityTokenProvider extends AbstractAbfsTestWithTimeo
   private static final String TOKEN_FILE = "/tmp/does_not_exist";
   private static final String TOKEN = "dummy-token";
 
-  public TestWorkloadIdentityTokenProvider() throws Exception {
+  public TestWorkloadIdentityTokenProvider() {
   }
 
   /**
@@ -49,7 +53,9 @@ public class TestWorkloadIdentityTokenProvider extends AbstractAbfsTestWithTimeo
     WorkloadIdentityTokenProvider provider = new WorkloadIdentityTokenProvider(
         AUTHORITY, TENANT_ID, CLIENT_ID, TOKEN_FILE);
 
-    assertTrue(provider.hasEnoughTimeElapsedSinceLastRefresh());
+    Assertions.assertThat(provider.hasEnoughTimeElapsedSinceLastRefresh())
+        .describedAs("Token should start as expired")
+        .isTrue();
   }
 
   /**
@@ -65,7 +71,9 @@ public class TestWorkloadIdentityTokenProvider extends AbstractAbfsTestWithTimeo
     Mockito.doReturn(System.currentTimeMillis() - oneHourMillis)
         .when(provider).getTokenFetchTime();
 
-    assertTrue(provider.hasEnoughTimeElapsedSinceLastRefresh());
+    Assertions.assertThat(provider.hasEnoughTimeElapsedSinceLastRefresh())
+        .describedAs("Token should be expired")
+        .isTrue();
   }
 
   /**
@@ -81,7 +89,9 @@ public class TestWorkloadIdentityTokenProvider extends AbstractAbfsTestWithTimeo
     Mockito.doReturn(System.currentTimeMillis() - fiftyNineMinutesMillis)
         .when(provider).getTokenFetchTime();
 
-    assertFalse(provider.hasEnoughTimeElapsedSinceLastRefresh());
+    Assertions.assertThat(provider.hasEnoughTimeElapsedSinceLastRefresh())
+        .describedAs("Token should not be expired")
+        .isFalse();
   }
 
   /**
@@ -99,8 +109,12 @@ public class TestWorkloadIdentityTokenProvider extends AbstractAbfsTestWithTimeo
         new WorkloadIdentityTokenProvider(AUTHORITY, TENANT_ID, CLIENT_ID, tokenFile.getPath()));
     Mockito.doReturn(azureAdToken)
         .when(tokenProvider).getTokenUsingJWTAssertion(TOKEN);
-    assertEquals(azureAdToken, tokenProvider.getToken());
-    assertTrue("token fetch time was not set correctly", tokenProvider.getTokenFetchTime() > startTime);
+    Assertions.assertThat(tokenProvider.getToken())
+        .describedAs("Token fetched from the token file is incorrect")
+        .isEqualTo(azureAdToken);
+    Assertions.assertThat(tokenProvider.getTokenFetchTime())
+        .describedAs("token fetch time was incorrect")
+        .isGreaterThanOrEqualTo(startTime);
   }
 
   /**
@@ -109,19 +123,18 @@ public class TestWorkloadIdentityTokenProvider extends AbstractAbfsTestWithTimeo
    * @throws IOException if file I/O fails.
    */
   @Test
-  public void testGetTokenThrowsWhenClientAssertionIsEmpty() throws IOException {
+  public void testGetTokenThrowsWhenClientAssertionIsEmpty() throws Exception {
     File tokenFile = File.createTempFile("azure-identity-token", "txt");
     AzureADToken azureAdToken = new AzureADToken();
     WorkloadIdentityTokenProvider tokenProvider = Mockito.spy(
         new WorkloadIdentityTokenProvider(AUTHORITY, TENANT_ID, CLIENT_ID, tokenFile.getPath()));
     Mockito.doReturn(azureAdToken)
         .when(tokenProvider).getTokenUsingJWTAssertion(TOKEN);
-    boolean exception = false;
-    try {
+    IOException ex = intercept(IOException.class, () -> {
       tokenProvider.getToken();
-    } catch (IOException e) {
-      exception = true;
-    }
-    assertTrue(exception);
+    });
+    Assertions.assertThat(ex.getMessage())
+      .describedAs("Exception should be thrown when the token file is empty")
+      .contains("Empty token file.");
   }
 }

@@ -21,14 +21,12 @@ package org.apache.hadoop.fs.azurebfs.oauth2;
 import java.io.File;
 import java.io.IOException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.hadoop.util.Preconditions;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import org.apache.commons.io.FileUtils;
-
 
 /**
  * Provides tokens based on Azure AD Workload Identity.
@@ -36,17 +34,13 @@ import org.apache.commons.io.FileUtils;
 public class WorkloadIdentityTokenProvider extends AccessTokenProvider {
 
   private static final String OAUTH2_TOKEN_PATH = "/oauth2/v2.0/token";
-  private final String authEndpoint;
-
-  private final String clientId;
-
-  private final String tokenFile;
-
-  private long tokenFetchTime = -1;
-
   private static final long ONE_HOUR = 3600 * 1000;
-
   private static final Logger LOG = LoggerFactory.getLogger(AccessTokenProvider.class);
+
+  private final String authEndpoint;
+  private final String clientId;
+  private final String tokenFile;
+  private long tokenFetchTime = -1;
 
   public WorkloadIdentityTokenProvider(final String authority, final String tenantId,
       final String clientId, final String tokenFile) {
@@ -85,7 +79,7 @@ public class WorkloadIdentityTokenProvider extends AccessTokenProvider {
 
   /**
    * Checks if the token is about to expire as per base expiry logic.
-   * Otherwise try to expire if enough time has elapsed since the last refresh.
+   * Otherwise, try to expire if enough time has elapsed since the last refresh.
    *
    * @return true if the token is expiring in next 1 hour or if a token has
    * never been fetched
