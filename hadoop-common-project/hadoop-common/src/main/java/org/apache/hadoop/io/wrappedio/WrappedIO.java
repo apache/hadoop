@@ -26,8 +26,6 @@ import java.util.Map;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.BulkDelete;
-import org.apache.hadoop.fs.BulkDeleteSource;
-import org.apache.hadoop.fs.impl.DefaultBulkDeleteSource;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
@@ -48,17 +46,6 @@ public final class WrappedIO {
   }
 
   /**
-   * Is bulk delete available on a filesystem?
-   * @param fs filesystem
-   * @param path path to delete under.
-   * @return true if bulk delete is available.
-   */
-  public static boolean isBulkDeleteAvailable(FileSystem fs, Path path) {
-    return (fs instanceof BulkDeleteSource)
-        && ((BulkDeleteSource) fs).isBulkDeleteAvailable(path);
-  }
-
-  /**
    * Get the maximum number of objects/files to delete in a single request.
    * @param fs filesystem
    * @param path path to delete under.
@@ -68,21 +55,9 @@ public final class WrappedIO {
    * @throws IOException problems resolving paths
    */
   public static int bulkDeletePageSize(FileSystem fs, Path path) throws IOException {
-    try (BulkDelete bulk = toBulkDeleteSource(fs).createBulkDelete(path)) {
+    try (BulkDelete bulk = fs.createBulkDelete(path)) {
       return bulk.pageSize();
     }
-  }
-
-  /**
-   * Convert a filesystem to a bulk delete source.
-   * @param fs filesystem
-   * @return cast fs or a default implementation.
-   */
-  private static BulkDeleteSource toBulkDeleteSource(final FileSystem fs) {
-    if (fs instanceof BulkDeleteSource) {
-        return (BulkDeleteSource) fs;
-    }
-    return new DefaultBulkDeleteSource(fs);
   }
 
   /**
@@ -107,9 +82,11 @@ public final class WrappedIO {
    * @throws IOException IO problems including networking, authentication and more.
    * @throws IllegalArgumentException if a path argument is invalid.
    */
-  public static List<Map.Entry<Path, String>> bulkDelete(FileSystem fs, Path base, Collection<Path> paths)
+  public static List<Map.Entry<Path, String>> bulkDelete(FileSystem fs,
+                                                         Path base,
+                                                         Collection<Path> paths)
         throws IOException {
-    try (BulkDelete bulk = toBulkDeleteSource(fs).createBulkDelete(base)) {
+    try (BulkDelete bulk = fs.createBulkDelete(base)) {
       return bulk.bulkDelete(paths);
     }
   }

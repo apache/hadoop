@@ -56,6 +56,7 @@ import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.Options.HandleOpt;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.impl.AbstractFSBuilderImpl;
+import org.apache.hadoop.fs.impl.DefaultBulkDeleteOperation;
 import org.apache.hadoop.fs.impl.FutureDataInputStreamBuilderImpl;
 import org.apache.hadoop.fs.impl.OpenFileParameters;
 import org.apache.hadoop.fs.permission.AclEntry;
@@ -169,7 +170,8 @@ import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapa
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public abstract class FileSystem extends Configured
-    implements Closeable, DelegationTokenIssuer, PathCapabilities {
+    implements Closeable, DelegationTokenIssuer,
+        PathCapabilities, BulkDeleteSource {
   public static final String FS_DEFAULT_NAME_KEY =
                    CommonConfigurationKeys.FS_DEFAULT_NAME_KEY;
   public static final String DEFAULT_FS =
@@ -4979,5 +4981,18 @@ public abstract class FileSystem extends Configured
       throws IOException {
     methodNotSupported();
     return null;
+  }
+
+  /**
+   * Create a default bulk delete operation to be used for any FileSystem.
+   * @param path base path for the operation.
+   * @return an instance of the bulk delete.
+   * @throws IllegalArgumentException any argument is invalid.
+   * @throws IOException if there is an IO problem.
+   */
+  @Override
+  public BulkDelete createBulkDelete(Path path)
+          throws IllegalArgumentException, IOException {
+    return new DefaultBulkDeleteOperation(path, this);
   }
 }

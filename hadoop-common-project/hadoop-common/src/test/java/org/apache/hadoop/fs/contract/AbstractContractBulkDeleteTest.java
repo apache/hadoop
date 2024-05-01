@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.contract;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -114,6 +115,15 @@ public abstract class AbstractContractBulkDeleteTest extends AbstractFSContractT
 
   @Test
   public void testBulkDeleteSuccessful() throws Exception {
+    runBulkDelete(false);
+  }
+
+  @Test
+  public void testBulkDeleteSuccessfulUsingDirectFS() throws Exception {
+    runBulkDelete(true);
+  }
+
+  private void runBulkDelete(boolean useDirectFS) throws IOException {
     List<Path> listOfPaths = createListOfPaths(pageSize, basePath);
     for (Path path : listOfPaths) {
       touch(fs, path);
@@ -122,13 +132,21 @@ public abstract class AbstractContractBulkDeleteTest extends AbstractFSContractT
     Assertions.assertThat(fileStatuses)
             .describedAs("File count after create")
             .hasSize(pageSize);
-    assertSuccessfulBulkDelete(
-            bulkDelete(getFileSystem(), basePath, listOfPaths));
+    if (useDirectFS) {
+      assertSuccessfulBulkDelete(
+              fs.createBulkDelete(basePath).bulkDelete(listOfPaths));
+    } else {
+      // Using WrappedIO to call bulk delete.
+      assertSuccessfulBulkDelete(
+              bulkDelete(getFileSystem(), basePath, listOfPaths));
+    }
+
     FileStatus[] fileStatusesAfterDelete = fs.listStatus(basePath);
     Assertions.assertThat(fileStatusesAfterDelete)
             .describedAs("File statuses should be empty after delete")
             .isEmpty();
   }
+
 
   @Test
   public void validatePathCapabilityDeclared() throws Exception {

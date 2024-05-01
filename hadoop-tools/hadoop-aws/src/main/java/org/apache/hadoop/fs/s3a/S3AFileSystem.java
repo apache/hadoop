@@ -288,7 +288,7 @@ import static org.apache.hadoop.util.functional.RemoteIterators.typeCastingRemot
 public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     AWSPolicyProvider, DelegationTokenProvider, IOStatisticsSource,
     AuditSpanSource<AuditSpanS3A>, ActiveThreadSpanSource<AuditSpanS3A>,
-    BulkDeleteSource, StoreContextFactory {
+        StoreContextFactory {
 
   /**
    * Default blocksize as used in blocksize and FS status queries.
