@@ -60,15 +60,6 @@ public class ITestS3AFSMainOperations extends FSMainOperationsBaseTest {
     }
   }
 
-  @Test
-  @Override
-  public void testWDAbsolute() throws IOException {
-    Path absoluteDir = getTestRootPath(fSys, "test/existingDir");
-    fSys.mkdirs(absoluteDir);
-    fSys.setWorkingDirectory(absoluteDir);
-    Assert.assertEquals(absoluteDir, fSys.getWorkingDirectory());
-  }
-
   @Override
   @Ignore("Permissions not supported")
   public void testListStatusThrowsExceptionForUnreadableDir() {

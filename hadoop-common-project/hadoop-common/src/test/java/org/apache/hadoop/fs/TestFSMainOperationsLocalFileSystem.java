@@ -52,13 +52,5 @@ public class TestFSMainOperationsLocalFileSystem extends FSMainOperationsBaseTes
   public void tearDown() throws Exception {
     super.tearDown();
   }
-  
-  @Test
-  @Override
-  public void testWDAbsolute() throws IOException {
-    Path absoluteDir = getTestRootPath(fSys, "test/existingDir");
-    fSys.mkdirs(absoluteDir);
-    fSys.setWorkingDirectory(absoluteDir);
-    Assert.assertEquals(absoluteDir, fSys.getWorkingDirectory());
-  }
+
 }

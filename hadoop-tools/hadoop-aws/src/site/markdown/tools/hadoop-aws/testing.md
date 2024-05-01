@@ -43,7 +43,7 @@ is a more specific lie and harder to make. And, if you get caught out: you
 lose all credibility with the project.
 
 You don't need to test from a VM within the AWS infrastructure; with the
-`-Dparallel=tests` option the non-scale tests complete in under twenty minutes.
+`-Dparallel-tests` option the non-scale tests complete in under twenty minutes.
 Because the tests clean up after themselves, they are also designed to be low
 cost. It's neither hard nor expensive to run the tests; if you can't,
 there's no guarantee your patch works. The reviewers have enough to do, and
