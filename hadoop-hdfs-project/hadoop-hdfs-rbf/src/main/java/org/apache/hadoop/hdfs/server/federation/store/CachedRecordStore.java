@@ -189,7 +189,7 @@ public abstract class CachedRecordStore<R extends BaseRecord>
           LOG.warn("Couldn't delete State Store record {}: {}", recordName,
               record);
         }
-      } else if (record.checkExpired(currentDriverTime)) {
+      } else if (!record.isExpired() && record.checkExpired(currentDriverTime)) {
         String recordName = StateStoreUtils.getRecordName(record.getClass());
         LOG.info("Override State Store record {}: {}", recordName, record);
         commitRecords.add(record);
