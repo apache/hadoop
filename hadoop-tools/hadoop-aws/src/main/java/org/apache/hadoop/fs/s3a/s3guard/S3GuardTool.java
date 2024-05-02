@@ -392,6 +392,8 @@ public abstract class S3GuardTool extends Configured implements Tool,
         "\tThe S3A connector is compatible with buckets where"
             + " directory markers are not deleted";
 
+    public static final String CAPABILITY_FORMAT = "\t%s %s%n";
+
     public BucketInfo(Configuration conf) {
       super(conf, GUARDED_FLAG, UNGUARDED_FLAG, FIPS_FLAG, MAGIC_FLAG);
       CommandFormat format = getCommandFormat();
@@ -560,9 +562,14 @@ public abstract class S3GuardTool extends Configured implements Tool,
       // and check for capabilities
       println(out, "%nStore Capabilities");
       for (String capability : S3A_DYNAMIC_CAPABILITIES) {
-        out.printf("\t%s %s%n", capability,
+        out.printf(CAPABILITY_FORMAT, capability,
             fs.hasPathCapability(root, capability));
       }
+      // the performance flags are dynamically generated
+      fs.createStoreContext().getPerformanceFlags().pathCapabilities()
+          .forEach(capability -> out.printf(CAPABILITY_FORMAT, capability, "true"));
+
+      // finish with a newline
       println(out, "");
 
       if (commands.getOpt(FIPS_FLAG) && !fs.hasPathCapability(root, FIPS_ENDPOINT)) {

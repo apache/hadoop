@@ -33,7 +33,9 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.impl.FlagSet;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.s3a.api.PerformanceFlagEnum;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentialBinding;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
@@ -992,6 +994,7 @@ public final class S3ATestUtils {
         .setMultiObjectDeleteEnabled(multiDelete)
         .setUseListV1(false)
         .setContextAccessors(accessors)
+        .setPerformanceFlags(FlagSet.createFlagSet(PerformanceFlagEnum.class,FS_S3A_PERFORMANCE_FLAGS))
         .build();
   }
 
