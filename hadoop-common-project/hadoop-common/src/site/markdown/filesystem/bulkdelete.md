@@ -45,7 +45,7 @@ it supports the API.
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 public interface BulkDeleteSource {
-  default BulkDelete createBulkDelete(Path path)
+  BulkDelete createBulkDelete(Path path)
       throws UnsupportedOperationException, IllegalArgumentException, IOException;
 
 }

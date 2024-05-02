@@ -47,18 +47,7 @@ public interface BulkDeleteSource {
    * @throws IllegalArgumentException path not valid.
    * @throws IOException problems resolving paths
    */
-  default BulkDelete createBulkDelete(Path path)
-      throws UnsupportedOperationException, IllegalArgumentException, IOException {
-    throw new UnsupportedOperationException("Bulk delete not supported");
-  }
-
-  /**
-   * Is bulk delete available on this path for this source?
-   * @param path path to delete under.
-   * @return true if bulk delete is available.
-   */
-  default boolean isBulkDeleteAvailable(Path path) {
-    return true;
-  }
+  BulkDelete createBulkDelete(Path path)
+      throws UnsupportedOperationException, IllegalArgumentException, IOException;
 
 }
