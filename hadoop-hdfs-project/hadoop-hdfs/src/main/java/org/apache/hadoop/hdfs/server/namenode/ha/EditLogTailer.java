@@ -34,6 +34,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Iterators;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.util.Timer;
@@ -355,7 +356,7 @@ public class EditLogTailer {
     // transitionToActive RPC takes the write lock before calling
     // tailer.stop() -- so if we're not interruptible, it will
     // deadlock.
-    namesystem.writeLockInterruptibly();
+    namesystem.writeLockInterruptibly(FSNamesystemLockMode.GLOBAL);
     try {
       long currentLastTxnId = image.getLastAppliedTxId();
       if (lastTxnId != currentLastTxnId) {
@@ -386,7 +387,7 @@ public class EditLogTailer {
       lastLoadedTxnId = image.getLastAppliedTxId();
       return editsLoaded;
     } finally {
-      namesystem.writeUnlock("doTailEdits");
+      namesystem.writeUnlock(FSNamesystemLockMode.GLOBAL, "doTailEdits");
     }
   }
 

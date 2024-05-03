@@ -51,6 +51,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.InternalDataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -159,13 +160,13 @@ public class TestFileCorruption {
       DatanodeRegistration dnR = InternalDataNodeTestUtils.
         getDNRegistrationForBP(dataNode, blk.getBlockPoolId());
       FSNamesystem ns = cluster.getNamesystem();
-      ns.writeLock();
+      ns.writeLock(FSNamesystemLockMode.BM);
       try {
         cluster.getNamesystem().getBlockManager().findAndMarkBlockAsCorrupt(blk,
             new DatanodeInfoBuilder().setNodeID(dnR).build(), "TEST",
             "STORAGE_ID");
       } finally {
-        ns.writeUnlock();
+        ns.writeUnlock(FSNamesystemLockMode.BM, "testArrayOutOfBoundsException");
       }
       
       // open the file
@@ -210,16 +211,16 @@ public class TestFileCorruption {
       FSNamesystem ns = cluster.getNamesystem();
       //fail the storage on that node which has the block
       try {
-        ns.writeLock();
+        ns.writeLock(FSNamesystemLockMode.BM);
         updateAllStorages(bm);
       } finally {
-        ns.writeUnlock();
+        ns.writeUnlock(FSNamesystemLockMode.BM, "testCorruptionWithDiskFailure");
       }
-      ns.writeLock();
+      ns.writeLock(FSNamesystemLockMode.BM);
       try {
         markAllBlocksAsCorrupt(bm, blk);
       } finally {
-        ns.writeUnlock();
+        ns.writeUnlock(FSNamesystemLockMode.BM, "testCorruptionWithDiskFailure");
       }
 
       // open the file

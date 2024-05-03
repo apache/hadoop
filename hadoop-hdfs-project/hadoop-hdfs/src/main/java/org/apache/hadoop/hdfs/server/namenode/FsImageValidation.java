@@ -26,6 +26,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.Storage;
+import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
 import org.apache.hadoop.hdfs.server.namenode.top.metrics.TopMetrics;
@@ -272,13 +273,13 @@ public class FsImageValidation {
 
       final FSImageFormat.LoaderDelegator loader
           = FSImageFormat.newLoader(conf, namesystem);
-      namesystem.writeLock();
+      namesystem.writeLock(FSNamesystemLockMode.GLOBAL);
       namesystem.getFSDirectory().writeLock();
       try {
         loader.load(fsImageFile, false);
       } finally {
         namesystem.getFSDirectory().writeUnlock();
-        namesystem.writeUnlock("loadImage");
+        namesystem.writeUnlock(FSNamesystemLockMode.GLOBAL, "loadImage");
       }
     }
     t.cancel();

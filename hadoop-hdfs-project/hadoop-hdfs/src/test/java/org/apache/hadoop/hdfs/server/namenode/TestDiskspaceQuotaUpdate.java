@@ -45,6 +45,7 @@ import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.QuotaByStorageTypeExceededException;
 import org.apache.hadoop.hdfs.server.datanode.InternalDataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
@@ -392,11 +393,11 @@ public class TestDiskspaceQuotaUpdate {
 
   private void updateCountForQuota(int i) {
     FSNamesystem fsn = cluster.getNamesystem();
-    fsn.writeLock();
+    fsn.writeLock(FSNamesystemLockMode.FS);
     try {
       getFSDirectory().updateCountForQuota(i);
     } finally {
-      fsn.writeUnlock();
+      fsn.writeUnlock(FSNamesystemLockMode.FS, "updateCountForQuota");
     }
   }
 

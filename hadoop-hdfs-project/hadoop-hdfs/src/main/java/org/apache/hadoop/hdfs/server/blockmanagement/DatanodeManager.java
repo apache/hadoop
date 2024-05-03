@@ -22,6 +22,7 @@ import static org.apache.hadoop.util.Time.monotonicNow;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.hdfs.server.namenode.fgl.FSNamesystemLockMode;
 import org.apache.hadoop.util.Preconditions;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
@@ -855,7 +856,7 @@ public class DatanodeManager {
    */
   private void removeDatanode(DatanodeDescriptor nodeInfo,
       boolean removeBlocksFromBlocksMap) {
-    assert namesystem.hasWriteLock();
+    assert namesystem.hasWriteLock(FSNamesystemLockMode.BM);
     heartbeatManager.removeDatanode(nodeInfo);
     if (removeBlocksFromBlocksMap) {
       blockManager.removeBlocksAssociatedTo(nodeInfo);
@@ -874,7 +875,7 @@ public class DatanodeManager {
    */
   public void removeDatanode(final DatanodeID node)
       throws UnregisteredNodeException {
-    namesystem.writeLock();
+    namesystem.writeLock(FSNamesystemLockMode.BM);
     try {
       final DatanodeDescriptor descriptor = getDatanode(node);
       if (descriptor != null) {
@@ -884,7 +885,7 @@ public class DatanodeManager {
                                      + node + " does not exist");
       }
     } finally {
-      namesystem.writeUnlock("removeDatanode");
+      namesystem.writeUnlock(FSNamesystemLockMode.BM, "removeDatanode");
     }
   }
 
@@ -1334,12 +1335,13 @@ public class DatanodeManager {
    */
   public void refreshNodes(final Configuration conf) throws IOException {
     refreshHostsReader(conf);
-    namesystem.writeLock();
+    // processExtraRedundancyBlocksOnInService involves FS in stopMaintenance and stopDecommission.
+    namesystem.writeLock(FSNamesystemLockMode.GLOBAL);
     try {
       refreshDatanodes();
       countSoftwareVersions();
     } finally {
-      namesystem.writeUnlock("refreshNodes");
+      namesystem.writeUnlock(FSNamesystemLockMode.GLOBAL, "refreshNodes");
     }
   }
 
