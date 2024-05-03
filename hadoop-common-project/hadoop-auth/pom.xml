@@ -136,7 +136,11 @@
     </dependency>
     <dependency>
       <groupId>org.apache.kerby</groupId>
-      <artifactId>kerb-simplekdc</artifactId>
+      <artifactId>kerb-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.kerby</groupId>
+      <artifactId>kerb-util</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.directory.server</groupId>
