@@ -1944,6 +1944,11 @@
           <version>${kerby.version}</version>
         </dependency>
         <dependency>
+          <groupId>org.apache.kerby</groupId>
+          <artifactId>kerb-util</artifactId>
+          <version>${kerby.version}</version>
+        </dependency>
+        <dependency>
           <groupId>org.ehcache</groupId>
           <artifactId>ehcache</artifactId>
           <version>${ehcache.version}</version>
