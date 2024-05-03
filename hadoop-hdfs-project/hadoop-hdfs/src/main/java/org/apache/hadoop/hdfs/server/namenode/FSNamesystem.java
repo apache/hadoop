@@ -687,6 +687,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   private final MessageDigest digest;
 
+  private static final String CMD_COMPLETE_FILE = "close";
+
   /**
    * Notify that loading of this FSDirectory is complete, and
    * it is imageLoaded for use
@@ -3221,7 +3223,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   boolean completeFile(final String src, String holder,
                        ExtendedBlock last, long fileId)
     throws IOException {
+    final String operationName = CMD_COMPLETE_FILE;
     boolean success = false;
+    FileStatus stat = null;
     checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = getPermissionChecker();
     FSPermissionChecker.setOperationType(null);
@@ -3229,15 +3233,20 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot complete file " + src);
-      success = FSDirWriteFileOp.completeFile(this, pc, src, holder, last,
+      INodesInPath iip = dir.resolvePath(pc, src, fileId);
+      success = FSDirWriteFileOp.completeFile(this, iip, src, holder, last,
                                               fileId);
+      if (success) {
+        stat = dir.getAuditFileInfo(iip);
+      }
     } finally {
-      writeUnlock("completeFile");
+      writeUnlock(operationName);
     }
     getEditLog().logSync();
     if (success) {
       NameNode.stateChangeLog.info("DIR* completeFile: " + src
           + " is closed by " + holder);
+      logAuditEvent(true, operationName, src, null, stat);
     }
     return success;
   }
@@ -8915,6 +8924,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         }
         sb.append("\t").append("proto=")
             .append(Server.getProtocol());
+        if (cmd.equals(CMD_COMPLETE_FILE) && status != null) {
+          sb.append("\t").append("fileSize=").append(status.getLen());
+        }
         if (isCallerContextEnabled &&
             callerContext != null &&
             callerContext.isContextValid()) {

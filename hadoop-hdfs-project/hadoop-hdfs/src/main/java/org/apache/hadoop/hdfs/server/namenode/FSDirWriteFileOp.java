@@ -676,7 +676,7 @@ class FSDirWriteFileOp {
     return new FileState(file, src, iip);
   }
 
-  static boolean completeFile(FSNamesystem fsn, FSPermissionChecker pc,
+  static boolean completeFile(FSNamesystem fsn, INodesInPath iip,
       final String srcArg, String holder, ExtendedBlock last, long fileId)
       throws IOException {
     String src = srcArg;
@@ -685,7 +685,6 @@ class FSDirWriteFileOp {
                                         src + " for " + holder);
     }
     checkBlock(fsn, last);
-    INodesInPath iip = fsn.dir.resolvePath(pc, src, fileId);
     return completeFileInternal(fsn, iip, holder,
         ExtendedBlock.getLocalBlock(last), fileId);
   }
