@@ -193,6 +193,8 @@ public interface S3ATestConstants {
 
   /**
    * Fork ID passed down from maven if the test is running in parallel.
+   * If a build was also executed with job.id set, this is included in
+   * the fork ID.
    */
   String TEST_UNIQUE_FORK_ID = "test.unique.fork.id";
   String TEST_STS_ENABLED = "test.fs.s3a.sts.enabled";

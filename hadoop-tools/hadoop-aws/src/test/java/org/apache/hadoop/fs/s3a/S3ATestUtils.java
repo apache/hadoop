@@ -601,6 +601,7 @@ public final class S3ATestUtils {
   /**
    * Create a test path, using the value of
    * {@link S3ATestConstants#TEST_UNIQUE_FORK_ID} if it is set.
+   * This path is *not* qualified.
    * @param defVal default value
    * @return a path
    */

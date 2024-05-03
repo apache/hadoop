@@ -120,14 +120,8 @@
                 <test.build.data>${test.build.data}/${surefire.forkNumber}</test.build.data>
                 <test.build.dir>${test.build.dir}/${surefire.forkNumber}</test.build.dir>
                 <hadoop.tmp.dir>${hadoop.tmp.dir}/${surefire.forkNumber}</hadoop.tmp.dir>
+                <test.unique.fork.id>job-${job.id}-fork-000${surefire.forkNumber}</test.unique.fork.id>
 
-                <!-- Due to a Maven quirk, setting this to just -->
-                <!-- surefire.forkNumber won't do the parameter -->
-                <!-- substitution.  Putting a prefix in front of it like -->
-                <!-- "fork-" makes it work. -->
-                <!-- Important: Those leading 0s are needed to guarantee that -->
-                <!-- trailing three chars are always numeric and unique -->
-                <test.unique.fork.id>fork-000${surefire.forkNumber}</test.unique.fork.id>
                 <!-- Propagate scale parameters -->
                 <fs.s3a.scale.test.enabled>${fs.s3a.scale.test.enabled}</fs.s3a.scale.test.enabled>
                 <fs.s3a.scale.test.huge.filesize>${fs.s3a.scale.test.huge.filesize}</fs.s3a.scale.test.huge.filesize>
@@ -297,6 +291,7 @@
                     <fs.s3a.directory.marker.audit>${fs.s3a.directory.marker.audit}</fs.s3a.directory.marker.audit>
                     <!-- Prefetch -->
                     <fs.s3a.prefetch.enabled>${fs.s3a.prefetch.enabled}</fs.s3a.prefetch.enabled>
+                    <test.unique.fork.id>job-${job.id}</test.unique.fork.id>
                   </systemPropertyVariables>
                   <forkedProcessTimeoutInSeconds>${fs.s3a.scale.test.timeout}</forkedProcessTimeoutInSeconds>
                 </configuration>
