@@ -70,7 +70,7 @@ class OpenFileCtxCache {
     Iterator<Entry<FileHandle, OpenFileCtx>> it = openFileMap.entrySet()
         .iterator();
     if (LOG.isTraceEnabled()) {
-      LOG.trace("openFileMap size:" + size());
+      LOG.trace("openFileMap size:{}", size());
     }
 
     Entry<FileHandle, OpenFileCtx> idlest = null;
@@ -80,7 +80,7 @@ class OpenFileCtxCache {
       OpenFileCtx ctx = pairs.getValue();
       if (!ctx.getActiveState()) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Got one inactive stream: " + ctx);
+          LOG.debug("Got one inactive stream: {}", ctx);
         }
         return pairs;
       }
@@ -150,7 +150,7 @@ class OpenFileCtxCache {
     Iterator<Entry<FileHandle, OpenFileCtx>> it = openFileMap.entrySet()
         .iterator();
     if (LOG.isTraceEnabled()) {
-      LOG.trace("openFileMap size:" + size());
+      LOG.trace("openFileMap size:{}", size());
     }
 
     while (it.hasNext()) {
@@ -202,7 +202,7 @@ class OpenFileCtxCache {
       Iterator<Entry<FileHandle, OpenFileCtx>> it = openFileMap.entrySet()
           .iterator();
       if (LOG.isTraceEnabled()) {
-        LOG.trace("openFileMap size:" + size());
+        LOG.trace("openFileMap size:{}", size());
       }
 
       while (it.hasNext()) {
@@ -255,8 +255,7 @@ class OpenFileCtxCache {
           long workedTime = Time.monotonicNow() - lastWakeupTime;
           if (workedTime < rotation) {
             if (LOG.isTraceEnabled()) {
-              LOG.trace("StreamMonitor can still have a sleep:"
-                  + ((rotation - workedTime) / 1000));
+              LOG.trace("StreamMonitor can still have a sleep:{}", (rotation - workedTime) / 1000);
             }
             Thread.sleep(rotation - workedTime);
           }

@@ -631,8 +631,7 @@ public class RMContextImpl implements RMContext {
       URI result = ProxyUriUtils.getProxyUri(null, proxyUri, applicationId);
       return result.toASCIIString();
     } catch(URISyntaxException e) {
-      LOG.warn("Could not generate default proxy tracking URL for " +
-          applicationId);
+      LOG.warn("Could not generate default proxy tracking URL for {}", applicationId);
       return UNAVAILABLE;
     }
   }

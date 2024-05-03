@@ -183,7 +183,7 @@ public class CleanerService extends CompositeService {
 
 
       fs.delete(pidPath, false);
-      LOG.info("Removed the global cleaner pid file at " + pidPath.toString());
+      LOG.info("Removed the global cleaner pid file at {}", pidPath);
     } catch (IOException e) {
       LOG.error(
           "Unable to remove the global cleaner pid file! The file may need "

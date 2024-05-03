@@ -177,15 +177,15 @@ public class FileSystemApplicationHistoryStore extends AbstractService
         return null;
       }
       if (!readStartData) {
-        LOG.warn("Start information is missing for application " + appId);
+        LOG.warn("Start information is missing for application {}", appId);
       }
       if (!readFinishData) {
-        LOG.warn("Finish information is missing for application " + appId);
+        LOG.warn("Finish information is missing for application {}", appId);
       }
-      LOG.info("Completed reading history information of application " + appId);
+      LOG.info("Completed reading history information of application {}", appId);
       return historyData;
     } catch (IOException e) {
-      LOG.error("Error when reading history file of application " + appId, e);
+      LOG.error("Error when reading history file of application {}", appId, e);
       throw e;
     } finally {
       hfReader.close();
@@ -209,8 +209,8 @@ public class FileSystemApplicationHistoryStore extends AbstractService
       } catch (IOException e) {
         // Eat the exception not to disturb the getting the next
         // ApplicationHistoryData
-        LOG.error("History information of application " + appId
-            + " is not included into the result due to the exception", e);
+        LOG.error("History information of application {} is not included into the result due to the exception",
+                appId, e);
       }
     }
     return historyDataMap;
@@ -290,19 +290,16 @@ public class FileSystemApplicationHistoryStore extends AbstractService
         return null;
       }
       if (!readStartData) {
-        LOG.warn("Start information is missing for application attempt "
-            + appAttemptId);
+        LOG.warn("Start information is missing for application attempt {}", appAttemptId);
       }
       if (!readFinishData) {
-        LOG.warn("Finish information is missing for application attempt "
-            + appAttemptId);
+        LOG.warn("Finish information is missing for application attempt {}", appAttemptId);
       }
-      LOG.info("Completed reading history information of application attempt "
-          + appAttemptId);
+      LOG.info("Completed reading history information of application attempt {}", appAttemptId);
       return historyData;
     } catch (IOException e) {
-      LOG.error("Error when reading history file of application attempt"
-          + appAttemptId, e);
+      LOG.error("Error when reading history file of application attempt{}",
+              appAttemptId, e);
       throw e;
     } finally {
       hfReader.close();
@@ -341,16 +338,16 @@ public class FileSystemApplicationHistoryStore extends AbstractService
         return null;
       }
       if (!readStartData) {
-        LOG.warn("Start information is missing for container " + containerId);
+        LOG.warn("Start information is missing for container {}", containerId);
       }
       if (!readFinishData) {
-        LOG.warn("Finish information is missing for container " + containerId);
+        LOG.warn("Finish information is missing for container {}", containerId);
       }
-      LOG.info("Completed reading history information of container "
-          + containerId);
+      LOG.info("Completed reading history information of container {}", containerId);
       return historyData;
     } catch (IOException e) {
-      LOG.error("Error when reading history file of container " + containerId, e);
+      LOG.error("Error when reading history file of container {}",
+              containerId, e);
       throw e;
     } finally {
       hfReader.close();
@@ -422,11 +419,10 @@ public class FileSystemApplicationHistoryStore extends AbstractService
           new Path(rootDirPath, appStart.getApplicationId().toString());
       try {
         hfWriter = new HistoryFileWriter(applicationHistoryFile);
-        LOG.info("Opened history file of application "
-            + appStart.getApplicationId());
+        LOG.info("Opened history file of application {}", appStart.getApplicationId());
       } catch (IOException e) {
-        LOG.error("Error when openning history file of application "
-            + appStart.getApplicationId(), e);
+        LOG.error("Error when opening history file of application {}",
+            appStart.getApplicationId(), e);
         throw e;
       }
       outstandingWriters.put(appStart.getApplicationId(), hfWriter);
@@ -439,11 +435,10 @@ public class FileSystemApplicationHistoryStore extends AbstractService
       hfWriter.writeHistoryData(new HistoryDataKey(appStart.getApplicationId()
         .toString(), START_DATA_SUFFIX),
         ((ApplicationStartDataPBImpl) appStart).getProto().toByteArray());
-      LOG.info("Start information of application "
-          + appStart.getApplicationId() + " is written");
+      LOG.info("Start information of application {} is written", appStart.getApplicationId());
     } catch (IOException e) {
-      LOG.error("Error when writing start information of application "
-          + appStart.getApplicationId(), e);
+      LOG.error("Error when writing start information of application {}",
+              appStart.getApplicationId(), e);
       throw e;
     }
   }
@@ -458,11 +453,10 @@ public class FileSystemApplicationHistoryStore extends AbstractService
       hfWriter.writeHistoryData(new HistoryDataKey(appFinish.getApplicationId()
         .toString(), FINISH_DATA_SUFFIX),
         ((ApplicationFinishDataPBImpl) appFinish).getProto().toByteArray());
-      LOG.info("Finish information of application "
-          + appFinish.getApplicationId() + " is written");
+      LOG.info("Finish information of application {} is written", appFinish.getApplicationId());
     } catch (IOException e) {
-      LOG.error("Error when writing finish information of application "
-          + appFinish.getApplicationId(), e);
+      LOG.error("Error when writing finish information of application {}",
+          appFinish.getApplicationId(), e);
       throw e;
     } finally {
       hfWriter.close();
@@ -482,11 +476,11 @@ public class FileSystemApplicationHistoryStore extends AbstractService
         .getApplicationAttemptId().toString(), START_DATA_SUFFIX),
         ((ApplicationAttemptStartDataPBImpl) appAttemptStart).getProto()
           .toByteArray());
-      LOG.info("Start information of application attempt "
-          + appAttemptStart.getApplicationAttemptId() + " is written");
+      LOG.info("Start information of application attempt {} is written",
+              appAttemptStart.getApplicationAttemptId());
     } catch (IOException e) {
-      LOG.error("Error when writing start information of application attempt "
-          + appAttemptStart.getApplicationAttemptId(), e);
+      LOG.error("Error when writing start information of application attempt {}",
+          appAttemptStart.getApplicationAttemptId(), e);
       throw e;
     }
   }
@@ -503,11 +497,11 @@ public class FileSystemApplicationHistoryStore extends AbstractService
         .getApplicationAttemptId().toString(), FINISH_DATA_SUFFIX),
         ((ApplicationAttemptFinishDataPBImpl) appAttemptFinish).getProto()
           .toByteArray());
-      LOG.info("Finish information of application attempt "
-          + appAttemptFinish.getApplicationAttemptId() + " is written");
+      LOG.info("Finish information of application attempt {} is written",
+              appAttemptFinish.getApplicationAttemptId());
     } catch (IOException e) {
-      LOG.error("Error when writing finish information of application attempt "
-          + appAttemptFinish.getApplicationAttemptId(), e);
+      LOG.error("Error when writing finish information of application attempt {}",
+              appAttemptFinish.getApplicationAttemptId(), e);
       throw e;
     }
   }
@@ -523,11 +517,10 @@ public class FileSystemApplicationHistoryStore extends AbstractService
       hfWriter.writeHistoryData(new HistoryDataKey(containerStart
         .getContainerId().toString(), START_DATA_SUFFIX),
         ((ContainerStartDataPBImpl) containerStart).getProto().toByteArray());
-      LOG.info("Start information of container "
-          + containerStart.getContainerId() + " is written");
+      LOG.info("Start information of container {} is written", containerStart.getContainerId());
     } catch (IOException e) {
-      LOG.error("Error when writing start information of container "
-          + containerStart.getContainerId(), e);
+      LOG.error("Error when writing start information of container {}",
+              containerStart.getContainerId(), e);
       throw e;
     }
   }
@@ -543,11 +536,10 @@ public class FileSystemApplicationHistoryStore extends AbstractService
       hfWriter.writeHistoryData(new HistoryDataKey(containerFinish
         .getContainerId().toString(), FINISH_DATA_SUFFIX),
         ((ContainerFinishDataPBImpl) containerFinish).getProto().toByteArray());
-      LOG.info("Finish information of container "
-          + containerFinish.getContainerId() + " is written");
+      LOG.info("Finish information of container {} is written", containerFinish.getContainerId());
     } catch (IOException e) {
-      LOG.error("Error when writing finish information of container "
-          + containerFinish.getContainerId(), e);
+      LOG.error("Error when writing finish information of container {}",
+              containerFinish.getContainerId(), e);
     }
   }
 

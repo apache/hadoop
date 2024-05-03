@@ -385,7 +385,7 @@ public class TestCopyListing extends SimpleCopyListing {
                 + ", idx=" + idx, fs.makeQualified(srcFiles.get(idx)),
             currentVal.getPath());
         if (LOG.isDebugEnabled()) {
-          LOG.debug("val=" + fs.makeQualified(srcFiles.get(idx)));
+          LOG.debug("val={}", fs.makeQualified(srcFiles.get(idx)));
         }
         idx++;
       }

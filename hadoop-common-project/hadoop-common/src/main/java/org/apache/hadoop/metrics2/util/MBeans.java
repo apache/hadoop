@@ -101,13 +101,12 @@ public final class MBeans {
         return name;
       } catch (InstanceAlreadyExistsException iaee) {
         if (LOG.isTraceEnabled()) {
-          LOG.trace("Failed to register MBean \"" + name + "\"", iaee);
+          LOG.trace("Failed to register MBean \"{}\"", name, iaee);
         } else {
-          LOG.warn("Failed to register MBean \"" + name
-              + "\": Instance already exists.");
+          LOG.warn("Failed to register MBean \"{}\": Instance already exists.", name);
         }
       } catch (Exception e) {
-        LOG.warn("Failed to register MBean \"" + name + "\"", e);
+        LOG.warn("Failed to register MBean \"{}\"", name, e);
       }
     }
     return null;

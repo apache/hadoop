@@ -172,7 +172,7 @@ public class TeraGen extends Configured implements Tool {
     public List<InputSplit> getSplits(JobContext job) {
       long totalRows = getNumberOfRows(job);
       int numSplits = job.getConfiguration().getInt(MRJobConfig.NUM_MAPS, 1);
-      LOG.info("Generating " + totalRows + " using " + numSplits);
+      LOG.info("Generating {} using {}",totalRows, numSplits);
       List<InputSplit> splits = new ArrayList<InputSplit>();
       long currentRow = 0;
       for(int split = 0; split < numSplits; ++split) {

@@ -599,8 +599,8 @@ public class LeveldbRMStateStore extends RMStateStore {
           batch.delete(bytes(attemptKey));
         }
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Removing state for app " + appId + " and "
-              + appState.attempts.size() + " attempts" + " at " + appKey);
+          LOG.debug("Removing state for app {} and {} attempts at {}",
+                  appId, appState.attempts.size(), appKey);
         }
         db.write(batch);
       }

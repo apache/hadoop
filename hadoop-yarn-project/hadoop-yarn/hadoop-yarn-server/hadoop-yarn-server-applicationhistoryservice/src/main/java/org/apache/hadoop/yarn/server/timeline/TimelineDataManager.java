@@ -107,10 +107,8 @@ public class TimelineDataManager extends AbstractService {
         return timelineACLsManager.checkAccess(
           ugi, ApplicationAccessType.VIEW_APP, entity);
       } catch (YarnException e) {
-        LOG.info("Error when verifying access for user " + ugi
-          + " on the events of the timeline entity "
-          + new EntityIdentifier(entity.getEntityId(),
-          entity.getEntityType()), e);
+        LOG.info("Error when verifying access for user {} on the events of the timeline entity {}",
+                new EntityIdentifier(entity.getEntityId(), entity.getEntityType()), ugi, e);
         return false;
       }
     }
@@ -296,10 +294,9 @@ public class TimelineDataManager extends AbstractService {
             eventsItr.remove();
           }
         } catch (Exception e) {
-          LOG.warn("Error when verifying access for user " + callerUGI
-              + " on the events of the timeline entity "
-              + new EntityIdentifier(eventsOfOneEntity.getEntityId(),
-                  eventsOfOneEntity.getEntityType()), e);
+          LOG.warn("Error when verifying access for user {} on the events of the timeline entity {}",
+                  callerUGI,new EntityIdentifier(eventsOfOneEntity.getEntityId(), eventsOfOneEntity.getEntityType()),
+                  e);
           eventsItr.remove();
         }
       }
@@ -373,8 +370,8 @@ public class TimelineDataManager extends AbstractService {
         }
       } catch (Exception e) {
         // Skip the entity which already exists and was put by others
-        LOG.warn("Skip the timeline entity: { id: " + entity.getEntityId()
-            + ", type: "+ entity.getEntityType() + " }", e);
+        LOG.warn("Skip the timeline entity: { id: {}, type: {} }",
+                entity.getEntityId(), entity.getEntityType(), e);
         TimelinePutResponse.TimelinePutError error =
             new TimelinePutResponse.TimelinePutError();
         error.setEntityId(entity.getEntityId());

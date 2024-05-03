@@ -101,12 +101,11 @@ public class JAXBContextResolver implements ContextResolver<JAXBContext> {
     if (loadCustom) {
       if (daoClasses != null) {
         Collections.addAll(finalcTypesList, daoClasses);
-        LOG.debug("Added custom dao classes: " + Arrays.toString(daoClasses));
+        LOG.debug("Added custom dao classes: {}", Arrays.toString(daoClasses));
       }
       if (unwrappedDaoClasses != null) {
         Collections.addAll(finalRootUnwrappedTypesList, unwrappedDaoClasses);
-        LOG.debug("Added custom Unwrapped dao classes: "
-            + Arrays.toString(unwrappedDaoClasses));
+        LOG.debug("Added custom Unwrapped dao classes: {}", Arrays.toString(unwrappedDaoClasses));
       }
     }
 

@@ -128,7 +128,7 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
               generateApplicationReport(entity, ApplicationReportField.ALL);
           apps.put(app.appReport.getApplicationId(), app.appReport);
         } catch (Exception e) {
-          LOG.error("Error on generating application report for " +
+          LOG.error("Error on generating application report for {}",
               entity.getEntityId(), e);
         }
       }
@@ -698,13 +698,12 @@ public class ApplicationHistoryManagerOnTimelineStore extends AbstractService
     } catch (AuthorizationException | ApplicationAttemptNotFoundException e) {
       // AuthorizationException is thrown because the user doesn't have access
       if (e instanceof AuthorizationException) {
-        LOG.warn("Failed to authorize when generating application report for "
-            + app.appReport.getApplicationId()
-            + ". Use a placeholder for its latest attempt id. ", e);
+        LOG.warn("Failed to authorize when generating application report for {}. "
+                        + "Use a placeholder for its latest attempt id. ",
+                app.appReport.getApplicationId(), e);
       } else { // Attempt not found
-        LOG.info("No application attempt found for "
-            + app.appReport.getApplicationId()
-            + ". Use a placeholder for its latest attempt id. ", e);
+        LOG.info("No application attempt found for {}. Use a placeholder for its latest attempt id. ",
+                app.appReport.getApplicationId(), e);
       }
       // It's possible that the app is finished before the first attempt is created.
       app.appReport.setDiagnostics(null);

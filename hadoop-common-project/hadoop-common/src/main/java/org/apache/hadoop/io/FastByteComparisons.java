@@ -94,8 +94,7 @@ abstract class FastByteComparisons {
         return comparer;
       } catch (Throwable t) { // ensure we really catch *everything*
         if (LOG.isTraceEnabled()) {
-          LOG.trace(t.getMessage());
-          LOG.trace("Lexicographical comparer selected");
+          LOG.trace("Lexicographical comparer selected", t);
         }
         return lexicographicalComparerJavaImpl();
       }

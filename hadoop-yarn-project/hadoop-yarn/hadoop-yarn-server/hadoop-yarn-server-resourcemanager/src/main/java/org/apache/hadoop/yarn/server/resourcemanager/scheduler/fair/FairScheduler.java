@@ -994,7 +994,7 @@ public class FairScheduler extends
 
     for (ResourceRequest resourceRequest : requests) {
       if (LOG.isTraceEnabled()) {
-        LOG.trace("Validating resource request: " + resourceRequest);
+        LOG.trace("Validating resource request: {}", resourceRequest);
       }
 
       MaxResourceValidationResult validationResult =

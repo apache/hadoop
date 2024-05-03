@@ -145,11 +145,9 @@ public class TestLargeBlock {
           }
         }
       }
-      LOG.debug("Before update: to read: " + bytesToRead +
-          "; read already: "+ thisread);
+      LOG.debug("Before update: to read: {}; read already: {}", bytesToRead, thisread);
       bytesToRead -= thisread;
-      LOG.debug("After  update: to read: " + bytesToRead +
-          "; read already: " + thisread);
+      LOG.debug("After  update: to read: {}; read already: {}", bytesToRead, thisread);
     }
     stm.close();
   }

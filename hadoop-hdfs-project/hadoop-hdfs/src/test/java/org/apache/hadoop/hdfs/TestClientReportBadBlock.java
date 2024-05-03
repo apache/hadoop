@@ -221,9 +221,7 @@ public class TestClientReportBadBlock {
       DatanodeInfo dninfo = datanodeinfos[i];
       final DataNode dn = cluster.getDataNode(dninfo.getIpcPort());
       cluster.corruptReplica(dn, block);
-      LOG.debug("Corrupted block " + block.getBlockName() + " on data node "
-          + dninfo);
-
+      LOG.debug("Corrupted block {} on data node {}", block.getBlockName(), dninfo);
     }
   }
 

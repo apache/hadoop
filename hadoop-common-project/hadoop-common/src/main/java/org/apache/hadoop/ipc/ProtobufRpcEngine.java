@@ -238,11 +238,10 @@ public class ProtobufRpcEngine implements RpcEngine {
       }
 
       if (LOG.isTraceEnabled()) {
-        LOG.trace(Thread.currentThread().getId() + ": Call -> " +
-            remoteId + ": " + method.getName() +
-            " {" + TextFormat.shortDebugString((Message) args[1]) + "}");
+        LOG.trace("{}: Call -> {}: {} {{}}",
+                Thread.currentThread().getId(), remoteId,
+                method.getName(), TextFormat.shortDebugString((Message) args[1]));
       }
-
 
       final Message theRequest = (Message) args[1];
       final RpcWritable.Buffer val;
@@ -253,9 +252,7 @@ public class ProtobufRpcEngine implements RpcEngine {
 
       } catch (Throwable e) {
         if (LOG.isTraceEnabled()) {
-          LOG.trace(Thread.currentThread().getId() + ": Exception <- " +
-              remoteId + ": " + method.getName() +
-                " {" + e + "}");
+          LOG.trace("{}: Exception <- {}: {} {{}}", Thread.currentThread().getId(), remoteId, method.getName(), e);
         }
         if (traceScope != null) {
           traceScope.addTimelineAnnotation("Call got exception: " +
@@ -311,9 +308,11 @@ public class ProtobufRpcEngine implements RpcEngine {
         returnMessage = buf.getValue(prototype.getDefaultInstanceForType());
 
         if (LOG.isTraceEnabled()) {
-          LOG.trace(Thread.currentThread().getId() + ": Response <- " +
-              remoteId + ": " + method.getName() +
-                " {" + TextFormat.shortDebugString(returnMessage) + "}");
+          LOG.trace("{}: Response <- {}: {} {{}}",
+                  Thread.currentThread().getId(),
+                  remoteId,
+                  method.getName(),
+                  TextFormat.shortDebugString(returnMessage));
         }
 
       } catch (Throwable e) {

@@ -271,10 +271,9 @@ public class AdminService extends CompositeService implements
         break;
       case REQUEST_BY_USER_FORCED:
         if (autoFailoverEnabled) {
-          LOG.warn("Allowing manual failover from " +
-              org.apache.hadoop.ipc.Server.getRemoteAddress() +
-              " even though automatic failover is enabled, because the user " +
-              "specified the force flag");
+          LOG.warn("Allowing manual failover from {} even though automatic failover is enabled, "
+                          + "because the user specified the force flag",
+                  org.apache.hadoop.ipc.Server.getRemoteAddress());
         }
         break;
       case REQUEST_BY_ZKFC:
@@ -666,7 +665,7 @@ public class AdminService extends CompositeService implements
       RMNode node = this.rm.getRMContext().getRMNodes().get(nodeId);
       if (node == null) {
         LOG.error("Resource update get failed on all nodes due to change "
-            + "resource on an unrecognized node: " + nodeId);
+            + "resource on an unrecognized node: {}", nodeId);
         throw RPCUtil.getRemoteException(
             "Resource update get failed on all nodes due to change resource "
                 + "on an unrecognized node: " + nodeId);
@@ -684,7 +683,7 @@ public class AdminService extends CompositeService implements
       RMNode node = this.rm.getRMContext().getRMNodes().get(nodeId);
 
       if (node == null) {
-        LOG.warn("Resource update get failed on an unrecognized node: " + nodeId);
+        LOG.warn("Resource update get failed on an unrecognized node: {}", nodeId);
         allSuccess = false;
       } else {
         // update resource to RMNode
@@ -944,7 +943,7 @@ public class AdminService extends CompositeService implements
 
   private YarnException logAndWrapException(Exception exception, String user,
       String operation, String msg) throws YarnException {
-    LOG.warn("Exception " + msg, exception);
+    LOG.warn("Exception {}", msg, exception);
     RMAuditLogger.logFailure(user, operation, "",
         "AdminService", "Exception " + msg);
     return RPCUtil.getRemoteException(exception);

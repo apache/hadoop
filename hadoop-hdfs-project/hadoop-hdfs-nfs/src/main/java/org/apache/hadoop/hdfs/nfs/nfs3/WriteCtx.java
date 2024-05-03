@@ -151,8 +151,7 @@ class WriteCtx {
       throws IOException {
     if (dataState != DataState.ALLOW_DUMP) {
       if (LOG.isTraceEnabled()) {
-        LOG.trace("No need to dump with status(replied,dataState):" + "("
-            + replied + "," + dataState + ")");
+        LOG.trace("No need to dump with status(replied,dataState):({},{})", replied, dataState);
       }
       return 0;
     }
