@@ -55,17 +55,21 @@ public class TestFederationStateStoreClientMetrics {
         FederationStateStoreClientMetrics.getNumSucceededCalls();
     long apiGoodBefore = FederationStateStoreClientMetrics
         .getNumSucceessfulCallsForMethod("registerSubCluster");
+    double totalLatencyBefore = FederationStateStoreClientMetrics
+        .getLatencySucceededCalls();
+    double apiLatencyBefore = FederationStateStoreClientMetrics
+        .getLatencySucceessfulCallsForMethod("registerSubCluster");
 
     goodStateStore.registerSubCluster(100);
 
     Assert.assertEquals(totalGoodBefore + 1,
         FederationStateStoreClientMetrics.getNumSucceededCalls());
-    Assert.assertEquals(100,
+    Assert.assertEquals((totalGoodBefore * totalLatencyBefore + 100) / (totalGoodBefore + 1),
         FederationStateStoreClientMetrics.getLatencySucceededCalls(), 0);
     Assert.assertEquals(apiGoodBefore + 1,
         FederationStateStoreClientMetrics.getNumSucceededCalls());
-    Assert.assertEquals(100, FederationStateStoreClientMetrics
-        .getLatencySucceessfulCallsForMethod("registerSubCluster"), 0);
+    Assert.assertEquals((apiGoodBefore * apiLatencyBefore + 100) / (apiGoodBefore + 1),
+        FederationStateStoreClientMetrics.getLatencySucceessfulCallsForMethod("registerSubCluster"), 0);
 
     LOG.info("Test: Running stats correctly calculated for 2 metrics");
 
@@ -73,12 +77,12 @@ public class TestFederationStateStoreClientMetrics {
 
     Assert.assertEquals(totalGoodBefore + 2,
         FederationStateStoreClientMetrics.getNumSucceededCalls());
-    Assert.assertEquals(150,
+    Assert.assertEquals((totalGoodBefore * totalLatencyBefore + 300) / (totalGoodBefore + 2),
         FederationStateStoreClientMetrics.getLatencySucceededCalls(), 0);
     Assert.assertEquals(apiGoodBefore + 2,
         FederationStateStoreClientMetrics.getNumSucceededCalls());
-    Assert.assertEquals(150, FederationStateStoreClientMetrics
-        .getLatencySucceessfulCallsForMethod("registerSubCluster"), 0);
+    Assert.assertEquals((apiGoodBefore * apiLatencyBefore + 300) / (apiGoodBefore + 2),
+        FederationStateStoreClientMetrics.getLatencySucceessfulCallsForMethod("registerSubCluster"), 0);
 
   }
 

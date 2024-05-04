@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.reader;
 
+import org.apache.hadoop.metrics2.MetricsSystem;
+import org.apache.hadoop.metrics2.impl.MetricsSystemImpl;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -49,6 +52,8 @@ public class TestTimelineReaderMetrics {
 
   @BeforeEach
   public void setup() {
+    MetricsSystem ms = new MetricsSystemImpl();
+    ms.unregisterSource("TimelineReaderMetrics");
     metrics = TimelineReaderMetrics.getInstance();
   }
 
