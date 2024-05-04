@@ -55,21 +55,28 @@ public class TestFederationStateStoreClientMetrics {
         FederationStateStoreClientMetrics.getNumSucceededCalls();
     long apiGoodBefore = FederationStateStoreClientMetrics
         .getNumSucceessfulCallsForMethod("registerSubCluster");
-    double totalLatencyBefore = FederationStateStoreClientMetrics
+    double meanLatencyBefore = FederationStateStoreClientMetrics
         .getLatencySucceededCalls();
-    double apiLatencyBefore = FederationStateStoreClientMetrics
+    double meanApiLatencyBefore = FederationStateStoreClientMetrics
         .getLatencySucceessfulCallsForMethod("registerSubCluster");
 
     goodStateStore.registerSubCluster(100);
 
     Assert.assertEquals(totalGoodBefore + 1,
         FederationStateStoreClientMetrics.getNumSucceededCalls());
-    Assert.assertEquals((totalGoodBefore * totalLatencyBefore + 100) / (totalGoodBefore + 1),
-        FederationStateStoreClientMetrics.getLatencySucceededCalls(), 0);
+    Assert.assertEquals(
+        (totalGoodBefore * meanLatencyBefore + 100) / (totalGoodBefore + 1),
+        FederationStateStoreClientMetrics.getLatencySucceededCalls(),
+        0
+    );
     Assert.assertEquals(apiGoodBefore + 1,
         FederationStateStoreClientMetrics.getNumSucceededCalls());
-    Assert.assertEquals((apiGoodBefore * apiLatencyBefore + 100) / (apiGoodBefore + 1),
-        FederationStateStoreClientMetrics.getLatencySucceessfulCallsForMethod("registerSubCluster"), 0);
+    Assert.assertEquals(
+        (apiGoodBefore * meanApiLatencyBefore + 100) / (apiGoodBefore + 1),
+        FederationStateStoreClientMetrics
+            .getLatencySucceessfulCallsForMethod("registerSubCluster"),
+        0
+    );
 
     LOG.info("Test: Running stats correctly calculated for 2 metrics");
 
@@ -77,12 +84,19 @@ public class TestFederationStateStoreClientMetrics {
 
     Assert.assertEquals(totalGoodBefore + 2,
         FederationStateStoreClientMetrics.getNumSucceededCalls());
-    Assert.assertEquals((totalGoodBefore * totalLatencyBefore + 300) / (totalGoodBefore + 2),
-        FederationStateStoreClientMetrics.getLatencySucceededCalls(), 0);
+    Assert.assertEquals(
+        (totalGoodBefore * meanLatencyBefore + 300) / (totalGoodBefore + 2),
+        FederationStateStoreClientMetrics.getLatencySucceededCalls(),
+        0
+    );
     Assert.assertEquals(apiGoodBefore + 2,
         FederationStateStoreClientMetrics.getNumSucceededCalls());
-    Assert.assertEquals((apiGoodBefore * apiLatencyBefore + 300) / (apiGoodBefore + 2),
-        FederationStateStoreClientMetrics.getLatencySucceessfulCallsForMethod("registerSubCluster"), 0);
+    Assert.assertEquals(
+        (apiGoodBefore * meanApiLatencyBefore + 300) / (apiGoodBefore + 2),
+        FederationStateStoreClientMetrics
+            .getLatencySucceessfulCallsForMethod("registerSubCluster"),
+        0
+    );
 
   }
 
