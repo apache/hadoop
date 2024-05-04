@@ -32,6 +32,7 @@ import org.apache.hadoop.mapreduce.TaskCounter;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.util.Progress;
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -52,6 +53,13 @@ public class TestMapTask {
           System.getProperty("java.io.tmpdir", "/tmp")),
       TestMapTask.class.getName());
 
+  @Before
+  public void setup() throws Exception {
+    if(!TEST_ROOT_DIR.exists()) {
+      TEST_ROOT_DIR.mkdirs();
+    }
+  } 
+ 
   @After
   public void cleanup() throws Exception {
     FileUtil.fullyDelete(TEST_ROOT_DIR);
