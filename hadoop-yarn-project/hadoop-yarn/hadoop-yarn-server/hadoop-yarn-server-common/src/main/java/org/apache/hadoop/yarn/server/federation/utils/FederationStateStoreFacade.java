@@ -20,23 +20,16 @@ package org.apache.hadoop.yarn.server.federation.utils;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.Random;
+import java.util.Collection;
 
-import javax.cache.Cache;
-import javax.cache.CacheManager;
-import javax.cache.Caching;
-import javax.cache.configuration.CompleteConfiguration;
-import javax.cache.configuration.FactoryBuilder;
-import javax.cache.configuration.MutableConfiguration;
-import javax.cache.expiry.CreatedExpiryPolicy;
-import javax.cache.expiry.Duration;
-import javax.cache.expiry.ExpiryPolicy;
-import javax.cache.integration.CacheLoader;
 import javax.cache.integration.CacheLoaderException;
-import javax.cache.spi.CachingProvider;
 
-import org.apache.commons.lang3.NotImplementedException;
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
@@ -46,6 +39,10 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
+import org.apache.hadoop.yarn.server.federation.cache.FederationCache;
+import org.apache.hadoop.yarn.server.federation.cache.FederationJCache;
+import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyUtils;
+import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyException;
 import org.apache.hadoop.yarn.server.federation.resolver.SubClusterResolver;
 import org.apache.hadoop.yarn.server.federation.store.FederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.exception.FederationStateStoreRetriableException;
@@ -57,20 +54,25 @@ import org.apache.hadoop.yarn.server.federation.store.records.GetApplicationHome
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterInfoRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterInfoResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPoliciesConfigurationsRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPoliciesConfigurationsResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPolicyConfigurationRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPolicyConfigurationResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClustersInfoRequest;
-import org.apache.hadoop.yarn.server.federation.store.records.GetSubClustersInfoResponse;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
 import org.apache.hadoop.yarn.server.federation.store.records.UpdateApplicationHomeSubClusterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterDeregisterRequest;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterDeregisterResponse;
+import org.apache.hadoop.yarn.webapp.NotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.thirdparty.com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.classification.VisibleForTesting;
 import com.zaxxer.hikari.pool.HikariPool.PoolInitializationException;
+
+import static org.apache.hadoop.yarn.server.federation.cache.FederationCache.buildPolicyConfigMap;
+import static org.apache.hadoop.yarn.server.federation.cache.FederationCache.buildSubClusterInfoMap;
 
 /**
  *
@@ -83,18 +85,15 @@ public final class FederationStateStoreFacade {
   private static final Logger LOG =
       LoggerFactory.getLogger(FederationStateStoreFacade.class);
 
-  private static final String GET_SUBCLUSTERS_CACHEID = "getSubClusters";
-  private static final String GET_POLICIES_CONFIGURATIONS_CACHEID =
-      "getPoliciesConfigurations";
-
   private static final FederationStateStoreFacade FACADE =
       new FederationStateStoreFacade();
 
+  private static Random rand = new Random(System.currentTimeMillis());
+
   private FederationStateStore stateStore;
-  private int cacheTimeToLive;
   private Configuration conf;
-  private Cache<Object, Object> cache;
   private SubClusterResolver subclusterResolver;
+  private FederationCache federationCache;
 
   private FederationStateStoreFacade() {
     initializeFacadeInternal(new Configuration());
@@ -115,11 +114,11 @@ public final class FederationStateStoreFacade {
           SubClusterResolver.class);
       this.subclusterResolver.load();
 
-      initCache();
+      federationCache = new FederationJCache();
+      federationCache.initCache(config, stateStore);
 
     } catch (YarnException ex) {
-      LOG.error("Failed to initialize the FederationStateStoreFacade object",
-          ex);
+      LOG.error("Failed to initialize the FederationStateStoreFacade object", ex);
       throw new RuntimeException(ex);
     }
   }
@@ -136,8 +135,8 @@ public final class FederationStateStoreFacade {
       Configuration config) {
     this.conf = config;
     this.stateStore = store;
-    clearCache();
-    initCache();
+    federationCache.clearCache();
+    federationCache.initCache(config, stateStore);
   }
 
   /**
@@ -158,8 +157,7 @@ public final class FederationStateStoreFacade {
         conf.getLong(YarnConfiguration.CLIENT_FAILOVER_SLEEPTIME_BASE_MS,
             YarnConfiguration.DEFAULT_RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_MS),
         TimeUnit.MILLISECONDS);
-    Map<Class<? extends Exception>, RetryPolicy> exceptionToPolicyMap =
-        new HashMap<Class<? extends Exception>, RetryPolicy>();
+    Map<Class<? extends Exception>, RetryPolicy> exceptionToPolicyMap = new HashMap<>();
     exceptionToPolicyMap.put(FederationStateStoreRetriableException.class,
         basePolicy);
     exceptionToPolicyMap.put(CacheLoaderException.class, basePolicy);
@@ -168,47 +166,6 @@ public final class FederationStateStoreFacade {
     RetryPolicy retryPolicy = RetryPolicies.retryByException(
         RetryPolicies.TRY_ONCE_THEN_FAIL, exceptionToPolicyMap);
     return retryPolicy;
-  }
-
-  private boolean isCachingEnabled() {
-    return (cacheTimeToLive > 0);
-  }
-
-  private void initCache() {
-    // Picking the JCache provider from classpath, need to make sure there's
-    // no conflict or pick up a specific one in the future
-    cacheTimeToLive =
-        conf.getInt(YarnConfiguration.FEDERATION_CACHE_TIME_TO_LIVE_SECS,
-            YarnConfiguration.DEFAULT_FEDERATION_CACHE_TIME_TO_LIVE_SECS);
-    if (isCachingEnabled()) {
-      CachingProvider jcacheProvider = Caching.getCachingProvider();
-      CacheManager jcacheManager = jcacheProvider.getCacheManager();
-      this.cache = jcacheManager.getCache(this.getClass().getSimpleName());
-      if (this.cache == null) {
-        LOG.info("Creating a JCache Manager with name "
-            + this.getClass().getSimpleName());
-        Duration cacheExpiry = new Duration(TimeUnit.SECONDS, cacheTimeToLive);
-        CompleteConfiguration<Object, Object> configuration =
-            new MutableConfiguration<Object, Object>().setStoreByValue(false)
-                .setReadThrough(true)
-                .setExpiryPolicyFactory(
-                    new FactoryBuilder.SingletonFactory<ExpiryPolicy>(
-                        new CreatedExpiryPolicy(cacheExpiry)))
-                .setCacheLoaderFactory(
-                    new FactoryBuilder.SingletonFactory<CacheLoader<Object, Object>>(
-                        new CacheLoaderImpl<Object, Object>()));
-        this.cache = jcacheManager.createCache(this.getClass().getSimpleName(),
-            configuration);
-      }
-    }
-  }
-
-  private void clearCache() {
-    CachingProvider jcacheProvider = Caching.getCachingProvider();
-    CacheManager jcacheManager = jcacheProvider.getCacheManager();
-
-    jcacheManager.destroyCache(this.getClass().getSimpleName());
-    this.cache = null;
   }
 
   /**
@@ -230,7 +187,7 @@ public final class FederationStateStoreFacade {
    */
   public SubClusterInfo getSubCluster(final SubClusterId subClusterId)
       throws YarnException {
-    if (isCachingEnabled()) {
+    if (federationCache.isCachingEnabled()) {
       return getSubClusters(false).get(subClusterId);
     } else {
       GetSubClusterInfoResponse response = stateStore
@@ -254,10 +211,10 @@ public final class FederationStateStoreFacade {
    */
   public SubClusterInfo getSubCluster(final SubClusterId subClusterId,
       final boolean flushCache) throws YarnException {
-    if (flushCache && isCachingEnabled()) {
+    if (flushCache && federationCache.isCachingEnabled()) {
       LOG.info("Flushing subClusters from cache and rehydrating from store,"
           + " most likely on account of RM failover.");
-      cache.remove(buildGetSubClustersCacheRequest(false));
+      federationCache.removeSubCluster(false);
     }
     return getSubCluster(subClusterId);
   }
@@ -270,16 +227,15 @@ public final class FederationStateStoreFacade {
    * @return the information of all active sub cluster(s)
    * @throws YarnException if the call to the state store is unsuccessful
    */
-  @SuppressWarnings("unchecked")
-  public Map<SubClusterId, SubClusterInfo> getSubClusters(
-      final boolean filterInactiveSubClusters) throws YarnException {
+  public Map<SubClusterId, SubClusterInfo> getSubClusters(final boolean filterInactiveSubClusters)
+      throws YarnException {
     try {
-      if (isCachingEnabled()) {
-        return (Map<SubClusterId, SubClusterInfo>) cache
-            .get(buildGetSubClustersCacheRequest(filterInactiveSubClusters));
+      if (federationCache.isCachingEnabled()) {
+        return federationCache.getSubClusters(filterInactiveSubClusters);
       } else {
-        return buildSubClusterInfoMap(stateStore.getSubClusters(
-            GetSubClustersInfoRequest.newInstance(filterInactiveSubClusters)));
+        GetSubClustersInfoRequest request =
+            GetSubClustersInfoRequest.newInstance(filterInactiveSubClusters);
+        return buildSubClusterInfoMap(stateStore.getSubClusters(request));
       }
     } catch (Throwable ex) {
       throw new YarnException(ex);
@@ -294,15 +250,15 @@ public final class FederationStateStoreFacade {
    *         mapping for the queue
    * @throws YarnException if the call to the state store is unsuccessful
    */
-  public SubClusterPolicyConfiguration getPolicyConfiguration(
-      final String queue) throws YarnException {
-    if (isCachingEnabled()) {
+  public SubClusterPolicyConfiguration getPolicyConfiguration(final String queue)
+      throws YarnException {
+    if (federationCache.isCachingEnabled()) {
       return getPoliciesConfigurations().get(queue);
     } else {
-
+      GetSubClusterPolicyConfigurationRequest request =
+          GetSubClusterPolicyConfigurationRequest.newInstance(queue);
       GetSubClusterPolicyConfigurationResponse response =
-          stateStore.getPolicyConfiguration(
-              GetSubClusterPolicyConfigurationRequest.newInstance(queue));
+          stateStore.getPolicyConfiguration(request);
       if (response == null) {
         return null;
       } else {
@@ -319,16 +275,15 @@ public final class FederationStateStoreFacade {
    * @return the policies for all currently active queues in the system
    * @throws YarnException if the call to the state store is unsuccessful
    */
-  @SuppressWarnings("unchecked")
   public Map<String, SubClusterPolicyConfiguration> getPoliciesConfigurations()
       throws YarnException {
     try {
-      if (isCachingEnabled()) {
-        return (Map<String, SubClusterPolicyConfiguration>) cache
-            .get(buildGetPoliciesConfigurationsCacheRequest());
+      if (federationCache.isCachingEnabled()) {
+        return federationCache.getPoliciesConfigurations();
       } else {
-        return buildPolicyConfigMap(stateStore.getPoliciesConfigurations(
-            GetSubClusterPoliciesConfigurationsRequest.newInstance()));
+        GetSubClusterPoliciesConfigurationsRequest request =
+            GetSubClusterPoliciesConfigurationsRequest.newInstance();
+        return buildPolicyConfigMap(stateStore.getPoliciesConfigurations(request));
       }
     } catch (Throwable ex) {
       throw new YarnException(ex);
@@ -363,7 +318,6 @@ public final class FederationStateStoreFacade {
       ApplicationHomeSubCluster appHomeSubCluster) throws YarnException {
     stateStore.updateApplicationHomeSubCluster(
         UpdateApplicationHomeSubClusterRequest.newInstance(appHomeSubCluster));
-    return;
   }
 
   /**
@@ -376,10 +330,17 @@ public final class FederationStateStoreFacade {
    */
   public SubClusterId getApplicationHomeSubCluster(ApplicationId appId)
       throws YarnException {
-    GetApplicationHomeSubClusterResponse response =
-        stateStore.getApplicationHomeSubCluster(
+    try {
+      if (federationCache.isCachingEnabled()) {
+        return federationCache.getApplicationHomeSubCluster(appId);
+      } else {
+        GetApplicationHomeSubClusterResponse response = stateStore.getApplicationHomeSubCluster(
             GetApplicationHomeSubClusterRequest.newInstance(appId));
-    return response.getApplicationHomeSubCluster().getHomeSubCluster();
+        return response.getApplicationHomeSubCluster().getHomeSubCluster();
+      }
+    } catch (Throwable ex) {
+      throw new YarnException(ex);
+    }
   }
 
   /**
@@ -410,6 +371,7 @@ public final class FederationStateStoreFacade {
    * @param defaultValue the default implementation for fallback
    * @param type the class for which a retry proxy is required
    * @param retryPolicy the policy for retrying method call failures
+   * @param <T> The type of the instance.
    * @return a retry proxy for the specified interface
    */
   public static <T> Object createRetryInstance(Configuration conf,
@@ -450,163 +412,212 @@ public final class FederationStateStoreFacade {
     }
   }
 
-  private Map<SubClusterId, SubClusterInfo> buildSubClusterInfoMap(
-      final GetSubClustersInfoResponse response) {
-    List<SubClusterInfo> subClusters = response.getSubClusters();
-    Map<SubClusterId, SubClusterInfo> subClustersMap =
-        new HashMap<>(subClusters.size());
-    for (SubClusterInfo subCluster : subClusters) {
-      subClustersMap.put(subCluster.getSubClusterId(), subCluster);
-    }
-    return subClustersMap;
-  }
-
-  private Object buildGetSubClustersCacheRequest(
-      final boolean filterInactiveSubClusters) {
-    final String cacheKey =
-        buildCacheKey(getClass().getSimpleName(), GET_SUBCLUSTERS_CACHEID,
-            Boolean.toString(filterInactiveSubClusters));
-    CacheRequest<String, Map<SubClusterId, SubClusterInfo>> cacheRequest =
-        new CacheRequest<String, Map<SubClusterId, SubClusterInfo>>(cacheKey,
-            new Func<String, Map<SubClusterId, SubClusterInfo>>() {
-              @Override
-              public Map<SubClusterId, SubClusterInfo> invoke(String key)
-                  throws Exception {
-                GetSubClustersInfoResponse subClusters =
-                    stateStore.getSubClusters(GetSubClustersInfoRequest
-                        .newInstance(filterInactiveSubClusters));
-                return buildSubClusterInfoMap(subClusters);
-              }
-            });
-    return cacheRequest;
-  }
-
-  private Map<String, SubClusterPolicyConfiguration> buildPolicyConfigMap(
-      GetSubClusterPoliciesConfigurationsResponse response) {
-    List<SubClusterPolicyConfiguration> policyConfigs =
-        response.getPoliciesConfigs();
-    Map<String, SubClusterPolicyConfiguration> queuePolicyConfigs =
-        new HashMap<>();
-    for (SubClusterPolicyConfiguration policyConfig : policyConfigs) {
-      queuePolicyConfigs.put(policyConfig.getQueue(), policyConfig);
-    }
-    return queuePolicyConfigs;
-  }
-
-  private Object buildGetPoliciesConfigurationsCacheRequest() {
-    final String cacheKey = buildCacheKey(getClass().getSimpleName(),
-        GET_POLICIES_CONFIGURATIONS_CACHEID, null);
-    CacheRequest<String, Map<String, SubClusterPolicyConfiguration>> cacheRequest =
-        new CacheRequest<String, Map<String, SubClusterPolicyConfiguration>>(
-            cacheKey,
-            new Func<String, Map<String, SubClusterPolicyConfiguration>>() {
-              @Override
-              public Map<String, SubClusterPolicyConfiguration> invoke(
-                  String key) throws Exception {
-                GetSubClusterPoliciesConfigurationsResponse policyConfigs =
-                    stateStore.getPoliciesConfigurations(
-                        GetSubClusterPoliciesConfigurationsRequest
-                            .newInstance());
-                return buildPolicyConfigMap(policyConfigs);
-              }
-            });
-    return cacheRequest;
-  }
-
-  protected String buildCacheKey(String typeName, String methodName,
-      String argName) {
-    StringBuilder buffer = new StringBuilder();
-    buffer.append(typeName).append(".")
-        .append(methodName);
-    if (argName != null) {
-      buffer.append("::");
-      buffer.append(argName);
-    }
-    return buffer.toString();
+  @VisibleForTesting
+  public FederationStateStore getStateStore() {
+    return stateStore;
   }
 
   /**
-   * Internal class that implements the CacheLoader interface that can be
-   * plugged into the CacheManager to load objects into the cache for specified
-   * keys.
+   * Get the number of active cluster nodes.
+   *
+   * @return number of active cluster nodes.
+   * @throws YarnException if the call to the state store is unsuccessful.
    */
-  private static class CacheLoaderImpl<K, V> implements CacheLoader<K, V> {
-    @SuppressWarnings("unchecked")
-    @Override
-    public V load(K key) throws CacheLoaderException {
-      try {
-        CacheRequest<K, V> query = (CacheRequest<K, V>) key;
-        assert query != null;
-        return query.getValue();
-      } catch (Throwable ex) {
-        throw new CacheLoaderException(ex);
-      }
-    }
-
-    @Override
-    public Map<K, V> loadAll(Iterable<? extends K> keys)
-        throws CacheLoaderException {
-      // The FACADE does not use the Cache's getAll API. Hence this is not
-      // required to be implemented
-      throw new NotImplementedException("Code is not implemented");
+  public int getActiveSubClustersCount() throws YarnException {
+    Map<SubClusterId, SubClusterInfo> activeSubClusters = getSubClusters(true);
+    if (activeSubClusters == null || activeSubClusters.isEmpty()) {
+      return 0;
+    } else {
+      return activeSubClusters.size();
     }
   }
 
   /**
-   * Internal class that encapsulates the cache key and a function that returns
-   * the value for the specified key.
+   * Randomly pick ActiveSubCluster.
+   * During the selection process, we will exclude SubClusters from the blacklist.
+   *
+   * @param activeSubClusters List of active subClusters.
+   * @param blackList blacklist.
+   * @return Active SubClusterId.
+   * @throws YarnException When there is no Active SubCluster,
+   * an exception will be thrown (No active SubCluster available to submit the request.)
    */
-  private static class CacheRequest<K, V> {
-    private K key;
-    private Func<K, V> func;
+  public static SubClusterId getRandomActiveSubCluster(
+      Map<SubClusterId, SubClusterInfo> activeSubClusters, List<SubClusterId> blackList)
+      throws YarnException {
 
-    public CacheRequest(K key, Func<K, V> func) {
-      this.key = key;
-      this.func = func;
+    // Check if activeSubClusters is empty, if it is empty, we need to throw an exception
+    if (MapUtils.isEmpty(activeSubClusters)) {
+      throw new FederationPolicyException(
+          FederationPolicyUtils.NO_ACTIVE_SUBCLUSTER_AVAILABLE);
     }
 
-    public V getValue() throws Exception {
-      return func.invoke(key);
+    // Change activeSubClusters to List
+    List<SubClusterId> subClusterIds = new ArrayList<>(activeSubClusters.keySet());
+
+    // If the blacklist is not empty, we need to remove all the subClusters in the blacklist
+    if (CollectionUtils.isNotEmpty(blackList)) {
+      subClusterIds.removeAll(blackList);
     }
 
-    @Override
-    public int hashCode() {
-      final int prime = 31;
-      int result = 1;
-      result = prime * result + ((key == null) ? 0 : key.hashCode());
-      return result;
+    // Check there are still active subcluster after removing the blacklist
+    if (CollectionUtils.isEmpty(subClusterIds)) {
+      throw new FederationPolicyException(
+          FederationPolicyUtils.NO_ACTIVE_SUBCLUSTER_AVAILABLE);
     }
 
-    @SuppressWarnings("unchecked")
-    @Override
-    public boolean equals(Object obj) {
-      if (this == obj) {
+    // Randomly choose a SubCluster
+    return subClusterIds.get(rand.nextInt(subClusterIds.size()));
+  }
+
+  /**
+   * Get the number of retries.
+   *
+   * @param configRetries User-configured number of retries.
+   * @return number of retries.
+   * @throws YarnException yarn exception.
+   */
+  public int getRetryNumbers(int configRetries) throws YarnException {
+    int activeSubClustersCount = getActiveSubClustersCount();
+    int actualRetryNums = Math.min(activeSubClustersCount, configRetries);
+    // Normally, we don't set a negative number for the number of retries,
+    // but if the user sets a negative number for the number of retries,
+    // we will return 0
+    if (actualRetryNums < 0) {
+      return 0;
+    }
+    return actualRetryNums;
+  }
+
+  /**
+   * Query SubClusterId By applicationId.
+   *
+   * If SubClusterId is not empty, it means it exists and returns true;
+   * if SubClusterId is empty, it means it does not exist and returns false.
+   *
+   * @param applicationId applicationId
+   * @return true, SubClusterId exists; false, SubClusterId not exists.
+   */
+  public boolean existsApplicationHomeSubCluster(ApplicationId applicationId) {
+    try {
+      SubClusterId subClusterId = getApplicationHomeSubCluster(applicationId);
+      if (subClusterId != null) {
         return true;
       }
-      if (obj == null) {
-        return false;
-      }
-      if (getClass() != obj.getClass()) {
-        return false;
-      }
-      CacheRequest<K, V> other = (CacheRequest<K, V>) obj;
-      if (key == null) {
-        if (other.key != null) {
-          return false;
-        }
-      } else if (!key.equals(other.key)) {
-        return false;
-      }
+    } catch (YarnException e) {
+      LOG.warn("get homeSubCluster by applicationId = {} error.", applicationId, e);
+    }
+    return false;
+  }
 
-      return true;
+  /**
+   * Add ApplicationHomeSubCluster to FederationStateStore.
+   *
+   * @param applicationId applicationId.
+   * @param homeSubCluster homeSubCluster, homeSubCluster selected according to policy.
+   * @throws YarnException yarn exception.
+   */
+  public void addApplicationHomeSubCluster(ApplicationId applicationId,
+      ApplicationHomeSubCluster homeSubCluster) throws YarnException {
+    try {
+      addApplicationHomeSubCluster(homeSubCluster);
+    } catch (YarnException e) {
+      String msg = String.format(
+          "Unable to insert the ApplicationId %s into the FederationStateStore.", applicationId);
+      throw new YarnException(msg, e);
     }
   }
 
   /**
-   * Encapsulates a method that has one parameter and returns a value of the
-   * type specified by the TResult parameter.
+   * Update ApplicationHomeSubCluster to FederationStateStore.
+   *
+   * @param subClusterId homeSubClusterId
+   * @param applicationId applicationId.
+   * @param homeSubCluster homeSubCluster, homeSubCluster selected according to policy.
+   * @throws YarnException yarn exception.
    */
-  protected interface Func<T, TResult> {
-    TResult invoke(T input) throws Exception;
+  public void updateApplicationHomeSubCluster(SubClusterId subClusterId,
+      ApplicationId applicationId, ApplicationHomeSubCluster homeSubCluster) throws YarnException {
+    try {
+      updateApplicationHomeSubCluster(homeSubCluster);
+    } catch (YarnException e) {
+      SubClusterId subClusterIdInStateStore = getApplicationHomeSubCluster(applicationId);
+      if (subClusterId == subClusterIdInStateStore) {
+        LOG.info("Application {} already submitted on SubCluster {}.", applicationId, subClusterId);
+      } else {
+        String msg = String.format(
+            "Unable to update the ApplicationId %s into the FederationStateStore.", applicationId);
+        throw new YarnException(msg, e);
+      }
+    }
+  }
+
+  /**
+   * Add or Update ApplicationHomeSubCluster.
+   *
+   * @param applicationId applicationId, is the id of the application.
+   * @param subClusterId homeSubClusterId, this is selected by strategy.
+   * @param retryCount number of retries.
+   * @throws YarnException yarn exception.
+   */
+  public void addOrUpdateApplicationHomeSubCluster(ApplicationId applicationId,
+      SubClusterId subClusterId, int retryCount) throws YarnException {
+    Boolean exists = existsApplicationHomeSubCluster(applicationId);
+    ApplicationHomeSubCluster appHomeSubCluster =
+        ApplicationHomeSubCluster.newInstance(applicationId, subClusterId);
+    if (!exists || retryCount == 0) {
+      // persist the mapping of applicationId and the subClusterId which has
+      // been selected as its home.
+      addApplicationHomeSubCluster(applicationId, appHomeSubCluster);
+    } else {
+      // update the mapping of applicationId and the home subClusterId to
+      // the new subClusterId we have selected.
+      updateApplicationHomeSubCluster(subClusterId, applicationId, appHomeSubCluster);
+    }
+  }
+
+  /**
+   * Deregister subCluster, Update the subCluster state to
+   * SC_LOST、SC_DECOMMISSIONED etc.
+   *
+   * @param subClusterId subClusterId.
+   * @param subClusterState The state of the subCluster to be updated.
+   * @throws YarnException yarn exception.
+   * @return If Deregister subCluster is successful, return true, otherwise, return false.
+   */
+  public boolean deregisterSubCluster(SubClusterId subClusterId,
+      SubClusterState subClusterState) throws YarnException {
+    SubClusterDeregisterRequest deregisterRequest =
+        SubClusterDeregisterRequest.newInstance(subClusterId, subClusterState);
+    SubClusterDeregisterResponse response = stateStore.deregisterSubCluster(deregisterRequest);
+    // If the response is not empty, deregisterSubCluster is successful.
+    if (response != null) {
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Get active subclusters.
+   *
+   * @return We will return a list of active subclusters as a Collection.
+   */
+  public Collection<SubClusterInfo> getActiveSubClusters()
+      throws NotFoundException {
+    try {
+      Map<SubClusterId, SubClusterInfo> subClusterMap = getSubClusters(true);
+      if (MapUtils.isEmpty(subClusterMap)) {
+        throw new NotFoundException("Not Found SubClusters.");
+      }
+      return subClusterMap.values();
+    } catch (Exception e) {
+      LOG.error("getActiveSubClusters failed.", e);
+      return null;
+    }
+  }
+
+  @VisibleForTesting
+  public FederationCache getFederationCache() {
+    return federationCache;
   }
 }
