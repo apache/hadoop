@@ -326,6 +326,15 @@ Each metrics record contains tags such as HAState and Hostname as additional inf
 | `FSN(Read/Write)LockOverallNanosAvgTime` | Average time of holding the lock by all operations in nanoseconds |
 | `PendingSPSPaths` | The number of paths to be processed by storage policy satisfier |
 
+BlockManager
+-------------
+
+The metrics present statistics from the BlockManager's perspective.
+
+| Name | Description                                                                                                                     |
+|:---- |:--------------------------------------------------------------------------------------------------------------------------------|
+| `StorageTypeStats` | key represents different StorageTypes, and value represents the detailed storage information corresponding to each StorageType. |
+
 JournalNode
 -----------
 
