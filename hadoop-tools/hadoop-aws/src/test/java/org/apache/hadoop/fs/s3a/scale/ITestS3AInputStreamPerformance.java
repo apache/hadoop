@@ -60,6 +60,7 @@ import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getInputStreamStatistics;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getS3AInputStream;
+import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.isUsingDefaultExternalDataFile;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticMinimum;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.lookupMaximumStatistic;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.lookupMeanStatistic;
@@ -99,7 +100,13 @@ public class ITestS3AInputStreamPerformance extends S3AScaleTestBase {
   @Override
   protected Configuration createScaleConfiguration() {
     Configuration conf = super.createScaleConfiguration();
-    S3ATestUtils.removeBaseAndBucketOverrides(conf, PREFETCH_ENABLED_KEY);
+    S3ATestUtils.removeBaseAndBucketOverrides(conf,
+        PREFETCH_ENABLED_KEY);
+    if (isUsingDefaultExternalDataFile(conf)) {
+      S3ATestUtils.removeBaseAndBucketOverrides(
+          conf,
+          ENDPOINT);
+    }
     conf.setBoolean(PREFETCH_ENABLED_KEY, false);
     return conf;
   }
