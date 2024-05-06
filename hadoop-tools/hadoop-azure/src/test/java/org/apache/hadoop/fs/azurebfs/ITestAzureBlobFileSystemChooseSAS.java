@@ -34,7 +34,6 @@ import org.apache.hadoop.fs.azurebfs.services.FixedSASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.utils.AccountSASGenerator;
 import org.apache.hadoop.fs.azurebfs.utils.Base64;
 
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PATH;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_SAS_FIXED_TOKEN;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_SAS_TOKEN_PROVIDER_TYPE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.accountProperty;
@@ -47,6 +46,7 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 public class ITestAzureBlobFileSystemChooseSAS extends AbstractAbfsIntegrationTest{
 
   private String accountSAS = null;
+  private final String TEST_PATH = "testPath";
 
   /**
    * To differentiate which SASTokenProvider was used we will use different type of SAS Tokens.
@@ -62,9 +62,10 @@ public class ITestAzureBlobFileSystemChooseSAS extends AbstractAbfsIntegrationTe
 
   @Override
   public void setup() throws Exception {
-    createFilesystemForSASTests();
+    createFilesystemWithTestFileForSASTests(new Path(TEST_PATH));
     super.setup();
-    generateAccountSAS();  }
+    generateAccountSAS();
+  }
 
   /**
    * Generates an Account SAS Token using the Account Shared Key to be used as a fixed SAS Token.
@@ -143,7 +144,7 @@ public class ITestAzureBlobFileSystemChooseSAS extends AbstractAbfsIntegrationTe
 
       // Asserting that FixedSASTokenProvider is used.
       Assertions.assertThat(testAbfsConfig.getSASTokenProvider())
-          .describedAs("Custom SASTokenProvider Class must be used")
+          .describedAs("FixedSASTokenProvider Class must be used")
           .isInstanceOf(FixedSASTokenProvider.class);
 
       // Assert that Account SAS is used and only read operations are permitted.
@@ -152,7 +153,7 @@ public class ITestAzureBlobFileSystemChooseSAS extends AbstractAbfsIntegrationTe
         newTestFs.create(testPath);
       });
       // Read Operation is permitted
-      newTestFs.getFileStatus(new Path(ROOT_PATH));
+      newTestFs.getFileStatus(new Path(TEST_PATH));
     }
   }
 
