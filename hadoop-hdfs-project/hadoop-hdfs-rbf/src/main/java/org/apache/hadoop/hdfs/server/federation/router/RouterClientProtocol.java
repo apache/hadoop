@@ -667,7 +667,8 @@ public class RouterClientProtocol implements ClientProtocol {
   public void concat(String trg, String[] src) throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.WRITE);
 
-    // Concat only effects when all files in same namespace. And in router view, a file only exists in one RemoteLocation.
+    // Concat only effects when all files in same namespace.
+    // And in router view, a file only exists in one RemoteLocation.
     final List<RemoteLocation> locations =
         rpcServer.getLocationsForPath(trg, true);
 
