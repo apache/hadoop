@@ -523,6 +523,7 @@ Each metrics record contains tags such as SessionId and Hostname as additional i
 | `NumProcessedCommands` | Num of processed commands of all BPServiceActors |
 | `ProcessedCommandsOpNumOps` | Total number of processed commands operations |
 | `ProcessedCommandsOpAvgTime` | Average time of processed commands operations in milliseconds |
+| `NullStorageBlockReports` | Number of blocks in IBRs that failed due to null storage |
 
 FsVolume
 --------
