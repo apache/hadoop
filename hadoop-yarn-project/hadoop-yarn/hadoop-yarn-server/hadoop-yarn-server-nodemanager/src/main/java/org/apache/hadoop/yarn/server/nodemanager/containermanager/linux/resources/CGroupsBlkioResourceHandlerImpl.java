@@ -134,7 +134,7 @@ public class CGroupsBlkioResourceHandlerImpl implements DiskResourceHandler {
       .createCGroup(CGroupsHandler.CGroupController.BLKIO, cgroupId);
     try {
       cGroupsHandler.updateCGroupParam(CGroupsHandler.CGroupController.BLKIO,
-          cgroupId, CGroupsHandler.CGROUP_PARAM_BLKIO_WEIGHT, DEFAULT_WEIGHT);
+          cgroupId, CGroupsHandler.CGROUP_PARAM_WEIGHT, DEFAULT_WEIGHT);
     } catch (ResourceHandlerException re) {
       cGroupsHandler.deleteCGroup(CGroupsHandler.CGroupController.BLKIO,
           cgroupId);
