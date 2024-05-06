@@ -670,9 +670,6 @@ public class RouterClientProtocol implements ClientProtocol {
     // Concat only effects when all files in same namespace. And in router view, a file only exists in one RemoteLocation.
     final List<RemoteLocation> locations =
         rpcServer.getLocationsForPath(trg, true);
-    if (locations == null) {
-      throw new IOException("Cannot find target file - " + trg);
-    }
 
     final RemoteLocation targetDestination = locations.get(0);
     String targetNameService = targetDestination.getNameserviceId();
@@ -682,10 +679,6 @@ public class RouterClientProtocol implements ClientProtocol {
       String sourceFile = src[i];
       List<RemoteLocation> srcLocations =
           rpcServer.getLocationsForPath(sourceFile, true);
-      if (srcLocations == null) {
-        throw new IOException(
-            "Cannot find source file " + sourceFile);
-      }
       RemoteLocation srcLocation = srcLocations.get(0);
       sourceDestinations[i] = srcLocation.getDest();
       if (!targetNameService.equals(srcLocation.getNameserviceId())) {
