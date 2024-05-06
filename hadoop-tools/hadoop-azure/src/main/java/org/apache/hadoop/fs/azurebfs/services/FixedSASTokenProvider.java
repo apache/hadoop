@@ -21,6 +21,8 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.SASTokenProviderException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.TokenAccessProviderException;
 import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
 import org.apache.hadoop.util.Preconditions;
 
@@ -32,10 +34,12 @@ import org.apache.hadoop.util.Preconditions;
 public class FixedSASTokenProvider implements SASTokenProvider {
   private String fixedSASToken;
 
-  public FixedSASTokenProvider(final String fixedSASToken) {
+  public FixedSASTokenProvider(final String fixedSASToken) throws SASTokenProviderException {
     this.fixedSASToken = fixedSASToken;
-    Preconditions.checkArgument(fixedSASToken != null && !fixedSASToken.isEmpty(),
-        "Configured Fixed SAS Token is Invalid: %s", fixedSASToken);
+    if (fixedSASToken == null || fixedSASToken.isEmpty()) {
+      throw new SASTokenProviderException(
+          String.format("Configured Fixed SAS Token is Invalid: %s", fixedSASToken));
+    }
   }
 
   @Override

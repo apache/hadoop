@@ -1007,21 +1007,23 @@ public class AbfsConfiguration{
       Class<? extends SASTokenProvider> customSasTokenProviderImplementation =
           getTokenProviderClass(authType, FS_AZURE_SAS_TOKEN_PROVIDER_TYPE,
               null, SASTokenProvider.class);
-      String configuredFixedToken = this.getString(FS_AZURE_SAS_FIXED_TOKEN, null);
+      String configuredFixedToken = this.getTrimmedPasswordString(FS_AZURE_SAS_FIXED_TOKEN, EMPTY_STRING);
 
-      Preconditions.checkArgument(
-          customSasTokenProviderImplementation != null || configuredFixedToken != null,
-          "At least one of the \"%s\" and \"%s\" must be set.",
-              FS_AZURE_SAS_TOKEN_PROVIDER_TYPE, FS_AZURE_SAS_FIXED_TOKEN);
+      if (customSasTokenProviderImplementation == null && configuredFixedToken.isEmpty()) {
+        throw new SASTokenProviderException(String.format(
+            "At least one of the \"%s\" and \"%s\" must be set.",
+            FS_AZURE_SAS_TOKEN_PROVIDER_TYPE, FS_AZURE_SAS_FIXED_TOKEN));
+      }
 
       // Prefer Custom SASTokenProvider Implementation if configured.
       if (customSasTokenProviderImplementation != null) {
         LOG.trace("Using Custom SASTokenProvider implementation because it is given precedence when it is set.");
         SASTokenProvider sasTokenProvider = ReflectionUtils.newInstance(
             customSasTokenProviderImplementation, rawConfig);
-        Preconditions.checkArgument(sasTokenProvider != null,
-            "Failed to initialize %s", customSasTokenProviderImplementation);
-
+        if (sasTokenProvider == null) {
+          throw new SASTokenProviderException(String.format(
+              "Failed to initialize %s", customSasTokenProviderImplementation));
+        }
         LOG.trace("Initializing {}", customSasTokenProviderImplementation.getName());
         sasTokenProvider.initialize(rawConfig, accountName);
         LOG.trace("{} init complete", customSasTokenProviderImplementation.getName());
@@ -1031,8 +1033,10 @@ public class AbfsConfiguration{
         FixedSASTokenProvider fixedSASTokenProvider = new FixedSASTokenProvider(configuredFixedToken);
         return fixedSASTokenProvider;
       }
+    } catch (SASTokenProviderException e) {
+      throw e;
     } catch (Exception e) {
-      throw new TokenAccessProviderException(
+      throw new SASTokenProviderException(
           "Unable to load SAS token provider class: " + e, e);
     }
   }
