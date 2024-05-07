@@ -46,7 +46,7 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 public class ITestAzureBlobFileSystemChooseSAS extends AbstractAbfsIntegrationTest{
 
   private String accountSAS = null;
-  private final String TEST_PATH = "testPath";
+  private static final String TEST_PATH = "testPath";
 
   /**
    * To differentiate which SASTokenProvider was used we will use different type of SAS Tokens.
