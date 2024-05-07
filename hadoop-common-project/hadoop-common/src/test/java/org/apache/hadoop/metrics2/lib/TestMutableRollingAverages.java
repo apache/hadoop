@@ -130,6 +130,37 @@ public class TestMutableRollingAverages {
     }
   }
 
+  @Test(timeout = 30000)
+  public void testMutableRollingAveragesConstructor() throws Exception {
+    final MetricsRecordBuilder rb = mockMetricsRecordBuilder();
+    final String name = "foo";
+    final int windowSizeMs = 5000;
+    final int numWindows = 2;
+    final int numOpsPerIteration = 1000;
+    try (MutableRollingAverages rollingAverages =
+        new MutableRollingAverages("Time", numWindows, windowSizeMs)) {
+      final long start = Time.monotonicNow();
+      for (int i = 1; i <= 3; i++) {
+        for (long j = 1; j <= numOpsPerIteration; j++) {
+          rollingAverages.add(name, i);
+        }
+        final long sleep = (start + (windowSizeMs * i) + 1000) - Time.monotonicNow();
+        Thread.sleep(sleep);
+        rollingAverages.snapshot(rb, false);
+
+        final double rollingSum =
+            numOpsPerIteration * (i > 1 ? (i - 1) : 0) + numOpsPerIteration * i;
+        final long rollingTotal = i > 1 ? 2 * numOpsPerIteration
+            : numOpsPerIteration;
+        verify(rb).addGauge(info("[Foo]RollingAvgTime", "Rolling average time for foo"),
+            rollingSum / rollingTotal);
+        verify(rb, times(i)).addGauge(
+            eq(info("[Foo]RollingAvgTime", "Rolling average time for foo")), anyDouble());
+      }
+    }
+  }
+
+
   /**
    * Test that MutableRollingAverages gives expected results after
    * initialization.
