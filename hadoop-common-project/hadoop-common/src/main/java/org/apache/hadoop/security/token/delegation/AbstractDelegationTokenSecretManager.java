@@ -121,7 +121,7 @@ extends AbstractDelegationTokenIdentifier>
   /**
    * Access to currentKey is protected by this object lock
    */
-  private volatile  DelegationKey currentKey;
+  private DelegationKey currentKey;
   
   private final long keyUpdateInterval;
   private final long tokenMaxLifetime;
@@ -173,7 +173,7 @@ extends AbstractDelegationTokenIdentifier>
     Preconditions.checkState(!running);
     updateCurrentKey();
     this.apiLock.writeLock().lock();
-    try{
+    try {
       running = true;
       tokenRemoverThread = new Daemon(new ExpiredTokenRemover());
       tokenRemoverThread.start();
@@ -346,7 +346,7 @@ extends AbstractDelegationTokenIdentifier>
    */
   protected int incrementDelegationTokenSeqNum() {
     this.apiLock.writeLock().lock();
-    try{
+    try {
       return ++delegationTokenSequenceNumber;
     }finally {
       this.apiLock.writeLock().unlock();
@@ -502,8 +502,13 @@ extends AbstractDelegationTokenIdentifier>
         + keyUpdateInterval + tokenMaxLifetime, generateSecret());
     //Log must be invoked outside the lock on 'this'
     logUpdateMasterKey(newKey);
-    currentKey = newKey;
-    storeDelegationKey(currentKey);
+    this.apiLock.writeLock().lock();
+    try {
+      currentKey = newKey;
+      storeDelegationKey(currentKey);
+    }finally {
+      this.apiLock.writeLock().unlock();
+    }
   }
   
   /** 
