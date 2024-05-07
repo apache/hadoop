@@ -2016,7 +2016,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       if (volumeMap.get(bpid, replicaInfo.getBlockId()).getGenerationStamp()
           > replicaInfo.getGenerationStamp()) {
         throw new IOException("Generation Stamp should be monotonically "
-            + "increased. bpid: " + bpid + " , block: " + replicaInfo);
+            + "increased bpid: " + bpid + ", block: " + replicaInfo);
       }
 
       ReplicaInfo newReplicaInfo = null;
@@ -2028,7 +2028,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       } else {
         FsVolumeImpl v = (FsVolumeImpl)replicaInfo.getVolume();
         if (v == null) {
-          throw new IOException("No volume for bpid: " + bpid + " , block: " + replicaInfo);
+          throw new IOException("No volume for bpid: " + bpid + ", block: " + replicaInfo);
         }
 
         newReplicaInfo = v.addFinalizedBlock(
