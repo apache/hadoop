@@ -5808,6 +5808,16 @@ public class BlockManager implements BlockStatsMXBean {
     return spsManager;
   }
 
+  public void setDataNodePeerStatsEnabled(boolean enable) {
+    placementPolicies.getPolicy(CONTIGUOUS).setDataNodePeerStatsEnabled(enable);
+    placementPolicies.getPolicy(STRIPED).setDataNodePeerStatsEnabled(enable);
+  }
+
+  @VisibleForTesting
+  public boolean getDataNodePeerStatsEnabled(BlockType blockType) {
+    return placementPolicies.getPolicy(blockType).getDataNodePeerStatsEnabled();
+  }
+
   public void setExcludeSlowNodesEnabled(boolean enable) {
     placementPolicies.getPolicy(CONTIGUOUS).setExcludeSlowNodesEnabled(enable);
     placementPolicies.getPolicy(STRIPED).setExcludeSlowNodesEnabled(enable);

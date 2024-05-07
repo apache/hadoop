@@ -264,6 +264,17 @@ public abstract class BlockPlacementPolicy {
   }
 
   /**
+   * Updates the value used for dataNodePeerStatsEnabled, which is set by
+   * {@link org.apache.hadoop.hdfs.DFSConfigKeys#DFS_DATANODE_PEER_STATS_ENABLED_KEY}
+   * initially.
+   *
+   * @param enable true, It indicates the write latency of record datanode.
+   */
+  public abstract void setDataNodePeerStatsEnabled(boolean enable);
+
+  public abstract boolean getDataNodePeerStatsEnabled();
+
+  /**
    * Updates the value used for excludeSlowNodesEnabled, which is set by
    * {@code DFSConfigKeys.DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_KEY}
    * initially.
