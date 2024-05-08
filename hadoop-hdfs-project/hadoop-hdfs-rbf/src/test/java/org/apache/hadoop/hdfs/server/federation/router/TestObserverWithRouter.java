@@ -979,7 +979,7 @@ public class TestObserverWithRouter {
 
   @EnumSource(ConfigSetting.class)
   @ParameterizedTest
-  public void testStateIDInvalidationWhenNNDisablesCRS(ConfigSetting configSetting) throws Exception {
+  public void testRestartingNamenodeWithStateIDContextDisabled(ConfigSetting configSetting) throws Exception {
     fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads(configSetting));
     Path path = new Path("/testFile1");
     // Send Create call to active
