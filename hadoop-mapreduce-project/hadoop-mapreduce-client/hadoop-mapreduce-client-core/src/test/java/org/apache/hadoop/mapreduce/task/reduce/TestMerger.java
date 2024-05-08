@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.mapreduce.task.reduce;
 
-import static org.apache.hadoop.mapreduce.MRJobConfig.IO_SORT_FACTOR;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
@@ -64,7 +63,6 @@ import org.apache.hadoop.mapreduce.util.MRJobConfUtil;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Progress;
 import org.apache.hadoop.util.Progressable;
 import org.junit.Assert;
