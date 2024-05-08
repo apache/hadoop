@@ -18,13 +18,13 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 
 @SuppressWarnings({"checkstyle:visibilitymodifier", "checkstyle:hiddenfield"})
 public final class FSQueueConverterBuilder {
   FSConfigToCSConfigRuleHandler ruleHandler;
-  Configuration capacitySchedulerConfig;
+  CapacitySchedulerConfiguration capacitySchedulerConfig;
   boolean preemptionEnabled;
   boolean sizeBasedWeight;
   Resource clusterResource;
@@ -48,8 +48,8 @@ public final class FSQueueConverterBuilder {
   }
 
   public FSQueueConverterBuilder withCapacitySchedulerConfig(
-      Configuration config) {
-    this.capacitySchedulerConfig = config;
+      CapacitySchedulerConfiguration capacitySchedulerConfig) {
+    this.capacitySchedulerConfig = capacitySchedulerConfig;
     return this;
   }
 

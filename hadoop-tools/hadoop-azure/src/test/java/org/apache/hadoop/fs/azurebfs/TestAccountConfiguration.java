@@ -382,6 +382,7 @@ public class TestAccountConfiguration {
 
     for (String key : CONFIG_KEYS) {
       setAuthConfig(abfsConf, true, AuthType.OAuth);
+      abfsConf.unset(key);
       abfsConf.unset(key + "." + accountName);
       testMissingConfigKey(abfsConf, key);
     }

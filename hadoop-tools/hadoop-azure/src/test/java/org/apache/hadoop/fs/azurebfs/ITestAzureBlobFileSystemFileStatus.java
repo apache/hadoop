@@ -83,9 +83,11 @@ public class ITestAzureBlobFileSystemFileStatus extends
       if (isDir) {
         assertEquals(errorInStatus + ": permission",
                 new FsPermission(DEFAULT_DIR_PERMISSION_VALUE), fileStatus.getPermission());
+        assertTrue(errorInStatus + "not a directory", fileStatus.isDirectory());
       } else {
         assertEquals(errorInStatus + ": permission",
                 new FsPermission(DEFAULT_FILE_PERMISSION_VALUE), fileStatus.getPermission());
+        assertTrue(errorInStatus + "not a file", fileStatus.isFile());
       }
     }
 
@@ -143,5 +145,23 @@ public class ITestAzureBlobFileSystemFileStatus extends
         minCreateStartTime < lastModifiedTime);
     assertTrue("lastModifiedTime should be before createEndTime",
         createEndTime > lastModifiedTime);
+  }
+
+  @Test
+  public void testFileStatusOnRoot() throws IOException {
+    AzureBlobFileSystem fs = getFileSystem();
+
+    // Assert that passing relative root path works
+    Path testPath = new Path("/");
+    validateStatus(fs, testPath, true);
+
+    // Assert that passing absolute root path works
+    String testPathStr = makeQualified(testPath).toString();
+    validateStatus(fs, new Path(testPathStr), true);
+
+    // Assert that passing absolute root path without "/" works
+    testPathStr = testPathStr.substring(0, testPathStr.length() - 1);
+    validateStatus(fs, new Path(testPathStr), true);
+
   }
 }

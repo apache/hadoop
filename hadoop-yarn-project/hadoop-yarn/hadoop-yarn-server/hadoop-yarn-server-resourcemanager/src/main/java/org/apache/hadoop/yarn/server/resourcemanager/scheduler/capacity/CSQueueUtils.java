@@ -30,7 +30,7 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 
 public class CSQueueUtils {
 
-  public final static float EPSILON = 0.0001f;
+  public final static float EPSILON = 0.001f;
 
   /*
    * Used only by tests
@@ -80,7 +80,7 @@ public class CSQueueUtils {
             label,
             csConf.getMaximumAMResourcePercentPerPartition(queuePath, label));
         queueCapacities.setWeight(label,
-            csConf.getNonLabeledQueueWeight(queuePath.getFullPath()));
+            csConf.getNonLabeledQueueWeight(queuePath));
       } else{
         queueCapacities.setCapacity(label,
             csConf.getLabeledQueueCapacity(queuePath, label) / 100);
@@ -285,20 +285,28 @@ public class CSQueueUtils {
 
   public static void updateAbsoluteCapacitiesByNodeLabels(QueueCapacities queueCapacities,
                                                           QueueCapacities parentQueueCapacities,
-                                                          Set<String> nodeLabels) {
+                                                          Set<String> nodeLabels,
+                                                          boolean isLegacyQueueMode) {
     for (String label : nodeLabels) {
-      // Weight will be normalized to queue.weight =
-      //      queue.weight(sum({sibling-queues.weight}))
-      // When weight is set, capacity will be set to 0;
-      // When capacity is set, weight will be normalized to 0,
-      // So get larger from normalized_weight and capacity will make sure we do
-      // calculation correct
-      float capacity = Math.max(
-          queueCapacities.getCapacity(label),
-          queueCapacities
-              .getNormalizedWeight(label));
-      if (capacity > 0f) {
-        queueCapacities.setAbsoluteCapacity(label, capacity * (
+      if (isLegacyQueueMode) {
+        // Weight will be normalized to queue.weight =
+        //      queue.weight(sum({sibling-queues.weight}))
+        // When weight is set, capacity will be set to 0;
+        // When capacity is set, weight will be normalized to 0,
+        // So get larger from normalized_weight and capacity will make sure we do
+        // calculation correct
+        float capacity = Math.max(
+            queueCapacities.getCapacity(label),
+            queueCapacities
+                .getNormalizedWeight(label));
+
+        if (capacity > 0f) {
+          queueCapacities.setAbsoluteCapacity(label, capacity * (
+              parentQueueCapacities == null ? 1 :
+                  parentQueueCapacities.getAbsoluteCapacity(label)));
+        }
+      } else {
+        queueCapacities.setAbsoluteCapacity(label, queueCapacities.getCapacity(label) * (
             parentQueueCapacities == null ? 1 :
                 parentQueueCapacities.getAbsoluteCapacity(label)));
       }

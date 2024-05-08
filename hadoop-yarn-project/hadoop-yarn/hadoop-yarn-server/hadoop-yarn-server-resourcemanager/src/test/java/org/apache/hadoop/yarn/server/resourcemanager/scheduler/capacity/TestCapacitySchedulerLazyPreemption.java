@@ -619,6 +619,7 @@ public class TestCapacitySchedulerLazyPreemption
     editPolicy.editSchedule();
     Assert.assertEquals(0, editPolicy.getToPreemptContainers().size());
     waitKillableContainersSize(pm, "a", RMNodeLabelsManager.NO_LABEL, 2);
+    rm1.stop();
   }
 
   @Test (timeout = 60000)
@@ -650,7 +651,8 @@ public class TestCapacitySchedulerLazyPreemption
      * from app1, and app2 will receive the preempted container
      */
     CapacitySchedulerConfiguration csConf = new CapacitySchedulerConfiguration(conf);
-    csConf.setUserLimitFactor(CapacitySchedulerConfiguration.ROOT + ".c", 0.1f);
+    QueuePath cQueuePath = new QueuePath(CapacitySchedulerConfiguration.ROOT + ".c");
+    csConf.setUserLimitFactor(cQueuePath, 0.1f);
     MockRM rm1 = new MockRM(csConf);
     rm1.getRMContext().setNodeLabelManager(mgr);
     rm1.start();

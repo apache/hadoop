@@ -24,12 +24,20 @@ import java.util.List;
 
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeAdminBackoffMonitor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeAdminMonitorInterface;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.Test;
 import org.junit.Before;
 import org.junit.After;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_SERVER_LOG_SLOW_RPC;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_SERVER_LOG_SLOW_RPC_THRESHOLD_MS_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_SERVER_LOG_SLOW_RPC_THRESHOLD_MS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_MAX_NODES_TO_REPORT_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_IMAGE_PARALLEL_LOAD_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LOCK_DETAILED_METRICS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_READ_LOCK_REPORTING_THRESHOLD_MS_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SLOWPEER_COLLECT_INTERVAL_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_WRITE_LOCK_REPORTING_THRESHOLD_MS_KEY;
 import static org.junit.Assert.*;
 
 import org.slf4j.Logger;
@@ -652,6 +660,206 @@ public class TestNameNodeReconfigure {
           DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_BLOCKS_PER_LOCK, "10000");
       assertEquals(datanodeManager.getDatanodeAdminManager().getBlocksPerLock(), 10000);
     }
+  }
+
+  @Test
+  public void testReconfigureMinBlocksForWrite() throws Exception {
+    final NameNode nameNode = cluster.getNameNode(0);
+    final BlockManager bm = nameNode.getNamesystem().getBlockManager();
+    String key = DFSConfigKeys.DFS_NAMENODE_BLOCKPLACEMENTPOLICY_MIN_BLOCKS_FOR_WRITE_KEY;
+    int defaultVal = DFSConfigKeys.DFS_NAMENODE_BLOCKPLACEMENTPOLICY_MIN_BLOCKS_FOR_WRITE_DEFAULT;
+
+    // Ensure we cannot set any of the parameters negative
+    ReconfigurationException reconfigurationException =
+        LambdaTestUtils.intercept(ReconfigurationException.class,
+            () -> nameNode.reconfigurePropertyImpl(key, "-20"));
+    assertTrue(reconfigurationException.getCause() instanceof IllegalArgumentException);
+    assertEquals(key + " = '-20' is invalid. It should be a "
+        +"positive, non-zero integer value.", reconfigurationException.getCause().getMessage());
+
+    // Ensure none of the values were updated from the defaults
+    assertEquals(defaultVal, bm.getMinBlocksForWrite(BlockType.CONTIGUOUS));
+    assertEquals(defaultVal, bm.getMinBlocksForWrite(BlockType.STRIPED));
+
+    reconfigurationException = LambdaTestUtils.intercept(ReconfigurationException.class,
+        () -> nameNode.reconfigurePropertyImpl(key, "0"));
+    assertTrue(reconfigurationException.getCause() instanceof IllegalArgumentException);
+    assertEquals(key + " = '0' is invalid. It should be a "
+        +"positive, non-zero integer value.", reconfigurationException.getCause().getMessage());
+
+    // Ensure none of the values were updated from the defaults
+    assertEquals(defaultVal, bm.getMinBlocksForWrite(BlockType.CONTIGUOUS));
+    assertEquals(defaultVal, bm.getMinBlocksForWrite(BlockType.STRIPED));
+
+
+    // Ensure none of the parameters can be set to a string value
+    reconfigurationException = LambdaTestUtils.intercept(ReconfigurationException.class,
+        () -> nameNode.reconfigurePropertyImpl(key, "str"));
+    assertTrue(reconfigurationException.getCause() instanceof NumberFormatException);
+
+    // Ensure none of the values were updated from the defaults
+    assertEquals(defaultVal, bm.getMinBlocksForWrite(BlockType.CONTIGUOUS));
+    assertEquals(defaultVal, bm.getMinBlocksForWrite(BlockType.STRIPED));
+
+    nameNode.reconfigurePropertyImpl(key, "3");
+
+    // Ensure none of the values were updated from the new value.
+    assertEquals(3, bm.getMinBlocksForWrite(BlockType.CONTIGUOUS));
+    assertEquals(3, bm.getMinBlocksForWrite(BlockType.STRIPED));
+  }
+
+  @Test
+  public void testReconfigureLogSlowRPC() throws ReconfigurationException {
+    final NameNode nameNode = cluster.getNameNode();
+    final NameNodeRpcServer nnrs = (NameNodeRpcServer) nameNode.getRpcServer();
+    // verify default value.
+    assertFalse(nnrs.getClientRpcServer().isLogSlowRPC());
+    assertEquals(IPC_SERVER_LOG_SLOW_RPC_THRESHOLD_MS_DEFAULT,
+        nnrs.getClientRpcServer().getLogSlowRPCThresholdTime());
+
+    // try invalid logSlowRPC.
+    try {
+      nameNode.reconfigurePropertyImpl(IPC_SERVER_LOG_SLOW_RPC, "non-boolean");
+      fail("should not reach here");
+    } catch (ReconfigurationException e) {
+      assertEquals(
+          "Could not change property ipc.server.log.slow.rpc from 'false' to 'non-boolean'",
+          e.getMessage());
+    }
+
+    // try correct logSlowRPC.
+    nameNode.reconfigurePropertyImpl(IPC_SERVER_LOG_SLOW_RPC, "True");
+    assertTrue(nnrs.getClientRpcServer().isLogSlowRPC());
+
+    // revert to defaults.
+    nameNode.reconfigurePropertyImpl(IPC_SERVER_LOG_SLOW_RPC, null);
+    assertFalse(nnrs.getClientRpcServer().isLogSlowRPC());
+
+    // try invalid logSlowRPCThresholdTime.
+    try {
+      nameNode.reconfigureProperty(IPC_SERVER_LOG_SLOW_RPC_THRESHOLD_MS_KEY,
+          "non-numeric");
+      fail("Should not reach here");
+    } catch (ReconfigurationException e) {
+      assertEquals("Could not change property " +
+          "ipc.server.log.slow.rpc.threshold.ms from '0' to 'non-numeric'", e.getMessage());
+    }
+
+    // try correct logSlowRPCThresholdTime.
+    nameNode.reconfigureProperty(IPC_SERVER_LOG_SLOW_RPC_THRESHOLD_MS_KEY,
+        "20000");
+    assertEquals(nnrs.getClientRpcServer().getLogSlowRPCThresholdTime(), 20000);
+  }
+
+  @Test
+  public void testReconfigureFSNamesystemLockMetricsParameters()
+      throws ReconfigurationException, IOException {
+    Configuration conf = new HdfsConfiguration();
+    conf.setBoolean(DFS_NAMENODE_LOCK_DETAILED_METRICS_KEY, false);
+    long defaultReadLockMS = 1000L;
+    conf.setLong(DFS_NAMENODE_READ_LOCK_REPORTING_THRESHOLD_MS_KEY, defaultReadLockMS);
+    long defaultWriteLockMS = 1000L;
+    conf.setLong(DFS_NAMENODE_WRITE_LOCK_REPORTING_THRESHOLD_MS_KEY, defaultWriteLockMS);
+
+    try (MiniDFSCluster newCluster = new MiniDFSCluster.Builder(conf).build()) {
+      newCluster.waitActive();
+      final NameNode nameNode = newCluster.getNameNode();
+      final FSNamesystem fsNamesystem = nameNode.getNamesystem();
+      // verify default value.
+      assertFalse(fsNamesystem.isMetricsEnabled());
+      assertEquals(defaultReadLockMS, fsNamesystem.getReadLockReportingThresholdMs());
+      assertEquals(defaultWriteLockMS, fsNamesystem.getWriteLockReportingThresholdMs());
+
+      // try invalid metricsEnabled.
+      try {
+        nameNode.reconfigurePropertyImpl(DFS_NAMENODE_LOCK_DETAILED_METRICS_KEY,
+            "non-boolean");
+        fail("should not reach here");
+      } catch (ReconfigurationException e) {
+        assertEquals(
+            "Could not change property dfs.namenode.lock.detailed-metrics.enabled from " +
+                "'false' to 'non-boolean'", e.getMessage());
+      }
+
+      // try correct metricsEnabled.
+      nameNode.reconfigurePropertyImpl(DFS_NAMENODE_LOCK_DETAILED_METRICS_KEY, "true");
+      assertTrue(fsNamesystem.isMetricsEnabled());
+
+      nameNode.reconfigurePropertyImpl(DFS_NAMENODE_LOCK_DETAILED_METRICS_KEY, null);
+      assertFalse(fsNamesystem.isMetricsEnabled());
+
+      // try invalid readLockMS.
+      try {
+        nameNode.reconfigureProperty(DFS_NAMENODE_READ_LOCK_REPORTING_THRESHOLD_MS_KEY,
+            "non-numeric");
+        fail("Should not reach here");
+      } catch (ReconfigurationException e) {
+        assertEquals("Could not change property " +
+            "dfs.namenode.read-lock-reporting-threshold-ms from '" +
+            defaultReadLockMS + "' to 'non-numeric'", e.getMessage());
+      }
+
+      // try correct readLockMS.
+      nameNode.reconfigureProperty(DFS_NAMENODE_READ_LOCK_REPORTING_THRESHOLD_MS_KEY,
+          "20000");
+      assertEquals(fsNamesystem.getReadLockReportingThresholdMs(), 20000);
+
+
+      // try invalid writeLockMS.
+      try {
+        nameNode.reconfigureProperty(
+            DFS_NAMENODE_WRITE_LOCK_REPORTING_THRESHOLD_MS_KEY, "non-numeric");
+        fail("Should not reach here");
+      } catch (ReconfigurationException e) {
+        assertEquals("Could not change property " +
+            "dfs.namenode.write-lock-reporting-threshold-ms from '" +
+            defaultWriteLockMS + "' to 'non-numeric'", e.getMessage());
+      }
+
+      // try correct writeLockMS.
+      nameNode.reconfigureProperty(
+          DFS_NAMENODE_WRITE_LOCK_REPORTING_THRESHOLD_MS_KEY, "100000");
+      assertEquals(fsNamesystem.getWriteLockReportingThresholdMs(), 100000);
+    }
+  }
+
+  @Test
+  public void testReconfigureSlowPeerCollectInterval() throws Exception {
+    final NameNode nameNode = cluster.getNameNode();
+    final DatanodeManager datanodeManager =
+        nameNode.namesystem.getBlockManager().getDatanodeManager();
+
+    assertFalse("SlowNode tracker is already enabled. It should be disabled by default",
+        datanodeManager.getSlowPeerTracker().isSlowPeerTrackerEnabled());
+    assertTrue(datanodeManager.isSlowPeerCollectorInitialized());
+
+    try {
+      nameNode.reconfigureProperty(DFS_NAMENODE_SLOWPEER_COLLECT_INTERVAL_KEY, "10m");
+    } catch (NullPointerException e) {
+      assertEquals("slowPeerCollectorDaemon thread is null, not support restart", e.getMessage());
+    }
+
+    nameNode.reconfigureProperty(DFS_DATANODE_PEER_STATS_ENABLED_KEY, "True");
+    assertTrue("SlowNode tracker is still disabled. Reconfiguration could not be successful",
+        datanodeManager.getSlowPeerTracker().isSlowPeerTrackerEnabled());
+    assertFalse(datanodeManager.isSlowPeerCollectorInitialized());
+    assertEquals(1800000, datanodeManager.getSlowPeerCollectionInterval());
+
+    try {
+      nameNode.reconfigureProperty(DFS_NAMENODE_SLOWPEER_COLLECT_INTERVAL_KEY, "non-numeric");
+    } catch (ReconfigurationException e) {
+      assertEquals("Could not change property dfs.namenode.slowpeer.collect.interval from "
+          + "'30m' to 'non-numeric'", e.getMessage());
+    }
+
+    nameNode.reconfigureProperty(DFS_NAMENODE_SLOWPEER_COLLECT_INTERVAL_KEY, "10m");
+    assertFalse(datanodeManager.isSlowPeerCollectorInitialized());
+    assertEquals(600000, datanodeManager.getSlowPeerCollectionInterval());
+
+    nameNode.reconfigureProperty(DFS_NAMENODE_SLOWPEER_COLLECT_INTERVAL_KEY, null);
+    assertFalse(datanodeManager.isSlowPeerCollectorInitialized());
+    // set to the value of the current system
+    assertEquals(600000, datanodeManager.getSlowPeerCollectionInterval());
   }
 
   @After

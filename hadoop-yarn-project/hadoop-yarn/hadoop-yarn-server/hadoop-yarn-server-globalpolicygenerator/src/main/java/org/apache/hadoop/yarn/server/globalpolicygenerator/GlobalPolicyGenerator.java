@@ -18,20 +18,44 @@
 
 package org.apache.hadoop.yarn.server.globalpolicygenerator;
 
+import java.io.IOException;
+import java.io.PrintStream;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.lang.time.DurationFormatUtils;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.metrics2.source.JvmMetrics;
+import org.apache.hadoop.security.AuthenticationFilterInitializer;
+import org.apache.hadoop.security.HttpCrossOriginFilterInitializer;
+import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.registry.client.api.RegistryOperations;
 import org.apache.hadoop.service.CompositeService;
+import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
+import org.apache.hadoop.yarn.server.federation.utils.FederationRegistryClient;
+import org.apache.hadoop.yarn.server.globalpolicygenerator.applicationcleaner.ApplicationCleaner;
+import org.apache.hadoop.yarn.server.globalpolicygenerator.policygenerator.PolicyGenerator;
 import org.apache.hadoop.yarn.server.globalpolicygenerator.subclustercleaner.SubClusterCleaner;
+import org.apache.hadoop.yarn.server.globalpolicygenerator.webapp.GPGWebApp;
+import org.apache.hadoop.yarn.webapp.WebApp;
+import org.apache.hadoop.yarn.webapp.WebApps;
+import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
+import org.apache.hadoop.yarn.webapp.util.WebServiceClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,17 +79,30 @@ public class GlobalPolicyGenerator extends CompositeService {
   public static final int SHUTDOWN_HOOK_PRIORITY = 30;
   private AtomicBoolean isStopping = new AtomicBoolean(false);
   private static final String METRICS_NAME = "Global Policy Generator";
+  private static long gpgStartupTime = System.currentTimeMillis();
 
   // Federation Variables
   private GPGContext gpgContext;
+  private RegistryOperations registry;
 
   // Scheduler service that runs tasks periodically
   private ScheduledThreadPoolExecutor scheduledExecutorService;
   private SubClusterCleaner subClusterCleaner;
+  private ApplicationCleaner applicationCleaner;
+  private PolicyGenerator policyGenerator;
+  private String webAppAddress;
+  private JvmPauseMonitor pauseMonitor;
+  private WebApp webApp;
 
   public GlobalPolicyGenerator() {
     super(GlobalPolicyGenerator.class.getName());
     this.gpgContext = new GPGContextImpl();
+  }
+
+  protected void doSecureLogin() throws IOException {
+    Configuration config = getConfig();
+    SecurityUtil.login(config, YarnConfiguration.GPG_KEYTAB,
+        YarnConfiguration.GPG_PRINCIPAL, getHostName(config));
   }
 
   protected void initAndStart(Configuration conf, boolean hasToReboot) {
@@ -82,26 +119,61 @@ public class GlobalPolicyGenerator extends CompositeService {
 
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
+    UserGroupInformation.setConfiguration(conf);
     // Set up the context
-    this.gpgContext
-        .setStateStoreFacade(FederationStateStoreFacade.getInstance());
+    this.gpgContext.setStateStoreFacade(FederationStateStoreFacade.getInstance(conf));
+    GPGPolicyFacade gpgPolicyFacade =
+        new GPGPolicyFacade(this.gpgContext.getStateStoreFacade(), conf);
+    this.gpgContext.setPolicyFacade(gpgPolicyFacade);
+
+    this.registry = FederationStateStoreFacade.createInstance(conf,
+        YarnConfiguration.YARN_REGISTRY_CLASS,
+        YarnConfiguration.DEFAULT_YARN_REGISTRY_CLASS,
+        RegistryOperations.class);
+    this.registry.init(conf);
+
+    UserGroupInformation user = UserGroupInformation.getCurrentUser();
+    FederationRegistryClient registryClient =
+        new FederationRegistryClient(conf, this.registry, user);
+    this.gpgContext.setRegistryClient(registryClient);
 
     this.scheduledExecutorService = new ScheduledThreadPoolExecutor(
         conf.getInt(YarnConfiguration.GPG_SCHEDULED_EXECUTOR_THREADS,
             YarnConfiguration.DEFAULT_GPG_SCHEDULED_EXECUTOR_THREADS));
     this.subClusterCleaner = new SubClusterCleaner(conf, this.gpgContext);
 
+    this.applicationCleaner = FederationStateStoreFacade.createInstance(conf,
+        YarnConfiguration.GPG_APPCLEANER_CLASS,
+        YarnConfiguration.DEFAULT_GPG_APPCLEANER_CLASS, ApplicationCleaner.class);
+    this.applicationCleaner.init(conf, this.gpgContext);
+
+    this.policyGenerator = new PolicyGenerator(conf, this.gpgContext);
+
+    this.webAppAddress = WebAppUtils.getGPGWebAppURLWithoutScheme(conf);
     DefaultMetricsSystem.initialize(METRICS_NAME);
+    JvmMetrics jm = JvmMetrics.initSingleton("GPG", null);
+    pauseMonitor = new JvmPauseMonitor();
+    addService(pauseMonitor);
+    jm.setPauseMonitor(pauseMonitor);
 
     // super.serviceInit after all services are added
     super.serviceInit(conf);
+    WebServiceClient.initialize(conf);
   }
 
   @Override
   protected void serviceStart() throws Exception {
+    try {
+      doSecureLogin();
+    } catch (IOException e) {
+      throw new YarnRuntimeException("Failed GPG login", e);
+    }
+
     super.serviceStart();
 
-    // Scheduler SubClusterCleaner service
+    this.registry.start();
+
+    // Schedule SubClusterCleaner service
     Configuration config = getConfig();
     long scCleanerIntervalMs = config.getTimeDuration(
         YarnConfiguration.GPG_SUBCLUSTER_CLEANER_INTERVAL_MS,
@@ -112,10 +184,57 @@ public class GlobalPolicyGenerator extends CompositeService {
       LOG.info("Scheduled sub-cluster cleaner with interval: {}",
           DurationFormatUtils.formatDurationISO(scCleanerIntervalMs));
     }
+
+    // Schedule ApplicationCleaner service
+    long appCleanerIntervalMs = config.getTimeDuration(
+        YarnConfiguration.GPG_APPCLEANER_INTERVAL_MS,
+        YarnConfiguration.DEFAULT_GPG_APPCLEANER_INTERVAL_MS, TimeUnit.MILLISECONDS);
+
+    if (appCleanerIntervalMs > 0) {
+      this.scheduledExecutorService.scheduleAtFixedRate(this.applicationCleaner,
+          0, appCleanerIntervalMs, TimeUnit.MILLISECONDS);
+      LOG.info("Scheduled application cleaner with interval: {}",
+          DurationFormatUtils.formatDurationISO(appCleanerIntervalMs));
+    }
+
+    // Schedule PolicyGenerator
+    // We recommend using yarn.federation.gpg.policy.generator.interval
+    // instead of yarn.federation.gpg.policy.generator.interval-ms
+
+    // To ensure compatibility,
+    // let's first obtain the value of "yarn.federation.gpg.policy.generator.interval-ms."
+    long policyGeneratorIntervalMillis = 0L;
+    String generatorIntervalMS = config.get(YarnConfiguration.GPG_POLICY_GENERATOR_INTERVAL_MS);
+    if (generatorIntervalMS != null) {
+      LOG.warn("yarn.federation.gpg.policy.generator.interval-ms is deprecated property, " +
+          " we better set it yarn.federation.gpg.policy.generator.interval.");
+      policyGeneratorIntervalMillis = Long.parseLong(generatorIntervalMS);
+    }
+
+    // If it is not available, let's retrieve
+    // the value of "yarn.federation.gpg.policy.generator.interval" instead.
+    if (policyGeneratorIntervalMillis == 0) {
+      policyGeneratorIntervalMillis = config.getTimeDuration(
+          YarnConfiguration.GPG_POLICY_GENERATOR_INTERVAL,
+          YarnConfiguration.DEFAULT_GPG_POLICY_GENERATOR_INTERVAL, TimeUnit.MILLISECONDS);
+    }
+
+    if(policyGeneratorIntervalMillis > 0){
+      this.scheduledExecutorService.scheduleAtFixedRate(this.policyGenerator,
+          0, policyGeneratorIntervalMillis, TimeUnit.MILLISECONDS);
+      LOG.info("Scheduled policy-generator with interval: {}",
+          DurationFormatUtils.formatDurationISO(policyGeneratorIntervalMillis));
+    }
+    startWepApp();
   }
 
   @Override
   protected void serviceStop() throws Exception {
+    if (this.registry != null) {
+      this.registry.stop();
+      this.registry = null;
+    }
+
     try {
       if (this.scheduledExecutorService != null
           && !this.scheduledExecutorService.isShutdown()) {
@@ -130,8 +249,12 @@ public class GlobalPolicyGenerator extends CompositeService {
     if (this.isStopping.getAndSet(true)) {
       return;
     }
+    if (webApp != null) {
+      webApp.stop();
+    }
     DefaultMetricsSystem.shutdown();
     super.serviceStop();
+    WebServiceClient.destroy();
   }
 
   public String getName() {
@@ -140,6 +263,44 @@ public class GlobalPolicyGenerator extends CompositeService {
 
   public GPGContext getGPGContext() {
     return this.gpgContext;
+  }
+
+  @VisibleForTesting
+  public void startWepApp() {
+    Configuration configuration = getConfig();
+
+    boolean enableCors = configuration.getBoolean(YarnConfiguration.GPG_WEBAPP_ENABLE_CORS_FILTER,
+        YarnConfiguration.DEFAULT_GPG_WEBAPP_ENABLE_CORS_FILTER);
+
+    if (enableCors) {
+      configuration.setBoolean(HttpCrossOriginFilterInitializer.PREFIX
+          + HttpCrossOriginFilterInitializer.ENABLED_SUFFIX, true);
+    }
+
+    // Always load pseudo authentication filter to parse "user.name" in an URL
+    // to identify a HTTP request's user.
+    boolean hasHadoopAuthFilterInitializer = false;
+    String filterInitializerConfKey = "hadoop.http.filter.initializers";
+    Class<?>[] initializersClasses = configuration.getClasses(filterInitializerConfKey);
+
+    List<String> targets = new ArrayList<>();
+    if (initializersClasses != null) {
+      for (Class<?> initializer : initializersClasses) {
+        if (initializer.getName().equals(AuthenticationFilterInitializer.class.getName())) {
+          hasHadoopAuthFilterInitializer = true;
+          break;
+        }
+        targets.add(initializer.getName());
+      }
+    }
+    if (!hasHadoopAuthFilterInitializer) {
+      targets.add(AuthenticationFilterInitializer.class.getName());
+      configuration.set(filterInitializerConfKey, StringUtils.join(",", targets));
+    }
+    LOG.info("Instantiating GPGWebApp at {}.", webAppAddress);
+    GPGWebApp gpgWebApp = new GPGWebApp(this);
+    webApp = WebApps.$for("gpg", GPGContext.class, this.gpgContext,
+        "ws").at(webAppAddress).start(gpgWebApp);
   }
 
   @SuppressWarnings("resource")
@@ -156,12 +317,70 @@ public class GlobalPolicyGenerator extends CompositeService {
     }
   }
 
+  /**
+   * Returns the hostname for this Router. If the hostname is not
+   * explicitly configured in the given config, then it is determined.
+   *
+   * @param config configuration
+   * @return the hostname (NB: may not be a FQDN)
+   * @throws UnknownHostException if the hostname cannot be determined
+   */
+  private String getHostName(Configuration config)
+      throws UnknownHostException {
+    String name = config.get(YarnConfiguration.GPG_KERBEROS_PRINCIPAL_HOSTNAME_KEY);
+    if (name == null) {
+      name = InetAddress.getLocalHost().getHostName();
+    }
+    return name;
+  }
+
   public static void main(String[] argv) {
     try {
-      startGPG(argv, new YarnConfiguration());
+      YarnConfiguration conf = new YarnConfiguration();
+      GenericOptionsParser hParser = new GenericOptionsParser(conf, argv);
+      argv = hParser.getRemainingArgs();
+      if (argv.length > 1) {
+        if (argv[0].equals("-format-policy-store")) {
+          handFormatPolicyStateStore(conf);
+        } else {
+          printUsage(System.err);
+        }
+      } else {
+        startGPG(argv, conf);
+      }
     } catch (Throwable t) {
       LOG.error("Error starting global policy generator", t);
       System.exit(-1);
     }
+  }
+
+  public static long getGPGStartupTime() {
+    return gpgStartupTime;
+  }
+
+  @VisibleForTesting
+  public WebApp getWebApp() {
+    return webApp;
+  }
+
+  private static void printUsage(PrintStream out) {
+    out.println("Usage: yarn gpg [-format-policy-store]");
+  }
+
+  private static void handFormatPolicyStateStore(Configuration conf) {
+    try {
+      System.out.println("Deleting Federation policy state store.");
+      FederationStateStoreFacade facade = FederationStateStoreFacade.getInstance(conf);
+      System.out.println("Federation policy state store has been cleaned.");
+      facade.deleteAllPoliciesConfigurations();
+    } catch (Exception e) {
+      LOG.error("Delete Federation policy state store error.", e);
+      System.err.println("Delete Federation policy state store error, exception = " + e);
+    }
+  }
+
+  @Override
+  public void setConfig(Configuration conf) {
+    super.setConfig(conf);
   }
 }

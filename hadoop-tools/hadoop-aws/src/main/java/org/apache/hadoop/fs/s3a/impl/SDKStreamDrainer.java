@@ -18,12 +18,10 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
-import java.io.Closeable;
+import java.io.InputStream;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import javax.annotation.Nullable;
-
-import com.amazonaws.internal.SdkFilterInputStream;
+import software.amazon.awssdk.http.Abortable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,23 +29,18 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
 
+
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.DRAIN_BUFFER_SIZE;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.invokeTrackingDuration;
-import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 
 /**
  * Drains/aborts s3 or other AWS SDK streams.
  * It is callable so can be passed directly to a submitter
  * for async invocation.
- * A request object may be passed in; it will be implicitly
- * cached until this object is GCd.
- * This is because in some versions of the AWS SDK, the S3Object
- * has a finalize() method which releases the http connection,
- * even when the stream is still open.
- * See HADOOP-17338 for details.
  */
-public class SDKStreamDrainer implements CallableRaisingIOE<Boolean> {
+public class SDKStreamDrainer<TStream extends InputStream & Abortable>
+    implements CallableRaisingIOE<Boolean> {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       SDKStreamDrainer.class);
@@ -58,17 +51,9 @@ public class SDKStreamDrainer implements CallableRaisingIOE<Boolean> {
   private final String uri;
 
   /**
-   * Request object; usually S3Object
-   * Never used, but needed to keep the http connection
-   * open long enough for draining to take place.
+   * Stream from the getObject response for draining and closing.
    */
-  @Nullable
-  private final Closeable requestObject;
-
-  /**
-   * Stream from the {@link #requestObject} for draining and closing.
-   */
-  private final SdkFilterInputStream sdkStream;
+  private final TStream sdkStream;
 
   /**
    * Should the request be aborted?
@@ -118,7 +103,6 @@ public class SDKStreamDrainer implements CallableRaisingIOE<Boolean> {
   /**
    * Prepare to drain the stream.
    * @param uri URI for messages
-   * @param requestObject http request object; needed to avoid GC issues.
    * @param sdkStream stream to close.
    * @param shouldAbort force an abort; used if explicitly requested.
    * @param streamStatistics stats to update
@@ -126,14 +110,12 @@ public class SDKStreamDrainer implements CallableRaisingIOE<Boolean> {
    * @param remaining remaining bytes
    */
   public SDKStreamDrainer(final String uri,
-      @Nullable final Closeable requestObject,
-      final SdkFilterInputStream sdkStream,
+      final TStream sdkStream,
       final boolean shouldAbort,
       final int remaining,
       final S3AInputStreamStatistics streamStatistics,
       final String reason) {
     this.uri = uri;
-    this.requestObject = requestObject;
     this.sdkStream = requireNonNull(sdkStream);
     this.shouldAbort = shouldAbort;
     this.remaining = remaining;
@@ -189,8 +171,11 @@ public class SDKStreamDrainer implements CallableRaisingIOE<Boolean> {
           "duplicate invocation of drain operation");
     }
     boolean executeAbort = shouldAbort;
-    LOG.debug("drain or abort reason {} remaining={} abort={}",
-        reason, remaining, executeAbort);
+    if (remaining > 0 || executeAbort) {
+      // only log if there is a drain or an abort
+      LOG.debug("drain or abort reason {} remaining={} abort={}",
+          reason, remaining, executeAbort);
+    }
 
     if (!executeAbort) {
       try {
@@ -233,7 +218,6 @@ public class SDKStreamDrainer implements CallableRaisingIOE<Boolean> {
         LOG.debug("Closing stream");
         sdkStream.close();
 
-        cleanupWithLogger(LOG, requestObject);
         // this MUST come after the close, so that if the IO operations fail
         // and an abort is triggered, the initial attempt's statistics
         // aren't collected.
@@ -255,8 +239,6 @@ public class SDKStreamDrainer implements CallableRaisingIOE<Boolean> {
       LOG.warn("When aborting {} stream after failing to close it for {}",
           uri, reason, e);
       thrown = e;
-    } finally {
-      cleanupWithLogger(LOG, requestObject);
     }
 
     streamStatistics.streamClose(true, remaining);
@@ -269,11 +251,7 @@ public class SDKStreamDrainer implements CallableRaisingIOE<Boolean> {
     return uri;
   }
 
-  public Object getRequestObject() {
-    return requestObject;
-  }
-
-  public SdkFilterInputStream getSdkStream() {
+  public TStream getSdkStream() {
     return sdkStream;
   }
 

@@ -170,6 +170,62 @@ message DeregisterSubClusterResponseProto {
   repeated DeregisterSubClustersProto deregisterSubClusters = 1;
 }
 
+message SaveFederationQueuePolicyRequestProto {
+  required string queue = 1;
+  required FederationQueueWeightProto federationQueueWeight = 2;
+  optional string policyManagerClassName = 3;
+}
+
+message SaveFederationQueuePolicyResponseProto {
+  required string message = 1;
+}
+
+message BatchSaveFederationQueuePoliciesRequestProto {
+  repeated FederationQueueWeightProto federationQueueWeights = 1;
+}
+
+message BatchSaveFederationQueuePoliciesResponseProto {
+  required string message = 1;
+}
+
+message QueryFederationQueuePoliciesRequestProto {
+  optional int32 pageSize = 1;
+  optional int32 currentPage = 2;
+  optional string queue = 3;
+  repeated string queues = 4;
+}
+
+message QueryFederationQueuePoliciesResponseProto {
+  optional int32 totalSize = 1;
+  optional int32 totalPage = 2;
+  optional int32 currentPage = 3;
+  optional int32 pageSize = 4;
+  repeated FederationQueueWeightProto federationQueueWeights = 5;
+}
+
+message DeleteFederationApplicationRequestProto {
+  optional string application = 1;
+}
+
+message DeleteFederationApplicationResponseProto {
+  optional string message = 1;
+}
+
+message GetSubClustersRequestProto {
+}
+
+message GetSubClustersResponseProto {
+  repeated FederationSubClusterProto subClusters = 1;
+}
+
+message DeleteFederationQueuePoliciesRequestProto {
+  repeated string queues = 1;
+}
+
+message DeleteFederationQueuePoliciesResponseProto {
+  required string message = 1;
+}
+
 //////////////////////////////////////////////////////////////////
 ///////////// RM Failover related records ////////////////////////
 //////////////////////////////////////////////////////////////////

@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.converter.weightconversion;
 
-import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSQueue;
 
 public interface CapacityConverter {
-  void convertWeightsForChildQueues(FSQueue queue, Configuration csConfig);
+  void convertWeightsForChildQueues(FSQueue queue, CapacitySchedulerConfiguration csConfig);
 }

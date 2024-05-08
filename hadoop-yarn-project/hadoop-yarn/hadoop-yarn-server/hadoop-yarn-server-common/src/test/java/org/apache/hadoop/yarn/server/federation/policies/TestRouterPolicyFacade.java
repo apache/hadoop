@@ -62,10 +62,9 @@ public class TestRouterPolicyFacade {
   public void setup() throws YarnException {
 
     // setting up a store and its facade (with caching off)
-    FederationStateStoreFacade fedFacade =
-        FederationStateStoreFacade.getInstance();
     YarnConfiguration conf = new YarnConfiguration();
     conf.set(YarnConfiguration.FEDERATION_CACHE_TIME_TO_LIVE_SECS, "0");
+    FederationStateStoreFacade fedFacade = FederationStateStoreFacade.getInstance(conf);
     store = new MemoryFederationStateStore();
     store.init(conf);
     fedFacade.reinitialize(store, conf);

@@ -25,6 +25,7 @@ import java.lang.reflect.Field;
 import java.util.EnumSet;
 import java.util.UUID;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
@@ -33,6 +34,9 @@ import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
+import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
+import org.apache.hadoop.fs.azurebfs.services.AbfsClientUtils;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -55,6 +59,7 @@ import static java.net.HttpURLConnection.HTTP_PRECON_FAILED;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -146,6 +151,26 @@ public class ITestAzureBlobFileSystemCreate extends
     assertIsFile(fs, testFile);
   }
 
+  @Test
+  public void testCreateOnRoot() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    Path testFile = path(AbfsHttpConstants.ROOT_PATH);
+    AbfsRestOperationException ex = intercept(AbfsRestOperationException.class, () ->
+        fs.create(testFile, true));
+    if (ex.getStatusCode() != HTTP_CONFLICT) {
+      // Request should fail with 409.
+      throw ex;
+    }
+
+    ex = intercept(AbfsRestOperationException.class, () ->
+        fs.createNonRecursive(testFile, FsPermission.getDefault(),
+            false, 1024, (short) 1, 1024, null));
+    if (ex.getStatusCode() != HTTP_CONFLICT) {
+      // Request should fail with 409.
+      throw ex;
+    }
+  }
+
   /**
    * Attempts to use to the ABFS stream after it is closed.
    */
@@ -190,7 +215,8 @@ public class ITestAzureBlobFileSystemCreate extends
         // the exception raised in close() must be in the caught exception's
         // suppressed list
         Throwable[] suppressed = fnfe.getSuppressed();
-        assertEquals("suppressed count", 1, suppressed.length);
+        Assertions.assertThat(suppressed.length)
+            .describedAs("suppressed count should be 1").isEqualTo(1);
         Throwable inner = suppressed[0];
         if (!(inner instanceof IOException)) {
           throw inner;
@@ -255,6 +281,7 @@ public class ITestAzureBlobFileSystemCreate extends
     final AzureBlobFileSystem fs =
         (AzureBlobFileSystem) FileSystem.newInstance(currentFs.getUri(),
             config);
+    AbfsClientUtils.setIsNamespaceEnabled(fs.getAbfsClient(), true);
 
     long totalConnectionMadeBeforeTest = fs.getInstrumentationMap()
         .get(CONNECTIONS_MADE.getStatName());
@@ -398,16 +425,16 @@ public class ITestAzureBlobFileSystemCreate extends
             serverErrorResponseEx) // Scn5: create overwrite=false fails with Http500
         .when(mockClient)
         .createPath(any(String.class), eq(true), eq(false),
-            isNamespaceEnabled ? any(String.class) : eq(null),
-            isNamespaceEnabled ? any(String.class) : eq(null),
-            any(boolean.class), eq(null), any(TracingContext.class));
+            any(AzureBlobFileSystemStore.Permissions.class), any(boolean.class), eq(null), any(),
+            any(TracingContext.class));
 
     doThrow(fileNotFoundResponseEx) // Scn1: GFS fails with Http404
         .doThrow(serverErrorResponseEx) // Scn2: GFS fails with Http500
         .doReturn(successOp) // Scn3: create overwrite=true fails with Http412
         .doReturn(successOp) // Scn4: create overwrite=true fails with Http500
         .when(mockClient)
-        .getPathStatus(any(String.class), eq(false), any(TracingContext.class));
+        .getPathStatus(any(String.class), eq(false), any(TracingContext.class), nullable(
+            ContextEncryptionAdapter.class));
 
     // mock for overwrite=true
     doThrow(
@@ -416,9 +443,8 @@ public class ITestAzureBlobFileSystemCreate extends
             serverErrorResponseEx) // Scn4: create overwrite=true fails with Http500
         .when(mockClient)
         .createPath(any(String.class), eq(true), eq(true),
-            isNamespaceEnabled ? any(String.class) : eq(null),
-            isNamespaceEnabled ? any(String.class) : eq(null),
-            any(boolean.class), eq(null), any(TracingContext.class));
+            any(AzureBlobFileSystemStore.Permissions.class), any(boolean.class), eq(null), any(),
+            any(TracingContext.class));
 
     // Scn1: GFS fails with Http404
     // Sequence of events expected:

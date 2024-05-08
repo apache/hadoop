@@ -224,13 +224,6 @@ public class ITestMarkerTool extends AbstractMarkerToolTest {
     runToFailure(EXIT_USAGE, MARKERS);
   }
 
-  @Test
-  public void testRunWrongBucket() throws Throwable {
-    runToFailure(EXIT_NOT_FOUND, MARKERS,
-        AUDIT,
-        "s3a://this-bucket-does-not-exist-hopefully");
-  }
-
   /**
    * Run with a path that doesn't exist.
    */

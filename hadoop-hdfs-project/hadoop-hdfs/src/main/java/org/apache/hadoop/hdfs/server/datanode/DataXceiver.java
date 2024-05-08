@@ -186,8 +186,8 @@ class DataXceiver extends Receiver implements Runnable {
     if (br == null) {
       return;
     }
-    // This doesn't need to be in a critical section. Althogh the client
-    // can resue the connection to issue a different request, trying sending
+    // This doesn't need to be in a critical section. Although the client
+    // can reuse the connection to issue a different request, trying sending
     // an OOB through the recently closed block receiver is harmless.
     LOG.info("Sending OOB to peer: {}", peer);
     br.sendOOB();
@@ -223,6 +223,7 @@ class DataXceiver extends Receiver implements Runnable {
   public void run() {
     int opsProcessed = 0;
     Op op = null;
+    Op firstOp = null;
 
     try {
       synchronized(this) {
@@ -290,6 +291,11 @@ class DataXceiver extends Receiver implements Runnable {
         }
 
         opStartTime = monotonicNow();
+        // compatible with loop retry requests
+        if (firstOp == null) {
+          firstOp = op;
+          incrReadWriteOpMetrics(op);
+        }
         processOp(op);
         ++opsProcessed;
       } while ((peer != null) &&
@@ -330,6 +336,9 @@ class DataXceiver extends Receiver implements Runnable {
           datanode.getDisplayName(), datanode.getXceiverCount());
       updateCurrentThreadName("Cleaning up");
       if (peer != null) {
+        if (firstOp != null) {
+          decrReadWriteOpMetrics(op);
+        }
         dataXceiverServer.closePeer(peer);
         IOUtils.closeStream(in);
       }
@@ -607,9 +616,10 @@ class DataXceiver extends Receiver implements Runnable {
       // send op status
       writeSuccessWithChecksumInfo(blockSender, new DataOutputStream(getOutputStream()));
 
-      long beginRead = Time.monotonicNow();
-      read = blockSender.sendBlock(out, baseStream, null); // send data
-      long duration = Time.monotonicNow() - beginRead;
+      long beginReadInNS = Time.monotonicNowNanos();
+      // send data
+      read = blockSender.sendBlock(out, baseStream, dataXceiverServer.getReadThrottler());
+      long durationInNS = Time.monotonicNowNanos() - beginReadInNS;
       if (blockSender.didSendEntireByteRange()) {
         // If we sent the entire range, then we should expect the client
         // to respond with a Status enum.
@@ -632,8 +642,8 @@ class DataXceiver extends Receiver implements Runnable {
       }
       datanode.metrics.incrBytesRead((int) read);
       datanode.metrics.incrBlocksRead();
-      datanode.metrics.incrTotalReadTime(duration);
-      DFSUtil.addTransferRateMetric(datanode.metrics, read, duration);
+      datanode.metrics.incrTotalReadTime(TimeUnit.NANOSECONDS.toMillis(durationInNS));
+      DFSUtil.addTransferRateMetric(datanode.metrics, read, durationInNS);
     } catch ( SocketException ignored ) {
       LOG.trace("{}:Ignoring exception while serving {} to {}",
           dnR, block, remoteAddress, ignored);
@@ -1116,15 +1126,15 @@ class DataXceiver extends Receiver implements Runnable {
       // send status first
       writeSuccessWithChecksumInfo(blockSender, reply);
 
-      long beginRead = Time.monotonicNow();
+      long beginReadInNS = Time.monotonicNowNanos();
       // send block content to the target
       long read = blockSender.sendBlock(reply, baseStream,
                                         dataXceiverServer.balanceThrottler);
-      long duration = Time.monotonicNow() - beginRead;
+      long durationInNS = Time.monotonicNowNanos() - beginReadInNS;
       datanode.metrics.incrBytesRead((int) read);
       datanode.metrics.incrBlocksRead();
-      datanode.metrics.incrTotalReadTime(duration);
-      DFSUtil.addTransferRateMetric(datanode.metrics, read, duration);
+      datanode.metrics.incrTotalReadTime(TimeUnit.NANOSECONDS.toMillis(durationInNS));
+      DFSUtil.addTransferRateMetric(datanode.metrics, read, durationInNS);
       
       LOG.info("Copied {} to {}", block, peer.getRemoteAddressString());
     } catch (IOException ioe) {
@@ -1463,6 +1473,22 @@ class DataXceiver extends Receiver implements Runnable {
           IOUtils.closeStream(out);
         }
       }
+    }
+  }
+
+  private void incrReadWriteOpMetrics(Op op) {
+    if (Op.READ_BLOCK.equals(op)) {
+      datanode.getMetrics().incrDataNodeReadActiveXceiversCount();
+    } else if (Op.WRITE_BLOCK.equals(op)) {
+      datanode.getMetrics().incrDataNodeWriteActiveXceiversCount();
+    }
+  }
+
+  private void decrReadWriteOpMetrics(Op op) {
+    if (Op.READ_BLOCK.equals(op)) {
+      datanode.getMetrics().decrDataNodeReadActiveXceiversCount();
+    } else if (Op.WRITE_BLOCK.equals(op)) {
+      datanode.getMetrics().decrDataNodeWriteActiveXceiversCount();
     }
   }
 }

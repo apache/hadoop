@@ -260,8 +260,7 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
     // it still has write access, which can be explored in the final
     // step to delete files and directories.
     roleConfig = createAssumedRoleConfig();
-    bindRolePolicyStatements(roleConfig,
-        STATEMENT_ALLOW_SSE_KMS_RW,
+    bindRolePolicyStatements(roleConfig, STATEMENT_ALLOW_KMS_RW,
         statement(true, S3_ALL_BUCKETS, S3_ALL_OPERATIONS),
         new Statement(Effects.Deny)
             .addActions(S3_ALL_GET)

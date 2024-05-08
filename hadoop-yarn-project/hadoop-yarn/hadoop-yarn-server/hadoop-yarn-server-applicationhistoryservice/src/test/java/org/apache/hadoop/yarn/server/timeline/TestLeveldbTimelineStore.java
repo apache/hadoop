@@ -496,8 +496,9 @@ public class TestLeveldbTimelineStore extends TimelineStoreTestUtils {
       store.init(conf);
       Mockito.verify(factory, Mockito.times(1))
           .repair(Mockito.any(File.class), Mockito.any(Options.class));
-      FileFilter fileFilter = new WildcardFileFilter(
-          "*" + LeveldbTimelineStore.BACKUP_EXT + "*");
+      FileFilter fileFilter = WildcardFileFilter.builder()
+              .setWildcards("*" + LeveldbTimelineStore.BACKUP_EXT +"*")
+              .get();
       assertTrue(path.listFiles(fileFilter).length > 0);
     } finally {
       store.close();

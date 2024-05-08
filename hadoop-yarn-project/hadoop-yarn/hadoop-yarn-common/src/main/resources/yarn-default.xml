@@ -742,6 +742,16 @@
   </property>
 
   <property>
+    <description>
+      Enable SSL/TLS encryption for the ZooKeeper communication.
+      Note: if hadoop.zk.ssl.enabled is set to a value, then that central setting has precedence,
+      and this value will be overridden by the value of hadoop.zk.ssl.enabled.
+    </description>
+    <name>yarn.resourcemanager.zk-client-ssl.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
     <description>Name of the cluster. In a HA setting,
       this is used to ensure the RM participates in leader
       election for this cluster and ensures it does not affect
@@ -1480,6 +1490,26 @@
 
   <property>
     <description>
+      The admin JVM options used on forking ContainerLocalizer process
+      by the container executor.
+    </description>
+    <name>yarn.nodemanager.container-localizer.admin.java.opts</name>
+    <value></value>
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.container-localizer.java.opts.add-exports-as-default</name>
+    <value>true</value>
+    <description>Since on JDK17 it is no longer possible to use the reflection API to
+      access public fields and methods, add-exports flags should be added to container
+      localizers regardless of the user specified JAVA_OPTS. Setting this to true will
+      add the flags to the container localizer on nodes with JDK17 or higher.
+      Defaults to true, but the setting has no effect on nodes using JDK16 and before.
+    </description>
+  </property>
+
+  <property>
+    <description>
       The log level for container localizer while it is an independent process.
     </description>
     <name>yarn.nodemanager.container-localizer.log.level</name>
@@ -1654,6 +1684,21 @@
     </description>
     <name>yarn.nodemanager.log-container-debug-info.enabled</name>
     <value>true</value>
+  </property>
+
+  <property>
+    <description>Generate additional logs about container launches,
+      if container returned with non-zero exit code.
+      Currently, this creates a copy of the launch script and lists the
+      directory contents of the container work dir. When listing directory
+      contents, we follow symlinks to a max-depth of 5(including symlinks
+      which point to outside the container work dir) which may lead to a
+      slowness in launching containers.
+      If yarn.nodemanager.log-container-debug-info.enabled is true,
+      it does not have effect on the behavior.
+    </description>
+    <name>yarn.nodemanager.log-container-debug-info-on-error.enabled</name>
+    <value>false</value>
   </property>
 
   <property>
@@ -2417,6 +2462,12 @@
     </description>
     <name>yarn.nodemanager.linux-container-executor.cgroups.delete-timeout-ms</name>
     <value>1000</value>
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.linux-container-executor.cgroups.v2.enabled</name>
+    <value>false</value>
+    <description>Boolean indicating whether cgroup v2 is enabled.</description>
   </property>
 
   <property>
@@ -3740,6 +3791,15 @@
    </description>
    <name>yarn.federation.cache-ttl.secs</name>
    <value>300</value>
+  </property>
+
+  <property>
+    <description>
+      The number of entries in the Federation cache.
+      default is 1000.
+    </description>
+    <name>yarn.federation.cache-entity.nums</name>
+    <value>1000</value>
   </property>
 
   <property>
@@ -5100,10 +5160,27 @@
 
   <property>
     <name>yarn.router.interceptor.user-thread-pool.keep-alive-time</name>
-    <value>0s</value>
+    <value>30s</value>
     <description>
       This configurable is used to set the keepAliveTime of the thread pool of the interceptor.
-      Default is 0s.
+      Default is 30s.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.router.interceptor.user-thread-pool.allow-core-thread-time-out</name>
+    <value>false</value>
+    <description>
+      This method configures the policy for core threads regarding termination
+      when no tasks arrive within the keep-alive time.
+      When set to false, core threads are never terminated due to a lack of tasks.
+      When set to true, the same keep-alive policy
+      that applies to non-core threads also applies to core threads.
+      To prevent constant thread replacement,
+      ensure that the keep-alive time is greater than zero when setting it to true.
+      It's advisable to call this method before the pool becomes actively used.
+      We need to ensure that
+        yarn.router.interceptor.user-thread-pool.keep-alive-time is greater than 0.
     </description>
   </property>
 
@@ -5153,7 +5230,7 @@
     <description>
       The number of threads to use for the Router scheduled executor service.
     </description>
-    <name>yarn.router.subcluster.cleaner.interval.time</name>
+    <name>yarn.router.scheduled.executor.threads</name>
     <value>1</value>
   </property>
 
@@ -5266,6 +5343,14 @@
 
   <property>
     <description>
+      Whether to enable proxy service in router. Default is true.
+    </description>
+    <name>yarn.router.webapp.proxy.enable</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <description>
       The number of threads to use for the GPG scheduled executor service.
       default is 10.
     </description>
@@ -5374,6 +5459,319 @@
     </description>
     <name>yarn.federation.non-ha.enabled</name>
     <value>false</value>
+  </property>
+
+  <property>
+    <name>yarn.federation.gpg.keytab.file</name>
+    <value></value>
+    <description>
+      The keytab file used by gpg to login as its
+      service principal. The principal name is configured with
+      dfs.federation.router.kerberos.principal.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.federation.gpg.kerberos.principal</name>
+    <value></value>
+    <description>
+      The GPG service principal. This is typically set to
+      gpg/_HOST@REALM.TLD. Each GPG will substitute _HOST with its
+      own fully qualified hostname at startup. The _HOST placeholder
+      allows using the same configuration setting on both GPG setup.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.federation.gpg.kerberos.principal.hostname</name>
+    <value></value>
+    <description>
+      Optional.
+      The hostname for the Router containing this
+      configuration file. Will be different for each machine.
+      Defaults to current hostname.
+    </description>
+  </property>
+
+  <property>
+    <description>
+      The number of retry for Register UAM.
+      The default value is 3.
+    </description>
+    <name>yarn.federation.amrmproxy.register.uam.retry-count</name>
+    <value>3</value>
+  </property>
+
+  <property>
+    <description>
+      Interval between retry for Register UAM.
+      The default value is 100ms.
+    </description>
+    <name>yarn.federation.amrmproxy.register.uam.interval</name>
+    <value>100ms</value>
+  </property>
+
+  <property>
+    <description>
+      The interval at which the policy generator runs, default is one hour
+    </description>
+    <name>yarn.federation.gpg.policy.generator.interval</name>
+    <value>1h</value>
+  </property>
+
+  <property>
+    <description>
+      The interval at which the policy generator runs, default is one hour.
+      This is an deprecated property, We better set it
+      `yarn.federation.gpg.policy.generator.interval`.
+    </description>
+    <name>yarn.federation.gpg.policy.generator.interval-ms</name>
+    <value>3600000</value>
+  </property>
+
+  <property>
+    <description>
+      The configured policy generator class, runs NoOpGlobalPolicy by default
+    </description>
+    <name>yarn.federation.gpg.policy.generator.class</name>
+    <value>org.apache.hadoop.yarn.server.globalpolicygenerator.policygenerator.NoOpGlobalPolicy</value>
+  </property>
+
+  <property>
+    <description>
+      Whether or not the policy generator is running in read only (won't modify policies), default is false
+    </description>
+    <name>yarn.federation.gpg.policy.generator.readonly</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
+      Which subclusters the gpg should blacklist, default is none
+    </description>
+    <name>yarn.federation.gpg.policy.generator.blacklist</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
+      GPG load policy, the minimum number of pending applications in the subCluster.
+    </description>
+    <name>yarn.federation.gpg.policy.generator.load-based.pending.minimum</name>
+    <value>100</value>
+  </property>
+
+  <property>
+    <description>
+      GPG load policy, the maximum number of pending applications in the subCluster.
+    </description>
+    <name>yarn.federation.gpg.policy.generator.load-based.pending.maximum</name>
+    <value>1000</value>
+  </property>
+
+  <property>
+    <description>
+      GPG load policy, the subCluster minimum weight,
+      If a subCluster has a very high load, we will assign this value to the subCluster.
+      The default value is 0, which means that we no longer assign appliaction to this subCluster.
+    </description>
+    <name>yarn.federation.gpg.policy.generator.load-based.weight.minimum</name>
+    <value>0</value>
+  </property>
+
+  <property>
+    <description>
+      GPG load policy, We choose the subCluster computing load of TopN.
+      This value represents the number of subClusters we want to calculate.
+    </description>
+    <name>yarn.federation.gpg.policy.generator.load-based.edit.maximum</name>
+    <value>3</value>
+  </property>
+
+  <property>
+    <description>
+      GPG load policy, We provide 4 calculation methods: NONE, LINEAR, QUADRATIC, LOG.
+
+      Note, this calculation method is when the number of Pending Applications in
+      the subCluster is less than yarn.federation.gpg.policy.generator.load-based.pending.maximum.
+
+      maxPendingVal = yarn.federation.gpg.policy.generator.load-based.pending.maximum -
+      yarn.federation.gpg.policy.generator.load-based.pending.minimum
+      curPendingVal = Pending Applications in the subCluster -
+      yarn.federation.gpg.policy.generator.load-based.pending.minimum
+
+      1. NONE: No calculation is required, and the weight is 1 at this time.
+      2. LINEAR: For linear computation, we will use (maxPendingVal - curPendingVal) / (maxPendingVal).
+      3. QUADRATIC: Calculated using quadratic,
+      We will calculate quadratic for maxPendingVal, curPendingVal,
+      then use this formula = (maxPendingVal - curPendingVal) / (maxPendingVal).
+      4. LOG(LOGARITHM): Calculated using logarithm,
+      We will calculate logarithm for maxPendingVal, curPendingVal,
+      then use this formula = (maxPendingVal - curPendingVal) / (maxPendingVal).
+
+      LINEAR is used by default.
+    </description>
+    <name>yarn.federation.gpg.policy.generator.load-based.scaling</name>
+    <value>LINEAR</value>
+  </property>
+
+  <property>
+    <description>
+      The Application Cleaner implementation class for GPG to use.
+    </description>
+    <name>yarn.federation.gpg.application.cleaner.class</name>
+    <value>org.apache.hadoop.yarn.server.globalpolicygenerator.applicationcleaner.DefaultApplicationCleaner</value>
+  </property>
+
+  <property>
+    <description>Flag to enable cross-origin (CORS) support in the GPG. This flag
+      requires the CORS filter initializer to be added to the filter initializers
+      list in core-site.xml.</description>
+    <name>yarn.federation.gpg.webapp.cross-origin.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
+      The interval at which the application cleaner runs, -1 means disabled.
+    </description>
+    <name>yarn.federation.gpg.application.cleaner.interval-ms</name>
+    <value>-1s</value>
+  </property>
+
+  <property>
+    <description>
+      The http address of the GPG web application.
+      If only a host is provided as the value,
+      the webapp will be served on a random port.
+    </description>
+    <name>yarn.federation.gpg.webapp.address</name>
+    <value>0.0.0.0:8069</value>
+  </property>
+
+  <property>
+    <description>
+      Specifications on how (many times) to contact Router for apps. We need to
+      do this because Router might return partial application list because some
+      sub-cluster RM is not responsive (e.g. failing over).
+      Should have three values separated by comma: minimal success retries,
+      maximum total retry, retry interval (ms).
+    </description>
+    <name>yarn.federation.gpg.application.cleaner.contact.router.spec</name>
+    <value>3,10,600000</value>
+  </property>
+
+  <property>
+    <description>
+      The https address of the GPG web application.
+      If only a host is provided as the value,
+      the webapp will be served on a random port.
+    </description>
+    <name> yarn.federation.gpg.webapp.https.address</name>
+    <value>0.0.0.0:8070</value>
+  </property>
+
+  <property>
+    <description>
+      This configuration will enable request rerouting according to the load of the subCluster.
+      If it is true, it will reroute the request according to the load of the subCluster.
+      The default configuration is false.
+    </description>
+    <name>yarn.nodemanager.least-load-policy-selector.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
+      SubCluster pending container threshold. The default value is 10000.
+      This configuration will determine the load weight of a subCluster.
+      For SC with pending containers count bigger than container threshold / 2,
+      use threshold / pending as weight.
+      For SC with pending containers count less than threshold / 2, we cap the weight at 2.
+    </description>
+    <name>yarn.nodemanager.least-load-policy-selector.pending-container.threshold</name>
+    <value>10000</value>
+  </property>
+
+  <property>
+    <description>
+      Whether to consider the configured vcores when calculating the subCluster load.
+      The default value is false, we only consider the number of cluster pending containers.
+      If this configuration item is set to true, This configuration item needs to be used together
+      with yarn.nodemanager.least-load-policy-selector.multiplier. We will use the following formula
+      when calculating subCluster pending.
+      pendingContainersCountNormalize = (totalPendingContainersCount * multiplier) / totalActiveCores.
+    </description>
+    <name>yarn.nodemanager.least-load-policy-selector.use-active-core</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
+      Max count to maintain for container allocation history.
+    </description>
+    <name>yarn.federation.amrmproxy.allocation.history.max.entry</name>
+    <value>100</value>
+  </property>
+
+  <property>
+    <description>
+      Whether to fail directly if activeSubCluster is less than 1.
+      The default is true.
+      If We set to false, We will try to re-fetch activeSubCluster list.
+    </description>
+    <name>yarn.nodemanager.least-load-policy-selector.fail-on-error</name>
+    <value>true</value>
+  </property>
+
+  <property>
+    <description>
+      The subCluster configured in the blacklist will not be forwarded requests.
+      The default value is empty.
+    </description>
+    <name>yarn.nodemanager.least-load-policy-selector.blacklist-subclusters</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
+      Max count to maintain for container allocation history.
+    </description>
+    <name>yarn.federation.amrmproxy.allocation.history.max.entry</name>
+    <value>100</value>
+  </property>
+
+  <property>
+    <description>
+      This configuration will be used
+      when yarn.nodemanager.least-load-policy-selector.use-active-core is set to true.
+      The purpose of this value is to help normalize the pendingContainersCount.
+    </description>
+    <name>yarn.nodemanager.least-load-policy-selector.multiplier</name>
+    <value>50000</value>
+  </property>
+
+  <property>
+    <description>
+      Set the connect timeout interval, in milliseconds.
+      A value of 0 means no timeout, otherwise values must be between 1 and Integer#MAX_VALUE.
+      This ensures that the connection is established within a specified time,
+      or it triggers a connection timeout exception.
+    </description>
+    <name>yarn.federation.gpg.webapp.connect-timeout</name>
+    <value>30s</value>
+  </property>
+
+  <property>
+    <description>
+      Set the read timeout interval, in milliseconds.
+      A value of 0 means no timeout, otherwise values must be between 1 and Integer#MAX_VALUE.
+      This timeout specifies the maximum time a client should wait for data to be read from a server
+      once the connection has been established.
+      If data is not received within the specified time, a read timeout exception is raised.
+    </description>
+    <name>yarn.federation.gpg.webapp.read-timeout</name>
+    <value>30s</value>
   </property>
 
 </configuration>

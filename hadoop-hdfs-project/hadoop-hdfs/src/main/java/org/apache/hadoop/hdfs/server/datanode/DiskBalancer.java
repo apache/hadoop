@@ -42,7 +42,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -82,14 +82,14 @@ public class DiskBalancer {
   private final BlockMover blockMover;
   private final ReentrantLock lock;
   private final ConcurrentHashMap<VolumePair, DiskBalancerWorkItem> workMap;
-  private boolean isDiskBalancerEnabled = false;
+  private volatile boolean isDiskBalancerEnabled = false;
   private ExecutorService scheduler;
   private Future future;
   private String planID;
   private String planFile;
   private DiskBalancerWorkStatus.Result currentResult;
   private long bandwidth;
-  private long planValidityInterval;
+  private volatile long planValidityInterval;
   private final Configuration config;
 
   /**
@@ -184,7 +184,8 @@ public class DiskBalancer {
     try {
       checkDiskBalancerEnabled();
       if ((this.future != null) && (!this.future.isDone())) {
-        LOG.error("Disk Balancer - Executing another plan, submitPlan failed.");
+        LOG.error("Disk Balancer - Executing another plan (Plan File: {}, Plan ID: {}), " +
+            "submitPlan failed.", planFile, planID);
         throw new DiskBalancerException("Executing another plan",
             DiskBalancerException.Result.PLAN_ALREADY_IN_PROGRESS);
       }
@@ -342,6 +343,58 @@ public class DiskBalancer {
   }
 
   /**
+   * Sets Disk balancer is to enable or not to enable.
+   *
+   * @param diskBalancerEnabled
+   *          true, enable diskBalancer, otherwise false to disable it.
+   */
+  public void setDiskBalancerEnabled(boolean diskBalancerEnabled) {
+    isDiskBalancerEnabled = diskBalancerEnabled;
+  }
+
+  /**
+   * Returns the value indicating if diskBalancer is enabled.
+   *
+   * @return boolean.
+   */
+  @VisibleForTesting
+  public boolean isDiskBalancerEnabled() {
+    return isDiskBalancerEnabled;
+  }
+
+  /**
+   * Sets maximum amount of time disk balancer plan is valid.
+   *
+   * @param planValidityInterval - maximum amount of time in the unit of milliseconds.
+   */
+  public void setPlanValidityInterval(long planValidityInterval) {
+    this.config.setTimeDuration(DFSConfigKeys.DFS_DISK_BALANCER_PLAN_VALID_INTERVAL,
+        planValidityInterval, TimeUnit.MILLISECONDS);
+    this.planValidityInterval = planValidityInterval;
+  }
+
+  /**
+   * Gets maximum amount of time disk balancer plan is valid.
+   *
+   * @return the maximum amount of time in milliseconds.
+   */
+  @VisibleForTesting
+  public long getPlanValidityInterval() {
+    return planValidityInterval;
+  }
+
+  /**
+   * Gets maximum amount of time disk balancer plan is valid in config.
+   *
+   * @return the maximum amount of time in milliseconds.
+   */
+  @VisibleForTesting
+  public long getPlanValidityIntervalInConfig() {
+    return config.getTimeDuration(DFSConfigKeys.DFS_DISK_BALANCER_PLAN_VALID_INTERVAL,
+        DFSConfigKeys.DFS_DISK_BALANCER_PLAN_VALID_INTERVAL_DEFAULT, TimeUnit.MILLISECONDS);
+  }
+
+  /**
    * Verifies that user provided plan is valid.
    *
    * @param planID      - SHA-1 of the plan.
@@ -398,7 +451,7 @@ public class DiskBalancer {
 
     if ((planID == null) ||
         (planID.length() != sha1Length) ||
-        !DigestUtils.sha1Hex(plan.getBytes(Charset.forName("UTF-8")))
+        !DigestUtils.sha1Hex(plan.getBytes(StandardCharsets.UTF_8))
             .equalsIgnoreCase(planID)) {
       LOG.error("Disk Balancer - Invalid plan hash.");
       throw new DiskBalancerException("Invalid or mis-matched hash.",
@@ -471,7 +524,7 @@ public class DiskBalancer {
 
       String sourceVolBasePath = storageIDToVolBasePathMap.get(sourceVolUuid);
       if (sourceVolBasePath == null) {
-        final String errMsg = "Disk Balancer - Unable to find volume: "
+        final String errMsg = "Disk Balancer - Unable to find source volume: "
             + step.getSourceVolume().getPath() + ". SubmitPlan failed.";
         LOG.error(errMsg);
         throw new DiskBalancerException(errMsg,
@@ -480,7 +533,7 @@ public class DiskBalancer {
 
       String destVolBasePath = storageIDToVolBasePathMap.get(destVolUuid);
       if (destVolBasePath == null) {
-        final String errMsg = "Disk Balancer - Unable to find volume: "
+        final String errMsg = "Disk Balancer - Unable to find dest volume: "
             + step.getDestinationVolume().getPath() + ". SubmitPlan failed.";
         LOG.error(errMsg);
         throw new DiskBalancerException(errMsg,
@@ -1006,7 +1059,7 @@ public class DiskBalancer {
       FsVolumeSpi source = getFsVolume(this.dataset, sourceVolUuid);
       if (source == null) {
         final String errMsg = "Disk Balancer - Unable to find source volume: "
-            + pair.getDestVolBasePath();
+            + pair.getSourceVolBasePath();
         LOG.error(errMsg);
         item.setErrMsg(errMsg);
         return;

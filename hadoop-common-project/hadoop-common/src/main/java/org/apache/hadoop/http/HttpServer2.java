@@ -56,6 +56,7 @@ import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.jmx.JMXJsonServletNaNFiltered;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import com.sun.jersey.spi.container.servlet.ServletContainer;
@@ -116,6 +117,9 @@ import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.eclipse.jetty.webapp.WebAppContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.JMX_NAN_FILTER;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.JMX_NAN_FILTER_DEFAULT;
 
 /**
  * Create a Jetty embedded server to answer http requests. The primary goal is
@@ -785,7 +789,7 @@ public final class HttpServer2 implements FilterContainer {
       }
     }
 
-    addDefaultServlets();
+    addDefaultServlets(conf);
     addPrometheusServlet(conf);
     addAsyncProfilerServlet(contexts, conf);
   }
@@ -976,12 +980,17 @@ public final class HttpServer2 implements FilterContainer {
 
   /**
    * Add default servlets.
+   * @param configuration the hadoop configuration
    */
-  protected void addDefaultServlets() {
+  protected void addDefaultServlets(Configuration configuration) {
     // set up default servlets
     addServlet("stacks", "/stacks", StackServlet.class);
     addServlet("logLevel", "/logLevel", LogLevel.Servlet.class);
-    addServlet("jmx", "/jmx", JMXJsonServlet.class);
+    addServlet("jmx", "/jmx",
+        configuration.getBoolean(JMX_NAN_FILTER, JMX_NAN_FILTER_DEFAULT)
+            ? JMXJsonServletNaNFiltered.class
+            : JMXJsonServlet.class
+    );
     addServlet("conf", "/conf", ConfServlet.class);
   }
 

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
@@ -39,6 +40,8 @@ import java.util.EnumSet;
 
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
+import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.*;
 import static org.apache.hadoop.test.GenericTestUtils.getTestDir;
@@ -47,6 +50,9 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 /**
  * Use metrics to assert about the cost of file API calls.
  * Parameterized on directory marker keep vs delete.
+ * When the FS is instantiated with creation performance, things
+ * behave differently...its value is that of the marker keep flag,
+ * so deletion costs are the same.
  */
 @RunWith(Parameterized.class)
 public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
@@ -69,6 +75,14 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
       final String name,
       final boolean keepMarkers) {
     super(keepMarkers);
+  }
+
+  @Override
+  public Configuration createConfiguration() {
+    final Configuration conf = super.createConfiguration();
+    removeBaseAndBucketOverrides(conf, FS_S3A_CREATE_PERFORMANCE);
+    conf.setBoolean(FS_S3A_CREATE_PERFORMANCE, isKeepingMarkers());
+    return conf;
   }
 
   /**
@@ -377,7 +391,7 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
     // create a bunch of files
     int filesToCreate = 10;
     for (int i = 0; i < filesToCreate; i++) {
-      create(basePath.suffix("/" + i));
+      file(basePath.suffix("/" + i));
     }
 
     fs.globStatus(basePath.suffix("/*"));
@@ -396,7 +410,7 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
     // create a single file, globStatus returning a single file on a pattern
     // triggers attempts at symlinks resolution if configured
     String fileName = "/notASymlinkDOntResolveMeLikeOne";
-    create(basePath.suffix(fileName));
+    file(basePath.suffix(fileName));
     // unguarded: 2 head + 1 list from getFileStatus on path,
     // plus 1 list to match the glob pattern
     // no additional operations from symlink resolution

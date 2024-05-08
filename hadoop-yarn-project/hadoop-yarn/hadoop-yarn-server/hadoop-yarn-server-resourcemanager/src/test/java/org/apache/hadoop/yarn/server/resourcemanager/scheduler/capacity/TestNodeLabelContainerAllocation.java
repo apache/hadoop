@@ -34,8 +34,10 @@ import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
@@ -74,6 +76,28 @@ import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
 
 public class TestNodeLabelContainerAllocation {
+  private static final String A_PATH = CapacitySchedulerConfiguration.ROOT + ".a";
+  private static final String B_PATH = CapacitySchedulerConfiguration.ROOT + ".b";
+  private static final String C_PATH = CapacitySchedulerConfiguration.ROOT + ".c";
+  private static final String D_PATH = CapacitySchedulerConfiguration.ROOT + ".d";
+  private static final String A1_PATH = A_PATH + ".a1";
+  private static final String A2_PATH = A_PATH + ".a2";
+  private static final String B1_PATH = B_PATH + ".b1";
+  private static final String B2_PATH = B_PATH + ".b2";
+  private static final String C1_PATH = C_PATH + ".c1";
+  private static final String C2_PATH = C_PATH + ".c2";
+
+  private static final QueuePath ROOT = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+  private static final QueuePath A = new QueuePath(A_PATH);
+  private static final QueuePath B = new QueuePath(B_PATH);
+  private static final QueuePath C = new QueuePath(C_PATH);
+  private static final QueuePath D = new QueuePath(D_PATH);
+  private static final QueuePath A1 = new QueuePath(A1_PATH);
+  private static final QueuePath A2 = new QueuePath(A2_PATH);
+  private static final QueuePath B1 = new QueuePath(B1_PATH);
+  private static final QueuePath B2 = new QueuePath(B2_PATH);
+  private static final QueuePath C1 = new QueuePath(C1_PATH);
+  private static final QueuePath C2 = new QueuePath(C2_PATH);
   private final int GB = 1024;
 
   private YarnConfiguration conf;
@@ -94,43 +118,37 @@ public class TestNodeLabelContainerAllocation {
         new CapacitySchedulerConfiguration(config);
     
     // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {"a", "b", "c"});
-    conf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "x", 100);
-    conf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "y", 100);
-    conf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "z", 100);
+    conf.setQueues(ROOT, new String[] {"a", "b", "c"});
+    conf.setCapacityByLabel(ROOT, "x", 100);
+    conf.setCapacityByLabel(ROOT, "y", 100);
+    conf.setCapacityByLabel(ROOT, "z", 100);
 
-    final String A = CapacitySchedulerConfiguration.ROOT + ".a";
     conf.setCapacity(A, 10);
     conf.setMaximumCapacity(A, 15);
     conf.setAccessibleNodeLabels(A, toSet("x"));
     conf.setCapacityByLabel(A, "x", 100);
 
-    final String B = CapacitySchedulerConfiguration.ROOT + ".b";
     conf.setCapacity(B, 20);
     conf.setAccessibleNodeLabels(B, toSet("y", "z"));
     conf.setCapacityByLabel(B, "y", 100);
     conf.setCapacityByLabel(B, "z", 100);
 
-    final String C = CapacitySchedulerConfiguration.ROOT + ".c";
     conf.setCapacity(C, 70);
     conf.setMaximumCapacity(C, 70);
     conf.setAccessibleNodeLabels(C, RMNodeLabelsManager.EMPTY_STRING_SET);
-    
+
     // Define 2nd-level queues
-    final String A1 = A + ".a1";
     conf.setQueues(A, new String[] {"a1"});
     conf.setCapacity(A1, 100);
     conf.setMaximumCapacity(A1, 100);
     conf.setCapacityByLabel(A1, "x", 100);
-    
-    final String B1 = B + ".b1";
+
     conf.setQueues(B, new String[] {"b1"});
     conf.setCapacity(B1, 100);
     conf.setMaximumCapacity(B1, 100);
     conf.setCapacityByLabel(B1, "y", 100);
     conf.setCapacityByLabel(B1, "z", 100);
 
-    final String C1 = C + ".c1";
     conf.setQueues(C, new String[] {"c1"});
     conf.setCapacity(C1, 100);
     conf.setMaximumCapacity(C1, 100);
@@ -1117,6 +1135,7 @@ public class TestNodeLabelContainerAllocation {
         RMNodeLabelsManager.NO_LABEL);
     checkNodePartitionOfRequestedPriority(app.getAppSchedulingInfo(), 2,
         RMNodeLabelsManager.NO_LABEL);
+    rm1.stop();
   }
 
   private void checkNodePartitionOfRequestedPriority(AppSchedulingInfo info,
@@ -1370,52 +1389,43 @@ public class TestNodeLabelContainerAllocation {
         new CapacitySchedulerConfiguration(this.conf);
     
     // Define top-level queues
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {"a", "b", "c"});
-    csConf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "x", 100);
+    csConf.setQueues(ROOT, new String[] {"a", "b", "c"});
+    csConf.setCapacityByLabel(ROOT, "x", 100);
 
-    final String A = CapacitySchedulerConfiguration.ROOT + ".a";
     csConf.setCapacity(A, 33);
     csConf.setAccessibleNodeLabels(A, toSet("x"));
     csConf.setCapacityByLabel(A, "x", 33);
     csConf.setQueues(A, new String[] {"a1", "a2"});
-    
-    final String B = CapacitySchedulerConfiguration.ROOT + ".b";
+
     csConf.setCapacity(B, 33);
     csConf.setAccessibleNodeLabels(B, toSet("x"));
     csConf.setCapacityByLabel(B, "x", 33);
     csConf.setQueues(B, new String[] {"b1", "b2"});
-    
-    final String C = CapacitySchedulerConfiguration.ROOT + ".c";
+
     csConf.setCapacity(C, 34);
     csConf.setAccessibleNodeLabels(C, toSet("x"));
     csConf.setCapacityByLabel(C, "x", 34);
     csConf.setQueues(C, new String[] {"c1", "c2"});
     
     // Define 2nd-level queues
-    final String A1 = A + ".a1";
     csConf.setCapacity(A1, 50);
     csConf.setCapacityByLabel(A1, "x", 100);
     csConf.setDefaultNodeLabelExpression(A1, "x");
-    
-    final String A2 = A + ".a2";
+
     csConf.setCapacity(A2, 50);
     csConf.setCapacityByLabel(A2, "x", 0);
-    
-    final String B1 = B + ".b1";
+
     csConf.setCapacity(B1, 50);
     csConf.setCapacityByLabel(B1, "x", 100);
     csConf.setDefaultNodeLabelExpression(B1, "x");
-    
-    final String B2 = B + ".b2";
+
     csConf.setCapacity(B2, 50);
     csConf.setCapacityByLabel(B2, "x", 0);
-    
-    final String C1 = C + ".c1";
+
     csConf.setCapacity(C1, 50);
     csConf.setCapacityByLabel(C1, "x", 100);
     csConf.setDefaultNodeLabelExpression(C1, "x");
-    
-    final String C2 = C + ".c2";
+
     csConf.setCapacity(C2, 50);
     csConf.setCapacityByLabel(C2, "x", 0);
     
@@ -1563,15 +1573,13 @@ public class TestNodeLabelContainerAllocation {
         new CapacitySchedulerConfiguration(this.conf);
     
     // Define top-level queues
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {"a", "b"});
-    csConf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "x", 100);
+    csConf.setQueues(ROOT, new String[] {"a", "b"});
+    csConf.setCapacityByLabel(ROOT, "x", 100);
 
-    final String A = CapacitySchedulerConfiguration.ROOT + ".a";
     csConf.setCapacity(A, 50);
     csConf.setAccessibleNodeLabels(A, toSet("x"));
     csConf.setCapacityByLabel(A, "x", 100);
-    
-    final String B = CapacitySchedulerConfiguration.ROOT + ".b";
+
     csConf.setCapacity(B, 50);
     csConf.setAccessibleNodeLabels(B, new HashSet<String>());
     csConf.setUserLimitFactor(B, 5);
@@ -1662,9 +1670,11 @@ public class TestNodeLabelContainerAllocation {
     };
 
     rm1.getRMContext().setNodeLabelManager(mgr);
+    Resource resource = Resource.newInstance(8 * GB, 8);
+    ((NullRMNodeLabelsManager)mgr).setResourceForLabel(CommonNodeLabelsManager.NO_LABEL, resource);
     rm1.start();
     String nodeIdStr = "h1:1234";
-    MockNM nm1 = rm1.registerNode(nodeIdStr, 8 * GB); // label = x
+    MockNM nm1 = rm1.registerNode(nodeIdStr, resource); // label = x
 
     // launch an app to queue b1 (label = y), AM container should be launched in nm3
     MockRMAppSubmissionData data =
@@ -1725,18 +1735,15 @@ public class TestNodeLabelContainerAllocation {
         new CapacitySchedulerConfiguration(this.conf);
 
     // Define top-level queues
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] { "a",
-        "b" });
-    csConf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "x", 100);
+    csConf.setQueues(ROOT, new String[] {"a", "b"});
+    csConf.setCapacityByLabel(ROOT, "x", 100);
 
-    final String A = CapacitySchedulerConfiguration.ROOT + ".a";
     csConf.setCapacity(A, 50);
     csConf.setAccessibleNodeLabels(A, toSet("x"));
     csConf.setCapacityByLabel(A, "x", 50);
     csConf.setMaximumCapacityByLabel(A, "x", 50);
     csConf.setUserLimit(A, 200);
 
-    final String B = CapacitySchedulerConfiguration.ROOT + ".b";
     csConf.setCapacity(B, 50);
     csConf.setAccessibleNodeLabels(B, toSet("x"));
     csConf.setCapacityByLabel(B, "x", 50);
@@ -1877,31 +1884,26 @@ public class TestNodeLabelContainerAllocation {
         new CapacitySchedulerConfiguration(this.conf);
 
     // Define top-level queues
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] { "a",
-        "b" });
-    csConf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "x", 100);
+    csConf.setQueues(ROOT, new String[] {"a", "b"});
+    csConf.setCapacityByLabel(ROOT, "x", 100);
 
     /**
      * Initially, we set A/B's resource 50:50
      */
-    final String A = CapacitySchedulerConfiguration.ROOT + ".a";
     csConf.setCapacity(A, 50);
     csConf.setAccessibleNodeLabels(A, toSet("x"));
     csConf.setCapacityByLabel(A, "x", 50);
     
     csConf.setQueues(A, new String[] { "a1", "a2" });
-    
-    final String A1 = A + ".a1";
+
     csConf.setCapacity(A1, 50);
     csConf.setAccessibleNodeLabels(A1, toSet("x"));
     csConf.setCapacityByLabel(A1, "x", 50);
-    
-    final String A2 = A + ".a2";
+
     csConf.setCapacity(A2, 50);
     csConf.setAccessibleNodeLabels(A2, toSet("x"));
     csConf.setCapacityByLabel(A2, "x", 50);
 
-    final String B = CapacitySchedulerConfiguration.ROOT + ".b";
     csConf.setCapacity(B, 50);
     csConf.setAccessibleNodeLabels(B, toSet("x"));
     csConf.setCapacityByLabel(B, "x", 50);
@@ -2138,25 +2140,20 @@ public class TestNodeLabelContainerAllocation {
         new CapacitySchedulerConfiguration(this.conf);
 
     // Define top-level queues
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] { "a",
-        "b", "c", "d" });
-    csConf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "x", 100);
+    csConf.setQueues(ROOT, new String[] {"a", "b", "c", "d"});
+    csConf.setCapacityByLabel(ROOT, "x", 100);
 
-    final String A = CapacitySchedulerConfiguration.ROOT + ".a";
     csConf.setCapacity(A, 25);
     csConf.setAccessibleNodeLabels(A, toSet("x"));
     csConf.setCapacityByLabel(A, "x", 30);
 
-    final String B = CapacitySchedulerConfiguration.ROOT + ".b";
     csConf.setCapacity(B, 25);
     csConf.setAccessibleNodeLabels(B, toSet("x"));
     csConf.setCapacityByLabel(B, "x", 70);
-    
-    final String C = CapacitySchedulerConfiguration.ROOT + ".c";
+
     csConf.setAccessibleNodeLabels(C, Collections.<String> emptySet());
     csConf.setCapacity(C, 25);
-    
-    final String D = CapacitySchedulerConfiguration.ROOT + ".d";
+
     csConf.setAccessibleNodeLabels(D, Collections.<String> emptySet());
     csConf.setCapacity(D, 25);
 
@@ -2317,6 +2314,7 @@ public class TestNodeLabelContainerAllocation {
     checkNumOfContainersInAnAppOnGivenNode(1, nm1.getNodeId(),
         cs.getApplicationAttempt(am4.getApplicationAttemptId()));
 
+    rm.stop();
   }
 
   @Test
@@ -2340,16 +2338,14 @@ public class TestNodeLabelContainerAllocation {
         new CapacitySchedulerConfiguration(this.conf);
 
     // Define top-level queues
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
+    csConf.setQueues(ROOT,
         new String[] { "a", "b" });
-    csConf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "x", 100);
+    csConf.setCapacityByLabel(ROOT, "x", 100);
 
-    final String A = CapacitySchedulerConfiguration.ROOT + ".a";
     csConf.setCapacity(A, 25);
     csConf.setAccessibleNodeLabels(A, toSet("*"));
     csConf.setCapacityByLabel(A, "x", 60);
 
-    final String B = CapacitySchedulerConfiguration.ROOT + ".b";
     csConf.setCapacity(B, 75);
     csConf.setAccessibleNodeLabels(B, toSet("x"));
     csConf.setCapacityByLabel(B, "x", 40);
@@ -2406,6 +2402,7 @@ public class TestNodeLabelContainerAllocation {
     doNMHeartbeat(rm, nm1.getNodeId(), 1);
     checkNumOfContainersInAnAppOnGivenNode(2, nm1.getNodeId(),
         cs.getApplicationAttempt(am1.getApplicationAttemptId()));
+    rm.stop();
   }
 
   @Test
@@ -2427,17 +2424,14 @@ public class TestNodeLabelContainerAllocation {
         new CapacitySchedulerConfiguration(this.conf);
 
     // Define top-level queues
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] { "a",
-        "b"});
-    csConf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "x", 100);
+    csConf.setQueues(ROOT, new String[] {"a", "b"});
+    csConf.setCapacityByLabel(ROOT, "x", 100);
 
-    final String A = CapacitySchedulerConfiguration.ROOT + ".a";
     csConf.setCapacity(A, 10);
     csConf.setAccessibleNodeLabels(A, toSet("x"));
     csConf.setCapacityByLabel(A, "x", 50);
     csConf.setMaximumCapacityByLabel(A, "x", 50);
 
-    final String B = CapacitySchedulerConfiguration.ROOT + ".b";
     csConf.setCapacity(B, 90);
     csConf.setAccessibleNodeLabels(B, toSet("x"));
     csConf.setCapacityByLabel(B, "x", 50);
@@ -2447,14 +2441,12 @@ public class TestNodeLabelContainerAllocation {
     csConf.setQueues(A, new String[] { "a1",
         "a2"});
 
-    final String A1 = A + ".a1";
     csConf.setCapacity(A1, 50);
     csConf.setAccessibleNodeLabels(A1, toSet("x"));
     csConf.setCapacityByLabel(A1, "x", 50);
     csConf.setMaximumCapacityByLabel(A1, "x", 100);
     csConf.setUserLimitFactor(A1, 100.0f);
 
-    final String A2 = A + ".a2";
     csConf.setCapacity(A2, 50);
     csConf.setAccessibleNodeLabels(A2, toSet("x"));
     csConf.setCapacityByLabel(A2, "x", 50);
@@ -2518,6 +2510,7 @@ public class TestNodeLabelContainerAllocation {
     doNMHeartbeat(rm, nm1.getNodeId(), 10);
     checkNumOfContainersInAnAppOnGivenNode(1, nm1.getNodeId(),
         cs.getApplicationAttempt(am2.getApplicationAttemptId()));
+    rm.stop();
   }
 
   @Test
@@ -2542,20 +2535,19 @@ public class TestNodeLabelContainerAllocation {
         this.conf);
 
     // Define top-level queues
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
+    csConf.setQueues(ROOT,
         new String[] { "a", "b" });
-    csConf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "x", 100);
+    csConf.setCapacityByLabel(ROOT, "x", 100);
 
-    final String queueA = CapacitySchedulerConfiguration.ROOT + ".a";
-    csConf.setCapacity(queueA, 25);
-    csConf.setAccessibleNodeLabels(queueA, toSet("x"));
-    csConf.setCapacityByLabel(queueA, "x", 50);
-    csConf.setMaximumCapacityByLabel(queueA, "x", 50);
-    final String queueB = CapacitySchedulerConfiguration.ROOT + ".b";
-    csConf.setCapacity(queueB, 75);
-    csConf.setAccessibleNodeLabels(queueB, toSet("x"));
-    csConf.setCapacityByLabel(queueB, "x", 50);
-    csConf.setMaximumCapacityByLabel(queueB, "x", 50);
+    csConf.setCapacity(A, 25);
+    csConf.setAccessibleNodeLabels(A, toSet("x"));
+    csConf.setCapacityByLabel(A, "x", 50);
+    csConf.setMaximumCapacityByLabel(A, "x", 50);
+
+    csConf.setCapacity(B, 75);
+    csConf.setAccessibleNodeLabels(B, toSet("x"));
+    csConf.setCapacityByLabel(B, "x", 50);
+    csConf.setMaximumCapacityByLabel(B, "x", 50);
 
     // set node -> label
     mgr.addToCluserNodeLabels(
@@ -2667,20 +2659,19 @@ public class TestNodeLabelContainerAllocation {
         this.conf);
 
     // Define top-level queues
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
+    csConf.setQueues(ROOT,
         new String[] { "a", "b" });
-    csConf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "x", 100);
+    csConf.setCapacityByLabel(ROOT, "x", 100);
 
-    final String queueA = CapacitySchedulerConfiguration.ROOT + ".a";
-    csConf.setCapacity(queueA, 25);
-    csConf.setAccessibleNodeLabels(queueA, toSet("x"));
-    csConf.setCapacityByLabel(queueA, "x", 50);
-    csConf.setMaximumCapacityByLabel(queueA, "x", 50);
-    final String queueB = CapacitySchedulerConfiguration.ROOT + ".b";
-    csConf.setCapacity(queueB, 75);
-    csConf.setAccessibleNodeLabels(queueB, toSet("x"));
-    csConf.setCapacityByLabel(queueB, "x", 50);
-    csConf.setMaximumCapacityByLabel(queueB, "x", 50);
+    csConf.setCapacity(A, 25);
+    csConf.setAccessibleNodeLabels(A, toSet("x"));
+    csConf.setCapacityByLabel(A, "x", 50);
+    csConf.setMaximumCapacityByLabel(A, "x", 50);
+
+    csConf.setCapacity(B, 75);
+    csConf.setAccessibleNodeLabels(B, toSet("x"));
+    csConf.setCapacityByLabel(B, "x", 50);
+    csConf.setMaximumCapacityByLabel(B, "x", 50);
 
     csConf.setBoolean(CapacitySchedulerConfiguration.ENABLE_USER_METRICS, true);
 
@@ -2948,15 +2939,14 @@ public class TestNodeLabelContainerAllocation {
         this.conf);
 
     // Define top-level queues
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
+    csConf.setQueues(ROOT,
         new String[] {"a"});
-    csConf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "x", 100);
+    csConf.setCapacityByLabel(ROOT, "x", 100);
 
-    final String queueA = CapacitySchedulerConfiguration.ROOT + ".a";
-    csConf.setCapacity(queueA, 100);
-    csConf.setAccessibleNodeLabels(queueA, toSet("x"));
-    csConf.setCapacityByLabel(queueA, "x", 100);
-    csConf.setMaximumCapacityByLabel(queueA, "x", 100);
+    csConf.setCapacity(A, 100);
+    csConf.setAccessibleNodeLabels(A, toSet("x"));
+    csConf.setCapacityByLabel(A, "x", 100);
+    csConf.setMaximumCapacityByLabel(A, "x", 100);
 
     // set node -> label
     // label x exclusivity is set to true
@@ -3084,23 +3074,21 @@ public class TestNodeLabelContainerAllocation {
         this.conf);
 
     // Define top-level queues
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
+    csConf.setQueues(ROOT,
         new String[] {"a"});
-    csConf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "x", 100);
+    csConf.setCapacityByLabel(ROOT, "x", 100);
 
-    final String queueA = CapacitySchedulerConfiguration.ROOT + ".a";
-    csConf.setCapacity(queueA, 100);
-    csConf.setAccessibleNodeLabels(queueA, toSet("x"));
-    csConf.setCapacityByLabel(queueA, "x", 100);
-    csConf.setMaximumCapacityByLabel(queueA, "x", 100);
+    csConf.setCapacity(A, 100);
+    csConf.setAccessibleNodeLabels(A, toSet("x"));
+    csConf.setCapacityByLabel(A, "x", 100);
+    csConf.setMaximumCapacityByLabel(A, "x", 100);
 
-    csConf.setQueues(queueA, new String[] {"a1"});
-    final String queueA1 = queueA + ".a1";
-    csConf.setCapacity(queueA1, 100);
+    csConf.setQueues(A, new String[] {"a1"});
 
-    csConf.setAccessibleNodeLabels(queueA1, toSet("x"));
-    csConf.setCapacityByLabel(queueA1, "x", 100);
-    csConf.setMaximumCapacityByLabel(queueA1, "x", 100);
+    csConf.setCapacity(A1, 100);
+    csConf.setAccessibleNodeLabels(A1, toSet("x"));
+    csConf.setCapacityByLabel(A1, "x", 100);
+    csConf.setMaximumCapacityByLabel(A1, "x", 100);
 
     // set node -> label
     // label x exclusivity is set to true
@@ -3304,35 +3292,31 @@ public class TestNodeLabelContainerAllocation {
         this.conf);
 
     // Define top-level queues
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
+    csConf.setQueues(ROOT,
         new String[] { "a", "b" });
-    csConf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "x", 100);
+    csConf.setCapacityByLabel(ROOT, "x", 100);
 
-    final String queueA = CapacitySchedulerConfiguration.ROOT + ".a";
-    csConf.setCapacity(queueA, 50);
-    csConf.setMaximumCapacity(queueA, 100);
-    csConf.setAccessibleNodeLabels(queueA, toSet("x"));
-    csConf.setCapacityByLabel(queueA, "x", 50);
-    csConf.setMaximumCapacityByLabel(queueA, "x", 100);
-    final String queueB = CapacitySchedulerConfiguration.ROOT + ".b";
-    csConf.setCapacity(queueB, 50);
-    csConf.setMaximumCapacity(queueB, 100);
-    csConf.setAccessibleNodeLabels(queueB, toSet("x"));
-    csConf.setCapacityByLabel(queueB, "x", 50);
-    csConf.setMaximumCapacityByLabel(queueB, "x", 100);
+    csConf.setCapacity(A, 50);
+    csConf.setMaximumCapacity(A, 100);
+    csConf.setAccessibleNodeLabels(A, toSet("x"));
+    csConf.setCapacityByLabel(A, "x", 50);
+    csConf.setMaximumCapacityByLabel(A, "x", 100);
+
+    csConf.setCapacity(B, 50);
+    csConf.setMaximumCapacity(B, 100);
+    csConf.setAccessibleNodeLabels(B, toSet("x"));
+    csConf.setCapacityByLabel(B, "x", 50);
+    csConf.setMaximumCapacityByLabel(B, "x", 100);
 
     // Define 2nd-level queues
-    csConf.setQueues(queueA, new String[] { "a1",
-        "a2"});
+    csConf.setQueues(A, new String[] {"a1", "a2"});
 
-    final String A1 = queueA + ".a1";
     csConf.setCapacity(A1, 20);
     csConf.setMaximumCapacity(A1, 60);
     csConf.setAccessibleNodeLabels(A1, toSet("x"));
     csConf.setCapacityByLabel(A1, "x", 60);
     csConf.setMaximumCapacityByLabel(A1, "x", 30);
 
-    final String A2 = queueA + ".a2";
     csConf.setCapacity(A2, 80);
     csConf.setMaximumCapacity(A2, 40);
     csConf.setAccessibleNodeLabels(A2, toSet("x"));

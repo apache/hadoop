@@ -19,21 +19,28 @@
 package org.apache.hadoop.hdfs.web.oauth2;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
-
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.RequestBody;
-import okhttp3.Response;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.web.URLConnectionFactory;
+import org.apache.hadoop.thirdparty.com.google.common.net.HttpHeaders;
 import org.apache.hadoop.util.JsonSerialization;
 import org.apache.hadoop.util.Timer;
 import org.apache.http.HttpStatus;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.util.EntityUtils;
 
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.OAUTH_CLIENT_ID_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.OAUTH_REFRESH_URL_KEY;
@@ -97,38 +104,37 @@ public abstract class CredentialBasedAccessTokenProvider
   }
 
   void refresh() throws IOException {
-    OkHttpClient client = new OkHttpClient.Builder()
-            .connectTimeout(URLConnectionFactory.DEFAULT_SOCKET_TIMEOUT, TimeUnit.MILLISECONDS)
-            .readTimeout(URLConnectionFactory.DEFAULT_SOCKET_TIMEOUT, TimeUnit.MILLISECONDS)
-            .build();
-
-    String bodyString = Utils.postBody(CLIENT_SECRET, getCredential(),
-        GRANT_TYPE, CLIENT_CREDENTIALS,
-        CLIENT_ID, clientId);
-
-    RequestBody body = RequestBody.create(bodyString, URLENCODED);
-
-    Request request = new Request.Builder()
-        .url(refreshURL)
-        .post(body)
+    final List<NameValuePair> pairs = new ArrayList<>();
+    pairs.add(new BasicNameValuePair(CLIENT_SECRET, getCredential()));
+    pairs.add(new BasicNameValuePair(GRANT_TYPE, CLIENT_CREDENTIALS));
+    pairs.add(new BasicNameValuePair(CLIENT_ID, clientId));
+    final RequestConfig config = RequestConfig.custom()
+        .setConnectTimeout(URLConnectionFactory.DEFAULT_SOCKET_TIMEOUT)
+        .setConnectionRequestTimeout(URLConnectionFactory.DEFAULT_SOCKET_TIMEOUT)
+        .setSocketTimeout(URLConnectionFactory.DEFAULT_SOCKET_TIMEOUT)
         .build();
-    try (Response response = client.newCall(request).execute()) {
-      if (!response.isSuccessful()) {
-        throw new IOException("Unexpected code " + response);
+    try (CloseableHttpClient client =
+             HttpClientBuilder.create().setDefaultRequestConfig(config).build()) {
+      final HttpPost httpPost = new HttpPost(refreshURL);
+      httpPost.setEntity(new UrlEncodedFormEntity(pairs, StandardCharsets.UTF_8));
+      httpPost.setHeader(HttpHeaders.CONTENT_TYPE, URLENCODED);
+      try (CloseableHttpResponse response = client.execute(httpPost)) {
+        final int statusCode = response.getStatusLine().getStatusCode();
+        if (statusCode != HttpStatus.SC_OK) {
+          throw new IllegalArgumentException(
+              "Received invalid http response: " + statusCode + ", text = " +
+                  EntityUtils.toString(response.getEntity()));
+        }
+        Map<?, ?> responseBody = JsonSerialization.mapReader().readValue(
+            EntityUtils.toString(response.getEntity()));
+
+        String newExpiresIn = responseBody.get(EXPIRES_IN).toString();
+        timer.setExpiresIn(newExpiresIn);
+
+        accessToken = responseBody.get(ACCESS_TOKEN).toString();
       }
-
-      if (response.code() != HttpStatus.SC_OK) {
-        throw new IllegalArgumentException("Received invalid http response: "
-            + response.code() + ", text = " + response.toString());
-      }
-
-      Map<?, ?> responseBody = JsonSerialization.mapReader().readValue(
-          response.body().string());
-
-      String newExpiresIn = responseBody.get(EXPIRES_IN).toString();
-      timer.setExpiresIn(newExpiresIn);
-
-      accessToken = responseBody.get(ACCESS_TOKEN).toString();
+    } catch (RuntimeException e) {
+      throw new IOException("Unable to obtain access token from credential", e);
     } catch (Exception e) {
       throw new IOException("Unable to obtain access token from credential", e);
     }

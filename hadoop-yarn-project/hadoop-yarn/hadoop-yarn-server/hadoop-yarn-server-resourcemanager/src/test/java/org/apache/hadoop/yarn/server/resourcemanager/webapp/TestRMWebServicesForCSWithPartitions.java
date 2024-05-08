@@ -25,11 +25,14 @@ import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTes
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.FN_SCHEDULER_ACT_ROOT;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.getFirstSubNodeFromJson;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.verifyNumberOfAllocations;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.createRM;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.createWebAppDescriptor;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.StringReader;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -53,38 +56,34 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
-import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityDiagnosticConstant;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityState;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.util.resource.Resources;
-import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
-import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.WebServicesTestUtils;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
-import com.google.inject.Guice;
-import com.google.inject.servlet.ServletModule;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
-import com.sun.jersey.test.framework.WebAppDescriptor;
 
+@RunWith(Parameterized.class)
 public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
   private static final String DEFAULT_PARTITION = "";
   private static final String CAPACITIES = "capacities";
@@ -99,119 +98,146 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
   private static final String QUEUE_A = "Qa";
   private static final String LABEL_LY = "Ly";
   private static final String LABEL_LX = "Lx";
+  private static final QueuePath ROOT_QUEUE_PATH =
+      new QueuePath(CapacitySchedulerConfiguration.ROOT);
   private static final ImmutableSet<String> CLUSTER_LABELS =
       ImmutableSet.of(LABEL_LX, LABEL_LY, DEFAULT_PARTITION);
   private static final String DOT = ".";
+  private static final double EPSILON = 1e-1f;
+
   private static MockRM rm;
   static private CapacitySchedulerConfiguration csConf;
   static private YarnConfiguration conf;
 
-  private static class WebServletModule extends ServletModule {
-    @Override
-    protected void configureServlets() {
-      bind(JAXBContextResolver.class);
-      bind(RMWebServices.class);
-      bind(GenericExceptionHandler.class);
-      csConf = new CapacitySchedulerConfiguration();
-      setupQueueConfiguration(csConf);
-      conf = new YarnConfiguration(csConf);
-      conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
-          ResourceScheduler.class);
-      rm = new MockRM(conf);
-      Set<NodeLabel> labels = new HashSet<NodeLabel>();
-      labels.add(NodeLabel.newInstance(LABEL_LX));
-      labels.add(NodeLabel.newInstance(LABEL_LY));
-      try {
-        RMNodeLabelsManager nodeLabelManager =
-            rm.getRMContext().getNodeLabelManager();
-        nodeLabelManager.addToCluserNodeLabels(labels);
-      } catch (Exception e) {
-        Assert.fail();
-      }
-      bind(ResourceManager.class).toInstance(rm);
-      serve("/*").with(GuiceContainer.class);
-    }
-  };
+  private final boolean legacyQueueMode;
 
-  static {
-    GuiceServletConfig.setInjector(
-        Guice.createInjector(new WebServletModule()));
+  @Parameterized.Parameters(name = "{index}: legacy-queue-mode={0}")
+  public static Collection<Boolean> getParameters() {
+    return Arrays.asList(true, false);
   }
 
-  private static void setupQueueConfiguration(
+  private MockNM nm1;
+
+  private void setupQueueConfiguration(
       CapacitySchedulerConfiguration config) {
 
+    config.setLegacyQueueModeEnabled(legacyQueueMode);
+
     // Define top-level queues
-    config.setQueues(CapacitySchedulerConfiguration.ROOT,
+    config.setQueues(ROOT_QUEUE_PATH,
         new String[] { QUEUE_A, QUEUE_B, QUEUE_C });
     String interMediateQueueC =
         CapacitySchedulerConfiguration.ROOT + "." + QUEUE_C;
-    config.setQueues(interMediateQueueC,
+    QueuePath interMediateQueueCPath = new QueuePath(interMediateQueueC);
+    config.setQueues(interMediateQueueCPath,
         new String[] { LEAF_QUEUE_C1, LEAF_QUEUE_C2 });
-    config.setCapacityByLabel(
-        CapacitySchedulerConfiguration.ROOT, LABEL_LX, 100);
-    config.setCapacityByLabel(
-        CapacitySchedulerConfiguration.ROOT, LABEL_LY, 100);
+    config.setCapacityByLabel(ROOT_QUEUE_PATH, LABEL_LX, 100);
+    config.setCapacityByLabel(ROOT_QUEUE_PATH, LABEL_LY, 100);
 
     String leafQueueA = CapacitySchedulerConfiguration.ROOT + "." + QUEUE_A;
-    config.setCapacity(leafQueueA, 30);
-    config.setMaximumCapacity(leafQueueA, 50);
+    QueuePath leafQueueAPath = new QueuePath(leafQueueA);
+    config.setCapacity(leafQueueAPath, 30);
+    config.setMaximumCapacity(leafQueueAPath, 50);
 
     String leafQueueB = CapacitySchedulerConfiguration.ROOT + "." + QUEUE_B;
-    config.setCapacity(leafQueueB, 30);
-    config.setMaximumCapacity(leafQueueB, 50);
+    QueuePath leafQueueBPath = new QueuePath(leafQueueB);
+    config.setCapacity(leafQueueBPath, 30);
+    config.setMaximumCapacity(leafQueueBPath, 50);
 
-    config.setCapacity(interMediateQueueC, 40);
-    config.setMaximumCapacity(interMediateQueueC, 50);
+    config.setCapacity(interMediateQueueCPath, 40);
+    config.setMaximumCapacity(interMediateQueueCPath, 50);
 
     String leafQueueC1 = interMediateQueueC + "." + LEAF_QUEUE_C1;
-    config.setCapacity(leafQueueC1, 50);
-    config.setMaximumCapacity(leafQueueC1, 60);
+    QueuePath leafQueueC1Path = new QueuePath(leafQueueC1);
+    config.setCapacity(leafQueueC1Path, 50);
+    config.setMaximumCapacity(leafQueueC1Path, 60);
 
     String leafQueueC2 = interMediateQueueC + "." + LEAF_QUEUE_C2;
-    config.setCapacity(leafQueueC2, 50);
-    config.setMaximumCapacity(leafQueueC2, 70);
+    QueuePath leafQueueC2Path = new QueuePath(leafQueueC2);
+    config.setCapacity(leafQueueC2Path, 50);
+    config.setMaximumCapacity(leafQueueC2Path, 70);
 
     // Define label specific configuration
     config.setAccessibleNodeLabels(
-        leafQueueA, ImmutableSet.of(DEFAULT_PARTITION));
-    config.setAccessibleNodeLabels(leafQueueB, ImmutableSet.of(LABEL_LX));
-    config.setAccessibleNodeLabels(interMediateQueueC,
+        leafQueueAPath, ImmutableSet.of(DEFAULT_PARTITION));
+    config.setAccessibleNodeLabels(leafQueueBPath, ImmutableSet.of(LABEL_LX));
+    config.setAccessibleNodeLabels(interMediateQueueCPath,
         ImmutableSet.of(LABEL_LX, LABEL_LY));
-    config.setAccessibleNodeLabels(leafQueueC1,
+    config.setAccessibleNodeLabels(leafQueueC1Path,
         ImmutableSet.of(LABEL_LX, LABEL_LY));
-    config.setAccessibleNodeLabels(leafQueueC2,
+    config.setAccessibleNodeLabels(leafQueueC2Path,
         ImmutableSet.of(LABEL_LX, LABEL_LY));
-    config.setDefaultNodeLabelExpression(leafQueueB, LABEL_LX);
-    config.setDefaultNodeLabelExpression(leafQueueC1, LABEL_LX);
-    config.setDefaultNodeLabelExpression(leafQueueC2, LABEL_LY);
+    config.setDefaultNodeLabelExpression(leafQueueBPath, LABEL_LX);
+    config.setDefaultNodeLabelExpression(leafQueueC1Path, LABEL_LX);
+    config.setDefaultNodeLabelExpression(leafQueueC2Path, LABEL_LY);
 
-    config.setCapacityByLabel(leafQueueB, LABEL_LX, 30);
-    config.setCapacityByLabel(interMediateQueueC, LABEL_LX, 70);
-    config.setCapacityByLabel(leafQueueC1, LABEL_LX, 40);
-    config.setCapacityByLabel(leafQueueC2, LABEL_LX, 60);
+    config.setCapacityByLabel(leafQueueBPath, LABEL_LX, 30);
+    config.setCapacityByLabel(interMediateQueueCPath, LABEL_LX, 70);
+    config.setCapacityByLabel(leafQueueC1Path, LABEL_LX, 40);
+    config.setCapacityByLabel(leafQueueC2Path, LABEL_LX, 60);
 
-    config.setCapacityByLabel(interMediateQueueC, LABEL_LY, 100);
-    config.setCapacityByLabel(leafQueueC1, LABEL_LY, 50);
-    config.setCapacityByLabel(leafQueueC2, LABEL_LY, 50);
-    config.setMaximumCapacityByLabel(leafQueueC1, LABEL_LY, 75);
-    config.setMaximumCapacityByLabel(leafQueueC2, LABEL_LY, 75);
+    config.setCapacityByLabel(interMediateQueueCPath, LABEL_LY, 100);
+    config.setCapacityByLabel(leafQueueC1Path, LABEL_LY, 50);
+    config.setCapacityByLabel(leafQueueC2Path, LABEL_LY, 50);
+    config.setMaximumCapacityByLabel(leafQueueC1Path, LABEL_LY, 75);
+    config.setMaximumCapacityByLabel(leafQueueC2Path, LABEL_LY, 75);
   }
 
   @Before
   @Override
   public void setUp() throws Exception {
     super.setUp();
-    GuiceServletConfig.setInjector(
-        Guice.createInjector(new WebServletModule()));
+
+    csConf = new CapacitySchedulerConfiguration();
+    setupQueueConfiguration(csConf);
+    conf = new YarnConfiguration(csConf);
+    rm = createRM(conf);
+
+    Set<NodeLabel> labels = new HashSet<NodeLabel>();
+    labels.add(NodeLabel.newInstance(LABEL_LX));
+    labels.add(NodeLabel.newInstance(LABEL_LY));
+    try {
+      RMNodeLabelsManager nodeLabelManager =
+          rm.getRMContext().getNodeLabelManager();
+      nodeLabelManager.addToCluserNodeLabels(labels);
+    } catch (Exception e) {
+      Assert.fail();
+    }
+
+    rm.start();
+    rm.getRMContext().getNodeLabelManager().addLabelsToNode(ImmutableMap
+        .of(NodeId.newInstance("127.0.0.1", 0), Sets.newHashSet(LABEL_LX)));
+
+    nm1 = new MockNM("127.0.0.1:1234", 2 * 1024,
+        rm.getResourceTrackerService());
+    MockNM nm2 = new MockNM("127.0.0.2:1234", 2 * 1024,
+        rm.getResourceTrackerService());
+    nm1.registerNode();
+    nm2.registerNode();
+
+    rm.getRMContext().getNodeLabelManager().addLabelsToNode(ImmutableMap
+        .of(NodeId.newInstance("127.0.0.2", 0), Sets.newHashSet(LABEL_LY)));
+
+    MockNM nm3 = new MockNM("127.0.0.2:1234", 128 * 1024,
+        rm.getResourceTrackerService());
+    nm3.registerNode();
+
+    // Default partition
+    MockNM nm4 = new MockNM("127.0.0.3:1234", 128 * 1024,
+        rm.getResourceTrackerService());
+    nm4.registerNode();
   }
 
-  public TestRMWebServicesForCSWithPartitions() {
-    super(new WebAppDescriptor.Builder(
-        "org.apache.hadoop.yarn.server.resourcemanager.webapp")
-            .contextListenerClass(GuiceServletConfig.class)
-            .filterClass(com.google.inject.servlet.GuiceFilter.class)
-            .contextPath("jersey-guice-filter").servletPath("/").build());
+  @After
+  public void tearDown() {
+    if (rm != null) {
+      rm.stop();
+    }
+  }
+
+  public TestRMWebServicesForCSWithPartitions(boolean legacyQueueMode) {
+    super(createWebAppDescriptor());
+    this.legacyQueueMode = legacyQueueMode;
   }
 
   @Test
@@ -269,88 +295,73 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
 
   @Test
   public void testPartitionInSchedulerActivities() throws Exception {
-    rm.start();
-    rm.getRMContext().getNodeLabelManager().addLabelsToNode(ImmutableMap
-        .of(NodeId.newInstance("127.0.0.1", 0), Sets.newHashSet(LABEL_LX)));
+    RMApp app1 = MockRMAppSubmitter.submit(rm,
+        MockRMAppSubmissionData.Builder.createWithMemory(1024, rm)
+            .withAppName("app1")
+            .withUser("user1")
+            .withAcls(null)
+            .withQueue(QUEUE_B)
+            .withAmLabel(LABEL_LX)
+            .build());
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
+    am1.allocate(Arrays.asList(
+        ResourceRequest.newBuilder().priority(Priority.UNDEFINED)
+            .resourceName("*").nodeLabelExpression(LABEL_LX)
+            .capability(Resources.createResource(2048)).numContainers(1)
+            .build()), null);
 
-    MockNM nm1 = new MockNM("127.0.0.1:1234", 2 * 1024,
-        rm.getResourceTrackerService());
-    MockNM nm2 = new MockNM("127.0.0.2:1234", 2 * 1024,
-        rm.getResourceTrackerService());
-    nm1.registerNode();
-    nm2.registerNode();
+    WebResource sr = resource().path(RMWSConsts.RM_WEB_SERVICE_PATH)
+        .path(RMWSConsts.SCHEDULER_ACTIVITIES);
+    ActivitiesTestUtils.requestWebResource(sr, null);
 
-    try {
-      RMApp app1 = MockRMAppSubmitter.submit(rm,
-          MockRMAppSubmissionData.Builder.createWithMemory(1024, rm)
-              .withAppName("app1")
-              .withUser("user1")
-              .withAcls(null)
-              .withQueue(QUEUE_B)
-              .withAmLabel(LABEL_LX)
-              .build());
-      MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
-      am1.allocate(Arrays.asList(
-          ResourceRequest.newBuilder().priority(Priority.UNDEFINED)
-              .resourceName("*").nodeLabelExpression(LABEL_LX)
-              .capability(Resources.createResource(2048)).numContainers(1)
-              .build()), null);
+    nm1.nodeHeartbeat(true);
+    Thread.sleep(1000);
 
-      WebResource sr = resource().path(RMWSConsts.RM_WEB_SERVICE_PATH)
-          .path(RMWSConsts.SCHEDULER_ACTIVITIES);
-      ActivitiesTestUtils.requestWebResource(sr, null);
+    JSONObject schedulerActivitiesJson =
+        ActivitiesTestUtils.requestWebResource(sr, null);
 
-      nm1.nodeHeartbeat(true);
-      Thread.sleep(1000);
-
-      JSONObject schedulerActivitiesJson =
-          ActivitiesTestUtils.requestWebResource(sr, null);
-
-      /*
-       * verify scheduler activities
-       */
-      verifyNumberOfAllocations(schedulerActivitiesJson, 1);
-      // verify queue Qb
-      Predicate<JSONObject> findQueueBPred =
-          (obj) -> obj.optString(FN_SCHEDULER_ACT_NAME)
-              .equals(CapacitySchedulerConfiguration.ROOT + DOT + QUEUE_B);
-      List<JSONObject> queueBObj = ActivitiesTestUtils.findInAllocations(
-          getFirstSubNodeFromJson(schedulerActivitiesJson,
-              FN_SCHEDULER_ACT_ROOT, FN_ACT_ALLOCATIONS), findQueueBPred);
-      assertEquals(1, queueBObj.size());
-      assertEquals(ActivityState.REJECTED.name(),
-          queueBObj.get(0).optString(FN_ACT_ALLOCATION_STATE));
-      assertEquals(ActivityDiagnosticConstant.QUEUE_DO_NOT_HAVE_ENOUGH_HEADROOM
-          + " from " + am1.getApplicationAttemptId().getApplicationId(),
-          queueBObj.get(0).optString(FN_ACT_DIAGNOSTIC));
-      // verify queue Qa
-      Predicate<JSONObject> findQueueAPred =
-          (obj) -> obj.optString(FN_SCHEDULER_ACT_NAME)
-              .equals(CapacitySchedulerConfiguration.ROOT + DOT + QUEUE_A);
-      List<JSONObject> queueAObj = ActivitiesTestUtils.findInAllocations(
-          getFirstSubNodeFromJson(schedulerActivitiesJson,
-              FN_SCHEDULER_ACT_ROOT, FN_ACT_ALLOCATIONS), findQueueAPred);
-      assertEquals(1, queueAObj.size());
-      assertEquals(ActivityState.REJECTED.name(),
-          queueAObj.get(0).optString(FN_ACT_ALLOCATION_STATE));
-      assertEquals(
-          ActivityDiagnosticConstant.QUEUE_NOT_ABLE_TO_ACCESS_PARTITION,
-          queueAObj.get(0).optString(FN_ACT_DIAGNOSTIC));
-      // verify queue Qc
-      Predicate<JSONObject> findQueueCPred =
-          (obj) -> obj.optString(FN_SCHEDULER_ACT_NAME)
-              .equals(CapacitySchedulerConfiguration.ROOT + DOT + QUEUE_C);
-      List<JSONObject> queueCObj = ActivitiesTestUtils.findInAllocations(
-          getFirstSubNodeFromJson(schedulerActivitiesJson,
-              FN_SCHEDULER_ACT_ROOT, FN_ACT_ALLOCATIONS), findQueueCPred);
-      assertEquals(1, queueCObj.size());
-      assertEquals(ActivityState.SKIPPED.name(),
-          queueCObj.get(0).optString(FN_ACT_ALLOCATION_STATE));
-      assertEquals(ActivityDiagnosticConstant.QUEUE_DO_NOT_NEED_MORE_RESOURCE,
-          queueCObj.get(0).optString(FN_ACT_DIAGNOSTIC));
-    } finally {
-      rm.stop();
-    }
+    /*
+     * verify scheduler activities
+     */
+    verifyNumberOfAllocations(schedulerActivitiesJson, 1);
+    // verify queue Qb
+    Predicate<JSONObject> findQueueBPred =
+        (obj) -> obj.optString(FN_SCHEDULER_ACT_NAME)
+            .equals(CapacitySchedulerConfiguration.ROOT + DOT + QUEUE_B);
+    List<JSONObject> queueBObj = ActivitiesTestUtils.findInAllocations(
+        getFirstSubNodeFromJson(schedulerActivitiesJson,
+            FN_SCHEDULER_ACT_ROOT, FN_ACT_ALLOCATIONS), findQueueBPred);
+    assertEquals(1, queueBObj.size());
+    assertEquals(ActivityState.REJECTED.name(),
+        queueBObj.get(0).optString(FN_ACT_ALLOCATION_STATE));
+    assertEquals(ActivityDiagnosticConstant.QUEUE_DO_NOT_HAVE_ENOUGH_HEADROOM
+        + " from " + am1.getApplicationAttemptId().getApplicationId(),
+        queueBObj.get(0).optString(FN_ACT_DIAGNOSTIC));
+    // verify queue Qa
+    Predicate<JSONObject> findQueueAPred =
+        (obj) -> obj.optString(FN_SCHEDULER_ACT_NAME)
+            .equals(CapacitySchedulerConfiguration.ROOT + DOT + QUEUE_A);
+    List<JSONObject> queueAObj = ActivitiesTestUtils.findInAllocations(
+        getFirstSubNodeFromJson(schedulerActivitiesJson,
+            FN_SCHEDULER_ACT_ROOT, FN_ACT_ALLOCATIONS), findQueueAPred);
+    assertEquals(1, queueAObj.size());
+    assertEquals(ActivityState.REJECTED.name(),
+        queueAObj.get(0).optString(FN_ACT_ALLOCATION_STATE));
+    assertEquals(
+        ActivityDiagnosticConstant.QUEUE_NOT_ABLE_TO_ACCESS_PARTITION,
+        queueAObj.get(0).optString(FN_ACT_DIAGNOSTIC));
+    // verify queue Qc
+    Predicate<JSONObject> findQueueCPred =
+        (obj) -> obj.optString(FN_SCHEDULER_ACT_NAME)
+            .equals(CapacitySchedulerConfiguration.ROOT + DOT + QUEUE_C);
+    List<JSONObject> queueCObj = ActivitiesTestUtils.findInAllocations(
+        getFirstSubNodeFromJson(schedulerActivitiesJson,
+            FN_SCHEDULER_ACT_ROOT, FN_ACT_ALLOCATIONS), findQueueCPred);
+    assertEquals(1, queueCObj.size());
+    assertEquals(ActivityState.SKIPPED.name(),
+        queueCObj.get(0).optString(FN_ACT_ALLOCATION_STATE));
+    assertEquals(ActivityDiagnosticConstant.QUEUE_DO_NOT_NEED_MORE_RESOURCE,
+        queueCObj.get(0).optString(FN_ACT_DIAGNOSTIC));
   }
 
   private void verifySchedulerInfoXML(Document dom) throws Exception {
@@ -553,20 +564,20 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
       float absoluteCapacity, float absoluteUsedCapacity,
       float absoluteMaxCapacity) {
     assertEquals("capacity doesn't match", capacity,
-        WebServicesTestUtils.getXmlFloat(partitionInfo, "capacity"), 1e-3f);
+        WebServicesTestUtils.getXmlFloat(partitionInfo, "capacity"), EPSILON);
     assertEquals("capacity doesn't match", usedCapacity,
-        WebServicesTestUtils.getXmlFloat(partitionInfo, "usedCapacity"), 1e-3f);
+        WebServicesTestUtils.getXmlFloat(partitionInfo, "usedCapacity"), EPSILON);
     assertEquals("capacity doesn't match", maxCapacity,
-        WebServicesTestUtils.getXmlFloat(partitionInfo, "maxCapacity"), 1e-3f);
+        WebServicesTestUtils.getXmlFloat(partitionInfo, "maxCapacity"), EPSILON);
     assertEquals("capacity doesn't match", absoluteCapacity,
         WebServicesTestUtils.getXmlFloat(partitionInfo, "absoluteCapacity"),
-        1e-3f);
+        EPSILON);
     assertEquals("capacity doesn't match", absoluteUsedCapacity,
         WebServicesTestUtils.getXmlFloat(partitionInfo, "absoluteUsedCapacity"),
-        1e-3f);
+        EPSILON);
     assertEquals("capacity doesn't match", absoluteMaxCapacity,
         WebServicesTestUtils.getXmlFloat(partitionInfo, "absoluteMaxCapacity"),
-        1e-3f);
+        EPSILON);
   }
 
   private void verifySchedulerInfoJson(JSONObject json)
@@ -575,7 +586,7 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
     JSONObject info = json.getJSONObject("scheduler");
     assertEquals("incorrect number of elements", 1, info.length());
     info = info.getJSONObject("schedulerInfo");
-    assertEquals("incorrect number of elements", 24, info.length());
+    assertEquals("incorrect number of elements", 25, info.length());
     JSONObject capacitiesJsonObject = info.getJSONObject(CAPACITIES);
     JSONArray partitionsCapsArray =
         capacitiesJsonObject.getJSONArray(QUEUE_CAPACITIES_BY_PARTITION);
@@ -738,13 +749,13 @@ public class TestRMWebServicesForCSWithPartitions extends JerseyTestBase {
       float maxCapacity, float absoluteCapacity, float absoluteUsedCapacity,
       float absoluteMaxCapacity) throws JSONException {
     assertEquals("capacity doesn't match", capacity,
-        (float) partitionCapacityInfoJson.getDouble("capacity"), 1e-3f);
+        (float) partitionCapacityInfoJson.getDouble("capacity"), EPSILON);
     assertEquals("capacity doesn't match", usedCapacity,
-        (float) partitionCapacityInfoJson.getDouble("usedCapacity"), 1e-3f);
+        (float) partitionCapacityInfoJson.getDouble("usedCapacity"), EPSILON);
     assertEquals("capacity doesn't match", maxCapacity,
-        (float) partitionCapacityInfoJson.getDouble("maxCapacity"), 1e-3f);
+        (float) partitionCapacityInfoJson.getDouble("maxCapacity"), EPSILON);
     assertEquals("capacity doesn't match", absoluteCapacity,
-        (float) partitionCapacityInfoJson.getDouble("absoluteCapacity"), 1e-3f);
+        (float) partitionCapacityInfoJson.getDouble("absoluteCapacity"), EPSILON);
     assertEquals("capacity doesn't match", absoluteUsedCapacity,
         (float) partitionCapacityInfoJson.getDouble("absoluteUsedCapacity"),
         1e-3f);

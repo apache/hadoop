@@ -26,13 +26,17 @@ import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.security.PrivilegedExceptionAction;
 import java.util.Base64;
 import java.util.Base64.Encoder;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
 import javax.servlet.ServletContext;
@@ -55,6 +59,7 @@ import javax.ws.rs.core.StreamingOutput;
 import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.Response.Status;
 
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.StorageType;
@@ -121,7 +126,6 @@ import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.StringUtils;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import com.sun.jersey.spi.container.ResourceFilters;
 
 /** Web-hdfs NameNode implementation. */
@@ -275,6 +279,9 @@ public class NamenodeWebHdfsMethods {
     namenode.queueExternalCall(call);
   }
 
+  /**
+   * Chooses a Datanode to redirect a request to.
+   */
   @VisibleForTesting
   static DatanodeInfo chooseDatanode(final NameNode namenode,
       final String path, final HttpOpParam.Op op, final long openOffset,
@@ -285,18 +292,18 @@ public class NamenodeWebHdfsMethods {
       throw new IOException("Namesystem has not been initialized yet.");
     }
     final BlockManager bm = fsn.getBlockManager();
-    
-    HashSet<Node> excludes = new HashSet<Node>();
+
+    Set<Node> excludes = new HashSet<>();
     if (excludeDatanodes != null) {
       for (String host : StringUtils
           .getTrimmedStringCollection(excludeDatanodes)) {
-        int idx = host.indexOf(":");
+        int idx = host.indexOf(':');
         Node excludeNode = null;
-        if (idx != -1) {
-          excludeNode = bm.getDatanodeManager().getDatanodeByXferAddr(
-             host.substring(0, idx), Integer.parseInt(host.substring(idx + 1)));
-        } else {
+        if (idx == -1) {
           excludeNode = bm.getDatanodeManager().getDatanodeByHost(host);
+        } else {
+          excludeNode = bm.getDatanodeManager().getDatanodeByXferAddr(
+            host.substring(0, idx), Integer.parseInt(host.substring(idx + 1)));
         }
 
         if (excludeNode != null) {
@@ -308,25 +315,15 @@ public class NamenodeWebHdfsMethods {
       }
     }
 
-    if (op == PutOpParam.Op.CREATE) {
-      //choose a datanode near to client 
-      final DatanodeDescriptor clientNode = bm.getDatanodeManager(
-          ).getDatanodeByHost(remoteAddr);
-      if (clientNode != null) {
-        final DatanodeStorageInfo[] storages = bm.chooseTarget4WebHDFS(
-            path, clientNode, excludes, blocksize);
-        if (storages.length > 0) {
-          return storages[0].getDatanodeDescriptor();
-        }
-      }
-    } else if (op == GetOpParam.Op.OPEN
+    // For these operations choose a datanode containing a replica
+    if (op == GetOpParam.Op.OPEN
         || op == GetOpParam.Op.GETFILECHECKSUM
         || op == PostOpParam.Op.APPEND) {
-      //choose a datanode containing a replica 
       final NamenodeProtocols np = getRPCServer(namenode);
       if (status == null) {
         throw new FileNotFoundException("File " + path + " not found.");
       }
+
       final long len = status.getLen();
       if (op == GetOpParam.Op.OPEN) {
         if (openOffset < 0L || (openOffset >= len && len > 0)) {
@@ -341,8 +338,20 @@ public class NamenodeWebHdfsMethods {
         final int count = locations.locatedBlockCount();
         if (count > 0) {
           return bestNode(locations.get(0).getLocations(), excludes);
+        } else {
+          throw new IOException("Block could not be located. Path=" + path + ", offset=" + offset);
         }
       }
+    }
+
+    // All other operations don't affect a specific node so let the BlockManager pick a target
+    DatanodeDescriptor clientNode = bm.getDatanodeManager(
+    ).getDatanodeByHost(remoteAddr);
+
+    DatanodeStorageInfo[] storages = bm.chooseTarget4WebHDFS(
+      path, clientNode, excludes, blocksize);
+    if (storages.length > 0) {
+      return storages[0].getDatanodeDescriptor();
     }
 
     return (DatanodeDescriptor)bm.getDatanodeManager().getNetworkTopology(
@@ -355,13 +364,13 @@ public class NamenodeWebHdfsMethods {
    * to return the first element of the node here.
    */
   protected static DatanodeInfo bestNode(DatanodeInfo[] nodes,
-      HashSet<Node> excludes) throws IOException {
+      Set<Node> excludes) throws IOException {
     for (DatanodeInfo dn: nodes) {
-      if (false == dn.isDecommissioned() && false == excludes.contains(dn)) {
+      if (!dn.isDecommissioned() && !excludes.contains(dn)) {
         return dn;
       }
     }
-    throw new IOException("No active nodes contain this block");
+    throw new IOException("No active and not excluded nodes contain this block");
   }
 
   public long renewDelegationToken(Token<DelegationTokenIdentifier> token)
@@ -1066,14 +1075,16 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(NoRedirectParam.NAME) @DefaultValue(NoRedirectParam.DEFAULT)
           final NoRedirectParam noredirect,
       @QueryParam(StartAfterParam.NAME) @DefaultValue(StartAfterParam.DEFAULT)
-          final StartAfterParam startAfter
+          final StartAfterParam startAfter,
+      @QueryParam(AllUsersParam.NAME) @DefaultValue(AllUsersParam.DEFAULT)
+          final AllUsersParam allUsers
       ) throws IOException, InterruptedException {
     return get(ugi, delegation, username, doAsUser, ROOT, op, offset, length,
         renewer, bufferSize, xattrNames, xattrEncoding, excludeDatanodes,
         fsAction, snapshotName, oldSnapshotName,
         snapshotDiffStartPath, snapshotDiffIndex,
         tokenKind, tokenService,
-        noredirect, startAfter);
+        noredirect, startAfter, allUsers);
   }
 
   /** Handle HTTP GET request. */
@@ -1123,12 +1134,14 @@ public class NamenodeWebHdfsMethods {
       @QueryParam(NoRedirectParam.NAME) @DefaultValue(NoRedirectParam.DEFAULT)
           final NoRedirectParam noredirect,
       @QueryParam(StartAfterParam.NAME) @DefaultValue(StartAfterParam.DEFAULT)
-          final StartAfterParam startAfter
+          final StartAfterParam startAfter,
+      @QueryParam(AllUsersParam.NAME) @DefaultValue(AllUsersParam.DEFAULT)
+          final AllUsersParam allUsers
       ) throws IOException, InterruptedException {
 
     init(ugi, delegation, username, doAsUser, path, op, offset, length,
         renewer, bufferSize, xattrEncoding, excludeDatanodes, fsAction,
-        snapshotName, oldSnapshotName, tokenKind, tokenService, startAfter);
+        snapshotName, oldSnapshotName, tokenKind, tokenService, startAfter, allUsers);
 
     return doAs(ugi, new PrivilegedExceptionAction<Response>() {
       @Override
@@ -1137,7 +1150,7 @@ public class NamenodeWebHdfsMethods {
             op, offset, length, renewer, bufferSize, xattrNames, xattrEncoding,
             excludeDatanodes, fsAction, snapshotName, oldSnapshotName,
             snapshotDiffStartPath, snapshotDiffIndex,
-            tokenKind, tokenService, noredirect, startAfter);
+            tokenKind, tokenService, noredirect, startAfter, allUsers);
       }
     });
   }
@@ -1171,7 +1184,8 @@ public class NamenodeWebHdfsMethods {
       final TokenKindParam tokenKind,
       final TokenServiceParam tokenService,
       final NoRedirectParam noredirectParam,
-      final StartAfterParam startAfter
+      final StartAfterParam startAfter,
+      final AllUsersParam allUsers
       ) throws IOException, URISyntaxException {
     final Configuration conf = (Configuration) context
         .getAttribute(JspHelper.CURRENT_CONF);
@@ -1321,11 +1335,17 @@ public class NamenodeWebHdfsMethods {
       final String jsonStr = JsonUtil.toJsonString("Path", trashPath);
       return Response.ok(jsonStr).type(MediaType.APPLICATION_JSON).build();
     }
+    case GETTRASHROOTS: {
+      Boolean value = allUsers.getValue();
+      final Collection<FileStatus> trashPaths = getTrashRoots(conf, value);
+      final String js = JsonUtil.toJsonString(trashPaths);
+      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+    }
     case LISTSTATUS_BATCH:
     {
       byte[] start = HdfsFileStatus.EMPTY_NAME;
       if (startAfter != null && startAfter.getValue() != null) {
-        start = startAfter.getValue().getBytes(Charsets.UTF_8);
+        start = startAfter.getValue().getBytes(StandardCharsets.UTF_8);
       }
       final DirectoryListing listing = getDirectoryListing(cp, fullpath, start);
       final String js = JsonUtil.toJsonString(listing);
@@ -1411,6 +1431,11 @@ public class NamenodeWebHdfsMethods {
     case GETECPOLICIES: {
       ErasureCodingPolicyInfo[] ecPolicyInfos = cp.getErasureCodingPolicies();
       final String js = JsonUtil.toJsonString(ecPolicyInfos);
+      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+    }
+    case GETECCODECS: {
+      Map<String, String> ecCodecs = cp.getErasureCodingCodecs();
+      final String js = JsonUtil.toJsonString("ErasureCodingCodecs", ecCodecs);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     default:
@@ -1513,7 +1538,7 @@ public class NamenodeWebHdfsMethods {
       @Override
       public void write(final OutputStream outstream) throws IOException {
         final PrintWriter out = new PrintWriter(new OutputStreamWriter(
-            outstream, Charsets.UTF_8));
+            outstream, StandardCharsets.UTF_8));
         out.println("{\"" + FileStatus.class.getSimpleName() + "es\":{\""
             + FileStatus.class.getSimpleName() + "\":[");
 
@@ -1550,6 +1575,12 @@ public class NamenodeWebHdfsMethods {
         out.flush();
       }
     };
+  }
+
+  private Collection<FileStatus> getTrashRoots(Configuration conf, boolean allUsers)
+      throws IOException {
+    FileSystem fs = FileSystem.get(conf != null ? conf : new Configuration());
+    return fs.getTrashRoots(allUsers);
   }
 
 

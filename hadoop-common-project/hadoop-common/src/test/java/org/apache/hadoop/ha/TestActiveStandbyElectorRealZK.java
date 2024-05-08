@@ -70,7 +70,7 @@ public class TestActiveStandbyElectorRealZK extends ClientBaseWithFixes {
       appDatas[i] = Ints.toByteArray(i);
       electors[i] = new ActiveStandbyElector(hostPort, 5000, PARENT_DIR,
           Ids.OPEN_ACL_UNSAFE, Collections.<ZKAuthInfo> emptyList(), cbs[i],
-          CommonConfigurationKeys.HA_FC_ELECTOR_ZK_OP_RETRIES_DEFAULT);
+          CommonConfigurationKeys.HA_FC_ELECTOR_ZK_OP_RETRIES_DEFAULT, null);
     }
   }
   
@@ -270,7 +270,7 @@ public class TestActiveStandbyElectorRealZK extends ClientBaseWithFixes {
     ActiveStandbyElector elector =
         new ActiveStandbyElector(hostPort, 5000, PARENT_DIR,
             Ids.READ_ACL_UNSAFE, Collections.<ZKAuthInfo>emptyList(), cb,
-            CommonConfigurationKeys.HA_FC_ELECTOR_ZK_OP_RETRIES_DEFAULT);
+            CommonConfigurationKeys.HA_FC_ELECTOR_ZK_OP_RETRIES_DEFAULT, null);
 
     // Simulate the case by pre-creating znode 'parentZnodeName'. Then updates
     // znode's data so that data version will be increased to 1. Here znode's

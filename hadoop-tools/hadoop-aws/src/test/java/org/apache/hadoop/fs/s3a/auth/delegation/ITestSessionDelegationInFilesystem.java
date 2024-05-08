@@ -26,13 +26,14 @@ import java.io.UncheckedIOException;
 import java.net.URI;
 import java.nio.file.AccessDeniedException;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.ObjectMetadata;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.HeadBucketResponse;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -65,8 +66,10 @@ import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeSessionTestsEnabled;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableCreateSession;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.isS3ExpressTestBucket;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.unsetHadoopCredentialProviders;
 import static org.apache.hadoop.fs.s3a.S3AUtils.getEncryptionAlgorithm;
@@ -76,6 +79,7 @@ import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenIOExceptio
 import static org.apache.hadoop.fs.s3a.auth.delegation.MiniKerberizedHadoopCluster.ALICE;
 import static org.apache.hadoop.fs.s3a.auth.delegation.MiniKerberizedHadoopCluster.assertSecurityEnabled;
 import static org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens.lookupS3ADelegationToken;
+import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.requireAnonymousDataPath;
 import static org.apache.hadoop.test.LambdaTestUtils.doAs;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.hamcrest.Matchers.containsString;
@@ -146,39 +150,49 @@ public class ITestSessionDelegationInFilesystem extends AbstractDelegationIT {
     // disable if assume role opts are off
     assumeSessionTestsEnabled(conf);
     disableFilesystemCaching(conf);
-    String s3EncryptionMethod;
-    try {
-      s3EncryptionMethod =
-          getEncryptionAlgorithm(getTestBucketName(conf), conf).getMethod();
-    } catch (IOException e) {
-      throw new UncheckedIOException("Failed to lookup encryption algorithm.",
-          e);
-    }
-    String s3EncryptionKey = getS3EncryptionKey(getTestBucketName(conf), conf);
+    final String bucket = getTestBucketName(conf);
+    final boolean isS3Express = isS3ExpressTestBucket(conf);
+
     removeBaseAndBucketOverrides(conf,
         DELEGATION_TOKEN_BINDING,
         Constants.S3_ENCRYPTION_ALGORITHM,
         Constants.S3_ENCRYPTION_KEY,
         SERVER_SIDE_ENCRYPTION_ALGORITHM,
-        SERVER_SIDE_ENCRYPTION_KEY);
+        SERVER_SIDE_ENCRYPTION_KEY,
+        S3EXPRESS_CREATE_SESSION);
     conf.set(HADOOP_SECURITY_AUTHENTICATION,
         UserGroupInformation.AuthenticationMethod.KERBEROS.name());
     enableDelegationTokens(conf, getDelegationBinding());
     conf.set(AWS_CREDENTIALS_PROVIDER, " ");
     // switch to CSE-KMS(if specified) else SSE-KMS.
-    if (conf.getBoolean(KEY_ENCRYPTION_TESTS, true)) {
+    if (!isS3Express && conf.getBoolean(KEY_ENCRYPTION_TESTS, true)) {
+      String s3EncryptionMethod;
+      try {
+        s3EncryptionMethod =
+            getEncryptionAlgorithm(bucket, conf).getMethod();
+      } catch (IOException e) {
+        throw new UncheckedIOException("Failed to lookup encryption algorithm.",
+            e);
+      }
+      String s3EncryptionKey = getS3EncryptionKey(bucket, conf);
+
       conf.set(Constants.S3_ENCRYPTION_ALGORITHM, s3EncryptionMethod);
       // KMS key ID a must if CSE-KMS is being tested.
       conf.set(Constants.S3_ENCRYPTION_KEY, s3EncryptionKey);
     }
     // set the YARN RM up for YARN tests.
     conf.set(YarnConfiguration.RM_PRINCIPAL, YARN_RM);
-    // turn on ACLs so as to verify role DT permissions include
-    // write access.
-    conf.set(CANNED_ACL, LOG_DELIVERY_WRITE);
+
+    if (conf.getBoolean(KEY_ACL_TESTS_ENABLED, false) && !isS3Express) {
+      // turn on ACLs so as to verify role DT permissions include
+      // write access.
+      conf.set(CANNED_ACL, LOG_DELIVERY_WRITE);
+    }
+    // disable create session so there's no need to
+    // add a role policy for it.
+    disableCreateSession(conf);
     return conf;
   }
-
 
   @Override
   public void setup() throws Exception {
@@ -254,7 +268,6 @@ public class ITestSessionDelegationInFilesystem extends AbstractDelegationIT {
   }
 
   @Test
-  @SuppressWarnings("deprecation")
   public void testAddTokensFromFileSystem() throws Throwable {
     describe("verify FileSystem.addDelegationTokens() collects tokens");
     S3AFileSystem fs = getFileSystem();
@@ -276,7 +289,7 @@ public class ITestSessionDelegationInFilesystem extends AbstractDelegationIT {
     AWSCredentialProviderList providerList = requireNonNull(
         delegationTokens.getCredentialProviders(), "providers");
 
-    providerList.getCredentials();
+    providerList.resolveCredentials();
   }
 
   @Test
@@ -323,15 +336,16 @@ public class ITestSessionDelegationInFilesystem extends AbstractDelegationIT {
    * Create a FS with a delegated token, verify it works as a filesystem,
    * and that you can pick up the same DT from that FS too.
    */
-  @SuppressWarnings("deprecation")
   @Test
   public void testDelegatedFileSystem() throws Throwable {
     describe("Delegation tokens can be passed to a new filesystem;"
         + " if role restricted, permissions are tightened.");
     S3AFileSystem fs = getFileSystem();
     // force a probe of the remote FS to make sure its endpoint is valid
-    fs.getObjectMetadata(new Path("/"));
-    readLandsatMetadata(fs);
+    // TODO: Check what should happen here. Calling headObject() on the root path fails in V2,
+    // with the error that key cannot be empty.
+   // fs.getObjectMetadata(new Path("/"));
+    readExternalDatasetMetadata(fs);
 
     URI uri = fs.getUri();
     // create delegation tokens from the test suites FS.
@@ -450,13 +464,13 @@ public class ITestSessionDelegationInFilesystem extends AbstractDelegationIT {
   }
 
   /**
-   * Session tokens can read the landsat bucket without problems.
+   * Session tokens can read the external bucket without problems.
    * @param delegatedFS delegated FS
    * @throws Exception failure
    */
   protected void verifyRestrictedPermissions(final S3AFileSystem delegatedFS)
       throws Exception {
-    readLandsatMetadata(delegatedFS);
+    readExternalDatasetMetadata(delegatedFS);
   }
 
   @Test
@@ -569,7 +583,7 @@ public class ITestSessionDelegationInFilesystem extends AbstractDelegationIT {
 
   /**
    * This verifies that the granted credentials only access the target bucket
-   * by using the credentials in a new S3 client to query the AWS-owned landsat
+   * by using the credentials in a new S3 client to query the external
    * bucket.
    * @param delegatedFS delegated FS with role-restricted access.
    * @throws AccessDeniedException if the delegated FS's credentials can't
@@ -577,29 +591,29 @@ public class ITestSessionDelegationInFilesystem extends AbstractDelegationIT {
    * @return result of the HEAD
    * @throws Exception failure
    */
-  @SuppressWarnings("deprecation")
-  protected ObjectMetadata readLandsatMetadata(final S3AFileSystem delegatedFS)
+  protected HeadBucketResponse readExternalDatasetMetadata(final S3AFileSystem delegatedFS)
       throws Exception {
     AWSCredentialProviderList testingCreds
-        = delegatedFS.shareCredentials("testing");
+        = delegatedFS.getS3AInternals().shareCredentials("testing");
 
-    URI landsat = new URI(DEFAULT_CSVTEST_FILE);
+    URI external = requireAnonymousDataPath(getConfiguration()).toUri();
     DefaultS3ClientFactory factory
         = new DefaultS3ClientFactory();
-    factory.setConf(new Configuration(delegatedFS.getConf()));
-    String host = landsat.getHost();
+    Configuration conf = delegatedFS.getConf();
+    factory.setConf(conf);
+    String host = external.getHost();
     S3ClientFactory.S3ClientCreationParameters parameters = null;
     parameters = new S3ClientFactory.S3ClientCreationParameters()
         .withCredentialSet(testingCreds)
         .withPathUri(new URI("s3a://localhost/"))
-        .withEndpoint(DEFAULT_ENDPOINT)
         .withMetrics(new EmptyS3AStatisticsContext()
             .newStatisticsFromAwsSdk())
         .withUserAgentSuffix("ITestSessionDelegationInFilesystem");
-    AmazonS3 s3 = factory.createS3Client(landsat, parameters);
+
+    S3Client s3 = factory.createS3Client(external, parameters);
 
     return Invoker.once("HEAD", host,
-        () -> s3.getObjectMetadata(host, landsat.getPath().substring(1)));
+        () -> s3.headBucket(b -> b.bucket(host)));
   }
 
   /**

@@ -59,7 +59,8 @@ public class AbsoluteResourceCapacityCalculator extends AbstractQueueCapacityCal
   public void updateCapacitiesAfterCalculation(
       ResourceCalculationDriver resourceCalculationDriver, CSQueue queue, String label) {
     CapacitySchedulerQueueCapacityHandler.setQueueCapacities(
-        resourceCalculationDriver.getUpdateContext().getUpdatedClusterResource(label), queue, label);
+        resourceCalculationDriver.getUpdateContext()
+            .getUpdatedClusterResource(label), queue, label);
   }
 
   @Override

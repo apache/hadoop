@@ -58,6 +58,11 @@ public final class EmptyPrefetchingStatistics
   }
 
   @Override
+  public void blockEvictedFromFileCache() {
+
+  }
+
+  @Override
   public void prefetchOperationCompleted() {
 
   }

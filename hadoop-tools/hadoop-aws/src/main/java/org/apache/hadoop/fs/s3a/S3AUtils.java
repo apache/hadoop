@@ -18,20 +18,14 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import com.amazonaws.AbortedException;
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.AmazonServiceException;
-import com.amazonaws.ClientConfiguration;
-import com.amazonaws.Protocol;
-import com.amazonaws.SdkBaseException;
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
-import com.amazonaws.retry.RetryUtils;
-import com.amazonaws.services.s3.model.AmazonS3Exception;
-import com.amazonaws.services.s3.model.MultiObjectDeleteException;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
-import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.util.Preconditions;
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
+import software.amazon.awssdk.core.exception.AbortedException;
+import software.amazon.awssdk.core.exception.ApiCallAttemptTimeoutException;
+import software.amazon.awssdk.core.exception.ApiCallTimeoutException;
+import software.amazon.awssdk.core.exception.SdkException;
+import software.amazon.awssdk.core.retry.RetryUtils;
+import software.amazon.awssdk.services.s3.model.S3Exception;
+import software.amazon.awssdk.services.s3.model.S3Object;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -44,16 +38,12 @@ import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.util.functional.RemoteIterators;
-import org.apache.hadoop.fs.s3a.audit.AuditFailureException;
-import org.apache.hadoop.fs.s3a.audit.AuditIntegration;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
-import org.apache.hadoop.fs.s3a.auth.IAMInstanceCredentialsProvider;
-import org.apache.hadoop.fs.s3a.impl.NetworkBinding;
-import org.apache.hadoop.fs.s3a.impl.V2Migration;
+import org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteException;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.security.ProviderUtils;
-import org.apache.hadoop.util.VersionInfo;
+import org.apache.hadoop.util.Preconditions;
 
 import org.apache.hadoop.util.Lists;
 import org.slf4j.Logger;
@@ -74,23 +64,26 @@ import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.nio.file.AccessDeniedException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Date;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
+import static org.apache.hadoop.fs.s3a.AWSCredentialProviderList.maybeTranslateCredentialException;
 import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.audit.AuditIntegration.maybeTranslateAuditException;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isUnknownBucket;
-import static org.apache.hadoop.fs.s3a.impl.InternalConstants.CSE_PADDING_LENGTH;
-import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.translateDeleteException;
+import static org.apache.hadoop.fs.s3a.impl.InstantiationIOException.instantiationException;
+import static org.apache.hadoop.fs.s3a.impl.InstantiationIOException.isAbstract;
+import static org.apache.hadoop.fs.s3a.impl.InstantiationIOException.isNotInstanceOf;
+import static org.apache.hadoop.fs.s3a.impl.InstantiationIOException.unsupportedConstructor;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.*;
+import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.maybeExtractIOException;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 import static org.apache.hadoop.util.functional.RemoteIterators.filteringRemoteIterator;
 
@@ -104,13 +97,7 @@ import static org.apache.hadoop.util.functional.RemoteIterators.filteringRemoteI
 public final class S3AUtils {
 
   private static final Logger LOG = LoggerFactory.getLogger(S3AUtils.class);
-  static final String CONSTRUCTOR_EXCEPTION = "constructor exception";
-  static final String INSTANTIATION_EXCEPTION
-      = "instantiation exception";
-  static final String NOT_AWS_PROVIDER =
-      "does not implement AWSCredentialsProvider";
-  static final String ABSTRACT_PROVIDER =
-      "is abstract and therefore cannot be created";
+
   static final String ENDPOINT_KEY = "Endpoint";
 
   /** Filesystem is closed; kept here to keep the errors close. */
@@ -145,21 +132,13 @@ public final class S3AUtils {
 
   private static final String BUCKET_PATTERN = FS_S3A_BUCKET_PREFIX + "%s.%s";
 
-  /**
-   * Error message when the AWS provider list built up contains a forbidden
-   * entry.
-   */
-  @VisibleForTesting
-  public static final String E_FORBIDDEN_AWS_PROVIDER
-      = "AWS provider class cannot be used";
-
   private S3AUtils() {
   }
 
   /**
    * Translate an exception raised in an operation into an IOException.
    * The specific type of IOException depends on the class of
-   * {@link AmazonClientException} passed in, and any status codes included
+   * {@link SdkException} passed in, and any status codes included
    * in the operation. That is: HTTP error codes are examined and can be
    * used to build a more specific response.
    *
@@ -172,14 +151,14 @@ public final class S3AUtils {
    */
   public static IOException translateException(String operation,
       Path path,
-      AmazonClientException exception) {
+      SdkException exception) {
     return translateException(operation, path.toString(), exception);
   }
 
   /**
    * Translate an exception raised in an operation into an IOException.
    * The specific type of IOException depends on the class of
-   * {@link AmazonClientException} passed in, and any status codes included
+   * {@link SdkException} passed in, and any status codes included
    * in the operation. That is: HTTP error codes are examined and can be
    * used to build a more specific response.
    * @param operation operation
@@ -189,13 +168,22 @@ public final class S3AUtils {
    */
   @SuppressWarnings("ThrowableInstanceNeverThrown")
   public static IOException translateException(@Nullable String operation,
-      String path,
-      SdkBaseException exception) {
+      @Nullable String path,
+      SdkException exception) {
     String message = String.format("%s%s: %s",
         operation,
         StringUtils.isNotEmpty(path)? (" on " + path) : "",
         exception);
-    if (!(exception instanceof AmazonServiceException)) {
+
+    if (path == null || path.isEmpty()) {
+      // handle null path by giving it a stub value.
+      // not ideal/informative, but ensures that the path is never null in
+      // exceptions constructed.
+      path = "/";
+    }
+
+    if (!(exception instanceof AwsServiceException)) {
+      // exceptions raised client-side: connectivity, auth, network problems...
       Exception innerCause = containsInterruptedException(exception);
       if (innerCause != null) {
         // interrupted IO, or a socket exception underneath that class
@@ -207,116 +195,170 @@ public final class S3AUtils {
       }
       // if the exception came from the auditor, hand off translation
       // to it.
-      if (exception instanceof AuditFailureException) {
-        return AuditIntegration.translateAuditException(path, (AuditFailureException) exception);
+      IOException ioe = maybeTranslateAuditException(path, exception);
+      if (ioe != null) {
+        return ioe;
       }
-      if (exception instanceof CredentialInitializationException) {
-        // the exception raised by AWSCredentialProvider list if the
-        // credentials were not accepted,
-        return (AccessDeniedException)new AccessDeniedException(path, null,
-            exception.toString()).initCause(exception);
+      ioe = maybeTranslateCredentialException(path, exception);
+      if (ioe != null) {
+        return ioe;
       }
+      // network problems covered by an IOE inside the exception chain.
+      ioe = maybeExtractIOException(path, exception, message);
+      if (ioe != null) {
+        return ioe;
+      }
+      // timeout issues
+      // ApiCallAttemptTimeoutException: a single HTTP request attempt failed.
+      // ApiCallTimeoutException: a request with any configured retries failed.
+      // The ApiCallTimeoutException exception should be the only one seen in
+      // the S3A code, but for due diligence both are handled and mapped to
+      // our own AWSApiCallTimeoutException.
+      if (exception instanceof ApiCallTimeoutException
+          || exception instanceof ApiCallAttemptTimeoutException) {
+        // An API call to an AWS service timed out.
+        // This is a subclass of ConnectTimeoutException so
+        // all retry logic for that exception is handled without
+        // having to look down the stack for a
+        return new AWSApiCallTimeoutException(message, exception);
+      }
+      // no custom handling.
       return new AWSClientIOException(message, exception);
     } else {
+      // "error response returned by an S3 or other service."
+      // These contain more details and should be translated based
+      // on the HTTP status code and other details.
       IOException ioe;
-      AmazonServiceException ase = (AmazonServiceException) exception;
+      AwsServiceException ase = (AwsServiceException) exception;
       // this exception is non-null if the service exception is an s3 one
-      AmazonS3Exception s3Exception = ase instanceof AmazonS3Exception
-          ? (AmazonS3Exception) ase
+      S3Exception s3Exception = ase instanceof S3Exception
+          ? (S3Exception) ase
           : null;
-      int status = ase.getStatusCode();
-      message = message + ":" + ase.getErrorCode();
+      int status = ase.statusCode();
+      if (ase.awsErrorDetails() != null) {
+        message = message + ":" + ase.awsErrorDetails().errorCode();
+      }
+
+      // big switch on the HTTP status code.
       switch (status) {
 
-      case 301:
-      case 307:
+      case SC_301_MOVED_PERMANENTLY:
+      case SC_307_TEMPORARY_REDIRECT:
         if (s3Exception != null) {
-          if (s3Exception.getAdditionalDetails() != null &&
-              s3Exception.getAdditionalDetails().containsKey(ENDPOINT_KEY)) {
-            message = String.format("Received permanent redirect response to "
-                + "endpoint %s.  This likely indicates that the S3 endpoint "
-                + "configured in %s does not match the AWS region containing "
-                + "the bucket.",
-                s3Exception.getAdditionalDetails().get(ENDPOINT_KEY), ENDPOINT);
-          }
+          message = String.format("Received permanent redirect response to "
+                  + "region %s.  This likely indicates that the S3 region "
+                  + "configured in %s does not match the AWS region containing " + "the bucket.",
+              s3Exception.awsErrorDetails().sdkHttpResponse().headers().get(BUCKET_REGION_HEADER),
+              AWS_REGION);
           ioe = new AWSRedirectException(message, s3Exception);
         } else {
           ioe = new AWSRedirectException(message, ase);
         }
         break;
 
-      case 400:
+      case SC_400_BAD_REQUEST:
         ioe = new AWSBadRequestException(message, ase);
         break;
 
       // permissions
-      case 401:
-      case 403:
+      case SC_401_UNAUTHORIZED:
+      case SC_403_FORBIDDEN:
         ioe = new AccessDeniedException(path, null, message);
         ioe.initCause(ase);
         break;
 
       // the object isn't there
-      case 404:
+      case SC_404_NOT_FOUND:
         if (isUnknownBucket(ase)) {
           // this is a missing bucket
           ioe = new UnknownStoreException(path, message, ase);
         } else {
-          // a normal unknown object
+          // a normal unknown object.
+          // Can also be raised by third-party stores when aborting an unknown multipart upload
           ioe = new FileNotFoundException(message);
           ioe.initCause(ase);
         }
         break;
 
+      // Caused by duplicate create bucket call.
+      case SC_409_CONFLICT:
+        ioe = new AWSBadRequestException(message, ase);
+        break;
+
       // this also surfaces sometimes and is considered to
       // be ~ a not found exception.
-      case 410:
+      case SC_410_GONE:
         ioe = new FileNotFoundException(message);
         ioe.initCause(ase);
         break;
 
-      // method not allowed; seen on S3 Select.
-      // treated as a bad request
-      case 405:
-        ioe = new AWSBadRequestException(message, s3Exception);
+      // errors which stores can return from requests which
+      // the store does not support.
+      case SC_405_METHOD_NOT_ALLOWED:
+      case SC_415_UNSUPPORTED_MEDIA_TYPE:
+      case SC_501_NOT_IMPLEMENTED:
+        ioe = new AWSUnsupportedFeatureException(message, s3Exception);
+        break;
+
+      // precondition failure: the object is there, but the precondition
+      // (e.g. etag) didn't match. Assume remote file change during
+      // rename or status passed in to openfile had an etag which didn't match.
+      case SC_412_PRECONDITION_FAILED:
+        ioe = new RemoteFileChangedException(path, message, "", ase);
         break;
 
       // out of range. This may happen if an object is overwritten with
-      // a shorter one while it is being read.
-      case 416:
-        ioe = new EOFException(message);
-        ioe.initCause(ase);
+      // a shorter one while it is being read or openFile() was invoked
+      // passing a FileStatus or file length less than that of the object.
+      // although the HTTP specification says that the response should
+      // include a range header specifying the actual range available,
+      // this isn't picked up here.
+      case SC_416_RANGE_NOT_SATISFIABLE:
+        ioe = new RangeNotSatisfiableEOFException(message, ase);
         break;
 
       // this has surfaced as a "no response from server" message.
       // so rare we haven't replicated it.
       // Treating as an idempotent proxy error.
-      case 443:
-      case 444:
+      case SC_443_NO_RESPONSE:
+      case SC_444_NO_RESPONSE:
         ioe = new AWSNoResponseException(message, ase);
         break;
 
       // throttling
-      case 503:
+      case SC_429_TOO_MANY_REQUESTS_GCS:    // google cloud through this connector
+      case SC_503_SERVICE_UNAVAILABLE:      // AWS
         ioe = new AWSServiceThrottledException(message, ase);
         break;
 
+      // gateway timeout
+      case SC_504_GATEWAY_TIMEOUT:
+        ioe = new AWSApiCallTimeoutException(message, ase);
+        break;
+
       // internal error
-      case 500:
+      case SC_500_INTERNAL_SERVER_ERROR:
         ioe = new AWSStatus500Exception(message, ase);
         break;
 
-      case 200:
+      case SC_200_OK:
         if (exception instanceof MultiObjectDeleteException) {
           // failure during a bulk delete
-          return translateDeleteException(message,
-              (MultiObjectDeleteException) exception);
+          return ((MultiObjectDeleteException) exception)
+              .translateException(message);
         }
         // other 200: FALL THROUGH
 
       default:
-        // no specific exit code. Choose an IOE subclass based on the class
-        // of the caught exception
+        // no specifically handled exit code.
+
+        // convert all unknown 500+ errors to a 500 exception
+        if (status > SC_500_INTERNAL_SERVER_ERROR) {
+          ioe = new AWSStatus500Exception(message, ase);
+          break;
+        }
+
+        // Choose an IOE subclass based on the class of the caught exception
         ioe = s3Exception != null
             ? new AWSS3IOException(message, s3Exception)
             : new AWSServiceIOException(message, ase);
@@ -336,10 +378,35 @@ public final class S3AUtils {
   public static IOException extractException(String operation,
       String path,
       ExecutionException ee) {
+    return convertExceptionCause(operation, path, ee.getCause());
+  }
+
+  /**
+   * Extract an exception from a failed future, and convert to an IOE.
+   * @param operation operation which failed
+   * @param path path operated on (may be null)
+   * @param ce completion exception
+   * @return an IOE which can be thrown
+   */
+  public static IOException extractException(String operation,
+      String path,
+      CompletionException ce) {
+    return convertExceptionCause(operation, path, ce.getCause());
+  }
+
+  /**
+   * Convert the cause of a concurrent exception to an IOE.
+   * @param operation operation which failed
+   * @param path path operated on (may be null)
+   * @param cause cause of a concurrent exception
+   * @return an IOE which can be thrown
+   */
+  private static IOException convertExceptionCause(String operation,
+      String path,
+      Throwable cause) {
     IOException ioe;
-    Throwable cause = ee.getCause();
-    if (cause instanceof AmazonClientException) {
-      ioe = translateException(operation, path, (AmazonClientException) cause);
+    if (cause instanceof SdkException) {
+      ioe = translateException(operation, path, (SdkException) cause);
     } else if (cause instanceof IOException) {
       ioe = (IOException) cause;
     } else {
@@ -377,7 +444,7 @@ public final class S3AUtils {
    * @return an IOE which can be rethrown
    */
   private static InterruptedIOException translateInterruptedException(
-      SdkBaseException exception,
+      SdkException exception,
       final Exception innerCause,
       String message) {
     InterruptedIOException ioe;
@@ -388,6 +455,7 @@ public final class S3AUtils {
       if (name.endsWith(".ConnectTimeoutException")
           || name.endsWith(".ConnectionPoolTimeoutException")
           || name.endsWith("$ConnectTimeoutException")) {
+        // TODO: review in v2
         // TCP connection http timeout from the shaded or unshaded filenames
         // com.amazonaws.thirdparty.apache.http.conn.ConnectTimeoutException
         ioe = new ConnectTimeoutException(message);
@@ -411,10 +479,10 @@ public final class S3AUtils {
    */
   public static boolean isThrottleException(Exception ex) {
     return ex instanceof AWSServiceThrottledException
-        || (ex instanceof AmazonServiceException
-            && 503  == ((AmazonServiceException)ex).getStatusCode())
-        || (ex instanceof SdkBaseException
-            && RetryUtils.isThrottlingException((SdkBaseException) ex));
+        || (ex instanceof AwsServiceException
+            && 503  == ((AwsServiceException)ex).statusCode())
+        || (ex instanceof SdkException
+            && RetryUtils.isThrottlingException((SdkException) ex));
   }
 
   /**
@@ -424,7 +492,8 @@ public final class S3AUtils {
    * @param ex exception
    * @return true if this is believed to be a sign the connection was broken.
    */
-  public static boolean isMessageTranslatableToEOF(SdkBaseException ex) {
+  public static boolean isMessageTranslatableToEOF(SdkException ex) {
+    // TODO: review in v2
     return ex.toString().contains(EOF_MESSAGE_IN_XML_PARSER) ||
             ex.toString().contains(EOF_READ_DIFFERENT_LENGTH);
   }
@@ -434,17 +503,16 @@ public final class S3AUtils {
    * @param e exception
    * @return string details
    */
-  public static String stringify(AmazonServiceException e) {
+  public static String stringify(AwsServiceException e) {
     StringBuilder builder = new StringBuilder(
-        String.format("%s: %s error %d: %s; %s%s%n",
-            e.getErrorType(),
-            e.getServiceName(),
-            e.getStatusCode(),
-            e.getErrorCode(),
-            e.getErrorMessage(),
-            (e.isRetryable() ? " (retryable)": "")
+        String.format("%s error %d: %s; %s%s%n",
+            e.awsErrorDetails().serviceName(),
+            e.statusCode(),
+            e.awsErrorDetails().errorCode(),
+            e.awsErrorDetails().errorMessage(),
+            (e.retryable() ? " (retryable)": "")
         ));
-    String rawResponseContent = e.getRawResponseContent();
+    String rawResponseContent = e.awsErrorDetails().rawResponse().asUtf8String();
     if (rawResponseContent != null) {
       builder.append(rawResponseContent);
     }
@@ -452,29 +520,9 @@ public final class S3AUtils {
   }
 
   /**
-   * Get low level details of an amazon exception for logging; multi-line.
-   * @param e exception
-   * @return string details
-   */
-  public static String stringify(AmazonS3Exception e) {
-    // get the low level details of an exception,
-    StringBuilder builder = new StringBuilder(
-        stringify((AmazonServiceException) e));
-    Map<String, String> details = e.getAdditionalDetails();
-    if (details != null) {
-      builder.append('\n');
-      for (Map.Entry<String, String> d : details.entrySet()) {
-        builder.append(d.getKey()).append('=')
-            .append(d.getValue()).append('\n');
-      }
-    }
-    return builder.toString();
-  }
-
-  /**
    * Create a files status instance from a listing.
    * @param keyPath path to entry
-   * @param summary summary from AWS
+   * @param s3Object s3Object entry
    * @param blockSize block size to declare.
    * @param owner owner of the file
    * @param eTag S3 object eTag or null if unavailable
@@ -483,20 +531,20 @@ public final class S3AUtils {
    * @return a status entry
    */
   public static S3AFileStatus createFileStatus(Path keyPath,
-      S3ObjectSummary summary,
+      S3Object s3Object,
       long blockSize,
       String owner,
       String eTag,
       String versionId,
       boolean isCSEEnabled) {
-    long size = summary.getSize();
+    long size = s3Object.size();
     // check if cse is enabled; strip out constant padding length.
     if (isCSEEnabled && size >= CSE_PADDING_LENGTH) {
       size -= CSE_PADDING_LENGTH;
     }
     return createFileStatus(keyPath,
-        objectRepresentsDirectory(summary.getKey()),
-        size, summary.getLastModified(), blockSize, owner, eTag, versionId);
+        objectRepresentsDirectory(s3Object.key()),
+        size, Date.from(s3Object.lastModified()), blockSize, owner, eTag, versionId);
   }
 
   /**
@@ -558,114 +606,7 @@ public final class S3AUtils {
   }
 
   /**
-   * The standard AWS provider list for AWS connections.
-   */
-  @SuppressWarnings("deprecation")
-  public static final List<Class<?>>
-      STANDARD_AWS_PROVIDERS = Collections.unmodifiableList(
-      Arrays.asList(
-          TemporaryAWSCredentialsProvider.class,
-          SimpleAWSCredentialsProvider.class,
-          EnvironmentVariableCredentialsProvider.class,
-          IAMInstanceCredentialsProvider.class));
-
-  /**
-   * Create the AWS credentials from the providers, the URI and
-   * the key {@link Constants#AWS_CREDENTIALS_PROVIDER} in the configuration.
-   * @param binding Binding URI -may be null
-   * @param conf filesystem configuration
-   * @return a credentials provider list
-   * @throws IOException Problems loading the providers (including reading
-   * secrets from credential files).
-   */
-  public static AWSCredentialProviderList createAWSCredentialProviderSet(
-      @Nullable URI binding,
-      Configuration conf) throws IOException {
-    // this will reject any user:secret entries in the URI
-    S3xLoginHelper.rejectSecretsInURIs(binding);
-    AWSCredentialProviderList credentials =
-        buildAWSProviderList(binding,
-            conf,
-            AWS_CREDENTIALS_PROVIDER,
-            STANDARD_AWS_PROVIDERS,
-            new HashSet<>());
-    // make sure the logging message strips out any auth details
-    LOG.debug("For URI {}, using credentials {}",
-        binding, credentials);
-    return credentials;
-  }
-
-  /**
-   * Load list of AWS credential provider/credential provider factory classes.
-   * @param conf configuration
-   * @param key key
-   * @param defaultValue list of default values
-   * @return the list of classes, possibly empty
-   * @throws IOException on a failure to load the list.
-   */
-  public static List<Class<?>> loadAWSProviderClasses(Configuration conf,
-      String key,
-      Class<?>... defaultValue) throws IOException {
-    try {
-      return Arrays.asList(conf.getClasses(key, defaultValue));
-    } catch (RuntimeException e) {
-      Throwable c = e.getCause() != null ? e.getCause() : e;
-      throw new IOException("From option " + key + ' ' + c, c);
-    }
-  }
-
-  /**
-   * Load list of AWS credential provider/credential provider factory classes;
-   * support a forbidden list to prevent loops, mandate full secrets, etc.
-   * @param binding Binding URI -may be null
-   * @param conf configuration
-   * @param key key
-   * @param forbidden a possibly empty set of forbidden classes.
-   * @param defaultValues list of default providers.
-   * @return the list of classes, possibly empty
-   * @throws IOException on a failure to load the list.
-   */
-  public static AWSCredentialProviderList buildAWSProviderList(
-      @Nullable final URI binding,
-      final Configuration conf,
-      final String key,
-      final List<Class<?>> defaultValues,
-      final Set<Class<?>> forbidden) throws IOException {
-
-    // build up the base provider
-    List<Class<?>> awsClasses = loadAWSProviderClasses(conf,
-        key,
-        defaultValues.toArray(new Class[defaultValues.size()]));
-    // and if the list is empty, switch back to the defaults.
-    // this is to address the issue that configuration.getClasses()
-    // doesn't return the default if the config value is just whitespace.
-    if (awsClasses.isEmpty()) {
-      awsClasses = defaultValues;
-    }
-    // iterate through, checking for blacklists and then instantiating
-    // each provider
-    AWSCredentialProviderList providers = new AWSCredentialProviderList();
-    for (Class<?> aClass : awsClasses) {
-
-      // List of V1 credential providers that will be migrated with V2 upgrade
-      if (!Arrays.asList("EnvironmentVariableCredentialsProvider",
-              "EC2ContainerCredentialsProviderWrapper", "InstanceProfileCredentialsProvider")
-          .contains(aClass.getSimpleName()) && aClass.getName().contains(AWS_AUTH_CLASS_PREFIX)) {
-        V2Migration.v1ProviderReferenced(aClass.getName());
-      }
-
-      if (forbidden.contains(aClass)) {
-        throw new IOException(E_FORBIDDEN_AWS_PROVIDER
-            + " in option " + key + ": " + aClass);
-      }
-      providers.add(createAWSCredentialProvider(conf,
-          aClass, binding));
-    }
-    return providers;
-  }
-
-  /**
-   * Create an AWS credential provider from its class by using reflection.  The
+   * Creates an instance of a class using reflection. The
    * class must implement one of the following means of construction, which are
    * attempted in order:
    *
@@ -674,91 +615,86 @@ public final class S3AUtils {
    *     org.apache.hadoop.conf.Configuration</li>
    * <li>a public constructor accepting
    *    org.apache.hadoop.conf.Configuration</li>
-   * <li>a public static method named getInstance that accepts no
+   * <li>a public static method named as per methodName, that accepts no
    *    arguments and returns an instance of
-   *    com.amazonaws.auth.AWSCredentialsProvider, or</li>
+   *    specified type, or</li>
    * <li>a public default constructor.</li>
    * </ol>
    *
+   * @param className name of class for which instance is to be created
    * @param conf configuration
-   * @param credClass credential class
    * @param uri URI of the FS
-   * @return the instantiated class
-   * @throws IOException on any instantiation failure.
+   * @param interfaceImplemented interface that this class implements
+   * @param methodName name of factory method to be invoked
+   * @param configKey config key under which this class is specified
+   * @param <InstanceT> Instance of class
+   * @return instance of the specified class
+   * @throws IOException on any problem
    */
-  private static AWSCredentialsProvider createAWSCredentialProvider(
+  @SuppressWarnings("unchecked")
+  public static <InstanceT> InstanceT getInstanceFromReflection(String className,
       Configuration conf,
-      Class<?> credClass,
-      @Nullable URI uri) throws IOException {
-    AWSCredentialsProvider credentials = null;
-    String className = credClass.getName();
-    if (!AWSCredentialsProvider.class.isAssignableFrom(credClass)) {
-      throw new IOException("Class " + credClass + " " + NOT_AWS_PROVIDER);
-    }
-    if (Modifier.isAbstract(credClass.getModifiers())) {
-      throw new IOException("Class " + credClass + " " + ABSTRACT_PROVIDER);
-    }
-    LOG.debug("Credential provider class is {}", className);
-
+      @Nullable URI uri,
+      Class<? extends InstanceT> interfaceImplemented,
+      String methodName,
+      String configKey) throws IOException {
     try {
-      // new X(uri, conf)
-      Constructor cons = getConstructor(credClass, URI.class,
-          Configuration.class);
-      if (cons != null) {
-        credentials = (AWSCredentialsProvider)cons.newInstance(uri, conf);
-        return credentials;
+      Class<?> instanceClass = S3AUtils.class.getClassLoader().loadClass(className);
+      if (Modifier.isAbstract(instanceClass.getModifiers())) {
+        throw isAbstract(uri, className, configKey);
       }
-      // new X(conf)
-      cons = getConstructor(credClass, Configuration.class);
-      if (cons != null) {
-        credentials = (AWSCredentialsProvider)cons.newInstance(conf);
-        return credentials;
+      if (!interfaceImplemented.isAssignableFrom(instanceClass)) {
+        throw isNotInstanceOf(uri, className, interfaceImplemented.getName(), configKey);
+
+      }
+      Constructor cons;
+      if (conf != null) {
+        // new X(uri, conf)
+        cons = getConstructor(instanceClass, URI.class, Configuration.class);
+
+        if (cons != null) {
+          return (InstanceT) cons.newInstance(uri, conf);
+        }
+        // new X(conf)
+        cons = getConstructor(instanceClass, Configuration.class);
+        if (cons != null) {
+          return (InstanceT) cons.newInstance(conf);
+        }
       }
 
-      // X.getInstance()
-      Method factory = getFactoryMethod(credClass, AWSCredentialsProvider.class,
-          "getInstance");
+      // X.methodName()
+      Method factory = getFactoryMethod(instanceClass, interfaceImplemented, methodName);
       if (factory != null) {
-        credentials = (AWSCredentialsProvider)factory.invoke(null);
-        return credentials;
+        return (InstanceT) factory.invoke(null);
       }
 
       // new X()
-      cons = getConstructor(credClass);
+      cons = getConstructor(instanceClass);
       if (cons != null) {
-        credentials = (AWSCredentialsProvider)cons.newInstance();
-        return credentials;
+        return (InstanceT) cons.newInstance();
       }
 
       // no supported constructor or factory method found
-      throw new IOException(String.format("%s " + CONSTRUCTOR_EXCEPTION
-          + ".  A class specified in %s must provide a public constructor "
-          + "of a supported signature, or a public factory method named "
-          + "getInstance that accepts no arguments.",
-          className, AWS_CREDENTIALS_PROVIDER));
+      throw unsupportedConstructor(uri, className, configKey);
     } catch (InvocationTargetException e) {
       Throwable targetException = e.getTargetException();
       if (targetException == null) {
-        targetException =  e;
+        targetException = e;
       }
       if (targetException instanceof IOException) {
         throw (IOException) targetException;
-      } else if (targetException instanceof SdkBaseException) {
-        throw translateException("Instantiate " + className, "",
-            (SdkBaseException) targetException);
+      } else if (targetException instanceof SdkException) {
+        throw translateException("Instantiate " + className, "/", (SdkException) targetException);
       } else {
         // supported constructor or factory method found, but the call failed
-        throw new IOException(className + " " + INSTANTIATION_EXCEPTION
-            + ": " + targetException,
-            targetException);
+        throw instantiationException(uri, className, configKey, targetException);
       }
     } catch (ReflectiveOperationException | IllegalArgumentException e) {
       // supported constructor or factory method found, but the call failed
-      throw new IOException(className + " " + INSTANTIATION_EXCEPTION
-          + ": " + e,
-          e);
+      throw instantiationException(uri, className, configKey, e);
     }
   }
+
 
   /**
    * Set a key if the value is non-empty.
@@ -946,13 +882,13 @@ public final class S3AUtils {
 
   /**
    * String information about a summary entry for debug messages.
-   * @param summary summary object
+   * @param s3Object s3Object entry
    * @return string value
    */
-  public static String stringify(S3ObjectSummary summary) {
-    StringBuilder builder = new StringBuilder(summary.getKey().length() + 100);
-    builder.append(summary.getKey()).append(' ');
-    builder.append("size=").append(summary.getSize());
+  public static String stringify(S3Object s3Object) {
+    StringBuilder builder = new StringBuilder(s3Object.key().length() + 100);
+    builder.append("\"").append(s3Object.key()).append("\" ");
+    builder.append("size=").append(s3Object.size());
     return builder.toString();
   }
 
@@ -1223,216 +1159,6 @@ public final class S3AUtils {
     } catch (IOException e) {
       LOG.warn("Failed to delete {}", path, e);
     }
-  }
-
-  /**
-   * Create a new AWS {@code ClientConfiguration}.
-   * All clients to AWS services <i>MUST</i> use this for consistent setup
-   * of connectivity, UA, proxy settings.
-   * @param conf The Hadoop configuration
-   * @param bucket Optional bucket to use to look up per-bucket proxy secrets
-   * @return new AWS client configuration
-   * @throws IOException problem creating AWS client configuration
-   *
-   * @deprecated use {@link #createAwsConf(Configuration, String, String)}
-   */
-  @Deprecated
-  public static ClientConfiguration createAwsConf(Configuration conf,
-      String bucket)
-      throws IOException {
-    return createAwsConf(conf, bucket, null);
-  }
-
-  /**
-   * Create a new AWS {@code ClientConfiguration}. All clients to AWS services
-   * <i>MUST</i> use this or the equivalents for the specific service for
-   * consistent setup of connectivity, UA, proxy settings.
-   *
-   * @param conf The Hadoop configuration
-   * @param bucket Optional bucket to use to look up per-bucket proxy secrets
-   * @param awsServiceIdentifier a string representing the AWS service (S3,
-   * etc) for which the ClientConfiguration is being created.
-   * @return new AWS client configuration
-   * @throws IOException problem creating AWS client configuration
-   */
-  public static ClientConfiguration createAwsConf(Configuration conf,
-      String bucket, String awsServiceIdentifier)
-      throws IOException {
-    final ClientConfiguration awsConf = new ClientConfiguration();
-    initConnectionSettings(conf, awsConf);
-    initProxySupport(conf, bucket, awsConf);
-    initUserAgent(conf, awsConf);
-    if (StringUtils.isNotEmpty(awsServiceIdentifier)) {
-      String configKey = null;
-      switch (awsServiceIdentifier) {
-      case AWS_SERVICE_IDENTIFIER_S3:
-        configKey = SIGNING_ALGORITHM_S3;
-        break;
-      case AWS_SERVICE_IDENTIFIER_STS:
-        configKey = SIGNING_ALGORITHM_STS;
-        break;
-      default:
-        // Nothing to do. The original signer override is already setup
-      }
-      if (configKey != null) {
-        String signerOverride = conf.getTrimmed(configKey, "");
-        if (!signerOverride.isEmpty()) {
-          LOG.debug("Signer override for {}} = {}", awsServiceIdentifier,
-              signerOverride);
-          awsConf.setSignerOverride(signerOverride);
-        }
-      }
-    }
-    return awsConf;
-  }
-
-  /**
-   * Initializes all AWS SDK settings related to connection management.
-   *
-   * @param conf Hadoop configuration
-   * @param awsConf AWS SDK configuration
-   *
-   * @throws IOException if there was an error initializing the protocol
-   *                     settings
-   */
-  public static void initConnectionSettings(Configuration conf,
-      ClientConfiguration awsConf) throws IOException {
-    awsConf.setMaxConnections(intOption(conf, MAXIMUM_CONNECTIONS,
-        DEFAULT_MAXIMUM_CONNECTIONS, 1));
-    initProtocolSettings(conf, awsConf);
-    awsConf.setMaxErrorRetry(intOption(conf, MAX_ERROR_RETRIES,
-        DEFAULT_MAX_ERROR_RETRIES, 0));
-    awsConf.setConnectionTimeout(intOption(conf, ESTABLISH_TIMEOUT,
-        DEFAULT_ESTABLISH_TIMEOUT, 0));
-    awsConf.setSocketTimeout(intOption(conf, SOCKET_TIMEOUT,
-        DEFAULT_SOCKET_TIMEOUT, 0));
-    int sockSendBuffer = intOption(conf, SOCKET_SEND_BUFFER,
-        DEFAULT_SOCKET_SEND_BUFFER, 2048);
-    int sockRecvBuffer = intOption(conf, SOCKET_RECV_BUFFER,
-        DEFAULT_SOCKET_RECV_BUFFER, 2048);
-    long requestTimeoutMillis = conf.getTimeDuration(REQUEST_TIMEOUT,
-        DEFAULT_REQUEST_TIMEOUT, TimeUnit.SECONDS, TimeUnit.MILLISECONDS);
-
-    if (requestTimeoutMillis > Integer.MAX_VALUE) {
-      LOG.debug("Request timeout is too high({} ms). Setting to {} ms instead",
-          requestTimeoutMillis, Integer.MAX_VALUE);
-      requestTimeoutMillis = Integer.MAX_VALUE;
-    }
-    awsConf.setRequestTimeout((int) requestTimeoutMillis);
-    awsConf.setSocketBufferSizeHints(sockSendBuffer, sockRecvBuffer);
-    String signerOverride = conf.getTrimmed(SIGNING_ALGORITHM, "");
-    if (!signerOverride.isEmpty()) {
-     LOG.debug("Signer override = {}", signerOverride);
-      awsConf.setSignerOverride(signerOverride);
-    }
-  }
-
-  /**
-   * Initializes the connection protocol settings when connecting to S3 (e.g.
-   * either HTTP or HTTPS). If secure connections are enabled, this method
-   * will load the configured SSL providers.
-   *
-   * @param conf Hadoop configuration
-   * @param awsConf AWS SDK configuration
-   *
-   * @throws IOException if there is an error initializing the configured
-   *                     {@link javax.net.ssl.SSLSocketFactory}
-   */
-  private static void initProtocolSettings(Configuration conf,
-      ClientConfiguration awsConf) throws IOException {
-    boolean secureConnections = conf.getBoolean(SECURE_CONNECTIONS,
-        DEFAULT_SECURE_CONNECTIONS);
-    awsConf.setProtocol(secureConnections ?  Protocol.HTTPS : Protocol.HTTP);
-    if (secureConnections) {
-      NetworkBinding.bindSSLChannelMode(conf, awsConf);
-    }
-  }
-
-  /**
-   * Initializes AWS SDK proxy support in the AWS client configuration
-   * if the S3A settings enable it.
-   * <br>
-   * <i>Note:</i> LimitedPrivate to provide proxy support in ranger repository.
-   *
-   * @param conf Hadoop configuration
-   * @param bucket Optional bucket to use to look up per-bucket proxy secrets
-   * @param awsConf AWS SDK configuration to update
-   * @throws IllegalArgumentException if misconfigured
-   * @throws IOException problem getting username/secret from password source.
-   */
-  @InterfaceAudience.LimitedPrivate("Ranger")
-  public static void initProxySupport(Configuration conf,
-      String bucket,
-      ClientConfiguration awsConf) throws IllegalArgumentException,
-      IOException {
-    String proxyHost = conf.getTrimmed(PROXY_HOST, "");
-    int proxyPort = conf.getInt(PROXY_PORT, -1);
-    if (!proxyHost.isEmpty()) {
-      awsConf.setProxyHost(proxyHost);
-      if (proxyPort >= 0) {
-        awsConf.setProxyPort(proxyPort);
-      } else {
-        if (conf.getBoolean(SECURE_CONNECTIONS, DEFAULT_SECURE_CONNECTIONS)) {
-          LOG.warn("Proxy host set without port. Using HTTPS default 443");
-          awsConf.setProxyPort(443);
-        } else {
-          LOG.warn("Proxy host set without port. Using HTTP default 80");
-          awsConf.setProxyPort(80);
-        }
-      }
-      final String proxyUsername = lookupPassword(bucket, conf, PROXY_USERNAME,
-          null, null);
-      final String proxyPassword = lookupPassword(bucket, conf, PROXY_PASSWORD,
-          null, null);
-      if ((proxyUsername == null) != (proxyPassword == null)) {
-        String msg = "Proxy error: " + PROXY_USERNAME + " or " +
-            PROXY_PASSWORD + " set without the other.";
-        LOG.error(msg);
-        throw new IllegalArgumentException(msg);
-      }
-      boolean isProxySecured = conf.getBoolean(PROXY_SECURED, false);
-      awsConf.setProxyUsername(proxyUsername);
-      awsConf.setProxyPassword(proxyPassword);
-      awsConf.setProxyDomain(conf.getTrimmed(PROXY_DOMAIN));
-      awsConf.setProxyWorkstation(conf.getTrimmed(PROXY_WORKSTATION));
-      awsConf.setProxyProtocol(isProxySecured ? Protocol.HTTPS : Protocol.HTTP);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Using proxy server {}://{}:{} as user {} with password {} "
-                + "on domain {} as workstation {}",
-            awsConf.getProxyProtocol(),
-            awsConf.getProxyHost(),
-            awsConf.getProxyPort(),
-            String.valueOf(awsConf.getProxyUsername()),
-            awsConf.getProxyPassword(), awsConf.getProxyDomain(),
-            awsConf.getProxyWorkstation());
-      }
-    } else if (proxyPort >= 0) {
-      String msg =
-          "Proxy error: " + PROXY_PORT + " set without " + PROXY_HOST;
-      LOG.error(msg);
-      throw new IllegalArgumentException(msg);
-    }
-  }
-
-  /**
-   * Initializes the User-Agent header to send in HTTP requests to AWS
-   * services.  We always include the Hadoop version number.  The user also
-   * may set an optional custom prefix to put in front of the Hadoop version
-   * number.  The AWS SDK internally appends its own information, which seems
-   * to include the AWS SDK version, OS and JVM version.
-   *
-   * @param conf Hadoop configuration
-   * @param awsConf AWS SDK configuration to update
-   */
-  private static void initUserAgent(Configuration conf,
-      ClientConfiguration awsConf) {
-    String userAgent = "Hadoop " + VersionInfo.getVersion();
-    String userAgentPrefix = conf.getTrimmed(USER_AGENT_PREFIX, "");
-    if (!userAgentPrefix.isEmpty()) {
-      userAgent = userAgentPrefix + ", " + userAgent;
-    }
-    LOG.debug("Using User-Agent: {}", userAgent);
-    awsConf.setUserAgentPrefix(userAgent);
   }
 
   /**
@@ -1757,6 +1483,11 @@ public final class S3AUtils {
           diagnostics);
       break;
 
+    case DSSE_KMS:
+      LOG.debug("Using DSSE-KMS with {}",
+          diagnostics);
+      break;
+
     case NONE:
     default:
       LOG.debug("Data is unencrypted");
@@ -1927,5 +1658,60 @@ public final class S3AUtils {
       return "ACCEPT_ALL";
     }
   };
+
+  /**
+   * Format a byte range for a request header.
+   * See https://www.rfc-editor.org/rfc/rfc9110.html#section-14.1.2
+   *
+   * @param rangeStart the start byte offset
+   * @param rangeEnd the end byte offset (inclusive)
+   * @return a formatted byte range
+   */
+  public static String formatRange(long rangeStart, long rangeEnd) {
+    return String.format("bytes=%d-%d", rangeStart, rangeEnd);
+  }
+
+  /**
+   * Get the equal op (=) delimited key-value pairs of the <code>name</code> property as
+   * a collection of pair of <code>String</code>s, trimmed of the leading and trailing whitespace
+   * after delimiting the <code>name</code> by comma and new line separator.
+   * If no such property is specified then empty <code>Map</code> is returned.
+   *
+   * @param configuration the configuration object.
+   * @param name property name.
+   * @return property value as a <code>Map</code> of <code>String</code>s, or empty
+   * <code>Map</code>.
+   */
+  public static Map<String, String> getTrimmedStringCollectionSplitByEquals(
+      final Configuration configuration,
+      final String name) {
+    String valueString = configuration.get(name);
+    if (null == valueString) {
+      return new HashMap<>();
+    }
+    return org.apache.hadoop.util.StringUtils
+        .getTrimmedStringCollectionSplitByEquals(valueString);
+  }
+
+
+  /**
+   * If classloader isolation is {@code true}
+   * (through {@link Constants#AWS_S3_CLASSLOADER_ISOLATION}) or not
+   * explicitly set, then the classLoader of the input configuration object
+   * will be set to the input classloader, otherwise nothing will happen.
+   * @param conf configuration object.
+   * @param classLoader isolated classLoader.
+   */
+  static void maybeIsolateClassloader(Configuration conf, ClassLoader classLoader) {
+    if (conf.getBoolean(Constants.AWS_S3_CLASSLOADER_ISOLATION,
+            Constants.DEFAULT_AWS_S3_CLASSLOADER_ISOLATION)) {
+      LOG.debug("Configuration classloader set to S3AFileSystem classloader: {}", classLoader);
+      conf.setClassLoader(classLoader);
+    } else {
+      LOG.debug("Configuration classloader not changed, support classes needed will be loaded " +
+                      "from the classloader that instantiated the Configuration object: {}",
+              conf.getClassLoader());
+    }
+  }
 
 }

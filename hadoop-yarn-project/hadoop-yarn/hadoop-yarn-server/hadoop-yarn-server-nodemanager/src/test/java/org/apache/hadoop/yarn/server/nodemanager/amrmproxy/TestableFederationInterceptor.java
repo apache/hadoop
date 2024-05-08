@@ -55,6 +55,7 @@ public class TestableFederationInterceptor extends FederationInterceptor {
   private MockResourceManagerFacade mockRm;
 
   private boolean isClientRPC = false;
+  private int retryCount = 0;
 
   public TestableFederationInterceptor() {
   }
@@ -76,7 +77,7 @@ public class TestableFederationInterceptor extends FederationInterceptor {
   }
 
   @Override
-  protected AMHeartbeatRequestHandler createHomeHeartbeartHandler(
+  protected AMHeartbeatRequestHandler createHomeHeartbeatHandler(
       Configuration conf, ApplicationId appId,
       AMRMClientRelayer rmProxyRelayer) {
     return new TestableAMRequestHandlerThread(conf, appId, rmProxyRelayer);
@@ -141,7 +142,7 @@ public class TestableFederationInterceptor extends FederationInterceptor {
   }
 
   /**
-   * Drain all aysnc heartbeat threads, comes in two favors:
+   * Drain all async heartbeat threads, comes in two favors:
    *
    * 1. waitForAsyncHBThreadFinish == false. Only wait for the async threads to
    * pick up all pending heartbeat requests. Not necessarily wait for all
@@ -158,9 +159,9 @@ public class TestableFederationInterceptor extends FederationInterceptor {
 
     LOG.info("waiting to drain home heartbeat handler");
     if (waitForAsyncHBThreadFinish) {
-      getHomeHeartbeartHandler().drainHeartbeatThread();
+      getHomeHeartbeatHandler().drainHeartbeatThread();
     } else {
-      while (getHomeHeartbeartHandler().getRequestQueueSize() > 0) {
+      while (getHomeHeartbeatHandler().getRequestQueueSize() > 0) {
         try {
           Thread.sleep(10);
         } catch (InterruptedException e) {
@@ -258,6 +259,24 @@ public class TestableFederationInterceptor extends FederationInterceptor {
     }
   }
 
+  @Override
+  protected TokenAndRegisterResponse launchUAMAndRegisterApplicationMaster(YarnConfiguration config,
+      String subClusterId, ApplicationId applicationId) throws IOException, YarnException {
+    if (retryCount > 0) {
+      retryCount--;
+      throw new YarnException("launchUAMAndRegisterApplicationMaster will retry");
+    }
+    return super.launchUAMAndRegisterApplicationMaster(config, subClusterId, applicationId);
+  }
+
+  public void setRetryCount(int retryCount) {
+    this.retryCount = retryCount;
+  }
+
+  public int getRetryCount() {
+    return retryCount;
+  }
+
   /**
    * Wrap the handler thread, so it calls from the same user.
    */
@@ -272,12 +291,9 @@ public class TestableFederationInterceptor extends FederationInterceptor {
     public void run() {
       try {
         getUGIWithToken(getAttemptId())
-            .doAs(new PrivilegedExceptionAction<Object>() {
-              @Override
-              public Object run() {
-                TestableAMRequestHandlerThread.super.run();
-                return null;
-              }
+            .doAs((PrivilegedExceptionAction<Object>) () -> {
+              TestableAMRequestHandlerThread.super.run();
+              return null;
             });
       } catch (Exception e) {
       }

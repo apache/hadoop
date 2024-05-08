@@ -21,10 +21,11 @@ package org.apache.hadoop.fs.s3a.impl;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
-import com.amazonaws.services.s3.model.DeleteObjectsRequest;
+import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;
 import org.slf4j.Logger;
@@ -40,6 +41,8 @@ import org.apache.hadoop.fs.s3a.S3ALocatedFileStatus;
 import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.util.DurationInfo;
 
+
+import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletionIgnoringExceptions;
 import static org.apache.hadoop.fs.store.audit.AuditingFunctions.callableWithinAuditSpan;
 import static org.apache.hadoop.util.Preconditions.checkArgument;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.maybeAwaitCompletion;
@@ -110,18 +113,30 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
   private long filesDeleted;
 
   /**
+   * Do directory operations purge pending uploads?
+   */
+  private final boolean dirOperationsPurgeUploads;
+
+  /**
+   * Count of uploads aborted.
+   */
+  private Optional<Long> uploadsAborted = Optional.empty();
+
+  /**
    * Constructor.
    * @param context store context
    * @param status  pre-fetched source status
    * @param recursive recursive delete?
    * @param callbacks callback provider
    * @param pageSize size of delete pages
+   * @param dirOperationsPurgeUploads Do directory operations purge pending uploads?
    */
   public DeleteOperation(final StoreContext context,
       final S3AFileStatus status,
       final boolean recursive,
       final OperationCallbacks callbacks,
-      final int pageSize) {
+      final int pageSize,
+      final boolean dirOperationsPurgeUploads) {
 
     super(context);
     this.status = status;
@@ -133,10 +148,20 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
     this.pageSize = pageSize;
     executor = MoreExecutors.listeningDecorator(
         context.createThrottledExecutor(1));
+    this.dirOperationsPurgeUploads = dirOperationsPurgeUploads;
   }
 
   public long getFilesDeleted() {
     return filesDeleted;
+  }
+
+  /**
+   * Get the count of uploads aborted.
+   * Non-empty iff enabled, and the operations completed without errors.
+   * @return count of aborted uploads.
+   */
+  public Optional<Long> getUploadsAborted() {
+    return uploadsAborted;
   }
 
   /**
@@ -235,6 +260,17 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
     try (DurationInfo ignored =
              new DurationInfo(LOG, false, "deleting %s", dirKey)) {
 
+      final CompletableFuture<Long> abortUploads;
+      if (dirOperationsPurgeUploads) {
+        final StoreContext sc = getStoreContext();
+        final String key = dirKey;
+        LOG.debug("All uploads under {} will be deleted", key);
+        abortUploads = submit(sc.getExecutor(), sc.getActiveAuditSpan(), () ->
+            callbacks.abortMultipartUploadsUnderPrefix(key));
+      } else {
+        abortUploads = null;
+      }
+
       // init the lists of keys and paths to delete
       resetDeleteList();
       deleteFuture = null;
@@ -256,10 +292,10 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
       LOG.debug("Deleting final batch of listed files");
       submitNextBatch();
       maybeAwaitCompletion(deleteFuture);
-
+      uploadsAborted = waitForCompletionIgnoringExceptions(abortUploads);
     }
-    LOG.debug("Delete \"{}\" completed; deleted {} objects", path,
-        filesDeleted);
+    LOG.debug("Delete \"{}\" completed; deleted {} objects and aborted {} uploads", path,
+        filesDeleted, uploadsAborted.orElse(0L));
   }
 
   /**
@@ -312,7 +348,8 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
       throws IOException {
     // delete a single page of keys and the metadata.
     // block for any previous batch.
-    maybeAwaitCompletion(deleteFuture);
+    maybeAwaitCompletion(deleteFuture).ifPresent(count ->
+        LOG.debug("Deleted {} uploads", count));
 
     // delete the current page of keys and paths
     deleteFuture = submitDelete(keys);
@@ -386,9 +423,9 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
                  "Delete page of %d keys", keyList.size())) {
       if (!keyList.isEmpty()) {
         // first delete the files.
-        List<DeleteObjectsRequest.KeyVersion> files = keyList.stream()
+        List<ObjectIdentifier> files = keyList.stream()
             .filter(e -> !e.isDirMarker)
-            .map(e -> e.keyVersion)
+            .map(e -> e.objectIdentifier)
             .collect(Collectors.toList());
         LOG.debug("Deleting of {} file objects", files.size());
         Invoker.once("Remove S3 Files",
@@ -398,18 +435,20 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
                 false
             ));
         // now the dirs
-        List<DeleteObjectsRequest.KeyVersion> dirs = keyList.stream()
+        List<ObjectIdentifier> dirs = keyList.stream()
             .filter(e -> e.isDirMarker)
-            .map(e -> e.keyVersion)
+            .map(e -> e.objectIdentifier)
             .collect(Collectors.toList());
-        LOG.debug("Deleting of {} directory markers", dirs.size());
-        // This is invoked with deleteFakeDir.
-        Invoker.once("Remove S3 Dir Markers",
-            status.getPath().toString(),
-            () -> callbacks.removeKeys(
-                dirs,
-                true
-            ));
+        if (!dirs.isEmpty()) {
+          LOG.debug("Deleting {} directory markers", dirs.size());
+          // This is invoked with deleteFakeDir.
+          Invoker.once("Remove S3 Dir Markers",
+              status.getPath().toString(),
+              () -> callbacks.removeKeys(
+                  dirs,
+                  true
+              ));
+        }
       }
     }
   }
@@ -422,17 +461,17 @@ public class DeleteOperation extends ExecutingStoreOperation<Boolean> {
    * to choose which statistics to update.
    */
   private static final class DeleteEntry {
-    private final DeleteObjectsRequest.KeyVersion keyVersion;
+    private final ObjectIdentifier objectIdentifier;
 
     private final boolean isDirMarker;
 
     private DeleteEntry(final String key, final boolean isDirMarker) {
-      this.keyVersion = new DeleteObjectsRequest.KeyVersion(key);
+      this.objectIdentifier = ObjectIdentifier.builder().key(key).build();
       this.isDirMarker = isDirMarker;
     }
 
     public String getKey() {
-      return keyVersion.getKey();
+      return objectIdentifier.key();
     }
 
     @Override

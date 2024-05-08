@@ -53,7 +53,7 @@ public class QueueNodeLabelsSettings {
   }
 
   private void initializeAccessibleLabels(CapacitySchedulerConfiguration configuration) {
-    this.accessibleLabels = configuration.getAccessibleNodeLabels(queuePath.getFullPath());
+    this.accessibleLabels = configuration.getAccessibleNodeLabels(queuePath);
     // Inherit labels from parent if not set
     if (this.accessibleLabels == null && parent != null) {
       this.accessibleLabels = parent.getAccessibleNodeLabels();
@@ -62,7 +62,7 @@ public class QueueNodeLabelsSettings {
 
   private void initializeDefaultLabelExpression(CapacitySchedulerConfiguration configuration) {
     this.defaultLabelExpression = configuration.getDefaultNodeLabelExpression(
-        queuePath.getFullPath());
+        queuePath);
     // If the accessible labels is not null and the queue has a parent with a
     // similar set of labels copy the defaultNodeLabelExpression from the parent
     if (this.accessibleLabels != null && parent != null
@@ -83,7 +83,7 @@ public class QueueNodeLabelsSettings {
       }
     } else {
       // Fallback to suboptimal but correct logic
-      this.configuredNodeLabels = configuration.getConfiguredNodeLabels(queuePath.getFullPath());
+      this.configuredNodeLabels = configuration.getConfiguredNodeLabels(queuePath);
     }
   }
 

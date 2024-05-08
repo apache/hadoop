@@ -32,7 +32,6 @@ import org.apache.hadoop.fs.FSDataOutputStreamBuilder;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
-import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.Statistic;
@@ -92,6 +91,13 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
     this.keepMarkers = keepMarkers;
   }
 
+  /**
+   * Constructor with markers kept.
+   */
+  public AbstractS3ACostTest() {
+    this(true);
+  }
+
   @Override
   public Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
@@ -101,7 +107,8 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
 
     removeBaseAndBucketOverrides(bucketName, conf,
         DIRECTORY_MARKER_POLICY,
-        AUTHORITATIVE_PATH);
+        AUTHORITATIVE_PATH,
+        FS_S3A_CREATE_PERFORMANCE);
     // directory marker options
     conf.set(DIRECTORY_MARKER_POLICY,
         keepMarkers
@@ -135,9 +142,7 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
     setupCostValidator();
 
     // determine bulk delete settings
-    final Configuration fsConf = getFileSystem().getConf();
-    isBulkDelete = fsConf.getBoolean(Constants.ENABLE_MULTI_DELETE,
-        true);
+    isBulkDelete = isBulkDeleteEnabled(getFileSystem());
     deleteMarkerStatistic = isBulkDelete()
         ? OBJECT_BULK_DELETE_REQUEST
         : OBJECT_DELETE_REQUEST;
@@ -230,6 +235,21 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
     getFileSystem().create(path, overwrite).close();
     return path;
   }
+
+  /**
+   * Create a file with a specific body, returning its path.
+   * @param path path to file.
+   * @param overwrite overwrite flag
+   * @param body body of file
+   * @return path of new file
+   */
+  protected Path file(Path path, final boolean overwrite, byte[] body)
+      throws IOException {
+    ContractTestUtils.createFile(getFileSystem(), path, overwrite, body);
+    return path;
+  }
+
+
 
   /**
    * Touch a file, overwriting.
@@ -348,6 +368,14 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
   protected OperationCostValidator.ExpectedProbe always(
       OperationCost cost) {
     return expect(true, cost);
+  }
+
+  /**
+   * Always run a metrics operation.
+   * @return a probe.
+   */
+  protected OperationCostValidator.ExpectedProbe always() {
+    return OperationCostValidator.always();
   }
 
   /**

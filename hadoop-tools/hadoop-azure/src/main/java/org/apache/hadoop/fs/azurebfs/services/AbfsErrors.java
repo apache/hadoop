@@ -48,6 +48,6 @@ public final class AbfsErrors {
       + "operation";
   public static final String ERR_NO_LEASE_THREADS = "Lease desired but no lease threads "
       + "configured, set " + FS_AZURE_LEASE_THREADS;
-
+  public static final String ERR_CREATE_ON_ROOT = "Cannot create file over root path";
   private AbfsErrors() {}
 }

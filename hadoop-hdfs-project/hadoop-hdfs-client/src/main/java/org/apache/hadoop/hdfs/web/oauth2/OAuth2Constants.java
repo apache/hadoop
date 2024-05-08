@@ -18,7 +18,6 @@
  */
 package org.apache.hadoop.hdfs.web.oauth2;
 
-import okhttp3.MediaType;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -30,8 +29,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 public final class OAuth2Constants {
   private OAuth2Constants() { /** Private constructor. **/ }
 
-  public static final MediaType URLENCODED
-      = MediaType.parse("application/x-www-form-urlencoded; charset=utf-8");
+  public static final String URLENCODED
+      = "application/x-www-form-urlencoded; charset=utf-8";
 
   /* Constants for OAuth protocol */
   public static final String ACCESS_TOKEN = "access_token";

@@ -21,13 +21,23 @@ package org.apache.hadoop.fs.s3a.audit;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
-import com.amazonaws.services.s3.model.DeleteObjectsRequest;
-import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
-import com.amazonaws.services.s3.model.GetObjectRequest;
+
+import software.amazon.awssdk.awscore.AwsExecutionAttribute;
+import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
+import software.amazon.awssdk.core.interceptor.InterceptorContext;
+import software.amazon.awssdk.http.SdkHttpMethod;
+import software.amazon.awssdk.http.SdkHttpRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
+import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
+
 import org.junit.After;
 import org.junit.Before;
 import org.slf4j.Logger;
@@ -137,22 +147,58 @@ public abstract class AbstractAuditingTest extends AbstractHadoopTestBase {
   /**
    * Create a head request and pass it through the manager's beforeExecution()
    * callback.
+   *
    * @return a processed request.
    */
-  protected GetObjectMetadataRequest head() {
-    return manager.beforeExecution(
-        requestFactory.newGetObjectMetadataRequest("/"));
+  protected SdkHttpRequest head() {
+    HeadObjectRequest.Builder headObjectRequestBuilder =
+        requestFactory.newHeadObjectRequestBuilder("/");
+    manager.requestCreated(headObjectRequestBuilder);
+    HeadObjectRequest headObjectRequest = headObjectRequestBuilder.build();
+    ExecutionAttributes executionAttributes = ExecutionAttributes.builder().build();
+    InterceptorContext context = InterceptorContext.builder()
+        .request(headObjectRequest)
+        .httpRequest(SdkHttpRequest.builder()
+            .uri(URI.create("https://test"))
+            .method(SdkHttpMethod.HEAD)
+            .build())
+        .build();
+    manager.beforeExecution(context, executionAttributes);
+    return manager.modifyHttpRequest(context, executionAttributes);
   }
 
   /**
-   * Create a GetObject request and modify it before passing it through auditor.
-   * @param modifyRequest Consumer Interface for changing the request before passing to the auditor
-   * @return the request
+   * Create a get request and pass it through the manager's beforeExecution()
+   * callback.
+   *
+   * @return a processed request.
    */
-  protected GetObjectRequest get(Consumer<GetObjectRequest> modifyRequest) {
-    GetObjectRequest req = requestFactory.newGetObjectRequest("/");
-    modifyRequest.accept(req);
-    return manager.beforeExecution(req);
+  protected SdkHttpRequest get(String range) {
+    GetObjectRequest.Builder getObjectRequestBuilder =
+        requestFactory.newGetObjectRequestBuilder("/");
+
+    SdkHttpRequest.Builder httpRequestBuilder =
+        SdkHttpRequest.builder().uri(URI.create("https://test")).method(SdkHttpMethod.GET);
+
+    if (!range.isEmpty()) {
+      getObjectRequestBuilder.range(range);
+      List<String> rangeHeader = new ArrayList<>();
+      rangeHeader.add(range);
+      Map<String, List<String>> headers = new HashMap<>();
+      headers.put("Range", rangeHeader);
+      httpRequestBuilder.headers(headers);
+    }
+
+    manager.requestCreated(getObjectRequestBuilder);
+    GetObjectRequest getObjectRequest = getObjectRequestBuilder.build();
+    ExecutionAttributes executionAttributes = ExecutionAttributes.builder().build().putAttribute(
+        AwsExecutionAttribute.OPERATION_NAME, "GetObject");
+    InterceptorContext context = InterceptorContext.builder()
+        .request(getObjectRequest)
+        .httpRequest(httpRequestBuilder.build())
+        .build();
+    manager.beforeExecution(context, executionAttributes);
+    return manager.modifyHttpRequest(context, executionAttributes);
   }
 
   /**
@@ -244,15 +290,31 @@ public abstract class AbstractAuditingTest extends AbstractHadoopTestBase {
    * @param keys keys to be provided in the bulk delete request.
    * @return a processed request.
    */
-  protected DeleteObjectsRequest headForBulkDelete(String... keys) {
+  protected SdkHttpRequest headForBulkDelete(String... keys) {
     if (keys == null || keys.length == 0) {
       return null;
     }
-    List<DeleteObjectsRequest.KeyVersion> keysToDelete = Arrays
+
+    List<ObjectIdentifier> keysToDelete = Arrays
         .stream(keys)
-        .map(DeleteObjectsRequest.KeyVersion::new)
+        .map(key -> ObjectIdentifier.builder().key(key).build())
         .collect(Collectors.toList());
-    return manager.beforeExecution(requestFactory.newBulkDeleteRequest(keysToDelete));
+
+    ExecutionAttributes executionAttributes = ExecutionAttributes.builder().build();
+
+    SdkHttpRequest.Builder httpRequestBuilder =
+        SdkHttpRequest.builder().uri(URI.create("https://test")).method(SdkHttpMethod.POST);
+
+    DeleteObjectsRequest deleteObjectsRequest =
+        requestFactory.newBulkDeleteRequestBuilder(keysToDelete).build();
+
+    InterceptorContext context = InterceptorContext.builder()
+        .request(deleteObjectsRequest)
+        .httpRequest(httpRequestBuilder.build())
+        .build();
+
+    manager.beforeExecution(context, executionAttributes);
+    return manager.modifyHttpRequest(context, executionAttributes);
   }
 
 }

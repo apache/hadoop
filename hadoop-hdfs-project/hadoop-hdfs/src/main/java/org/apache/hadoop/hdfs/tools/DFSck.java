@@ -26,6 +26,7 @@ import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.util.concurrent.TimeUnit;
 
@@ -207,7 +208,7 @@ public class DFSck extends Configured implements Tool {
       }
       InputStream stream = connection.getInputStream();
       BufferedReader input = new BufferedReader(new InputStreamReader(
-          stream, "UTF-8"));
+          stream, StandardCharsets.UTF_8));
       try {
         String line = null;
         while ((line = input.readLine()) != null) {
@@ -376,7 +377,7 @@ public class DFSck extends Configured implements Tool {
     }
     InputStream stream = connection.getInputStream();
     BufferedReader input = new BufferedReader(new InputStreamReader(
-                                              stream, "UTF-8"));
+                                              stream, StandardCharsets.UTF_8));
     String line = null;
     String lastLine = NamenodeFsck.CORRUPT_STATUS;
     int errCode = -1;
@@ -396,6 +397,8 @@ public class DFSck extends Configured implements Tool {
       errCode = 0;
     } else if (lastLine.contains("Incorrect blockId format:")) {
       errCode = 0;
+    } else if (lastLine.endsWith(NamenodeFsck.EXCESS_STATUS)) {
+      errCode = 0;
     } else if (lastLine.endsWith(NamenodeFsck.DECOMMISSIONED_STATUS)) {
       errCode = 2;
     } else if (lastLine.endsWith(NamenodeFsck.DECOMMISSIONING_STATUS)) {
@@ -404,6 +407,8 @@ public class DFSck extends Configured implements Tool {
       errCode = 4;
     } else if (lastLine.endsWith(NamenodeFsck.ENTERING_MAINTENANCE_STATUS)) {
       errCode = 5;
+    } else if (lastLine.endsWith(NamenodeFsck.STALE_STATUS)) {
+      errCode = 6;
     }
     return errCode;
   }

@@ -22,6 +22,7 @@ import com.fasterxml.jackson.databind.ObjectReader;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.apache.hadoop.fs.ContentSummary;
@@ -75,6 +76,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -865,6 +867,49 @@ public class JsonUtilClient {
     String state = getString(m, "state", "DISABLE");
     final ErasureCodingPolicyState ecPolicyState = ErasureCodingPolicyState.valueOf(state);
     return new ErasureCodingPolicyInfo(ecPolicy, ecPolicyState);
+  }
+
+  public static Map<String, String> getErasureCodeCodecs(Map<?, ?> json) {
+    Map<String, String> map = new HashMap<>();
+    Map<?, ?> m = (Map<?, ?>) json.get("ErasureCodingCodecs");
+    m.forEach((key, value) -> {
+      map.put((String) key, (String) value);
+    });
+    return map;
+  }
+
+  public static Collection<FileStatus> getTrashRoots(Map<?, ?> json) {
+    List<?> objs = (List<?>) json.get("Paths");
+    if (objs != null) {
+      FileStatus[] trashRoots = new FileStatus[objs.size()];
+      for (int i = 0; i < objs.size(); i++) {
+        Map<?, ?> m = (Map<?, ?>) objs.get(i);
+        trashRoots[i] = toFileStatus(m);
+      }
+      return Arrays.asList(trashRoots);
+    }
+    return new ArrayList<FileStatus>(0);
+  }
+
+  public static FileStatus toFileStatus(Map<?, ?> json) {
+    Path path = new Path(getString(json, "path", ""));
+    long length = getLong(json, "length", 0);
+    boolean isdir = getBoolean(json, "isdir", false);
+    short replication = (short) getInt(json, "block_replication", -1);
+    long blockSize = getLong(json, "blocksize", 256);
+    long modificationTime = getLong(json, "modification_time", 0);
+    long accessTime = getLong(json, "access_time", 0);
+    String permString = getString(json, "permission", null);
+    FsPermission permission = toFsPermission(permString);
+    String owner = getString(json, "owner", null);
+    String group = getString(json, "group", null);
+    if (json.get("symlink") != null) {
+      Path symlink = new Path((String) json.get("symlink"));
+      return new FileStatus(length, isdir, replication, blockSize, modificationTime,
+          accessTime, permission, owner, group, symlink, path);
+    }
+    return new FileStatus(length, isdir, replication, blockSize, modificationTime,
+        accessTime, permission, owner, group, path);
   }
 
   private static List<SnapshotDiffReport.DiffReportEntry> toDiffList(

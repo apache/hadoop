@@ -44,6 +44,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationSyst
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.SharingPolicy;
 import org.apache.hadoop.yarn.server.resourcemanager.reservation.exceptions.PlanningException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
@@ -74,7 +75,7 @@ public class TestSimpleCapacityReplanner {
     RMContext context = ReservationSystemTestUtil.createMockRMContext();
     ReservationSchedulerConfiguration conf =
         mock(ReservationSchedulerConfiguration.class);
-    when(conf.getEnforcementWindow(any(String.class))).thenReturn(6L);
+    when(conf.getEnforcementWindow(any(QueuePath.class))).thenReturn(6L);
 
     enf.init("blah", conf);
 

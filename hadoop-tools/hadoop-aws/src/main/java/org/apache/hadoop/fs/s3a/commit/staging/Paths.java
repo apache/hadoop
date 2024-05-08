@@ -228,6 +228,19 @@ public final class Paths {
   }
 
   /**
+   * Build a qualified parent path for the temporary multipart upload commit
+   * directory built by {@link #getMultipartUploadCommitsDirectory(Configuration, String)}.
+   * @param conf configuration defining default FS.
+   * @param uuid uuid of job
+   * @return a path which can be used for temporary work
+   * @throws IOException on an IO failure.
+   */
+  public static Path getStagingUploadsParentDirectory(Configuration conf,
+      String uuid) throws IOException {
+    return getMultipartUploadCommitsDirectory(conf, uuid).getParent();
+  }
+
+  /**
    * Build a qualified temporary path for the multipart upload commit
    * information in the cluster filesystem.
    * Path is built by

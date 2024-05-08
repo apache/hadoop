@@ -61,7 +61,7 @@ public class GlobbedCopyListing extends CopyListing {
    * @param pathToListingFile The location at which the copy-listing file
    *                           is to be created.
    * @param context The distcp context with associated input options.
-   * @throws IOException
+   * @throws IOException if unable to construct the fileList
    */
   @Override
   public void doBuildListing(Path pathToListingFile, DistCpContext context)

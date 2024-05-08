@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.setQueueHandler;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -31,6 +32,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -95,6 +97,7 @@ public class TestApplicationLimits {
   private final ResourceCalculator resourceCalculator = new DefaultResourceCalculator();
 
   RMContext rmContext = null;
+  private CapacitySchedulerContext csContext;
 
   
   @Before
@@ -107,12 +110,13 @@ public class TestApplicationLimits {
     rmContext = TestUtils.getMockRMContext();
     Resource clusterResource = Resources.createResource(10 * 16 * GB, 10 * 32);
 
-    CapacitySchedulerContext csContext = createCSContext(csConf, resourceCalculator,
+    csContext = createCSContext(csConf, resourceCalculator,
         Resources.createResource(GB, 1), Resources.createResource(16*GB, 32),
         clusterResource);
     when(csContext.getRMContext()).thenReturn(rmContext);
     CapacitySchedulerQueueContext queueContext = new CapacitySchedulerQueueContext(csContext);
-    
+    setQueueHandler(csContext);
+
     RMContainerTokenSecretManager containerTokenSecretManager =
         new RMContainerTokenSecretManager(conf);
     containerTokenSecretManager.rollMasterKey();
@@ -141,22 +145,33 @@ public class TestApplicationLimits {
     doReturn(100).when(queue).getMaxApplications();
     doReturn(25).when(queue).getMaxApplicationsPerUser();
   }
-  
+
   private static final String A = "a";
   private static final String B = "b";
+  private static final  String C = "c";
+  private static final  String D = "d";
+  private static final  String AA1 = "a1";
+  private static final  String AA2 = "a2";
+  private static final  String AA3 = "a3";
+  private static final QueuePath ROOT_QUEUE_PATH =
+      new QueuePath(CapacitySchedulerConfiguration.ROOT);
+  private static final QueuePath A_QUEUE_PATH = ROOT_QUEUE_PATH.createNewLeaf(A);
+  private static final QueuePath B_QUEUE_PATH = ROOT_QUEUE_PATH.createNewLeaf(B);
+  private static final QueuePath C_QUEUE_PATH = ROOT_QUEUE_PATH.createNewLeaf(C);
+  private static final QueuePath D_QUEUE_PATH = ROOT_QUEUE_PATH.createNewLeaf(D);
+  private static final QueuePath AA1_QUEUE_PATH = A_QUEUE_PATH.createNewLeaf(AA1);
+  private static final QueuePath AA2_QUEUE_PATH = A_QUEUE_PATH.createNewLeaf(AA2);
+  private static final QueuePath AA3_QUEUE_PATH = A_QUEUE_PATH.createNewLeaf(AA3);
   private void setupQueueConfiguration(CapacitySchedulerConfiguration conf) {
     
     // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {A, B});
+    conf.setQueues(ROOT_QUEUE_PATH, new String[] {A, B});
 
-    final String Q_A = CapacitySchedulerConfiguration.ROOT + "." + A;
-    conf.setCapacity(Q_A, 10);
+    conf.setCapacity(A_QUEUE_PATH, 10);
+    conf.setCapacity(B_QUEUE_PATH, 90);
     
-    final String Q_B = CapacitySchedulerConfiguration.ROOT + "." + B;
-    conf.setCapacity(Q_B, 90);
-    
-    conf.setUserLimit(CapacitySchedulerConfiguration.ROOT + "." + A, 50);
-    conf.setUserLimitFactor(CapacitySchedulerConfiguration.ROOT + "." + A, 5.0f);
+    conf.setUserLimit(A_QUEUE_PATH, 50);
+    conf.setUserLimitFactor(A_QUEUE_PATH, 5.0f);
     
     LOG.info("Setup top-level queues a and b");
   }
@@ -194,9 +209,12 @@ public class TestApplicationLimits {
     Resource clusterResource = Resource.newInstance(80 * GB, 40);
     root.updateClusterResource(clusterResource, new ResourceLimits(
         clusterResource));
+    queue = (LeafQueue) root.getChildQueues().stream().filter(
+        child -> child.getQueueName().equals(A))
+        .findFirst().orElseThrow(NoSuchElementException::new);
     queue.updateClusterResource(clusterResource, new ResourceLimits(
         clusterResource));
-    
+
     ActiveUsersManager activeUsersManager = mock(ActiveUsersManager.class);
     when(queue.getAbstractUsersManager()).thenReturn(activeUsersManager);
 
@@ -277,11 +295,11 @@ public class TestApplicationLimits {
     Resource clusterResource = 
       Resources.createResource(100 * 16 * GB, 100 * 16);
 
-    CapacitySchedulerContext csContext = createCSContext(csConf, resourceCalculator,
+    CapacitySchedulerContext context = createCSContext(csConf, resourceCalculator,
         Resources.createResource(GB, 1), Resources.createResource(16*GB, 16),
         clusterResource);
-    CapacitySchedulerQueueManager queueManager = csContext.getCapacitySchedulerQueueManager();
-    CapacitySchedulerQueueContext queueContext = new CapacitySchedulerQueueContext(csContext);
+    CapacitySchedulerQueueManager queueManager = context.getCapacitySchedulerQueueManager();
+    CapacitySchedulerQueueContext queueContext = new CapacitySchedulerQueueContext(context);
 
     CSQueueStore queues = new CSQueueStore();
     CSQueue root = 
@@ -329,7 +347,7 @@ public class TestApplicationLimits {
     // should return -1 if per queue setting not set
     assertEquals(
         (int)CapacitySchedulerConfiguration.UNDEFINED, 
-        csConf.getMaximumApplicationsPerQueue(queue.getQueuePath()));
+        csConf.getMaximumApplicationsPerQueue(queue.getQueuePathObject()));
     int expectedMaxApps =  
         (int)
         (CapacitySchedulerConfiguration.DEFAULT_MAXIMUM_SYSTEM_APPLICATIIONS * 
@@ -344,7 +362,7 @@ public class TestApplicationLimits {
     // should default to global setting if per queue setting not set
     assertEquals(CapacitySchedulerConfiguration.DEFAULT_MAXIMUM_APPLICATIONMASTERS_RESOURCE_PERCENT,
         csConf.getMaximumApplicationMasterResourcePerQueuePercent(
-            queue.getQueuePath()), epsilon);
+            queue.getQueuePathObject()), epsilon);
 
     // Change the per-queue max AM resources percentage.
     csConf.setFloat(PREFIX + queue.getQueuePath()
@@ -364,7 +382,7 @@ public class TestApplicationLimits {
 
     assertEquals(0.5f,
         csConf.getMaximumApplicationMasterResourcePerQueuePercent(
-          queue.getQueuePath()), epsilon);
+          queue.getQueuePathObject()), epsilon);
 
     assertThat(queue.calculateAndGetAMResourceLimit()).isEqualTo(
         Resource.newInstance(800 * GB, 1));
@@ -384,7 +402,8 @@ public class TestApplicationLimits {
         clusterResource));
 
     queue = (LeafQueue)queues.get(A);
-    assertEquals(9999, (int)csConf.getMaximumApplicationsPerQueue(queue.getQueuePath()));
+    assertEquals(9999, (int)csConf.getMaximumApplicationsPerQueue(
+        queue.getQueuePathObject()));
     assertEquals(9999, queue.getMaxApplications());
 
     expectedMaxAppsPerUser = Math.min(9999, (int)(9999 *
@@ -569,16 +588,16 @@ public class TestApplicationLimits {
   public void testHeadroom() throws Exception {
     CapacitySchedulerConfiguration csConf = 
         new CapacitySchedulerConfiguration();
-    csConf.setUserLimit(CapacitySchedulerConfiguration.ROOT + "." + A, 25);
+    csConf.setUserLimit(A_QUEUE_PATH, 25);
     setupQueueConfiguration(csConf);
 
     // Say cluster has 100 nodes of 16G each
     Resource clusterResource = Resources.createResource(100 * 16 * GB);
 
-    CapacitySchedulerContext csContext = createCSContext(csConf, resourceCalculator,
+    CapacitySchedulerContext context = createCSContext(csConf, resourceCalculator,
         Resources.createResource(GB), Resources.createResource(16*GB), clusterResource);
-    CapacitySchedulerQueueManager queueManager = csContext.getCapacitySchedulerQueueManager();
-    CapacitySchedulerQueueContext queueContext = new CapacitySchedulerQueueContext(csContext);
+    CapacitySchedulerQueueManager queueManager = context.getCapacitySchedulerQueueManager();
+    CapacitySchedulerQueueContext queueContext = new CapacitySchedulerQueueContext(context);
 
     CSQueueStore queues = new CSQueueStore();
     CSQueue rootQueue = CapacitySchedulerQueueManager.parseQueue(queueContext,
@@ -588,7 +607,7 @@ public class TestApplicationLimits {
         new ResourceLimits(clusterResource));
 
     ResourceUsage queueCapacities = rootQueue.getQueueResourceUsage();
-    when(csContext.getClusterResourceUsage())
+    when(context.getClusterResourceUsage())
         .thenReturn(queueCapacities);
 
     // Manipulate queue 'a'
@@ -714,53 +733,46 @@ public class TestApplicationLimits {
     CapacitySchedulerConfiguration conf =
         new CapacitySchedulerConfiguration(config);
     // Define top-level
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT,
+    conf.setQueues(ROOT_QUEUE_PATH,
         new String[]{"a", "b", "c", "d"});
-    conf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "x", 100);
-    conf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "y", 100);
-    conf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "z", 100);
+    conf.setCapacityByLabel(ROOT_QUEUE_PATH, "x", 100);
+    conf.setCapacityByLabel(ROOT_QUEUE_PATH, "y", 100);
+    conf.setCapacityByLabel(ROOT_QUEUE_PATH, "z", 100);
 
     conf.setInt(CapacitySchedulerConfiguration.QUEUE_GLOBAL_MAX_APPLICATION,
         20);
     conf.setInt("yarn.scheduler.capacity.root.a.a1.maximum-applications", 1);
     conf.setFloat("yarn.scheduler.capacity.root.d.user-limit-factor", 0.1f);
     conf.setInt("yarn.scheduler.capacity.maximum-applications", 4);
-    final String a = CapacitySchedulerConfiguration.ROOT + ".a";
-    final String b = CapacitySchedulerConfiguration.ROOT + ".b";
-    final String c = CapacitySchedulerConfiguration.ROOT + ".c";
-    final String d = CapacitySchedulerConfiguration.ROOT + ".d";
-    final String aa1 = a + ".a1";
-    final String aa2 = a + ".a2";
-    final String aa3 = a + ".a3";
 
-    conf.setQueues(a, new String[]{"a1", "a2", "a3"});
-    conf.setCapacity(a, 50);
-    conf.setCapacity(b, 50);
-    conf.setCapacity(c, 0);
-    conf.setCapacity(d, 0);
-    conf.setCapacity(aa1, 50);
-    conf.setCapacity(aa2, 50);
-    conf.setCapacity(aa3, 0);
+    conf.setQueues(A_QUEUE_PATH, new String[]{"a1", "a2", "a3"});
+    conf.setCapacity(A_QUEUE_PATH, 50);
+    conf.setCapacity(B_QUEUE_PATH, 50);
+    conf.setCapacity(C_QUEUE_PATH, 0);
+    conf.setCapacity(D_QUEUE_PATH, 0);
+    conf.setCapacity(AA1_QUEUE_PATH, 50);
+    conf.setCapacity(AA2_QUEUE_PATH, 50);
+    conf.setCapacity(AA3_QUEUE_PATH, 0);
 
-    conf.setCapacityByLabel(a, "y", 25);
-    conf.setCapacityByLabel(b, "y", 50);
-    conf.setCapacityByLabel(c, "y", 25);
-    conf.setCapacityByLabel(d, "y", 0);
+    conf.setCapacityByLabel(A_QUEUE_PATH, "y", 25);
+    conf.setCapacityByLabel(B_QUEUE_PATH, "y", 50);
+    conf.setCapacityByLabel(C_QUEUE_PATH, "y", 25);
+    conf.setCapacityByLabel(D_QUEUE_PATH, "y", 0);
 
-    conf.setCapacityByLabel(a, "x", 50);
-    conf.setCapacityByLabel(b, "x", 50);
+    conf.setCapacityByLabel(A_QUEUE_PATH, "x", 50);
+    conf.setCapacityByLabel(B_QUEUE_PATH, "x", 50);
 
-    conf.setCapacityByLabel(a, "z", 50);
-    conf.setCapacityByLabel(b, "z", 50);
+    conf.setCapacityByLabel(A_QUEUE_PATH, "z", 50);
+    conf.setCapacityByLabel(B_QUEUE_PATH, "z", 50);
 
-    conf.setCapacityByLabel(aa1, "x", 100);
-    conf.setCapacityByLabel(aa2, "x", 0);
+    conf.setCapacityByLabel(AA1_QUEUE_PATH, "x", 100);
+    conf.setCapacityByLabel(AA2_QUEUE_PATH, "x", 0);
 
-    conf.setCapacityByLabel(aa1, "y", 25);
-    conf.setCapacityByLabel(aa2, "y", 75);
+    conf.setCapacityByLabel(AA1_QUEUE_PATH, "y", 25);
+    conf.setCapacityByLabel(AA2_QUEUE_PATH, "y", 75);
 
-    conf.setCapacityByLabel(aa2, "z", 75);
-    conf.setCapacityByLabel(aa3, "z", 25);
+    conf.setCapacityByLabel(AA2_QUEUE_PATH, "z", 75);
+    conf.setCapacityByLabel(AA3_QUEUE_PATH, "z", 25);
     return conf;
   }
 
@@ -987,27 +999,28 @@ public class TestApplicationLimits {
       ResourceCalculator rc, Resource minResource, Resource maxResource, Resource clusterResource) {
     YarnConfiguration conf = new YarnConfiguration();
 
-    CapacitySchedulerContext csContext = mock(CapacitySchedulerContext.class);
-    when(csContext.getConfiguration()).thenReturn(csConf);
-    when(csContext.getConf()).thenReturn(conf);
-    when(csContext.getMinimumResourceCapability()).
+    CapacitySchedulerContext context = mock(CapacitySchedulerContext.class);
+    when(context.getConfiguration()).thenReturn(csConf);
+    when(context.getConf()).thenReturn(conf);
+    when(context.getMinimumResourceCapability()).
         thenReturn(minResource);
-    when(csContext.getMaximumResourceCapability()).
+    when(context.getMaximumResourceCapability()).
         thenReturn(maxResource);
-    when(csContext.getResourceCalculator()).
+    when(context.getResourceCalculator()).
         thenReturn(rc);
     CapacitySchedulerQueueManager queueManager = new CapacitySchedulerQueueManager(conf,
         rmContext.getNodeLabelManager(), null);
-    when(csContext.getPreemptionManager()).thenReturn(new PreemptionManager());
-    when(csContext.getCapacitySchedulerQueueManager()).thenReturn(queueManager);
+    when(context.getPreemptionManager()).thenReturn(new PreemptionManager());
+    when(context.getCapacitySchedulerQueueManager()).thenReturn(queueManager);
 
-    when(csContext.getRMContext()).thenReturn(rmContext);
-    when(csContext.getPreemptionManager()).thenReturn(new PreemptionManager());
+    when(context.getRMContext()).thenReturn(rmContext);
+    when(context.getPreemptionManager()).thenReturn(new PreemptionManager());
+    setQueueHandler(context);
 
     // Total cluster resources.
-    when(csContext.getClusterResource()).thenReturn(clusterResource);
+    when(context.getClusterResource()).thenReturn(clusterResource);
 
-    return csContext;
+    return context;
   }
 
 }

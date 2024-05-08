@@ -155,7 +155,7 @@ public class TestAMRMClientRelayer {
     this.conf = new Configuration();
 
     this.mockAMS = new MockApplicationMasterService();
-    this.relayer = new AMRMClientRelayer(this.mockAMS, null, "TEST");
+    this.relayer = new AMRMClientRelayer(this.mockAMS, null, "TEST", conf);
     this.relayer.registerApplicationMaster(
         RegisterApplicationMasterRequest.newInstance("", 0, ""));
 

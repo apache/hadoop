@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.server.nodemanager.webapp;
 
 import java.io.IOException;
 import java.net.URI;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
@@ -77,7 +77,7 @@ public class ContainerShellWebSocket {
         if (!message.equals("1{}")) {
           // Send keystroke to process input
           byte[] payload;
-          payload = message.getBytes(Charset.forName("UTF-8"));
+          payload = message.getBytes(StandardCharsets.UTF_8);
           if (payload != null) {
             pair.out.write(payload);
             pair.out.flush();
@@ -86,7 +86,7 @@ public class ContainerShellWebSocket {
         // Render process output
         int no = pair.in.available();
         pair.in.read(buffer, 0, Math.min(no, buffer.length));
-        String formatted = new String(buffer, Charset.forName("UTF-8"))
+        String formatted = new String(buffer, StandardCharsets.UTF_8)
             .replaceAll("\n", "\r\n");
         session.getRemote().sendString(formatted);
       }
@@ -142,7 +142,7 @@ public class ContainerShellWebSocket {
     try {
       LOG.info(session.getRemoteAddress().getHostString() + " closed!");
       String exit = "exit\r\n";
-      pair.out.write(exit.getBytes(Charset.forName("UTF-8")));
+      pair.out.write(exit.getBytes(StandardCharsets.UTF_8));
       pair.out.flush();
       pair.in.close();
       pair.out.close();

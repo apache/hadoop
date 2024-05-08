@@ -113,7 +113,7 @@ public class ConfBlock extends HtmlBlock {
           __();
     } catch(IOException e) {
       LOG.error("Error while reading "+confPath, e);
-      html.p().__("Sorry got an error while reading conf file. ", confPath);
+      html.p().__("Sorry got an error while reading conf file. ", confPath).__();
     }
   }
 }

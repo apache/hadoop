@@ -63,7 +63,7 @@ public class AboutBlock extends RouterBlock {
    * @param isEnabled true, federation is enabled; false, federation is not enabled.
    */
   private void initYarnRouterBasicInformation(boolean isEnabled) {
-    FederationStateStoreFacade facade = FederationStateStoreFacade.getInstance();
+    FederationStateStoreFacade facade = FederationStateStoreFacade.getInstance(router.getConfig());
     RouterInfo routerInfo = new RouterInfo(router);
     String lastStartTime =
         DateFormatUtils.format(routerInfo.getStartedOn(), DATE_PATTERN);

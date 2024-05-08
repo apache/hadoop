@@ -371,24 +371,24 @@ public class NameNodeRpcServer implements NamenodeProtocols {
           .build();
 
       // Add all the RPC protocols that the namenode implements
-      DFSUtil.addPBProtocol(conf, HAServiceProtocolPB.class, haPbService,
+      DFSUtil.addInternalPBProtocol(conf, HAServiceProtocolPB.class, haPbService,
           serviceRpcServer);
-      DFSUtil.addPBProtocol(conf, ReconfigurationProtocolPB.class,
+      DFSUtil.addInternalPBProtocol(conf, ReconfigurationProtocolPB.class,
           reconfigurationPbService, serviceRpcServer);
-      DFSUtil.addPBProtocol(conf, NamenodeProtocolPB.class, NNPbService,
+      DFSUtil.addInternalPBProtocol(conf, NamenodeProtocolPB.class, NNPbService,
           serviceRpcServer);
-      DFSUtil.addPBProtocol(conf, DatanodeProtocolPB.class, dnProtoPbService,
+      DFSUtil.addInternalPBProtocol(conf, DatanodeProtocolPB.class, dnProtoPbService,
           serviceRpcServer);
-      DFSUtil.addPBProtocol(conf, RefreshAuthorizationPolicyProtocolPB.class,
+      DFSUtil.addInternalPBProtocol(conf, RefreshAuthorizationPolicyProtocolPB.class,
           refreshAuthService, serviceRpcServer);
-      DFSUtil.addPBProtocol(conf, RefreshUserMappingsProtocolPB.class, 
+      DFSUtil.addInternalPBProtocol(conf, RefreshUserMappingsProtocolPB.class,
           refreshUserMappingService, serviceRpcServer);
       // We support Refreshing call queue here in case the client RPC queue is full
-      DFSUtil.addPBProtocol(conf, RefreshCallQueueProtocolPB.class,
+      DFSUtil.addInternalPBProtocol(conf, RefreshCallQueueProtocolPB.class,
           refreshCallQueueService, serviceRpcServer);
-      DFSUtil.addPBProtocol(conf, GenericRefreshProtocolPB.class,
+      DFSUtil.addInternalPBProtocol(conf, GenericRefreshProtocolPB.class,
           genericRefreshService, serviceRpcServer);
-      DFSUtil.addPBProtocol(conf, GetUserMappingsProtocolPB.class, 
+      DFSUtil.addInternalPBProtocol(conf, GetUserMappingsProtocolPB.class,
           getUserMappingService, serviceRpcServer);
 
       // Update the address with the correct port
@@ -431,7 +431,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
           .setSecretManager(namesystem.getDelegationTokenSecretManager())
           .build();
 
-      DFSUtil.addPBProtocol(conf, DatanodeLifelineProtocolPB.class,
+      DFSUtil.addInternalPBProtocol(conf, DatanodeLifelineProtocolPB.class,
           lifelineProtoPbService, lifelineRpcServer);
 
       // Update the address with the correct port
@@ -474,23 +474,23 @@ public class NameNodeRpcServer implements NamenodeProtocols {
         .build();
 
     // Add all the RPC protocols that the namenode implements
-    DFSUtil.addPBProtocol(conf, HAServiceProtocolPB.class, haPbService,
+    DFSUtil.addInternalPBProtocol(conf, HAServiceProtocolPB.class, haPbService,
         clientRpcServer);
-    DFSUtil.addPBProtocol(conf, ReconfigurationProtocolPB.class,
+    DFSUtil.addInternalPBProtocol(conf, ReconfigurationProtocolPB.class,
         reconfigurationPbService, clientRpcServer);
-    DFSUtil.addPBProtocol(conf, NamenodeProtocolPB.class, NNPbService,
+    DFSUtil.addInternalPBProtocol(conf, NamenodeProtocolPB.class, NNPbService,
         clientRpcServer);
-    DFSUtil.addPBProtocol(conf, DatanodeProtocolPB.class, dnProtoPbService,
+    DFSUtil.addInternalPBProtocol(conf, DatanodeProtocolPB.class, dnProtoPbService,
         clientRpcServer);
-    DFSUtil.addPBProtocol(conf, RefreshAuthorizationPolicyProtocolPB.class, 
+    DFSUtil.addInternalPBProtocol(conf, RefreshAuthorizationPolicyProtocolPB.class,
         refreshAuthService, clientRpcServer);
-    DFSUtil.addPBProtocol(conf, RefreshUserMappingsProtocolPB.class, 
+    DFSUtil.addInternalPBProtocol(conf, RefreshUserMappingsProtocolPB.class,
         refreshUserMappingService, clientRpcServer);
-    DFSUtil.addPBProtocol(conf, RefreshCallQueueProtocolPB.class,
+    DFSUtil.addInternalPBProtocol(conf, RefreshCallQueueProtocolPB.class,
         refreshCallQueueService, clientRpcServer);
-    DFSUtil.addPBProtocol(conf, GenericRefreshProtocolPB.class,
+    DFSUtil.addInternalPBProtocol(conf, GenericRefreshProtocolPB.class,
         genericRefreshService, clientRpcServer);
-    DFSUtil.addPBProtocol(conf, GetUserMappingsProtocolPB.class, 
+    DFSUtil.addInternalPBProtocol(conf, GetUserMappingsProtocolPB.class,
         getUserMappingService, clientRpcServer);
 
     // set service-level authorization security policy
@@ -649,7 +649,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   /////////////////////////////////////////////////////
   @Override // NamenodeProtocol
   public BlocksWithLocations getBlocks(DatanodeInfo datanode, long size, long
-      minBlockSize, long timeInterval)
+      minBlockSize, long timeInterval, StorageType storageType)
       throws IOException {
     String operationName = "getBlocks";
     if(size <= 0) {
@@ -663,7 +663,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     checkNNStartup();
     namesystem.checkSuperuserPrivilege(operationName);
     namesystem.checkNameNodeSafeMode("Cannot execute getBlocks");
-    return namesystem.getBlocks(datanode, size, minBlockSize, timeInterval);
+    return namesystem.getBlocks(datanode, size, minBlockSize, timeInterval, storageType);
   }
 
   @Override // NamenodeProtocol
@@ -993,6 +993,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public void reportBadBlocks(LocatedBlock[] blocks) throws IOException {
     checkNNStartup();
     namesystem.reportBadBlocks(blocks);
+    namesystem.logAuditEvent(true, "reportBadBlocks", null);
   }
 
   @Override // ClientProtocol
@@ -1360,6 +1361,14 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     namesystem.checkOperation(OperationCategory.UNCHECKED);
     namesystem.checkSuperuserPrivilege(operationName);
     return namesystem.getFSImage().getMostRecentCheckpointTxId();
+  }
+
+  @Override // NamenodeProtocol
+  public long getMostRecentNameNodeFileTxId(NNStorage.NameNodeFile nnf) throws IOException {
+    checkNNStartup();
+    namesystem.checkOperation(OperationCategory.UNCHECKED);
+    namesystem.checkSuperuserPrivilege();
+    return namesystem.getFSImage().getMostRecentNameNodeFileTxId(nnf);
   }
   
   @Override // NamenodeProtocol
@@ -2676,5 +2685,12 @@ public class NameNodeRpcServer implements NamenodeProtocols {
           + "external SPS service is not allowed to fetch the path Ids");
     }
     return namesystem.getBlockManager().getSPSManager().getNextPathId();
+  }
+
+  @Override // ClientProtocol
+  public Path getEnclosingRoot(String src)
+      throws IOException {
+    checkNNStartup();
+    return namesystem.getEnclosingRoot(src);
   }
 }

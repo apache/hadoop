@@ -1,0 +1,134 @@
+{
+  "capacity": 100.0,
+  "usedCapacity": 0.0,
+  "maxCapacity": 100.0,
+  "queueName": "root",
+  "queues": {
+    "queue": [
+      {
+        "type": "capacitySchedulerLeafQueueInfo",
+        "capacity": 100.0,
+        "usedCapacity": 0.0,
+        "maxCapacity": 100.0,
+        "absoluteCapacity": 100.0,
+        "absoluteMaxCapacity": 100.0,
+        "absoluteUsedCapacity": 0.0,
+        "numApplications": 484,
+        "queueName": "default",
+        "state": "RUNNING",
+        "resourcesUsed": {
+          "memory": 0,
+          "vCores": 0
+        },
+        "hideReservationQueues": false,
+        "nodeLabels": [
+          "*"
+        ],
+        "numActiveApplications": 484,
+        "numPendingApplications": 0,
+        "numContainers": 0,
+        "maxApplications": 10000,
+        "maxApplicationsPerUser": 10000,
+        "userLimit": 100,
+        "users": {
+          "user": [
+            {
+              "username": "Default",
+              "resourcesUsed": {
+                "memory": 0,
+                "vCores": 0
+              },
+              "numPendingApplications": 0,
+              "numActiveApplications": 468,
+              "AMResourceUsed": {
+                "memory": 30191616,
+                "vCores": 468
+              },
+              "userResourceLimit": {
+                "memory": 31490048,
+                "vCores": 7612
+              }
+            }
+          ]
+        },
+        "userLimitFactor": 1.0,
+        "AMResourceLimit": {
+          "memory": 31490048,
+          "vCores": 7612
+        },
+        "usedAMResource": {
+          "memory": 30388224,
+          "vCores": 532
+        },
+        "userAMResourceLimit": {
+          "memory": 31490048,
+          "vCores": 7612
+        },
+        "preemptionDisabled": true
+      }
+    ]
+  },
+  "health": {
+    "lastrun": 1517951638085,
+    "operationsInfo": {
+      "entry": {
+        "key": "last-allocation",
+        "value": {
+          "nodeId": "node0:0",
+          "containerId": "container_e61477_1517922128312_0340_01_000001",
+          "queue": "root.default"
+        }
+      },
+      "entry": {
+        "key": "last-reservation",
+        "value": {
+          "nodeId": "node0:1",
+          "containerId": "container_e61477_1517879828320_0249_01_000001",
+          "queue": "root.default"
+        }
+      },
+      "entry": {
+        "key": "last-release",
+        "value": {
+          "nodeId": "node0:2",
+          "containerId": "container_e61477_1517922128312_0340_01_000001",
+          "queue": "root.default"
+        }
+      },
+      "entry": {
+        "key": "last-preemption",
+        "value": {
+          "nodeId": "N/A",
+          "containerId": "N/A",
+          "queue": "N/A"
+        }
+      }
+    },
+    "lastRunDetails": [
+      {
+        "operation": "releases",
+        "count": 0,
+        "resources": {
+          "memory": 0,
+          "vCores": 0
+        }
+      },
+      {
+        "operation": "allocations",
+        "count": 0,
+        "resources": {
+          "memory": 0,
+          "vCores": 0
+        }
+      },
+      {
+        "operation": "reservations",
+        "count": 0,
+        "resources": {
+          "memory": 0,
+          "vCores": 0
+        }
+      }
+    ]
+  }
+}

@@ -49,5 +49,7 @@ public class TestRBFConfigFields extends TestConfigurationFieldsBase {
     xmlPrefixToSkipCompare = new HashSet<String>();
     xmlPrefixToSkipCompare.add(
         RBFConfigKeys.DFS_ROUTER_FAIR_HANDLER_COUNT_KEY_PREFIX);
+    xmlPrefixToSkipCompare.add(
+        RBFConfigKeys.DFS_ROUTER_FAIR_HANDLER_PROPORTION_KEY_PREFIX);
   }
 }

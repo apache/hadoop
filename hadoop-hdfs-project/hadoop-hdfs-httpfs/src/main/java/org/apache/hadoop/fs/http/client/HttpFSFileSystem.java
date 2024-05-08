@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs.http.client;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -24,7 +25,6 @@ import java.util.EnumSet;
 import java.util.List;
 
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.MapType;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -148,6 +148,7 @@ public class HttpFSFileSystem extends FileSystem
   public static final String EC_POLICY_NAME_PARAM = "ecpolicy";
   public static final String OFFSET_PARAM = "offset";
   public static final String LENGTH_PARAM = "length";
+  public static final String ALLUSERS_PARAM = "allusers";
 
   public static final Short DEFAULT_PERMISSION = 0755;
   public static final String ACLSPEC_DEFAULT = "";
@@ -286,6 +287,8 @@ public class HttpFSFileSystem extends FileSystem
     GETFILELINKSTATUS(HTTP_GET),
     GETSTATUS(HTTP_GET),
     GETECPOLICIES(HTTP_GET),
+    GETECCODECS(HTTP_GET),
+    GETTRASHROOTS(HTTP_GET),
     GET_BLOCK_LOCATIONS(HTTP_GET);
 
     private String httpMethod;
@@ -793,7 +796,7 @@ public class HttpFSFileSystem extends FileSystem
     Map<String, String> params = new HashMap<String, String>();
     params.put(OP_PARAM, Operation.LISTSTATUS_BATCH.toString());
     if (token != null) {
-      params.put(START_AFTER_PARAM, new String(token, Charsets.UTF_8));
+      params.put(START_AFTER_PARAM, new String(token, StandardCharsets.UTF_8));
     }
     HttpURLConnection conn = getConnection(
         Operation.LISTSTATUS_BATCH.getMethod(),
@@ -808,7 +811,7 @@ public class HttpFSFileSystem extends FileSystem
     byte[] newToken = null;
     if (statuses.length > 0) {
       newToken = statuses[statuses.length - 1].getPath().getName().toString()
-          .getBytes(Charsets.UTF_8);
+          .getBytes(StandardCharsets.UTF_8);
     }
     // Parse the remainingEntries boolean into hasMore
     final long remainingEntries = (Long) listing.get(REMAINING_ENTRIES_JSON);
@@ -1784,6 +1787,33 @@ public class HttpFSFileSystem extends FileSystem
     HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
     JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
     return JsonUtilClient.getAllErasureCodingPolicies(json);
+  }
+
+  public Map<String, String> getAllErasureCodingCodecs() throws IOException {
+    Map<String, String> params = new HashMap<>();
+    params.put(OP_PARAM, Operation.GETECCODECS.toString());
+    Path path = new Path(getUri().toString(), "/");
+    HttpURLConnection conn =
+        getConnection(Operation.GETECCODECS.getMethod(), params, path, false);
+    HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+    JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
+    return JsonUtilClient.getErasureCodeCodecs(json);
+  }
+
+  public Collection<FileStatus> getTrashRoots(boolean allUsers) {
+    Map<String, String> params = new HashMap<String, String>();
+    params.put(OP_PARAM, Operation.GETTRASHROOTS.toString());
+    params.put(ALLUSERS_PARAM, Boolean.toString(allUsers));
+    Path path = new Path(getUri().toString(), "/");
+    try {
+      HttpURLConnection conn = getConnection(Operation.GETTRASHROOTS.getMethod(),
+          params, path, true);
+      HttpExceptionUtils.validateResponse(conn, HttpURLConnection.HTTP_OK);
+      JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
+      return JsonUtilClient.getTrashRoots(json);
+    } catch (IOException e) {
+      return super.getTrashRoots(allUsers);
+    }
   }
 
   @VisibleForTesting

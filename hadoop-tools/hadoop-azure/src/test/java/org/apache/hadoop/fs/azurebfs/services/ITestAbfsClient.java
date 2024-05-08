@@ -48,9 +48,11 @@ import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APPEND_ACTION;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EXPECT_100_JDK_ERROR;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PATCH;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PUT;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HUNDRED_CONTINUE;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.*;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.EXPECT;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_HTTP_METHOD_OVERRIDE;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_ACTION;
@@ -58,6 +60,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARA
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ABFS_ACCOUNT_NAME;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -75,7 +78,6 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SEMICOLO
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SINGLE_WHITE_SPACE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLUSTER_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLUSTER_TYPE;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_VALUE_UNKNOWN;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_CONFIGURATION_FILE_NAME;
 
 /**
@@ -86,6 +88,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 
   private static final String ACCOUNT_NAME = "bogusAccountName.dfs.core.windows.net";
   private static final String FS_AZURE_USER_AGENT_PREFIX = "Partner Service";
+  private static final String HUNDRED_CONTINUE_USER_AGENT = SINGLE_WHITE_SPACE + HUNDRED_CONTINUE + SEMICOLON;
   private static final String TEST_PATH = "/testfile";
   public static final int REDUCED_RETRY_COUNT = 2;
   public static final int REDUCED_BACKOFF_INTERVAL = 100;
@@ -133,7 +136,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
       boolean includeSSLProvider) throws IOException {
     AbfsClientContext abfsClientContext = new AbfsClientContextBuilder().build();
     AbfsClient client = new AbfsClient(new URL("https://azure.com"), null,
-        config, (AccessTokenProvider) null, abfsClientContext);
+        config, (AccessTokenProvider) null, null, abfsClientContext);
     String sslProviderName = null;
     if (includeSSLProvider) {
       sslProviderName = DelegatingSSLSocketFactory.getDefaultFactory()
@@ -143,15 +146,15 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
   }
 
   @Test
-  public void verifybBasicInfo() throws Exception {
+  public void verifyBasicInfo() throws Exception {
     final Configuration configuration = new Configuration();
     configuration.addResource(TEST_CONFIGURATION_FILE_NAME);
     AbfsConfiguration abfsConfiguration = new AbfsConfiguration(configuration,
         ACCOUNT_NAME);
-    verifybBasicInfo(getUserAgentString(abfsConfiguration, false));
+    verifyBasicInfo(getUserAgentString(abfsConfiguration, false));
   }
 
-  private void verifybBasicInfo(String userAgentStr) {
+  private void verifyBasicInfo(String userAgentStr) {
     Assertions.assertThat(userAgentStr)
         .describedAs("User-Agent string [" + userAgentStr
             + "] should be of the pattern: " + this.userAgentStringPattern.pattern())
@@ -180,7 +183,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
         ACCOUNT_NAME);
     String userAgentStr = getUserAgentString(abfsConfiguration, false);
 
-    verifybBasicInfo(userAgentStr);
+    verifyBasicInfo(userAgentStr);
     Assertions.assertThat(userAgentStr)
       .describedAs("User-Agent string should contain " + FS_AZURE_USER_AGENT_PREFIX)
       .contains(FS_AZURE_USER_AGENT_PREFIX);
@@ -190,10 +193,45 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
         ACCOUNT_NAME);
     userAgentStr = getUserAgentString(abfsConfiguration, false);
 
-    verifybBasicInfo(userAgentStr);
+    verifyBasicInfo(userAgentStr);
     Assertions.assertThat(userAgentStr)
       .describedAs("User-Agent string should not contain " + FS_AZURE_USER_AGENT_PREFIX)
       .doesNotContain(FS_AZURE_USER_AGENT_PREFIX);
+  }
+
+  /**
+   * This method represents a unit test for verifying the behavior of the User-Agent header
+   * with respect to the "Expect: 100-continue" header setting in the Azure Blob File System (ABFS) configuration.
+   *
+   * The test ensures that the User-Agent string includes or excludes specific information based on whether the
+   * "Expect: 100-continue" header is enabled or disabled in the configuration.
+   *
+   */
+  @Test
+  public void verifyUserAgentExpectHeader()
+          throws IOException, IllegalAccessException {
+    final Configuration configuration = new Configuration();
+    configuration.addResource(TEST_CONFIGURATION_FILE_NAME);
+    configuration.set(ConfigurationKeys.FS_AZURE_USER_AGENT_PREFIX_KEY, FS_AZURE_USER_AGENT_PREFIX);
+    configuration.setBoolean(ConfigurationKeys.FS_AZURE_ACCOUNT_IS_EXPECT_HEADER_ENABLED, true);
+    AbfsConfiguration abfsConfiguration = new AbfsConfiguration(configuration,
+            ACCOUNT_NAME);
+    String userAgentStr = getUserAgentString(abfsConfiguration, false);
+
+    verifyBasicInfo(userAgentStr);
+    Assertions.assertThat(userAgentStr)
+            .describedAs("User-Agent string should contain " + HUNDRED_CONTINUE_USER_AGENT)
+            .contains(HUNDRED_CONTINUE_USER_AGENT);
+
+    configuration.setBoolean(ConfigurationKeys.FS_AZURE_ACCOUNT_IS_EXPECT_HEADER_ENABLED, false);
+    abfsConfiguration = new AbfsConfiguration(configuration,
+            ACCOUNT_NAME);
+    userAgentStr = getUserAgentString(abfsConfiguration, false);
+
+    verifyBasicInfo(userAgentStr);
+    Assertions.assertThat(userAgentStr)
+            .describedAs("User-Agent string should not contain " + HUNDRED_CONTINUE_USER_AGENT)
+            .doesNotContain(HUNDRED_CONTINUE_USER_AGENT);
   }
 
   @Test
@@ -206,14 +244,14 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
         ACCOUNT_NAME);
     String userAgentStr = getUserAgentString(abfsConfiguration, true);
 
-    verifybBasicInfo(userAgentStr);
+    verifyBasicInfo(userAgentStr);
     Assertions.assertThat(userAgentStr)
       .describedAs("User-Agent string should contain sslProvider")
       .contains(DelegatingSSLSocketFactory.getDefaultFactory().getProviderName());
 
     userAgentStr = getUserAgentString(abfsConfiguration, false);
 
-    verifybBasicInfo(userAgentStr);
+    verifyBasicInfo(userAgentStr);
     Assertions.assertThat(userAgentStr)
       .describedAs("User-Agent string should not contain sslProvider")
       .doesNotContain(DelegatingSSLSocketFactory.getDefaultFactory().getProviderName());
@@ -229,7 +267,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
         ACCOUNT_NAME);
     String userAgentStr = getUserAgentString(abfsConfiguration, false);
 
-    verifybBasicInfo(userAgentStr);
+    verifyBasicInfo(userAgentStr);
     Assertions.assertThat(userAgentStr)
       .describedAs("User-Agent string should contain cluster name")
       .contains(clusterName);
@@ -239,7 +277,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
         ACCOUNT_NAME);
     userAgentStr = getUserAgentString(abfsConfiguration, false);
 
-    verifybBasicInfo(userAgentStr);
+    verifyBasicInfo(userAgentStr);
     Assertions.assertThat(userAgentStr)
       .describedAs("User-Agent string should not contain cluster name")
       .doesNotContain(clusterName)
@@ -257,7 +295,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
         ACCOUNT_NAME);
     String userAgentStr = getUserAgentString(abfsConfiguration, false);
 
-    verifybBasicInfo(userAgentStr);
+    verifyBasicInfo(userAgentStr);
     Assertions.assertThat(userAgentStr)
       .describedAs("User-Agent string should contain cluster type")
       .contains(clusterType);
@@ -267,7 +305,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
         ACCOUNT_NAME);
     userAgentStr = getUserAgentString(abfsConfiguration, false);
 
-    verifybBasicInfo(userAgentStr);
+    verifyBasicInfo(userAgentStr);
     Assertions.assertThat(userAgentStr)
       .describedAs("User-Agent string should not contain cluster type")
       .doesNotContain(clusterType)
@@ -304,6 +342,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
         (currentAuthType == AuthType.OAuth
             ? abfsConfig.getTokenProvider()
             : null),
+            null,
         abfsClientContext);
 
     return testClient;
@@ -326,7 +365,9 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 
     when(client.getAbfsPerfTracker()).thenReturn(tracker);
     when(client.getAuthType()).thenReturn(currentAuthType);
-    when(client.getRetryPolicy()).thenReturn(
+    when(client.getExponentialRetryPolicy()).thenReturn(
+        new ExponentialRetryPolicy(1));
+    when(client.getRetryPolicy(any())).thenReturn(
         new ExponentialRetryPolicy(1));
 
     when(client.createDefaultUriQueryBuilder()).thenCallRealMethod();
@@ -347,6 +388,10 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     client = ITestAbfsClient.setAbfsClientField(client, "baseUrl",
         baseAbfsClientInstance.getBaseUrl());
 
+    // override xMsVersion
+    client = ITestAbfsClient.setAbfsClientField(client, "xMsVersion",
+        baseAbfsClientInstance.getxMsVersion());
+
     // override auth provider
     if (currentAuthType == AuthType.SharedKey) {
       client = ITestAbfsClient.setAbfsClientField(client, "sharedKeyCredentials",
@@ -360,7 +405,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     }
 
     // override user agent
-    String userAgent = "APN/1.0 Azure Blob FS/3.4.0-SNAPSHOT (PrivateBuild "
+    String userAgent = "APN/1.0 Azure Blob FS/3.5.0-SNAPSHOT (PrivateBuild "
         + "JavaJRE 1.8.0_252; Linux 5.3.0-59-generic/amd64; openssl-1.0; "
         + "UNKNOWN/UNKNOWN) MSFT";
     client = ITestAbfsClient.setAbfsClientField(client, "userAgent", userAgent);
@@ -368,7 +413,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     return client;
   }
 
-  private static AbfsClient setAbfsClientField(
+  static AbfsClient setAbfsClientField(
       final AbfsClient client,
       final String fieldName,
       Object fieldObject) throws Exception {
@@ -517,7 +562,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
         appendRequestParameters.getLength(), null));
 
     AbfsHttpOperation abfsHttpOperation = Mockito.spy(new AbfsHttpOperation(url,
-        HTTP_METHOD_PUT, requestHeaders));
+        HTTP_METHOD_PUT, requestHeaders, DEFAULT_HTTP_CONNECTION_TIMEOUT, DEFAULT_HTTP_READ_TIMEOUT));
 
     // Sets the expect request property if expect header is enabled.
     if (appendRequestParameters.isExpectHeaderEnabled()) {
@@ -544,7 +589,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
         .getConnResponseMessage();
 
     // Make the getOutputStream throw IOException to see it returns from the sendRequest correctly.
-    Mockito.doThrow(new ProtocolException("Server rejected Operation"))
+    Mockito.doThrow(new ProtocolException(EXPECT_100_JDK_ERROR))
         .when(abfsHttpOperation)
         .getConnOutputStream();
 
@@ -556,7 +601,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     // Mock the restOperation for the client.
     Mockito.doReturn(op)
         .when(testClient)
-        .getAbfsRestOperationForAppend(Mockito.any(),
+        .getAbfsRestOperation(eq(AbfsRestOperationType.Append),
             Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any(),
             Mockito.nullable(int.class), Mockito.nullable(int.class),
             Mockito.any());
@@ -571,7 +616,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
             .isTrue();
 
     intercept(AzureBlobFileSystemException.class,
-        () -> testClient.append(finalTestPath, buffer, appendRequestParameters, null, tracingContext));
+        () -> testClient.append(finalTestPath, buffer, appendRequestParameters, null, null, tracingContext));
 
     // Verify that the request was not exponentially retried because of user error.
     Assertions.assertThat(tracingContext.getRetryCount())

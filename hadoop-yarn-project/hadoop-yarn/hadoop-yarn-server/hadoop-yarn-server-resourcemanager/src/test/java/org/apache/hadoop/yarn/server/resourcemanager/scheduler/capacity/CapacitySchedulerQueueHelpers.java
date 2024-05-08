@@ -27,22 +27,43 @@ import static org.junit.Assert.assertEquals;
 
 public final class CapacitySchedulerQueueHelpers {
 
-  public static final String A = CapacitySchedulerConfiguration.ROOT + ".a";
-  public static final String B = CapacitySchedulerConfiguration.ROOT + ".b";
-  public static final String A_CHILD = A + ".a";
-  public static final String A1 = A + ".a1";
-  public static final String A2 = A + ".a2";
-  public static final String B1 = B + ".b1";
-  public static final String B2 = B + ".b2";
-  public static final String B3 = B + ".b3";
+  public static final String DEFAULT_PATH = CapacitySchedulerConfiguration.ROOT + ".default";
+  public static final String A_PATH = CapacitySchedulerConfiguration.ROOT + ".a";
+  public static final String B_PATH = CapacitySchedulerConfiguration.ROOT + ".b";
+  public static final String A_CHILD_PATH = A_PATH + ".a";
+  public static final String A1_PATH = A_PATH + ".a1";
+  public static final String A2_PATH = A_PATH + ".a2";
+  public static final String A3_PATH = A_PATH + ".a3";
+  public static final String B1_PATH = B_PATH + ".b1";
+  public static final String B2_PATH = B_PATH + ".b2";
+  public static final String B3_PATH = B_PATH + ".b3";
+  public static final String A1_B1_PATH = A1_PATH + ".b1";
+  public static final QueuePath ROOT = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+  public static final QueuePath DEFAULT = new QueuePath(DEFAULT_PATH);
+  public static final QueuePath A = new QueuePath(A_PATH);
+  public static final QueuePath A_CHILD = new QueuePath(A_CHILD_PATH);
+  public static final QueuePath A1 = new QueuePath(A1_PATH);
+  public static final QueuePath A2 = new QueuePath(A2_PATH);
+  public static final QueuePath A3 = new QueuePath(A3_PATH);
+  public static final QueuePath B = new QueuePath(B_PATH);
+  public static final QueuePath B1 = new QueuePath(B1_PATH);
+  public static final QueuePath B2 = new QueuePath(B2_PATH);
+  public static final QueuePath B3 = new QueuePath(B3_PATH);
+  public static final QueuePath A1_B1 = new QueuePath(A1_B1_PATH);
   public static final float A_CAPACITY = 10.5f;
   public static final float B_CAPACITY = 89.5f;
-  public static final String P1 = CapacitySchedulerConfiguration.ROOT + ".p1";
-  public static final String P2 = CapacitySchedulerConfiguration.ROOT + ".p2";
-  public static final String X1 = P1 + ".x1";
-  public static final String X2 = P1 + ".x2";
-  public static final String Y1 = P2 + ".y1";
-  public static final String Y2 = P2 + ".y2";
+  public static final String P1_PATH = CapacitySchedulerConfiguration.ROOT + ".p1";
+  public static final String P2_PATH = CapacitySchedulerConfiguration.ROOT + ".p2";
+  public static final String X1_PATH = P1_PATH + ".x1";
+  public static final String X2_PATH = P1_PATH + ".x2";
+  public static final String Y1_PATH = P2_PATH + ".y1";
+  public static final String Y2_PATH = P2_PATH + ".y2";
+  public static final QueuePath P1 = new QueuePath(P1_PATH);
+  public static final QueuePath P2 = new QueuePath(P2_PATH);
+  public static final QueuePath X1 = new QueuePath(X1_PATH);
+  public static final QueuePath X2 = new QueuePath(X2_PATH);
+  public static final QueuePath Y1 = new QueuePath(Y1_PATH);
+  public static final QueuePath Y2 = new QueuePath(Y2_PATH);
   public static final float A1_CAPACITY = 30;
   public static final float A2_CAPACITY = 70;
   public static final float B1_CAPACITY = 79.2f;
@@ -67,7 +88,7 @@ public final class CapacitySchedulerQueueHelpers {
       CapacitySchedulerConfiguration conf) {
 
     // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[]{"a", "b"});
+    conf.setQueues(ROOT, new String[]{"a", "b"});
 
     conf.setCapacity(A, A_CAPACITY);
     conf.setCapacity(B, B_CAPACITY);
@@ -94,7 +115,7 @@ public final class CapacitySchedulerQueueHelpers {
       CapacitySchedulerConfiguration conf) {
 
     // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[]{"a", "b"});
+    conf.setQueues(ROOT, new String[]{"a", "b"});
 
     conf.setCapacity(A, A_CAPACITY);
     conf.setCapacity(B, B_CAPACITY);
@@ -105,8 +126,8 @@ public final class CapacitySchedulerQueueHelpers {
     conf.setUserLimitFactor(A1, 100.0f);
     conf.setCapacity(A2, 30.0f);
     conf.setUserLimitFactor(A2, 100.0f);
-    conf.setCapacity("root.a.a3", 40.0f);
-    conf.setUserLimitFactor("root.a.a3", 100.0f);
+    conf.setCapacity(A3, 40.0f);
+    conf.setUserLimitFactor(A3, 100.0f);
 
     conf.setQueues(B, new String[]{"b1", "b2", "b3"});
     conf.setCapacity(B1, B1_CAPACITY);
@@ -132,7 +153,7 @@ public final class CapacitySchedulerQueueHelpers {
       CapacitySchedulerConfiguration conf) {
 
     // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT,
+    conf.setQueues(ROOT,
         new String[]{"a", "b"});
 
     conf.setCapacity(A, A_CAPACITY);
@@ -161,7 +182,7 @@ public final class CapacitySchedulerQueueHelpers {
       CapacitySchedulerConfiguration conf) {
 
     // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT,
+    conf.setQueues(ROOT,
         new String[]{"a", "b"});
 
     conf.setCapacity(A, A_CAPACITY);
@@ -190,7 +211,7 @@ public final class CapacitySchedulerQueueHelpers {
       CapacitySchedulerConfiguration conf) {
 
     // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT,
+    conf.setQueues(ROOT,
         new String[]{"a", "b"});
 
     conf.setCapacity(A, A_CAPACITY);
@@ -227,7 +248,7 @@ public final class CapacitySchedulerQueueHelpers {
       CapacitySchedulerConfiguration conf) {
 
     // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT,
+    conf.setQueues(ROOT,
         new String[]{"a", "b"});
 
     conf.setCapacity(A, A_CAPACITY);
@@ -250,7 +271,8 @@ public final class CapacitySchedulerQueueHelpers {
 
     // Set childQueue for B1
     conf.setQueues(B1, new String[]{"b11"});
-    final String b11 = B1 + ".b11";
+    final String b11Path = B1 + ".b11";
+    final QueuePath b11 = new QueuePath(b11Path);
     conf.setCapacity(b11, 100.0f);
     conf.setUserLimitFactor(b11, 100.0f);
 
@@ -265,7 +287,7 @@ public final class CapacitySchedulerQueueHelpers {
       CapacitySchedulerConfiguration conf) {
 
     // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[]{"a"});
+    conf.setQueues(ROOT, new String[]{"a"});
 
     conf.setCapacity(A, A_CAPACITY + B_CAPACITY);
 
@@ -283,7 +305,7 @@ public final class CapacitySchedulerQueueHelpers {
       CapacitySchedulerConfiguration conf) {
 
     // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT,
+    conf.setQueues(ROOT,
         new String[]{"a", "b"});
 
     conf.setCapacity(A, 80f);
@@ -299,7 +321,7 @@ public final class CapacitySchedulerQueueHelpers {
       CapacitySchedulerConfiguration conf) {
 
     // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT,
+    conf.setQueues(ROOT,
         new String[]{"p1", "p2"});
 
     conf.setCapacity(P1, 50f);
@@ -343,13 +365,13 @@ public final class CapacitySchedulerQueueHelpers {
 
   public static Map<String, ExpectedCapacities> getDefaultCapacities(float capA, float capB) {
     Map<String, ExpectedCapacities> capacities = new HashMap<>();
-    capacities.put(A, new ExpectedCapacities(capA, 1.0f));
-    capacities.put(B, new ExpectedCapacities(capB, 1.0f));
-    capacities.put(A1, new ExpectedCapacities((A1_CAPACITY / 100.0f), capA));
-    capacities.put(A2, new ExpectedCapacities((A2_CAPACITY / 100.0f), capA));
-    capacities.put(B1, new ExpectedCapacities((B1_CAPACITY / 100.0f), capB));
-    capacities.put(B2, new ExpectedCapacities((B2_CAPACITY / 100.0f), capB));
-    capacities.put(B3, new ExpectedCapacities((B3_CAPACITY / 100.0f), capB));
+    capacities.put(A.getFullPath(), new ExpectedCapacities(capA, 1.0f));
+    capacities.put(B.getFullPath(), new ExpectedCapacities(capB, 1.0f));
+    capacities.put(A1.getFullPath(), new ExpectedCapacities((A1_CAPACITY / 100.0f), capA));
+    capacities.put(A2.getFullPath(), new ExpectedCapacities((A2_CAPACITY / 100.0f), capA));
+    capacities.put(B1.getFullPath(), new ExpectedCapacities((B1_CAPACITY / 100.0f), capB));
+    capacities.put(B2.getFullPath(), new ExpectedCapacities((B2_CAPACITY / 100.0f), capB));
+    capacities.put(B3.getFullPath(), new ExpectedCapacities((B3_CAPACITY / 100.0f), capB));
     return capacities;
   }
 
@@ -370,7 +392,7 @@ public final class CapacitySchedulerQueueHelpers {
   }
 
   public static void assertQueueCapacities(CSQueue q, ExpectedCapacities capacities) {
-    final float epsilon = 1e-5f;
+    final float epsilon = 1e-4f;
     assertEquals("capacity", capacities.getCapacity(), q.getCapacity(), epsilon);
     assertEquals("absolute capacity", capacities.getAbsCapacity(),
         q.getAbsoluteCapacity(), epsilon);

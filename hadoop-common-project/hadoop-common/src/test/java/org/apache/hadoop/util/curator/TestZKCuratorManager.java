@@ -22,13 +22,20 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 import javax.security.auth.login.AppConfigurationEntry;
+
+import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.CuratorFrameworkFactory;
+import org.apache.curator.retry.RetryNTimes;
 import org.apache.curator.test.TestingServer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.authentication.util.JaasConfiguration;
 import org.apache.hadoop.util.ZKUtil;
 import org.apache.zookeeper.CreateMode;
@@ -111,7 +118,7 @@ public class TestZKCuratorManager {
     curator.create(node1);
     assertNull(curator.getStringData(node1));
 
-    byte[] setData = "setData".getBytes("UTF-8");
+    byte[] setData = "setData".getBytes(StandardCharsets.UTF_8);
     curator.setData(node1, setData, -1);
     assertEquals("setData", curator.getStringData(node1));
 
@@ -130,7 +137,7 @@ public class TestZKCuratorManager {
     String fencingNodePath = "/fencing";
     String node1 = "/node1";
     String node2 = "/node2";
-    byte[] testData = "testData".getBytes("UTF-8");
+    byte[] testData = "testData".getBytes(StandardCharsets.UTF_8);
     assertFalse(curator.exists(fencingNodePath));
     assertFalse(curator.exists(node1));
     assertFalse(curator.exists(node2));
@@ -148,7 +155,7 @@ public class TestZKCuratorManager {
     assertTrue(Arrays.equals(testData, curator.getData(node1)));
     assertTrue(Arrays.equals(testData, curator.getData(node2)));
 
-    byte[] setData = "setData".getBytes("UTF-8");
+    byte[] setData = "setData".getBytes(StandardCharsets.UTF_8);
     txn = curator.createTransaction(zkAcl, fencingNodePath);
     txn.setData(node1, setData, -1);
     txn.delete(node2);
@@ -191,6 +198,36 @@ public class TestZKCuratorManager {
       // Remove global configuration
       System.clearProperty(ZKClientConfig.LOGIN_CONTEXT_NAME_KEY);
     }
+  }
+
+  @Test
+  public void testCuratorFrameworkFactory() throws Exception{
+    // By not explicitly calling the NewZooKeeper method validate that the Curator override works.
+    ZKClientConfig zkClientConfig = new ZKClientConfig();
+    Configuration conf = new Configuration();
+    conf.set(CommonConfigurationKeys.ZK_ADDRESS, this.server.getConnectString());
+    int numRetries = conf.getInt(CommonConfigurationKeys.ZK_NUM_RETRIES,
+        CommonConfigurationKeys.ZK_NUM_RETRIES_DEFAULT);
+    int zkSessionTimeout = conf.getInt(CommonConfigurationKeys.ZK_TIMEOUT_MS,
+        CommonConfigurationKeys.ZK_TIMEOUT_MS_DEFAULT);
+    int zkRetryInterval = conf.getInt(
+        CommonConfigurationKeys.ZK_RETRY_INTERVAL_MS,
+        CommonConfigurationKeys.ZK_RETRY_INTERVAL_MS_DEFAULT);
+    RetryNTimes retryPolicy = new RetryNTimes(numRetries, zkRetryInterval);
+
+    CuratorFramework client = CuratorFrameworkFactory.builder()
+        .connectString(conf.get(CommonConfigurationKeys.ZK_ADDRESS))
+        .zkClientConfig(zkClientConfig)
+        .sessionTimeoutMs(zkSessionTimeout).retryPolicy(retryPolicy)
+        .authorization(new ArrayList<>())
+        .zookeeperFactory(new ZKCuratorManager.HadoopZookeeperFactory(
+            "foo1", "bar1", "bar1.keytab", false,
+            new SecurityUtil.TruststoreKeystore(conf))
+
+        ).build();
+    client.start();
+    validateJaasConfiguration(ZKCuratorManager.HadoopZookeeperFactory.JAAS_CLIENT_ENTRY,
+        "bar1", "bar1.keytab", client.getZookeeperClient().getZooKeeper());
   }
 
   private void validateJaasConfiguration(String clientConfig, String principal, String keytab,

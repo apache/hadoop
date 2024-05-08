@@ -36,7 +36,6 @@ import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.Context;
-import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
@@ -48,6 +47,7 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.thirdparty.com.google.common.net.HttpHeaders;
 import org.apache.hadoop.util.Sets;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationDeleteRequest;
@@ -166,8 +166,10 @@ import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesTest.DEDICATED_QUEUE_PATH;
+import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesTest.DEFAULT_QUEUE_PATH;
+import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesTest.ROOT_QUEUE_PATH;
 import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesTest.QUEUE_DEFAULT;
-import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesTest.QUEUE_DEFAULT_FULL;
 import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesTest.QUEUE_DEDICATED;
 import static org.apache.hadoop.yarn.server.router.webapp.BaseRouterWebServicesTest.QUEUE_DEDICATED_FULL;
 import static org.mockito.Mockito.mock;
@@ -211,7 +213,7 @@ public class MockDefaultRequestInterceptorREST
     validateRunning();
 
     ApplicationId applicationId =
-        ApplicationId.newInstance(Integer.valueOf(getSubClusterId().getId()),
+        ApplicationId.newInstance(Integer.parseInt(getSubClusterId().getId()),
             applicationCounter.incrementAndGet());
     NewApplication appId =
         new NewApplication(applicationId.toString(), new ResourceInfo());
@@ -275,7 +277,7 @@ public class MockDefaultRequestInterceptorREST
     AppInfo appInfo = new AppInfo();
 
     appInfo.setAppId(
-        ApplicationId.newInstance(Integer.valueOf(getSubClusterId().getId()),
+        ApplicationId.newInstance(Integer.parseInt(getSubClusterId().getId()),
             applicationCounter.incrementAndGet()).toString());
     appInfo.setAMHostHttpAddress("http://i_am_the_AM:1234");
 
@@ -316,7 +318,7 @@ public class MockDefaultRequestInterceptorREST
     if (nodeId.contains(subClusterId) || nodeId.contains("test")) {
       node = new NodeInfo();
       node.setId(nodeId);
-      node.setLastHealthUpdate(Integer.valueOf(getSubClusterId().getId()));
+      node.setLastHealthUpdate(Integer.parseInt(getSubClusterId().getId()));
     }
     return node;
   }
@@ -328,7 +330,7 @@ public class MockDefaultRequestInterceptorREST
     }
     NodeInfo node = new NodeInfo();
     node.setId("Node " + Integer.valueOf(getSubClusterId().getId()));
-    node.setLastHealthUpdate(Integer.valueOf(getSubClusterId().getId()));
+    node.setLastHealthUpdate(Integer.parseInt(getSubClusterId().getId()));
     NodesInfo nodes = new NodesInfo();
     nodes.add(node);
     return nodes;
@@ -350,12 +352,12 @@ public class MockDefaultRequestInterceptorREST
       throw new RuntimeException("RM is stopped");
     }
     ClusterMetricsInfo metrics = new ClusterMetricsInfo();
-    metrics.setAppsSubmitted(Integer.valueOf(getSubClusterId().getId()));
-    metrics.setAppsCompleted(Integer.valueOf(getSubClusterId().getId()));
-    metrics.setAppsPending(Integer.valueOf(getSubClusterId().getId()));
-    metrics.setAppsRunning(Integer.valueOf(getSubClusterId().getId()));
-    metrics.setAppsFailed(Integer.valueOf(getSubClusterId().getId()));
-    metrics.setAppsKilled(Integer.valueOf(getSubClusterId().getId()));
+    metrics.setAppsSubmitted(Integer.parseInt(getSubClusterId().getId()));
+    metrics.setAppsCompleted(Integer.parseInt(getSubClusterId().getId()));
+    metrics.setAppsPending(Integer.parseInt(getSubClusterId().getId()));
+    metrics.setAppsRunning(Integer.parseInt(getSubClusterId().getId()));
+    metrics.setAppsFailed(Integer.parseInt(getSubClusterId().getId()));
+    metrics.setAppsKilled(Integer.parseInt(getSubClusterId().getId()));
 
     return metrics;
   }
@@ -1105,12 +1107,12 @@ public class MockDefaultRequestInterceptorREST
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
 
     // Define default queue
-    conf.setCapacity(QUEUE_DEFAULT_FULL, 20);
+    conf.setCapacity(DEFAULT_QUEUE_PATH, 20);
     // Define dedicated queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT,
+    conf.setQueues(ROOT_QUEUE_PATH,
         new String[] {QUEUE_DEFAULT,  QUEUE_DEDICATED});
-    conf.setCapacity(QUEUE_DEDICATED_FULL, 80);
-    conf.setReservable(QUEUE_DEDICATED_FULL, true);
+    conf.setCapacity(DEDICATED_QUEUE_PATH, 80);
+    conf.setReservable(DEDICATED_QUEUE_PATH, true);
 
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class, ResourceScheduler.class);
     conf.setBoolean(YarnConfiguration.RM_RESERVATION_SYSTEM_ENABLE, true);

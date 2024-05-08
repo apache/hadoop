@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs;
 
+import org.junit.rules.TemporaryFolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -86,6 +87,9 @@ public class TestDFSStripedInputStream {
   @Rule
   public Timeout globalTimeout = new Timeout(300000);
 
+  @Rule
+  public TemporaryFolder baseDir = new TemporaryFolder();
+
   public ErasureCodingPolicy getEcPolicy() {
     return StripedFileTestUtil.getDefaultECPolicy();
   }
@@ -110,14 +114,12 @@ public class TestDFSStripedInputStream {
           CodecUtil.IO_ERASURECODE_CODEC_RS_RAWCODERS_KEY,
           NativeRSRawErasureCoderFactory.CODER_NAME);
     }
-    conf.set(MiniDFSCluster.HDFS_MINIDFS_BASEDIR,
-        GenericTestUtils.getRandomizedTempPath());
     SimulatedFSDataset.setFactory(conf);
     startUp();
   }
 
   private void startUp() throws IOException {
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(
+    cluster = new MiniDFSCluster.Builder(conf, baseDir.getRoot()).numDataNodes(
         dataBlocks + parityBlocks).build();
     cluster.waitActive();
     for (DataNode dn : cluster.getDataNodes()) {

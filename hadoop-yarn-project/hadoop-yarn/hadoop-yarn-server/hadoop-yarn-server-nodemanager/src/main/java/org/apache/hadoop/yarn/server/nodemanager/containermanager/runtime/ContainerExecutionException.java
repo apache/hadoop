@@ -88,4 +88,8 @@ public class ContainerExecutionException extends YarnException {
     return errorOutput;
   }
 
+  public static int getDefaultExitCode() {
+    return EXIT_CODE_UNSET;
+  }
+
 }

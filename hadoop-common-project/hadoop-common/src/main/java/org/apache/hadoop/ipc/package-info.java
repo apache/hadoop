@@ -18,8 +18,12 @@
 
 /**
  * Tools to help define network clients and servers.
+ * Other ASF projects use this package, often with their own shaded/unshaded
+ * versions of protobuf messages.
+ * Changes to the API signatures will break things, especially changes to
+ * {@link org.apache.hadoop.ipc.RPC} and {@link org.apache.hadoop.ipc.RpcEngine}.
  */
-@InterfaceAudience.LimitedPrivate({"HBase", "HDFS", "MapReduce"})
+@InterfaceAudience.LimitedPrivate({"HBase", "HDFS", "MapReduce", "YARN", "Hive", "Ozone"})
 @InterfaceStability.Evolving
 package org.apache.hadoop.ipc;
 import org.apache.hadoop.classification.InterfaceAudience;

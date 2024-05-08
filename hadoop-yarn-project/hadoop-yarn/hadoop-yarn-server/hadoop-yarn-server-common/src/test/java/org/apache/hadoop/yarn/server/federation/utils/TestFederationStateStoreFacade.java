@@ -57,7 +57,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
-import javax.cache.Cache;
+import org.ehcache.Cache;
 
 /**
  * Unit tests for FederationStateStoreFacade.
@@ -80,8 +80,8 @@ public class TestFederationStateStoreFacade {
   private Configuration conf;
   private FederationStateStore stateStore;
   private FederationStateStoreTestUtil stateStoreTestUtil;
-  private FederationStateStoreFacade facade =
-      FederationStateStoreFacade.getInstance();
+  private FederationStateStoreFacade facade;
+
   private Boolean isCachingEnabled;
 
   public TestFederationStateStoreFacade(Boolean isCachingEnabled) {
@@ -90,6 +90,7 @@ public class TestFederationStateStoreFacade {
       conf.setInt(YarnConfiguration.FEDERATION_CACHE_TIME_TO_LIVE_SECS, 0);
     }
     this.isCachingEnabled = isCachingEnabled;
+    facade = FederationStateStoreFacade.getInstance(conf);
   }
 
   @Before
@@ -244,7 +245,7 @@ public class TestFederationStateStoreFacade {
       assert fedCache instanceof FederationJCache;
       FederationJCache jCache = (FederationJCache) fedCache;
       String cacheKey = jCache.getAppHomeSubClusterCacheKey(appId);
-      Cache<String, CacheRequest<String, ?>> cache = jCache.getCache();
+      Cache<String, CacheRequest> cache = jCache.getCache();
       CacheRequest<String, ?> cacheRequest = cache.get(cacheKey);
       ApplicationHomeSubClusterCacheResponse response =
           ApplicationHomeSubClusterCacheResponse.class.cast(cacheRequest.getValue());

@@ -110,4 +110,19 @@ public class TestQueueCapacityVector {
     QueueCapacityVector emptyCapacityVector = new QueueCapacityVector();
     Assert.assertEquals("[]", emptyCapacityVector.toString());
   }
+
+  @Test
+  public void testIsMixedType() {
+    // Starting from ABSOLUTE mode
+    QueueCapacityVector capacityVector = QueueCapacityVector.newInstance();
+    Assert.assertFalse(capacityVector.isMixedCapacityVector());
+
+    capacityVector.setResource(VCORES_URI, 6, ResourceUnitCapacityType.PERCENTAGE);
+    capacityVector.setResource(MEMORY_URI, 10, ResourceUnitCapacityType.PERCENTAGE);
+    capacityVector.setResource(CUSTOM_RESOURCE, 3, ResourceUnitCapacityType.PERCENTAGE);
+    Assert.assertFalse(capacityVector.isMixedCapacityVector());
+
+    capacityVector.setResource(VCORES_URI, 6, ResourceUnitCapacityType.WEIGHT);
+    Assert.assertTrue(capacityVector.isMixedCapacityVector());
+  }
 }

@@ -72,8 +72,7 @@ public class AMRMProxyTokenSecretManager extends
 
   private NMStateStoreService nmStateStore;
 
-  private final Set<ApplicationAttemptId> appAttemptSet =
-      new HashSet<ApplicationAttemptId>();
+  private final Set<ApplicationAttemptId> appAttemptSet = new HashSet<>();
 
   /**
    * Create an {@link AMRMProxyTokenSecretManager}.
@@ -226,8 +225,7 @@ public class AMRMProxyTokenSecretManager extends
               .getMasterKey().getKeyId());
       byte[] password = this.createPassword(identifier);
       appAttemptSet.add(appAttemptId);
-      return new Token<AMRMTokenIdentifier>(identifier.getBytes(),
-          password, identifier.getKind(), new Text());
+      return new Token<>(identifier.getBytes(), password, identifier.getKind(), new Text());
     } finally {
       this.writeLock.unlock();
     }

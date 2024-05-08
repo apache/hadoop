@@ -291,9 +291,8 @@ class BPOfferService {
   void reportBadBlocks(ExtendedBlock block,
                        String storageUuid, StorageType storageType) {
     checkBlock(block);
+    ReportBadBlockAction rbbAction = new ReportBadBlockAction(block, storageUuid, storageType);
     for (BPServiceActor actor : bpServices) {
-      ReportBadBlockAction rbbAction = new ReportBadBlockAction
-          (block, storageUuid, storageType);
       actor.bpThreadEnqueue(rbbAction);
     }
   }
@@ -428,8 +427,10 @@ class BPOfferService {
       dn.bpRegistrationSucceeded(bpRegistration, getBlockPoolId());
       // Add the initial block token secret keys to the DN's secret manager.
       if (dn.isBlockTokenEnabled) {
+        boolean updateCurrentKey = bpServiceActor.state == null
+            || bpServiceActor.state == HAServiceState.ACTIVE;
         dn.blockPoolTokenSecretManager.addKeys(getBlockPoolId(),
-            reg.getExportedKeys());
+            reg.getExportedKeys(), updateCurrentKey);
       }
     } finally {
       writeUnlock();
@@ -778,11 +779,11 @@ class BPOfferService {
           ((BlockRecoveryCommand)cmd).getRecoveringBlocks());
       break;
     case DatanodeProtocol.DNA_ACCESSKEYUPDATE:
-      LOG.info("DatanodeCommand action: DNA_ACCESSKEYUPDATE");
+      LOG.info("DatanodeCommand action from active NN {}: DNA_ACCESSKEYUPDATE", nnSocketAddress);
       if (dn.isBlockTokenEnabled) {
         dn.blockPoolTokenSecretManager.addKeys(
             getBlockPoolId(), 
-            ((KeyUpdateCommand) cmd).getExportedKeys());
+            ((KeyUpdateCommand) cmd).getExportedKeys(), true);
       }
       break;
     case DatanodeProtocol.DNA_BALANCERBANDWIDTHUPDATE:
@@ -823,7 +824,7 @@ class BPOfferService {
       if (dn.isBlockTokenEnabled) {
         dn.blockPoolTokenSecretManager.addKeys(
             getBlockPoolId(), 
-            ((KeyUpdateCommand) cmd).getExportedKeys());
+            ((KeyUpdateCommand) cmd).getExportedKeys(), false);
       }
       break;
     case DatanodeProtocol.DNA_TRANSFER:

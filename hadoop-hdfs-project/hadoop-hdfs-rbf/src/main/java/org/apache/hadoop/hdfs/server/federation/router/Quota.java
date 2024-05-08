@@ -75,7 +75,7 @@ public class Quota {
    * @param storagespaceQuota Storage space quota.
    * @param type StorageType that the space quota is intended to be set on.
    * @param checkMountEntry whether to check the path is a mount entry.
-   * @throws AccessControlException If the quota system is disabled or if
+   * @throws IOException If the quota system is disabled or if
    * checkMountEntry is true and the path is a mount entry.
    */
   public void setQuota(String path, long namespaceQuota, long storagespaceQuota,
@@ -347,7 +347,7 @@ public class Quota {
    * @return true if bitwise AND by all storage type returns true, false otherwise.
    */
   public static boolean andByStorageType(Predicate<StorageType> predicate) {
-    boolean res = false;
+    boolean res = true;
     for (StorageType type : StorageType.values()) {
       res &= predicate.test(type);
     }

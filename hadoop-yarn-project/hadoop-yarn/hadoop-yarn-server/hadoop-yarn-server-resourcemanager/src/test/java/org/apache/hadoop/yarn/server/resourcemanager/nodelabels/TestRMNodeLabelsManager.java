@@ -50,6 +50,7 @@ import org.apache.hadoop.yarn.nodelabels.RMNodeLabel;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeLabelsUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEventType;
@@ -667,13 +668,14 @@ public class TestRMNodeLabelsManager extends NodeLabelTestBase {
     CapacitySchedulerConfiguration conf =
         new CapacitySchedulerConfiguration(config);
     // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] { "a" });
-    conf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "x", 100);
+    final QueuePath root = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+    conf.setQueues(root, new String[] {"a"});
+    conf.setCapacityByLabel(root, "x", 100);
 
-    final String A = CapacitySchedulerConfiguration.ROOT + ".a";
-    conf.setCapacity(A, 100);
-    conf.setAccessibleNodeLabels(A, ImmutableSet.of("x"));
-    conf.setCapacityByLabel(A, "x", 100);
+    final QueuePath a = root.createNewLeaf("a");
+    conf.setCapacity(a, 100);
+    conf.setAccessibleNodeLabels(a, ImmutableSet.of("x"));
+    conf.setCapacityByLabel(a, "x", 100);
     return conf;
   }
 

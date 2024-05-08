@@ -22,6 +22,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.Stack;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -41,7 +42,6 @@ import org.xml.sax.XMLReader;
 import org.xml.sax.helpers.DefaultHandler;
 import org.xml.sax.helpers.XMLReaderFactory;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 
 /**
  * OfflineEditsXmlLoader walks an EditsVisitor over an OEV XML file
@@ -75,7 +75,7 @@ class OfflineEditsXmlLoader
         File inputFile, OfflineEditsViewer.Flags flags) throws FileNotFoundException {
     this.visitor = visitor;
     this.fileReader =
-        new InputStreamReader(new FileInputStream(inputFile), Charsets.UTF_8);
+        new InputStreamReader(new FileInputStream(inputFile), StandardCharsets.UTF_8);
     this.fixTxIds = flags.getFixTxIds();
   }
 

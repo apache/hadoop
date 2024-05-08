@@ -5,6 +5,17 @@
     <maxCapacity>100.0</maxCapacity>
     <weight>-1.0</weight>
     <normalizedWeight>0.0</normalizedWeight>
+    <queueCapacityVectorInfo>
+      <configuredCapacityVector>[memory-mb=100.0%,vcores=100.0%]</configuredCapacityVector>
+      <capacityVectorEntries>
+        <resourceName>memory-mb</resourceName>
+        <resourceValue>100.0%</resourceValue>
+      </capacityVectorEntries>
+      <capacityVectorEntries>
+        <resourceName>vcores</resourceName>
+        <resourceValue>100.0%</resourceValue>
+      </capacityVectorEntries>
+    </queueCapacityVectorInfo>
     <queueName>root</queueName>
     <queuePath>root</queuePath>
     <maxParallelApps>2147483647</maxParallelApps>
@@ -12,10 +23,10 @@
     <queues>
       <queue xsi:type="capacitySchedulerLeafQueueInfo">
         <queuePath>root.a</queuePath>
-        <capacity>20.0</capacity>
+        <capacity>12.5</capacity>
         <usedCapacity>0.0</usedCapacity>
         <maxCapacity>50.0</maxCapacity>
-        <absoluteCapacity>20.0</absoluteCapacity>
+        <absoluteCapacity>12.5</absoluteCapacity>
         <absoluteMaxCapacity>50.0</absoluteMaxCapacity>
         <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
         <weight>-1.0</weight>
@@ -50,17 +61,28 @@
           </resourceInformations>
         </resourcesUsed>
         <hideReservationQueues>false</hideReservationQueues>
-        <nodeLabels>*</nodeLabels>
+        <nodeLabels>root-a-default-label</nodeLabels>
         <allocatedContainers>0</allocatedContainers>
         <reservedContainers>0</reservedContainers>
         <pendingContainers>0</pendingContainers>
         <capacities>
           <queueCapacitiesByPartition>
             <partitionName/>
-            <capacity>20.0</capacity>
+            <queueCapacityVectorInfo>
+              <configuredCapacityVector>[memory-mb=12.5%,vcores=12.5%]</configuredCapacityVector>
+              <capacityVectorEntries>
+                <resourceName>memory-mb</resourceName>
+                <resourceValue>12.5%</resourceValue>
+              </capacityVectorEntries>
+              <capacityVectorEntries>
+                <resourceName>vcores</resourceName>
+                <resourceValue>12.5%</resourceValue>
+              </capacityVectorEntries>
+            </queueCapacityVectorInfo>
+            <capacity>12.5</capacity>
             <usedCapacity>0.0</usedCapacity>
             <maxCapacity>50.0</maxCapacity>
-            <absoluteCapacity>20.0</absoluteCapacity>
+            <absoluteCapacity>12.5</absoluteCapacity>
             <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
             <absoluteMaxCapacity>50.0</absoluteMaxCapacity>
             <maxAMLimitPercentage>10.0</maxAMLimitPercentage>
@@ -115,8 +137,8 @@
               </resourceInformations>
             </configuredMaxResource>
             <effectiveMinResource>
-              <memory>0</memory>
-              <vCores>0</vCores>
+              <memory>4096</memory>
+              <vCores>4</vCores>
               <resourceInformations>
                 <resourceInformation>
                   <attributes/>
@@ -125,12 +147,123 @@
                   <name>memory-mb</name>
                   <resourceType>COUNTABLE</resourceType>
                   <units>Mi</units>
-                  <value>0</value>
+                  <value>4096</value>
                 </resourceInformation>
                 <resourceInformation>
                   <attributes/>
                   <maximumAllocation>9223372036854775807</maximumAllocation>
                   <minimumAllocation>0</minimumAllocation>
+                  <name>vcores</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units/>
+                  <value>4</value>
+                </resourceInformation>
+              </resourceInformations>
+            </effectiveMinResource>
+            <effectiveMaxResource>
+              <memory>16384</memory>
+              <vCores>16</vCores>
+              <resourceInformations>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>memory-mb</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units>Mi</units>
+                  <value>16384</value>
+                </resourceInformation>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>vcores</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units/>
+                  <value>16</value>
+                </resourceInformation>
+              </resourceInformations>
+            </effectiveMaxResource>
+          </queueCapacitiesByPartition>
+          <queueCapacitiesByPartition>
+            <partitionName>root-a-default-label</partitionName>
+            <queueCapacityVectorInfo>
+              <configuredCapacityVector>[]</configuredCapacityVector>
+            </queueCapacityVectorInfo>
+            <capacity>0.0</capacity>
+            <usedCapacity>0.0</usedCapacity>
+            <maxCapacity>100.0</maxCapacity>
+            <absoluteCapacity>0.0</absoluteCapacity>
+            <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
+            <absoluteMaxCapacity>0.0</absoluteMaxCapacity>
+            <maxAMLimitPercentage>0.0</maxAMLimitPercentage>
+            <weight>-1.0</weight>
+            <normalizedWeight>0.0</normalizedWeight>
+            <configuredMinResource>
+              <memory>0</memory>
+              <vCores>0</vCores>
+              <resourceInformations>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>8192</maximumAllocation>
+                  <minimumAllocation>1024</minimumAllocation>
+                  <name>memory-mb</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units>Mi</units>
+                  <value>0</value>
+                </resourceInformation>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>4</maximumAllocation>
+                  <minimumAllocation>1</minimumAllocation>
+                  <name>vcores</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units/>
+                  <value>0</value>
+                </resourceInformation>
+              </resourceInformations>
+            </configuredMinResource>
+            <configuredMaxResource>
+              <memory>0</memory>
+              <vCores>0</vCores>
+              <resourceInformations>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>8192</maximumAllocation>
+                  <minimumAllocation>1024</minimumAllocation>
+                  <name>memory-mb</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units>Mi</units>
+                  <value>0</value>
+                </resourceInformation>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>4</maximumAllocation>
+                  <minimumAllocation>1</minimumAllocation>
+                  <name>vcores</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units/>
+                  <value>0</value>
+                </resourceInformation>
+              </resourceInformations>
+            </configuredMaxResource>
+            <effectiveMinResource>
+              <memory>0</memory>
+              <vCores>0</vCores>
+              <resourceInformations>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>8192</maximumAllocation>
+                  <minimumAllocation>1024</minimumAllocation>
+                  <name>memory-mb</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units>Mi</units>
+                  <value>0</value>
+                </resourceInformation>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>4</maximumAllocation>
+                  <minimumAllocation>1</minimumAllocation>
                   <name>vcores</name>
                   <resourceType>COUNTABLE</resourceType>
                   <units/>
@@ -144,6 +277,35 @@
               <resourceInformations>
                 <resourceInformation>
                   <attributes/>
+                  <maximumAllocation>8192</maximumAllocation>
+                  <minimumAllocation>1024</minimumAllocation>
+                  <name>memory-mb</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units>Mi</units>
+                  <value>0</value>
+                </resourceInformation>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>4</maximumAllocation>
+                  <minimumAllocation>1</minimumAllocation>
+                  <name>vcores</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units/>
+                  <value>0</value>
+                </resourceInformation>
+              </resourceInformations>
+            </effectiveMaxResource>
+          </queueCapacitiesByPartition>
+        </capacities>
+        <resources>
+          <resourceUsagesByPartition>
+            <partitionName/>
+            <used>
+              <memory>0</memory>
+              <vCores>0</vCores>
+              <resourceInformations>
+                <resourceInformation>
+                  <attributes/>
                   <maximumAllocation>9223372036854775807</maximumAllocation>
                   <minimumAllocation>0</minimumAllocation>
                   <name>memory-mb</name>
@@ -161,12 +323,130 @@
                   <value>0</value>
                 </resourceInformation>
               </resourceInformations>
-            </effectiveMaxResource>
-          </queueCapacitiesByPartition>
-        </capacities>
-        <resources>
+            </used>
+            <reserved>
+              <memory>0</memory>
+              <vCores>0</vCores>
+              <resourceInformations>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>memory-mb</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units>Mi</units>
+                  <value>0</value>
+                </resourceInformation>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>vcores</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units/>
+                  <value>0</value>
+                </resourceInformation>
+              </resourceInformations>
+            </reserved>
+            <pending>
+              <memory>0</memory>
+              <vCores>0</vCores>
+              <resourceInformations>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>memory-mb</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units>Mi</units>
+                  <value>0</value>
+                </resourceInformation>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>vcores</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units/>
+                  <value>0</value>
+                </resourceInformation>
+              </resourceInformations>
+            </pending>
+            <amUsed>
+              <memory>0</memory>
+              <vCores>0</vCores>
+              <resourceInformations>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>memory-mb</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units>Mi</units>
+                  <value>0</value>
+                </resourceInformation>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>vcores</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units/>
+                  <value>0</value>
+                </resourceInformation>
+              </resourceInformations>
+            </amUsed>
+            <amLimit>
+              <memory>2048</memory>
+              <vCores>1</vCores>
+              <resourceInformations>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>memory-mb</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units>Mi</units>
+                  <value>2048</value>
+                </resourceInformation>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>vcores</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units/>
+                  <value>1</value>
+                </resourceInformation>
+              </resourceInformations>
+            </amLimit>
+            <userAmLimit>
+              <memory>0</memory>
+              <vCores>0</vCores>
+              <resourceInformations>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>memory-mb</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units>Mi</units>
+                  <value>0</value>
+                </resourceInformation>
+                <resourceInformation>
+                  <attributes/>
+                  <maximumAllocation>9223372036854775807</maximumAllocation>
+                  <minimumAllocation>0</minimumAllocation>
+                  <name>vcores</name>
+                  <resourceType>COUNTABLE</resourceType>
+                  <units/>
+                  <value>0</value>
+                </resourceInformation>
+              </resourceInformations>
+            </userAmLimit>
+          </resourceUsagesByPartition>
           <resourceUsagesByPartition>
-            <partitionName/>
+            <partitionName>root-a-default-label</partitionName>
             <used>
               <memory>0</memory>
               <vCores>0</vCores>
@@ -314,8 +594,8 @@
           </resourceUsagesByPartition>
         </resources>
         <minEffectiveCapacity>
-          <memory>0</memory>
-          <vCores>0</vCores>
+          <memory>4096</memory>
+          <vCores>4</vCores>
           <resourceInformations>
             <resourceInformation>
               <attributes/>
@@ -324,7 +604,7 @@
               <name>memory-mb</name>
               <resourceType>COUNTABLE</resourceType>
               <units>Mi</units>
-              <value>0</value>
+              <value>4096</value>
             </resourceInformation>
             <resourceInformation>
               <attributes/>
@@ -333,13 +613,13 @@
               <name>vcores</name>
               <resourceType>COUNTABLE</resourceType>
               <units/>
-              <value>0</value>
+              <value>4</value>
             </resourceInformation>
           </resourceInformations>
         </minEffectiveCapacity>
         <maxEffectiveCapacity>
-          <memory>0</memory>
-          <vCores>0</vCores>
+          <memory>16384</memory>
+          <vCores>16</vCores>
           <resourceInformations>
             <resourceInformation>
               <attributes/>
@@ -348,7 +628,7 @@
               <name>memory-mb</name>
               <resourceType>COUNTABLE</resourceType>
               <units>Mi</units>
-              <value>0</value>
+              <value>16384</value>
             </resourceInformation>
             <resourceInformation>
               <attributes/>
@@ -357,7 +637,7 @@
               <name>vcores</name>
               <resourceType>COUNTABLE</resourceType>
               <units/>
-              <value>0</value>
+              <value>16</value>
             </resourceInformation>
           </resourceInformations>
         </maxEffectiveCapacity>
@@ -413,15 +693,15 @@
         <numActiveApplications>0</numActiveApplications>
         <numPendingApplications>0</numPendingApplications>
         <numContainers>0</numContainers>
-        <maxApplications>2000</maxApplications>
-        <maxApplicationsPerUser>2000</maxApplicationsPerUser>
+        <maxApplications>1250</maxApplications>
+        <maxApplicationsPerUser>1250</maxApplicationsPerUser>
         <userLimit>100.0</userLimit>
         <users/>
         <userLimitFactor>1.0</userLimitFactor>
         <configuredMaxAMResourceLimit>0.1</configuredMaxAMResourceLimit>
         <AMResourceLimit>
-          <memory>0</memory>
-          <vCores>0</vCores>
+          <memory>2048</memory>
+          <vCores>1</vCores>
           <resourceInformations>
             <resourceInformation>
               <attributes/>
@@ -430,7 +710,7 @@
               <name>memory-mb</name>
               <resourceType>COUNTABLE</resourceType>
               <units>Mi</units>
-              <value>0</value>
+              <value>2048</value>
             </resourceInformation>
             <resourceInformation>
               <attributes/>
@@ -439,7 +719,7 @@
               <name>vcores</name>
               <resourceType>COUNTABLE</resourceType>
               <units/>
-              <value>0</value>
+              <value>1</value>
             </resourceInformation>
           </resourceInformations>
         </AMResourceLimit>
@@ -468,8 +748,8 @@
           </resourceInformations>
         </usedAMResource>
         <userAMResourceLimit>
-          <memory>0</memory>
-          <vCores>0</vCores>
+          <memory>2048</memory>
+          <vCores>1</vCores>
           <resourceInformations>
             <resourceInformation>
               <attributes/>
@@ -478,7 +758,7 @@
               <name>memory-mb</name>
               <resourceType>COUNTABLE</resourceType>
               <units>Mi</units>
-              <value>0</value>
+              <value>2048</value>
             </resourceInformation>
             <resourceInformation>
               <attributes/>
@@ -487,7 +767,7 @@
               <name>vcores</name>
               <resourceType>COUNTABLE</resourceType>
               <units/>
-              <value>0</value>
+              <value>1</value>
             </resourceInformation>
           </resourceInformations>
         </userAMResourceLimit>
@@ -500,10 +780,10 @@
       </queue>
       <queue xsi:type="capacitySchedulerLeafQueueInfo">
         <queuePath>root.b</queuePath>
-        <capacity>70.0</capacity>
+        <capacity>50.0</capacity>
         <usedCapacity>0.0</usedCapacity>
         <maxCapacity>100.0</maxCapacity>
-        <absoluteCapacity>70.0</absoluteCapacity>
+        <absoluteCapacity>50.0</absoluteCapacity>
         <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
         <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
         <weight>-1.0</weight>
@@ -545,10 +825,21 @@
         <capacities>
           <queueCapacitiesByPartition>
             <partitionName/>
-            <capacity>70.0</capacity>
+            <queueCapacityVectorInfo>
+              <configuredCapacityVector>[memory-mb=50.0%,vcores=50.0%]</configuredCapacityVector>
+              <capacityVectorEntries>
+                <resourceName>memory-mb</resourceName>
+                <resourceValue>50.0%</resourceValue>
+              </capacityVectorEntries>
+              <capacityVectorEntries>
+                <resourceName>vcores</resourceName>
+                <resourceValue>50.0%</resourceValue>
+              </capacityVectorEntries>
+            </queueCapacityVectorInfo>
+            <capacity>50.0</capacity>
             <usedCapacity>0.0</usedCapacity>
             <maxCapacity>100.0</maxCapacity>
-            <absoluteCapacity>70.0</absoluteCapacity>
+            <absoluteCapacity>50.0</absoluteCapacity>
             <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
             <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
             <maxAMLimitPercentage>10.0</maxAMLimitPercentage>
@@ -603,8 +894,8 @@
               </resourceInformations>
             </configuredMaxResource>
             <effectiveMinResource>
-              <memory>0</memory>
-              <vCores>0</vCores>
+              <memory>16384</memory>
+              <vCores>16</vCores>
               <resourceInformations>
                 <resourceInformation>
                   <attributes/>
@@ -613,7 +904,7 @@
                   <name>memory-mb</name>
                   <resourceType>COUNTABLE</resourceType>
                   <units>Mi</units>
-                  <value>0</value>
+                  <value>16384</value>
                 </resourceInformation>
                 <resourceInformation>
                   <attributes/>
@@ -622,13 +913,13 @@
                   <name>vcores</name>
                   <resourceType>COUNTABLE</resourceType>
                   <units/>
-                  <value>0</value>
+                  <value>16</value>
                 </resourceInformation>
               </resourceInformations>
             </effectiveMinResource>
             <effectiveMaxResource>
-              <memory>0</memory>
-              <vCores>0</vCores>
+              <memory>32768</memory>
+              <vCores>32</vCores>
               <resourceInformations>
                 <resourceInformation>
                   <attributes/>
@@ -637,7 +928,7 @@
                   <name>memory-mb</name>
                   <resourceType>COUNTABLE</resourceType>
                   <units>Mi</units>
-                  <value>0</value>
+                  <value>32768</value>
                 </resourceInformation>
                 <resourceInformation>
                   <attributes/>
@@ -646,7 +937,7 @@
                   <name>vcores</name>
                   <resourceType>COUNTABLE</resourceType>
                   <units/>
-                  <value>0</value>
+                  <value>32</value>
                 </resourceInformation>
               </resourceInformations>
             </effectiveMaxResource>
@@ -752,8 +1043,8 @@
               </resourceInformations>
             </amUsed>
             <amLimit>
-              <memory>0</memory>
-              <vCores>0</vCores>
+              <memory>4096</memory>
+              <vCores>1</vCores>
               <resourceInformations>
                 <resourceInformation>
                   <attributes/>
@@ -762,7 +1053,7 @@
                   <name>memory-mb</name>
                   <resourceType>COUNTABLE</resourceType>
                   <units>Mi</units>
-                  <value>0</value>
+                  <value>4096</value>
                 </resourceInformation>
                 <resourceInformation>
                   <attributes/>
@@ -771,7 +1062,7 @@
                   <name>vcores</name>
                   <resourceType>COUNTABLE</resourceType>
                   <units/>
-                  <value>0</value>
+                  <value>1</value>
                 </resourceInformation>
               </resourceInformations>
             </amLimit>
@@ -802,8 +1093,8 @@
           </resourceUsagesByPartition>
         </resources>
         <minEffectiveCapacity>
-          <memory>0</memory>
-          <vCores>0</vCores>
+          <memory>16384</memory>
+          <vCores>16</vCores>
           <resourceInformations>
             <resourceInformation>
               <attributes/>
@@ -812,7 +1103,7 @@
               <name>memory-mb</name>
               <resourceType>COUNTABLE</resourceType>
               <units>Mi</units>
-              <value>0</value>
+              <value>16384</value>
             </resourceInformation>
             <resourceInformation>
               <attributes/>
@@ -821,13 +1112,13 @@
               <name>vcores</name>
               <resourceType>COUNTABLE</resourceType>
               <units/>
-              <value>0</value>
+              <value>16</value>
             </resourceInformation>
           </resourceInformations>
         </minEffectiveCapacity>
         <maxEffectiveCapacity>
-          <memory>0</memory>
-          <vCores>0</vCores>
+          <memory>32768</memory>
+          <vCores>32</vCores>
           <resourceInformations>
             <resourceInformation>
               <attributes/>
@@ -836,7 +1127,7 @@
               <name>memory-mb</name>
               <resourceType>COUNTABLE</resourceType>
               <units>Mi</units>
-              <value>0</value>
+              <value>32768</value>
             </resourceInformation>
             <resourceInformation>
               <attributes/>
@@ -845,7 +1136,7 @@
               <name>vcores</name>
               <resourceType>COUNTABLE</resourceType>
               <units/>
-              <value>0</value>
+              <value>32</value>
             </resourceInformation>
           </resourceInformations>
         </maxEffectiveCapacity>
@@ -901,15 +1192,15 @@
         <numActiveApplications>0</numActiveApplications>
         <numPendingApplications>0</numPendingApplications>
         <numContainers>0</numContainers>
-        <maxApplications>7000</maxApplications>
-        <maxApplicationsPerUser>7000</maxApplicationsPerUser>
+        <maxApplications>5000</maxApplications>
+        <maxApplicationsPerUser>5000</maxApplicationsPerUser>
         <userLimit>100.0</userLimit>
         <users/>
         <userLimitFactor>1.0</userLimitFactor>
         <configuredMaxAMResourceLimit>0.1</configuredMaxAMResourceLimit>
         <AMResourceLimit>
-          <memory>0</memory>
-          <vCores>0</vCores>
+          <memory>4096</memory>
+          <vCores>1</vCores>
           <resourceInformations>
             <resourceInformation>
               <attributes/>
@@ -918,7 +1209,7 @@
               <name>memory-mb</name>
               <resourceType>COUNTABLE</resourceType>
               <units>Mi</units>
-              <value>0</value>
+              <value>4096</value>
             </resourceInformation>
             <resourceInformation>
               <attributes/>
@@ -927,7 +1218,7 @@
               <name>vcores</name>
               <resourceType>COUNTABLE</resourceType>
               <units/>
-              <value>0</value>
+              <value>1</value>
             </resourceInformation>
           </resourceInformations>
         </AMResourceLimit>
@@ -956,8 +1247,8 @@
           </resourceInformations>
         </usedAMResource>
         <userAMResourceLimit>
-          <memory>0</memory>
-          <vCores>0</vCores>
+          <memory>4096</memory>
+          <vCores>1</vCores>
           <resourceInformations>
             <resourceInformation>
               <attributes/>
@@ -966,7 +1257,7 @@
               <name>memory-mb</name>
               <resourceType>COUNTABLE</resourceType>
               <units>Mi</units>
-              <value>0</value>
+              <value>4096</value>
             </resourceInformation>
             <resourceInformation>
               <attributes/>
@@ -975,7 +1266,7 @@
               <name>vcores</name>
               <resourceType>COUNTABLE</resourceType>
               <units/>
-              <value>0</value>
+              <value>1</value>
             </resourceInformation>
           </resourceInformations>
         </userAMResourceLimit>
@@ -988,10 +1279,10 @@
       </queue>
       <queue xsi:type="capacitySchedulerLeafQueueInfo">
         <queuePath>root.c</queuePath>
-        <capacity>10.0</capacity>
+        <capacity>37.5</capacity>
         <usedCapacity>0.0</usedCapacity>
         <maxCapacity>100.0</maxCapacity>
-        <absoluteCapacity>10.0</absoluteCapacity>
+        <absoluteCapacity>37.5</absoluteCapacity>
         <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
         <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
         <weight>-1.0</weight>
@@ -1033,10 +1324,21 @@
         <capacities>
           <queueCapacitiesByPartition>
             <partitionName/>
-            <capacity>10.0</capacity>
+            <queueCapacityVectorInfo>
+              <configuredCapacityVector>[memory-mb=37.5%,vcores=37.5%]</configuredCapacityVector>
+              <capacityVectorEntries>
+                <resourceName>memory-mb</resourceName>
+                <resourceValue>37.5%</resourceValue>
+              </capacityVectorEntries>
+              <capacityVectorEntries>
+                <resourceName>vcores</resourceName>
+                <resourceValue>37.5%</resourceValue>
+              </capacityVectorEntries>
+            </queueCapacityVectorInfo>
+            <capacity>37.5</capacity>
             <usedCapacity>0.0</usedCapacity>
             <maxCapacity>100.0</maxCapacity>
-            <absoluteCapacity>10.0</absoluteCapacity>
+            <absoluteCapacity>37.5</absoluteCapacity>
             <absoluteUsedCapacity>0.0</absoluteUsedCapacity>
             <absoluteMaxCapacity>100.0</absoluteMaxCapacity>
             <maxAMLimitPercentage>10.0</maxAMLimitPercentage>
@@ -1091,8 +1393,8 @@
               </resourceInformations>
             </configuredMaxResource>
             <effectiveMinResource>
-              <memory>0</memory>
-              <vCores>0</vCores>
+              <memory>12288</memory>
+              <vCores>12</vCores>
               <resourceInformations>
                 <resourceInformation>
                   <attributes/>
@@ -1101,7 +1403,7 @@
                   <name>memory-mb</name>
                   <resourceType>COUNTABLE</resourceType>
                   <units>Mi</units>
-                  <value>0</value>
+                  <value>12288</value>
                 </resourceInformation>
                 <resourceInformation>
                   <attributes/>
@@ -1110,13 +1412,13 @@
                   <name>vcores</name>
                   <resourceType>COUNTABLE</resourceType>
                   <units/>
-                  <value>0</value>
+                  <value>12</value>
                 </resourceInformation>
               </resourceInformations>
             </effectiveMinResource>
             <effectiveMaxResource>
-              <memory>0</memory>
-              <vCores>0</vCores>
+              <memory>32768</memory>
+              <vCores>32</vCores>
               <resourceInformations>
                 <resourceInformation>
                   <attributes/>
@@ -1125,7 +1427,7 @@
                   <name>memory-mb</name>
                   <resourceType>COUNTABLE</resourceType>
                   <units>Mi</units>
-                  <value>0</value>
+                  <value>32768</value>
                 </resourceInformation>
                 <resourceInformation>
                   <attributes/>
@@ -1134,7 +1436,7 @@
                   <name>vcores</name>
                   <resourceType>COUNTABLE</resourceType>
                   <units/>
-                  <value>0</value>
+                  <value>32</value>
                 </resourceInformation>
               </resourceInformations>
             </effectiveMaxResource>
@@ -1240,8 +1542,8 @@
               </resourceInformations>
             </amUsed>
             <amLimit>
-              <memory>0</memory>
-              <vCores>0</vCores>
+              <memory>4096</memory>
+              <vCores>1</vCores>
               <resourceInformations>
                 <resourceInformation>
                   <attributes/>
@@ -1250,7 +1552,7 @@
                   <name>memory-mb</name>
                   <resourceType>COUNTABLE</resourceType>
                   <units>Mi</units>
-                  <value>0</value>
+                  <value>4096</value>
                 </resourceInformation>
                 <resourceInformation>
                   <attributes/>
@@ -1259,7 +1561,7 @@
                   <name>vcores</name>
                   <resourceType>COUNTABLE</resourceType>
                   <units/>
-                  <value>0</value>
+                  <value>1</value>
                 </resourceInformation>
               </resourceInformations>
             </amLimit>
@@ -1290,8 +1592,8 @@
           </resourceUsagesByPartition>
         </resources>
         <minEffectiveCapacity>
-          <memory>0</memory>
-          <vCores>0</vCores>
+          <memory>12288</memory>
+          <vCores>12</vCores>
           <resourceInformations>
             <resourceInformation>
               <attributes/>
@@ -1300,7 +1602,7 @@
               <name>memory-mb</name>
               <resourceType>COUNTABLE</resourceType>
               <units>Mi</units>
-              <value>0</value>
+              <value>12288</value>
             </resourceInformation>
             <resourceInformation>
               <attributes/>
@@ -1309,13 +1611,13 @@
               <name>vcores</name>
               <resourceType>COUNTABLE</resourceType>
               <units/>
-              <value>0</value>
+              <value>12</value>
             </resourceInformation>
           </resourceInformations>
         </minEffectiveCapacity>
         <maxEffectiveCapacity>
-          <memory>0</memory>
-          <vCores>0</vCores>
+          <memory>32768</memory>
+          <vCores>32</vCores>
           <resourceInformations>
             <resourceInformation>
               <attributes/>
@@ -1324,7 +1626,7 @@
               <name>memory-mb</name>
               <resourceType>COUNTABLE</resourceType>
               <units>Mi</units>
-              <value>0</value>
+              <value>32768</value>
             </resourceInformation>
             <resourceInformation>
               <attributes/>
@@ -1333,7 +1635,7 @@
               <name>vcores</name>
               <resourceType>COUNTABLE</resourceType>
               <units/>
-              <value>0</value>
+              <value>32</value>
             </resourceInformation>
           </resourceInformations>
         </maxEffectiveCapacity>
@@ -1389,15 +1691,15 @@
         <numActiveApplications>0</numActiveApplications>
         <numPendingApplications>0</numPendingApplications>
         <numContainers>0</numContainers>
-        <maxApplications>1000</maxApplications>
-        <maxApplicationsPerUser>1000</maxApplicationsPerUser>
+        <maxApplications>3750</maxApplications>
+        <maxApplicationsPerUser>3750</maxApplicationsPerUser>
         <userLimit>100.0</userLimit>
         <users/>
         <userLimitFactor>1.0</userLimitFactor>
         <configuredMaxAMResourceLimit>0.1</configuredMaxAMResourceLimit>
         <AMResourceLimit>
-          <memory>0</memory>
-          <vCores>0</vCores>
+          <memory>4096</memory>
+          <vCores>1</vCores>
           <resourceInformations>
             <resourceInformation>
               <attributes/>
@@ -1406,7 +1708,7 @@
               <name>memory-mb</name>
               <resourceType>COUNTABLE</resourceType>
               <units>Mi</units>
-              <value>0</value>
+              <value>4096</value>
             </resourceInformation>
             <resourceInformation>
               <attributes/>
@@ -1415,7 +1717,7 @@
               <name>vcores</name>
               <resourceType>COUNTABLE</resourceType>
               <units/>
-              <value>0</value>
+              <value>1</value>
             </resourceInformation>
           </resourceInformations>
         </AMResourceLimit>
@@ -1444,8 +1746,8 @@
           </resourceInformations>
         </usedAMResource>
         <userAMResourceLimit>
-          <memory>0</memory>
-          <vCores>0</vCores>
+          <memory>4096</memory>
+          <vCores>1</vCores>
           <resourceInformations>
             <resourceInformation>
               <attributes/>
@@ -1454,7 +1756,7 @@
               <name>memory-mb</name>
               <resourceType>COUNTABLE</resourceType>
               <units>Mi</units>
-              <value>0</value>
+              <value>4096</value>
             </resourceInformation>
             <resourceInformation>
               <attributes/>
@@ -1463,7 +1765,7 @@
               <name>vcores</name>
               <resourceType>COUNTABLE</resourceType>
               <units/>
-              <value>0</value>
+              <value>1</value>
             </resourceInformation>
           </resourceInformations>
         </userAMResourceLimit>
@@ -1478,6 +1780,17 @@
     <capacities>
       <queueCapacitiesByPartition>
         <partitionName/>
+        <queueCapacityVectorInfo>
+          <configuredCapacityVector>[memory-mb=100.0%,vcores=100.0%]</configuredCapacityVector>
+          <capacityVectorEntries>
+            <resourceName>memory-mb</resourceName>
+            <resourceValue>100.0%</resourceValue>
+          </capacityVectorEntries>
+          <capacityVectorEntries>
+            <resourceName>vcores</resourceName>
+            <resourceValue>100.0%</resourceValue>
+          </capacityVectorEntries>
+        </queueCapacityVectorInfo>
         <capacity>100.0</capacity>
         <usedCapacity>0.0</usedCapacity>
         <maxCapacity>100.0</maxCapacity>
@@ -1536,8 +1849,8 @@
           </resourceInformations>
         </configuredMaxResource>
         <effectiveMinResource>
-          <memory>0</memory>
-          <vCores>0</vCores>
+          <memory>32768</memory>
+          <vCores>32</vCores>
           <resourceInformations>
             <resourceInformation>
               <attributes/>
@@ -1546,7 +1859,7 @@
               <name>memory-mb</name>
               <resourceType>COUNTABLE</resourceType>
               <units>Mi</units>
-              <value>0</value>
+              <value>32768</value>
             </resourceInformation>
             <resourceInformation>
               <attributes/>
@@ -1555,13 +1868,13 @@
               <name>vcores</name>
               <resourceType>COUNTABLE</resourceType>
               <units/>
-              <value>0</value>
+              <value>32</value>
             </resourceInformation>
           </resourceInformations>
         </effectiveMinResource>
         <effectiveMaxResource>
-          <memory>0</memory>
-          <vCores>0</vCores>
+          <memory>32768</memory>
+          <vCores>32</vCores>
           <resourceInformations>
             <resourceInformation>
               <attributes/>
@@ -1570,7 +1883,7 @@
               <name>memory-mb</name>
               <resourceType>COUNTABLE</resourceType>
               <units>Mi</units>
-              <value>0</value>
+              <value>32768</value>
             </resourceInformation>
             <resourceInformation>
               <attributes/>
@@ -1579,7 +1892,7 @@
               <name>vcores</name>
               <resourceType>COUNTABLE</resourceType>
               <units/>
-              <value>0</value>
+              <value>32</value>
             </resourceInformation>
           </resourceInformations>
         </effectiveMaxResource>

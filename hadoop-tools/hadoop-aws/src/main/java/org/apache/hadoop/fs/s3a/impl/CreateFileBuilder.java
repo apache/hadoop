@@ -72,6 +72,12 @@ public class CreateFileBuilder extends
       new CreateFileOptions(CREATE_NO_OVERWRITE_FLAGS, true, false, null);
 
   /**
+   * Performance create options.
+   */
+  public static final CreateFileOptions OPTIONS_CREATE_FILE_PERFORMANCE =
+      new CreateFileOptions(CREATE_OVERWRITE_FLAGS, true, true, null);
+
+  /**
    * Callback interface.
    */
   private final CreateFileBuilderCallbacks callbacks;
@@ -129,6 +135,7 @@ public class CreateFileBuilder extends
     if (flags.contains(CreateFlag.APPEND)) {
       throw new UnsupportedOperationException("Append is not supported");
     }
+
     if (!flags.contains(CreateFlag.CREATE) &&
         !flags.contains(CreateFlag.OVERWRITE)) {
       throw new PathIOException(path.toString(),

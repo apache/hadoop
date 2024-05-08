@@ -397,12 +397,19 @@
   <name>dfs.datanode.du.reserved</name>
   <value>0</value>
   <description>Reserved space in bytes per volume. Always leave this much space free for non dfs use.
+      Specific directory based reservation is supported. The property can be followed with directory
+      name which is set at 'dfs.datanode.data.dir'. For example, reserved space for /data/hdfs1/data
+      can be configured using property 'dfs.datanode.du.reserved./data/hdfs1/data'. If specific directory
+      reservation is not configured then dfs.datanode.du.reserved will be used.
       Specific storage type based reservation is also supported. The property can be followed with
       corresponding storage types ([ssd]/[disk]/[archive]/[ram_disk]/[nvdimm]) for cluster with heterogeneous storage.
       For example, reserved space for RAM_DISK storage can be configured using property
       'dfs.datanode.du.reserved.ram_disk'. If specific storage type reservation is not configured
       then dfs.datanode.du.reserved will be used. Support multiple size unit suffix(case insensitive),
-      as described in dfs.blocksize.
+      as described in dfs.blocksize. Use directory name and storage type based reservation at the
+      same time is also allowed if both are configured.
+      Property priority example: dfs.datanode.du.reserved./data/hdfs1/data.ram_disk >
+      dfs.datanode.du.reserved./data/hdfs1/data > dfs.datanode.du.reserved.ram_disk > dfs.datanode.du.reserved
       Note: In case of using tune2fs to set reserved-blocks-percentage, or other filesystem tools,
       then you can possibly run into out of disk errors because hadoop will not check those
       external tool configurations.
@@ -414,12 +421,19 @@
   <value>0</value>
   <description>Reserved space in percentage. Read dfs.datanode.du.reserved.calculator to see
     when this takes effect. The actual number of bytes reserved will be calculated by using the
-    total capacity of the data directory in question. Specific storage type based reservation
+    total capacity of the data directory in question. Specific directory based reservation is
+    supported. The property can be followed with directory name which is set at 'dfs.datanode.data.dir'.
+    For example, reserved percentage space for /data/hdfs1/data can be configured using property
+    'dfs.datanode.du.reserved.pct./data/hdfs1/data'. If specific directory reservation is not
+    configured then dfs.datanode.du.reserved.pct will be used. Specific storage type based reservation
     is also supported. The property can be followed with corresponding storage types
     ([ssd]/[disk]/[archive]/[ram_disk]/[nvdimm]) for cluster with heterogeneous storage.
     For example, reserved percentage space for RAM_DISK storage can be configured using property
     'dfs.datanode.du.reserved.pct.ram_disk'. If specific storage type reservation is not configured
-    then dfs.datanode.du.reserved.pct will be used.
+    then dfs.datanode.du.reserved.pct will be used. Use directory and storage type based reservation
+    is also allowed if both are configured.
+    Priority example: dfs.datanode.du.reserved.pct./data/hdfs1/data.ram_disk > dfs.datanode.du.reserved.pct./data/hdfs1/data
+    > dfs.datanode.du.reserved.pct.ram_disk > dfs.datanode.du.reserved.pct
   </description>
 </property>
 
@@ -2446,6 +2460,15 @@
 </property>
 
 <property>
+  <name>dfs.namenode.block-placement.min-blocks-for.write</name>
+  <value>1</value>
+  <description>
+    Setting the minimum number of blocks for write operations is used to calculate the space required
+    for write operations.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.max.slowpeer.collect.nodes</name>
   <value>5</value>
   <description>
@@ -2802,6 +2825,15 @@
 </property>
 
 <property>
+  <name>dfs.namenode.observer.enabled</name>
+  <value>false</value>
+  <description>
+    This causes NameNode on startup to become an observer node if
+    set to true, otherwise startup is no different.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.enable.retrycache</name>
   <value>true</value>
   <description>
@@ -2919,6 +2951,33 @@
     map.  The cached blocks map is a hash map which uses chained hashing.
     Smaller maps may be accessed more slowly if the number of cached blocks is
     large; larger maps will consume more memory.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.crm.checklocktime.enable</name>
+  <value>false</value>
+  <description>
+    Set to true to enable CacheManager to check amount of time to hold the
+    global rwlock.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.crm.maxlocktime.ms</name>
+  <value>1000</value>
+  <description>
+    The maximum amount of time that CacheManager should hold the global rwlock.
+    This configuration enable when set `dfs.namenode.crm.checklocktime.enable`.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.crm.sleeptime.ms</name>
+  <value>300</value>
+  <description>
+    The amount of time that CacheManager should relase the global rwlock.
+    This configuration enable when set `dfs.namenode.crm.checklocktime.enable`.
   </description>
 </property>
 
@@ -3739,6 +3798,16 @@
 </property>
 
 <property>
+  <name>dfs.ha.zkfc.client.ssl.enabled</name>
+  <value>false</value>
+  <description>
+    Enable SSL/TLS encryption for the ZooKeeper communication from ZKFC.
+    Note: if hadoop.zk.ssl.enabled is set to a value, then that central setting has precedence,
+    and this value will be overridden by the value of hadoop.zk.ssl.enabled.
+  </description>
+</property>
+
+<property>
   <name>dfs.ha.nn.not-become-active-in-safemode</name>
   <value>false</value>
   <description>
@@ -4401,6 +4470,15 @@
 </property>
 
 <property>
+  <name>dfs.client.failover.lazy.resolved</name>
+  <value>false</value>
+  <description>
+    Used to enable lazy resolution of host->ip. If the value is true,
+    the host will only be resolved only before Dfsclient needs to request the host.
+  </description>
+</property>
+
+<property>
   <name>dfs.client.key.provider.cache.expiry</name>
   <value>864000000</value>
   <description>
@@ -4717,6 +4795,15 @@
       Specifies the maximum amount of bandwidth that the data transfering can utilize for writing block or pipeline
       recovery when
       BlockConstructionStage is PIPELINE_SETUP_APPEND_RECOVERY or PIPELINE_SETUP_STREAMING_RECOVERY.
+      When the bandwidth value is zero, there is no limit.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.datanode.data.read.bandwidthPerSec</name>
+    <value>0</value>
+    <description>
+      Specifies the maximum amount of bandwidth that can utilize for reading block.
       When the bandwidth value is zero, there is no limit.
     </description>
   </property>
@@ -5146,6 +5233,17 @@
     </description>
   </property>
 
+  <property>
+    <name>dfs.namenode.available-space-block-placement-policy.balanced-space-tolerance-limit</name>
+    <value>100</value>
+    <description>
+      Only used when the dfs.block.replicator.classname is set to
+      org.apache.hadoop.hdfs.server.blockmanagement.AvailableSpaceBlockPlacementPolicy.
+      Special value between 0 and 100, inclusive. if the value is set beyond the scope,
+      this value will be set as 100 by default.
+    </description>
+  </property>
+
 <property>
   <name>
     dfs.namenode.available-space-block-placement-policy.balance-local-node
@@ -5247,7 +5345,7 @@
   <name>dfs.namenode.file.close.num-committed-allowed</name>
   <value>0</value>
   <description>
-    Normally a file can only be closed with all its blocks are committed.
+    Normally a file can only be closed with all its blocks are complete.
     When this value is set to a positive integer N, a file can be closed
     when N blocks are committed and the rest complete. In case of Erasure Coded
     blocks, the committed block shall be allowed only when the block group is
@@ -5333,6 +5431,24 @@
   <description>
     Timeout in seconds for block reconstruction.  If this value is 0 or less,
     then it will default to 5 minutes.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.excess.redundancy.timeout-sec</name>
+  <value>3600</value>
+  <description>
+    Timeout in seconds for excess redundancy block. If this value is 0 or less,
+    then it will default to 3600 minutes.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.excess.redundancy.timeout.check.limit</name>
+  <value>1000</value>
+  <description>
+    Limits number of blocks used to check for excess redundancy timeout.
+    If this value is 0 or less, then it will default to 1000.
   </description>
 </property>
 
@@ -5589,6 +5705,14 @@
   <value>false</value>
   <description>
     If true, allows slownode information to be replied to Client via PipelineAck.
+  </description>
+</property>
+
+<property>
+  <name>dfs.pipeline.congestion.ratio</name>
+  <value>1.5</value>
+  <description>
+    The ratio which is used to compute congestion load.
   </description>
 </property>
 
@@ -6442,6 +6566,22 @@
     <description>
       The default prefix key to construct the uniqKey for one DFSOutputStream.
       If the namespace is DEFAULT, it's best to change this conf to other value.
+    </description>
+  </property>
+  <property>
+    <name>dfs.client.congestion.backoff.mean.time</name>
+    <value>5000</value>
+    <description>
+      The mean time in milliseconds which is used to compute
+      client congestion backoff sleep time.
+    </description>
+  </property>
+  <property>
+    <name>dfs.client.congestion.backoff.max.time</name>
+    <value>50000</value>
+    <description>
+      The max time in milliseconds which is used to restrict
+      the upper limit backoff sleep time for client.
     </description>
   </property>
   <property>

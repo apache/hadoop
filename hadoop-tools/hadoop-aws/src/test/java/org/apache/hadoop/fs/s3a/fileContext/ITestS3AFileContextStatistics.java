@@ -16,7 +16,6 @@ package org.apache.hadoop.fs.s3a.fileContext;
 import java.io.IOException;
 import java.net.URI;
 
-import com.amazonaws.services.s3.model.CryptoStorageMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -77,7 +76,7 @@ public class ITestS3AFileContextStatistics extends FCStatisticsBaseTest {
    * <br>
    * NOTE: if Client side encryption is enabled, expected bytes written
    * should increase by 16(padding of data) + bytes for the key ID set + 94(KMS
-   * key generation) in case of storage type{@link CryptoStorageMode} as
+   * key generation) in case of storage type CryptoStorageMode as
    * ObjectMetadata(Default). If Crypto Storage mode is instruction file then
    * add additional bytes as that file is stored separately and would account
    * for bytes written.

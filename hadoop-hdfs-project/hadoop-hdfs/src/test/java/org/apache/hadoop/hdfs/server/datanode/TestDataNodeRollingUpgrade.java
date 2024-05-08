@@ -27,6 +27,8 @@ import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.junit.Rule;
+import org.junit.rules.TemporaryFolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -65,6 +67,9 @@ public class TestDataNodeRollingUpgrade {
   private static final long FILE_SIZE = BLOCK_SIZE;
   private static final long SEED = 0x1BADF00DL;
 
+  @Rule
+  public TemporaryFolder baseDir = new TemporaryFolder();
+
   Configuration conf;
   MiniDFSCluster cluster = null;
   DistributedFileSystem fs = null;
@@ -75,7 +80,7 @@ public class TestDataNodeRollingUpgrade {
   private void startCluster() throws IOException {
     conf = new HdfsConfiguration();
     conf.setInt("dfs.blocksize", 1024*1024);
-    cluster = new Builder(conf).numDataNodes(REPL_FACTOR).build();
+    cluster = new Builder(conf, baseDir.getRoot()).numDataNodes(REPL_FACTOR).build();
     cluster.waitActive();
     fs = cluster.getFileSystem();
     nn = cluster.getNameNode(0);

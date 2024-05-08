@@ -188,7 +188,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
 
     stateStore = new MemoryFederationStateStore();
     stateStore.init(this.getConf());
-    FederationStateStoreFacade.getInstance().reinitialize(stateStore,
+    FederationStateStoreFacade.getInstance(this.getConf()).reinitialize(stateStore,
         this.getConf());
     stateStoreUtil = new FederationStateStoreTestUtil(stateStore);
 
@@ -215,7 +215,8 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
         RM_DELEGATION_TOKEN_REMOVE_SCAN_INTERVAL_KEY,
         RM_DELEGATION_TOKEN_REMOVE_SCAN_INTERVAL_DEFAULT, TimeUnit.MILLISECONDS);
     RouterDelegationTokenSecretManager tokenSecretManager = new RouterDelegationTokenSecretManager(
-        secretKeyInterval, tokenMaxLifetime, tokenRenewInterval, removeScanInterval);
+        secretKeyInterval, tokenMaxLifetime, tokenRenewInterval, removeScanInterval,
+        this.getConf());
     tokenSecretManager.startThreads();
     routerClientRMService.setRouterDTSecretManager(tokenSecretManager);
 

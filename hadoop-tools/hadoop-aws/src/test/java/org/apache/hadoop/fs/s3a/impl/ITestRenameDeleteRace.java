@@ -23,12 +23,13 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
-import com.amazonaws.AmazonClientException;
+import software.amazon.awssdk.core.exception.SdkException;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -207,7 +208,7 @@ public class ITestRenameDeleteRace extends AbstractS3ATestBase {
 
     @Override
     protected void maybeCreateFakeParentDirectory(final Path path)
-        throws IOException, AmazonClientException {
+        throws IOException, SdkException {
       LOG.info("waking anything blocked on the signal semaphore");
       // notify anything waiting
       signalCreatingFakeParentDirectory.release();

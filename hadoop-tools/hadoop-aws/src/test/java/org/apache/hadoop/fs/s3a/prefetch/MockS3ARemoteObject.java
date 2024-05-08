@@ -21,11 +21,12 @@ package org.apache.hadoop.fs.s3a.prefetch;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.concurrent.CompletableFuture;
 
-import com.amazonaws.services.s3.model.GetObjectRequest;
-import com.amazonaws.services.s3.model.S3Object;
+import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.http.AbortableInputStream;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 
 import org.apache.hadoop.fs.impl.prefetch.Validate;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
@@ -55,7 +56,7 @@ class MockS3ARemoteObject extends S3ARemoteObject {
     super(
         S3APrefetchFakes.createReadContext(null, KEY, size, 1, 1),
         S3APrefetchFakes.createObjectAttributes(BUCKET, KEY, size),
-        S3APrefetchFakes.createInputStreamCallbacks(BUCKET, KEY),
+        S3APrefetchFakes.createInputStreamCallbacks(BUCKET),
         EmptyS3AStatisticsContext.EMPTY_INPUT_STREAM_STATISTICS,
         S3APrefetchFakes.createChangeTracker(BUCKET, KEY, size)
     );
@@ -68,7 +69,8 @@ class MockS3ARemoteObject extends S3ARemoteObject {
   }
 
   @Override
-  public InputStream openForRead(long offset, int size) throws IOException {
+  public ResponseInputStream<GetObjectResponse> openForRead(long offset, int size)
+      throws IOException {
     Validate.checkLessOrEqual(offset, "offset", size(), "size()");
     Validate.checkLessOrEqual(size, "size", size() - offset, "size() - offset");
 
@@ -77,11 +79,15 @@ class MockS3ARemoteObject extends S3ARemoteObject {
       throw new IOException("Throwing because throwExceptionOnOpen is true ");
     }
     int bufSize = (int) Math.min(size, size() - offset);
-    return new ByteArrayInputStream(contents, (int) offset, bufSize);
+    GetObjectResponse objectResponse = GetObjectResponse.builder().build();
+    return new ResponseInputStream(objectResponse,
+        AbortableInputStream.create(new ByteArrayInputStream(contents,
+            (int) offset, bufSize), () -> {}));
   }
 
   @Override
-  public void close(InputStream inputStream, int numRemainingBytes) {
+  public void close(ResponseInputStream<GetObjectResponse> inputStream,
+      int numRemainingBytes) {
     // do nothing since we do not use a real S3 stream.
   }
 
@@ -92,7 +98,8 @@ class MockS3ARemoteObject extends S3ARemoteObject {
   public static S3AInputStream.InputStreamCallbacks createClient(String bucketName) {
     return new S3AInputStream.InputStreamCallbacks() {
       @Override
-      public S3Object getObject(GetObjectRequest request) {
+      public ResponseInputStream<GetObjectResponse> getObject(
+          GetObjectRequest request) {
         return null;
       }
 
@@ -102,8 +109,8 @@ class MockS3ARemoteObject extends S3ARemoteObject {
       }
 
       @Override
-      public GetObjectRequest newGetRequest(String key) {
-        return new GetObjectRequest(bucketName, key);
+      public GetObjectRequest.Builder newGetRequestBuilder(String key) {
+        return GetObjectRequest.builder().bucket(bucketName).key(key);
       }
 
       @Override

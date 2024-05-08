@@ -26,6 +26,7 @@ import java.util.UUID;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.impl.BackReference;
 import org.apache.hadoop.util.Preconditions;
 
 import org.slf4j.Logger;
@@ -39,6 +40,7 @@ import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
+import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.utils.CachedSASToken;
 import org.apache.hadoop.fs.azurebfs.utils.Listener;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
@@ -69,6 +71,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   private final String path;
   private final long contentLength;
   private final int bufferSize; // default buffer size
+  private final int footerReadSize; // default buffer size to read when reading footer
   private final int readAheadQueueDepth;         // initialized in constructor
   private final String eTag;                  // eTag of the path when InputStream are created
   private final boolean tolerateOobAppends; // whether tolerate Oob Appends
@@ -98,6 +101,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   //                                                      of valid bytes in buffer)
   private boolean closed = false;
   private TracingContext tracingContext;
+  private final ContextEncryptionAdapter contextEncryptionAdapter;
 
   //  Optimisations modify the pointer fields.
   //  For better resilience the following fields are used to save the
@@ -121,6 +125,9 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
    */
   private long nextReadPos;
 
+  /** ABFS instance to be held by the input stream to avoid GC close. */
+  private final BackReference fsBackRef;
+
   public AbfsInputStream(
           final AbfsClient client,
           final Statistics statistics,
@@ -134,6 +141,10 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     this.path = path;
     this.contentLength = contentLength;
     this.bufferSize = abfsInputStreamContext.getReadBufferSize();
+    /*
+    * FooterReadSize should not be more than bufferSize.
+    */
+    this.footerReadSize = Math.min(bufferSize, abfsInputStreamContext.getFooterReadBufferSize());
     this.readAheadQueueDepth = abfsInputStreamContext.getReadAheadQueueDepth();
     this.tolerateOobAppends = abfsInputStreamContext.isTolerateOobAppends();
     this.eTag = eTag;
@@ -152,6 +163,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     this.tracingContext.setStreamID(inputStreamId);
     this.context = abfsInputStreamContext;
     readAheadBlockSize = abfsInputStreamContext.getReadAheadBlockSize();
+    this.fsBackRef = abfsInputStreamContext.getFsBackRef();
+    contextEncryptionAdapter = abfsInputStreamContext.getEncryptionAdapter();
 
     // Propagate the config values to ReadBufferManager so that the first instance
     // to initialize can set the readAheadBlockSize
@@ -353,6 +366,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     return optimisedRead(b, off, len, 0, contentLength);
   }
 
+  // To do footer read of files when enabled.
   private int readLastBlock(final byte[] b, final int off, final int len)
       throws IOException {
     if (len == 0) {
@@ -365,10 +379,10 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     // data need to be copied to user buffer from index bCursor,
     // AbfsInutStream buffer is going to contain data from last block start. In
     // that case bCursor will be set to fCursor - lastBlockStart
-    long lastBlockStart = max(0, contentLength - bufferSize);
+    long lastBlockStart = max(0, contentLength - footerReadSize);
     bCursor = (int) (fCursor - lastBlockStart);
     // 0 if contentlength is < buffersize
-    long actualLenToRead = min(bufferSize, contentLength);
+    long actualLenToRead = min(footerReadSize, contentLength);
     return optimisedRead(b, off, len, lastBlockStart, actualLenToRead);
   }
 
@@ -543,7 +557,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       }
       LOG.trace("Trigger client.read for path={} position={} offset={} length={}", path, position, offset, length);
       op = client.read(path, position, b, offset, length,
-          tolerateOobAppends ? "*" : eTag, cachedSasToken.get(), tracingContext);
+          tolerateOobAppends ? "*" : eTag, cachedSasToken.get(),
+          contextEncryptionAdapter, tracingContext);
       cachedSasToken.update(op.getSasToken());
       LOG.debug("issuing HTTP GET request params position = {} b.length = {} "
           + "offset = {} length = {}", position, b.length, offset, length);
@@ -696,8 +711,11 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   public synchronized void close() throws IOException {
     LOG.debug("Closing {}", this);
     closed = true;
-    buffer = null; // de-reference the buffer so it can be GC'ed sooner
     ReadBufferManager.getBufferManager().purgeBuffersForStream(this);
+    buffer = null; // de-reference the buffer so it can be GC'ed sooner
+    if (contextEncryptionAdapter != null) {
+      contextEncryptionAdapter.destroy();
+    }
   }
 
   /**
@@ -808,6 +826,11 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   }
 
   @VisibleForTesting
+  protected int getFooterReadBufferSize() {
+    return footerReadSize;
+  }
+
+  @VisibleForTesting
   public int getReadAheadQueueDepth() {
     return readAheadQueueDepth;
   }
@@ -856,5 +879,10 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   @VisibleForTesting
   long getLimit() {
     return this.limit;
+  }
+
+  @VisibleForTesting
+  BackReference getFsBackRef() {
+    return fsBackRef;
   }
 }

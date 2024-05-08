@@ -19,7 +19,9 @@ package org.apache.hadoop.yarn.server.router.webapp;
 
 import com.google.inject.Inject;
 import com.sun.jersey.api.client.Client;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
@@ -158,13 +160,19 @@ public class MetricsOverviewTable extends RouterBlock {
         // Initialize table data information
         tbody().$class("ui-widget-content").
         tr().
-        td(String.valueOf(metrics.getActiveNodes())).
-        td(String.valueOf(metrics.getDecommissioningNodes())).
-        td(String.valueOf(metrics.getDecommissionedNodes())).
-        td(String.valueOf(metrics.getLostNodes())).
-        td(String.valueOf(metrics.getUnhealthyNodes())).
-        td(String.valueOf(metrics.getRebootedNodes())).
-        td(String.valueOf(metrics.getShutdownNodes())).
+        td().a(url("nodes"), String.valueOf(metrics.getActiveNodes())).__().
+        td().a(url("nodes/router/?node.state=decommissioning"),
+            String.valueOf(metrics.getDecommissioningNodes())).__().
+        td().a(url("nodes/router/?node.state=decommissioned"),
+            String.valueOf(metrics.getDecommissionedNodes())).__().
+        td().a(url("nodes/router/?node.state=lost"),
+            String.valueOf(metrics.getLostNodes())).__().
+        td().a(url("nodes/router/?node.state=unhealthy"),
+            String.valueOf(metrics.getUnhealthyNodes())).__().
+        td().a(url("nodes/router/?node.state=rebooted"),
+            String.valueOf(metrics.getRebootedNodes())).__().
+        td().a(url("nodes/router/?node.state=shutdown"),
+            String.valueOf(metrics.getShutdownNodes())).__().
         __().
         __().__();
   }
@@ -206,28 +214,53 @@ public class MetricsOverviewTable extends RouterBlock {
 
     // If Federation mode is not enabled or there is currently no SubCluster available,
     // each column in the list should be displayed as N/A
-    if (!isEnabled || subclusters == null || subclusters.isEmpty()) {
-      fsMetricsScheduleTr.tr().
-          td(UNAVAILABLE).
-          td(UNAVAILABLE).
-          td(UNAVAILABLE).
-          td(UNAVAILABLE).
-          td(UNAVAILABLE).
-          td(UNAVAILABLE).
-          td(UNAVAILABLE).
-          td(UNAVAILABLE).
-          td(UNAVAILABLE)
-          .__();
-    } else {
+    if (!isEnabled) {
+      initLocalClusterOverViewTable(fsMetricsScheduleTr);
+    } else if (subclusters != null && !subclusters.isEmpty()) {
       initSubClusterOverViewTable(metrics, fsMetricsScheduleTr, subclusters);
+    } else {
+      showRouterSchedulerMetricsData(UNAVAILABLE, fsMetricsScheduleTr);
     }
 
     fsMetricsScheduleTr.__().__();
   }
 
+  /**
+   * We display Scheduler information for local cluster.
+   *
+   * @param fsMetricsScheduleTr MetricsScheduleTr.
+   */
+  private void initLocalClusterOverViewTable(
+      Hamlet.TBODY<Hamlet.TABLE<Hamlet.DIV<Hamlet>>> fsMetricsScheduleTr) {
+    // configuration
+    Configuration config = this.router.getConfig();
+    Client client = RouterWebServiceUtil.createJerseyClient(config);
+    String webAppAddress = WebAppUtils.getRMWebAppURLWithScheme(config);
+
+    // Get the name of the local cluster.
+    String localClusterName = config.get(YarnConfiguration.RM_CLUSTER_ID, UNAVAILABLE);
+    SchedulerOverviewInfo schedulerOverviewInfo =
+        getSchedulerOverviewInfo(webAppAddress, config, client);
+    if (schedulerOverviewInfo != null) {
+      RouterSchedulerMetrics rsMetrics =
+          new RouterSchedulerMetrics(localClusterName, schedulerOverviewInfo);
+      // Basic information
+      showRouterSchedulerMetricsData(rsMetrics, fsMetricsScheduleTr);
+    } else {
+      showRouterSchedulerMetricsData(localClusterName, fsMetricsScheduleTr);
+    }
+  }
+
+  /**
+   * We display Scheduler information for multiple subClusters.
+   *
+   * @param metrics RouterClusterMetrics.
+   * @param fsMetricsScheduleTr MetricsScheduleTr.
+   * @param subClusters subCluster list.
+   */
   private void initSubClusterOverViewTable(RouterClusterMetrics metrics,
       Hamlet.TBODY<Hamlet.TABLE<Hamlet.DIV<Hamlet>>> fsMetricsScheduleTr,
-      Collection<SubClusterInfo> subclusters) {
+      Collection<SubClusterInfo> subClusters) {
 
     // configuration
     Configuration config = this.router.getConfig();
@@ -235,30 +268,93 @@ public class MetricsOverviewTable extends RouterBlock {
     Client client = RouterWebServiceUtil.createJerseyClient(config);
 
     // Traverse all SubClusters to get cluster information.
-    for (SubClusterInfo subcluster : subclusters) {
+    for (SubClusterInfo subcluster : subClusters) {
+      // We need to make sure subCluster is not null
+      if (subcluster != null && subcluster.getSubClusterId() != null) {
+        // Call the RM interface to obtain schedule information
+        String webAppAddress =  WebAppUtils.getHttpSchemePrefix(config) +
+            subcluster.getRMWebServiceAddress();
+        SchedulerOverviewInfo schedulerOverviewInfo =
+            getSchedulerOverviewInfo(webAppAddress, config, client);
 
-      // Call the RM interface to obtain schedule information
-      String webAppAddress =  WebAppUtils.getHttpSchemePrefix(config) +
-          subcluster.getRMWebServiceAddress();
+        // If schedulerOverviewInfo is not null,
+        // We will display information from rsMetrics, otherwise we will not display information.
+        if (schedulerOverviewInfo != null) {
+          RouterSchedulerMetrics rsMetrics =
+              new RouterSchedulerMetrics(subcluster, metrics, schedulerOverviewInfo);
+          // Basic information
+          showRouterSchedulerMetricsData(rsMetrics, fsMetricsScheduleTr);
+        }
+      }
+    }
 
-      SchedulerOverviewInfo typeInfo = RouterWebServiceUtil
+    client.destroy();
+  }
+
+  /**
+   * Get SchedulerOverview information based on webAppAddress.
+   *
+   * @param webAppAddress webAppAddress.
+   * @param config configuration.
+   * @param client jersey Client.
+   * @return SchedulerOverviewInfo.
+   */
+  private SchedulerOverviewInfo getSchedulerOverviewInfo(String webAppAddress,
+      Configuration config, Client client) {
+    try {
+      SchedulerOverviewInfo schedulerOverviewInfo = RouterWebServiceUtil
           .genericForward(webAppAddress, null, SchedulerOverviewInfo.class, HTTPMethods.GET,
           RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.SCHEDULER_OVERVIEW, null, null,
-          config, client);
-      RouterSchedulerMetrics rsMetrics = new RouterSchedulerMetrics(subcluster, metrics, typeInfo);
-
-      // Basic information
-      fsMetricsScheduleTr.tr().
-          td(rsMetrics.getSubCluster()).
-          td(rsMetrics.getSchedulerType()).
-          td(rsMetrics.getSchedulingResourceType()).
-          td(rsMetrics.getMinimumAllocation()).
-          td(rsMetrics.getMaximumAllocation()).
-          td(rsMetrics.getApplicationPriority()).
-          td(rsMetrics.getSchedulerBusy()).
-          td(rsMetrics.getRmDispatcherEventQueueSize()).
-          td(rsMetrics.getSchedulerDispatcherEventQueueSize()).
-          __();
+           config, client);
+      return schedulerOverviewInfo;
+    } catch (Exception e) {
+      LOG.error("get SchedulerOverviewInfo from webAppAddress = {} error.",
+          webAppAddress, e);
+      return null;
     }
+  }
+
+  /**
+   * Show RouterSchedulerMetricsData.
+   *
+   * @param rsMetrics routerSchedulerMetrics.
+   * @param fsMetricsScheduleTr MetricsScheduleTr.
+   */
+  private void showRouterSchedulerMetricsData(RouterSchedulerMetrics rsMetrics,
+      Hamlet.TBODY<Hamlet.TABLE<Hamlet.DIV<Hamlet>>> fsMetricsScheduleTr) {
+    // Basic information
+    fsMetricsScheduleTr.tr().
+        td(rsMetrics.getSubCluster()).
+        td(rsMetrics.getSchedulerType()).
+        td(rsMetrics.getSchedulingResourceType()).
+        td(rsMetrics.getMinimumAllocation()).
+        td(rsMetrics.getMaximumAllocation()).
+        td(rsMetrics.getApplicationPriority()).
+        td(rsMetrics.getSchedulerBusy()).
+        td(rsMetrics.getRmDispatcherEventQueueSize()).
+        td(rsMetrics.getSchedulerDispatcherEventQueueSize()).
+        __();
+  }
+
+  /**
+   * Show RouterSchedulerMetricsData.
+   *
+   * @param subClusterId subClusterId.
+   * @param fsMetricsScheduleTr MetricsScheduleTr.
+   */
+  private void showRouterSchedulerMetricsData(String subClusterId,
+      Hamlet.TBODY<Hamlet.TABLE<Hamlet.DIV<Hamlet>>> fsMetricsScheduleTr) {
+    String subCluster = StringUtils.isNotBlank(subClusterId) ? subClusterId : UNAVAILABLE;
+    fsMetricsScheduleTr.tr().
+        td(subCluster).
+        td(UNAVAILABLE).
+        td(UNAVAILABLE).
+        td(UNAVAILABLE).
+        td(UNAVAILABLE).
+        td(UNAVAILABLE).
+        td(UNAVAILABLE).
+        td(UNAVAILABLE).
+        td(UNAVAILABLE)
+        .__();
   }
 }

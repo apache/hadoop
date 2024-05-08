@@ -238,7 +238,7 @@ public class TestLineRecordReader {
     }
     fis.close();
     assertTrue("Test file data too big for buffer", count < data.length);
-    return new String(data, 0, count, "UTF-8").split("\n");
+    return new String(data, 0, count, StandardCharsets.UTF_8).split("\n");
   }
 
   public void checkRecordSpanningMultipleSplits(String testFile,

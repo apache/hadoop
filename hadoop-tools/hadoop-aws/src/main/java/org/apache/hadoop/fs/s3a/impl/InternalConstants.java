@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a.impl;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -30,7 +31,26 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.s3a.Constants;
 
+import static org.apache.hadoop.fs.CommonPathCapabilities.DIRECTORY_LISTING_INCONSISTENT;
+import static org.apache.hadoop.fs.CommonPathCapabilities.ETAGS_AVAILABLE;
+import static org.apache.hadoop.fs.CommonPathCapabilities.FS_CHECKSUMS;
+import static org.apache.hadoop.fs.CommonPathCapabilities.FS_MULTIPART_UPLOADER;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_STANDARD_OPTIONS;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_ACCESS_GRANTS_ENABLED;
+import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_OPERATIONS_PURGE_UPLOADS;
+import static org.apache.hadoop.fs.s3a.Constants.ENABLE_MULTI_DELETE;
+import static org.apache.hadoop.fs.s3a.Constants.FIPS_ENDPOINT;
+import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
+import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE_ENABLED;
+import static org.apache.hadoop.fs.s3a.Constants.STORE_CAPABILITY_AWS_V2;
+import static org.apache.hadoop.fs.s3a.impl.S3ExpressStorage.STORE_CAPABILITY_S3_EXPRESS_STORAGE;
+import static org.apache.hadoop.fs.s3a.Constants.STORE_CAPABILITY_DIRECTORY_MARKER_ACTION_DELETE;
+import static org.apache.hadoop.fs.s3a.Constants.STORE_CAPABILITY_DIRECTORY_MARKER_ACTION_KEEP;
+import static org.apache.hadoop.fs.s3a.Constants.STORE_CAPABILITY_DIRECTORY_MARKER_POLICY_AUTHORITATIVE;
+import static org.apache.hadoop.fs.s3a.Constants.STORE_CAPABILITY_DIRECTORY_MARKER_POLICY_DELETE;
+import static org.apache.hadoop.fs.s3a.Constants.STORE_CAPABILITY_DIRECTORY_MARKER_POLICY_KEEP;
+import static org.apache.hadoop.fs.s3a.Constants.STORE_CAPABILITY_MULTIPART_UPLOAD_ENABLED;
+import static org.apache.hadoop.fs.s3a.commit.CommitConstants.STORE_CAPABILITY_MAGIC_COMMITTER;
 
 /**
  * Internal constants private only to the S3A codebase.
@@ -94,8 +114,6 @@ public final class InternalConstants {
 
   /**
    * The known keys used in a standard openFile call.
-   * if there's a select marker in there then the keyset
-   * used becomes that of the select operation.
    */
   @InterfaceStability.Unstable
   public static final Set<String> S3A_OPENFILE_KEYS;
@@ -110,11 +128,73 @@ public final class InternalConstants {
     S3A_OPENFILE_KEYS = Collections.unmodifiableSet(keys);
   }
 
+  /** 200 status code: OK. */
+  public static final int SC_200_OK = 200;
+
+  /** 301 status code: Moved Permanently. */
+  public static final int SC_301_MOVED_PERMANENTLY = 301;
+
+  /** 307 status code: Temporary Redirect. */
+  public static final int SC_307_TEMPORARY_REDIRECT = 307;
+
+  /** 400 status code: Bad Request. */
+  public static final int SC_400_BAD_REQUEST = 400;
+
+  /** 401 status code: Unauthorized. */
+  public static final int SC_401_UNAUTHORIZED = 401;
+
+  /** 403 status code: Forbidden. */
+  public static final int SC_403_FORBIDDEN = 403;
+
   /** 403 error code. */
-  public static final int SC_403 = 403;
+  @Deprecated
+  public static final int SC_403 = SC_403_FORBIDDEN;
+
+  /** 404 status code: Not Found. */
+  public static final int SC_404_NOT_FOUND = 404;
 
   /** 404 error code. */
-  public static final int SC_404 = 404;
+  @Deprecated
+  public static final int SC_404 = SC_404_NOT_FOUND;
+
+  /** 405 status code: Method Not Allowed. */
+  public static final int SC_405_METHOD_NOT_ALLOWED = 405;
+
+  /** 409 status code: Conflict. Example: creating a bucket twice. */
+  public static final int SC_409_CONFLICT = 409;
+
+  /** 410 status code: Gone. */
+  public static final int SC_410_GONE = 410;
+
+  /** 412 status code: Precondition Failed. */
+  public static final int SC_412_PRECONDITION_FAILED = 412;
+
+  /** 415 status code: Content type unsupported by this store. */
+  public static final int SC_415_UNSUPPORTED_MEDIA_TYPE = 415;
+
+  /** 416 status code: Range Not Satisfiable. */
+  public static final int SC_416_RANGE_NOT_SATISFIABLE = 416;
+
+  /** 429 status code: This is the google GCS throttle message. */
+  public static final int SC_429_TOO_MANY_REQUESTS_GCS = 429;
+
+  /** 443 status code: No Response (unofficial). */
+  public static final int SC_443_NO_RESPONSE = 443;
+
+  /** 444 status code: No Response (unofficial). */
+  public static final int SC_444_NO_RESPONSE = 444;
+
+  /** 500 status code: Internal Server Error. */
+  public static final int SC_500_INTERNAL_SERVER_ERROR = 500;
+
+  /** 501 status code: method not implemented. */
+  public static final int SC_501_NOT_IMPLEMENTED = 501;
+
+  /** 503 status code: Service Unavailable. on AWS S3: throttle response. */
+  public static final int SC_503_SERVICE_UNAVAILABLE = 503;
+
+  /** 504 Gateway Timeout. AWS SDK considers retryable. */
+  public static final int SC_504_GATEWAY_TIMEOUT = 504;
 
   /** Name of the log for throttling events. Value: {@value}. */
   public static final String THROTTLE_LOG_NAME =
@@ -180,6 +260,38 @@ public final class InternalConstants {
    */
   public static final Set<String> CREATE_FILE_KEYS =
       Collections.unmodifiableSet(
-          new HashSet<>(Arrays.asList(Constants.FS_S3A_CREATE_PERFORMANCE)));
+          new HashSet<>(Arrays.asList(FS_S3A_CREATE_PERFORMANCE)));
+
+  /**
+   * Dynamic Path capabilities to be evaluated
+   * in the BucketInfo tool.
+   */
+  public static final List<String> S3A_DYNAMIC_CAPABILITIES =
+      Collections.unmodifiableList(Arrays.asList(
+          ETAGS_AVAILABLE,
+          FS_CHECKSUMS,
+          FS_MULTIPART_UPLOADER,
+          DIRECTORY_LISTING_INCONSISTENT,
+          FIPS_ENDPOINT,
+          AWS_S3_ACCESS_GRANTS_ENABLED,
+
+          // s3 specific
+          STORE_CAPABILITY_AWS_V2,
+          STORE_CAPABILITY_DIRECTORY_MARKER_POLICY_KEEP,
+          STORE_CAPABILITY_DIRECTORY_MARKER_POLICY_DELETE,
+          STORE_CAPABILITY_DIRECTORY_MARKER_POLICY_AUTHORITATIVE,
+          STORE_CAPABILITY_DIRECTORY_MARKER_ACTION_KEEP,
+          STORE_CAPABILITY_DIRECTORY_MARKER_ACTION_DELETE,
+          STORE_CAPABILITY_MAGIC_COMMITTER,
+          STORE_CAPABILITY_MULTIPART_UPLOAD_ENABLED,
+          STORE_CAPABILITY_S3_EXPRESS_STORAGE,
+          FS_S3A_CREATE_PERFORMANCE_ENABLED,
+          DIRECTORY_OPERATIONS_PURGE_UPLOADS,
+          ENABLE_MULTI_DELETE));
+
+  /**
+   * AWS V4 Auth Scheme to use when creating signers: {@value}.
+   */
+  public static final String AUTH_SCHEME_AWS_SIGV_4 = "aws.auth#sigv4";
 
 }

@@ -242,6 +242,11 @@ public final class EmptyS3AStatisticsContext implements S3AStatisticsContext {
     }
 
     @Override
+    public void blockEvictedFromFileCache() {
+
+    }
+
+    @Override
     public void executorAcquired(Duration timeInQueue) {
 
     }

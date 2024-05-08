@@ -18,9 +18,10 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
+import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+
 import org.apache.hadoop.classification.VisibleForTesting;
 
 import org.apache.commons.lang3.StringUtils;
@@ -42,13 +43,10 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.getAWSAccessKeys;
  * property fs.s3a.aws.credentials.provider.  Therefore, changing the class name
  * would be a backward-incompatible change.
  *
- * @deprecated This class will be replaced by one that implements AWS SDK V2's AwsCredentialProvider
- * as part of upgrading S3A to SDK V2. See HADOOP-18073.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-@Deprecated
-public class SimpleAWSCredentialsProvider implements AWSCredentialsProvider {
+public class SimpleAWSCredentialsProvider implements AwsCredentialsProvider {
 
   public static final String NAME
       = "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider";
@@ -63,7 +61,7 @@ public class SimpleAWSCredentialsProvider implements AWSCredentialsProvider {
    */
   public SimpleAWSCredentialsProvider(final URI uri, final Configuration conf)
       throws IOException {
-      this(getAWSAccessKeys(uri, conf));
+    this(getAWSAccessKeys(uri, conf));
   }
 
   /**
@@ -75,25 +73,25 @@ public class SimpleAWSCredentialsProvider implements AWSCredentialsProvider {
   @VisibleForTesting
   SimpleAWSCredentialsProvider(final S3xLoginHelper.Login login)
       throws IOException {
-      this.accessKey = login.getUser();
-      this.secretKey = login.getPassword();
+    this.accessKey = login.getUser();
+    this.secretKey = login.getPassword();
   }
 
   @Override
-  public AWSCredentials getCredentials() {
+  public AwsCredentials resolveCredentials() {
     if (!StringUtils.isEmpty(accessKey) && !StringUtils.isEmpty(secretKey)) {
-      return new BasicAWSCredentials(accessKey, secretKey);
+      return AwsBasicCredentials.create(accessKey, secretKey);
     }
     throw new NoAwsCredentialsException("SimpleAWSCredentialsProvider",
         "No AWS credentials in the Hadoop configuration");
   }
 
   @Override
-  public void refresh() {}
-
-  @Override
   public String toString() {
-    return getClass().getSimpleName();
+    return "SimpleAWSCredentialsProvider{" +
+        "accessKey.empty=" + accessKey.isEmpty() +
+        ", secretKey.empty=" + secretKey.isEmpty() +
+        '}';
   }
 
 }

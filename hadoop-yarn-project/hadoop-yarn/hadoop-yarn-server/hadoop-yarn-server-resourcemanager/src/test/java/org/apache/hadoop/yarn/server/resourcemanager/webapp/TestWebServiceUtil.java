@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -26,6 +27,10 @@ import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import javax.ws.rs.core.MediaType;
@@ -38,16 +43,19 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.inject.Guice;
 import com.google.inject.servlet.ServletModule;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 import com.sun.jersey.test.framework.WebAppDescriptor;
-import org.codehaus.jettison.json.JSONException;
-import org.codehaus.jettison.json.JSONObject;
+
 import org.junit.Assert;
 import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
@@ -65,20 +73,25 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 
-import static org.apache.hadoop.yarn.conf.YarnConfiguration.MEMORY_CONFIGURATION_STORE;
-import static org.apache.hadoop.yarn.conf.YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.GB;
 import static org.junit.Assert.assertEquals;
 
 public final class TestWebServiceUtil {
+  private static final ObjectMapper MAPPER = new ObjectMapper()
+      .configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
+  private static final ObjectWriter OBJECT_WRITER =
+      MAPPER.writerWithDefaultPrettyPrinter();
+
   private TestWebServiceUtil(){
   }
 
   public static class WebServletModule extends ServletModule {
     private final MockRM rm;
+    private final boolean setCustomAuthFilter;
 
-    WebServletModule(MockRM rm) {
+    WebServletModule(MockRM rm, boolean setCustomAuthFilter) {
       this.rm = rm;
+      this.setCustomAuthFilter = setCustomAuthFilter;
     }
 
     @Override
@@ -88,37 +101,77 @@ public final class TestWebServiceUtil {
       bind(GenericExceptionHandler.class);
       bind(ResourceManager.class).toInstance(rm);
       serve("/*").with(GuiceContainer.class);
+
+      if (setCustomAuthFilter) {
+        filter("/*").through(TestRMWebServicesAppsModification
+            .TestRMCustomAuthFilter.class);
+      }
     }
   }
 
   public static void runTest(String template, String name,
       MockRM rm,
       WebResource resource) throws Exception {
-    final boolean reinitAfterNodeChane = isMutableConfig(rm.getConfig());
     try {
-      assertJsonResponse(sendRequest(resource), String.format(template, name, 0));
+      boolean legacyQueueMode = ((CapacityScheduler) rm.getResourceScheduler())
+          .getConfiguration().isLegacyQueueMode();
+
+      // capacity is not set when there are no cluster resources available in non-legacy queue mode
+      assertJsonResponse(sendRequest(resource),
+          getExpectedResourceFile(template, name, "0", legacyQueueMode));
+
       MockNM nm1 = rm.registerNode("h1:1234", 8 * GB, 8);
       rm.registerNode("h2:1234", 8 * GB, 8);
-      if (reinitAfterNodeChane) {
-        reinitialize(rm, rm.getConfig());
-      }
-      assertJsonResponse(sendRequest(resource), String.format(template, name, 16));
+      assertJsonResponse(sendRequest(resource),
+          getExpectedResourceFile(template, name, "16", legacyQueueMode));
       rm.registerNode("h3:1234", 8 * GB, 8);
       MockNM nm4 = rm.registerNode("h4:1234", 8 * GB, 8);
-      if (reinitAfterNodeChane) {
-        reinitialize(rm, rm.getConfig());
-      }
-      assertJsonResponse(sendRequest(resource), String.format(template, name, 32));
+
+      assertJsonResponse(sendRequest(resource),
+          getExpectedResourceFile(template, name, "32", legacyQueueMode));
       rm.unRegisterNode(nm1);
       rm.unRegisterNode(nm4);
-      assertJsonResponse(sendRequest(resource), String.format(template, name, 16));
+      assertJsonResponse(sendRequest(resource),
+          getExpectedResourceFile(template, name, "16", legacyQueueMode));
     } finally {
       rm.close();
     }
   }
-  public static boolean isMutableConfig(Configuration config) {
-    return Objects.equals(config.get(SCHEDULER_CONFIGURATION_STORE_CLASS),
-        MEMORY_CONFIGURATION_STORE);
+
+  /**
+   * There are some differences between legacy and non-legacy queue mode.
+   *   - capacity/maxCapacity shows effective values instead of configured on non-legacy mode
+   *   - no cluster resource -> no capacity in non-legacy mode
+   *   - no cluster resource -> maxApplications is set to the configured value in non-legacy mode
+   *   - normalizedWeight is not set in non-legacy queue mode
+   *  To address this tests may add separate test files for legacy queue mode.
+   *
+   * @param template The file template to use
+   * @param name The base test name (-legacy suffix will be searched if legacy-queue-mode)
+   * @param suffix The test suffix
+   * @param legacyQueueMode Is legacy-queue-mode enabled
+   * @return The expected test file name. In legacy-queue mode returns the basename-legacy
+   * filepath if exists.
+   *
+   * @throws IOException when the resource file cannot be opened for some reason.
+   */
+  public static String getExpectedResourceFile(String template, String name, String suffix,
+                                               boolean legacyQueueMode) throws IOException {
+    String legacyResource = String.format(template, legacySuffix(legacyQueueMode, name), suffix);
+    try (InputStream stream = getResourceAsStream(legacyResource)) {
+      if (stream != null) {
+        return legacyResource;
+      }
+    }
+
+    return String.format(template, name, suffix);
+  }
+
+  public static String legacySuffix(boolean legacyQueueMode, String text) {
+    if (legacyQueueMode) {
+      return text + "-legacy";
+    }
+    return text;
   }
 
   public static ClientResponse sendRequest(WebResource resource) {
@@ -162,22 +215,61 @@ public final class TestWebServiceUtil {
   }
 
   public static void assertJsonResponse(ClientResponse response,
-      String expectedResourceFilename) throws JSONException,
-      IOException {
+      String expectedResourceFilename) throws IOException {
     assertJsonType(response);
-    JSONObject json = response.getEntity(JSONObject.class);
-    String actual = prettyPrintJson(json.toString(2));
+
+    JsonNode jsonNode = MAPPER.readTree(response.getEntity(String.class));
+    sortQueuesLexically((ObjectNode) jsonNode);
+
+    String actual = OBJECT_WRITER.writeValueAsString(jsonNode);
     updateTestDataAutomatically(expectedResourceFilename, actual);
     assertEquals(
-        prettyPrintJson(getResourceAsString(expectedResourceFilename)),
+        // Deserialize/serialise again with the exact same settings
+        // to make sure jackson upgrade doesn't break the test
+        OBJECT_WRITER.writeValueAsString(
+            MAPPER.readTree(
+                Objects.requireNonNull(getResourceAsString(expectedResourceFilename)))),
         actual);
   }
 
-  private static String prettyPrintJson(String in) throws JsonProcessingException {
-    ObjectMapper objectMapper = new ObjectMapper();
-    return objectMapper
-        .writerWithDefaultPrettyPrinter()
-        .writeValueAsString(objectMapper.readTree(in));
+  /**
+   * Sorts the "queue": [ {}, {}, {} ] parts recursively by the queuePath key.
+   *
+   * <p>
+   * There was a marshalling error described in YARN-4785 in CapacitySchedulerInfo.getQueues().
+   * If that issue still present, we can't sort the queues there, but only sort the leaf queues
+   * then the non-leaf queues which would make a consistent output, but hard to document.
+   * Instead we make sure the test data is at least ordered by queue names.
+   * </p>
+   *
+   * @param object the json object to sort.
+   */
+  private static void sortQueuesLexically(ObjectNode object) {
+    Iterator<String> keys = object.fieldNames();
+    while (keys.hasNext()) {
+      String key = keys.next();
+      JsonNode o = object.get(key);
+      if (key.equals("queue") && o.isArray()) {
+        ArrayNode original = (ArrayNode) o;
+        List<ObjectNode> queues = new ArrayList<>(original.size());
+        for (int i = 0; i < original.size(); i++) {
+          if (original.get(i).isObject()) {
+            queues.add((ObjectNode) original.get(i));
+          }
+        }
+        queues.sort(new Comparator<ObjectNode>() {
+          private static final String SORT_BY_KEY = "queuePath";
+          @Override
+          public int compare(ObjectNode a, ObjectNode b) {
+            return a.get(SORT_BY_KEY).asText().compareTo(b.get(SORT_BY_KEY).asText());
+          }
+        });
+
+        object.set("queue", MAPPER.createObjectNode().arrayNode().addAll(queues));
+      } else if (o.isObject()) {
+        sortQueuesLexically((ObjectNode) o);
+      }
+    }
   }
 
   public static void assertJsonType(ClientResponse response) {
@@ -236,22 +328,25 @@ public final class TestWebServiceUtil {
   }
 
   public static MockRM createRM(Configuration config) {
+    return createRM(config, false);
+  }
+
+  public static MockRM createRM(Configuration config, boolean setCustomAuthFilter) {
     config.setClass(YarnConfiguration.RM_SCHEDULER,
         CapacityScheduler.class, ResourceScheduler.class);
     config.set(YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_HANDLER,
         YarnConfiguration.SCHEDULER_RM_PLACEMENT_CONSTRAINTS_HANDLER);
     MockRM rm = new MockRM(config);
-    GuiceServletConfig.setInjector(Guice.createInjector(new WebServletModule(rm)));
+    GuiceServletConfig.setInjector(Guice.createInjector(
+        new WebServletModule(rm, setCustomAuthFilter)));
     rm.start();
     return rm;
   }
 
-  public static MockRM createMutableRM(Configuration conf) throws IOException {
+  public static MockRM createMutableRM(Configuration conf, boolean setCustomAuthFilter) {
     conf.set(YarnConfiguration.SCHEDULER_CONFIGURATION_STORE_CLASS,
         YarnConfiguration.MEMORY_CONFIGURATION_STORE);
-    MockRM rm = createRM(new CapacitySchedulerConfiguration(conf));
-    reinitialize(rm, conf);
-    return rm;
+    return createRM(new CapacitySchedulerConfiguration(conf), setCustomAuthFilter);
   }
 
   public static void reinitialize(MockRM rm, Configuration conf) throws IOException {
@@ -261,5 +356,32 @@ public final class TestWebServiceUtil {
     // Therefore CS will think there's only the default queue there.
     CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
     cs.reinitialize(conf, rm.getRMContext(), true);
+  }
+
+  public static File getCapacitySchedulerConfigFileInTarget() {
+    return new File("target/test-classes", YarnConfiguration.CS_CONFIGURATION_FILE);
+  }
+
+  public static File getBackupCapacitySchedulerConfigFileInTarget() {
+    return new File("target/test-classes", YarnConfiguration.CS_CONFIGURATION_FILE + ".tmp");
+  }
+
+  public static void backupSchedulerConfigFileInTarget() {
+    final File file = getCapacitySchedulerConfigFileInTarget();
+    if (file.exists()) {
+      if (!file.renameTo(getBackupCapacitySchedulerConfigFileInTarget())) {
+        throw new RuntimeException("Failed to backup configuration file");
+      }
+    }
+  }
+
+  public static void restoreSchedulerConfigFileInTarget() {
+    File file = getBackupCapacitySchedulerConfigFileInTarget();
+    if (file.exists()) {
+      getCapacitySchedulerConfigFileInTarget().delete();
+      if (!file.renameTo(getCapacitySchedulerConfigFileInTarget())) {
+        throw new RuntimeException("Failed to restore configuration file");
+      }
+    }
   }
 }

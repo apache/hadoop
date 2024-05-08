@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -31,7 +32,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 
 /**
  * <code>JobQueueClient</code> is interface provided to the user in order to get
@@ -148,7 +148,7 @@ class JobQueueClient extends Configured implements Tool {
     JobQueueInfo[] rootQueues = jc.getRootQueues();
     for (JobQueueInfo queue : rootQueues) {
       printJobQueueInfo(queue, new PrintWriter(new OutputStreamWriter(
-          System.out, Charsets.UTF_8)));
+          System.out, StandardCharsets.UTF_8)));
     }
   }
   
@@ -187,7 +187,7 @@ class JobQueueClient extends Configured implements Tool {
       return;
     }
     printJobQueueInfo(jobQueueInfo, new PrintWriter(new OutputStreamWriter(
-        System.out, Charsets.UTF_8)));
+        System.out, StandardCharsets.UTF_8)));
     if (showJobs && (jobQueueInfo.getChildren() == null ||
         jobQueueInfo.getChildren().size() == 0)) {
       JobStatus[] jobs = jobQueueInfo.getJobStatuses();

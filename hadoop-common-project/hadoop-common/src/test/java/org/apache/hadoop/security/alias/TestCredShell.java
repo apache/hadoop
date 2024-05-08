@@ -166,6 +166,21 @@ public class TestCredShell {
   }
 
   @Test
+  public void testPromptForCredentialNotFound() throws Exception {
+    String[] args1 = {"check", "credential1", "-provider",
+        jceksProvider};
+    ArrayList<String> password = new ArrayList<String>();
+    password.add("p@ssw0rd");
+    int rc = 0;
+    CredentialShell shell = new CredentialShell();
+    shell.setConf(new Configuration());
+    shell.setPasswordReader(new MockPasswordReader(password));
+    rc = shell.run(args1);
+    assertEquals(0, rc);
+    assertOutputContains("Password match failed for credential1.");
+  }
+
+  @Test
   public void testPromptForCredential() throws Exception {
     String[] args1 = {"create", "credential1", "-provider",
         jceksProvider};

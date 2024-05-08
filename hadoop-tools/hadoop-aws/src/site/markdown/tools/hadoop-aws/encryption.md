@@ -66,7 +66,7 @@ The server-side "SSE" encryption is performed with symmetric AES256 encryption;
 S3 offers different mechanisms for actually defining the key to use.
 
 
-There are four key management mechanisms, which in order of simplicity of use,
+There are five key management mechanisms, which in order of simplicity of use,
 are:
 
 * S3 Default Encryption
@@ -75,6 +75,9 @@ are:
 by Amazon's Key Management Service, a key referenced by name in the uploading client.
 * SSE-C : the client specifies an actual base64 encoded AES-256 key to be used
 to encrypt and decrypt the data.
+* DSSE-KMS: Two independent layers of encryption at server side. An AES256 key is
+generated in S3, and encrypted with a secret key provided by Amazon's Key Management
+Service.
 
 Encryption options
 
@@ -84,6 +87,7 @@ Encryption options
 | `SSE-KMS` | server side, KMS key | key used to encrypt/decrypt | none |
 | `SSE-C` | server side, custom key | encryption algorithm and secret | encryption algorithm and secret |
 | `CSE-KMS` | client side, KMS key | encryption algorithm and key ID | encryption algorithm |
+| `DSSE-KMS` | server side, KMS key | key used to encrypt/decrypt | none |
 
 With server-side encryption, the data is uploaded to S3 unencrypted (but wrapped by the HTTPS
 encryption channel).
@@ -91,7 +95,7 @@ The data is encrypted in the S3 store and decrypted when it's being retrieved.
 
 A server side algorithm can be enabled by default for a bucket, so that
 whenever data is uploaded unencrypted a default encryption algorithm is added.
-When data is encrypted with S3-SSE or SSE-KMS it is transparent to all clients
+When data is encrypted with S3-SSE, SSE-KMS or DSSE-KMS it is transparent to all clients
 downloading the data.
 SSE-C is different in that every client must know the secret key needed to decypt the data.
 
@@ -132,7 +136,7 @@ not explicitly declare an encryption algorithm.
 
 [S3 Default Encryption for S3 Buckets](https://docs.aws.amazon.com/AmazonS3/latest/dev/bucket-encryption.html)
 
-This supports SSE-S3 and SSE-KMS.
+This supports SSE-S3, SSE-KMS and DSSE-KMS.
 
 There is no need to set anything up in the client: do it in the AWS console.
 
@@ -314,6 +318,82 @@ bucket and to not change this key.  This is due to when a request is made to S3,
 the actual encryption key must be provided to decrypt the object and access the
 metadata.  Since only one encryption key can be provided at a time, S3A will not
 pass the correct encryption key to decrypt the data.
+
+
+### <a name="dsse-kms"></a> DSSE-KMS: Dual-layer Server-Encryption with KMS Managed Encryption Keys
+
+By providing a dual-layer server-side encryption mechanism using AWS Key Management Service
+(AWS KMS) keys, known as DSSE-KMS, two layers of encryption are applied to objects upon their
+upload to Amazon S3. DSSE-KMS simplifies the process of meeting compliance requirements that
+mandate the implementation of multiple layers of encryption for data while maintaining complete
+control over the encryption keys.
+
+
+When uploading data encrypted with SSE-KMS, the sequence is as follows:
+
+1. The S3A client must declare a specific CMK in the property `fs.s3a.encryption.key`, or leave
+   it blank to use the default configured for that region.
+
+2. The S3A client uploads all the data as normal, now including encryption information.
+
+3. The S3 service encrypts the data with a symmetric key unique to the new object.
+
+4. The S3 service retrieves the chosen CMK key from the KMS service, and, if the user has
+   the right to use it, uses it to provide dual-layer encryption for the data.
+
+
+When downloading DSSE-KMS encrypted data, the sequence is as follows
+
+1. The S3A client issues an HTTP GET request to read the data.
+
+2. S3 sees that the data was encrypted with DSSE-KMS, and looks up the specific key in the
+   KMS service.
+
+3. If and only if the requesting user has been granted permission to use the CMS key does
+   the KMS service provide S3 with the key.
+
+4. As a result, S3 will only decode the data if the user has been granted access to the key.
+
+Further reading on DSSE-KMS [here](https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingDSSEncryption.html)
+
+AWS Blog post [here](https://aws.amazon.com/blogs/aws/new-amazon-s3-dual-layer-server-side-encryption-with-keys-stored-in-aws-key-management-service-dsse-kms/)
+
+### Enabling DSSE-KMS
+
+To enable DSSE-KMS, the property `fs.s3a.encryption.algorithm` must be set to `DSSE-KMS` in `core-site`:
+
+```xml
+<property>
+  <name>fs.s3a.encryption.algorithm</name>
+  <value>DSSE-KMS</value>
+</property>
+```
+
+The ID of the specific key used to encrypt the data should also be set in the property `fs.s3a.encryption.key`:
+
+```xml
+<property>
+  <name>fs.s3a.encryption.key</name>
+  <value>arn:aws:kms:us-west-2:360379543683:key/071a86ff-8881-4ba0-9230-95af6d01ca01</value>
+</property>
+```
+
+Organizations may define a default key in the Amazon KMS; if a default key is set,
+then it will be used whenever SSE-KMS encryption is chosen and the value of `fs.s3a.encryption.key` is empty.
+
+### the S3A `fs.s3a.encryption.key` key only affects created files
+
+With SSE-KMS, the S3A client option `fs.s3a.encryption.key` sets the
+key to be used when new files are created. When reading files, this key,
+and indeed the value of `fs.s3a.encryption.algorithm` is ignored:
+S3 will attempt to retrieve the key and decrypt the file based on the create-time settings.
+
+This means that
+
+* There's no need to configure any client simply reading data.
+* It is possible for a client to read data encrypted with one KMS key, and
+  write it with another.
+
 
 
 ## <a name="best_practises"></a> Encryption best practises
@@ -536,15 +616,14 @@ header.x-amz-version-id="KcDOVmznIagWx3gP1HlDqcZvm1mFWZ2a"
 A file with no-encryption (on a bucket without versioning but with intelligent tiering):
 
 ```
-bin/hadoop fs -getfattr -d s3a://landsat-pds/scene_list.gz
+ bin/hadoop fs -getfattr -d s3a://noaa-cors-pds/raw/2024/001/akse/AKSE001x.24_.gz
 
-# file: s3a://landsat-pds/scene_list.gz
-header.Content-Length="45603307"
-header.Content-Type="application/octet-stream"
-header.ETag="39c34d489777a595b36d0af5726007db"
-header.Last-Modified="Wed Aug 29 01:45:15 BST 2018"
-header.x-amz-storage-class="INTELLIGENT_TIERING"
-header.x-amz-version-id="null"
+# file: s3a://noaa-cors-pds/raw/2024/001/akse/AKSE001x.24_.gz
+header.Content-Length="524671"
+header.Content-Type="binary/octet-stream"
+header.ETag=""3e39531220fbd3747d32cf93a79a7a0c""
+header.Last-Modified="Tue Jan 02 00:15:13 GMT 2024"
+header.x-amz-server-side-encryption="AES256"
 ```
 
 ###<a name="changing-encryption"></a> Use `rename()` to encrypt files with new keys
@@ -606,7 +685,6 @@ clients where S3-CSE has not been enabled.
 - Writing files may be slower, as only a single block can be encrypted and
  uploaded at a time.
 - Multipart Uploader API disabled.
-- S3 Select is not supported.
 - Multipart uploads would be serial, and partSize must be a multiple of 16
  bytes.
 - maximum message size in bytes that can be encrypted under this mode is

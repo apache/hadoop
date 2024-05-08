@@ -35,7 +35,6 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -218,7 +217,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       //Capture output from prelaunch.out
 
       List<String> output = Files.readAllLines(Paths.get(localLogDir.getAbsolutePath(), ContainerLaunch.CONTAINER_PRE_LAUNCH_STDOUT),
-          Charset.forName("UTF-8"));
+          StandardCharsets.UTF_8);
       assert(output.contains("hello"));
 
       symLinkFile = new File(tmpDir, badSymlink);
@@ -549,7 +548,7 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
       } catch(ExitCodeException e){
         //Capture diagnostics from prelaunch.stderr
         List<String> error = Files.readAllLines(Paths.get(localLogDir.getAbsolutePath(), ContainerLaunch.CONTAINER_PRE_LAUNCH_STDERR),
-            Charset.forName("UTF-8"));
+            StandardCharsets.UTF_8);
         diagnostics = StringUtils.join("\n", error);
       }
       Assert.assertTrue(diagnostics.contains(Shell.WINDOWS ?
@@ -575,18 +574,25 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
             + Apps.crossPlatformify("HADOOP_HOME") + "/share/hadoop/common/lib/*"
             + ApplicationConstants.CLASS_PATH_SEPARATOR
             + Apps.crossPlatformify("HADOOP_LOG_HOME")
-            + ApplicationConstants.LOG_DIR_EXPANSION_VAR;
+            + ApplicationConstants.LOG_DIR_EXPANSION_VAR
+            + " " + ApplicationConstants.JVM_ADD_OPENS_VAR;
 
     String res = ContainerLaunch.expandEnvironment(input, logPath);
+
+    String additionalJdk17PlusOptions =
+        "--add-opens=java.base/java.lang=ALL-UNNAMED " +
+        "--add-exports=java.base/sun.net.dns=ALL-UNNAMED " +
+        "--add-exports=java.base/sun.net.util=ALL-UNNAMED";
+    String expectedAddOpens = Shell.isJavaVersionAtLeast(17) ? additionalJdk17PlusOptions : "";
 
     if (Shell.WINDOWS) {
       Assert.assertEquals("%HADOOP_HOME%/share/hadoop/common/*;"
           + "%HADOOP_HOME%/share/hadoop/common/lib/*;"
-          + "%HADOOP_LOG_HOME%/nm/container/logs", res);
+          + "%HADOOP_LOG_HOME%/nm/container/logs" + " " + expectedAddOpens, res);
     } else {
       Assert.assertEquals("$HADOOP_HOME/share/hadoop/common/*:"
           + "$HADOOP_HOME/share/hadoop/common/lib/*:"
-          + "$HADOOP_LOG_HOME/nm/container/logs", res);
+          + "$HADOOP_LOG_HOME/nm/container/logs" + " " + expectedAddOpens, res);
     }
     System.out.println(res);
   }
@@ -1830,6 +1836,63 @@ public class TestContainerLaunch extends BaseContainerManagerTest {
             scriptCopy.length() > 0);
         }
       }
+    } finally {
+      // cleanup
+      if (shellFile != null && shellFile.exists()) {
+        shellFile.delete();
+      }
+      if (tempFile != null && tempFile.exists()) {
+        tempFile.delete();
+      }
+    }
+  }
+
+  @Test
+  public void testDebuggingInformationOnError() throws IOException {
+    File shellFile = null;
+    File tempFile = null;
+    Configuration conf = new YarnConfiguration();
+    try {
+      shellFile = Shell.appendScriptExtension(tmpDir, "hello");
+      tempFile = Shell.appendScriptExtension(tmpDir, "temp");
+      String testCommand = Shell.WINDOWS ? "@echo \"hello\"" : "echo \"hello\"";
+      PrintWriter writer = new PrintWriter(new FileOutputStream(shellFile));
+      FileUtil.setExecutable(shellFile, true);
+      writer.println(testCommand);
+      writer.close();
+      Map<Path, List<String>> resources = new HashMap<>();
+      Map<String, String> env = new HashMap<>();
+      List<String> commands = new ArrayList<>();
+      if (Shell.WINDOWS) {
+        commands.add("cmd");
+        commands.add("/c");
+        commands.add("\"" + shellFile.getAbsolutePath() + "\"");
+      } else {
+        commands.add("/bin/sh \\\"" + shellFile.getAbsolutePath() + "\\\"");
+      }
+      conf.setBoolean(YarnConfiguration.NM_LOG_CONTAINER_DEBUG_INFO, false);
+      conf.setBoolean(YarnConfiguration.NM_LOG_CONTAINER_DEBUG_INFO_ON_ERROR, true);
+      FileOutputStream fos = new FileOutputStream(tempFile);
+      ContainerExecutor exec = new DefaultContainerExecutor();
+      exec.setConf(conf);
+      LinkedHashSet<String> nmVars = new LinkedHashSet<>();
+      exec.writeLaunchEnv(fos, env, resources, commands,
+          new Path(localLogDir.getAbsolutePath()), "user",
+          tempFile.getName(), nmVars);
+      fos.flush();
+      fos.close();
+      FileUtil.setExecutable(tempFile, true);
+      Shell.ShellCommandExecutor shexc = new Shell.ShellCommandExecutor(
+          new String[]{tempFile.getAbsolutePath()}, tmpDir);
+      shexc.execute();
+      assertThat(shexc.getExitCode()).isZero();
+      File directorInfo =
+          new File(localLogDir, ContainerExecutor.DIRECTORY_CONTENTS);
+      File scriptCopy = new File(localLogDir, tempFile.getName());
+      Assert.assertFalse("Directory info file missing",
+          directorInfo.exists());
+      Assert.assertFalse("Copy of launch script missing",
+          scriptCopy.exists());
     } finally {
       // cleanup
       if (shellFile != null && shellFile.exists()) {

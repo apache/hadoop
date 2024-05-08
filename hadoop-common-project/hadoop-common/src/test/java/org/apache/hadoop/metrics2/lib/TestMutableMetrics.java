@@ -634,5 +634,7 @@ public class TestMutableMetrics {
     assertEquals(3.2f, mgf.value(), 0.0);
     mgf.incr();
     assertEquals(4.2f, mgf.value(), 0.0);
+    mgf.set(Float.NaN);
+    assertEquals(Float.NaN, mgf.value(), 0.0);
   }
 }

@@ -39,6 +39,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEv
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -50,13 +51,22 @@ import java.util.HashSet;
 
 import java.io.IOException;
 
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assume.assumeThat;
+
 public class TestCapacitySchedulerNewQueueAutoCreation
     extends TestCapacitySchedulerAutoCreatedQueueBase {
   private static final Logger LOG = LoggerFactory.getLogger(
       org.apache.hadoop.yarn.server.resourcemanager
           .scheduler.capacity.TestCapacitySchedulerAutoCreatedQueueBase.class);
+  private static final QueuePath EMPTY_AUTO_PARENT = new QueuePath("root.empty-auto-parent");
+  private static final QueuePath A_A2_AUTO = new QueuePath("root.a.a2-auto");
+  private static final QueuePath E_AUTO = new QueuePath("root.e-auto");
+  private static final QueuePath E_E1 = new QueuePath("root.e.e1");
+  private static final QueuePath A_A_AUTO_A2 = new QueuePath("root.a.a-auto.a2");
+  private static final QueuePath A_A1_AUTO_A2_AUTO = new QueuePath("root.a.a1-auto.a2-auto");
   public static final int GB = 1024;
-  private static final int MAX_MEMORY = 1200;
+  public static final int MAX_MEMORY = 1200;
   private MockRM mockRM = null;
   private CapacityScheduler cs;
   private CapacitySchedulerConfiguration csConf;
@@ -75,8 +85,8 @@ public class TestCapacitySchedulerNewQueueAutoCreation
   /*
   Create the following structure:
            root
-        /       \
-      a          b
+        /   |   \
+      a     b    e
     /
   a1
    */
@@ -87,18 +97,25 @@ public class TestCapacitySchedulerNewQueueAutoCreation
         ResourceScheduler.class);
 
     // By default, set 3 queues, a/b, and a.a1
-    csConf.setQueues("root", new String[]{"a", "b"});
-    csConf.setNonLabeledQueueWeight("root", 1f);
-    csConf.setNonLabeledQueueWeight("root.a", 1f);
-    csConf.setNonLabeledQueueWeight("root.b", 1f);
-    csConf.setQueues("root.a", new String[]{"a1"});
-    csConf.setNonLabeledQueueWeight("root.a.a1", 1f);
-    csConf.setAutoQueueCreationV2Enabled("root", true);
-    csConf.setAutoQueueCreationV2Enabled("root.a", true);
-    csConf.setAutoQueueCreationV2Enabled("root.e", true);
-    csConf.setAutoQueueCreationV2Enabled(PARENT_QUEUE, true);
+    csConf.setQueues(ROOT, new String[]{"a", "b"});
+    csConf.setNonLabeledQueueWeight(ROOT, 1f);
+    csConf.setNonLabeledQueueWeight(A, 1f);
+    csConf.setNonLabeledQueueWeight(B, 1f);
+    csConf.setQueues(A, new String[]{"a1"});
+    csConf.setNonLabeledQueueWeight(A1, 1f);
+    csConf.setAutoQueueCreationV2Enabled(ROOT, true);
+    csConf.setAutoQueueCreationV2Enabled(A, true);
+    csConf.setAutoQueueCreationV2Enabled(E, true);
+    csConf.setAutoQueueCreationV2Enabled(new QueuePath(PARENT_QUEUE), true);
     // Test for auto deletion when expired
     csConf.setAutoExpiredDeletionTime(1);
+  }
+
+  @After
+  public void tearDown() {
+    if (mockRM != null) {
+      mockRM.stop();
+    }
   }
 
   protected void startScheduler() throws Exception {
@@ -277,7 +294,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
   public void testAutoCreateQueueAutoParentTwoLevelsWithSiblings()
       throws Exception {
     startScheduler();
-    csConf.setAutoQueueCreationV2Enabled("root.a.a2-auto", true);
+    csConf.setAutoQueueCreationV2Enabled(A_A2_AUTO, true);
 
     // root.a has 1/2 abs resource -> a1 and a2-auto same weight 1/4
     // -> a3-auto is alone with weight 1/4
@@ -311,9 +328,13 @@ public class TestCapacitySchedulerNewQueueAutoCreation
   public void testAutoCreateQueueWhenSiblingsNotInWeightMode()
       throws Exception {
     startScheduler();
-    csConf.setCapacity("root.a", 50f);
-    csConf.setCapacity("root.b", 50f);
-    csConf.setCapacity("root.a.a1", 100f);
+    // If the new queue mode is used it's allowed to
+    // create a new dynamic queue when the sibling is
+    // not in weight mode
+    assumeThat(csConf.isLegacyQueueMode(), is(true));
+    csConf.setCapacity(A, 50f);
+    csConf.setCapacity(B, 50f);
+    csConf.setCapacity(A1, 100f);
     cs.reinitialize(csConf, mockRM.getRMContext());
     createQueue("root.a.a2-auto");
   }
@@ -327,7 +348,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
         () -> createQueue("root.a.a3-auto.a4-auto.a5-auto"));
 
     // Set depth 3 for root.a, making it a valid scenario
-    csConf.setMaximumAutoCreatedQueueDepth("root.a", 3);
+    csConf.setMaximumAutoCreatedQueueDepth(A, 3);
     cs.reinitialize(csConf, mockRM.getRMContext());
     try {
       createQueue("root.a.a3-auto.a4-auto.a5-auto");
@@ -338,7 +359,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
 
     // Set global depth to 3
     csConf.setMaximumAutoCreatedQueueDepth(3);
-    csConf.unset(CapacitySchedulerConfiguration.getQueuePrefix("root.a")
+    csConf.unset(QueuePrefixes.getQueuePrefix(A)
         + CapacitySchedulerConfiguration.MAXIMUM_QUEUE_DEPTH);
     cs.reinitialize(csConf, mockRM.getRMContext());
     try {
@@ -349,7 +370,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     }
 
     // Set depth on a dynamic queue, which has no effect on auto queue creation validation
-    csConf.setMaximumAutoCreatedQueueDepth("root.a.a6-auto.a7-auto.a8-auto", 10);
+    csConf.setMaximumAutoCreatedQueueDepth(new QueuePath("root.a.a6-auto.a7-auto.a8-auto"), 10);
     Assert.assertThrows(SchedulerDynamicEditException.class,
         () -> createQueue("root.a.a6-auto.a7-auto.a8-auto.a9-auto.a10-auto.a11-auto"));
   }
@@ -358,7 +379,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
   public void testAutoCreateQueueShouldFailIfNotEnabledForParent()
       throws Exception {
     startScheduler();
-    csConf.setAutoQueueCreationV2Enabled("root", false);
+    csConf.setAutoQueueCreationV2Enabled(ROOT, false);
     cs.reinitialize(csConf, mockRM.getRMContext());
     createQueue("root.c-auto");
   }
@@ -386,7 +407,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     createBasicQueueStructureAndValidate();
 
     // Now, update root.a's weight to 6
-    csConf.setNonLabeledQueueWeight("root.a", 6f);
+    csConf.setNonLabeledQueueWeight(new QueuePath("root.a"), 6f);
     cs.reinitialize(csConf, mockRM.getRMContext());
 
     // Double confirm, after refresh, we should still see root queue has 5
@@ -404,8 +425,8 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     Assert.assertEquals(6f, a.getQueueCapacities().getWeight(), 1e-6);
 
     // Set queue c-auto's weight to 6, and mark c-auto to be static queue
-    csConf.setQueues("root", new String[]{"a", "b", "c-auto"});
-    csConf.setNonLabeledQueueWeight("root.c-auto", 6f);
+    csConf.setQueues(ROOT, new String[]{"a", "b", "c-auto"});
+    csConf.setNonLabeledQueueWeight(new QueuePath("root.c-auto"), 6f);
     cs.reinitialize(csConf, mockRM.getRMContext());
 
     // Get queue c
@@ -422,10 +443,10 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     createQueue("root.e-auto.e2-auto");
 
     // Do change 2nd level queue from dynamic to static
-    csConf.setQueues("root", new String[]{"a", "b", "c-auto", "e-auto"});
-    csConf.setNonLabeledQueueWeight("root.e-auto", 6f);
-    csConf.setQueues("root.e-auto", new String[]{"e1-auto"});
-    csConf.setNonLabeledQueueWeight("root.e-auto.e1-auto", 6f);
+    csConf.setQueues(ROOT, new String[]{"a", "b", "c-auto", "e-auto"});
+    csConf.setNonLabeledQueueWeight(new QueuePath("root.e-auto"), 6f);
+    csConf.setQueues(E_AUTO, new String[]{"e1-auto"});
+    csConf.setNonLabeledQueueWeight(new QueuePath("root.e-auto.e1-auto"), 6f);
     cs.reinitialize(csConf, mockRM.getRMContext());
 
     // Get queue e1
@@ -452,9 +473,9 @@ public class TestCapacitySchedulerNewQueueAutoCreation
   public void testConvertDynamicParentToStaticParent() throws Exception {
     startScheduler();
     createQueue("root.d-auto.d1-auto");
-    csConf.setQueues("root", new String[]{"a", "b", "d-auto"});
-    csConf.setNonLabeledQueueWeight("root.a", 6f);
-    csConf.setNonLabeledQueueWeight("root.d-auto", 1f);
+    csConf.setQueues(ROOT, new String[]{"a", "b", "d-auto"});
+    csConf.setNonLabeledQueueWeight(new QueuePath("root.a"), 6f);
+    csConf.setNonLabeledQueueWeight(new QueuePath("root.d-auto"), 1f);
     cs.reinitialize(csConf, mockRM.getRMContext());
 
     CSQueue d = cs.getQueue("root.d-auto");
@@ -489,14 +510,14 @@ public class TestCapacitySchedulerNewQueueAutoCreation
   public void testChildlessParentQueueWhenAutoQueueCreationEnabled()
       throws Exception {
     startScheduler();
-    csConf.setQueues("root", new String[]{"a", "b", "empty-auto-parent"});
-    csConf.setNonLabeledQueueWeight("root", 1f);
-    csConf.setNonLabeledQueueWeight("root.a", 1f);
-    csConf.setNonLabeledQueueWeight("root.b", 1f);
-    csConf.setQueues("root.a", new String[]{"a1"});
-    csConf.setNonLabeledQueueWeight("root.a.a1", 1f);
-    csConf.setAutoQueueCreationV2Enabled("root", true);
-    csConf.setAutoQueueCreationV2Enabled("root.a", true);
+    csConf.setQueues(ROOT, new String[]{"a", "b", "empty-auto-parent"});
+    csConf.setNonLabeledQueueWeight(ROOT, 1f);
+    csConf.setNonLabeledQueueWeight(A, 1f);
+    csConf.setNonLabeledQueueWeight(B, 1f);
+    csConf.setQueues(A, new String[]{"a1"});
+    csConf.setNonLabeledQueueWeight(A1, 1f);
+    csConf.setAutoQueueCreationV2Enabled(ROOT, true);
+    csConf.setAutoQueueCreationV2Enabled(A, true);
     cs.reinitialize(csConf, mockRM.getRMContext());
 
     CSQueue empty = cs.getQueue("root.empty-auto-parent");
@@ -504,15 +525,15 @@ public class TestCapacitySchedulerNewQueueAutoCreation
         empty instanceof LeafQueue);
     empty.stopQueue();
 
-    csConf.setQueues("root", new String[]{"a", "b", "empty-auto-parent"});
-    csConf.setNonLabeledQueueWeight("root", 1f);
-    csConf.setNonLabeledQueueWeight("root.a", 1f);
-    csConf.setNonLabeledQueueWeight("root.b", 1f);
-    csConf.setQueues("root.a", new String[]{"a1"});
-    csConf.setNonLabeledQueueWeight("root.a.a1", 1f);
-    csConf.setAutoQueueCreationV2Enabled("root", true);
-    csConf.setAutoQueueCreationV2Enabled("root.a", true);
-    csConf.setAutoQueueCreationV2Enabled("root.empty-auto-parent", true);
+    csConf.setQueues(ROOT, new String[]{"a", "b", "empty-auto-parent"});
+    csConf.setNonLabeledQueueWeight(ROOT, 1f);
+    csConf.setNonLabeledQueueWeight(A, 1f);
+    csConf.setNonLabeledQueueWeight(B, 1f);
+    csConf.setQueues(A, new String[]{"a1"});
+    csConf.setNonLabeledQueueWeight(A1, 1f);
+    csConf.setAutoQueueCreationV2Enabled(ROOT, true);
+    csConf.setAutoQueueCreationV2Enabled(A, true);
+    csConf.setAutoQueueCreationV2Enabled(EMPTY_AUTO_PARENT, true);
     cs.reinitialize(csConf, mockRM.getRMContext());
 
     empty = cs.getQueue("root.empty-auto-parent");
@@ -629,7 +650,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     Assert.assertEquals(1000, e.getMaxApplications());
 
     // when set some queue for max apps
-    csConf.setMaximumApplicationsPerQueue("root.e1", 50);
+    csConf.setMaximumApplicationsPerQueue(new QueuePath("root.e1"), 50);
     createQueue("root.e1");
     LeafQueue e1 = (LeafQueue)cs.
         getQueue("root.e1");
@@ -690,7 +711,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
   public void testAutoCreateQueueMaxQueuesLimit() throws Exception {
     startScheduler();
 
-    csConf.setAutoCreatedQueuesV2MaxChildQueuesLimit("root.e", 5);
+    csConf.setAutoCreatedQueuesV2MaxChildQueuesLimit(E, 5);
     cs.reinitialize(csConf, mockRM.getRMContext());
 
     for (int i = 0; i < 5; ++i) {
@@ -710,8 +731,13 @@ public class TestCapacitySchedulerNewQueueAutoCreation
   @Test
   public void testAutoCreatedQueueTemplateConfig() throws Exception {
     startScheduler();
+
+    QueuePath childQueuesOfA = new QueuePath("root.a.*");
+    QueuePath aQueuePath = new QueuePath("root.a");
+    QueuePath cQueuePath = new QueuePath("root.c");
+
     csConf.set(AutoCreatedQueueTemplate.getAutoQueueTemplatePrefix(
-        "root.a.*") + "capacity", "6w");
+        childQueuesOfA) + "capacity", "6w");
     cs.reinitialize(csConf, mockRM.getRMContext());
 
     AbstractLeafQueue a2 = createQueue("root.a.a-auto.a2");
@@ -725,9 +751,9 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     // Set the user-limit-factor and maximum-am-resource-percent via templates to ensure their
     // modified defaults are indeed overridden
     csConf.set(AutoCreatedQueueTemplate.getAutoQueueTemplatePrefix(
-        "root.a.*") + "user-limit-factor", "10");
+        childQueuesOfA) + "user-limit-factor", "10");
     csConf.set(AutoCreatedQueueTemplate.getAutoQueueTemplatePrefix(
-        "root.a.*") + "maximum-am-resource-percent", "0.8");
+        childQueuesOfA) + "maximum-am-resource-percent", "0.8");
 
     cs.reinitialize(csConf, mockRM.getRMContext());
     a2 = (LeafQueue) cs.getQueue("root.a.a-auto.a2");
@@ -739,13 +765,13 @@ public class TestCapacitySchedulerNewQueueAutoCreation
         0.8f, a2.getMaxAMResourcePerQueuePercent(), 1e-6);
 
 
-    csConf.setNonLabeledQueueWeight("root.a.a-auto.a2", 4f);
+    csConf.setNonLabeledQueueWeight(new QueuePath("root.a.a-auto.a2"), 4f);
     cs.reinitialize(csConf, mockRM.getRMContext());
     Assert.assertEquals("weight is not explicitly set", 4f,
         a2.getQueueCapacities().getWeight(), 1e-6);
 
     csConf.setBoolean(AutoCreatedQueueTemplate.getAutoQueueTemplatePrefix(
-        "root.a") + CapacitySchedulerConfiguration
+        aQueuePath) + CapacitySchedulerConfiguration
         .AUTO_CREATE_CHILD_QUEUE_AUTO_REMOVAL_ENABLE, false);
     cs.reinitialize(csConf, mockRM.getRMContext());
     AbstractLeafQueue a3 = createQueue("root.a.a3");
@@ -754,9 +780,9 @@ public class TestCapacitySchedulerNewQueueAutoCreation
 
     // Set the capacity of label TEST
     csConf.set(AutoCreatedQueueTemplate.getAutoQueueTemplatePrefix(
-        "root.c") + "accessible-node-labels.TEST.capacity", "6w");
-    csConf.setQueues("root", new String[]{"a", "b", "c"});
-    csConf.setAutoQueueCreationV2Enabled("root.c", true);
+        cQueuePath) + "accessible-node-labels.TEST.capacity", "6w");
+    csConf.setQueues(ROOT, new String[]{"a", "b", "c"});
+    csConf.setAutoQueueCreationV2Enabled(C, true);
     cs.reinitialize(csConf, mockRM.getRMContext());
     AbstractLeafQueue c1 = createQueue("root.c.c1");
     Assert.assertEquals("weight is not set for label TEST", 6f,
@@ -771,19 +797,19 @@ public class TestCapacitySchedulerNewQueueAutoCreation
   public void testAutoCreatedQueueConfigChange() throws Exception {
     startScheduler();
     AbstractLeafQueue a2 = createQueue("root.a.a-auto.a2");
-    csConf.setNonLabeledQueueWeight("root.a.a-auto.a2", 4f);
+    csConf.setNonLabeledQueueWeight(a2.getQueuePathObject(), 4f);
     cs.reinitialize(csConf, mockRM.getRMContext());
 
     Assert.assertEquals("weight is not explicitly set", 4f,
         a2.getQueueCapacities().getWeight(), 1e-6);
 
     a2 = (AbstractLeafQueue) cs.getQueue("root.a.a-auto.a2");
-    csConf.setState("root.a.a-auto.a2", QueueState.STOPPED);
+    csConf.setState(A_A_AUTO_A2, QueueState.STOPPED);
     cs.reinitialize(csConf, mockRM.getRMContext());
     Assert.assertEquals("root.a.a-auto.a2 has not been stopped",
         QueueState.STOPPED, a2.getState());
 
-    csConf.setState("root.a.a-auto.a2", QueueState.RUNNING);
+    csConf.setState(A_A_AUTO_A2, QueueState.RUNNING);
     cs.reinitialize(csConf, mockRM.getRMContext());
     Assert.assertEquals("root.a.a-auto.a2 is not running",
         QueueState.RUNNING, a2.getState());
@@ -794,9 +820,9 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     startScheduler();
 
     createQueue("root.e.e1");
-    csConf.setState("root.e", QueueState.STOPPED);
-    csConf.setState("root.e.e1", QueueState.STOPPED);
-    csConf.setState("root.a", QueueState.STOPPED);
+    csConf.setState(E, QueueState.STOPPED);
+    csConf.setState(E_E1, QueueState.STOPPED);
+    csConf.setState(A, QueueState.STOPPED);
     cs.reinitialize(csConf, mockRM.getRMContext());
 
     // Make sure the static queue is stopped
@@ -812,13 +838,13 @@ public class TestCapacitySchedulerNewQueueAutoCreation
         QueueState.STOPPED);
 
     // Make root.e state to RUNNING
-    csConf.setState("root.e", QueueState.RUNNING);
+    csConf.setState(E, QueueState.RUNNING);
     cs.reinitialize(csConf, mockRM.getRMContext());
     Assert.assertEquals(cs.getQueue("root.e.e1").getState(),
         QueueState.STOPPED);
 
     // Make root.e.e1 state to RUNNING
-    csConf.setState("root.e.e1", QueueState.RUNNING);
+    csConf.setState(E_E1, QueueState.RUNNING);
     cs.reinitialize(csConf, mockRM.getRMContext());
     Assert.assertEquals(cs.getQueue("root.e.e1").getState(),
         QueueState.RUNNING);
@@ -944,7 +970,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     startScheduler();
     // Test for disabled auto deletion
     csConf.setAutoExpiredDeletionEnabled(
-        "root.a.a1-auto.a2-auto", false);
+        A_A1_AUTO_A2_AUTO, false);
     csConf.setBoolean(
         YarnConfiguration.RM_SCHEDULER_ENABLE_MONITORS, true);
     csConf.set(YarnConfiguration.RM_SCHEDULER_MONITOR_POLICIES,
@@ -1011,7 +1037,7 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     // Enabled now
     // The auto deletion will work.
     csConf.setAutoExpiredDeletionEnabled(
-        "root.a.a1-auto.a2-auto", true);
+        A_A1_AUTO_A2_AUTO, true);
     cs.reinitialize(csConf, mockRM.getRMContext());
 
     // Wait the a2 deleted.
@@ -1156,12 +1182,12 @@ public class TestCapacitySchedulerNewQueueAutoCreation
         getQueue("root.a.a-auto");
     Assert.assertTrue(aAuto.isDynamicQueue());
 
-    csConf.setState("root.a", QueueState.STOPPED);
+    csConf.setState(A, QueueState.STOPPED);
     cs.reinitialize(csConf, mockRM.getRMContext());
     aAuto = (AbstractCSQueue) cs.
         getQueue("root.a.a-auto");
     Assert.assertEquals("root.a.a-auto is not in STOPPED state", QueueState.STOPPED, aAuto.getState());
-    csConf.setQueues("root", new String[]{"b"});
+    csConf.setQueues(ROOT, new String[]{"b"});
     cs.reinitialize(csConf, mockRM.getRMContext());
     CSQueue aAutoNew = cs.getQueue("root.a.a-auto");
     Assert.assertNull(aAutoNew);
@@ -1171,24 +1197,24 @@ public class TestCapacitySchedulerNewQueueAutoCreation
     Assert.assertNotNull(aAutoNew);
 
     // Validate static grandparent deletion
-    csConf.setQueues("root", new String[]{"a", "b"});
-    csConf.setQueues("root.a", new String[]{"a1"});
-    csConf.setAutoQueueCreationV2Enabled("root.a.a1", true);
+    csConf.setQueues(ROOT, new String[]{"a", "b"});
+    csConf.setQueues(A, new String[]{"a1"});
+    csConf.setAutoQueueCreationV2Enabled(A1, true);
     cs.reinitialize(csConf, mockRM.getRMContext());
 
     createQueue("root.a.a1.a1-auto");
     CSQueue a1Auto = cs.getQueue("root.a.a1.a1-auto");
     Assert.assertNotNull("a1-auto should exist", a1Auto);
 
-    csConf.setQueues("root", new String[]{"b"});
+    csConf.setQueues(ROOT, new String[]{"b"});
     cs.reinitialize(csConf, mockRM.getRMContext());
     a1Auto = cs.getQueue("root.a.a1.a1-auto");
     Assert.assertNull("a1-auto has no parent and should not exist", a1Auto);
 
     // Validate dynamic parent deletion
-    csConf.setState("root.b", QueueState.STOPPED);
+    csConf.setState(B, QueueState.STOPPED);
     cs.reinitialize(csConf, mockRM.getRMContext());
-    csConf.setAutoQueueCreationV2Enabled("root.b", true);
+    csConf.setAutoQueueCreationV2Enabled(B, true);
     cs.reinitialize(csConf, mockRM.getRMContext());
 
     createQueue("root.b.b-auto-parent.b-auto-leaf");

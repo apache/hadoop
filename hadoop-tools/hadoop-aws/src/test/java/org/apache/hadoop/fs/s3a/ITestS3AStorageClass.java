@@ -37,7 +37,6 @@ import org.apache.hadoop.fs.contract.s3a.S3AContract;
 import static org.apache.hadoop.fs.s3a.Constants.FAST_UPLOAD_BUFFER;
 import static org.apache.hadoop.fs.s3a.Constants.FAST_UPLOAD_BUFFER_ARRAY;
 import static org.apache.hadoop.fs.s3a.Constants.FAST_UPLOAD_BUFFER_DISK;
-import static org.apache.hadoop.fs.s3a.Constants.FAST_UPLOAD_BYTEBUFFER;
 import static org.apache.hadoop.fs.s3a.Constants.STORAGE_CLASS;
 import static org.apache.hadoop.fs.s3a.Constants.STORAGE_CLASS_GLACIER;
 import static org.apache.hadoop.fs.s3a.Constants.STORAGE_CLASS_REDUCED_REDUNDANCY;
@@ -75,17 +74,12 @@ public class ITestS3AStorageClass extends AbstractS3ATestBase {
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
+    skipIfStorageClassTestsDisabled(conf);
     disableFilesystemCaching(conf);
     removeBaseAndBucketOverrides(conf, STORAGE_CLASS, FAST_UPLOAD_BUFFER);
     conf.set(FAST_UPLOAD_BUFFER, fastUploadBufferType);
 
     return conf;
-  }
-
-  @Override
-  public void setup() throws Exception {
-    super.setup();
-    skipIfStorageClassTestsDisabled(getConfiguration());
   }
 
   /*

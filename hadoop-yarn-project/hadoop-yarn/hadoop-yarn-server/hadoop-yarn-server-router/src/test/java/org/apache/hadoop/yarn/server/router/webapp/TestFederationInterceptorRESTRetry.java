@@ -93,7 +93,7 @@ public class TestFederationInterceptorRESTRetry
 
     stateStore = new MemoryFederationStateStore();
     stateStore.init(conf);
-    FederationStateStoreFacade.getInstance().reinitialize(stateStore,
+    FederationStateStoreFacade.getInstance(conf).reinitialize(stateStore,
         getConf());
     stateStoreUtil = new FederationStateStoreTestUtil(stateStore);
 

@@ -24,13 +24,14 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.TreeMap;
-import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
@@ -207,12 +208,13 @@ public class FederationClientInterceptor
   private final Clock clock = new MonotonicClock();
   private boolean returnPartialReport;
   private long submitIntervalTime;
+  private boolean allowPartialResult;
 
   @Override
   public void init(String userName) {
     super.init(userName);
 
-    federationFacade = FederationStateStoreFacade.getInstance();
+    federationFacade = FederationStateStoreFacade.getInstance(getConf());
     rand = new Random(System.currentTimeMillis());
 
     int numMinThreads = getNumMinThreads(getConf());
@@ -229,6 +231,15 @@ public class FederationClientInterceptor
     BlockingQueue<Runnable> workQueue = new LinkedBlockingQueue<>();
     this.executorService = new ThreadPoolExecutor(numMinThreads, numMaxThreads,
         keepAliveTime, TimeUnit.MILLISECONDS, workQueue, threadFactory);
+
+    // Adding this line so that unused user threads will exit and be cleaned up if idle for too long
+    boolean allowCoreThreadTimeOut =  getConf().getBoolean(
+        YarnConfiguration.ROUTER_USER_CLIENT_THREAD_POOL_ALLOW_CORE_THREAD_TIMEOUT,
+        YarnConfiguration.DEFAULT_ROUTER_USER_CLIENT_THREAD_POOL_ALLOW_CORE_THREAD_TIMEOUT);
+
+    if (keepAliveTime > 0 && allowCoreThreadTimeOut) {
+      this.executorService.allowCoreThreadTimeOut(allowCoreThreadTimeOut);
+    }
 
     final Configuration conf = this.getConf();
 
@@ -253,6 +264,10 @@ public class FederationClientInterceptor
     returnPartialReport = conf.getBoolean(
         YarnConfiguration.ROUTER_CLIENTRM_PARTIAL_RESULTS_ENABLED,
         YarnConfiguration.DEFAULT_ROUTER_CLIENTRM_PARTIAL_RESULTS_ENABLED);
+
+    allowPartialResult = conf.getBoolean(
+        YarnConfiguration.ROUTER_INTERCEPTOR_ALLOW_PARTIAL_RESULT_ENABLED,
+        YarnConfiguration.DEFAULT_ROUTER_INTERCEPTOR_ALLOW_PARTIAL_RESULT_ENABLED);
   }
 
   @Override
@@ -649,6 +664,13 @@ public class FederationClientInterceptor
     try {
       LOG.info("forceKillApplication {} on SubCluster {}.", applicationId, subClusterId);
       response = clientRMProxy.forceKillApplication(request);
+      // If kill home sub-cluster application is successful,
+      // we will try to kill the same application in other sub-clusters.
+      if (response != null) {
+        ClientMethod remoteMethod = new ClientMethod("forceKillApplication",
+            new Class[]{KillApplicationRequest.class}, new Object[]{request});
+        invokeConcurrent(remoteMethod, KillApplicationResponse.class, subClusterId);
+      }
     } catch (Exception e) {
       routerMetrics.incrAppsFailedKilled();
       String msg = "Unable to kill the application report.";
@@ -819,12 +841,24 @@ public class FederationClientInterceptor
     return RouterYarnClientUtils.merge(clusterMetrics);
   }
 
-  <R> Collection<R> invokeConcurrent(ClientMethod request, Class<R> clazz)
-      throws YarnException {
-
+  <R> Collection<R> invokeConcurrent(ClientMethod request, Class<R> clazz) throws YarnException {
     // Get Active SubClusters
     Map<SubClusterId, SubClusterInfo> subClusterInfo = federationFacade.getSubClusters(true);
     Collection<SubClusterId> subClusterIds = subClusterInfo.keySet();
+    return invokeConcurrent(request, clazz, subClusterIds);
+  }
+
+  <R> Collection<R> invokeConcurrent(ClientMethod request, Class<R> clazz,
+      SubClusterId homeSubclusterId) throws YarnException {
+    // Get Active SubClusters
+    Map<SubClusterId, SubClusterInfo> subClusterInfo = federationFacade.getSubClusters(true);
+    Collection<SubClusterId> subClusterIds = subClusterInfo.keySet();
+    subClusterIds.remove(homeSubclusterId);
+    return invokeConcurrent(request, clazz, subClusterIds);
+  }
+
+  <R> Collection<R> invokeConcurrent(ClientMethod request, Class<R> clazz,
+      Collection<SubClusterId> subClusterIds) throws YarnException {
 
     List<Callable<Pair<SubClusterId, Object>>> callables = new ArrayList<>();
     List<Future<Pair<SubClusterId, Object>>> futures = new ArrayList<>();
@@ -833,13 +867,27 @@ public class FederationClientInterceptor
     // Generate parallel Callable tasks
     for (SubClusterId subClusterId : subClusterIds) {
       callables.add(() -> {
-        ApplicationClientProtocol protocol = getClientRMProxyForSubCluster(subClusterId);
-        String methodName = request.getMethodName();
-        Class<?>[] types = request.getTypes();
-        Object[] params = request.getParams();
-        Method method = ApplicationClientProtocol.class.getMethod(methodName, types);
-        Object result = method.invoke(protocol, params);
-        return Pair.of(subClusterId, result);
+        try {
+          ApplicationClientProtocol protocol = getClientRMProxyForSubCluster(subClusterId);
+          String methodName = request.getMethodName();
+          Class<?>[] types = request.getTypes();
+          Object[] params = request.getParams();
+          Method method = ApplicationClientProtocol.class.getMethod(methodName, types);
+          Object result = method.invoke(protocol, params);
+          return Pair.of(subClusterId, result);
+        } catch (Exception e) {
+          Throwable cause = e.getCause();
+          // We use Callable. If the exception thrown here is InvocationTargetException,
+          // it is a wrapped exception. We need to get the real cause of the error.
+          if (cause != null && cause instanceof InvocationTargetException) {
+            cause = cause.getCause();
+          }
+          String errMsg = (cause.getMessage() != null) ? cause.getMessage() : "UNKNOWN";
+          YarnException yarnException =
+              new YarnException(String.format("subClusterId %s exec %s error %s.",
+              subClusterId, request.getMethodName(), errMsg), e);
+          return Pair.of(subClusterId, yarnException);
+        }
       });
     }
 
@@ -853,8 +901,11 @@ public class FederationClientInterceptor
           Pair<SubClusterId, Object> pair = future.get();
           subClusterId = pair.getKey();
           Object result = pair.getValue();
+          if (result instanceof YarnException) {
+            throw YarnException.class.cast(result);
+          }
           results.put(subClusterId, clazz.cast(result));
-        } catch (InterruptedException | ExecutionException e) {
+        } catch (InterruptedException | ExecutionException | YarnException e) {
           Throwable cause = e.getCause();
           LOG.error("Cannot execute {} on {} : {}", request.getMethodName(),
               subClusterId.getId(), cause.getMessage());
@@ -868,13 +919,48 @@ public class FederationClientInterceptor
     // All sub-clusters return results to be considered successful,
     // otherwise an exception will be thrown.
     if (exceptions != null && !exceptions.isEmpty()) {
-      Set<SubClusterId> subClusterIdSets = exceptions.keySet();
-      throw new YarnException("invokeConcurrent Failed, An exception occurred in subClusterIds = " +
-          StringUtils.join(subClusterIdSets, ","));
+      if (!allowPartialResult || exceptions.keySet().size() == subClusterIds.size()) {
+        throw new YarnException("invokeConcurrent Failed = " +
+            StringUtils.join(exceptions.values(), ","));
+      }
     }
 
     // return result
     return results.values();
+  }
+
+  <R> Collection<R> invoke(ClientMethod request, Class<R> clazz, String subClusterId)
+      throws YarnException {
+
+    // Get Active SubClusters
+    Map<SubClusterId, SubClusterInfo> subClusterInfoMap = federationFacade.getSubClusters(true);
+
+    // According to subCluster of string type, convert to SubClusterId type
+    SubClusterId subClusterIdKey = SubClusterId.newInstance(subClusterId);
+
+    // If the provided subCluster is not Active or does not exist,
+    // an exception will be returned directly.
+    if (!subClusterInfoMap.containsKey(subClusterIdKey)) {
+      throw new YarnException("subClusterId = " + subClusterId + " is not an active subCluster.");
+    }
+
+    try {
+      ApplicationClientProtocol protocol = getClientRMProxyForSubCluster(subClusterIdKey);
+      String methodName = request.getMethodName();
+      Class<?>[] types = request.getTypes();
+      Object[] params = request.getParams();
+      Method method = ApplicationClientProtocol.class.getMethod(methodName, types);
+      Object result = method.invoke(protocol, params);
+      if (result != null) {
+        return Collections.singletonList(clazz.cast(result));
+      }
+    } catch (Exception e) {
+      throw new YarnException("invoke Failed, An exception occurred in subClusterId = " +
+          subClusterId, e);
+    }
+
+    throw new YarnException("invoke Failed, An exception occurred in subClusterId = " +
+        subClusterId);
   }
 
   @Override
@@ -908,6 +994,21 @@ public class FederationClientInterceptor
     throw new YarnException("Unable to get cluster nodes.");
   }
 
+  /**
+   * <p>The interface used by clients to get information about <em>queues</em>
+   * from the <code>ResourceManager</code>.</p>
+   *
+   * <p>The client, via {@link GetQueueInfoRequest}, can ask for details such
+   * as used/total resources, child queues, running applications etc.</p>
+   *
+   * <p> In secure mode,the <code>ResourceManager</code> verifies access before
+   * providing the information.</p>
+   *
+   * @param request request to get queue information
+   * @return queue information
+   * @throws YarnException exceptions from yarn servers.
+   * @throws IOException io error occur.
+   */
   @Override
   public GetQueueInfoResponse getQueueInfo(GetQueueInfoRequest request)
       throws YarnException, IOException {
@@ -918,13 +1019,18 @@ public class FederationClientInterceptor
           TARGET_CLIENT_RM_SERVICE, msg);
       RouterServerUtil.logAndThrowException(msg, null);
     }
+    String rSubCluster = request.getSubClusterId();
 
     long startTime = clock.getTime();
     ClientMethod remoteMethod = new ClientMethod("getQueueInfo",
         new Class[]{GetQueueInfoRequest.class}, new Object[]{request});
     Collection<GetQueueInfoResponse> queues = null;
     try {
-      queues = invokeConcurrent(remoteMethod, GetQueueInfoResponse.class);
+      if (StringUtils.isNotBlank(rSubCluster)) {
+        queues = invoke(remoteMethod, GetQueueInfoResponse.class, rSubCluster);
+      } else {
+        queues = invokeConcurrent(remoteMethod, GetQueueInfoResponse.class);
+      }
     } catch (Exception ex) {
       routerMetrics.incrGetQueueInfoFailedRetrieved();
       String msg = "Unable to get queue [" + request.getQueueName() + "] to exception.";
@@ -2269,5 +2375,10 @@ public class FederationClientInterceptor
   @VisibleForTesting
   public void setNumSubmitRetries(int numSubmitRetries) {
     this.numSubmitRetries = numSubmitRetries;
+  }
+
+  @VisibleForTesting
+  public void setAllowPartialResult(boolean allowPartialResult) {
+    this.allowPartialResult = allowPartialResult;
   }
 }

@@ -490,9 +490,15 @@ public class TestRouterWebServiceUtil {
         metricsResponse.getTotalMB() + metricsClone.getTotalMB(),
         metrics.getTotalMB());
     Assert.assertEquals(
+        metricsResponse.getUtilizedMB() + metricsClone.getUtilizedMB(),
+        metrics.getUtilizedMB());
+    Assert.assertEquals(
         metricsResponse.getTotalVirtualCores()
             + metricsClone.getTotalVirtualCores(),
         metrics.getTotalVirtualCores());
+    Assert.assertEquals(
+        metricsResponse.getUtilizedVirtualCores() + metricsClone.getUtilizedVirtualCores(),
+        metrics.getUtilizedVirtualCores());
     Assert.assertEquals(
         metricsResponse.getTotalNodes() + metricsClone.getTotalNodes(),
         metrics.getTotalNodes());
@@ -544,7 +550,9 @@ public class TestRouterWebServiceUtil {
     metricsClone.setContainersPending(metrics.getPendingContainers());
 
     metricsClone.setTotalMB(metrics.getTotalMB());
+    metricsClone.setUtilizedMB(metrics.getUtilizedMB());
     metricsClone.setTotalVirtualCores(metrics.getTotalVirtualCores());
+    metricsClone.setUtilizedVirtualCores(metrics.getUtilizedVirtualCores());
     metricsClone.setTotalNodes(metrics.getTotalNodes());
     metricsClone.setLostNodes(metrics.getLostNodes());
     metricsClone.setUnhealthyNodes(metrics.getUnhealthyNodes());
@@ -580,7 +588,9 @@ public class TestRouterWebServiceUtil {
     metrics.setContainersPending(rand.nextInt(1000));
 
     metrics.setTotalMB(rand.nextInt(1000));
+    metrics.setUtilizedMB(metrics.getTotalMB() - rand.nextInt(100));
     metrics.setTotalVirtualCores(rand.nextInt(1000));
+    metrics.setUtilizedVirtualCores(metrics.getUtilizedVirtualCores() - rand.nextInt(100));
     metrics.setTotalNodes(rand.nextInt(1000));
     metrics.setLostNodes(rand.nextInt(1000));
     metrics.setUnhealthyNodes(rand.nextInt(1000));

@@ -31,8 +31,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import com.amazonaws.services.s3.model.PartETag;
+import software.amazon.awssdk.services.s3.model.CompletedPart;
 import com.fasterxml.jackson.annotation.JsonProperty;
+
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -215,13 +216,13 @@ public class SinglePendingCommit extends PersistentCommitData<SinglePendingCommi
    * @param parts ordered list of etags.
    * @throws ValidationFailure if the data is invalid
    */
-  public void bindCommitData(List<PartETag> parts) throws ValidationFailure {
+  public void bindCommitData(List<CompletedPart> parts) throws ValidationFailure {
     etags = new ArrayList<>(parts.size());
     int counter = 1;
-    for (PartETag part : parts) {
-      verify(part.getPartNumber() == counter,
-          "Expected part number %s but got %s", counter, part.getPartNumber());
-      etags.add(part.getETag());
+    for (CompletedPart part : parts) {
+      verify(part.partNumber() == counter,
+          "Expected part number %s but got %s", counter, part.partNumber());
+      etags.add(part.eTag());
       counter++;
     }
   }

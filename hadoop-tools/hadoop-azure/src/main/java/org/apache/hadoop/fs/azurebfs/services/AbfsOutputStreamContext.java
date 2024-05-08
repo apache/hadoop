@@ -21,7 +21,9 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.util.concurrent.ExecutorService;
 
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+import org.apache.hadoop.fs.impl.BackReference;
 import org.apache.hadoop.fs.store.DataBlocks;
 
 /**
@@ -49,6 +51,8 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
 
   private AbfsLease lease;
 
+  private ContextEncryptionAdapter contextEncryptionAdapter;
+
   private DataBlocks.BlockFactory blockFactory;
 
   private int blockOutputActiveBlocks;
@@ -64,6 +68,9 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
   private ExecutorService executorService;
 
   private TracingContext tracingContext;
+
+  /** A BackReference to the FS instance that created this OutputStream. */
+  private BackReference fsBackRef;
 
   public AbfsOutputStreamContext(final long sasTokenRenewPeriodForStreamsInSeconds) {
     super(sasTokenRenewPeriodForStreamsInSeconds);
@@ -157,6 +164,12 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
     return this;
   }
 
+  public AbfsOutputStreamContext withAbfsBackRef(
+      final BackReference fsBackRef) {
+    this.fsBackRef = fsBackRef;
+    return this;
+  }
+
   public AbfsOutputStreamContext build() {
     // Validation of parameters to be done here.
     if (streamStatistics == null) {
@@ -180,6 +193,12 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
 
   public AbfsOutputStreamContext withLease(final AbfsLease lease) {
     this.lease = lease;
+    return this;
+  }
+
+  public AbfsOutputStreamContext withEncryptionAdapter(
+      final ContextEncryptionAdapter contextEncryptionAdapter) {
+    this.contextEncryptionAdapter = contextEncryptionAdapter;
     return this;
   }
 
@@ -230,6 +249,10 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
     return this.lease.getLeaseID();
   }
 
+  public ContextEncryptionAdapter getEncryptionAdapter() {
+    return contextEncryptionAdapter;
+  }
+
   public DataBlocks.BlockFactory getBlockFactory() {
     return blockFactory;
   }
@@ -260,5 +283,9 @@ public class AbfsOutputStreamContext extends AbfsStreamContext {
 
   public TracingContext getTracingContext() {
     return tracingContext;
+  }
+
+  public BackReference getFsBackRef() {
+    return fsBackRef;
   }
 }

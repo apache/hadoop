@@ -351,23 +351,15 @@ public class TestUnmanagedApplicationManager {
       ApplicationAttemptId appAttemptId)
       throws IOException, InterruptedException {
     return getUGIWithToken(appAttemptId)
-        .doAs(new PrivilegedExceptionAction<Token<AMRMTokenIdentifier>>() {
-          @Override
-          public Token<AMRMTokenIdentifier> run() throws Exception {
-            return uam.launchUAM();
-          }
-        });
+        .doAs((PrivilegedExceptionAction<Token<AMRMTokenIdentifier>>) () -> uam.launchUAM());
   }
 
   protected void reAttachUAM(final Token<AMRMTokenIdentifier> uamToken,
       ApplicationAttemptId appAttemptId)
       throws IOException, InterruptedException {
-    getUGIWithToken(appAttemptId).doAs(new PrivilegedExceptionAction<Object>() {
-      @Override
-      public Token<AMRMTokenIdentifier> run() throws Exception {
-        uam.reAttachUAM(uamToken);
-        return null;
-      }
+    getUGIWithToken(appAttemptId).doAs((PrivilegedExceptionAction<Object>) () -> {
+      uam.reAttachUAM(uamToken);
+      return null;
     });
   }
 
@@ -376,25 +368,16 @@ public class TestUnmanagedApplicationManager {
       ApplicationAttemptId appAttemptId)
       throws YarnException, IOException, InterruptedException {
     return getUGIWithToken(appAttemptId).doAs(
-        new PrivilegedExceptionAction<RegisterApplicationMasterResponse>() {
-          @Override
-          public RegisterApplicationMasterResponse run()
-              throws YarnException, IOException {
-            return uam.registerApplicationMaster(request);
-          }
-        });
+        (PrivilegedExceptionAction<RegisterApplicationMasterResponse>)
+        () -> uam.registerApplicationMaster(request));
   }
 
   protected void allocateAsync(final AllocateRequest request,
-      final AsyncCallback<AllocateResponse> callBack,
-      ApplicationAttemptId appAttemptId)
+      final AsyncCallback<AllocateResponse> callBack, ApplicationAttemptId appAttemptId)
       throws YarnException, IOException, InterruptedException {
-    getUGIWithToken(appAttemptId).doAs(new PrivilegedExceptionAction<Object>() {
-      @Override
-      public Object run() throws YarnException {
-        uam.allocateAsync(request, callBack);
-        return null;
-      }
+    getUGIWithToken(appAttemptId).doAs((PrivilegedExceptionAction<Object>) () -> {
+      uam.allocateAsync(request, callBack);
+      return null;
     });
   }
 
@@ -402,16 +385,9 @@ public class TestUnmanagedApplicationManager {
       final FinishApplicationMasterRequest request,
       ApplicationAttemptId appAttemptId)
       throws YarnException, IOException, InterruptedException {
-    return getUGIWithToken(appAttemptId)
-        .doAs(new PrivilegedExceptionAction<FinishApplicationMasterResponse>() {
-          @Override
-          public FinishApplicationMasterResponse run()
-              throws YarnException, IOException {
-            FinishApplicationMasterResponse response =
-                uam.finishApplicationMaster(request);
-            return response;
-          }
-        });
+    return getUGIWithToken(appAttemptId).doAs(
+        (PrivilegedExceptionAction<FinishApplicationMasterResponse>) () ->
+        uam.finishApplicationMaster(request));
   }
 
   protected class CountingCallback implements AsyncCallback<AllocateResponse> {
@@ -497,14 +473,10 @@ public class TestUnmanagedApplicationManager {
     @Override
     public void run() {
       try {
-        getUGIWithToken(attemptId)
-            .doAs(new PrivilegedExceptionAction<Object>() {
-              @Override
-              public Object run() {
-                TestableAMRequestHandlerThread.super.run();
-                return null;
-              }
-            });
+        getUGIWithToken(attemptId).doAs((PrivilegedExceptionAction<Object>) () -> {
+          TestableAMRequestHandlerThread.super.run();
+          return null;
+        });
       } catch (Exception e) {
         LOG.error("Exception running TestableAMRequestHandlerThread", e);
       }

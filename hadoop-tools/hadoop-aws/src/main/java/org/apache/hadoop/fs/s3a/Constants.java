@@ -23,6 +23,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
+import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -33,7 +34,14 @@ import java.util.concurrent.TimeUnit;
  * as deprecated and simply ignored.
  *
  * All S3Guard related constants are marked as Deprecated and either ignored (ddb config)
- * or rejected (setting the metastore to anything other than the null store)
+ * or rejected (setting the metastore to anything other than the null store).
+ * <p>
+ * Timeout default values are declared as integers or long values in milliseconds and
+ * occasionally seconds.
+ * There are now {@code Duration} constants for these default values; the original
+ * fields are retained for compatibility, and derive their value from the Duration equivalent.
+ * <p>
+ * New timeout/duration constants do not get the equivalent integer/long fields.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
@@ -59,6 +67,13 @@ public final class Constants {
   // aws credentials providers
   public static final String AWS_CREDENTIALS_PROVIDER =
       "fs.s3a.aws.credentials.provider";
+
+  /**
+   * AWS credentials providers mapping with key/value pairs.
+   * Value = {@value}
+   */
+  public static final String AWS_CREDENTIALS_PROVIDER_MAPPING =
+      "fs.s3a.aws.credentials.provider.mapping";
 
   /**
    * Extra set of security credentials which will be prepended to that
@@ -140,19 +155,51 @@ public final class Constants {
   public static final String ASSUMED_ROLE_POLICY =
       "fs.s3a.assumed.role.policy";
 
-  @SuppressWarnings("deprecation")
   public static final String ASSUMED_ROLE_CREDENTIALS_DEFAULT =
       SimpleAWSCredentialsProvider.NAME;
 
 
-  // the maximum number of tasks cached if all threads are already uploading
+  /**
+   * The maximum number of tasks queued (other than prefetcher tasks) if all threads are
+   * busy: {@value}.
+   */
   public static final String MAX_TOTAL_TASKS = "fs.s3a.max.total.tasks";
 
+  /**
+   * Default value for {@link #MAX_TOTAL_TASKS}: {@value}.
+   */
   public static final int DEFAULT_MAX_TOTAL_TASKS = 32;
 
-  // number of simultaneous connections to s3
+  /**
+   * Number of simultaneous connections to S3: {@value}.
+   */
   public static final String MAXIMUM_CONNECTIONS = "fs.s3a.connection.maximum";
-  public static final int DEFAULT_MAXIMUM_CONNECTIONS = 96;
+
+  /**
+   * Default value for {@link #MAXIMUM_CONNECTIONS}: {@value}.
+   * Future releases are likely to increase this value.
+   * Keep in sync with the value in {@code core-default.xml}
+   */
+  public static final int DEFAULT_MAXIMUM_CONNECTIONS = 500;
+
+  /**
+   * Configuration option to configure expiration time of
+   * S3 http connection from the connection pool: {@value}.
+   */
+  public static final String CONNECTION_TTL = "fs.s3a.connection.ttl";
+
+  /**
+   * Default duration for {@link #CONNECTION_TTL}: 5 minutes.
+   */
+  public static final Duration DEFAULT_CONNECTION_TTL_DURATION =
+      Duration.ofMinutes(5);
+
+  /**
+   * Default value in millis for {@link #CONNECTION_TTL}: 5 minutes.
+   * @deprecated use {@link #DEFAULT_CONNECTION_TTL_DURATION}
+   */
+  public static final long DEFAULT_CONNECTION_TTL =
+      DEFAULT_CONNECTION_TTL_DURATION.toMillis();
 
   // connect to s3 over ssl?
   public static final String SECURE_CONNECTIONS =
@@ -218,6 +265,9 @@ public final class Constants {
   /**
    * Number of times the AWS client library should retry errors before
    * escalating to the S3A code: {@value}.
+   * The S3A connector does its own selective retries; the only time the AWS
+   * SDK operations are not wrapped is during multipart copy via the AWS SDK
+   * transfer manager.
    */
   public static final String MAX_ERROR_RETRIES = "fs.s3a.attempts.maximum";
 
@@ -225,7 +275,7 @@ public final class Constants {
    * Default number of times the AWS client library should retry errors before
    * escalating to the S3A code: {@value}.
    */
-  public static final int DEFAULT_MAX_ERROR_RETRIES = 10;
+  public static final int DEFAULT_MAX_ERROR_RETRIES = 5;
 
   /**
    * Experimental/Unstable feature: should the AWS client library retry
@@ -251,19 +301,128 @@ public final class Constants {
   public static final boolean EXPERIMENTAL_AWS_INTERNAL_THROTTLING_DEFAULT =
       true;
 
-  // milliseconds until we give up trying to establish a connection to s3
+  /**
+   * This is the minimum operation duration unless programmatically set.
+   * It ensures that even if a configuration has mistaken a millisecond
+   * option for seconds, a viable duration will actually be used.
+   * Value: 15s.
+   */
+  public static final Duration MINIMUM_NETWORK_OPERATION_DURATION = Duration.ofSeconds(15);
+
+  /**
+   * Milliseconds until a connection is established: {@value}.
+   */
   public static final String ESTABLISH_TIMEOUT =
       "fs.s3a.connection.establish.timeout";
-  public static final int DEFAULT_ESTABLISH_TIMEOUT = 50000;
 
-  // milliseconds until we give up on a connection to s3
+  /**
+   * Default TCP/(and TLS?) establish timeout: 30 seconds.
+   */
+  public static final Duration DEFAULT_ESTABLISH_TIMEOUT_DURATION = Duration.ofSeconds(30);
+
+  /**
+   * Default establish timeout in millis: 30 seconds.
+   * @deprecated use {@link #DEFAULT_ESTABLISH_TIMEOUT_DURATION}
+   */
+  public static final int DEFAULT_ESTABLISH_TIMEOUT =
+      (int)DEFAULT_ESTABLISH_TIMEOUT_DURATION.toMillis();
+
+  /**
+   * Milliseconds until we give up on a connection to s3: {@value}.
+   */
   public static final String SOCKET_TIMEOUT = "fs.s3a.connection.timeout";
-  public static final int DEFAULT_SOCKET_TIMEOUT = 200000;
 
-  // milliseconds until a request is timed-out
+  /**
+   * Default socket timeout: 200 seconds.
+   */
+  public static final Duration DEFAULT_SOCKET_TIMEOUT_DURATION = Duration.ofSeconds(200);
+
+  /**
+   * Default socket timeout: {@link #DEFAULT_SOCKET_TIMEOUT_DURATION}.
+   * @deprecated use {@link #DEFAULT_SOCKET_TIMEOUT_DURATION}
+   */
+  public static final int DEFAULT_SOCKET_TIMEOUT = (int)DEFAULT_SOCKET_TIMEOUT_DURATION.toMillis();
+
+  /**
+   * How long should the SDK retry/wait on a response from an S3 store: {@value}
+   * <i>including the time needed to sign the request</i>.
+   * <p>
+   * This is time to response, so for a GET request it is "time to 200 response"
+   * not the time limit to download the requested data.
+   * This makes it different from {@link #REQUEST_TIMEOUT}, which is for total
+   * HTTP request.
+   * <p>
+   * Default unit is milliseconds.
+   * <p>
+   * There is a minimum duration set in {@link #MINIMUM_NETWORK_OPERATION_DURATION};
+   * it is impossible to set a delay less than this, even for testing.
+   * Why so? Too many deployments where the configuration assumed the timeout was in seconds
+   * and that "120" was a reasonable value rather than "too short to work reliably"
+   * <p>
+   * Note for anyone writing tests which need to set a low value for this:
+   * to avoid the minimum duration overrides, call
+   * {@code AWSClientConfig.setMinimumOperationDuration()} and set a low value
+   * before creating the filesystem.
+   */
   public static final String REQUEST_TIMEOUT =
       "fs.s3a.connection.request.timeout";
-  public static final int DEFAULT_REQUEST_TIMEOUT = 0;
+
+  /**
+   * Default duration of a request before it is timed out: 60s.
+   */
+  public static final Duration DEFAULT_REQUEST_TIMEOUT_DURATION = Duration.ofSeconds(60);
+
+  /**
+   * Default duration of a request before it is timed out: Zero.
+   * @deprecated use {@link #DEFAULT_REQUEST_TIMEOUT_DURATION}
+   */
+  public static final int DEFAULT_REQUEST_TIMEOUT =
+      (int)DEFAULT_REQUEST_TIMEOUT_DURATION.toMillis();
+
+  /**
+   * Acquisition timeout for connections from the pool:
+   * {@value}.
+   * Default unit is milliseconds for consistency with other options.
+   */
+  public static final String CONNECTION_ACQUISITION_TIMEOUT =
+      "fs.s3a.connection.acquisition.timeout";
+
+  /**
+   * Default acquisition timeout: 60 seconds.
+   */
+  public static final Duration DEFAULT_CONNECTION_ACQUISITION_TIMEOUT_DURATION =
+      Duration.ofSeconds(60);
+
+  /**
+   * Should TCP Keepalive be enabled on the socket?
+   * This adds some network IO, but finds failures faster.
+   * {@value}.
+   */
+  public static final String CONNECTION_KEEPALIVE =
+      "fs.s3a.connection.keepalive";
+
+  /**
+   * Default value of {@link #CONNECTION_KEEPALIVE}: {@value}.
+   */
+  public static final boolean DEFAULT_CONNECTION_KEEPALIVE = false;
+
+  /**
+   * Maximum idle time for connections in the pool: {@value}.
+   * <p>
+   * Too low: overhead of creating connections.
+   * Too high, risk of stale connections and inability to use the
+   * adaptive load balancing of the S3 front end.
+   * <p>
+   * Default unit is milliseconds for consistency with other options.
+   */
+  public static final String CONNECTION_IDLE_TIME =
+      "fs.s3a.connection.idle.time";
+
+  /**
+   * Default idle time: 60 seconds.
+   */
+  public static final Duration DEFAULT_CONNECTION_IDLE_TIME_DURATION =
+      Duration.ofSeconds(60);
 
   // socket send buffer to be used in Amazon client
   public static final String SOCKET_SEND_BUFFER = "fs.s3a.socket.send.buffer";
@@ -277,13 +436,34 @@ public final class Constants {
   public static final String MAX_PAGING_KEYS = "fs.s3a.paging.maximum";
   public static final int DEFAULT_MAX_PAGING_KEYS = 5000;
 
-  // the maximum number of threads to allow in the pool used by TransferManager
+  /**
+   * The maximum number of threads to allow in the pool used by S3A.
+   * Value: {@value}.
+   */
   public static final String MAX_THREADS = "fs.s3a.threads.max";
-  public static final int DEFAULT_MAX_THREADS = 10;
 
-  // the time an idle thread waits before terminating
+  /**
+   * Default value of {@link #MAX_THREADS}: {@value}.
+   */
+  public static final int DEFAULT_MAX_THREADS = 96;
+
+  /**
+   * The time an idle thread waits before terminating: {@value}.
+   * This is in SECONDS unless the optional unit is given.
+   */
   public static final String KEEPALIVE_TIME = "fs.s3a.threads.keepalivetime";
-  public static final int DEFAULT_KEEPALIVE_TIME = 60;
+
+  /**
+   * Default value of {@link #KEEPALIVE_TIME}: 60s.
+   */
+  public static final Duration DEFAULT_KEEPALIVE_TIME_DURATION = Duration.ofSeconds(60);
+
+  /**
+   * Default value of {@link #KEEPALIVE_TIME}: 60s.
+   * @deprecated use {@link #DEFAULT_KEEPALIVE_TIME_DURATION}
+   */
+  public static final int DEFAULT_KEEPALIVE_TIME =
+      (int)DEFAULT_KEEPALIVE_TIME_DURATION.getSeconds();
 
   // size of each of or multipart pieces in bytes
   public static final String MULTIPART_SIZE = "fs.s3a.multipart.size";
@@ -488,10 +668,17 @@ public final class Constants {
       "fs.s3a.multipart.purge";
   public static final boolean DEFAULT_PURGE_EXISTING_MULTIPART = false;
 
-  // purge any multipart uploads older than this number of seconds
+  /**
+   * purge any multipart uploads older than this number of seconds.
+   */
   public static final String PURGE_EXISTING_MULTIPART_AGE =
       "fs.s3a.multipart.purge.age";
-  public static final long DEFAULT_PURGE_EXISTING_MULTIPART_AGE = 86400;
+
+  /**
+   * Default Age.
+   */
+  public static final long DEFAULT_PURGE_EXISTING_MULTIPART_AGE =
+      Duration.ofDays(1).getSeconds();
 
   /**
    * s3 server-side encryption, see
@@ -586,7 +773,7 @@ public final class Constants {
 
   public static final String SIGNING_ALGORITHM_STS =
       "fs.s3a." + Constants.AWS_SERVICE_IDENTIFIER_STS.toLowerCase()
-          + "signing-algorithm";
+          + ".signing-algorithm";
 
   public static final String S3N_FOLDER_SUFFIX = "_$folder$";
   public static final String FS_S3A_BLOCK_SIZE = "fs.s3a.block.size";
@@ -728,14 +915,21 @@ public final class Constants {
   public static final String STREAM_READ_GAUGE_INPUT_POLICY =
       "stream_read_gauge_input_policy";
 
+  /**
+   * S3 Client Factory implementation class: {@value}.
+   * Unstable and incompatible between v1 and v2 SDK versions.
+   */
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
   public static final String S3_CLIENT_FACTORY_IMPL =
       "fs.s3a.s3.client.factory.impl";
 
+  /**
+   * Default factory:
+   * {@code org.apache.hadoop.fs.s3a.DefaultS3ClientFactory}.
+   */
   @InterfaceAudience.Private
   @InterfaceStability.Unstable
-  @SuppressWarnings("deprecation")
   public static final Class<? extends S3ClientFactory>
       DEFAULT_S3_CLIENT_FACTORY_IMPL =
           DefaultS3ClientFactory.class;
@@ -1160,17 +1354,45 @@ public final class Constants {
   public static final String AWS_S3_CENTRAL_REGION = "us-east-1";
 
   /**
+   * The default S3 region when using cross region client.
+   * Value {@value}.
+   */
+  public static final String AWS_S3_DEFAULT_REGION = "us-east-2";
+
+  /**
+   * Is the endpoint a FIPS endpoint?
+   * Can be queried as a path capability.
+   * Value {@value}.
+   */
+  public static final String FIPS_ENDPOINT = "fs.s3a.endpoint.fips";
+
+  public static final boolean ENDPOINT_FIPS_DEFAULT = false;
+
+  /**
    * Require that all S3 access is made through Access Points.
    */
   public static final String AWS_S3_ACCESSPOINT_REQUIRED = "fs.s3a.accesspoint.required";
 
   /**
    * Flag for create performance.
-   * This is *not* a configuration option; it is for use in the
-   * {code createFile()} builder.
+   * This can be set in the {code createFile()} builder.
    * Value {@value}.
    */
   public static final String FS_S3A_CREATE_PERFORMANCE = "fs.s3a.create.performance";
+
+  /**
+   * Default value for create performance in an S3A FS.
+   * Value {@value}.
+   */
+  public static final boolean FS_S3A_CREATE_PERFORMANCE_DEFAULT = false;
+
+  /**
+   * Capability to indicate that the FS has been instantiated with
+   * {@link #FS_S3A_CREATE_PERFORMANCE} set to true.
+   * Value {@value}.
+   */
+  public static final String FS_S3A_CREATE_PERFORMANCE_ENABLED =
+      FS_S3A_CREATE_PERFORMANCE + ".enabled";
 
   /**
    * Prefix for adding a header to the object when created.
@@ -1201,12 +1423,12 @@ public final class Constants {
   /**
    * Default minimum seek in bytes during vectored reads : {@value}.
    */
-  public static final int DEFAULT_AWS_S3_VECTOR_READS_MIN_SEEK_SIZE = 4896; // 4K
+  public static final int DEFAULT_AWS_S3_VECTOR_READS_MIN_SEEK_SIZE = 4096; // 4K
 
   /**
    * Default maximum read size in bytes during vectored reads : {@value}.
    */
-  public static final int DEFAULT_AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE = 1253376; //1M
+  public static final int DEFAULT_AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE = 1048576; //1M
 
   /**
    * Maximum number of range reads a single input stream can have
@@ -1273,7 +1495,150 @@ public final class Constants {
   /**
    * Stream supports multipart uploads to the given path.
    */
-  public static final String STORE_CAPABILITY_DIRECTORY_MARKER_MULTIPART_UPLOAD_ENABLED =
+  public static final String STORE_CAPABILITY_MULTIPART_UPLOAD_ENABLED =
       "fs.s3a.capability.multipart.uploads.enabled";
 
+  /**
+   * Stream supports multipart uploads to the given path.
+   * This name is wrong, but it has shipped so must be
+   * retained.
+   */
+  @Deprecated
+  public static final String STORE_CAPABILITY_DIRECTORY_MARKER_MULTIPART_UPLOAD_ENABLED
+      = STORE_CAPABILITY_MULTIPART_UPLOAD_ENABLED;
+
+  /**
+   * Prefetch max blocks count config.
+   * Value = {@value}
+   */
+  public static final String PREFETCH_MAX_BLOCKS_COUNT = "fs.s3a.prefetch.max.blocks.count";
+
+  /**
+   * Default value for max blocks count config.
+   * Value = {@value}
+   */
+  public static final int DEFAULT_PREFETCH_MAX_BLOCKS_COUNT = 4;
+
+  /**
+   * The bucket region header.
+   */
+  public static final String BUCKET_REGION_HEADER = "x-amz-bucket-region";
+
+  /**
+   * Should directory operations purge uploads?
+   * This adds at least one parallelized list operation to the call,
+   * plus the overhead of deletions.
+   * Value: {@value}.
+   */
+  public static final String DIRECTORY_OPERATIONS_PURGE_UPLOADS =
+      "fs.s3a.directory.operations.purge.uploads";
+
+  /**
+   * Default value of {@link #DIRECTORY_OPERATIONS_PURGE_UPLOADS}: {@value}.
+   */
+  public static final boolean DIRECTORY_OPERATIONS_PURGE_UPLOADS_DEFAULT = false;
+
+
+  /**
+   * Is the higher performance copy from local file to S3 enabled?
+   * This switch allows for it to be disabled if there are problems.
+   * Value: {@value}.
+   */
+  public static final String OPTIMIZED_COPY_FROM_LOCAL = "fs.s3a.optimized.copy.from.local.enabled";
+
+  /**
+   * Default value for {@link #OPTIMIZED_COPY_FROM_LOCAL}.
+   * Value: {@value}.
+   */
+  public static final boolean OPTIMIZED_COPY_FROM_LOCAL_DEFAULT = true;
+
+  /**
+   * Is this a v2 SDK build? value {@value}.
+   */
+  public static final String STORE_CAPABILITY_AWS_V2 =
+      "fs.s3a.capability.aws.v2";
+
+  /**
+   * Use the S3 Express createSession() operation to authenticate with
+   * S3Express storage?
+   * <p>
+   * Value: {@value}.
+   * <p>
+   * This is preferred as it is faster, but it does require extra IAM
+   * permissions and is not suited to some deployments, including some
+   * of the hadoop-aws test suites.
+   */
+  public static final String S3EXPRESS_CREATE_SESSION =
+      "fs.s3a.s3express.create.session";
+
+  /**
+   * Default value of {@link #S3EXPRESS_CREATE_SESSION}.
+   * Value: {@value}.
+   */
+  public static final boolean S3EXPRESS_CREATE_SESSION_DEFAULT = true;
+
+  /**
+   * Flag to switch to a v2 SDK HTTP signer. Value {@value}.
+   */
+  public static final String HTTP_SIGNER_ENABLED = "fs.s3a.http.signer.enabled";
+
+  /**
+   * Default value of {@link #HTTP_SIGNER_ENABLED}: {@value}.
+   */
+  public static final boolean HTTP_SIGNER_ENABLED_DEFAULT = false;
+
+  /**
+   * Classname of the http signer to use when {@link #HTTP_SIGNER_ENABLED}
+   * is true: {@value}.
+   */
+  public static final String HTTP_SIGNER_CLASS_NAME = "fs.s3a.http.signer.class";
+
+  /**
+   * Should checksums be validated on download?
+   * This is slower and not needed on TLS connections.
+   * Value: {@value}.
+   */
+  public static final String CHECKSUM_VALIDATION =
+      "fs.s3a.checksum.validation";
+
+  /**
+   * Default value of {@link #CHECKSUM_VALIDATION}.
+   * Value: {@value}.
+   */
+  public static final boolean CHECKSUM_VALIDATION_DEFAULT = false;
+
+  /**
+   * Are extensions classes, such as {@code fs.s3a.aws.credentials.provider},
+   * going to be loaded from the same classloader that loaded
+   * the {@link S3AFileSystem}?
+   * It is useful to turn classloader isolation off for Apache Spark applications
+   * that might load {@link S3AFileSystem} from the Spark distribution (Launcher classloader)
+   * while users might want to provide custom extensions (loaded by Spark MutableClassloader).
+   * Value: {@value}.
+   */
+  public static final String AWS_S3_CLASSLOADER_ISOLATION =
+            "fs.s3a.classloader.isolation";
+
+  /**
+   * Default value for {@link #AWS_S3_CLASSLOADER_ISOLATION}.
+   * Value: {@value}.
+   */
+  public static final boolean DEFAULT_AWS_S3_CLASSLOADER_ISOLATION = true;
+
+  /**
+   * Flag {@value}
+   * to enable S3 Access Grants to control authorization to S3 data. More information:
+   * https://aws.amazon.com/s3/features/access-grants/
+   * and
+   * https://github.com/aws/aws-s3-accessgrants-plugin-java-v2/
+   */
+  public static final String AWS_S3_ACCESS_GRANTS_ENABLED = "fs.s3a.access.grants.enabled";
+
+  /**
+   * Flag {@value} to enable jobs fall back to the Job Execution IAM role in
+   * case they get Access Denied from the S3 Access Grants call. More information:
+   * https://github.com/aws/aws-s3-accessgrants-plugin-java-v2/
+   */
+  public static final String AWS_S3_ACCESS_GRANTS_FALLBACK_TO_IAM_ENABLED =
+          "fs.s3a.access.grants.fallback.to.iam";
 }

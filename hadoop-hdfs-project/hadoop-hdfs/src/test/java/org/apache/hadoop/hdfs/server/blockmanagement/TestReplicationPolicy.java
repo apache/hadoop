@@ -1734,4 +1734,27 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
     assertFalse(dnManager.shouldAvoidStaleDataNodesForWrite());
     resetHeartbeatForStorages();
   }
+
+  @Test
+  public void testChosenFailureForNotEnoughStorageSpace() {
+    final LogVerificationAppender appender = new LogVerificationAppender();
+    final Logger logger = Logger.getRootLogger();
+    logger.addAppender(appender);
+
+    // Set all datanode storage remaining space is 1 * BLOCK_SIZE.
+    for(int i = 0; i < dataNodes.length; i++) {
+      updateHeartbeatWithUsage(dataNodes[i], BLOCK_SIZE, 0L, BLOCK_SIZE,
+          0L, 0L, 0L, 0, 0);
+    }
+
+    // Set chooseStorage4Block required the minimum number of blocks is 2.
+    replicator.setMinBlocksForWrite(2);
+    DatanodeStorageInfo[] targets = chooseTarget(1, dataNodes[1],
+        new ArrayList<DatanodeStorageInfo>(), null);
+    assertEquals(0, targets.length);
+    assertNotEquals(0,
+        appender.countLinesWithMessage("NOT_ENOUGH_STORAGE_SPACE"));
+
+    resetHeartbeatForStorages();
+  }
 }

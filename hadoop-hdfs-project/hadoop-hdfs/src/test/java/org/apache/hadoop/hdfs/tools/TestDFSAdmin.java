@@ -38,6 +38,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PEER_STATS_ENABL
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_IMAGE_PARALLEL_LOAD_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_BLOCKPLACEMENTPOLICY_MIN_BLOCKS_FOR_WRITE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_PLACEMENT_EC_CLASSNAME_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCK_REPLICATOR_CLASSNAME_KEY;
@@ -45,6 +46,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AVOID_SLOW_DATAN
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_LIMIT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_BLOCKS_PER_LOCK;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_TRANSFER_BANDWIDTHPERSEC_KEY;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.text.TextStringBuilder;
@@ -95,10 +97,11 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.Assert;
+import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_MAX_SLOWPEER_COLLECT_NODES_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LOCK_DETAILED_METRICS_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsAdmin.TRASH_PERMISSION;
 import static org.hamcrest.CoreMatchers.allOf;
 import static org.hamcrest.CoreMatchers.anyOf;
@@ -346,7 +349,7 @@ public class TestDFSAdmin {
     final List<String> outs = Lists.newArrayList();
     final List<String> errs = Lists.newArrayList();
     getReconfigurableProperties("datanode", address, outs, errs);
-    assertEquals(20, outs.size());
+    assertEquals(26, outs.size());
     assertEquals(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, outs.get(1));
   }
 
@@ -441,7 +444,7 @@ public class TestDFSAdmin {
     final List<String> outs = Lists.newArrayList();
     final List<String> errs = Lists.newArrayList();
     getReconfigurableProperties("namenode", address, outs, errs);
-    assertEquals(22, outs.size());
+    assertEquals(29, outs.size());
     assertTrue(outs.get(0).contains("Reconfigurable properties:"));
     assertEquals(DFS_BLOCK_INVALIDATE_LIMIT_KEY, outs.get(1));
     assertEquals(DFS_BLOCK_PLACEMENT_EC_CLASSNAME_KEY, outs.get(2));
@@ -452,10 +455,11 @@ public class TestDFSAdmin {
     assertEquals(DFS_IMAGE_PARALLEL_LOAD_KEY, outs.get(7));
     assertEquals(DFS_NAMENODE_AVOID_SLOW_DATANODE_FOR_READ_KEY, outs.get(8));
     assertEquals(DFS_NAMENODE_BLOCKPLACEMENTPOLICY_EXCLUDE_SLOW_NODES_ENABLED_KEY, outs.get(9));
-    assertEquals(DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_BLOCKS_PER_LOCK, outs.get(10));
-    assertEquals(DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_LIMIT, outs.get(11));
-    assertEquals(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, outs.get(12));
-    assertEquals(DFS_NAMENODE_MAX_SLOWPEER_COLLECT_NODES_KEY, outs.get(13));
+    assertEquals(DFS_NAMENODE_BLOCKPLACEMENTPOLICY_MIN_BLOCKS_FOR_WRITE_KEY, outs.get(10));
+    assertEquals(DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_BLOCKS_PER_LOCK, outs.get(11));
+    assertEquals(DFS_NAMENODE_DECOMMISSION_BACKOFF_MONITOR_PENDING_LIMIT, outs.get(12));
+    assertEquals(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, outs.get(13));
+    assertEquals(DFS_NAMENODE_LOCK_DETAILED_METRICS_KEY, outs.get(14));
     assertEquals(errs.size(), 0);
   }
 
@@ -1280,5 +1284,107 @@ public class TestDFSAdmin {
 
     Assertions.assertThat(outs.subList(1, 5)).containsSubsequence(success, from, to);
     Assertions.assertThat(outs.subList(5, 9)).containsSubsequence(success, from, to, retrieval);
+  }
+
+  @Test
+  public void testDecommissionDataNodesReconfig()
+      throws IOException, InterruptedException, TimeoutException {
+    redirectStream();
+    final Configuration dfsConf = new HdfsConfiguration();
+    try (MiniDFSCluster miniCluster = new MiniDFSCluster.Builder(dfsConf)
+        .numDataNodes(3).build()) {
+      ReconfigurationUtil reconfigurationUtil = mock(ReconfigurationUtil.class);
+      miniCluster.getDataNodes().forEach(node -> node.setReconfigurationUtil(reconfigurationUtil));
+      List<ReconfigurationUtil.PropertyChange> changes = new ArrayList<>();
+      changes.add(new ReconfigurationUtil.PropertyChange(
+          DFS_DATANODE_DATA_TRANSFER_BANDWIDTHPERSEC_KEY, "1000",
+          datanode.getConf().get(DFS_DATANODE_DATA_TRANSFER_BANDWIDTHPERSEC_KEY)));
+      when(reconfigurationUtil.parseChangedProperties(any(Configuration.class),
+          any(Configuration.class))).thenReturn(changes);
+
+      DFSAdmin dfsAdmin = Mockito.spy(new DFSAdmin(dfsConf));
+      DistributedFileSystem dfs = Mockito.spy(miniCluster.getFileSystem());
+      DatanodeInfo decommissioningNode1 = dfs.getDataNodeStats()[0];
+      DatanodeInfo decommissioningNode2 = dfs.getDataNodeStats()[1];
+      DatanodeInfo[] dataNodeStats = new DatanodeInfo[]{decommissioningNode1, decommissioningNode2};
+      when(dfsAdmin.getDFS()).thenReturn(dfs);
+      when(dfs.getDataNodeStats(DatanodeReportType.DECOMMISSIONING)).thenReturn(dataNodeStats);
+
+      int ret = dfsAdmin.startReconfiguration("datanode", "decomnodes");
+
+      // collect outputs
+      final List<String> outsForStartReconf = Lists.newArrayList();
+      final List<String> errsForStartReconf = Lists.newArrayList();
+      scanIntoList(out, outsForStartReconf);
+      scanIntoList(err, errsForStartReconf);
+
+      // verify startReconfiguration results is as expected
+      assertEquals(0, ret);
+      String started = "Started reconfiguration task on node";
+      String starting =
+          "Starting of reconfiguration task successful on 2 nodes, failed on 0 nodes.";
+      Assertions.assertThat(outsForStartReconf).hasSize(3);
+      Assertions.assertThat(errsForStartReconf).hasSize(0);
+      Assertions.assertThat(outsForStartReconf.get(0)).startsWith(started);
+      Assertions.assertThat(outsForStartReconf.get(1)).startsWith(started);
+      Assertions.assertThat(outsForStartReconf.get(2)).startsWith(starting);
+
+      // verify getReconfigurationStatus results is as expected
+      Thread.sleep(1000);
+      resetStream();
+      final List<String> outsForFinishReconf = Lists.newArrayList();
+      final List<String> errsForFinishReconf = Lists.newArrayList();
+      waitForReconfigurationDecommissionNode("datanode", "decomnodes",
+          dfsAdmin, outsForFinishReconf, errsForFinishReconf);
+      String success = "SUCCESS: Changed property " +
+          DFS_DATANODE_DATA_TRANSFER_BANDWIDTHPERSEC_KEY;
+      String from = "\tFrom: \"0\"";
+      String to = "\tTo: \"1000\"";
+      String retrieval =
+          "Retrieval of reconfiguration status successful on 2 nodes, failed on 0 nodes.";
+
+      Assertions.assertThat(outsForFinishReconf.subList(1, 5)).
+          containsSubsequence(success, from, to);
+      Assertions.assertThat(outsForFinishReconf.subList(5, 9)).
+          containsSubsequence(success, from, to, retrieval);
+
+      // verify refreshed decommissioningNode is as expected
+      String node1Addr = decommissioningNode1.getIpAddr() + ":" +
+          decommissioningNode1.getIpcPort();
+      String node2Addr = decommissioningNode2.getIpAddr() + ":" +
+          decommissioningNode2.getIpcPort();
+      int finishedReconfCount = 0;
+      for (String outMessage : outsForFinishReconf) {
+        finishedReconfCount = outMessage.contains(node1Addr) ?
+            finishedReconfCount + 1 : finishedReconfCount + 0;
+        finishedReconfCount = outMessage.contains(node2Addr) ?
+            finishedReconfCount + 1 : finishedReconfCount + 0;
+      }
+      assertTrue(finishedReconfCount == 2);
+    }
+  }
+
+  private void waitForReconfigurationDecommissionNode(final String nodeType, final String address,
+      DFSAdmin dfsAdmin, List<String> outs, List<String> errs)
+      throws TimeoutException, InterruptedException {
+    PrintStream outStream = new PrintStream(out);
+    PrintStream errStream = new PrintStream(err);
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      @Override
+      public Boolean get() {
+        LocatedBlocks blocks = null;
+        try {
+          dfsAdmin.getReconfigurationStatusUtil("datanode", "decomnodes",
+              outStream, errStream);
+        } catch (IOException | InterruptedException e) {
+          LOG.error(String.format(
+              "call getReconfigurationStatus on %s[%s] failed.", nodeType,
+              address), e);
+        }
+        scanIntoList(out, outs);
+        scanIntoList(err, errs);
+        return !outs.isEmpty() && outs.get(0).contains("finished");
+      }
+    }, 100, 100 * 100);
   }
 }

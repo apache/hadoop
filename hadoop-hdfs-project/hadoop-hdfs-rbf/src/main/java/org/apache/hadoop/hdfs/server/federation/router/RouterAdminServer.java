@@ -211,9 +211,9 @@ public class RouterAdminServer extends AbstractService
         RefreshCallQueueProtocolProtos.RefreshCallQueueProtocolService.
         newReflectiveBlockingService(refreshCallQueueXlator);
 
-    DFSUtil.addPBProtocol(conf, GenericRefreshProtocolPB.class,
+    DFSUtil.addInternalPBProtocol(conf, GenericRefreshProtocolPB.class,
         genericRefreshService, adminServer);
-    DFSUtil.addPBProtocol(conf, RefreshCallQueueProtocolPB.class,
+    DFSUtil.addInternalPBProtocol(conf, RefreshCallQueueProtocolPB.class,
         refreshCallQueueService, adminServer);
 
     registerRefreshFairnessPolicyControllerHandler();

@@ -20,18 +20,17 @@ package org.apache.hadoop.fs.s3a;
 
 import java.io.IOException;
 
-import com.amazonaws.ClientConfiguration;
-import com.amazonaws.Protocol;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
+import software.amazon.awssdk.http.apache.ProxyConfiguration;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.s3a.impl.AWSClientConfig;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
 import static org.apache.hadoop.fs.s3a.Constants.PROXY_HOST;
 import static org.apache.hadoop.fs.s3a.Constants.PROXY_PORT;
 import static org.apache.hadoop.fs.s3a.Constants.PROXY_SECURED;
-import static org.apache.hadoop.fs.s3a.S3AUtils.initProxySupport;
 
 /**
  * Tests to verify {@link S3AUtils} translates the proxy configurations
@@ -79,11 +78,16 @@ public class TestS3AProxy extends AbstractHadoopTestBase {
   private void verifyProxy(Configuration proxyConfig,
       boolean isExpectedSecured)
       throws IOException {
-    ClientConfiguration awsConf = new ClientConfiguration();
-    initProxySupport(proxyConfig, "test-bucket", awsConf);
-    Assertions.assertThat(awsConf.getProxyProtocol())
+    ProxyConfiguration config =
+        AWSClientConfig.createProxyConfiguration(proxyConfig, "testBucket");
+    ProxyConfiguration asyncConfig =
+        AWSClientConfig.createProxyConfiguration(proxyConfig, "testBucket");
+    Assertions.assertThat(config.scheme())
         .describedAs("Proxy protocol not as expected")
-        .isEqualTo(isExpectedSecured ? Protocol.HTTPS : Protocol.HTTP);
+        .isEqualTo(isExpectedSecured ? "https" : "http");
+    Assertions.assertThat(asyncConfig.scheme())
+        .describedAs("Proxy protocol not as expected")
+        .isEqualTo(isExpectedSecured ? "https" : "http");
   }
 
   /**

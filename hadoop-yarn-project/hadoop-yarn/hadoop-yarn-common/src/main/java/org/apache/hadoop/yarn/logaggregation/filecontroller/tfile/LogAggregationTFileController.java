@@ -22,7 +22,7 @@ import java.io.DataInputStream;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -217,7 +217,7 @@ public class LogAggregationTFileController
                           valueStream, os, buf,
                           ContainerLogAggregationType.AGGREGATED);
                       byte[] b = aggregatedLogSuffix(fileType).getBytes(
-                          Charset.forName("UTF-8"));
+                          StandardCharsets.UTF_8);
                       os.write(b, 0, b.length);
                       findLogs = true;
                     } else {

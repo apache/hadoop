@@ -26,44 +26,48 @@ import java.nio.file.AccessDeniedException;
 import java.util.List;
 import java.util.stream.IntStream;
 
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.services.securitytoken.model.AWSSecurityTokenServiceException;
+import software.amazon.awssdk.auth.credentials.AwsCredentials;
+import software.amazon.awssdk.services.s3.model.MultipartUpload;
+import software.amazon.awssdk.services.sts.model.StsException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.AWSBadRequestException;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
-import org.apache.hadoop.fs.s3a.MultipartUtils;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
-import org.apache.hadoop.fs.s3a.S3ATestConstants;
 import org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
 import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.fs.s3a.commit.impl.CommitContext;
 import org.apache.hadoop.fs.s3a.commit.impl.CommitOperations;
+import org.apache.hadoop.fs.s3a.impl.InstantiationIOException;
 import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool;
 import org.apache.hadoop.fs.s3a.statistics.CommitterStatistics;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.Constants.S3EXPRESS_CREATE_SESSION;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
-import static org.apache.hadoop.fs.s3a.S3AUtils.*;
+import static org.apache.hadoop.fs.s3a.auth.CredentialProviderListFactory.E_FORBIDDEN_AWS_PROVIDER;
 import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.*;
 import static org.apache.hadoop.fs.s3a.auth.RoleModel.*;
 import static org.apache.hadoop.fs.s3a.auth.RolePolicies.*;
 import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.forbidden;
 import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.newAssumedRoleConfig;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardToolTestHelper.exec;
+import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.requireAnonymousDataPath;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsSourceToString;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
@@ -101,10 +105,17 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
       = "ValidationError";
 
   @Override
+  protected Configuration createConfiguration() {
+    final Configuration conf = super.createConfiguration();
+    removeBaseAndBucketOverrides(conf, S3EXPRESS_CREATE_SESSION);
+    return conf;
+  }
+
+  @Override
   public void setup() throws Exception {
     super.setup();
     assumeRoleTests();
-    uri = new URI(S3ATestConstants.DEFAULT_CSVTEST_FILE);
+    uri = requireAnonymousDataPath(getConfiguration()).toUri();
   }
 
   @Override
@@ -140,7 +151,6 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   }
 
   @Test
-  @SuppressWarnings("deprecation")
   public void testCreateCredentialProvider() throws IOException {
     describe("Create the credential provider");
 
@@ -148,13 +158,12 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     try (AssumedRoleCredentialProvider provider
              = new AssumedRoleCredentialProvider(uri, conf)) {
       LOG.info("Provider is {}", provider);
-      AWSCredentials credentials = provider.getCredentials();
+      AwsCredentials credentials = provider.resolveCredentials();
       assertNotNull("Null credentials from " + provider, credentials);
     }
   }
 
   @Test
-  @SuppressWarnings("deprecation")
   public void testCreateCredentialProviderNoURI() throws IOException {
     describe("Create the credential provider");
 
@@ -162,7 +171,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     try (AssumedRoleCredentialProvider provider
              = new AssumedRoleCredentialProvider(null, conf)) {
       LOG.info("Provider is {}", provider);
-      AWSCredentials credentials = provider.getCredentials();
+      AwsCredentials credentials = provider.resolveCredentials();
       assertNotNull("Null credentials from " + provider, credentials);
     }
   }
@@ -172,7 +181,6 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
    * @return a configuration set to use to the role ARN.
    * @throws JsonProcessingException problems working with JSON policies.
    */
-  @SuppressWarnings("deprecation")
   protected Configuration createValidRoleConf() throws JsonProcessingException {
     String roleARN = getAssumedRoleARN();
 
@@ -181,18 +189,26 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     conf.set(ASSUMED_ROLE_ARN, roleARN);
     conf.set(ASSUMED_ROLE_SESSION_NAME, "valid");
     conf.set(ASSUMED_ROLE_SESSION_DURATION, "45m");
+    // disable create session so there's no need to
+    // add a role policy for it.
+    disableCreateSession(conf);
+
     bindRolePolicy(conf, RESTRICTED_POLICY);
     return conf;
   }
 
   @Test
-  @SuppressWarnings("deprecation")
   public void testAssumedInvalidRole() throws Throwable {
     Configuration conf = new Configuration();
     conf.set(ASSUMED_ROLE_ARN, ROLE_ARN_EXAMPLE);
-    interceptClosing(AWSSecurityTokenServiceException.class,
+    interceptClosing(StsException.class,
         "",
-        () -> new AssumedRoleCredentialProvider(uri, conf));
+        () -> {
+          AssumedRoleCredentialProvider p =
+              new AssumedRoleCredentialProvider(uri, conf);
+          p.resolveCredentials();
+          return p;
+        });
   }
 
   @Test
@@ -204,7 +220,6 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   }
 
   @Test
-  @SuppressWarnings("deprecation")
   public void testAssumeRoleNoARN() throws Exception {
     describe("Attemnpt to create the FS with no ARN");
     Configuration conf = createAssumedRoleConfig();
@@ -237,7 +252,6 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   }
 
   @Test
-  @SuppressWarnings("deprecation")
   public void testAssumeRoleCannotAuthAssumedRole() throws Exception {
     describe("Assert that you can't use assumed roles to auth assumed roles");
 
@@ -246,12 +260,11 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     conf.set(ASSUMED_ROLE_CREDENTIALS_PROVIDER,
         AssumedRoleCredentialProvider.NAME);
     expectFileSystemCreateFailure(conf,
-        IOException.class,
+        InstantiationIOException.class,
         E_FORBIDDEN_AWS_PROVIDER);
   }
 
   @Test
-  @SuppressWarnings("deprecation")
   public void testAssumeRoleBadInnerAuth() throws Exception {
     describe("Try to authenticate with a keypair with spaces");
 
@@ -267,7 +280,6 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   }
 
   @Test
-  @SuppressWarnings("deprecation")
   public void testAssumeRoleBadInnerAuth2() throws Exception {
     describe("Try to authenticate with an invalid keypair");
 
@@ -351,7 +363,6 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   }
 
   @Test
-  @SuppressWarnings("deprecation")
   public void testAssumeRoleUndefined() throws Throwable {
     describe("Verify that you cannot instantiate the"
         + " AssumedRoleCredentialProvider without a role ARN");
@@ -363,12 +374,11 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   }
 
   @Test
-  @SuppressWarnings("deprecation")
   public void testAssumedIllegalDuration() throws Throwable {
     describe("Expect the constructor to fail if the session is to short");
     Configuration conf = new Configuration();
     conf.set(ASSUMED_ROLE_SESSION_DURATION, "30s");
-    interceptClosing(AWSSecurityTokenServiceException.class, "",
+    interceptClosing(StsException.class, "",
         () -> new AssumedRoleCredentialProvider(uri, conf));
   }
 
@@ -426,8 +436,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     bindRolePolicy(conf,
         policy(
             statement(false, S3_ALL_BUCKETS, S3_GET_OBJECT_TORRENT),
-            ALLOW_S3_GET_BUCKET_LOCATION,
-            STATEMENT_ALLOW_SSE_KMS_RW));
+            ALLOW_S3_GET_BUCKET_LOCATION, STATEMENT_ALLOW_KMS_RW));
     Path path = path("testAssumeRoleStillIncludesRolePerms");
     roleFS = (S3AFileSystem) path.getFileSystem(conf);
     assertTouchForbidden(roleFS, path);
@@ -447,8 +456,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     bindRolePolicy(conf,
         policy(
             statement(false, S3_ALL_BUCKETS, S3_PATH_WRITE_OPERATIONS),
-            STATEMENT_ALL_S3,
-            STATEMENT_ALLOW_SSE_KMS_READ));
+            STATEMENT_ALL_S3, STATEMENT_ALLOW_KMS_RW));
     Path path = methodPath();
     roleFS = (S3AFileSystem) path.getFileSystem(conf);
     // list the root path, expect happy
@@ -468,7 +476,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     // list multipart uploads.
     // This is part of the read policy.
     int counter = 0;
-    MultipartUtils.UploadIterator iterator = roleFS.listUploads("/");
+    RemoteIterator<MultipartUpload> iterator = roleFS.listUploads("/");
     while (iterator.hasNext()) {
       counter++;
       iterator.next();
@@ -495,8 +503,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     Configuration conf = createAssumedRoleConfig();
 
     bindRolePolicyStatements(conf,
-        STATEMENT_ALL_BUCKET_READ_ACCESS,
-        STATEMENT_ALLOW_SSE_KMS_RW,
+        STATEMENT_ALL_BUCKET_READ_ACCESS, STATEMENT_ALLOW_KMS_RW,
         new Statement(Effects.Allow)
           .addActions(S3_ALL_OPERATIONS)
           .addResources(directory(restrictedDir)));
@@ -537,7 +544,6 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
    * don't break.
    */
   @Test
-  @SuppressWarnings("deprecation")
   public void testAssumedRoleRetryHandler() throws Throwable {
     try(AssumedRoleCredentialProvider provider
             = new AssumedRoleCredentialProvider(getFileSystem().getUri(),
@@ -563,8 +569,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     fs.delete(basePath, true);
     fs.mkdirs(readOnlyDir);
 
-    bindRolePolicyStatements(conf,
-        STATEMENT_ALLOW_SSE_KMS_RW,
+    bindRolePolicyStatements(conf, STATEMENT_ALLOW_KMS_RW,
         STATEMENT_ALL_BUCKET_READ_ACCESS,
         new Statement(Effects.Allow)
             .addActions(S3_PATH_RW_OPERATIONS)
@@ -714,8 +719,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     S3AFileSystem fs = getFileSystem();
     fs.delete(destDir, true);
 
-    bindRolePolicyStatements(conf,
-        STATEMENT_ALLOW_SSE_KMS_RW,
+    bindRolePolicyStatements(conf, STATEMENT_ALLOW_KMS_RW,
         statement(true, S3_ALL_BUCKETS, S3_ALL_OPERATIONS),
         new Statement(Effects.Deny)
             .addActions(S3_PATH_WRITE_OPERATIONS)
@@ -745,13 +749,14 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
 
     describe("Restrict role to read only");
     Configuration conf = createAssumedRoleConfig();
-
-    bindRolePolicyStatements(conf,
-        STATEMENT_ALLOW_SSE_KMS_RW,
+    bindRolePolicyStatements(conf, STATEMENT_ALLOW_KMS_RW,
         statement(true, S3_ALL_BUCKETS, S3_ALL_OPERATIONS),
         statement(false, S3_ALL_BUCKETS, S3_GET_BUCKET_LOCATION));
     Path path = methodPath();
     roleFS = (S3AFileSystem) path.getFileSystem(conf);
+
+    // getBucketLocation fails with error
+    assumeNotS3ExpressFileSystem(roleFS);
     forbidden("",
         () -> roleFS.getBucketLocation());
     S3GuardTool.BucketInfo infocmd = new S3GuardTool.BucketInfo(conf);

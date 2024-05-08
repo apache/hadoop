@@ -21,16 +21,15 @@ package org.apache.hadoop.security.protocolPB;
 import java.io.Closeable;
 import java.io.IOException;
 
-import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtocolMetaInterface;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RpcClientUtil;
 import org.apache.hadoop.security.RefreshUserMappingsProtocol;
 import org.apache.hadoop.security.proto.RefreshUserMappingsProtocolProtos.RefreshSuperUserGroupsConfigurationRequestProto;
 import org.apache.hadoop.security.proto.RefreshUserMappingsProtocolProtos.RefreshUserToGroupsMappingsRequestProto;
-
 import org.apache.hadoop.thirdparty.protobuf.RpcController;
-import org.apache.hadoop.thirdparty.protobuf.ServiceException;
+
+import static org.apache.hadoop.ipc.internal.ShadedProtobufHelper.ipc;
 
 public class RefreshUserMappingsProtocolClientSideTranslatorPB implements
     ProtocolMetaInterface, RefreshUserMappingsProtocol, Closeable {
@@ -59,22 +58,14 @@ public class RefreshUserMappingsProtocolClientSideTranslatorPB implements
 
   @Override
   public void refreshUserToGroupsMappings() throws IOException {
-    try {
-      rpcProxy.refreshUserToGroupsMappings(NULL_CONTROLLER,
-          VOID_REFRESH_USER_TO_GROUPS_MAPPING_REQUEST);
-    } catch (ServiceException se) {
-      throw ProtobufHelper.getRemoteException(se);
-    }
+    ipc(() -> rpcProxy.refreshUserToGroupsMappings(NULL_CONTROLLER,
+        VOID_REFRESH_USER_TO_GROUPS_MAPPING_REQUEST));
   }
 
   @Override
   public void refreshSuperUserGroupsConfiguration() throws IOException {
-    try {
-      rpcProxy.refreshSuperUserGroupsConfiguration(NULL_CONTROLLER,
-          VOID_REFRESH_SUPERUSER_GROUPS_CONFIGURATION_REQUEST);
-    } catch (ServiceException se) {
-      throw ProtobufHelper.getRemoteException(se);
-    }
+    ipc(() -> rpcProxy.refreshSuperUserGroupsConfiguration(NULL_CONTROLLER,
+        VOID_REFRESH_SUPERUSER_GROUPS_CONFIGURATION_REQUEST));
   }
 
   @Override

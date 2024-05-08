@@ -40,7 +40,6 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
-import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.CachedBlock;
 import org.apache.hadoop.hdfs.server.protocol.BlockECReconstructionCommand.BlockECReconstructionInfo;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
@@ -812,11 +811,11 @@ public class DatanodeDescriptor extends DatanodeInfo {
    *
    * @param t requested storage type
    * @param blockSize requested block size
+   * @param minBlocksForWrite requested the minimum number of blocks
    */
   public DatanodeStorageInfo chooseStorage4Block(StorageType t,
-      long blockSize) {
-    final long requiredSize =
-        blockSize * HdfsServerConstants.MIN_BLOCKS_FOR_WRITE;
+      long blockSize, int minBlocksForWrite) {
+    final long requiredSize = blockSize * minBlocksForWrite;
     final long scheduledSize = blockSize * getBlocksScheduled(t);
     long remaining = 0;
     DatanodeStorageInfo storage = null;

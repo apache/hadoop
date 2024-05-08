@@ -87,4 +87,31 @@ public class TestFederationRegistryClient {
         this.registryClient.loadStateFromRegistry(appId).size());
   }
 
+  @Test
+  public void testRemoveWithMemoryState() {
+    ApplicationId appId1 = ApplicationId.newInstance(0, 0);
+    ApplicationId appId2 = ApplicationId.newInstance(0, 1);
+    String scId0 = "subcluster0";
+
+    this.registryClient.writeAMRMTokenForUAM(appId1, scId0, new Token<>());
+    this.registryClient.writeAMRMTokenForUAM(appId2, scId0, new Token<>());
+    Assert.assertEquals(2, this.registryClient.getAllApplications().size());
+
+    // Create a new client instance
+    this.registryClient =
+        new FederationRegistryClient(this.conf, this.registry, this.user);
+
+    this.registryClient.loadStateFromRegistry(appId2);
+    // Should remove app2
+    this.registryClient.removeAppFromRegistry(appId2, false);
+    Assert.assertEquals(1, this.registryClient.getAllApplications().size());
+
+    // Should not remove app1 since memory state don't have it
+    this.registryClient.removeAppFromRegistry(appId1, false);
+    Assert.assertEquals(1, this.registryClient.getAllApplications().size());
+
+    // Should remove app1
+    this.registryClient.removeAppFromRegistry(appId1, true);
+    Assert.assertEquals(0, this.registryClient.getAllApplications().size());
+  }
 }

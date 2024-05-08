@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.http.server;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -55,6 +54,7 @@ import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.XAttrEncodingPa
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.XAttrNameParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.XAttrSetFlagParam;
 import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.XAttrValueParam;
+import org.apache.hadoop.fs.http.server.HttpFSParametersProvider.AllUsersParam;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.web.JsonUtil;
 import org.apache.hadoop.http.JettyUtils;
@@ -90,6 +90,7 @@ import javax.ws.rs.core.UriInfo;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.security.AccessControlException;
 import java.security.PrivilegedExceptionAction;
 import java.text.MessageFormat;
@@ -421,7 +422,7 @@ public class HttpFSServer {
           HttpFSParametersProvider.StartAfterParam.class);
       byte[] token = HttpFSUtils.EMPTY_BYTES;
       if (startAfter != null) {
-        token = startAfter.getBytes(Charsets.UTF_8);
+        token = startAfter.getBytes(StandardCharsets.UTF_8);
       }
       FSOperations.FSListStatusBatch command = new FSOperations
           .FSListStatusBatch(path, token);
@@ -534,6 +535,14 @@ public class HttpFSServer {
       response = Response.ok(js).type(MediaType.APPLICATION_JSON).build();
       break;
     }
+    case GETECCODECS: {
+      FSOperations.FSGetErasureCodingCodecs command =
+          new FSOperations.FSGetErasureCodingCodecs();
+      Map json = fsExecute(user, command);
+      AUDIT_LOG.info("[{}]", path);
+      response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
+      break;
+    }
     case GET_BLOCK_LOCATIONS: {
       long offset = 0;
       long len = Long.MAX_VALUE;
@@ -566,6 +575,14 @@ public class HttpFSServer {
       FSOperations.FSStatus command = new FSOperations.FSStatus(path);
       @SuppressWarnings("rawtypes") Map js = fsExecute(user, command);
       response = Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+      break;
+    }
+    case GETTRASHROOTS: {
+      Boolean allUsers = params.get(AllUsersParam.NAME, AllUsersParam.class);
+      FSOperations.FSGetTrashRoots command = new FSOperations.FSGetTrashRoots(allUsers);
+      Map json = fsExecute(user, command);
+      AUDIT_LOG.info("allUsers [{}]", allUsers);
+      response = Response.ok(json).type(MediaType.APPLICATION_JSON).build();
       break;
     }
     default: {

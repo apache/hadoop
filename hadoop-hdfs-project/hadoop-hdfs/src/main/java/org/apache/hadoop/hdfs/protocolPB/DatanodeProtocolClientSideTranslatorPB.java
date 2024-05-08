@@ -61,7 +61,6 @@ import org.apache.hadoop.hdfs.server.protocol.StorageBlockReport;
 import org.apache.hadoop.hdfs.server.protocol.StorageReceivedDeletedBlocks;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
 import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
-import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtobufRpcEngine2;
 import org.apache.hadoop.ipc.ProtocolMetaInterface;
 import org.apache.hadoop.ipc.RPC;
@@ -71,9 +70,10 @@ import org.apache.hadoop.security.UserGroupInformation;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.protobuf.RpcController;
-import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 
 import javax.annotation.Nonnull;
+
+import static org.apache.hadoop.ipc.internal.ShadedProtobufHelper.ipc;
 
 /**
  * This class is the client side translator to translate the requests made on
@@ -123,11 +123,8 @@ public class DatanodeProtocolClientSideTranslatorPB implements
     RegisterDatanodeRequestProto.Builder builder = RegisterDatanodeRequestProto
         .newBuilder().setRegistration(PBHelper.convert(registration));
     RegisterDatanodeResponseProto resp;
-    try {
-      resp = rpcProxy.registerDatanode(NULL_CONTROLLER, builder.build());
-    } catch (ServiceException se) {
-      throw ProtobufHelper.getRemoteException(se);
-    }
+    resp = ipc(() -> rpcProxy.registerDatanode(NULL_CONTROLLER, builder.build()));
+
     return PBHelper.convert(resp.getRegistration());
   }
 
@@ -164,11 +161,8 @@ public class DatanodeProtocolClientSideTranslatorPB implements
     }
 
     HeartbeatResponseProto resp;
-    try {
-      resp = rpcProxy.sendHeartbeat(NULL_CONTROLLER, builder.build());
-    } catch (ServiceException se) {
-      throw ProtobufHelper.getRemoteException(se);
-    }
+    resp = ipc(() -> rpcProxy.sendHeartbeat(NULL_CONTROLLER, builder.build()));
+
     DatanodeCommand[] cmds = new DatanodeCommand[resp.getCmdsList().size()];
     int index = 0;
     for (DatanodeCommandProto p : resp.getCmdsList()) {
@@ -215,11 +209,7 @@ public class DatanodeProtocolClientSideTranslatorPB implements
     }
     builder.setContext(PBHelper.convert(context));
     BlockReportResponseProto resp;
-    try {
-      resp = rpcProxy.blockReport(NULL_CONTROLLER, builder.build());
-    } catch (ServiceException se) {
-      throw ProtobufHelper.getRemoteException(se);
-    }
+    resp = ipc(() -> rpcProxy.blockReport(NULL_CONTROLLER, builder.build()));
     return resp.hasCmd() ? PBHelper.convert(resp.getCmd()) : null;
   }
 
@@ -235,11 +225,7 @@ public class DatanodeProtocolClientSideTranslatorPB implements
     }
     
     CacheReportResponseProto resp;
-    try {
-      resp = rpcProxy.cacheReport(NULL_CONTROLLER, builder.build());
-    } catch (ServiceException se) {
-      throw ProtobufHelper.getRemoteException(se);
-    }
+    resp = ipc(() -> rpcProxy.cacheReport(NULL_CONTROLLER, builder.build()));
     if (resp.hasCmd()) {
       return PBHelper.convert(resp.getCmd());
     }
@@ -264,11 +250,7 @@ public class DatanodeProtocolClientSideTranslatorPB implements
       }
       builder.addBlocks(repBuilder.build());
     }
-    try {
-      rpcProxy.blockReceivedAndDeleted(NULL_CONTROLLER, builder.build());
-    } catch (ServiceException se) {
-      throw ProtobufHelper.getRemoteException(se);
-    }
+    ipc(() -> rpcProxy.blockReceivedAndDeleted(NULL_CONTROLLER, builder.build()));
   }
 
   @Override
@@ -277,21 +259,13 @@ public class DatanodeProtocolClientSideTranslatorPB implements
     ErrorReportRequestProto req = ErrorReportRequestProto.newBuilder()
         .setRegistartion(PBHelper.convert(registration))
         .setErrorCode(errorCode).setMsg(msg).build();
-    try {
-      rpcProxy.errorReport(NULL_CONTROLLER, req);
-    } catch (ServiceException se) {
-      throw ProtobufHelper.getRemoteException(se);
-    }
+    ipc(() -> rpcProxy.errorReport(NULL_CONTROLLER, req));
   }
 
   @Override
   public NamespaceInfo versionRequest() throws IOException {
-    try {
-      return PBHelper.convert(rpcProxy.versionRequest(NULL_CONTROLLER,
-          VOID_VERSION_REQUEST).getInfo());
-    } catch (ServiceException e) {
-      throw ProtobufHelper.getRemoteException(e);
-    }
+    return PBHelper.convert(ipc(() -> rpcProxy.versionRequest(NULL_CONTROLLER,
+        VOID_VERSION_REQUEST).getInfo()));
   }
 
   @Override
@@ -302,11 +276,7 @@ public class DatanodeProtocolClientSideTranslatorPB implements
       builder.addBlocks(i, PBHelperClient.convertLocatedBlock(blocks[i]));
     }
     ReportBadBlocksRequestProto req = builder.build();
-    try {
-      rpcProxy.reportBadBlocks(NULL_CONTROLLER, req);
-    } catch (ServiceException se) {
-      throw ProtobufHelper.getRemoteException(se);
-    }
+    ipc(() -> rpcProxy.reportBadBlocks(NULL_CONTROLLER, req));
   }
 
   @Override
@@ -327,11 +297,7 @@ public class DatanodeProtocolClientSideTranslatorPB implements
       builder.addNewTargetStorages(newtargetstorages[i]);
     }
     CommitBlockSynchronizationRequestProto req = builder.build();
-    try {
-      rpcProxy.commitBlockSynchronization(NULL_CONTROLLER, req);
-    } catch (ServiceException se) {
-      throw ProtobufHelper.getRemoteException(se);
-    }
+    ipc(() -> rpcProxy.commitBlockSynchronization(NULL_CONTROLLER, req));
   }
 
   @Override // ProtocolMetaInterface

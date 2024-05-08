@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.router.rmadmin;
 
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
@@ -27,6 +28,7 @@ import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -63,10 +65,30 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.NodesToAttributesMappin
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusterResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.DeregisterSubClusters;
+import org.apache.hadoop.yarn.server.api.protocolrecords.FederationQueueWeight;
+import org.apache.hadoop.yarn.server.api.protocolrecords.FederationSubCluster;
+import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.SaveFederationQueuePolicyResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationQueuePoliciesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationQueuePoliciesResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplicationRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplicationResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.GetSubClustersRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.GetSubClustersResponse;
 import org.apache.hadoop.yarn.server.federation.failover.FederationProxyProviderUtil;
+import org.apache.hadoop.yarn.server.federation.policies.manager.PriorityBroadcastPolicyManager;
+import org.apache.hadoop.yarn.server.federation.policies.manager.WeightedHomePolicyManager;
+import org.apache.hadoop.yarn.server.federation.policies.manager.WeightedLocalityPolicyManager;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterState;
+import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
+import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.router.RouterMetrics;
 import org.apache.hadoop.yarn.server.router.RouterServerUtil;
@@ -76,9 +98,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.HashMap;
 import java.util.Collection;
 import java.util.Set;
 import java.util.Date;
@@ -91,10 +116,19 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
+import static org.apache.hadoop.yarn.server.router.RouterServerUtil.checkPolicyManagerValid;
+
 public class FederationRMAdminInterceptor extends AbstractRMAdminRequestInterceptor {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(FederationRMAdminInterceptor.class);
+
+  private static final String COMMA = ",";
+  private static final String COLON = ":";
+
+  private static final List<String> SUPPORT_WEIGHT_MANAGERS =
+      new ArrayList<>(Arrays.asList(WeightedLocalityPolicyManager.class.getName(),
+      PriorityBroadcastPolicyManager.class.getName(), WeightedHomePolicyManager.class.getName()));
 
   private Map<SubClusterId, ResourceManagerAdministrationProtocol> adminRMProxies;
   private FederationStateStoreFacade federationFacade;
@@ -114,18 +148,30 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
     ThreadFactory threadFactory = new ThreadFactoryBuilder()
         .setNameFormat("RPC Router RMAdminClient-" + userName + "-%d ").build();
 
-    BlockingQueue<Runnable> workQueue = new LinkedBlockingQueue<Runnable>();
-    this.executorService = new ThreadPoolExecutor(numThreads, numThreads,
-        0L, TimeUnit.MILLISECONDS, workQueue, threadFactory);
+    long keepAliveTime = getConf().getTimeDuration(
+        YarnConfiguration.ROUTER_USER_CLIENT_THREAD_POOL_KEEP_ALIVE_TIME,
+        YarnConfiguration.DEFAULT_ROUTER_USER_CLIENT_THREAD_POOL_KEEP_ALIVE_TIME, TimeUnit.SECONDS);
 
-    federationFacade = FederationStateStoreFacade.getInstance();
+    BlockingQueue<Runnable> workQueue = new LinkedBlockingQueue<>();
+    this.executorService = new ThreadPoolExecutor(numThreads, numThreads,
+        keepAliveTime, TimeUnit.MILLISECONDS, workQueue, threadFactory);
+
+    boolean allowCoreThreadTimeOut =  getConf().getBoolean(
+        YarnConfiguration.ROUTER_USER_CLIENT_THREAD_POOL_ALLOW_CORE_THREAD_TIMEOUT,
+        YarnConfiguration.DEFAULT_ROUTER_USER_CLIENT_THREAD_POOL_ALLOW_CORE_THREAD_TIMEOUT);
+
+    if (keepAliveTime > 0 && allowCoreThreadTimeOut) {
+      this.executorService.allowCoreThreadTimeOut(allowCoreThreadTimeOut);
+    }
+
+    federationFacade = FederationStateStoreFacade.getInstance(this.getConf());
     this.conf = this.getConf();
     this.adminRMProxies = new ConcurrentHashMap<>();
     routerMetrics = RouterMetrics.getMetrics();
 
     this.heartbeatExpirationMillis = this.conf.getTimeDuration(
         YarnConfiguration.ROUTER_SUBCLUSTER_EXPIRATION_TIME,
-        YarnConfiguration.DEFAULT_ROUTER_SUBCLUSTER_EXPIRATION_TIME, TimeUnit.MINUTES);
+        YarnConfiguration.DEFAULT_ROUTER_SUBCLUSTER_EXPIRATION_TIME, TimeUnit.MILLISECONDS);
   }
 
   @VisibleForTesting
@@ -855,11 +901,619 @@ public class FederationRMAdminInterceptor extends AbstractRMAdminRequestIntercep
     } catch (Exception e) {
       routerMetrics.incrDeregisterSubClusterFailedRetrieved();
       RouterServerUtil.logAndThrowException(e,
-              "Unable to deregisterSubCluster due to exception. " + e.getMessage());
+          "Unable to deregisterSubCluster due to exception. " + e.getMessage());
     }
 
     routerMetrics.incrDeregisterSubClusterFailedRetrieved();
     throw new YarnException("Unable to deregisterSubCluster.");
+  }
+
+  /**
+   * Save the Queue Policy for the Federation.
+   *
+   * @param request saveFederationQueuePolicy Request.
+   * @return Response from saveFederationQueuePolicy.
+   * @throws YarnException exceptions from yarn servers.
+   * @throws IOException if an IO error occurred.
+   */
+  @Override
+  public SaveFederationQueuePolicyResponse saveFederationQueuePolicy(
+      SaveFederationQueuePolicyRequest request) throws YarnException, IOException {
+
+    // Parameter validation.
+
+    if (request == null) {
+      routerMetrics.incrSaveFederationQueuePolicyFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing SaveFederationQueuePolicy request.", null);
+    }
+
+    FederationQueueWeight federationQueueWeight = request.getFederationQueueWeight();
+    if (federationQueueWeight == null) {
+      routerMetrics.incrSaveFederationQueuePolicyFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing FederationQueueWeight information.", null);
+    }
+
+    String queue = request.getQueue();
+    if (StringUtils.isBlank(queue)) {
+      routerMetrics.incrSaveFederationQueuePolicyFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing Queue information.", null);
+    }
+
+    String policyManagerClassName = request.getPolicyManagerClassName();
+    if (!checkPolicyManagerValid(policyManagerClassName, SUPPORT_WEIGHT_MANAGERS)) {
+      routerMetrics.incrSaveFederationQueuePolicyFailedRetrieved();
+      RouterServerUtil.logAndThrowException(policyManagerClassName +
+          " does not support the use of queue weights.", null);
+    }
+
+    String amRmWeight = federationQueueWeight.getAmrmWeight();
+    FederationQueueWeight.checkSubClusterQueueWeightRatioValid(amRmWeight);
+
+    String routerWeight = federationQueueWeight.getRouterWeight();
+    FederationQueueWeight.checkSubClusterQueueWeightRatioValid(routerWeight);
+
+    String headRoomAlpha = federationQueueWeight.getHeadRoomAlpha();
+    FederationQueueWeight.checkHeadRoomAlphaValid(headRoomAlpha);
+
+    try {
+      long startTime = clock.getTime();
+
+      // Step2, parse amRMPolicyWeights.
+      Map<SubClusterIdInfo, Float> amRMPolicyWeights = getSubClusterWeightMap(amRmWeight);
+      LOG.debug("amRMPolicyWeights = {}.", amRMPolicyWeights);
+
+      // Step3, parse routerPolicyWeights.
+      Map<SubClusterIdInfo, Float> routerPolicyWeights = getSubClusterWeightMap(routerWeight);
+      LOG.debug("routerWeights = {}.", amRMPolicyWeights);
+
+      // Step4, Initialize WeightedPolicyInfo.
+      WeightedPolicyInfo weightedPolicyInfo = new WeightedPolicyInfo();
+      weightedPolicyInfo.setHeadroomAlpha(Float.parseFloat(headRoomAlpha));
+      weightedPolicyInfo.setAMRMPolicyWeights(amRMPolicyWeights);
+      weightedPolicyInfo.setRouterPolicyWeights(routerPolicyWeights);
+
+      // Step5, Set SubClusterPolicyConfiguration.
+      SubClusterPolicyConfiguration policyConfiguration =
+          SubClusterPolicyConfiguration.newInstance(queue, policyManagerClassName,
+          weightedPolicyInfo.toByteBuffer());
+      federationFacade.setPolicyConfiguration(policyConfiguration);
+      long stopTime = clock.getTime();
+      routerMetrics.succeededSaveFederationQueuePolicyRetrieved(stopTime - startTime);
+      return SaveFederationQueuePolicyResponse.newInstance("save policy success.");
+    } catch (Exception e) {
+      routerMetrics.incrSaveFederationQueuePolicyFailedRetrieved();
+      RouterServerUtil.logAndThrowException(e,
+          "Unable to saveFederationQueuePolicy due to exception. " + e.getMessage());
+    }
+
+    routerMetrics.incrSaveFederationQueuePolicyFailedRetrieved();
+    throw new YarnException("Unable to saveFederationQueuePolicy.");
+  }
+
+  /**
+   * Batch Save the Queue Policies for the Federation.
+   *
+   * @param request BatchSaveFederationQueuePolicies Request
+   * @return Response from batchSaveFederationQueuePolicies.
+   * @throws YarnException exceptions from yarn servers.
+   * @throws IOException if an IO error occurred.
+   */
+  @Override
+  public BatchSaveFederationQueuePoliciesResponse batchSaveFederationQueuePolicies(
+      BatchSaveFederationQueuePoliciesRequest request) throws YarnException, IOException {
+
+    // Parameter validation.
+    if (request == null) {
+      routerMetrics.incrBatchSaveFederationQueuePoliciesFailedRetrieved();
+      RouterServerUtil.logAndThrowException(
+          "Missing BatchSaveFederationQueuePoliciesRequest request.", null);
+    }
+
+    List<FederationQueueWeight> federationQueueWeights = request.getFederationQueueWeights();
+    if (federationQueueWeights == null) {
+      routerMetrics.incrBatchSaveFederationQueuePoliciesFailedRetrieved();
+      RouterServerUtil.logAndThrowException("Missing FederationQueueWeights information.", null);
+    }
+
+    try {
+      long startTime = clock.getTime();
+      for (FederationQueueWeight federationQueueWeight : federationQueueWeights) {
+        saveFederationQueuePolicy(federationQueueWeight);
+      }
+      long stopTime = clock.getTime();
+      routerMetrics.succeededBatchSaveFederationQueuePoliciesRetrieved(stopTime - startTime);
+      return BatchSaveFederationQueuePoliciesResponse.newInstance("batch save policies success.");
+    } catch (Exception e) {
+      routerMetrics.incrBatchSaveFederationQueuePoliciesFailedRetrieved();
+      RouterServerUtil.logAndThrowException(e,
+          "Unable to batchSaveFederationQueuePolicies due to exception. " + e.getMessage());
+    }
+
+    routerMetrics.incrBatchSaveFederationQueuePoliciesFailedRetrieved();
+    throw new YarnException("Unable to batchSaveFederationQueuePolicies.");
+  }
+
+  /**
+   * List the Queue Policies for the Federation.
+   *
+   * @param request QueryFederationQueuePolicies Request.
+   * @return QueryFederationQueuePolicies Response.
+   *
+   * @throws YarnException indicates exceptions from yarn servers.
+   * @throws IOException io error occurs.
+   */
+  @Override
+  public QueryFederationQueuePoliciesResponse listFederationQueuePolicies(
+      QueryFederationQueuePoliciesRequest request) throws YarnException, IOException {
+
+    // Parameter validation.
+    if (request == null) {
+      routerMetrics.incrListFederationQueuePoliciesFailedRetrieved();
+      RouterServerUtil.logAndThrowException(
+          "Missing ListFederationQueuePolicies Request.", null);
+    }
+
+    if (request.getPageSize() <= 0) {
+      routerMetrics.incrListFederationQueuePoliciesFailedRetrieved();
+      RouterServerUtil.logAndThrowException(
+          "PageSize cannot be negative or zero.", null);
+    }
+
+    if (request.getCurrentPage() <= 0) {
+      routerMetrics.incrListFederationQueuePoliciesFailedRetrieved();
+      RouterServerUtil.logAndThrowException(
+          "CurrentPage cannot be negative or zero.", null);
+    }
+
+    try {
+      QueryFederationQueuePoliciesResponse response;
+
+      long startTime = clock.getTime();
+      String queue = request.getQueue();
+      List<String> queues = request.getQueues();
+      int currentPage = request.getCurrentPage();
+      int pageSize = request.getPageSize();
+
+      // Print log
+      LOG.info("queue = {}, queues={}, currentPage={}, pageSize={}",
+          queue, queues, currentPage, pageSize);
+
+      Map<String, SubClusterPolicyConfiguration> policiesConfigurations =
+          federationFacade.getPoliciesConfigurations();
+
+      // If the queue is not empty, filter according to the queue.
+      if (StringUtils.isNotBlank(queue)) {
+        response = filterPoliciesConfigurationsByQueue(queue, policiesConfigurations,
+            pageSize, currentPage);
+      } else if(CollectionUtils.isNotEmpty(queues)) {
+        // If queues are not empty, filter by queues, which may return multiple results.
+        // We filter by pagination.
+        response = filterPoliciesConfigurationsByQueues(queues, policiesConfigurations,
+            pageSize, currentPage);
+      } else {
+        // If we don't have any filtering criteria, we should also support paginating the results.
+        response = filterPoliciesConfigurations(policiesConfigurations, pageSize, currentPage);
+      }
+      long stopTime = clock.getTime();
+      routerMetrics.succeededListFederationQueuePoliciesRetrieved(stopTime - startTime);
+      if (response == null) {
+        response = QueryFederationQueuePoliciesResponse.newInstance();
+      }
+      return response;
+    } catch (Exception e) {
+      routerMetrics.incrListFederationQueuePoliciesFailedRetrieved();
+      RouterServerUtil.logAndThrowException(e,
+          "Unable to ListFederationQueuePolicies due to exception. " + e.getMessage());
+    }
+
+    routerMetrics.incrListFederationQueuePoliciesFailedRetrieved();
+    throw new YarnException("Unable to listFederationQueuePolicies.");
+  }
+
+  @Override
+  public DeleteFederationApplicationResponse deleteFederationApplication(
+      DeleteFederationApplicationRequest request) throws YarnException, IOException {
+
+    // Parameter validation.
+    if (request == null) {
+      routerMetrics.incrDeleteFederationApplicationFailedRetrieved();
+      RouterServerUtil.logAndThrowException(
+          "Missing deleteFederationApplication Request.", null);
+    }
+
+    String application = request.getApplication();
+    if (StringUtils.isBlank(application)) {
+      routerMetrics.incrDeleteFederationApplicationFailedRetrieved();
+      RouterServerUtil.logAndThrowException(
+          "ApplicationId cannot be null.", null);
+    }
+
+    // Try calling deleteApplicationHomeSubCluster to delete the application.
+    try {
+      long startTime = clock.getTime();
+      ApplicationId applicationId = ApplicationId.fromString(application);
+      federationFacade.deleteApplicationHomeSubCluster(applicationId);
+      long stopTime = clock.getTime();
+      routerMetrics.succeededDeleteFederationApplicationFailedRetrieved(stopTime - startTime);
+      return DeleteFederationApplicationResponse.newInstance(
+          "applicationId = " + applicationId + " delete success.");
+    } catch (Exception e) {
+      RouterServerUtil.logAndThrowException(e,
+          "Unable to deleteFederationApplication due to exception. " + e.getMessage());
+    }
+
+    throw new YarnException("Unable to deleteFederationApplication.");
+  }
+
+  /**
+   * Get federation subcluster list.
+   *
+   * @param request GetSubClustersRequest Request.
+   * @return SubClusters Response.
+   * @throws YarnException exceptions from yarn servers.
+   * @throws IOException io error occurs.
+   */
+  @Override
+  public GetSubClustersResponse getFederationSubClusters(GetSubClustersRequest request)
+       throws YarnException, IOException {
+
+    // Parameter validation.
+    if (request == null) {
+      routerMetrics.incrGetFederationSubClustersFailedRetrieved();
+      RouterServerUtil.logAndThrowException(
+          "Missing getFederationSubClusters Request.", null);
+    }
+
+    // Step1. Get all subClusters of the cluster.
+    Map<SubClusterId, SubClusterInfo> subClusters =
+        federationFacade.getSubClusters(false);
+
+    // Step2. Get FederationSubCluster data.
+    List<FederationSubCluster> federationSubClusters = new ArrayList<>();
+    long startTime = clock.getTime();
+    for (Map.Entry<SubClusterId, SubClusterInfo> subCluster : subClusters.entrySet()) {
+      SubClusterId subClusterId = subCluster.getKey();
+      try {
+        SubClusterInfo subClusterInfo = subCluster.getValue();
+        long lastHeartBeat = subClusterInfo.getLastHeartBeat();
+        Date lastHeartBeatDate = new Date(lastHeartBeat);
+        FederationSubCluster federationSubCluster = FederationSubCluster.newInstance(
+            subClusterId.getId(), subClusterInfo.getState().name(), lastHeartBeatDate.toString());
+        federationSubClusters.add(federationSubCluster);
+      } catch (Exception e) {
+        routerMetrics.incrGetFederationSubClustersFailedRetrieved();
+        LOG.error("getSubClusters SubClusterId = [%s] error.", subClusterId, e);
+      }
+    }
+    long stopTime = clock.getTime();
+    routerMetrics.succeededGetFederationSubClustersRetrieved(stopTime - startTime);
+
+    // Step3. Return results.
+    return GetSubClustersResponse.newInstance(federationSubClusters);
+  }
+
+  /**
+   * Delete Policies based on the provided queue list.
+   *
+   * @param request DeleteFederationQueuePoliciesRequest Request.
+   * @return If the deletion is successful, the queue deletion success message will be returned.
+   * @throws YarnException indicates exceptions from yarn servers.
+   * @throws IOException io error occurs.
+   */
+  @Override
+  public DeleteFederationQueuePoliciesResponse deleteFederationPoliciesByQueues(
+      DeleteFederationQueuePoliciesRequest request) throws YarnException, IOException {
+
+    // Parameter validation.
+    if (request == null) {
+      routerMetrics.incrDeleteFederationPoliciesByQueuesRetrieved();
+      RouterServerUtil.logAndThrowException(
+          "Missing deleteFederationQueuePoliciesByQueues Request.", null);
+    }
+
+    List<String> queues = request.getQueues();
+    if (CollectionUtils.isEmpty(queues)) {
+      routerMetrics.incrDeleteFederationPoliciesByQueuesRetrieved();
+      RouterServerUtil.logAndThrowException("queues cannot be null.", null);
+    }
+
+    // Try calling deleteApplicationHomeSubCluster to delete the application.
+    try {
+      long startTime = clock.getTime();
+      federationFacade.deletePolicyConfigurations(queues);
+      long stopTime = clock.getTime();
+      routerMetrics.succeededDeleteFederationPoliciesByQueuesRetrieved(stopTime - startTime);
+      return DeleteFederationQueuePoliciesResponse.newInstance(
+         "queues = " + StringUtils.join(queues, ",") + " delete success.");
+    } catch (Exception e) {
+      RouterServerUtil.logAndThrowException(e,
+          "Unable to deleteFederationPoliciesByQueues due to exception. " + e.getMessage());
+    }
+    throw new YarnException("Unable to deleteFederationPoliciesByQueues.");
+  }
+
+  /**
+   * According to the configuration information of the queue filtering queue,
+   * this part should only return 1 result.
+   *
+   * @param queue queueName.
+   * @param policiesConfigurations policy configurations.
+   * @param pageSize Items per page.
+   * @param currentPage The number of pages to be queried.
+   * @return federation queue policies response.
+   * @throws YarnException indicates exceptions from yarn servers.
+   *
+   */
+  private QueryFederationQueuePoliciesResponse filterPoliciesConfigurationsByQueue(String queue,
+      Map<String, SubClusterPolicyConfiguration> policiesConfigurations,
+      int pageSize, int currentPage) throws YarnException {
+
+    // Step1. Check the parameters, if the policy list is empty, return empty directly.
+    if (MapUtils.isEmpty(policiesConfigurations)) {
+      return null;
+    }
+    SubClusterPolicyConfiguration policyConf = policiesConfigurations.getOrDefault(queue, null);
+    if(policyConf == null) {
+      return null;
+    }
+
+    // Step2. Parse the parameters.
+    List<FederationQueueWeight> federationQueueWeights = new ArrayList<>();
+    FederationQueueWeight federationQueueWeight = parseFederationQueueWeight(queue, policyConf);
+    federationQueueWeights.add(federationQueueWeight);
+
+    // Step3. Return result.
+    return QueryFederationQueuePoliciesResponse.newInstance(
+        1, 1, currentPage, pageSize, federationQueueWeights);
+  }
+
+  /**
+   * Filter queue configuration information based on the queue list.
+   *
+   * @param queues The name of the queue.
+   * @param policiesConfigurations policy configurations.
+   * @param pageSize Items per page.
+   * @param currentPage The number of pages to be queried.
+   * @return federation queue policies response.
+   * @throws YarnException indicates exceptions from yarn servers.
+   */
+  private QueryFederationQueuePoliciesResponse filterPoliciesConfigurationsByQueues(
+      List<String> queues, Map<String, SubClusterPolicyConfiguration> policiesConfigurations,
+      int pageSize, int currentPage) throws YarnException {
+
+    // Step1. Check the parameters, if the policy list is empty, return empty directly.
+    if (MapUtils.isEmpty(policiesConfigurations)) {
+      return null;
+    }
+
+    // Step2. Filtering for Queue Policies.
+    List<FederationQueueWeight> federationQueueWeights = new ArrayList<>();
+    for (String queue : queues) {
+      SubClusterPolicyConfiguration policyConf = policiesConfigurations.getOrDefault(queue, null);
+      if(policyConf == null) {
+        continue;
+      }
+      FederationQueueWeight federationQueueWeight = parseFederationQueueWeight(queue, policyConf);
+      if (federationQueueWeight != null) {
+        federationQueueWeights.add(federationQueueWeight);
+      }
+    }
+
+    // Step3. To paginate the returned results.
+    return queryFederationQueuePoliciesPagination(federationQueueWeights, pageSize, currentPage);
+  }
+
+  /**
+   * Filter PoliciesConfigurations, and we paginate Policies within this method.
+   *
+   * @param policiesConfigurations policy configurations.
+   * @param pageSize Items per page.
+   * @param currentPage The number of pages to be queried.
+   * @return federation queue policies response.
+   * @throws YarnException indicates exceptions from yarn servers.
+   */
+  private QueryFederationQueuePoliciesResponse filterPoliciesConfigurations(
+      Map<String, SubClusterPolicyConfiguration> policiesConfigurations,
+      int pageSize, int currentPage) throws YarnException {
+
+    // Step1. Check the parameters, if the policy list is empty, return empty directly.
+    if (MapUtils.isEmpty(policiesConfigurations)) {
+      return null;
+    }
+
+    // Step2. Traverse policiesConfigurations and obtain the FederationQueueWeight list.
+    List<FederationQueueWeight> federationQueueWeights = new ArrayList<>();
+    for (Map.Entry<String, SubClusterPolicyConfiguration> entry :
+        policiesConfigurations.entrySet()) {
+      String queue = entry.getKey();
+      SubClusterPolicyConfiguration policyConf = entry.getValue();
+      if (policyConf == null) {
+        continue;
+      }
+      FederationQueueWeight federationQueueWeight = parseFederationQueueWeight(queue, policyConf);
+      if (federationQueueWeight != null) {
+        federationQueueWeights.add(federationQueueWeight);
+      }
+    }
+
+    // Step3. To paginate the returned results.
+    return queryFederationQueuePoliciesPagination(federationQueueWeights, pageSize, currentPage);
+  }
+
+  /**
+   * Pagination for FederationQueuePolicies.
+   *
+   * @param queueWeights List Of FederationQueueWeight.
+   * @param pageSize Items per page.
+   * @param currentPage The number of pages to be queried.
+   * @return federation queue policies response.
+   * @throws YarnException indicates exceptions from yarn servers.
+   */
+  private QueryFederationQueuePoliciesResponse queryFederationQueuePoliciesPagination(
+      List<FederationQueueWeight> queueWeights, int pageSize, int currentPage)
+      throws YarnException {
+    if (CollectionUtils.isEmpty(queueWeights)) {
+      return null;
+    }
+
+    int startIndex = (currentPage - 1) * pageSize;
+    int endIndex = Math.min(startIndex + pageSize, queueWeights.size());
+
+    if (startIndex > endIndex) {
+      throw new YarnException("The index of the records to be retrieved " +
+          "has exceeded the maximum index.");
+    }
+
+    List<FederationQueueWeight> subFederationQueueWeights =
+        queueWeights.subList(startIndex, endIndex);
+
+    int totalSize = queueWeights.size();
+    int totalPage =
+        (totalSize % pageSize == 0) ? totalSize / pageSize : (totalSize / pageSize) + 1;
+
+    // Step3. Returns the Queue Policies result.
+    return QueryFederationQueuePoliciesResponse.newInstance(
+        totalSize, totalPage, currentPage, pageSize, subFederationQueueWeights);
+  }
+
+  /**
+   * Parses a FederationQueueWeight from the given queue and SubClusterPolicyConfiguration.
+   *
+   * @param queue The name of the queue.
+   * @param policyConf policy configuration.
+   * @return Queue weights for representing Federation.
+   * @throws YarnException YarnException indicates exceptions from yarn servers.
+   */
+  private FederationQueueWeight parseFederationQueueWeight(String queue,
+      SubClusterPolicyConfiguration policyConf) throws YarnException {
+
+    if (policyConf != null) {
+      ByteBuffer params = policyConf.getParams();
+      WeightedPolicyInfo weightedPolicyInfo = WeightedPolicyInfo.fromByteBuffer(params);
+      Map<SubClusterIdInfo, Float> amrmPolicyWeights = weightedPolicyInfo.getAMRMPolicyWeights();
+      Map<SubClusterIdInfo, Float> routerPolicyWeights =
+          weightedPolicyInfo.getRouterPolicyWeights();
+      float headroomAlpha = weightedPolicyInfo.getHeadroomAlpha();
+      String policyManagerClassName = policyConf.getType();
+
+      String amrmPolicyWeight = parsePolicyWeights(amrmPolicyWeights);
+      String routerPolicyWeight = parsePolicyWeights(routerPolicyWeights);
+
+      FederationQueueWeight.checkSubClusterQueueWeightRatioValid(amrmPolicyWeight);
+      FederationQueueWeight.checkSubClusterQueueWeightRatioValid(routerPolicyWeight);
+
+      return FederationQueueWeight.newInstance(routerPolicyWeight, amrmPolicyWeight,
+          String.valueOf(headroomAlpha), queue, policyManagerClassName);
+    }
+
+    return null;
+  }
+
+  /**
+   * Parses the policy weights from the provided policyWeights map.
+   * returns a string similar to the following:
+   * SC-1:0.7,SC-2:0.3
+   *
+   * @param policyWeights
+   *        A map containing SubClusterIdInfo as keys and corresponding weight values.
+   * @return A string representation of the parsed policy weights.
+   */
+  protected String parsePolicyWeights(Map<SubClusterIdInfo, Float> policyWeights) {
+    if (MapUtils.isEmpty(policyWeights)) {
+      return null;
+    }
+    List<String> policyWeightList = new ArrayList<>();
+    for (Map.Entry<SubClusterIdInfo, Float> entry : policyWeights.entrySet()) {
+      SubClusterIdInfo key = entry.getKey();
+      Float value = entry.getValue();
+      policyWeightList.add(key.toId() + ":" + value);
+    }
+    return StringUtils.join(policyWeightList, ",");
+  }
+
+  /**
+   * Save FederationQueuePolicy.
+   *
+   * @param federationQueueWeight queue weight.
+   * @throws YarnException exceptions from yarn servers.
+   */
+  private void saveFederationQueuePolicy(FederationQueueWeight federationQueueWeight)
+      throws YarnException {
+
+    // Step1, Check whether the weight setting of the queue is as expected.
+    String queue = federationQueueWeight.getQueue();
+    String policyManagerClassName = federationQueueWeight.getPolicyManagerClassName();
+
+    if (StringUtils.isBlank(queue)) {
+      RouterServerUtil.logAndThrowException("Missing Queue information.", null);
+    }
+
+    if (StringUtils.isBlank(policyManagerClassName)) {
+      RouterServerUtil.logAndThrowException("Missing PolicyManagerClassName information.", null);
+    }
+
+    if (!checkPolicyManagerValid(policyManagerClassName, SUPPORT_WEIGHT_MANAGERS)) {
+      routerMetrics.incrSaveFederationQueuePolicyFailedRetrieved();
+      RouterServerUtil.logAndThrowException(policyManagerClassName +
+              "does not support the use of queue weights.", null);
+    }
+
+    String amRmWeight = federationQueueWeight.getAmrmWeight();
+    FederationQueueWeight.checkSubClusterQueueWeightRatioValid(amRmWeight);
+
+    String routerWeight = federationQueueWeight.getRouterWeight();
+    FederationQueueWeight.checkSubClusterQueueWeightRatioValid(routerWeight);
+
+    String headRoomAlpha = federationQueueWeight.getHeadRoomAlpha();
+    FederationQueueWeight.checkHeadRoomAlphaValid(headRoomAlpha);
+
+    // Step2, parse amRMPolicyWeights.
+    Map<SubClusterIdInfo, Float> amRMPolicyWeights = getSubClusterWeightMap(amRmWeight);
+    LOG.debug("amRMPolicyWeights = {}.", amRMPolicyWeights);
+
+    // Step3, parse routerPolicyWeights.
+    Map<SubClusterIdInfo, Float> routerPolicyWeights = getSubClusterWeightMap(routerWeight);
+    LOG.debug("routerWeights = {}.", amRMPolicyWeights);
+
+    // Step4, Initialize WeightedPolicyInfo.
+    WeightedPolicyInfo weightedPolicyInfo = new WeightedPolicyInfo();
+    weightedPolicyInfo.setHeadroomAlpha(Float.parseFloat(headRoomAlpha));
+    weightedPolicyInfo.setAMRMPolicyWeights(amRMPolicyWeights);
+    weightedPolicyInfo.setRouterPolicyWeights(routerPolicyWeights);
+
+    // Step5, Set SubClusterPolicyConfiguration.
+    SubClusterPolicyConfiguration policyConfiguration =
+        SubClusterPolicyConfiguration.newInstance(queue, policyManagerClassName,
+        weightedPolicyInfo.toByteBuffer());
+    federationFacade.setPolicyConfiguration(policyConfiguration);
+  }
+
+  /**
+   * Get the Map of SubClusterWeight.
+   *
+   * This method can parse the Weight information of Router and
+   * the Weight information of AMRMProxy.
+   *
+   * An example of a parsed string is as follows:
+   * SC-1:0.7,SC-2:0.3
+   *
+   * @param policyWeight policyWeight.
+   * @return Map of SubClusterWeight.
+   * @throws YarnException exceptions from yarn servers.
+   */
+  protected Map<SubClusterIdInfo, Float> getSubClusterWeightMap(String policyWeight)
+      throws YarnException {
+    FederationQueueWeight.checkSubClusterQueueWeightRatioValid(policyWeight);
+    Map<SubClusterIdInfo, Float> result = new HashMap<>();
+    String[] policyWeights = policyWeight.split(COMMA);
+    for (String policyWeightItem : policyWeights) {
+      String[] subClusterWeight = policyWeightItem.split(COLON);
+      String subClusterId = subClusterWeight[0];
+      SubClusterIdInfo subClusterIdInfo = new SubClusterIdInfo(subClusterId);
+      String weight = subClusterWeight[1];
+      result.put(subClusterIdInfo, Float.valueOf(weight));
+    }
+    return result;
   }
 
   /**

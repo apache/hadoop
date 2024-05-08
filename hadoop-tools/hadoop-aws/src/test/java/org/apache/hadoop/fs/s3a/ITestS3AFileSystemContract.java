@@ -19,7 +19,9 @@
 package org.apache.hadoop.fs.s3a;
 
 import java.io.FileNotFoundException;
+import java.io.IOException;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -32,6 +34,7 @@ import org.apache.hadoop.fs.FileSystemContractBaseTest;
 import org.apache.hadoop.fs.Path;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.isCreatePerformanceEnabled;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assume.*;
 import static org.junit.Assert.*;
@@ -136,5 +139,22 @@ public class ITestS3AFileSystemContract extends FileSystemContractBaseTest {
     intercept(FileNotFoundException.class,
         () -> super.testRenameNonExistentPath());
 
+  }
+
+  @Override
+  public void testOverwrite() throws IOException {
+    boolean createPerformance = isCreatePerformanceEnabled(fs);
+    try {
+      super.testOverwrite();
+      Assertions.assertThat(createPerformance)
+          .describedAs("create performance enabled")
+          .isFalse();
+    } catch (AssertionError e) {
+      // swallow the exception if create performance is enabled,
+      // else rethrow
+      if (!createPerformance) {
+        throw e;
+      }
+    }
   }
 }

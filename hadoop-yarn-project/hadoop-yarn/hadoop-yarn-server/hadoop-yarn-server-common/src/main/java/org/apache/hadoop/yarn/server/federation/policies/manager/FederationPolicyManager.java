@@ -19,6 +19,7 @@ package org.apache.hadoop.yarn.server.federation.policies.manager;
 
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitializationContext;
 import org.apache.hadoop.yarn.server.federation.policies.amrmproxy.FederationAMRMProxyPolicy;
+import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
 import org.apache.hadoop.yarn.server.federation.policies.router.FederationRouterPolicy;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
@@ -48,7 +49,7 @@ public interface FederationPolicyManager {
    * instance of {@link FederationAMRMProxyPolicy} reinitialized with the
    * current context, otherwise a new instance initialized with the current
    * context is provided. If the instance is compatible with the current class
-   * the implementors should attempt to reinitalize (retaining state). To affect
+   * the implementors should attempt to reinitialize (retaining state). To affect
    * a complete policy reset oldInstance should be null.
    *
    * @param policyContext the current context
@@ -70,7 +71,7 @@ public interface FederationPolicyManager {
    * instance of {@link FederationRouterPolicy} reinitialized with the current
    * context, otherwise a new instance initialized with the current context is
    * provided. If the instance is compatible with the current class the
-   * implementors should attempt to reinitalize (retaining state). To affect a
+   * implementors should attempt to reinitialize (retaining state). To affect a
    * complete policy reset oldInstance should be set to null.
    *
    * @param policyContext the current context
@@ -115,4 +116,27 @@ public interface FederationPolicyManager {
    */
   void setQueue(String queue);
 
+  /**
+   * This method returns the queue WeightedPolicyInfo
+   * this policy is configured for.
+   *
+   * @return the name of the queue.
+   */
+  WeightedPolicyInfo getWeightedPolicyInfo();
+
+  /**
+   * This methods provides a setter for the queue WeightedPolicyInfo
+   * this policy is specified for.
+   *
+   * @param weightedPolicyInfo weightedPolicyInfo of the subCluster.
+   */
+  void setWeightedPolicyInfo(WeightedPolicyInfo weightedPolicyInfo);
+
+  /**
+   * PolicyManager Whether to support WeightedPolicyInfo.
+   * Some of PolicyManagers do not support WeightedPolicyInfo.
+   * @return true, supports WeightedPolicyInfo;
+   * false, WeightedPolicyInfo is not supported
+   */
+  boolean isSupportWeightedPolicyInfo();
 }

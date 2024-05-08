@@ -33,7 +33,9 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
@@ -110,6 +112,35 @@ public abstract class LogAggregationFileController {
   protected String fileControllerName;
 
   protected boolean fsSupportsChmod = true;
+
+  private static class FsLogPathKey {
+    private Class<? extends FileSystem> fsType;
+    private Path logPath;
+
+    FsLogPathKey(Class<? extends FileSystem> fsType, Path logPath) {
+      this.fsType = fsType;
+      this.logPath = logPath;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+      FsLogPathKey that = (FsLogPathKey) o;
+      return Objects.equals(fsType, that.fsType) && Objects.equals(logPath, that.logPath);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(fsType, logPath);
+    }
+  }
+  private static final ConcurrentHashMap<FsLogPathKey, Boolean> FS_CHMOD_CACHE
+      = new ConcurrentHashMap<>();
 
   public LogAggregationFileController() {}
 
@@ -429,26 +460,34 @@ public abstract class LogAggregationFileController {
             + remoteRootLogDir + "]", e);
       }
     } else {
-      //Check if FS has capability to set/modify permissions
-      Path permissionCheckFile = new Path(qualified, String.format("%s.permission_check",
-          RandomStringUtils.randomAlphanumeric(8)));
+      final FsLogPathKey key = new FsLogPathKey(remoteFS.getClass(), qualified);
+      FileSystem finalRemoteFS = remoteFS;
+      fsSupportsChmod = FS_CHMOD_CACHE.computeIfAbsent(key,
+          k -> checkFsSupportsChmod(finalRemoteFS, remoteRootLogDir, qualified));
+    }
+  }
+
+  private boolean checkFsSupportsChmod(FileSystem remoteFS, Path logDir, Path qualified) {
+    //Check if FS has capability to set/modify permissions
+    Path permissionCheckFile = new Path(qualified, String.format("%s.permission_check",
+        RandomStringUtils.randomAlphanumeric(8)));
+    try {
+      remoteFS.createNewFile(permissionCheckFile);
+      remoteFS.setPermission(permissionCheckFile, new FsPermission(TLDIR_PERMISSIONS));
+      return true;
+    } catch (UnsupportedOperationException use) {
+      LOG.info("Unable to set permissions for configured filesystem since"
+          + " it does not support this {}", remoteFS.getScheme());
+    } catch (IOException e) {
+      LOG.warn("Failed to check if FileSystem supports permissions on "
+          + "remoteLogDir [{}]", logDir, e);
+    } finally {
       try {
-        remoteFS.createNewFile(permissionCheckFile);
-        remoteFS.setPermission(permissionCheckFile, new FsPermission(TLDIR_PERMISSIONS));
-      } catch (UnsupportedOperationException use) {
-        LOG.info("Unable to set permissions for configured filesystem since"
-            + " it does not support this {}", remoteFS.getScheme());
-        fsSupportsChmod = false;
-      } catch (IOException e) {
-        LOG.warn("Failed to check if FileSystem supports permissions on "
-            + "remoteLogDir [" + remoteRootLogDir + "]", e);
-      } finally {
-        try {
-          remoteFS.delete(permissionCheckFile, false);
-        } catch (IOException ignored) {
-        }
+        remoteFS.delete(permissionCheckFile, false);
+      } catch (IOException ignored) {
       }
     }
+    return false;
   }
 
   /**

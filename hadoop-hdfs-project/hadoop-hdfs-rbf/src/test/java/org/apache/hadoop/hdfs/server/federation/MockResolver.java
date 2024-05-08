@@ -336,7 +336,14 @@ public class MockResolver
   @Override
   public synchronized Set<FederationNamespaceInfo> getNamespaces()
       throws IOException {
-    return Collections.unmodifiableSet(this.namespaces);
+    Set<FederationNamespaceInfo> ret = new TreeSet<>();
+    Set<String> disabled = getDisabledNamespaces();
+    for (FederationNamespaceInfo ns : namespaces) {
+      if (!disabled.contains(ns.getNameserviceId())) {
+        ret.add(ns);
+      }
+    }
+    return Collections.unmodifiableSet(ret);
   }
 
   public void clearDisableNamespaces() {
@@ -395,6 +402,11 @@ public class MockResolver
 
   @Override
   public void setRouterId(String router) {
+  }
+
+  @Override
+  public void rotateCache(
+      String nsId, FederationNamenodeContext namenode, boolean listObserversFirst) {
   }
 
   /**

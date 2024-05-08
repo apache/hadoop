@@ -19,11 +19,11 @@
   <parent>
     <artifactId>hadoop-yarn</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>3.4.0-SNAPSHOT</version>
+    <version>3.5.0-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <artifactId>hadoop-yarn-common</artifactId>
-  <version>3.4.0-SNAPSHOT</version>
+  <version>3.5.0-SNAPSHOT</version>
   <name>Apache Hadoop YARN Common</name>
 
   <properties>
@@ -132,10 +132,11 @@
     <dependency>
       <groupId>com.google.protobuf</groupId>
       <artifactId>protobuf-java</artifactId>
+      <scope>${transient.protobuf2.scope}</scope>
     </dependency>
     <dependency>
       <groupId>org.bouncycastle</groupId>
-      <artifactId>bcprov-jdk15on</artifactId>
+      <artifactId>bcprov-jdk18on</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -202,8 +203,8 @@
       <artifactId>jersey-guice</artifactId>
     </dependency>
     <dependency>
-     <groupId>log4j</groupId>
-     <artifactId>log4j</artifactId>
+     <groupId>ch.qos.reload4j</groupId>
+     <artifactId>reload4j</artifactId>
     </dependency>
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
@@ -271,6 +272,7 @@
             <exclude>src/main/resources/webapps/test/.keep</exclude>
             <exclude>src/main/resources/webapps/proxy/.keep</exclude>
             <exclude>src/main/resources/webapps/node/.keep</exclude>
+            <exclude>src/main/resources/webapps/gpg/.keep</exclude>
             <exclude>src/main/resources/webapps/static/dt-1.11.5/css/jquery.dataTables.css</exclude>
             <exclude>src/main/resources/webapps/static/dt-1.11.5/css/custom_datatable.css</exclude>
             <exclude>src/main/resources/webapps/static/dt-1.11.5/css/jui-dt.css</exclude>

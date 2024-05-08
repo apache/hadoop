@@ -81,15 +81,19 @@ extends AbstractDelegationTokenIdentifier>
       = DelegationTokenSecretManagerMetrics.create();
 
   private String formatTokenId(TokenIdent id) {
-    return "(" + id + ")";
+    try {
+      return "(" + id + ")";
+    } catch (Exception e) {
+      LOG.warn("Exception in formatTokenId", e);
+    }
+    return "( SequenceNumber=" + id.getSequenceNumber() + " )";
   }
 
   /** 
    * Cache of currently valid tokens, mapping from DelegationTokenIdentifier 
    * to DelegationTokenInformation. Protected by this object lock.
    */
-  protected final Map<TokenIdent, DelegationTokenInformation> currentTokens 
-      = new ConcurrentHashMap<>();
+  protected Map<TokenIdent, DelegationTokenInformation> currentTokens;
 
   /**
    * Map of token real owners to its token count. This is used to generate
@@ -155,6 +159,7 @@ extends AbstractDelegationTokenIdentifier>
     this.tokenRenewInterval = delegationTokenRenewInterval;
     this.tokenRemoverScanInterval = delegationTokenRemoverScanInterval;
     this.storeTokenTrackingId = false;
+    this.currentTokens = new ConcurrentHashMap<>();
   }
 
   /**
@@ -188,6 +193,14 @@ extends AbstractDelegationTokenIdentifier>
    */
   public long getCurrentTokensSize() {
     return currentTokens.size();
+  }
+
+  /**
+   * Interval for tokens to be renewed.
+   * @return Renew interval in milliseconds.
+   */
+  protected long getTokenRenewInterval() {
+    return this.tokenRenewInterval;
   }
 
   /** 
@@ -751,7 +764,7 @@ extends AbstractDelegationTokenIdentifier>
     Set<TokenIdent> expiredTokens = new HashSet<>();
     synchronized (this) {
       Iterator<Map.Entry<TokenIdent, DelegationTokenInformation>> i =
-          currentTokens.entrySet().iterator();
+          getCandidateTokensForCleanup().entrySet().iterator();
       while (i.hasNext()) {
         Map.Entry<TokenIdent, DelegationTokenInformation> entry = i.next();
         long renewDate = entry.getValue().getRenewDate();
@@ -766,13 +779,21 @@ extends AbstractDelegationTokenIdentifier>
     logExpireTokens(expiredTokens);
   }
 
+  protected Map<TokenIdent, DelegationTokenInformation> getCandidateTokensForCleanup() {
+    return this.currentTokens;
+  }
+
   protected void logExpireTokens(
       Collection<TokenIdent> expiredTokens) throws IOException {
     for (TokenIdent ident : expiredTokens) {
       logExpireToken(ident);
       LOG.info("Removing expired token " + formatTokenId(ident));
-      removeStoredToken(ident);
+      removeExpiredStoredToken(ident);
     }
+  }
+
+  protected void removeExpiredStoredToken(TokenIdent ident) throws IOException {
+    removeStoredToken(ident);
   }
 
   public void stopThreads() {

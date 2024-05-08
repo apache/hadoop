@@ -47,7 +47,7 @@ import static org.apache.hadoop.hdfs.server.namenode.ha.ObserverReadProxyProvide
  */
 public class RouterObserverReadProxyProvider<T> extends AbstractNNFailoverProxyProvider<T> {
   @VisibleForTesting
-  static final Logger LOG = LoggerFactory.getLogger(ObserverReadProxyProvider.class);
+  static final Logger LOG = LoggerFactory.getLogger(RouterObserverReadProxyProvider.class);
 
   /** Client-side context for syncing with the NameNode server side. */
   private final AlignmentContext alignmentContext;

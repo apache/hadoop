@@ -54,6 +54,7 @@ import org.apache.hadoop.yarn.util.ConverterUtils;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -505,7 +506,10 @@ public class HadoopArchiveLogs implements Tool {
     String classpath = halrJarPath + File.pathSeparator + harJarPath;
     FileWriterWithEncoding fw = null;
     try {
-      fw = new FileWriterWithEncoding(localScript, "UTF-8");
+      fw = FileWriterWithEncoding.builder()
+              .setFile(localScript)
+              .setCharset(StandardCharsets.UTF_8)
+              .get();
       fw.write("#!/bin/bash\nset -e\nset -x\n");
       int containerCount = 1;
       for (AppInfo context : eligibleApplications) {

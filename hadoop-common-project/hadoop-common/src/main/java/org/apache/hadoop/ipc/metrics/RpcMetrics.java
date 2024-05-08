@@ -69,6 +69,8 @@ public class RpcMetrics {
         CommonConfigurationKeys.RPC_METRICS_QUANTILE_ENABLE_DEFAULT);
     metricsTimeUnit = getMetricsTimeUnit(conf);
     if (rpcQuantileEnable) {
+      rpcEnQueueTimeQuantiles =
+          new MutableQuantiles[intervals.length];
       rpcQueueTimeQuantiles =
           new MutableQuantiles[intervals.length];
       rpcLockWaitTimeQuantiles =
@@ -81,6 +83,9 @@ public class RpcMetrics {
           new MutableQuantiles[intervals.length];
       for (int i = 0; i < intervals.length; i++) {
         int interval = intervals[i];
+        rpcEnQueueTimeQuantiles[i] = registry.newQuantiles("rpcEnQueueTime"
+            + interval + "s", "rpc enqueue time in " + metricsTimeUnit, "ops",
+            "latency", interval);
         rpcQueueTimeQuantiles[i] = registry.newQuantiles("rpcQueueTime"
             + interval + "s", "rpc queue time in " + metricsTimeUnit, "ops",
             "latency", interval);
@@ -114,6 +119,8 @@ public class RpcMetrics {
 
   @Metric("Number of received bytes") MutableCounterLong receivedBytes;
   @Metric("Number of sent bytes") MutableCounterLong sentBytes;
+  @Metric("EQueue time") MutableRate rpcEnQueueTime;
+  MutableQuantiles[] rpcEnQueueTimeQuantiles;
   @Metric("Queue time") MutableRate rpcQueueTime;
   MutableQuantiles[] rpcQueueTimeQuantiles;
   @Metric("Lock wait time") MutableRate rpcLockWaitTime;
@@ -134,7 +141,9 @@ public class RpcMetrics {
   MutableCounterLong rpcAuthorizationSuccesses;
   @Metric("Number of client backoff requests")
   MutableCounterLong rpcClientBackoff;
-  @Metric("Number of Slow RPC calls")
+  @Metric("Number of disconnected client backoff requests")
+  MutableCounterLong rpcClientBackoffDisconnected;
+  @Metric("Number of slow RPC calls")
   MutableCounterLong rpcSlowCalls;
   @Metric("Number of requeue calls")
   MutableCounterLong rpcRequeueCalls;
@@ -258,6 +267,23 @@ public class RpcMetrics {
   }
 
   /**
+   * Sometimes, the request time observed by the client is much longer than
+   * the queue + process time on the RPC server.Perhaps the RPC request
+   * 'waiting enQueue' took too long on the RPC server, so we should add
+   * enQueue time to RpcMetrics. See HADOOP-18840 for details.
+   * Add an RPC enqueue time sample
+   * @param enQTime the queue time
+   */
+  public void addRpcEnQueueTime(long enQTime) {
+    rpcEnQueueTime.add(enQTime);
+    if (rpcQuantileEnable) {
+      for (MutableQuantiles q : rpcEnQueueTimeQuantiles) {
+        q.add(enQTime);
+      }
+    }
+  }
+
+  /**
    * Add an RPC queue time sample
    * @param qTime the queue time
    */
@@ -317,6 +343,22 @@ public class RpcMetrics {
   public void incrClientBackoff() {
     rpcClientBackoff.incr();
   }
+
+  /**
+   * Client was disconnected due to backoff
+   */
+  public void incrClientBackoffDisconnected() {
+    rpcClientBackoffDisconnected.incr();
+  }
+
+  /**
+   * Returns the number of disconnected backoffs.
+   * @return long
+   */
+  public long getClientBackoffDisconnected() {
+    return rpcClientBackoffDisconnected.value();
+  }
+
 
   /**
    * Increments the Slow RPC counter.

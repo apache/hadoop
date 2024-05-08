@@ -29,6 +29,7 @@ import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
@@ -49,7 +50,6 @@ import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 
 /**
@@ -335,8 +335,8 @@ public class TestDFSUpgrade {
       for (File f : baseDirs) { 
         UpgradeUtilities.corruptFile(
             new File(f,"VERSION"),
-            "layoutVersion".getBytes(Charsets.UTF_8),
-            "xxxxxxxxxxxxx".getBytes(Charsets.UTF_8));
+            "layoutVersion".getBytes(StandardCharsets.UTF_8),
+            "xxxxxxxxxxxxx".getBytes(StandardCharsets.UTF_8));
       }
       startNameNodeShouldFail(StartupOption.UPGRADE);
       UpgradeUtilities.createEmptyDirs(nameNodeDirs);

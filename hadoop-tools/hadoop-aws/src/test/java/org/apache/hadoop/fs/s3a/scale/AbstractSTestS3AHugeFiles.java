@@ -18,17 +18,16 @@
 
 package org.apache.hadoop.fs.s3a.scale;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
+import java.time.Duration;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.IntFunction;
 
-import com.amazonaws.event.ProgressEvent;
-import com.amazonaws.event.ProgressEventType;
-import com.amazonaws.event.ProgressListener;
 import org.assertj.core.api.Assertions;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
@@ -48,8 +47,12 @@ import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Statistic;
+import org.apache.hadoop.fs.s3a.impl.ProgressListener;
+import org.apache.hadoop.fs.s3a.impl.ProgressListenerEvent;
 import org.apache.hadoop.fs.s3a.statistics.BlockOutputStreamStatistics;
 import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.io.ElasticByteBufferPool;
+import org.apache.hadoop.io.WeakReferencedElasticByteBufferPool;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.Progressable;
 
@@ -58,8 +61,6 @@ import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_BU
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_LENGTH;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_WHOLE_FILE;
-import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_SPLIT_END;
-import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_SPLIT_START;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.validateVectoredReadResult;
 import static org.apache.hadoop.fs.s3a.Constants.*;
@@ -73,14 +74,15 @@ import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatis
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsSourceToString;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_WRITE_BLOCK_UPLOADS;
+import static org.apache.hadoop.util.functional.RemoteIterators.filteringRemoteIterator;
 
 /**
  * Scale test which creates a huge file.
- *
+ * <p>
  * <b>Important:</b> the order in which these tests execute is fixed to
  * alphabetical order. Test cases are numbered {@code test_123_} to impose
  * an ordering based on the numbers.
- *
+ * <p>
  * Having this ordering allows the tests to assume that the huge file
  * exists. Even so: they should all have a {@link #assumeHugeFileExists()}
  * check at the start, in case an individual test is executed.
@@ -104,8 +106,8 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
   public void setup() throws Exception {
     super.setup();
     scaleTestDir = new Path(getTestPath(), getTestSuiteName());
-    hugefile = new Path(scaleTestDir, "hugefile");
-    hugefileRenamed = new Path(scaleTestDir, "hugefileRenamed");
+    hugefile = new Path(scaleTestDir, "src/hugefile");
+    hugefileRenamed = new Path(scaleTestDir, "dest/hugefile");
     uploadBlockSize = uploadBlockSize();
     filesize = getTestPropertyBytes(getConf(), KEY_HUGE_FILESIZE,
         DEFAULT_HUGE_FILESIZE);
@@ -356,10 +358,10 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
   /**
    * Is this expected to be a multipart upload?
    * Assertions will change if not.
-   * @return true by default.
+   * @return what the filesystem expects.
    */
   protected boolean expectMultipartUpload() {
-    return true;
+    return getFileSystem().getS3AInternals().isMultipartCopyEnabled();
   }
 
   /**
@@ -377,10 +379,9 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
   }
 
   /**
-   * Progress callback from AWS. Likely to come in on a different thread.
+   * Progress callback.
    */
-  private final class ProgressCallback implements Progressable,
-      ProgressListener {
+  private final class ProgressCallback implements Progressable, ProgressListener {
     private AtomicLong bytesTransferred = new AtomicLong(0);
     private AtomicLong uploadEvents = new AtomicLong(0);
     private AtomicInteger failures = new AtomicInteger(0);
@@ -395,11 +396,8 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     }
 
     @Override
-    public void progressChanged(ProgressEvent progressEvent) {
-      ProgressEventType eventType = progressEvent.getEventType();
-      if (eventType.isByteCountEvent()) {
-        bytesTransferred.addAndGet(progressEvent.getBytesTransferred());
-      }
+    public void progressChanged(ProgressListenerEvent eventType, long transferredBytes) {
+
       switch (eventType) {
       case TRANSFER_PART_FAILED_EVENT:
         // failure
@@ -408,6 +406,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
         break;
       case TRANSFER_PART_COMPLETED_EVENT:
         // completion
+        bytesTransferred.addAndGet(transferredBytes);
         long elapsedTime = timer.elapsedTime();
         double elapsedTimeS = elapsedTime / 1.0e9;
         long written = bytesTransferred.get();
@@ -415,21 +414,18 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
         LOG.info(String.format(
             "Event %s; total uploaded=%d MB in %.1fs;" +
                 " effective upload bandwidth = %.2f MB/s",
-            progressEvent,
+            eventType,
             writtenMB, elapsedTimeS, writtenMB / elapsedTimeS));
         break;
       case REQUEST_BYTE_TRANSFER_EVENT:
         uploadEvents.incrementAndGet();
         break;
       default:
-        if (!eventType.isByteCountEvent()) {
-          LOG.info("Event {}", progressEvent);
-        }
+        // nothing
         break;
       }
     }
 
-    @Override
     public String toString() {
       String sb = "ProgressCallback{"
           + "bytesTransferred=" + bytesTransferred.get() +
@@ -497,7 +493,40 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     ContractTestUtils.assertPathExists(fs, "Huge file", hugefile);
     FileStatus status = fs.getFileStatus(hugefile);
     ContractTestUtils.assertIsFile(hugefile, status);
+    LOG.info("Huge File Status: {}", status);
     assertEquals("File size in " + status, filesize, status.getLen());
+
+    // now do some etag status checks asserting they are always the same
+    // across listing operations.
+    final Path path = hugefile;
+    final FileStatus listStatus = listFile(hugefile);
+    LOG.info("List File Status: {}", listStatus);
+
+    Assertions.assertThat(listStatus.getLen())
+        .describedAs("List file status length %s", listStatus)
+        .isEqualTo(filesize);
+    Assertions.assertThat(etag(listStatus))
+        .describedAs("List file status etag %s", listStatus)
+        .isEqualTo(etag(status));
+  }
+
+  /**
+   * Get a filestatus by listing the parent directory.
+   * @param path path
+   * @return status
+   * @throws IOException failure to read, file not found
+   */
+  private FileStatus listFile(final Path path)
+      throws IOException {
+    try {
+      return filteringRemoteIterator(
+          getFileSystem().listStatusIterator(path.getParent()),
+          st -> st.getPath().equals(path))
+          .next();
+    } catch (NoSuchElementException e) {
+      throw (FileNotFoundException)(new FileNotFoundException("Not found: " + path)
+          .initCause(e));
+    }
   }
 
   /**
@@ -516,7 +545,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     String filetype = encrypted ? "encrypted file" : "file";
     describe("Positioned reads of %s %s", filetype, hugefile);
     S3AFileSystem fs = getFileSystem();
-    FileStatus status = fs.getFileStatus(hugefile);
+    FileStatus status = listFile(hugefile);
     long size = status.getLen();
     int ops = 0;
     final int bufferSize = 8192;
@@ -525,7 +554,11 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
 
     ContractTestUtils.NanoTimer timer = new ContractTestUtils.NanoTimer();
     ContractTestUtils.NanoTimer readAtByte0, readAtByte0Again, readAtEOF;
-    try (FSDataInputStream in = fs.open(hugefile, uploadBlockSize)) {
+    try (FSDataInputStream in = fs.openFile(hugefile)
+        .withFileStatus(status)
+        .opt(FS_OPTION_OPENFILE_READ_POLICY, "random")
+        .opt(FS_OPTION_OPENFILE_BUFFER_SIZE, uploadBlockSize)
+        .build().get()) {
       readAtByte0 = new ContractTestUtils.NanoTimer();
       in.readFully(0, buffer);
       readAtByte0.end("time to read data at start of file");
@@ -551,54 +584,94 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
         toHuman(timer.nanosPerOperation(ops)));
   }
 
+  /**
+   * Should this test suite use direct buffers for
+   * the Vector IO operations?
+   * @return true if direct buffers are desired.
+   */
+  protected boolean isDirectVectorBuffer() {
+    return false;
+  }
+
   @Test
   public void test_045_vectoredIOHugeFile() throws Throwable {
     assumeHugeFileExists();
-    List<FileRange> rangeList = new ArrayList<>();
-    rangeList.add(FileRange.createFileRange(5856368, 116770));
-    rangeList.add(FileRange.createFileRange(3520861, 116770));
-    rangeList.add(FileRange.createFileRange(8191913, 116770));
-    rangeList.add(FileRange.createFileRange(1520861, 116770));
-    rangeList.add(FileRange.createFileRange(2520861, 116770));
-    rangeList.add(FileRange.createFileRange(9191913, 116770));
-    rangeList.add(FileRange.createFileRange(2820861, 156770));
-    IntFunction<ByteBuffer> allocate = ByteBuffer::allocate;
+    final ElasticByteBufferPool pool =
+              new WeakReferencedElasticByteBufferPool();
+    boolean direct = isDirectVectorBuffer();
+    IntFunction<ByteBuffer> allocate = size -> pool.getBuffer(direct, size);
+
+    // build a list of ranges for both reads.
+    final int rangeLength = 116770;
+    long base = 1520861;
+    long pos = base;
+    List<FileRange> rangeList = range(pos, rangeLength);
+    pos += rangeLength;
+    range(rangeList, pos, rangeLength);
+    pos += rangeLength;
+    range(rangeList, pos, rangeLength);
+    pos += rangeLength;
+    range(rangeList, pos, rangeLength);
+    pos += rangeLength;
+    range(rangeList, pos, rangeLength);
+    pos += rangeLength;
+    range(rangeList, pos, rangeLength);
+
     FileSystem fs = getFileSystem();
 
-    // read into a buffer first
-    // using sequential IO
+    final int validateSize = (int) totalReadSize(rangeList);
 
-    int validateSize = (int) Math.min(filesize, 10 * _1MB);
-    byte[] readFullRes;
-    IOStatistics sequentialIOStats, vectorIOStats;
+    // read the same ranges using readFully into a buffer.
+    // this is to both validate the range resolution logic,
+    // and to compare performance of sequential GET requests
+    // with the vector IO.
+    byte[] readFullRes = new byte[validateSize];
+    IOStatistics readIOStats, vectorIOStats;
+    DurationInfo readFullyTime = new DurationInfo(LOG, true, "Sequential read of %,d bytes",
+        validateSize);
     try (FSDataInputStream in = fs.openFile(hugefile)
-        .optLong(FS_OPTION_OPENFILE_LENGTH, validateSize)  // lets us actually force a shorter read
-        .optLong(FS_OPTION_OPENFILE_SPLIT_START, 0)
-        .opt(FS_OPTION_OPENFILE_SPLIT_END, validateSize)
-        .opt(FS_OPTION_OPENFILE_READ_POLICY, "sequential")
+        .optLong(FS_OPTION_OPENFILE_LENGTH, filesize)
+        .opt(FS_OPTION_OPENFILE_READ_POLICY, "random")
         .opt(FS_OPTION_OPENFILE_BUFFER_SIZE, uploadBlockSize)
-        .build().get();
-         DurationInfo ignored = new DurationInfo(LOG, "Sequential read of %,d bytes",
-             validateSize)) {
-      readFullRes = new byte[validateSize];
-      in.readFully(0, readFullRes);
-      sequentialIOStats = in.getIOStatistics();
+        .build().get()) {
+      for (FileRange range : rangeList) {
+        in.readFully(range.getOffset(),
+            readFullRes,
+            (int)(range.getOffset() - base),
+            range.getLength());
+      }
+      readIOStats = in.getIOStatistics();
+    } finally {
+      readFullyTime.close();
     }
 
     // now do a vector IO read
+    DurationInfo vectorTime = new DurationInfo(LOG, true, "Vector Read");
     try (FSDataInputStream in = fs.openFile(hugefile)
         .optLong(FS_OPTION_OPENFILE_LENGTH, filesize)
         .opt(FS_OPTION_OPENFILE_READ_POLICY, "vector, random")
-        .build().get();
-         DurationInfo ignored = new DurationInfo(LOG, "Vector Read")) {
-
+        .build().get()) {
+      // initiate the read.
       in.readVectored(rangeList, allocate);
-      // Comparing vectored read results with read fully.
-      validateVectoredReadResult(rangeList, readFullRes);
+      // Wait for the results and compare with read fully.
+      validateVectoredReadResult(rangeList, readFullRes, base);
       vectorIOStats = in.getIOStatistics();
+    } finally {
+      vectorTime.close();
+      // release the pool
+      pool.release();
     }
 
-    LOG.info("Bulk read IOStatistics={}", ioStatisticsToPrettyString(sequentialIOStats));
+    final Duration readFullyDuration = readFullyTime.asDuration();
+    final Duration vectorDuration = vectorTime.asDuration();
+    final Duration diff = readFullyDuration.minus(vectorDuration);
+    double ratio = readFullyDuration.toNanos() / (double) vectorDuration.toNanos();
+    String format = String.format("Vector read to %s buffer taking %s was %s faster than"
+            + " readFully() (%s); ratio=%,.2fX",
+        direct ? "direct" : "heap",
+        vectorDuration, diff, readFullyDuration, ratio);
+    LOG.info(format);
+    LOG.info("Bulk read IOStatistics={}", ioStatisticsToPrettyString(readIOStats));
     LOG.info("Vector IOStatistics={}", ioStatisticsToPrettyString(vectorIOStats));
   }
 
@@ -668,25 +741,43 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     S3AFileSystem fs = getFileSystem();
     FileStatus status = fs.getFileStatus(hugefile);
     long size = status.getLen();
-    fs.delete(hugefileRenamed, false);
     ContractTestUtils.NanoTimer timer = new ContractTestUtils.NanoTimer();
-    fs.rename(hugefile, hugefileRenamed);
+    renameFile(hugefile, hugefileRenamed);
     long mb = Math.max(size / _1MB, 1);
     timer.end("time to rename file of %d MB", mb);
     LOG.info("Time per MB to rename = {} nS",
         toHuman(timer.nanosPerOperation(mb)));
     bandwidth(timer, size);
+    assertPathExists("renamed file", hugefileRenamed);
     logFSState();
     FileStatus destFileStatus = fs.getFileStatus(hugefileRenamed);
     assertEquals(size, destFileStatus.getLen());
 
     // rename back
     ContractTestUtils.NanoTimer timer2 = new ContractTestUtils.NanoTimer();
-    fs.rename(hugefileRenamed, hugefile);
+    renameFile(hugefileRenamed, hugefile);
+
     timer2.end("Renaming back");
     LOG.info("Time per MB to rename = {} nS",
         toHuman(timer2.nanosPerOperation(mb)));
     bandwidth(timer2, size);
+  }
+
+  /**
+   * Rename a file.
+   * Subclasses may do this differently.
+   * @param src source file
+   * @param dest dest file
+   * @throws IOException IO failure
+   */
+  protected void renameFile(final Path src,
+      final Path dest) throws IOException {
+    final S3AFileSystem fs = getFileSystem();
+    fs.delete(dest, false);
+    final boolean renamed = fs.rename(src, dest);
+    Assertions.assertThat(renamed)
+        .describedAs("rename(%s, %s)", src, dest)
+        .isTrue();
   }
 
   /**

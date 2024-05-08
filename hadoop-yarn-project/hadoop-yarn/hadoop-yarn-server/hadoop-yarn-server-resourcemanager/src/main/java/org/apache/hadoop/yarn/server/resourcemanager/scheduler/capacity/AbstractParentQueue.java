@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.LockSupport;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
@@ -77,6 +78,7 @@ import org.apache.hadoop.yarn.util.UnitsConversionUtil;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
+import static org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager.NO_LABEL;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.getACLsForFlexibleAutoCreatedParentQueue;
 
 public abstract class AbstractParentQueue extends AbstractCSQueue {
@@ -133,7 +135,7 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
     this.childQueues = new ArrayList<>();
     this.allowZeroCapacitySum =
           queueContext.getConfiguration()
-              .getAllowZeroCapacitySum(getQueuePath());
+              .getAllowZeroCapacitySum(getQueuePathObject());
 
   }
 
@@ -167,7 +169,7 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
 
       // Initialize queue ordering policy
       queueOrderingPolicy = configuration.getQueueOrderingPolicy(
-          getQueuePath(), parent == null ?
+          getQueuePathObject(), parent == null ?
               null :
               ((AbstractParentQueue) parent).getQueueOrderingPolicyConfigName());
       queueOrderingPolicy.setQueues(childQueues);
@@ -228,8 +230,7 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
               "{Queue=" + queue.getQueuePath() + ", label=" + nodeLabel
                   + " uses weight mode}. ");
         }
-        if (!queue.getQueueResourceQuotas().getConfiguredMinResource(nodeLabel)
-            .equals(Resources.none())) {
+        if (checkConfigTypeIsAbsoluteResource(queue.getQueuePathObject(), nodeLabel)) {
           absoluteMinResSet = true;
           // There's a special handling: when absolute resource is configured,
           // capacity will be calculated (and set) for UI/metrics purposes, so
@@ -549,7 +550,7 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
    */
   public boolean isEligibleForAutoQueueCreation() {
     return isDynamicQueue() || queueContext.getConfiguration().
-        isAutoQueueCreationV2Enabled(getQueuePath());
+        isAutoQueueCreationV2Enabled(getQueuePathObject());
   }
 
   @Override
@@ -1136,11 +1137,43 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
     CSQueueUtils.updateConfiguredCapacityMetrics(resourceCalculator,
         labelManager.getResourceByLabel(null, clusterResource),
         RMNodeLabelsManager.NO_LABEL, this);
+
+    LOG.info("Refresh after resource calculation (PARENT) {}\n"
+            + "effectiveMinResource = {}\n"
+            + "effectiveMaxResource = {}\n"
+            + "capacity = {}\n"
+            + "maxCapacity = {}\n"
+            + "absoluteCapacity = {}\n"
+            + "absoluteMaxCapacity = {}",
+        queuePath,
+        getEffectiveCapacity(NO_LABEL),
+        getEffectiveMaxCapacity(NO_LABEL),
+        getCapacity(),
+        getMaximumCapacity(),
+        getAbsoluteCapacity(),
+        getAbsoluteMaximumCapacity());
   }
 
   @Override
   public void updateClusterResource(Resource clusterResource,
       ResourceLimits resourceLimits) {
+    if (queueContext.getConfiguration().isLegacyQueueMode()) {
+      updateClusterResourceLegacyMode(clusterResource, resourceLimits);
+      return;
+    }
+
+    CapacitySchedulerQueueCapacityHandler handler =
+        queueContext.getQueueManager().getQueueCapacityHandler();
+    if (rootQueue) {
+      handler.updateRoot(this, clusterResource);
+      handler.updateChildren(clusterResource, this);
+    } else {
+      handler.updateChildren(clusterResource, getParent());
+    }
+  }
+
+  public void updateClusterResourceLegacyMode(Resource clusterResource,
+                                              ResourceLimits resourceLimits) {
     writeLock.lock();
     try {
       // Special handle root queue
@@ -1313,6 +1346,18 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
       readLock.unlock();
     }
 
+  }
+
+  @Override
+  public List<CSQueue> getChildQueuesByTryLock() {
+    try {
+      while (!readLock.tryLock()){
+        LockSupport.parkNanos(10000);
+      }
+      return new ArrayList<>(childQueues);
+    } finally {
+      readLock.unlock();
+    }
   }
 
   @Override
@@ -1585,7 +1630,7 @@ public abstract class AbstractParentQueue extends AbstractCSQueue {
   public boolean isEligibleForAutoDeletion() {
     return isDynamicQueue() && getChildQueues().size() == 0 &&
         queueContext.getConfiguration().
-            isAutoExpiredDeletionEnabled(this.getQueuePath());
+            isAutoExpiredDeletionEnabled(this.getQueuePathObject());
   }
 
   public AutoCreatedQueueTemplate getAutoCreatedQueueTemplate() {

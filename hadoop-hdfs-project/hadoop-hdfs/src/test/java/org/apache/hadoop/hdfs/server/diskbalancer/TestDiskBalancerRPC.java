@@ -197,7 +197,7 @@ public class TestDiskBalancerRPC {
   }
 
   @Test
-  public void testgetDiskBalancerBandwidth() throws Exception {
+  public void testGetDiskBalancerBandwidth() throws Exception {
     RpcTestHelper rpcTestHelper = new RpcTestHelper().invoke();
     DataNode dataNode = rpcTestHelper.getDataNode();
     String planHash = rpcTestHelper.getPlanHash();

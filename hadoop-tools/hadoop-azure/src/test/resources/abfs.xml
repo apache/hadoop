@@ -19,7 +19,7 @@
 <configuration xmlns:xi="http://www.w3.org/2001/XInclude">
     <property>
         <name>fs.contract.test.root-tests-enabled</name>
-        <value>false</value>
+        <value>true</value>
     </property>
 
     <property>

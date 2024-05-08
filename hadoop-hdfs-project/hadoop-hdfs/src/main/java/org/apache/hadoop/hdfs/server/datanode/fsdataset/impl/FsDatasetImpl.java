@@ -63,6 +63,7 @@ import org.apache.hadoop.hdfs.ExtendedBlockId;
 import org.apache.hadoop.hdfs.server.common.AutoCloseDataSetLock;
 import org.apache.hadoop.hdfs.server.common.DataNodeLockManager;
 import org.apache.hadoop.hdfs.server.common.DataNodeLockManager.LockLevel;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
 import org.apache.hadoop.hdfs.server.datanode.DataSetLockManager;
 import org.apache.hadoop.hdfs.server.datanode.FileIoProvider;
 import org.apache.hadoop.hdfs.server.datanode.FinalizedReplica;
@@ -247,6 +248,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     if (info == null || !info.metadataExists()) {
       return null;
     }
+    DataNodeFaultInjector.get().delayGetMetaDataInputStream();
     return info.getMetadataInputStream(0);
   }
 
@@ -284,7 +286,8 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   private long maxDirScannerNotifyCount;
   private long curDirScannerNotifyCount;
   private long lastDirScannerNotifyTime;
-  
+  private volatile long lastDirScannerFinishTime;
+
   /**
    * An FSDataset has a directory where it loads its data files.
    */
@@ -1584,15 +1587,29 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   public ReplicaHandler createRbw(
       StorageType storageType, String storageId, ExtendedBlock b,
       boolean allowLazyPersist) throws IOException {
+    return createRbw(storageType, storageId, b, allowLazyPersist, 0L);
+  }
+
+  @Override // FsDatasetSpi
+  public ReplicaHandler createRbw(
+      StorageType storageType, String storageId, ExtendedBlock b,
+      boolean allowLazyPersist, long newGS) throws IOException {
     long startTimeMs = Time.monotonicNow();
     try (AutoCloseableLock lock = lockManager.readLock(LockLevel.BLOCK_POOl,
         b.getBlockPoolId())) {
       ReplicaInfo replicaInfo = volumeMap.get(b.getBlockPoolId(),
           b.getBlockId());
       if (replicaInfo != null) {
-        throw new ReplicaAlreadyExistsException("Block " + b +
-            " already exists in state " + replicaInfo.getState() +
-            " and thus cannot be created.");
+        // In case of retries with same blockPoolId + blockId as before
+        // with updated GS, cleanup the old replica to avoid
+        // any multiple copies with same blockPoolId + blockId
+        if (newGS != 0L) {
+          cleanupReplica(b.getBlockPoolId(), replicaInfo);
+        } else {
+          throw new ReplicaAlreadyExistsException("Block " + b +
+              " already exists in state " + replicaInfo.getState() +
+              " and thus cannot be created.");
+        }
       }
       // create a new block
       FsVolumeReference ref = null;
@@ -2402,8 +2419,9 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
    *
    * @param bpid the block pool ID.
    * @param block The block to be invalidated.
+   * @param checkFiles Whether to check data and meta files.
    */
-  public void invalidateMissingBlock(String bpid, Block block) {
+  public void invalidateMissingBlock(String bpid, Block block, boolean checkFiles) {
 
     // The replica seems is on its volume map but not on disk.
     // We can't confirm here is block file lost or disk failed.
@@ -2415,9 +2433,19 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     // So remove if from volume map notify namenode is ok.
     try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.BLOCK_POOl,
         bpid)) {
-      ReplicaInfo replica = volumeMap.remove(bpid, block);
-      invalidate(bpid, replica);
+      // Check if this block is on the volume map.
+      ReplicaInfo replica = volumeMap.get(bpid, block);
+      // Double-check block or meta file existence when checkFiles as true.
+      if (replica != null && (!checkFiles ||
+          (!replica.blockDataExists() || !replica.metadataExists()))) {
+        volumeMap.remove(bpid, block);
+        invalidate(bpid, replica);
+      }
     }
+  }
+
+  public void invalidateMissingBlock(String bpid, Block block) {
+    invalidateMissingBlock(bpid, block, true);
   }
 
   /**
@@ -2736,9 +2764,6 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
           Block.getGenerationStamp(diskMetaFile.getName()) :
           HdfsConstants.GRANDFATHER_GENERATION_STAMP;
 
-      final boolean isRegular = FileUtil.isRegularFile(diskMetaFile, false) &&
-          FileUtil.isRegularFile(diskFile, false);
-
       if (vol.getStorageType() == StorageType.PROVIDED) {
         if (memBlockInfo == null) {
           // replica exists on provided store but not in memory
@@ -2906,9 +2931,17 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
             + memBlockInfo.getNumBytes() + " to "
             + memBlockInfo.getBlockDataLength());
         memBlockInfo.setNumBytes(memBlockInfo.getBlockDataLength());
-      } else if (!isRegular) {
-        corruptBlock = new Block(memBlockInfo);
-        LOG.warn("Block:{} is not a regular file.", corruptBlock.getBlockId());
+      } else {
+        // Check whether the memory block file and meta file are both regular files.
+        File memBlockFile = new File(memBlockInfo.getBlockURI());
+        File memMetaFile = new File(memBlockInfo.getMetadataURI());
+        boolean isRegular = FileUtil.isRegularFile(memMetaFile, false) &&
+            FileUtil.isRegularFile(memBlockFile, false);
+        if (!isRegular) {
+          corruptBlock = new Block(memBlockInfo);
+          LOG.warn("Block:{} has some regular files, block file is {} and meta file is {}.",
+              corruptBlock.getBlockId(), memBlockFile, memMetaFile);
+        }
       }
     } finally {
       if (dataNodeMetrics != null) {
@@ -3810,6 +3843,21 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   @Override
   public List<FsVolumeImpl> getVolumeList() {
     return volumes.getVolumes();
+  }
+
+  @Override
+  public long getLastDirScannerFinishTime() {
+    return this.lastDirScannerFinishTime;
+  }
+
+  @Override
+  public void setLastDirScannerFinishTime(long time) {
+    this.lastDirScannerFinishTime = time;
+  }
+
+  @Override
+  public long getPendingAsyncDeletions() {
+    return asyncDiskService.countPendingDeletions();
   }
 }
 

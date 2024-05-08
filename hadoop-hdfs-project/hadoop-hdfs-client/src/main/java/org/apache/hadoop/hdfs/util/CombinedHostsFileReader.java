@@ -27,6 +27,7 @@ import java.io.File;
 import java.io.InputStreamReader;
 import java.io.IOException;
 import java.io.Reader;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -84,7 +85,7 @@ public final class CombinedHostsFileReader {
     if (hostFile.length() > 0) {
       try (Reader input =
           new InputStreamReader(
-              Files.newInputStream(hostFile.toPath()), "UTF-8")) {
+              Files.newInputStream(hostFile.toPath()), StandardCharsets.UTF_8)) {
         allDNs = objectMapper.readValue(input, DatanodeAdminProperties[].class);
       } catch (JsonMappingException jme) {
         // The old format doesn't have json top-level token to enclose
@@ -103,7 +104,7 @@ public final class CombinedHostsFileReader {
       List<DatanodeAdminProperties> all = new ArrayList<>();
       try (Reader input =
           new InputStreamReader(Files.newInputStream(Paths.get(hostsFilePath)),
-                  "UTF-8")) {
+                  StandardCharsets.UTF_8)) {
         Iterator<DatanodeAdminProperties> iterator =
             objectReader.readValues(jsonFactory.createParser(input));
         while (iterator.hasNext()) {

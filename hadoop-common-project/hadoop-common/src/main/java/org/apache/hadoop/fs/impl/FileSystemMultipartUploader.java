@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.impl;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -30,7 +31,6 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -104,7 +104,7 @@ public class FileSystemMultipartUploader extends AbstractMultipartUploader {
       fs.mkdirs(collectorPath, FsPermission.getDirDefault());
 
       ByteBuffer byteBuffer = ByteBuffer.wrap(
-          collectorPath.toString().getBytes(Charsets.UTF_8));
+          collectorPath.toString().getBytes(StandardCharsets.UTF_8));
       return BBUploadHandle.from(byteBuffer);
     });
   }
@@ -130,7 +130,7 @@ public class FileSystemMultipartUploader extends AbstractMultipartUploader {
     byte[] uploadIdByteArray = uploadId.toByteArray();
     checkUploadId(uploadIdByteArray);
     Path collectorPath = new Path(new String(uploadIdByteArray, 0,
-        uploadIdByteArray.length, Charsets.UTF_8));
+        uploadIdByteArray.length, StandardCharsets.UTF_8));
     Path partPath =
         mergePaths(collectorPath, mergePaths(new Path(Path.SEPARATOR),
             new Path(partNumber + ".part")));
@@ -149,7 +149,7 @@ public class FileSystemMultipartUploader extends AbstractMultipartUploader {
       cleanupWithLogger(LOG, inputStream);
     }
     return BBPartHandle.from(ByteBuffer.wrap(
-        partPath.toString().getBytes(Charsets.UTF_8)));
+        partPath.toString().getBytes(StandardCharsets.UTF_8)));
   }
 
   private Path createCollectorPath(Path filePath) {
@@ -210,7 +210,7 @@ public class FileSystemMultipartUploader extends AbstractMultipartUploader {
         .map(pair -> {
           byte[] byteArray = pair.getValue().toByteArray();
           return new Path(new String(byteArray, 0, byteArray.length,
-              Charsets.UTF_8));
+              StandardCharsets.UTF_8));
         })
         .collect(Collectors.toList());
 
@@ -223,7 +223,7 @@ public class FileSystemMultipartUploader extends AbstractMultipartUploader {
         "Duplicate PartHandles");
     byte[] uploadIdByteArray = multipartUploadId.toByteArray();
     Path collectorPath = new Path(new String(uploadIdByteArray, 0,
-        uploadIdByteArray.length, Charsets.UTF_8));
+        uploadIdByteArray.length, StandardCharsets.UTF_8));
 
     boolean emptyFile = totalPartsLen(partHandles) == 0;
     if (emptyFile) {
@@ -250,7 +250,7 @@ public class FileSystemMultipartUploader extends AbstractMultipartUploader {
     byte[] uploadIdByteArray = uploadId.toByteArray();
     checkUploadId(uploadIdByteArray);
     Path collectorPath = new Path(new String(uploadIdByteArray, 0,
-        uploadIdByteArray.length, Charsets.UTF_8));
+        uploadIdByteArray.length, StandardCharsets.UTF_8));
 
     return FutureIO.eval(() -> {
       // force a check for a file existing; raises FNFE if not found

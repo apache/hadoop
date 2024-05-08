@@ -406,6 +406,7 @@ public class DirectoryScanner implements Runnable {
     }
     try {
       reconcile();
+      dataset.setLastDirScannerFinishTime(System.currentTimeMillis());
     } catch (Exception e) {
       // Log and continue - allows Executor to run again next cycle
       LOG.error(
@@ -508,6 +509,7 @@ public class DirectoryScanner implements Runnable {
 
     // Pre-sort the reports outside of the lock
     blockPoolReport.sortBlocks();
+    DataNodeFaultInjector.get().delayDiffRecord();
 
     for (final String bpid : blockPoolReport.getBlockPoolIds()) {
       List<ScanInfo> blockpoolReport = blockPoolReport.getScanInfo(bpid);

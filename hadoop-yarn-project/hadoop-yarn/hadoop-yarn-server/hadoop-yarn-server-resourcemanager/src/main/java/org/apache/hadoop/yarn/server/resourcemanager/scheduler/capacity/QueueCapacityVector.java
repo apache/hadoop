@@ -210,6 +210,9 @@ public class QueueCapacityVector implements
         && !capacityTypes.get(resourceName).equals(resourceType)) {
       capacityTypePerResource.get(capacityTypes.get(resourceName))
           .remove(resourceName);
+      if (capacityTypePerResource.get(capacityTypes.get(resourceName)).isEmpty()) {
+        capacityTypePerResource.remove(capacityTypes.get(resourceName));
+      }
     }
 
     capacityTypePerResource.putIfAbsent(resourceType, new HashSet<>());
@@ -277,6 +280,10 @@ public class QueueCapacityVector implements
 
     public String getResourceName() {
       return resourceName;
+    }
+
+    public String getResourceWithPostfix() {
+      return resourceValue + vectorResourceType.getPostfix();
     }
   }
 }

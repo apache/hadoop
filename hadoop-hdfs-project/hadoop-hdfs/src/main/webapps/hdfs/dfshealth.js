@@ -378,6 +378,7 @@
                 });
             }
           });
+          $("#table-datanodes").width('100%');
           renderHistogram(data);
           $('#ui-tabs a[href="#tab-datanode"]').tab('show');
         });

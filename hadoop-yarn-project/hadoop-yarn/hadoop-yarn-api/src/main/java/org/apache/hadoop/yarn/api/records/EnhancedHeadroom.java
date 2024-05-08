@@ -69,4 +69,9 @@ public abstract class EnhancedHeadroom {
     sb.append(">");
     return sb.toString();
   }
+
+  public double getNormalizedPendingCount(long multiplier) {
+    int totalPendingCount = getTotalPendingCount();
+    return (double) totalPendingCount * multiplier;
+  }
 }

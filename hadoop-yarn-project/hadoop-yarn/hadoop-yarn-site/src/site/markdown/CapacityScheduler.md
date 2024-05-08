@@ -64,7 +64,13 @@ The `CapacityScheduler` supports the following features:
 
 * **Priority Scheduling** - This feature allows applications to be submitted and scheduled with different priorities. Higher integer value indicates higher priority for an application. Currently Application priority is supported only for FIFO ordering policy.
 
+* **Percentage Resource Configuration** - Administrators could specify percentages of resources to a queue.
+
 * **Absolute Resource Configuration** - Administrators could specify absolute resources to a queue instead of providing percentage based values. This provides better control for admins to configure required amount of resources for a given queue.
+
+* **Weight Resource Configuration** - Administrators could specify weights to a queue instead of providing percentage based values. This provides better control for admins to configure resources for the queue in a dynamically changing queue hierarchy.
+
+* **Universal Capacity Vector Resource Configuration** - Administrators could specify resources in a mixed manner to a queue using absolute, weight or percentage modes for each defined resource types. This provides the most flexible way to configure the required amount of resources for a given queue.
 
 * **Dynamic Auto-Creation and Management of Leaf Queues** - This feature supports auto-creation of **leaf queues** in conjunction with **queue-mapping** which currently supports **user-group** based queue mappings for application placement to a queue. The scheduler also supports capacity management for these queues based on a policy configured on the parent queue.
 
@@ -123,33 +129,75 @@ Configuration
 
 | Property | Description |
 |:---- |:---- |
-| `yarn.scheduler.capacity.<queue-path>.capacity` | Queue *capacity* in percentage (%) as a float (e.g. 12.5), weight as a float with the postfix *w* (e.g. 2.0w) or as absolute resource queue minimum capacity. When using percentage values the sum of capacities for all queues, at each level, must be equal to 100. If absolute resource is configured, sum of absolute resources of child queues could be less than its parent absolute resource capacity. Applications in the queue may consume more resources than the queue's capacity if there are free resources, providing elasticity. |
-| `yarn.scheduler.capacity.<queue-path>.maximum-capacity` | Maximum queue capacity in percentage (%) as a float (when the *capacity* property is defined with either percentages or weights) or as absolute resource queue maximum capacity. This limits the *elasticity* for applications in the queue. 1) Value is between 0 and 100. 2) Admin needs to make sure absolute maximum capacity >= absolute capacity for each queue. Also, setting this value to -1 sets maximum capacity to 100%. |
+| `yarn.scheduler.capacity.legacy-queue-mode.enabled` | Disabling the legacy-queue mode opens up the possibility to mix different capacity modes and the usage of the Universal Capacity Vector format to allocate resources flexibly for the queues. Default is *true*. |
+| `yarn.scheduler.capacity.<queue-path>.capacity` | Queue *capacity* in percentage (%) as a float (e.g. 12.5), weight as a float with the postfix *w* (e.g. 2.0w) or as absolute resource queue minimum capacity. When using percentage values the sum of capacities for all queues, at each level, must be equal to 100. If absolute resource is configured, sum of absolute resources of child queues could be less than its parent absolute resource capacity. Applications in the queue may consume more resources than the queue's capacity if there are free resources, providing elasticity. When the legacy-queue-mode is disabled the Universal Capacity Vector format can be used to configure the queue capacities, e.g. `[memory=50%,vcores=2w,gpu=1]`. |
+| `yarn.scheduler.capacity.<queue-path>.maximum-capacity` | Maximum queue capacity in percentage (%) as a float (when the *capacity* property is defined with either percentages or weights) or as absolute resource queue maximum capacity. This limits the *elasticity* for applications in the queue. 1) Value is between 0 and 100. 2) Admin needs to make sure absolute maximum capacity >= absolute capacity for each queue. Also, setting this value to -1 sets maximum capacity to 100%. When the legacy-queue-mode is disabled the Universal Capacity Vector format can be used to configure the queue capacities, e.g. `[memory=50%,vcores=2w,gpu=1]`. |
 | `yarn.scheduler.capacity.minimum-user-limit-percent` / `yarn.scheduler.capacity.<queue-path>.minimum-user-limit-percent` | Each queue enforces a limit on the percentage of resources allocated to a user at any given time, if there is demand for resources. The user limit can vary between a minimum and maximum value. The former (the minimum value) is set to this property value and the latter (the maximum value) depends on the number of users who have submitted applications. For e.g., suppose the value of this property is 25. If two users have submitted applications to a queue, no single user can use more than 50% of the queue resources. If a third user submits an application, no single user can use more than 33% of the queue resources. With 4 or more users, no user can use more than 25% of the queues resources. A value of 100 implies no user limits are imposed. The default is 100. Value is specified as an integer. This can be set for all queues with `yarn.scheduler.capacity.minimum-user-limit-percent` and can also be overridden on a per queue basis by setting `yarn.scheduler.capacity.<queue-path>.minimum-user-limit-percent`. |
 | `yarn.scheduler.capacity.user-limit-factor` / `yarn.scheduler.capacity.<queue-path>.user-limit-factor` | User limit factor provides a way to control the max amount of resources that a single user can consume. It is the multiple of the queue's capacity. By default this is set to 1 which ensures that a single user can never take more than the queue's configured capacity irrespective of how idle the cluster is. Increasing it means a single user can use more than the minimum capacity of the cluster, while decreasing it results in lower maximum resources. Setting this to -1 will disable the feature. Value is specified as a float. Note: using the flexible auto queue creation (yarn.scheduler.capacity.\<queue-path\>.auto-queue-creation-v2) with weights will automatically set this property to -1, as the dynamic queues will be created with the hardcoded weight of 1 and in idle cluster scenarios they should be able to use more resources than calculated. This can be set for all queues with `yarn.scheduler.capacity.user-limit-factor` and can also be overridden on a per queue basis by setting `yarn.scheduler.capacity.<queue-path>.user-limit-factor`. |
 | `yarn.scheduler.capacity.<queue-path>.maximum-allocation-mb` | The per queue maximum limit of memory to allocate to each container request at the Resource Manager. This setting overrides the cluster configuration `yarn.scheduler.maximum-allocation-mb`. This value must be smaller than or equal to the cluster maximum. |
 | `yarn.scheduler.capacity.<queue-path>.maximum-allocation-vcores` | The per queue maximum limit of virtual cores to allocate to each container request at the Resource Manager. This setting overrides the cluster configuration `yarn.scheduler.maximum-allocation-vcores`. This value must be smaller than or equal to the cluster maximum. |
 | `yarn.scheduler.capacity.<queue-path>.user-settings.<user-name>.weight` | This floating point value is used when calculating the user limit resource values for users in a queue. This value will weight each user more or less than the other users in the queue. For example, if user A should receive 50% more resources in a queue than users B and C, this property will be set to 1.5 for user A.  Users B and C will default to 1.0. |
 
-  * Configuring Resource Allocation
+  * Configuring Resource Allocation (legacy-queue-mode)
 
   `CapacityScheduler` supports three different resource allocation configuration modes: percentage values (*relative mode*), weights and absolute resources.
 
   Relative mode provides a way to describe queue's resources as a fraction of its parent's resources. For example if *capacity* is set as 50.0 for the queue `root.users`, users queue has 50% of root's resources set as minimum capacity.
 
-  In weight mode the resources are divided based on how the queue's weight relates to the sum of configured weights under the same parent. For example if there are three queues under a parent with weights *3w*, *2w*, *5w*, the sum is 10, so the calculated minimum *capacity* will be 30%, 20% and 50% respectively. The benefit of using this mode is flexibility. When using percentages every time a new queue gets added the percentage values need to be manually recalculated, as the sum under a parent must to be 100%, but with weights this is performed automatically. Using the previous example when a new queue gets added under the same parent as the previous three with weight *10w* the new sum will be 20, so the new calculated *capacities* will be: 15%, 10%, 25%, 50%. Note: `yarn.scheduler.capacity.<queue-path>.max-capacity` must be configured with percentages, as there is no weight mode for *maximum-capacity*.
+  In weight mode the resources are divided based on how the queue's weight relates to the sum of configured weights under the same parent. For example if there are three queues under a parent with weights *3w*, *2w*, *5w*, the sum is 10, so the calculated minimum *capacity* will be 30%, 20% and 50% respectively. The benefit of using this mode is flexibility. When using percentages every time a new queue gets added the percentage values need to be manually recalculated, as the sum under a parent must be 100%, but with weights this is performed automatically. Using the previous example when a new queue gets added under the same parent as the previous three with weight *10w* the new sum will be 20, so the new calculated *capacities* will be: 15%, 10%, 25%, 50%. Note: `yarn.scheduler.capacity.<queue-path>.max-capacity` must be configured with percentages, as there is no weight mode for *maximum-capacity*.
 
   To use absolute resources mode both `yarn.scheduler.capacity.<queue-path>.capacity` and `yarn.scheduler.capacity.<queue-path>.max-capacity` should have absolute resource values like `[memory=10240,vcores=12]`. This configuration indicates 10GB Memory and 12 VCores.
 
   It is possible to mix weights and percentages in a queue structure, but child queues under one parent must use the same *capacity* mode.
 
+  * Configuring Resource Allocation (non-legacy-queue-mode)
+
+  The capacity and maximum-capacity can be set for the queues using the Universal Capacity Vector format, e.g. `[memory=50%,vcores=2w,gpu=1]`.
+  In this example the Memory is set in percentage mode, the Vcores is set in weight mode and the GPU is set in absolute units.
+  It is also possible to use to old capacity format, e.g.: `50.0` for percentage, `[memory=1024,vcores=1]` for absolute and `1w` for weight mode.
+  Different modes can be mixed freely in the queue hierarchy.
+
+  The hierarchy between the resources is calculated based on the queues' capacity configuration and the available cluster resources.
+  Calculating the hierarchy of resources is done in the following way, for each defined resource type:
+  1. the configured absolute capacities are allocated to the queues from the available cluster resources
+  2. the remaining cluster resources are allocated to the queues with percentage resource configurations
+  3. the rest of the resources are allocated to the queues with weighted resource configurations
+
+  Example for mixed queue resource allocation using the Universal Capacity Vector format:
+```
+    # Configuration
+    yarn.scheduler.capacity.legacy-queue-mode.enabled = false
+    yarn.scheduler.capacity.root.queues = default, test_1, test_2
+    yarn.scheduler.capacity.root.test_1.queues = test_1_1, test_1_2, test_1_3
+    yarn.scheduler.capacity.root.default.capacity =         [memory=1w, vcores=1w]
+    yarn.scheduler.capacity.root.test_1.capacity =          [memory=16384, vcores=16]
+    yarn.scheduler.capacity.root.test_1.test_1_1.capacity = [memory=50%, vcores=50%]
+    yarn.scheduler.capacity.root.test_1.test_1_2.capacity = [memory=1w, vcores=1w]
+    yarn.scheduler.capacity.root.test_1.test_1_3.capacity = [memory=12288, vcores=12]
+    yarn.scheduler.capacity.root.test_2.capacity =          [memory=75%, vcores=75%]
+
+    # ClusterResources=[32GB 32VCores]  EffectiveMin                     AbsoluteCapacity
+    root.default              4/32      [memory=4096,    vcores=4]       12.5%
+    root.test_1              16/32      [memory=16384,   vcores=16]
+    root.test_1.test_1_1        2/16      [memory=2048,  vcores=2]       6.25%
+    root.test_1.test_1_2        2/16      [memory=2048,  vcores=2]       6.25%
+    root.test_1.test_1_3       12/16      [memory=12288, vcores=12]      37.5%
+    root.test_2              12/32      [memory=12288,   vcores=12]      37.5%
+```
+  Further examples can be found at `TestRMWebServicesCapacitySchedulerMixedMode.java`.
+
+  The capacity for the root queue cannot be configured, it is fixed to 100% (percentage mode).
+
+  The actual capacity, absoluteCapacity and derived properties like maximumApplications are calculated from the hierarchy between the resources.
+  If there is no cluster resource, the maximumApplications defaults to the configured values.
+
   * Running and Pending Application Limits
-  
+
   The `CapacityScheduler` supports the following parameters to control the running and pending applications:
 
 | Property | Description |
 |:---- |:---- |
-| `yarn.scheduler.capacity.maximum-applications` / `yarn.scheduler.capacity.<queue-path>.maximum-applications` | Maximum number of applications in the system which can be concurrently active both running and pending. Limits on each queue are directly proportional to their queue capacities and user limits. This is a hard limit and any applications submitted when this limit is reached will be rejected. Default is 10000. This can be set for all queues with `yarn.scheduler.capacity.maximum-applications` and can also be overridden on a per queue basis by setting `yarn.scheduler.capacity.<queue-path>.maximum-applications`. When this property is not set for a specific queue path, the maximum application number is calculated by taking all configured node labels into consideration, and choosing the highest possible value. Integer value expected. |
+| `yarn.scheduler.capacity.maximum-applications` / `yarn.scheduler.capacity.<queue-path>.maximum-applications` | Maximum number of applications in the system which can be concurrently active both running and pending. Limits on each queue are directly proportional to their queue absolute capacities and user limits. This is a hard limit and any applications submitted when this limit is reached will be rejected. Default is 10000. This can be set for all queues with `yarn.scheduler.capacity.maximum-applications` and can also be overridden on a per queue basis by setting `yarn.scheduler.capacity.<queue-path>.maximum-applications`. When this property is not set for a specific queue path, the maximum application number is calculated by taking all configured node labels into consideration, and choosing the highest possible value. When the legacy-queue-mode is disabled and no cluster resource is available, it defaults to the configured values. Integer value expected. |
 | `yarn.scheduler.capacity.maximum-am-resource-percent` / `yarn.scheduler.capacity.<queue-path>.maximum-am-resource-percent` | Maximum percent of resources in the cluster which can be used to run application masters - controls number of concurrent active applications. Limits on each queue are directly proportional to their queue capacities and user limits. Specified as a float - ie 0.5 = 50%. Default is 10%. This can be set for all queues with `yarn.scheduler.capacity.maximum-am-resource-percent` and can also be overridden on a per queue basis by setting `yarn.scheduler.capacity.<queue-path>.maximum-am-resource-percent` |
 | `yarn.scheduler.capacity.max-parallel-apps` / `yarn.scheduler.capacity.<queue-path>.max-parallel-apps` | Maximum number of applications that can run at the same time. Unlike to `maximum-applications`, application submissions are *not* rejected when this limit is reached. Instead they stay in `ACCEPTED` state until they are eligible to run. This can be set for all queues with `yarn.scheduler.capacity.max-parallel-apps` and can also be overridden on a per queue basis by setting `yarn.scheduler.capacity.<queue-path>.max-parallel-apps`. Integer value is expected. By default, there is no limit. The maximum parallel application limit is an inherited property in the queue hierarchy, meaning that the lowest value will be selected as the enforced limit in every branch of the hierarchy. |
 
@@ -310,7 +358,8 @@ The property `yarn.scheduler.capacity.mapping-rule-json` takes precedence over `
 
 ####Differences between legacy and flexible queue auto-creation modes
 
-To use the flexible Queue Auto-Creation under a parent the queue capacities must be configured with weights. The flexible mode gives the user much more freedom to automatically create new leaf queues or entire queue hierarchies based on mapping rules. "Legacy" mode refers to either percentage-based configuration or where capacities are defined with absolute resources.
+To use the flexible Queue Auto-Creation under a parent the queue capacities must be configured with weights in legacy-queue-mode. The flexible mode gives the user much more freedom to automatically create new leaf queues or entire queue hierarchies based on mapping rules. "Legacy" mode refers to either percentage-based configuration or where capacities are defined with absolute resources.
+If legacy-queue-mode is disabled the capacities can be configured using the Universal Capacity Vector format or using weights `1w`, percentages `75` or absolute units `[memory=1024,vcores=1]`.
 
 In flexible Queue Auto-Creation mode, every parent queue can have dynamically created parent or leaf queues (if the `yarn.scheduler.capacity.<queue-path>.auto-queue-creation-v2.enabled` property is set to true), even if it already has static child queues. This also means that certain settings influence the outcome of the queue placement depending on how the scheduler is configured.
 
@@ -584,7 +633,7 @@ The following configuration parameters can be configured in yarn-site.xml to con
 | `yarn.resourcemanager.reservation-system.planfollower.time-step` | *Optional* parameter: the frequency in milliseconds of the `PlanFollower` timer. Long value expected. The default value is *1000*. |
 
 
-The `ReservationSystem` is integrated with the `CapacityScheduler` queue hierachy and can be configured for any **LeafQueue** currently. The `CapacityScheduler` supports the following parameters to tune the `ReservationSystem`:
+The `ReservationSystem` is integrated with the `CapacityScheduler` queue hierarchy and can be configured for any **LeafQueue** currently. The `CapacityScheduler` supports the following parameters to tune the `ReservationSystem`:
 
 | Property | Description |
 |:---- |:---- |
@@ -830,7 +879,7 @@ Changing queue/scheduler properties and adding/removing queues can be done in tw
   Remove the queue configurations from the file and run refresh as described above
 
 ### Enabling periodic configuration refresh
-Enabling queue configuration periodic refresh allows reloading and applying the configuration by editing the *conf/capacity-scheduler.xml* without the necessicity of calling yarn rmadmin -refreshQueues.
+Enabling queue configuration periodic refresh allows reloading and applying the configuration by editing the *conf/capacity-scheduler.xml* without the necessity of calling yarn rmadmin -refreshQueues.
 
 | Property | Description |
 |:---- |:---- |

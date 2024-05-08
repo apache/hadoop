@@ -376,7 +376,7 @@ public class TestMixedQueueResourceCalculation extends CapacitySchedulerQueueCal
       update(assertionBuilder, UPDATE_RESOURCE);
       Assert.fail("WEIGHT maximum capacity type is not supported, an error should be thrown when " +
           "set up");
-    } catch (IllegalStateException ignored) {
+    } catch (IOException ignored) {
     }
   }
 
@@ -522,15 +522,15 @@ public class TestMixedQueueResourceCalculation extends CapacitySchedulerQueueCal
   }
 
   private void setQueues() {
-    csConf.setQueues("root", new String[]{"a", "b", "c"});
+    csConf.setQueues(ROOT, new String[]{"a", "b", "c"});
     csConf.setQueues(A, new String[]{"a1", "a2"});
     csConf.setQueues(B, new String[]{"b1"});
   }
 
   private Optional<QueueUpdateWarning> getSpecificWarning(
       Collection<QueueUpdateWarning> warnings, QueueUpdateWarningType warningTypeToSelect,
-      String queue) {
+      QueuePath queue) {
     return warnings.stream().filter((w) -> w.getWarningType().equals(warningTypeToSelect)
-        && w.getQueue().equals(queue)).findFirst();
+        && w.getQueue().equals(queue.getFullPath())).findFirst();
   }
 }

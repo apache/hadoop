@@ -86,7 +86,7 @@ public class TestAMRMProxyMetrics extends BaseAMRMProxyTest {
         finishApplicationMaster(testAppId, FinalApplicationStatus.SUCCEEDED);
 
     Assert.assertNotNull(finishResponse);
-    Assert.assertEquals(true, finishResponse.getIsUnregistered());
+    Assert.assertTrue(finishResponse.getIsUnregistered());
 
     Assert.assertEquals(failedAppStartRequests, metrics.getFailedAppStartRequests());
     Assert.assertEquals(failedRegisterAMRequests, metrics.getFailedRegisterAMRequests());

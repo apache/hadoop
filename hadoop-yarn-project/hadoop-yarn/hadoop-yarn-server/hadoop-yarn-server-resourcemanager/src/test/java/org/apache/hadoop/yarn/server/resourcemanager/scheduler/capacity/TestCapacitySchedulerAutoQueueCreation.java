@@ -109,6 +109,8 @@ public class TestCapacitySchedulerAutoQueueCreation
   private static final Logger LOG = LoggerFactory.getLogger(
       TestCapacitySchedulerAutoQueueCreation.class);
 
+  private static final String SPECIFIED_QUEUE_MAPPING = "%specified";
+
   private static final String CURRENT_USER_MAPPING = "%user";
 
   private static final Resource TEMPLATE_MAX_RES = Resource.newInstance(16 *
@@ -141,7 +143,11 @@ public class TestCapacitySchedulerAutoQueueCreation
       validateInitialQueueEntitlement(parentQueue, USER0,
           expectedChildQueueAbsCapacity, accessibleNodeLabelsOnC);
 
-      validateUserAndAppLimits(autoCreatedLeafQueue, 4000, 4000);
+      // The new queue calculation mode works from the effective resources
+      // so the absoluteCapacity and the maxApplications differs a little
+      // bit: 6553/16384=0.3999633789 vs 0.4
+      final int maxApps = cs.getConfiguration().isLegacyQueueMode() ? 4000 : 3999;
+      validateUserAndAppLimits(autoCreatedLeafQueue, maxApps, maxApps);
       validateContainerLimits(autoCreatedLeafQueue, 6, 10240);
 
       assertTrue(autoCreatedLeafQueue
@@ -578,7 +584,7 @@ public class TestCapacitySchedulerAutoQueueCreation
     //And weight mode, to allow dynamic auto queue creation for root
     CapacitySchedulerConfiguration conf = setupSchedulerConfiguration();
     conf.setAutoQueueCreationV2Enabled(ROOT, true);
-    conf.setCapacity("root.default", "1w");
+    conf.setCapacity(DEFAULT, "1w");
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
         ResourceScheduler.class);
 
@@ -940,7 +946,11 @@ public class TestCapacitySchedulerAutoQueueCreation
       AutoCreatedLeafQueue user0Queue = (AutoCreatedLeafQueue) newCS.getQueue(
           USER1);
       validateCapacities(user0Queue, 0.5f, 0.15f, 1.0f, 0.5f);
-      validateUserAndAppLimits(user0Queue, 4000, 4000);
+      // The new queue calculation mode works from the effective resources
+      // so the absoluteCapacity and the maxApplications differs a little
+      // bit: 6553/16384=0.3999633789 vs 0.4
+      final int maxApps = cs.getConfiguration().isLegacyQueueMode() ? 4000 : 3999;
+      validateUserAndAppLimits(user0Queue, maxApps, maxApps);
 
       //update leaf queue template capacities
       conf.setAutoCreatedLeafQueueConfigCapacity(C, 30f);
@@ -948,7 +958,7 @@ public class TestCapacitySchedulerAutoQueueCreation
 
       newCS.reinitialize(conf, newMockRM.getRMContext());
       validateCapacities(user0Queue, 0.3f, 0.09f, 0.4f, 0.2f);
-      validateUserAndAppLimits(user0Queue, 4000, 4000);
+      validateUserAndAppLimits(user0Queue, maxApps, maxApps);
 
       //submit app1 as USER3
       submitApp(newMockRM, parentQueue, USER3, USER3, 3, 1);
@@ -956,7 +966,7 @@ public class TestCapacitySchedulerAutoQueueCreation
           (AutoCreatedLeafQueue) newCS.getQueue(USER1);
       validateCapacities(user3Queue, 0.3f, 0.09f, 0.4f,0.2f);
 
-      validateUserAndAppLimits(user3Queue, 4000, 4000);
+      validateUserAndAppLimits(user3Queue, maxApps, maxApps);
 
       //submit app1 as USER1 - is already activated. there should be no diff
       // in capacities
@@ -964,7 +974,7 @@ public class TestCapacitySchedulerAutoQueueCreation
 
       validateCapacities(user3Queue, 0.3f, 0.09f, 0.4f,0.2f);
 
-      validateUserAndAppLimits(user3Queue, 4000, 4000);
+      validateUserAndAppLimits(user3Queue, maxApps, maxApps);
       validateContainerLimits(user3Queue, 6, 10240);
 
       GuaranteedOrZeroCapacityOverTimePolicy autoCreatedQueueManagementPolicy =
@@ -996,15 +1006,14 @@ public class TestCapacitySchedulerAutoQueueCreation
     try {
       CapacitySchedulerConfiguration csConf
           = new CapacitySchedulerConfiguration();
-      csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
-          new String[] {"a", "b"});
-      csConf.setCapacity("root.a", 90);
-      csConf.setCapacity("root.b", 10);
-      csConf.setAutoCreateChildQueueEnabled("root.a", true);
-      csConf.setAutoCreatedLeafQueueConfigCapacity("root.a", 50);
-      csConf.setAutoCreatedLeafQueueConfigMaxCapacity("root.a", 100);
-      csConf.setAcl("root.a", QueueACL.ADMINISTER_QUEUE, "*");
-      csConf.setAcl("root.a", QueueACL.SUBMIT_APPLICATIONS, "*");
+      csConf.setQueues(ROOT, new String[] {"a", "b"});
+      csConf.setCapacity(A, 90);
+      csConf.setCapacity(B, 10);
+      csConf.setAutoCreateChildQueueEnabled(A, true);
+      csConf.setAutoCreatedLeafQueueConfigCapacity(A, 50);
+      csConf.setAutoCreatedLeafQueueConfigMaxCapacity(A, 100);
+      csConf.setAcl(A, QueueACL.ADMINISTER_QUEUE, "*");
+      csConf.setAcl(A, QueueACL.SUBMIT_APPLICATIONS, "*");
       csConf.setBoolean(YarnConfiguration
           .APPLICATION_TAG_BASED_PLACEMENT_ENABLED, true);
       csConf.setStrings(YarnConfiguration
@@ -1044,6 +1053,42 @@ public class TestCapacitySchedulerAutoQueueCreation
       if (mockRM != null) {
         mockRM.close();
       }
+    }
+  }
+
+  @Test(timeout = 10000)
+  public void testAutoCreateLeafQueueFailsWithSpecifiedEmptyStringLeafQueue()
+          throws Exception {
+
+    final String invalidQueue = "";
+
+    MockRM newMockRM = setupSchedulerInstance();
+    CapacityScheduler newCS =
+            (CapacityScheduler) newMockRM.getResourceScheduler();
+
+    //queue mapping to place app in queue specified by user
+    setupQueueMapping(newCS, "app_user", "root.c", SPECIFIED_QUEUE_MAPPING);
+    newCS.updatePlacementRules();
+
+    try {
+      //submitting to root.c. should fail WITHOUT crashing the RM
+      submitApp(newCS, "app_user", invalidQueue, "root.c");
+
+      RMContext rmContext = mock(RMContext.class);
+      when(rmContext.getDispatcher()).thenReturn(dispatcher);
+      newCS.setRMContext(rmContext);
+
+      ApplicationId appId = BuilderUtils.newApplicationId(1, 1);
+      SchedulerEvent addAppEvent = new AppAddedSchedulerEvent(
+              appId, "root.c." + invalidQueue, "app_user");
+      newCS.handle(addAppEvent);
+
+      RMAppEvent event = new RMAppEvent(appId, RMAppEventType.APP_REJECTED,
+              "error");
+      dispatcher.spyOnNextEvent(event, 10000);
+    } finally {
+      ((CapacityScheduler) newMockRM.getResourceScheduler()).stop();
+      newMockRM.stop();
     }
   }
 }

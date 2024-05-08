@@ -21,7 +21,12 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 import javax.ws.rs.core.MediaType;
 
 import com.sun.jersey.api.client.ClientResponse;
+
+import java.util.Arrays;
+import java.util.Collection;
+
 import org.codehaus.jettison.json.JSONObject;
+import org.junit.AfterClass;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
@@ -30,26 +35,49 @@ import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmissionData;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRMAppSubmitter;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.GB;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.assertJsonResponse;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.assertJsonType;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.assertXmlResponse;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.backupSchedulerConfigFileInTarget;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.createRM;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.createWebAppDescriptor;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.restoreSchedulerConfigFileInTarget;
 import static org.junit.Assert.assertEquals;
 
+@RunWith(Parameterized.class)
 public class TestRMWebServicesCapacitySched extends JerseyTestBase {
 
-  public TestRMWebServicesCapacitySched() {
+  private static final QueuePath ROOT = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+  private static final QueuePath A = new QueuePath(CapacitySchedulerConfiguration.ROOT + ".a");
+  private final boolean legacyQueueMode;
+
+  @Parameterized.Parameters(name = "{index}: legacy-queue-mode={0}")
+  public static Collection<Boolean> getParameters() {
+    return Arrays.asList(true, false);
+  }
+
+  public TestRMWebServicesCapacitySched(boolean legacyQueueMode) {
     super(createWebAppDescriptor());
+    this.legacyQueueMode = legacyQueueMode;
+    backupSchedulerConfigFileInTarget();
+  }
+
+  @AfterClass
+  public static void afterClass() {
+    restoreSchedulerConfigFileInTarget();
   }
 
   @Test
   public void testClusterScheduler() throws Exception {
     try (MockRM rm = createRM(createConfig())){
+      rm.registerNode("h1:1234", 32 * GB, 32);
       assertJsonResponse(resource().path("ws/v1/cluster/scheduler")
               .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class),
           "webapp/scheduler-response.json");
@@ -67,9 +95,9 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
   @Test
   public void testPerUserResources() throws Exception {
     try (MockRM rm = createRM(createConfig())){
-      rm.registerNode("h1:1234", 10 * GB, 10);
+      rm.registerNode("h1:1234", 32 * GB, 32);
       MockRMAppSubmitter.submit(rm, MockRMAppSubmissionData.Builder
-          .createWithMemory(10, rm)
+          .createWithMemory(32, rm)
           .withAppName("app1")
           .withUser("user1")
           .withAcls(null)
@@ -78,7 +106,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
           .build()
       );
       MockRMAppSubmitter.submit(rm, MockRMAppSubmissionData.Builder
-          .createWithMemory(20, rm)
+          .createWithMemory(64, rm)
           .withAppName("app2")
           .withUser("user2")
           .withAcls(null)
@@ -99,9 +127,10 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
   @Test
   public void testNodeLabelDefaultAPI() throws Exception {
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration(createConfig());
-    conf.setDefaultNodeLabelExpression("root", "ROOT-INHERITED");
-    conf.setDefaultNodeLabelExpression("root.a", "root-a-default-label");
+    conf.setDefaultNodeLabelExpression(ROOT, "ROOT-INHERITED");
+    conf.setDefaultNodeLabelExpression(A, "root-a-default-label");
     try (MockRM rm = createRM(conf)) {
+      rm.registerNode("h1:1234", 32 * GB, 32);
       ClientResponse response = resource().path("ws/v1/cluster/scheduler")
           .accept(MediaType.APPLICATION_XML).get(ClientResponse.class);
       assertXmlResponse(response, "webapp/scheduler-response-NodeLabelDefaultAPI.xml");
@@ -110,6 +139,7 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
   @Test
   public void testClusterSchedulerOverviewCapacity() throws Exception {
     try (MockRM rm = createRM(createConfig())) {
+      rm.registerNode("h1:1234", 32 * GB, 32);
       ClientResponse response = resource().path("ws/v1/cluster/scheduler-overview")
           .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
       assertJsonType(response);
@@ -129,12 +159,14 @@ public class TestRMWebServicesCapacitySched extends JerseyTestBase {
 
   private Configuration createConfig() {
     Configuration conf = new Configuration();
+    conf.set("yarn.scheduler.capacity.legacy-queue-mode.enabled", String.valueOf(legacyQueueMode));
     conf.set("yarn.scheduler.capacity.root.queues", "a, b, c");
-    conf.set("yarn.scheduler.capacity.root.a.capacity", "20");
+    conf.set("yarn.scheduler.capacity.root.a.capacity", "12.5");
+    conf.set("yarn.scheduler.capacity.root.a.accessible-node-labels", "root-a-default-label");
     conf.set("yarn.scheduler.capacity.root.a.maximum-capacity", "50");
     conf.set("yarn.scheduler.capacity.root.a.max-parallel-app", "42");
-    conf.set("yarn.scheduler.capacity.root.b.capacity", "70");
-    conf.set("yarn.scheduler.capacity.root.c.capacity", "10");
+    conf.set("yarn.scheduler.capacity.root.b.capacity", "50");
+    conf.set("yarn.scheduler.capacity.root.c.capacity", "37.5");
     return conf;
   }
 }

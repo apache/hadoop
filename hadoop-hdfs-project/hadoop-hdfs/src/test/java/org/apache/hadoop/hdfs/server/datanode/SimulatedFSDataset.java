@@ -939,6 +939,16 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
     return 0L;
   }
 
+  @Override
+  public long getLastDirScannerFinishTime() {
+    return 0L;
+  }
+
+  @Override
+  public long getPendingAsyncDeletions() {
+    return 0;
+  }
+
   /**
    * Get metrics from the metrics source
    *
@@ -1192,6 +1202,12 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
       StorageType storageType, String storageId, ExtendedBlock b,
       boolean allowLazyPersist) throws IOException {
     return createTemporary(storageType, storageId, b, false);
+  }
+
+  @Override
+  public ReplicaHandler createRbw(StorageType storageType, String storageId,
+      ExtendedBlock b, boolean allowLazyPersist, long newGS) throws IOException {
+    return createRbw(storageType, storageId, b, allowLazyPersist);
   }
 
   @Override // FsDatasetSpi
@@ -1631,6 +1647,11 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   @Override
   public List<FsVolumeImpl> getVolumeList() {
     return null;
+  }
+
+  @Override
+  public void setLastDirScannerFinishTime(long time) {
+    throw new UnsupportedOperationException();
   }
 }
 

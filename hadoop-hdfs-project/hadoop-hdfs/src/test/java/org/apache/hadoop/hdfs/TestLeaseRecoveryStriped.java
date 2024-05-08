@@ -30,6 +30,10 @@ import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.server.datanode.BlockRecoveryWorker;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.TestInterDatanodeProtocol;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -188,6 +192,62 @@ public class TestLeaseRecoveryStriped {
     }
   }
 
+  /**
+   * Test lease recovery for EC policy when one internal block located on
+   * stale datanode.
+   */
+  @Test
+  public void testLeaseRecoveryWithStaleDataNode() {
+    LOG.info("blockLengthsSuite: " +
+        Arrays.toString(blockLengthsSuite));
+    long staleInterval = conf.getLong(
+        DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_KEY,
+        DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_DEFAULT);
+
+    for (int i = 0; i < blockLengthsSuite.length; i++) {
+      BlockLengths blockLengths = blockLengthsSuite[i];
+      try {
+        writePartialBlocks(blockLengths.getBlockLengths());
+
+        // Get block info for the last block and mark corresponding datanode
+        // as stale.
+        LocatedBlock locatedblock =
+            TestInterDatanodeProtocol.getLastLocatedBlock(
+                dfs.dfs.getNamenode(), p.toString());
+        DatanodeInfo firstDataNode = locatedblock.getLocations()[0];
+        DatanodeDescriptor dnDes = cluster.getNameNode().getNamesystem()
+            .getBlockManager().getDatanodeManager()
+            .getDatanode(firstDataNode);
+        DataNodeTestUtils.setHeartbeatsDisabledForTests(
+            cluster.getDataNode(dnDes.getIpcPort()), true);
+        DFSTestUtil.resetLastUpdatesWithOffset(dnDes, -(staleInterval + 1));
+
+        long[] longArray = new long[blockLengths.getBlockLengths().length - 1];
+        for (int j = 0; j < longArray.length; ++j) {
+          longArray[j] = blockLengths.getBlockLengths()[j + 1];
+        }
+        int safeLength = (int) StripedBlockUtil.getSafeLength(ecPolicy,
+            longArray);
+        int checkDataLength = Math.min(testFileLength, safeLength);
+        recoverLease();
+        List<Long> oldGS = new ArrayList<>();
+        oldGS.add(1001L);
+        StripedFileTestUtil.checkData(dfs, p, checkDataLength,
+            new ArrayList<>(), oldGS, blockGroupSize);
+
+        DataNodeTestUtils.setHeartbeatsDisabledForTests(
+            cluster.getDataNode(dnDes.getIpcPort()), false);
+        DFSTestUtil.resetLastUpdatesWithOffset(dnDes, 0);
+
+      } catch (Throwable e) {
+        String msg = "failed testCase at i=" + i + ", blockLengths="
+            + blockLengths + "\n"
+            + StringUtils.stringifyException(e);
+        Assert.fail(msg);
+      }
+    }
+  }
+
   @Test
   public void testSafeLength() {
     checkSafeLength(0, 0); // Length of: 0
@@ -197,6 +257,35 @@ public class TestLeaseRecoveryStriped {
     checkSafeLength(256 * 1024 * 1024, 1610612736L); // Length of: 256 MiB
     checkSafeLength(517399040, 3101687808L); // Length of: 517399040
     checkSafeLength(1024 * 1024 * 1024, 6442450944L); // Length of: 1 GiB
+  }
+
+  /**
+   * 1. Write 1MB data, then flush it.
+   * 2. Mock client quiet exceptionally.
+   * 3. Trigger lease recovery.
+   * 4. Lease recovery successfully.
+   */
+  @Test
+  public void testLeaseRecoveryWithManyZeroLengthReplica() {
+    int curCellSize = (int)1024 * 1024;
+    try {
+      final FSDataOutputStream out = dfs.create(p);
+      final DFSStripedOutputStream stripedOut = (DFSStripedOutputStream) out
+          .getWrappedStream();
+      for (int pos = 0; pos < curCellSize; pos++) {
+        out.write(StripedFileTestUtil.getByte(pos));
+      }
+      for (int i = 0; i < dataBlocks + parityBlocks; i++) {
+        StripedDataStreamer s = stripedOut.getStripedDataStreamer(i);
+        waitStreamerAllAcked(s);
+        stopBlockStream(s);
+      }
+      recoverLease();
+      LOG.info("Trigger recover lease manually successfully.");
+    } catch (Throwable e) {
+      String msg = "failed testCase" + StringUtils.stringifyException(e);
+      Assert.fail(msg);
+    }
   }
 
   private void checkSafeLength(int blockLength, long expectedSafeLength) {

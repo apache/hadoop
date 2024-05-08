@@ -102,6 +102,7 @@ public abstract class ContainerExecutor implements Configurable {
   private String[] whitelistVars;
   private int exitCodeFileTimeout =
       YarnConfiguration.DEFAULT_NM_CONTAINER_EXECUTOR_EXIT_FILE_TIMEOUT;
+  private int containerExitCode;
 
   @Override
   public void setConf(Configuration conf) {
@@ -303,7 +304,7 @@ public abstract class ContainerExecutor implements Configurable {
 
     if (pidPath == null) {
       LOG.warn("{} is not active, returning terminated error", containerId);
-
+      containerExitCode = ExitCode.TERMINATED.getExitCode();
       return ExitCode.TERMINATED.getExitCode();
     }
 
@@ -335,7 +336,7 @@ public abstract class ContainerExecutor implements Configurable {
     while (!file.exists() && msecLeft >= 0) {
       if (!isContainerActive(containerId)) {
         LOG.info("{} was deactivated", containerId);
-
+        containerExitCode = ExitCode.TERMINATED.getExitCode();
         return ExitCode.TERMINATED.getExitCode();
       }
 
@@ -350,7 +351,9 @@ public abstract class ContainerExecutor implements Configurable {
     }
 
     try {
-      return Integer.parseInt(FileUtils.readFileToString(file, StandardCharsets.UTF_8).trim());
+      containerExitCode = Integer.parseInt(
+          FileUtils.readFileToString(file, StandardCharsets.UTF_8).trim());
+      return containerExitCode;
     } catch (NumberFormatException e) {
       throw new IOException("Error parsing exit code from pid " + pid, e);
     }
@@ -453,9 +456,7 @@ public abstract class ContainerExecutor implements Configurable {
     }
 
     // dump debugging information if configured
-    if (getConf() != null &&
-        getConf().getBoolean(YarnConfiguration.NM_LOG_CONTAINER_DEBUG_INFO,
-        YarnConfiguration.DEFAULT_NM_LOG_CONTAINER_DEBUG_INFO)) {
+    if (shouldWriteDebugInformation(getConf())) {
       sb.echo("Copying debugging information");
       sb.copyDebugInformation(new Path(outFilename),
           new Path(logDir, outFilename));
@@ -486,6 +487,18 @@ public abstract class ContainerExecutor implements Configurable {
    */
   protected File[] readDirAsUser(String user, Path dir) {
     return new File(dir.toString()).listFiles();
+  }
+
+  private boolean shouldWriteDebugInformation(Configuration config) {
+    return config != null && (
+            config.getBoolean(
+                YarnConfiguration.NM_LOG_CONTAINER_DEBUG_INFO,
+                YarnConfiguration.DEFAULT_NM_LOG_CONTAINER_DEBUG_INFO
+            ) || (
+            config.getBoolean(
+                YarnConfiguration.NM_LOG_CONTAINER_DEBUG_INFO_ON_ERROR,
+                YarnConfiguration.DEFAULT_NM_LOG_CONTAINER_DEBUG_INFO_ON_ERROR
+            ) && containerExitCode != 0));
   }
 
   /**

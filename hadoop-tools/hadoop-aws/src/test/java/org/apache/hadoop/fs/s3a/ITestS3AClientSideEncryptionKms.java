@@ -21,11 +21,11 @@ package org.apache.hadoop.fs.s3a;
 import java.io.IOException;
 import java.util.Map;
 
-import com.amazonaws.services.s3.Headers;
 import org.assertj.core.api.Assertions;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.impl.AWSHeaders;
 import org.apache.hadoop.fs.s3a.impl.HeaderProcessing;
 
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
@@ -69,14 +69,14 @@ public class ITestS3AClientSideEncryptionKms
     // Assert KeyWrap Algo
     assertEquals("Key wrap algo isn't same as expected", KMS_KEY_WRAP_ALGO,
         processHeader(fsXAttrs,
-            xAttrPrefix + Headers.CRYPTO_KEYWRAP_ALGORITHM));
+            xAttrPrefix + AWSHeaders.CRYPTO_KEYWRAP_ALGORITHM));
 
     // Assert content encryption algo for KMS, is present in the
     // materials description and KMS key ID isn't.
     String keyId = getS3EncryptionKey(getTestBucketName(getConfiguration()),
         getConfiguration());
     Assertions.assertThat(processHeader(fsXAttrs,
-        xAttrPrefix + Headers.MATERIALS_DESCRIPTION))
+        xAttrPrefix + AWSHeaders.MATERIALS_DESCRIPTION))
         .describedAs("Materials Description should contain the content "
             + "encryption algo and should not contain the KMS keyID.")
         .contains(KMS_CONTENT_ENCRYPTION_ALGO)

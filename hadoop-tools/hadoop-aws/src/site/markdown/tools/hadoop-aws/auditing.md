@@ -22,7 +22,7 @@ and inside the AWS S3 SDK, immediately before the request is executed.
 The full architecture is covered in [Auditing Architecture](auditing_architecture.html);
 this document covers its use.
 
-## Important: Auditing is disabled by default
+## Important: Auditing is currently enabled
 
 Due to a memory leak from the use of `ThreadLocal` fields, this auditing feature
 leaked memory as S3A filesystem instances were created and deleted.
@@ -32,7 +32,7 @@ See [HADOOP-18091](https://issues.apache.org/jira/browse/HADOOP-18091) _S3A audi
 
 To avoid these memory leaks, auditing was disabled by default in the hadoop 3.3.2 release.
 
-As these memory leaks have now been fixed, auditing has been re-enabled.
+As these memory leaks have now been fixed, auditing has been re-enabled in Hadoop 3.3.5+
 
 To disable it, set `fs.s3a.audit.enabled` to `false`.
 
@@ -77,7 +77,7 @@ ideally even identifying the process/job generating load.
 
 ## Using Auditing
 
-Auditing is disabled by default.
+Auditing is enabled by default.
 When auditing enabled, a Logging Auditor will annotate the S3 logs through a custom
 HTTP Referrer header in requests made to S3.
 Other auditor classes may be used instead.
@@ -88,7 +88,7 @@ Other auditor classes may be used instead.
 |--------|---------|---------------|
 | `fs.s3a.audit.enabled` | Is auditing enabled? | `true` |
 | `fs.s3a.audit.service.classname` | Auditor classname | `org.apache.hadoop.fs.s3a.audit.impl.LoggingAuditor` |
-| `fs.s3a.audit.request.handlers` | List of extra subclasses of AWS SDK RequestHandler2 to include in handler chain | `""` |
+| `fs.s3a.audit.execution.interceptors` | Implementations of AWS v2 SDK `ExecutionInterceptor` to include in handler chain | `""` |
 | `fs.s3a.audit.referrer.enabled` | Logging auditor to publish the audit information in the HTTP Referrer header | `true` |
 | `fs.s3a.audit.referrer.filter` | List of audit fields to filter | `""` |
 | `fs.s3a.audit.reject.out.of.span.operations` | Auditor to reject operations "outside of a span" | `false` |
@@ -96,14 +96,14 @@ Other auditor classes may be used instead.
 
 ### Disabling Auditing.
 
-In this release of Hadoop, auditing is disabled.
+In this release of Hadoop, auditing is enabled by default.
 
 This can be explicitly set globally or for specific buckets
 
 ```xml
 <property>
   <name>fs.s3a.audit.enabled</name>
-  <value>false</value>
+  <value>true</value>
 </property>
 ```
 
@@ -111,9 +111,9 @@ Specific buckets can have auditing disabled, even when it is enabled globally.
 
 ```xml
 <property>
-  <name>fs.s3a.bucket.landsat-pds.audit.enabled</name>
+  <name>fs.s3a.bucket.noaa-isd-pds.audit.enabled</name>
   <value>false</value>
-  <description>Do not audit landsat bucket operations</description>
+  <description>Do not audit bucket operations</description>
 </property>
 ```
 
@@ -162,6 +162,26 @@ correlate access by S3 clients to the actual operations taking place.
 Note: this logging is described as "Best Effort". There's no guarantee as to
 when logs arrive.
 
+### Integration with AWS SDK request processing
+
+The auditing component inserts itself into the AWS SDK request processing
+code, so it can attach the referrer header.
+
+It is possible to declare extra classes to add to the processing chain,
+all of which must implement the interface `software.amazon.awssdk.core.interceptor.ExecutionInterceptor`.
+
+The list of classes is set in the configuration option `fs.s3a.audit.execution.interceptors`.
+
+Any class in the list which implements `org.apache.hadoop.conf.Configurable` will have
+`Configurable.setConf()` called with the filesystem configuration passed down.
+
+Before the upgrade to the V2 SDK, a list of extra subclasses of the AWS SDK `com.amazonaws.handlers.RequestHandler2`
+class could be declared in the option `fs.s3a.audit.request.handlers`;
+these would be wired up into the V1 request processing pipeline.
+
+This option is now ignored completely, other than printing a warning message the first time a filesystem is created with a non-empty value.
+
+
 ### Rejecting out-of-span operations
 
 The logging auditor can be configured to raise an exception whenever
@@ -201,7 +221,7 @@ The HTTP referrer header is attached by the logging auditor.
 If the S3 Bucket is configured to log requests to another bucket, then these logs
 entries will include the audit information _as the referrer_.
 
-This can be parsed (consult AWS documentation for a regular expression)
+The S3 Server log entries can be parsed (consult AWS documentation for a regular expression)
 and the http referrer header extracted.
 
 ```
@@ -242,12 +262,14 @@ If any of the field values were `null`, the field is omitted.
 
 _Notes_
 
-* Thread IDs are from the current thread in the JVM, so can be compared to those in`````````
+* Thread IDs are from the current thread in the JVM, so can be compared to those in
   Log4J logs. They are never unique.
 * Task Attempt/Job IDs are only ever set during operations involving the S3A committers, specifically
-  all operations excecuted by the committer.
+  all operations executed by the committer.
   Operations executed in the same thread as the committer's instantiation _may_ also report the
   IDs, even if they are unrelated to the actual task. Consider them "best effort".
+
+Thread IDs are generated as follows:
 
 ```java
 Long.toString(Thread.currentThread().getId())
@@ -268,6 +290,8 @@ In such situations the audit log is incomplete.
 This is why the span ID is always passed in as part of the URL,
 rather than just an HTTP query parameter: even if
 the header is chopped, the span ID will always be present.
+
+As of August 2023, this header is not collected in AWS CloudTrail -only S3 Server logs.
 
 ## Privacy Implications of HTTP Referrer auditing
 
@@ -318,9 +342,9 @@ either globally or for specific buckets:
 </property>
 
 <property>
-  <name>fs.s3a.bucket.landsat-pds.audit.referrer.enabled</name>
+  <name>fs.s3a.bucket.noaa-isd-pds.audit.referrer.enabled</name>
   <value>false</value>
-  <description>Do not add the referrer header to landsat operations</description>
+  <description>Do not add the referrer header to operations</description>
 </property>
 ```
 
@@ -422,6 +446,12 @@ log4j.logger.org.apache.hadoop.fs.s3a.audit=TRACE
 ```
 
 This is very noisy and not recommended in normal operation.
+
+If logging of HTTP IO is enabled then the "referer" header is printed as part of every request:
+```
+log4j.logger.org.apache.http=DEBUG
+log4j.logger.software.amazon.awssdk.thirdparty.org.apache.http.client.HttpClient=DEBUG
+```
 
 ## Integration with S3A Committers
 

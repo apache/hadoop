@@ -1308,12 +1308,12 @@ so returning the special new stream.
 
 
 
-This is done with a "magic" temporary directory name, `__magic`, to indicate that all files
+This is done with a "MAGIC PATH" (where the filesystem knows to remap paths with prefix `__magic_job-${jobId}`) temporary directory name to indicate that all files
 created under this path are not to be completed during the stream write process.
 Directories created under the path will still be created —this allows job- and
 task-specific directories to be created for individual job and task attempts.
 
-For example, the pattern `__magic/${jobID}/${taskId}` could be used to
+For example, the pattern `${MAGIC PATH}/${jobID}/${taskId}` could be used to
 store pending commits to the final directory for that specific task. If that
 task is committed, all pending commit files stored in that path will be loaded
 and used to commit the final uploads.
@@ -1322,19 +1322,19 @@ Consider a job with the final directory `/results/latest`
 
  The intermediate directory for the task 01 attempt 01 of job `job_400_1` would be
 
-    /results/latest/__magic/job_400_1/_task_01_01
+    /results/latest/__magic_job-400/job_400_1/_task_01_01
 
 This would be returned as the temp directory.
 
 When a client attempted to create the file
-`/results/latest/__magic/job_400_1/task_01_01/latest.orc.lzo` , the S3A FS would initiate
+`/results/latest/__magic_job-400/job_400_1/task_01_01/latest.orc.lzo` , the S3A FS would initiate
 a multipart request with the final destination of `/results/latest/latest.orc.lzo`.
 
 As data was written to the output stream, it would be incrementally uploaded as
 individual multipart PUT operations
 
 On `close()`, summary data would be written to the file
-`/results/latest/__magic/job400_1/task_01_01/latest.orc.lzo.pending`.
+`/results/latest/__magic_job-400/job400_1/task_01_01/latest.orc.lzo.pending`.
 This would contain the upload ID and all the parts and etags of uploaded data.
 
 A marker file is also created, so that code which verifies that a newly created file
@@ -1358,7 +1358,7 @@ to the job attempt.
 1. These are merged into to a single `Pendingset` structure.
 1. Which is saved to a `.pendingset` file in the job attempt directory.
 1. Finally, the task attempt directory is deleted. In the example, this
-would be to `/results/latest/__magic/job400_1/task_01_01.pendingset`;
+would be to `/results/latest/__magic_job-400/job400_1/task_01_01.pendingset`;
 
 
 A failure to load any of the single pending upload files (i.e. the file
@@ -1386,9 +1386,9 @@ file.
 
 To allow tasks to generate data in subdirectories, a special filename `__base`
 will be used to provide an extra cue as to the final path. When mapping an output
-path  `/results/latest/__magic/job_400/task_01_01/__base/2017/2017-01-01.orc.lzo.pending`
+path  `/results/latest/__magic_job-400/job_400/task_01_01/__base/2017/2017-01-01.orc.lzo.pending`
 to a final destination path, the path will become `/results/latest/2017/2017-01-01.orc.lzo`.
-That is: all directories between `__magic` and `__base` inclusive will be ignored.
+That is: all directories between `__magic_job-400` and `__base` inclusive will be ignored.
 
 
 **Issues**
@@ -1479,16 +1479,16 @@ Job drivers themselves may be preempted.
 
 One failure case is that the entire execution framework failed; a new process
 must identify outstanding jobs with pending work, and abort them, then delete
-the appropriate `__magic` directories.
+the appropriate `"MAGIC PATH"` directories.
 
-This can be done either by scanning the directory tree for `__magic` directories
+This can be done either by scanning the directory tree for `"MAGIC PATH"` directories
 and scanning underneath them, or by using the `listMultipartUploads()` call to
 list multipart uploads under a path, then cancel them. The most efficient solution
 may be to use `listMultipartUploads` to identify all outstanding request, and use that
-to identify which requests to cancel, and where to scan for `__magic` directories.
+to identify which requests to cancel, and where to scan for `"MAGIC PATH"` directories.
 This strategy should address scalability problems when working with repositories
 with many millions of objects —rather than list all keys searching for those
-with `/__magic/**/*.pending` in their name, work backwards from the active uploads to
+with `/${MAGIC PATH}/**/*.pending` in their name, work backwards from the active uploads to
 the directories with the data.
 
 We may also want to consider having a cleanup operation in the S3 CLI to
@@ -1569,11 +1569,11 @@ a directory, then it is not going to work: the existing data will not be cleaned
 up. A cleanup operation would need to be included in the job commit, deleting
 all files in the destination directory which where not being overwritten.
 
-1. It requires a path element, such as `__magic` which cannot be used
+1. It requires a path element, such as `"MAGIC PATH"` which cannot be used
 for any purpose other than for the storage of pending commit data.
 
 1. Unless extra code is added to every FS operation, it will still be possible
-to manipulate files under the `__magic` tree. That's not bad, just potentially
+to manipulate files under the `"MAGIC PATH"` tree. That's not bad, just potentially
 confusing.
 
 1. As written data is not materialized until the commit, it will not be possible
@@ -1692,9 +1692,9 @@ must be used, which means: the V2 classes.
 #### Resolved issues
 
 
-**Magic Committer: Name of directory**
+**Magic Committer: Directory Naming**
 
-The design proposes the name `__magic` for the directory. HDFS and
+The design proposes `__magic_job-` as the prefix for the magic paths of different jobs for the directory. HDFS and
 the various scanning routines always treat files and directories starting with `_`
 as temporary/excluded data.
 
@@ -1705,14 +1705,14 @@ It is legal to create subdirectories in a task work directory, which
 will then be moved into the destination directory, retaining that directory
 tree.
 
-That is, a if the task working dir is `dest/__magic/app1/task1/`, all files
-under `dest/__magic/app1/task1/part-0000/` must end up under the path
+That is, a if the task working dir is `dest/${MAGIC PATH}/app1/task1/`, all files
+under `dest/${MAGIC PATH}/app1/task1/part-0000/` must end up under the path
 `dest/part-0000/`.
 
 This behavior is relied upon for the writing of intermediate map data in an MR
 job.
 
-This means it is not simply enough to strip off all elements of under `__magic`,
+This means it is not simply enough to strip off all elements of under ``"MAGIC PATH"``,
 it is critical to determine the base path.
 
 Proposed: use the special name `__base` as a marker of the base element for
@@ -1918,9 +1918,9 @@ bandwidth and the data upload bandwidth.
 
 No use is made of the cluster filesystem; there are no risks there.
 
-A malicious user with write access to the `__magic` directory could manipulate
+A malicious user with write access to the ``"MAGIC PATH"`` directory could manipulate
 or delete the metadata of pending uploads, or potentially inject new work int
-the commit. Having access to the `__magic` directory implies write access
+the commit. Having access to the ``"MAGIC PATH"`` directory implies write access
 to the parent destination directory: a malicious user could just as easily
 manipulate the final output, without needing to attack the committer's intermediate
 files.

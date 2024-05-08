@@ -464,10 +464,27 @@ public abstract class YarnClient extends AbstractService {
    * @throws YarnException
    *           in case of errors or if YARN rejects the request due to
    *           access-control restrictions.
-   * @throws IOException
+   * @throws IOException I/O exception has occurred.
    */
   public abstract QueueInfo getQueueInfo(String queueName) throws YarnException,
       IOException;
+
+  /**
+   * <p>
+   * Get information ({@link QueueInfo}) about a given <em>queue</em>.
+   * </p>
+   *
+   * @param queueName
+   *          Name of the queue whose information is needed.
+   * @param subClusterId sub-cluster Id.
+   * @return queue information.
+   * @throws YarnException
+   *           in case of errors or if YARN rejects the request due to
+   *           access-control restrictions.
+   * @throws IOException I/O exception has occurred.
+   */
+  public abstract QueueInfo getQueueInfo(String queueName, String subClusterId)
+      throws YarnException, IOException;
 
   /**
    * <p>

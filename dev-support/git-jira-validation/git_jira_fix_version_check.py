@@ -30,7 +30,7 @@ import subprocess
 
 from jira import JIRA
 
-jira_project_name = input("JIRA Project Name (e.g HADOOP / OZONE etc): ") \
+jira_project_name = input("JIRA Project Name (default: HADOOP): ") \
                     or "HADOOP"
 # Define project_jira_keys with - appended. e.g for HADOOP Jiras,
 # project_jira_keys should include HADOOP-, HDFS-, YARN-, MAPREDUCE-
