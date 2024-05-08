@@ -1000,8 +1000,12 @@ public class TestObserverWithRouter {
     fileSystem2.open(path).close();
     
     long observerCount2 = routerContext.getRouter().getRpcServer().getRPCMetrics().getObserverProxyOps();
-    
     assertEquals("There should no extra calls to the observer", observerCount1, observerCount2);
+
+    fileSystem.open(path).close();
+    long observerCount3 = routerContext.getRouter().getRpcServer().getRPCMetrics().getObserverProxyOps();
+    assertTrue("Old filesystem will send calls to observer", observerCount3 > observerCount2);
+
   }
   
   
