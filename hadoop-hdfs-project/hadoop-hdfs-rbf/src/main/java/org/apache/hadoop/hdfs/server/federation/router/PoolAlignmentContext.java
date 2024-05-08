@@ -64,7 +64,7 @@ public class PoolAlignmentContext implements AlignmentContext {
    */
   @Override
   public void receiveResponseState(RpcHeaderProtos.RpcResponseHeaderProto header) {
-    if (header.getStateId() <= 0) {
+    if (header.getStateId() == 0 && sharedGlobalStateId.get() > 0) {
       sharedGlobalStateId.reset();
     } else {
       sharedGlobalStateId.accumulate(header.getStateId());

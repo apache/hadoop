@@ -979,7 +979,8 @@ public class TestObserverWithRouter {
 
   @EnumSource(ConfigSetting.class)
   @ParameterizedTest
-  public void testRestartingNamenodeWithStateIDContextDisabled(ConfigSetting configSetting) throws Exception {
+  public void testRestartingNamenodeWithStateIDContextDisabled(ConfigSetting configSetting)
+      throws Exception {
     fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads(configSetting));
     Path path = new Path("/testFile1");
     // Send Create call to active
@@ -988,7 +989,8 @@ public class TestObserverWithRouter {
     // Send read request
     fileSystem.open(path).close();
 
-    long observerCount1 = routerContext.getRouter().getRpcServer().getRPCMetrics().getObserverProxyOps();
+    long observerCount1 = routerContext.getRouter().getRpcServer()
+        .getRPCMetrics().getObserverProxyOps();
 
     // Restart active namenodes and disable sending state id.
     restartActiveWithStateIDContextDisabled();
@@ -999,11 +1001,13 @@ public class TestObserverWithRouter {
     fileSystem2.msync();
     fileSystem2.open(path).close();
 
-    long observerCount2 = routerContext.getRouter().getRpcServer().getRPCMetrics().getObserverProxyOps();
+    long observerCount2 = routerContext.getRouter().getRpcServer()
+        .getRPCMetrics().getObserverProxyOps();
     assertEquals("There should no extra calls to the observer", observerCount1, observerCount2);
 
     fileSystem.open(path).close();
-    long observerCount3 = routerContext.getRouter().getRpcServer().getRPCMetrics().getObserverProxyOps();
+    long observerCount3 = routerContext.getRouter().getRpcServer()
+        .getRPCMetrics().getObserverProxyOps();
     assertTrue("Old filesystem will send calls to observer", observerCount3 > observerCount2);
   }
 
@@ -1013,8 +1017,8 @@ public class TestObserverWithRouter {
       if (nameNode != null && nameNode.isActiveState()) {
         Configuration conf = new Configuration();
         setConfDefaults(conf);
-        // Disable stateId context
-        cluster.getCluster().getConfiguration(nnIndex).setBoolean(DFS_NAMENODE_STATE_CONTEXT_ENABLED_KEY, false);
+        cluster.getCluster().getConfiguration(nnIndex)
+            .setBoolean(DFS_NAMENODE_STATE_CONTEXT_ENABLED_KEY, false);
         cluster.getCluster().restartNameNode(nnIndex, true);
         cluster.getCluster().getNameNode(nnIndex).isActiveState();
       }
