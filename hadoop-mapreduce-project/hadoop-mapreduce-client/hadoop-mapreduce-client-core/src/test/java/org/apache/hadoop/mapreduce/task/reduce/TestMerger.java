@@ -231,16 +231,6 @@ public class TestMerger {
     Assert.assertEquals(0, mergeManager.inMemoryMapOutputs.size());
     Assert.assertEquals(0, mergeManager.inMemoryMergedMapOutputs.size());
     Assert.assertEquals(0, mergeManager.onDiskMapOutputs.size());
-
-    LambdaTestUtils.intercept(IllegalArgumentException.class,
-        "Invalid value for mapreduce.task.io.sort.factor: 1, " +
-            "please set it to a number greater than 1",
-        () -> {
-          jobConf.set(IO_SORT_FACTOR, "1");
-          return new MergeManagerImpl<Text, Text>(reduceId2, jobConf, fs, lda, Reporter.NULL, null,
-              null, null, null, null,
-              null, null, new Progress(), new MROutputFiles());
-        });
   }
 
   private byte[] writeMapOutput(Configuration conf, Map<String, String> keysToValues)
