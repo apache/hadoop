@@ -179,9 +179,8 @@ public class MergeManagerImpl<K, V> implements MergeManager<K, V> {
     this.ioSortFactor = jobConf.getInt(MRJobConfig.IO_SORT_FACTOR,
         MRJobConfig.DEFAULT_IO_SORT_FACTOR);
     if (this.ioSortFactor <= 1) {
-      throw new IllegalArgumentException("Invalid value for "
-          + MRJobConfig.IO_SORT_FACTOR +": "
-          + this.ioSortFactor + ", please set it to a number greater than 1");
+      LOG.warn("Invalid value for {} : {}, please set it to a number greater than 1",
+          MRJobConfig.IO_SORT_FACTOR, this.ioSortFactor);
     }
 
     final float singleShuffleMemoryLimitPercent =
