@@ -984,31 +984,29 @@ public class TestObserverWithRouter {
     Path path = new Path("/testFile1");
     // Send Create call to active
     fileSystem.create(path).close();
-    
+
     // Send read request
     fileSystem.open(path).close();
-    
+
     long observerCount1 = routerContext.getRouter().getRpcServer().getRPCMetrics().getObserverProxyOps();
-    
+
     // Restart active namenodes and disable sending state id.
     restartActiveWithStateIDContextDisabled();
-    
+
     Configuration conf = getConfToEnableObserverReads(configSetting);
     conf.setBoolean("fs.hdfs.impl.disable.cache", true);
     FileSystem fileSystem2 = routerContext.getFileSystem(conf);
     fileSystem2.msync();
     fileSystem2.open(path).close();
-    
+
     long observerCount2 = routerContext.getRouter().getRpcServer().getRPCMetrics().getObserverProxyOps();
     assertEquals("There should no extra calls to the observer", observerCount1, observerCount2);
 
     fileSystem.open(path).close();
     long observerCount3 = routerContext.getRouter().getRpcServer().getRPCMetrics().getObserverProxyOps();
     assertTrue("Old filesystem will send calls to observer", observerCount3 > observerCount2);
-
   }
-  
-  
+
   void restartActiveWithStateIDContextDisabled() throws Exception {
     for (int nnIndex = 0; nnIndex < cluster.getNamenodes().size(); nnIndex++) {
       NameNode nameNode = cluster.getCluster().getNameNode(nnIndex);
