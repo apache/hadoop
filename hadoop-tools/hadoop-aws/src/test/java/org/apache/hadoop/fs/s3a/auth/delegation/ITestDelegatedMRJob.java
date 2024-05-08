@@ -33,6 +33,7 @@ import org.apache.hadoop.examples.WordCount;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
@@ -53,12 +54,14 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.assumeSessionTestsEnabled;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.deployService;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestPropertyInt;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.terminateService;
 import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.probeForAssumedRoleARN;
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.*;
 import static org.apache.hadoop.fs.s3a.auth.delegation.MiniKerberizedHadoopCluster.assertSecurityEnabled;
 import static org.apache.hadoop.fs.s3a.auth.delegation.MiniKerberizedHadoopCluster.closeUserFileSystems;
 import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.getOrcData;
+import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.isUsingDefaultExternalDataFile;
 import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.requireAnonymousDataPath;
 
 /**
@@ -175,7 +178,7 @@ public class ITestDelegatedMRJob extends AbstractDelegationIT {
     String host = jobResourceUri.getHost();
     // and fix to the main endpoint if the caller has moved
     conf.set(
-        String.format("fs.s3a.bucket.%s.endpoint", host), "us-east-1");
+        String.format("fs.s3a.bucket.%s.endpoint", host), "");
 
     // set up DTs
     enableDelegationTokens(conf, tokenBinding);
@@ -251,6 +254,10 @@ public class ITestDelegatedMRJob extends AbstractDelegationIT {
   public void testJobSubmissionCollectsTokens() throws Exception {
     describe("Mock Job test");
     JobConf conf = new JobConf(getConfiguration());
+    if (isUsingDefaultExternalDataFile(conf)) {
+      removeBaseAndBucketOverrides(conf,
+          Constants.ENDPOINT);
+    }
 
     // the input here is the external file; which lets
     // us differentiate source URI from dest URI

@@ -2055,10 +2055,13 @@ public class DatanodeManager {
     }
   }
   
-  public void markAllDatanodesStale() {
-    LOG.info("Marking all datanodes as stale");
+  public void markAllDatanodesStaleAndSetKeyUpdateIfNeed() {
+    LOG.info("Marking all datanodes as stale and schedule update block token if need.");
     synchronized (this) {
       for (DatanodeDescriptor dn : datanodeMap.values()) {
+        if (blockManager.isBlockTokenEnabled()) {
+          dn.setNeedKeyUpdate(true);
+        }
         for(DatanodeStorageInfo storage : dn.getStorageInfos()) {
           storage.markStaleAfterFailover();
         }
