@@ -126,7 +126,7 @@ public final class ZKCuratorManager {
    * Start the connection to the ZooKeeper ensemble.
    * @throws IOException If the connection cannot be started.
    */
-  public void start() throws IOException{
+  public void start() throws IOException {
     this.start(new ArrayList<>());
   }
 
@@ -135,7 +135,7 @@ public final class ZKCuratorManager {
    * @param authInfos List of authentication keys.
    * @throws IOException If the connection cannot be started.
    */
-  public void start(List<AuthInfo> authInfos) throws IOException{
+  public void start(List<AuthInfo> authInfos) throws IOException {
     this.start(authInfos, false);
   }
 
@@ -144,7 +144,7 @@ public final class ZKCuratorManager {
    * @param zkHostPort Host:Port of the ZooKeeper.
    * @throws IOException If the connection cannot be started.
    */
-  public void start(String zkHostPort) throws IOException{
+  public void start(String zkHostPort) throws IOException {
     this.start(new ArrayList<>(), false, zkHostPort);
   }
 
@@ -154,7 +154,7 @@ public final class ZKCuratorManager {
    * @param sslEnabled If the connection should be SSL/TLS encrypted.
    * @throws IOException If the connection cannot be started.
    */
-  public void start(List<AuthInfo> authInfos, boolean sslEnabled) throws IOException{
+  public void start(List<AuthInfo> authInfos, boolean sslEnabled) throws IOException {
     this.start(authInfos, sslEnabled, null);
   }
 
@@ -167,7 +167,7 @@ public final class ZKCuratorManager {
    * @throws IOException            If the connection cannot be started.
    */
   public void start(List<AuthInfo> authInfos, boolean sslEnabled, String zkHostPort)
-      throws IOException{
+      throws IOException {
 
     ZKClientConfig zkClientConfig = new ZKClientConfig();
 
