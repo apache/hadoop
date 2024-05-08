@@ -21,18 +21,16 @@ package org.apache.hadoop.fs.s3a;
 import java.io.IOException;
 import java.util.Optional;
 
-import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.junit.Test;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 import static org.apache.hadoop.fs.s3a.EncryptionTestUtils.validateEncryptionFileAttributes;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
-import static org.apache.hadoop.fs.s3a.S3AUtils.getS3EncryptionKey;
 import static org.hamcrest.CoreMatchers.containsString;
 
 /**
@@ -67,6 +65,7 @@ public class ITestS3AEncryptionSSEKMSDefaultKey
 
   @Test
   public void testEncryptionFileAttributes() throws Exception {
+    describe("Test for correct encryption file attributes for SSE-KMS with server default key.");
     Path path = path(createFilename(1024));
     byte[] data = dataset(1024, 'a', 'z');
     S3AFileSystem fs = getFileSystem();

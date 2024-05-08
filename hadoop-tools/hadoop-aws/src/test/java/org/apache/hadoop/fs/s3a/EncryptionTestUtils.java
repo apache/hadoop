@@ -132,12 +132,15 @@ public final class EncryptionTestUtils {
                                                 String algorithm,
                                                 Optional<String> kmsKey) throws IOException {
     Map<String, byte[]> xAttrs = fs.getXAttrs(path);
+    Assertions.assertThat(xAttrs.get(XA_SERVER_SIDE_ENCRYPTION))
+            .describedAs("Server side encryption must not be null")
+            .isNotNull();
     Assertions.assertThat(HeaderProcessing.decodeBytes(xAttrs.get(XA_SERVER_SIDE_ENCRYPTION)))
                     .describedAs("Server side encryption algorithm must match")
                     .isEqualTo(algorithm);
-    Assertions.assertThat(xAttrs.containsKey(XA_ENCRYPTION_KEY_ID))
+    Assertions.assertThat(xAttrs)
             .describedAs("Encryption key id should be present")
-            .isTrue();
+            .containsKey(XA_ENCRYPTION_KEY_ID);
     kmsKey.ifPresent(s -> Assertions.assertThat(HeaderProcessing.decodeBytes(xAttrs.get(XA_ENCRYPTION_KEY_ID)))
               .describedAs("Encryption key id should match with the kms key")
               .isEqualTo(s));

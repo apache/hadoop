@@ -46,8 +46,6 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfEncryptionNotSet;
 import static org.apache.hadoop.fs.s3a.S3AUtils.getS3EncryptionKey;
-import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.XA_ENCRYPTION_KEY_ID;
-import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.XA_SERVER_SIDE_ENCRYPTION;
 
 /**
  * Concrete class that extends {@link AbstractTestS3AEncryption}
@@ -106,6 +104,7 @@ public class ITestS3AEncryptionWithDefaultS3Settings extends
 
   @Test
   public void testEncryptionFileAttributes() throws Exception {
+    describe("Test for correct encryption file attributes for SSE-KMS with user default setting.");
     Path path = path(createFilename(1024));
     byte[] data = dataset(1024, 'a', 'z');
     S3AFileSystem fs = getFileSystem();
