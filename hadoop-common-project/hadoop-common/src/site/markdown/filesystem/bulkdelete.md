@@ -39,7 +39,10 @@ restrictions do not state what the outcome will be when executed on other stores
 ### Interface `org.apache.hadoop.fs.BulkDeleteSource`
 
 The interface `BulkDeleteSource` is offered by a FileSystem/FileContext class if
-it supports the API.
+it supports the API. The default implementation is implemented in base FileSystem
+class that returns an instance of `org.apache.hadoop.fs.impl.DefaultBulkDeleteOperation`.
+The default implementation details are provided in below sections.
+
 
 ```java
 @InterfaceAudience.Public

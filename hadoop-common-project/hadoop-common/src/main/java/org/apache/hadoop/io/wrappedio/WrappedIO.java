@@ -54,7 +54,7 @@ public final class WrappedIO {
    * @throws IllegalArgumentException path not valid.
    * @throws IOException problems resolving paths
    */
-  public static int bulkDeletePageSize(FileSystem fs, Path path) throws IOException {
+  public static int bulkDelete_PageSize(FileSystem fs, Path path) throws IOException {
     try (BulkDelete bulk = fs.createBulkDelete(path)) {
       return bulk.pageSize();
     }
@@ -82,9 +82,9 @@ public final class WrappedIO {
    * @throws IOException IO problems including networking, authentication and more.
    * @throws IllegalArgumentException if a path argument is invalid.
    */
-  public static List<Map.Entry<Path, String>> bulkDelete(FileSystem fs,
-                                                         Path base,
-                                                         Collection<Path> paths)
+  public static List<Map.Entry<Path, String>> bulkDelete_delete(FileSystem fs,
+                                                                Path base,
+                                                                Collection<Path> paths)
         throws IOException {
     try (BulkDelete bulk = fs.createBulkDelete(base)) {
       return bulk.bulkDelete(paths);

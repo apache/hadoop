@@ -48,7 +48,7 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.propagateBucketOptions;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.lookupMeanStatistic;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.STORE_IO_RATE_LIMITED_DURATION;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_MEAN;
-import static org.apache.hadoop.io.wrappedio.WrappedIO.bulkDelete;
+import static org.apache.hadoop.io.wrappedio.WrappedIO.bulkDelete_delete;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -160,7 +160,7 @@ public class ITestS3AContractBulkDelete extends AbstractContractBulkDeleteTest {
       // Adding more paths only if multi-object delete is enabled.
       paths.add(filePath);
     }
-    assertSuccessfulBulkDelete(bulkDelete(getFileSystem(), basePath, paths));
+    assertSuccessfulBulkDelete(bulkDelete_delete(getFileSystem(), basePath, paths));
     // During the bulk delete operation, the directories are not deleted in S3A.
     assertIsDirectory(dirPath);
   }
@@ -174,7 +174,7 @@ public class ITestS3AContractBulkDelete extends AbstractContractBulkDeleteTest {
     fs.mkdirs(subDir);
     // adding parent directory to the list of paths.
     paths.add(dirPath);
-    assertSuccessfulBulkDelete(bulkDelete(getFileSystem(), basePath, paths));
+    assertSuccessfulBulkDelete(bulkDelete_delete(getFileSystem(), basePath, paths));
     // During the bulk delete operation, the directories are not deleted in S3A.
     assertIsDirectory(dirPath);
     assertIsDirectory(subDir);
@@ -188,7 +188,7 @@ public class ITestS3AContractBulkDelete extends AbstractContractBulkDeleteTest {
     touch(fs, file);
     // adding parent directory to the list of paths.
     paths.add(dirPath);
-    assertSuccessfulBulkDelete(bulkDelete(getFileSystem(), basePath, paths));
+    assertSuccessfulBulkDelete(bulkDelete_delete(getFileSystem(), basePath, paths));
     // During the bulk delete operation,
     // the directories are not deleted in S3A.
     assertIsDirectory(dirPath);

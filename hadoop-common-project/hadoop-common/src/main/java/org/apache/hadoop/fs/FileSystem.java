@@ -4984,7 +4984,8 @@ public abstract class FileSystem extends Configured
   }
 
   /**
-   * Create a default bulk delete operation to be used for any FileSystem.
+   * Create a bulk delete operation.
+   * The default implementation returns an instance of {@link DefaultBulkDeleteOperation}.
    * @param path base path for the operation.
    * @return an instance of the bulk delete.
    * @throws IllegalArgumentException any argument is invalid.
