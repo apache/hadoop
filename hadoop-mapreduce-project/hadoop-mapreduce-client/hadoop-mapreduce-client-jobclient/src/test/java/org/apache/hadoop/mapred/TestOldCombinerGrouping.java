@@ -122,7 +122,7 @@ public class TestOldCombinerGrouping {
   @After
   public void cleanup() {
     FileUtil.fullyDelete(TEST_ROOT_DIR);
-  } 
+  }
 
   @Test
   public void testCombiner() throws Exception {

@@ -58,8 +58,8 @@ public class TestMapTask {
     if(!TEST_ROOT_DIR.exists()) {
       TEST_ROOT_DIR.mkdirs();
     }
-  } 
- 
+  }
+
   @After
   public void cleanup() throws Exception {
     FileUtil.fullyDelete(TEST_ROOT_DIR);

@@ -109,7 +109,7 @@ public class TestNewCombinerGrouping {
   public void cleanup() {
     FileUtil.fullyDelete(TEST_ROOT_DIR);
   }
-  
+
   @Test
   public void testCombiner() throws Exception {
     if (!TEST_ROOT_DIR.mkdirs()) {
