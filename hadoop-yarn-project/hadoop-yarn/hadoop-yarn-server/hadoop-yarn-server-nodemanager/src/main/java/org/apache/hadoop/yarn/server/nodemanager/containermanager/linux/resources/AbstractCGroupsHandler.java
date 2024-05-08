@@ -414,9 +414,10 @@ public abstract class AbstractCGroupsHandler implements CGroupsHandler {
   public String createCGroup(CGroupController controller, String cGroupId)
       throws ResourceHandlerException {
     String path = getPathForCGroup(controller, cGroupId);
+    File cgroup = new File(path);
     LOG.debug("createCgroup: {}", path);
 
-    if (!new File(path).mkdir()) {
+    if (!cgroup.exists() && !cgroup.mkdir()) {
       throw new ResourceHandlerException("Failed to create cgroup at " + path);
     }
 

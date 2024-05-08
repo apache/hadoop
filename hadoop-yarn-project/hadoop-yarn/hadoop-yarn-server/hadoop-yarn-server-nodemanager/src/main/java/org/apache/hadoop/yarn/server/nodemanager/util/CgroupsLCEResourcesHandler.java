@@ -175,7 +175,7 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
           String.valueOf(limits[0]));
       updateCgroup(CONTROLLER_CPU, "", CPU_QUOTA_US,
           String.valueOf(limits[1]));
-    } else if (CGroupsCpuResourceHandlerImpl.cpuLimitsExist(
+    } else if (CGroupsCpuResourceHandlerImpl.checkCgroupV1CPULimitExists(
         pathForCgroup(CONTROLLER_CPU, ""))) {
       LOG.info("Removing CPU constraints for YARN containers.");
       updateCgroup(CONTROLLER_CPU, "", CPU_QUOTA_US, String.valueOf(-1));
