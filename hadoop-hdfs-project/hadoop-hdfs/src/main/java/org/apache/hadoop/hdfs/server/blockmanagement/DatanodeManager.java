@@ -1361,11 +1361,7 @@ public class DatanodeManager {
         continue;
       }
       try {
-        synchronized (this) {
-          networktopology.remove(dnDescriptor);
-          dnDescriptor.setNetworkLocation(resolvedNetwork);
-          networktopology.add(dnDescriptor); // may throw InvalidTopologyException
-        }
+        networktopology.updateNodeNetworkLocation(dnDescriptor, resolvedNetwork);
       } catch (Throwable e) {
         LOG.error("{}.refreshTopology: update datanode: {} failed. reset from Rack: {} to Rack: {}.",
             getClass().getSimpleName(), dnDescriptor, resolvedNetwork, originNetwork);
