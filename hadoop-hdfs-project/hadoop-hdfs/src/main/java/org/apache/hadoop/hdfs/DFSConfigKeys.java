@@ -2072,4 +2072,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final long DFS_LEASE_HARDLIMIT_DEFAULT =
       HdfsClientConfigKeys.DFS_LEASE_HARDLIMIT_DEFAULT;
 
+  public static final String DFS_NAMENODE_PENDING_EC_BLOCKS_REPLICATION_FACTOR =
+      "dfs.namenode.pending.ec.blocks.replication.factor";
+  public static final int DFS_NAMENODE_PENDING_EC_BLOCKS_REPLICATION_FACTOR_DEFAULT = 6;
 }

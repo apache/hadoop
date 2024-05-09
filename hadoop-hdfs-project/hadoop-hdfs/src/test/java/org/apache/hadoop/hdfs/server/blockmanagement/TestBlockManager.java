@@ -2329,4 +2329,51 @@ public class TestBlockManager {
       DataNodeFaultInjector.set(oldInjector);
     }
   }
+
+  @Test
+  public void testScheduleReconstructionforECBlockWhenReachLimit() {
+    NameNode.initMetrics(new Configuration(), HdfsServerConstants.NamenodeRole.NAMENODE);
+
+    // 1 Set limit and factor for block manager
+    bm.setMaxReplicationStreams(2);
+    bm.setReplicationStreamsHardLimit(2);
+    bm.setPendingECBlockReplicationFactor(1);
+
+    // 2 Init blockId, ecPolicy and storage for construct ec block
+    long blockId = -9223372036854775776L;
+    // RS-3-2 EC policy
+    ErasureCodingPolicy ecPolicy = SystemErasureCodingPolicies.getPolicies().get(1);
+    // create 4 storageInfo, which means 1 block is missing
+    DatanodeStorageInfo ds1 = DFSTestUtil.createDatanodeStorageInfo(
+        "storage1", "1.1.1.1", "rack1", "host1");
+    DatanodeStorageInfo ds2 = DFSTestUtil.createDatanodeStorageInfo(
+        "storage2", "2.2.2.2", "rack2", "host2");
+    DatanodeStorageInfo ds3 = DFSTestUtil.createDatanodeStorageInfo(
+        "storage3", "3.3.3.3", "rack3", "host3");
+    DatanodeStorageInfo ds4 = DFSTestUtil.createDatanodeStorageInfo(
+        "storage4", "4.4.4.4", "rack4", "host4");
+    for (int i = 0; i < 10; i++) {
+      // 3 construct ec block
+      blockId = blockId + 16;
+      // create an EC block group: 3 data blocks + 2 parity blocks
+      Block aBlockGroup =
+          new Block(blockId, ecPolicy.getCellSize() * ecPolicy.getNumDataUnits(), 0);
+      BlockInfoStriped aBlockInfoStriped = new BlockInfoStriped(aBlockGroup, ecPolicy);
+      // link block with storage
+      aBlockInfoStriped.addStorage(ds1, aBlockGroup);
+      aBlockInfoStriped.addStorage(ds2, new Block(blockId + 1, 0, 0));
+      aBlockInfoStriped.addStorage(ds3, new Block(blockId + 2, 0, 0));
+      aBlockInfoStriped.addStorage(ds4, new Block(blockId + 3, 0, 0));
+      addEcBlockToBM(blockId, ecPolicy);
+      aBlockInfoStriped.setBlockCollectionId(mockINodeId);
+
+      // 4 schedule block
+      BlockReconstructionWork work = bm.scheduleReconstruction(aBlockInfoStriped, 3);
+      if (i < 2) {
+        assertNotNull(work);
+      } else {
+        assertNull("Work should not be constructed when dn reaches replication limit!", work);
+      }
+    }
+  }
 }

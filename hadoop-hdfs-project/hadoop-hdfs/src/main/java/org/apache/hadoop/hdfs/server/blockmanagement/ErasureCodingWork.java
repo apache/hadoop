@@ -49,6 +49,9 @@ class ErasureCodingWork extends BlockReconstructionWork {
     this.liveBlockIndices = liveBlockIndices;
     this.liveBusyBlockIndices = liveBusyBlockIndices;
     this.excludeReconstructedIndices = excludeReconstrutedIndices;
+    for (DatanodeDescriptor datanode : getSrcNodes()) {
+      datanode.incrementECBlockPendingReplicationWithoutTargets();
+    }
     LOG.debug("Creating an ErasureCodingWork to {} reconstruct ",
         block);
   }
@@ -61,20 +64,26 @@ class ErasureCodingWork extends BlockReconstructionWork {
   void chooseTargets(BlockPlacementPolicy blockplacement,
       BlockStoragePolicySuite storagePolicySuite,
       Set<Node> excludedNodes) {
-    // TODO: new placement policy for EC considering multiple writers
-    DatanodeStorageInfo[] chosenTargets = null;
-    // HDFS-14720. If the block is deleted, the block size will become
-    // BlockCommand.NO_ACK (LONG.MAX_VALUE) . This kind of block we don't need
-    // to send for replication or reconstruction
-    if (!getBlock().isDeleted()) {
-      chosenTargets = blockplacement.chooseTarget(
-          getSrcPath(), getAdditionalReplRequired(), getSrcNodes()[0],
-          getLiveReplicaStorages(), false, excludedNodes, getBlockSize(),
-          storagePolicySuite.getPolicy(getStoragePolicyID()), null);
-    } else {
-      LOG.warn("ErasureCodingWork could not need choose targets for {}", getBlock());
+    try {
+      // TODO: new placement policy for EC considering multiple writers
+      DatanodeStorageInfo[] chosenTargets = null;
+      // HDFS-14720. If the block is deleted, the block size will become
+      // BlockCommand.NO_ACK (LONG.MAX_VALUE) . This kind of block we don't need
+      // to send for replication or reconstruction
+      if (!getBlock().isDeleted()) {
+        chosenTargets = blockplacement.chooseTarget(
+            getSrcPath(), getAdditionalReplRequired(), getSrcNodes()[0],
+            getLiveReplicaStorages(), false, excludedNodes, getBlockSize(),
+            storagePolicySuite.getPolicy(getStoragePolicyID()), null);
+      } else {
+        LOG.warn("ErasureCodingWork could not need choose targets for {}", getBlock());
+      }
+      setTargets(chosenTargets);
+    } finally {
+      for (DatanodeDescriptor datanode : getSrcNodes()) {
+        datanode.decrementECBlockPendingReplicationWithoutTargets();
+      }
     }
-    setTargets(chosenTargets);
   }
 
   /**

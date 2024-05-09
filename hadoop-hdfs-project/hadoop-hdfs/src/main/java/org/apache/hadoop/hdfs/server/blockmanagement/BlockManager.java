@@ -496,6 +496,8 @@ public class BlockManager implements BlockStatsMXBean {
    */
   private long excessRedundancyTimeoutCheckLimit;
 
+  private int pendingECBlockReplicationFactor;
+
   public BlockManager(final Namesystem namesystem, boolean haEnabled,
       final Configuration conf) throws IOException {
     this.namesystem = namesystem;
@@ -602,7 +604,9 @@ public class BlockManager implements BlockStatsMXBean {
     this.deleteCorruptReplicaImmediately =
         conf.getBoolean(DFS_NAMENODE_CORRUPT_BLOCK_DELETE_IMMEDIATELY_ENABLED,
             DFS_NAMENODE_CORRUPT_BLOCK_DELETE_IMMEDIATELY_ENABLED_DEFAULT);
-
+    this.pendingECBlockReplicationFactor = Math.max(
+        conf.getInt(DFS_NAMENODE_PENDING_EC_BLOCKS_REPLICATION_FACTOR,
+            DFS_NAMENODE_PENDING_EC_BLOCKS_REPLICATION_FACTOR_DEFAULT), 1);
     setExcessRedundancyTimeout(conf.getLong(DFS_NAMENODE_EXCESS_REDUNDANCY_TIMEOUT_SEC_KEY,
         DFS_NAMENODE_EXCESS_REDUNDANCY_TIMEOUT_SEC_DEAFULT));
     setExcessRedundancyTimeoutCheckLimit(conf.getLong(
@@ -2627,7 +2631,7 @@ public class BlockManager implements BlockStatsMXBean {
 
       if (priority != LowRedundancyBlocks.QUEUE_HIGHEST_PRIORITY
           && (!node.isDecommissionInProgress() && !node.isEnteringMaintenance())
-          && node.getNumberOfBlocksToBeReplicated() +
+          && node.getNumberOfBlocksToBeReplicated(pendingECBlockReplicationFactor) +
           node.getNumberOfBlocksToBeErasureCoded() >= maxReplicationStreams) {
         if (isStriped && (state == StoredReplicaState.LIVE
             || state == StoredReplicaState.DECOMMISSIONING)) {
@@ -2638,7 +2642,7 @@ public class BlockManager implements BlockStatsMXBean {
         continue; // already reached replication limit
       }
 
-      if (node.getNumberOfBlocksToBeReplicated() +
+      if (node.getNumberOfBlocksToBeReplicated(pendingECBlockReplicationFactor) +
           node.getNumberOfBlocksToBeErasureCoded() >= replicationStreamsHardLimit) {
         if (isStriped && (state == StoredReplicaState.LIVE
             || state == StoredReplicaState.DECOMMISSIONING)) {
@@ -5828,5 +5832,10 @@ public class BlockManager implements BlockStatsMXBean {
   @VisibleForTesting
   public int getMinBlocksForWrite(BlockType blockType) {
     return placementPolicies.getPolicy(blockType).getMinBlocksForWrite();
+  }
+
+  @VisibleForTesting
+  void setPendingECBlockReplicationFactor(int pendingECBlockReplicationFactor) {
+    this.pendingECBlockReplicationFactor = Math.max(pendingECBlockReplicationFactor, 1);
   }
 }

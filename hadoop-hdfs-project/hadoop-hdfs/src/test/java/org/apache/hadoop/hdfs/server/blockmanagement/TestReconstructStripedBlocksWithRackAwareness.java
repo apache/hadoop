@@ -213,7 +213,7 @@ public class TestReconstructStripedBlocksWithRackAwareness {
           DatanodeDescriptor dn = storage.getDatanodeDescriptor();
           Assert.assertEquals("Block to be erasure coded is wrong for datanode:"
               + dn, 0, dn.getNumberOfBlocksToBeErasureCoded());
-          if (dn.getNumberOfBlocksToBeReplicated() == 1) {
+          if (dn.getNumberOfBlocksToBeReplicated(1) == 1) {
             scheduled = true;
           }
         }
