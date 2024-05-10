@@ -21,6 +21,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -125,6 +127,30 @@ public class DatanodeUtil {
     String path = DataStorage.BLOCK_SUBDIR_PREFIX + d1 + SEP +
         DataStorage.BLOCK_SUBDIR_PREFIX + d2;
     return new File(root, path);
+  }
+
+  /**
+   * Take an example: we hava a block with blockid mapping to:
+   * "/data1/hadoop/hdfs/datanode/current/BP-xxxx/current/finalized/subdir0/subdir0"
+   * We return "subdir0/subdir0"
+   * @return
+   */
+  public static String idToBlockDirSuffixName(long blockId) {
+    int d1 = (int) ((blockId >> 16) & 0x1F);
+    int d2 = (int) ((blockId >> 8) & 0x1F);
+    return DataStorage.BLOCK_SUBDIR_PREFIX + d1 + SEP +
+        DataStorage.BLOCK_SUBDIR_PREFIX + d2;
+  }
+  
+  public static List<String> getAllSubDirNameForDataSetLock() {
+    List<String> res = new ArrayList<>();
+    for (int d1 = 0; d1 <= 0x1F; d1++) {
+      for (int d2 = 0; d2 <= 0x1F; d2++) {
+        res.add(DataStorage.BLOCK_SUBDIR_PREFIX + d1 + SEP +
+            DataStorage.BLOCK_SUBDIR_PREFIX + d2);
+      }
+    }
+    return res;
   }
 
   /**

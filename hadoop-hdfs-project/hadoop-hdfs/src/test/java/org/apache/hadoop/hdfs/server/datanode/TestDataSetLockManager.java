@@ -37,6 +37,7 @@ public class TestDataSetLockManager {
   public void testBaseFunc() {
     manager.addLock(LockLevel.BLOCK_POOl, "BPtest");
     manager.addLock(LockLevel.VOLUME, "BPtest", "Volumetest");
+    manager.addLock(LockLevel.DIR, "BPtest", "Volumetest", "SubDirtest");
 
     AutoCloseDataSetLock lock = manager.writeLock(LockLevel.BLOCK_POOl, "BPtest");
     AutoCloseDataSetLock lock1 = manager.readLock(LockLevel.BLOCK_POOl, "BPtest");
@@ -59,6 +60,15 @@ public class TestDataSetLockManager {
     lock5.close();
     lock4.close();
 
+    manager.lockLeakCheck();
+    assertNull(manager.getLastException());
+
+    AutoCloseDataSetLock lock6 = manager.writeLock(LockLevel.BLOCK_POOl, "BPtest");
+    AutoCloseDataSetLock lock7 = manager.readLock(LockLevel.VOLUME, "BPtest", "Volumetest");
+    AutoCloseDataSetLock lock8 = manager.readLock(LockLevel.DIR, "BPtest", "Volumetest", "SubDirtest");
+    lock8.close();
+    lock7.close();
+    lock6.close();
     manager.lockLeakCheck();
     assertNull(manager.getLastException());
 
@@ -89,4 +99,5 @@ public class TestDataSetLockManager {
     Exception lastException = manager.getLastException();
     assertEquals(lastException.getMessage(), "lock Leak");
   }
+
 }
