@@ -172,4 +172,10 @@ public class DataNodeFaultInjector {
    * Just delay getMetaDataInputStream a while.
    */
   public void delayGetMetaDataInputStream() {}
+  
+  /*
+   * Increase DatanodeNetworkErrors.
+   * @param dataXceiver
+   */
+  public void incrementDatanodeNetworkErrors(DataXceiver dataXceiver) { }
 }

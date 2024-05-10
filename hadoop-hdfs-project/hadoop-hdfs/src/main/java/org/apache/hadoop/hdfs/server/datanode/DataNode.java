@@ -140,6 +140,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -2760,6 +2761,28 @@ public class DataNode extends ReconfigurableBase
 
   @Override // DataNodeMXBean
   public Map<String, Map<String, Long>> getDatanodeNetworkCounts() {
+    int maxDisplay = getConf().getInt(DFSConfigKeys.DFS_DATANODE_NETWORKERRORS_DISPLAY_TOPCOUNT,
+        DFSConfigKeys.DFS_DATANODE_NETWORKERRORS_DISPLAY_TOPCOUNT_DEFAULT);
+    if (maxDisplay >= 0) {
+      ConcurrentMap<String, Map<String, Long>> map = datanodeNetworkCounts.asMap();
+      Set<Map.Entry<String, Map<String, Long>>> entries = map.entrySet();
+      List<Map.Entry<String, Map<String, Long>>> list = new ArrayList<>(entries);
+      list.sort((o1, o2) -> {
+        Map<String, Long> value1Map = o1.getValue();
+        Map<String, Long> value2Map = o2.getValue();
+        long compared =
+            value2Map.getOrDefault(DataNode.NETWORK_ERRORS, 0L) - value1Map.getOrDefault(
+                DataNode.NETWORK_ERRORS, 0L);
+        return (int) compared;
+      });
+      Map<String, Map<String, Long>> resultMap = new ConcurrentHashMap<>();
+      maxDisplay = Math.min(list.size(), maxDisplay);
+      for (int i = 0; i < maxDisplay; i++) {
+        resultMap.put(list.get(i).getKey(), list.get(i).getValue());
+      }
+      list.clear();
+      return resultMap;
+    }
     return datanodeNetworkCounts.asMap();
   }
 
