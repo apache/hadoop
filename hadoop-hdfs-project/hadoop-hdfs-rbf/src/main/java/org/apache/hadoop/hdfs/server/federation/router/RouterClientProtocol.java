@@ -667,26 +667,28 @@ public class RouterClientProtocol implements ClientProtocol {
   public void concat(String trg, String[] src) throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.WRITE);
 
-    // Concat only effects when all files in same namespace.
-    // And in router view, a file only exists in one RemoteLocation.
-    final List<RemoteLocation> locations =
-        rpcServer.getLocationsForPath(trg, true);
-
-    final RemoteLocation targetDestination = locations.get(0);
-    String targetNameService = targetDestination.getNameserviceId();
+    // Concat only effects when all files in the same namespace.
+    RemoteResult<RemoteLocation, HdfsFileStatus> trgResult = getFileRemoteResult(trg);
+    if (trgResult.getResult() == null) {
+      throw new IOException("Cannot find target file - " + trg);
+    }
+    RemoteLocation targetDestination = trgResult.getLocation();
+    String targetNameService = trgResult.getLocation().getNameserviceId();
 
     String[] sourceDestinations = new String[src.length];
     for (int i = 0; i < src.length; i++) {
       String sourceFile = src[i];
-      List<RemoteLocation> srcLocations =
-          rpcServer.getLocationsForPath(sourceFile, true);
-      RemoteLocation srcLocation = srcLocations.get(0);
+      RemoteResult<RemoteLocation, HdfsFileStatus> srcResult = getFileRemoteResult(sourceFile);
+      if (srcResult.getResult() == null) {
+        throw new IOException("Cannot find source file - " + sourceFile);
+      }
+      RemoteLocation srcLocation = srcResult.getLocation();
       sourceDestinations[i] = srcLocation.getDest();
+
       if (!targetNameService.equals(srcLocation.getNameserviceId())) {
         throw new IOException("Cannot concatenate source file " + sourceFile
-            + " because it is located in a different namespace"
-            + " with nameservice " + srcLocation.getNameserviceId()
-            + " from the target file with nameservice "
+            + " because it is located in a different namespace" + " with nameservice "
+            + srcLocation.getNameserviceId() + " from the target file with nameservice "
             + targetNameService);
       }
     }
@@ -996,6 +998,20 @@ public class RouterClientProtocol implements ClientProtocol {
     }
 
     return ret;
+  }
+
+  public RemoteResult<RemoteLocation, HdfsFileStatus> getFileRemoteResult(String path)
+      throws IOException {
+    rpcServer.checkOperation(NameNode.OperationCategory.READ);
+
+    final List<RemoteLocation> locations = rpcServer.getLocationsForPath(path, false, false);
+    RemoteMethod method =
+        new RemoteMethod("getFileInfo", new Class<?>[] {String.class}, new RemoteParam());
+    // Check for file information sequentially
+    RemoteResult<RemoteLocation, HdfsFileStatus> result =
+        rpcClient.invokeSequential(method, locations, HdfsFileStatus.class, null);
+
+    return result;
   }
 
   @Override
