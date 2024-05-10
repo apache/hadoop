@@ -34,7 +34,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.compress.zlib.BuiltInGzipCompressor;
 import org.apache.hadoop.io.compress.zlib.BuiltInGzipDecompressor;
-import org.apache.hadoop.io.compress.zlib.ZlibCompressor;
+import org.apache.hadoop.io.compress.zlib.ZlibCompressor.CompressionLevel;
 import org.apache.hadoop.io.compress.zlib.ZlibFactory;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -95,22 +95,27 @@ public class TestCodecPool {
   public void testCompressorConf() throws Exception {
     DefaultCodec codec1 = new DefaultCodec();
     Configuration conf = new Configuration();
-    ZlibFactory.setCompressionLevel(conf, ZlibCompressor.CompressionLevel.TWO);
+    ZlibFactory.setCompressionLevel(conf, CompressionLevel.TWO);
     codec1.setConf(conf);
     Compressor comp1 = CodecPool.getCompressor(codec1);
     CodecPool.returnCompressor(comp1);
 
     DefaultCodec codec2 = new DefaultCodec();
     Configuration conf2 = new Configuration();
-    ZlibFactory.setCompressionLevel(conf2, ZlibCompressor.CompressionLevel.THREE);
+    CompressionLevel newCompressionLevel = CompressionLevel.THREE;
+    ZlibFactory.setCompressionLevel(conf2, newCompressionLevel);
     codec2.setConf(conf2);
     Compressor comp2 = CodecPool.getCompressor(codec2);
     List<Field> fields = ReflectionUtils.getDeclaredFieldsIncludingInherited(comp2.getClass());
     for (Field field : fields) {
       if (field.getName().equals("level")) {
         field.setAccessible(true);
-        int levelValue = (Integer) field.get(comp2);
-        assertEquals(3, levelValue);
+        Object levelValue = field.get(comp2);
+        if (levelValue instanceof CompressionLevel) {
+          assertEquals(newCompressionLevel, levelValue);
+        } else {
+          assertEquals(3, levelValue);
+        }
       }
     }
     CodecPool.returnCompressor(comp2);
