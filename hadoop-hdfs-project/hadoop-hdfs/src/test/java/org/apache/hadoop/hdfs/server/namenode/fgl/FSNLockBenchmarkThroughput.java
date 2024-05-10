@@ -19,11 +19,14 @@
 package org.apache.hadoop.hdfs.server.namenode.fgl;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -38,26 +41,23 @@ import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * This class benchmarks the throughput of NN for both global-lock and fine-grained lock.
+ * Using some common used RPCs, such as create,addBlock,complete,append,rename,
+ * delete,setPermission,setOwner,setReplication,getFileInfo,getListing,getBlockLocation,
+ * to build some tasks according to readWrite ratio and testing count.
+ * Then create a thread pool with a concurrency of the numClient to perform these tasks.
+ * The performance difference between Global Lock and Fine-grained Lock can be
+ * obtained according to the execution time.
  */
-public class FSNLockBenchmarkThroughput {
+public class FSNLockBenchmarkThroughput extends Configured implements Tool {
 
-  private final int readWriteRatio;
-  private final int testingCount;
-  private final ExecutorService executorService;
   private final FileSystem fileSystem;
 
-  public FSNLockBenchmarkThroughput(FileSystem fileSystem,
-      int readWriteRatio, int testingCount, int concurrency) {
+  public FSNLockBenchmarkThroughput(FileSystem fileSystem) {
     this.fileSystem = fileSystem;
-    this.readWriteRatio = readWriteRatio;
-    this.testingCount = testingCount;
-    this.executorService = Executors.newFixedThreadPool(concurrency);
   }
 
-  public void benchmark(String lockName) throws Exception {
-    System.out.println("Do benchmark for " + lockName);
-    Path basePath = new Path("/tmp/fsnlock/benchmark/throughput");
-
+  public void benchmark(Path basePath, int readWriteRatio, int testingCount,
+      int numClients) throws Exception {
     // private final
     ArrayList<Path> readingPaths = new ArrayList<>();
     for (int i = 0; i < 30; i++) {
@@ -70,29 +70,34 @@ public class FSNLockBenchmarkThroughput {
 
     // building tasks.
     List<Callable<Void>> tasks = buildTasks(this.fileSystem,
-        basePath, readingPaths, detailInfo);
+        basePath, testingCount, readWriteRatio, readingPaths, detailInfo);
     Collections.shuffle(tasks);
 
     long startTime = System.currentTimeMillis();
 
-    // Submit all tasks.
-    List<Future<Void>> futures = this.executorService.invokeAll(tasks);
+    ExecutorService executors = Executors.newFixedThreadPool(numClients);
+    try {
+      // Submit all tasks.
+      List<Future<Void>> futures = executors.invokeAll(tasks);
 
-    // Waiting result
-    for (Future<Void> f : futures) {
-      f.get();
-    }
+      // Waiting result
+      for (Future<Void> f : futures) {
+        f.get();
+      }
 
-    long endTime = System.currentTimeMillis();
+      long endTime = System.currentTimeMillis();
+      // Print result.
+      System.out.println("The Benchmark result is: " + tasks.size()
+          + " tasks with readWriteRatio " + readWriteRatio + " completed, taking "
+          + (endTime - startTime) + "(ms)");
+      detailInfo.forEach((k,v) -> System.out.println("\t operationName:" + k + ", testCount:" + v));
+    } finally {
+      executors.shutdown();
+      executors.shutdownNow();
 
-    // Print result.
-    System.out.println("The Benchmark result for " + lockName + " is: " + tasks.size()
-        + " tasks with readWriteRatio " + this.readWriteRatio + " completed, taking "
-        + (endTime - startTime) + "(ms)");
-    detailInfo.forEach((k,v) -> System.out.println("\t operationName:" + k + ", testCount:" + v));
-
-    for (Path path : readingPaths) {
-      this.fileSystem.delete(path, false);
+      for (Path path : readingPaths) {
+        this.fileSystem.delete(path, false);
+      }
     }
   }
 
@@ -221,11 +226,11 @@ public class FSNLockBenchmarkThroughput {
   /**
    * Building some callable tasks according to testingCount and readWriteRatio.
    */
-  private List<Callable<Void>> buildTasks(FileSystem fs, Path basePath,
-      ArrayList<Path> readingPaths, HashMap<String, Integer> detailInfo) {
+  private List<Callable<Void>> buildTasks(FileSystem fs, Path basePath, int testingCount,
+      int readWriteRatio, ArrayList<Path> readingPaths, HashMap<String, Integer> detailInfo) {
     List<Callable<Void>> tasks = new ArrayList<>();
-    for (int i = 0; i < this.testingCount; i++) {
 
+    for (int i = 0; i < testingCount; i++) {
       // contains 4 * 10 write RPCs.
       for (int j = 0; j < 10; j++) {
         Path path = new Path(basePath, "write_" + i + "_" + j);
@@ -238,7 +243,7 @@ public class FSNLockBenchmarkThroughput {
       tasks.add(otherWriteOperation(fs, srcPath, targetPath, detailInfo));
 
       // The number of write RPCs is 50.
-      for (int j = 0; j < this.readWriteRatio * 50; j++) {
+      for (int j = 0; j < readWriteRatio * 50; j++) {
         int opNumber = ThreadLocalRandom.current().nextInt(5);
         int pathIndex = ThreadLocalRandom.current().nextInt(readingPaths.size());
         Path path = readingPaths.get(pathIndex);
@@ -254,16 +259,63 @@ public class FSNLockBenchmarkThroughput {
     return tasks;
   }
 
+  @Override
+  public int run(String[] args) throws Exception {
+    String basePath = "/tmp/fsnlock/benchmark/throughput";
+    int readWriteRatio = 20;
+    int testingCount = 100;
+    int numClients = 100;
+
+    if (args.length >= 4) {
+      basePath = args[0];
+
+      try {
+        readWriteRatio = Integer.parseInt(args[1]);
+        if (readWriteRatio <= 0) {
+          printUsage("Invalid readWrite ratio: " + readWriteRatio);
+        }
+      } catch (NumberFormatException e) {
+        printUsage("Invalid readWrite ratio: " + e.getMessage());
+      }
+
+      try {
+        testingCount = Integer.parseInt(args[2]);
+        if (testingCount <= 0) {
+          printUsage("Invalid testing count: " + testingCount);
+        }
+      } catch (NumberFormatException e) {
+        printUsage("Invalid testing count: " + e.getMessage());
+      }
+
+      try {
+        numClients = Integer.parseInt(args[3]);
+        if (numClients <= 0) {
+          printUsage("Invalid num of clients: " + numClients);
+        }
+      } catch (NumberFormatException e) {
+        printUsage("Invalid num of clients: " + e.getMessage());
+      }
+    } else {
+      printUsage(null);
+    }
+
+    benchmark(new Path(basePath), readWriteRatio, testingCount, numClients);
+    return 0;
+  }
+
+  private static void printUsage(String msg) {
+    if (msg != null) {
+      System.out.println(msg);
+    }
+    System.err.println("Usage: FSNLockBenchmarkThroughput " +
+        "<base path> <read write ratio> <testing count> <num clients>");
+    System.exit(1);
+  }
+
   public static void main(String[] args) throws Exception {
-    int readWriteRatio = Integer.parseInt(args[0]);
-    int testingCount = Integer.parseInt(args[1]);
-    int clientNumber = Integer.parseInt(args[2]);
-
     Configuration conf = new HdfsConfiguration();
-
     FileSystem fs = FileSystem.get(conf);
-    FSNLockBenchmarkThroughput benchmark = new FSNLockBenchmarkThroughput(
-        fs, readWriteRatio, testingCount, clientNumber);
-    benchmark.benchmark(null);
+    int res = ToolRunner.run(conf, new FSNLockBenchmarkThroughput(fs), args);
+    System.exit(res);
   }
 }

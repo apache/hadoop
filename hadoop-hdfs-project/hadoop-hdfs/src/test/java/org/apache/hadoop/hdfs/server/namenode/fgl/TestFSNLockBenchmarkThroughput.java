@@ -24,6 +24,8 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
+import org.apache.hadoop.util.ToolRunner;
+import org.junit.Assert;
 import org.junit.Test;
 
 /**
@@ -42,6 +44,11 @@ public class TestFSNLockBenchmarkThroughput {
   }
 
   @Test
+  public void testFineGrainedLockingBenchmarkThroughput3() throws Exception {
+    testBenchmarkThroughput(true, 10, 100, 100);
+  }
+
+  @Test
   public void testGlobalLockingBenchmarkThroughput1() throws Exception {
     testBenchmarkThroughput(false, 20, 100, 1000);
   }
@@ -51,23 +58,25 @@ public class TestFSNLockBenchmarkThroughput {
     testBenchmarkThroughput(false, 20, 1000, 1000);
   }
 
+  @Test
+  public void testGlobalLockingBenchmarkThroughput3() throws Exception {
+    testBenchmarkThroughput(false, 10, 100, 100);
+  }
+
   private void testBenchmarkThroughput(boolean enableFGL, int readWriteRatio,
-      int testingCount, int concurrency) throws Exception {
+      int testingCount, int numClients) throws Exception {
     MiniQJMHACluster qjmhaCluster = null;
 
     try {
       Configuration conf = new HdfsConfiguration();
       conf.setBoolean(DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY, true);
       conf.setInt(DFSConfigKeys.DFS_QJOURNAL_SELECT_INPUT_STREAMS_TIMEOUT_KEY, 500);
-      String lockName = null;
       if (enableFGL) {
         conf.setClass(DFSConfigKeys.DFS_NAMENODE_LOCK_MODEL_PROVIDER_KEY,
             FineGrainedFSNamesystemLock.class, FSNLockManager.class);
-        lockName = FineGrainedFSNamesystemLock.class.getName();
       } else {
         conf.setClass(DFSConfigKeys.DFS_NAMENODE_LOCK_MODEL_PROVIDER_KEY,
             GlobalFSNamesystemLock.class, FSNLockManager.class);
-        lockName = GlobalFSNamesystemLock.class.getName();
       }
 
       MiniQJMHACluster.Builder builder = new MiniQJMHACluster.Builder(conf);
@@ -80,10 +89,12 @@ public class TestFSNLockBenchmarkThroughput {
 
       FileSystem fileSystem = cluster.getFileSystem(0);
 
-      FSNLockBenchmarkThroughput benchmarkThroughput =
-          new FSNLockBenchmarkThroughput(
-              fileSystem, readWriteRatio, testingCount, concurrency);
-      benchmarkThroughput.benchmark(lockName);
+      String[] args = new String[]{"/tmp/fsnlock/benchmark/throughput",
+          String.valueOf(readWriteRatio), String.valueOf(testingCount),
+          String.valueOf(numClients)};
+
+      Assert.assertEquals(0, ToolRunner.run(conf,
+          new FSNLockBenchmarkThroughput(fileSystem), args));
     } finally {
       if (qjmhaCluster != null) {
         qjmhaCluster.shutdown();
