@@ -90,7 +90,8 @@ public class FSNLockBenchmarkThroughput extends Configured implements Tool {
       System.out.println("The Benchmark result is: " + tasks.size()
           + " tasks with readWriteRatio " + readWriteRatio + " completed, taking "
           + (endTime - startTime) + "(ms)");
-      detailInfo.forEach((k,v) -> System.out.println("\t operationName:" + k + ", testCount:" + v));
+      detailInfo.forEach(
+          (k, v) -> System.out.println("\t operationName:" + k + ", testCount:" + v));
     } finally {
       executors.shutdown();
       executors.shutdownNow();
