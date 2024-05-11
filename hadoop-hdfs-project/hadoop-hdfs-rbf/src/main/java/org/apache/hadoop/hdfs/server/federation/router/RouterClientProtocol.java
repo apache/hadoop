@@ -106,6 +106,7 @@ import java.io.Serializable;
 import java.net.ConnectException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -668,21 +669,19 @@ public class RouterClientProtocol implements ClientProtocol {
     rpcServer.checkOperation(NameNode.OperationCategory.WRITE);
 
     // Concat only effects when all files in the same namespace.
-    RemoteResult<RemoteLocation, HdfsFileStatus> trgResult = getFileRemoteResult(trg);
-    if (trgResult.getResult() == null) {
+    RemoteLocation targetDestination = getFileRemoteLocation(trg);
+    if (targetDestination == null) {
       throw new IOException("Cannot find target file - " + trg);
     }
-    RemoteLocation targetDestination = trgResult.getLocation();
-    String targetNameService = trgResult.getLocation().getNameserviceId();
+    String targetNameService = targetDestination.getNameserviceId();
 
     String[] sourceDestinations = new String[src.length];
     for (int i = 0; i < src.length; i++) {
       String sourceFile = src[i];
-      RemoteResult<RemoteLocation, HdfsFileStatus> srcResult = getFileRemoteResult(sourceFile);
-      if (srcResult.getResult() == null) {
+      RemoteLocation srcLocation = getFileRemoteLocation(sourceFile);
+      if (srcLocation == null) {
         throw new IOException("Cannot find source file - " + sourceFile);
       }
-      RemoteLocation srcLocation = srcResult.getLocation();
       sourceDestinations[i] = srcLocation.getDest();
 
       if (!targetNameService.equals(srcLocation.getNameserviceId())) {
@@ -1000,18 +999,25 @@ public class RouterClientProtocol implements ClientProtocol {
     return ret;
   }
 
-  public RemoteResult<RemoteLocation, HdfsFileStatus> getFileRemoteResult(String path)
-      throws IOException {
+  public RemoteLocation getFileRemoteLocation(String path) throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.READ);
 
     final List<RemoteLocation> locations = rpcServer.getLocationsForPath(path, false, false);
-    RemoteMethod method =
-        new RemoteMethod("getFileInfo", new Class<?>[] {String.class}, new RemoteParam());
-    // Check for file information sequentially
-    RemoteResult<RemoteLocation, HdfsFileStatus> result =
-        rpcClient.invokeSequential(method, locations, HdfsFileStatus.class, null);
+    if (locations.size() == 1)
+      return locations.get(0);
+    RemoteLocation remoteLocation = null;
+    for (RemoteLocation location : locations) {
+      RemoteMethod method =
+          new RemoteMethod("getFileInfo", new Class<?>[] {String.class}, new RemoteParam());
+      HdfsFileStatus ret = rpcClient.invokeSequential(Collections.singletonList(location), method,
+          HdfsFileStatus.class, null);
+      if (ret != null) {
+        remoteLocation = location;
+        break;
+      }
+    }
 
-    return result;
+    return remoteLocation;
   }
 
   @Override

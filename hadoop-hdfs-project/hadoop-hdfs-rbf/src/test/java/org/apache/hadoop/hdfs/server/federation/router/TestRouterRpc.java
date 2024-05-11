@@ -1235,6 +1235,14 @@ public class TestRouterRpc {
     testConcat(existingFile, sameRouterEmptyFile, false);
     FileStatus mergedStatus = getFileStatus(routerFS, sameRouterEmptyFile);
     assertEquals(existingFileSize, mergedStatus.getLen());
+
+    // Test when concat srclist has some empty file, namenode will throw IOException.
+    String srcEmptyFile = cluster.getFederatedTestDirectoryForNS(sameNameservice) + "_srcEmptyFile";
+    createFile(routerFS, srcEmptyFile, 0);
+    String targetFile = cluster.getFederatedTestDirectoryForNS(sameNameservice) + "_targetFile";
+    createFile(routerFS, targetFile, existingFileSize);
+    // Concat in same namespaces, succeeds
+    testConcat(srcEmptyFile, targetFile, true);
   }
 
   @Test
