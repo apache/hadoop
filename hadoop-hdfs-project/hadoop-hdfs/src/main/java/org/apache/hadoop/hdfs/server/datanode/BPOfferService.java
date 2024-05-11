@@ -31,6 +31,7 @@ import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.protocol.*;
 import org.apache.hadoop.hdfs.server.protocol.BlockECReconstructionCommand.BlockECReconstructionInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo.BlockStatus;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Sets;
 
@@ -324,6 +325,12 @@ class BPOfferService {
     final ReceivedDeletedBlockInfo info = new ReceivedDeletedBlockInfo(
         block.getLocalBlock(), status, delHint);
     final DatanodeStorage storage = dn.getFSDataset().getStorage(storageUuid);
+    if (storage == null) {
+      LOG.warn("Trying to add RDBI for null storage UUID {}. Trace: {}", storageUuid,
+          Joiner.on("\n").join(Thread.currentThread().getStackTrace()));
+      getDataNode().getMetrics().incrNullStorageBlockReports();
+      return;
+    }
 
     for (BPServiceActor actor : bpServices) {
       actor.getIbrManager().notifyNamenodeBlock(info, storage,
