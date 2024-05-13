@@ -227,6 +227,7 @@ com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:2.12.7
 com.fasterxml.jackson.module:jackson-module-jaxb-annotations:2.12.7
 com.fasterxml.uuid:java-uuid-generator:3.1.4
 com.fasterxml.woodstox:woodstox-core:5.4.0
+com.github.ben-manes.caffeine:caffeine:2.9.3
 com.github.davidmoten:rxjava-extras:0.8.0.17
 com.github.stephenc.jcip:jcip-annotations:1.0-1
 com.google:guice:4.0
