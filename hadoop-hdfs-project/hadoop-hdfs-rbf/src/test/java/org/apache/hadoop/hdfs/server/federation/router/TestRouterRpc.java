@@ -1164,6 +1164,21 @@ public class TestRouterRpc {
   }
 
   private void testConcat(
+      String source, String target, boolean failureExpected, boolean verfiyException, String msg) {
+    boolean failure = false;
+    try {
+      // Concat test file with fill block length file via router
+      routerProtocol.concat(target, new String[] {source});
+    } catch (IOException ex) {
+      failure = true;
+      if (verfiyException) {
+        assertExceptionContains(msg, ex);
+      }
+    }
+    assertEquals(failureExpected, failure);
+  }
+
+  private void testConcat(
       String source, String target, boolean failureExpected) {
     boolean failure = false;
     try {
@@ -1242,7 +1257,8 @@ public class TestRouterRpc {
     String targetFile = cluster.getFederatedTestDirectoryForNS(sameNameservice) + "_targetFile";
     createFile(routerFS, targetFile, existingFileSize);
     // Concat in same namespaces, succeeds
-    testConcat(srcEmptyFile, targetFile, true);
+    testConcat(srcEmptyFile, targetFile, true, true,
+        "concat: source file " + srcEmptyFile + " is invalid or empty or underConstruction");
   }
 
   @Test
