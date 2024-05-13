@@ -1258,7 +1258,8 @@ public class TestRouterRpc {
     createFile(routerFS, targetFile, existingFileSize);
     // Concat in same namespaces, succeeds
     testConcat(srcEmptyFile, targetFile, true, true,
-        "concat: source file " + srcEmptyFile + " is invalid or empty or underConstruction");
+        "org.apache.hadoop.ipc.RemoteException(org.apache.hadoop.HadoopIllegalArgumentException): concat: source file "
+            + srcEmptyFile + " is invalid or empty or underConstruction");
   }
 
   @Test
