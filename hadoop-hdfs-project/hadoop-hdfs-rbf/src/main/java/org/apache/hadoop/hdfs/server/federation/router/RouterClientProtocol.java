@@ -1003,8 +1003,9 @@ public class RouterClientProtocol implements ClientProtocol {
     rpcServer.checkOperation(NameNode.OperationCategory.READ);
 
     final List<RemoteLocation> locations = rpcServer.getLocationsForPath(path, false, false);
-    if (locations.size() == 1)
+    if (locations.size() == 1) {
       return locations.get(0);
+    }
     RemoteLocation remoteLocation = null;
     for (RemoteLocation location : locations) {
       RemoteMethod method =
