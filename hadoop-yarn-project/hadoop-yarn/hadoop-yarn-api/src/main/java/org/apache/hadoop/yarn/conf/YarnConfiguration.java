@@ -2733,6 +2733,10 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_LINUX_CONTAINER_CGROUPS_MOUNT_PATH =
     NM_PREFIX + "linux-container-executor.cgroups.mount-path";
 
+  /** Where the linux container executor should mount cgroups v2 if not found */
+  public static final String NM_LINUX_CONTAINER_CGROUPS_V2_MOUNT_PATH =
+      NM_PREFIX + "linux-container-executor.cgroups.v2.mount-path";
+
   /**
    * Whether the apps should run in strict resource usage mode(not allowed to
    * use spare CPU)

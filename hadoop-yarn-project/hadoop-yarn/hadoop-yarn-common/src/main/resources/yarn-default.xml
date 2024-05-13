@@ -2088,6 +2088,20 @@
   </property>
 
   <property>
+    <description>This property sets the mount path for CGroups v2.
+      This parameter is optional, and needed to be set only in mixed mode,
+      when CGroups v2 is mounted in a different path than Cgroups v1.
+      For example, in hybrid mode, CGroups v1 controllers can be mounted in
+      /sys/fs/cgroup, while v2 can be mounted in /sys/fs/cgroup/unified folder.
+      
+      If this value is not set, the value of
+      yarn.nodemanager.linux-container-executor.cgroups.mount-path
+      will be used for CGroups v2 as well.
+    </description>
+    <name>yarn.nodemanager.linux-container-executor.cgroups.v2.mount-path</name>
+  </property>
+
+  <property>
     <description>Delay in ms between attempts to remove linux cgroup</description>
     <name>yarn.nodemanager.linux-container-executor.cgroups.delete-delay-ms</name>
     <value>20</value>
