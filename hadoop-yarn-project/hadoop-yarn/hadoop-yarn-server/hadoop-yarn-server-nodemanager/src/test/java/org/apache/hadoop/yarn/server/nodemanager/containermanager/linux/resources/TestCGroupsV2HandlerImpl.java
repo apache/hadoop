@@ -217,11 +217,13 @@ public class TestCGroupsV2HandlerImpl extends TestCGroupsHandlerBase {
     conf.set(YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_HIERARCHY,
         "/hadoop-yarn");
 
+    File baseCgroup = new File(tmpPath);
     File subCgroup = new File(tmpPath, "/hadoop-yarn");
     Assert.assertTrue("temp dir should be created", subCgroup.mkdirs());
     subCgroup.deleteOnExit();
 
     String enabledControllers = "cpuset cpu io memory hugetlb pids rdma misc\n";
+    createFileWithContent(baseCgroup, CGroupsHandler.CGROUP_CONTROLLERS_FILE, enabledControllers);
     createFileWithContent(subCgroup, CGroupsHandler.CGROUP_CONTROLLERS_FILE, enabledControllers);
 
     File subtreeControlFile = new File(subCgroup.getAbsolutePath(),

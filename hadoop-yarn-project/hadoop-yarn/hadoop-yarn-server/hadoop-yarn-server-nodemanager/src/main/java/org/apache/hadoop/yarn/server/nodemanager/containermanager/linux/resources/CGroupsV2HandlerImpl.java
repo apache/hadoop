@@ -97,10 +97,8 @@ class CGroupsV2HandlerImpl extends AbstractCGroupsHandler {
   @Override
   protected Map<String, Set<String>> parsePreConfiguredMountPath() throws IOException {
     Map<String, Set<String>> controllerMappings = new HashMap<>();
-    String controllerPath = this.cGroupsMountConfig.getMountPath() +
-        Path.SEPARATOR + this.cGroupPrefix;
     controllerMappings.put(this.cGroupsMountConfig.getMountPath(),
-        readControllersFile(controllerPath));
+        readControllersFile(this.cGroupsMountConfig.getMountPath()));
     return controllerMappings;
   }
 
@@ -171,19 +169,32 @@ class CGroupsV2HandlerImpl extends AbstractCGroupsHandler {
     try {
       Set<String> enabledControllers = readControllersFile(yarnHierarchy.getAbsolutePath());
       if (!enabledControllers.contains(controller.getName())) {
-        throw new ResourceHandlerException(String.format(
+        String errorMsg = String.format(
             "The controller %s is not enabled in the cgroup hierarchy: %s. Please enable it in " +
                 "in the %s/cgroup.subtree_control file.",
             controller.getName(), yarnHierarchy.getAbsolutePath(),
-            yarnHierarchy.getParentFile().getAbsolutePath()));
+            yarnHierarchy.getParentFile().getAbsolutePath());
+
+        throw new ResourceHandlerException(getErrorWithDetails(
+            errorMsg, controller.getName(),
+            yarnHierarchy.getAbsolutePath()));
       }
 
       File subtreeControlFile = new File(yarnHierarchy.getAbsolutePath()
           + Path.SEPARATOR + CGROUP_SUBTREE_CONTROL_FILE);
       if (!subtreeControlFile.exists()) {
-        throw new ResourceHandlerException(
-            "No subtree control file found in the cgroup hierarchy: " +
-                yarnHierarchy.getAbsolutePath());
+        String errorMsg = "No subtree control file found in the cgroup hierarchy: " +
+            yarnHierarchy.getAbsolutePath();
+        throw new ResourceHandlerException(getErrorWithDetails(
+            errorMsg, controller.getName(),
+            yarnHierarchy.getAbsolutePath()));
+      }
+      if (!subtreeControlFile.canWrite()) {
+        String errorMsg = "Cannot write the cgroup.subtree_control file in the " +
+            "cgroup hierarchy: " + yarnHierarchy.getAbsolutePath();
+        throw new ResourceHandlerException(getErrorWithDetails(
+            errorMsg, controller.getName(),
+            yarnHierarchy.getAbsolutePath()));
       }
 
       Writer w = new OutputStreamWriter(Files.newOutputStream(subtreeControlFile.toPath(),
@@ -194,16 +205,20 @@ class CGroupsV2HandlerImpl extends AbstractCGroupsHandler {
             yarnHierarchy.getAbsolutePath());
         pw.write("+" + controller.getName());
         if (pw.checkError()) {
-          throw new ResourceHandlerException("Failed to add the controller to the " +
+          String errorMsg = "Failed to add the controller to the " +
               "cgroup.subtree_control file in the cgroup hierarchy: " +
-              yarnHierarchy.getAbsolutePath());
+              yarnHierarchy.getAbsolutePath();
+          throw new ResourceHandlerException(getErrorWithDetails(
+              errorMsg, controller.getName(),
+              yarnHierarchy.getAbsolutePath()));
         }
       }
     } catch (IOException e) {
-      throw new ResourceHandlerException(
-          "Failed to update the cgroup.subtree_control file in the cgroup hierarchy: " +
-              yarnHierarchy.getAbsolutePath(), e);
+      String errorMsg = "Failed to update the cgroup.subtree_control file in the " +
+          "cgroup hierarchy: " + yarnHierarchy.getAbsolutePath();
+      throw new ResourceHandlerException(getErrorWithDetails(
+          errorMsg, controller.getName(),
+          yarnHierarchy.getAbsolutePath()));
     }
   }
-
 }
