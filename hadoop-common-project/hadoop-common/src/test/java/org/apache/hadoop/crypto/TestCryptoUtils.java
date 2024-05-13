@@ -19,6 +19,7 @@ package org.apache.hadoop.crypto;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.assertj.core.api.Assertions;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.junit.Assert;
 import org.junit.Test;
@@ -70,8 +71,9 @@ public class TestCryptoUtils {
     assertRemoveProvider();
 
     final Configuration conf = new Configuration();
-    Assert.assertTrue("true".equalsIgnoreCase(
-        conf.get(HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_AUTO_ADD_KEY)));
+    Assertions.assertThat(conf.get(HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_AUTO_ADD_KEY))
+        .describedAs("conf: " + HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_AUTO_ADD_KEY)
+        .isEqualToIgnoringCase("true");
     Assert.assertTrue(HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_AUTO_ADD_DEFAULT);
 
     conf.set(HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_KEY, CryptoUtils.BOUNCY_CASTLE_PROVIDER_NAME);
@@ -79,7 +81,8 @@ public class TestCryptoUtils {
     Assert.assertEquals(CryptoUtils.BOUNCY_CASTLE_PROVIDER_NAME, providerFromConf);
 
     final Provider provider = Security.getProvider(BouncyCastleProvider.PROVIDER_NAME);
-    Assert.assertTrue(provider instanceof BouncyCastleProvider);
+    Assertions.assertThat(provider)
+        .isInstanceOf(BouncyCastleProvider.class);
 
     assertRemoveProvider();
   }
