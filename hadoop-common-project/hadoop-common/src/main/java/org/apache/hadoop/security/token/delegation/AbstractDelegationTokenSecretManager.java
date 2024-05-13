@@ -286,7 +286,7 @@ extends AbstractDelegationTokenIdentifier>
    */
   protected int getCurrentKeyId() {
     this.apiLock.readLock().lock();
-    try{
+    try {
       return currentId;
     } finally {
       this.apiLock.readLock().unlock();
@@ -316,7 +316,7 @@ extends AbstractDelegationTokenIdentifier>
    */
   protected void setCurrentKeyId(int keyId) {
     this.apiLock.writeLock().lock();
-    try{
+    try {
       currentId = keyId;
     } finally {
       this.apiLock.writeLock().unlock();
@@ -616,7 +616,7 @@ extends AbstractDelegationTokenIdentifier>
   public byte[] retrievePassword(TokenIdent identifier)
       throws InvalidToken {
     this.apiLock.readLock().lock();
-    try{
+    try {
       return checkToken(identifier).getPassword();
     } finally {
       this.apiLock.readLock().unlock();
@@ -652,7 +652,7 @@ extends AbstractDelegationTokenIdentifier>
   public void verifyToken(TokenIdent identifier, byte[] password)
       throws InvalidToken {
     this.apiLock.readLock().lock();
-    try{
+    try {
       byte[] storedPassword = retrievePassword(identifier);
       if (!MessageDigest.isEqual(password, storedPassword)) {
         throw new InvalidToken("token " + formatTokenId(identifier)
