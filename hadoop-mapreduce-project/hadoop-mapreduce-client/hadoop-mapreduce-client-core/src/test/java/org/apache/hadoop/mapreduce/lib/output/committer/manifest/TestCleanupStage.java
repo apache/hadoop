@@ -80,9 +80,17 @@ public class TestCleanupStage extends AbstractManifestCommitterTest {
   @Test
   public void testCleanupInParallelHealthy() throws Throwable {
     describe("parallel cleanup of TA dirs.");
-    cleanup(true, true, false,
+    cleanup(true, true, false, false,
         CleanupJobStage.Outcome.PARALLEL_DELETE,
         PARALLEL_DELETE_COUNT);
+    verifyJobDirsCleanedUp();
+  }
+
+  @Test
+  public void testCleanupInParallelHealthyBaseFirst() throws Throwable {
+    describe("parallel cleanup of TA dirs with base first: one operation");
+    cleanup(true, true, true, false,
+        CleanupJobStage.Outcome.DELETED, ROOT_DELETE_COUNT);
     verifyJobDirsCleanedUp();
   }
 
@@ -90,7 +98,7 @@ public class TestCleanupStage extends AbstractManifestCommitterTest {
   public void testCleanupSingletonHealthy() throws Throwable {
     describe("Cleanup with a single delete. Not the default; would be best on HDFS");
 
-    cleanup(true, false, false,
+    cleanup(true, false, false, false,
         CleanupJobStage.Outcome.DELETED, ROOT_DELETE_COUNT);
     verifyJobDirsCleanedUp();
   }
@@ -99,29 +107,67 @@ public class TestCleanupStage extends AbstractManifestCommitterTest {
   public void testCleanupNoDir() throws Throwable {
     describe("parallel cleanup MUST not fail if there's no dir");
     // first do the cleanup
-    cleanup(true, true, false,
+    cleanup(true, true, false, false,
         CleanupJobStage.Outcome.PARALLEL_DELETE, PARALLEL_DELETE_COUNT);
 
     // now expect cleanup by single delete still works
     // the delete count is 0 as pre check skips it
-    cleanup(true, false, false,
+    cleanup(true, false, false, false,
+        CleanupJobStage.Outcome.NOTHING_TO_CLEAN_UP, 0);
+    cleanup(true, true, true, false,
         CleanupJobStage.Outcome.NOTHING_TO_CLEAN_UP, 0);
 
     // if skipped, that happens first
-    cleanup(false, true, false,
+    cleanup(false, true, false, false,
         CleanupJobStage.Outcome.DISABLED, 0);
   }
 
   @Test
   public void testFailureInParallelDelete() throws Throwable {
-    describe("A parallel delete fails, but the base delete works");
+    describe("A parallel delete fails, but the fallback base delete works");
 
     // pick one of the manifests
     TaskManifest manifest = manifests.get(4);
-    Path taPath = new Path(manifest.getTaskAttemptDir());
-    failures.addDeletePathToFail(taPath);
-    cleanup(true, true, false,
+    failures.addDeletePathToFail(new Path(manifest.getTaskAttemptDir()));
+    cleanup(true, true, false, false,
         CleanupJobStage.Outcome.DELETED, PARALLEL_DELETE_COUNT);
+  }
+
+  @Test
+  public void testFailureInParallelBaseDelete() throws Throwable {
+    describe("A parallel delete fails in the base delete; the parallel stage works");
+
+    // base path will timeout on first delete; the parallel delete will take place
+    failures.addDeletePathToTimeOut(getJobStageConfig().getOutputTempSubDir());
+    failures.setFailureLimit(1);
+    cleanup(true, true, false, false,
+        CleanupJobStage.Outcome.PARALLEL_DELETE, PARALLEL_DELETE_COUNT);
+  }
+
+  @Test
+  public void testDoubleFailureInParallelBaseDelete() throws Throwable {
+    describe("A parallel delete fails with the base delete and a task attempt dir");
+
+    // base path will timeout on first delete; the parallel delete will take place
+    failures.addDeletePathToTimeOut(getJobStageConfig().getOutputTempSubDir());
+    TaskManifest manifest = manifests.get(4);
+    failures.addDeletePathToFail(new Path(manifest.getTaskAttemptDir()));
+    failures.setFailureLimit(2);
+    cleanup(true, true, true, false,
+        CleanupJobStage.Outcome.DELETED, PARALLEL_DELETE_COUNT + 1);
+  }
+
+  @Test
+  public void testTripleFailureInParallelBaseDelete() throws Throwable {
+    describe("All delete phases will fail");
+
+    // base path will timeout on first delete; the parallel delete will take place
+    failures.addDeletePathToTimeOut(getJobStageConfig().getOutputTempSubDir());
+    TaskManifest manifest = manifests.get(4);
+    failures.addDeletePathToFail(new Path(manifest.getTaskAttemptDir()));
+    failures.setFailureLimit(4);
+    cleanup(true, true, true, true,
+        CleanupJobStage.Outcome.FAILURE, PARALLEL_DELETE_COUNT + 1);
   }
 
   /**
@@ -135,7 +181,7 @@ public class TestCleanupStage extends AbstractManifestCommitterTest {
     StageConfig stageConfig = getJobStageConfig();
     // TA dir doesn't exist, so listing will fail.
     failures.addPathNotFound(stageConfig.getJobAttemptTaskSubDir());
-    cleanup(true, true, false,
+    cleanup(true, true, false, false,
         CleanupJobStage.Outcome.DELETED, ROOT_DELETE_COUNT);
   }
 
