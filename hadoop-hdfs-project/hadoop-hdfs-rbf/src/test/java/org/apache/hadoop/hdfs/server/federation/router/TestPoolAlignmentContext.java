@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.federation.router;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -49,5 +50,35 @@ public class TestPoolAlignmentContext {
     RpcRequestHeaderProto.Builder builder = RpcRequestHeaderProto.newBuilder();
     poolAlignmentContext.updateRequestState(builder);
     Assertions.assertEquals(expectedValue, builder.getStateId());
+  }
+
+  @Test
+  public void testWhenNamenodeStopsSendingStateId() {
+    RouterStateIdContext routerStateIdContext = new RouterStateIdContext(new Configuration());
+    String namespaceId = "namespace1";
+    PoolAlignmentContext poolContext = new PoolAlignmentContext(routerStateIdContext, namespaceId);
+
+    poolContext.receiveResponseState(getRpcResponseHeader(10L));
+    // Last seen value is the one from namenode, but request header is the max seen by clients so far.
+    Assertions.assertEquals(10L, poolContext.getLastSeenStateId());
+    assertRequestHeaderStateId(poolContext, Long.MIN_VALUE);
+
+    poolContext.advanceClientStateId(10L);
+    assertRequestHeaderStateId(poolContext, 10L);
+
+    // When namenode state context is disabled, it returns a stateId of zero
+    poolContext.receiveResponseState(getRpcResponseHeader(0));
+    // Routers should reset the cached state Id to not send a stale value to the observer.
+    Assertions.assertEquals(Long.MIN_VALUE, poolContext.getLastSeenStateId());
+    assertRequestHeaderStateId(poolContext, 10L);
+  }
+
+  private RpcHeaderProtos.RpcResponseHeaderProto getRpcResponseHeader(long stateID) {
+    return RpcHeaderProtos.RpcResponseHeaderProto
+        .newBuilder()
+        .setCallId(1)
+        .setStatus(RpcHeaderProtos.RpcResponseHeaderProto.RpcStatusProto.SUCCESS)
+        .setStateId(stateID)
+        .build();
   }
 }
