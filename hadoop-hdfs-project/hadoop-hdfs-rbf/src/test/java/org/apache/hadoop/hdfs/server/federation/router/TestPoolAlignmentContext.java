@@ -70,7 +70,7 @@ public class TestPoolAlignmentContext {
     poolContext.receiveResponseState(getRpcResponseHeader(0));
     // Routers should reset the cached state Id to not send a stale value to the observer.
     Assertions.assertEquals(Long.MIN_VALUE, poolContext.getLastSeenStateId());
-    assertRequestHeaderStateId(poolContext, 10L);
+    assertRequestHeaderStateId(poolContext, Long.MIN_VALUE);
   }
 
   private RpcHeaderProtos.RpcResponseHeaderProto getRpcResponseHeader(long stateID) {
