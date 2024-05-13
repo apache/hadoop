@@ -165,7 +165,7 @@ public final class AbfsHttpConstants {
    */
   public static final Integer HTTP_STATUS_CATEGORY_QUOTIENT = 100;
 
-  public static final String FS_INIT_FAILED_CPK_CONFIG_IN_NON_HNS_ACCOUNT =
+  public static final String CPK_IN_NON_HNS_ACCOUNT_ERROR_MESSAGE =
       "Non HNS account can not have CPK configs enabled.";
 
   private AbfsHttpConstants() {}

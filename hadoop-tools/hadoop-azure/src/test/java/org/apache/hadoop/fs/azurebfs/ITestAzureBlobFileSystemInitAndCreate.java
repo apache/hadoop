@@ -21,10 +21,15 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.FileNotFoundException;
 
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.TrileanConversionException;
+import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 /**
  * Test filesystem initialization and creation.
@@ -48,5 +53,43 @@ public class ITestAzureBlobFileSystemInitAndCreate extends
   public void ensureFilesystemWillNotBeCreatedIfCreationConfigIsNotSet() throws Exception {
     final AzureBlobFileSystem fs = this.createFileSystem();
     FileStatus[] fileStatuses = fs.listStatus(new Path("/"));
+  }
+
+  @Test
+  public void testGetAclCallOnHnsConfigAbsence() throws Exception {
+    AzureBlobFileSystem fs = ((AzureBlobFileSystem) FileSystem.newInstance(
+        getRawConfiguration()));
+    AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
+    AbfsClient client = Mockito.spy(fs.getAbfsClient());
+    Mockito.doReturn(client).when(store).getClient();
+
+    Mockito.doThrow(TrileanConversionException.class)
+        .when(store)
+        .getNamespaceConfig();
+
+    TracingContext tracingContext = getSampleTracingContext(fs, true);
+    store.getIsNamespaceEnabled(tracingContext);
+
+    Mockito.verify(client, Mockito.times(1))
+        .getAclStatus(Mockito.anyString(), Mockito.any(TracingContext.class));
+  }
+
+  @Test
+  public void testNoGetAclCallOnHnsConfigPresence() throws Exception {
+    AzureBlobFileSystem fs = ((AzureBlobFileSystem) FileSystem.newInstance(
+        getRawConfiguration()));
+    AzureBlobFileSystemStore store = Mockito.spy(fs.getAbfsStore());
+    AbfsClient client = Mockito.spy(fs.getAbfsClient());
+    Mockito.doReturn(client).when(store).getClient();
+
+    Mockito.doReturn(true)
+        .when(store)
+        .getNamespaceConfig();
+
+    TracingContext tracingContext = getSampleTracingContext(fs, true);
+    store.getIsNamespaceEnabled(tracingContext);
+
+    Mockito.verify(client, Mockito.times(0))
+        .getAclStatus(Mockito.anyString(), Mockito.any(TracingContext.class));
   }
 }

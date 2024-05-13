@@ -366,7 +366,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   public boolean getIsNamespaceEnabled(TracingContext tracingContext)
       throws AzureBlobFileSystemException {
     try {
-      return this.isNamespaceEnabled.toBoolean();
+      return getNamespaceConfig();
     } catch (TrileanConversionException e) {
       LOG.debug("isNamespaceEnabled is UNKNOWN; fall back and determine through"
           + " getAcl server call", e);
@@ -374,7 +374,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
     try {
       LOG.debug("Get root ACL status");
-      client.getAclStatus(AbfsHttpConstants.ROOT_PATH, tracingContext);
+      getClient().getAclStatus(AbfsHttpConstants.ROOT_PATH, tracingContext);
       isNamespaceEnabled = Trilean.getTrilean(true);
     } catch (AbfsRestOperationException ex) {
       // Get ACL status is a HEAD request, its response doesn't contain
@@ -388,6 +388,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       throw ex;
     }
     return isNamespaceEnabled.toBoolean();
+  }
+
+  @VisibleForTesting
+  boolean getNamespaceConfig() throws TrileanConversionException {
+    return this.isNamespaceEnabled.toBoolean();
   }
 
   @VisibleForTesting
