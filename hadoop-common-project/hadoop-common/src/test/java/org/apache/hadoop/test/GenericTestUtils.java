@@ -405,24 +405,19 @@ public abstract class GenericTestUtils {
   }
 
   /**
-   * Wait at least {@code atLeastWaitForMillis} from start to end of the test.
+   * Execute check and wait for {@code executeAndWaitForMillis}.
    *
    * @param check the test to perform.
-   * @param atLeastWaitForMillis the minimum waiting time from the beginning
-   * to the end of the test.
+   * @param executeAndWaitForMillis Waiting time after executing check.
    * @throws InterruptedException if the method is interrupted while waiting.
    */
-  public static <T> T atLeastWaitFor(final Supplier<T> check,
-      long atLeastWaitForMillis) throws InterruptedException {
-    if (atLeastWaitForMillis < 0) {
-      atLeastWaitForMillis = 0;
+  public static <T> T executeAndWait(final Supplier<T> check,
+      long executeAndWaitForMillis) throws InterruptedException {
+    if (executeAndWaitForMillis < 0) {
+      executeAndWaitForMillis = 0;
     }
-    long st = Time.monotonicNow();
     T result = check.get();
-    long runTime = Time.monotonicNow() - st;
-    if (runTime < atLeastWaitForMillis) {
-      Thread.sleep(atLeastWaitForMillis - runTime);
-    }
+    Thread.sleep(executeAndWaitForMillis);
     return result;
   }
 

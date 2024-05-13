@@ -26,7 +26,7 @@ import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStor
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.getStateStoreConfiguration;
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.newStateStore;
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.waitStateStore;
-import static org.apache.hadoop.test.GenericTestUtils.atLeastWaitFor;
+import static org.apache.hadoop.test.GenericTestUtils.executeAndWait;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -283,7 +283,7 @@ public class TestNamenodeResolver {
     // 1) ns0:nn0 - Active
     // 2) ns0:nn1 - Standby (newest)
     // Verify the selected entry is the active entry
-    assertTrue(atLeastWaitFor(
+    assertTrue(executeAndWait(
         () -> registerNamenode(
             NAMESERVICES[0], NAMENODES[0], HAServiceState.ACTIVE),
         100));
@@ -302,7 +302,7 @@ public class TestNamenodeResolver {
     // Verify the selected entry is the standby entry as the active entry is
     // stale
     // Expire active registration
-    assertTrue(atLeastWaitFor(
+    assertTrue(executeAndWait(
         () -> registerNamenode(
             NAMESERVICES[0], NAMENODES[0], HAServiceState.ACTIVE),
         6000));
@@ -319,7 +319,7 @@ public class TestNamenodeResolver {
     // 1) ns0:nn0 - Active
     // 2) ns0:nn1 - Unavailable (newest)
     // Verify the selected entry is the active entry
-    assertTrue(atLeastWaitFor(
+    assertTrue(executeAndWait(
         () -> registerNamenode(
             NAMESERVICES[0], NAMENODES[0], HAServiceState.ACTIVE),
         100));
@@ -332,7 +332,7 @@ public class TestNamenodeResolver {
     // 1) ns0:nn0 - Unavailable (newest)
     // 2) ns0:nn1 - Standby
     // Verify the selected entry is the standby entry
-    assertTrue(atLeastWaitFor(
+    assertTrue(executeAndWait(
         () -> registerNamenode(
             NAMESERVICES[0], NAMENODES[1], HAServiceState.STANDBY),
         1000));
@@ -347,11 +347,11 @@ public class TestNamenodeResolver {
     // 2) ns0:nn1 - Standby
     // 3) ns0:nn2 - Active (newest)
     // Verify the selected entry is the newest active entry
-    assertTrue(atLeastWaitFor(
+    assertTrue(executeAndWait(
         () -> registerNamenode(
             NAMESERVICES[0], NAMENODES[0], null),
         100));
-    assertTrue(atLeastWaitFor(
+    assertTrue(executeAndWait(
         () -> registerNamenode(
             NAMESERVICES[0], NAMENODES[1], HAServiceState.STANDBY),
         100));
@@ -366,11 +366,11 @@ public class TestNamenodeResolver {
     // 2) ns0:nn1 - Standby
     // 3) ns0:nn2 - Standby (newest)
     // Verify the selected entry is the oldest standby entry
-    assertTrue(atLeastWaitFor(
+    assertTrue(executeAndWait(
         () -> registerNamenode(
             NAMESERVICES[0], NAMENODES[0], HAServiceState.STANDBY),
         1500));
-    assertTrue(atLeastWaitFor(
+    assertTrue(executeAndWait(
         () -> registerNamenode(
             NAMESERVICES[0], NAMENODES[2], HAServiceState.STANDBY),
         1500));
@@ -384,7 +384,7 @@ public class TestNamenodeResolver {
     // 1) ns0:nn0 - Observer (oldest)
     // 2) ns0:nn1 - Observer (newest)
     // Verify the selected entry is the newest Observer entry
-    assertTrue(atLeastWaitFor(
+    assertTrue(executeAndWait(
         () -> registerNamenode(
             NAMESERVICES[0], NAMENODES[0], HAServiceState.OBSERVER),
         1500));
@@ -399,11 +399,11 @@ public class TestNamenodeResolver {
     // 2) ns0:nn1 - Unavailable
     // 3) ns0:nn2 - Unavailable (newest)
     // Verify the selected entry is the oldest Unavailable entry
-    assertTrue(atLeastWaitFor(
+    assertTrue(executeAndWait(
         () -> registerNamenode(
             NAMESERVICES[0], NAMENODES[0], null),
         1500));
-    assertTrue(atLeastWaitFor(
+    assertTrue(executeAndWait(
         () -> registerNamenode(
             NAMESERVICES[0], NAMENODES[1], null),
         1500));
