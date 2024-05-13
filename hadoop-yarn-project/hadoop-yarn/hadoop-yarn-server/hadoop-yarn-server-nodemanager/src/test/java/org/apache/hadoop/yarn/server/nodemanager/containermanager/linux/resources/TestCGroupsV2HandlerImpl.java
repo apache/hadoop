@@ -210,6 +210,111 @@ public class TestCGroupsV2HandlerImpl extends TestCGroupsHandlerBase {
     Assert.assertEquals(parentDir.getAbsolutePath(), memoryDir);
   }
 
+  /*
+   * Create a mock mtab file with the following content for hybrid v1/v2:
+   * cgroup2 /path/to/parentV2Dir cgroup2 rw,nosuid,nodev,noexec,relatime,nsdelegate,memory_recursiveprot 0 0
+   * cgroup /path/to/parentDir cgroup rw,nosuid,nodev,noexec,relatime,memory 0 0
+   *
+   * Create the following cgroup hierarchy:
+   * 
+   *                                       parentDir
+   *                              ___________________________
+   *                             /                           \
+   *                          unified                      memory
+   *       _________________________________________________
+   *      /                     \                           \
+   *  cgroup.controllers     cgroup.subtree_control   test-hadoop-yarn (hierarchyDir)
+   *                                                        _________________
+   *                                                       /                 \
+   *                                              cgroup.controllers   cgroup.subtree_control
+   */
+  public File createPremountedHybridCgroups(File v1ParentDir)
+      throws IOException {
+    File v2ParentDir = new File(v1ParentDir, "unified");
+
+    String mtabContent =
+        "cgroup " + v1ParentDir.getAbsolutePath() + "/memory"
+            + " cgroup rw,nosuid,nodev,noexec,relatime,memory 0 0\n"
+        + "cgroup2 " + v2ParentDir.getAbsolutePath()
+            + " cgroup2 rw,nosuid,nodev,noexec,relatime,nsdelegate,memory_recursiveprot 0 0\n";
+    
+    File mockMtab = createFileWithContent(v1ParentDir, UUID.randomUUID().toString(), mtabContent);
+
+    String enabledV2Controllers = "cpuset cpu io hugetlb pids rdma misc\n";
+    File controllersFile = createFileWithContent(v2ParentDir, CGroupsHandler.CGROUP_CONTROLLERS_FILE,
+        enabledV2Controllers);
+
+    File subtreeControlFile = new File(v2ParentDir, CGroupsHandler.CGROUP_SUBTREE_CONTROL_FILE);
+    Assert.assertTrue("empty subtree_control file should be created",
+        subtreeControlFile.createNewFile());
+
+    File hierarchyDir = new File(v2ParentDir, hierarchy);
+    if (!hierarchyDir.mkdirs()) {
+      String message = "Could not create directory " + hierarchyDir.getAbsolutePath();
+      throw new IOException(message);
+    }
+    hierarchyDir.deleteOnExit();
+
+    FileUtils.copyFile(controllersFile, new File(hierarchyDir,
+        CGroupsHandler.CGROUP_CONTROLLERS_FILE));
+    FileUtils.copyFile(subtreeControlFile, new File(hierarchyDir,
+        CGroupsHandler.CGROUP_SUBTREE_CONTROL_FILE));
+
+    return mockMtab;
+  }
+
+  @Test
+  public void testHybridMtabParsing() throws Exception {
+    // Initialize mtab and cgroup dir
+    File v1ParentDir = new File(tmpPath);
+    
+    File v2ParentDir = new File(v1ParentDir, "unified");
+    Assert.assertTrue("temp dir should be created", v2ParentDir.mkdirs());
+    v2ParentDir.deleteOnExit();
+    
+    // create mock cgroup
+    File mockMtabFile = createPremountedHybridCgroups(v1ParentDir);
+    
+    // create memory cgroup for v1
+    File memoryCgroup = new File(v1ParentDir, "memory");
+    assertTrue("Directory should be created", memoryCgroup.mkdirs());
+
+    // init v1 and v2 handlers
+    CGroupsHandlerImpl cGroupsHandler = new CGroupsHandlerImpl(
+        createMountConfiguration(),
+        privilegedOperationExecutorMock, mockMtabFile.getAbsolutePath());
+    CGroupsV2HandlerImpl cGroupsV2Handler = new CGroupsV2HandlerImpl(
+        createMountConfiguration(),
+        privilegedOperationExecutorMock, mockMtabFile.getAbsolutePath());
+
+    // Verify resource handlers that are enabled in v1
+    Map<String, Set<String>> newMtab =
+        cGroupsHandler.parseMtab(mockMtabFile.getAbsolutePath());
+    Map<CGroupsHandler.CGroupController, String> controllerv1Paths =
+        cGroupsHandler.initializeControllerPathsFromMtab(
+            newMtab);
+
+    Assert.assertEquals(1, controllerv1Paths.size());
+    assertTrue(controllerv1Paths
+        .containsKey(CGroupsHandler.CGroupController.MEMORY));
+    String memoryDir =
+        controllerv1Paths.get(CGroupsHandler.CGroupController.MEMORY);
+    Assert.assertEquals(memoryCgroup.getAbsolutePath(), memoryDir);
+
+    // Verify resource handlers that are enabled in v2
+    newMtab =
+        cGroupsV2Handler.parseMtab(mockMtabFile.getAbsolutePath());
+    Map<CGroupsHandler.CGroupController, String> controllerPaths =
+        cGroupsV2Handler.initializeControllerPathsFromMtab(
+            newMtab);
+
+    Assert.assertEquals(3, controllerPaths.size());
+    assertTrue(controllerPaths
+        .containsKey(CGroupsHandler.CGroupController.CPU));
+    String cpuDir = controllerPaths.get(CGroupsHandler.CGroupController.CPU);
+    Assert.assertEquals(v2ParentDir.getAbsolutePath(), cpuDir);
+  }
+
   @Test
   public void testManualCgroupSetting() throws Exception {
     YarnConfiguration conf = new YarnConfiguration();
@@ -217,8 +322,26 @@ public class TestCGroupsV2HandlerImpl extends TestCGroupsHandlerBase {
     conf.set(YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_HIERARCHY,
         "/hadoop-yarn");
 
-    File baseCgroup = new File(tmpPath);
-    File subCgroup = new File(tmpPath, "/hadoop-yarn");
+    validateCgroupV2Controllers(conf, tmpPath);
+  }
+
+  @Test
+  public void testManualHybridCgroupSetting() throws Exception {
+    String unifiedPath = tmpPath + "/unified";
+    
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.set(YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_MOUNT_PATH, tmpPath);
+    conf.set(YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_V2_MOUNT_PATH, unifiedPath);
+    conf.set(YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_HIERARCHY,
+        "/hadoop-yarn");
+
+    validateCgroupV1Controllers(conf, tmpPath);
+    validateCgroupV2Controllers(conf, unifiedPath);
+  }
+
+  private void validateCgroupV2Controllers(YarnConfiguration conf, String mountPath) throws Exception {
+    File baseCgroup = new File(mountPath);
+    File subCgroup = new File(mountPath, "/hadoop-yarn");
     Assert.assertTrue("temp dir should be created", subCgroup.mkdirs());
     subCgroup.deleteOnExit();
 
@@ -235,8 +358,8 @@ public class TestCGroupsV2HandlerImpl extends TestCGroupsHandlerBase {
     cGroupsHandler.initializeCGroupController(CGroupsHandler.CGroupController.CPU);
 
     Assert.assertEquals("CPU cgroup path was not set", subCgroup.getAbsolutePath(),
-            new File(cGroupsHandler.getPathForCGroup(
-                CGroupsHandler.CGroupController.CPU, "")).getAbsolutePath());
+        new File(cGroupsHandler.getPathForCGroup(
+            CGroupsHandler.CGroupController.CPU, "")).getAbsolutePath());
 
     // Verify that the subtree control file was updated
     String subtreeControllersEnabledString = FileUtils.readFileToString(subtreeControlFile,
@@ -275,5 +398,22 @@ public class TestCGroupsV2HandlerImpl extends TestCGroupsHandlerBase {
     Assert.assertEquals(3, subtreeControllersEnabled.size());
     Assert.assertTrue("Controllers not enabled in subtree control file",
         cGroupsHandler.getValidCGroups().containsAll(subtreeControllersEnabled));
+  }
+
+  private void validateCgroupV1Controllers(YarnConfiguration conf, String mountPath)
+      throws ResourceHandlerException {
+    File blkio = new File(new File(mountPath, "blkio"), "/hadoop-yarn");
+
+    Assert.assertTrue("temp dir should be created", blkio.mkdirs());
+
+    CGroupsHandlerImpl cGroupsv1Handler = new CGroupsHandlerImpl(conf, null);
+    cGroupsv1Handler.initializeCGroupController(
+        CGroupsHandler.CGroupController.BLKIO);
+
+    Assert.assertEquals("BLKIO CGRoup path was not set", blkio.getAbsolutePath(),
+        new File(cGroupsv1Handler.getPathForCGroup(
+            CGroupsHandler.CGroupController.BLKIO, "")).getAbsolutePath());
+
+    FileUtils.deleteQuietly(blkio);
   }
 }
