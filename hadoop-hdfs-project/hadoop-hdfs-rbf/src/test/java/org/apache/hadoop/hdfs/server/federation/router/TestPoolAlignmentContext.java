@@ -18,7 +18,7 @@
 package org.apache.hadoop.hdfs.server.federation.router;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos;
+import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcRequestHeaderProto;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -59,7 +59,8 @@ public class TestPoolAlignmentContext {
     PoolAlignmentContext poolContext = new PoolAlignmentContext(routerStateIdContext, namespaceId);
 
     poolContext.receiveResponseState(getRpcResponseHeader(10L));
-    // Last seen value is the one from namenode, but request header is the max seen by clients so far.
+    // Last seen value is the one from namenode,
+    // but request header is the max seen by clients so far.
     Assertions.assertEquals(10L, poolContext.getLastSeenStateId());
     assertRequestHeaderStateId(poolContext, Long.MIN_VALUE);
 
@@ -73,11 +74,11 @@ public class TestPoolAlignmentContext {
     assertRequestHeaderStateId(poolContext, Long.MIN_VALUE);
   }
 
-  private RpcHeaderProtos.RpcResponseHeaderProto getRpcResponseHeader(long stateID) {
-    return RpcHeaderProtos.RpcResponseHeaderProto
+  private RpcResponseHeaderProto getRpcResponseHeader(long stateID) {
+    return RpcResponseHeaderProto
         .newBuilder()
         .setCallId(1)
-        .setStatus(RpcHeaderProtos.RpcResponseHeaderProto.RpcStatusProto.SUCCESS)
+        .setStatus(RpcResponseHeaderProto.RpcStatusProto.SUCCESS)
         .setStateId(stateID)
         .build();
   }
