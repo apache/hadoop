@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.crypto;
 
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -27,13 +26,11 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
-import java.security.Security;
 import javax.crypto.Cipher;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import org.slf4j.Logger;
 
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_JAVA_SECURE_RANDOM_ALGORITHM_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_JAVA_SECURE_RANDOM_ALGORITHM_DEFAULT;
 
@@ -46,10 +43,6 @@ public abstract class JceCtrCryptoCodec extends CryptoCodec{
 
   public String getProvider() {
     return provider;
-  }
-
-  public void setProvider(String provider) {
-    this.provider = provider;
   }
 
   public void calculateIV(byte[] initIV, long counter,
@@ -82,17 +75,15 @@ public abstract class JceCtrCryptoCodec extends CryptoCodec{
 
   public void setConf(Configuration conf) {
     this.conf = conf;
-    setProvider(conf.get(HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_KEY));
-    if (BouncyCastleProvider.PROVIDER_NAME.equals(provider)) {
-      Security.addProvider(new BouncyCastleProvider());
-    }
+    this.provider = CryptoUtils.getJceProvider(conf);
+
     final String secureRandomAlg =
           conf.get(
               HADOOP_SECURITY_JAVA_SECURE_RANDOM_ALGORITHM_KEY,
               HADOOP_SECURITY_JAVA_SECURE_RANDOM_ALGORITHM_DEFAULT);
 
     try {
-      random = (provider != null)
+      random = (provider != null && !provider.isEmpty())
             ? SecureRandom.getInstance(secureRandomAlg, provider)
             : SecureRandom.getInstance(secureRandomAlg);
     } catch(GeneralSecurityException e) {
