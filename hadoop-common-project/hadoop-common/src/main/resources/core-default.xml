@@ -3633,6 +3633,21 @@ The switch to turn S3A auditing on or off.
   <value></value>
   <description>
     The JCE provider name used in CryptoCodec.
+    If this value is set, the corresponding provider must be added to the provider list.
+    The provider may be added statically in the java.security file, or
+    dynamically by calling the java.security.Security.addProvider(..) method, or
+    automatically (only for org.bouncycastle.jce.provider.BouncyCastleProvider)
+    by setting "hadoop.security.crypto.jce.provider.auto-add" to true
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.crypto.jce.provider.auto-add</name>
+  <value>true</value>
+  <description>
+    Automatically add the org.bouncycastle.jce.provider.BouncyCastleProvider
+    when the value in "hadoop.security.crypto.jce.provider" is set
+    to BouncyCastleProvider.PROVIDER_NAME.
   </description>
 </property>
 
