@@ -41,7 +41,7 @@ import java.util.Iterator;
 import java.util.Set;
 
 public class TestOldCombinerGrouping {
-  private static File TEST_ROOT_DIR = GenericTestUtils.getRandomizedTestDir();
+  private static File testRootDir = GenericTestUtils.getRandomizedTestDir();
 
   public static class Map implements
       Mapper<LongWritable, Text, Text, LongWritable> {
@@ -121,19 +121,19 @@ public class TestOldCombinerGrouping {
 
   @After
   public void cleanup() {
-    FileUtil.fullyDelete(TEST_ROOT_DIR);
+    FileUtil.fullyDelete(testRootDir);
   }
 
   @Test
   public void testCombiner() throws Exception {
-    if (!TEST_ROOT_DIR.mkdirs()) {
-      throw new RuntimeException("Could not create test dir: " + TEST_ROOT_DIR);
+    if (!testRootDir.mkdirs()) {
+      throw new RuntimeException("Could not create test dir: " + testRootDir);
     }
-    File in = new File(TEST_ROOT_DIR, "input");
+    File in = new File(testRootDir, "input");
     if (!in.mkdirs()) {
       throw new RuntimeException("Could not create test dir: " + in);
     }
-    File out = new File(TEST_ROOT_DIR, "output");
+    File out = new File(testRootDir, "output");
     PrintWriter pw = new PrintWriter(new FileWriter(new File(in, "data.txt")));
     pw.println("A|a,1");
     pw.println("A|b,2");
