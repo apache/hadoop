@@ -72,6 +72,9 @@ public class ITestS3AEncryptionSSEKMSDefaultKey
     writeDataset(fs, path, data, data.length, 1024 * 1024, true);
     ContractTestUtils.verifyFileContents(fs, path, data);
     // we don't know the KMS key in case of server default option.
-    validateEncryptionFileAttributes(fs, path, EncryptionTestUtils.AWS_KMS_SSE_ALGORITHM,  Optional.empty());
+    validateEncryptionFileAttributes(fs,
+            path,
+            EncryptionTestUtils.AWS_KMS_SSE_ALGORITHM,
+            Optional.empty());
   }
 }

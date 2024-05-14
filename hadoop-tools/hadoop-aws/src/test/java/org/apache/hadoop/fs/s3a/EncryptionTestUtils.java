@@ -139,7 +139,8 @@ public final class EncryptionTestUtils {
     Assertions.assertThat(xAttrs)
             .describedAs("Encryption key id should be present")
             .containsKey(XA_ENCRYPTION_KEY_ID);
-    kmsKey.ifPresent(s -> Assertions.assertThat(HeaderProcessing.decodeBytes(xAttrs.get(XA_ENCRYPTION_KEY_ID)))
+    kmsKey.ifPresent(s -> Assertions
+            .assertThat(HeaderProcessing.decodeBytes(xAttrs.get(XA_ENCRYPTION_KEY_ID)))
               .describedAs("Encryption key id should match with the kms key")
               .isEqualTo(s));
   }
