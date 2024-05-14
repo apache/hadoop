@@ -480,7 +480,8 @@ extends AbstractDelegationTokenIdentifier>
             getTrackingIdIfEnabled(identifier)));
         addTokenForOwnerStats(identifier);
       } else {
-        throw new IOException("Same delegation token being added twice: " + formatTokenId(identifier));
+        throw new IOException("Same delegation token being added twice: " +
+            formatTokenId(identifier));
       }
     } finally {
       this.apiLock.writeLock().unlock();
@@ -566,10 +567,12 @@ extends AbstractDelegationTokenIdentifier>
       identifier.setMaxDate(now + tokenMaxLifetime);
       identifier.setMasterKeyId(currentKey.getKeyId());
       identifier.setSequenceNumber(sequenceNum);
-      LOG.info("Creating password for identifier: " + formatTokenId(identifier) + ", currentKey: " + currentKey.getKeyId());
+      LOG.info("Creating password for identifier: " + formatTokenId(identifier) +
+          ", currentKey: " + currentKey.getKeyId());
       byte[] password = createPassword(identifier.getBytes(), currentKey.getKey());
       DelegationTokenInformation tokenInfo =
-          new DelegationTokenInformation(now + tokenRenewInterval, password, getTrackingIdIfEnabled(identifier));
+          new DelegationTokenInformation(now + tokenRenewInterval, password,
+              getTrackingIdIfEnabled(identifier));
       try {
         METRICS.trackStoreToken(() -> storeToken(identifier, tokenInfo));
       } catch (IOException ioe) {
@@ -684,20 +687,23 @@ extends AbstractDelegationTokenIdentifier>
 
       long now = Time.now();
       if (id.getMaxDate() < now) {
-        throw new InvalidToken(renewer + " tried to renew an expired token " + formatTokenId(id) + " max expiration date: "
-            + Time.formatTime(id.getMaxDate()) + " currentTime: " + Time.formatTime(now));
+        throw new InvalidToken(renewer + " tried to renew an expired token " + formatTokenId(id) +
+            " max expiration date: " + Time.formatTime(id.getMaxDate()) + " currentTime: " +
+            Time.formatTime(now));
       }
       if ((id.getRenewer() == null) || (id.getRenewer().toString().isEmpty())) {
-        throw new AccessControlException(renewer + " tried to renew a token " + formatTokenId(id) + " without a renewer");
+        throw new AccessControlException(renewer + " tried to renew a token " + formatTokenId(id) +
+            " without a renewer");
       }
       if (!id.getRenewer().toString().equals(renewer)) {
-        throw new AccessControlException(renewer + " tries to renew a token " + formatTokenId(id) + " with non-matching renewer "
-            + id.getRenewer());
+        throw new AccessControlException(renewer + " tries to renew a token " + formatTokenId(id) +
+            " with non-matching renewer " + id.getRenewer());
       }
       DelegationKey key = getDelegationKey(id.getMasterKeyId());
       if (key == null) {
-        throw new InvalidToken("Unable to find master key for keyId=" + id.getMasterKeyId() + " from cache. Failed to renew an unexpired token "
-            + formatTokenId(id) + " with sequenceNumber=" + id.getSequenceNumber());
+        throw new InvalidToken("Unable to find master key for keyId=" + id.getMasterKeyId() +
+            " from cache. Failed to renew an unexpired token " + formatTokenId(id) +
+            " with sequenceNumber=" + id.getSequenceNumber());
       }
       byte[] password = createPassword(token.getIdentifier(), key.getKey());
       if (!MessageDigest.isEqual(password, token.getPassword())) {
@@ -745,8 +751,11 @@ extends AbstractDelegationTokenIdentifier>
       Text renewer = id.getRenewer();
       HadoopKerberosName cancelerKrbName = new HadoopKerberosName(canceller);
       String cancelerShortName = cancelerKrbName.getShortName();
-      if (!canceller.equals(owner) && (renewer == null || renewer.toString().isEmpty() || !cancelerShortName.equals(renewer.toString()))) {
-        throw new AccessControlException(canceller + " is not authorized to cancel the token " + formatTokenId(id));
+      if (!canceller.equals(owner) &&
+          (renewer == null || renewer.toString().isEmpty() ||
+              !cancelerShortName.equals(renewer.toString()))) {
+        throw new AccessControlException(canceller + " is not authorized to cancel the token " +
+            formatTokenId(id));
       }
       DelegationTokenInformation info = currentTokens.remove(id);
       if (info == null) {
@@ -903,10 +912,6 @@ extends AbstractDelegationTokenIdentifier>
     return running;
   }
 
-  public ReentrantReadWriteLock getApiLock() {
-    return this.apiLock;
-  }
-  
   private class ExpiredTokenRemover extends Thread {
     private long lastMasterKeyUpdate;
     private long lastTokenCacheCleanup;
