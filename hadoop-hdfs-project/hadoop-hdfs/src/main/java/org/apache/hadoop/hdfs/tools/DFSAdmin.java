@@ -2095,22 +2095,20 @@ public class DFSAdmin extends FsShell {
     if (errMsg != null) {
       err.println(errMsg);
       return 1;
-    } else {
-      out.print(outMsg);
     }
 
     if (status != null) {
       if (!status.hasTask()) {
-        out.println("no task was found.");
+        out.println(outMsg + "no task was found.");
         return 0;
       }
-      out.print("started at " + new Date(status.getStartTime()));
+      String startMsg = outMsg + "started at " + new Date(status.getStartTime());
       if (!status.stopped()) {
-        out.println(" and is still running.");
+        out.println(startMsg + " and is still running.");
         return 0;
       }
 
-      out.println(" and finished at "
+      out.println(startMsg + " and finished at "
           + new Date(status.getEndTime()).toString() + ".");
       if (status.getStatus() == null) {
         // Nothing to report.
@@ -2133,6 +2131,7 @@ public class DFSAdmin extends FsShell {
         }
       }
     } else {
+      out.println(outMsg);
       return 1;
     }
 
