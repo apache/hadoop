@@ -25,9 +25,9 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 public class CGroupsMountConfig {
   private final boolean enableMount;
   private final String mountPath;
-  
+
   // CGroups v2 mount path is only relevant in mixed CGroups v1/v2 mode,
-  // where v2 can be mounted in a different folder than v1.
+  // where v2 is mounted alongside with v1.
   private final String v2MountPath;
 
   public CGroupsMountConfig(Configuration conf) {

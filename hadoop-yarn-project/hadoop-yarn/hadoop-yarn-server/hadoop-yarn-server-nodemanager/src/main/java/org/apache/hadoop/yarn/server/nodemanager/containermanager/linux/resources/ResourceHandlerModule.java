@@ -63,8 +63,8 @@ public class ResourceHandlerModule {
    * as resource metrics functionality. We need to ensure that the same
    * instance is used for both.
    */
-  private static volatile CGroupsHandler cGroupsV1Handler;
-  private static volatile CGroupsHandler cGroupsV2Handler;
+  private static volatile CGroupsHandler cGroupV1Handler;
+  private static volatile CGroupsHandler cGroupV2Handler;
   private static volatile TrafficControlBandwidthHandlerImpl
       trafficControlBandwidthHandler;
   private static volatile NetworkPacketTaggingHandlerImpl
@@ -76,41 +76,42 @@ public class ResourceHandlerModule {
   private static volatile CpuResourceHandler
       cGroupsCpuResourceHandler;
 
-  private static void initializeCGroupsHandlers(Configuration conf) throws ResourceHandlerException {
-    initializeCGroupsV1Handler(conf);
+  private static void initializeCGroupHandlers(Configuration conf)
+      throws ResourceHandlerException {
+    initializeCGroupV1Handler(conf);
     if (cgroupsV2Enabled) {
-      initializeCGroupsV2Handler(conf);
+      initializeCGroupV2Handler(conf);
     }
   }
 
-  private static void initializeCGroupsV1Handler(Configuration conf)
+  private static void initializeCGroupV1Handler(Configuration conf)
       throws ResourceHandlerException {
-    if (cGroupsV1Handler == null) {
+    if (cGroupV1Handler == null) {
       synchronized (CGroupsHandler.class) {
-        if (cGroupsV1Handler == null) {
-          cGroupsV1Handler = new CGroupsHandlerImpl(
+        if (cGroupV1Handler == null) {
+          cGroupV1Handler = new CGroupsHandlerImpl(
               conf, PrivilegedOperationExecutor.getInstance(conf));
-          LOG.debug("Value of CGroupsV1Handler is: {}", cGroupsV1Handler);
+          LOG.debug("Value of CGroupsV1Handler is: {}", cGroupV1Handler);
         }
       }
     }
   }
 
-  private static void initializeCGroupsV2Handler(Configuration conf)
+  private static void initializeCGroupV2Handler(Configuration conf)
       throws ResourceHandlerException {
-    if (cGroupsV2Handler == null) {
+    if (cGroupV2Handler == null) {
       synchronized (CGroupsHandler.class) {
-        if (cGroupsV2Handler == null) {
-          cGroupsV2Handler = new CGroupsV2HandlerImpl(
+        if (cGroupV2Handler == null) {
+          cGroupV2Handler = new CGroupsV2HandlerImpl(
               conf, PrivilegedOperationExecutor.getInstance(conf));
-          LOG.debug("Value of CGroupsV2Handler is: {}", cGroupsV2Handler);
+          LOG.debug("Value of CGroupsV2Handler is: {}", cGroupV2Handler);
         }
       }
     }
   }
 
   private static boolean isMountedInCGroupsV2(CGroupsHandler.CGroupController controller) {
-    return (cGroupsV2Handler != null && cGroupsV2Handler.getControllerPath(controller) != null);
+    return (cGroupV2Handler != null && cGroupV2Handler.getControllerPath(controller) != null);
   }
 
   /**
@@ -120,7 +121,7 @@ public class ResourceHandlerModule {
    */
 
   public static CGroupsHandler getCGroupsHandler() {
-    return cgroupsV2Enabled ? cGroupsV2Handler : cGroupsV1Handler;
+    return cGroupV1Handler;
   }
 
   /**
@@ -173,11 +174,11 @@ public class ResourceHandlerModule {
           if (cGroupsCpuResourceHandler == null) {
             LOG.debug("Creating new cgroups cpu handler");
 
-            initializeCGroupsHandlers(conf);
+            initializeCGroupHandlers(conf);
             if (isMountedInCGroupsV2(CGroupsHandler.CGroupController.CPU)) {
-              cGroupsCpuResourceHandler = new CGroupsV2CpuResourceHandlerImpl(cGroupsV2Handler);
+              cGroupsCpuResourceHandler = new CGroupsV2CpuResourceHandlerImpl(cGroupV2Handler);
             } else {
-              cGroupsCpuResourceHandler = new CGroupsCpuResourceHandlerImpl(cGroupsV1Handler);
+              cGroupsCpuResourceHandler = new CGroupsCpuResourceHandlerImpl(cGroupV1Handler);
             }
             return cGroupsCpuResourceHandler;
           }
@@ -197,10 +198,10 @@ public class ResourceHandlerModule {
           if (trafficControlBandwidthHandler == null) {
             LOG.info("Creating new traffic control bandwidth handler.");
 
-            initializeCGroupsHandlers(conf);
+            initializeCGroupHandlers(conf);
             trafficControlBandwidthHandler = new
                 TrafficControlBandwidthHandlerImpl(PrivilegedOperationExecutor
-                .getInstance(conf), cGroupsV1Handler,
+                .getInstance(conf), cGroupV1Handler,
                 new TrafficController(conf, PrivilegedOperationExecutor
                     .getInstance(conf)));
           }
@@ -234,10 +235,10 @@ public class ResourceHandlerModule {
         if (networkPacketTaggingHandlerImpl == null) {
           LOG.info("Creating new network-tagging-handler.");
 
-          initializeCGroupsHandlers(conf);
+          initializeCGroupHandlers(conf);
           networkPacketTaggingHandlerImpl =
               new NetworkPacketTaggingHandlerImpl(
-                  PrivilegedOperationExecutor.getInstance(conf), cGroupsV1Handler);
+                  PrivilegedOperationExecutor.getInstance(conf), cGroupV1Handler);
         }
       }
     }
@@ -266,9 +267,9 @@ public class ResourceHandlerModule {
         if (cGroupsBlkioResourceHandler == null) {
           LOG.debug("Creating new cgroups blkio handler");
 
-          initializeCGroupsHandlers(conf);
+          initializeCGroupHandlers(conf);
           cGroupsBlkioResourceHandler =
-              new CGroupsBlkioResourceHandlerImpl(cGroupsV1Handler);
+              new CGroupsBlkioResourceHandlerImpl(cGroupV1Handler);
         }
       }
     }
@@ -291,11 +292,11 @@ public class ResourceHandlerModule {
       synchronized (MemoryResourceHandler.class) {
         if (cGroupsMemoryResourceHandler == null) {
 
-          initializeCGroupsHandlers(conf);
+          initializeCGroupHandlers(conf);
           if (isMountedInCGroupsV2(CGroupsHandler.CGroupController.MEMORY)) {
-            cGroupsMemoryResourceHandler = new CGroupsV2MemoryResourceHandlerImpl(cGroupsV2Handler);
+            cGroupsMemoryResourceHandler = new CGroupsV2MemoryResourceHandlerImpl(cGroupV2Handler);
           } else {
-            cGroupsMemoryResourceHandler = new CGroupsMemoryResourceHandlerImpl(cGroupsV1Handler);
+            cGroupsMemoryResourceHandler = new CGroupsMemoryResourceHandlerImpl(cGroupV1Handler);
           }
         }
       }
@@ -358,10 +359,10 @@ public class ResourceHandlerModule {
     }
 
     for (ResourcePlugin plugin : pluginMap.values()) {
-      initializeCGroupsHandlers(conf);
+      initializeCGroupHandlers(conf);
       addHandlerIfNotNull(handlerList,
           plugin.createResourceHandler(nmContext,
-              cGroupsV1Handler,
+              cGroupV1Handler,
               PrivilegedOperationExecutor.getInstance(conf)));
     }
   }
@@ -390,22 +391,6 @@ public class ResourceHandlerModule {
   @VisibleForTesting
   static void nullifyResourceHandlerChain() throws ResourceHandlerException {
     resourceHandlerChain = null;
-  }
-
-  @VisibleForTesting
-  static void resetCGroupsHandlers() {
-    cGroupsV1Handler = null;
-    cGroupsV2Handler = null;
-  }
-
-  @VisibleForTesting
-  static void resetCpuResourceHandler() {
-    cGroupsCpuResourceHandler = null;
-  }
-
-  @VisibleForTesting
-  static void resetMemoryResourceHandler() {
-    cGroupsMemoryResourceHandler = null;
   }
 
   /**

@@ -49,9 +49,6 @@ public class TestResourceHandlerModule {
     networkEnabledConf.setBoolean(YarnConfiguration.NM_NETWORK_RESOURCE_ENABLED,
         true);
     ResourceHandlerModule.nullifyResourceHandlerChain();
-    ResourceHandlerModule.resetCGroupsHandlers();
-    ResourceHandlerModule.resetCpuResourceHandler();
-    ResourceHandlerModule.resetMemoryResourceHandler();
   }
 
   @Test
@@ -112,39 +109,6 @@ public class TestResourceHandlerModule {
       Assert.assertTrue(resourceHandlers.get(0) == handler);
     } else {
       Assert.fail("Null returned");
-    }
-  }
-
-  @Test
-  public void testCgroupsHandlerClassForCgroupV1() throws ResourceHandlerException {
-    Configuration conf = new YarnConfiguration();
-    conf.setBoolean(YarnConfiguration.NM_MEMORY_RESOURCE_ENABLED, true);
-    conf.setBoolean(YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_V2_ENABLED, false);
-
-    initResourceHandlerChain(conf);
-
-    Assert.assertTrue(ResourceHandlerModule.getCGroupsHandler()
-        instanceof CGroupsHandlerImpl);
-  }
-
-  @Test
-  public void testCgroupsHandlerClassForCgroupV2() throws ResourceHandlerException {
-    Configuration conf = new YarnConfiguration();
-    conf.setBoolean(YarnConfiguration.NM_MEMORY_RESOURCE_ENABLED, true);
-    conf.setBoolean(YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_V2_ENABLED, true);
-
-    initResourceHandlerChain(conf);
-
-    Assert.assertTrue(ResourceHandlerModule.getCGroupsHandler()
-        instanceof CGroupsV2HandlerImpl);
-  }
-
-  private void initResourceHandlerChain(Configuration conf) throws ResourceHandlerException {
-    ResourceHandlerChain resourceHandlerChain =
-        ResourceHandlerModule.getConfiguredResourceHandlerChain(conf,
-            mock(Context.class));
-    if (resourceHandlerChain == null) {
-      Assert.fail("Could not initialize resource handler chain");
     }
   }
 }
