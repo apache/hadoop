@@ -213,14 +213,14 @@ public class TestCGroupsV2HandlerImpl extends TestCGroupsHandlerBase {
   /*
    * Create a mock mtab file with the following content for hybrid v1/v2:
    * cgroup2 /path/to/parentV2Dir cgroup2 rw,nosuid,nodev,noexec,relatime,nsdelegate,memory_recursiveprot 0 0
-   * cgroup /path/to/parentDir cgroup rw,nosuid,nodev,noexec,relatime,memory 0 0
+   * cgroup /path/to/parentDir/memory cgroup rw,nosuid,nodev,noexec,relatime,memory 0 0
    *
    * Create the following cgroup hierarchy:
    * 
-   *                                       parentDir
-   *                              ___________________________
-   *                             /                           \
-   *                          unified                      memory
+   *                                           parentDir
+   *                              __________________________________
+   *                             /                                  \
+   *                          unified                             memory
    *       _________________________________________________
    *      /                     \                           \
    *  cgroup.controllers     cgroup.subtree_control   test-hadoop-yarn (hierarchyDir)
