@@ -1531,10 +1531,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       if (dir != null && getFSImage() != null) {
         if (getFSImage().editLog != null) {
           getFSImage().editLog.close();
+          // Update the fsimage with the last txid that we wrote
+          // so that the tailer starts from the right spot.
+          getFSImage().updateLastAppliedTxIdFromWritten();
         }
-        // Update the fsimage with the last txid that we wrote
-        // so that the tailer starts from the right spot.
-        getFSImage().updateLastAppliedTxIdFromWritten();
       }
       if (dir != null) {
         dir.ezManager.stopReencryptThread();
