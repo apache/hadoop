@@ -134,4 +134,8 @@ public enum AclEntryStatusFormat implements LongBitFormat.Enum {
   public int getLength() {
     return BITS.getLength();
   }
+
+  public LongBitFormat getBitFormat() {
+    return BITS;
+  }
 }

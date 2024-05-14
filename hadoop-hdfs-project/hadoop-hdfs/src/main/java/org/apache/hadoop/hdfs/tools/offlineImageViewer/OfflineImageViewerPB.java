@@ -28,6 +28,7 @@ import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -89,6 +90,9 @@ public class OfflineImageViewerPB {
       + "    in a delimited format.\n"
       + "    Note that the check is not exhaustive, and only catches\n"
       + "    missing nodes during the namespace reconstruction.\n"
+      + "  * Transformed: Convert the format of fsimage to low version readable.\n"
+      + "    -tv specify the target layout version to generate the fsimage file, \n"
+      + "    used by transformed only.\n"
       + "\n"
       + "Required command line arguments:\n"
       + "-i,--inputFile <arg>   FSImage or XML file to process.\n"
@@ -101,7 +105,7 @@ public class OfflineImageViewerPB {
       + "                       will also create an <outputFile>.md5 file.\n"
       + "-p,--processor <arg>   Select which type of processor to apply\n"
       + "                       against image file. (XML|FileDistribution|\n"
-      + "                       ReverseXML|Web|Delimited|DetectCorruption)\n"
+      + "                       ReverseXML|Web|Delimited|DetectCorruption|Transformed)\n"
       + "                       The default is Web.\n"
       + "-addr <arg>            Specify the address(host:port) to listen.\n"
       + "                       (localhost:5978 by default). This option is\n"
@@ -127,6 +131,7 @@ public class OfflineImageViewerPB {
       + "                       constructs the namespace in memory \n"
       + "                       before outputting text.\n"
       + "-m,--multiThread <arg> Use multiThread to process sub-sections.\n"
+      + "-tv                    Specify the target layout version to generate the fsimage file.\n"
       + "-h,--help              Display usage information and exit\n";
 
   /**
@@ -152,6 +157,7 @@ public class OfflineImageViewerPB {
     options.addOption("ec", false, "");
     options.addOption("t", "temp", true, "");
     options.addOption("m", "multiThread", true, "");
+    options.addOption("tv", "targetVersion", true, "");
 
     return options;
   }
@@ -210,7 +216,8 @@ public class OfflineImageViewerPB {
     Configuration conf = new Configuration();
     PrintStream out = null;
     try {
-      out = outputFile.equals("-") || "REVERSEXML".equalsIgnoreCase(processor) ?
+      out = outputFile.equals("-") || "REVERSEXML".equalsIgnoreCase(processor)
+          || "TRANSFORMED".equalsIgnoreCase(processor) ?
         System.out : new PrintStream(outputFile, "UTF-8");
       switch (StringUtils.toUpperCase(processor)) {
       case "FILEDISTRIBUTION":
@@ -258,6 +265,18 @@ public class OfflineImageViewerPB {
         try (PBImageCorruptionDetector detector =
             new PBImageCorruptionDetector(out, delimiter, tempPath)) {
           detector.visit(inputFile);
+        }
+        break;
+      case "TRANSFORMED":
+        try {
+          int targetVersion = Integer.parseInt(cmd.getOptionValue(
+              "tv", String.valueOf(NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION)));
+          OfflineImageConverter.run(conf, inputFile, outputFile, targetVersion);
+        } catch (Exception e) {
+          System.err.println("OfflineImageConverter failed: "
+              + e.getMessage());
+          e.printStackTrace(System.err);
+          ExitUtil.terminate(1);
         }
         break;
       default:
