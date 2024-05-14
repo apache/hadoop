@@ -212,11 +212,11 @@ public class TestCGroupsV2HandlerImpl extends TestCGroupsHandlerBase {
 
   /*
    * Create a mock mtab file with the following content for hybrid v1/v2:
-   * cgroup2 /path/to/parentV2Dir cgroup2 rw,nosuid,nodev,noexec,relatime,nsdelegate,memory_recursiveprot 0 0
+   * cgroup2 /path/to/parentV2Dir cgroup2 rw,nosuid,nodev,noexec,relatime,memory_recursiveprot 0 0
    * cgroup /path/to/parentDir/memory cgroup rw,nosuid,nodev,noexec,relatime,memory 0 0
    *
    * Create the following cgroup hierarchy:
-   * 
+   *
    *                                           parentDir
    *                              __________________________________
    *                             /                                  \
@@ -236,13 +236,13 @@ public class TestCGroupsV2HandlerImpl extends TestCGroupsHandlerBase {
         "cgroup " + v1ParentDir.getAbsolutePath() + "/memory"
             + " cgroup rw,nosuid,nodev,noexec,relatime,memory 0 0\n"
         + "cgroup2 " + v2ParentDir.getAbsolutePath()
-            + " cgroup2 rw,nosuid,nodev,noexec,relatime,nsdelegate,memory_recursiveprot 0 0\n";
-    
+            + " cgroup2 rw,nosuid,nodev,noexec,relatime,memory_recursiveprot 0 0\n";
+
     File mockMtab = createFileWithContent(v1ParentDir, UUID.randomUUID().toString(), mtabContent);
 
     String enabledV2Controllers = "cpuset cpu io hugetlb pids rdma misc\n";
-    File controllersFile = createFileWithContent(v2ParentDir, CGroupsHandler.CGROUP_CONTROLLERS_FILE,
-        enabledV2Controllers);
+    File controllersFile = createFileWithContent(v2ParentDir,
+        CGroupsHandler.CGROUP_CONTROLLERS_FILE, enabledV2Controllers);
 
     File subtreeControlFile = new File(v2ParentDir, CGroupsHandler.CGROUP_SUBTREE_CONTROL_FILE);
     Assert.assertTrue("empty subtree_control file should be created",
@@ -267,14 +267,14 @@ public class TestCGroupsV2HandlerImpl extends TestCGroupsHandlerBase {
   public void testHybridMtabParsing() throws Exception {
     // Initialize mtab and cgroup dir
     File v1ParentDir = new File(tmpPath);
-    
+
     File v2ParentDir = new File(v1ParentDir, "unified");
     Assert.assertTrue("temp dir should be created", v2ParentDir.mkdirs());
     v2ParentDir.deleteOnExit();
-    
+
     // create mock cgroup
     File mockMtabFile = createPremountedHybridCgroups(v1ParentDir);
-    
+
     // create memory cgroup for v1
     File memoryCgroup = new File(v1ParentDir, "memory");
     assertTrue("Directory should be created", memoryCgroup.mkdirs());
@@ -328,7 +328,7 @@ public class TestCGroupsV2HandlerImpl extends TestCGroupsHandlerBase {
   @Test
   public void testManualHybridCgroupSetting() throws Exception {
     String unifiedPath = tmpPath + "/unified";
-    
+
     YarnConfiguration conf = new YarnConfiguration();
     conf.set(YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_MOUNT_PATH, tmpPath);
     conf.set(YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_V2_MOUNT_PATH, unifiedPath);
@@ -339,7 +339,8 @@ public class TestCGroupsV2HandlerImpl extends TestCGroupsHandlerBase {
     validateCgroupV2Controllers(conf, unifiedPath);
   }
 
-  private void validateCgroupV2Controllers(YarnConfiguration conf, String mountPath) throws Exception {
+  private void validateCgroupV2Controllers(YarnConfiguration conf, String mountPath)
+      throws Exception {
     File baseCgroup = new File(mountPath);
     File subCgroup = new File(mountPath, "/hadoop-yarn");
     Assert.assertTrue("temp dir should be created", subCgroup.mkdirs());
