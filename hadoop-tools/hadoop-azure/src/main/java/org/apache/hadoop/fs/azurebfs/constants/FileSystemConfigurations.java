@@ -159,7 +159,7 @@ public final class FileSystemConfigurations {
   /**
    * IO rate limit. Value: {@value}
    */
-  public static final int RATE_LIMIT_DEFAULT = 10_000;
+  public static final int RATE_LIMIT_DEFAULT = 1_000;
 
   private FileSystemConfigurations() {}
 }

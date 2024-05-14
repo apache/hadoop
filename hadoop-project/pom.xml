@@ -136,7 +136,7 @@
     <cache.api.version>1.1.1</cache.api.version>
     <caffeine.version>2.9.3</caffeine.version>
     <hikari.version>4.0.3</hikari.version>
-    <derby.version>10.14.2.0</derby.version>
+    <derby.version>10.17.1.0</derby.version>
     <mssql.version>6.2.1.jre7</mssql.version>
     <okhttp3.version>4.11.0</okhttp3.version>
     <kotlin-stdlib.version>1.6.20</kotlin-stdlib.version>
