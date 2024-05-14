@@ -29,6 +29,7 @@ import java.io.InterruptedIOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Queue;
@@ -38,6 +39,7 @@ import java.util.zip.Checksum;
 import org.apache.hadoop.fs.ChecksumException;
 import org.apache.hadoop.fs.FSOutputSummer;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.DFSPacket;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -217,7 +219,10 @@ class BlockReceiver implements Closeable {
         switch (stage) {
         case PIPELINE_SETUP_CREATE:
           replicaHandler = datanode.data.createRbw(storageType, storageId,
-              block, allowLazyPersist);
+              block, allowLazyPersist, newGs);
+          if (newGs != 0L) {
+            block.setGenerationStamp(newGs);
+          }
           datanode.notifyNamenodeReceivingBlock(
               block, replicaHandler.getReplica().getStorageUuid());
           break;
@@ -598,7 +603,9 @@ class BlockReceiver implements Closeable {
       return 0;
     }
 
-    datanode.metrics.incrPacketsReceived();
+    if (seqno != DFSPacket.HEART_BEAT_SEQNO) {
+      datanode.metrics.incrPacketsReceived();
+    }
     //First write the packet to the mirror:
     if (mirrorOut != null && !mirrorError) {
       try {
@@ -839,7 +846,7 @@ class BlockReceiver implements Closeable {
           
           replicaInfo.setLastChecksumAndDataLen(offsetInBlock, lastCrc);
 
-          datanode.metrics.incrBytesWritten(len);
+          datanode.metrics.incrBytesWritten(numBytesToDisk);
           datanode.metrics.incrTotalWriteTime(duration);
 
           manageWriterOsCache(offsetInBlock, seqno);
@@ -1057,7 +1064,7 @@ class BlockReceiver implements Closeable {
           // send a special ack upstream.
           if (datanode.isRestarting() && isClient && !isTransfer) {
             try (Writer out = new OutputStreamWriter(
-                replicaInfo.createRestartMetaStream(), "UTF-8")) {
+                replicaInfo.createRestartMetaStream(), StandardCharsets.UTF_8)) {
               // write out the current time.
               out.write(Long.toString(Time.now() + restartBudget));
               out.flush();

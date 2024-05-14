@@ -132,20 +132,17 @@ This auditing information can be used to identify opportunities to reduce load.
 Prints and optionally checks the status of a bucket.
 
 ```bash
-hadoop s3guard bucket-info [-guarded] [-unguarded] [-auth] [-nonauth] [-magic] [-encryption ENCRYPTION] [-markers MARKER] s3a://BUCKET
+hadoop s3guard bucket-info [-fips] [-magic] [-encryption ENCRYPTION] [-markers MARKER] s3a://BUCKET
 ```
 
 Options
 
-| argument | meaning |
-|-----------|-------------|
-| `-guarded` | Require S3Guard to be enabled. This will now always fail |
-| `-unguarded` | Require S3Guard to be disabled. This will now always succeed |
-| `-auth` | Require the S3Guard mode to be "authoritative". This will now always fail |
-| `-nonauth` | Require the S3Guard mode to be "non-authoritative". This will now always fail |
-| `-magic` | Require the S3 filesystem to be support the "magic" committer |
-| `-markers` | Directory marker status: `aware`, `keep`, `delete`, `authoritative` |
-| `-encryption <type>` | Require a specific encryption algorithm  |
+| argument             | meaning                                                             |
+|----------------------|---------------------------------------------------------------------|
+| `-fips`              | Require FIPS endopint to be in use                                  |
+| `-magic`             | Require the S3 filesystem to be support the "magic" committer       |
+| `-markers`           | Directory marker status: `aware`, `keep`, `delete`, `authoritative` |
+| `-encryption <type>` | Require a specific encryption algorithm                             |
 
 The server side encryption options are not directly related to S3Guard, but
 it is often convenient to check them at the same time.

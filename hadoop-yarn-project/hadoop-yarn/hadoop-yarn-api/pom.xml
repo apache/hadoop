@@ -19,11 +19,11 @@
   <parent>
     <artifactId>hadoop-yarn</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>3.4.0-SNAPSHOT</version>
+    <version>3.5.0-SNAPSHOT</version>
   </parent>
   <modelVersion>4.0.0</modelVersion>
   <artifactId>hadoop-yarn-api</artifactId>
-  <version>3.4.0-SNAPSHOT</version>
+  <version>3.5.0-SNAPSHOT</version>
   <name>Apache Hadoop YARN API</name>
 
   <properties>
@@ -51,7 +51,7 @@
       <exclusions>
         <exclusion>
           <groupId>org.apache.hadoop.thirdparty</groupId>
-          <artifactId>hadoop-shaded-protobuf_3_7</artifactId>
+          <artifactId>hadoop-shaded-protobuf_3_23</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
@@ -63,13 +63,8 @@
     </dependency>
 
     <dependency>
-      <groupId>com.google.protobuf</groupId>
-      <artifactId>protobuf-java</artifactId>
-    </dependency>
-
-    <dependency>
       <groupId>org.apache.hadoop.thirdparty</groupId>
-      <artifactId>hadoop-shaded-protobuf_3_7</artifactId>
+      <artifactId>hadoop-shaded-protobuf_3_23</artifactId>
     </dependency>
 
     <dependency>
@@ -80,7 +75,7 @@
       <exclusions>
         <exclusion>
           <groupId>org.apache.hadoop.thirdparty</groupId>
-          <artifactId>hadoop-shaded-protobuf_3_7</artifactId>
+          <artifactId>hadoop-shaded-protobuf_3_23</artifactId>
         </exclusion>
       </exclusions>
     </dependency>

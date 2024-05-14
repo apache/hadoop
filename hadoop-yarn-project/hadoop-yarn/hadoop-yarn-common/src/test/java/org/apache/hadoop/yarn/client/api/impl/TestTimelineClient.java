@@ -78,7 +78,7 @@ public class TestTimelineClient {
     conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
     conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 1.0f);
     client = createTimelineClient(conf);
-    TimelineConnector.DEFAULT_SOCKET_TIMEOUT = 10;
+    client.getConnector().setSocketTimeOut(10);
   }
 
   @AfterEach
@@ -89,7 +89,7 @@ public class TestTimelineClient {
     if (isSSLConfigured()) {
       KeyStoreTestUtil.cleanupSSLConfig(keystoresDir, sslConfDir);
     }
-    TimelineConnector.DEFAULT_SOCKET_TIMEOUT = 60_000;
+    client.getConnector().setSocketTimeOut(60_000);
   }
 
   @Test

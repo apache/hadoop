@@ -385,6 +385,9 @@ public class PBHelperClient {
     if (info.getUpgradeDomain() != null) {
       builder.setUpgradeDomain(info.getUpgradeDomain());
     }
+    if (info.getSoftwareVersion() != null) {
+      builder.setSoftwareVersion(info.getSoftwareVersion());
+    }
     builder
         .setId(convert((DatanodeID) info))
         .setCapacity(info.getCapacity())
@@ -786,7 +789,8 @@ public class PBHelperClient {
                 di.getLastBlockReportTime() : 0)
             .setLastBlockReportMonotonic(di.hasLastBlockReportMonotonic() ?
                 di.getLastBlockReportMonotonic() : 0)
-            .setNumBlocks(di.getNumBlocks());
+            .setNumBlocks(di.getNumBlocks())
+            .setSoftwareVersion(di.getSoftwareVersion());
 
     if (di.hasNonDfsUsed()) {
       dinfo.setNonDfsUsed(di.getNonDfsUsed());

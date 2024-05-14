@@ -29,6 +29,7 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSQueue;
 
 public class WeightToPercentConverter
@@ -50,11 +51,11 @@ public class WeightToPercentConverter
     boolean shouldAllowZeroSumCapacity = result.getRight();
 
     capacities
-        .forEach((key, value) -> csConfig.setCapacity(key, value.toString()));
+        .forEach((key, value) -> csConfig.setCapacity(new QueuePath(key), value.toString()));
 
     if (shouldAllowZeroSumCapacity) {
       String queueName = queue.getName();
-      csConfig.setAllowZeroCapacitySum(queueName, true);
+      csConfig.setAllowZeroCapacitySum(new QueuePath(queueName), true);
     }
   }
 

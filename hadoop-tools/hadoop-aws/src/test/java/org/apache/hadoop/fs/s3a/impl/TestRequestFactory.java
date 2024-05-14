@@ -178,7 +178,6 @@ public class TestRequestFactory extends AbstractHadoopTestBase {
         PutObjectOptions.keepingDirs(), -1, true));
     a(factory.newPutObjectRequestBuilder(path,
         PutObjectOptions.deletingDirs(), 1024, false));
-    a(factory.newSelectRequestBuilder(path));
   }
 
   /**

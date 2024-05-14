@@ -25,6 +25,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ClosedByInterruptException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -32,6 +33,8 @@ import org.apache.hadoop.hdfs.server.datanode.DataStorage;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.log4j.Level;
 import org.junit.Assert;
 
 import org.apache.hadoop.conf.Configuration;
@@ -39,10 +42,32 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSTestUtil.ShortCircuitTestContext;
+import org.junit.BeforeClass;
 import org.junit.Test;
+import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_KEY;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+
 
 public class TestRead {
-  final private int BLOCK_SIZE = 512;
+  static final private int BLOCK_SIZE = 512;
+  static final long SEED = 0xDEADBEEFL;
+  static final int FILE_SIZE = BLOCK_SIZE * 10;
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestRead.class.getName());
+  private final GenericTestUtils.LogCapturer dfsClientLog =
+      GenericTestUtils.LogCapturer.captureLogs(DFSClient.LOG);
+
+  @BeforeClass
+  public static void setLogLevel() {
+    GenericTestUtils.setLogLevel(DFSClient.LOG, Level.WARN);
+  }
 
   private void testEOF(MiniDFSCluster cluster, int fileLength) throws IOException {
     FileSystem fs = cluster.getFileSystem();
@@ -188,6 +213,128 @@ public class TestRead {
       public boolean isSimulated() {
         return true;
       }
+    }
+  }
+
+  /**
+   * Test logging in readBuffer() when the number of IOExceptions can be recovered by retrying on
+   * a different datanode or by refreshing data nodes and retrying each data node one more time.
+   */
+  @Test(timeout=120000)
+  public void testReadBufferIOExceptionLogging() throws IOException {
+    testReadBufferIOExceptionLogging(0, 0);
+    testReadBufferIOExceptionLogging(1, 0);
+    testReadBufferIOExceptionLogging(2, 0);
+    testReadBufferIOExceptionLogging(3, 0);
+    testReadBufferIOExceptionLogging(4, 1);
+    testReadBufferIOExceptionLogging(5, 1);
+    testReadBufferIOExceptionLogging(6, 1);
+  }
+
+  /**
+   * @param ioExceptions number of IOExceptions to throw during a test.
+   * @param maxBlockAcquireFailures number of refreshLocation we would perform once we mark
+   *                                   all current data nodes as dead.
+   */
+  private void testReadBufferIOExceptionLogging(final int ioExceptions,
+      int maxBlockAcquireFailures) throws IOException {
+    dfsClientLog.clearOutput();
+    Configuration conf = new Configuration();
+    conf.setInt(DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_KEY, maxBlockAcquireFailures);
+    final int[] count = {0};
+    // Set up the InjectionHandler
+    DFSClientFaultInjector.set(Mockito.mock(DFSClientFaultInjector.class));
+    DFSClientFaultInjector injector = DFSClientFaultInjector.get();
+    Mockito.doAnswer(new Answer<Void>() {
+      @Override
+      public Void answer(InvocationOnMock invocation) throws Throwable {
+        if (count[0] < ioExceptions) {
+          LOG.info("-------------- throw IOException");
+          count[0]++;
+          throw new IOException("IOException test");
+        }
+        return null;
+      }
+    }).when(injector).fetchFromDatanodeException();
+
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).format(true).build();
+    DistributedFileSystem fileSys = cluster.getFileSystem();
+    DFSClient dfsClient = fileSys.getClient();
+    DFSInputStream input = null;
+    Path file = new Path("/testfile.dat");
+
+    try {
+      DFSTestUtil.createFile(fileSys, file, FILE_SIZE, FILE_SIZE, BLOCK_SIZE, (short) 3, SEED);
+
+      byte[] buffer = new byte[FILE_SIZE];
+      input = dfsClient.open(file.toString());
+      input.read(buffer, 0, FILE_SIZE);
+      assertEquals(ioExceptions, StringUtils.countMatches(dfsClientLog.getOutput(),
+          "Retry with the current or next available datanode."));
+    } finally {
+      Mockito.reset(injector);
+      IOUtils.cleanupWithLogger(LOG, input);
+      fileSys.close();
+      cluster.shutdown();
+      dfsClientLog.clearOutput();
+    }
+  }
+
+  /**
+   * Test the case where we always hit IOExceptions, causing the read request to fail.
+   */
+  @Test(timeout=60000)
+  public void testReadBufferIOExceptionLoggingFailedRequest() throws IOException {
+    testReadBufferIOExceptionLoggingFailedRequest(0);
+    testReadBufferIOExceptionLoggingFailedRequest(1);
+  }
+
+  private void testReadBufferIOExceptionLoggingFailedRequest(int maxBlockAcquireFailures)
+      throws IOException {
+    dfsClientLog.clearOutput();
+    Configuration conf = new Configuration();
+    conf.setInt(DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_KEY, maxBlockAcquireFailures);
+    // Set up the InjectionHandler
+    DFSClientFaultInjector.set(Mockito.mock(DFSClientFaultInjector.class));
+    DFSClientFaultInjector injector = DFSClientFaultInjector.get();
+    Mockito.doAnswer(new Answer<Void>() {
+      @Override
+      public Void answer(InvocationOnMock invocation) throws Throwable {
+        LOG.info("-------------- throw IOException");
+        throw new IOException("IOException test");
+      }
+    }).when(injector).fetchFromDatanodeException();
+
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).format(true).build();
+    DistributedFileSystem fileSys = cluster.getFileSystem();
+    DFSClient dfsClient = fileSys.getClient();
+    DFSInputStream input = null;
+    Path file = new Path("/testfile.dat");
+
+    try {
+      DFSTestUtil.createFile(fileSys, file, FILE_SIZE, FILE_SIZE, BLOCK_SIZE, (short) 3, SEED);
+
+      byte[] buffer = new byte[FILE_SIZE];
+      input = dfsClient.open(file.toString());
+      input.read(buffer, 0, FILE_SIZE);
+      fail();
+    } catch (BlockMissingException e) {
+      // Logging from readWithStrategy()
+      assertEquals(1, StringUtils.countMatches(dfsClientLog.getOutput(),
+          "Failed to read from all available datanodes for file"));
+      assertEquals(1 + 3L * (maxBlockAcquireFailures + 1),
+          StringUtils.countMatches(dfsClientLog.getOutput(),
+              "Exception when fetching file /testfile.dat at position="));
+      // Logging from actualGetFromOneDataNode
+      assertEquals(1 + 3L * (maxBlockAcquireFailures + 1),
+          StringUtils.countMatches(dfsClientLog.getOutput(),
+              "Retry with the current or next available datanode."));
+    } finally {
+      Mockito.reset(injector);
+      IOUtils.cleanupWithLogger(LOG, input);
+      fileSys.close();
+      cluster.shutdown();
+      dfsClientLog.clearOutput();
     }
   }
 }

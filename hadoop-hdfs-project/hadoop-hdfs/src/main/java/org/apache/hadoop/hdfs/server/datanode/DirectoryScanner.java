@@ -466,7 +466,7 @@ public class DirectoryScanner implements Runnable {
   public void reconcile() throws IOException {
     LOG.debug("reconcile start DirectoryScanning");
     scan();
-
+    DataNodeFaultInjector.get().waitUntilStorageRemoved();
     // HDFS-14476: run checkAndUpdate with batch to avoid holding the lock too
     // long
     int loopCount = 0;
@@ -509,6 +509,7 @@ public class DirectoryScanner implements Runnable {
 
     // Pre-sort the reports outside of the lock
     blockPoolReport.sortBlocks();
+    DataNodeFaultInjector.get().delayDiffRecord();
 
     for (final String bpid : blockPoolReport.getBlockPoolIds()) {
       List<ScanInfo> blockpoolReport = blockPoolReport.getScanInfo(bpid);

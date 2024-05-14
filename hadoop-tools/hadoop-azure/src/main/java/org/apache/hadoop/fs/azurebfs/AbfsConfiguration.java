@@ -152,6 +152,14 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_MAX_BACKOFF_INTERVAL)
   private int maxBackoffInterval;
 
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = AZURE_STATIC_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED,
+      DefaultValue = DEFAULT_STATIC_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED)
+  private boolean staticRetryForConnectionTimeoutEnabled;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_STATIC_RETRY_INTERVAL,
+      DefaultValue = DEFAULT_STATIC_RETRY_INTERVAL)
+  private int staticRetryInterval;
+
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_BACKOFF_INTERVAL,
       DefaultValue = DEFAULT_BACKOFF_INTERVAL)
   private int backoffInterval;
@@ -165,6 +173,14 @@ public class AbfsConfiguration{
       MinValue = 0,
       DefaultValue = DEFAULT_CUSTOM_TOKEN_FETCH_RETRY_COUNT)
   private int customTokenFetchRetryCount;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_HTTP_CONNECTION_TIMEOUT,
+          DefaultValue = DEFAULT_HTTP_CONNECTION_TIMEOUT)
+  private int httpConnectionTimeout;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_HTTP_READ_TIMEOUT,
+          DefaultValue = DEFAULT_HTTP_READ_TIMEOUT)
+  private int httpReadTimeout;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_OAUTH_TOKEN_FETCH_RETRY_COUNT,
       MinValue = 0,
@@ -343,8 +359,15 @@ public class AbfsConfiguration{
           FS_AZURE_ABFS_RENAME_RESILIENCE, DefaultValue = DEFAULT_ENABLE_ABFS_RENAME_RESILIENCE)
   private boolean renameResilience;
 
-  private String clientProvidedEncryptionKey;
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, DefaultValue = DEFAULT_ENABLE_ABFS_CHECKSUM_VALIDATION)
+  private boolean isChecksumValidationEnabled;
 
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_ENABLE_PAGINATED_DELETE, DefaultValue = DEFAULT_ENABLE_PAGINATED_DELETE)
+  private boolean isPaginatedDeleteEnabled;
+
+  private String clientProvidedEncryptionKey;
   private String clientProvidedEncryptionKeySHA;
 
   public AbfsConfiguration(final Configuration rawConfig, String accountName)
@@ -669,6 +692,14 @@ public class AbfsConfiguration{
     return this.maxBackoffInterval;
   }
 
+  public boolean getStaticRetryForConnectionTimeoutEnabled() {
+    return staticRetryForConnectionTimeoutEnabled;
+  }
+
+  public int getStaticRetryInterval() {
+    return staticRetryInterval;
+  }
+
   public int getBackoffIntervalMilliseconds() {
     return this.backoffInterval;
   }
@@ -679,6 +710,14 @@ public class AbfsConfiguration{
 
   public int getCustomTokenFetchRetryCount() {
     return this.customTokenFetchRetryCount;
+  }
+
+  public int getHttpConnectionTimeout() {
+    return this.httpConnectionTimeout;
+  }
+
+  public int getHttpReadTimeout() {
+    return this.httpReadTimeout;
   }
 
   public long getAzureBlockSize() {
@@ -1192,11 +1231,6 @@ public class AbfsConfiguration{
   }
 
   @VisibleForTesting
-  public void setFooterReadBufferSize(int footerReadBufferSize) {
-    this.footerReadBufferSize = footerReadBufferSize;
-  }
-
-  @VisibleForTesting
   public void setEnableAbfsListIterator(boolean enableAbfsListIterator) {
     this.enableAbfsListIterator = enableAbfsListIterator;
   }
@@ -1205,7 +1239,16 @@ public class AbfsConfiguration{
     return renameResilience;
   }
 
-  void setRenameResilience(boolean actualResilience) {
-    renameResilience = actualResilience;
+  public boolean isPaginatedDeleteEnabled() {
+    return isPaginatedDeleteEnabled;
+  }
+
+  public boolean getIsChecksumValidationEnabled() {
+    return isChecksumValidationEnabled;
+  }
+
+  @VisibleForTesting
+  public void setIsChecksumValidationEnabled(boolean isChecksumValidationEnabled) {
+    this.isChecksumValidationEnabled = isChecksumValidationEnabled;
   }
 }

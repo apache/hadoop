@@ -69,6 +69,7 @@ public final class AbfsHttpConstants {
    * and should qualify for retry.
    */
   public static final int HTTP_CONTINUE = 100;
+  public static final String EXPECT_100_JDK_ERROR = "Server rejected operation";
 
   // Abfs generic constants
   public static final String SINGLE_WHITE_SPACE = " ";
@@ -92,6 +93,7 @@ public final class AbfsHttpConstants {
   public static final String FORWARD_SLASH_ENCODE = "%2F";
   public static final String AZURE_DISTRIBUTED_FILE_SYSTEM_AUTHORITY_DELIMITER = "@";
   public static final String UTF_8 = "utf-8";
+  public static final String MD5 = "MD5";
   public static final String GMT_TIMEZONE = "GMT";
   public static final String APPLICATION_JSON = "application/json";
   public static final String APPLICATION_OCTET_STREAM = "application/octet-stream";
@@ -119,8 +121,37 @@ public final class AbfsHttpConstants {
   public static final char CHAR_EQUALS = '=';
   public static final char CHAR_STAR = '*';
   public static final char CHAR_PLUS = '+';
-  public static final String DECEMBER_2019_API_VERSION = "2019-12-12";
-  public static final String APRIL_2021_API_VERSION = "2021-04-10";
+
+  /**
+   * Specifies the version of the REST protocol used for processing the request.
+   * Versions should be added in enum list in ascending chronological order.
+   * Latest one should be added last in the list.
+   * When upgrading the version for whole driver, update the getCurrentVersion;
+   */
+  public enum ApiVersion {
+
+    DEC_12_2019("2019-12-12"),
+    APR_10_2021("2021-04-10"),
+    AUG_03_2023("2023-08-03");
+
+    private final String xMsApiVersion;
+
+    ApiVersion(String xMsApiVersion) {
+      this.xMsApiVersion = xMsApiVersion;
+    }
+
+    @Override
+    public String toString() {
+      return xMsApiVersion;
+    }
+
+    public static ApiVersion getCurrentVersion() {
+      return DEC_12_2019;
+    }
+  }
+
+  @Deprecated
+  public static final String DECEMBER_2019_API_VERSION = ApiVersion.DEC_12_2019.toString();
 
   /**
    * Value that differentiates categories of the http_status.

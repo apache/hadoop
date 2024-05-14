@@ -43,6 +43,7 @@ import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_RE
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_WHOLE_FILE;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.s3a.Constants.ASYNC_DRAIN_THRESHOLD;
+import static org.apache.hadoop.fs.s3a.Constants.CHECKSUM_VALIDATION;
 import static org.apache.hadoop.fs.s3a.Constants.ESTABLISH_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.INPUT_FADVISE;
 import static org.apache.hadoop.fs.s3a.Constants.MAXIMUM_CONNECTIONS;
@@ -85,6 +86,11 @@ public class ITestUnbufferDraining extends AbstractS3ACostTest {
   public static final int ATTEMPTS = 10;
 
   /**
+   * Should checksums be enabled?
+   */
+  public static final boolean CHECKSUMS = false;
+
+  /**
    * Test FS with a tiny connection pool and
    * no recovery.
    */
@@ -102,6 +108,7 @@ public class ITestUnbufferDraining extends AbstractS3ACostTest {
     Configuration conf = super.createConfiguration();
     removeBaseAndBucketOverrides(conf,
         ASYNC_DRAIN_THRESHOLD,
+        CHECKSUM_VALIDATION,
         ESTABLISH_TIMEOUT,
         INPUT_FADVISE,
         MAX_ERROR_RETRIES,
@@ -111,7 +118,7 @@ public class ITestUnbufferDraining extends AbstractS3ACostTest {
         REQUEST_TIMEOUT,
         RETRY_LIMIT,
         SOCKET_TIMEOUT);
-
+    conf.setBoolean(CHECKSUM_VALIDATION, CHECKSUMS);
     return conf;
   }
 
@@ -132,6 +139,7 @@ public class ITestUnbufferDraining extends AbstractS3ACostTest {
       conf.setInt(MAX_ERROR_RETRIES, 1);
       conf.setInt(READAHEAD_RANGE, READAHEAD);
       conf.setInt(RETRY_LIMIT, 1);
+      conf.setBoolean(CHECKSUM_VALIDATION, CHECKSUMS);
       setDurationAsSeconds(conf, ESTABLISH_TIMEOUT,
           Duration.ofSeconds(1));
 
@@ -221,10 +229,20 @@ public class ITestUnbufferDraining extends AbstractS3ACostTest {
    */
   private static void assertReadPolicy(final FSDataInputStream in,
       final S3AInputPolicy policy) {
-    S3AInputStream inner = (S3AInputStream) in.getWrappedStream();
+    S3AInputStream inner = getS3AInputStream(in);
     Assertions.assertThat(inner.getInputPolicy())
         .describedAs("input policy of %s", inner)
         .isEqualTo(policy);
+  }
+
+  /**
+   * Extract the inner stream from an FSDataInputStream.
+   * Because prefetching is disabled, this is always an S3AInputStream.
+   * @param in input stream
+   * @return the inner stream cast to an S3AInputStream.
+   */
+  private static S3AInputStream getS3AInputStream(final FSDataInputStream in) {
+    return (S3AInputStream) in.getWrappedStream();
   }
 
   /**

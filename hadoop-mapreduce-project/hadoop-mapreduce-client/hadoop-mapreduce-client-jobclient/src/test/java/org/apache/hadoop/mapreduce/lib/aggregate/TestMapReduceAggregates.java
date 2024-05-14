@@ -30,6 +30,7 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.junit.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.text.NumberFormat;
 
 import static org.junit.Assert.assertEquals;
@@ -61,8 +62,8 @@ public class TestMapReduceAggregates {
     fs.mkdirs(INPUT_DIR);
     fs.delete(OUTPUT_DIR, true);
 
-    StringBuffer inputData = new StringBuffer();
-    StringBuffer expectedOutput = new StringBuffer();
+    StringBuilder inputData = new StringBuilder();
+    StringBuilder expectedOutput = new StringBuilder();
     expectedOutput.append("max\t19\n");
     expectedOutput.append("min\t1\n"); 
 
@@ -82,7 +83,7 @@ public class TestMapReduceAggregates {
     expectedOutput.append("uniq_count\t15\n");
 
 
-    fileOut.write(inputData.toString().getBytes("utf-8"));
+    fileOut.write(inputData.toString().getBytes(StandardCharsets.UTF_8));
     fileOut.close();
 
     System.out.println("inputData:");

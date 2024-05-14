@@ -34,6 +34,7 @@ public class GPGWebApp extends WebApp {
 
   @Override
   public void setup() {
+    bind(GPGWebServices.class);
     bind(JAXBContextResolver.class);
     bind(GPGWebApp.class).toInstance(this);
     bind(GenericExceptionHandler.class);

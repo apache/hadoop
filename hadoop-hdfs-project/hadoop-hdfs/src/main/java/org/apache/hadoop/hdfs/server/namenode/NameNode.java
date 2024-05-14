@@ -1380,7 +1380,6 @@ public class NameNode extends ReconfigurableBase implements
     }
     
     Collection<URI> nameDirsToFormat = FSNamesystem.getNamespaceDirs(conf);
-    List<URI> sharedDirs = FSNamesystem.getSharedEditsDirs(conf);
     List<URI> editDirsToFormat = 
                  FSNamesystem.getNamespaceEditsDirs(conf);
 
@@ -1392,10 +1391,8 @@ public class NameNode extends ReconfigurableBase implements
     }
 
     LOG.info("Formatting using clusterid: {}", clusterId);
-    
-    FSImage fsImage = new FSImage(conf, nameDirsToFormat, editDirsToFormat);
     FSNamesystem fsn = null;
-    try {
+    try (FSImage fsImage = new FSImage(conf, nameDirsToFormat, editDirsToFormat)) {
       fsn = new FSNamesystem(conf, fsImage);
       fsImage.getEditLog().initJournalsForWrite();
 
@@ -1423,7 +1420,6 @@ public class NameNode extends ReconfigurableBase implements
       LOG.warn("Encountered exception during format", ioe);
       throw ioe;
     } finally {
-      fsImage.close();
       if (fsn != null) {
         fsn.close();
       }

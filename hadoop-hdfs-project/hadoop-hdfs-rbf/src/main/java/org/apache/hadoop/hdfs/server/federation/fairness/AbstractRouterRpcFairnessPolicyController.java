@@ -106,4 +106,9 @@ public class AbstractRouterRpcFairnessPolicyController
     });
     return json.toString();
   }
+
+  @Override
+  public boolean contains(String nsId) {
+    return permits.containsKey(nsId);
+  }
 }

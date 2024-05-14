@@ -48,6 +48,11 @@ public class TestAutoCreatedQueueDeletionPolicy
 
   private CapacitySchedulerQueueManager autoQueueHandler;
 
+  public static final QueuePath ROOT = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+  public static final QueuePath ROOT_A = new QueuePath("root", "a");
+  public static final QueuePath ROOT_A_A1 = QueuePath.createFromQueues("root", "a", "a1");
+  public static final QueuePath ROOT_B = new QueuePath("root", "b");
+
   /*
     Create the following structure:
              root
@@ -63,15 +68,15 @@ public class TestAutoCreatedQueueDeletionPolicy
         ResourceScheduler.class);
 
     // By default, set 3 queues, a/b, and a.a1
-    csConf.setQueues("root", new String[]{"a", "b"});
-    csConf.setNonLabeledQueueWeight("root", 1f);
-    csConf.setNonLabeledQueueWeight("root.a", 1f);
-    csConf.setNonLabeledQueueWeight("root.b", 1f);
-    csConf.setQueues("root.a", new String[]{"a1"});
-    csConf.setNonLabeledQueueWeight("root.a.a1", 1f);
-    csConf.setAutoQueueCreationV2Enabled("root", true);
-    csConf.setAutoQueueCreationV2Enabled("root.a", true);
-    csConf.setAutoQueueCreationV2Enabled(PARENT_QUEUE, true);
+    csConf.setQueues(ROOT, new String[]{"a", "b"});
+    csConf.setNonLabeledQueueWeight(ROOT, 1f);
+    csConf.setNonLabeledQueueWeight(ROOT_A, 1f);
+    csConf.setNonLabeledQueueWeight(ROOT_B, 1f);
+    csConf.setQueues(ROOT_A, new String[]{"a1"});
+    csConf.setNonLabeledQueueWeight(ROOT_A_A1, 1f);
+    csConf.setAutoQueueCreationV2Enabled(ROOT, true);
+    csConf.setAutoQueueCreationV2Enabled(ROOT_A, true);
+    csConf.setAutoQueueCreationV2Enabled(PARENT_QUEUE_PATH, true);
     // Test for auto deletion when expired
     csConf.setAutoExpiredDeletionTime(1);
   }

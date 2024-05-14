@@ -107,6 +107,8 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_HA_NAMENODE
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_NAMENODE_RPC_ADDRESS_AUXILIARY_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_NAMESERVICES;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Failover.DFS_CLIENT_LAZY_RESOLVED;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Failover.DFS_CLIENT_LAZY_RESOLVED_DEFAULT;
 
 @InterfaceAudience.Private
 public class DFSUtilClient {
@@ -530,11 +532,18 @@ public class DFSUtilClient {
       String suffix = concatSuffixes(nsId, nnId);
       String address = checkKeysAndProcess(defaultValue, suffix, conf, keys);
       if (address != null) {
-        InetSocketAddress isa = NetUtils.createSocketAddr(address);
-        if (isa.isUnresolved()) {
-          LOG.warn("Namenode for {} remains unresolved for ID {}. Check your "
-              + "hdfs-site.xml file to ensure namenodes are configured "
-              + "properly.", nsId, nnId);
+        InetSocketAddress isa = null;
+        // There is no need to resolve host->ip in advance.
+        // Delay the resolution until the host is used.
+        if (conf.getBoolean(DFS_CLIENT_LAZY_RESOLVED, DFS_CLIENT_LAZY_RESOLVED_DEFAULT)) {
+          isa = NetUtils.createSocketAddrUnresolved(address);
+        }else {
+          isa = NetUtils.createSocketAddr(address);
+          if (isa.isUnresolved()) {
+            LOG.warn("Namenode for {} remains unresolved for ID {}. Check your "
+                + "hdfs-site.xml file to ensure namenodes are configured "
+                + "properly.", nsId, nnId);
+          }
         }
         ret.put(nnId, isa);
       }

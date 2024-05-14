@@ -118,6 +118,7 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsPermission;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azurebfs.services.ExponentialRetryPolicy;
+import org.apache.hadoop.fs.azurebfs.services.StaticRetryPolicy;
 import org.apache.hadoop.fs.azurebfs.services.AbfsLease;
 import org.apache.hadoop.fs.azurebfs.services.SharedKeyCredentials;
 import org.apache.hadoop.fs.azurebfs.services.AbfsPerfTracker;
@@ -897,21 +898,21 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         .map(c -> c.getBoolean(FS_AZURE_BUFFERED_PREAD_DISABLE, false))
         .orElse(false);
     int footerReadBufferSize = options.map(c -> c.getInt(
-        AZURE_FOOTER_READ_BUFFER_SIZE, abfsConfiguration.getFooterReadBufferSize()))
-        .orElse(abfsConfiguration.getFooterReadBufferSize());
-    return new AbfsInputStreamContext(abfsConfiguration.getSasTokenRenewPeriodForStreamsInSeconds())
-            .withReadBufferSize(abfsConfiguration.getReadBufferSize())
-            .withReadAheadQueueDepth(abfsConfiguration.getReadAheadQueueDepth())
-            .withTolerateOobAppends(abfsConfiguration.getTolerateOobAppends())
-            .isReadAheadEnabled(abfsConfiguration.isReadAheadEnabled())
-            .withReadSmallFilesCompletely(abfsConfiguration.readSmallFilesCompletely())
-            .withOptimizeFooterRead(abfsConfiguration.optimizeFooterRead())
+        AZURE_FOOTER_READ_BUFFER_SIZE, getAbfsConfiguration().getFooterReadBufferSize()))
+        .orElse(getAbfsConfiguration().getFooterReadBufferSize());
+    return new AbfsInputStreamContext(getAbfsConfiguration().getSasTokenRenewPeriodForStreamsInSeconds())
+            .withReadBufferSize(getAbfsConfiguration().getReadBufferSize())
+            .withReadAheadQueueDepth(getAbfsConfiguration().getReadAheadQueueDepth())
+            .withTolerateOobAppends(getAbfsConfiguration().getTolerateOobAppends())
+            .isReadAheadEnabled(getAbfsConfiguration().isReadAheadEnabled())
+            .withReadSmallFilesCompletely(getAbfsConfiguration().readSmallFilesCompletely())
+            .withOptimizeFooterRead(getAbfsConfiguration().optimizeFooterRead())
             .withFooterReadBufferSize(footerReadBufferSize)
-            .withReadAheadRange(abfsConfiguration.getReadAheadRange())
+            .withReadAheadRange(getAbfsConfiguration().getReadAheadRange())
             .withStreamStatistics(new AbfsInputStreamStatisticsImpl())
             .withShouldReadBufferSizeAlways(
-                abfsConfiguration.shouldReadBufferSizeAlways())
-            .withReadAheadBlockSize(abfsConfiguration.getReadAheadBlockSize())
+                getAbfsConfiguration().shouldReadBufferSizeAlways())
+            .withReadAheadBlockSize(getAbfsConfiguration().getReadAheadBlockSize())
             .withBufferedPreadDisabled(bufferedPreadDisabled)
             .withEncryptionAdapter(contextEncryptionAdapter)
             .withAbfsBackRef(fsBackRef)
@@ -1076,8 +1077,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
     do {
       try (AbfsPerfInfo perfInfo = startTracking("delete", "deletePath")) {
-        AbfsRestOperation op = client
-            .deletePath(relativePath, recursive, continuation, tracingContext);
+        AbfsRestOperation op = client.deletePath(relativePath, recursive,
+            continuation, tracingContext, getIsNamespaceEnabled(tracingContext));
         perfInfo.registerResult(op.getResult());
         continuation = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
         perfInfo.registerSuccess(true);
@@ -1781,6 +1782,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     return new AbfsClientContextBuilder()
         .withExponentialRetryPolicy(
             new ExponentialRetryPolicy(abfsConfiguration))
+        .withStaticRetryPolicy(
+            new StaticRetryPolicy(abfsConfiguration))
         .withAbfsCounters(abfsCounters)
         .withAbfsPerfTracker(abfsPerfTracker)
         .build();

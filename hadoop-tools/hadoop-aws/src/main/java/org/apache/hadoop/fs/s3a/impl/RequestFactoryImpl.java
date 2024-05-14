@@ -43,7 +43,6 @@ import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.MetadataDirective;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import software.amazon.awssdk.services.s3.model.SelectObjectContentRequest;
 import software.amazon.awssdk.services.s3.model.ServerSideEncryption;
 import software.amazon.awssdk.services.s3.model.StorageClass;
 import software.amazon.awssdk.services.s3.model.UploadPartRequest;
@@ -583,20 +582,6 @@ public class RequestFactoryImpl implements RequestFactory {
         .contentLength(size);
     uploadPartEncryptionParameters(builder);
     return prepareRequest(builder);
-  }
-
-  @Override
-  public SelectObjectContentRequest.Builder newSelectRequestBuilder(String key) {
-    SelectObjectContentRequest.Builder requestBuilder =
-        SelectObjectContentRequest.builder().bucket(bucket).key(key);
-
-    EncryptionSecretOperations.getSSECustomerKey(encryptionSecrets).ifPresent(base64customerKey -> {
-      requestBuilder.sseCustomerAlgorithm(ServerSideEncryption.AES256.name())
-          .sseCustomerKey(base64customerKey)
-          .sseCustomerKeyMD5(Md5Utils.md5AsBase64(Base64.getDecoder().decode(base64customerKey)));
-    });
-
-    return prepareRequest(requestBuilder);
   }
 
   @Override

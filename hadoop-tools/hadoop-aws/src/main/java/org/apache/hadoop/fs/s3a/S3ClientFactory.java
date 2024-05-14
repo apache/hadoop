@@ -177,6 +177,16 @@ public interface S3ClientFactory {
     private boolean expressCreateSession = S3EXPRESS_CREATE_SESSION_DEFAULT;
 
     /**
+     * Enable checksum validation.
+     */
+    private boolean checksumValidationEnabled;
+
+    /**
+     * Is FIPS enabled?
+     */
+    private boolean fipsEnabled;
+
+    /**
      * List of execution interceptors to include in the chain
      * of interceptors in the SDK.
      * @return the interceptors list
@@ -446,6 +456,20 @@ public interface S3ClientFactory {
       return this;
     }
 
+    /**
+     * Set builder value.
+     * @param value new value
+     * @return the builder
+     */
+    public S3ClientCreationParameters withChecksumValidationEnabled(final boolean value) {
+      checksumValidationEnabled = value;
+      return this;
+    }
+
+    public boolean isChecksumValidationEnabled() {
+      return checksumValidationEnabled;
+    }
+
     @Override
     public String toString() {
       return "S3ClientCreationParameters{" +
@@ -459,7 +483,26 @@ public interface S3ClientFactory {
           ", multipartCopy=" + multipartCopy +
           ", region='" + region + '\'' +
           ", expressCreateSession=" + expressCreateSession +
+          ", checksumValidationEnabled=" + checksumValidationEnabled +
           '}';
+    }
+
+    /**
+     * Get the FIPS flag.
+     * @return is fips enabled
+     */
+    public boolean isFipsEnabled() {
+      return fipsEnabled;
+    }
+
+    /**
+     * Set builder value.
+     * @param value new value
+     * @return the builder
+     */
+    public S3ClientCreationParameters withFipsEnabled(final boolean value) {
+      fipsEnabled = value;
+      return this;
     }
   }
 }

@@ -1089,7 +1089,10 @@ public abstract class Server {
       int count = responseWaitCount.decrementAndGet();
       assert count >= 0 : "response has already been sent";
       if (count == 0) {
+        long startNanos = Time.monotonicNowNanos();
         doResponse(null);
+        getProcessingDetails().set(Timing.RESPONSE,
+            Time.monotonicNowNanos() - startNanos, TimeUnit.NANOSECONDS);
       }
     }
 
@@ -1257,14 +1260,10 @@ public abstract class Server {
         deltaNanos -= details.get(Timing.LOCKSHARED, TimeUnit.NANOSECONDS);
         deltaNanos -= details.get(Timing.LOCKEXCLUSIVE, TimeUnit.NANOSECONDS);
         details.set(Timing.LOCKFREE, deltaNanos, TimeUnit.NANOSECONDS);
-        startNanos = Time.monotonicNowNanos();
 
         setResponseFields(value, responseParams);
         sendResponse();
-
         details.setReturnStatus(responseParams.returnStatus);
-        deltaNanos = Time.monotonicNowNanos() - startNanos;
-        details.set(Timing.RESPONSE, deltaNanos, TimeUnit.NANOSECONDS);
       } else {
         LOG.debug("Deferring response for callId: {}", this.callId);
       }
@@ -3133,6 +3132,13 @@ public abstract class Server {
       // For example, IPC clients using FailoverOnNetworkExceptionRetry handle
       // RetriableException.
       rpcMetrics.incrClientBackoff();
+      // Clients that are directly put into lowest priority queue are backed off and disconnected.
+      if (cqe.getCause() instanceof RpcServerException) {
+        RpcServerException ex = (RpcServerException) cqe.getCause();
+        if (ex.getRpcStatusProto() == RpcStatusProto.FATAL) {
+          rpcMetrics.incrClientBackoffDisconnected();
+        }
+      }
       // unwrap retriable exception.
       throw cqe.getCause();
     }

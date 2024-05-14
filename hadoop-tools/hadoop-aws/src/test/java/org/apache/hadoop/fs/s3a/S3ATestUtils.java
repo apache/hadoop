@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -72,12 +73,19 @@ import org.junit.AssumptionViolatedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.core.exception.SdkClientException;
+import software.amazon.awssdk.core.internal.io.ChecksumValidatingInputStream;
+import software.amazon.awssdk.services.s3.internal.checksums.S3ChecksumValidatingInputStream;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 
 import java.io.Closeable;
 import java.io.File;
+import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
+import java.lang.reflect.Field;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
@@ -97,6 +105,8 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletion;
 import static org.apache.hadoop.fs.s3a.impl.S3ExpressStorage.STORE_CAPABILITY_S3_EXPRESS_STORAGE;
+import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.getExternalData;
+import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.requireDefaultExternalDataFile;
 import static org.apache.hadoop.test.GenericTestUtils.buildPaths;
 import static org.apache.hadoop.util.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CREDENTIAL_PROVIDER_PATH;
@@ -397,22 +407,22 @@ public final class S3ATestUtils {
    * Get the test CSV file; assume() that it is not empty.
    * @param conf test configuration
    * @return test file.
+   * @deprecated Retained only to assist cherrypicking patches
    */
+  @Deprecated
   public static String getCSVTestFile(Configuration conf) {
-    String csvFile = conf
-        .getTrimmed(KEY_CSVTEST_FILE, DEFAULT_CSVTEST_FILE);
-    Assume.assumeTrue("CSV test file is not the default",
-        isNotEmpty(csvFile));
-    return csvFile;
+    return getExternalData(conf).toUri().toString();
   }
 
   /**
    * Get the test CSV path; assume() that it is not empty.
    * @param conf test configuration
    * @return test file as a path.
+   * @deprecated Retained only to assist cherrypicking patches
    */
+  @Deprecated
   public static Path getCSVTestPath(Configuration conf) {
-    return new Path(getCSVTestFile(conf));
+    return getExternalData(conf);
   }
 
   /**
@@ -421,12 +431,11 @@ public final class S3ATestUtils {
    * read only).
    * @return test file.
    * @param conf test configuration
+   * @deprecated Retained only to assist cherrypicking patches
    */
+  @Deprecated
   public static String getLandsatCSVFile(Configuration conf) {
-    String csvFile = getCSVTestFile(conf);
-    Assume.assumeTrue("CSV test file is not the default",
-        DEFAULT_CSVTEST_FILE.equals(csvFile));
-    return csvFile;
+    return requireDefaultExternalDataFile(conf);
   }
   /**
    * Get the test CSV file; assume() that it is not modified (i.e. we haven't
@@ -434,9 +443,11 @@ public final class S3ATestUtils {
    * read only).
    * @param conf test configuration
    * @return test file as a path.
+   * @deprecated Retained only to assist cherrypicking patches
    */
+  @Deprecated
   public static Path getLandsatCSVPath(Configuration conf) {
-    return new Path(getLandsatCSVFile(conf));
+    return getExternalData(conf);
   }
 
   /**
@@ -456,6 +467,8 @@ public final class S3ATestUtils {
         .describedAs("Exception expected of class %s", clazz)
         .isNotNull();
     if (!(ex.getClass().equals(clazz))) {
+      LOG.warn("Rethrowing exception: {} as it is not an instance of {}",
+          ex, clazz, ex);
       throw ex;
     }
     return (E)ex;
@@ -538,6 +551,16 @@ public final class S3ATestUtils {
       Configuration configuration) {
     assume("Skipping test as bucket is an S3Express bucket",
         !isS3ExpressTestBucket(configuration));
+  }
+
+  /**
+   * Skip a test if the test bucket is not an S3Express bucket.
+   * @param configuration configuration to probe
+   */
+  public static void skipIfNotS3ExpressBucket(
+      Configuration configuration) {
+    assume("Skipping test as bucket is not an S3Express bucket",
+        isS3ExpressTestBucket(configuration));
   }
 
   /**
@@ -1660,6 +1683,54 @@ public final class S3ATestUtils {
   }
 
   /**
+   * Get the inner stream of a FilterInputStream.
+   * Uses reflection to access a protected field.
+   * @param fis input stream.
+   * @return the inner stream.
+   */
+  public static InputStream getInnerStream(FilterInputStream fis) {
+    try {
+      final Field field = FilterInputStream.class.getDeclaredField("in");
+      field.setAccessible(true);
+      return (InputStream) field.get(fis);
+    } catch (IllegalAccessException | NoSuchFieldException e) {
+      throw new AssertionError("Failed to get inner stream: " + e, e);
+    }
+  }
+
+  /**
+   * Get the innermost stream of a chain of FilterInputStreams.
+   * This allows tests into the internals of an AWS SDK stream chain.
+   * @param fis input stream.
+   * @return the inner stream.
+   */
+  public static InputStream getInnermostStream(FilterInputStream fis) {
+    InputStream inner = fis;
+    while (inner instanceof FilterInputStream) {
+      inner = getInnerStream((FilterInputStream) inner);
+    }
+    return inner;
+  }
+
+  /**
+   * Verify that an s3a stream is not checksummed.
+   * The inner stream must be active.
+   */
+  public static void assertStreamIsNotChecksummed(final S3AInputStream wrappedS3A) {
+    final ResponseInputStream<GetObjectResponse> wrappedStream =
+        wrappedS3A.getWrappedStream();
+    Assertions.assertThat(wrappedStream)
+        .describedAs("wrapped stream is not open: call read() on %s", wrappedS3A)
+        .isNotNull();
+
+    final InputStream inner = getInnermostStream(wrappedStream);
+    Assertions.assertThat(inner)
+        .describedAs("innermost stream of %s", wrappedS3A)
+        .isNotInstanceOf(ChecksumValidatingInputStream.class)
+        .isNotInstanceOf(S3ChecksumValidatingInputStream.class);
+  }
+
+  /**
    * Disable Prefetching streams from S3AFileSystem in tests.
    * @param conf Configuration to remove the prefetch property from.
    */
@@ -1710,5 +1781,60 @@ public final class S3ATestUtils {
     Preconditions.checkArgument(status instanceof EtagSource,
         "Not an EtagSource: %s", status);
     return ((EtagSource) status).getEtag();
+  }
+
+  /**
+   * Create an SDK client exception.
+   * @param message message
+   * @param cause nullable cause
+   * @return the exception
+   */
+  public static SdkClientException sdkClientException(
+      String message, Throwable cause) {
+    return SdkClientException.builder()
+        .message(message)
+        .cause(cause)
+        .build();
+  }
+
+  /**
+   * Create an SDK client exception using the string value of the cause
+   * as the message.
+   * @param cause nullable cause
+   * @return the exception
+   */
+  public static SdkClientException sdkClientException(
+      Throwable cause) {
+    return SdkClientException.builder()
+        .message(cause.toString())
+        .cause(cause)
+        .build();
+  }
+
+  private static final String BYTES_PREFIX = "bytes=";
+
+  /**
+   * Given a range header, split into start and end.
+   * Based on AWSRequestAnalyzer.
+   * @param rangeHeader header string
+   * @return parse range, or (-1, -1) for problems
+   */
+  public static Pair<Long, Long> requestRange(String rangeHeader) {
+    if (rangeHeader != null && rangeHeader.startsWith(BYTES_PREFIX)) {
+      String[] values = rangeHeader
+          .substring(BYTES_PREFIX.length())
+          .split("-");
+      if (values.length == 2) {
+        try {
+          long start = Long.parseUnsignedLong(values[0]);
+          long end = Long.parseUnsignedLong(values[1]);
+          return Pair.of(start, end);
+        } catch (NumberFormatException e) {
+          LOG.warn("Failed to parse range header {}", rangeHeader, e);
+        }
+      }
+    }
+    // error case
+    return Pair.of(-1L, -1L);
   }
 }

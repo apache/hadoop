@@ -2465,6 +2465,12 @@
   </property>
 
   <property>
+    <name>yarn.nodemanager.linux-container-executor.cgroups.v2.enabled</name>
+    <value>false</value>
+    <description>Boolean indicating whether cgroup v2 is enabled.</description>
+  </property>
+
+  <property>
     <description>T-file compression types used to compress aggregated logs.</description>
     <name>yarn.nodemanager.log-aggregation.compression-type</name>
     <value>none</value>
@@ -3785,6 +3791,15 @@
    </description>
    <name>yarn.federation.cache-ttl.secs</name>
    <value>300</value>
+  </property>
+
+  <property>
+    <description>
+      The number of entries in the Federation cache.
+      default is 1000.
+    </description>
+    <name>yarn.federation.cache-entity.nums</name>
+    <value>1000</value>
   </property>
 
   <property>

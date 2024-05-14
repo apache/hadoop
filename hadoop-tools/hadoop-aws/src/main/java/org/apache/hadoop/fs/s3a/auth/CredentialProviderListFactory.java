@@ -51,6 +51,7 @@ import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.apache.hadoop.fs.store.LogExactlyOnce;
 
 import static org.apache.hadoop.fs.s3a.Constants.AWS_CREDENTIALS_PROVIDER;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_CREDENTIALS_PROVIDER_MAPPING;
 import static org.apache.hadoop.fs.s3a.adapter.AwsV1BindingSupport.isAwsV1SdkAvailable;
 
 /**
@@ -216,6 +217,9 @@ public final class CredentialProviderListFactory {
         key,
         defaultValues.toArray(new Class[defaultValues.size()]));
 
+    Map<String, String> awsCredsMappedClasses =
+        S3AUtils.getTrimmedStringCollectionSplitByEquals(conf,
+            AWS_CREDENTIALS_PROVIDER_MAPPING);
     Map<String, String> v1v2CredentialProviderMap = V1_V2_CREDENTIAL_PROVIDER_MAP;
     final Set<String> forbiddenClassnames =
         forbidden.stream().map(c -> c.getName()).collect(Collectors.toSet());
@@ -231,6 +235,10 @@ public final class CredentialProviderListFactory {
         final String mapped = v1v2CredentialProviderMap.get(className);
         LOG_REMAPPED_ENTRY.warn("Credentials option {} contains AWS v1 SDK entry {}; mapping to {}",
             key, className, mapped);
+        className = mapped;
+      } else if (awsCredsMappedClasses != null && awsCredsMappedClasses.containsKey(className)) {
+        final String mapped = awsCredsMappedClasses.get(className);
+        LOG_REMAPPED_ENTRY.debug("Credential entry {} is mapped to {}", className, mapped);
         className = mapped;
       }
       // now scan the forbidden list. doing this after any mappings ensures the v1 names

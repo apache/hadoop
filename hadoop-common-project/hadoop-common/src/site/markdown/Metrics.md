@@ -87,6 +87,7 @@ The default timeunit used for RPC metrics is milliseconds (as per the below desc
 | `RpcAuthorizationFailures` | Total number of authorization failures |
 | `RpcAuthorizationSuccesses` | Total number of authorization successes |
 | `RpcClientBackoff` | Total number of client backoff requests |
+| `RpcClientBackoffDisconnected` | Total number of client backoff requests that are disconnected. This is a subset of RpcClientBackoff |
 | `RpcSlowCalls` | Total number of slow RPC calls |
 | `RpcRequeueCalls` | Total number of requeue RPC calls |
 | `RpcCallsSuccesses` | Total number of RPC calls that are successfully processed |
@@ -325,6 +326,15 @@ Each metrics record contains tags such as HAState and Hostname as additional inf
 | `FSN(Read/Write)LockOverallNanosAvgTime` | Average time of holding the lock by all operations in nanoseconds |
 | `PendingSPSPaths` | The number of paths to be processed by storage policy satisfier |
 
+BlockManager
+-------------
+
+The metrics present statistics from the BlockManager's perspective.
+
+| Name | Description                                                                                                                     |
+|:---- |:--------------------------------------------------------------------------------------------------------------------------------|
+| `StorageTypeStats` | key represents different StorageTypes, and value represents the detailed storage information corresponding to each StorageType. |
+
 JournalNode
 -----------
 
@@ -457,6 +467,8 @@ Each metrics record contains tags such as SessionId and Hostname as additional i
 | `BlockReportsAvgTime` | Average time of block report operations in milliseconds |
 | `BlockReports`*ServiceId*`-`*NNId*`NumOps` | Total number of block report operations to specific serviceId and nnId |
 | `BlockReports`*ServiceId*`-`*NNId*`AvgTime` | Average time of block report operations to specific serviceId and nnId in milliseconds |
+| `BlockReportsCreateCostMillsNumOps` | Total number of block report creating operations |
+| `BlockReportsCreateCostMillsAvgTime` | Average time of block report creating operations in milliseconds |
 | `IncrementalBlockReportsNumOps` | Total number of incremental block report operations |
 | `IncrementalBlockReportsAvgTime` | Average time of incremental block report operations in milliseconds |
 | `IncrementalBlockReports`*ServiceId*`-`*NNId*`NumOps` | Total number of incremental block report operations to specific serviceId and nnId |
@@ -520,6 +532,7 @@ Each metrics record contains tags such as SessionId and Hostname as additional i
 | `NumProcessedCommands` | Num of processed commands of all BPServiceActors |
 | `ProcessedCommandsOpNumOps` | Total number of processed commands operations |
 | `ProcessedCommandsOpAvgTime` | Average time of processed commands operations in milliseconds |
+| `NullStorageBlockReports` | Number of blocks in IBRs that failed due to null storage |
 
 FsVolume
 --------

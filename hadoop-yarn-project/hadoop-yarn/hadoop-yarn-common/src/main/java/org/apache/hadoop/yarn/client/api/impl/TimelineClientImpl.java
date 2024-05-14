@@ -459,4 +459,10 @@ public class TimelineClientImpl extends TimelineClient {
   public void setTimelineWriter(TimelineWriter writer) {
     this.timelineWriter = writer;
   }
+
+  @Private
+  @VisibleForTesting
+  public TimelineConnector getConnector() {
+    return connector;
+  }
 }

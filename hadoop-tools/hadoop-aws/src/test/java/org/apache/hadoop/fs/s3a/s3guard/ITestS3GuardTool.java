@@ -22,28 +22,34 @@ import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStreamReader;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 import org.junit.Test;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.StringUtils;
 
+import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
+import static org.apache.hadoop.fs.s3a.Constants.ENDPOINT;
+import static org.apache.hadoop.fs.s3a.Constants.FIPS_ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.assertNoUploadsAt;
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.clearAnyUploads;
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.countUploadsAt;
 import static org.apache.hadoop.fs.s3a.MultipartTestUtils.createPartUpload;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.getLandsatCSVFile;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.BucketInfo;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.E_BAD_STATE;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.Uploads;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardToolTestHelper.exec;
+import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.isUsingDefaultExternalDataFile;
 
 /**
  * Test S3Guard Tool CLI commands.
@@ -55,36 +61,44 @@ public class ITestS3GuardTool extends AbstractS3GuardToolTestBase {
       "-force", "-verbose"};
 
   @Test
-  public void testLandsatBucketUnguarded() throws Throwable {
-    run(BucketInfo.NAME,
-        "-" + BucketInfo.UNGUARDED_FLAG,
-        getLandsatCSVFile(getConfiguration()));
-  }
-
-  @Test
-  public void testLandsatBucketRequireGuarded() throws Throwable {
-    runToFailure(E_BAD_STATE,
-        BucketInfo.NAME,
-        "-" + BucketInfo.GUARDED_FLAG,
-        getLandsatCSVFile(
-            ITestS3GuardTool.this.getConfiguration()));
-  }
-
-  @Test
-  public void testLandsatBucketRequireUnencrypted() throws Throwable {
-    removeBaseAndBucketOverrides(getConfiguration(), S3_ENCRYPTION_ALGORITHM);
-    run(BucketInfo.NAME,
+  public void testExternalBucketRequireUnencrypted() throws Throwable {
+    Configuration conf = getConfiguration();
+    if (isUsingDefaultExternalDataFile(conf)) {
+      removeBaseAndBucketOverrides(conf,
+          S3_ENCRYPTION_ALGORITHM,
+          ENDPOINT);
+    }
+    run(conf, BucketInfo.NAME,
         "-" + BucketInfo.ENCRYPTION_FLAG, "none",
-        getLandsatCSVFile(getConfiguration()));
+        externalBucket());
+  }
+
+  /**
+   * Get the external bucket; this is of the default external file.
+   * If not set to the default value, the test will be skipped.
+   * @return the bucket of the default external file.
+   */
+  private String externalBucket() {
+    Configuration conf = getConfiguration();
+    Path result = PublicDatasetTestUtils.requireDefaultExternalData(conf);
+    final URI uri = result.toUri();
+    final String bucket = uri.getScheme() + "://" + uri.getHost();
+    return bucket;
   }
 
   @Test
-  public void testLandsatBucketRequireEncrypted() throws Throwable {
+  public void testExternalBucketRequireEncrypted() throws Throwable {
+    Configuration conf = getConfiguration();
+    if (isUsingDefaultExternalDataFile(conf)) {
+      removeBaseAndBucketOverrides(conf,
+          ENDPOINT);
+    }
     runToFailure(E_BAD_STATE,
+        conf,
         BucketInfo.NAME,
         "-" + BucketInfo.ENCRYPTION_FLAG,
-        "AES256", getLandsatCSVFile(
-            ITestS3GuardTool.this.getConfiguration()));
+        "AES256",
+        externalBucket());
   }
 
   @Test
@@ -94,6 +108,20 @@ public class ITestS3GuardTool extends AbstractS3GuardToolTestBase {
     String output = exec(cmd, cmd.getName(),
         "-" + BucketInfo.UNGUARDED_FLAG,
         getFileSystem().getUri().toString());
+    LOG.info("Exec output=\n{}", output);
+  }
+
+  @Test
+  public void testStoreInfoFips() throws Throwable {
+    final S3AFileSystem fs = getFileSystem();
+    if (!fs.hasPathCapability(new Path("/"), FIPS_ENDPOINT)) {
+      skip("FIPS not enabled");
+    }
+    S3GuardTool.BucketInfo cmd =
+        toClose(new S3GuardTool.BucketInfo(fs.getConf()));
+    String output = exec(cmd, cmd.getName(),
+        "-" + BucketInfo.FIPS_FLAG,
+        fs.getUri().toString());
     LOG.info("Exec output=\n{}", output);
   }
 
@@ -198,9 +226,13 @@ public class ITestS3GuardTool extends AbstractS3GuardToolTestBase {
 
   @Test
   public void testUploadNegativeExpect() throws Throwable {
-    runToFailure(E_BAD_STATE, Uploads.NAME, "-expect", "1",
-        path("/we/are/almost/postive/this/doesnt/exist/fhfsadfoijew")
-            .toString());
+    Configuration conf = getConfiguration();
+    runToFailure(E_BAD_STATE,
+        conf,
+        Uploads.NAME,
+        "-expect",
+        "1",
+        path("/we/are/almost/postive/this/doesnt/exist/fhfsadfoijew").toString());
   }
 
   private void assertNumUploads(Path path, int numUploads) throws Exception {

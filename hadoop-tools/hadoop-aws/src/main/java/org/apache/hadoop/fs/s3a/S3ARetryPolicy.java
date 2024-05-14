@@ -209,8 +209,14 @@ public class S3ARetryPolicy implements RetryPolicy {
     // in this map.
     policyMap.put(AWSClientIOException.class, retryAwsClientExceptions);
 
+    // Http Channel issues: treat as communication failure
+    policyMap.put(HttpChannelEOFException.class, connectivityFailure);
+
     // server didn't respond.
     policyMap.put(AWSNoResponseException.class, retryIdempotentCalls);
+
+    // range header is out of scope of object; retrying won't help
+    policyMap.put(RangeNotSatisfiableEOFException.class, fail);
 
     // should really be handled by resubmitting to new location;
     // that's beyond the scope of this retry policy
@@ -251,10 +257,7 @@ public class S3ARetryPolicy implements RetryPolicy {
     policyMap.put(ConnectException.class, connectivityFailure);
 
     // this can be a sign of an HTTP connection breaking early.
-    // which can be reacted to by another attempt if the request was idempotent.
-    // But: could also be a sign of trying to read past the EOF on a GET,
-    // which isn't going to be recovered from
-    policyMap.put(EOFException.class, retryIdempotentCalls);
+    policyMap.put(EOFException.class, connectivityFailure);
 
     // object not found. 404 when not unknown bucket; 410 "gone"
     policyMap.put(FileNotFoundException.class, fail);
@@ -300,7 +303,7 @@ public class S3ARetryPolicy implements RetryPolicy {
     if (exception instanceof SdkException) {
       // update the sdk exception for the purpose of exception
       // processing.
-      ex = S3AUtils.translateException("", "", (SdkException) exception);
+      ex = S3AUtils.translateException("", "/", (SdkException) exception);
     }
     LOG.debug("Retry probe for {} with {} retries and {} failovers,"
             + " idempotent={}, due to {}",

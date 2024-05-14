@@ -651,7 +651,7 @@ There are several challenges with this bind mount approach that need to be
 considered.
 
 1. Any users and groups defined in the image will be overwritten by the host's users and groups
-2. No users and groups can be added once the container is started, as /etc/passwd and /etc/group are immutible in the container. Do not mount these read-write as it can render the host inoperable.
+2. No users and groups can be added once the container is started, as /etc/passwd and /etc/group are immutable in the container. Do not mount these read-write as it can render the host inoperable.
 
 This approach is not recommended beyond testing given the inflexibility to
 modify running containers.

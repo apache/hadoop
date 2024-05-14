@@ -40,10 +40,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.getCSVTestPath;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.auth.delegation.DelegationConstants.DELEGATION_TOKEN_BINDING;
 import static org.apache.hadoop.fs.s3a.impl.InstantiationIOException.CONSTRUCTOR_EXCEPTION;
+import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.getExternalData;
+import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.isUsingDefaultExternalDataFile;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.*;
 
@@ -100,6 +101,23 @@ public class ITestS3AAWSCredentialsProvider {
   @Test
   public void testBadCredentialsConstructor() throws Exception {
     Configuration conf = createConf(BadCredentialsProviderConstructor.class);
+    final InstantiationIOException ex =
+        intercept(InstantiationIOException.class, CONSTRUCTOR_EXCEPTION, () ->
+            createFailingFS(conf));
+    if (InstantiationIOException.Kind.UnsupportedConstructor != ex.getKind()) {
+      throw ex;
+    }
+  }
+
+  /**
+   * Test aws credentials provider remapping with key that maps to
+   * BadCredentialsProviderConstructor.
+   */
+  @Test
+  public void testBadCredentialsConstructorWithRemap() throws Exception {
+    Configuration conf = createConf("aws.test.map1");
+    conf.set(AWS_CREDENTIALS_PROVIDER_MAPPING,
+        "aws.test.map1=" + BadCredentialsProviderConstructor.class.getName());
     final InstantiationIOException ex =
         intercept(InstantiationIOException.class, CONSTRUCTOR_EXCEPTION, () ->
             createFailingFS(conf));
@@ -170,13 +188,32 @@ public class ITestS3AAWSCredentialsProvider {
   }
 
   /**
+   * Test aws credentials provider remapping with key that maps to
+   * BadCredentialsProvider.
+   */
+  @Test
+  public void testBadCredentialsWithRemap() throws Exception {
+    Configuration conf = createConf("aws.test.map.key");
+    conf.set(AWS_CREDENTIALS_PROVIDER_MAPPING,
+        "aws.test.map.key=" + BadCredentialsProvider.class.getName());
+    intercept(AccessDeniedException.class,
+        "",
+        () -> createFailingFS(conf));
+  }
+
+  /**
    * Test using the anonymous credential provider with the public csv
    * test file; if the test file path is unset then it will be skipped.
    */
   @Test
   public void testAnonymousProvider() throws Exception {
     Configuration conf = createConf(AnonymousAWSCredentialsProvider.class);
-    Path testFile = getCSVTestPath(conf);
+    if (isUsingDefaultExternalDataFile(conf)) {
+      removeBaseAndBucketOverrides(conf,
+          ENDPOINT);
+      conf.set(ENDPOINT, CENTRAL_ENDPOINT);
+    }
+    Path testFile = getExternalData(conf);
     try (FileSystem fs = FileSystem.newInstance(testFile.toUri(), conf)) {
       Assertions.assertThat(fs)
           .describedAs("Filesystem")
