@@ -253,9 +253,7 @@
     "centos:8": "make"
   },
   "maven": {
-    "debian:10": "maven",
-    "ubuntu:focal": "maven",
-    "ubuntu:focal::arch64": "maven"
+    "debian:10": "maven"
   },
   "java": {
     "debian:10": "openjdk-11-jdk",
