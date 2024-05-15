@@ -21,9 +21,7 @@ package org.apache.hadoop.fs.s3a;
 import java.io.IOException;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Assert;
 import org.junit.Ignore;
-import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSMainOperationsBaseTest;
