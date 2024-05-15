@@ -443,16 +443,14 @@ extends AbstractDelegationTokenIdentifier>
     int newCurrentId;
     synchronized (this) {
       newCurrentId = incrementCurrentKeyId();
-    }
-    DelegationKey newKey = new DelegationKey(newCurrentId, System
-        .currentTimeMillis()
-        + keyUpdateInterval + tokenMaxLifetime, generateSecret());
-    //Log must be invoked outside the lock on 'this'
-    logUpdateMasterKey(newKey);
-    synchronized (this) {
-      currentKey = newKey;
+      currentKey = new DelegationKey(newCurrentId, System
+          .currentTimeMillis()
+          + keyUpdateInterval + tokenMaxLifetime, generateSecret());
+
       storeDelegationKey(currentKey);
     }
+    //Log must be invoked outside the lock on 'this'
+    logUpdateMasterKey(currentKey);
   }
   
   /** 
