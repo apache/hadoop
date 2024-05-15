@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -237,8 +238,8 @@ public abstract class ITestS3AClientSideEncryption extends AbstractS3ATestBase {
       assertEquals("Mismatch in content length bytes", SMALL_FILE_SIZE,
           encryptedFSFileStatus.getLen());
 
-      intercept(SecurityException.class, "",
-          "SecurityException should be thrown",
+      intercept(FileNotFoundException.class, "Instruction file not found!",
+          "AWSClientIOException should be thrown",
           () -> {
             in.read(new byte[SMALL_FILE_SIZE]);
             return "Exception should be raised if unencrypted data is read by "

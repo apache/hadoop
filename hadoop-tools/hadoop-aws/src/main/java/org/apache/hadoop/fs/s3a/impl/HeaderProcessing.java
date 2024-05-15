@@ -47,6 +47,7 @@ import static org.apache.hadoop.fs.s3a.Statistic.INVOCATION_XATTR_GET_MAP;
 import static org.apache.hadoop.fs.s3a.Statistic.INVOCATION_XATTR_GET_NAMED;
 import static org.apache.hadoop.fs.s3a.Statistic.INVOCATION_XATTR_GET_NAMED_MAP;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.X_HEADER_MAGIC_MARKER;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.CSE_PADDING_LENGTH;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDuration;
 
 /**
@@ -322,20 +323,16 @@ public class HeaderProcessing extends AbstractStoreOperation {
     maybeSetHeader(headers, XA_CONTENT_LANGUAGE,
         md.contentLanguage());
     // If CSE is enabled, use the unencrypted content length.
-    // TODO: CSE is not supported yet, add these headers in during CSE work.
-//    if (md.getUserMetaDataOf(Headers.CRYPTO_CEK_ALGORITHM) != null
-//        && md.getUserMetaDataOf(Headers.UNENCRYPTED_CONTENT_LENGTH) != null) {
-//      maybeSetHeader(headers, XA_CONTENT_LENGTH,
-//          md.getUserMetaDataOf(Headers.UNENCRYPTED_CONTENT_LENGTH));
-//    } else {
-//      maybeSetHeader(headers, XA_CONTENT_LENGTH,
-//          md.contentLength());
-//    }
-//    maybeSetHeader(headers, XA_CONTENT_MD5,
-//        md.getContentMD5());
-    // TODO: Add back in else block during CSE work.
-    maybeSetHeader(headers, XA_CONTENT_LENGTH,
-        md.contentLength());
+    if (this.getStoreContext().isCSEEnabled() &&
+        md.metadata().get(AWSHeaders.CRYPTO_CEK_ALGORITHM) != null
+        && md.contentLength() >= CSE_PADDING_LENGTH) {
+      maybeSetHeader(headers, XA_CONTENT_LENGTH,
+          md.contentLength() - CSE_PADDING_LENGTH);
+    } else {
+      maybeSetHeader(headers, XA_CONTENT_LENGTH,
+          md.contentLength());
+    }
+
     if (md.sdkHttpResponse() != null && md.sdkHttpResponse().headers() != null
         && md.sdkHttpResponse().headers().get("Content-Range") != null) {
       maybeSetHeader(headers, XA_CONTENT_RANGE,

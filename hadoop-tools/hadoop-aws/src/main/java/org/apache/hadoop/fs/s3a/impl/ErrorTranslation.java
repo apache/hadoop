@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.lang.reflect.Constructor;
 
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
+import software.amazon.awssdk.core.exception.SdkException;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.s3a.HttpChannelEOFException;
@@ -68,6 +69,9 @@ public final class ErrorTranslation {
    */
   private ErrorTranslation() {
   }
+
+  static final String ENCRYPTION_CLIENT_EXCEPTION =
+      "software.amazon.encryption.s3.S3EncryptionClientException";
 
   /**
    * Does this exception indicate that the AWS Bucket was unknown.
@@ -150,6 +154,25 @@ public final class ErrorTranslation {
     final IOException ioe = (IOException) cause;
 
     return wrapWithInnerIOE(path, message, thrown, ioe);
+  }
+
+  /**
+   * Extracts the underlying exception from a SdkException.
+   * @param exception amazon exception raised
+   * @return extractedException
+   */
+  public static SdkException maybeExtractSdkException(SdkException exception) {
+    SdkException extractedException = exception;
+    if (exception.toString().contains(ENCRYPTION_CLIENT_EXCEPTION)
+        && exception.getCause() instanceof SdkException) {
+      extractedException = (SdkException) exception.getCause();
+      if (extractedException != null
+          && extractedException.getCause() instanceof AwsServiceException) {
+        extractedException = (SdkException) extractedException.getCause();
+      }
+    }
+
+    return extractedException;
   }
 
   /**

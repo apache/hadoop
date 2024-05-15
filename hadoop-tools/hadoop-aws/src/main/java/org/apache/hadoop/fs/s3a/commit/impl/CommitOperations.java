@@ -37,6 +37,7 @@ import javax.annotation.Nullable;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.model.CompletedPart;
 import software.amazon.awssdk.services.s3.model.MultipartUpload;
+import software.amazon.awssdk.services.s3.model.SdkPartType;
 import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 import org.slf4j.Logger;
@@ -580,14 +581,20 @@ public class CommitOperations extends AbstractStoreOperation
         for (int partNumber = 1; partNumber <= numParts; partNumber += 1) {
           progress.progress();
           long size = Math.min(length - offset, uploadPartSize);
-          UploadPartRequest part = writeOperations.newUploadPartRequestBuilder(
+          UploadPartRequest.Builder partBuilder = writeOperations.newUploadPartRequestBuilder(
               destKey,
               uploadId,
               partNumber,
-              size).build();
+              size);
+
+          if (partNumber == numParts) {
+            partBuilder.sdkPartType(SdkPartType.LAST);
+          }
+
           // Read from the file input stream at current position.
           RequestBody body = RequestBody.fromInputStream(fileStream, size);
-          UploadPartResponse response = writeOperations.uploadPart(part, body, statistics);
+          UploadPartResponse response =
+              writeOperations.uploadPart(partBuilder.build(), body, statistics);
           offset += uploadPartSize;
           parts.add(CompletedPart.builder()
               .partNumber(partNumber)
