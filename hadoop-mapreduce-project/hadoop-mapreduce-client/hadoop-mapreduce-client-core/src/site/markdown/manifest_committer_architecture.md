@@ -19,6 +19,7 @@ This document describes the architecture and other implementation/correctness
 aspects of the [Manifest Committer](manifest_committer.html)
 
 The protocol and its correctness are covered in [Manifest Committer Protocol](manifest_committer_protocol.html).
+
 <!-- MACRO{toc|fromDepth=0|toDepth=2} -->
 
 The _Manifest_ committer is a committer for work which provides performance on ABFS for "real world"
@@ -278,6 +279,11 @@ The manifest committer assumes that the amount of data being stored in memory is
 because there is no longer the need to store an etag for every block of every
 file being committed.
 
+This assumption turned out not to hold for some jobs:
+[MAPREDUCE-7435. ManifestCommitter OOM on azure job](https://issues.apache.org/jira/browse/MAPREDUCE-7435)
+
+The strategy here was to read in all manifests and stream their entries to a local file, as Hadoop
+Writable objects -hence with lower marshalling overhead than JSON.
 
 #### Duplicate creation of directories in the dest dir
 
