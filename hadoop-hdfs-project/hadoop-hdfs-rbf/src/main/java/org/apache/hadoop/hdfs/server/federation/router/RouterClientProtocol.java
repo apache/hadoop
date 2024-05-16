@@ -672,8 +672,17 @@ public class RouterClientProtocol implements ClientProtocol {
     if (targetBlocks == null) {
       throw new IOException("Cannot locate blocks for target file - " + trg);
     }
+    String expectedBlockPoolId = null;
+    String expectedBlockPoolIdPath = null;
     LocatedBlock lastLocatedBlock = targetBlocks.getLastLocatedBlock();
-    String targetBlockPoolId = lastLocatedBlock.getBlock().getBlockPoolId();
+    // HDFS supports trg file can be empty, but file in src cannot be empty.
+    // lastLocatedBlock will be null if trg is an empty file, so check before
+    // getBlock.
+    if (lastLocatedBlock != null) {
+      // expectedBlockPoolId will not be null if lastLocatedBlock is not null.
+      expectedBlockPoolId = lastLocatedBlock.getBlock().getBlockPoolId();
+      expectedBlockPoolIdPath = trg;
+    }
     for (String source : src) {
       LocatedBlocks sourceBlocks = getBlockLocations(source, 0, 1);
       if (sourceBlocks == null) {
@@ -682,23 +691,44 @@ public class RouterClientProtocol implements ClientProtocol {
       }
       String sourceBlockPoolId =
           sourceBlocks.getLastLocatedBlock().getBlock().getBlockPoolId();
-      if (!sourceBlockPoolId.equals(targetBlockPoolId)) {
+      if (expectedBlockPoolId == null) {
+        // If expectedBlockPoolId is null, this is due to trg is an empty file.
+        // In this case, set it to the block pool id of the first file in src.
+        // Then following iterations of the for loop will check the block pool
+        // id of the other files in src against it, this can make sure that all
+        // files in src have the same block pool id.
+        // This also means that if trg is an empty file, we will not check the
+        // block pool id of trg against the block pool id of files in src in this
+        // step. But this will be checked in the following getLocationForPath of
+        // trg. And exceptions will be thrown if the block pool id of trg is not
+        // match with expectedBlockPoolId.
+        expectedBlockPoolId = sourceBlockPoolId;
+        expectedBlockPoolIdPath = source;
+      } else if (!sourceBlockPoolId.equals(expectedBlockPoolId)) {
         throw new IOException("Cannot concatenate source file " + source
             + " because it is located in a different namespace"
             + " with block pool id " + sourceBlockPoolId
-            + " from the target file with block pool id "
-            + targetBlockPoolId);
+            + " from the other file " + expectedBlockPoolIdPath
+            + " with block pool id " + expectedBlockPoolId);
       }
     }
 
+    if (expectedBlockPoolId == null) {
+      throw new IOException("Cannot determine expected block pool id of src, " +
+          "HDFS does not support src array contain no element");
+    }
+
     // Find locations in the matching namespace.
+    // If the block pool id of empty file trg is not match with expectedBlockPoolId,
+    // getLocationForPath will throw an exception with message "Cannot locate a
+    // nameservice for block pool {expectedBlockPoolId}".
     final RemoteLocation targetDestination =
-        rpcServer.getLocationForPath(trg, true, targetBlockPoolId);
+        rpcServer.getLocationForPath(trg, true, expectedBlockPoolId);
     String[] sourceDestinations = new String[src.length];
     for (int i = 0; i < src.length; i++) {
       String sourceFile = src[i];
       RemoteLocation location =
-          rpcServer.getLocationForPath(sourceFile, true, targetBlockPoolId);
+          rpcServer.getLocationForPath(sourceFile, true, expectedBlockPoolId);
       sourceDestinations[i] = location.getDest();
     }
     // Invoke
