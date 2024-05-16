@@ -25,7 +25,7 @@ import software.amazon.awssdk.services.s3.model.ObjectStorageClass;
 import software.amazon.awssdk.services.s3.model.S3Object;
 
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
-import org.apache.hadoop.thirdparty.com.google.common.collect.Sets;
+import org.apache.hadoop.util.Sets;
 
 
 /**
@@ -86,6 +86,10 @@ public enum S3ObjectStorageClassFilter {
     return true;
   }
 
+  /**
+   * Returns the filter function set as part of the enum definition
+   * @return the filter function set as part of the enum definition
+   */
   public Function<S3Object, Boolean> getFilter() {
     return filter;
   }

@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 
+import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
@@ -64,34 +65,32 @@ public class ITestS3AReadRestoredGlacierObjects extends AbstractS3ATestBase {
   @Parameterized.Parameters(name = "storage-class-{1}")
   public static Collection<Object[]> data(){
     return Arrays.asList(new Object[][] {
-        {Type.GLACIER_AND_DEEP_ARCHIVE, STORAGE_CLASS_GLACIER},
-        {Type.GLACIER_AND_DEEP_ARCHIVE, STORAGE_CLASS_DEEP_ARCHIVE},
-        {Type.GLACIER, STORAGE_CLASS_GLACIER}
+        {STORAGE_CLASS_GLACIER}, {STORAGE_CLASS_DEEP_ARCHIVE},
     });
   }
 
-  private final int maxRetries = 100;
-  private final int retryDelayMs = 5000;
-
-  private final Type type;
+  private static final int MAX_RETRIES = 100;
+  private static final int RETRY_DELAY_MS = 5000;
   private final String glacierClass;
 
-  public ITestS3AReadRestoredGlacierObjects(Type type, String glacierClass) {
-    this.type = type;
+  public ITestS3AReadRestoredGlacierObjects(String glacierClass) {
     this.glacierClass = glacierClass;
   }
 
   private FileSystem createFiles(String s3ObjectStorageClassFilter) throws Throwable {
-    Configuration conf = this.createConfiguration();
+    FileSystem fs = createFileSystem(s3ObjectStorageClassFilter);
+    Path path = new Path(methodPath(), "glaciated");
+    ContractTestUtils.touch(fs, path);
+    return fs;
+  }
+
+  private FileSystem createFileSystem(String s3ObjectStorageClassFilter) throws Throwable {
+    Configuration conf = createConfiguration();
     conf.set(READ_RESTORED_GLACIER_OBJECTS, s3ObjectStorageClassFilter);
     // Create Glacier objects:Storage Class:DEEP_ARCHIVE/GLACIER
     conf.set(STORAGE_CLASS, glacierClass);
-    S3AContract contract = (S3AContract) createContract(conf);
-    contract.init();
-
-    FileSystem fs = contract.getTestFileSystem();
-    Path path = new Path(methodPath(), "glaciated");
-    ContractTestUtils.touch(fs, path);
+    FileSystem fs = new S3AFileSystem();
+    fs.initialize(getFileSystem().getUri(), conf);
     return fs;
   }
 
@@ -105,62 +104,65 @@ public class ITestS3AReadRestoredGlacierObjects extends AbstractS3ATestBase {
   }
 
   @Test
-  public void testConfigWithInvalidValue() throws Throwable {
-    Assume.assumeTrue(type == Type.GLACIER_AND_DEEP_ARCHIVE);
-    String invalidValue = "ABCDE";
-    try (FileSystem fs = createFiles(invalidValue)) {
-      Assertions.assertThat(
-              fs.listStatus(methodPath()))
-          .describedAs("FileStatus List of %s", methodPath()).isNotEmpty();
-    }
-  }
+  public void testAllGlacierAndDeepArchiveCases() throws Throwable {
 
-  @Test
-  public void testIgnoreGlacierObject() throws Throwable {
-    Assume.assumeTrue(type == Type.GLACIER_AND_DEEP_ARCHIVE);
     try (FileSystem fs = createFiles(S3ObjectStorageClassFilter.SKIP_ALL_GLACIER.name())) {
+
+      // testIgnoreGlacierObject
+      describe("Running testIgnoreGlacierObject");
       Assertions.assertThat(
           fs.listStatus(methodPath()))
-        .describedAs("FileStatus List of %s", methodPath()).isEmpty();
-    }
-  }
+        .describedAs("FileStatus List of %s", methodPath())
+        .isEmpty();
 
-  @Test
-  public void testIgnoreRestoringGlacierObject() throws Throwable {
-    Assume.assumeTrue(type == Type.GLACIER_AND_DEEP_ARCHIVE);
-    try (FileSystem fs = createFiles(S3ObjectStorageClassFilter.READ_RESTORED_GLACIER_OBJECTS.name())) {
-      Assertions.assertThat(
-              fs.listStatus(
-                  methodPath()))
-          .describedAs("FileStatus List of %s", methodPath()).isEmpty();
-    }
-  }
+      // testReadAllObjects
+      describe("Running testReadAllObjects");
+      try (FileSystem fsTest = createFileSystem(S3ObjectStorageClassFilter.READ_ALL.name())) {
+        Assertions.assertThat(
+                fsTest.listStatus(methodPath()))
+            .describedAs("FileStatus List of %s", methodPath())
+            .isNotEmpty();
+      }
 
-  @Test
-  public void testRestoredGlacierObject() throws Throwable {
-    // Skipping this test for Deep Archive as expedited retrieval is not supported
-    Assume.assumeTrue(type == Type.GLACIER);
-    try (FileSystem fs = createFiles(S3ObjectStorageClassFilter.READ_RESTORED_GLACIER_OBJECTS.name())) {
-      restoreGlacierObject(getFilePrefixForListObjects(), 2);
-      Assertions.assertThat(
-              fs.listStatus(
-                  methodPath()))
-          .describedAs("FileStatus List of %s", methodPath()).isNotEmpty();
-    }
-  }
+      // testIgnoreRestoringGlacierObject
+      describe("Running testIgnoreRestoringGlacierObject");
+      try (FileSystem fsTest = createFileSystem(S3ObjectStorageClassFilter.READ_RESTORED_GLACIER_OBJECTS.name())) {
+        Assertions.assertThat(
+                fsTest.listStatus(methodPath()))
+            .describedAs("FileStatus List of %s", methodPath())
+            .isEmpty();
+      }
 
-  @Test
-  public void testReadAllObjects() throws Throwable {
-    Assume.assumeTrue(type == Type.GLACIER_AND_DEEP_ARCHIVE);
-    try (FileSystem fs = createFiles(S3ObjectStorageClassFilter.READ_ALL.name())) {
-      Assertions.assertThat(
-              fs.listStatus(methodPath()))
-          .describedAs("FileStatus List of %s", methodPath()).isNotEmpty();
+      // testConfigWithInvalidValue
+      describe("Running testConfigWithInvalidValue");
+      String invalidValue = "ABCDE";
+      try (FileSystem fsTest = createFiles(invalidValue)) {
+        Assertions.assertThat(
+                fsTest.listStatus(methodPath()))
+            .describedAs("FileStatus List of %s", methodPath())
+            .isNotEmpty();
+      }
+
+
+      // testRestoredGlacierObject - run only for Glacier Storage Class
+      if ( glacierClass == STORAGE_CLASS_GLACIER ) {
+        describe("Running testRestoredGlacierObject");
+        try (FileSystem fsTest = createFileSystem(S3ObjectStorageClassFilter.READ_RESTORED_GLACIER_OBJECTS.name())) {
+          restoreGlacierObject(getFilePrefixForListObjects(), 2);
+          Assertions.assertThat(
+                  fsTest.listStatus(methodPath()))
+              .describedAs("FileStatus List of %s", methodPath())
+              .isNotEmpty();
+        }
+
+      }
+
     }
   }
 
 
   private void restoreGlacierObject(String glacierObjectKey, int expirationDays) throws Exception {
+    describe("Initiate restore of the Glacier object");
     try (AuditSpan auditSpan = getSpanSource().createSpan(OBJECT_LIST_REQUEST, "", "").activate()) {
 
       S3Client s3Client = getFileSystem().getS3AInternals().getAmazonS3Client("test");
@@ -175,7 +177,8 @@ public class ITestS3AReadRestoredGlacierObjects extends AbstractS3ATestBase {
       S3ListRequest s3ListRequest = getFileSystem().createListObjectsRequest(
           getFilePrefixForListObjects(), "/");
 
-      LambdaTestUtils.await(maxRetries * retryDelayMs, retryDelayMs,
+      describe("Wait till restore of the object is complete");
+      LambdaTestUtils.await(MAX_RETRIES * RETRY_DELAY_MS, RETRY_DELAY_MS,
           () -> !getS3GlacierObject(s3Client, s3ListRequest).restoreStatus().isRestoreInProgress());
     }
   }

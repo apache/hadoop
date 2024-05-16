@@ -932,7 +932,7 @@ The switch to turn S3A auditing on or off.
 
 [Amazon S3 Glacier (S3 Glacier)](https://docs.aws.amazon.com/amazonglacier/latest/dev/introduction.html) is a secure and durable service for low-cost data archiving and
 long-term backup.
-With S3 Glacier, you can store your data cost effectively for months, years, or even decades.
+With S3 Glacier, it is possible to store data more cost-effectively for months, years, or even decades.
 This support introduces a new config, which decides the objects returned from listStatus.
 Note : This is not available on all AWS S3 store types, or on third party stores.
 
