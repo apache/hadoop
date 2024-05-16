@@ -19,7 +19,7 @@ FROM centos:7
 RUN yum -y install tomcat lsof krb5-workstation sssd-client curl
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN mkdir -p /opt/apache/solr && \
-    curl -SL https://downloads.apache.org/lucene/solr/8.11.2/solr-8.11.2.tgz | \
+    curl -SL https://downloads.apache.org/lucene/solr/8.11.3/solr-8.11.3.tgz | \
     tar -xzC /opt/apache/solr --strip 1
 COPY src/main/scripts/setup-image.sh /setup-image.sh
 COPY src/main/resources/samples.xml /tmp/samples.xml
