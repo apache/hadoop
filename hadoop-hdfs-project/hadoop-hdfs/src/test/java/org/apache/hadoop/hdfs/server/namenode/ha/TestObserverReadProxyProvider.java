@@ -51,7 +51,49 @@ import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+//Added
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.AbstractFileSystem;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
+import org.apache.hadoop.hdfs.*;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSelector;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.ipc.RetriableException;
+import org.apache.hadoop.ipc.StandbyException;
+import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.SecurityUtilTestHelper;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.Whitebox;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.slf4j.event.Level;
 
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.security.PrivilegedExceptionAction;
+import java.util.Collection;
+import java.util.HashSet;
+
+import static org.junit.Assert.*;
 /**
  * Tests for {@link ObserverReadProxyProvider} under various configurations of
  * NameNode states. Mainly testing that the proxy provider picks the correct
@@ -74,6 +116,10 @@ public class TestObserverReadProxyProvider {
     nnURI = URI.create("hdfs://" + ns);
     conf = new Configuration();
     conf.set(HdfsClientConfigKeys.DFS_NAMESERVICES, ns);
+    // Can be here: 
+    // conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTH_TO_LOCAL,
+    //     "RULE:[2:$1@$0](JobTracker@.*FOO.COM)s/@.*//" + "DEFAULT");
+
     // Set observer probe retry period to 0. Required by the tests that
     // transition observer back and forth
     conf.setTimeDuration(
@@ -91,6 +137,7 @@ public class TestObserverReadProxyProvider {
       namenodeAddrs[i] = "namenode" + i + ".test:8020";
       conf.set(HdfsClientConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY + "." + ns +
           "." + namenodeIDs[i], namenodeAddrs[i]);
+
       namenodeAnswers[i] = new NameNodeAnswer();
       proxies[i] = mock(ClientProtocol.class);
       doWrite(Mockito.doAnswer(namenodeAnswers[i].clientAnswer)
@@ -281,6 +328,108 @@ public class TestObserverReadProxyProvider {
     namenodeAnswers[1].setObserverState();
     doRead();
     assertHandledBy(1);
+  }
+
+  @Test
+  public void testSlowReadStandbys1() throws Exception {
+    LOG.info("[Mike] testSlowReadStandbys");
+
+    int number_of_nn = 1;
+
+    setupProxyProvider(number_of_nn);
+
+    namenodeAnswers[0].setActiveState();
+
+    for (int i = 1; i<number_of_nn; i++){
+        namenodeAnswers[i].setStandbyState();
+    }
+
+    doRead();
+    
+    assertHandledBy(0);
+    LOG.info("[Mike] After assert");
+  }
+  
+
+  @Test
+  public void testSlowReadStandbys2() throws Exception {
+    LOG.info("[Mike] testSlowReadStandbys");
+
+    int number_of_nn = 2;
+
+    setupProxyProvider(number_of_nn);
+    
+
+    namenodeAnswers[0].setActiveState();
+
+    for (int i = 1; i<number_of_nn; i++){
+        namenodeAnswers[i].setStandbyState();
+    }
+
+    doRead();
+    
+    assertHandledBy(0);
+    LOG.info("[Mike] After assert");
+  }
+
+  @Test
+  public void testSlowReadStandbys4() throws Exception {
+    LOG.info("[Mike] testSlowReadStandbys");
+
+    int number_of_nn = 4;
+
+    setupProxyProvider(number_of_nn);
+
+    namenodeAnswers[0].setActiveState();
+
+    for (int i = 1; i<number_of_nn; i++){
+        namenodeAnswers[i].setStandbyState();
+    }
+
+    doRead();
+    
+    assertHandledBy(0);
+    LOG.info("[Mike] After assert");
+  }
+
+  @Test
+  public void testSlowReadStandbys8() throws Exception {
+    LOG.info("[Mike] testSlowReadStandbys");
+
+    int number_of_nn = 8;
+
+    setupProxyProvider(number_of_nn);
+
+    namenodeAnswers[0].setActiveState();
+
+    for (int i = 1; i<number_of_nn; i++){
+        namenodeAnswers[i].setStandbyState();
+    }
+
+    doRead();
+    
+    assertHandledBy(0);
+    LOG.info("[Mike] After assert");
+  }
+
+  @Test
+  public void testSlowReadStandbys16() throws Exception {
+    LOG.info("[Mike] testSlowReadStandbys");
+
+    int number_of_nn = 16;
+
+    setupProxyProvider(number_of_nn);
+
+    namenodeAnswers[0].setActiveState();
+
+    for (int i = 1; i<number_of_nn; i++){
+        namenodeAnswers[i].setStandbyState();
+    }
+
+    doRead();
+    
+    assertHandledBy(0);
+    LOG.info("[Mike] After assert");
   }
 
   @Test

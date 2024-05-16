@@ -52,6 +52,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 
+
 /**
  * A {@link org.apache.hadoop.io.retry.FailoverProxyProvider} implementation
  * that supports reading from observer namenode(s).
@@ -286,7 +287,7 @@ public class ObserverReadProxyProvider<T>
     currentIndex = (currentIndex + 1) % nameNodeProxies.size();
     currentProxy = createProxyIfNeeded(nameNodeProxies.get(currentIndex));
     currentProxy.setCachedState(getHAServiceState(currentProxy));
-    LOG.debug("Changed current proxy from {} to {}",
+    LOG.info("Changed current proxy from {} to {}",
         initial == null ? "none" : initial.proxyInfo,
         currentProxy.proxyInfo);
     return currentProxy;
@@ -297,23 +298,41 @@ public class ObserverReadProxyProvider<T>
    * assume it is in standby state, but log the exception.
    */
   private HAServiceState getHAServiceState(NNProxyInfo<T> proxyInfo) {
+    LOG.info("[Mike] in getHAServiceState");
     IOException ioe;
     try {
-      return getProxyAsClientProtocol(proxyInfo.proxy).getHAServiceState();
+      LOG.info("[Mike] inside try block");
+      if (getProxyAsClientProtocol(proxyInfo.proxy).getHAServiceState()==HAServiceState.STANDBY){
+        
+        try {
+            // Sleep for 1 second (1000 milliseconds)
+            LOG.info("[Mike] inside try block, is standby state, sleep 6ms");
+            Thread.sleep(6);
+        } catch (InterruptedException e) {
+            // Handle interruption exception
+            LOG.info("[Mike] inside try block, is standby state, threw expcetion");
+            e.printStackTrace();
+        }      
+      }
+      return HAServiceState.STANDBY;
     } catch (RemoteException re) {
+      LOG.info("[Mike] inside catch block RemoteException");
       // Though a Standby will allow a getHAServiceState call, it won't allow
       // delegation token lookup, so if DT is used it throws StandbyException
       if (re.unwrapRemoteException() instanceof StandbyException) {
-        LOG.debug("NameNode {} threw StandbyException when fetching HAState",
+        LOG.info("[Mike] standby threw exception");
+        LOG.info("NameNode {} threw StandbyException when fetching HAState",
             proxyInfo.getAddress());
         return HAServiceState.STANDBY;
       }
       ioe = re;
     } catch (IOException e) {
+      LOG.info("[Mike] inside catch block IOException");
       ioe = e;
     }
+
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Failed to connect to {} while fetching HAServiceState",
+      LOG.info("Failed to connect to {} while fetching HAServiceState",
           proxyInfo.getAddress(), ioe);
     }
     return null;
@@ -416,7 +435,9 @@ public class ObserverReadProxyProvider<T>
       lastProxy = null;
       Object retVal;
 
-      if (observerReadEnabled && shouldFindObserver() && isRead(method)) {
+    LOG.info("[Mike] The number of Proxies is: {}", nameNodeProxies.size());
+    //Patched: if (observerReadEnabled && shouldFindObserver() && isRead(method)) {
+      if (observerReadEnabled && isRead(method)) {
         if (!msynced) {
           // An msync() must first be performed to ensure that this client is
           // up-to-date with the active's state. This will only be done once.
@@ -429,7 +450,11 @@ public class ObserverReadProxyProvider<T>
         int activeCount = 0;
         int standbyCount = 0;
         int unreachableCount = 0;
+
+        LOG.info("[Mike] Before for loop, the time is: {}", Time.monotonicNow());
+
         for (int i = 0; i < nameNodeProxies.size(); i++) {
+        LOG.info("[Mike] inside for loop");
           NNProxyInfo<T> current = getCurrentProxy();
           HAServiceState currState = current.getCachedState();
           if (currState != HAServiceState.OBSERVER) {
@@ -440,18 +465,18 @@ public class ObserverReadProxyProvider<T>
             } else if (currState == null) {
               unreachableCount++;
             }
-            LOG.debug("Skipping proxy {} for {} because it is in state {}",
+            LOG.info("Skipping proxy {} for {} because it is in state {}",
                 current.proxyInfo, method.getName(),
                 currState == null ? "unreachable" : currState);
             changeProxy(current);
             continue;
           }
-          LOG.debug("Attempting to service {} using proxy {}",
+          LOG.info("Attempting to service {} using proxy {}",
               method.getName(), current.proxyInfo);
           try {
             retVal = method.invoke(current.proxy, args);
             lastProxy = current;
-            LOG.debug("Invocation of {} using {} was successful",
+            LOG.info("Invocation of {} using {} was successful",
                 method.getName(), current.proxyInfo);
             return retVal;
           } catch (InvocationTargetException ite) {
@@ -491,6 +516,8 @@ public class ObserverReadProxyProvider<T>
           }
         }
 
+        LOG.info("[Mike] After for loop, meaning no observer, the time is: {}", Time.monotonicNow());
+
         // Only log message if there are actual observer failures.
         // Getting here with failedObserverCount = 0 could
         // be that there is simply no Observer node running at all.
@@ -503,7 +530,7 @@ public class ObserverReadProxyProvider<T>
           lastObserverProbeTime = 0;
         } else {
           if (LOG.isDebugEnabled()) {
-            LOG.debug("Read falling back to active without observer read "
+            LOG.info("Read falling back to active without observer read "
                 + "fail, is there no observer node running?");
           }
           lastObserverProbeTime = Time.monotonicNow();
@@ -513,7 +540,7 @@ public class ObserverReadProxyProvider<T>
       // Either all observers have failed, observer reads are disabled,
       // or this is a write request. In any case, forward the request to
       // the active NameNode.
-      LOG.debug("Using failoverProxy to service {}", method.getName());
+      LOG.info("Using failoverProxy to service {}", method.getName());
       ProxyInfo<T> activeProxy = failoverProxy.getProxy();
       try {
         retVal = method.invoke(activeProxy.proxy, args);
