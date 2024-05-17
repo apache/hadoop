@@ -16,12 +16,9 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hdfs;
+package org.apache.hadoop.io.erasurecode;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
-import org.apache.hadoop.io.erasurecode.CodecUtil;
-import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureDecoder;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureEncoder;
 import org.junit.Test;
@@ -32,47 +29,46 @@ import static org.junit.Assert.assertArrayEquals;
 
 public class TestErasureCodingEncodeAndDecode {
 
-  private static int CHUNCK = 1024;
-  private final ErasureCodingPolicy ecPolicy = StripedFileTestUtil.getDefaultECPolicy();
-  private final int dataBlocks = ecPolicy.getNumDataUnits();
-  private final int parityBlocks = ecPolicy.getNumParityUnits();
-  private final int totalBlocks = ecPolicy.getNumDataUnits() + ecPolicy.getNumParityUnits();
-  private final Configuration conf = new HdfsConfiguration();
+  private final static int CHUNCK = 1024;
+  private final static int DATAB_LOCKS = 6;
+  private final static int PARITY_BLOCKS = 3;
+  private final static int TOTAL_BLOCKS = DATAB_LOCKS + PARITY_BLOCKS;
 
   @Test
   public void testEncodeAndDecode() throws Exception {
-    int totalBytes = CHUNCK * dataBlocks;
+    Configuration conf = new Configuration();
+    int totalBytes = CHUNCK * DATAB_LOCKS;
     Random random = new Random();
     byte[] tmpBytes = new byte[totalBytes];
     random.nextBytes(tmpBytes);
-    byte[][] data = new byte[dataBlocks][CHUNCK];
-    for (int i = 0; i < dataBlocks; i++) {
+    byte[][] data = new byte[DATAB_LOCKS][CHUNCK];
+    for (int i = 0; i < DATAB_LOCKS; i++) {
       System.arraycopy(tmpBytes, i * CHUNCK, data[i], 0, CHUNCK);
     }
-    ErasureCoderOptions coderOptions = new ErasureCoderOptions(dataBlocks, parityBlocks);
+    ErasureCoderOptions coderOptions = new ErasureCoderOptions(DATAB_LOCKS, PARITY_BLOCKS);
 
     // 1 Encode
     RawErasureEncoder encoder =
-        CodecUtil.createRawEncoder(conf, ecPolicy.getCodecName(), coderOptions);
-    byte[][] parity = new byte[parityBlocks][CHUNCK];
+        CodecUtil.createRawEncoder(conf, ErasureCodeConstants.RS_CODEC_NAME, coderOptions);
+    byte[][] parity = new byte[PARITY_BLOCKS][CHUNCK];
     encoder.encode(data, parity);
 
     // 2 Compose the complete data
-    byte[][] all = new byte[dataBlocks + parityBlocks][CHUNCK];
-    for (int i = 0; i < dataBlocks; i++) {
+    byte[][] all = new byte[DATAB_LOCKS + PARITY_BLOCKS][CHUNCK];
+    for (int i = 0; i < DATAB_LOCKS; i++) {
       System.arraycopy(data[i], 0, all[i], 0, CHUNCK);
     }
-    for (int i = 0; i < parityBlocks; i++) {
-      System.arraycopy(parity[i], 0, all[i + dataBlocks], 0, CHUNCK);
+    for (int i = 0; i < PARITY_BLOCKS; i++) {
+      System.arraycopy(parity[i], 0, all[i + DATAB_LOCKS], 0, CHUNCK);
     }
 
     // 3 Decode
-    RawErasureDecoder rawDecoder = CodecUtil.createRawDecoder(conf,
-        ecPolicy.getCodecName(), coderOptions);
-    byte[][] backup = new byte[parityBlocks][CHUNCK];
-    for (int i = 0; i < totalBlocks; i++) {
-      for (int j = 0; j < totalBlocks; j++) {
-        for (int k = 0; k < totalBlocks; k++) {
+    RawErasureDecoder rawDecoder =
+        CodecUtil.createRawDecoder(conf, ErasureCodeConstants.RS_CODEC_NAME, coderOptions);
+    byte[][] backup = new byte[PARITY_BLOCKS][CHUNCK];
+    for (int i = 0; i < TOTAL_BLOCKS; i++) {
+      for (int j = 0; j < TOTAL_BLOCKS; j++) {
+        for (int k = 0; k < TOTAL_BLOCKS; k++) {
           int[] erasedIndexes;
           if (i == j && j == k) {
             erasedIndexes = new int[]{i};
