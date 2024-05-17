@@ -1698,42 +1698,6 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   }
 
   /**
-   * Locate the location with the matching block pool id.
-   *
-   * @param path Path to check.
-   * @param failIfLocked Fail the request if locked (top mount point).
-   * @param blockPoolId The block pool ID of the namespace to search for.
-   * @return Prioritized list of locations in the federated cluster.
-   * @throws IOException if the location for this path cannot be determined.
-   */
-  protected RemoteLocation getLocationForPath(
-      String path, boolean failIfLocked, String blockPoolId)
-          throws IOException {
-
-    final List<RemoteLocation> locations =
-        getLocationsForPath(path, failIfLocked);
-
-    String nameserviceId = null;
-    Set<FederationNamespaceInfo> namespaces =
-        this.namenodeResolver.getNamespaces();
-    for (FederationNamespaceInfo namespace : namespaces) {
-      if (namespace.getBlockPoolId().equals(blockPoolId)) {
-        nameserviceId = namespace.getNameserviceId();
-        break;
-      }
-    }
-    if (nameserviceId != null) {
-      for (RemoteLocation location : locations) {
-        if (location.getNameserviceId().equals(nameserviceId)) {
-          return location;
-        }
-      }
-    }
-    throw new IOException(
-        "Cannot locate a nameservice for block pool " + blockPoolId);
-  }
-
-  /**
    * Get the possible locations of a path in the federated cluster.
    * During the get operation, it will do the quota verification.
    *
