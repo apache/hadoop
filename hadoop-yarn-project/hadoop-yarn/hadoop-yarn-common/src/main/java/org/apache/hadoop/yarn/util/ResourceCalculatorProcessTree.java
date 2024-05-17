@@ -37,8 +37,6 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 @Public
 @Evolving
 public abstract class ResourceCalculatorProcessTree extends Configured {
-  static final Logger LOG = LoggerFactory
-      .getLogger(ResourceCalculatorProcessTree.class);
   public static final int UNAVAILABLE = -1;
 
   /**
@@ -169,7 +167,6 @@ public abstract class ResourceCalculatorProcessTree extends Configured {
    */
   public static ResourceCalculatorProcessTree getResourceCalculatorProcessTree(
     String pid, Class<? extends ResourceCalculatorProcessTree> clazz, Configuration conf) {
-
     if (clazz != null) {
       try {
         Constructor <? extends ResourceCalculatorProcessTree> c = clazz.getConstructor(String.class);
