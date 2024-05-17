@@ -86,4 +86,39 @@ public abstract class StateStoreBaseImpl extends StateStoreDriver {
     Class<T> recordClass = (Class<T>)StateStoreUtils.getRecordClass(clazz);
     return remove(recordClass, query) == 1;
   }
+
+  @Override
+  public <T extends BaseRecord> List<T> removeMultiple(List<T> records) throws IOException {
+    assert !records.isEmpty();
+    // Fall back to iterative remove() calls if all records don't share 1 class
+    Class<? extends BaseRecord> expectedClazz = records.get(0).getClass();
+    if (!records.stream().allMatch(x -> x.getClass() == expectedClazz)) {
+      List<T> result = new ArrayList<>();
+      for (T record : records) {
+        if (remove(record)) {
+          result.add(record);
+        }
+      }
+      return result;
+    }
+
+    final List<Query<T>> queries = new ArrayList<>();
+    for (T record: records) {
+      queries.add(new Query<>(record));
+    }
+    @SuppressWarnings("unchecked")
+    Class<T> recordClass = (Class<T>) StateStoreUtils.getRecordClass(expectedClazz);
+    return remove(recordClass, queries);
+  }
+
+  public <T extends BaseRecord> List<T> remove(Class<T> clazz, List<Query<T>> queries)
+      throws IOException {
+    List<T> result = new ArrayList<>();
+    for (Query<T> query : queries) {
+      if (remove(clazz, query) > 0) {
+        result.add(query.getPartial());
+      }
+    }
+    return result;
+  }
 }

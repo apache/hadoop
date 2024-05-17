@@ -30,6 +30,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.spy;
 
@@ -84,6 +85,8 @@ public class TestStateStoreMembershipState extends TestStateStoreBase {
     getConf().setLong(
         RBFConfigKeys.FEDERATION_STORE_MEMBERSHIP_EXPIRATION_DELETION_MS,
         TimeUnit.SECONDS.toMillis(2));
+    getConf().set(RBFConfigKeys.FEDERATION_STORE_MEMBERSHIP_ASYNC_OVERRIDE_CLASSES,
+        "org.apache.hadoop.hdfs.server.federation.store.impl.MembershipStoreImpl");
   }
 
   @Before
@@ -565,7 +568,7 @@ public class TestStateStoreMembershipState extends TestStateStoreBase {
     // Load cache
     MembershipStore memStoreSpy = spy(membershipStore);
     DelayAnswer delayer = new DelayAnswer(LOG);
-    doAnswer(delayer).when(memStoreSpy).overrideExpiredRecords(any());
+    doAnswer(delayer).when(memStoreSpy).overrideExpiredRecords(any(), anyBoolean());
 
     ExecutorService pool = Executors.newFixedThreadPool(1);
 

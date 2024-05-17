@@ -251,6 +251,11 @@ public class StateStoreService extends CompositeService {
 
     T recordStore = RecordStore.newInstance(clazz, this.getDriver());
     Class<? extends BaseRecord> recordClass = recordStore.getRecordClass();
+    if (recordStore instanceof CachedRecordStore && conf.getStringCollection(
+            RBFConfigKeys.FEDERATION_STORE_MEMBERSHIP_ASYNC_OVERRIDE_CLASSES)
+        .contains(clazz.getCanonicalName())) {
+      ((CachedRecordStore<?>) recordStore).toggleAsyncOverride(true);
+    }
     this.recordStores.put(recordClass, recordStore);
 
     // Subscribe for cache updates

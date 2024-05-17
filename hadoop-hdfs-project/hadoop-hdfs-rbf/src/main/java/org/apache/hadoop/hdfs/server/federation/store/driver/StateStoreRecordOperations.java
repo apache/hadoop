@@ -128,6 +128,17 @@ public interface StateStoreRecordOperations {
   <T extends BaseRecord> boolean remove(T record) throws IOException;
 
   /**
+   * Remove multiple records.
+   *
+   * @param <T> Record class of the records.
+   * @param records Records to be removed.
+   * @return Records that were removed.
+   * @throws IOException Throws exception if unable to query the data store.
+   */
+  @AtMostOnce
+  <T extends BaseRecord> List<T> removeMultiple(List<T> records) throws IOException;
+
+  /**
    * Remove all records of this class from the store.
    *
    * @param <T> Record class of the records.
@@ -152,4 +163,17 @@ public interface StateStoreRecordOperations {
   <T extends BaseRecord> int remove(Class<T> clazz, Query<T> query)
       throws IOException;
 
+  /**
+   * Remove all records of a specific class that match any query in a list of queries.
+   * Requires the getAll implementation to fetch fresh records on each call.
+   *
+   * @param clazz The class to match the records with.
+   * @param queries Queries (logical OR) to filter what to remove.
+   * @param <T> Record class of the records.
+   * @return Removed records. Not true removed records, but rather queries that deleted records.
+   * @throws IOException Throws exception if unable to query the data store.
+   */
+  @AtMostOnce
+  <T extends BaseRecord> List<T> remove(Class<T> clazz, List<Query<T>> queries)
+      throws IOException;
 }
