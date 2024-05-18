@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.hadoop.hdfs.server.federation.router;
 
 import org.apache.hadoop.conf.Configuration;
@@ -47,8 +48,6 @@ import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
-import org.apache.hadoop.hdfs.protocol.LocatedBlock;
-import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.ReplicatedBlockStats;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
@@ -77,7 +76,9 @@ import org.slf4j.LoggerFactory;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -262,7 +263,10 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
     final List<RemoteLocation> locs = new LinkedList<>(srcLocations);
     RemoteParam dstParam = getRenameDestinations(locs, dstLocations);
     if (locs.isEmpty()) {
-      return rbfRename.routerFedRename(src, dst, srcLocations, dstLocations);
+      setCurCompletableFuture(
+          CompletableFuture.completedFuture(
+              rbfRename.routerFedRename(src, dst, srcLocations, dstLocations)));
+      return asyncReturn(Boolean.class);
     }
     RemoteMethod method = new RemoteMethod("rename",
         new Class<?>[] {String.class, String.class},
@@ -352,78 +356,88 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
   @Override
   public void concat(String trg, String[] src) throws IOException {
     RouterRpcServer rpcServer = getRpcServer();
+    RouterRpcClient rpcClient = getRpcClient();
     rpcServer.checkOperation(NameNode.OperationCategory.WRITE);
 
-    // See if the src and target files are all in the same namespace
-    getBlockLocations(trg, 0, 1);
+    List<String> sourceDestinations = new ArrayList<>(src.length);
+    // Concat only effects when all files in the same namespace.
+    getFileRemoteLocation(trg);
     CompletableFuture<Object> completableFuture = getCompletableFuture();
     completableFuture = completableFuture.thenCompose(o -> {
-      LocatedBlocks targetBlocks  = (LocatedBlocks) o;
-      if (targetBlocks == null) {
+      RemoteLocation targetDestination = (RemoteLocation) o;
+      if (targetDestination == null) {
         throw new CompletionException(
-            new IOException("Cannot locate blocks for target file - " + trg));
+            new IOException("Cannot find target file - " + trg));
       }
-      LocatedBlock lastLocatedBlock = targetBlocks.getLastLocatedBlock();
-      String targetBlockPoolId = lastLocatedBlock.getBlock().getBlockPoolId();
-      CompletableFuture<Object> future = CompletableFuture.completedFuture(null);
-      for (String source : src) {
-        future = future.thenCompose(o1 -> {
-          try {
-            getBlockLocations(source, 0, 1);
-            CompletableFuture<Object> completableFuture1 = getCompletableFuture();
-            return completableFuture1.thenApply(res -> {
-              if (res == null) {
-                throw new CompletionException(new IOException(
-                    "Cannot located blocks for source file " + source));
-              }
-              LocatedBlocks sourceBlocks1 = (LocatedBlocks) res;
-              String sourceBlockPoolId =
-                  sourceBlocks1.getLastLocatedBlock().getBlock().getBlockPoolId();
-              if (!sourceBlockPoolId.equals(targetBlockPoolId)) {
-                throw new RuntimeException(
-                    new IOException("Cannot concatenate source file " + source
-                        + " because it is located in a different namespace"
-                        + " with block pool id " + sourceBlockPoolId
-                        + " from the target file with block pool id "
-                        + targetBlockPoolId));
-              }
-              return res;
-            });
-          } catch (IOException e) {
-            throw new CompletionException(e);
-          }
-        });
-      }
-      return future.thenApply(r -> targetBlockPoolId);
-    });
-
-    RouterRpcClient rpcClient = getRpcClient();
-    completableFuture = completableFuture.thenCompose(o -> {
-      String targetBlockPoolId = (String) o;
-      // Find locations in the matching namespace.
+      String targetNameService = targetDestination.getNameserviceId();
+      AsyncRequestDoWhile<String, RemoteLocation, RemoteLocation> asyncRequestDoWhile =
+          new AsyncRequestDoWhile<>();
       try {
-        final RemoteLocation targetDestination
-            = rpcServer.getLocationForPath(trg, true, targetBlockPoolId);
-        String[] sourceDestinations = new String[src.length];
-        for (int i = 0; i < src.length; i++) {
-          String sourceFile = src[i];
-          RemoteLocation location =
-              rpcServer.getLocationForPath(sourceFile, true, targetBlockPoolId);
-          sourceDestinations[i] = location.getDest();
-        }
-        // Invoke
+        asyncRequestDoWhile.whileFor(Arrays.stream(src).iterator())
+            .doAsync(this::getFileRemoteLocation)
+            .thenApply((sourceFile, srcLocation) -> {
+              if (srcLocation == null) {
+                throw new CompletionException(
+                    new IOException("Cannot find source file - " + sourceFile));
+              }
+              sourceDestinations.add(srcLocation.getDest());
+
+              if (!targetNameService.equals(srcLocation.getNameserviceId())) {
+                IOException ioe = new IOException("Cannot concatenate source file " + sourceFile
+                    + " because it is located in a different namespace" + " with nameservice "
+                    + srcLocation.getNameserviceId() + " from the target file with nameservice "
+                    + targetNameService);
+                throw new CompletionException(ioe);
+              }
+              return targetDestination;
+            }).asyncDoWhile(RemoteLocation.class);
+        return getCompletableFuture();
+      } catch (IOException e) {
+        throw new CompletionException(e);
+      }
+    });
+    // Invoke
+    completableFuture = completableFuture.thenCompose(o -> {
+      RemoteLocation targetDestination = (RemoteLocation) o;
+      try {
         RemoteMethod method = new RemoteMethod("concat",
             new Class<?>[] {String.class, String[].class},
-            targetDestination.getDest(), sourceDestinations);
+            targetDestination.getDest(), sourceDestinations.toArray(new String[0]));
         rpcClient.invokeSingle(targetDestination, method, Void.class);
         return getCompletableFuture();
       } catch (IOException e) {
         throw new CompletionException(e);
       }
     });
-
     setCurCompletableFuture(completableFuture);
-    asyncReturn(Void.class);
+  }
+
+  @Override
+  public RemoteLocation getFileRemoteLocation(String path) throws IOException {
+    RouterRpcServer rpcServer = getRpcServer();
+    RouterRpcClient rpcClient = getRpcClient();
+    rpcServer.checkOperation(NameNode.OperationCategory.READ);
+
+    final List<RemoteLocation> locations =
+        rpcServer.getLocationsForPath(path, false, false);
+    if (locations.size() == 1) {
+      setCurCompletableFuture(CompletableFuture.completedFuture(locations.get(0)));
+      return asyncReturn(RemoteLocation.class);
+    }
+    RemoteMethod method =
+        new RemoteMethod("getFileInfo", new Class<?>[] {String.class}, new RemoteParam());
+    AsyncRequestDoWhile<RemoteLocation, HdfsFileStatus, RemoteLocation> asyncRequestDoWhile =
+        new AsyncRequestDoWhile<>();
+    return asyncRequestDoWhile.whileFor(locations.listIterator())
+        .doAsync(location -> rpcClient.invokeSequential(Collections.singletonList(location),
+            method, HdfsFileStatus.class, null))
+        .thenApply((remoteLocation, hdfsFileStatus) -> {
+          if (hdfsFileStatus != null) {
+            asyncRequestDoWhile.breakNow();
+            return remoteLocation;
+          }
+          return null;
+        }).asyncDoWhile(RemoteLocation.class);
   }
 
   @Override

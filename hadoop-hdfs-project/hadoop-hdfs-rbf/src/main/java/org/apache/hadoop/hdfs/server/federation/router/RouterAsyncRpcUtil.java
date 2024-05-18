@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdfs.server.federation.router;
 
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
@@ -81,4 +82,8 @@ public final class RouterAsyncRpcUtil {
     R res() throws IOException;
   }
 
+  @FunctionalInterface
+  interface AsyncRequestUntil<T, R> {
+    R res(T o) throws IOException;
+  }
 }

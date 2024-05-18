@@ -104,7 +104,7 @@ public class RouterAsyncRpcClient extends RouterRpcClient{
       List<? extends FederationNamenodeContext> namenodes,
       boolean useObserver, Class<?> protocol,
       Method method, Object... params) throws IOException {
-    LOG.info("{} zj test : {}, {}, {}, {}", Thread.currentThread(), method.getName(), useObserver, namenodes.toString());
+    LOG.info("{} : {}, {}, {}, {}", Thread.currentThread(), method.getName(), useObserver, namenodes.toString());
     CompletableFuture<Object> completableFuture =
         invokeMethodAsync(ugi, namenodes, useObserver, protocol, method, params);
     CUR_COMPLETABLE_FUTURE.set(completableFuture);
@@ -329,7 +329,6 @@ public class RouterAsyncRpcClient extends RouterRpcClient{
       transferThreadLocalContext(originCall, callerContext);
       Client.setAsynchronousMode(true);
       method.invoke(obj, params);
-      // TODO: for test. because dfsclient and router may use main thread.
       // so unset the value , ensure dfsclient rpc is sync.
       Client.setAsynchronousMode(false);
       CompletableFuture<Object> completableFuture =
