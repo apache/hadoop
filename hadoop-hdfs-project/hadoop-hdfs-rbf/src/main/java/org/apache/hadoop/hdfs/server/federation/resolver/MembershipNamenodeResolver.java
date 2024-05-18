@@ -33,6 +33,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.sun.javafx.UnmodifiableArrayList;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.federation.store.DisabledNameserviceStore;
@@ -239,7 +240,7 @@ public class MembershipNamenodeResolver
 
     List<? extends FederationNamenodeContext> ret = cacheNS.get(Pair.of(nsId, listObserversFirst));
     if (ret != null) {
-      return shuffleObserverNN(ret, listObserversFirst);
+      return new ArrayList<>(shuffleObserverNN(ret, listObserversFirst));
     }
 
     // Not cached, generate the value

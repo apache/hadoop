@@ -321,131 +321,131 @@ import org.apache.hadoop.thirdparty.protobuf.ServiceException;
 public class ClientNamenodeProtocolServerSideTranslatorPB implements
     ClientNamenodeProtocolPB {
   final private ClientProtocol server;
-  static final DeleteSnapshotResponseProto VOID_DELETE_SNAPSHOT_RESPONSE =
+  protected static final DeleteSnapshotResponseProto VOID_DELETE_SNAPSHOT_RESPONSE =
       DeleteSnapshotResponseProto.newBuilder().build();
-  static final RenameSnapshotResponseProto VOID_RENAME_SNAPSHOT_RESPONSE =
+  protected static final RenameSnapshotResponseProto VOID_RENAME_SNAPSHOT_RESPONSE =
       RenameSnapshotResponseProto.newBuilder().build();
-  static final AllowSnapshotResponseProto VOID_ALLOW_SNAPSHOT_RESPONSE = 
+  protected static final AllowSnapshotResponseProto VOID_ALLOW_SNAPSHOT_RESPONSE =
       AllowSnapshotResponseProto.newBuilder().build();
-  static final DisallowSnapshotResponseProto VOID_DISALLOW_SNAPSHOT_RESPONSE =
+  protected static final DisallowSnapshotResponseProto VOID_DISALLOW_SNAPSHOT_RESPONSE =
       DisallowSnapshotResponseProto.newBuilder().build();
-  static final GetSnapshottableDirListingResponseProto 
+  protected static final GetSnapshottableDirListingResponseProto
       NULL_GET_SNAPSHOTTABLE_DIR_LISTING_RESPONSE = 
       GetSnapshottableDirListingResponseProto.newBuilder().build();
-  static final GetSnapshotListingResponseProto
+  protected static final GetSnapshotListingResponseProto
       NULL_GET_SNAPSHOT_LISTING_RESPONSE =
       GetSnapshotListingResponseProto.newBuilder().build();
-  static final SetStoragePolicyResponseProto VOID_SET_STORAGE_POLICY_RESPONSE =
+  protected static final SetStoragePolicyResponseProto VOID_SET_STORAGE_POLICY_RESPONSE =
       SetStoragePolicyResponseProto.newBuilder().build();
-  static final UnsetStoragePolicyResponseProto
+  protected static final UnsetStoragePolicyResponseProto
       VOID_UNSET_STORAGE_POLICY_RESPONSE =
       UnsetStoragePolicyResponseProto.newBuilder().build();
 
-  private static final CreateResponseProto VOID_CREATE_RESPONSE = 
+  protected static final CreateResponseProto VOID_CREATE_RESPONSE =
   CreateResponseProto.newBuilder().build();
 
-  private static final SetPermissionResponseProto VOID_SET_PERM_RESPONSE = 
+  protected static final SetPermissionResponseProto VOID_SET_PERM_RESPONSE =
   SetPermissionResponseProto.newBuilder().build();
 
-  private static final SetOwnerResponseProto VOID_SET_OWNER_RESPONSE = 
+  protected static final SetOwnerResponseProto VOID_SET_OWNER_RESPONSE =
   SetOwnerResponseProto.newBuilder().build();
 
-  private static final AbandonBlockResponseProto VOID_ADD_BLOCK_RESPONSE = 
+  protected static final AbandonBlockResponseProto VOID_ADD_BLOCK_RESPONSE =
   AbandonBlockResponseProto.newBuilder().build();
 
-  private static final ReportBadBlocksResponseProto VOID_REP_BAD_BLOCK_RESPONSE = 
+  protected static final ReportBadBlocksResponseProto VOID_REP_BAD_BLOCK_RESPONSE =
   ReportBadBlocksResponseProto.newBuilder().build();
 
-  private static final ConcatResponseProto VOID_CONCAT_RESPONSE = 
+  protected static final ConcatResponseProto VOID_CONCAT_RESPONSE =
   ConcatResponseProto.newBuilder().build();
 
-  private static final Rename2ResponseProto VOID_RENAME2_RESPONSE = 
+  protected static final Rename2ResponseProto VOID_RENAME2_RESPONSE =
   Rename2ResponseProto.newBuilder().build();
 
-  private static final GetListingResponseProto VOID_GETLISTING_RESPONSE = 
+  protected static final GetListingResponseProto VOID_GETLISTING_RESPONSE =
   GetListingResponseProto.newBuilder().build();
 
-  private static final GetBatchedListingResponseProto
+  protected static final GetBatchedListingResponseProto
       VOID_GETBATCHEDLISTING_RESPONSE =
       GetBatchedListingResponseProto.newBuilder()
           .setStartAfter(ByteString.copyFromUtf8(""))
           .setHasMore(false)
           .build();
 
-  private static final RenewLeaseResponseProto VOID_RENEWLEASE_RESPONSE = 
+  protected static final RenewLeaseResponseProto VOID_RENEWLEASE_RESPONSE =
   RenewLeaseResponseProto.newBuilder().build();
 
-  private static final RefreshNodesResponseProto VOID_REFRESHNODES_RESPONSE =
+  protected static final RefreshNodesResponseProto VOID_REFRESHNODES_RESPONSE =
   RefreshNodesResponseProto.newBuilder().build();
 
-  private static final FinalizeUpgradeResponseProto VOID_FINALIZEUPGRADE_RESPONSE = 
+  protected static final FinalizeUpgradeResponseProto VOID_FINALIZEUPGRADE_RESPONSE =
   FinalizeUpgradeResponseProto.newBuilder().build();
 
-  private static final MetaSaveResponseProto VOID_METASAVE_RESPONSE = 
+  protected static final MetaSaveResponseProto VOID_METASAVE_RESPONSE =
   MetaSaveResponseProto.newBuilder().build();
 
-  private static final GetFileInfoResponseProto VOID_GETFILEINFO_RESPONSE = 
+  protected static final GetFileInfoResponseProto VOID_GETFILEINFO_RESPONSE =
   GetFileInfoResponseProto.newBuilder().build();
 
-  private static final GetLocatedFileInfoResponseProto
+  protected static final GetLocatedFileInfoResponseProto
       VOID_GETLOCATEDFILEINFO_RESPONSE =
           GetLocatedFileInfoResponseProto.newBuilder().build();
 
-  private static final GetFileLinkInfoResponseProto VOID_GETFILELINKINFO_RESPONSE = 
+  protected static final GetFileLinkInfoResponseProto VOID_GETFILELINKINFO_RESPONSE =
   GetFileLinkInfoResponseProto.newBuilder().build();
 
-  private static final SetQuotaResponseProto VOID_SETQUOTA_RESPONSE = 
+  protected static final SetQuotaResponseProto VOID_SETQUOTA_RESPONSE =
   SetQuotaResponseProto.newBuilder().build();
 
-  private static final FsyncResponseProto VOID_FSYNC_RESPONSE = 
+  protected static final FsyncResponseProto VOID_FSYNC_RESPONSE =
   FsyncResponseProto.newBuilder().build();
 
-  private static final SetTimesResponseProto VOID_SETTIMES_RESPONSE = 
+  protected static final SetTimesResponseProto VOID_SETTIMES_RESPONSE =
   SetTimesResponseProto.newBuilder().build();
 
-  private static final CreateSymlinkResponseProto VOID_CREATESYMLINK_RESPONSE = 
+  protected static final CreateSymlinkResponseProto VOID_CREATESYMLINK_RESPONSE =
   CreateSymlinkResponseProto.newBuilder().build();
 
-  private static final UpdatePipelineResponseProto
+  protected static final UpdatePipelineResponseProto
     VOID_UPDATEPIPELINE_RESPONSE = 
   UpdatePipelineResponseProto.newBuilder().build();
 
-  private static final CancelDelegationTokenResponseProto 
+  protected static final CancelDelegationTokenResponseProto
       VOID_CANCELDELEGATIONTOKEN_RESPONSE = 
           CancelDelegationTokenResponseProto.newBuilder().build();
 
-  private static final SetBalancerBandwidthResponseProto 
+  protected static final SetBalancerBandwidthResponseProto
       VOID_SETBALANCERBANDWIDTH_RESPONSE = 
         SetBalancerBandwidthResponseProto.newBuilder().build();
 
-  private static final SetAclResponseProto
+  protected static final SetAclResponseProto
     VOID_SETACL_RESPONSE = SetAclResponseProto.getDefaultInstance();
 
-  private static final ModifyAclEntriesResponseProto
+  protected static final ModifyAclEntriesResponseProto
     VOID_MODIFYACLENTRIES_RESPONSE = ModifyAclEntriesResponseProto
       .getDefaultInstance();
 
-  private static final RemoveAclEntriesResponseProto
+  protected static final RemoveAclEntriesResponseProto
     VOID_REMOVEACLENTRIES_RESPONSE = RemoveAclEntriesResponseProto
       .getDefaultInstance();
 
-  private static final RemoveDefaultAclResponseProto
+  protected static final RemoveDefaultAclResponseProto
     VOID_REMOVEDEFAULTACL_RESPONSE = RemoveDefaultAclResponseProto
       .getDefaultInstance();
 
-  private static final RemoveAclResponseProto
+  protected static final RemoveAclResponseProto
     VOID_REMOVEACL_RESPONSE = RemoveAclResponseProto.getDefaultInstance();
-  
-  private static final SetXAttrResponseProto
+
+  protected static final SetXAttrResponseProto
     VOID_SETXATTR_RESPONSE = SetXAttrResponseProto.getDefaultInstance();
-  
-  private static final RemoveXAttrResponseProto
+
+  protected static final RemoveXAttrResponseProto
     VOID_REMOVEXATTR_RESPONSE = RemoveXAttrResponseProto.getDefaultInstance();
 
-  private static final CheckAccessResponseProto
+  protected static final CheckAccessResponseProto
     VOID_CHECKACCESS_RESPONSE = CheckAccessResponseProto.getDefaultInstance();
 
-  private static final SatisfyStoragePolicyResponseProto
+  protected static final SatisfyStoragePolicyResponseProto
       VOID_SATISFYSTORAGEPOLICY_RESPONSE = SatisfyStoragePolicyResponseProto
       .getDefaultInstance();
 

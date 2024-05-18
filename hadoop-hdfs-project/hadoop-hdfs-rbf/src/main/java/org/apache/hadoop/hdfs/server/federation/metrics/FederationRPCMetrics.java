@@ -302,6 +302,10 @@ public class FederationRPCMetrics implements FederationRPCMBean {
     processingOp.incr();
   }
 
+  public void incrProcessingOp() {
+    processingOp.incr();
+  }
+
   @Override
   public double getProcessingAvg() {
     return processing.lastStat().mean();

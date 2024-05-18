@@ -149,10 +149,9 @@ public class Quota {
     final List<RemoteLocation> quotaLocs = getValidQuotaLocations(path);
     RemoteMethod method = new RemoteMethod("getQuotaUsage",
         new Class<?>[] {String.class}, new RemoteParam());
-    Map<RemoteLocation, QuotaUsage> results = rpcClient.invokeConcurrent(
-        quotaLocs, method, true, false, QuotaUsage.class);
 
-    return results;
+    return rpcClient.invokeConcurrent(
+        quotaLocs, method, true, false, QuotaUsage.class);
   }
 
   /**
@@ -361,7 +360,7 @@ public class Quota {
    * @return List of quota remote locations.
    * @throws IOException
    */
-  private List<RemoteLocation> getQuotaRemoteLocations(String path)
+  protected List<RemoteLocation> getQuotaRemoteLocations(String path)
       throws IOException {
     List<RemoteLocation> locations = new ArrayList<>();
     RouterQuotaManager manager = this.router.getQuotaManager();

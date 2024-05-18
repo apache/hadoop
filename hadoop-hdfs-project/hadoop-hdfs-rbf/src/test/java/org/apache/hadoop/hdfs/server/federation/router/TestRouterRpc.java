@@ -2011,6 +2011,9 @@ public class TestRouterRpc {
         new String[] {"bar", "group2"});
     String[] result =
         router.getRouter().getRpcServer().getGroupsForUser("user");
+    if (router.getRouter().isEnableAsync()) {
+      result = (String[]) RouterAsyncRpcUtil.getResult();
+    }
     assertArrayEquals(group, result);
   }
 

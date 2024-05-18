@@ -60,6 +60,7 @@ import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamespaceInfo
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.router.Router;
+import org.apache.hadoop.hdfs.server.federation.router.RouterAsyncRpcUtil;
 import org.apache.hadoop.hdfs.server.federation.router.RouterRpcServer;
 import org.apache.hadoop.hdfs.server.federation.router.RouterServiceState;
 import org.apache.hadoop.hdfs.server.federation.router.security.RouterSecurityManager;
@@ -559,7 +560,12 @@ public class RBFMetrics implements RouterMBean, FederationMBean {
       DatanodeInfo[] live = null;
       if (this.enableGetDNUsage) {
         RouterRpcServer rpcServer = this.router.getRpcServer();
-        live = rpcServer.getDatanodeReport(DatanodeReportType.LIVE, false, timeOut);
+        if (rpcServer.isAsync()) {
+          rpcServer.getDatanodeReportAsync(DatanodeReportType.LIVE, false, timeOut);
+          live = (DatanodeInfo[]) RouterAsyncRpcUtil.getResult();
+        } else {
+          live = rpcServer.getDatanodeReport(DatanodeReportType.LIVE, false, timeOut);
+        }
       } else {
         LOG.debug("Getting node usage is disabled.");
       }

@@ -72,18 +72,18 @@ import static org.apache.hadoop.ipc.internal.ShadedProtobufHelper.ipc;
 public class NamenodeProtocolTranslatorPB implements NamenodeProtocol,
     ProtocolMetaInterface, Closeable, ProtocolTranslator {
   /** RpcController is not used and hence is set to null */
-  private final static RpcController NULL_CONTROLLER = null;
+  protected final static RpcController NULL_CONTROLLER = null;
   
   /*
    * Protobuf requests with no parameters instantiated only once
    */
-  private static final GetBlockKeysRequestProto VOID_GET_BLOCKKEYS_REQUEST = 
+  protected static final GetBlockKeysRequestProto VOID_GET_BLOCKKEYS_REQUEST =
       GetBlockKeysRequestProto.newBuilder().build();
-  private static final GetTransactionIdRequestProto VOID_GET_TRANSACTIONID_REQUEST = 
+  protected static final GetTransactionIdRequestProto VOID_GET_TRANSACTIONID_REQUEST =
       GetTransactionIdRequestProto.newBuilder().build();
-  private static final RollEditLogRequestProto VOID_ROLL_EDITLOG_REQUEST = 
+  protected static final RollEditLogRequestProto VOID_ROLL_EDITLOG_REQUEST =
       RollEditLogRequestProto.newBuilder().build();
-  private static final VersionRequestProto VOID_VERSION_REQUEST = 
+  protected static final VersionRequestProto VOID_VERSION_REQUEST =
       VersionRequestProto.newBuilder().build();
 
   final private NamenodeProtocolPB rpcProxy;

@@ -34,7 +34,7 @@ public final class Time {
   /**
    * number of nano seconds in 1 millisecond
    */
-  private static final long NANOSECONDS_PER_MILLISECOND = 1000000;
+  public static final long NANOSECONDS_PER_MILLISECOND = 1000000;
 
   private static final TimeZone UTC_ZONE = TimeZone.getTimeZone("UTC");
 

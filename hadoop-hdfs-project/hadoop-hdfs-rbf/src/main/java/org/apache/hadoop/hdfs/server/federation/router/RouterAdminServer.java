@@ -30,6 +30,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntriesRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntriesResponse;
@@ -104,6 +106,10 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.protobuf.BlockingService;
+
+import static org.apache.hadoop.hdfs.server.federation.router.RouterAsyncRpcUtil.getCompletableFuture;
+import static org.apache.hadoop.hdfs.server.federation.router.RouterAsyncRpcUtil.getResult;
+import static org.apache.hadoop.hdfs.server.federation.router.RouterAsyncRpcUtil.setCurCompletableFuture;
 
 /**
  * This class is responsible for handling all the Admin calls to the HDFS
@@ -617,6 +623,9 @@ public class RouterAdminServer extends AbstractService
   private List<String> getDestinationNameServices(
       GetDestinationRequest request, List<RemoteLocation> locations)
       throws IOException {
+    if (router.isEnableAsync()) {
+      return getDestinationNameServicesAsync(request, locations);
+    }
     final String src = request.getSrcPath();
     final List<String> nsIds = new ArrayList<>();
     RouterRpcServer rpcServer = this.router.getRpcServer();
@@ -637,6 +646,37 @@ public class RouterAdminServer extends AbstractService
           src, ioe.getMessage());
     }
     return nsIds;
+  }
+
+  private List<String> getDestinationNameServicesAsync(
+      GetDestinationRequest request, List<RemoteLocation> locations)
+      throws IOException {
+    final String src = request.getSrcPath();
+    RouterRpcServer rpcServer = this.router.getRpcServer();
+    RouterRpcClient rpcClient = rpcServer.getRPCClient();
+    RemoteMethod method = new RemoteMethod("getFileInfo",
+        new Class<?>[] {String.class}, new RemoteParam());
+    try {
+      rpcClient.invokeConcurrent(
+              locations, method, false, false, HdfsFileStatus.class);
+      CompletableFuture<Object> completableFuture = getCompletableFuture();
+      completableFuture = completableFuture.thenApply(o -> {
+        final List<String> nsIds = new ArrayList<>();
+        Map<RemoteLocation, HdfsFileStatus> responses =
+            (Map<RemoteLocation, HdfsFileStatus>) o;
+        for (RemoteLocation location : locations) {
+          if (responses.get(location) != null) {
+            nsIds.add(location.getNameserviceId());
+          }
+        }
+        return nsIds;
+      });
+      setCurCompletableFuture(completableFuture);
+    } catch (IOException ioe) {
+      LOG.error("Cannot get location for {}: {}",
+          src, ioe.getMessage());
+    }
+    return (List<String>) getResult();
   }
 
   /**

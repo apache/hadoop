@@ -144,9 +144,8 @@ public class ErasureCoding {
         rpcServer.getLocationsForPath(src, false, false);
     RemoteMethod remoteMethod = new RemoteMethod("getErasureCodingPolicy",
         new Class<?>[] {String.class}, new RemoteParam());
-    ErasureCodingPolicy ret = rpcClient.invokeSequential(
+    return rpcClient.invokeSequential(
         locations, remoteMethod, null, null);
-    return ret;
   }
 
   public void setErasureCodingPolicy(String src, String ecPolicyName)

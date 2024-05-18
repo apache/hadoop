@@ -23,6 +23,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -50,6 +51,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
+import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterContext;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.StateStoreDFSCluster;
@@ -490,19 +492,32 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
         routerContext.getRouter().getRpcServer().getClientProtocolModule();
     setupOrderMountPath(DestinationOrder.HASH_ALL);
     // Should be true only for directory and false for all other cases.
-    assertTrue(client.isMultiDestDirectory("/mount/dir"));
-    assertFalse(client.isMultiDestDirectory("/mount/nodir"));
-    assertFalse(client.isMultiDestDirectory("/mount/dir/file"));
+    assertTrue(isMultiDestDir(client, "/mount/dir"));
+    assertFalse(isMultiDestDir(client, "/mount/nodir"));
+    assertFalse(isMultiDestDir(client, "/mount/dir/file"));
     routerFs.createSymlink(new Path("/mount/dir/file"),
         new Path("/mount/dir/link"), true);
-    assertFalse(client.isMultiDestDirectory("/mount/dir/link"));
+    assertFalse(isMultiDestDir(client, "/mount/dir/link"));
     routerFs.createSymlink(new Path("/mount/dir/dir"),
         new Path("/mount/dir/linkDir"), true);
-    assertFalse(client.isMultiDestDirectory("/mount/dir/linkDir"));
+    assertFalse(isMultiDestDir(client, "/mount/dir/linkDir"));
     resetTestEnvironment();
     // Test single directory destination. Should be false for the directory.
     setupOrderMountPath(DestinationOrder.HASH);
-    assertFalse(client.isMultiDestDirectory("/mount/dir"));
+    assertFalse(isMultiDestDir(client, "/mount/dir"));
+  }
+
+  private  boolean isMultiDestDir(
+      RouterClientProtocol client, String src) throws IOException {
+    boolean multiDestDirectory = client.isMultiDestDirectory(src);
+    if (rpcServer.isAsync()) {
+      try {
+        multiDestDirectory = (boolean) RouterAsyncRpcUtil.getResult();
+      } catch (UnresolvedPathException e) {
+        return false;
+      }
+    }
+    return multiDestDirectory;
   }
 
   /**
@@ -675,8 +690,14 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
     try {
       // Verify that #invokeAtAvailableNs works by calling #getServerDefaults.
       RemoteMethod method = new RemoteMethod("getServerDefaults");
-      FsServerDefaults serverDefaults =
-          rpcServer.invokeAtAvailableNs(method, FsServerDefaults.class);
+      FsServerDefaults serverDefaults = null;
+      if (rpcServer.isAsync()) {
+        rpcServer.invokeAtAvailableNsAsync(method, FsServerDefaults.class);
+        serverDefaults = (FsServerDefaults) RouterAsyncRpcUtil.getResult();
+      } else {
+        serverDefaults =
+            rpcServer.invokeAtAvailableNs(method, FsServerDefaults.class);
+      }
       assertNotNull(serverDefaults);
     } finally {
       dfsCluster.restartNameNode(0);

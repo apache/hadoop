@@ -152,21 +152,34 @@ public class FederationRPCPerformanceMonitor implements RouterRpcMonitor {
   }
 
   @Override
+  public void incrProcessingOp() {
+    if (metrics != null) {
+      metrics.incrProcessingOp();
+    }
+  }
+
+  @Override
   public void proxyOpComplete(boolean success, String nsId,
       FederationNamenodeServiceState state) {
+    proxyOpComplete(success, nsId, state, getProxyTime());
+  }
+
+  @Override
+  public void proxyOpComplete(
+      boolean success, String nsId, FederationNamenodeServiceState state, long costMs) {
     if (success) {
-      long proxyTime = getProxyTime();
-      if (proxyTime >= 0) {
+      if (costMs >= 0) {
         if (metrics != null && !CONCURRENT.equals(nsId)) {
-          metrics.addProxyTime(proxyTime, state);
+          metrics.addProxyTime(costMs, state);
         }
         if (nameserviceRPCMetricsMap != null &&
             nameserviceRPCMetricsMap.containsKey(nsId)) {
-          nameserviceRPCMetricsMap.get(nsId).addProxyTime(proxyTime);
+          nameserviceRPCMetricsMap.get(nsId).addProxyTime(costMs);
         }
       }
     }
   }
+
 
   @Override
   public void proxyOpFailureStandby(String nsId) {

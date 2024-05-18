@@ -89,11 +89,11 @@ public class TestRpcServerHandoff {
     }
 
     void sendResponse() {
-      deferredCall.setDeferredResponse(request);
+      deferredCall.setDeferredResponse(request, 0);
     }
 
     void sendError() {
-      deferredCall.setDeferredError(new IOException("DeferredError"));
+      deferredCall.setDeferredError(new IOException("DeferredError"), 0);
     }
   }
 

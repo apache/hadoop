@@ -36,7 +36,7 @@ public class GetUserMappingsProtocolClientSideTranslatorPB implements
     ProtocolMetaInterface, GetUserMappingsProtocol, Closeable {
 
   /** RpcController is not used and hence is set to null */
-  private final static RpcController NULL_CONTROLLER = null;
+  protected final static RpcController NULL_CONTROLLER = null;
   private final GetUserMappingsProtocolPB rpcProxy;
   
   public GetUserMappingsProtocolClientSideTranslatorPB(

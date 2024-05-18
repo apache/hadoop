@@ -35,14 +35,14 @@ public class RefreshUserMappingsProtocolClientSideTranslatorPB implements
     ProtocolMetaInterface, RefreshUserMappingsProtocol, Closeable {
 
   /** RpcController is not used and hence is set to null */
-  private final static RpcController NULL_CONTROLLER = null;
+  protected final static RpcController NULL_CONTROLLER = null;
   private final RefreshUserMappingsProtocolPB rpcProxy;
   
-  private final static RefreshUserToGroupsMappingsRequestProto 
+  protected final static RefreshUserToGroupsMappingsRequestProto
   VOID_REFRESH_USER_TO_GROUPS_MAPPING_REQUEST = 
       RefreshUserToGroupsMappingsRequestProto.newBuilder().build();
 
-  private final static RefreshSuperUserGroupsConfigurationRequestProto
+  protected final static RefreshSuperUserGroupsConfigurationRequestProto
   VOID_REFRESH_SUPERUSER_GROUPS_CONFIGURATION_REQUEST = 
       RefreshSuperUserGroupsConfigurationRequestProto.newBuilder().build();
 

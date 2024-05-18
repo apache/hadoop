@@ -99,6 +99,9 @@ public class RouterQuotaUpdateService extends PeriodicService {
         // This is because mount table does not have mtime.
         // For other mount entry get current quota usage
         HdfsFileStatus ret = this.rpcServer.getFileInfo(src);
+        if (rpcServer.isAsync()) {
+          ret = (HdfsFileStatus) RouterAsyncRpcUtil.getResult();
+        }
         if (ret == null || ret.getModificationTime() == 0) {
           long[] zeroConsume = new long[StorageType.values().length];
           currentQuotaUsage =
@@ -113,6 +116,9 @@ public class RouterQuotaUpdateService extends PeriodicService {
             Quota quotaModule = this.rpcServer.getQuotaModule();
             Map<RemoteLocation, QuotaUsage> usageMap =
                 quotaModule.getEachQuotaUsage(src);
+            if (router.isEnableAsync()) {
+              usageMap = (Map<RemoteLocation, QuotaUsage>) RouterAsyncRpcUtil.getResult();
+            }
             currentQuotaUsage = quotaModule.aggregateQuota(src, usageMap);
             remoteQuotaUsage.putAll(usageMap);
           } catch (IOException ioe) {

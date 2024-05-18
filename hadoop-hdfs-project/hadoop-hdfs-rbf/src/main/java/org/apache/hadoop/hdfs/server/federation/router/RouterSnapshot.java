@@ -244,4 +244,16 @@ public class RouterSnapshot {
           locations, remoteMethod, SnapshotDiffReportListing.class, null);
     }
   }
+
+  public RouterRpcServer getRpcServer() {
+    return rpcServer;
+  }
+
+  public RouterRpcClient getRpcClient() {
+    return rpcClient;
+  }
+
+  public ActiveNamenodeResolver getNamenodeResolver() {
+    return namenodeResolver;
+  }
 }

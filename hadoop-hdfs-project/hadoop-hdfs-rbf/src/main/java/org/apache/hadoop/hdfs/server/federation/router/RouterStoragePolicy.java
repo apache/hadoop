@@ -89,7 +89,7 @@ public class RouterStoragePolicy {
     RemoteMethod method = new RemoteMethod("getStoragePolicy",
         new Class<?>[] {String.class},
         new RemoteParam());
-    return (BlockStoragePolicy) rpcClient.invokeSequential(locations, method);
+    return rpcClient.invokeSequential(locations, method);
   }
 
   public void satisfyStoragePolicy(String path) throws IOException {

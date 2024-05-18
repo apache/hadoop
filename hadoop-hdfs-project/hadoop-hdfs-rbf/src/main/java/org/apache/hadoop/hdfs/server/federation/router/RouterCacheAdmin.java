@@ -161,7 +161,7 @@ public class RouterCacheAdmin {
    * @param locations the locations to map.
    * @return map with CacheDirectiveInfo mapped to the locations.
    */
-  private Map<RemoteLocation, CacheDirectiveInfo> getRemoteMap(
+  Map<RemoteLocation, CacheDirectiveInfo> getRemoteMap(
       CacheDirectiveInfo path, final List<RemoteLocation> locations) {
     final Map<RemoteLocation, CacheDirectiveInfo> dstMap = new HashMap<>();
     Iterator<RemoteLocation> iterator = locations.iterator();

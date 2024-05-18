@@ -1157,10 +1157,10 @@ public abstract class Server {
       return this.deferredResponse;
     }
 
-    public void setDeferredResponse(Writable response) {
+    public void setDeferredResponse(Writable response, long setupTime) {
     }
 
-    public void setDeferredError(Throwable t) {
+    public void setDeferredError(Throwable t, long setupTime) {
     }
 
     public long getTimestampNanos() {
@@ -1252,22 +1252,28 @@ public abstract class Server {
         populateResponseParamsOnError(e, responseParams);
       }
       if (!isResponseDeferred()) {
-        long deltaNanos = Time.monotonicNowNanos() - startNanos;
-        ProcessingDetails details = getProcessingDetails();
-
-        details.set(Timing.PROCESSING, deltaNanos, TimeUnit.NANOSECONDS);
-        deltaNanos -= details.get(Timing.LOCKWAIT, TimeUnit.NANOSECONDS);
-        deltaNanos -= details.get(Timing.LOCKSHARED, TimeUnit.NANOSECONDS);
-        deltaNanos -= details.get(Timing.LOCKEXCLUSIVE, TimeUnit.NANOSECONDS);
-        details.set(Timing.LOCKFREE, deltaNanos, TimeUnit.NANOSECONDS);
-
-        setResponseFields(value, responseParams);
-        sendResponse();
-        details.setReturnStatus(responseParams.returnStatus);
+        sendResponse(value, responseParams, startNanos);
       } else {
         LOG.debug("Deferring response for callId: {}", this.callId);
       }
       return null;
+    }
+
+    private void sendResponse(
+        Writable response,
+        ResponseParams responseParams, long startNanos) throws IOException {
+      long deltaNanos = Time.monotonicNowNanos() - startNanos;
+      ProcessingDetails details = getProcessingDetails();
+
+      details.set(Timing.PROCESSING, deltaNanos, TimeUnit.NANOSECONDS);
+      deltaNanos -= details.get(Timing.LOCKWAIT, TimeUnit.NANOSECONDS);
+      deltaNanos -= details.get(Timing.LOCKSHARED, TimeUnit.NANOSECONDS);
+      deltaNanos -= details.get(Timing.LOCKEXCLUSIVE, TimeUnit.NANOSECONDS);
+      details.set(Timing.LOCKFREE, deltaNanos, TimeUnit.NANOSECONDS);
+
+      setResponseFields(response, responseParams);
+      sendResponse();
+      details.setReturnStatus(responseParams.returnStatus);
     }
 
     /**
@@ -1326,29 +1332,11 @@ public abstract class Server {
       connection.sendResponse(call);
     }
 
-    /**
-     * Send a deferred response, ignoring errors.
-     */
-    private void sendDeferedResponse() {
-      try {
-        connection.sendResponse(this);
-      } catch (Exception e) {
-        // For synchronous calls, application code is done once it's returned
-        // from a method. It does not expect to receive an error.
-        // This is equivalent to what happens in synchronous calls when the
-        // Responder is not able to send out the response.
-        LOG.error("Failed to send deferred response. ThreadName=" + Thread
-            .currentThread().getName() + ", CallId="
-            + callId + ", hostname=" + getHostAddress());
-      }
-    }
-
     @Override
-    public void setDeferredResponse(Writable response) {
+    public void setDeferredResponse(Writable response, long setupTime) {
       if (this.connection.getServer().running) {
         try {
-          setupResponse(this, RpcStatusProto.SUCCESS, null, response,
-              null, null);
+          sendResponse(response, new ResponseParams(), setupTime);
         } catch (IOException e) {
           // For synchronous calls, application code is done once it has
           // returned from a method. It does not expect to receive an error.
@@ -1357,14 +1345,20 @@ public abstract class Server {
           LOG.error(
               "Failed to setup deferred successful response. ThreadName=" +
                   Thread.currentThread().getName() + ", Call=" + this);
-          return;
+        } catch (Exception e) {
+          // For synchronous calls, application code is done once it's returned
+          // from a method. It does not expect to receive an error.
+          // This is equivalent to what happens in synchronous calls when the
+          // Responder is not able to send out the response.
+          LOG.error("Failed to send deferred response. ThreadName=" + Thread
+              .currentThread().getName() + ", CallId="
+              + callId + ", hostname=" + getHostAddress());
         }
-        sendDeferedResponse();
       }
     }
 
     @Override
-    public void setDeferredError(Throwable t) {
+    public void setDeferredError(Throwable t, long setupTime) {
       if (this.connection.getServer().running) {
         if (t == null) {
           t = new IOException(
@@ -1373,9 +1367,7 @@ public abstract class Server {
         try {
           ResponseParams responseParams = new ResponseParams();
           populateResponseParamsOnError(t, responseParams);
-          setupResponse(this, responseParams.returnStatus,
-              responseParams.detailedErr,
-              null, responseParams.errorClass, responseParams.error);
+          sendResponse(null, responseParams, setupTime);
         } catch (IOException e) {
           // For synchronous calls, application code is done once it has
           // returned from a method. It does not expect to receive an error.
@@ -1384,8 +1376,15 @@ public abstract class Server {
           LOG.error(
               "Failed to setup deferred error response. ThreadName=" +
                   Thread.currentThread().getName() + ", Call=" + this);
+        } catch (Exception e) {
+          // For synchronous calls, application code is done once it's returned
+          // from a method. It does not expect to receive an error.
+          // This is equivalent to what happens in synchronous calls when the
+          // Responder is not able to send out the response.
+          LOG.error("Failed to send deferred response. ThreadName=" + Thread
+              .currentThread().getName() + ", CallId="
+              + callId + ", hostname=" + getHostAddress());
         }
-        sendDeferedResponse();
       }
     }
 
