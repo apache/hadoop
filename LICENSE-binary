@@ -309,6 +309,7 @@ org.apache.commons:commons-validator:1.6
 org.apache.curator:curator-client:5.2.0
 org.apache.curator:curator-framework:5.2.0
 org.apache.curator:curator-recipes:5.2.0
+org.apache.derby:derby:10.17.1.0
 org.apache.hbase:hbase-annotations:2.5.8
 org.apache.hbase:hbase-client:2.5.8
 org.apache.hbase:hbase-common:2.5.8
