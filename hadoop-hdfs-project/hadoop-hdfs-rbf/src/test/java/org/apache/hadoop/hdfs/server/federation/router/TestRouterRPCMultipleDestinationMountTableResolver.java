@@ -63,6 +63,7 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntr
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetDestinationRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetDestinationResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.hdfs.tools.federation.RouterAdmin;
 import org.apache.hadoop.io.IOUtils;
@@ -70,13 +71,22 @@ import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Tests router rpc with multiple destination mount table resolver.
  */
+@RunWith(Parameterized.class)
 public class TestRouterRPCMultipleDestinationMountTableResolver {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestRouterRPCMultipleDestinationMountTableResolver.class);
   private static final List<String> NS_IDS = Arrays.asList("ns0", "ns1", "ns2");
 
   private static StateStoreDFSCluster cluster;
@@ -87,6 +97,23 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
   private static DistributedFileSystem nnFs2;
   private static DistributedFileSystem routerFs;
   private static RouterRpcServer rpcServer;
+  private ConfigSetting configSetting;
+
+  public TestRouterRPCMultipleDestinationMountTableResolver(
+      ConfigSetting configSetting) {
+    this.configSetting = configSetting;
+  }
+
+  public enum ConfigSetting {
+    TEST_SYNC_ROUTER,
+    TEST_ASYNC_ROUTER
+  }
+
+  @Parameterized.Parameters
+  public static Collection<ConfigSetting> data() {
+    return Arrays.asList(new ConfigSetting[]{
+        ConfigSetting.TEST_ASYNC_ROUTER, ConfigSetting.TEST_SYNC_ROUTER});
+  }
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -103,20 +130,14 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
     cluster.addRouterOverrides(routerConf);
     cluster.addNamenodeOverrides(hdfsConf);
     cluster.startCluster();
-    cluster.startRouters();
+    cluster.startRouters(1);
     cluster.waitClusterUp();
-
-    routerContext = cluster.getRandomRouter();
-    resolver =
-        (MountTableResolver) routerContext.getRouter().getSubclusterResolver();
     nnFs0 = (DistributedFileSystem) cluster
         .getNamenode(cluster.getNameservices().get(0), null).getFileSystem();
     nnFs1 = (DistributedFileSystem) cluster
         .getNamenode(cluster.getNameservices().get(1), null).getFileSystem();
     nnFs2 = (DistributedFileSystem) cluster
         .getNamenode(cluster.getNameservices().get(2), null).getFileSystem();
-    routerFs = (DistributedFileSystem) routerContext.getFileSystem();
-    rpcServer =routerContext.getRouter().getRpcServer();
   }
 
   @AfterClass
@@ -126,6 +147,20 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
       cluster.shutdown();
       cluster = null;
     }
+  }
+
+  @Before
+  public void setupRpcServer() throws IOException {
+    LOG.info("Test use {}", configSetting.toString());
+    if (this.configSetting == ConfigSetting.TEST_SYNC_ROUTER) {
+      routerContext = cluster.getRandomSyncRouter();
+    } else {
+      routerContext = cluster.getRandomAsyncRouter();
+    }
+    resolver =
+        (MountTableResolver) routerContext.getRouter().getSubclusterResolver();
+    routerFs = (DistributedFileSystem) routerContext.getFileSystem();
+    rpcServer = routerContext.getRouter().getRpcServer();
   }
 
   /**
@@ -549,6 +584,8 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
     // mount path.
     SnapshotStatus[] snapshots = routerFs.getSnapshotListing(snapDir);
     assertEquals(snapshotPath, snapshots[0].getFullPath());
+    routerFs.deleteSnapshot(snapDir, "snap");
+    assertTrue(removeMount("/mountSnap"));
   }
 
   @Test
@@ -603,6 +640,7 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
     ContentSummary cs1 = routerFs.getContentSummary(path);
     assertEquals(-1, cs1.getQuota());
     assertEquals(-1, cs1.getSpaceQuota());
+    assertTrue(removeMount("/router_test"));
   }
 
   @Test
@@ -634,6 +672,7 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
     ContentSummary ns1Cs = nnFs1.getContentSummary(path);
     assertEquals(nsQuota, ns1Cs.getQuota());
     assertEquals(ssQuota, ns1Cs.getSpaceQuota());
+    assertTrue(removeMount("/testContentSummaryWithMultipleDest"));
   }
 
   @Test
@@ -660,6 +699,7 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
     ContentSummary cs = routerFs.getContentSummary(path);
     assertEquals(nsQuota, cs.getQuota());
     assertEquals(ssQuota, cs.getSpaceQuota());
+    assertTrue(removeMount("/testContentSummaryMultipleDestWithMaxValue"));
   }
 
   /**
@@ -701,6 +741,7 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
     } finally {
       dfsCluster.restartNameNode(0);
       dfsCluster.restartNameNode(1);
+      assertTrue(removeMount("/testInvokeAtAvailableNs"));
     }
   }
 
@@ -737,6 +778,7 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
     } finally {
       IOUtils.closeStream(out);
       dfsCluster.restartNameNode(0);
+      assertTrue(removeMount("/testWriteWithUnavailableSubCluster"));
     }
   }
 
@@ -779,6 +821,8 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
           routerFs.rename(new Path(srcDir + "/dir1/dir_1"),
               new Path(targetDir));
         });
+    assertTrue(removeMount(srcDir));
+    assertTrue(removeMount(targetDir));
   }
 
   /**
@@ -972,5 +1016,15 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
     configuration.setSocketAddr(RBFConfigKeys.DFS_ROUTER_ADMIN_ADDRESS_KEY,
         routerSocket);
     return new RouterAdmin(configuration);
+  }
+
+  private boolean removeMount(String path) throws IOException {
+    MountTableManager mountTableManager =
+        routerContext.getAdminClient().getMountTableManager();
+    RemoveMountTableEntryRequest req =
+        RemoveMountTableEntryRequest.newInstance(path);
+    RemoveMountTableEntryResponse removeMountTableEntryResponse =
+        mountTableManager.removeMountTableEntry(req);
+    return removeMountTableEntryResponse.getStatus();
   }
 }

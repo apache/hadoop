@@ -27,6 +27,7 @@ import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.delet
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.getFileStatus;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.verifyFileExists;
 import static org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.TEST_STRING;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_RPC_ENABLE_ASYNC;
 import static org.apache.hadoop.ipc.CallerContext.PROXY_USER_PORT;
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -248,6 +249,7 @@ public class TestRouterRpc {
     // We decrease the DN cache times to make the test faster
     routerConf.setTimeDuration(
         RBFConfigKeys.DN_REPORT_CACHE_EXPIRE, 1, TimeUnit.SECONDS);
+    routerConf.setBoolean(DFS_ROUTER_RPC_ENABLE_ASYNC, true);
     cluster.addRouterOverrides(routerConf);
     cluster.startRouters();
 
@@ -346,6 +348,7 @@ public class TestRouterRpc {
     this.routerFS = r.getFileSystem();
     this.routerNamenodeProtocol = NameNodeProxies.createProxy(router.getConf(),
         router.getFileSystem().getUri(), NamenodeProtocol.class).getProxy();
+    assertTrue(router.getRouter().isEnableAsync());
   }
 
   protected FileSystem getRouterFileSystem() {

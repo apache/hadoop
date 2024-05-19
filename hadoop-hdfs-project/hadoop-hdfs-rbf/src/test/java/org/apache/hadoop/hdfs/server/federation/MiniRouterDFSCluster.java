@@ -45,6 +45,7 @@ import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_MONITOR_NAMENODE;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_RPC_BIND_HOST_KEY;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_RPC_ENABLE_ASYNC;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_SAFEMODE_ENABLE;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.FEDERATION_FILE_RESOLVER_CLIENT_CLASS;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.FEDERATION_NAMENODE_RESOLVER_CLIENT_CLASS;
@@ -120,6 +121,8 @@ public class MiniRouterDFSCluster {
   private List<NamenodeContext> namenodes;
   /** Routers in the federated cluster. */
   private List<RouterContext> routers;
+  private List<RouterContext> syncRouters;
+  private List<RouterContext> asyncRouters;
   /** If the Namenodes are in high availability.*/
   private boolean highAvailability;
   /** Number of datanodes per nameservice. */
@@ -772,6 +775,16 @@ public class MiniRouterDFSCluster {
     return routers.get(rand.nextInt(routers.size()));
   }
 
+  public RouterContext getRandomAsyncRouter() {
+    Random rand = new Random();
+    return asyncRouters.get(rand.nextInt(asyncRouters.size()));
+  }
+
+  public RouterContext getRandomSyncRouter() {
+    Random rand = new Random();
+    return syncRouters.get(rand.nextInt(syncRouters.size()));
+  }
+
   public List<RouterContext> getRouters() {
     return routers;
   }
@@ -779,6 +792,13 @@ public class MiniRouterDFSCluster {
   public RouterContext buildRouter(String nsId, String nnId)
       throws URISyntaxException, IOException {
     Configuration config = generateRouterConfiguration(nsId, nnId);
+    RouterContext rc = new RouterContext(config, nsId, nnId);
+    return rc;
+  }
+
+  public RouterContext buildAsyncRouter(String nsId, String nnId) {
+    Configuration config = generateRouterConfiguration(nsId, nnId);
+    config.setBoolean(DFS_ROUTER_RPC_ENABLE_ASYNC, true);
     RouterContext rc = new RouterContext(config, nsId, nnId);
     return rc;
   }
@@ -863,6 +883,41 @@ public class MiniRouterDFSCluster {
     for (String ns : this.nameservices) {
       for (NamenodeContext context : getNamenodes(ns)) {
         RouterContext router = buildRouter(ns, context.namenodeId);
+        this.routers.add(router);
+      }
+    }
+
+    // Start all routers
+    for (RouterContext router : this.routers) {
+      router.router.start();
+    }
+
+    // Wait until all routers are active and record their ports
+    for (RouterContext router : this.routers) {
+      waitActive(router);
+      router.initRouter();
+    }
+  }
+
+  public void startRouters(int asyncRouterNum)
+      throws InterruptedException, URISyntaxException, IOException{
+    assert asyncRouterNum < this.nameservices.size();
+    // Create one router per nameservice
+    this.routers = new ArrayList<>();
+    this.syncRouters = new ArrayList<>();
+    this.asyncRouters = new ArrayList<>();
+    int asyncNum = 0;
+    for (String ns : this.nameservices) {
+      for (NamenodeContext context : getNamenodes(ns)) {
+        RouterContext router = null;
+        if (asyncNum < asyncRouterNum) {
+          router = buildAsyncRouter(ns, context.namenodeId);
+          asyncRouters.add(router);
+          asyncNum++;
+        } else {
+          router = buildRouter(ns, context.namenodeId);
+          syncRouters.add(router);
+        }
         this.routers.add(router);
       }
     }

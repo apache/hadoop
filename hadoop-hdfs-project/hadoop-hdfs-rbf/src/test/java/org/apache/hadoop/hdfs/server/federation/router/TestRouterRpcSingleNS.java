@@ -30,6 +30,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_RPC_ENABLE_ASYNC;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -118,6 +119,7 @@ public class TestRouterRpcSingleNS {
     // We decrease the DN cache times to make the test faster
     routerConf.setTimeDuration(RBFConfigKeys.DN_REPORT_CACHE_EXPIRE, 1,
         TimeUnit.SECONDS);
+    routerConf.setBoolean(DFS_ROUTER_RPC_ENABLE_ASYNC, true);
     cluster.addRouterOverrides(routerConf);
     cluster.startRouters();
 

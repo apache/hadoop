@@ -31,7 +31,9 @@ import org.junit.Test;
 
 import java.io.IOException;
 
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_RPC_ENABLE_ASYNC;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Testing DFSClient renewLease with same INodeId.
@@ -55,6 +57,7 @@ public class TestRenewLeaseWithSameINodeId {
         .rpc()
         .quota()
         .build();
+    routerConf.setBoolean(DFS_ROUTER_RPC_ENABLE_ASYNC, true);
     cluster.addRouterOverrides(routerConf);
     cluster.startRouters();
 
@@ -63,6 +66,7 @@ public class TestRenewLeaseWithSameINodeId {
     cluster.waitNamenodeRegistration();
 
     routerContext = cluster.getRouters().get(0);
+    assertTrue(routerContext.getRouter().isEnableAsync());
   }
 
   @AfterClass

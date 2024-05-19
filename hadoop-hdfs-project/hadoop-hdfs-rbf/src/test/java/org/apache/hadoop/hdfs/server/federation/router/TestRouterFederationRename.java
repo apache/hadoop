@@ -98,6 +98,7 @@ public class TestRouterFederationRename extends TestRouterFederationRenameBase {
     router = getRouterContext();
     routerFS = getRouterFileSystem();
     cluster = getCluster();
+    assertTrue(router.getRouter().isEnableAsync());
   }
 
   private void testRenameDir(RouterContext testRouter, String path,

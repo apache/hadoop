@@ -23,6 +23,7 @@ import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.verif
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FEDERATION_RENAME_BANDWIDTH;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FEDERATION_RENAME_MAP;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_ADMIN_ENABLE;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_RPC_ENABLE_ASYNC;
 import static org.apache.hadoop.tools.fedbalance.FedBalanceConfigs.SCHEDULER_JOURNAL_URI;
 
 import java.io.IOException;
@@ -98,6 +99,7 @@ public class TestRouterFederationRenameBase {
     routerConf.setBoolean(DFS_PERMISSIONS_ENABLED_KEY, true);
     routerConf.set(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
         TestRouterFederationRename.MockGroupsMapping.class.getName());
+    routerConf.setBoolean(DFS_ROUTER_RPC_ENABLE_ASYNC, true);
     cluster.addRouterOverrides(routerConf);
     cluster.startRouters();
 

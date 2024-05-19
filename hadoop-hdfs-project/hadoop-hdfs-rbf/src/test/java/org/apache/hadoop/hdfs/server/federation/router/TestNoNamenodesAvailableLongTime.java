@@ -46,6 +46,7 @@ import java.util.List;
 
 import static org.apache.hadoop.ha.HAServiceProtocol.HAServiceState.ACTIVE;
 import static org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.DEFAULT_HEARTBEAT_INTERVAL_MS;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_RPC_ENABLE_ASYNC;
 import static org.apache.hadoop.hdfs.server.namenode.AclTestHelpers.aclEntry;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
@@ -114,6 +115,7 @@ public class TestNoNamenodesAvailableLongTime {
 
     // Reduce the number of RPC clients threads to overload the Router easy
     routerConf.setInt(RBFConfigKeys.DFS_ROUTER_CLIENT_THREADS_SIZE, 4);
+    routerConf.setBoolean(DFS_ROUTER_RPC_ENABLE_ASYNC, true);
 
     // No need for datanodes
     cluster.setNumDatanodesPerNameservice(0);
@@ -158,6 +160,7 @@ public class TestNoNamenodesAvailableLongTime {
     }
 
     routerContext = cluster.getRandomRouter();
+    assertTrue(routerContext.getRouter().isEnableAsync());
 
     // Get the second namenode in the router cache and make it active
     setSecondNonObserverNamenodeInTheRouterCacheActive(numberOfObserver, false);

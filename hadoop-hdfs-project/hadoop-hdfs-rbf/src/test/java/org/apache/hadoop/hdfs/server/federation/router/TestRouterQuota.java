@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_RPC_ENABLE_ASYNC;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -100,6 +101,7 @@ public class TestRouterQuota {
         .rpc()
         .build();
     routerConf.set(RBFConfigKeys.DFS_ROUTER_QUOTA_CACHE_UPDATE_INTERVAL, "2s");
+    routerConf.setBoolean(DFS_ROUTER_RPC_ENABLE_ASYNC, true);
 
     // override some hdfs settings that used in testing space quota
     Configuration hdfsConf = new Configuration(false);

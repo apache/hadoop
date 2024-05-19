@@ -142,7 +142,6 @@ public class Router extends CompositeService implements
 
   /** State of the Router. */
   private RouterServiceState state = RouterServiceState.UNINITIALIZED;
-  private boolean enableAsync;
 
 
   /////////////////////////////////////////////////////////
@@ -878,6 +877,9 @@ public class Router extends CompositeService implements
   }
 
   public boolean isEnableAsync() {
-    return true;
+    if (rpcServer == null) {
+      return false;
+    }
+    return rpcServer.isAsync();
   }
 }

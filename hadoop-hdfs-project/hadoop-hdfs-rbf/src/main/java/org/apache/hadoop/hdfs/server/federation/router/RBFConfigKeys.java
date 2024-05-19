@@ -72,7 +72,9 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
   public static final String DFS_ROUTER_RPC_ENABLE =
       FEDERATION_ROUTER_PREFIX + "rpc.enable";
   public static final boolean DFS_ROUTER_RPC_ENABLE_DEFAULT = true;
-
+  public static final String DFS_ROUTER_RPC_ENABLE_ASYNC =
+      FEDERATION_ROUTER_PREFIX + "rpc.enable.async";
+  public static final boolean DFS_ROUTER_RPC_ENABLE_ASYNC_DEFAULT = false;
   public static final String DFS_ROUTER_METRICS_ENABLE =
       FEDERATION_ROUTER_PREFIX + "metrics.enable";
   public static final boolean DFS_ROUTER_METRICS_ENABLE_DEFAULT = true;

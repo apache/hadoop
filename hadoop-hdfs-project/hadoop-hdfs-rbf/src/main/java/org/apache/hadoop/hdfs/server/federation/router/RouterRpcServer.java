@@ -26,6 +26,8 @@ import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_READER_COUNT_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_READER_QUEUE_SIZE_DEFAULT;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_READER_QUEUE_SIZE_KEY;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_RPC_ENABLE_ASYNC;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_RPC_ENABLE_ASYNC_DEFAULT;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DN_REPORT_CACHE_EXPIRE;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DN_REPORT_CACHE_EXPIRE_MS_DEFAULT;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FEDERATION_RENAME_OPTION;
@@ -272,6 +274,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   private RouterRenameOption routerRenameOption;
   /** Schedule the router federation rename jobs. */
   private BalanceProcedureScheduler fedRenameScheduler;
+  private boolean enableAsync;
 
   public static Executor getExecutor() {
     if (executor == null) {
@@ -314,6 +317,9 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     int handlerQueueSize = this.conf.getInt(DFS_ROUTER_HANDLER_QUEUE_SIZE_KEY,
         DFS_ROUTER_HANDLER_QUEUE_SIZE_DEFAULT);
 
+    this.enableAsync = conf.getBoolean(DFS_ROUTER_RPC_ENABLE_ASYNC,
+        DFS_ROUTER_RPC_ENABLE_ASYNC_DEFAULT);
+    LOG.info("Router enable async {}", this.enableAsync);
     // Override Hadoop Common IPC setting
     int readerQueueSize = this.conf.getInt(DFS_ROUTER_READER_QUEUE_SIZE_KEY,
         DFS_ROUTER_READER_QUEUE_SIZE_DEFAULT);
@@ -426,7 +432,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     }
 
     // Create the client
-    if (router.isEnableAsync()) {
+    if (this.enableAsync) {
       this.rpcClient = new RouterAsyncRpcClient(this.conf, this.router,
           this.namenodeResolver, this.rpcMonitor, routerStateIdContext);
       this.nnProto = new RouterAsyncNamenodeProtocol(this);
@@ -988,7 +994,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
    */
   RemoteLocation getCreateLocation(final String src) throws IOException {
     final List<RemoteLocation> locations = getLocationsForPath(src, true);
-    if (router.isEnableAsync()) {
+    if (isAsync()) {
       getCreateLocationAsync(src, locations);
       return asyncReturn(RemoteLocation.class);
     }
@@ -2375,6 +2381,6 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   }
 
   public boolean isAsync() {
-    return router.isEnableAsync();
+    return this.enableAsync;
   }
 }

@@ -63,6 +63,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_RPC_ENABLE_ASYNC;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
@@ -157,6 +158,7 @@ public class TestRouterUserMappings {
   private String setUpMultiRoutersAndReturnDefaultFs() throws Exception {
     //setup a miniroutercluster with 2 nameservices, 4 routers.
     cluster = new MiniRouterDFSCluster(true, 2);
+    conf.setBoolean(DFS_ROUTER_RPC_ENABLE_ASYNC, true);
     cluster.addRouterOverrides(conf);
     cluster.startRouters();
 

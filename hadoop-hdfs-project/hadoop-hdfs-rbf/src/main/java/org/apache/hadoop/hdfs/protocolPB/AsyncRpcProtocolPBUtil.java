@@ -80,7 +80,7 @@ public final class AsyncRpcProtocolPBUtil {
     // transfer originCall & callerContext to worker threads of executor.
     final Server.Call originCall = Server.getCurCall().get();
     final CallerContext originContext = CallerContext.getCurrent();
-    completableFuture.thenComposeAsync(o -> {
+    completableFuture.thenCompose(o -> {
       Server.getCurCall().set(originCall);
       CallerContext.setCurrent(originContext);
       try {

@@ -21,6 +21,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMESERVICES;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.NAMENODES;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_RPC_ENABLE_ASYNC;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
@@ -133,7 +134,8 @@ public class TestObserverWithRouter {
         .metrics()
         .rpc()
         .build();
-
+    routerConf.setBoolean(DFS_ROUTER_RPC_ENABLE_ASYNC, true);
+    conf.setBoolean(DFS_ROUTER_RPC_ENABLE_ASYNC, true);
     cluster.addRouterOverrides(conf);
     cluster.addRouterOverrides(routerConf);
 
@@ -148,6 +150,7 @@ public class TestObserverWithRouter {
 
     cluster.waitActiveNamespaces();
     routerContext  = cluster.getRandomRouter();
+    assertTrue(routerContext.getRouter().isEnableAsync());
   }
 
   private void setConfDefaults(Configuration conf) {

@@ -92,6 +92,7 @@ public class TestRouterFederationRenamePermission
     foo = UserGroupInformation.createRemoteUser("foo");
     router = getRouterContext();
     routerFS = getRouterFileSystem();
+    assertTrue(router.getRouter().isEnableAsync());
   }
 
   @Test
