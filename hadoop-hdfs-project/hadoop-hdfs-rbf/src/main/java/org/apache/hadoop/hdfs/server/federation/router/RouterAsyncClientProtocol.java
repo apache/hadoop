@@ -89,6 +89,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static org.apache.hadoop.hdfs.server.federation.router.FederationUtil.updateMountPointStatus;
 import static org.apache.hadoop.hdfs.server.federation.router.RouterAsyncRpcUtil.asyncReturn;
@@ -1478,6 +1479,26 @@ public class RouterAsyncClientProtocol extends RouterClientProtocol {
   public BatchedRemoteIterator.BatchedEntries<CachePoolEntry> listCachePools(String prevKey)
       throws IOException {
     return routerAsyncCacheAdmin.listCachePools(prevKey);
+  }
+
+  @Override
+  public void msync() throws IOException {
+    RouterRpcServer rpcServer = getRpcServer();
+    RouterRpcClient rpcClient = getRpcClient();
+    ActiveNamenodeResolver namenodeResolver = getNamenodeResolver();
+    rpcServer.checkOperation(NameNode.OperationCategory.READ, true);
+    // Only msync to nameservices with observer reads enabled.
+    Set<FederationNamespaceInfo> allNamespaces = namenodeResolver.getNamespaces();
+    RemoteMethod method = new RemoteMethod("msync");
+    Set<FederationNamespaceInfo> namespacesEligibleForObserverReads = allNamespaces
+        .stream()
+        .filter(ns -> rpcClient.isNamespaceObserverReadEligible(ns.getNameserviceId()))
+        .collect(Collectors.toSet());
+    if (namespacesEligibleForObserverReads.isEmpty()) {
+      setCurCompletableFuture(CompletableFuture.completedFuture(null));
+      return;
+    }
+    rpcClient.invokeConcurrent(namespacesEligibleForObserverReads, method);
   }
 
   @Override

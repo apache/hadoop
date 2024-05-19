@@ -62,6 +62,7 @@ import java.util.function.BiFunction;
 import static org.apache.hadoop.hdfs.server.federation.fairness.RouterRpcFairnessConstants.CONCURRENT_NS;
 import static org.apache.hadoop.hdfs.server.federation.metrics.FederationRPCPerformanceMonitor.CONCURRENT;
 import static org.apache.hadoop.hdfs.server.federation.router.RouterAsyncRpcUtil.CUR_COMPLETABLE_FUTURE;
+import static org.apache.hadoop.hdfs.server.federation.router.RouterRpcServer.getAsyncRouterHandler;
 
 public class RouterAsyncRpcClient extends RouterRpcClient{
   private static final Logger LOG =
@@ -104,9 +105,21 @@ public class RouterAsyncRpcClient extends RouterRpcClient{
       List<? extends FederationNamenodeContext> namenodes,
       boolean useObserver, Class<?> protocol,
       Method method, Object... params) throws IOException {
-    LOG.info("{} : {}, {}, {}, {}", Thread.currentThread(), method.getName(), useObserver, namenodes.toString());
     CompletableFuture<Object> completableFuture =
-        invokeMethodAsync(ugi, namenodes, useObserver, protocol, method, params);
+        CompletableFuture.completedFuture(null);
+    // transfer originCall & callerContext to worker threads of executor.
+    final Server.Call originCall = Server.getCurCall().get();
+    final CallerContext originContext = CallerContext.getCurrent();
+    completableFuture = completableFuture.thenComposeAsync(o -> {
+      LOG.info("Async invoke method : {}, {}, {}, {}", method.getName(), useObserver,
+          namenodes.toString(), params);
+      transferThreadLocalContext(originCall, originContext);
+      try {
+        return invokeMethodAsync(ugi, namenodes, useObserver, protocol, method, params);
+      } catch (IOException e) {
+        throw new CompletionException(e);
+      }
+    }, getAsyncRouterHandler());
     CUR_COMPLETABLE_FUTURE.set(completableFuture);
     return completableFuture;
   }
@@ -140,8 +153,6 @@ public class RouterAsyncRpcClient extends RouterRpcClient{
 
     for (FederationNamenodeContext namenode : namenodes) {
       completableFuture = completableFuture.thenCompose(args -> {
-        LOG.info("{} invokeAsyncTask {} {} {}",
-            Thread.currentThread(), namenode, method.getName(), params);
         Boolean shouldUseObserver = (Boolean) args[0];
         Boolean failover = (Boolean) args[1];
         Boolean complete = (Boolean) args[2];

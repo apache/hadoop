@@ -947,6 +947,7 @@ public class TestRouterQuota {
 
     routerContext.getRouter().getRpcServer().setQuota("/setquotanmt/testdir17",
         nsQuota, ssQuota, null);
+    RouterAsyncRpcUtil.getResult();
 
     RouterQuotaUpdateService updateService = routerContext.getRouter()
         .getQuotaCacheUpdateService();
@@ -1287,6 +1288,9 @@ public class TestRouterQuota {
     RouterQuotaUpdateService updateService = routerContext.getRouter()
         .getQuotaCacheUpdateService();
     updateService.periodicInvoke();
+    if (routerContext.getRouter().isEnableAsync()) {
+      RouterAsyncRpcUtil.getResult();
+    }
   }
 
   private void verifyTypeQuotaAndConsume(long[] quota, long[] consume,

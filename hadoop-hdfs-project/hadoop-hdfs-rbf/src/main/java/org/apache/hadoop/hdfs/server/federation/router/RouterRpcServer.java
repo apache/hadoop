@@ -26,6 +26,12 @@ import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_READER_COUNT_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_READER_QUEUE_SIZE_DEFAULT;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_READER_QUEUE_SIZE_KEY;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_RPC_ASYNC_HANDLER_COUNT;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_RPC_ASYNC_HANDLER_COUNT_DEFAULT;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_RPC_ASYNC_REQUEST_PERMITS;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_RPC_ASYNC_REQUEST_PERMITS_DEFAULT;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_RPC_ASYNC_RESPONSE_COUNT;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_RPC_ASYNC_RESPONSE_COUNT_DEFAULT;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_RPC_ENABLE_ASYNC;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_RPC_ENABLE_ASYNC_DEFAULT;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DN_REPORT_CACHE_EXPIRE;
@@ -60,8 +66,10 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -217,7 +225,9 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
 
   private static final Logger LOG =
       LoggerFactory.getLogger(RouterRpcServer.class);
-  private static volatile ExecutorService executor;
+  private static ExecutorService asyncRouterHandler;
+  private static ExecutorService asyncRouterResponse;
+  private static Semaphore asyncRequestPermits;
 
   /** Configuration for the RPC server. */
   private Configuration conf;
@@ -276,16 +286,20 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   private BalanceProcedureScheduler fedRenameScheduler;
   private boolean enableAsync;
 
-  public static Executor getExecutor() {
-    if (executor == null) {
-      synchronized (RouterRpcServer.class) {
-        if (executor == null) {
-          executor = Executors.newFixedThreadPool(100);
-        }
-        return executor;
-      }
-    }
-    return executor;
+  public static Executor getAsyncRouterHandler() {
+    return asyncRouterHandler;
+  }
+
+  public static Executor getAsyncRouterResponse() {
+    return asyncRouterResponse;
+  }
+
+  public static void acquire() throws InterruptedException {
+    asyncRequestPermits.acquire();
+  }
+
+  public static void release() {
+    asyncRequestPermits.release();
   }
 
   /**
@@ -301,7 +315,6 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
       ActiveNamenodeResolver nnResolver, FileSubclusterResolver fileResolver)
           throws IOException {
     super(RouterRpcServer.class.getName());
-    executor = null;
     this.conf = conf;
     this.router = router;
     this.namenodeResolver = nnResolver;
@@ -320,6 +333,12 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     this.enableAsync = conf.getBoolean(DFS_ROUTER_RPC_ENABLE_ASYNC,
         DFS_ROUTER_RPC_ENABLE_ASYNC_DEFAULT);
     LOG.info("Router enable async {}", this.enableAsync);
+    if (this.enableAsync) {
+      asyncRequestPermits = new Semaphore(
+          conf.getInt(DFS_ROUTER_RPC_ASYNC_REQUEST_PERMITS,
+              DFS_ROUTER_RPC_ASYNC_REQUEST_PERMITS_DEFAULT));
+      initAsyncThreadPool();
+    }
     // Override Hadoop Common IPC setting
     int readerQueueSize = this.conf.getInt(DFS_ROUTER_READER_QUEUE_SIZE_KEY,
         DFS_ROUTER_READER_QUEUE_SIZE_DEFAULT);
@@ -476,6 +495,35 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     initRouterFedRename();
   }
 
+  private void initAsyncThreadPool() {
+    int asyncHandlerCount = conf.getInt(DFS_ROUTER_RPC_ASYNC_HANDLER_COUNT,
+        DFS_ROUTER_RPC_ASYNC_HANDLER_COUNT_DEFAULT);
+    int asyncResponseCount = conf.getInt(DFS_ROUTER_RPC_ASYNC_RESPONSE_COUNT,
+        DFS_ROUTER_RPC_ASYNC_RESPONSE_COUNT_DEFAULT);
+    asyncRouterHandler = Executors.newFixedThreadPool(asyncHandlerCount, new ThreadFactory() {
+      private AtomicInteger number = new AtomicInteger(0);
+      @Override
+      public Thread newThread(Runnable r) {
+        Thread asyncHandler = new Thread(r);
+        int num = number.getAndAdd(1);
+        asyncHandler.setName("Router-async-handler-" + num);
+        asyncHandler.setDaemon(true);
+        return asyncHandler;
+      }
+    });
+    asyncRouterResponse = Executors.newFixedThreadPool(asyncResponseCount, new ThreadFactory() {
+      private AtomicInteger number = new AtomicInteger(0);
+      @Override
+      public Thread newThread(Runnable r) {
+        Thread asyncResponse = new Thread(r);
+        int num = number.getAndAdd(1);
+        asyncResponse.setName("Router-async-response-" + num);
+        asyncResponse.setDaemon(true);
+        return asyncResponse;
+      }
+    });
+  }
+
   /**
    * Clear expired namespace in the shared RouterStateIdContext.
    */
@@ -584,9 +632,6 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     }
     if (this.fedRenameScheduler != null) {
       fedRenameScheduler.shutDown();
-    }
-    if (executor != null) {
-      executor.shutdown();
     }
     super.serviceStop();
   }

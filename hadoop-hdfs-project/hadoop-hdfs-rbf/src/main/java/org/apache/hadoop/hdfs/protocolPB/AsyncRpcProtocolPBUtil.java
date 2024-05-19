@@ -68,7 +68,7 @@ public final class AsyncRpcProtocolPBUtil {
       }catch (Exception e) {
         throw new CompletionException(e);
       }
-    }, RouterRpcServer.getExecutor());
+    }, RouterRpcServer.getAsyncRouterResponse());
     setThreadLocal(resCompletableFuture);
   }
 
@@ -77,33 +77,31 @@ public final class AsyncRpcProtocolPBUtil {
         ProtobufRpcEngine2.Server.registerForDeferredResponse2();
     CompletableFuture<Object> completableFuture =
         CompletableFuture.completedFuture(null);
-    // transfer originCall & callerContext to worker threads of executor.
-    final Server.Call originCall = Server.getCurCall().get();
-    final CallerContext originContext = CallerContext.getCurrent();
     completableFuture.thenCompose(o -> {
-      Server.getCurCall().set(originCall);
-      CallerContext.setCurrent(originContext);
       try {
+        RouterRpcServer.acquire();
         req.req();
         return (CompletableFuture<T>)RouterAsyncRpcUtil.getCompletableFuture();
       } catch (Exception e) {
         throw new CompletionException(e);
       }
     }).handle((result, e) -> {
-      LOG.info("async response by [{}], callback: {}, CallerContext: {}, result: [{}]",
-          Thread.currentThread().getName(), callback, originContext, result);
+      LOG.info("Async response, callback: {}, CallerContext: {}, result: [{}]",
+          callback, CallerContext.getCurrent(), result, e);
       if (e == null) {
         Message value = null;
         try {
           value = res.res(result);
         } catch (RuntimeException re) {
           callback.error(re);
+          RouterRpcServer.release();
           return null;
         }
         callback.setResponse(value);
       } else {
         callback.error(e.getCause());
       }
+      RouterRpcServer.release();
       return null;
     });
   }
