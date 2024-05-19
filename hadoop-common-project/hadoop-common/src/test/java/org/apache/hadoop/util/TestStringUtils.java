@@ -624,6 +624,15 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
         () -> StringUtils.getTrimmedStringCollectionSplitByEquals(",="));
   }
 
+  @Test
+  public void testForGetStackTrace() {
+    Throwable throwable = new Throwable();
+    int stackLength = throwable.getStackTrace().length;
+    String stackTrace = StringUtils.getStackTrace(new Throwable());
+    String[] splitTrace = stackTrace.split("\n\t");
+    assertEquals(stackLength, splitTrace.length);
+  }
+
   // Benchmark for StringUtils split
   public static void main(String []args) {
     final String TO_SPLIT = "foo,bar,baz,blah,blah";

@@ -97,8 +97,8 @@ class CGroupsV2HandlerImpl extends AbstractCGroupsHandler {
   @Override
   protected Map<String, Set<String>> parsePreConfiguredMountPath() throws IOException {
     Map<String, Set<String>> controllerMappings = new HashMap<>();
-    controllerMappings.put(this.cGroupsMountConfig.getMountPath(),
-        readControllersFile(this.cGroupsMountConfig.getMountPath()));
+    controllerMappings.put(this.cGroupsMountConfig.getV2MountPath(),
+        readControllersFile(this.cGroupsMountConfig.getV2MountPath()));
     return controllerMappings;
   }
 
