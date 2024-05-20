@@ -1624,4 +1624,16 @@ public final class Constants {
    * Value: {@value}.
    */
   public static final boolean DEFAULT_AWS_S3_CLASSLOADER_ISOLATION = true;
+  /**
+   * Default value for {@link #S3A_IO_RATE_LIMIT}.
+   * Value: {@value}.
+   * 0 means no rate limiting.
+   */
+  public static final int DEFAULT_S3A_IO_RATE_LIMIT = 0;
+
+  /**
+   * Config to set the rate limit for S3A IO operations.
+   * Value: {@value}.
+   */
+  public static final String S3A_IO_RATE_LIMIT = "fs.s3a.io.rate.limit";
 }
