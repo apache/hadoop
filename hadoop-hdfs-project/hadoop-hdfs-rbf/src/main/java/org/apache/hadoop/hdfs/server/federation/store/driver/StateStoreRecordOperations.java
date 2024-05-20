@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.federation.store.driver;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -132,11 +133,11 @@ public interface StateStoreRecordOperations {
    *
    * @param <T> Record class of the records.
    * @param records Records to be removed.
-   * @return Records that were removed.
+   * @return Map of record -> boolean indicating any entries being deleted by this record.
    * @throws IOException Throws exception if unable to query the data store.
    */
   @AtMostOnce
-  <T extends BaseRecord> List<T> removeMultiple(List<T> records) throws IOException;
+  <T extends BaseRecord> Map<T, Boolean> removeMultiple(List<T> records) throws IOException;
 
   /**
    * Remove all records of this class from the store.
@@ -170,10 +171,10 @@ public interface StateStoreRecordOperations {
    * @param clazz The class to match the records with.
    * @param queries Queries (logical OR) to filter what to remove.
    * @param <T> Record class of the records.
-   * @return Removed records. Not true removed records, but rather queries that deleted records.
+   * @return Map of query to number of records deleted by that query.
    * @throws IOException Throws exception if unable to query the data store.
    */
   @AtMostOnce
-  <T extends BaseRecord> List<T> remove(Class<T> clazz, List<Query<T>> queries)
+  <T extends BaseRecord> Map<Query<T>, Integer> remove(Class<T> clazz, List<Query<T>> queries)
       throws IOException;
 }

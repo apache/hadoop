@@ -21,7 +21,10 @@ import static org.apache.hadoop.hdfs.server.federation.store.StateStoreUtils.fil
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -88,16 +91,14 @@ public abstract class StateStoreBaseImpl extends StateStoreDriver {
   }
 
   @Override
-  public <T extends BaseRecord> List<T> removeMultiple(List<T> records) throws IOException {
+  public <T extends BaseRecord> Map<T, Boolean> removeMultiple(List<T> records) throws IOException {
     assert !records.isEmpty();
     // Fall back to iterative remove() calls if all records don't share 1 class
     Class<? extends BaseRecord> expectedClazz = records.get(0).getClass();
     if (!records.stream().allMatch(x -> x.getClass() == expectedClazz)) {
-      List<T> result = new ArrayList<>();
+      Map<T, Boolean> result = new HashMap<>();
       for (T record : records) {
-        if (remove(record)) {
-          result.add(record);
-        }
+        result.put(record, remove(record));
       }
       return result;
     }
@@ -108,16 +109,16 @@ public abstract class StateStoreBaseImpl extends StateStoreDriver {
     }
     @SuppressWarnings("unchecked")
     Class<T> recordClass = (Class<T>) StateStoreUtils.getRecordClass(expectedClazz);
-    return remove(recordClass, queries);
+    Map<Query<T>, Integer> result = remove(recordClass, queries);
+    return result.entrySet().stream()
+        .collect(Collectors.toMap(e -> e.getKey().getPartial(), e -> e.getValue() > 0));
   }
 
-  public <T extends BaseRecord> List<T> remove(Class<T> clazz, List<Query<T>> queries)
-      throws IOException {
-    List<T> result = new ArrayList<>();
+  public <T extends BaseRecord> Map<Query<T>, Integer> remove(Class<T> clazz,
+      List<Query<T>> queries) throws IOException {
+    Map<Query<T>, Integer> result = new HashMap<>();
     for (Query<T> query : queries) {
-      if (remove(clazz, query) > 0) {
-        result.add(query.getPartial());
-      }
+      result.put(query, remove(clazz, query));
     }
     return result;
   }

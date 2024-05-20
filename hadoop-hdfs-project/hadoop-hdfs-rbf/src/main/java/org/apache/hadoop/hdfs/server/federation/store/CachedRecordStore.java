@@ -21,12 +21,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.Map;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -53,8 +48,7 @@ public abstract class CachedRecordStore<R extends BaseRecord>
 
   /** Prevent loading the cache more than once every 500 ms. */
   private static final long MIN_UPDATE_MS = 500;
-  /** Should spawn 2 separate threads for overwriting and deleting records or not? */
-  private boolean asyncOverride = false;
+
 
   /** Cached entries. */
   private List<R> records = new ArrayList<>();
@@ -101,10 +95,6 @@ public abstract class CachedRecordStore<R extends BaseRecord>
     this.override = over;
   }
 
-  public void toggleAsyncOverride(boolean flag) {
-    this.asyncOverride = flag;
-  }
-
   /**
    * Check that the cache of the State Store information is available.
    *
@@ -132,7 +122,7 @@ public abstract class CachedRecordStore<R extends BaseRecord>
 
         // If we have any expired record, update the State Store
         if (this.override) {
-          overrideExpiredRecords(result, this.asyncOverride);
+          overrideExpiredRecords(result);
         }
       } catch (IOException e) {
         LOG.error("Cannot get \"{}\" records from the State Store",
@@ -179,10 +169,9 @@ public abstract class CachedRecordStore<R extends BaseRecord>
    * removed.
    *
    * @param query RecordQueryResult containing the data to be inspected.
-   * @param async should spawn threads or not, one for overwriting, one for deleting
    * @throws IOException If the values cannot be updated.
    */
-  public void overrideExpiredRecords(QueryResult<R> query, boolean async) throws IOException {
+  public void overrideExpiredRecords(QueryResult<R> query) throws IOException {
     List<R> commitRecords = new ArrayList<>();
     List<R> toDeleteRecords = new ArrayList<>();
     List<R> deletedRecords = new ArrayList<>();
@@ -203,50 +192,18 @@ public abstract class CachedRecordStore<R extends BaseRecord>
         commitRecords.add(record);
       }
     }
-
-    List<Callable<Void>> callables = new ArrayList<>();
-    callables.add(() -> {
-      if (!commitRecords.isEmpty()) {
-        getDriver().putAll(commitRecords, true, false);
-      }
-      return null;
-    });
-
-    callables.add(() -> {
-      if (!toDeleteRecords.isEmpty()) {
-        deletedRecords.addAll(getDriver().removeMultiple(toDeleteRecords));
-      }
-      if (!deletedRecords.isEmpty()) {
-        newRecords.removeAll(deletedRecords);
-      }
-      return null;
-    });
-
-    if (async) {
-      ThreadPoolExecutor executor = new ThreadPoolExecutor(2, 2,
-          0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>());
-      List<Future<Void>> futures = new ArrayList<>();
-      futures.add(executor.submit(callables.get(0)));
-      futures.add(executor.submit(callables.get(1)));
-      try {
-        for (Future<Void> future : futures) {
-          future.get();
+    if (commitRecords.size() > 0) {
+      getDriver().putAll(commitRecords, true, false);
+    }
+    if (!toDeleteRecords.isEmpty()) {
+      for (Map.Entry<R, Boolean> entry : getDriver().removeMultiple(toDeleteRecords).entrySet()) {
+        if (entry.getValue()) {
+          deletedRecords.add(entry.getKey());
         }
-      } catch (InterruptedException e) {
-        LOG.error("Failed to override expired records.", e);
-        throw new IOException(e);
-      } catch (ExecutionException e) {
-        throw new IOException(e);
-      } finally {
-        executor.shutdown();
       }
-    } else {
-      try {
-        callables.get(0).call();
-        callables.get(1).call();
-      } catch (Exception e) {
-        throw new IOException(e);
-      }
+    }
+    if (!deletedRecords.isEmpty()) {
+      newRecords.removeAll(deletedRecords);
     }
   }
 
@@ -262,7 +219,7 @@ public abstract class CachedRecordStore<R extends BaseRecord>
     newRecords.add(record);
     long time = getDriver().getTime();
     QueryResult<R> query = new QueryResult<>(newRecords, time);
-    overrideExpiredRecords(query, false);
+    overrideExpiredRecords(query);
   }
 
   /**

@@ -288,13 +288,14 @@ public class StateStoreZooKeeperImpl extends StateStoreSerializableImpl {
   }
 
   @Override
-  public <T extends BaseRecord> List<T> remove(Class<T> clazz, List<Query<T>> queries)
-      throws IOException {
+  public <T extends BaseRecord> Map<Query<T>, Integer> remove(Class<T> clazz,
+      List<Query<T>> queries) throws IOException {
     verifyDriverReady();
-    final List<T> removed = new ArrayList<>();
+    // Track how many entries are deleted by each query
+    Map<Query<T>, Integer> ret = new HashMap<>();
     final List<T> trueRemoved = Collections.synchronizedList(new ArrayList<>());
     if (queries.isEmpty()) {
-      return removed;
+      return ret;
     }
 
     // Read the current data
@@ -306,7 +307,7 @@ public class StateStoreZooKeeperImpl extends StateStoreSerializableImpl {
     } catch (IOException ex) {
       LOG.error("Cannot get existing records", ex);
       getMetrics().addFailure(monotonicNow() - start);
-      return removed;
+      return ret;
     }
 
     // Check the records to remove
@@ -353,22 +354,22 @@ public class StateStoreZooKeeperImpl extends StateStoreSerializableImpl {
     if (!trueRemoved.isEmpty()) {
       getMetrics().addRemove(end - start);
     }
-    // Convert back to partials
+    // Generate return map
     for (Map.Entry<Query<T>, List<T>> entry : queryToRecords.entrySet()) {
       for (T record : entry.getValue()) {
         if (trueRemoved.contains(record)) {
-          removed.add(entry.getKey().getPartial());
+          ret.compute(entry.getKey(), (k, v) ->  (v == null) ? 1 : v + 1);
           break;
         }
       }
     }
-    return removed;
+    return ret;
   }
 
   @Override
   public <T extends BaseRecord> int remove(Class<T> clazz, Query<T> query)
       throws IOException {
-    return remove(clazz, Collections.singletonList(query)).size();
+    return remove(clazz, Collections.singletonList(query)).get(query);
   }
 
   @Override

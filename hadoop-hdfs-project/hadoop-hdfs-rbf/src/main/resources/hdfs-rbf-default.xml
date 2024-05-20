@@ -371,20 +371,6 @@
   </property>
 
   <property>
-    <name>dfs.federation.router.store.async.override.classes</name>
-    <value></value>
-    <description>
-      CachedRecordStore periodic updates contain an overwrite part and a deletion part.
-      Classes in this config will do these 2 steps in parallel when updating cache.
-      Supported classes:
-      org.apache.hadoop.hdfs.server.federation.store.impl.DisabledNameserviceStoreImpl
-      org.apache.hadoop.hdfs.server.federation.store.impl.MembershipStoreImpl
-      org.apache.hadoop.hdfs.server.federation.store.impl.MountTableStoreImpl
-      org.apache.hadoop.hdfs.server.federation.store.impl.RouterStoreImpl
-    </description>
-  </property>
-
-  <property>
     <name>dfs.federation.router.store.connection.test</name>
     <value>60000</value>
     <description>
