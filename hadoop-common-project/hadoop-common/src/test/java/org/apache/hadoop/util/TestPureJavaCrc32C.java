@@ -17,11 +17,12 @@
  */
 package org.apache.hadoop.util;
 
-import static org.junit.Assert.*;
-
 import java.util.zip.Checksum;
 
 import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
+
 
 public class TestPureJavaCrc32C {
 
