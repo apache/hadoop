@@ -104,7 +104,7 @@ public class CGroupsV2ResourceCalculator extends AbstractCGroupsResourceCalculat
   }
 
   @Override
-  protected List<Path> getCgroupFilesToLoadInStats() {
+  protected List<Path> getCGroupFilesToLoadInStats() {
     List<Path> result = new ArrayList<>();
     try (Stream<Path> cGroupFiles = Files.list(getCGroupPath())){
       cGroupFiles.forEach(result::add);
