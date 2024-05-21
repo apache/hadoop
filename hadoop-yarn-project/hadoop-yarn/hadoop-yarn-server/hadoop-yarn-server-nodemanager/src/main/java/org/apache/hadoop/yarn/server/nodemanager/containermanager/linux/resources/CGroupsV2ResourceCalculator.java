@@ -41,7 +41,7 @@ import org.apache.commons.lang3.StringUtils;
  * ResourceHandlerModule, what is only initialised in the NodeManager process not in the container.
  * So this implementation will not work with the mapreduce.job.process-tree.class property.
  *
- * Limitation: CGroups does not have the ability to measure virtual memory usage.
+ * Limitation: Cgroup does not have the ability to measure virtual memory usage.
  * This includes memory reserved but not used.
  * Cgroup measures used memory as a sum of the physical memory and swap usage.
  * This will be returned to the virtual memory counters.
