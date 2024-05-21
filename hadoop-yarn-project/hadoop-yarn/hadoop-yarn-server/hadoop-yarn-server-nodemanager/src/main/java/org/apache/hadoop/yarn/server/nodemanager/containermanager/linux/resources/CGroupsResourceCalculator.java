@@ -40,7 +40,7 @@ import org.slf4j.LoggerFactory;
  *
  * Limitation: Cgroup does not have the ability to measure virtual memory usage.
  * This includes memory reserved but not used.
- * CGroups measures used memory as sa sum of physical memory and swap usage.
+ * Cgroup measures used memory as a sum of the physical memory and swap usage.
  * This will be returned to the virtual memory counters.
  * If the real virtual memory is required please use the legacy procfs based
  * resource calculator or CombinedResourceCalculator.
