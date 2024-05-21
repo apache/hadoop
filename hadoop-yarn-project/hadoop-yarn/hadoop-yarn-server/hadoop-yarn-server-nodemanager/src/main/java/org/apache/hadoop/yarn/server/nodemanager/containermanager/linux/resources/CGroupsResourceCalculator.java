@@ -30,7 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * A CGroupV1 file-system based Resource calculator without the process tree features.
+ * A Cgroup version 1 file-system based Resource calculator without the process tree features.
  *
  * Warning!!!
  * ResourceCalculatorProcessTree can be used with mapreduce.job.process-tree.class property.
