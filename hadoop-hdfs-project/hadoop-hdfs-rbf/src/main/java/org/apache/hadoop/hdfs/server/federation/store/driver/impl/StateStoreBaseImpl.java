@@ -104,14 +104,14 @@ public abstract class StateStoreBaseImpl extends StateStoreDriver {
     }
 
     final List<Query<T>> queries = new ArrayList<>();
-    for (T record: records) {
+    for (T record : records) {
       queries.add(new Query<>(record));
     }
     @SuppressWarnings("unchecked")
     Class<T> recordClass = (Class<T>) StateStoreUtils.getRecordClass(expectedClazz);
     Map<Query<T>, Integer> result = remove(recordClass, queries);
     return result.entrySet().stream()
-        .collect(Collectors.toMap(e -> e.getKey().getPartial(), e -> e.getValue() > 0));
+        .collect(Collectors.toMap(e -> e.getKey().getPartial(), e -> e.getValue() == 1));
   }
 
   public <T extends BaseRecord> Map<Query<T>, Integer> remove(Class<T> clazz,

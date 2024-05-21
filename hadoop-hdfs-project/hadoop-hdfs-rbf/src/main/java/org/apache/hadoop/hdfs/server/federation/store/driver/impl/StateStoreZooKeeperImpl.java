@@ -348,7 +348,6 @@ public class StateStoreZooKeeperImpl extends StateStoreSerializableImpl {
       }
     } catch (Exception e) {
       LOG.error("Record removal failed : {}", e.getMessage(), e);
-      throw new IOException(e);
     }
     long end = monotonicNow();
     if (!trueRemoved.isEmpty()) {
@@ -359,7 +358,6 @@ public class StateStoreZooKeeperImpl extends StateStoreSerializableImpl {
       for (T record : entry.getValue()) {
         if (trueRemoved.contains(record)) {
           ret.compute(entry.getKey(), (k, v) ->  (v == null) ? 1 : v + 1);
-          break;
         }
       }
     }
