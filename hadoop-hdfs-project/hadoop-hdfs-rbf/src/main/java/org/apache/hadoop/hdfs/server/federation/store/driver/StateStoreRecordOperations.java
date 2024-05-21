@@ -133,7 +133,7 @@ public interface StateStoreRecordOperations {
    *
    * @param <T> Record class of the records.
    * @param records Records to be removed.
-   * @return Map of record -> boolean indicating if the record has being removed successfully.
+   * @return Map of record to a boolean indicating if the record has being removed successfully.
    * @throws IOException Throws exception if unable to query the data store.
    */
   @AtMostOnce
