@@ -133,7 +133,7 @@ public interface StateStoreRecordOperations {
    *
    * @param <T> Record class of the records.
    * @param records Records to be removed.
-   * @return Map of record -> boolean indicating any entries being deleted by this record.
+   * @return Map of record -> boolean indicating if the record has being removed successfully.
    * @throws IOException Throws exception if unable to query the data store.
    */
   @AtMostOnce
@@ -171,7 +171,7 @@ public interface StateStoreRecordOperations {
    * @param clazz The class to match the records with.
    * @param queries Queries (logical OR) to filter what to remove.
    * @param <T> Record class of the records.
-   * @return Map of query to number of records deleted by that query.
+   * @return Map of query to number of records removed by that query.
    * @throws IOException Throws exception if unable to query the data store.
    */
   @AtMostOnce
