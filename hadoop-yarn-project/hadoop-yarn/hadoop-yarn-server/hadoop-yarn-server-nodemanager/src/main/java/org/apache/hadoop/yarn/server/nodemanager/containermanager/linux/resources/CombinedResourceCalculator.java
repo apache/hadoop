@@ -52,7 +52,8 @@ public class CombinedResourceCalculator  extends ResourceCalculatorProcessTree {
 
   @Override
   public void updateProcessTree() {
-    resourceCalculators.stream().parallel().forEach(ResourceCalculatorProcessTree::updateProcessTree);
+    resourceCalculators.stream().parallel()
+        .forEach(ResourceCalculatorProcessTree::updateProcessTree);
   }
 
   @Override

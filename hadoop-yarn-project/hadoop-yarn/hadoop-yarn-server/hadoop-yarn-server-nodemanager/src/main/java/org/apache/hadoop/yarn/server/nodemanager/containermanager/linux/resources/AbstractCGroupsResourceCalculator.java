@@ -45,15 +45,16 @@ import org.apache.hadoop.yarn.util.SystemClock;
  * Common code base for the CGroupsResourceCalculator implementations.
  */
 public abstract class AbstractCGroupsResourceCalculator extends ResourceCalculatorProcessTree {
-  private static final Logger LOG = LoggerFactory.getLogger(AbstractCGroupsResourceCalculator.class);
-  protected final String pid;
-  protected final Clock clock = SystemClock.getInstance();
-  protected final Map<String, String> stats = new ConcurrentHashMap<>();
+  private static final Logger LOG =
+      LoggerFactory.getLogger(AbstractCGroupsResourceCalculator.class);
+  private final String pid;
+  private final Clock clock = SystemClock.getInstance();
+  private final Map<String, String> stats = new ConcurrentHashMap<>();
 
-  protected long jiffyLengthMs = SysInfoLinux.JIFFY_LENGTH_IN_MILLIS;
-  protected CpuTimeTracker cpuTimeTracker;
-  protected CGroupsHandler cGroupsHandler;
-  protected String procFs = "/proc";
+  private long jiffyLengthMs = SysInfoLinux.JIFFY_LENGTH_IN_MILLIS;
+  private CpuTimeTracker cpuTimeTracker;
+  private CGroupsHandler cGroupsHandler;
+  private String procFs = "/proc";
 
   private final List<String> totalJiffiesKeys;
   private final String rssMemoryKey;
@@ -133,7 +134,9 @@ public abstract class AbstractCGroupsResourceCalculator extends ResourceCalculat
   }
 
   private void addSingleLineToStat(Path file, String line) {
-    stats.put(file.getFileName().toString(), line.trim());
+    if (file.getFileName() != null) {
+      stats.put(file.getFileName().toString(), line.trim());
+    }
   }
 
   private void addMultiLineToStat(Path file, List<String> lines) {
@@ -148,7 +151,7 @@ public abstract class AbstractCGroupsResourceCalculator extends ResourceCalculat
   private long getTotalJiffies() {
     Long reduce = totalJiffiesKeys.stream()
         .map(this::getStat)
-        .filter(stats -> stats != UNAVAILABLE)
+        .filter(statValue -> statValue != UNAVAILABLE)
         .reduce(0L, Long::sum);
     return reduce == 0 ? UNAVAILABLE : reduce;
   }
@@ -161,7 +164,7 @@ public abstract class AbstractCGroupsResourceCalculator extends ResourceCalculat
 
   protected List<String> readLinesFromCGroupFileFromProcDir() throws IOException {
     // https://docs.kernel.org/admin-guide/cgroup-v2.html#processes
-    // https://www.kernel.org/doc/html/latest/admin-guide/cgroup-v1/cgroups.html#how-are-cgroups-implemented
+    // https://www.kernel.org/doc/html/latest/admin-guide/cgroup-v1/cgroups.html
     Path cgroup = Paths.get(procFs, pid, "cgroup");
     List<String> result = Arrays.asList(fileToString(cgroup).split(System.lineSeparator()));
     LOG.debug("The {} pid has the following lines in the procfs cgroup file {}", pid, result);
@@ -173,9 +176,9 @@ public abstract class AbstractCGroupsResourceCalculator extends ResourceCalculat
   }
 
   protected List<String> fileToLines(Path path) throws IOException {
-    return path.toFile().exists()
-        ? Arrays.asList(FileUtils.readFileToString(path.toFile(), StandardCharsets.UTF_8).trim().split(System.lineSeparator()))
-        : Collections.emptyList();
+    return !path.toFile().exists() ? Collections.emptyList()
+      : Arrays.asList(FileUtils.readFileToString(path.toFile(), StandardCharsets.UTF_8)
+        .trim().split(System.lineSeparator()));
   }
 
   @VisibleForTesting
@@ -200,5 +203,9 @@ public abstract class AbstractCGroupsResourceCalculator extends ResourceCalculat
 
   public CGroupsHandler getcGroupsHandler() {
     return cGroupsHandler;
+  }
+
+  public String getPid() {
+    return pid;
   }
 }

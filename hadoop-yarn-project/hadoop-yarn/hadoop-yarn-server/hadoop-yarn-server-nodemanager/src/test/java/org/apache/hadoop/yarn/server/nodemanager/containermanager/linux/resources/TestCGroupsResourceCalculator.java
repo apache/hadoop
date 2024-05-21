@@ -31,11 +31,8 @@ import org.junit.Test;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.util.CpuTimeTracker;
-import org.apache.hadoop.yarn.exceptions.YarnException;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;

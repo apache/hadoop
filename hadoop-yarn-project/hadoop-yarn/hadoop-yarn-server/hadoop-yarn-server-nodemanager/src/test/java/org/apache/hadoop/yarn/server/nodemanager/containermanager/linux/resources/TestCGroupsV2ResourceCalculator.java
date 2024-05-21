@@ -33,12 +33,8 @@ import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.util.CpuTimeTracker;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -82,9 +78,9 @@ public class TestCGroupsV2ResourceCalculator {
         "meaning_of_life 42");
 
     CGroupsV2ResourceCalculator calculator = createCalculator();
-    when(calculator.cGroupsHandler.getCGroupV2MountPath())
+    when(calculator.getcGroupsHandler().getCGroupV2MountPath())
         .thenReturn(root.resolve("mount/cgroup2/yarn").toString());
-    when(calculator.cGroupsHandler.getRelativePathForCGroup(eq("/container_1")))
+    when(calculator.getcGroupsHandler().getRelativePathForCGroup(eq("/container_1")))
         .thenReturn("container_1");
 
     calculator.updateProcessTree();

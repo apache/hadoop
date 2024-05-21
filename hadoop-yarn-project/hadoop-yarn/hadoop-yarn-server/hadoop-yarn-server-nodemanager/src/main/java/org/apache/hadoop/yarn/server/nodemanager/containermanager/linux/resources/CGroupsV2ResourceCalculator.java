@@ -109,15 +109,15 @@ public class CGroupsV2ResourceCalculator extends AbstractCGroupsResourceCalculat
     try (Stream<Path> cGroupFiles = Files.list(getCGroupPath())){
       cGroupFiles.forEach(result::add);
     } catch (IOException e) {
-      LOG.debug("Failed to list cgroup files for pid: " + pid, e);
+      LOG.debug("Failed to list cgroup files for pid: " + getPid(), e);
     }
-    LOG.debug("Found cgroup files for pid {} is {}", pid, result);
+    LOG.debug("Found cgroup files for pid {} is {}", getPid(), result);
     return  result;
   }
 
   private Path getCGroupPath() throws IOException {
     return Paths.get(
-        cGroupsHandler.getCGroupV2MountPath(),
+        getcGroupsHandler().getCGroupV2MountPath(),
         StringUtils.substringAfterLast(readLinesFromCGroupFileFromProcDir().get(0), ":")
     );
   }

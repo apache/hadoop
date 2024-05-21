@@ -49,23 +49,25 @@ public class CGroupsResourceCalculator extends AbstractCGroupsResourceCalculator
   private static final Logger LOG = LoggerFactory.getLogger(CGroupsResourceCalculator.class);
 
   /**
-   * <a href="https://docs.kernel.org/admin-guide/cgroup-v1/cpuacct.html">Documentation</a>
+   * <a href="https://docs.kernel.org/admin-guide/cgroup-v1/cpuacct.html">DOC</a>
    *
    * ...
-   * cpuacct.stat file lists a few statistics which further divide the CPU time obtained by the cgroup into user and system times.
+   * cpuacct.stat file lists a few statistics which further divide the CPU time obtained
+   * by the cgroup into user and system times.
    * Currently the following statistics are supported:
    *  - user: Time spent by tasks of the cgroup in user mode.
    *  - system: Time spent by tasks of the cgroup in kernel mode.
    * user and system are in USER_HZ unit.
    *  ...
    *
-   * <a href="https://litux.nl/mirror/kerneldevelopment/0672327201/ch10lev1sec3.html">Documentation</a>
+   * <a href="https://litux.nl/mirror/kerneldevelopment/0672327201/ch10lev1sec3.html">DOC</a>
    *
    * ...
    * In kernels earlier than 2.6, changing the value of HZ resulted in user-space anomalies.
    * This happened because values were exported to user-space in units of ticks-per-second.
    * As these interfaces became permanent, applications grew to rely on a specific value of HZ.
-   * Consequently, changing HZ would scale various exported values by some constantwithout user-space knowing!
+   * Consequently, changing HZ would scale various exported values
+   * by some constantwithout user-space knowing!
    * Uptime would read 20 hours when it was in fact two!
    *
    * To prevent such problems, the kernel needs to scale all exported jiffies values.
@@ -79,11 +81,13 @@ public class CGroupsResourceCalculator extends AbstractCGroupsResourceCalculator
   private static final String CPU_STAT = "cpuacct.stat";
 
   /**
-   * <a href="https://docs.kernel.org/admin-guide/cgroup-v1/memory.html#usage-in-bytes">Documentation</a>
+   * <a href="https://docs.kernel.org/admin-guide/cgroup-v1/memory.html#usage-in-bytes">DOC</a>
    *
    * ...
-   * For efficiency, as other kernel components, memory cgroup uses some optimization to avoid unnecessary cacheline false sharing.
-   * usage_in_bytes is affected by the method and doesn’t show ‘exact’ value of memory (and swap) usage,
+   * For efficiency, as other kernel components, memory cgroup uses some optimization
+   * to avoid unnecessary cacheline false sharing.
+   * usage_in_bytes is affected by the method
+   * and doesn’t show ‘exact’ value of memory (and swap) usage,
    * it’s a fuzz value for efficient access. (Of course, when necessary, it’s synchronized.)
    *  ...
    *
@@ -107,38 +111,41 @@ public class CGroupsResourceCalculator extends AbstractCGroupsResourceCalculator
     try {
       String cpuRelative = getCGroupRelativePath(CGroupsHandler.CGroupController.CPUACCT);
       if (cpuRelative != null) {
-        File cpuDir = new File(cGroupsHandler.getControllerPath(CGroupsHandler.CGroupController.CPUACCT), cpuRelative);
+        File cpuDir = new File(getcGroupsHandler().getControllerPath(
+            CGroupsHandler.CGroupController.CPUACCT), cpuRelative);
         result.add(Paths.get(cpuDir.getAbsolutePath(), CPU_STAT));
       }
     } catch (IOException e) {
-      LOG.debug("Exception while looking for CPUACCT controller for pid: " + pid, e);
+      LOG.debug("Exception while looking for CPUACCT controller for pid: " + getPid(), e);
     }
 
     try {
       String memoryRelative = getCGroupRelativePath(CGroupsHandler.CGroupController.MEMORY);
       if (memoryRelative != null) {
-        File memDir = new File(cGroupsHandler.getControllerPath(CGroupsHandler.CGroupController.MEMORY), memoryRelative);
+        File memDir = new File(getcGroupsHandler().getControllerPath(
+            CGroupsHandler.CGroupController.MEMORY), memoryRelative);
         result.add(Paths.get(memDir.getAbsolutePath(), MEM_STAT));
         result.add(Paths.get(memDir.getAbsolutePath(), MEMSW_STAT));
       }
     } catch (IOException e) {
-      LOG.debug("Exception while looking for MEMORY controller for pid: " + pid, e);
+      LOG.debug("Exception while looking for MEMORY controller for pid: " + getPid(), e);
     }
 
     return result;
   }
 
-  private String getCGroupRelativePath(CGroupsHandler.CGroupController controller) throws IOException {
+  private String getCGroupRelativePath(CGroupsHandler.CGroupController controller)
+      throws IOException {
     for (String line : readLinesFromCGroupFileFromProcDir()) {
       // example line: 6:cpuacct,cpu:/yarn/container_1
       String[] parts = line.split(":");
       if (parts[1].contains(controller.getName())) {
         String cgroupPath = parts[2];
         String cgroup = new File(cgroupPath).toPath().getFileName().toString();
-        return cGroupsHandler.getRelativePathForCGroup(cgroup);
+        return getcGroupsHandler().getRelativePathForCGroup(cgroup);
       }
     }
-    LOG.debug("No {} controller found for pid {}", controller, pid);
+    LOG.debug("No {} controller found for pid {}", controller, getPid());
     return null;
   }
 }
