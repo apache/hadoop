@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,14 +15,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.util;
 
-/**
- * Package org.apache.hadoop.yarn.server.timelineservice.storage.common contains
- * a set of utility classes used across backend storage reader and writer.
- */
-@InterfaceAudience.Private
-@InterfaceStability.Unstable
-package org.apache.hadoop.yarn.server.timelineservice.storage.common;
+import java.util.zip.Checksum;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
+
+
+public class TestPureJavaCrc32C {
+
+  @Test
+  public void testChecksumInit() {
+    Checksum csum = new PureJavaCrc32C();
+    long crc1 = csum.getValue();
+    csum.reset();
+    long crc2 = csum.getValue();
+    assertEquals("reset should give same as initial value", crc1, crc2);
+  }
+}

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -16,24 +16,5 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.yarn.server.timelineservice.reader;
-
-import org.apache.hadoop.yarn.server.timelineservice.metrics.TimelineReaderMetrics;
-
-/**
- * DummyTimelineReaderMetrics for mocking {@link TimelineReaderMetrics} calls.
- */
-public class DummyTimelineReaderMetrics extends TimelineReaderMetrics {
-
-
-  @Override
-  public void addGetEntitiesLatency(
-      long durationMs, boolean succeeded) {
-
-  }
-
-  @Override
-  public void addGetEntityTypesLatency(
-      long durationMs, boolean succeeded) {
-  }
-}
+/** Crypto related classes. */
+package org.apache.hadoop.crypto;

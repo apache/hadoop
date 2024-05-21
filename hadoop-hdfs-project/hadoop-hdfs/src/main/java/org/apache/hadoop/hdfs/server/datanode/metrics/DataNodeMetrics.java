@@ -102,7 +102,7 @@ public class DataNodeMetrics {
   final MutableQuantiles[]   ramDiskBlocksLazyPersistWindowMsQuantiles;
 
   @Metric MutableCounterLong fsyncCount;
-  
+
   @Metric MutableCounterLong volumeFailures;
 
   @Metric("Count of network errors on the datanode")
@@ -185,6 +185,8 @@ public class DataNodeMetrics {
   private MutableCounterLong numProcessedCommands;
   @Metric("Rate of processed commands of all BPServiceActors")
   private MutableRate processedCommandsOp;
+  @Metric("Number of blocks in IBRs that failed due to null storage")
+  private MutableCounterLong nullStorageBlockReports;
 
   // FsDatasetImpl local file process metrics.
   @Metric private MutableRate createRbwOp;
@@ -812,4 +814,7 @@ public class DataNodeMetrics {
     replaceBlockOpToOtherHost.incr();
   }
 
+  public void incrNullStorageBlockReports() {
+    nullStorageBlockReports.incr();
+  }
 }

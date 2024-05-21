@@ -32,6 +32,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
 import org.apache.hadoop.security.FastSaslClientFactory;
 import org.apache.hadoop.security.FastSaslServerFactory;
+import org.apache.hadoop.security.SaslConstants;
 import org.apache.hadoop.security.SaslInputStream;
 import org.apache.hadoop.security.SaslOutputStream;
 
@@ -50,7 +51,7 @@ class SaslParticipant {
   // a short string.
   private static final String SERVER_NAME = "0";
   private static final String PROTOCOL = "hdfs";
-  private static final String MECHANISM = "DIGEST-MD5";
+  private static final String[] MECHANISM_ARRAY = {SaslConstants.SASL_MECHANISM};
 
   // One of these will always be null.
   private final SaslServer saslServer;
@@ -81,7 +82,7 @@ class SaslParticipant {
       Map<String, String> saslProps, CallbackHandler callbackHandler)
       throws SaslException {
     initializeSaslServerFactory();
-    return new SaslParticipant(saslServerFactory.createSaslServer(MECHANISM,
+    return new SaslParticipant(saslServerFactory.createSaslServer(MECHANISM_ARRAY[0],
       PROTOCOL, SERVER_NAME, saslProps, callbackHandler));
   }
 
@@ -99,7 +100,7 @@ class SaslParticipant {
       throws SaslException {
     initializeSaslClientFactory();
     return new SaslParticipant(
-        saslClientFactory.createSaslClient(new String[] {MECHANISM}, userName,
+        saslClientFactory.createSaslClient(MECHANISM_ARRAY, userName,
             PROTOCOL, SERVER_NAME, saslProps, callbackHandler));
   }
 

@@ -16,14 +16,20 @@
  * limitations under the License.
  */
 
-/**
- * Package org.apache.hadoop.yarn.server.timelineservice.storage.flow
- * contains classes related to implementation for flow related tables, viz. flow
- * run table and flow activity table.
- */
-@InterfaceAudience.Private
-@InterfaceStability.Unstable
-package org.apache.hadoop.yarn.server.timelineservice.storage.flow;
+package org.apache.hadoop.fs.s3a.impl;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+
+/**
+ * Factory for creating store contexts.
+ */
+@InterfaceAudience.Private
+public interface StoreContextFactory {
+
+  /**
+   * Build an immutable store context, including picking
+   * up the current audit span.
+   * @return the store context.
+   */
+  StoreContext createStoreContext();
+}

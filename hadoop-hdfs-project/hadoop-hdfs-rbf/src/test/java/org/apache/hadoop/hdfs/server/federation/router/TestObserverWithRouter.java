@@ -107,10 +107,7 @@ public class TestObserverWithRouter {
   public void startUpCluster(int numberOfObserver, Configuration confOverrides) throws Exception {
     int numberOfNamenode = 2 + numberOfObserver;
     Configuration conf = new Configuration(false);
-    conf.setBoolean(RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_DEFAULT_KEY, true);
-    conf.setBoolean(DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY, true);
-    conf.set(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, "0ms");
-    conf.setBoolean(DFS_NAMENODE_STATE_CONTEXT_ENABLED_KEY, true);
+    setConfDefaults(conf);
     if (confOverrides != null) {
       confOverrides
           .iterator()
@@ -151,6 +148,13 @@ public class TestObserverWithRouter {
 
     cluster.waitActiveNamespaces();
     routerContext  = cluster.getRandomRouter();
+  }
+
+  private void setConfDefaults(Configuration conf) {
+    conf.setBoolean(RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_DEFAULT_KEY, true);
+    conf.setBoolean(DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY, true);
+    conf.set(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY, "0ms");
+    conf.setBoolean(DFS_NAMENODE_STATE_CONTEXT_ENABLED_KEY, true);
   }
 
   public enum ConfigSetting {
@@ -971,5 +975,56 @@ public class TestObserverWithRouter {
         .getRPCMetrics().getActiveProxyOps();
     // There should no calls to any namespace.
     assertEquals("No calls to any namespace", 0, rpcCountForActive);
+  }
+
+  @EnumSource(ConfigSetting.class)
+  @ParameterizedTest
+  public void testRestartingNamenodeWithStateIDContextDisabled(ConfigSetting configSetting)
+      throws Exception {
+    fileSystem = routerContext.getFileSystem(getConfToEnableObserverReads(configSetting));
+    Path path = new Path("/testFile1");
+    // Send Create call to active
+    fileSystem.create(path).close();
+
+    // Send read request
+    fileSystem.open(path).close();
+
+    long observerCount1 = routerContext.getRouter().getRpcServer()
+        .getRPCMetrics().getObserverProxyOps();
+
+    // Restart active namenodes and disable sending state id.
+    restartActiveWithStateIDContextDisabled();
+
+    Configuration conf = getConfToEnableObserverReads(configSetting);
+    conf.setBoolean("fs.hdfs.impl.disable.cache", true);
+    FileSystem fileSystem2 = routerContext.getFileSystem(conf);
+    fileSystem2.msync();
+    fileSystem2.open(path).close();
+
+    long observerCount2 = routerContext.getRouter().getRpcServer()
+        .getRPCMetrics().getObserverProxyOps();
+    assertEquals("There should no extra calls to the observer", observerCount1, observerCount2);
+
+    fileSystem.open(path).close();
+    long observerCount3 = routerContext.getRouter().getRpcServer()
+        .getRPCMetrics().getObserverProxyOps();
+    assertTrue("Old filesystem will send calls to observer", observerCount3 > observerCount2);
+  }
+
+  void restartActiveWithStateIDContextDisabled() throws Exception {
+    for (int nnIndex = 0; nnIndex < cluster.getNamenodes().size(); nnIndex++) {
+      NameNode nameNode = cluster.getCluster().getNameNode(nnIndex);
+      if (nameNode != null && nameNode.isActiveState()) {
+        Configuration conf = new Configuration();
+        setConfDefaults(conf);
+        cluster.getCluster().getConfiguration(nnIndex)
+            .setBoolean(DFS_NAMENODE_STATE_CONTEXT_ENABLED_KEY, false);
+        cluster.getCluster().restartNameNode(nnIndex, true);
+        cluster.getCluster().getNameNode(nnIndex).isActiveState();
+      }
+    }
+    for (String ns : cluster.getNameservices()) {
+      cluster.switchToActive(ns, NAMENODES[0]);
+    }
   }
 }

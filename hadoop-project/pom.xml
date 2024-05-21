@@ -111,7 +111,7 @@
     <guava.version>27.0-jre</guava.version>
     <guice.version>4.2.3</guice.version>
 
-    <bouncycastle.version>1.77</bouncycastle.version>
+    <bouncycastle.version>1.78</bouncycastle.version>
 
     <!-- Required for testing LDAP integration -->
     <apacheds.version>2.0.0.AM26</apacheds.version>
@@ -169,7 +169,7 @@
 
     <!-- Plugin versions and config -->
     <maven-surefire-plugin.argLine>-Xmx2048m -XX:+HeapDumpOnOutOfMemoryError</maven-surefire-plugin.argLine>
-    <maven-surefire-plugin.version>3.0.0-M1</maven-surefire-plugin.version>
+    <maven-surefire-plugin.version>3.2.5</maven-surefire-plugin.version>
     <maven-surefire-report-plugin.version>${maven-surefire-plugin.version}</maven-surefire-report-plugin.version>
     <maven-failsafe-plugin.version>${maven-surefire-plugin.version}</maven-failsafe-plugin.version>
 
@@ -186,7 +186,7 @@
     <exec-maven-plugin.version>1.3.1</exec-maven-plugin.version>
     <make-maven-plugin.version>1.0-beta-1</make-maven-plugin.version>
     <surefire.fork.timeout>900</surefire.fork.timeout>
-    <aws-java-sdk.version>1.12.599</aws-java-sdk.version>
+    <aws-java-sdk.version>1.12.720</aws-java-sdk.version>
     <aws-java-sdk-v2.version>2.24.6</aws-java-sdk-v2.version>
     <aws.eventstream.version>1.0.1</aws.eventstream.version>
     <hsqldb.version>2.7.1</hsqldb.version>
@@ -203,8 +203,7 @@
     <swagger-annotations-version>1.5.4</swagger-annotations-version>
     <snakeyaml.version>2.0</snakeyaml.version>
     <sshd.version>2.11.0</sshd.version>
-    <hbase.one.version>1.7.1</hbase.one.version>
-    <hbase.two.version>2.2.4</hbase.two.version>
+    <hbase.version>2.5.8-hadoop3</hbase.version>
     <junit.version>4.13.2</junit.version>
     <junit.jupiter.version>5.8.2</junit.jupiter.version>
     <junit.vintage.version>5.8.2</junit.vintage.version>
@@ -500,6 +499,11 @@
         <artifactId>hadoop-yarn-common</artifactId>
         <version>${hadoop.version}</version>
         <type>test-jar</type>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-yarn-server-timelineservice-hbase-server-2</artifactId>
+        <version>${hadoop.version}</version>
       </dependency>
 
       <dependency>
@@ -1811,6 +1815,10 @@
             <groupId>org.apache.yetus</groupId>
             <artifactId>audience-annotations</artifactId>
           </exclusion>
+          <exclusion>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.core</artifactId>
+          </exclusion>
         </exclusions>
       </dependency>
       <dependency>
@@ -1874,6 +1882,14 @@
           <exclusion>
             <groupId>org.apache.yetus</groupId>
             <artifactId>audience-annotations</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>com.google.errorprone</groupId>
+            <artifactId>error_prone_annotations</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.checkerframework</groupId>
+            <artifactId>checker-qual</artifactId>
           </exclusion>
         </exclusions>
       </dependency>
@@ -1941,6 +1957,11 @@
         <dependency>
           <groupId>org.apache.kerby</groupId>
           <artifactId>kerb-core</artifactId>
+          <version>${kerby.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.kerby</groupId>
+          <artifactId>kerb-util</artifactId>
           <version>${kerby.version}</version>
         </dependency>
         <dependency>
@@ -2423,6 +2444,7 @@
             <DYLD_LIBRARY_PATH>${env.DYLD_LIBRARY_PATH}:${project.build.directory}/native/target/usr/local/lib:${hadoop.common.build.dir}/native/target/usr/local/lib</DYLD_LIBRARY_PATH>
             <MALLOC_ARENA_MAX>4</MALLOC_ARENA_MAX>
           </environmentVariables>
+          <failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
           <trimStackTrace>false</trimStackTrace>
           <systemPropertyVariables>
 
@@ -2677,33 +2699,6 @@
         </plugins>
       </build>
     </profile>
-    <!-- The profile for building against HBase 1.2.x
-     This is the default.
-     -->
-    <profile>
-      <id>hbase1</id>
-      <activation>
-        <property>
-          <name>!hbase.profile</name>
-        </property>
-      </activation>
-      <properties>
-        <hbase.version>${hbase.one.version}</hbase.version>
-        <hbase-compatible-hadoop.version>2.8.5</hbase-compatible-hadoop.version>
-        <hbase-compatible-guava.version>12.0.1</hbase-compatible-guava.version>
-        <hbase-compatible-guice.version>4.0</hbase-compatible-guice.version>
-        <hbase-server-artifactid>hadoop-yarn-server-timelineservice-hbase-server-1</hbase-server-artifactid>
-      </properties>
-      <dependencyManagement>
-        <dependencies>
-          <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>${hbase-server-artifactid}</artifactId>
-            <version>${hadoop.version}</version>
-          </dependency>
-        </dependencies>
-      </dependencyManagement>
-    </profile>
     <!-- The profile for building against HBase 2.0.0.
      Activate using: mvn -Dhbase.profile=2.0
     -->
@@ -2716,20 +2711,10 @@
         </property>
       </activation>
       <properties>
-        <hbase.version>${hbase.two.version}</hbase.version>
-        <hbase-compatible-hadoop.version>2.8.5</hbase-compatible-hadoop.version>
-        <hbase-compatible-guava.version>11.0.2</hbase-compatible-guava.version>
-        <hbase-server-artifactid>hadoop-yarn-server-timelineservice-hbase-server-2</hbase-server-artifactid>
-        <hbase-compatible-guice.version>4.0</hbase-compatible-guice.version>
-        <hbase-compatible-jetty.version>9.3.27.v20190418</hbase-compatible-jetty.version>
       </properties>
       <dependencyManagement>
         <dependencies>
-          <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>${hbase-server-artifactid}</artifactId>
-            <version>${hadoop.version}</version>
-          </dependency>
+
         </dependencies>
       </dependencyManagement>
     </profile>

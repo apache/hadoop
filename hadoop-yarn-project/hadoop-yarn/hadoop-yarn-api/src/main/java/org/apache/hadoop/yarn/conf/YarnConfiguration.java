@@ -2733,6 +2733,10 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_LINUX_CONTAINER_CGROUPS_MOUNT_PATH =
     NM_PREFIX + "linux-container-executor.cgroups.mount-path";
 
+  /** Where the linux container executor should mount cgroups v2 if not found. */
+  public static final String NM_LINUX_CONTAINER_CGROUPS_V2_MOUNT_PATH =
+      NM_PREFIX + "linux-container-executor.cgroups.v2.mount-path";
+
   /**
    * Whether the apps should run in strict resource usage mode(not allowed to
    * use spare CPU)
@@ -2803,6 +2807,14 @@ public class YarnConfiguration extends Configuration {
 
   public static final long DEFAULT_NM_LINUX_CONTAINER_CGROUPS_DELETE_DELAY =
       20;
+
+  /**
+   * Boolean indicating whether cgroup v2 is enabled.
+   */
+  public static final String NM_LINUX_CONTAINER_CGROUPS_V2_ENABLED =
+      NM_PREFIX + "linux-container-executor.cgroups.v2.enabled";
+
+  public static final boolean DEFAULT_NM_LINUX_CONTAINER_CGROUPS_V2_ENABLED = false;
 
   /**
    * Indicates if memory and CPU limits will be set for the Windows Job

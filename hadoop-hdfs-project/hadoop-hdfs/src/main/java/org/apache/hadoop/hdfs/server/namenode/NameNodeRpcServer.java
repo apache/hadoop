@@ -993,6 +993,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public void reportBadBlocks(LocatedBlock[] blocks) throws IOException {
     checkNNStartup();
     namesystem.reportBadBlocks(blocks);
+    namesystem.logAuditEvent(true, "reportBadBlocks", null);
   }
 
   @Override // ClientProtocol

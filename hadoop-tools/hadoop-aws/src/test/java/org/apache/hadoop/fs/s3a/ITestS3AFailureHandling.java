@@ -32,9 +32,6 @@ import org.apache.hadoop.fs.statistics.StoreStatisticNames;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -45,7 +42,9 @@ import java.util.stream.Collectors;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.createFiles;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.isBulkDeleteEnabled;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.test.ExtraAssertions.failIf;
+import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.isUsingDefaultExternalDataFile;
 import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.requireDefaultExternalData;
 import static org.apache.hadoop.test.LambdaTestUtils.*;
 import static org.apache.hadoop.util.functional.RemoteIterators.mappingRemoteIterator;
@@ -55,14 +54,15 @@ import static org.apache.hadoop.util.functional.RemoteIterators.toList;
  * ITest for failure handling, primarily multipart deletion.
  */
 public class ITestS3AFailureHandling extends AbstractS3ATestBase {
-  private static final Logger LOG =
-      LoggerFactory.getLogger(ITestS3AFailureHandling.class);
 
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
     S3ATestUtils.disableFilesystemCaching(conf);
     conf.setBoolean(Constants.ENABLE_MULTI_DELETE, true);
+    if (isUsingDefaultExternalDataFile(conf)) {
+      removeBaseAndBucketOverrides(conf, Constants.ENDPOINT);
+    }
     return conf;
   }
 

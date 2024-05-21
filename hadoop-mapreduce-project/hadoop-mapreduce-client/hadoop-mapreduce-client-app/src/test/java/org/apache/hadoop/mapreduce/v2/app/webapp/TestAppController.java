@@ -319,6 +319,8 @@ public class TestAppController {
     appController.attempts();
 
     assertEquals(AttemptsPage.class, appController.getClazz());
+
+    appController.getProperty().remove(AMParams.ATTEMPT_STATE);
   }
 
 }
