@@ -38,12 +38,21 @@ import org.slf4j.LoggerFactory;
  * ResourceHandlerModule, what is only initialised in the NodeManager process not in the container.
  * So this implementation will not work with the mapreduce.job.process-tree.class property.
  *
- * Limitation: Cgroup does not have the ability to measure virtual memory usage.
- * This includes memory reserved but not used.
- * Cgroup measures used memory as a sum of the physical memory and swap usage.
- * This will be returned to the virtual memory counters.
- * If the real virtual memory is required please use the legacy procfs based
- * resource calculator or CombinedResourceCalculator.
+ * Limitation:
+ * The ResourceCalculatorProcessTree class can be configured using the
+ * mapreduce.job.process-tree.class property within a MapReduce job.
+ * However, it is important to note that instances of ResourceCalculatorProcessTree operate
+ * within the context of a MapReduce task. This presents a limitation:
+ * these instances do not have access to the ResourceHandlerModule,
+ * which is only initialized within the NodeManager process
+ * and not within individual containers where MapReduce tasks execute.
+ * As a result, the current implementation of ResourceCalculatorProcessTree is incompatible
+ * with the mapreduce.job.process-tree.class property. This incompatibility arises
+ * because the ResourceHandlerModule is essential for managing and monitoring resource usage,
+ * and without it, the ResourceCalculatorProcessTree cannot function as intended
+ * within the confines of a MapReduce task. Therefore, any attempts to utilize this class
+ * through the mapreduce.job.process-tree.class property
+ * will not succeed under the current architecture.
  */
 public class CGroupsResourceCalculator extends AbstractCGroupsResourceCalculator {
   private static final Logger LOG = LoggerFactory.getLogger(CGroupsResourceCalculator.class);
@@ -105,7 +114,7 @@ public class CGroupsResourceCalculator extends AbstractCGroupsResourceCalculator
   }
 
   @Override
-  protected List<Path> getCgroupFilesToLoadInStats() {
+  protected List<Path> getCGroupFilesToLoadInStats() {
     List<Path> result = new ArrayList<>();
 
     try {

@@ -117,7 +117,7 @@ public abstract class AbstractCGroupsResourceCalculator extends ResourceCalculat
   @Override
   public void updateProcessTree() {
     stats.clear();
-    for (Path statFile : getCgroupFilesToLoadInStats()) {
+    for (Path statFile : getCGroupFilesToLoadInStats()) {
       try {
         List<String> lines = fileToLines(statFile);
         if (1 == lines.size()) {
@@ -160,7 +160,7 @@ public abstract class AbstractCGroupsResourceCalculator extends ResourceCalculat
     return Long.parseLong(stats.getOrDefault(key, String.valueOf(UNAVAILABLE)));
   }
 
-  protected abstract List<Path> getCgroupFilesToLoadInStats();
+  protected abstract List<Path> getCGroupFilesToLoadInStats();
 
   protected List<String> readLinesFromCGroupFileFromProcDir() throws IOException {
     // https://docs.kernel.org/admin-guide/cgroup-v2.html#processes
