@@ -25,8 +25,6 @@ import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.List;
 
-import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -527,7 +525,7 @@ public class AbfsRestOperation {
   /**
    * Incrementing Abfs counters with a long value.
    *
-   * @param statistic the Abfs statistic that needs to be incremented.f
+   * @param statistic the Abfs statistic that needs to be incremented.
    * @param value     the value to be incremented by.
    */
   private void incrementCounter(AbfsStatistic statistic, long value) {
