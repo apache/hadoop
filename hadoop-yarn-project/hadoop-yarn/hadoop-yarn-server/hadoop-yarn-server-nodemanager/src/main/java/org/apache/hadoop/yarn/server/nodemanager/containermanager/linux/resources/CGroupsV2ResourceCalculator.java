@@ -61,7 +61,7 @@ public class CGroupsV2ResourceCalculator extends AbstractCGroupsResourceCalculat
   private static final Logger LOG = LoggerFactory.getLogger(CGroupsV2ResourceCalculator.class);
 
   /**
-   * <a href="https://docs.kernel.org/admin-guide/cgroup-v2.html#cpu-interface-files">Documentation</a>
+   * <a href="https://docs.kernel.org/admin-guide/cgroup-v2.html#cpu-interface-files">DOC</a>
    *
    * ...
    * cpu.stat
@@ -76,12 +76,14 @@ public class CGroupsV2ResourceCalculator extends AbstractCGroupsResourceCalculat
   private static final String CPU_STAT = "cpu.stat#usage_usec";
 
   /**
-   * <a href="https://docs.kernel.org/admin-guide/cgroup-v2.html#memory-interface-files">Documentation</a>
+   * <a href="https://docs.kernel.org/admin-guide/cgroup-v2.html#memory-interface-files">DOC</a>
    *
    * ...
    * memory.stat
    *  A read-only flat-keyed file which exists on non-root cgroups.
-   *  This breaks down the cgroup’s memory footprint into different types of memory, type-specific details, and other information on the state and past events of the memory management system.
+   *  This breaks down the cgroup’s memory footprint into different types of memory,
+   *  type-specific details, and other information on the state
+   *  and past events of the memory management system.
    *  All memory amounts are in bytes.
    *  ...
    *  anon
@@ -92,7 +94,7 @@ public class CGroupsV2ResourceCalculator extends AbstractCGroupsResourceCalculat
   private static final String MEM_STAT = "memory.stat#anon";
 
   /**
-   * <a href="https://docs.kernel.org/admin-guide/cgroup-v2.html#memory-interface-files">Documentation</a>
+   * <a href="https://docs.kernel.org/admin-guide/cgroup-v2.html#memory-interface-files">DOC</a>
    *
    * ...
    * memory.swap.current
