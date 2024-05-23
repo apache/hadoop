@@ -111,8 +111,10 @@ public class RouterAsyncRpcClient extends RouterRpcClient{
     final Server.Call originCall = Server.getCurCall().get();
     final CallerContext originContext = CallerContext.getCurrent();
     completableFuture = completableFuture.thenComposeAsync(o -> {
-      LOG.info("Async invoke method : {}, {}, {}, {}", method.getName(), useObserver,
-          namenodes.toString(), params);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Async invoke method : {}, {}, {}, {}", method.getName(), useObserver,
+            namenodes.toString(), params);
+      }
       transferThreadLocalContext(originCall, originContext);
       try {
         return invokeMethodAsync(ugi, namenodes, useObserver, protocol, method, params);
@@ -464,7 +466,6 @@ public class RouterAsyncRpcClient extends RouterRpcClient{
       // Return the first result, whether it is the value or not
       return new RemoteResult<>(locations.get(0), results.get(0));
     });
-    System.out.println("zjcom2: " + resultFuture);
     CUR_COMPLETABLE_FUTURE.set(resultFuture);
 //    return (RemoteResult) getResult();
     return null;

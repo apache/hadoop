@@ -86,8 +86,10 @@ public final class AsyncRpcProtocolPBUtil {
         throw new CompletionException(e);
       }
     }).handle((result, e) -> {
-      LOG.info("Async response, callback: {}, CallerContext: {}, result: [{}]",
-          callback, CallerContext.getCurrent(), result, e);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Async response, callback: {}, CallerContext: {}, result: [{}]",
+            callback, CallerContext.getCurrent(), result, e);
+      }
       if (e == null) {
         Message value = null;
         try {
