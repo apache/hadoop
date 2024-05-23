@@ -38,7 +38,6 @@ import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadResponse;
 import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CreateMultipartUploadResponse;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
-import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
 import software.amazon.awssdk.services.s3.model.ListMultipartUploadsRequest;
 import software.amazon.awssdk.services.s3.model.ListMultipartUploadsResponse;
 import software.amazon.awssdk.services.s3.model.MultipartUpload;
@@ -133,9 +132,10 @@ public class StagingTestBase {
    * @throws IOException IO problems.
    */
   protected static S3AFileSystem createAndBindMockFSInstance(Configuration conf,
-      Pair<StagingTestBase.ClientResults, StagingTestBase.ClientErrors> outcome, S3Client mockClient)
+      Pair<StagingTestBase.ClientResults, StagingTestBase.ClientErrors> outcome,
+                                                             S3Client mockS3Client)
       throws IOException {
-    S3AFileSystem mockFs = mockS3AFileSystemRobustly(mockClient);
+    S3AFileSystem mockFs = mockS3AFileSystemRobustly(mockS3Client);
     MockS3AFileSystem wrapperFS = new MockS3AFileSystem(mockFs, outcome);
     URI uri = RAW_BUCKET_URI;
     wrapperFS.initialize(uri, conf);
@@ -146,13 +146,13 @@ public class StagingTestBase {
     return mockFs;
   }
 
-  private static S3AFileSystem mockS3AFileSystemRobustly(S3Client s3Client) {
+  private static S3AFileSystem mockS3AFileSystemRobustly(S3Client mockS3Client) {
     S3AFileSystem mockFS = mock(S3AFileSystem.class);
     S3AInternals s3AInternals = mock(S3AInternals.class);
     when(mockFS.getS3AInternals()).thenReturn(s3AInternals);
     when(s3AInternals.getStore()).thenReturn(mock(S3AStore.class));
     when(s3AInternals.getAmazonS3Client(anyString()))
-        .thenReturn(s3Client);
+        .thenReturn(mockS3Client);
     doNothing().when(mockFS).incrementReadOperations();
     doNothing().when(mockFS).incrementWriteOperations();
     doNothing().when(mockFS).incrementWriteOperations();
