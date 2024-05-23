@@ -68,6 +68,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
@@ -225,8 +226,8 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
 
   private static final Logger LOG =
       LoggerFactory.getLogger(RouterRpcServer.class);
-  private static ExecutorService asyncRouterHandler;
-  private static ExecutorService asyncRouterResponse;
+  private static AsyncExecutor asyncRouterHandler;
+  private static AsyncExecutor asyncRouterResponse;
   private static Semaphore asyncRequestPermits;
 
   /** Configuration for the RPC server. */
@@ -500,28 +501,8 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
         DFS_ROUTER_RPC_ASYNC_HANDLER_COUNT_DEFAULT);
     int asyncResponseCount = conf.getInt(DFS_ROUTER_RPC_ASYNC_RESPONSE_COUNT,
         DFS_ROUTER_RPC_ASYNC_RESPONSE_COUNT_DEFAULT);
-    asyncRouterHandler = Executors.newFixedThreadPool(asyncHandlerCount, new ThreadFactory() {
-      private AtomicInteger number = new AtomicInteger(0);
-      @Override
-      public Thread newThread(Runnable r) {
-        Thread asyncHandler = new Thread(r);
-        int num = number.getAndAdd(1);
-        asyncHandler.setName("Router-async-handler-" + num);
-        asyncHandler.setDaemon(true);
-        return asyncHandler;
-      }
-    });
-    asyncRouterResponse = Executors.newFixedThreadPool(asyncResponseCount, new ThreadFactory() {
-      private AtomicInteger number = new AtomicInteger(0);
-      @Override
-      public Thread newThread(Runnable r) {
-        Thread asyncResponse = new Thread(r);
-        int num = number.getAndAdd(1);
-        asyncResponse.setName("Router-async-response-" + num);
-        asyncResponse.setDaemon(true);
-        return asyncResponse;
-      }
-    });
+    asyncRouterHandler = new AsyncExecutor(asyncHandlerCount, "Async handler");
+    asyncRouterResponse = new AsyncExecutor(asyncResponseCount, "Async responder");
   }
 
   /**
