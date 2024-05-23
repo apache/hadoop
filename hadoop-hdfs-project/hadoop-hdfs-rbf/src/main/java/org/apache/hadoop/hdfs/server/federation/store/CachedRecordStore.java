@@ -174,7 +174,6 @@ public abstract class CachedRecordStore<R extends BaseRecord>
   public void overrideExpiredRecords(QueryResult<R> query) throws IOException {
     List<R> commitRecords = new ArrayList<>();
     List<R> toDeleteRecords = new ArrayList<>();
-    List<R> deletedRecords = new ArrayList<>();
     List<R> newRecords = query.getRecords();
     long currentDriverTime = query.getTimestamp();
     if (newRecords == null || currentDriverTime <= 0) {
@@ -198,12 +197,9 @@ public abstract class CachedRecordStore<R extends BaseRecord>
     if (!toDeleteRecords.isEmpty()) {
       for (Map.Entry<R, Boolean> entry : getDriver().removeMultiple(toDeleteRecords).entrySet()) {
         if (entry.getValue()) {
-          deletedRecords.add(entry.getKey());
+          newRecords.remove(entry.getKey());
         }
       }
-    }
-    if (!deletedRecords.isEmpty()) {
-      newRecords.removeAll(deletedRecords);
     }
   }
 
