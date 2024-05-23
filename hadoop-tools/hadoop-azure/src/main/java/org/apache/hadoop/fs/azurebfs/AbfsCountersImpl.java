@@ -21,10 +21,12 @@ package org.apache.hadoop.fs.azurebfs;
 import java.net.URI;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-
 import org.apache.hadoop.fs.azurebfs.services.AbfsCounters;
+import org.apache.hadoop.fs.azurebfs.services.AbfsReadFooterMetrics;
+import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
@@ -34,8 +36,42 @@ import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableMetric;
 
-import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.*;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.BYTES_RECEIVED;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.BYTES_SENT;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_APPEND;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_CREATE;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_CREATE_NON_RECURSIVE;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_DELETE;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_EXIST;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_GET_DELEGATION_TOKEN;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_GET_FILE_STATUS;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_LIST_STATUS;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_MKDIRS;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_OPEN;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CALL_RENAME;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.CONNECTIONS_MADE;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.DIRECTORIES_CREATED;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.DIRECTORIES_DELETED;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.ERROR_IGNORED;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.FILES_CREATED;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.FILES_DELETED;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.GET_RESPONSES;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.HTTP_DELETE_REQUEST;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.HTTP_GET_REQUEST;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.HTTP_HEAD_REQUEST;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.HTTP_PATCH_REQUEST;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.HTTP_POST_REQUEST;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.HTTP_PUT_REQUEST;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.METADATA_INCOMPLETE_RENAME_FAILURES;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.READ_THROTTLES;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.RENAME_PATH_ATTEMPTS;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.RENAME_RECOVERY;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.SEND_REQUESTS;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.SERVER_UNAVAILABLE;
+import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.WRITE_THROTTLES;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
+import static org.apache.hadoop.util.Time.now;
+
 
 /**
  * Instrumentation of Abfs counters.
@@ -62,6 +98,12 @@ public class AbfsCountersImpl implements AbfsCounters {
       new MetricsRegistry("abfsMetrics").setContext(CONTEXT);
 
   private final IOStatisticsStore ioStatisticsStore;
+
+  private AbfsBackoffMetrics abfsBackoffMetrics = null;
+
+  private AbfsReadFooterMetrics abfsReadFooterMetrics = null;
+
+  private AtomicLong lastExecutionTime = null;
 
   private static final AbfsStatistic[] STATISTIC_LIST = {
       CALL_CREATE,
@@ -91,7 +133,6 @@ public class AbfsCountersImpl implements AbfsCounters {
       RENAME_RECOVERY,
       METADATA_INCOMPLETE_RENAME_FAILURES,
       RENAME_PATH_ATTEMPTS
-
   };
 
   private static final AbfsStatistic[] DURATION_TRACKER_LIST = {
@@ -121,6 +162,25 @@ public class AbfsCountersImpl implements AbfsCounters {
       ioStatisticsStoreBuilder.withDurationTracking(durationStats.getStatName());
     }
     ioStatisticsStore = ioStatisticsStoreBuilder.build();
+    lastExecutionTime = new AtomicLong(now());
+  }
+
+  @Override
+  public void initializeMetrics(MetricFormat metricFormat) {
+    switch (metricFormat) {
+      case INTERNAL_BACKOFF_METRIC_FORMAT:
+        abfsBackoffMetrics = new AbfsBackoffMetrics();
+        break;
+      case INTERNAL_FOOTER_METRIC_FORMAT:
+        abfsReadFooterMetrics = new AbfsReadFooterMetrics();
+        break;
+      case INTERNAL_METRIC_FORMAT:
+        abfsBackoffMetrics = new AbfsBackoffMetrics();
+        abfsReadFooterMetrics = new AbfsReadFooterMetrics();
+        break;
+      default:
+        break;
+    }
   }
 
   /**
@@ -188,6 +248,21 @@ public class AbfsCountersImpl implements AbfsCounters {
     return registry;
   }
 
+  @Override
+  public AbfsBackoffMetrics getAbfsBackoffMetrics() {
+    return abfsBackoffMetrics != null ? abfsBackoffMetrics : null;
+  }
+
+  @Override
+  public AtomicLong getLastExecutionTime() {
+    return lastExecutionTime;
+  }
+
+  @Override
+  public AbfsReadFooterMetrics getAbfsReadFooterMetrics() {
+    return abfsReadFooterMetrics != null ? abfsReadFooterMetrics : null;
+  }
+
   /**
    * {@inheritDoc}
    *
@@ -243,5 +318,26 @@ public class AbfsCountersImpl implements AbfsCounters {
   @Override
   public DurationTracker trackDuration(String key) {
     return ioStatisticsStore.trackDuration(key);
+  }
+
+  @Override
+  public String toString() {
+    String metric = "";
+    if (abfsBackoffMetrics != null) {
+      long totalNoRequests = getAbfsBackoffMetrics().getTotalNumberOfRequests();
+      if (totalNoRequests > 0) {
+        metric += "#BO:" + getAbfsBackoffMetrics().toString();
+      }
+    }
+    if (abfsReadFooterMetrics != null) {
+      Map<String, AbfsReadFooterMetrics> metricsMap = getAbfsReadFooterMetrics().getMetricsMap();
+      if (metricsMap != null && !(metricsMap.isEmpty())) {
+        String readFooterMetric = getAbfsReadFooterMetrics().toString();
+        if (!readFooterMetric.equals("")) {
+          metric += "#FO:" + getAbfsReadFooterMetrics().toString();
+        }
+      }
+    }
+    return metric;
   }
 }
