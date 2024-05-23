@@ -103,6 +103,10 @@ public enum Statistic {
       StoreStatisticNames.OP_ACCESS,
       "Calls of access()",
       TYPE_DURATION),
+  INVOCATION_BULK_DELETE(
+      StoreStatisticNames.OP_BULK_DELETE,
+      "Calls of bulk delete()",
+      TYPE_COUNTER),
   INVOCATION_COPY_FROM_LOCAL_FILE(
       StoreStatisticNames.OP_COPY_FROM_LOCAL_FILE,
       "Calls of copyFromLocalFile()",
@@ -538,6 +542,10 @@ public enum Statistic {
   STORE_IO_RETRY(StoreStatisticNames.STORE_IO_RETRY,
       "retried requests made of the remote store",
       TYPE_COUNTER),
+
+  STORE_IO_RATE_LIMITED(StoreStatisticNames.STORE_IO_RATE_LIMITED_DURATION,
+      "Duration of rate limited operations",
+      TYPE_DURATION),
 
   STORE_IO_THROTTLED(
       StoreStatisticNames.STORE_IO_THROTTLED,
