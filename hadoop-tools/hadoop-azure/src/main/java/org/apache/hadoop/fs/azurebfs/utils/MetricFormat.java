@@ -15,14 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.fs.azurebfs.utils;
 
-package org.apache.hadoop.fs.azurebfs.services;
+public enum MetricFormat {
+  INTERNAL_BACKOFF_METRIC_FORMAT, // <client-correlation-id>:<client-req-id>:<filesystem-id>
+  // :<backoff-metric-results>
 
-/**
- * Class for Timer Functionality.
- */
-public enum TimerFunctionality {
-  RESUME,
-  SUSPEND
+  INTERNAL_FOOTER_METRIC_FORMAT,  // <client-correlation-id>:<client-req-id>:<filesystem-id>
+  // :<footer-metric-results>
+
+  INTERNAL_METRIC_FORMAT, // <client-correlation-id>:<client-req-id>:<filesystem-id>
+  // :<backoff-metric-results>:<footer-metric-results>
+
+  EMPTY;
+
+  @Override
+  public String toString() {
+    return this == EMPTY ? "" : this.name();
+  }
 }
-
