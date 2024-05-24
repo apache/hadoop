@@ -218,8 +218,9 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
       FEDERATION_STORE_PREFIX + "driver.class";
   public static final Class<? extends StateStoreDriver>
       FEDERATION_STORE_DRIVER_CLASS_DEFAULT = StateStoreZooKeeperImpl.class;
-  public static final String FEDERATION_STORE_MEMBERSHIP_ASYNC_OVERRIDE_CLASSES =
-      FEDERATION_STORE_PREFIX + "async.override.classes";
+  public static final String FEDERATION_STORE_MEMBERSHIP_ASYNC_OVERRIDE =
+      FEDERATION_STORE_PREFIX + "async.override";
+  public static final boolean FEDERATION_STORE_MEMBERSHIP_ASYNC_OVERRIDE_DEFAULT = false;
 
   public static final String FEDERATION_STORE_CONNECTION_TEST_MS =
       FEDERATION_STORE_PREFIX + "connection.test";

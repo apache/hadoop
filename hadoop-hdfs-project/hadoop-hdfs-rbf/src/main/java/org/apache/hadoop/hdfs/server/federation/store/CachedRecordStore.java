@@ -105,10 +105,14 @@ public abstract class CachedRecordStore<R extends BaseRecord>
   }
 
   public void toggleAsyncOverride(boolean flag) {
+    // Only usable by stores that override
+    if (!this.override) {
+      return;
+    }
     this.asyncOverride = flag;
     if (this.asyncOverride) {
-      executor =
-          new ThreadPoolExecutor(2, 2, 0L, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>());
+      executor = new ThreadPoolExecutor(2, 2, 1L, TimeUnit.MINUTES, new LinkedBlockingQueue<>());
+      executor.allowCoreThreadTimeOut(true);
     } else if (executor != null) {
       executor.shutdown();
       executor = null;
@@ -142,7 +146,7 @@ public abstract class CachedRecordStore<R extends BaseRecord>
 
         // If we have any expired record, update the State Store
         if (this.override) {
-          overrideExpiredRecords(result, this.asyncOverride);
+          overrideExpiredRecords(result);
         }
       } catch (IOException e) {
         LOG.error("Cannot get \"{}\" records from the State Store",
@@ -189,10 +193,9 @@ public abstract class CachedRecordStore<R extends BaseRecord>
    * removed.
    *
    * @param query RecordQueryResult containing the data to be inspected.
-   * @param async should spawn threads or not, one for overwriting, one for deleting
    * @throws IOException If the values cannot be updated.
    */
-  public void overrideExpiredRecords(QueryResult<R> query, boolean async) throws IOException {
+  public void overrideExpiredRecords(QueryResult<R> query) throws IOException {
     List<R> commitRecords = new ArrayList<>();
     List<R> toDeleteRecords = new ArrayList<>();
     List<R> newRecords = query.getRecords();
@@ -220,7 +223,12 @@ public abstract class CachedRecordStore<R extends BaseRecord>
     };
     Callable<Void> deletionCallable = () -> {
       if (!toDeleteRecords.isEmpty()) {
-        for (Map.Entry<R, Boolean> entry : getDriver().removeMultiple(toDeleteRecords).entrySet()) {
+        Map<R, Boolean> removedRecords = getDriver().removeMultiple(toDeleteRecords);
+        // Only remove records from newRecords if using sync mode
+        if (asyncOverride) {
+          return null;
+        }
+        for (Map.Entry<R, Boolean> entry : removedRecords.entrySet()) {
           if (entry.getValue()) {
             newRecords.remove(entry.getKey());
           }
@@ -229,9 +237,9 @@ public abstract class CachedRecordStore<R extends BaseRecord>
       return null;
     };
 
-    if (async && executor != null) {
+    if (asyncOverride && executor != null) {
       // Just submit and let the tasks do their work. newRecords might be stale but will
-      // clear itself next override cycle.
+      // sort itself out next override cycle.
       executor.submit(overwriteCallable);
       executor.submit(deletionCallable);
     } else {
@@ -256,7 +264,7 @@ public abstract class CachedRecordStore<R extends BaseRecord>
     newRecords.add(record);
     long time = getDriver().getTime();
     QueryResult<R> query = new QueryResult<>(newRecords, time);
-    overrideExpiredRecords(query, false);
+    overrideExpiredRecords(query);
   }
 
   /**
