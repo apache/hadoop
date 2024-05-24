@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -172,7 +173,7 @@ public abstract class CachedRecordStore<R extends BaseRecord>
    */
   public void overrideExpiredRecords(QueryResult<R> query) throws IOException {
     List<R> commitRecords = new ArrayList<>();
-    List<R> deleteRecords = new ArrayList<>();
+    List<R> toDeleteRecords = new ArrayList<>();
     List<R> newRecords = query.getRecords();
     long currentDriverTime = query.getTimestamp();
     if (newRecords == null || currentDriverTime <= 0) {
@@ -182,13 +183,8 @@ public abstract class CachedRecordStore<R extends BaseRecord>
     for (R record : newRecords) {
       if (record.shouldBeDeleted(currentDriverTime)) {
         String recordName = StateStoreUtils.getRecordName(record.getClass());
-        if (getDriver().remove(record)) {
-          deleteRecords.add(record);
-          LOG.info("Deleted State Store record {}: {}", recordName, record);
-        } else {
-          LOG.warn("Couldn't delete State Store record {}: {}", recordName,
-              record);
-        }
+        LOG.info("State Store record to delete {}: {}", recordName, record);
+        toDeleteRecords.add(record);
       } else if (!record.isExpired() && record.checkExpired(currentDriverTime)) {
         String recordName = StateStoreUtils.getRecordName(record.getClass());
         LOG.info("Override State Store record {}: {}", recordName, record);
@@ -198,8 +194,12 @@ public abstract class CachedRecordStore<R extends BaseRecord>
     if (commitRecords.size() > 0) {
       getDriver().putAll(commitRecords, true, false);
     }
-    if (deleteRecords.size() > 0) {
-      newRecords.removeAll(deleteRecords);
+    if (!toDeleteRecords.isEmpty()) {
+      for (Map.Entry<R, Boolean> entry : getDriver().removeMultiple(toDeleteRecords).entrySet()) {
+        if (entry.getValue()) {
+          newRecords.remove(entry.getKey());
+        }
+      }
     }
   }
 
