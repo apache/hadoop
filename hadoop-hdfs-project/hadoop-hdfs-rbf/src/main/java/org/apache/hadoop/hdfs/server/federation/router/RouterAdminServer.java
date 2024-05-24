@@ -527,8 +527,7 @@ public class RouterAdminServer extends AbstractService
     boolean success = false;
     RouterSafemodeService safeModeService = this.router.getSafemodeService();
     if (safeModeService != null) {
-      this.router.updateRouterState(RouterServiceState.SAFEMODE);
-      safeModeService.setManualSafeMode(true);
+      safeModeService.enter(true);
       success = verifySafeMode(true);
       if (success) {
         LOG.info("STATE* Safe mode is ON.\n" + "It was turned on manually. "
@@ -548,8 +547,7 @@ public class RouterAdminServer extends AbstractService
     boolean success = false;
     RouterSafemodeService safeModeService = this.router.getSafemodeService();
     if (safeModeService != null) {
-      this.router.updateRouterState(RouterServiceState.RUNNING);
-      safeModeService.setManualSafeMode(false);
+      safeModeService.leave();
       success = verifySafeMode(false);
       if (success) {
         LOG.info("STATE* Safe mode is OFF.\n" + "It was turned off manually.");
