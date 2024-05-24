@@ -235,8 +235,8 @@ public abstract class StateStoreDriver implements StateStoreRecordOperations {
   /**
    * Try to overwrite records in commitRecords and remove records in deleteRecords.
    * Should return null if async mode is used. Else return removed records.
-   * @param commitRecords commit to overwrite in state store
-   * @param deleteRecords commit to remove from state store
+   * @param commitRecords records to overwrite in state store
+   * @param deleteRecords records to remove from state store
    * @param <R> record class
    * @return null if async mode is used, else removed records
    */
