@@ -374,8 +374,7 @@
     <name>dfs.federation.router.store.async.override</name>
     <value>false</value>
     <description>
-      CachedRecordStore periodic updates contain an overwrite part and a deletion part.
-      Setting this config to true will do these 2 steps in parallel when updating cache.
+      Allow StateStoreDriver to overwrite and delete records asynchronously.
       Only used by MembershipStore and RouterStore.
     </description>
   </property>

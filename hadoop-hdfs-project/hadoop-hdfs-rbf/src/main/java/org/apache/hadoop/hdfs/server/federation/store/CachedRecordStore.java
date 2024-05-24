@@ -22,12 +22,6 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -54,10 +48,7 @@ public abstract class CachedRecordStore<R extends BaseRecord>
 
   /** Prevent loading the cache more than once every 500 ms. */
   private static final long MIN_UPDATE_MS = 500;
-  /** Should spawn 2 separate threads for overwriting and deleting records or not? */
-  private volatile boolean asyncOverride = false;
-  /** Thread pool to run cache overwrite and deletion */
-  private ThreadPoolExecutor executor;
+
 
   /** Cached entries. */
   private List<R> records = new ArrayList<>();
@@ -102,21 +93,6 @@ public abstract class CachedRecordStore<R extends BaseRecord>
     super(clazz, driver);
 
     this.override = over;
-  }
-
-  public void toggleAsyncOverride(boolean flag) {
-    // Only usable by stores that override
-    if (!this.override) {
-      return;
-    }
-    this.asyncOverride = flag;
-    if (this.asyncOverride) {
-      executor = new ThreadPoolExecutor(2, 2, 1L, TimeUnit.MINUTES, new LinkedBlockingQueue<>());
-      executor.allowCoreThreadTimeOut(true);
-    } else if (executor != null) {
-      executor.shutdown();
-      executor = null;
-    }
   }
 
   /**
@@ -197,7 +173,7 @@ public abstract class CachedRecordStore<R extends BaseRecord>
    */
   public void overrideExpiredRecords(QueryResult<R> query) throws IOException {
     List<R> commitRecords = new ArrayList<>();
-    List<R> toDeleteRecords = new ArrayList<>();
+    List<R> deleteRecords = new ArrayList<>();
     List<R> newRecords = query.getRecords();
     long currentDriverTime = query.getTimestamp();
     if (newRecords == null || currentDriverTime <= 0) {
@@ -208,47 +184,18 @@ public abstract class CachedRecordStore<R extends BaseRecord>
       if (record.shouldBeDeleted(currentDriverTime)) {
         String recordName = StateStoreUtils.getRecordName(record.getClass());
         LOG.info("State Store record to delete {}: {}", recordName, record);
-        toDeleteRecords.add(record);
+        deleteRecords.add(record);
       } else if (!record.isExpired() && record.checkExpired(currentDriverTime)) {
         String recordName = StateStoreUtils.getRecordName(record.getClass());
         LOG.info("Override State Store record {}: {}", recordName, record);
         commitRecords.add(record);
       }
     }
-    Callable<Void> overwriteCallable = () -> {
-      if (!commitRecords.isEmpty()) {
-        getDriver().putAll(commitRecords, true, false);
-      }
-      return null;
-    };
-    Callable<Void> deletionCallable = () -> {
-      if (!toDeleteRecords.isEmpty()) {
-        Map<R, Boolean> removedRecords = getDriver().removeMultiple(toDeleteRecords);
-        // Only remove records from newRecords if using sync mode
-        if (asyncOverride) {
-          return null;
-        }
-        for (Map.Entry<R, Boolean> entry : removedRecords.entrySet()) {
-          if (entry.getValue()) {
-            newRecords.remove(entry.getKey());
-          }
-        }
-      }
-      return null;
-    };
-
-    if (asyncOverride && executor != null) {
-      // Just submit and let the tasks do their work. newRecords might be stale but will
-      // sort itself out next override cycle.
-      executor.submit(overwriteCallable);
-      executor.submit(deletionCallable);
-    } else {
-      try {
-        overwriteCallable.call();
-        deletionCallable.call();
-      } catch (Exception e) {
-        throw new IOException(e);
-      }
+    List<R> removedRecords = getDriver().handleOverwriteAndDelete(commitRecords, deleteRecords);
+    // In driver async mode, driver will return null and skip the next block.
+    // newRecords might be stale as a result but will sort itself out the next override cycle.
+    if (removedRecords != null && !removedRecords.isEmpty()) {
+      newRecords.removeAll(removedRecords);
     }
   }
 

@@ -250,11 +250,6 @@ public class StateStoreService extends CompositeService {
         "Cannot add record to the State Store once started";
 
     T recordStore = RecordStore.newInstance(clazz, this.getDriver());
-    if (recordStore instanceof CachedRecordStore && conf.getBoolean(
-        RBFConfigKeys.FEDERATION_STORE_MEMBERSHIP_ASYNC_OVERRIDE,
-        RBFConfigKeys.FEDERATION_STORE_MEMBERSHIP_ASYNC_OVERRIDE_DEFAULT)) {
-      ((CachedRecordStore<?>) recordStore).toggleAsyncOverride(true);
-    }
     Class<? extends BaseRecord> recordClass = recordStore.getRecordClass();
     this.recordStores.put(recordClass, recordStore);
 
