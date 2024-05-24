@@ -24,7 +24,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -102,11 +101,16 @@ public abstract class StateStoreDriver implements StateStoreRecordOperations {
       }
     }
 
-    if (conf.getBoolean(
-        RBFConfigKeys.FEDERATION_STORE_MEMBERSHIP_ASYNC_OVERRIDE,
-        RBFConfigKeys.FEDERATION_STORE_MEMBERSHIP_ASYNC_OVERRIDE_DEFAULT)) {
-      executor = new ThreadPoolExecutor(2, 2, 1L, TimeUnit.MINUTES, new LinkedBlockingQueue<>());
+    int nThreads = conf.getInt(
+        RBFConfigKeys.FEDERATION_STORE_DRIVER_ASYNC_OVERRIDE_MAX_THREADS,
+        RBFConfigKeys.FEDERATION_STORE_DRIVER_ASYNC_OVERRIDE_MAX_THREADS_DEFAULT);
+    if (nThreads > 0) {
+      executor = new ThreadPoolExecutor(nThreads, nThreads, 1L, TimeUnit.MINUTES,
+          new LinkedBlockingQueue<>());
       executor.allowCoreThreadTimeOut(true);
+      LOG.info("Init StateStoreDriver in async mode with {} threads.", nThreads);
+    } else {
+      LOG.info("Init StateStoreDriver in sync mode.");
     }
     return true;
   }
@@ -242,37 +246,50 @@ public abstract class StateStoreDriver implements StateStoreRecordOperations {
    */
   public <R extends BaseRecord> List<R> handleOverwriteAndDelete(List<R> commitRecords,
       List<R> deleteRecords) throws IOException {
-    Callable<StateStoreOperationResult> overwriteCallable =
-        () -> putAll(commitRecords, true, false);
-    Callable<Map<R, Boolean>> deletionCallable = () -> removeMultiple(deleteRecords);
-
-    if (executor != null) {
-      // In async mode, just submit and let the tasks do their work and return asap.
-      if (!commitRecords.isEmpty()) {
-        executor.submit(overwriteCallable);
-      }
-      if (!deleteRecords.isEmpty()) {
-        executor.submit(deletionCallable);
-      }
-      return null;
-    } else {
-      try {
-        List<R> result = new ArrayList<>();
-        if (!commitRecords.isEmpty()) {
-          overwriteCallable.call();
+    List<R> result = null;
+    try {
+      // Overwrite all expired records.
+      if (commitRecords != null && !commitRecords.isEmpty()) {
+        Runnable overwriteCallable =
+            () -> {
+              try {
+                putAll(commitRecords, true, false);
+              } catch (IOException e) {
+                throw new RuntimeException(e);
+              }
+            };
+        if (executor != null) {
+          executor.execute(overwriteCallable);
+        } else {
+          overwriteCallable.run();
         }
-        if (!deleteRecords.isEmpty()) {
-          Map<R, Boolean> removedRecords = deletionCallable.call();
+      }
+
+      // Delete all deletable records.
+      if (deleteRecords != null && !deleteRecords.isEmpty()) {
+        Map<R, Boolean> removedRecords = new HashMap<>();
+        Runnable deletionCallable = () -> {
+          try {
+            removedRecords.putAll(removeMultiple(deleteRecords));
+          } catch (IOException e) {
+            throw new RuntimeException(e);
+          }
+        };
+        if (executor != null) {
+          executor.execute(deletionCallable);
+        } else {
+          result = new ArrayList<>();
+          deletionCallable.run();
           for (Map.Entry<R, Boolean> entry : removedRecords.entrySet()) {
             if (entry.getValue()) {
               result.add(entry.getKey());
             }
           }
         }
-        return result;
-      } catch (Exception e) {
-        throw new IOException(e);
       }
+    } catch (Exception e) {
+      throw new IOException(e);
     }
+    return result;
   }
 }

@@ -469,7 +469,7 @@ The connection to the State Store and the internal caching at the Router.
 | dfs.federation.router.store.connection.test | 60000 | How often to check for the connection to the State Store in milliseconds. |
 | dfs.federation.router.cache.ttl | 60000 | How often to refresh the State Store caches in milliseconds. |
 | dfs.federation.router.store.membership.expiration | 300000 | Expiration time in milliseconds for a membership record. |
-| dfs.federation.router.store.async.override |  | Allow MembershipStore and RouterStore to overwrite and delete records in parallel when overriding. |
+| dfs.federation.router.store.driver.async.override.max.threads |  | Number of threads to overwrite and delete records asynchronously when overriding. |
 | dfs.federation.router.mount-table.cache.update | false | If true, Mount table cache is updated whenever a mount table entry is added, modified or removed for all the routers. |
 | dfs.federation.router.mount-table.cache.update.timeout | 1m | Max time to wait for all the routers to finish their mount table cache update. |
 | dfs.federation.router.mount-table.cache.update.client.max.time | 5m | Max time a RouterClient connection can be cached. |

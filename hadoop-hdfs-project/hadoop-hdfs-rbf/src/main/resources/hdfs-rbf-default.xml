@@ -371,11 +371,12 @@
   </property>
 
   <property>
-    <name>dfs.federation.router.store.async.override</name>
-    <value>false</value>
+    <name>dfs.federation.router.store.driver.async.override.max.threads</name>
+    <value>-1</value>
     <description>
-      Allow StateStoreDriver to overwrite and delete records asynchronously.
-      Only used by MembershipStore and RouterStore.
+      Number of threads used by StateStoreDriver to overwrite and delete records asynchronously.
+      Only used by MembershipStore and RouterStore. Non-positive values will make StateStoreDriver
+      run in sync mode.
     </description>
   </property>
 
