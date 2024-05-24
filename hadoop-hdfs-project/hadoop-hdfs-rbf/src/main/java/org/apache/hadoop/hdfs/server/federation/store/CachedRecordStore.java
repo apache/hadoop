@@ -142,7 +142,6 @@ public abstract class CachedRecordStore<R extends BaseRecord>
 
         // If we have any expired record, update the State Store
         if (this.override) {
-          // Just spawn 2 tasks: overwrite, delete and continue asap without blocking
           overrideExpiredRecords(result, this.asyncOverride);
         }
       } catch (IOException e) {
@@ -155,7 +154,6 @@ public abstract class CachedRecordStore<R extends BaseRecord>
       writeLock.lock();
       try {
         this.records.clear();
-        // Can be stale but will fix itself next override cycle
         this.records.addAll(newRecords);
         this.timestamp = t;
         this.initialized = true;
