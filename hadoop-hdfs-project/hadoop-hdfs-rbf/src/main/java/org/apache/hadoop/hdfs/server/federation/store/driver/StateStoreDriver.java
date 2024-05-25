@@ -242,6 +242,7 @@ public abstract class StateStoreDriver implements StateStoreRecordOperations {
    * @param commitRecords records to overwrite in state store
    * @param deleteRecords records to remove from state store
    * @param <R> record class
+   * @throws IOException when there is a failure during overwriting or deletion
    * @return null if async mode is used, else removed records
    */
   public <R extends BaseRecord> List<R> handleOverwriteAndDelete(List<R> commitRecords,
