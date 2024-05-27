@@ -402,6 +402,7 @@ public class LogAggregationService extends AbstractService implements
         LogHandlerContainerRecoveredEvent containerRecoveredEvent =
             (LogHandlerContainerRecoveredEvent) event;
         recoverContainer(containerRecoveredEvent.getContainerId());
+        break;
       case LOG_AGG_TOKEN_UPDATE:
         checkAndEnableAppAggregators();
         break;

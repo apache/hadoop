@@ -733,24 +733,23 @@ public abstract class NMStateStoreService extends AbstractService {
   /**
    * Load the state of the log aggregators
    * @return recovered log aggregator state
-   * @throws IOException
+   * @throws IOException if fails
    */
   public abstract RecoveredLogAggregatorState loadLogAggregatorState()
       throws IOException;
 
   /**
-   * Store the state of a log deleter
-   * @param appId the application ID for the log deleter
-   * @param proto the serialized state of the log deleter
-   * @throws IOException
+   * Store the state of a log aggregator
+   * @param containerId the container ID for the log aggregator
+   * @throws IOException if fails
    */
-  public abstract void storeLogAggregator(ContainerId containerId) 
+  public abstract void storeLogAggregator(ContainerId containerId)
       throws IOException;
 
   /**
-   * Remove the state of a log deleter
-   * @param appId the application ID for the log deleter
-   * @throws IOException
+   * Remove the state of a log aggregator
+   * @param containerId the container ID for the log aggregator
+   * @throws IOException if fails
    */
   public abstract void removeLogAggregator(ContainerId containerId)
       throws IOException;
