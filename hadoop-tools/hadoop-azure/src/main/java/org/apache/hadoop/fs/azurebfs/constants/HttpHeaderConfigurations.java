@@ -75,5 +75,11 @@ public final class HttpHeaderConfigurations {
   public static final String EXPECT = "Expect";
   public static final String X_MS_RANGE_GET_CONTENT_MD5 = "x-ms-range-get-content-md5";
 
+  public static final String X_MS_SOURCE_LEASE_ID = "x-ms-source-lease-id";
+  public static final String X_MS_BLOB_TYPE = "x-ms-blob-type";
+  public static final String X_MS_META_HDI_ISFOLDER = "x-ms-meta-hdi_isfolder";
+  public static final String X_MS_METADATA_PREFIX = "x-ms-meta-";
+  public static final String X_MS_COPY_SOURCE = "x-ms-copy-source";
+
   private HttpHeaderConfigurations() {}
 }

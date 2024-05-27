@@ -30,6 +30,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
 import org.apache.hadoop.fs.azurebfs.constants.AuthConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.IntegerConfigurationValidatorAnnotation;
 import org.apache.hadoop.fs.azurebfs.contracts.annotations.ConfigurationValidationAnnotations.IntegerWithOutlierConfigurationValidatorAnnotation;
@@ -90,6 +91,18 @@ public class AbfsConfiguration{
   @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ACCOUNT_IS_HNS_ENABLED,
       DefaultValue = DEFAULT_FS_AZURE_ACCOUNT_IS_HNS_ENABLED)
   private String isNamespaceEnabledAccount;
+
+  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_FNS_ACCOUNT_SERVICE_TYPE,
+      DefaultValue = DEFAULT_FS_AZURE_FNS_ACCOUNT_SERVICE_TYPE)
+  private String fnsAccountServiceType;
+
+  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_INGRESS_SERVICE_TYPE,
+      DefaultValue = DEFAULT_FS_AZURE_INGRESS_SERVICE_TYPE)
+  private String ingressServiceType;
+
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_DFSTOBLOB_FALLBACK,
+      DefaultValue = DEFAULT_FS_AZURE_ENABLE_DFSTOBLOB_FALLBACK)
+  private boolean isDfsToBlobFallbackEnabled;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_WRITE_MAX_CONCURRENT_REQUESTS,
       DefaultValue = -1)
@@ -419,6 +432,34 @@ public class AbfsConfiguration{
 
   public Trilean getIsNamespaceEnabledAccount() {
     return Trilean.getTrilean(isNamespaceEnabledAccount);
+  }
+
+  public AbfsServiceType getFnsAccountServiceType() {
+    if (fnsAccountServiceType.compareToIgnoreCase(AbfsServiceType.DFS.name()) == 0) {
+      return AbfsServiceType.DFS;
+    }
+    return AbfsServiceType.BLOB;
+  }
+
+  public AbfsServiceType getIngressServiceType() {
+    if (ingressServiceType.compareToIgnoreCase(AbfsServiceType.DFS.name()) == 0) {
+      return AbfsServiceType.DFS;
+    }
+    return AbfsServiceType.BLOB;
+  }
+
+  public boolean isDfsToBlobFallbackEnabled() {
+    return isDfsToBlobFallbackEnabled;
+  }
+
+  /**
+   * Returns whether the Blob client initialization is required based on the configurations.
+   * @return
+   */
+  public boolean isBlobClientInitRequired() {
+    return getFnsAccountServiceType() == AbfsServiceType.BLOB
+        || getIngressServiceType() == AbfsServiceType.BLOB
+        || isDfsToBlobFallbackEnabled;
   }
 
   /**

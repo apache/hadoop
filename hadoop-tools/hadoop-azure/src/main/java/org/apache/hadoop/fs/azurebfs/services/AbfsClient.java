@@ -35,7 +35,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
@@ -69,7 +68,6 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
-import org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
@@ -83,7 +81,6 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
-import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.RENAME_PATH_ATTEMPTS;
 import static org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.extractEtagHeader;
@@ -94,31 +91,29 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.S
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.HTTPS_SCHEME;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.*;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.*;
-import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.RENAME_DESTINATION_PARENT_PATH_NOT_FOUND;
-import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.SOURCE_PATH_NOT_FOUND;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_TIMEOUT_ABBREVIATION;
 
 /**
  * AbfsClient.
  */
-public class AbfsClient implements Closeable {
+public abstract class AbfsClient implements Closeable {
   public static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
   public static final String HUNDRED_CONTINUE_USER_AGENT = SINGLE_WHITE_SPACE + HUNDRED_CONTINUE + SEMICOLON;
 
   private final URL baseUrl;
   private final SharedKeyCredentials sharedKeyCredentials;
-  private ApiVersion xMsVersion = ApiVersion.getCurrentVersion();
+  protected ApiVersion xMsVersion = ApiVersion.getCurrentVersion();
   private final ExponentialRetryPolicy exponentialRetryPolicy;
   private final StaticRetryPolicy staticRetryPolicy;
   private final String filesystem;
-  private final AbfsConfiguration abfsConfiguration;
-  private final String userAgent;
+  protected final AbfsConfiguration abfsConfiguration;
+  protected final String userAgent;
   private final AbfsPerfTracker abfsPerfTracker;
   private String clientProvidedEncryptionKey = null;
   private String clientProvidedEncryptionKeySHA = null;
 
   private final String accountName;
-  private final AuthType authType;
+  protected final AuthType authType;
   private AccessTokenProvider tokenProvider;
   private SASTokenProvider sasTokenProvider;
   private final AbfsCounters abfsCounters;
@@ -136,7 +131,7 @@ public class AbfsClient implements Closeable {
   private final ListeningScheduledExecutorService executorService;
   private Boolean isNamespaceEnabled;
 
-  private boolean renameResilience;
+  protected boolean renameResilience;
   private TimerTask runningTimerTask;
   private boolean isSendMetricCall;
   private SharedKeyCredentials metricSharedkeyCredentials = null;
@@ -144,7 +139,7 @@ public class AbfsClient implements Closeable {
   /**
    * logging the rename failure if metadata is in an incomplete state.
    */
-  private static final LogExactlyOnce ABFS_METADATA_INCOMPLETE_RENAME_FAILURE = new LogExactlyOnce(LOG);
+  protected static final LogExactlyOnce ABFS_METADATA_INCOMPLETE_RENAME_FAILURE = new LogExactlyOnce(LOG);
 
   private AbfsClient(final URL baseUrl,
       final SharedKeyCredentials sharedKeyCredentials,
@@ -317,22 +312,25 @@ public class AbfsClient implements Closeable {
    * @return default request headers
    */
   @VisibleForTesting
-  protected List<AbfsHttpHeader> createDefaultHeaders() {
-    return createDefaultHeaders(this.xMsVersion);
-  }
+  protected abstract List<AbfsHttpHeader> createDefaultHeaders();
 
   /**
    * Create request headers for Rest Operation using the specified API version.
    * @param xMsVersion
    * @return default request headers
    */
-  private List<AbfsHttpHeader> createDefaultHeaders(ApiVersion xMsVersion) {
+  @VisibleForTesting
+  public abstract List<AbfsHttpHeader> createDefaultHeaders(ApiVersion xMsVersion);
+
+  /**
+   * Create request headers common to both service endpoints.
+   * @param xMsVersion azure services API version to be used.
+   * @return common request headers
+   */
+  protected List<AbfsHttpHeader> createCommonHeaders(ApiVersion xMsVersion) {
     final List<AbfsHttpHeader> requestHeaders = new ArrayList<AbfsHttpHeader>();
     requestHeaders.add(new AbfsHttpHeader(X_MS_VERSION, xMsVersion.toString()));
-    requestHeaders.add(new AbfsHttpHeader(ACCEPT, APPLICATION_JSON
-        + COMMA + SINGLE_WHITE_SPACE + APPLICATION_OCTET_STREAM));
-    requestHeaders.add(new AbfsHttpHeader(ACCEPT_CHARSET,
-        UTF_8));
+    requestHeaders.add(new AbfsHttpHeader(ACCEPT_CHARSET, UTF_8));
     requestHeaders.add(new AbfsHttpHeader(CONTENT_TYPE, EMPTY_STRING));
     requestHeaders.add(new AbfsHttpHeader(USER_AGENT, userAgent));
     return requestHeaders;
@@ -355,7 +353,7 @@ public class AbfsClient implements Closeable {
    *   <li>read</li>
    * </ol>
    */
-  private void addEncryptionKeyRequestHeaders(String path,
+  protected void addEncryptionKeyRequestHeaders(String path,
       List<AbfsHttpHeader> requestHeaders, boolean isCreateFileRequest,
       ContextEncryptionAdapter contextEncryptionAdapter, TracingContext tracingContext)
       throws AzureBlobFileSystemException {
@@ -390,106 +388,25 @@ public class AbfsClient implements Closeable {
         SERVER_SIDE_ENCRYPTION_ALGORITHM));
   }
 
-  AbfsUriQueryBuilder createDefaultUriQueryBuilder() {
+  protected AbfsUriQueryBuilder createDefaultUriQueryBuilder() {
     final AbfsUriQueryBuilder abfsUriQueryBuilder = new AbfsUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_TIMEOUT, DEFAULT_TIMEOUT);
     return abfsUriQueryBuilder;
   }
 
-  public AbfsRestOperation createFilesystem(TracingContext tracingContext)
-      throws AzureBlobFileSystemException {
-    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
+  public abstract AbfsRestOperation createFilesystem(TracingContext tracingContext)
+      throws AzureBlobFileSystemException;
 
-    final AbfsUriQueryBuilder abfsUriQueryBuilder = new AbfsUriQueryBuilder();
-    abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE, FILESYSTEM);
+  public abstract AbfsRestOperation setFilesystemProperties(final String properties,
+      TracingContext tracingContext) throws AzureBlobFileSystemException;
 
-    final URL url = createRequestUrl(abfsUriQueryBuilder.toString());
-    final AbfsRestOperation op = getAbfsRestOperation(
-        AbfsRestOperationType.CreateFileSystem,
-        HTTP_METHOD_PUT, url, requestHeaders);
-    op.execute(tracingContext);
-    return op;
-  }
-
-  public AbfsRestOperation setFilesystemProperties(final String properties,
-      TracingContext tracingContext) throws AzureBlobFileSystemException {
-    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-    // JDK7 does not support PATCH, so to work around the issue we will use
-    // PUT and specify the real method in the X-Http-Method-Override header.
-    requestHeaders.add(new AbfsHttpHeader(X_HTTP_METHOD_OVERRIDE,
-            HTTP_METHOD_PATCH));
-
-    requestHeaders.add(new AbfsHttpHeader(X_MS_PROPERTIES,
-            properties));
-
-    final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
-    abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE, FILESYSTEM);
-
-    final URL url = createRequestUrl(abfsUriQueryBuilder.toString());
-    final AbfsRestOperation op = getAbfsRestOperation(
-            AbfsRestOperationType.SetFileSystemProperties,
-            HTTP_METHOD_PUT,
-            url,
-            requestHeaders);
-    op.execute(tracingContext);
-    return op;
-  }
-
-  public AbfsRestOperation listPath(final String relativePath, final boolean recursive, final int listMaxResults,
+  public abstract AbfsRestOperation listPath(final String relativePath, final boolean recursive, final int listMaxResults,
                                     final String continuation, TracingContext tracingContext)
-      throws IOException {
-    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
+      throws IOException;
 
-    final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
-    abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE, FILESYSTEM);
-    abfsUriQueryBuilder.addQuery(QUERY_PARAM_DIRECTORY, getDirectoryQueryParameter(relativePath));
-    abfsUriQueryBuilder.addQuery(QUERY_PARAM_RECURSIVE, String.valueOf(recursive));
-    abfsUriQueryBuilder.addQuery(QUERY_PARAM_CONTINUATION, continuation);
-    abfsUriQueryBuilder.addQuery(QUERY_PARAM_MAXRESULTS, String.valueOf(listMaxResults));
-    abfsUriQueryBuilder.addQuery(HttpQueryParams.QUERY_PARAM_UPN, String.valueOf(abfsConfiguration.isUpnUsed()));
-    appendSASTokenToQuery(relativePath, SASTokenProvider.LIST_OPERATION, abfsUriQueryBuilder);
+  public abstract AbfsRestOperation getFilesystemProperties(TracingContext tracingContext) throws AzureBlobFileSystemException;
 
-    final URL url = createRequestUrl(abfsUriQueryBuilder.toString());
-    final AbfsRestOperation op = getAbfsRestOperation(
-            AbfsRestOperationType.ListPaths,
-            HTTP_METHOD_GET,
-            url,
-            requestHeaders);
-    op.execute(tracingContext);
-    return op;
-  }
-
-  public AbfsRestOperation getFilesystemProperties(TracingContext tracingContext) throws AzureBlobFileSystemException {
-    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-
-    final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
-    abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE, FILESYSTEM);
-
-    final URL url = createRequestUrl(abfsUriQueryBuilder.toString());
-    final AbfsRestOperation op = getAbfsRestOperation(
-            AbfsRestOperationType.GetFileSystemProperties,
-            HTTP_METHOD_HEAD,
-            url,
-            requestHeaders);
-    op.execute(tracingContext);
-    return op;
-  }
-
-  public AbfsRestOperation deleteFilesystem(TracingContext tracingContext) throws AzureBlobFileSystemException {
-    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-
-    final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
-    abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE, FILESYSTEM);
-
-    final URL url = createRequestUrl(abfsUriQueryBuilder.toString());
-    final AbfsRestOperation op = getAbfsRestOperation(
-            AbfsRestOperationType.DeleteFileSystem,
-            HTTP_METHOD_DELETE,
-            url,
-            requestHeaders);
-    op.execute(tracingContext);
-    return op;
-  }
+  public abstract AbfsRestOperation deleteFilesystem(TracingContext tracingContext) throws AzureBlobFileSystemException;
 
   /**
    * Method for calling createPath API to the backend. Method can be called from:
@@ -518,7 +435,7 @@ public class AbfsClient implements Closeable {
    * @throws AzureBlobFileSystemException throws back the exception it receives from the
    * {@link AbfsRestOperation#execute(TracingContext)} method call.
    */
-  public AbfsRestOperation createPath(final String path,
+  public abstract AbfsRestOperation createPath(final String path,
       final boolean isFile,
       final boolean overwrite,
       final Permissions permissions,
@@ -526,142 +443,18 @@ public class AbfsClient implements Closeable {
       final String eTag,
       final ContextEncryptionAdapter contextEncryptionAdapter,
       final TracingContext tracingContext)
-      throws AzureBlobFileSystemException {
-    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-    if (isFile) {
-      addEncryptionKeyRequestHeaders(path, requestHeaders, true,
-          contextEncryptionAdapter, tracingContext);
-    }
-    if (!overwrite) {
-      requestHeaders.add(new AbfsHttpHeader(IF_NONE_MATCH, AbfsHttpConstants.STAR));
-    }
+      throws AzureBlobFileSystemException;
 
-    if (permissions.hasPermission()) {
-      requestHeaders.add(
-          new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_PERMISSIONS,
-              permissions.getPermission()));
-    }
+  public abstract AbfsRestOperation acquireLease(final String path, int duration, TracingContext tracingContext) throws AzureBlobFileSystemException;
 
-    if (permissions.hasUmask()) {
-      requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_UMASK,
-          permissions.getUmask()));
-    }
+  public abstract AbfsRestOperation renewLease(final String path, final String leaseId,
+      TracingContext tracingContext) throws AzureBlobFileSystemException;
 
-    if (eTag != null && !eTag.isEmpty()) {
-      requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.IF_MATCH, eTag));
-    }
+  public abstract AbfsRestOperation releaseLease(final String path,
+      final String leaseId, TracingContext tracingContext) throws AzureBlobFileSystemException;
 
-    final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
-    abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESOURCE, isFile ? FILE : DIRECTORY);
-    if (isAppendBlob) {
-      abfsUriQueryBuilder.addQuery(QUERY_PARAM_BLOBTYPE, APPEND_BLOB_TYPE);
-    }
-
-    String operation = isFile
-        ? SASTokenProvider.CREATE_FILE_OPERATION
-        : SASTokenProvider.CREATE_DIRECTORY_OPERATION;
-    appendSASTokenToQuery(path, operation, abfsUriQueryBuilder);
-
-    final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
-    final AbfsRestOperation op = getAbfsRestOperation(
-            AbfsRestOperationType.CreatePath,
-            HTTP_METHOD_PUT,
-            url,
-            requestHeaders);
-    try {
-      op.execute(tracingContext);
-    } catch (AzureBlobFileSystemException ex) {
-      // If we have no HTTP response, throw the original exception.
-      if (!op.hasResult()) {
-        throw ex;
-      }
-      if (!isFile && op.getResult().getStatusCode() == HttpURLConnection.HTTP_CONFLICT) {
-        String existingResource =
-            op.getResult().getResponseHeader(X_MS_EXISTING_RESOURCE_TYPE);
-        if (existingResource != null && existingResource.equals(DIRECTORY)) {
-          return op; //don't throw ex on mkdirs for existing directory
-        }
-      }
-      throw ex;
-    }
-    return op;
-  }
-
-  public AbfsRestOperation acquireLease(final String path, int duration, TracingContext tracingContext) throws AzureBlobFileSystemException {
-    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-
-    requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_ACTION, ACQUIRE_LEASE_ACTION));
-    requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_DURATION, Integer.toString(duration)));
-    requestHeaders.add(new AbfsHttpHeader(X_MS_PROPOSED_LEASE_ID, UUID.randomUUID().toString()));
-
-    final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
-
-    final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
-    final AbfsRestOperation op = getAbfsRestOperation(
-        AbfsRestOperationType.LeasePath,
-        HTTP_METHOD_POST,
-        url,
-        requestHeaders);
-    op.execute(tracingContext);
-    return op;
-  }
-
-  public AbfsRestOperation renewLease(final String path, final String leaseId,
-      TracingContext tracingContext) throws AzureBlobFileSystemException {
-    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-
-    requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_ACTION, RENEW_LEASE_ACTION));
-    requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_ID, leaseId));
-
-    final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
-
-    final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
-    final AbfsRestOperation op = getAbfsRestOperation(
-        AbfsRestOperationType.LeasePath,
-        HTTP_METHOD_POST,
-        url,
-        requestHeaders);
-    op.execute(tracingContext);
-    return op;
-  }
-
-  public AbfsRestOperation releaseLease(final String path,
-      final String leaseId, TracingContext tracingContext) throws AzureBlobFileSystemException {
-    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-
-    requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_ACTION, RELEASE_LEASE_ACTION));
-    requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_ID, leaseId));
-
-    final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
-
-    final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
-    final AbfsRestOperation op = getAbfsRestOperation(
-        AbfsRestOperationType.LeasePath,
-        HTTP_METHOD_POST,
-        url,
-        requestHeaders);
-    op.execute(tracingContext);
-    return op;
-  }
-
-  public AbfsRestOperation breakLease(final String path,
-      TracingContext tracingContext) throws AzureBlobFileSystemException {
-    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-
-    requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_ACTION, BREAK_LEASE_ACTION));
-    requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_BREAK_PERIOD, DEFAULT_LEASE_BREAK_PERIOD));
-
-    final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
-
-    final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
-    final AbfsRestOperation op = getAbfsRestOperation(
-        AbfsRestOperationType.LeasePath,
-        HTTP_METHOD_POST,
-        url,
-        requestHeaders);
-    op.execute(tracingContext);
-    return op;
-  }
+  public abstract AbfsRestOperation breakLease(final String path,
+      TracingContext tracingContext) throws AzureBlobFileSystemException;
 
   /**
    * Rename a file or directory.
@@ -685,7 +478,7 @@ public class AbfsClient implements Closeable {
    * AbfsRest operation, rename recovery and incomplete metadata state failure.
    * @throws AzureBlobFileSystemException failure, excluding any recovery from overload failures.
    */
-  public AbfsClientRenameResult renamePath(
+  public abstract AbfsClientRenameResult renamePath(
           final String source,
           final String destination,
           final String continuation,
@@ -693,121 +486,12 @@ public class AbfsClient implements Closeable {
           String sourceEtag,
           boolean isMetadataIncompleteState,
           boolean isNamespaceEnabled)
-      throws IOException {
-    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
+      throws IOException;
 
-    final boolean hasEtag = !isEmpty(sourceEtag);
-
-    boolean shouldAttemptRecovery = renameResilience && isNamespaceEnabled;
-    if (!hasEtag && shouldAttemptRecovery) {
-      // in case eTag is already not supplied to the API
-      // and rename resilience is expected and it is an HNS enabled account
-      // fetch the source etag to be used later in recovery
-      try {
-        final AbfsRestOperation srcStatusOp = getPathStatus(source,
-                false, tracingContext, null);
-        if (srcStatusOp.hasResult()) {
-          final AbfsHttpOperation result = srcStatusOp.getResult();
-          sourceEtag = extractEtagHeader(result);
-          // and update the directory status.
-          boolean isDir = checkIsDir(result);
-          shouldAttemptRecovery = !isDir;
-          LOG.debug("Retrieved etag of source for rename recovery: {}; isDir={}", sourceEtag, isDir);
-        }
-      } catch (AbfsRestOperationException e) {
-        throw new AbfsRestOperationException(e.getStatusCode(), SOURCE_PATH_NOT_FOUND.getErrorCode(),
-                e.getMessage(), e);
-      }
-
-     }
-
-    String encodedRenameSource = urlEncode(FORWARD_SLASH + this.getFileSystem() + source);
-    if (authType == AuthType.SAS) {
-      final AbfsUriQueryBuilder srcQueryBuilder = new AbfsUriQueryBuilder();
-      appendSASTokenToQuery(source, SASTokenProvider.RENAME_SOURCE_OPERATION, srcQueryBuilder);
-      encodedRenameSource += srcQueryBuilder.toString();
-    }
-
-    LOG.trace("Rename source queryparam added {}", encodedRenameSource);
-    requestHeaders.add(new AbfsHttpHeader(X_MS_RENAME_SOURCE, encodedRenameSource));
-    requestHeaders.add(new AbfsHttpHeader(IF_NONE_MATCH, STAR));
-
-    final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
-    abfsUriQueryBuilder.addQuery(QUERY_PARAM_CONTINUATION, continuation);
-    appendSASTokenToQuery(destination, SASTokenProvider.RENAME_DESTINATION_OPERATION, abfsUriQueryBuilder);
-
-    final URL url = createRequestUrl(destination, abfsUriQueryBuilder.toString());
-    final AbfsRestOperation op = createRenameRestOperation(url, requestHeaders);
-    try {
-      incrementAbfsRenamePath();
-      op.execute(tracingContext);
-      // AbfsClientResult contains the AbfsOperation, If recovery happened or
-      // not, and the incompleteMetaDataState is true or false.
-      // If we successfully rename a path and isMetadataIncompleteState was
-      // true, then rename was recovered, else it didn't, this is why
-      // isMetadataIncompleteState is used for renameRecovery(as the 2nd param).
-      return new AbfsClientRenameResult(op, isMetadataIncompleteState, isMetadataIncompleteState);
-    } catch (AzureBlobFileSystemException e) {
-      // If we have no HTTP response, throw the original exception.
-      if (!op.hasResult()) {
-        throw e;
-      }
-
-      // ref: HADOOP-18242. Rename failure occurring due to a rare case of
-      // tracking metadata being in incomplete state.
-      if (op.getResult().getStorageErrorCode()
-              .equals(RENAME_DESTINATION_PARENT_PATH_NOT_FOUND.getErrorCode())
-              && !isMetadataIncompleteState) {
-        //Logging
-        ABFS_METADATA_INCOMPLETE_RENAME_FAILURE
-                .info("Rename Failure attempting to resolve tracking metadata state and retrying.");
-        // rename recovery should be attempted in this case also
-        shouldAttemptRecovery = true;
-        isMetadataIncompleteState = true;
-        String sourceEtagAfterFailure = sourceEtag;
-        if (isEmpty(sourceEtagAfterFailure)) {
-          // Doing a HEAD call resolves the incomplete metadata state and
-          // then we can retry the rename operation.
-          AbfsRestOperation sourceStatusOp = getPathStatus(source, false,
-              tracingContext, null);
-          isMetadataIncompleteState = true;
-          // Extract the sourceEtag, using the status Op, and set it
-          // for future rename recovery.
-          AbfsHttpOperation sourceStatusResult = sourceStatusOp.getResult();
-          sourceEtagAfterFailure = extractEtagHeader(sourceStatusResult);
-        }
-        renamePath(source, destination, continuation, tracingContext,
-                sourceEtagAfterFailure, isMetadataIncompleteState, isNamespaceEnabled);
-      }
-      // if we get out of the condition without a successful rename, then
-      // it isn't metadata incomplete state issue.
-      isMetadataIncompleteState = false;
-
-      // setting default rename recovery success to false
-      boolean etagCheckSucceeded = false;
-      if (shouldAttemptRecovery) {
-        etagCheckSucceeded = renameIdempotencyCheckOp(
-                source,
-                sourceEtag, op, destination, tracingContext);
-      }
-      if (!etagCheckSucceeded) {
-        // idempotency did not return different result
-        // throw back the exception
-        throw e;
-      }
-      return new AbfsClientRenameResult(op, true, isMetadataIncompleteState);
-    }
-  }
-
-  private boolean checkIsDir(AbfsHttpOperation result) {
-    String resourceType = result.getResponseHeader(
-            HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
-    return resourceType != null
-            && resourceType.equalsIgnoreCase(AbfsHttpConstants.DIRECTORY);
-  }
+  protected abstract boolean checkIsDir(AbfsHttpOperation result);
 
   @VisibleForTesting
-  AbfsRestOperation createRenameRestOperation(URL url, List<AbfsHttpHeader> requestHeaders) {
+  protected AbfsRestOperation createRenameRestOperation(URL url, List<AbfsHttpHeader> requestHeaders) {
     AbfsRestOperation op = getAbfsRestOperation(
             AbfsRestOperationType.RenamePath,
             HTTP_METHOD_PUT,
@@ -816,7 +500,7 @@ public class AbfsClient implements Closeable {
     return op;
   }
 
-  private void incrementAbfsRenamePath() {
+  protected void incrementAbfsRenamePath() {
     abfsCounters.incrementCounter(RENAME_PATH_ATTEMPTS, 1);
   }
 
@@ -886,137 +570,24 @@ public class AbfsClient implements Closeable {
     return sourceEtag.equals(extractEtagHeader(result));
   }
 
-  public AbfsRestOperation append(final String path, final byte[] buffer,
+  public abstract AbfsRestOperation append(final String path, final byte[] buffer,
       AppendRequestParameters reqParams, final String cachedSasToken,
       ContextEncryptionAdapter contextEncryptionAdapter, TracingContext tracingContext)
-      throws AzureBlobFileSystemException {
-    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-    addEncryptionKeyRequestHeaders(path, requestHeaders, false,
-        contextEncryptionAdapter, tracingContext);
-    if (reqParams.isExpectHeaderEnabled()) {
-      requestHeaders.add(new AbfsHttpHeader(EXPECT, HUNDRED_CONTINUE));
-    }
-    // JDK7 does not support PATCH, so to workaround the issue we will use
-    // PUT and specify the real method in the X-Http-Method-Override header.
-    requestHeaders.add(new AbfsHttpHeader(X_HTTP_METHOD_OVERRIDE,
-        HTTP_METHOD_PATCH));
-    if (reqParams.getLeaseId() != null) {
-      requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_ID, reqParams.getLeaseId()));
-    }
-
-    final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
-    abfsUriQueryBuilder.addQuery(QUERY_PARAM_ACTION, APPEND_ACTION);
-    abfsUriQueryBuilder.addQuery(QUERY_PARAM_POSITION, Long.toString(reqParams.getPosition()));
-
-    if ((reqParams.getMode() == AppendRequestParameters.Mode.FLUSH_MODE) || (
-        reqParams.getMode() == AppendRequestParameters.Mode.FLUSH_CLOSE_MODE)) {
-      abfsUriQueryBuilder.addQuery(QUERY_PARAM_FLUSH, TRUE);
-      if (reqParams.getMode() == AppendRequestParameters.Mode.FLUSH_CLOSE_MODE) {
-        abfsUriQueryBuilder.addQuery(QUERY_PARAM_CLOSE, TRUE);
-      }
-    }
-
-    // Check if the retry is with "Expect: 100-continue" header being present in the previous request.
-    if (reqParams.isRetryDueToExpect()) {
-      String userAgentRetry = userAgent;
-      // Remove the specific marker related to "Expect: 100-continue" from the User-Agent string.
-      userAgentRetry = userAgentRetry.replace(HUNDRED_CONTINUE_USER_AGENT, EMPTY_STRING);
-      requestHeaders.removeIf(header -> header.getName().equalsIgnoreCase(USER_AGENT));
-      requestHeaders.add(new AbfsHttpHeader(USER_AGENT, userAgentRetry));
-    }
-
-    // Add MD5 Hash of request content as request header if feature is enabled
-    if (isChecksumValidationEnabled()) {
-      addCheckSumHeaderForWrite(requestHeaders, reqParams, buffer);
-    }
-
-    // AbfsInputStream/AbfsOutputStream reuse SAS tokens for better performance
-    String sasTokenForReuse = appendSASTokenToQuery(path, SASTokenProvider.WRITE_OPERATION,
-        abfsUriQueryBuilder, cachedSasToken);
-
-    final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
-    final AbfsRestOperation op = getAbfsRestOperation(
-            AbfsRestOperationType.Append,
-            HTTP_METHOD_PUT,
-            url,
-            requestHeaders,
-            buffer,
-            reqParams.getoffset(),
-            reqParams.getLength(),
-            sasTokenForReuse);
-    try {
-      op.execute(tracingContext);
-    } catch (AbfsRestOperationException e) {
-      /*
-         If the http response code indicates a user error we retry
-         the same append request with expect header being disabled.
-         When "100-continue" header is enabled but a non Http 100 response comes,
-         the response message might not get set correctly by the server.
-         So, this handling is to avoid breaking of backward compatibility
-         if someone has taken dependency on the exception message,
-         which is created using the error string present in the response header.
-      */
-      int responseStatusCode = e.getStatusCode();
-      if (checkUserError(responseStatusCode) && reqParams.isExpectHeaderEnabled()) {
-        LOG.debug("User error, retrying without 100 continue enabled for the given path {}", path);
-        reqParams.setExpectHeaderEnabled(false);
-        reqParams.setRetryDueToExpect(true);
-        return this.append(path, buffer, reqParams, cachedSasToken,
-            contextEncryptionAdapter, tracingContext);
-      }
-      // If we have no HTTP response, throw the original exception.
-      if (!op.hasResult()) {
-        throw e;
-      }
-
-      if (isMd5ChecksumError(e)) {
-        throw new AbfsInvalidChecksumException(e);
-      }
-
-      if (reqParams.isAppendBlob()
-          && appendSuccessCheckOp(op, path,
-          (reqParams.getPosition() + reqParams.getLength()), tracingContext)) {
-        final AbfsRestOperation successOp = getAbfsRestOperation(
-                AbfsRestOperationType.Append,
-                HTTP_METHOD_PUT,
-                url,
-                requestHeaders,
-                buffer,
-                reqParams.getoffset(),
-                reqParams.getLength(),
-                sasTokenForReuse);
-        successOp.hardSetResult(HttpURLConnection.HTTP_OK);
-        return successOp;
-      }
-      throw e;
-    }
-
-    catch (AzureBlobFileSystemException e) {
-      // Any server side issue will be returned as AbfsRestOperationException and will be handled above.
-      LOG.debug("Append request failed with non server issues for path: {}, offset: {}, position: {}",
-          path, reqParams.getoffset(), reqParams.getPosition());
-      throw e;
-    }
-
-    return op;
-  }
+      throws AzureBlobFileSystemException;
 
   /**
    * Returns true if the status code lies in the range of user error.
    * @param responseStatusCode http response status code.
    * @return True or False.
    */
-  private boolean checkUserError(int responseStatusCode) {
-    return (responseStatusCode >= HttpURLConnection.HTTP_BAD_REQUEST
-        && responseStatusCode < HttpURLConnection.HTTP_INTERNAL_ERROR);
-  }
+  public abstract boolean checkUserError(int responseStatusCode);
 
   /**
    * To check if the failure exception returned by server is due to MD5 Mismatch
    * @param e Exception returned by AbfsRestOperation
    * @return boolean whether exception is due to MD5Mismatch or not
    */
-  private boolean isMd5ChecksumError(final AbfsRestOperationException e) {
+  protected boolean isMd5ChecksumError(final AbfsRestOperationException e) {
     AzureServiceErrorCode storageErrorCode = e.getErrorCode();
     return storageErrorCode == AzureServiceErrorCode.MD5_MISMATCH;
   }
@@ -1044,100 +615,30 @@ public class AbfsClient implements Closeable {
     return false;
   }
 
-  public AbfsRestOperation flush(final String path, final long position,
+  public abstract AbfsRestOperation flush(final String path, final long position,
       boolean retainUncommittedData, boolean isClose,
       final String cachedSasToken, final String leaseId,
       ContextEncryptionAdapter contextEncryptionAdapter, TracingContext tracingContext)
-      throws AzureBlobFileSystemException {
-    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-    addEncryptionKeyRequestHeaders(path, requestHeaders, false,
-        contextEncryptionAdapter, tracingContext);
-    // JDK7 does not support PATCH, so to workaround the issue we will use
-    // PUT and specify the real method in the X-Http-Method-Override header.
-    requestHeaders.add(new AbfsHttpHeader(X_HTTP_METHOD_OVERRIDE,
-            HTTP_METHOD_PATCH));
-    if (leaseId != null) {
-      requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_ID, leaseId));
-    }
+      throws AzureBlobFileSystemException;
 
-    final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
-    abfsUriQueryBuilder.addQuery(QUERY_PARAM_ACTION, FLUSH_ACTION);
-    abfsUriQueryBuilder.addQuery(QUERY_PARAM_POSITION, Long.toString(position));
-    abfsUriQueryBuilder.addQuery(QUERY_PARAM_RETAIN_UNCOMMITTED_DATA, String.valueOf(retainUncommittedData));
-    abfsUriQueryBuilder.addQuery(QUERY_PARAM_CLOSE, String.valueOf(isClose));
-    // AbfsInputStream/AbfsOutputStream reuse SAS tokens for better performance
-    String sasTokenForReuse = appendSASTokenToQuery(path, SASTokenProvider.WRITE_OPERATION,
-        abfsUriQueryBuilder, cachedSasToken);
+  public abstract AbfsRestOperation flush(byte[] buffer,
+      final String path,
+      boolean isClose,
+      final String cachedSasToken,
+      final String leaseId,
+      final String eTag,
+      final TracingContext tracingContext) throws AzureBlobFileSystemException;
 
-    final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
-    final AbfsRestOperation op = getAbfsRestOperation(
-            AbfsRestOperationType.Flush,
-            HTTP_METHOD_PUT,
-            url,
-            requestHeaders, sasTokenForReuse);
-    op.execute(tracingContext);
-    return op;
-  }
-
-  public AbfsRestOperation setPathProperties(final String path, final String properties,
+  public abstract AbfsRestOperation setPathProperties(final String path, final String properties,
                                              final TracingContext tracingContext, final ContextEncryptionAdapter contextEncryptionAdapter)
-      throws AzureBlobFileSystemException {
-    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-    addEncryptionKeyRequestHeaders(path, requestHeaders, false,
-        contextEncryptionAdapter, tracingContext);
-    // JDK7 does not support PATCH, so to workaround the issue we will use
-    // PUT and specify the real method in the X-Http-Method-Override header.
-    requestHeaders.add(new AbfsHttpHeader(X_HTTP_METHOD_OVERRIDE,
-            HTTP_METHOD_PATCH));
+      throws AzureBlobFileSystemException;
 
-    requestHeaders.add(new AbfsHttpHeader(X_MS_PROPERTIES, properties));
-
-    final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
-    abfsUriQueryBuilder.addQuery(QUERY_PARAM_ACTION, SET_PROPERTIES_ACTION);
-    appendSASTokenToQuery(path, SASTokenProvider.SET_PROPERTIES_OPERATION, abfsUriQueryBuilder);
-
-    final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
-    final AbfsRestOperation op = getAbfsRestOperation(
-            AbfsRestOperationType.SetPathProperties,
-            HTTP_METHOD_PUT,
-            url,
-            requestHeaders);
-    op.execute(tracingContext);
-    return op;
-  }
-
-  public AbfsRestOperation getPathStatus(final String path,
+  public abstract AbfsRestOperation getPathStatus(final String path,
       final boolean includeProperties, final TracingContext tracingContext,
       final ContextEncryptionAdapter contextEncryptionAdapter)
-      throws AzureBlobFileSystemException {
-    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-    final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
-    String operation = SASTokenProvider.GET_PROPERTIES_OPERATION;
-    if (!includeProperties) {
-      // The default action (operation) is implicitly to get properties and this action requires read permission
-      // because it reads user defined properties.  If the action is getStatus or getAclStatus, then
-      // only traversal (execute) permission is required.
-      abfsUriQueryBuilder.addQuery(HttpQueryParams.QUERY_PARAM_ACTION, AbfsHttpConstants.GET_STATUS);
-      operation = SASTokenProvider.GET_STATUS_OPERATION;
-    } else {
-      addEncryptionKeyRequestHeaders(path, requestHeaders, false,
-          contextEncryptionAdapter,
-          tracingContext);
-    }
-    abfsUriQueryBuilder.addQuery(HttpQueryParams.QUERY_PARAM_UPN, String.valueOf(abfsConfiguration.isUpnUsed()));
-    appendSASTokenToQuery(path, operation, abfsUriQueryBuilder);
+      throws AzureBlobFileSystemException;
 
-    final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
-    final AbfsRestOperation op = getAbfsRestOperation(
-            AbfsRestOperationType.GetPathStatus,
-            HTTP_METHOD_HEAD,
-            url,
-            requestHeaders);
-    op.execute(tracingContext);
-    return op;
-  }
-
-  public AbfsRestOperation read(final String path,
+  public abstract AbfsRestOperation read(final String path,
       final long position,
       final byte[] buffer,
       final int bufferOffset,
@@ -1145,99 +646,13 @@ public class AbfsClient implements Closeable {
       final String eTag,
       String cachedSasToken,
       ContextEncryptionAdapter contextEncryptionAdapter,
-      TracingContext tracingContext) throws AzureBlobFileSystemException {
-    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-    addEncryptionKeyRequestHeaders(path, requestHeaders, false,
-        contextEncryptionAdapter, tracingContext);
-    AbfsHttpHeader rangeHeader = new AbfsHttpHeader(RANGE,
-        String.format("bytes=%d-%d", position, position + bufferLength - 1));
-    requestHeaders.add(rangeHeader);
-    requestHeaders.add(new AbfsHttpHeader(IF_MATCH, eTag));
+      TracingContext tracingContext) throws AzureBlobFileSystemException;
 
-    // Add request header to fetch MD5 Hash of data returned by server.
-    if (isChecksumValidationEnabled(requestHeaders, rangeHeader, bufferLength)) {
-      requestHeaders.add(new AbfsHttpHeader(X_MS_RANGE_GET_CONTENT_MD5, TRUE));
-    }
-
-    final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
-    // AbfsInputStream/AbfsOutputStream reuse SAS tokens for better performance
-    String sasTokenForReuse = appendSASTokenToQuery(path, SASTokenProvider.READ_OPERATION,
-        abfsUriQueryBuilder, cachedSasToken);
-
-    final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
-    final AbfsRestOperation op = getAbfsRestOperation(
-            AbfsRestOperationType.ReadFile,
-            HTTP_METHOD_GET,
-            url,
-            requestHeaders,
-            buffer,
-            bufferOffset,
-            bufferLength, sasTokenForReuse);
-    op.execute(tracingContext);
-
-    // Verify the MD5 hash returned by server holds valid on the data received.
-    if (isChecksumValidationEnabled(requestHeaders, rangeHeader, bufferLength)) {
-      verifyCheckSumForRead(buffer, op.getResult(), bufferOffset);
-    }
-
-    return op;
-  }
-
-  public AbfsRestOperation deletePath(final String path, final boolean recursive,
+  public abstract AbfsRestOperation deletePath(final String path, final boolean recursive,
                                       final String continuation,
                                       TracingContext tracingContext,
                                       final boolean isNamespaceEnabled)
-          throws AzureBlobFileSystemException {
-    /*
-     * If Pagination is enabled and current API version is old,
-     * use the minimum required version for pagination.
-     * If Pagination is enabled and current API version is later than minimum required
-     * version for pagination, use current version only as azure service is backward compatible.
-     * If pagination is disabled, use the current API version only.
-     */
-    final List<AbfsHttpHeader> requestHeaders = (isPaginatedDelete(recursive,
-        isNamespaceEnabled) && xMsVersion.compareTo(ApiVersion.AUG_03_2023) < 0)
-        ? createDefaultHeaders(ApiVersion.AUG_03_2023)
-        : createDefaultHeaders();
-    final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
-
-    if (isPaginatedDelete(recursive, isNamespaceEnabled)) {
-      // Add paginated query parameter
-      abfsUriQueryBuilder.addQuery(QUERY_PARAM_PAGINATED, TRUE);
-    }
-
-    abfsUriQueryBuilder.addQuery(QUERY_PARAM_RECURSIVE, String.valueOf(recursive));
-    abfsUriQueryBuilder.addQuery(QUERY_PARAM_CONTINUATION, continuation);
-    String operation = recursive ? SASTokenProvider.DELETE_RECURSIVE_OPERATION : SASTokenProvider.DELETE_OPERATION;
-    appendSASTokenToQuery(path, operation, abfsUriQueryBuilder);
-
-    final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
-    final AbfsRestOperation op = new AbfsRestOperation(
-            AbfsRestOperationType.DeletePath,
-            this,
-            HTTP_METHOD_DELETE,
-            url,
-            requestHeaders);
-    try {
-    op.execute(tracingContext);
-    } catch (AzureBlobFileSystemException e) {
-      // If we have no HTTP response, throw the original exception.
-      if (!op.hasResult()) {
-        throw e;
-      }
-      final AbfsRestOperation idempotencyOp = deleteIdempotencyCheckOp(op);
-      if (idempotencyOp.getResult().getStatusCode()
-          == op.getResult().getStatusCode()) {
-        // idempotency did not return different result
-        // throw back the exception
-        throw e;
-      } else {
-        return idempotencyOp;
-      }
-    }
-
-    return op;
-  }
+          throws AzureBlobFileSystemException;
 
   /**
    * Check if the delete request failure is post a retry and if delete failure
@@ -1274,117 +689,30 @@ public class AbfsClient implements Closeable {
     return op;
   }
 
-  public AbfsRestOperation setOwner(final String path, final String owner, final String group,
+  public abstract AbfsRestOperation setOwner(final String path, final String owner, final String group,
                                     TracingContext tracingContext)
-      throws AzureBlobFileSystemException {
-    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-    // JDK7 does not support PATCH, so to workaround the issue we will use
-    // PUT and specify the real method in the X-Http-Method-Override header.
-    requestHeaders.add(new AbfsHttpHeader(X_HTTP_METHOD_OVERRIDE,
-            HTTP_METHOD_PATCH));
+      throws AzureBlobFileSystemException;
 
-    if (owner != null && !owner.isEmpty()) {
-      requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_OWNER, owner));
-    }
-    if (group != null && !group.isEmpty()) {
-      requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_GROUP, group));
-    }
-
-    final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
-    abfsUriQueryBuilder.addQuery(HttpQueryParams.QUERY_PARAM_ACTION, AbfsHttpConstants.SET_ACCESS_CONTROL);
-    appendSASTokenToQuery(path, SASTokenProvider.SET_OWNER_OPERATION, abfsUriQueryBuilder);
-
-    final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
-    final AbfsRestOperation op = getAbfsRestOperation(
-        AbfsRestOperationType.SetOwner,
-        AbfsHttpConstants.HTTP_METHOD_PUT,
-        url,
-        requestHeaders);
-    op.execute(tracingContext);
-    return op;
-  }
-
-  public AbfsRestOperation setPermission(final String path, final String permission,
+  public abstract AbfsRestOperation setPermission(final String path, final String permission,
                                          TracingContext tracingContext)
-      throws AzureBlobFileSystemException {
-    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-    // JDK7 does not support PATCH, so to workaround the issue we will use
-    // PUT and specify the real method in the X-Http-Method-Override header.
-    requestHeaders.add(new AbfsHttpHeader(X_HTTP_METHOD_OVERRIDE,
-            HTTP_METHOD_PATCH));
-
-    requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_PERMISSIONS, permission));
-
-    final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
-    abfsUriQueryBuilder.addQuery(HttpQueryParams.QUERY_PARAM_ACTION, AbfsHttpConstants.SET_ACCESS_CONTROL);
-    appendSASTokenToQuery(path, SASTokenProvider.SET_PERMISSION_OPERATION, abfsUriQueryBuilder);
-
-    final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
-    final AbfsRestOperation op = getAbfsRestOperation(
-        AbfsRestOperationType.SetPermissions,
-        AbfsHttpConstants.HTTP_METHOD_PUT,
-        url,
-        requestHeaders);
-    op.execute(tracingContext);
-    return op;
-  }
+      throws AzureBlobFileSystemException;
 
   public AbfsRestOperation setAcl(final String path, final String aclSpecString,
                                   TracingContext tracingContext) throws AzureBlobFileSystemException {
     return setAcl(path, aclSpecString, AbfsHttpConstants.EMPTY_STRING, tracingContext);
   }
 
-  public AbfsRestOperation setAcl(final String path, final String aclSpecString, final String eTag,
+  public abstract AbfsRestOperation setAcl(final String path, final String aclSpecString, final String eTag,
                                   TracingContext tracingContext)
-      throws AzureBlobFileSystemException {
-    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-    // JDK7 does not support PATCH, so to workaround the issue we will use
-    // PUT and specify the real method in the X-Http-Method-Override header.
-    requestHeaders.add(new AbfsHttpHeader(X_HTTP_METHOD_OVERRIDE,
-            HTTP_METHOD_PATCH));
-
-    requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.X_MS_ACL, aclSpecString));
-
-    if (eTag != null && !eTag.isEmpty()) {
-      requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.IF_MATCH, eTag));
-    }
-
-    final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
-    abfsUriQueryBuilder.addQuery(HttpQueryParams.QUERY_PARAM_ACTION, AbfsHttpConstants.SET_ACCESS_CONTROL);
-    appendSASTokenToQuery(path, SASTokenProvider.SET_ACL_OPERATION, abfsUriQueryBuilder);
-
-    final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
-    final AbfsRestOperation op = getAbfsRestOperation(
-        AbfsRestOperationType.SetAcl,
-        AbfsHttpConstants.HTTP_METHOD_PUT,
-        url,
-        requestHeaders);
-    op.execute(tracingContext);
-    return op;
-  }
+      throws AzureBlobFileSystemException;
 
   public AbfsRestOperation getAclStatus(final String path, TracingContext tracingContext)
           throws AzureBlobFileSystemException {
     return getAclStatus(path, abfsConfiguration.isUpnUsed(), tracingContext);
   }
 
-  public AbfsRestOperation getAclStatus(final String path, final boolean useUPN,
-                                        TracingContext tracingContext) throws AzureBlobFileSystemException {
-    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-    final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
-    abfsUriQueryBuilder.addQuery(HttpQueryParams.QUERY_PARAM_ACTION, AbfsHttpConstants.GET_ACCESS_CONTROL);
-    abfsUriQueryBuilder.addQuery(HttpQueryParams.QUERY_PARAM_UPN, String.valueOf(useUPN));
-    appendSASTokenToQuery(path, SASTokenProvider.GET_ACL_OPERATION, abfsUriQueryBuilder);
-
-    final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
-    final AbfsRestOperation op = getAbfsRestOperation(
-        AbfsRestOperationType.GetAcl,
-        AbfsHttpConstants.HTTP_METHOD_HEAD,
-        url,
-        requestHeaders);
-    op.execute(tracingContext);
-    return op;
-  }
+  public abstract AbfsRestOperation getAclStatus(final String path, final boolean useUPN,
+                                        TracingContext tracingContext) throws AzureBlobFileSystemException;
 
   /**
    * Talks to the server to check whether the permission specified in
@@ -1396,21 +724,8 @@ public class AbfsClient implements Closeable {
    * @return      The {@link AbfsRestOperation} object for the operation
    * @throws AzureBlobFileSystemException in case of bad requests
    */
-  public AbfsRestOperation checkAccess(String path, String rwx, TracingContext tracingContext)
-      throws AzureBlobFileSystemException {
-    AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
-    abfsUriQueryBuilder.addQuery(QUERY_PARAM_ACTION, CHECK_ACCESS);
-    abfsUriQueryBuilder.addQuery(QUERY_FS_ACTION, rwx);
-    appendSASTokenToQuery(path, SASTokenProvider.CHECK_ACCESS_OPERATION, abfsUriQueryBuilder);
-    URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
-    AbfsRestOperation op = getAbfsRestOperation(
-        AbfsRestOperationType.CheckAccess,
-        AbfsHttpConstants.HTTP_METHOD_HEAD,
-        url,
-        createDefaultHeaders());
-    op.execute(tracingContext);
-    return op;
-  }
+  public abstract AbfsRestOperation checkAccess(String path, String rwx, TracingContext tracingContext)
+      throws AzureBlobFileSystemException;
 
   /**
    * Get the directory query parameter used by the List Paths REST API and used
@@ -1439,7 +754,7 @@ public class AbfsClient implements Closeable {
    * @return sasToken - returned for optional re-use.
    * @throws SASTokenProviderException
    */
-  private String appendSASTokenToQuery(String path, String operation, AbfsUriQueryBuilder queryBuilder) throws SASTokenProviderException {
+  protected String appendSASTokenToQuery(String path, String operation, AbfsUriQueryBuilder queryBuilder) throws SASTokenProviderException {
     return appendSASTokenToQuery(path, operation, queryBuilder, null);
   }
 
@@ -1452,7 +767,7 @@ public class AbfsClient implements Closeable {
    * @return sasToken - returned for optional re-use.
    * @throws SASTokenProviderException
    */
-  private String appendSASTokenToQuery(String path,
+  protected String appendSASTokenToQuery(String path,
                                        String operation,
                                        AbfsUriQueryBuilder queryBuilder,
                                        String cachedSasToken)
@@ -1488,7 +803,7 @@ public class AbfsClient implements Closeable {
   }
 
   @VisibleForTesting
-  private URL createRequestUrl(final String query) throws AzureBlobFileSystemException {
+  protected URL createRequestUrl(final String query) throws AzureBlobFileSystemException {
     return createRequestUrl(EMPTY_STRING, query);
   }
 
@@ -1560,7 +875,7 @@ public class AbfsClient implements Closeable {
     return abfsConfiguration.isPaginatedDeleteEnabled();
   }
 
-  private Boolean isPaginatedDelete(boolean isRecursiveDelete, boolean isNamespaceEnabled) {
+  protected Boolean isPaginatedDelete(boolean isRecursiveDelete, boolean isNamespaceEnabled) {
     return getIsPaginatedDeleteEnabled() && isNamespaceEnabled && isRecursiveDelete;
   }
 
@@ -1643,7 +958,7 @@ public class AbfsClient implements Closeable {
    * @param buffer for getting input data for MD5 computation
    * @throws AbfsRestOperationException if Md5 computation fails
    */
-  private void addCheckSumHeaderForWrite(List<AbfsHttpHeader> requestHeaders,
+  protected void addCheckSumHeaderForWrite(List<AbfsHttpHeader> requestHeaders,
       final AppendRequestParameters reqParams, final byte[] buffer)
       throws AbfsRestOperationException {
     String md5Hash = computeMD5Hash(buffer, reqParams.getoffset(),
@@ -1658,7 +973,7 @@ public class AbfsClient implements Closeable {
    * @param bufferOffset Position where data returned by server is saved in buffer.
    * @throws AbfsRestOperationException if Md5Mismatch.
    */
-  private void verifyCheckSumForRead(final byte[] buffer,
+  protected void verifyCheckSumForRead(final byte[] buffer,
       final AbfsHttpOperation result, final int bufferOffset)
       throws AbfsRestOperationException {
     // Number of bytes returned by server could be less than or equal to what
@@ -1691,7 +1006,7 @@ public class AbfsClient implements Closeable {
    * @param bufferLength must be less than or equal to 4 MB.
    * @return true if all conditions are met.
    */
-  private boolean isChecksumValidationEnabled(List<AbfsHttpHeader> requestHeaders,
+  protected boolean isChecksumValidationEnabled(List<AbfsHttpHeader> requestHeaders,
       final AbfsHttpHeader rangeHeader, final int bufferLength) {
     return getAbfsConfiguration().getIsChecksumValidationEnabled()
         && requestHeaders.contains(rangeHeader) && bufferLength <= 4 * ONE_MB;
@@ -1705,7 +1020,7 @@ public class AbfsClient implements Closeable {
    *     Path - Update Azure Rest API</a>.
    * @return true if checksum validation enabled.
    */
-  private boolean isChecksumValidationEnabled() {
+  protected boolean isChecksumValidationEnabled() {
     return getAbfsConfiguration().getIsChecksumValidationEnabled();
   }
 

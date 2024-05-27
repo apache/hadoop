@@ -35,6 +35,28 @@ public final class ConfigurationKeys {
    * path to determine HNS status.
    */
   public static final String FS_AZURE_ACCOUNT_IS_HNS_ENABLED = "fs.azure.account.hns.enabled";
+
+  /**
+   * Config to specify which {@link  AbfsServiceType} to use with HNS-Disabled Account type.
+   * Recommendation is to always use Blob Endpoint with HNS-Disabled Account type.
+   * This will override service endpoint configured in "fs.defaultFS".
+   * Value {@value} case-insensitive "DFS" or "BLOB".
+   */
+  public static final String FS_AZURE_FNS_ACCOUNT_SERVICE_TYPE = "fs.azure.fns.account.service.type";
+
+  /**
+   * Config to specify which {@link AbfsServiceType} to use only for Ingress Operations.
+   * Other operations will continue to move to the service endpoint configured in "fs.defaultFS".
+   * Value {@value} case-insensitive "DFS" or "BLOB".
+   */
+  public static final String FS_AZURE_INGRESS_SERVICE_TYPE = "fs.azure.ingress.service.type";
+
+  /**
+   * Config to be set only for cases where traffic over dfs endpoint is experiencing compatibility issues.
+   * Value {@value} case-insensitive "True" or "False".
+   */
+  public static final String FS_AZURE_ENABLE_DFSTOBLOB_FALLBACK = "fs.azure.enable.dfstoblob.fallback";
+
   /**
    * Enable or disable expect hundred continue header.
    * Value: {@value}.

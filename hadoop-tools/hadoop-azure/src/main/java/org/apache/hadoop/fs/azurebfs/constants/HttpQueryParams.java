@@ -48,5 +48,15 @@ public final class HttpQueryParams {
   public static final String QUERY_PARAM_SUOID = "suoid";
   public static final String QUERY_PARAM_SIGNATURE = "sig";
 
+  public static final String QUERY_PARAM_RESTYPE = "restype";
+  public static final String QUERY_PARAM_COMP = "comp";
+  public static final String QUERY_PARAM_INCLUDE = "include";
+  public static final String QUERY_PARAM_PREFIX = "prefix";
+  public static final String QUERY_PARAM_MARKER = "marker";
+  public static final String QUERY_PARAM_DELIMITER = "delimiter";
+  public static final String QUERY_PARAM_MAX_RESULTS = "maxresults";
+  public static final String QUERY_PARAM_BLOCKID = "blockid";
+  public static final String QUERY_PARAM_BLOCKLISTTYPE = "blocklisttype";
+
   private HttpQueryParams() {}
 }
