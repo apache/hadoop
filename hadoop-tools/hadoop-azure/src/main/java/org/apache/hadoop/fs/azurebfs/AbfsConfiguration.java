@@ -454,7 +454,7 @@ public class AbfsConfiguration{
 
   /**
    * Returns whether the Blob client initialization is required based on the configurations.
-   * @return
+   * @return true if blob client initialization is required, false otherwise
    */
   public boolean isBlobClientInitRequired() {
     return getFnsAccountServiceType() == AbfsServiceType.BLOB
@@ -502,6 +502,7 @@ public class AbfsConfiguration{
    * Returns the account-specific value if it exists, then looks for an
    * account-agnostic value.
    * @param key Account-agnostic configuration key
+   * @param defaultValue Value returned if not configured
    * @return value if one exists, else the default value
    */
   public String getString(String key, String defaultValue) {
@@ -535,7 +536,7 @@ public class AbfsConfiguration{
    * looks for an account-agnostic value.
    * @param key Account-agnostic configuration key
    * @return value in String form if one exists, else null
-   * @throws IOException
+   * @throws IOException if getPassword fails
    */
   public String getPasswordString(String key) throws IOException {
     char[] passchars = rawConfig.getPassword(accountConf(key));

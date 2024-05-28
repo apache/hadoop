@@ -30,6 +30,7 @@ public interface IdentityHandler {
    * Perform lookup from Service Principal's Object ID to Username.
    * @param originalIdentity AAD object ID.
    * @return User name, if no name found returns empty string.
+   * @throws IOException if lookup fails.
    * */
   String lookupForLocalUserIdentity(String originalIdentity) throws IOException;
 
@@ -37,6 +38,7 @@ public interface IdentityHandler {
    * Perform lookup from Security Group's Object ID to Security Group name.
    * @param originalIdentity AAD object ID.
    * @return Security group name, if no name found returns empty string.
+   * @throws IOException if lookup fails.
    * */
   String lookupForLocalGroupIdentity(String originalIdentity) throws IOException;
 }

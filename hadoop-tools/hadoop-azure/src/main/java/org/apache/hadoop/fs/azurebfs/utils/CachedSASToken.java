@@ -54,7 +54,7 @@ public final class CachedSASToken {
   /**
    * Create instance with specified minimum expiration.  SAS tokens are
    * automatically renewed when their expiration is within this period.
-   * @param minExpirationInSeconds
+   * @param minExpirationInSeconds minimum expiration time for SAS.
    */
   public CachedSASToken(long minExpirationInSeconds) {
     this.minExpirationInSeconds = minExpirationInSeconds;

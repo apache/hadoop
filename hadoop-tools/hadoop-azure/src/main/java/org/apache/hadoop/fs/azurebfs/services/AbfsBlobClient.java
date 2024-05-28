@@ -125,13 +125,13 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
   }
 
   public List<AbfsHttpHeader> createDefaultHeaders() {
-    return this.createDefaultHeaders(this.xMsVersion);
+    return this.createDefaultHeaders(getxMsVersion());
   }
 
   /**
    * Create request headers for Rest Operation using the specified API version.
    * Blob Endpoint API responses are in JSON/XML format.
-   * @param xMsVersion
+   * @param xMsVersion API version to be used.
    * @return default request headers
    */
   @Override
@@ -146,7 +146,7 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
   /**
    * Get Rest Operation for API <a href = https://learn.microsoft.com/en-us/rest/api/storageservices/create-container></a>.
    * Creates a storage container as filesystem root.
-   * @param tracingContext
+   * @param tracingContext for tracing the service call.
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation fails.
    */
@@ -170,7 +170,7 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
    * Get Rest Operation for API <a href = https://learn.microsoft.com/en-us/rest/api/storageservices/set-container-metadata></a>.
    * Sets user-defined properties of the filesystem.
    * @param properties comma separated list of metadata key-value pairs.
-   * @param tracingContext
+   * @param tracingContext for tracing the service call.
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation fails.
    */
@@ -196,7 +196,7 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
   /**
    * Get Rest Operation for API <a href = https://learn.microsoft.com/en-us/rest/api/storageservices/get-container-properties></a>.
    * Gets all the properties of the filesystem.
-   * @param tracingContext
+   * @param tracingContext for tracing the service call.
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation fails.
    * */
@@ -219,7 +219,7 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
   /**
    * Get Rest Operation for API <a href = https://learn.microsoft.com/en-us/rest/api/storageservices/delete-container></a>.
    * Deletes the Container acting as current filesystem.
-   * @param tracingContext
+   * @param tracingContext for tracing the service call.
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation fails.
    */
@@ -243,7 +243,7 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
    * Get Rest Operation for API <a href = https://learn.microsoft.com/en-us/rest/api/storageservices/put-blob></a>.
    * Creates a file or directory(marker file) at specified path.
    * @param path of the directory to be created.
-   * @param tracingContext
+   * @param tracingContext for tracing the service call.
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation fails.
    */
@@ -302,7 +302,7 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
    * @param recursive to return all blobs in the path, including those in subdirectories.
    * @param listMaxResults maximum number of blobs to return.
    * @param continuation marker to specify the continuation token.
-   * @param tracingContext
+   * @param tracingContext for tracing the service call.
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation or response parsing fails.
    */
@@ -318,7 +318,7 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
    * Get Rest Operation for API <a href = https://learn.microsoft.com/en-us/rest/api/storageservices/lease-blob></a>.
    * @param path on which lease has to be acquired.
    * @param duration for which lease has to be acquired.
-   * @param tracingContext
+   * @param tracingContext for tracing the service call.
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation fails.
    */
@@ -345,7 +345,7 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
    * Get Rest Operation for API <a href = https://learn.microsoft.com/en-us/rest/api/storageservices/lease-blob></a>.
    * @param path on which lease has to be renewed.
    * @param leaseId of the lease to be renewed.
-   * @param tracingContext
+   * @param tracingContext for tracing the service call.
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation fails.
    */
@@ -371,7 +371,7 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
    * Get Rest Operation for API <a href = https://learn.microsoft.com/en-us/rest/api/storageservices/lease-blob></a>.
    * @param path on which lease has to be released.
    * @param leaseId of the lease to be released.
-   * @param tracingContext
+   * @param tracingContext for tracing the service call.
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation fails.
    */
@@ -396,7 +396,7 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
   /**
    * Get Rest Operation for API <a href = https://learn.microsoft.com/en-us/rest/api/storageservices/lease-blob></a>.
    * @param path on which lease has to be broken.
-   * @param tracingContext
+   * @param tracingContext for tracing the service call.
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation fails.
    */
@@ -441,10 +441,11 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
    * @param eTag to specify conditional headers.
    * @param cachedSasToken to be used for the authenticating operation.
    * @param contextEncryptionAdapter to provide encryption context.
-   * @param tracingContext
+   * @param tracingContext for tracing the service call.
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation fails.
    */
+  @SuppressWarnings("checkstyle:ParameterNumber")
   @Override
   public AbfsRestOperation read(final String path,
       final long position,
@@ -484,7 +485,7 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
    * @param reqParams containing parameters for append operation like offset, length etc.
    * @param cachedSasToken to be used for the authenticating operation.
    * @param contextEncryptionAdapter to provide encryption context.
-   * @param tracingContext
+   * @param tracingContext for tracing the service call.
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation fails.
    */
@@ -506,7 +507,7 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
     }
 
     if (reqParams.isRetryDueToExpect()) {
-      String userAgentRetry = userAgent;
+      String userAgentRetry = getUserAgent();
       userAgentRetry = userAgentRetry.replace(HUNDRED_CONTINUE_USER_AGENT, EMPTY_STRING);
       requestHeaders.removeIf(header -> header.getName().equalsIgnoreCase(USER_AGENT));
       requestHeaders.add(new AbfsHttpHeader(USER_AGENT, userAgentRetry));
@@ -565,7 +566,7 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
       final String leaseId,
       final ContextEncryptionAdapter contextEncryptionAdapter,
       final TracingContext tracingContext) throws AzureBlobFileSystemException {
-    return this.flush(null, path, isClose, cachedSasToken, leaseId, null,
+    return this.flush(new byte[0], path, isClose, cachedSasToken, leaseId, "",
         tracingContext);
   }
 
@@ -578,9 +579,9 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
    * @param cachedSasToken The cachedSasToken if available.
    * @param leaseId The leaseId of the blob if available.
    * @param eTag The etag of the blob.
-   * @param tracingContext Tracing context for the operation.
-   * @return AbfsRestOperation op.
-   * @throws IOException
+   * @param tracingContext for tracing the service call.
+   * @return executed rest operation containing response from server.
+   * @throws AzureBlobFileSystemException if rest operation fails.
    */
   @Override
   public AbfsRestOperation flush(byte[] buffer,
@@ -620,7 +621,7 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
    * Set the properties of a file or directory.
    * @param path on which properties have to be set.
    * @param properties comma separated list of metadata key-value pairs.
-   * @param tracingContext
+   * @param tracingContext for tracing the service call.
    * @param contextEncryptionAdapter to provide encryption context.
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation fails.
@@ -652,7 +653,7 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
    * Get the properties of a file or directory.
    * @param path of which properties have to be fetched.
    * @param includeProperties to include user defined properties.
-   * @param tracingContext
+   * @param tracingContext for tracing the service call.
    * @param contextEncryptionAdapter to provide encryption context.
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation fails.
@@ -667,7 +668,7 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(HttpQueryParams.QUERY_PARAM_UPN,
-        String.valueOf(abfsConfiguration.isUpnUsed()));
+        String.valueOf(getAbfsConfiguration().isUpnUsed()));
     appendSASTokenToQuery(path, SASTokenProvider.GET_PROPERTIES_OPERATION,
         abfsUriQueryBuilder);
 
@@ -770,7 +771,7 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
    * Get Rest Operation for API <a href = https://learn.microsoft.com/en-us/rest/api/storageservices/get-block-list></a>.
    * Get the list of committed block ids of the blob.
    * @param path The path to get the list of blockId's.
-   * @param tracingContext The tracing context for the operation.
+   * @param tracingContext for tracing the service call.
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation fails.
    */
@@ -799,7 +800,7 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
    * @param sourceBlobPath path of source to be copied.
    * @param destinationBlobPath path of the destination.
    * @param srcLeaseId if source path has an active lease.
-   * @param tracingContext tracingContext object.
+   * @param tracingContext for tracing the service call.
    * @return executed rest operation containing response from server.
    * This method owns the logic of triggering copyBlob API. The caller of this
    * method have to own the logic of polling the destination with the copyId
@@ -851,7 +852,7 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
         SASTokenProvider.DELETE_OPERATION, abfsUriQueryBuilder);
     final URL url = createRequestUrl(blobRelativePath, abfsUriQueryBuilder.toString());
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-    if(leaseId != null) {
+    if (leaseId != null) {
       requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_ID, leaseId));
     }
     final AbfsRestOperation op = getAbfsRestOperation(

@@ -122,6 +122,7 @@ public final class AzureADAuthenticator {
    * @param tenantGuid  (optional) The guid of the AAD tenant. Can be {@code null}.
    * @param clientId    (optional) The clientId guid of the MSI service
    *                    principal to use. Can be {@code null}.
+   * @param authority   MSI authority to be used. Can be {@code null}.
    * @param bypassCache {@code boolean} specifying whether a cached token is acceptable or a fresh token
    *                    request should me made to AAD
    * @return {@link AzureADToken} obtained using the creds

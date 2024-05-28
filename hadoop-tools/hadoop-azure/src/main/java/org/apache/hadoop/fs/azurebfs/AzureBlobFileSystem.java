@@ -1305,7 +1305,7 @@ public class AzureBlobFileSystem extends FileSystem
    *
    * @param f source path.
    * @return true if the path exists.
-   * @throws IOException
+   * @throws IOException if operation fails
    */
   @Override
   public boolean exists(Path f) throws IOException {

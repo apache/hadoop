@@ -42,6 +42,7 @@ public class RefreshTokenBasedTokenProvider extends AccessTokenProvider {
    *
    * @param clientId the client ID (GUID) of the client web app obtained from Azure Active Directory configuration
    * @param refreshToken the refresh token
+   * @param authEndpoint the authentication endpoint
    */
   public RefreshTokenBasedTokenProvider(final String authEndpoint,
       String clientId, String refreshToken) {

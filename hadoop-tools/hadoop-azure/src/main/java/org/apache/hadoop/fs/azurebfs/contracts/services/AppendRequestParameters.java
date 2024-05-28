@@ -62,6 +62,7 @@ public class AppendRequestParameters {
   }
 
   // Constructor to be used for interacting with AbfsBlobClient
+  @SuppressWarnings("checkstyle:ParameterNumber")
   public AppendRequestParameters(final long position,
       final int offset,
       final int length,

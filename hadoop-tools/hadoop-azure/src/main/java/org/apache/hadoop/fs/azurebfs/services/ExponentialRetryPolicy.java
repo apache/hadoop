@@ -77,6 +77,7 @@ public class ExponentialRetryPolicy extends AbfsRetryPolicy {
 
   /**
    * Initializes a new instance of the {@link ExponentialRetryPolicy} class.
+   * @param maxIoRetries The maximum number of retry attempts.
    */
   public ExponentialRetryPolicy(final int maxIoRetries) {
 
