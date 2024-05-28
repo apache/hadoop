@@ -983,8 +983,8 @@ public class AbfsDfsClient extends AbfsClient implements Closeable {
     appendSASTokenToQuery(path, operation, abfsUriQueryBuilder);
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
-    final AbfsRestOperation op = getAbfsRestOperation(
-        AbfsRestOperationType.DeletePath,
+    final AbfsRestOperation op = new AbfsRestOperation(
+        AbfsRestOperationType.DeletePath, this,
         HTTP_METHOD_DELETE, url, requestHeaders);
     try {
       op.execute(tracingContext);
