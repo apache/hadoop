@@ -353,7 +353,11 @@ public class MockS3AFileSystem extends S3AFileSystem {
       String key,
       boolean isFile)
       throws SdkException, IOException {
-    deleteObject(key);
+    mock.getS3AInternals()
+            .getAmazonS3Client("test")
+            .deleteObject(getRequestFactory()
+            .newDeleteObjectRequestBuilder(key)
+            .build());
   }
 
   @Override
