@@ -1798,8 +1798,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
   private AbfsServiceType getDefaultServiceType(Configuration conf)
       throws UnsupportedAbfsOperationException{
-    // Todo: Remove this check once the code is ready for Blob Endpoint Support.
     if (conf.get(FS_DEFAULT_NAME_KEY).contains(AbfsServiceType.BLOB.toString().toLowerCase())) {
+      // Todo: [FnsOverBlob] return "AbfsServiceType.BLOB" once the code is ready for Blob Endpoint Support.
       throw new UnsupportedAbfsOperationException(
           "Blob Endpoint Support is not yet implemented. Please use DFS Endpoint.");
     }
