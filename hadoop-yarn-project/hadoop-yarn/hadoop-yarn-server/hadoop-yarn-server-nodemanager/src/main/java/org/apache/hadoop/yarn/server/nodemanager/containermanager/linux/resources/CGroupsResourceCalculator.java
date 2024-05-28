@@ -150,8 +150,10 @@ public class CGroupsResourceCalculator extends AbstractCGroupsResourceCalculator
       String[] parts = line.split(":");
       if (parts[1].contains(controller.getName())) {
         String cgroupPath = parts[2];
-        String cgroup = new File(cgroupPath).toPath().getFileName().toString();
-        return getcGroupsHandler().getRelativePathForCGroup(cgroup);
+        Path fileName = new File(cgroupPath).toPath().getFileName();
+        if (fileName != null) {
+          return getcGroupsHandler().getRelativePathForCGroup(fileName.toString());
+        }
       }
     }
     LOG.debug("No {} controller found for pid {}", controller, getPid());

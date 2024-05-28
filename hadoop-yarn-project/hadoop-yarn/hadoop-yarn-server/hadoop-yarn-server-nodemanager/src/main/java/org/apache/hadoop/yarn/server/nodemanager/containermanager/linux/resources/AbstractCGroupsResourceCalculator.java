@@ -134,8 +134,9 @@ public abstract class AbstractCGroupsResourceCalculator extends ResourceCalculat
   }
 
   private void addSingleLineToStat(Path file, String line) {
-    if (file.getFileName() != null) {
-      stats.put(file.getFileName().toString(), line.trim());
+    Path fileName = file.getFileName();
+    if (fileName != null) {
+      stats.put(fileName.toString(), line.trim());
     }
   }
 
