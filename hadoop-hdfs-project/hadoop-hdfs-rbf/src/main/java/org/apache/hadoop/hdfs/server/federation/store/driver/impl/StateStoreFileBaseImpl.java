@@ -201,6 +201,7 @@ public abstract class StateStoreFileBaseImpl
 
   @Override
   public void close() throws Exception {
+    super.close();
     if (this.concurrentStoreAccessPool != null) {
       this.concurrentStoreAccessPool.shutdown();
       boolean isTerminated = this.concurrentStoreAccessPool.awaitTermination(5, TimeUnit.SECONDS);
