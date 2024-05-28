@@ -57,6 +57,7 @@ import org.apache.hadoop.fs.azurebfs.utils.EncryptionType;
 import org.apache.hadoop.fs.impl.OpenFileParameters;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Lists;
 
@@ -179,11 +180,17 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
 
   @Test
   public void testCustomEncryptionCombinations() throws Exception {
-    AzureBlobFileSystem fs = getOrCreateFS();
+    try (AzureBlobFileSystem fs = getOrCreateFS()) {
+      validateCpkResponseHeadersForCombination(fs);
+    }
+  }
+
+  private void validateCpkResponseHeadersForCombination(final AzureBlobFileSystem fs)
+      throws Exception {
     Path testPath = path("/testFile");
     String relativePath = fs.getAbfsStore().getRelativePath(testPath);
-    MockEncryptionContextProvider ecp
-        = (MockEncryptionContextProvider) createEncryptedFile(testPath);
+    MockEncryptionContextProvider ecp =
+        (MockEncryptionContextProvider) createEncryptedFile(testPath);
     AbfsRestOperation op = callOperation(fs, new Path(relativePath), ecp);
     if (op == null) {
       return;
@@ -401,9 +408,9 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
           .isTrue();
       return fs;
     } catch (IOException ex) {
-      Assertions.assertThat(ex.getMessage())
-          .describedAs("Exception message should contain the expected message")
-          .contains(CPK_IN_NON_HNS_ACCOUNT_ERROR_MESSAGE);
+      GenericTestUtils.assertExceptionContains(
+          CPK_IN_NON_HNS_ACCOUNT_ERROR_MESSAGE, ex,
+          "Exception message should contain the expected message");
       Assertions.assertThat(
               getConfiguration().getBoolean(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT,
                   false))
@@ -444,18 +451,18 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
    * was used to create the x-ms-encryption-context value used for creating the file.
    */
   private EncryptionContextProvider createEncryptedFile(Path testPath) throws Exception {
-    AzureBlobFileSystem fs;
-    if (getFileSystem().getAbfsClient().getEncryptionType() == fileEncryptionType) {
-      fs = getFileSystem();
-    } else {
-      fs = fileEncryptionType == ENCRYPTION_CONTEXT
-          ? getECProviderEnabledFS()
-          : getCPKEnabledFS();
+    try (AzureBlobFileSystem fs = getFileSystemForFileEncryption()) {
+      String relativePath = fs.getAbfsStore().getRelativePath(testPath);
+      try (FSDataOutputStream out = fs.create(new Path(relativePath))) {
+        out.write(SERVER_FILE_CONTENT.getBytes());
+      }
+      verifyFileEncryption(fs, relativePath);
+      return fs.getAbfsClient().getEncryptionContextProvider();
     }
-    String relativePath = fs.getAbfsStore().getRelativePath(testPath);
-    try (FSDataOutputStream out = fs.create(new Path(relativePath))) {
-      out.write(SERVER_FILE_CONTENT.getBytes());
-    }
+  }
+
+  private void verifyFileEncryption(final AzureBlobFileSystem fs,
+      final String relativePath) throws Exception {
     // verify file is encrypted by calling getPathStatus (with properties)
     // without encryption headers in request
     if (fileEncryptionType != EncryptionType.NONE) {
@@ -469,7 +476,19 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
                   getTestTracingContext(fs, false), abfsClient)));
       fs.getAbfsClient().setEncryptionType(fileEncryptionType);
     }
-    return fs.getAbfsClient().getEncryptionContextProvider();
+  }
+
+  private AzureBlobFileSystem getFileSystemForFileEncryption() throws Exception {
+    AzureBlobFileSystem fs;
+    if (getFileSystem().getAbfsClient().getEncryptionType() == fileEncryptionType) {
+      fs = (AzureBlobFileSystem) FileSystem.newInstance(
+          getConfiguration().getRawConfiguration());
+    } else {
+      fs = fileEncryptionType == ENCRYPTION_CONTEXT
+          ? getECProviderEnabledFS()
+          : getCPKEnabledFS();
+    }
+    return fs;
   }
 
   @Override

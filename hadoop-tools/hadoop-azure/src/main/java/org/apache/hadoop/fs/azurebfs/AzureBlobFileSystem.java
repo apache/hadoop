@@ -223,12 +223,17 @@ public class AzureBlobFileSystem extends FileSystem
       }
     }
 
-    if ((abfsConfiguration.createEncryptionContextProvider() != null
-        || StringUtils.isNotEmpty(
-        abfsConfiguration.getEncodedClientProvidedEncryptionKey()))
+    /*
+     * Non-hierarchical-namespace account can not have a client-provided-key(CPK).
+     * Fail initialization of filesystem if the configs are provided. CPK is of
+     * two types: GLOBAL_KEY, and ENCRYPTION_CONTEXT.
+     */
+    if ((isEncryptionContextCPK(abfsConfiguration) || isGlobalKeyCPK(
+        abfsConfiguration))
         && !getIsNamespaceEnabled(
         new TracingContext(clientCorrelationId, fileSystemId,
-            FSOperationType.CREATE_FILESYSTEM, tracingHeaderFormat, listener))) {
+            FSOperationType.CREATE_FILESYSTEM, tracingHeaderFormat,
+            listener))) {
       /*
        * Close the filesystem gracefully before throwing exception. Graceful close
        * will ensure that all resources are released properly.
@@ -252,6 +257,15 @@ public class AzureBlobFileSystem extends FileSystem
 
     rateLimiting = RateLimitingFactory.create(abfsConfiguration.getRateLimit());
     LOG.debug("Initializing AzureBlobFileSystem for {} complete", uri);
+  }
+
+  private boolean isGlobalKeyCPK(final AbfsConfiguration abfsConfiguration) {
+    return StringUtils.isNotEmpty(
+        abfsConfiguration.getEncodedClientProvidedEncryptionKey());
+  }
+
+  private boolean isEncryptionContextCPK(final AbfsConfiguration abfsConfiguration) {
+    return abfsConfiguration.createEncryptionContextProvider() != null;
   }
 
   @Override

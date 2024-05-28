@@ -22,6 +22,10 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.util.VersionInfo;
 
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENCRYPTION_CONTEXT_PROVIDER_TYPE;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY_SHA;
+
 /**
  * Responsible to keep all constant keys used in abfs rest client here.
  */
@@ -165,8 +169,20 @@ public final class AbfsHttpConstants {
    */
   public static final Integer HTTP_STATUS_CATEGORY_QUOTIENT = 100;
 
+  private static final String CPK_CONFIG_LIST =
+      FS_AZURE_ENCRYPTION_CONTEXT_PROVIDER_TYPE + ", "
+          + FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY + ", "
+          + FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY_SHA;
+
+  /**
+   * Exception message on filesystem init if client-provided-keys configs are provided
+   * for a non-hierarchical-namespace account: {@value}
+   */
   public static final String CPK_IN_NON_HNS_ACCOUNT_ERROR_MESSAGE =
-      "Non HNS account can not have CPK configs enabled.";
+      "Non hierarchical-namespace account can not have configs enabled for Client"
+          + "Provided Keys. Following configs can not be given with "
+          + "non-hierarchical-namespace account:"
+          + CPK_CONFIG_LIST;
 
   private AbfsHttpConstants() {}
 }
