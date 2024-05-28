@@ -32,11 +32,10 @@ import org.slf4j.LoggerFactory;
 /**
  * A Cgroup version 1 file-system based Resource calculator without the process tree features.
  *
- * Warning!!!
- * ResourceCalculatorProcessTree can be used with mapreduce.job.process-tree.class property.
- * However, those instances runs in the mapreduce task, and can not access to the
- * ResourceHandlerModule, what is only initialised in the NodeManager process not in the container.
- * So this implementation will not work with the mapreduce.job.process-tree.class property.
+ * Warning: this implementation will not work properly when configured using the mapreduce.job.process-tree.class job property.
+ * Theoretically the ResourceCalculatorProcessTree can be configured using the mapreduce.job.process-tree.class job property, however it
+ * has a dependency on an instantiated ResourceHandlerModule, which is only initialised in the NodeManager process 
+ * and not in the containers.
  *
  * Limitation:
  * The ResourceCalculatorProcessTree class can be configured using the
