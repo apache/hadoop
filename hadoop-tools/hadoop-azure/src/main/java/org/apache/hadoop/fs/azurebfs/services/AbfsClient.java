@@ -202,21 +202,25 @@ public class AbfsClient implements Closeable {
     this.isMetricCollectionStopped = new AtomicBoolean(false);
     this.metricAnalysisPeriod = abfsConfiguration.getMetricAnalysisTimeout();
     this.metricIdlePeriod = abfsConfiguration.getMetricIdleTimeout();
-    if (!metricFormat.toString().equals("")) {
-      isMetricCollectionEnabled = true;
-      abfsCounters.initializeMetrics(metricFormat);
+    if (!metricFormat.toString().equals(EMPTY_STRING)) {
       String metricAccountName = abfsConfiguration.getMetricAccount();
-      int dotIndex = metricAccountName.indexOf(AbfsHttpConstants.DOT);
-      if (dotIndex <= 0) {
-        throw new InvalidUriException(
-                metricAccountName + " - account name is not fully qualified.");
-      }
       String metricAccountKey = abfsConfiguration.getMetricAccountKey();
-      try {
-        metricSharedkeyCredentials = new SharedKeyCredentials(metricAccountName.substring(0, dotIndex),
-                metricAccountKey);
-      } catch (IllegalArgumentException e) {
-        throw new IOException("Exception while initializing metric credentials " + e);
+      if (!metricAccountName.equals(EMPTY_STRING) && !metricAccountKey.equals(EMPTY_STRING)) {
+        isMetricCollectionEnabled = true;
+        abfsCounters.initializeMetrics(metricFormat);
+        int dotIndex = metricAccountName.indexOf(AbfsHttpConstants.DOT);
+        if (dotIndex <= 0) {
+          throw new InvalidUriException(
+              metricAccountName + " - account name is not fully qualified.");
+        }
+        try {
+          metricSharedkeyCredentials = new SharedKeyCredentials(
+              metricAccountName.substring(0, dotIndex),
+              metricAccountKey);
+        } catch (IllegalArgumentException e) {
+          throw new IOException(
+              "Exception while initializing metric credentials " + e);
+        }
       }
     }
     this.timer = new Timer(
