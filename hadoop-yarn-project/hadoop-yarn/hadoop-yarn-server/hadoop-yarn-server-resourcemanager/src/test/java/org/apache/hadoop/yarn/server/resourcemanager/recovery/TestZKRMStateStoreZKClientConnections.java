@@ -88,7 +88,7 @@ public class TestZKRMStateStoreZKClientConnections {
 
     public RMStateStore getRMStateStore(Configuration conf) throws Exception {
       String workingZnode = "/Test";
-      conf.set(CommonConfigurationKeys.ZK_ADDRESS,
+      conf.set(YarnConfiguration.RM_ZK_ADDRESS,
           testingServer.getConnectString());
       conf.set(YarnConfiguration.ZK_RM_STATE_STORE_PARENT_PATH, workingZnode);
       this.store = new TestZKRMStateStore(conf, workingZnode);
