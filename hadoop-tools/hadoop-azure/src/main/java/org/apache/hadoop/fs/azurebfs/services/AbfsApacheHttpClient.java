@@ -39,18 +39,19 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.HTTP_
 import static org.apache.http.conn.ssl.SSLConnectionSocketFactory.getDefaultHostnameVerifier;
 
 final class AbfsApacheHttpClient {
+
   private final CloseableHttpClient httpClient;
 
-  static AbfsApacheHttpClient ABFS_APACHE_HTTP_CLIENT = null;
+  private static AbfsApacheHttpClient ABFS_APACHE_HTTP_CLIENT = null;
 
-  private static boolean usable = true;
+  private static boolean USABLE = true;
 
   static void registerFallback() {
-    usable = false;
+    USABLE = false;
   }
 
   static boolean usable() {
-    return usable;
+    return USABLE;
   }
 
   static synchronized void setClient(DelegatingSSLSocketFactory delegatingSSLSocketFactory,
@@ -59,6 +60,10 @@ final class AbfsApacheHttpClient {
       ABFS_APACHE_HTTP_CLIENT = new AbfsApacheHttpClient(
           delegatingSSLSocketFactory, readTimeout);
     }
+  }
+
+  static AbfsApacheHttpClient getClient() {
+    return ABFS_APACHE_HTTP_CLIENT;
   }
 
   private AbfsApacheHttpClient(DelegatingSSLSocketFactory delegatingSSLSocketFactory,
@@ -75,10 +80,10 @@ final class AbfsApacheHttpClient {
         .disableRedirectHandling()
         .disableAutomaticRetries()
         /*
-        * To prevent the read of system property http.agent. The agent is set
-        * in request headers by AbfsClient. System property read is an
-        * overhead.
-        */
+         * To prevent the read of system property http.agent. The agent is set
+         * in request headers by AbfsClient. System property read is an
+         * overhead.
+         */
         .setUserAgent(EMPTY_STRING);
     httpClient = builder.build();
   }
@@ -106,7 +111,8 @@ final class AbfsApacheHttpClient {
       ConnectionSocketFactory sslSocketFactory) {
     if (sslSocketFactory == null) {
       return RegistryBuilder.<ConnectionSocketFactory>create()
-          .register(HTTP_SCHEME, PlainConnectionSocketFactory.getSocketFactory())
+          .register(HTTP_SCHEME,
+              PlainConnectionSocketFactory.getSocketFactory())
           .build();
     }
     return RegistryBuilder.<ConnectionSocketFactory>create()

@@ -47,7 +47,7 @@ class AbfsManagedApacheHttpConnection
 
   private final int hashCode;
 
-  public AbfsManagedApacheHttpConnection(ManagedHttpClientConnection conn,
+  AbfsManagedApacheHttpConnection(ManagedHttpClientConnection conn,
       final HttpRoute route) {
     this.httpClientConnection = conn;
     this.httpRoute = route;

@@ -75,6 +75,7 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
   private HttpRequestBase httpRequestBase;
 
   private HttpResponse httpResponse;
+
   private boolean connectionDisconnectedOnError = false;
 
   private final boolean isPayloadRequest;
@@ -150,8 +151,8 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
       if (httpResponse != null) {
         try {
           EntityUtils.consume(httpResponse.getEntity());
-          } finally {
-          if(httpResponse instanceof CloseableHttpResponse) {
+        } finally {
+          if (httpResponse instanceof CloseableHttpResponse) {
             ((CloseableHttpResponse) httpResponse).close();
           }
         }
@@ -190,7 +191,7 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
     AbfsManagedHttpClientContext abfsHttpClientContext
         = setFinalAbfsClientContext();
     HttpResponse response
-        = AbfsApacheHttpClient.ABFS_APACHE_HTTP_CLIENT.execute(httpRequestBase,
+        = AbfsApacheHttpClient.getClient().execute(httpRequestBase,
         abfsHttpClientContext, getConnectionTimeout(), getReadTimeout());
     setConnectionTimeMs(abfsHttpClientContext.getConnectTime());
     setSendRequestTimeMs(abfsHttpClientContext.getSendTime());
@@ -242,7 +243,7 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
   @Override
   InputStream getContentInputStream()
       throws IOException {
-    if(httpResponse == null || httpResponse.getEntity() == null) {
+    if (httpResponse == null || httpResponse.getEntity() == null) {
       return null;
     }
     return httpResponse.getEntity().getContent();

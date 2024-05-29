@@ -143,7 +143,8 @@ public class ITestAbfsHttpClientRequestExecutor extends
               .isEqualTo(0);
           Assertions.assertThat(connectionInfo.getReceiveResponseInvocation())
               .isEqualTo(1);
-          Assertions.assertThat(connectionInfo.getReceiveResponseBodyInvocation())
+          Assertions.assertThat(
+                  connectionInfo.getReceiveResponseBodyInvocation())
               .isEqualTo(1);
         }
         if (invocation[0] == 2) {
@@ -153,7 +154,8 @@ public class ITestAbfsHttpClientRequestExecutor extends
               .isEqualTo(1);
           Assertions.assertThat(connectionInfo.getReceiveResponseInvocation())
               .isEqualTo(1);
-          Assertions.assertThat(connectionInfo.getReceiveResponseBodyInvocation())
+          Assertions.assertThat(
+                  connectionInfo.getReceiveResponseBodyInvocation())
               .isEqualTo(1);
         }
         if (invocation[0] == 3) {
@@ -163,7 +165,8 @@ public class ITestAbfsHttpClientRequestExecutor extends
               .isEqualTo(1);
           Assertions.assertThat(connectionInfo.getReceiveResponseInvocation())
               .isEqualTo(2);
-          Assertions.assertThat(connectionInfo.getReceiveResponseBodyInvocation())
+          Assertions.assertThat(
+                  connectionInfo.getReceiveResponseBodyInvocation())
               .isEqualTo(1);
         }
         Assertions.assertThat(invocation[0]).isLessThanOrEqualTo(3);
@@ -313,9 +316,13 @@ public class ITestAbfsHttpClientRequestExecutor extends
         Assertions.assertThat(connectionInfo.getReceiveResponseBodyInvocation())
             .isEqualTo(1);
 
-        Assertions.assertThat(latencyDifferencePerentage(connectionInfo.getSendTime(), op.getResult().getSendLatency()))
+        Assertions.assertThat(
+                latencyDifferencePerentage(connectionInfo.getSendTime(),
+                    op.getResult().getSendLatency()))
             .isLessThan(1);
-        Assertions.assertThat(latencyDifferencePerentage(connectionInfo.getReadTime(), op.getResult().getRecvLatency()))
+        Assertions.assertThat(
+                latencyDifferencePerentage(connectionInfo.getReadTime(),
+                    op.getResult().getRecvLatency()))
             .isLessThan(1);
         return null;
       }).when(op).execute(Mockito.any(TracingContext.class));
@@ -336,10 +343,11 @@ public class ITestAbfsHttpClientRequestExecutor extends
 
   private long latencyDifferencePerentage(final long expectationLatency,
       final long observationLatency) {
-    if(expectationLatency == 0) {
+    if (expectationLatency == 0) {
       return 0;
     }
-    return Math.abs(expectationLatency - observationLatency) * 100 / expectationLatency;
+    return Math.abs(expectationLatency - observationLatency) * 100
+        / expectationLatency;
   }
 
   private static class ConnectionInfo {

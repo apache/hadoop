@@ -48,7 +48,7 @@ class AbfsConnectionManager implements HttpClientConnectionManager {
 
   private final HttpClientConnectionOperator connectionOperator;
 
-  public AbfsConnectionManager(Registry<ConnectionSocketFactory> socketFactoryRegistry,
+  AbfsConnectionManager(Registry<ConnectionSocketFactory> socketFactoryRegistry,
       AbfsConnFactory connectionFactory) {
     this.httpConnectionFactory = connectionFactory;
     connectionOperator = new DefaultHttpClientConnectionOperator(

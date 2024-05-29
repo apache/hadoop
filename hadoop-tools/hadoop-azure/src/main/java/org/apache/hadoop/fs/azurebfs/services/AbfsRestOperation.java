@@ -495,7 +495,7 @@ public class AbfsRestOperation {
 
   private void registerApacheHttpClientIoException() {
     apacheHttpClientIoExceptions++;
-    if(apacheHttpClientIoExceptions
+    if (apacheHttpClientIoExceptions
         >= abfsConfiguration.getMaxApacheHttpClientIoExceptionsRetries()) {
       AbfsApacheHttpClient.registerFallback();
     }
