@@ -18,338 +18,146 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources;
 
-import org.apache.hadoop.classification.VisibleForTesting;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.hadoop.util.CpuTimeTracker;
-import org.apache.hadoop.util.Shell;
-import org.apache.hadoop.util.SysInfoLinux;
-import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.util.Clock;
-import org.apache.hadoop.yarn.util.ResourceCalculatorProcessTree;
-import org.apache.hadoop.yarn.util.SystemClock;
-
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.math.BigInteger;
-import java.nio.charset.StandardCharsets;
-import java.util.function.Function;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
- * A cgroups file-system based Resource calculator without the process tree
- * features.
+ * A Cgroup version 1 file-system based Resource calculator without the process tree features.
  *
- * CGroups has its limitations. It can only be enabled, if both CPU and memory
- * cgroups are enabled with yarn.nodemanager.resource.cpu.enabled and
- * yarn.nodemanager.resource.memory.enabled respectively. This means that
- * memory limits are enforced by default. You can turn this off and keep
- * memory reporting only with yarn.nodemanager.resource.memory.enforced.
+ * Warning: this implementation will not work properly
+ * when configured using the mapreduce.job.process-tree.class job property.
+ * Theoretically the ResourceCalculatorProcessTree can be configured using the
+ * mapreduce.job.process-tree.class job property, however it has a dependency on an
+ * instantiated ResourceHandlerModule, which is only initialised in the NodeManager process
+ * and not in the containers.
  *
- * Another limitation is virtual memory measurement. CGroups does not have the
- * ability to measure virtual memory usage. This includes memory reserved but
- * not used. CGroups measures used memory as sa sum of
- * physical memory and swap usage. This will be returned in the virtual
- * memory counters.
- * If the real virtual memory is required please use the legacy procfs based
- * resource calculator or CombinedResourceCalculator.
+ * Limitation:
+ * The ResourceCalculatorProcessTree class can be configured using the
+ * mapreduce.job.process-tree.class property within a MapReduce job.
+ * However, it is important to note that instances of ResourceCalculatorProcessTree operate
+ * within the context of a MapReduce task. This presents a limitation:
+ * these instances do not have access to the ResourceHandlerModule,
+ * which is only initialized within the NodeManager process
+ * and not within individual containers where MapReduce tasks execute.
+ * As a result, the current implementation of ResourceCalculatorProcessTree is incompatible
+ * with the mapreduce.job.process-tree.class property. This incompatibility arises
+ * because the ResourceHandlerModule is essential for managing and monitoring resource usage,
+ * and without it, the ResourceCalculatorProcessTree cannot function as intended
+ * within the confines of a MapReduce task. Therefore, any attempts to utilize this class
+ * through the mapreduce.job.process-tree.class property
+ * will not succeed under the current architecture.
  */
-public class CGroupsResourceCalculator extends ResourceCalculatorProcessTree {
-  enum Result {
-    Continue,
-    Exit
-  }
-  protected static final Logger LOG = LoggerFactory
-      .getLogger(CGroupsResourceCalculator.class);
-  private static final String PROCFS = "/proc";
-  static final String CGROUP = "cgroup";
-  static final String CPU_STAT = "cpuacct.stat";
-  static final String MEM_STAT = "memory.usage_in_bytes";
-  static final String MEMSW_STAT = "memory.memsw.usage_in_bytes";
-  private static final String USER = "user ";
-  private static final String SYSTEM = "system ";
-
-  private static final Pattern CGROUP_FILE_FORMAT = Pattern.compile(
-      "^(\\d+):([^:]+):/(.*)$");
-  private final String procfsDir;
-  private CGroupsHandler cGroupsHandler;
-
-  private String pid;
-  private File cpuStat;
-  private File memStat;
-  private File memswStat;
-
-  private BigInteger processTotalJiffies;
-  private long processPhysicalMemory;
-  private long processVirtualMemory;
-
-  private final long jiffyLengthMs;
-  private final CpuTimeTracker cpuTimeTracker;
-  private Clock clock;
+public class CGroupsResourceCalculator extends AbstractCGroupsResourceCalculator {
+  private static final Logger LOG = LoggerFactory.getLogger(CGroupsResourceCalculator.class);
 
   /**
-   * Create resource calculator for all Yarn containers.
-   */
-  public CGroupsResourceCalculator()
-      throws YarnException {
-    this(null, PROCFS, ResourceHandlerModule.getCGroupsHandler(),
-        SystemClock.getInstance(), SysInfoLinux.JIFFY_LENGTH_IN_MILLIS);
-  }
-
-  /**
-   * Create resource calculator for the container that has the specified pid.
-   * @param pid A pid from the cgroup or null for all containers
-   */
-  public CGroupsResourceCalculator(String pid) {
-    this(pid, PROCFS, ResourceHandlerModule.getCGroupsHandler(),
-        SystemClock.getInstance(), SysInfoLinux.JIFFY_LENGTH_IN_MILLIS);
-  }
-
-  /**
-   * Create resource calculator for testing.
-   * @param pid A pid from the cgroup or null for all containers
-   * @param procfsDir Path to /proc or a mock /proc directory
-   * @param cGroupsHandler Initialized cgroups handler object
-   * @param clock A clock object
-   * @param jiffyLengthMs0 Jiffy length in milliseconds
-   */
-  @VisibleForTesting
-  CGroupsResourceCalculator(String pid, String procfsDir,
-                            CGroupsHandler cGroupsHandler,
-                            Clock clock,
-                            long jiffyLengthMs0) {
-    super(pid);
-    this.procfsDir = procfsDir;
-    this.cGroupsHandler = cGroupsHandler;
-    this.pid = pid != null && pid.equals("0") ? "1" : pid;
-    this.jiffyLengthMs = jiffyLengthMs0;
-    this.cpuTimeTracker =
-        new CpuTimeTracker(this.jiffyLengthMs);
-    this.clock = clock;
-    this.processTotalJiffies = BigInteger.ZERO;
-    this.processPhysicalMemory = UNAVAILABLE;
-    this.processVirtualMemory = UNAVAILABLE;
-  }
-
-  @Override
-  public void initialize() throws YarnException {
-    if (!CGroupsResourceCalculator.isAvailable()) {
-      throw new YarnException("CGroupsResourceCalculator is not available");
-    }
-    setCGroupFilePaths();
-  }
-
-  @Override
-  public float getCpuUsagePercent() {
-    LOG.debug("Process {} jiffies:{}", pid, processTotalJiffies);
-    return cpuTimeTracker.getCpuTrackerUsagePercent();
-  }
-
-  @Override
-  public long getCumulativeCpuTime() {
-    if (jiffyLengthMs < 0) {
-      return UNAVAILABLE;
-    }
-    return processTotalJiffies.longValue() * jiffyLengthMs;
-  }
-
-  @Override
-  public long getRssMemorySize(int olderThanAge) {
-    if (olderThanAge > 1) {
-      return UNAVAILABLE;
-    }
-    return processPhysicalMemory;
-  }
-
-  @Override
-  public long getVirtualMemorySize(int olderThanAge) {
-    if (olderThanAge > 1) {
-      return UNAVAILABLE;
-    }
-    return processVirtualMemory;
-  }
-
-  @Override
-  public void updateProcessTree() {
-    try {
-      this.processTotalJiffies = readTotalProcessJiffies();
-      cpuTimeTracker.updateElapsedJiffies(processTotalJiffies,
-          clock.getTime());
-    } catch (YarnException e) {
-      LOG.warn("Failed to parse " + pid, e);
-    }
-    processPhysicalMemory = getMemorySize(memStat);
-    if (memswStat.exists()) {
-      processVirtualMemory = getMemorySize(memswStat);
-    } else {
-      LOG.debug("Swap cgroups monitoring is not compiled into the kernel {}",
-          memswStat.getAbsolutePath());
-    }
-  }
-
-  @Override
-  public String getProcessTreeDump() {
-    // We do not have a process tree in cgroups return just the pid for tracking
-    return pid;
-  }
-
-  @Override
-  public boolean checkPidPgrpidForMatch() {
-    // We do not have a process tree in cgroups returning default ok
-    return true;
-  }
-
-  /**
-   * Checks if the CGroupsResourceCalculator is available on this system.
-   * This assumes that Linux container executor is already initialized.
+   * <a href="https://docs.kernel.org/admin-guide/cgroup-v1/cpuacct.html">DOC</a>
    *
-   * @return true if CGroupsResourceCalculator is available. False otherwise.
+   * ...
+   * cpuacct.stat file lists a few statistics which further divide the CPU time obtained
+   * by the cgroup into user and system times.
+   * Currently the following statistics are supported:
+   *  - user: Time spent by tasks of the cgroup in user mode.
+   *  - system: Time spent by tasks of the cgroup in kernel mode.
+   * user and system are in USER_HZ unit.
+   *  ...
+   *
+   * <a href="https://litux.nl/mirror/kerneldevelopment/0672327201/ch10lev1sec3.html">DOC</a>
+   *
+   * ...
+   * In kernels earlier than 2.6, changing the value of HZ resulted in user-space anomalies.
+   * This happened because values were exported to user-space in units of ticks-per-second.
+   * As these interfaces became permanent, applications grew to rely on a specific value of HZ.
+   * Consequently, changing HZ would scale various exported values
+   * by some constantwithout user-space knowing!
+   * Uptime would read 20 hours when it was in fact two!
+   *
+   * To prevent such problems, the kernel needs to scale all exported jiffies values.
+   * It does this by defining USER_HZ, which is the HZ value that user-space expects. On x86,
+   * because HZ was historically 100, USER_HZ is 100. The macro jiffies_to_clock_t()
+   * is then used to scale a tick count in terms of HZ to a tick count in terms of USER_HZ.
+   * The macro used depends on whether USER_HZ and HZ are integer multiples of themselves.
+   * ...
+   *
    */
-  public static boolean isAvailable() {
+  private static final String CPU_STAT = "cpuacct.stat";
+
+  /**
+   * <a href="https://docs.kernel.org/admin-guide/cgroup-v1/memory.html#usage-in-bytes">DOC</a>
+   *
+   * ...
+   * For efficiency, as other kernel components, memory cgroup uses some optimization
+   * to avoid unnecessary cacheline false sharing.
+   * usage_in_bytes is affected by the method
+   * and doesn’t show ‘exact’ value of memory (and swap) usage,
+   * it’s a fuzz value for efficient access. (Of course, when necessary, it’s synchronized.)
+   *  ...
+   *
+   */
+  private static final String MEM_STAT = "memory.usage_in_bytes";
+  private static final String MEMSW_STAT = "memory.memsw.usage_in_bytes";
+
+  public CGroupsResourceCalculator(String pid) {
+    super(
+        pid,
+        Arrays.asList(CPU_STAT + "#user", CPU_STAT + "#system"),
+        MEM_STAT,
+        MEMSW_STAT
+    );
+  }
+
+  @Override
+  protected List<Path> getCGroupFilesToLoadInStats() {
+    List<Path> result = new ArrayList<>();
+
     try {
-      if (!Shell.LINUX) {
-        LOG.info("CGroupsResourceCalculator currently is supported only on "
-            + "Linux.");
-        return false;
+      String cpuRelative = getCGroupRelativePath(CGroupsHandler.CGroupController.CPUACCT);
+      if (cpuRelative != null) {
+        File cpuDir = new File(getcGroupsHandler().getControllerPath(
+            CGroupsHandler.CGroupController.CPUACCT), cpuRelative);
+        result.add(Paths.get(cpuDir.getAbsolutePath(), CPU_STAT));
       }
-      if (ResourceHandlerModule.getCGroupsHandler() == null ||
-          ResourceHandlerModule.getCpuResourceHandler() == null ||
-          ResourceHandlerModule.getMemoryResourceHandler() == null) {
-        LOG.info("CGroupsResourceCalculator requires enabling CGroups" +
-            "cpu and memory");
-        return false;
-      }
-    } catch (SecurityException se) {
-      LOG.warn("Failed to get Operating System name. " + se);
-      return false;
+    } catch (IOException e) {
+      LOG.debug("Exception while looking for CPUACCT controller for pid: " + getPid(), e);
     }
-    return true;
-  }
 
-  private long getMemorySize(File cgroupUsageFile) {
-    long[] mem = new long[1];
     try {
-      processFile(cgroupUsageFile, (String line) -> {
-        mem[0] = Long.parseLong(line);
-        return Result.Exit;
-      });
-      return mem[0];
-    } catch (YarnException e) {
-      LOG.warn("Failed to parse cgroups " + memswStat, e);
-    }
-    return UNAVAILABLE;
-  }
-
-  private BigInteger readTotalProcessJiffies() throws YarnException {
-    final BigInteger[] totalCPUTimeJiffies = new BigInteger[1];
-    totalCPUTimeJiffies[0] = BigInteger.ZERO;
-    processFile(cpuStat, (String line) -> {
-      if (line.startsWith(USER)) {
-        totalCPUTimeJiffies[0] = totalCPUTimeJiffies[0].add(
-            new BigInteger(line.substring(USER.length())));
+      String memoryRelative = getCGroupRelativePath(CGroupsHandler.CGroupController.MEMORY);
+      if (memoryRelative != null) {
+        File memDir = new File(getcGroupsHandler().getControllerPath(
+            CGroupsHandler.CGroupController.MEMORY), memoryRelative);
+        result.add(Paths.get(memDir.getAbsolutePath(), MEM_STAT));
+        result.add(Paths.get(memDir.getAbsolutePath(), MEMSW_STAT));
       }
-      if (line.startsWith(SYSTEM)) {
-        totalCPUTimeJiffies[0] = totalCPUTimeJiffies[0].add(
-            new BigInteger(line.substring(SYSTEM.length())));
-      }
-      return Result.Continue;
-    });
-    return totalCPUTimeJiffies[0];
-  }
-
-  private String getCGroupRelativePath(
-      CGroupsHandler.CGroupController controller)
-      throws YarnException {
-    if (pid == null) {
-      return cGroupsHandler.getRelativePathForCGroup("");
-    } else {
-      return getCGroupRelativePathForPid(controller);
+    } catch (IOException e) {
+      LOG.debug("Exception while looking for MEMORY controller for pid: " + getPid(), e);
     }
+
+    return result;
   }
 
-  private String getCGroupRelativePathForPid(
-      CGroupsHandler.CGroupController controller)
-      throws YarnException {
-    File pidCgroupFile = new File(new File(procfsDir, pid), CGROUP);
-    String[] result = new String[1];
-    processFile(pidCgroupFile, (String line)->{
-      Matcher m = CGROUP_FILE_FORMAT.matcher(line);
-      boolean mat = m.find();
-      if (mat) {
-        if (m.group(2).contains(controller.getName())) {
-          // Instead of returning the full path we compose it
-          // based on the last item as the container id
-          // This helps to avoid confusion within a privileged Docker container
-          // where the path is referred in /proc/<pid>/cgroup as
-          // /docker/<dcontainerid>/hadoop-yarn/<containerid>
-          // but it is /hadoop-yarn/<containerid> in the cgroups hierarchy
-          String cgroupPath = m.group(3);
-
-          if (cgroupPath != null) {
-            String cgroup =
-                new File(cgroupPath).toPath().getFileName().toString();
-            result[0] = cGroupsHandler.getRelativePathForCGroup(cgroup);
-          } else {
-            LOG.warn("Invalid cgroup path for " + pidCgroupFile);
-          }
-          return Result.Exit;
-        }
-      } else {
-        LOG.warn(
-            "Unexpected: cgroup file is not in the expected format"
-                + " for process with pid " + pid);
-      }
-      return Result.Continue;
-    });
-    if (result[0] == null) {
-      throw new YarnException(controller.getName() + " CGroup for pid " + pid +
-          " not found " + pidCgroupFile);
-    }
-    return result[0];
-  }
-
-  private void processFile(File file, Function<String, Result> processLine)
-      throws YarnException {
-    // Read "procfsDir/<pid>/stat" file - typically /proc/<pid>/stat
-    try (InputStreamReader fReader = new InputStreamReader(
-        new FileInputStream(file), StandardCharsets.UTF_8)) {
-      try (BufferedReader in = new BufferedReader(fReader)) {
-        try {
-          String str;
-          while ((str = in.readLine()) != null) {
-            Result result = processLine.apply(str);
-            if (result == Result.Exit) {
-              return;
-            }
-          }
-        } catch (IOException io) {
-          throw new YarnException("Error reading the stream " + io, io);
+  private String getCGroupRelativePath(CGroupsHandler.CGroupController controller)
+      throws IOException {
+    for (String line : readLinesFromCGroupFileFromProcDir()) {
+      // example line: 6:cpuacct,cpu:/yarn/container_1
+      String[] parts = line.split(":");
+      if (parts[1].contains(controller.getName())) {
+        String cgroupPath = parts[2];
+        Path fileName = new File(cgroupPath).toPath().getFileName();
+        if (fileName != null) {
+          return getcGroupsHandler().getRelativePathForCGroup(fileName.toString());
         }
       }
-    } catch (IOException f) {
-      throw new YarnException("The process vanished in the interim " + pid, f);
     }
+    LOG.debug("No {} controller found for pid {}", controller, getPid());
+    return null;
   }
-
-  void setCGroupFilePaths() throws YarnException {
-    if (cGroupsHandler == null) {
-      throw new YarnException("CGroups handler is not initialized");
-    }
-    File cpuDir = new File(
-        cGroupsHandler.getControllerPath(
-            CGroupsHandler.CGroupController.CPUACCT),
-        getCGroupRelativePath(CGroupsHandler.CGroupController.CPUACCT));
-    File memDir = new File(
-        cGroupsHandler.getControllerPath(
-            CGroupsHandler.CGroupController.MEMORY),
-        getCGroupRelativePath(CGroupsHandler.CGroupController.MEMORY));
-    cpuStat = new File(cpuDir, CPU_STAT);
-    memStat = new File(memDir, MEM_STAT);
-    memswStat = new File(memDir, MEMSW_STAT);
-  }
-
 }
