@@ -148,6 +148,7 @@ public class TestFilterFileSystem {
 
     FSDataOutputStream append(Path f, int bufferSize,
         Progressable progress, boolean appendToNewBlock) throws IOException;
+    BulkDelete createBulkDelete(Path path) throws IllegalArgumentException, IOException;
   }
 
   @Test
