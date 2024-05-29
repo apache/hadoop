@@ -547,7 +547,6 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
   }
 
   public static class AbfsHttpOperationWithFixedResult extends AbfsHttpOperation {
-
     /**
      * Creates an instance to represent fixed results.
      * This is used in idempotency handling.
@@ -563,166 +562,8 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
     }
 
     @Override
-    int getConnectionTimeout() {
-      return super.getConnectionTimeout();
-    }
-
-    @Override
-    int getReadTimeout() {
-      return super.getReadTimeout();
-    }
-
-    @Override
-    List<AbfsHttpHeader> getRequestHeaders() {
-      return super.getRequestHeaders();
-    }
-
-    @Override
-    void addHeaderToRequestHeaderList(final AbfsHttpHeader abfsHttpHeader) {
-      super.addHeaderToRequestHeaderList(abfsHttpHeader);
-    }
-
-    @Override
-    public String getMethod() {
-      return super.getMethod();
-    }
-
-    @Override
-    public String getHost() {
-      return super.getHost();
-    }
-
-    @Override
-    public int getStatusCode() {
-      return super.getStatusCode();
-    }
-
-    @Override
-    public String getStatusDescription() {
-      return super.getStatusDescription();
-    }
-
-    @Override
-    public String getStorageErrorCode() {
-      return super.getStorageErrorCode();
-    }
-
-    @Override
-    public String getStorageErrorMessage() {
-      return super.getStorageErrorMessage();
-    }
-
-    @Override
     public String getClientRequestId() {
       return null;
-    }
-
-    @Override
-    public String getExpectedAppendPos() {
-      return super.getExpectedAppendPos();
-    }
-
-    @Override
-    public String getRequestId() {
-      return super.getRequestId();
-    }
-
-    @Override
-    public void setMaskForSAS() {
-      super.setMaskForSAS();
-    }
-
-    @Override
-    public int getBytesSent() {
-      return super.getBytesSent();
-    }
-
-    @Override
-    public int getExpectedBytesToBeSent() {
-      return super.getExpectedBytesToBeSent();
-    }
-
-    @Override
-    public long getBytesReceived() {
-      return super.getBytesReceived();
-    }
-
-    @Override
-    public URL getUrl() {
-      return super.getUrl();
-    }
-
-    @Override
-    public ListResultSchema getListResultSchema() {
-      return super.getListResultSchema();
-    }
-
-    @Override
-    void setExpectedBytesToBeSent(final int expectedBytesToBeSent) {
-      super.setExpectedBytesToBeSent(expectedBytesToBeSent);
-    }
-
-    @Override
-    void setStatusCode(final int statusCode) {
-      super.setStatusCode(statusCode);
-    }
-
-    @Override
-    void setStatusDescription(final String statusDescription) {
-      super.setStatusDescription(statusDescription);
-    }
-
-    @Override
-    void setBytesSent(final int bytesSent) {
-      super.setBytesSent(bytesSent);
-    }
-
-    @Override
-    void setSendRequestTimeMs(final long sendRequestTimeMs) {
-      super.setSendRequestTimeMs(sendRequestTimeMs);
-    }
-
-    @Override
-    void setRecvResponseTimeMs(final long recvResponseTimeMs) {
-      super.setRecvResponseTimeMs(recvResponseTimeMs);
-    }
-
-    @Override
-    void setRequestId(final String requestId) {
-      super.setRequestId(requestId);
-    }
-
-    @Override
-    void setConnectionTimeMs(final long connectionTimeMs) {
-      super.setConnectionTimeMs(connectionTimeMs);
-    }
-
-    @Override
-    public String toString() {
-      return super.toString();
-    }
-
-    @Override
-    public String getLogString() {
-      return super.getLogString();
-    }
-
-    @Override
-    public String getMaskedUrl() {
-      return super.getMaskedUrl();
-    }
-
-    @Override
-    public String getMaskedEncodedUrl() {
-      return super.getMaskedEncodedUrl();
-    }
-
-    @Override
-    public void sendPayload(final byte[] buffer,
-        final int offset,
-        final int length)
-        throws IOException {
-
     }
 
     @Override
@@ -739,40 +580,13 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
     }
 
     @Override
-    void parseResponse(final byte[] buffer, final int offset, final int length)
-        throws IOException {
-      super.parseResponse(buffer, offset, length);
-    }
-
-    @Override
     InputStream getContentInputStream() throws IOException {
       return null;
     }
 
     @Override
-    protected void processStorageErrorResponse() {
-      super.processStorageErrorResponse();
-    }
-
-    @Override
     protected InputStream getErrorStream() throws IOException {
       return null;
-    }
-
-    @Override
-    protected void parseListFilesResponse(final InputStream stream)
-        throws IOException {
-      super.parseListFilesResponse(stream);
-    }
-
-    @Override
-    long elapsedTimeMs(final long startTime) {
-      return super.elapsedTimeMs(startTime);
-    }
-
-    @Override
-    boolean isNullInputStream(final InputStream stream) {
-      return super.isNullInputStream(stream);
     }
 
     @Override
@@ -821,19 +635,16 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
     }
 
     @Override
-    public long getSendLatency() {
-      return super.getSendLatency();
-    }
-
-    @Override
-    public long getRecvLatency() {
-      return super.getRecvLatency();
-    }
-
-    @Override
     public String getResponseHeader(final String httpHeader) {
       return "";
     }
 
+    @Override
+    public void sendPayload(final byte[] buffer,
+        final int offset,
+        final int length)
+        throws IOException {
+
+    }
   }
 }
