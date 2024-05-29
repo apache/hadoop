@@ -57,27 +57,6 @@ public class AbfsJdkHttpOperation extends AbfsHttpOperation {
 
   private boolean connectionDisconnectedOnError = false;
 
-  public static AbfsJdkHttpOperation getAbfsHttpOperationWithFixedResult(
-      final URL url,
-      final String method,
-      final int httpStatus) {
-    AbfsHttpOperationWithFixedResult httpOp
-        = new AbfsHttpOperationWithFixedResult(url, method, httpStatus);
-    return httpOp;
-  }
-
-  /**
-   * Constructor for FixedResult instance, avoiding connection init.
-   * @param url request url
-   * @param method Http method
-   * @param httpStatus HttpStatus
-   */
-  protected AbfsJdkHttpOperation(final URL url,
-      final String method,
-      final int httpStatus) {
-    super(LOG, url, method, httpStatus);
-  }
-
   /**
    * Initializes a new HTTP request and opens the connection.
    *
@@ -362,28 +341,5 @@ public class AbfsJdkHttpOperation extends AbfsHttpOperation {
   @Override
   public String getTracingContextSuffix() {
     return AbfsApacheHttpClient.usable() ? JDK_IMPL : JDK_FALLBACK;
-  }
-
-  public static class AbfsHttpOperationWithFixedResult
-      extends AbfsJdkHttpOperation {
-
-    /**
-     * Creates an instance to represent fixed results.
-     * This is used in idempotency handling.
-     *
-     * @param url The full URL including query string parameters.
-     * @param method The HTTP method (PUT, PATCH, POST, GET, HEAD, or DELETE).
-     * @param httpStatus StatusCode to hard set
-     */
-    public AbfsHttpOperationWithFixedResult(final URL url,
-        final String method,
-        final int httpStatus) {
-      super(url, method, httpStatus);
-    }
-
-    @Override
-    public String getResponseHeader(final String httpHeader) {
-      return "";
-    }
   }
 }

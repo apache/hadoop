@@ -120,15 +120,7 @@ public class AbfsRestOperation {
   }
 
   public void hardSetResult(int httpStatus) {
-    if (abfsConfiguration.getPreferredHttpOperationType()
-        == HttpOperationType.APACHE_HTTP_CLIENT) {
-      result
-          = AbfsAHCHttpOperation.getAbfsApacheHttpClientHttpOperationWithFixedResult(
-          this.url,
-          this.method, httpStatus);
-      return;
-    }
-    result = AbfsJdkHttpOperation.getAbfsHttpOperationWithFixedResult(this.url,
+    result = AbfsHttpOperation.getAbfsHttpOperationWithFixedResult(this.url,
         this.method, httpStatus);
   }
 

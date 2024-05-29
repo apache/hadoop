@@ -88,13 +88,6 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
     this.isPayloadRequest = isPayloadRequest(method);
   }
 
-  private AbfsAHCHttpOperation(final URL url,
-      final String method,
-      final int httpStatus) {
-    super(LOG, url, method, httpStatus);
-    this.isPayloadRequest = isPayloadRequest(method);
-  }
-
   @VisibleForTesting
   AbfsManagedHttpClientContext setFinalAbfsClientContext() {
     return new AbfsManagedHttpClientContext();
@@ -103,13 +96,6 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
   private boolean isPayloadRequest(final String method) {
     return HTTP_METHOD_PUT.equals(method) || HTTP_METHOD_PATCH.equals(method)
         || HTTP_METHOD_POST.equals(method);
-  }
-
-  public static AbfsAHCHttpOperation getAbfsApacheHttpClientHttpOperationWithFixedResult(
-      final URL url,
-      final String method,
-      final int httpStatus) {
-    return new AbfsAHCHttpOperation(url, method, httpStatus);
   }
 
   @Override
