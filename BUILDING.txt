@@ -163,14 +163,7 @@ Maven build goals:
  YARN Application Timeline Service V2 build options:
 
    YARN Timeline Service v.2 chooses Apache HBase as the primary backing storage. The supported
-   versions of Apache HBase are 1.7.1 (default) and 2.2.4.
-
-  * HBase 1.7.1 is used by default to build Hadoop. The official releases are ready to use if you
-    plan on running Timeline Service v2 with HBase 1.7.1.
-
-  * Use -Dhbase.profile=2.0 to build Hadoop with HBase 2.2.4. Provide this option if you plan
-    on running Timeline Service v2 with HBase 2.x.
-
+   version of Apache HBase is 2.5.8.
 
  Snappy build options:
 
@@ -652,6 +645,20 @@ container.
     -Dcmake.prefix.path=C:\vcpkg\installed\x64-windows^
     -Dwindows.cmake.toolchain.file=C:\vcpkg\scripts\buildsystems\vcpkg.cmake -Dwindows.cmake.build.type=RelWithDebInfo^
     -Dwindows.build.hdfspp.dll=off -Dwindows.no.sasl=on -Duse.platformToolsetVersion=v142
+
+Building the release tarball:
+Assuming that we're still running in the Docker container hadoop-windows-10-builder, run the
+following command to create the Apache Hadoop release tarball -
+
+> set IS_WINDOWS=1
+> set MVN_ARGS="-Dshell-executable=C:\Git\bin\bash.exe -Dhttps.protocols=TLSv1.2 -Pnative-win -Drequire.openssl -Dopenssl.prefix=C:\vcpkg\installed\x64-windows -Dcmake.prefix.path=C:\vcpkg\installed\x64-windows -Dwindows.cmake.toolchain.file=C:\vcpkg\scripts\buildsystems\vcpkg.cmake -Dwindows.cmake.build.type=RelWithDebInfo -Dwindows.build.hdfspp.dll=off -Duse.platformToolsetVersion=v142 -Dwindows.no.sasl=on -DskipTests -DskipDocs -Drequire.test.libhadoop"
+> C:\Git\bin\bash.exe C:\hadoop\dev-support\bin\create-release --mvnargs=%MVN_ARGS%
+
+Note:
+If the building fails due to an issue with long paths, rename the Hadoop root directory to just a
+letter (like 'h') and rebuild -
+
+> C:\Git\bin\bash.exe C:\h\dev-support\bin\create-release --mvnargs=%MVN_ARGS%
 
 ----------------------------------------------------------------------------------
 Building distributions:

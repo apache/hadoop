@@ -31,6 +31,7 @@ import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.protocol.*;
 import org.apache.hadoop.hdfs.server.protocol.BlockECReconstructionCommand.BlockECReconstructionInfo;
 import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo.BlockStatus;
+import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Sets;
 
@@ -324,6 +325,12 @@ class BPOfferService {
     final ReceivedDeletedBlockInfo info = new ReceivedDeletedBlockInfo(
         block.getLocalBlock(), status, delHint);
     final DatanodeStorage storage = dn.getFSDataset().getStorage(storageUuid);
+    if (storage == null) {
+      LOG.warn("Trying to add RDBI for null storage UUID {}. Trace: {}", storageUuid,
+          Joiner.on("\n").join(Thread.currentThread().getStackTrace()));
+      getDataNode().getMetrics().incrNullStorageBlockReports();
+      return;
+    }
 
     for (BPServiceActor actor : bpServices) {
       actor.getIbrManager().notifyNamenodeBlock(info, storage,
@@ -427,8 +434,10 @@ class BPOfferService {
       dn.bpRegistrationSucceeded(bpRegistration, getBlockPoolId());
       // Add the initial block token secret keys to the DN's secret manager.
       if (dn.isBlockTokenEnabled) {
+        boolean updateCurrentKey = bpServiceActor.state == null
+            || bpServiceActor.state == HAServiceState.ACTIVE;
         dn.blockPoolTokenSecretManager.addKeys(getBlockPoolId(),
-            reg.getExportedKeys());
+            reg.getExportedKeys(), updateCurrentKey);
       }
     } finally {
       writeUnlock();
@@ -781,7 +790,7 @@ class BPOfferService {
       if (dn.isBlockTokenEnabled) {
         dn.blockPoolTokenSecretManager.addKeys(
             getBlockPoolId(), 
-            ((KeyUpdateCommand) cmd).getExportedKeys());
+            ((KeyUpdateCommand) cmd).getExportedKeys(), true);
       }
       break;
     case DatanodeProtocol.DNA_BALANCERBANDWIDTHUPDATE:
@@ -822,7 +831,7 @@ class BPOfferService {
       if (dn.isBlockTokenEnabled) {
         dn.blockPoolTokenSecretManager.addKeys(
             getBlockPoolId(), 
-            ((KeyUpdateCommand) cmd).getExportedKeys());
+            ((KeyUpdateCommand) cmd).getExportedKeys(), false);
       }
       break;
     case DatanodeProtocol.DNA_TRANSFER:

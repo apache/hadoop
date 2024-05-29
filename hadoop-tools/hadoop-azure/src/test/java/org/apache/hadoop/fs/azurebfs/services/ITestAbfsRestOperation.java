@@ -66,6 +66,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_A
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_CONFIGURATION_FILE_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpOperationType.APACHE_HTTP_CLIENT;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpOperationType.JDK_HTTP_URL_CONNECTION;
+import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.EGRESS_OVER_ACCOUNT_LIMIT;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -262,6 +263,11 @@ public class ITestAbfsRestOperation extends AbstractAbfsIntegrationTest {
       // behaviour based on response code.
 
       Mockito.doReturn(responseCode).when(httpOperation).getStatusCode();
+      if (responseCode == HTTP_UNAVAILABLE) {
+        Mockito.doReturn(EGRESS_OVER_ACCOUNT_LIMIT.getErrorMessage())
+            .when(httpOperation)
+            .getStorageErrorMessage();
+      }
       Mockito.doReturn(responseMessage)
           .when(httpOperation)
           .getConnResponseMessage();

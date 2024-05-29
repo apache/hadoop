@@ -140,17 +140,28 @@ public class TestStateStoreZK extends TestStateStoreDriverBase {
       insertList.add(newRecord);
     }
     // Insert Multiple on sync mode
-    long startSync = Time.now();
+    long startSyncPut = Time.now();
     stateStoreDriver.putAll(insertList, true, false);
-    long endSync = Time.now();
+    long endSyncPut = Time.now();
+    // Removing 1000 records synchronously is painfully slow so test with only 5 records
+    // Then remove the rest with removeAll()
+    long startSyncRemove = Time.now();
+    for (MountTable entry : insertList.subList(0, 5)) {
+      stateStoreDriver.remove(entry);
+    }
+    long endSyncRemove = Time.now();
     stateStoreDriver.removeAll(MembershipState.class);
 
     stateStoreDriver.setEnableConcurrent(true);
     // Insert Multiple on async mode
-    long startAsync = Time.now();
+    long startAsyncPut = Time.now();
     stateStoreDriver.putAll(insertList, true, false);
-    long endAsync = Time.now();
-    assertTrue((endSync - startSync) > (endAsync - startAsync));
+    long endAsyncPut = Time.now();
+    long startAsyncRemove = Time.now();
+    stateStoreDriver.removeMultiple(insertList.subList(0, 5));
+    long endAsyncRemove = Time.now();
+    assertTrue((endSyncPut - startSyncPut) > (endAsyncPut - startAsyncPut));
+    assertTrue((endSyncRemove - startSyncRemove) > (endAsyncRemove - startAsyncRemove));
   }
 
   @Test
