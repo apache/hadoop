@@ -195,7 +195,7 @@ public class AbfsRestOperation {
     if (abfsBackoffMetrics != null) {
       this.metricsMap = abfsBackoffMetrics.getMetricsMap();
     }
-    this.maxIoRetries = client.getAbfsConfiguration().getMaxIoRetries();
+    this.maxIoRetries = abfsConfiguration.getMaxIoRetries();
     this.intercept = client.getIntercept();
     this.abfsConfiguration = abfsConfiguration;
     this.retryPolicy = client.getExponentialRetryPolicy();
@@ -243,7 +243,9 @@ public class AbfsRestOperation {
     // triggered by a single file system call, using a new tracing context.
     lastUsedTracingContext = createNewTracingContext(tracingContext);
     try {
-      abfsCounters.getLastExecutionTime().set(now());
+      if (abfsCounters != null) {
+        abfsCounters.getLastExecutionTime().set(now());
+      }
       client.timerOrchestrator(TimerFunctionality.RESUME, null);
       IOStatisticsBinding.trackDurationOfInvocation(abfsCounters,
           AbfsStatistic.getStatNameFromHttpCall(method),
