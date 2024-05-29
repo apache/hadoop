@@ -140,7 +140,7 @@ public class TestDirectoryScanner {
   /** Truncate a block file. */
   private long truncateBlockFile() throws IOException {
     try (AutoCloseableLock lock = fds.acquireDatasetLockManager().writeLock(
-        LockLevel.BLOCK_POOl, bpid)) {
+        "testDirectoryScanner", LockLevel.BLOCK_POOl, bpid)) {
       for (ReplicaInfo b : FsDatasetTestUtil.getReplicas(fds, bpid)) {
         File f = new File(b.getBlockURI());
         File mf = new File(b.getMetadataURI());
@@ -166,7 +166,7 @@ public class TestDirectoryScanner {
   /** Delete a block file */
   private long deleteBlockFile() {
     try (AutoCloseableLock lock = fds.acquireDatasetLockManager().
-        writeLock(LockLevel.BLOCK_POOl, bpid)) {
+        writeLock("testDirectoryScanner", LockLevel.BLOCK_POOl, bpid)) {
       for (ReplicaInfo b : FsDatasetTestUtil.getReplicas(fds, bpid)) {
         File f = new File(b.getBlockURI());
         File mf = new File(b.getMetadataURI());
@@ -183,7 +183,7 @@ public class TestDirectoryScanner {
   /** Delete block meta file */
   private long deleteMetaFile() {
     try (AutoCloseableLock lock = fds.acquireDatasetLockManager().
-        writeLock(LockLevel.BLOCK_POOl, bpid)) {
+        writeLock("testDirectoryScanner", LockLevel.BLOCK_POOl, bpid)) {
       for (ReplicaInfo b : FsDatasetTestUtil.getReplicas(fds, bpid)) {
         // Delete a metadata file
         if (b.metadataExists() && b.deleteMetadata()) {
@@ -203,7 +203,7 @@ public class TestDirectoryScanner {
    */
   private void duplicateBlock(long blockId) throws IOException {
     try (AutoCloseableLock lock = fds.acquireDatasetLockManager().
-        writeLock(LockLevel.BLOCK_POOl, bpid)) {
+        writeLock("testDirectoryScanner", LockLevel.BLOCK_POOl, bpid)) {
       ReplicaInfo b = FsDatasetTestUtil.fetchReplicaInfo(fds, bpid, blockId);
       try (FsDatasetSpi.FsVolumeReferences volumes =
           fds.getFsVolumeReferences()) {

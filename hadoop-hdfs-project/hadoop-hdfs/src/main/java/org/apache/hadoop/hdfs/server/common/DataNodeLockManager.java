@@ -35,12 +35,12 @@ public interface DataNodeLockManager<T extends AutoCloseDataSetLock> {
   /**
    * Acquire readLock and then lock.
    */
-  T readLock(LockLevel level, String... resources);
+  T readLock(String op, LockLevel level, String... resources);
 
   /**
    * Acquire writeLock and then lock.
    */
-  T writeLock(LockLevel level, String... resources);
+  T writeLock(String op, LockLevel level, String... resources);
 
   /**
    * Add a lock to LockManager.
@@ -50,7 +50,7 @@ public interface DataNodeLockManager<T extends AutoCloseDataSetLock> {
   /**
    * Remove a lock from LockManager.
    */
-  void removeLock(LockLevel level, String... resources);
+  void removeLock(String op, LockLevel level, String... resources);
 
   /**
    * LockManager may need to back hook.
