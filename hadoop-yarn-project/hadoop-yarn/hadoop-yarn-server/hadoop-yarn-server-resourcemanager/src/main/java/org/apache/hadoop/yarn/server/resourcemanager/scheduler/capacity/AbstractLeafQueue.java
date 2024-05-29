@@ -1278,8 +1278,6 @@ public class AbstractLeafQueue extends AbstractCSQueue {
             "User capacity has reached its maximum limit." +
                 " User limit is " + userLimit + "Resource used by " +
                 userName + " is " + usedResourceByUser + ".");
-        application.updateAMContainerDiagnostics(AMState.ACTIVATED,
-            "User capacity has reached its maximum limit.");
         ActivitiesLogger.APP.recordRejectedAppActivityFromLeafQueue(
             activitiesManager, node, application, application.getPriority(),
             ActivityDiagnosticConstant.QUEUE_HIT_USER_MAX_CAPACITY_LIMIT);
