@@ -34,7 +34,7 @@ public interface IdentityTransformerInterface {
    * @param isUserName indicate whether the input originalIdentity is an owner name or owning group name.
    * @param localIdentity the local user or group, should be parsed from UserGroupInformation.
    * @return owner or group after transformation.
-   * @throws if transformation fails.
+   * @throws IOException if transformation fails.
    */
   String transformIdentityForGetRequest(String originalIdentity, boolean isUserName, String localIdentity)
       throws IOException;
@@ -57,7 +57,7 @@ public interface IdentityTransformerInterface {
    * @param aclEntries list of AclEntry.
    * @param localUser local user name.
    * @param localGroup local primary group.
-   * @throws if transformation fails.
+   * @throws IOException if transformation fails.
    */
   void transformAclEntriesForGetRequest(final List<AclEntry> aclEntries, String localUser, String localGroup)
       throws IOException;

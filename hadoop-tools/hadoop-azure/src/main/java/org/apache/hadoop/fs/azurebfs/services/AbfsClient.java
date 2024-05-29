@@ -1003,8 +1003,7 @@ public abstract class AbfsClient implements Closeable {
   /**
    * Conditions check for allowing checksum support for read operation.
    * Sending MD5 Hash in request headers. For more details see
-   * @see <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/read"></a>.
-   *     Path - Read Azure Storage Rest API</a>.
+   * @see <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/read">Path - Read Azure Storage Rest API</a>.
    * 1. Range header must be present as one of the request headers.
    * 2. buffer length must be less than or equal to 4 MB.
    * @param requestHeaders to be checked for range header.
@@ -1022,8 +1021,7 @@ public abstract class AbfsClient implements Closeable {
    * Conditions check for allowing checksum support for write operation.
    * Server will support this if client sends the MD5 Hash as a request header.
    * For azure stoage service documentation see
-   * @see <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/update"></a>.
-   *     Path - Update Azure Rest API</a>.
+   * @see <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/update">Path - Update Azure Rest API</a>.
    * @return true if checksum validation enabled.
    */
   protected boolean isChecksumValidationEnabled() {
