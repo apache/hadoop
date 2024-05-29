@@ -42,28 +42,28 @@ final class AbfsApacheHttpClient {
 
   private final CloseableHttpClient httpClient;
 
-  private static AbfsApacheHttpClient ABFS_APACHE_HTTP_CLIENT = null;
+  private static AbfsApacheHttpClient abfsApacheHttpClient = null;
 
-  private static boolean USABLE = true;
+  private static boolean usable = true;
 
   static void registerFallback() {
-    USABLE = false;
+    usable = false;
   }
 
   static boolean usable() {
-    return USABLE;
+    return usable;
   }
 
   static synchronized void setClient(DelegatingSSLSocketFactory delegatingSSLSocketFactory,
       final int readTimeout) {
-    if (ABFS_APACHE_HTTP_CLIENT == null) {
-      ABFS_APACHE_HTTP_CLIENT = new AbfsApacheHttpClient(
+    if (abfsApacheHttpClient == null) {
+      abfsApacheHttpClient = new AbfsApacheHttpClient(
           delegatingSSLSocketFactory, readTimeout);
     }
   }
 
   static AbfsApacheHttpClient getClient() {
-    return ABFS_APACHE_HTTP_CLIENT;
+    return abfsApacheHttpClient;
   }
 
   private AbfsApacheHttpClient(DelegatingSSLSocketFactory delegatingSSLSocketFactory,
