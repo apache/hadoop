@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.federation.metrics;
 
 import static org.apache.hadoop.util.Time.now;
+import static org.apache.hadoop.util.Time.monotonicNow;
 
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
@@ -191,6 +192,10 @@ public class NamenodeBeanMetrics
   @Override
   public String getSoftwareVersion() {
     return VersionInfo.getVersion();
+  }
+
+  private Object getLastBlockReport(DatanodeInfo node) {
+    return (monotonicNow() - node.getLastBlockReportMonotonic()) / 60000;
   }
 
   @Override
@@ -489,6 +494,7 @@ public class NamenodeBeanMetrics
         innerinfo.put("blockScheduled", -1); // node.getBlocksScheduled()
         innerinfo.put("blockPoolUsed", node.getBlockPoolUsed());
         innerinfo.put("blockPoolUsedPercent", node.getBlockPoolUsedPercent());
+        innerInfo.put("lastBlockReport", getLastBlockReport(node));
         innerinfo.put("volfails", -1); // node.getVolumeFailures()
         innerinfo.put("blockPoolUsedPercentStdDev",
             Util.getBlockPoolUsedPercentStdDev(storageReports));
