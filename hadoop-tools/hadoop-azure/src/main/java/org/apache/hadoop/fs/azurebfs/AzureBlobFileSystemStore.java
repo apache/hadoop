@@ -1729,7 +1729,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       creds = new SharedKeyCredentials(accountName.substring(0, dotIndex),
             abfsConfiguration.getStorageAccountKey());
     } else if (authType == AuthType.SAS) {
-      LOG.trace("Fetching SAS token provider");
+      LOG.trace("Fetching SAS Token Provider");
       sasTokenProvider = abfsConfiguration.getSASTokenProvider();
     } else {
       LOG.trace("Fetching token provider");
