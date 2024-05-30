@@ -25,9 +25,9 @@ import org.apache.hadoop.util.Preconditions;
  * based on the service type.
  */
 public class AbfsClientHandler {
-  private AbfsServiceType defaultServiceType;
-  private AbfsClient dfsAbfsClient;
-  private AbfsClient blobAbfsClient;
+  private final AbfsServiceType defaultServiceType;
+  private final AbfsClient dfsAbfsClient;
+  private final AbfsClient blobAbfsClient;
 
   public AbfsClientHandler(AbfsServiceType defaultServiceType,
       AbfsClient dfsAbfsClient, AbfsClient blobAbfsClient) {

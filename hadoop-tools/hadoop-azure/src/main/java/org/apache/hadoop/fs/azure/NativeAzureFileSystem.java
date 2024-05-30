@@ -1870,7 +1870,7 @@ public class NativeAzureFileSystem extends FileSystem {
    * @return the output stream used to write data into the newly created file .
    * @throws IOException if an IO error occurs while attempting to delete the
    * path.
-   *
+   * @throws FileAlreadyExistsException if file already exists at path.
    */
   protected FSDataOutputStream createInternal(Path f, FsPermission permission,
                                     boolean overwrite,
