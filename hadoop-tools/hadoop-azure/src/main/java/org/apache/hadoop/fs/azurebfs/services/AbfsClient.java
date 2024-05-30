@@ -1065,6 +1065,7 @@ public class AbfsClient implements Closeable {
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_POSITION, Long.toString(position));
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RETAIN_UNCOMMITTED_DATA, String.valueOf(retainUncommittedData));
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_CLOSE, String.valueOf(isClose));
+
     // AbfsInputStream/AbfsOutputStream reuse SAS tokens for better performance
     String sasTokenForReuse = appendSASTokenToQuery(path, SASTokenProvider.WRITE_OPERATION,
         abfsUriQueryBuilder, cachedSasToken);
@@ -1160,6 +1161,7 @@ public class AbfsClient implements Closeable {
     }
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
+
     // AbfsInputStream/AbfsOutputStream reuse SAS tokens for better performance
     String sasTokenForReuse = appendSASTokenToQuery(path, SASTokenProvider.READ_OPERATION,
         abfsUriQueryBuilder, cachedSasToken);
@@ -1471,16 +1473,17 @@ public class AbfsClient implements Closeable {
           sasToken = cachedSasToken;
           LOG.trace("Using cached SAS token.");
         }
+
         // if SAS Token contains a prefix of ?, it should be removed
         if (sasToken.charAt(0) == '?') {
           sasToken = sasToken.substring(1);
         }
+
         queryBuilder.setSASToken(sasToken);
         LOG.trace("SAS token fetch complete for {} on {}", operation, path);
       } catch (Exception ex) {
-        throw new SASTokenProviderException(String.format("Failed to acquire a SAS token for %s on %s due to %s",
-            operation,
-            path,
+        throw new SASTokenProviderException(String.format(
+            "Failed to acquire a SAS token for %s on %s due to %s", operation, path,
             ex.toString()));
       }
     }
