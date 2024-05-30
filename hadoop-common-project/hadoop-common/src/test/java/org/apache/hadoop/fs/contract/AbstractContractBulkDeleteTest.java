@@ -69,7 +69,7 @@ public abstract class AbstractContractBulkDeleteTest extends AbstractFSContractT
   public void setUp() throws Exception {
     fs = getFileSystem();
     basePath = path(getClass().getName());
-    pageSize = WrappedIO.bulkDelete_PageSize(getFileSystem(), basePath);
+    pageSize = WrappedIO.bulkDelete_pageSize(getFileSystem(), basePath);
     fs.mkdirs(basePath);
   }
 

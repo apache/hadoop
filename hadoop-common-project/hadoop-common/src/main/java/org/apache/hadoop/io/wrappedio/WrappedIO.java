@@ -54,7 +54,7 @@ public final class WrappedIO {
    * @throws IllegalArgumentException path not valid.
    * @throws IOException problems resolving paths
    */
-  public static int bulkDelete_PageSize(FileSystem fs, Path path) throws IOException {
+  public static int bulkDelete_pageSize(FileSystem fs, Path path) throws IOException {
     try (BulkDelete bulk = fs.createBulkDelete(path)) {
       return bulk.pageSize();
     }
