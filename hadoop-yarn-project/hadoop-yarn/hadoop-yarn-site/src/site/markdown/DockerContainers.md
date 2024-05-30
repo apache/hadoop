@@ -514,7 +514,7 @@ uid:gid pair will be used to launch the container's process.
 As an example of what is meant by uid:gid pair, consider the following. By
 default, in non-secure mode, YARN will launch processes as the user `nobody`
 (see the table at the bottom of
-[Using CGroups with YARN](./NodeManagerCgroups.html) for how the run as user is
+[Using Cgroups with YARN](./NodeManagerCgroups.html) for how the run as user is
 determined in non-secure mode). On CentOS based systems, the `nobody` user's uid
 is `99` and the `nobody` group is `99`. As a result, YARN will call `docker run`
 with `--user 99:99`. If the `nobody` user does not have the uid `99` in the

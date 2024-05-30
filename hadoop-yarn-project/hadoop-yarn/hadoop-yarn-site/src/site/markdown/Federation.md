@@ -177,7 +177,7 @@ ZooKeeper: one must set the ZooKeeper settings for Hadoop:
 | Property                            | Example                                                                             | Description                             |
 |:------------------------------------|:------------------------------------------------------------------------------------|:----------------------------------------|
 | `yarn.federation.state-store.class` | `org.apache.hadoop.yarn.server.federation.store.impl.ZookeeperFederationStateStore` | The type of state-store to use.         |
-| `hadoop.zk.address`                 | `host:port`                                                                         | The address for the ZooKeeper ensemble. |
+| `yarn.federation.state-store.zk.address`                 | `host:port`                                                                         | The address for the ZooKeeper ensemble. |
 
 SQL: one must setup the following parameters:
 
@@ -1006,7 +1006,7 @@ Example of Machine-Role Mapping(Exclude HDFS):
 
 <!-- ZK Address. -->
 <property>
-  <name>hadoop.zk.address</name>
+  <name>yarn.federation.state-store.zk.address</name>
   <value>zkHost:zkPort</value>
 </property>
 
@@ -1067,7 +1067,7 @@ $HADOOP_HOME/bin/yarn --daemon start resourcemanager
 
 <!-- ZK Address. -->
 <property>
-  <name>hadoop.zk.address</name>
+  <name>yarn.federation.state-store.zk.address</name>
   <value>zkHost:zkPort</value>
 </property>
 
@@ -1135,7 +1135,7 @@ After we have finished configuring the `YARN-2` cluster, we can proceed with sta
 
 <!-- ZK Address. -->
 <property>
-  <name>hadoop.zk.address</name>
+  <name>yarn.federation.state-store.zk.address</name>
   <value>zkHost:zkPort</value>
 </property>
 

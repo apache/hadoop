@@ -1151,6 +1151,49 @@ Note that these performance numbers are also sent back to the ADLS Gen 2 API end
 in the `x-ms-abfs-client-latency` HTTP headers in subsequent requests. Azure uses these
 settings to track their end-to-end latency.
 
+### <a name="drivermetricoptions"></a> Driver Metric Options
+
+Config `fs.azure.metric.format` provides an option to select the format of IDs included in the `header` for metrics.
+This config accepts a String value corresponding to the following enum options.
+`INTERNAL_METRIC_FORMAT` : backoff + footer metrics
+`INTERNAL_BACKOFF_METRIC_FORMAT` : backoff metrics
+`INTERNAL_FOOTER_METRIC_FORMAT` : footer metrics
+`EMPTY` : default
+
+`fs.azure.metric.account.name`: This configuration parameter is used to specify the name of the account which will be
+used to push the metrics to the backend. We can configure a separate account to push metrics to the store or use the
+same for as the existing account on which other requests are made.
+
+```xml
+
+<property>
+    <name>fs.azure.metric.account.name</name>
+    <value>METRICACCOUNTNAME.dfs.core.windows.net</value>
+</property>
+```
+
+`fs.azure.metric.account.key`: This is the access key for the storage account used for pushing metrics to the store.
+
+```xml
+
+<property>
+    <name>fs.azure.metric.account.key</name>
+    <value>ACCOUNTKEY</value>
+</property>
+```
+
+`fs.azure.metric.uri`: This configuration provides the uri in the format of 'https://`<accountname>`
+.dfs.core.windows.net/`<containername>`'. This should be a part of the config in order to prevent extra calls to create
+the filesystem. We use an existing filsystem to push the metrics.
+
+```xml
+
+<property>
+    <name>fs.azure.metric.uri</name>
+    <value>https://METRICACCOUNTNAME.dfs.core.windows.net/CONTAINERNAME</value>
+</property>
+```
+
 ## <a name="troubleshooting"></a> Troubleshooting
 
 The problems associated with the connector usually come down to, in order

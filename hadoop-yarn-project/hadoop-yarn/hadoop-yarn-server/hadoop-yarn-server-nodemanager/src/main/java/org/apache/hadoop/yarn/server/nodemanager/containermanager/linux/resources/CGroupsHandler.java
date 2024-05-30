@@ -123,6 +123,8 @@ public interface CGroupsHandler {
   String CGROUP_CONTROLLERS_FILE = "cgroup.controllers";
   String CGROUP_SUBTREE_CONTROL_FILE = "cgroup.subtree_control";
   String CGROUP_CPU_MAX = "max";
+  String CGROUP_MEMORY_MAX = "max";
+  String CGROUP_MEMORY_LOW = "low";
 
   // present in v1 and v2
   String CGROUP_PROCS_FILE = "cgroup.procs";
@@ -237,4 +239,10 @@ public interface CGroupsHandler {
    * @return parameter value as read from the parameter file
    */
   String getCGroupMountPath();
+
+  /**
+   * Returns CGroupV2 Mount Path.
+   * @return parameter value as read from the parameter file
+   */
+  String getCGroupV2MountPath();
 }
