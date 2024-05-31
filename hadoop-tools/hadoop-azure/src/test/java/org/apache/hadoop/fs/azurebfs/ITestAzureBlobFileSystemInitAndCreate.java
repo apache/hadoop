@@ -29,6 +29,7 @@ import org.mockito.Mockito;
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.TrileanConversionException;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
+import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 /**
@@ -68,6 +69,9 @@ public class ITestAzureBlobFileSystemInitAndCreate extends
         .isNamespaceEnabled();
 
     TracingContext tracingContext = getSampleTracingContext(fs, true);
+    Mockito.doReturn(Mockito.mock(AbfsRestOperation.class))
+        .when(client)
+        .getAclStatus(Mockito.anyString(), Mockito.any(TracingContext.class));
     store.getIsNamespaceEnabled(tracingContext);
 
     Mockito.verify(client, Mockito.times(1))
