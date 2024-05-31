@@ -37,11 +37,11 @@ Multiple blocks may be read in parallel.
 
 ### Configuring the stream
 
-|Property    |Meaning    |Default    |
-|---|---|---|
-|`fs.s3a.prefetch.enabled`    |Enable the prefetch input stream    |`false` |
-|`fs.s3a.prefetch.block.size`    |Size of a block    |`8M`    |
-|`fs.s3a.prefetch.block.count`    |Number of blocks to prefetch    |`8`    |
+| Property                      | Meaning                          | Default |
+|-------------------------------|----------------------------------|---------|
+| `fs.s3a.prefetch.enabled`     | Enable the prefetch input stream | `false` |
+| `fs.s3a.prefetch.block.size`  | Size of a block                  | `8M`    |
+| `fs.s3a.prefetch.block.count` | Number of blocks to prefetch     | `8`     |
 
 The default size of a block is 8MB, and the minimum allowed block size is 1 byte.
 Decreasing block size will increase the number of blocks to be read for a file.
@@ -100,7 +100,7 @@ the `S3InMemoryInputStream` will be used.
 
 If the caller makes the following read calls:
 
-```
+```java
 in.read(buffer, 0, 3MB);
 in.read(buffer, 0, 2MB);
 ```

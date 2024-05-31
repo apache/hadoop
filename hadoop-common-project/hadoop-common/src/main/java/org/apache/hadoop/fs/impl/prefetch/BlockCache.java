@@ -55,12 +55,15 @@ public interface BlockCache extends Closeable {
 
   /**
    * Gets the block having the given {@code blockNumber}.
-   *
+   * If the block is not present then the method returns
+   * false and {@code buffer} is unchanged.
    * @param blockNumber the id of the desired block.
    * @param buffer contents of the desired block are copied to this buffer.
+   * @return true if the block was found.
    * @throws IOException if there is an error reading the given block.
+   * @throws IllegalArgumentException if buffer is null.
    */
-  void get(int blockNumber, ByteBuffer buffer) throws IOException;
+  boolean get(int blockNumber, ByteBuffer buffer) throws IOException;
 
   /**
    * Puts the given block in this cache.

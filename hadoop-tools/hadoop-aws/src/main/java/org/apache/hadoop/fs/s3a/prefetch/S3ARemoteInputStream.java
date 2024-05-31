@@ -117,6 +117,9 @@ public abstract class S3ARemoteInputStream
 
   private final ChangeTracker changeTracker;
 
+  /**
+   * IOStatistics.
+   */
   private final IOStatistics ioStatistics;
 
   /** Aggregator used to aggregate per thread IOStatistics. */
@@ -339,7 +342,7 @@ public abstract class S3ARemoteInputStream
   @Override
   public int read(byte[] buffer, int offset, int len) throws IOException {
     throwIfClosed();
-
+    validatePositionedReadArgs(nextReadPos, buffer, offset, len);
     if (len == 0) {
       return 0;
     }
