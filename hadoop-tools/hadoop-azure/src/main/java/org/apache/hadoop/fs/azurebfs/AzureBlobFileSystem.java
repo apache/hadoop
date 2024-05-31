@@ -42,6 +42,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import javax.annotation.Nullable;
+import javax.naming.NamingException;
+import javax.naming.directory.BasicAttributes;
+import javax.naming.directory.DirContext;
+import javax.naming.spi.NamingManager;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.impl.BackReference;
@@ -49,6 +53,9 @@ import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import sun.net.dns.ResolverConfiguration;
+import sun.net.util.IPAddressUtil;
+
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -233,8 +240,54 @@ public class AzureBlobFileSystem extends FileSystem
       }
     }
 
+    List<String> nsList = ResolverConfiguration.open().nameservers();
+    final Hashtable<String,Object> env = new Hashtable<>();
+    env.put("java.naming.factory.initial",
+        "com.sun.jndi.dns.DnsContextFactory");
+
+    String provUrl = createProviderURL(nsList);
+    env.put("java.naming.provider.url", provUrl);
+    DirContext ctx = null;
+    try {
+      ctx = (DirContext) NamingManager.getInitialContext(env);
+      String[] id = {"A", "AAAA", "CNAME"};
+      int times = 0;
+      String name = getAbfsClient().getBaseUrl().getAuthority();
+      List<String> names = new ArrayList<>();
+      while(times++ < 7) {
+        try {
+          BasicAttributes attrs = (BasicAttributes) ctx.getAttributes(name, id);
+          name = attrs.getAll().next().get().toString();
+          names.add(name);
+        } catch (Exception ex) {
+          break;
+        }
+      }
+      System.out.println(names);
+    } catch (NamingException e) {
+      throw new RuntimeException(e);
+    }
+
     rateLimiting = RateLimitingFactory.create(abfsConfiguration.getRateLimit());
     LOG.debug("Initializing AzureBlobFileSystem for {} complete", uri);
+  }
+
+  private String createProviderURL(List<String> nsList) {
+    StringBuffer sb = new StringBuffer();
+    for (String s : nsList) {
+      appendIfLiteralAddress(s, sb);
+    }
+    return sb.toString();
+  }
+
+  private void appendIfLiteralAddress(String addr, StringBuffer sb) {
+    if (IPAddressUtil.isIPv4LiteralAddress(addr)) {
+      sb.append("dns://" + addr + " ");
+    } else {
+      if (IPAddressUtil.isIPv6LiteralAddress(addr)) {
+        sb.append("dns://[" + addr + "] ");
+      }
+    }
   }
 
   @Override
