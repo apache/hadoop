@@ -371,6 +371,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
    * calling this method at the same time. The resolution of namespace information
    * would be stored back as state of {@link #isNamespaceEnabled}.
    *
+   * @param tracingContext tracing context
    * @return true if namespace is enabled, false otherwise.
    * @throws AzureBlobFileSystemException server errors.
    */
