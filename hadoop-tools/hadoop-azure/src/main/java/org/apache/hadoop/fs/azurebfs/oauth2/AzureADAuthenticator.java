@@ -59,6 +59,7 @@ public final class AzureADAuthenticator {
   private static final String SCOPE = "https://storage.azure.com/.default";
   private static final String JWT_BEARER_ASSERTION = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer";
   private static final String CLIENT_CREDENTIALS = "client_credentials";
+  private static final String OAUTH_VERSION_2_0 = "/oauth2/v2.0/";
   private static final int CONNECT_TIMEOUT = 30 * 1000;
   private static final int READ_TIMEOUT = 30 * 1000;
 
@@ -97,10 +98,9 @@ public final class AzureADAuthenticator {
     Preconditions.checkNotNull(authEndpoint, "authEndpoint");
     Preconditions.checkNotNull(clientId, "clientId");
     Preconditions.checkNotNull(clientSecret, "clientSecret");
-    boolean isVersion2AuthenticationEndpoint = authEndpoint.contains("/oauth2/v2.0/");
 
     QueryParams qp = new QueryParams();
-    if (isVersion2AuthenticationEndpoint) {
+    if (isVersion2AuthenticationEndpoint(authEndpoint)) {
       qp.add("scope", SCOPE);
     } else {
       qp.add("resource", RESOURCE_NAME);
@@ -137,10 +137,9 @@ public final class AzureADAuthenticator {
     Preconditions.checkNotNull(authEndpoint, "authEndpoint");
     Preconditions.checkNotNull(clientId, "clientId");
     Preconditions.checkNotNull(clientAssertion, "clientAssertion");
-    boolean isVersion2AuthenticationEndpoint = authEndpoint.contains("/oauth2/v2.0/");
 
     QueryParams qp = new QueryParams();
-    if (isVersion2AuthenticationEndpoint) {
+    if (isVersion2AuthenticationEndpoint(authEndpoint)) {
       qp.add("scope", SCOPE);
     } else {
       qp.add("resource", RESOURCE_NAME);
@@ -565,5 +564,9 @@ public final class AzureADAuthenticator {
     } while (bytesRead >= 0 && totalBytesRead < length);
 
     return new String(b, 0, totalBytesRead, StandardCharsets.UTF_8);
+  }
+
+  private static boolean isVersion2AuthenticationEndpoint(String authEndpoint) {
+    return authEndpoint.contains(OAUTH_VERSION_2_0);
   }
 }

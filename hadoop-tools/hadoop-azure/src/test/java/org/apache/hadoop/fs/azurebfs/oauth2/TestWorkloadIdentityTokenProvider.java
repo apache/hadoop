@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azurebfs.oauth2;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Date;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
@@ -40,7 +41,11 @@ public class TestWorkloadIdentityTokenProvider extends AbstractAbfsTestWithTimeo
   private static final String TENANT_ID = "00000000-0000-0000-0000-000000000000";
   private static final String CLIENT_ID = "00000000-0000-0000-0000-000000000000";
   private static final String TOKEN_FILE = "/tmp/does_not_exist";
+  private static final String CLIENT_ASSERTION = "dummy-client-assertion";
   private static final String TOKEN = "dummy-token";
+  private static final long FEW_SECONDS = 5 * 1000;
+  private static final long ONE_MINUTE = 60 * 1000;
+  private static final long FIVE_MINUTES = 5 * ONE_MINUTE;
 
   public TestWorkloadIdentityTokenProvider() {
   }
@@ -53,68 +58,47 @@ public class TestWorkloadIdentityTokenProvider extends AbstractAbfsTestWithTimeo
     WorkloadIdentityTokenProvider provider = new WorkloadIdentityTokenProvider(
         AUTHORITY, TENANT_ID, CLIENT_ID, TOKEN_FILE);
 
-    Assertions.assertThat(provider.hasEnoughTimeElapsedSinceLastRefresh())
+    Assertions.assertThat(provider.isTokenAboutToExpire())
         .describedAs("Token should start as expired")
         .isTrue();
   }
 
-  /**
-   * Test that the token will expire one hour after the last refresh.
-   */
   @Test
-  public void testTokenExpiresAfterOneHour() {
-    WorkloadIdentityTokenProvider provider = Mockito.spy(
-        new WorkloadIdentityTokenProvider(AUTHORITY, TENANT_ID, CLIENT_ID, TOKEN_FILE));
+  public void testTokenFetchAndExpiry() throws Exception{
+    long startTime = System.currentTimeMillis();
+    AzureADToken adToken = new AzureADToken();
+    adToken.setAccessToken(TOKEN);
+    adToken.setExpiry(new Date(System.currentTimeMillis() + FEW_SECONDS + FIVE_MINUTES));
 
-    Mockito.doCallRealMethod().when(provider).hasEnoughTimeElapsedSinceLastRefresh();
-    final long oneHourMillis = 3600 * 1000;
-    Mockito.doReturn(System.currentTimeMillis() - oneHourMillis)
-        .when(provider).getTokenFetchTime();
+    File tokenFile = File.createTempFile(TOKEN_FILE, "txt");
+    FileUtils.write(tokenFile, CLIENT_ASSERTION, StandardCharsets.UTF_8);
 
-    Assertions.assertThat(provider.hasEnoughTimeElapsedSinceLastRefresh())
-        .describedAs("Token should be expired")
+    WorkloadIdentityTokenProvider mockedTokenProvider = Mockito.spy(
+        new WorkloadIdentityTokenProvider(AUTHORITY, TENANT_ID, CLIENT_ID,
+            tokenFile.getPath()));
+    Mockito.doReturn(adToken).when(mockedTokenProvider).getTokenUsingJWTAssertion(CLIENT_ASSERTION);
+
+    // Token should be expired first and fetched
+    Assertions.assertThat(mockedTokenProvider.isTokenAboutToExpire())
+        .describedAs("Token should not be expired")
         .isTrue();
-  }
+    Assertions.assertThat(mockedTokenProvider.getToken().getAccessToken())
+        .describedAs("Token should be fetched")
+        .isEqualTo(TOKEN);
+    Assertions.assertThat(mockedTokenProvider.getTokenFetchTime())
+        .describedAs("Token should not be expired")
+        .isGreaterThan(startTime);
 
-  /**
-   * Test that the token will not expire before one hour after the last refresh.
-   */
-  @Test
-  public void testTokenDoesNotExpireTooSoon() {
-    WorkloadIdentityTokenProvider provider = Mockito.spy(
-        new WorkloadIdentityTokenProvider(AUTHORITY, TENANT_ID, CLIENT_ID, TOKEN_FILE));
-
-    Mockito.doCallRealMethod().when(provider).hasEnoughTimeElapsedSinceLastRefresh();
-    final long fiftyNineMinutesMillis = 59 * 60 * 1000;
-    Mockito.doReturn(System.currentTimeMillis() - fiftyNineMinutesMillis)
-        .when(provider).getTokenFetchTime();
-
-    Assertions.assertThat(provider.hasEnoughTimeElapsedSinceLastRefresh())
+    // Token should be valid for few seconds.
+    Assertions.assertThat(mockedTokenProvider.isTokenAboutToExpire())
         .describedAs("Token should not be expired")
         .isFalse();
-  }
 
-  /**
-   * Test that the correct token is read from the token file.
-   *
-   * @throws IOException if the token file is empty or file I/O fails.
-   */
-  @Test
-  public void testGetToken() throws IOException {
-    long startTime = System.currentTimeMillis();
-    File tokenFile = File.createTempFile("azure-identity-token", "txt");
-    FileUtils.write(tokenFile, TOKEN, StandardCharsets.UTF_8);
-    AzureADToken azureAdToken = new AzureADToken();
-    WorkloadIdentityTokenProvider tokenProvider = Mockito.spy(
-        new WorkloadIdentityTokenProvider(AUTHORITY, TENANT_ID, CLIENT_ID, tokenFile.getPath()));
-    Mockito.doReturn(azureAdToken)
-        .when(tokenProvider).getTokenUsingJWTAssertion(TOKEN);
-    Assertions.assertThat(tokenProvider.getToken())
-        .describedAs("Token fetched from the token file is incorrect")
-        .isEqualTo(azureAdToken);
-    Assertions.assertThat(tokenProvider.getTokenFetchTime())
-        .describedAs("token fetch time was incorrect")
-        .isGreaterThanOrEqualTo(startTime);
+    // Token should be expired after few seconds.
+    Thread.sleep(FEW_SECONDS);
+    Assertions.assertThat(mockedTokenProvider.isTokenAboutToExpire())
+        .describedAs("Token should be expired")
+        .isTrue();
   }
 
   /**
@@ -123,7 +107,7 @@ public class TestWorkloadIdentityTokenProvider extends AbstractAbfsTestWithTimeo
    * @throws IOException if file I/O fails.
    */
   @Test
-  public void testGetTokenThrowsWhenClientAssertionIsEmpty() throws Exception {
+  public void testTokenFetchWithEmptyTokenFile() throws Exception {
     File tokenFile = File.createTempFile("azure-identity-token", "txt");
     AzureADToken azureAdToken = new AzureADToken();
     WorkloadIdentityTokenProvider tokenProvider = Mockito.spy(
@@ -135,6 +119,26 @@ public class TestWorkloadIdentityTokenProvider extends AbstractAbfsTestWithTimeo
     });
     Assertions.assertThat(ex.getMessage())
       .describedAs("Exception should be thrown when the token file is empty")
-      .contains("Empty token file.");
+      .contains("Empty token file");
+  }
+
+  /**
+   * Test that an exception is thrown when the token file is not present.
+   *
+   * @throws IOException if file I/O fails.
+   */
+  @Test
+  public void testTokenFetchWithTokenFileNotFound() throws Exception {
+    AzureADToken azureAdToken = new AzureADToken();
+    WorkloadIdentityTokenProvider tokenProvider = Mockito.spy(
+        new WorkloadIdentityTokenProvider(AUTHORITY, TENANT_ID, CLIENT_ID, TOKEN_FILE));
+    Mockito.doReturn(azureAdToken)
+        .when(tokenProvider).getTokenUsingJWTAssertion(TOKEN);
+    IOException ex = intercept(IOException.class, () -> {
+      tokenProvider.getToken();
+    });
+    Assertions.assertThat(ex.getMessage())
+        .describedAs("Exception should be thrown when the token file not found")
+        .contains("Error reading token file");
   }
 }

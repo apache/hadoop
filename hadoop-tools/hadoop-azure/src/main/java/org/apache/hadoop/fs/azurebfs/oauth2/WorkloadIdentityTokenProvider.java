@@ -34,8 +34,9 @@ import org.apache.hadoop.util.Preconditions;
 public class WorkloadIdentityTokenProvider extends AccessTokenProvider {
 
   private static final String OAUTH2_TOKEN_PATH = "/oauth2/v2.0/token";
-  private static final long ONE_HOUR = 3600 * 1000;
   private static final Logger LOG = LoggerFactory.getLogger(AccessTokenProvider.class);
+  private static final String EMPTY_TOKEN_FILE_ERROR = "Empty token file found at specified path: ";
+  private static final String TOKEN_FILE_READ_ERROR = "Error reading token file at specified path: ";
 
   private final String authEndpoint;
   private final String clientId;
@@ -64,6 +65,56 @@ public class WorkloadIdentityTokenProvider extends AccessTokenProvider {
   }
 
   /**
+   * Checks if the token is about to expire as per base expiry logic.
+   * Otherwise, expire if there is a clock skew issue in the system.
+   *
+   * @return true if the token is expiring in next 1 hour or if a token has
+   * never been fetched
+   */
+  @Override
+  protected boolean isTokenAboutToExpire() {
+    if (tokenFetchTime == -1 || super.isTokenAboutToExpire()) {
+      return true;
+    }
+
+    // In case of, any clock skew issues, refresh token.
+    long elapsedTimeSinceLastTokenRefreshInMillis =
+        System.currentTimeMillis() - tokenFetchTime;
+    boolean expiring = elapsedTimeSinceLastTokenRefreshInMillis < 0;
+    if (expiring) {
+      LOG.debug("JWTToken: token renewing. Time elapsed since last token fetch:"
+          + " {} milliseconds", elapsedTimeSinceLastTokenRefreshInMillis);
+    }
+
+    return expiring;
+  }
+
+  /**
+   * Gets the client assertion from the token file.
+   * The token file should contain the client assertion in JWT format.
+   * It should be a String containing Base64Url encoded JSON Web Token (JWT).
+   * See <a href="https://azure.github.io/azure-workload-identity/docs/faq.html#does-workload-identity-work-in-disconnected-environments">
+   * Azure Workload Identity FAQ</a>.
+   *
+   * @return the client assertion.
+   * @throws IOException if the token file is empty.
+   */
+  private String getClientAssertion()
+      throws IOException {
+    String clientAssertion = "";
+    try {
+      File file = new File(tokenFile);
+      clientAssertion = FileUtils.readFileToString(file, "UTF-8");
+    } catch (Exception e) {
+      throw new IOException(TOKEN_FILE_READ_ERROR + tokenFile, e);
+    }
+    if (Strings.isNullOrEmpty(clientAssertion)) {
+      throw new IOException(EMPTY_TOKEN_FILE_ERROR + tokenFile);
+    }
+    return clientAssertion;
+  }
+
+  /**
    * Gets the Azure AD token from a client assertion in JWT format.
    * This method exists to make unit testing possible.
    *
@@ -75,60 +126,6 @@ public class WorkloadIdentityTokenProvider extends AccessTokenProvider {
   AzureADToken getTokenUsingJWTAssertion(String clientAssertion) throws IOException {
     return AzureADAuthenticator
         .getTokenUsingJWTAssertion(authEndpoint, clientId, clientAssertion);
-  }
-
-  /**
-   * Checks if the token is about to expire as per base expiry logic.
-   * Otherwise, try to expire if enough time has elapsed since the last refresh.
-   *
-   * @return true if the token is expiring in next 1 hour or if a token has
-   * never been fetched
-   */
-  @Override
-  protected boolean isTokenAboutToExpire() {
-    return super.isTokenAboutToExpire() || hasEnoughTimeElapsedSinceLastRefresh();
-  }
-
-  /**
-   * Checks to see if enough time has elapsed since the last token refresh.
-   *
-   * @return true if the token was last refreshed more than an hour ago.
-   */
-  protected boolean hasEnoughTimeElapsedSinceLastRefresh() {
-    if (getTokenFetchTime() == -1) {
-      return true;
-    }
-    boolean expiring = false;
-    long elapsedTimeSinceLastTokenRefreshInMillis =
-        System.currentTimeMillis() - getTokenFetchTime();
-    // In case token is not refreshed for 1 hr or any clock skew issues,
-    // refresh token.
-    expiring = elapsedTimeSinceLastTokenRefreshInMillis >= ONE_HOUR
-        || elapsedTimeSinceLastTokenRefreshInMillis < 0;
-    if (expiring) {
-      LOG.debug("JWTToken: token renewing. Time elapsed since last token fetch:"
-          + " {} milliseconds", elapsedTimeSinceLastTokenRefreshInMillis);
-    }
-    return expiring;
-  }
-
-  /**
-   * Gets the client assertion from the token file.  The token in the file
-   * is automatically refreshed by Azure at least once every 24 hours.
-   * See <a href="https://azure.github.io/azure-workload-identity/docs/faq.html#does-workload-identity-work-in-disconnected-environments">
-   * Azure Workload Identity FAQ</a>.
-   *
-   * @return the client assertion.
-   * @throws IOException if the token file is empty.
-   */
-  private String getClientAssertion()
-      throws IOException {
-    File file = new File(tokenFile);
-    String clientAssertion = FileUtils.readFileToString(file, "UTF-8");
-    if (Strings.isNullOrEmpty(clientAssertion)) {
-        throw new IOException("Empty token file.");
-    }
-    return clientAssertion;
   }
 
   /**
