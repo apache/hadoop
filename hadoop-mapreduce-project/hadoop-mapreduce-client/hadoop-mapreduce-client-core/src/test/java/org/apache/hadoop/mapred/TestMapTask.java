@@ -32,6 +32,7 @@ import org.apache.hadoop.mapreduce.TaskCounter;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.util.Progress;
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -47,14 +48,21 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 
 public class TestMapTask {
-  private static File TEST_ROOT_DIR = new File(
+  private static File testRootDir = new File(
       System.getProperty("test.build.data",
           System.getProperty("java.io.tmpdir", "/tmp")),
       TestMapTask.class.getName());
 
+  @Before
+  public void setup() throws Exception {
+    if(!testRootDir.exists()) {
+      testRootDir.mkdirs();
+    }
+  }
+
   @After
   public void cleanup() throws Exception {
-    FileUtil.fullyDelete(TEST_ROOT_DIR);
+    FileUtil.fullyDelete(testRootDir);
   }
 
   @Rule
@@ -66,7 +74,7 @@ public class TestMapTask {
   public void testShufflePermissions() throws Exception {
     JobConf conf = new JobConf();
     conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, "077");
-    conf.set(MRConfig.LOCAL_DIR, TEST_ROOT_DIR.getAbsolutePath());
+    conf.set(MRConfig.LOCAL_DIR, testRootDir.getAbsolutePath());
     MapOutputFile mof = new MROutputFiles();
     mof.setConf(conf);
     TaskAttemptID attemptId = new TaskAttemptID("12345", 1, TaskType.MAP, 1, 1);
@@ -98,7 +106,7 @@ public class TestMapTask {
   public void testSpillFilesCountLimitInvalidValue() throws Exception {
     JobConf conf = new JobConf();
     conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, "077");
-    conf.set(MRConfig.LOCAL_DIR, TEST_ROOT_DIR.getAbsolutePath());
+    conf.set(MRConfig.LOCAL_DIR, testRootDir.getAbsolutePath());
     conf.setInt(MRJobConfig.SPILL_FILES_COUNT_LIMIT, -2);
     MapOutputFile mof = new MROutputFiles();
     mof.setConf(conf);
@@ -124,7 +132,7 @@ public class TestMapTask {
   public void testSpillFilesCountBreach() throws Exception {
     JobConf conf = new JobConf();
     conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, "077");
-    conf.set(MRConfig.LOCAL_DIR, TEST_ROOT_DIR.getAbsolutePath());
+    conf.set(MRConfig.LOCAL_DIR, testRootDir.getAbsolutePath());
     conf.setInt(MRJobConfig.SPILL_FILES_COUNT_LIMIT, 2);
     MapOutputFile mof = new MROutputFiles();
     mof.setConf(conf);

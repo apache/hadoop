@@ -21,7 +21,10 @@ import static org.apache.hadoop.hdfs.server.federation.store.StateStoreUtils.fil
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -85,5 +88,38 @@ public abstract class StateStoreBaseImpl extends StateStoreDriver {
     @SuppressWarnings("unchecked")
     Class<T> recordClass = (Class<T>)StateStoreUtils.getRecordClass(clazz);
     return remove(recordClass, query) == 1;
+  }
+
+  @Override
+  public <T extends BaseRecord> Map<T, Boolean> removeMultiple(List<T> records) throws IOException {
+    assert !records.isEmpty();
+    // Fall back to iterative remove() calls if all records don't share 1 class
+    Class<? extends BaseRecord> expectedClazz = records.get(0).getClass();
+    if (!records.stream().allMatch(x -> x.getClass() == expectedClazz)) {
+      Map<T, Boolean> result = new HashMap<>();
+      for (T record : records) {
+        result.put(record, remove(record));
+      }
+      return result;
+    }
+
+    final List<Query<T>> queries = new ArrayList<>();
+    for (T record : records) {
+      queries.add(new Query<>(record));
+    }
+    @SuppressWarnings("unchecked")
+    Class<T> recordClass = (Class<T>) StateStoreUtils.getRecordClass(expectedClazz);
+    Map<Query<T>, Integer> result = remove(recordClass, queries);
+    return result.entrySet().stream()
+        .collect(Collectors.toMap(e -> e.getKey().getPartial(), e -> e.getValue() == 1));
+  }
+
+  public <T extends BaseRecord> Map<Query<T>, Integer> remove(Class<T> clazz,
+      List<Query<T>> queries) throws IOException {
+    Map<Query<T>, Integer> result = new HashMap<>();
+    for (Query<T> query : queries) {
+      result.put(query, remove(clazz, query));
+    }
+    return result;
   }
 }

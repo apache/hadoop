@@ -47,6 +47,7 @@ import static org.apache.hadoop.fs.s3a.Statistic.INVOCATION_XATTR_GET_MAP;
 import static org.apache.hadoop.fs.s3a.Statistic.INVOCATION_XATTR_GET_NAMED;
 import static org.apache.hadoop.fs.s3a.Statistic.INVOCATION_XATTR_GET_NAMED_MAP;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.X_HEADER_MAGIC_MARKER;
+import static org.apache.hadoop.fs.s3a.impl.AWSHeaders.SERVER_SIDE_ENCRYPTION_AWS_KMS_KEY_ID;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDuration;
 
 /**
@@ -184,6 +185,9 @@ public class HeaderProcessing extends AbstractStoreOperation {
    */
   public static final String XA_SERVER_SIDE_ENCRYPTION =
       XA_HEADER_PREFIX + AWSHeaders.SERVER_SIDE_ENCRYPTION;
+
+  public static final String XA_ENCRYPTION_KEY_ID =
+      XA_HEADER_PREFIX + SERVER_SIDE_ENCRYPTION_AWS_KMS_KEY_ID;
 
   /**
    * Storage Class XAttr: {@value}.
@@ -363,6 +367,8 @@ public class HeaderProcessing extends AbstractStoreOperation {
         md.versionId());
     maybeSetHeader(headers, XA_SERVER_SIDE_ENCRYPTION,
         md.serverSideEncryptionAsString());
+    maybeSetHeader(headers, XA_ENCRYPTION_KEY_ID,
+            md.ssekmsKeyId());
     maybeSetHeader(headers, XA_STORAGE_CLASS,
         md.storageClassAsString());
 

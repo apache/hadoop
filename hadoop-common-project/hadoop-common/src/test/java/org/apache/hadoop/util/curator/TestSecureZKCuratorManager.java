@@ -71,9 +71,9 @@ public class TestSecureZKCuratorManager {
             DELETE_DATA_DIRECTORY_ON_CLOSE, SERVER_ID, TICK_TIME, MAX_CLIENT_CNXNS,
             customConfiguration);
     this.server = new TestingServer(spec, true);
-    this.hadoopConf.set(CommonConfigurationKeys.ZK_ADDRESS, this.server.getConnectString());
+    String zkHostPort = this.server.getConnectString();
     this.curator = new ZKCuratorManager(this.hadoopConf);
-    this.curator.start(new ArrayList<>(), true);
+    this.curator.start(new ArrayList<>(), true, zkHostPort);
   }
 
   /**

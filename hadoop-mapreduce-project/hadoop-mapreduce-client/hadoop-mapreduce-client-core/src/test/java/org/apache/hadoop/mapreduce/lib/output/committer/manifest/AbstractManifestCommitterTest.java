@@ -57,6 +57,7 @@ import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.ManifestS
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.files.TaskManifest;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestCommitterSupport;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.ManifestStoreOperations;
+import org.apache.hadoop.mapreduce.lib.output.committer.manifest.impl.UnreliableManifestStoreOperations;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.CleanupJobStage;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.SaveTaskManifestStage;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.stages.SetupTaskStage;
@@ -166,6 +167,12 @@ public abstract class AbstractManifestCommitterTest
   private static final ThreadLeakTracker THREAD_LEAK_TRACKER = new ThreadLeakTracker();
 
   private static final int MAX_LEN = 64_000;
+
+  /**
+   * How many attempts to save manifests before giving up.
+   * Kept small to reduce sleep times and network delays.
+   */
+  public static final int SAVE_ATTEMPTS = 4;
 
   /**
    * Submitter for tasks; may be null.
@@ -771,6 +778,9 @@ public abstract class AbstractManifestCommitterTest
   /**
    * Create the stage config for job or task but don't finalize it.
    * Uses {@link #TASK_IDS} for job/task ID.
+   * The store operations is extracted from
+   * {@link #getStoreOperations()}, which is how fault injection
+   * can be set up.
    * @param jobAttemptNumber job attempt number
    * @param taskIndex task attempt index; -1 for job attempt only.
    * @param taskAttemptNumber task attempt number
@@ -796,6 +806,7 @@ public abstract class AbstractManifestCommitterTest
         .withJobAttemptNumber(jobAttemptNumber)
         .withJobDirectories(attemptDirs)
         .withName(String.format(NAME_FORMAT_JOB_ATTEMPT, jobId))
+        .withManifestSaveAttempts(SAVE_ATTEMPTS)
         .withOperations(getStoreOperations())
         .withProgressable(getProgressCounter())
         .withSuccessMarkerFileLimit(100_000)
@@ -924,7 +935,7 @@ public abstract class AbstractManifestCommitterTest
     }
 
     // save the manifest for this stage.
-    new SaveTaskManifestStage(taskStageConfig).apply(manifest);
+    new SaveTaskManifestStage(taskStageConfig).apply(() -> manifest);
     return manifest;
   }
 
@@ -998,7 +1009,9 @@ public abstract class AbstractManifestCommitterTest
    * Create and execute a cleanup stage.
    * @param enabled is the stage enabled?
    * @param deleteTaskAttemptDirsInParallel delete task attempt dirs in
-   *        parallel?
+   * parallel?
+   * @param attemptBaseDeleteFirst Make an initial attempt to
+   * delete the base directory
    * @param suppressExceptions suppress exceptions?
    * @param outcome expected outcome.
    * @param expectedDirsDeleted #of directories deleted. -1 for no checks
@@ -1008,13 +1021,18 @@ public abstract class AbstractManifestCommitterTest
   protected CleanupJobStage.Result cleanup(
       final boolean enabled,
       final boolean deleteTaskAttemptDirsInParallel,
+      boolean attemptBaseDeleteFirst,
       final boolean suppressExceptions,
       final CleanupJobStage.Outcome outcome,
       final int expectedDirsDeleted) throws IOException {
     StageConfig stageConfig = getJobStageConfig();
     CleanupJobStage.Result result = new CleanupJobStage(stageConfig)
         .apply(new CleanupJobStage.Arguments(OP_STAGE_JOB_CLEANUP,
-            enabled, deleteTaskAttemptDirsInParallel, suppressExceptions));
+            enabled,
+            deleteTaskAttemptDirsInParallel,
+            attemptBaseDeleteFirst,
+            suppressExceptions,
+            0));
     assertCleanupResult(result, outcome, expectedDirsDeleted);
     return result;
   }
@@ -1036,6 +1054,24 @@ public abstract class AbstractManifestCommitterTest
     return new String(
         readDataset(fs, path, (int) st.getLen()),
         StandardCharsets.UTF_8);
+  }
+
+  /**
+   * Make the store operations unreliable.
+   * If it already was then reset the failure options.
+   * @return the store operations
+   */
+  protected UnreliableManifestStoreOperations makeStoreOperationsUnreliable() {
+    UnreliableManifestStoreOperations failures;
+    final ManifestStoreOperations wrappedOperations = getStoreOperations();
+    if (wrappedOperations instanceof UnreliableManifestStoreOperations) {
+      failures = (UnreliableManifestStoreOperations) wrappedOperations;
+      failures.reset();
+    } else {
+      failures = new UnreliableManifestStoreOperations(wrappedOperations);
+      setStoreOperations(failures);
+    }
+    return failures;
   }
 
   /**

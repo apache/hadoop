@@ -284,13 +284,30 @@ public abstract class AbstractAbfsIntegrationTest extends
     useConfiguredFileSystem = true;
   }
 
+  /**
+   * Create a filesystem for SAS tests using the SharedKey authentication.
+   * We do not allow filesystem creation with SAS because certain type of SAS do not have
+   * required permissions, and it is not known what type of SAS is configured by user.
+   * @throws Exception
+   */
   protected void createFilesystemForSASTests() throws Exception {
-    // The SAS tests do not have permission to create a filesystem
-    // so first create temporary instance of the filesystem using SharedKey
-    // then re-use the filesystem it creates with SAS auth instead of SharedKey.
+    createFilesystemWithTestFileForSASTests(null);
+  }
+
+  /**
+   * Create a filesystem for SAS tests along with a test file using SharedKey authentication.
+   * We do not allow filesystem creation with SAS because certain type of SAS do not have
+   * required permissions, and it is not known what type of SAS is configured by user.
+   * @param testPath path of the test file.
+   * @throws Exception
+   */
+  protected void createFilesystemWithTestFileForSASTests(Path testPath) throws Exception {
     try (AzureBlobFileSystem tempFs = (AzureBlobFileSystem) FileSystem.newInstance(rawConfig)){
       ContractTestUtils.assertPathExists(tempFs, "This path should exist",
           new Path("/"));
+      if (testPath != null) {
+        tempFs.create(testPath).close();
+      }
       abfsConfig.set(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SAS.name());
       usingFilesystemForSASTests = true;
     }
