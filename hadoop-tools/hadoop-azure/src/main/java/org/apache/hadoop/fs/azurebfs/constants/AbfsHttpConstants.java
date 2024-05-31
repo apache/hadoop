@@ -169,6 +169,21 @@ public final class AbfsHttpConstants {
    */
   public static final Integer HTTP_STATUS_CATEGORY_QUOTIENT = 100;
 
+  /**
+   * List of configurations that are related to Client-Provided-Keys.
+   * <ol>
+   *   <li>
+   *     {@value ConfigurationKeys#FS_AZURE_ENCRYPTION_CONTEXT_PROVIDER_TYPE}
+   *     for ENCRYPTION_CONTEXT cpk-type.
+   *   </li>
+   *   <li>
+   *     {@value ConfigurationKeys#FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY} and
+   *     {@value ConfigurationKeys#FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY_SHA}
+   *     for GLOBAL_KEY cpk-type.
+   *   </li>
+   * </ol>
+   * List: {@value}
+   */
   private static final String CPK_CONFIG_LIST =
       FS_AZURE_ENCRYPTION_CONTEXT_PROVIDER_TYPE + ", "
           + FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY + ", "

@@ -65,7 +65,7 @@ public class ITestAzureBlobFileSystemInitAndCreate extends
 
     Mockito.doThrow(TrileanConversionException.class)
         .when(store)
-        .getNamespaceConfig();
+        .isNamespaceEnabled();
 
     TracingContext tracingContext = getSampleTracingContext(fs, true);
     store.getIsNamespaceEnabled(tracingContext);
@@ -84,7 +84,7 @@ public class ITestAzureBlobFileSystemInitAndCreate extends
 
     Mockito.doReturn(true)
         .when(store)
-        .getNamespaceConfig();
+        .isNamespaceEnabled();
 
     TracingContext tracingContext = getSampleTracingContext(fs, true);
     store.getIsNamespaceEnabled(tracingContext);
