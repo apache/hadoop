@@ -80,7 +80,7 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
     testConfig.set(ConfigurationKeys.FS_AZURE_SAS_TOKEN_PROVIDER_TYPE, TEST_ERR_AUTHZ_CLASS);
     testConfig.set(MOCK_SASTOKENPROVIDER_FAIL_INIT, "true");
 
-    intercept(TokenAccessProviderException.class,
+    intercept(SASTokenProviderException.class,
         ()-> {
           testFs.initialize(fs.getUri(), this.getConfiguration().getRawConfiguration());
         });
