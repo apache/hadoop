@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -173,7 +172,7 @@ public abstract class CachedRecordStore<R extends BaseRecord>
    */
   public void overrideExpiredRecords(QueryResult<R> query) throws IOException {
     List<R> commitRecords = new ArrayList<>();
-    List<R> toDeleteRecords = new ArrayList<>();
+    List<R> deleteRecords = new ArrayList<>();
     List<R> newRecords = query.getRecords();
     long currentDriverTime = query.getTimestamp();
     if (newRecords == null || currentDriverTime <= 0) {
@@ -184,22 +183,18 @@ public abstract class CachedRecordStore<R extends BaseRecord>
       if (record.shouldBeDeleted(currentDriverTime)) {
         String recordName = StateStoreUtils.getRecordName(record.getClass());
         LOG.info("State Store record to delete {}: {}", recordName, record);
-        toDeleteRecords.add(record);
+        deleteRecords.add(record);
       } else if (!record.isExpired() && record.checkExpired(currentDriverTime)) {
         String recordName = StateStoreUtils.getRecordName(record.getClass());
         LOG.info("Override State Store record {}: {}", recordName, record);
         commitRecords.add(record);
       }
     }
-    if (commitRecords.size() > 0) {
-      getDriver().putAll(commitRecords, true, false);
-    }
-    if (!toDeleteRecords.isEmpty()) {
-      for (Map.Entry<R, Boolean> entry : getDriver().removeMultiple(toDeleteRecords).entrySet()) {
-        if (entry.getValue()) {
-          newRecords.remove(entry.getKey());
-        }
-      }
+    List<R> removedRecords = getDriver().handleOverwriteAndDelete(commitRecords, deleteRecords);
+    // In driver async mode, driver will return null and skip the next block.
+    // newRecords might be stale as a result but will sort itself out the next override cycle.
+    if (removedRecords != null && !removedRecords.isEmpty()) {
+      newRecords.removeAll(removedRecords);
     }
   }
 

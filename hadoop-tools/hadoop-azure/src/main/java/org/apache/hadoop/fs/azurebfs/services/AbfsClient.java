@@ -792,16 +792,17 @@ public abstract class AbfsClient implements Closeable {
           sasToken = cachedSasToken;
           LOG.trace("Using cached SAS token.");
         }
+
         // if SAS Token contains a prefix of ?, it should be removed
         if (sasToken.charAt(0) == '?') {
           sasToken = sasToken.substring(1);
         }
+
         queryBuilder.setSASToken(sasToken);
         LOG.trace("SAS token fetch complete for {} on {}", operation, path);
       } catch (Exception ex) {
-        throw new SASTokenProviderException(String.format("Failed to acquire a SAS token for %s on %s due to %s",
-            operation,
-            path,
+        throw new SASTokenProviderException(String.format(
+            "Failed to acquire a SAS token for %s on %s due to %s", operation, path,
             ex.toString()));
       }
     }

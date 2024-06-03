@@ -27,7 +27,6 @@ import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.RetryNTimes;
 import org.apache.curator.test.TestingServer;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.metrics2.MetricsRecord;
 import org.apache.hadoop.metrics2.impl.MetricsCollectorImpl;
 import org.apache.hadoop.metrics2.impl.MetricsRecords;
@@ -94,7 +93,7 @@ public class TestZookeeperFederationStateStore extends FederationStateStoreBaseT
       curatorFramework.start();
 
       Configuration conf = new YarnConfiguration();
-      conf.set(CommonConfigurationKeys.ZK_ADDRESS, connectString);
+      conf.set(YarnConfiguration.FEDERATION_STATESTORE_ZK_ADDRESS, connectString);
       conf.setInt(YarnConfiguration.FEDERATION_STATESTORE_MAX_APPLICATIONS, 10);
       setConf(conf);
     } catch (Exception e) {
