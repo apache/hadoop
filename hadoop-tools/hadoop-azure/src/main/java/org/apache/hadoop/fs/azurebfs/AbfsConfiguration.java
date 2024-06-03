@@ -440,6 +440,11 @@ public class AbfsConfiguration{
     return getEnum(FS_AZURE_FNS_ACCOUNT_SERVICE_TYPE, fsConfiguredServiceType);
   }
 
+  /**
+   * Get the service type to be used for Ingress Operations.
+   * Default value is the same as the service type configured for the file system.
+   * @return the service type.
+   */
   public AbfsServiceType getIngressServiceType() {
     return getEnum(FS_AZURE_INGRESS_SERVICE_TYPE, getFsConfiguredServiceType());
   }

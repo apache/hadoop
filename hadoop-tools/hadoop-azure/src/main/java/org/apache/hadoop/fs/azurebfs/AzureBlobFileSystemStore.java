@@ -231,7 +231,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
     try {
       this.abfsConfiguration = new AbfsConfiguration(
-          abfsStoreBuilder.configuration, accountName, identifyAbfsServiceType());
+          abfsStoreBuilder.configuration, accountName, identifyAbfsServiceTypeFromUrl());
     } catch (IllegalAccessException exception) {
       throw new FileSystemOperationUnhandledException(exception);
     }
@@ -295,13 +295,13 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
   public void validateConfiguredServiceType(TracingContext tracingContext)
       throws AzureBlobFileSystemException {
-    // Todo: [FnsOverBlob] - Fail FS Init with Blob Endpoint Until FNS over Blob is ready.
+    // Todo: [FnsOverBlob] - Remove this check, Failing FS Init with Blob Endpoint Until FNS over Blob is ready.
     if (getConfiguredServiceType() == AbfsServiceType.BLOB) {
       throw new InvalidConfigurationValueException(FS_DEFAULT_NAME_KEY);
     }
     if (getIsNamespaceEnabled(tracingContext) && getConfiguredServiceType() == AbfsServiceType.BLOB) {
       // This could be because of either wrongly configured url or wrongly configured fns service type.
-      if(identifyAbfsServiceType() == AbfsServiceType.BLOB) {
+      if(identifyAbfsServiceTypeFromUrl() == AbfsServiceType.BLOB) {
         throw new InvalidConfigurationValueException(FS_DEFAULT_NAME_KEY);
       }
       throw new InvalidConfigurationValueException(FS_AZURE_FNS_ACCOUNT_SERVICE_TYPE);
@@ -1812,11 +1812,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     LOG.trace("AbfsClient init complete");
   }
 
-  private AbfsServiceType identifyAbfsServiceType() {
+  private AbfsServiceType identifyAbfsServiceTypeFromUrl() {
     if (uri.toString().contains(FileSystemUriSchemes.ABFS_BLOB_DOMAIN_NAME)) {
       return AbfsServiceType.BLOB;
     }
-    // Incase of DFS Domain name or any other custom endpoint, the service
+    // In case of DFS Domain name or any other custom endpoint, the service
     // type is to be identified as default DFS.
     return AbfsServiceType.DFS;
   }

@@ -46,7 +46,7 @@ public final class ConfigurationKeys {
 
   /**
    * Config to specify which {@link AbfsServiceType} to use only for Ingress Operations.
-   * Other operations will continue to move to the service endpoint configured in "fs.defaultFS".
+   * Other operations will continue to move to the configured service endpoint.
    * Value {@value} case-insensitive "DFS" or "BLOB".
    */
   public static final String FS_AZURE_INGRESS_SERVICE_TYPE = "fs.azure.ingress.service.type";

@@ -26,17 +26,6 @@ package org.apache.hadoop.fs.azurebfs.constants;
  * </ol>
  */
 public enum AbfsServiceType {
-  DFS(".dfs.core.windows.net"),
-  BLOB(".blob.core.windows.net");
-
-  private final String endpointDnsSuffix;
-
-  AbfsServiceType(String endpointDnsSuffix) {
-    this.endpointDnsSuffix = endpointDnsSuffix;
-  }
-
-  @Override
-  public String toString() {
-    return endpointDnsSuffix;
-  }
+  DFS,
+  BLOB;
 }
