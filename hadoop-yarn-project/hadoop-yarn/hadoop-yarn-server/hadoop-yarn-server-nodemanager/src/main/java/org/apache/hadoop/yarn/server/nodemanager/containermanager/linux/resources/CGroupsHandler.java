@@ -239,4 +239,10 @@ public interface CGroupsHandler {
    * @return parameter value as read from the parameter file
    */
   String getCGroupMountPath();
+
+  /**
+   * Returns CGroupV2 Mount Path.
+   * @return parameter value as read from the parameter file
+   */
+  String getCGroupV2MountPath();
 }

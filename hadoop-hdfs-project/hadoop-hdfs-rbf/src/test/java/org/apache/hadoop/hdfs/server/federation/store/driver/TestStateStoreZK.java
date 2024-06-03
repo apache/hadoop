@@ -32,7 +32,6 @@ import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.RetryNTimes;
 import org.apache.curator.test.TestingServer;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreUtils;
 import org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreZooKeeperImpl;
@@ -71,7 +70,7 @@ public class TestStateStoreZK extends TestStateStoreDriverBase {
     // Create the ZK State Store
     Configuration conf =
         getStateStoreConfiguration(StateStoreZooKeeperImpl.class);
-    conf.set(CommonConfigurationKeys.ZK_ADDRESS, connectString);
+    conf.set(RBFConfigKeys.FEDERATION_STORE_ZK_ADDRESS, connectString);
     // Disable auto-repair of connection
     conf.setLong(RBFConfigKeys.FEDERATION_STORE_CONNECTION_TEST_MS,
         TimeUnit.HOURS.toMillis(1));

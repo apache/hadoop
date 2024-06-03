@@ -389,6 +389,13 @@
   </property>
 
   <property>
+    <name>dfs.federation.router.store.driver.zk.address</name>
+    <description>
+      Host:Port of the ZooKeeper for StateStoreZooKeeperImpl.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.federation.router.store.driver.zk.parent-path</name>
     <value>/hdfs-federation</value>
     <description>
