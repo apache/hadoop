@@ -301,7 +301,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     }
     if (getIsNamespaceEnabled(tracingContext) && getConfiguredServiceType() == AbfsServiceType.BLOB) {
       // This could be because of either wrongly configured url or wrongly configured fns service type.
-      if(identifyAbfsServiceTypeFromUrl() == AbfsServiceType.BLOB) {
+      if (identifyAbfsServiceTypeFromUrl() == AbfsServiceType.BLOB) {
         throw new InvalidConfigurationValueException(FS_DEFAULT_NAME_KEY);
       }
       throw new InvalidConfigurationValueException(FS_AZURE_FNS_ACCOUNT_SERVICE_TYPE);

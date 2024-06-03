@@ -25,6 +25,8 @@ import org.junit.Test;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
 import org.apache.hadoop.fs.azurebfs.services.AbfsBlobClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.utils.Base64;
@@ -51,9 +53,9 @@ public class ITestAbfsBlobClient extends AbstractAbfsIntegrationTest {
       Assertions.assertThat(client).isInstanceOf(AbfsBlobClient.class);
       // Make sure all client.REST_API_CALLS succeed with right parameters
       testClientAPIs(client, getTestTracingContext(fs));
-    } catch (UnsupportedOperationException ex) {
-      // Todo: [FnsOverBlob] - Remove this block once all Blob Endpoint Support is ready.
-      Assertions.assertThat(ex.getMessage()).contains("Blob Endpoint Support is not yet implemented");
+    } catch (AzureBlobFileSystemException ex) {
+      // Todo: [FnsOverBlob] - Remove this block once complete Blob Endpoint Support is ready.
+      Assertions.assertThat(ex).isInstanceOf(InvalidConfigurationValueException.class);
     }
   }
 
