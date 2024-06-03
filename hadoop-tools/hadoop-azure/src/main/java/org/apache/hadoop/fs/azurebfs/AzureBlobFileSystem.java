@@ -209,6 +209,8 @@ public class AzureBlobFileSystem extends FileSystem
     tracingHeaderFormat = abfsConfiguration.getTracingHeaderFormat();
     this.setWorkingDirectory(this.getHomeDirectory());
 
+    abfsStore.validateConfiguredServiceType(getInitTracingContext());
+
     TracingContext tracingContext = new TracingContext(clientCorrelationId,
             fileSystemId, FSOperationType.CREATE_FILESYSTEM, tracingHeaderFormat, listener);
     if (abfsConfiguration.getCreateRemoteFileSystemDuringInitialization()) {
@@ -1440,6 +1442,11 @@ public class AzureBlobFileSystem extends FileSystem
     }
 
     return false;
+  }
+
+  private TracingContext getInitTracingContext() {
+    return new TracingContext(clientCorrelationId, fileSystemId,
+        FSOperationType.INIT, tracingHeaderFormat, listener);
   }
 
   @VisibleForTesting

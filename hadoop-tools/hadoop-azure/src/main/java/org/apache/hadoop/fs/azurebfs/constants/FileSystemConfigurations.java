@@ -32,8 +32,6 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_ST
 public final class FileSystemConfigurations {
 
   public static final String DEFAULT_FS_AZURE_ACCOUNT_IS_HNS_ENABLED = "";
-  public static final String DEFAULT_FS_AZURE_FNS_ACCOUNT_SERVICE_TYPE = "DFS";
-  public static final String DEFAULT_FS_AZURE_INGRESS_SERVICE_TYPE = "DFS";
   public static final boolean DEFAULT_FS_AZURE_ENABLE_DFSTOBLOB_FALLBACK = false;
   public static final boolean DEFAULT_FS_AZURE_ACCOUNT_IS_EXPECT_HEADER_ENABLED = true;
   public static final String USER_HOME_DIRECTORY_PREFIX = "/user";

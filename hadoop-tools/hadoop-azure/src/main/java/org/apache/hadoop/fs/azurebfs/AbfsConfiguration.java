@@ -86,20 +86,13 @@ public class AbfsConfiguration{
 
   private final Configuration rawConfig;
   private final String accountName;
+  private final AbfsServiceType fsConfiguredServiceType;
   private final boolean isSecure;
   private static final Logger LOG = LoggerFactory.getLogger(AbfsConfiguration.class);
 
   @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ACCOUNT_IS_HNS_ENABLED,
       DefaultValue = DEFAULT_FS_AZURE_ACCOUNT_IS_HNS_ENABLED)
   private String isNamespaceEnabledAccount;
-
-  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_FNS_ACCOUNT_SERVICE_TYPE,
-      DefaultValue = DEFAULT_FS_AZURE_FNS_ACCOUNT_SERVICE_TYPE)
-  private String fnsAccountServiceType;
-
-  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_INGRESS_SERVICE_TYPE,
-      DefaultValue = DEFAULT_FS_AZURE_INGRESS_SERVICE_TYPE)
-  private String ingressServiceType;
 
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_DFSTOBLOB_FALLBACK,
       DefaultValue = DEFAULT_FS_AZURE_ENABLE_DFSTOBLOB_FALLBACK)
@@ -405,11 +398,14 @@ public class AbfsConfiguration{
   private String clientProvidedEncryptionKey;
   private String clientProvidedEncryptionKeySHA;
 
-  public AbfsConfiguration(final Configuration rawConfig, String accountName)
-      throws IllegalAccessException, InvalidConfigurationValueException, IOException {
+  public AbfsConfiguration(final Configuration rawConfig,
+      String accountName,
+      AbfsServiceType fsConfiguredServiceType)
+      throws IllegalAccessException, IOException {
     this.rawConfig = ProviderUtils.excludeIncompatibleCredentialProviders(
         rawConfig, AzureBlobFileSystem.class);
     this.accountName = accountName;
+    this.fsConfiguredServiceType = fsConfiguredServiceType;
     this.isSecure = getBoolean(FS_AZURE_SECURE_MODE, false);
 
     Field[] fields = this.getClass().getDeclaredFields();
@@ -431,22 +427,21 @@ public class AbfsConfiguration{
     }
   }
 
+  public AbfsConfiguration(final Configuration rawConfig, String accountName)
+      throws IllegalAccessException, IOException {
+    this(rawConfig, accountName, AbfsServiceType.DFS);
+  }
+
   public Trilean getIsNamespaceEnabledAccount() {
     return Trilean.getTrilean(isNamespaceEnabledAccount);
   }
 
-  public AbfsServiceType getFnsAccountServiceType() {
-    if (fnsAccountServiceType.compareToIgnoreCase(AbfsServiceType.DFS.name()) == 0) {
-      return AbfsServiceType.DFS;
-    }
-    return AbfsServiceType.BLOB;
+  public AbfsServiceType getFsConfiguredServiceType() {
+    return getEnum(FS_AZURE_FNS_ACCOUNT_SERVICE_TYPE, fsConfiguredServiceType);
   }
 
   public AbfsServiceType getIngressServiceType() {
-    if (ingressServiceType.compareToIgnoreCase(AbfsServiceType.DFS.name()) == 0) {
-      return AbfsServiceType.DFS;
-    }
-    return AbfsServiceType.BLOB;
+    return getEnum(FS_AZURE_INGRESS_SERVICE_TYPE, getFsConfiguredServiceType());
   }
 
   public boolean isDfsToBlobFallbackEnabled() {
@@ -458,9 +453,9 @@ public class AbfsConfiguration{
    * @return true if blob client initialization is required, false otherwise
    */
   public boolean isBlobClientInitRequired() {
-    return getFnsAccountServiceType() == AbfsServiceType.BLOB
+    return getFsConfiguredServiceType() == AbfsServiceType.BLOB
         || getIngressServiceType() == AbfsServiceType.BLOB
-        || isDfsToBlobFallbackEnabled;
+        || isDfsToBlobFallbackEnabled();
   }
 
   /**
