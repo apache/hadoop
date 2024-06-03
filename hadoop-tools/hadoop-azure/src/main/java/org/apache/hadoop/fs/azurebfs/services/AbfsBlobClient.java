@@ -309,7 +309,7 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
   public AbfsRestOperation listPath(final String relativePath, final boolean recursive,
       final int listMaxResults, final String continuation, TracingContext tracingContext)
       throws AzureBlobFileSystemException {
-    // Todo: To be implemented as part of response handling of blob endpoint APIs.
+    // Todo: [FnsOverBlob] To be implemented as part of response handling of blob endpoint APIs.
     throw new NotImplementedException("Blob Endpoint Support is not yet implemented");
   }
 
@@ -425,7 +425,7 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
       final String sourceEtag,
       final boolean isMetadataIncompleteState,
       final boolean isNamespaceEnabled) throws IOException {
-    // Todo: To be implemented as part of rename-delete over blob endpoint work.
+    // Todo: [FnsOverBlob] To be implemented as part of rename-delete over blob endpoint work.
     throw new NotImplementedException("Rename operation on Blob endpoint will be implemented in future.");
   }
 
@@ -685,7 +685,7 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
       if (op.getResult().getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
         // This path could be present as an implicit directory in FNS.
         AbfsRestOperation listOp = listPath(path, false, 1, null, tracingContext);
-        // Todo: To be implemented as part of response handling of blob endpoint APIs.
+        // Todo: [FnsOverBlob] To be implemented as part of response handling of blob endpoint APIs.
         return listOp;
       }
       throw ex;
@@ -699,7 +699,7 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
       final String continuation,
       TracingContext tracingContext,
       final boolean isNamespaceEnabled) throws AzureBlobFileSystemException {
-    // Todo: To be implemented as part of rename-delete over blob endpoint work.
+    // Todo: [FnsOverBlob] To be implemented as part of rename-delete over blob endpoint work.
     throw new NotImplementedException("Delete operation on Blob endpoint will be implemented in future.");
   }
 

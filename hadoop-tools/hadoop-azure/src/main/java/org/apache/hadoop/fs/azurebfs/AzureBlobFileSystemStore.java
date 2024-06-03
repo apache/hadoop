@@ -295,6 +295,10 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
   public void validateConfiguredServiceType(TracingContext tracingContext)
       throws AzureBlobFileSystemException {
+    // Todo: [FnsOverBlob] - Fail FS Init with Blob Endpoint Until FNS over Blob is ready.
+    if (getConfiguredServiceType() == AbfsServiceType.BLOB) {
+      throw new InvalidConfigurationValueException(FS_DEFAULT_NAME_KEY);
+    }
     if (getIsNamespaceEnabled(tracingContext) && getConfiguredServiceType() == AbfsServiceType.BLOB) {
       // This could be because of either wrongly configured url or wrongly configured fns service type.
       if(identifyAbfsServiceType() == AbfsServiceType.BLOB) {
