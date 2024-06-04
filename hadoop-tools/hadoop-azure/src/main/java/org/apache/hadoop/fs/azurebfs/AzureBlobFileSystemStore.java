@@ -302,9 +302,9 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     if (getIsNamespaceEnabled(tracingContext) && getConfiguredServiceType() == AbfsServiceType.BLOB) {
       // This could be because of either wrongly configured url or wrongly configured fns service type.
       if (identifyAbfsServiceTypeFromUrl() == AbfsServiceType.BLOB) {
-        throw new InvalidConfigurationValueException(FS_DEFAULT_NAME_KEY);
+        throw new InvalidConfigurationValueException(FS_DEFAULT_NAME_KEY, "Wrong Domain Suffix for HNS Account");
       }
-      throw new InvalidConfigurationValueException(FS_AZURE_FNS_ACCOUNT_SERVICE_TYPE);
+      throw new InvalidConfigurationValueException(FS_AZURE_FNS_ACCOUNT_SERVICE_TYPE, "Wrong Service Type for HNS Accounts");
     }
   }
 
@@ -1786,7 +1786,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     }
 
     LOG.trace("Initializing AbfsClient for {}", baseUrl);
-    AbfsClient dfsClient = null, blobClient = null;
+    AbfsDfsClient dfsClient = null;
+    AbfsBlobClient blobClient = null;
     if (tokenProvider != null) {
       dfsClient = new AbfsDfsClient(baseUrl, creds, abfsConfiguration,
           tokenProvider, encryptionContextProvider,

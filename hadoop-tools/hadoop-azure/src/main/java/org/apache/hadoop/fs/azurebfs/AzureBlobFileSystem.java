@@ -209,8 +209,6 @@ public class AzureBlobFileSystem extends FileSystem
     tracingHeaderFormat = abfsConfiguration.getTracingHeaderFormat();
     this.setWorkingDirectory(this.getHomeDirectory());
 
-    abfsStore.validateConfiguredServiceType(getFsInitTracingContext());
-
     TracingContext tracingContext = new TracingContext(clientCorrelationId,
             fileSystemId, FSOperationType.CREATE_FILESYSTEM, tracingHeaderFormat, listener);
     if (abfsConfiguration.getCreateRemoteFileSystemDuringInitialization()) {
@@ -222,6 +220,8 @@ public class AzureBlobFileSystem extends FileSystem
         }
       }
     }
+
+    abfsStore.validateConfiguredServiceType(getFsInitTracingContext());
 
     LOG.trace("Initiate check for delegation token manager");
     if (UserGroupInformation.isSecurityEnabled()) {
