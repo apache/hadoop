@@ -73,11 +73,13 @@ import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeContext;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeServiceState;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
+import org.apache.hadoop.hdfs.server.federation.router.async.AsyncUtil;
 import org.apache.hadoop.hdfs.server.namenode.ha.ReadOnly;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryPolicy.RetryAction.RetryDecision;
 import org.apache.hadoop.ipc.CallerContext;
+import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.ObserverRetryOnActiveException;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.RetriableException;
@@ -719,7 +721,8 @@ public class RouterRpcClient {
       int retryCount, final Method method,
       final Object obj, final Object... params) throws IOException {
     try {
-      return method.invoke(obj, params);
+      // TODO: only test, not commit!
+      return invoke(method, obj, params);
     } catch (IllegalAccessException | IllegalArgumentException e) {
       LOG.error("Unexpected exception while proxying API", e);
       return null;
@@ -752,6 +755,21 @@ public class RouterRpcClient {
       } else {
         throw new IOException(e);
       }
+    }
+  }
+
+  // TODO: only test, not commit!!!
+  private Object invoke(
+      final Method method, final Object obj, final Object... params)
+      throws InvocationTargetException, IllegalAccessException {
+    Client.setAsynchronousMode(true);
+    method.invoke(obj, params);
+    try {
+      return AsyncUtil.syncReturn(Object.class);
+    } catch (Exception e) {
+      throw new InvocationTargetException(e);
+    } finally {
+      Client.setAsynchronousMode(false);
     }
   }
 
