@@ -220,7 +220,7 @@ public class S3ACachingInputStream extends S3ARemoteInputStream {
     } else {
       // A sequential read results in a prefetch.
       // but
-      prefetchCount = numBlocksToPrefetch ;
+      prefetchCount = numBlocksToPrefetch;
     }
 
     int toBlockNumber = getBlockData().getBlockNumber(readPos);

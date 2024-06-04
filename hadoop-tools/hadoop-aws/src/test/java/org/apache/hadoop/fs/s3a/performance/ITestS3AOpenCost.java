@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.s3a.performance;
 
 
 import java.io.EOFException;
-import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.Arrays;

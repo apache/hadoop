@@ -358,7 +358,7 @@ public class ITestS3APrefetchingLargeFiles extends AbstractS3ACostTest {
     Assertions.assertThat(tmpFiles)
         .describedAs("No cache files found under " + tmpFileDir)
         .isNotNull()
-        .hasSizeGreaterThanOrEqualTo( 1);
+        .hasSizeGreaterThanOrEqualTo(1);
 
     for (File tmpFile : tmpFiles) {
       Path path = new Path(tmpFile.getAbsolutePath());

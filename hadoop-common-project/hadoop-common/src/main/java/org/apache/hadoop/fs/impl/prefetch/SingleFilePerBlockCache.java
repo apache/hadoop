@@ -587,7 +587,7 @@ public class SingleFilePerBlockCache implements BlockCache {
   }
 
   /**
-   * Validate a block entry against a buffer, including checksum comparison
+   * Validate a block entry against a buffer, including checksum comparison.
    * @param entry block entry
    * @param buffer buffer
    * @throws IllegalStateException if invalid.

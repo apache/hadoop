@@ -484,7 +484,7 @@ public abstract class CachingBlockManager extends BlockManager {
         blockManager.prefetch(data, taskQueuedStartTime);
       } catch (Exception e) {
         LOG.info("{}: error prefetching block {}. {}", path, data.getBlockNumber(), e.getMessage());
-        LOG.debug("{}: error prefetching block {}", path , data.getBlockNumber(), e);
+        LOG.debug("{}: error prefetching block {}", path, data.getBlockNumber(), e);
       }
       return null;
     }
@@ -514,7 +514,7 @@ public abstract class CachingBlockManager extends BlockManager {
     Validate.checkNotNull(data, "data");
 
     final int blockNumber = data.getBlockNumber();
-    LOG.debug("{}: Block {}: request caching of {}", path , blockNumber, data);
+    LOG.debug("{}: Block {}: request caching of {}", path, blockNumber, data);
 
     if (isClosed() || isCachingDisabled()) {
       data.setDone();

@@ -458,9 +458,10 @@ public abstract class S3ARemoteInputStream
   }
 
   /**
-   * Get string info on offset, mapping to block number:offset
+   * Get string info on offset, mapping to block number:offset.
    * @param offset absolute position
-   * @return a string of block number and offset, with a block number of "-1:" if the offset is invalid.
+   * @return a string of block number and offset, with a block number of "-1:"
+   *          if the offset is invalid.
    */
   protected String getOffsetStr(long offset) {
     int blockNumber = -1;
