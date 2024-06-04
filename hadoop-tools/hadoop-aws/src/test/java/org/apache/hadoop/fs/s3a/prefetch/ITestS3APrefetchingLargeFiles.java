@@ -41,12 +41,12 @@ import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsContext;
 import org.apache.hadoop.test.LambdaTestUtils;
 
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
 import static org.apache.hadoop.fs.s3a.Constants.BUFFER_DIR;
 import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_BLOCK_COUNT_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_BLOCK_SIZE_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_ENABLED_KEY;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
-import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertDurationRange;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticCounter;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticGauge;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
@@ -56,7 +56,6 @@ import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsTo
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.ACTION_HTTP_GET_REQUEST;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_ACTIVE_MEMORY_IN_USE;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_BLOCKS_IN_FILE_CACHE;
-import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_BLOCK_ACQUIRE_AND_READ;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_BLOCK_CACHE_ENABLED;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_BLOCK_PREFETCH_ENABLED;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_OPENED;
@@ -128,7 +127,6 @@ public class ITestS3APrefetchingLargeFiles extends AbstractS3ACostTest {
     tmpFileDir = tempFolder.newFolder("cache");
     super.setup();
 
-
     ioStatisticsContext = getCurrentIOStatisticsContext();
     ioStatisticsContext.reset();
     nameThread();
@@ -166,10 +164,7 @@ public class ITestS3APrefetchingLargeFiles extends AbstractS3ACostTest {
 
     try (FSDataInputStream in = getFileSystem().open(path)) {
       ioStats = in.getIOStatistics();
-      // prefetching is on
-      verifyStatisticGaugeValue(ioStats, STREAM_READ_BLOCK_PREFETCH_ENABLED, 1);
-      // there is no caching
-      verifyStatisticGaugeValue(ioStats, STREAM_READ_BLOCK_CACHE_ENABLED, 1);
+      assertPrefetchingAndCachingEnabled(ioStats);
 
       byte[] buffer = new byte[S_1K];
       long bytesRead = 0;
@@ -192,14 +187,21 @@ public class ITestS3APrefetchingLargeFiles extends AbstractS3ACostTest {
       in.unbuffer();
       // Verify that once stream is closed, all memory is freed
       verifyStatisticGaugeValue(ioStats, STREAM_READ_ACTIVE_MEMORY_IN_USE, 0);
-      // prefetching is on
-      verifyStatisticGaugeValue(ioStats, STREAM_READ_BLOCK_PREFETCH_ENABLED, 1);
-      // there is no caching
-      verifyStatisticGaugeValue(ioStats, STREAM_READ_BLOCK_CACHE_ENABLED, 1);
-
+      assertPrefetchingAndCachingEnabled(ioStats);
     }
     // Verify that once stream is closed, all memory is freed
     verifyStatisticGaugeValue(ioStats, STREAM_READ_ACTIVE_MEMORY_IN_USE, 0);
+  }
+
+  /**
+   * Assert that prefetching and caching enabled -determined by examining gauges.
+   * @param ioStats iostatistics
+   */
+  private static void assertPrefetchingAndCachingEnabled(final IOStatistics ioStats) {
+    // prefetching is on
+    verifyStatisticGaugeValue(ioStats, STREAM_READ_BLOCK_PREFETCH_ENABLED, 1);
+    // there is caching
+    verifyStatisticGaugeValue(ioStats, STREAM_READ_BLOCK_CACHE_ENABLED, 1);
   }
 
   private void printStreamStatistics(final FSDataInputStream in) {
@@ -249,6 +251,7 @@ public class ITestS3APrefetchingLargeFiles extends AbstractS3ACostTest {
   /**
    * Random read of a large file, with a small block size
    * so as to reduce wait time for read completion.
+   * @throws Throwable
    */
   @Test
   public void testRandomReadLargeFile() throws Throwable {
@@ -257,20 +260,31 @@ public class ITestS3APrefetchingLargeFiles extends AbstractS3ACostTest {
     final Path path = createLargeFile();
 
     describe("Commencing Read Sequence");
-    try (FSDataInputStream in = getFileSystem().open(path)) {
+    try (FSDataInputStream in = getFileSystem()
+        .openFile(path)
+        .opt(FS_OPTION_OPENFILE_READ_POLICY, "random")
+        .build().get()) {
       ioStats = in.getIOStatistics();
 
       byte[] buffer = new byte[BLOCK_SIZE];
 
+      // there is no prefetch of block 0
+      awaitCachedBlocks(ioStats, 0);
+
       // Don't read block 0 completely so it gets cached on read after seek
       in.read(buffer, 0, BLOCK_SIZE - S_1K);
+      awaitCachedBlocks(ioStats, 1);
 
       // Seek to block 2 and read all of it
       in.seek(BLOCK_SIZE * 2);
       in.read(buffer, 0, BLOCK_SIZE);
 
+      // so no increment in cache block count
+      awaitCachedBlocks(ioStats, 1);
+
       // Seek to block 4 but don't read: noop.
       in.seek(BLOCK_SIZE * 4);
+      awaitCachedBlocks(ioStats, 1);
 
       // Backwards seek, will use cached block 0
       in.seek(S_500 * 5);
@@ -286,20 +300,30 @@ public class ITestS3APrefetchingLargeFiles extends AbstractS3ACostTest {
       LambdaTestUtils.eventually(TIMEOUT_MILLIS, INTERVAL_MILLIS, () -> {
         LOG.info("Attempt {}: {}", iterations.incrementAndGet(),
             ioStatisticsToPrettyString(ioStats));
-        // verifyStatisticCounterValue(ioStats, ACTION_HTTP_GET_REQUEST, 4);
+        verifyStatisticCounterValue(ioStats, ACTION_HTTP_GET_REQUEST, 4);
         verifyStatisticCounterValue(ioStats, STREAM_READ_OPENED, 4);
-        // verifyStatisticCounterValue(ioStats, STREAM_READ_PREFETCH_OPERATIONS, 2);
-        // verifyStatisticGaugeValue(ioStats, STREAM_READ_BLOCKS_IN_FILE_CACHE, 3);
       });
       printStreamStatistics(in);
     }
-/*    LambdaTestUtils.eventually(TIMEOUT_MILLIS, INTERVAL_MILLIS, () -> {
-      verifyStatisticGaugeValue(ioStats, STREAM_READ_BLOCKS_IN_FILE_CACHE, 0);
+    awaitCachedBlocks(ioStats, 0);
+    LambdaTestUtils.eventually(TIMEOUT_MILLIS, INTERVAL_MILLIS, () -> {
       verifyStatisticGaugeValue(ioStats, STREAM_READ_ACTIVE_MEMORY_IN_USE, 0);
-    });*/
+    });
 
   }
 
+  /**
+   * Await the cached block count to match the expected value.
+   * @param ioStats live statistics
+   * @param count count of blocks
+   * @throws Exception failure
+   */
+  public void awaitCachedBlocks(final IOStatistics ioStats, final long count) throws Exception {
+    LambdaTestUtils.eventually(TIMEOUT_MILLIS, INTERVAL_MILLIS, () -> {
+      verifyStatisticGaugeValue(ioStats, STREAM_READ_BLOCKS_IN_FILE_CACHE, count);
+      verifyStatisticGaugeValue(ioStats, STREAM_READ_ACTIVE_MEMORY_IN_USE, 0);
+    });
+  }
   /**
    * Test to verify the existence of the cache file.
    * Tries to perform inputStream read and seek ops to make the prefetching take place and
