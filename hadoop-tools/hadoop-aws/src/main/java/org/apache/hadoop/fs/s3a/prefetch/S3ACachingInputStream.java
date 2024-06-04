@@ -259,6 +259,7 @@ public class S3ACachingInputStream extends S3ARemoteInputStream {
    * Construct an instance of a {@code S3ACachingBlockManager}.
    *
    * @param blockManagerParameters block manager parameters
+   * @param reader block reader
    * @return the block manager
    * @throws IllegalArgumentException if reader is null.
    */
