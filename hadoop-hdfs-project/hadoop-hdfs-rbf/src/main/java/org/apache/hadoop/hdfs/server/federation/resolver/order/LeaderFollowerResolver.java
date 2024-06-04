@@ -24,17 +24,17 @@ import org.slf4j.LoggerFactory;
 import java.util.Set;
 
 public class LeaderFollowerResolver implements OrderedResolver {
-    protected static final Logger LOG =
-            LoggerFactory.getLogger(LeaderFollowerResolver.class);
+  protected static final Logger LOG =
+      LoggerFactory.getLogger(LeaderFollowerResolver.class);
 
-    @Override
-    public String getFirstNamespace(String path, PathLocation loc) {
-        // always return first destination
-        Set<String> namespaces = loc.getNamespaces(true);
-        if (namespaces == null || namespaces.isEmpty()) {
-            LOG.error("Cannot find sub-cluster for {}", loc);
-            return null;
-        }
-        return namespaces.iterator().next();
+  @Override
+  public String getFirstNamespace(String path, PathLocation loc) {
+    // always return first destination
+    Set<String> namespaces = loc.getNamespaces(true);
+    if (namespaces == null || namespaces.isEmpty()) {
+      LOG.error("Cannot find sub-cluster for {}", loc);
+      return null;
     }
+    return namespaces.iterator().next();
+  }
 }

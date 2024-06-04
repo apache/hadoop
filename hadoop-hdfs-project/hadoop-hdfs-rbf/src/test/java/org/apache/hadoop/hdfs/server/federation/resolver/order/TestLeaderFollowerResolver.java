@@ -33,35 +33,34 @@ import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 
 public class TestLeaderFollowerResolver {
-    @Test
-    public void testResolve() throws Exception {
-        // Mock the subcluster mapping
-        Configuration conf = new Configuration();
-        Router router = mock(Router.class);
-        LeaderFollowerResolver leaderFollowerResolver = new LeaderFollowerResolver();
+  @Test
+  public void testResolve() throws Exception {
+    // Mock the subcluster mapping
+    Configuration conf = new Configuration();
+    Router router = mock(Router.class);
+    LeaderFollowerResolver leaderFollowerResolver = new LeaderFollowerResolver();
 
-        // Add the mocks to the resolver
-        MultipleDestinationMountTableResolver resolver =
-                new MultipleDestinationMountTableResolver(conf, router);
-        resolver.addResolver(DestinationOrder.LEADER_FOLLOWER, leaderFollowerResolver);
+    // Add the mocks to the resolver
+    MultipleDestinationMountTableResolver resolver =
+      new MultipleDestinationMountTableResolver(conf, router);
+    resolver.addResolver(DestinationOrder.LEADER_FOLLOWER, leaderFollowerResolver);
 
-        Map<String, String> mapLocal = new LinkedHashMap<>();
-        mapLocal.put("subcluster2", "/local");
-        mapLocal.put("subcluster0", "/local");
-        mapLocal.put("subcluster1", "/local");
-        MountTable localEntry = MountTable.newInstance("/local", mapLocal);
-        localEntry.setDestOrder(DestinationOrder.LEADER_FOLLOWER);
-        resolver.addEntry(localEntry);
+    Map<String, String> mapLocal = new LinkedHashMap<>();
+    mapLocal.put("subcluster2", "/local");
+    mapLocal.put("subcluster0", "/local");
+    mapLocal.put("subcluster1", "/local");
+    MountTable localEntry = MountTable.newInstance("/local", mapLocal);
+    localEntry.setDestOrder(DestinationOrder.LEADER_FOLLOWER);
+    resolver.addEntry(localEntry);
 
+    PathLocation dest = resolver.getDestinationForPath("/local/file0.txt");
+    assertDestination("subcluster2", dest);
 
-        PathLocation dest = resolver.getDestinationForPath("/local/file0.txt");
-        assertDestination("subcluster2", dest);
+  }
 
-    }
-
-    private static void assertDestination(String expectedNsId, PathLocation loc) {
-        List<RemoteLocation> dests = loc.getDestinations();
-        RemoteLocation dest = dests.get(0);
-        assertEquals(expectedNsId, dest.getNameserviceId());
-    }
+  private static void assertDestination(String expectedNsId, PathLocation loc) {
+    List<RemoteLocation> dests = loc.getDestinations();
+    RemoteLocation dest = dests.get(0);
+    assertEquals(expectedNsId, dest.getNameserviceId());
+  }
 }

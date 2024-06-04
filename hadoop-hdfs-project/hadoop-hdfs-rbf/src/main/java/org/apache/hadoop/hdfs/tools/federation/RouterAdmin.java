@@ -169,11 +169,13 @@ public class RouterAdmin extends Configured implements Tool {
     } else if (cmd.equals(ADD_ALL_COMMAND)) {
       return "\t[" + ADD_ALL_COMMAND + " "
           + "<source1> <nameservice1,nameservice2,...> <destination1> "
-          + "[-readonly] [-faulttolerant] " + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE|LEADER_FOLLOWER] "
+          + "[-readonly] [-faulttolerant] " + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE"
+          + "|LEADER_FOLLOWER] "
           + "-owner <owner1> -group <group1> -mode <mode1>"
           + " , "
           + "<source2> <nameservice1,nameservice2,...> <destination2> "
-          + "[-readonly] [-faulttolerant] " + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE|LEADER_FOLLOWER] "
+          + "[-readonly] [-faulttolerant] " + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE"
+          + "|LEADER_FOLLOWER] "
           + "-owner <owner2> -group <group2> -mode <mode2>"
           + " , ...]";
     } else if (cmd.equals("-update")) {

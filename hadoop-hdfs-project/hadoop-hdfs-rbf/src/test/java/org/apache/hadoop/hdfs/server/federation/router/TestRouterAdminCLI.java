@@ -276,7 +276,7 @@ public class TestRouterAdminCLI {
     final String dest = "/changAdd";
 
     String[] argv = new String[] {
-            "-add", mnt, nsId, dest, "-order", order.toString()};
+      "-add", mnt, nsId, dest, "-order", order.toString()};
     assertEquals(0, ToolRunner.run(admin, argv));
 
     stateStore.loadCache(MountTableStoreImpl.class, true);
