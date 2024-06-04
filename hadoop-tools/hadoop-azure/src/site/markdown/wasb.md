@@ -33,7 +33,7 @@ were informed to migrate to ABFS driver.
 Users of the legacy WASB driver face a number of challenges and limitations:
 1. They cannot leverage the optimizations and benefits of the latest ABFS driver.
 2. They need to deal with the compatibility issues should the files and folders were
-modified with the legacy WASB driver and the ABFS driver concurrently in a phased 
+modified with the legacy WASB driver and the ABFS driver concurrently in a phased
 transition situation.
 3. There are differences for supported features for FNS and HNS over ABFS Driver.
 4. In certain cases, they must perform a significant amount of re-work on their
@@ -61,7 +61,6 @@ move to HNS enabled accounts with the ABFS driver, which is our recommended stac
 for big data analytics on ADLS Gen2.
 
 ### Impact for existing ABFS users using ADLS Gen2 (HNS enabled account)
-
 This feature does not impact the existing users who are using ADLS Gen2 Accounts
 (HNS enabled account) with ABFS driver.
 
@@ -70,7 +69,6 @@ will still enjoy the benefits of HNS, such as atomic operations, fine-grained
 access control, scalability, and performance.
 
 ### Official recommendation
-
 Microsoft continues to recommend all Big Data and Analytics users to use
 Azure Data Lake Gen2 (ADLS Gen2) using the ABFS driver and will continue to optimize
 this scenario in the future, we believe that this new option will help all those
@@ -78,7 +76,6 @@ users to transition to a supported scenario immediately, while they plan to
 ultimately move to ADLS Gen2 (HNS enabled account).
 
 ### New Authentication Options for a migrating user
-
 Below auth types that WASB provides will continue to work on the new FNS over
 ABFS Driver over configuration that accepts these SAS types (similar to WASB):
 1. SharedKey
@@ -87,16 +84,14 @@ ABFS Driver over configuration that accepts these SAS types (similar to WASB):
 
 Below authentication types that were not supported by WASB driver but supported by
 ABFS driver will continue to be available for new FNS over ABFS Driver
-
 1. OAuth 2.0 Client Credentials
 2. OAuth 2.0: Refresh Token
 3. Azure Managed Identity
 4. Custom OAuth 2.0 Token Provider
 
-Refer to [ABFS Authentication](abfs.html) for more details.
+Refer to [ABFS Authentication](abfs.html/authentication) for more details.
 
 ### ABFS Features Not Available for migrating Users
 Certain features of ABFS Driver will be available only to users using HNS accounts with ABFS driver.
-
 1. ABFS Driver's SAS Token Provider plugin for UserDelegation SAS and Fixed SAS.
-2. Client Provided Encryption Key (CPEK) support for Data ingress and egress.
+2. Client Provided Encryption Key (CPK) support for Data ingress and egress.
