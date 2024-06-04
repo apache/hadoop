@@ -88,14 +88,16 @@ public final class ITestS3ACommitterFactory extends AbstractCommitITest {
   private static final Object[][] BINDINGS = {
       {"", "", FileOutputCommitter.class, "Default Binding"},
       {COMMITTER_NAME_FILE, "", FileOutputCommitter.class, "File committer in FS"},
-      {COMMITTER_NAME_PARTITIONED, "", PartitionedStagingCommitter.class, "partitoned committer in FS"},
+      {COMMITTER_NAME_PARTITIONED, "", PartitionedStagingCommitter.class,
+          "partitoned committer in FS"},
       {COMMITTER_NAME_STAGING, "", StagingCommitter.class, "staging committer in FS"},
       {COMMITTER_NAME_MAGIC, "", MagicS3GuardCommitter.class, "magic committer in FS"},
       {COMMITTER_NAME_DIRECTORY, "", DirectoryStagingCommitter.class, "Dir committer in FS"},
       {INVALID_NAME, "", null, "invalid committer in FS"},
 
       {"", COMMITTER_NAME_FILE, FileOutputCommitter.class, "File committer in task"},
-      {"", COMMITTER_NAME_PARTITIONED, PartitionedStagingCommitter.class, "partioned committer in task"},
+      {"", COMMITTER_NAME_PARTITIONED, PartitionedStagingCommitter.class,
+          "partioned committer in task"},
       {"", COMMITTER_NAME_STAGING, StagingCommitter.class, "staging committer in task"},
       {"", COMMITTER_NAME_MAGIC, MagicS3GuardCommitter.class, "magic committer in task"},
       {"", COMMITTER_NAME_DIRECTORY, DirectoryStagingCommitter.class, "Dir committer in task"},
