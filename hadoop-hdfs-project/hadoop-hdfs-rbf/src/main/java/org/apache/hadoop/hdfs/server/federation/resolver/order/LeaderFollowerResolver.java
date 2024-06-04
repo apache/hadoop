@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,26 +17,24 @@
  */
 package org.apache.hadoop.hdfs.server.federation.resolver.order;
 
-import java.util.EnumSet;
+import org.apache.hadoop.hdfs.server.federation.resolver.PathLocation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-/**
- * Order of the destinations when we have multiple of them. When the resolver
- * of files to subclusters (FileSubclusterResolver) has multiple destinations,
- * this determines which location should be checked first.
- */
-public enum DestinationOrder {
-  HASH, // Follow consistent hashing in the first folder level
-  LOCAL, // Local first
-  RANDOM, // Random order
-  HASH_ALL, // Follow consistent hashing
-  SPACE, // Available space based order
-  LEADER_FOLLOWER; // try leader sub-cluster first, if failed, try followers
+import java.util.Set;
 
-  /** Approaches that write folders in all subclusters. */
-  public static final EnumSet<DestinationOrder> FOLDER_ALL = EnumSet.of(
-      HASH_ALL,
-      RANDOM,
-      SPACE,
-      // leader-follower mode should make sure all directory exists in case of switching
-      LEADER_FOLLOWER);
+public class LeaderFollowerResolver implements OrderedResolver {
+    protected static final Logger LOG =
+            LoggerFactory.getLogger(LeaderFollowerResolver.class);
+
+    @Override
+    public String getFirstNamespace(String path, PathLocation loc) {
+        // always return first destination
+        Set<String> namespaces = loc.getNamespaces(true);
+        if (namespaces == null || namespaces.isEmpty()) {
+            LOG.error("Cannot find sub-cluster for {}", loc);
+            return null;
+        }
+        return namespaces.iterator().next();
+    }
 }
