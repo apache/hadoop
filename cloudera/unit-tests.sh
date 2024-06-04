@@ -13,6 +13,7 @@ MAIN_POM="${SCRIPT_DIR}/../pom.xml"
 POM_FILE="${POM_FILE:-$MAIN_POM}"
 TEST_EXCLUDE_PATTERN="${TEST_EXCLUDE_PATTERN:-$(cat "${SCRIPT_DIR}/test-excludes.txt" | { grep -v "^#" || test $? = 1; } | paste -sd "," -)}"
 
+SKIP_SONAR=1
 SONAR_URL="${SONAR_URL:-https://sonarqube.infra.cloudera.com}"
 SONAR_LOGIN="${SONAR_LOGIN:-}"
 SONAR_PROJECT_KEY="${SONAR_PROJECT_KEY:-}"
