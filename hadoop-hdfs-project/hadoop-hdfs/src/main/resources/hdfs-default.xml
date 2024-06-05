@@ -4995,6 +4995,14 @@
 </property>
 
 <property>
+  <name>dfs.datanode.copy.block.cross.namespace.socket-timeout.ms</name>
+  <value>300000</value>
+  <description>
+    Default timeout value in milliseconds for datanode copying block cross namespace.
+  </description>
+</property>
+
+<property>
   <name>dfs.ha.fencing.methods</name>
   <value></value>
   <description>

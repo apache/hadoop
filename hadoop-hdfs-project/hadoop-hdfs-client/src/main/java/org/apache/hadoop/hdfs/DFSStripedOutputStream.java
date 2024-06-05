@@ -1271,6 +1271,9 @@ public class DFSStripedOutputStream extends DFSOutputStream
 
       try (TraceScope ignored =
                dfsClient.getTracer().newScope("completeFile")) {
+        if (currentBlockGroup == null) {
+          currentBlockGroup = getUserAssignmentLastBlock();
+        }
         completeFile(currentBlockGroup);
       }
       logCorruptBlocks();
