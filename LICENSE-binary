@@ -482,9 +482,9 @@ com.microsoft.azure:azure-cosmosdb-gateway:2.4.5
 com.microsoft.azure:azure-data-lake-store-sdk:2.3.3
 com.microsoft.azure:azure-keyvault-core:1.0.0
 com.microsoft.sqlserver:mssql-jdbc:6.2.1.jre7
-org.bouncycastle:bcpkix-jdk18on:1.77
-org.bouncycastle:bcprov-jdk18on:1.77
-org.bouncycastle:bcutil-jdk18on:1.77
+org.bouncycastle:bcpkix-jdk18on:1.78.1
+org.bouncycastle:bcprov-jdk18on:1.78.1
+org.bouncycastle:bcutil-jdk18on:1.78.1
 org.checkerframework:checker-qual:2.5.2
 org.codehaus.mojo:animal-sniffer-annotations:1.21
 org.jruby.jcodings:jcodings:1.0.13
