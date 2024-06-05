@@ -27,6 +27,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKREPORT_SPLIT_THRESHO
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKREPORT_SPLIT_THRESHOLD_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CACHEREPORT_INTERVAL_MSEC_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CACHEREPORT_INTERVAL_MSEC_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_COPY_BLOCK_CROSS_NAMESPACE_SOCKET_TIMEOUT_MS_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_COPY_BLOCK_CROSS_NAMESPACE_SOCKET_TIMEOUT_MS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_LIFELINE_INTERVAL_SECONDS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_NON_LOCAL_LAZY_PERSIST;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_NON_LOCAL_LAZY_PERSIST_DEFAULT;
@@ -89,6 +91,7 @@ public class DNConf {
   final int socketWriteTimeout;
   final int socketKeepaliveTimeout;
   final int ecChecksumSocketTimeout;
+  private final int copyBlockCrossNamespaceSocketTimeout;
   private final int transferSocketSendBufferSize;
   private final int transferSocketRecvBufferSize;
   private final boolean tcpNoDelay;
@@ -153,6 +156,9 @@ public class DNConf {
     ecChecksumSocketTimeout = getConf().getInt(
         DFS_CHECKSUM_EC_SOCKET_TIMEOUT_KEY,
         DFS_CHECKSUM_EC_SOCKET_TIMEOUT_DEFAULT);
+    copyBlockCrossNamespaceSocketTimeout = getConf().getInt(
+        DFS_DATANODE_COPY_BLOCK_CROSS_NAMESPACE_SOCKET_TIMEOUT_MS_KEY,
+        DFS_DATANODE_COPY_BLOCK_CROSS_NAMESPACE_SOCKET_TIMEOUT_MS_DEFAULT);
     this.transferSocketSendBufferSize = getConf().getInt(
         DFSConfigKeys.DFS_DATANODE_TRANSFER_SOCKET_SEND_BUFFER_SIZE_KEY,
         DFSConfigKeys.DFS_DATANODE_TRANSFER_SOCKET_SEND_BUFFER_SIZE_DEFAULT);
@@ -388,6 +394,15 @@ public class DNConf {
    */
   public int getEcChecksumSocketTimeout() {
     return ecChecksumSocketTimeout;
+  }
+
+  /**
+   * Returns socket timeout for copyBlockCrossNamespace.
+   *
+   * @return int socket timeout
+   */
+  public int getCopyBlockCrossNamespaceSocketTimeout() {
+    return copyBlockCrossNamespaceSocketTimeout;
   }
 
   /**

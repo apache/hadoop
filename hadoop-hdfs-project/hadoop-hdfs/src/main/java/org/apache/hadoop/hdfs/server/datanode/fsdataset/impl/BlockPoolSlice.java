@@ -46,6 +46,7 @@ import java.util.concurrent.RecursiveAction;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.fs.HardLink;
 import org.apache.hadoop.hdfs.server.datanode.FSCachingGetSpaceUsed;
 import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
@@ -139,7 +140,7 @@ public class BlockPoolSlice {
   private volatile GetSpaceUsed dfsUsage;
 
   /**
-   * Create a blook pool slice
+   * Create a blook pool slice.
    * @param bpid Block pool Id
    * @param volume {@link FsVolumeImpl} to which this BlockPool belongs to
    * @param bpDir directory corresponding to the BlockPool
@@ -1152,4 +1153,14 @@ public class BlockPoolSlice {
     this.deleteDuplicateReplicas = deleteDuplicateReplicasForTests;
   }
 
+  public File hardLinkOneBlock(File src, File srcMeta, Block dstBlock) throws IOException {
+    File dstMeta = new File(tmpDir,
+        DatanodeUtil.getMetaName(dstBlock.getBlockName(), dstBlock.getGenerationStamp()));
+    HardLink.createHardLink(srcMeta, dstMeta);
+
+    File dstBlockFile = new File(tmpDir, dstBlock.getBlockName());
+    HardLink.createHardLink(src, dstBlockFile);
+
+    return dstBlockFile;
+  }
 }
