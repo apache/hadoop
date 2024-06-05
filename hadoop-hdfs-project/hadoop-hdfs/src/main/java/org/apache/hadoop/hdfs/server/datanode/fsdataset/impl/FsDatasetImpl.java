@@ -68,6 +68,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataSetLockManager;
 import org.apache.hadoop.hdfs.server.datanode.FileIoProvider;
 import org.apache.hadoop.hdfs.server.datanode.FinalizedReplica;
 import org.apache.hadoop.hdfs.server.datanode.LocalReplica;
+import org.apache.hadoop.hdfs.server.datanode.LocalReplicaInPipeline;
 import org.apache.hadoop.hdfs.server.datanode.metrics.DataNodeMetrics;
 import org.apache.hadoop.util.AutoCloseableLock;
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -3862,6 +3863,28 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
   @Override
   public long getPendingAsyncDeletions() {
     return asyncDiskService.countPendingDeletions();
+  }
+
+  @Override
+  public void hardLinkOneBlock(ExtendedBlock srcBlock, ExtendedBlock dstBlock) throws IOException {
+    BlockLocalPathInfo blpi = getBlockLocalPathInfo(srcBlock);
+    FsVolumeImpl v = getVolume(srcBlock);
+
+    try (AutoCloseableLock lock = lockManager.writeLock(LockLevel.VOLUME, dstBlock.getBlockPoolId(),
+        v.getStorageID())) {
+      File src = new File(blpi.getBlockPath());
+      File srcMeta = new File(blpi.getMetaPath());
+      BlockPoolSlice dstBPS = v.getBlockPoolSlice(dstBlock.getBlockPoolId());
+      File dstBlockFile = dstBPS.hardLinkOneBlock(src, srcMeta, dstBlock.getLocalBlock());
+
+      ReplicaInfo replicaInfo =
+          new LocalReplicaInPipeline(dstBlock.getBlockId(), dstBlock.getGenerationStamp(), v,
+              dstBlockFile.getParentFile(), dstBlock.getLocalBlock().getNumBytes());
+      dstBlockFile = dstBPS.addFinalizedBlock(dstBlock.getLocalBlock(), replicaInfo);
+      replicaInfo = new FinalizedReplica(dstBlock.getLocalBlock(), getVolume(srcBlock),
+          dstBlockFile.getParentFile());
+      volumeMap.add(dstBlock.getBlockPoolId(), replicaInfo);
+    }
   }
 }
 

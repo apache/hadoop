@@ -28,6 +28,7 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_SERV
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_TEST_DROP_NAMENODE_RESPONSE_NUM_KEY;
 
+import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -1954,6 +1955,26 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
       throws IOException {
     return DFSUtilClient.connectToDN(dn, timeout, conf, saslClient,
         socketFactory, getConf().isConnectToDnViaHostname(), this, blockToken);
+  }
+
+  protected void copyBlockCrossNamespace(ExtendedBlock sourceBlk,
+      Token<BlockTokenIdentifier> sourceBlockToken, DatanodeInfo sourceDatanode,
+      ExtendedBlock targetBlk, Token<BlockTokenIdentifier> targetBlockToken,
+      DatanodeInfo targetDatanode) throws IOException {
+    IOStreamPair pair =
+        DFSUtilClient.connectToDN(sourceDatanode, getConf().getSocketTimeout(), conf, saslClient,
+            socketFactory, getConf().isConnectToDnViaHostname(), this, sourceBlockToken);
+
+    new Sender((DataOutputStream) pair.out).copyBlockCrossNamespace(sourceBlk, sourceBlockToken,
+        targetBlk, targetBlockToken, targetDatanode);
+
+    pair.out.flush();
+
+    DataInputStream reply = new DataInputStream(pair.in);
+    BlockOpResponseProto proto = BlockOpResponseProto.parseFrom(PBHelperClient.vintPrefixed(reply));
+    DataTransferProtoUtil.checkBlockOpStatus(proto,
+        "copyBlockCrossNamespace " + sourceBlk + " to " + targetBlk + " from " + sourceDatanode
+            + " to " + targetDatanode);
   }
 
   /**
