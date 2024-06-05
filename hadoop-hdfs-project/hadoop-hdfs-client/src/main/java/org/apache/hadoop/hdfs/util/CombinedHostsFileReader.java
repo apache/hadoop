@@ -125,7 +125,8 @@ public final class CombinedHostsFileReader {
     }
     return allDNs;
   }
-      /**
+
+  /**
    * Wrapper to call readFile with timeout via Future Tasks.
    * If timeout is reached, it will throw IOException
    * @param hostsFile the input json file to read from
