@@ -19,14 +19,24 @@ package org.apache.hadoop.hdfs.util;
 
 import java.io.File;
 import java.io.FileWriter;
+import java.io.IOException;
+import java.util.concurrent.Callable;
 
 import org.apache.hadoop.hdfs.protocol.DatanodeAdminProperties;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.After;
 import org.junit.Test;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
+import org.junit.rules.ExpectedException;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+
 
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.when;
 
 /**
  * Test for JSON based HostsFileReader.
@@ -43,6 +53,12 @@ public class TestCombinedHostsFileReader {
   private final File jsonFile = new File(TESTCACHEDATADIR, "dfs.hosts.json");
   private final File legacyFile =
       new File(TESTCACHEDATADIR, "legacy.dfs.hosts.json");
+
+  @Rule
+  public final ExpectedException exception = ExpectedException.none();
+
+  @Mock
+  private Callable<DatanodeAdminProperties[]> callable;
 
   @Before
   public void setUp() throws Exception {
@@ -87,4 +103,50 @@ public class TestCombinedHostsFileReader {
         CombinedHostsFileReader.readFile(newFile.getAbsolutePath());
     assertEquals(0, all.length);
   }
+
+  /*
+   * When timeout is enabled, test for success when reading file within timeout limits
+   */
+  @Test
+  public void testReadFileWithTimeoutSuccess() throws Exception {
+
+      DatanodeAdminProperties[] all =
+        CombinedHostsFileReader.readFileWithTimeout(
+          jsonFile.getAbsolutePath(), 1000);
+      assertEquals(7, all.length);
+  }
+
+  /*
+   * When timeout is enabled, test for IOException when reading file exceeds timeout limits
+   */
+  @Test
+  public void testReadFileWithTimeoutTimeoutException() throws Exception {
+    exception.expect(IOException.class);
+    when(callable.call()).thenAnswer(new Answer<Void>() {
+      @Override
+      public Void answer(InvocationOnMock invocation) throws Throwable {
+        Thread.sleep(2000);
+        return null;
+      }
+    });
+
+    CombinedHostsFileReader.readFileWithTimeout(
+      jsonFile.getAbsolutePath(), 1);
+  }
+
+  /*
+  * When timeout is enabled, test for IOException when execution is interrupted
+  */
+ @Test(expected = IOException.class)
+ public void testReadFileWithTimeoutInterruptedException() throws Exception {
+   when(callable.call()).thenAnswer(new Answer<Void>() {
+     @Override
+     public Void answer(InvocationOnMock invocation) throws Throwable {
+       throw new InterruptedException();
+     }
+   });
+
+   CombinedHostsFileReader.readFileWithTimeout(
+     jsonFile.getAbsolutePath(), 1);
+ }
 }
