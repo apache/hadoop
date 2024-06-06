@@ -115,10 +115,14 @@ public final class ITestS3ACommitterFactory extends AbstractCommitITest {
   }
 
   /**
-   * Name of committer to set in fs config. If "" do not set one.
+   * Name of committer to set in filesystem config. If "" do not set one.
    */
   private final String fsCommitterName;
-  private final String pathCommitterName;
+
+  /**
+   * Name of committer to set in job config.
+   */
+  private final String jobCommitterName;
 
   /**
    * Expected committer class.
@@ -126,14 +130,25 @@ public final class ITestS3ACommitterFactory extends AbstractCommitITest {
    */
   private final Class<? extends AbstractS3ACommitter> committerClass;
 
+  /**
+   * Description from parameters, simply for thread names to be more informative.
+   */
   private final String description;
 
-  public ITestS3ACommitterFactory(final String fsCommitterName,
-      final String pathCommitterName,
+  /**
+   * Create a parameterized instance.
+   * @param fsCommitterName committer to set in filesystem config
+   * @param jobCommitterName committer to set in job config
+   * @param committerClass expected committer class
+   * @param description debug text for thread names.
+   */
+  public ITestS3ACommitterFactory(
+      final String fsCommitterName,
+      final String jobCommitterName,
       final Class<? extends AbstractS3ACommitter> committerClass,
       final String description) {
     this.fsCommitterName = fsCommitterName;
-    this.pathCommitterName = pathCommitterName;
+    this.jobCommitterName = jobCommitterName;
     this.committerClass = committerClass;
     this.description = description;
   }
@@ -178,7 +193,7 @@ public final class ITestS3ACommitterFactory extends AbstractCommitITest {
     jobConf.set(FileOutputFormat.OUTDIR, outDir.toUri().toString());
     jobConf.set(MRJobConfig.TASK_ATTEMPT_ID, attempt0);
     jobConf.setInt(MRJobConfig.APPLICATION_ATTEMPT_ID, 1);
-    maybeSetCommitterName(jobConf, pathCommitterName);
+    maybeSetCommitterName(jobConf, jobCommitterName);
     tContext = new TaskAttemptContextImpl(jobConf, taskAttempt0);
 
     LOG.info("Filesystem Committer='{}'; task='{}'",
