@@ -1141,6 +1141,7 @@ your IDE or via maven.
 1. Run a full AWS-test suite with S3 client-side encryption enabled by
  setting `fs.s3a.encryption.algorithm` to 'CSE-KMS' and setting up AWS-KMS
   Key ID in `fs.s3a.encryption.key`.
+2. Verify that the output of test `TestAWSV2SDK` doesn't contain any unshaded classes.
 
 The dependency chain of the `hadoop-aws` module should be similar to this, albeit
 with different version numbers:
