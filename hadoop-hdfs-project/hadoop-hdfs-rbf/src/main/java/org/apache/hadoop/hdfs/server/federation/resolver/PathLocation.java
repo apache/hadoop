@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.server.federation.resolver;
 
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
@@ -159,11 +158,7 @@ public class PathLocation {
    * @return Set containing the subclusters.
    */
   public Set<String> getNamespaces() {
-    return getNamespaces(false);
-  }
-
-  public Set<String> getNamespaces(boolean keepInOrder) {
-    Set<String> namespaces = keepInOrder ? new LinkedHashSet<>() : new HashSet<>();
+    Set<String> namespaces = new HashSet<>();
     List<RemoteLocation> locations = this.getDestinations();
     for (RemoteLocation location : locations) {
       String nsId = location.getNameserviceId();

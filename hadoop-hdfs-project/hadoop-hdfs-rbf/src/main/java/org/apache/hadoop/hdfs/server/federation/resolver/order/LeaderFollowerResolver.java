@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.federation.resolver.order;
 
 import org.apache.hadoop.hdfs.server.federation.resolver.PathLocation;
+import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,11 +31,12 @@ public class LeaderFollowerResolver implements OrderedResolver {
   @Override
   public String getFirstNamespace(String path, PathLocation loc) {
     // always return first destination
-    Set<String> namespaces = loc.getNamespaces(true);
-    if (namespaces == null || namespaces.isEmpty()) {
+    try {
+      RemoteLocation remoteLocation = loc.getDefaultLocation();
+      return remoteLocation.getNameserviceId();
+    } catch (Exception ex) {
       LOG.error("Cannot find sub-cluster for {}", loc);
       return null;
     }
-    return namespaces.iterator().next();
   }
 }
