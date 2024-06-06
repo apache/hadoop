@@ -54,8 +54,8 @@ public final class BulkDeleteUtils {
    * @return true if the path is under the base path.
    */
   public static boolean validatePathIsUnderParent(Path p, Path basePath) {
-    while (p.getParent() != null) {
-      if (p.getParent().equals(basePath)) {
+    while (p != null) {
+      if (p.equals(basePath)) {
         return true;
       }
       p = p.getParent();
