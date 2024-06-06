@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.function.Function;
@@ -120,7 +121,7 @@ public final class AsyncUtil {
    */
   public static void asyncThrowException(Throwable e) {
     CompletableFuture<Object> result = new CompletableFuture<>();
-    result.completeExceptionally(e);
+    result.completeExceptionally(new CompletionException(e));
     CUR_COMPLETABLE_FUTURE.set(result);
   }
 
