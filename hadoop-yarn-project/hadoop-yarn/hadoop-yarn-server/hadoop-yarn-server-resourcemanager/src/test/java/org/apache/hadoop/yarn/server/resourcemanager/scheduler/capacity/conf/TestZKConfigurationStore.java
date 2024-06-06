@@ -23,7 +23,6 @@ import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.RetryNTimes;
 import org.apache.curator.test.TestingServer;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.Service;
@@ -100,7 +99,7 @@ public class TestZKConfigurationStore extends
     curatorTestingServer = setupCuratorServer();
     curatorFramework = setupCuratorFramework(curatorTestingServer);
 
-    conf.set(CommonConfigurationKeys.ZK_ADDRESS,
+    conf.set(YarnConfiguration.RM_ZK_ADDRESS,
         curatorTestingServer.getConnectString());
     rm = new MockRM(conf);
     rm.start();

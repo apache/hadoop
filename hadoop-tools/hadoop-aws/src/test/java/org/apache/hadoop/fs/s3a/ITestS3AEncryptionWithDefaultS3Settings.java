@@ -102,6 +102,7 @@ public class ITestS3AEncryptionWithDefaultS3Settings extends
   @Test
   public void testEncryptionFileAttributes() throws Exception {
     describe("Test for correct encryption file attributes for SSE-KMS with user default setting.");
+    skipIfBucketNotKmsEncrypted();
     Path path = path(createFilename(1024));
     byte[] data = dataset(1024, 'a', 'z');
     S3AFileSystem fs = getFileSystem();

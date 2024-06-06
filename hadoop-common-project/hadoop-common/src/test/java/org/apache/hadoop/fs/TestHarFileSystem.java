@@ -257,6 +257,8 @@ public class TestHarFileSystem {
         Progressable progress, boolean appendToNewBlock) throws IOException;
 
     Path getEnclosingRoot(Path path) throws IOException;
+
+    BulkDelete createBulkDelete(Path path) throws IllegalArgumentException, IOException;
   }
 
   @Test

@@ -218,6 +218,9 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
       FEDERATION_STORE_PREFIX + "driver.class";
   public static final Class<? extends StateStoreDriver>
       FEDERATION_STORE_DRIVER_CLASS_DEFAULT = StateStoreZooKeeperImpl.class;
+  public static final String FEDERATION_STORE_DRIVER_ASYNC_OVERRIDE_MAX_THREADS =
+      FEDERATION_STORE_PREFIX + "driver.async.override.max.threads";
+  public static final int FEDERATION_STORE_DRIVER_ASYNC_OVERRIDE_MAX_THREADS_DEFAULT = -1;
 
   public static final String FEDERATION_STORE_CONNECTION_TEST_MS =
       FEDERATION_STORE_PREFIX + "connection.test";
@@ -257,6 +260,8 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
       FEDERATION_STORE_ZK_DRIVER_PREFIX + "async.max.threads";
   public static final int FEDERATION_STORE_ZK_ASYNC_MAX_THREADS_DEFAULT =
       -1;
+  public static final String FEDERATION_STORE_ZK_ADDRESS =
+      FEDERATION_STORE_ZK_DRIVER_PREFIX + "address";
 
   // HDFS Router-based federation File based store implementation specific configs
   public static final String FEDERATION_STORE_FILE_ASYNC_THREADS =

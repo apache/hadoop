@@ -59,7 +59,7 @@ To make most efficient use of S3, care is needed.
 The S3A FileSystem supports implementation of vectored read api using which
 a client can provide a list of file ranges to read returning a future read
 object associated with each range. For full api specification please see
-[FSDataInputStream](../../hadoop-common-project/hadoop-common/filesystem/fsdatainputstream.html).
+[FSDataInputStream](../../../../../../hadoop-common-project/hadoop-common/target/site/filesystem/fsdatainputstream.html).
 
 The following properties can be configured to optimise vectored reads based
 on the client requirements.
@@ -93,6 +93,86 @@ on the client requirements.
    </description>
 </property>
 ```
+
+## <a name="bulkdelete"></a> Improving delete performance through bulkdelete API.
+
+For bulk delete API spec refer to File System specification. [BulkDelete](../../../../../../hadoop-common-project/hadoop-common/target/site/filesystem/bulkdelete.html)
+
+The S3A client exports this API.
+
+### S3A Implementation of Bulk Delete.
+If multi-object delete is enabled (`fs.s3a.multiobjectdelete.enable` = true), as
+it is by default, then the page size is limited to that defined in
+`fs.s3a.bulk.delete.page.size`, which MUST be less than or equal to 1000.
+* The entire list of paths to delete is aggregated into a single bulk delete request,
+  issued to the store.
+* Provided the caller has the correct permissions, every entry in the list
+  will, if the path references an object, cause that object to be deleted.
+* If the path does not reference an object: the path will not be deleted
+  "This is for deleting objects, not directories"
+* No probes for the existence of parent directories will take place; no
+  parent directory markers will be created.
+  "If you need parent directories, call mkdir() yourself"
+* The list of failed keys listed in the `DeleteObjectsResponse` response
+  are converted into paths and returned along with their error messages.
+* Network and other IO errors are raised as exceptions.
+
+If multi-object delete is disabled (or the list of size 1)
+* A single `DELETE` call is issued
+* Any `AccessDeniedException` raised is converted to a result in the error list.
+* Any 404 response from a (non-AWS) store will be ignored.
+* Network and other IO errors are raised as exceptions.
+
+Because there are no probes to ensure the call does not overwrite a directory,
+or to see if a parentDirectory marker needs to be created,
+this API is still faster than issuing a normal `FileSystem.delete(path)` call.
+
+That is: all the overhead normally undertaken to preserve the Posix System model are omitted.
+
+
+### S3 Scalability and Performance
+
+Every entry in a bulk delete request counts as one write operation
+against AWS S3 storage.
+With the default write rate under a prefix on AWS S3 Standard storage
+restricted to 3,500 writes/second, it is very easy to overload
+the store by issuing a few bulk delete requests simultaneously.
+
+* If throttling is triggered then all clients interacting with
+  the store may observe performance issues.
+* The write quota applies even for paths which do not exist.
+* The S3A client *may* perform rate throttling as well as page size limiting.
+
+What does that mean? it means that attempting to issue multiple
+bulk delete calls in parallel can be counterproductive.
+
+When overloaded, the S3 store returns a 403 throttle response.
+This will trigger it back off and retry of posting the request.
+However, the repeated request will still include the same number of objects and
+*so generate the same load*.
+
+This can lead to a pathological situation where the repeated requests will
+never be satisfied because the request itself is sufficient to overload the store.
+See [HADOOP-16823.Large DeleteObject requests are their own Thundering Herd]
+(https://issues.apache.org/jira/browse/HADOOP-16823)
+for an example of where this did actually surface in production.
+
+This is why the default page size of S3A clients is 250 paths, not the store limit of 1000 entries.
+It is also why the S3A delete/rename operations do not attempt to do massive parallel deletions,
+Instead bulk delete requests are queued for a single blocking thread to issue.
+Consider a similar design.
+
+
+When working with versioned S3 buckets, every path deleted will add a tombstone marker
+to the store at that location, even if there was no object at that path.
+While this has no negative performance impact on the bulk delete call,
+it will slow down list requests subsequently made against that path.
+That is: bulk delete requests of paths which do not exist will hurt future queries.
+
+Avoid this. Note also that TPC-DS Benchmark do not create the right load to make the
+performance problems observable -but they can surface in production.
+* Configure buckets to have a limited number of days for tombstones to be preserved.
+* Do not delete paths which you know reference nonexistent files or directories.
 
 ## <a name="fadvise"></a> Improving data input performance through fadvise
 
