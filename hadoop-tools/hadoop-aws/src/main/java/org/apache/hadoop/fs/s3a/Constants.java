@@ -737,6 +737,16 @@ public final class Constants {
       "fs.s3a.encryption.key";
 
   /**
+   * Set S3-SSE encryption context.
+   * The value of this property is a set of non-secret comma-separated key-value pairs
+   * of additional contextual information about the data that are separated by equal
+   * operator (=).
+   * value:{@value}
+   */
+  public static final String S3_ENCRYPTION_CONTEXT =
+      "fs.s3a.encryption.context";
+
+  /**
    * List of custom Signers. The signer class will be loaded, and the signer
    * name will be associated with this signer class in the S3 SDK.
    * Examples
