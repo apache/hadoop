@@ -31,7 +31,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.SASTokenProviderException;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.TokenAccessProviderException;
 import org.apache.hadoop.fs.azurebfs.extensions.MockSASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.permission.FsAction;

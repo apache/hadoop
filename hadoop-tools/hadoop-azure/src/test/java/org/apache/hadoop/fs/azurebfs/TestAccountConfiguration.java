@@ -27,8 +27,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.ConfigurationPropertyNotFoundException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.TokenAccessProviderException;
-import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
-import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.CustomTokenProviderAdapter;
 import org.apache.hadoop.fs.azurebfs.oauth2.MsiTokenProvider;
@@ -418,13 +416,14 @@ public class TestAccountConfiguration {
 
   }
 
-  private void testConfigPropNotFound(List<String> CONFIG_KEYS, String tokenProviderClassName) throws Throwable {
+  private void testConfigPropNotFound(List<String> configKeys,
+      String tokenProviderClassName)throws Throwable {
     final String accountName = "account";
 
     final Configuration conf = new Configuration();
     final AbfsConfiguration abfsConf = new AbfsConfiguration(conf, accountName);
 
-    for (String key : CONFIG_KEYS) {
+    for (String key : configKeys) {
       setAuthConfig(abfsConf, true, AuthType.OAuth, tokenProviderClassName);
       abfsConf.unset(key);
       abfsConf.unset(key + "." + accountName);
