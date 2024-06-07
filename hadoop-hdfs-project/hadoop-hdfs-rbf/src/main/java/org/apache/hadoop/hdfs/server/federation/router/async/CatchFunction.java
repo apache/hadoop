@@ -21,6 +21,27 @@ import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
+/**
+ * The {@code CatchFunction} interface represents a function that handles exceptions
+ * occurring within an asynchronous operation. It provides a mechanism to catch and
+ * process exceptions to a specific type, allowing for error recovery or alternative
+ * processing paths within an asynchronous workflow.
+ *
+ * <p>This interface is part of the asynchronous utilities provided by the Hadoop
+ * Distributed File System (HDFS) Federation router. It is used in conjunction with
+ * other asynchronous interfaces such as {@link AsyncRun} and
+ * {@link FinallyFunction} to build complex, non-blocking operations.</p>
+ *
+ * <p>An implementation of this interface should define how to handle a caught
+ * exception. It takes two parameters: the result of the asynchronous operation (if
+ * any) and the caught exception. The function can then return a new result or modify
+ * the existing result to continue the asynchronous processing.</p>
+ *
+ * @param <R> the type of the result of the asynchronous operation
+ * @param <E> the type of the exception to catch, extending {@link Throwable}
+ * @see AsyncRun
+ * @see FinallyFunction
+ */
 @FunctionalInterface
 public interface CatchFunction<R, E extends Throwable>
     extends Async<R>{

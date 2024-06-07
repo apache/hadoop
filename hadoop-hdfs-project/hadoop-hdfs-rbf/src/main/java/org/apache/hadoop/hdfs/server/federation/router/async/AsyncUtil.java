@@ -346,7 +346,7 @@ public final class AsyncUtil {
         future = asyncDo.async(entry);
       } catch (IOException e) {
         future = new CompletableFuture<>();
-        future.completeExceptionally(e);
+        future.completeExceptionally(new CompletionException(e));
       }
       completableFutures[i++] = future;
     }
