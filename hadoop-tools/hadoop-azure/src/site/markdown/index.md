@@ -18,6 +18,7 @@
 
 See also:
 
+* [WASB](./wasb.html)
 * [ABFS](./abfs.html)
 * [Testing](./testing_azure.html)
 
