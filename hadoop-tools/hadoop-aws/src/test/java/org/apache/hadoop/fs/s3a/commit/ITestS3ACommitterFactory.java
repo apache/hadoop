@@ -196,7 +196,8 @@ public final class ITestS3ACommitterFactory extends AbstractCommitITest {
     maybeSetCommitterName(jobConf, jobCommitterName);
     tContext = new TaskAttemptContextImpl(jobConf, taskAttempt0);
 
-    LOG.info("Filesystem Committer='{}'; task='{}'",
+    LOG.info("{}: Filesystem Committer='{}'; task='{}'",
+        description,
         fsConf.get(FS_S3A_COMMITTER_NAME),
         jobConf.get(FS_S3A_COMMITTER_NAME));
   }
@@ -232,8 +233,7 @@ public final class ITestS3ACommitterFactory extends AbstractCommitITest {
           expected,
           createCommitter().getClass());
     } else {
-      intercept(PathCommitException.class, () ->
-          createCommitter());
+      intercept(PathCommitException.class, this::createCommitter);
     }
   }
 
