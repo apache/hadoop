@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.server.federation.router.async;
 
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 
 @FunctionalInterface
 public interface AsyncCatchFunction<R, E extends Throwable>
@@ -62,10 +61,10 @@ public interface AsyncCatchFunction<R, E extends Throwable>
             return null;
           });
         } catch (IOException ioe) {
-          result.completeExceptionally(new CompletionException(ioe));
+          result.completeExceptionally(ioe);
         }
       } else {
-        result.completeExceptionally(e);
+        result.completeExceptionally(cause);
       }
       return r;
     });
