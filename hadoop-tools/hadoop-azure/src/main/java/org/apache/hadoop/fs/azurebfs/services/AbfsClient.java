@@ -1734,7 +1734,7 @@ public class AbfsClient implements Closeable {
   }
 
   @VisibleForTesting
-  URL getBaseUrl() {
+  public URL getBaseUrl() {
     return baseUrl;
   }
 
