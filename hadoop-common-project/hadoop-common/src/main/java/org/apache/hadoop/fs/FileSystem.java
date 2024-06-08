@@ -997,8 +997,8 @@ public abstract class FileSystem extends Configured
     return open(f.getPath(), getConf().getInt(IO_FILE_BUFFER_SIZE_KEY,
         IO_FILE_BUFFER_SIZE_DEFAULT));
   }
-        
-  /**
+
+ /**
    * Opens an FSDataInputStream at the indicated Path.
    * @param f the file to open
    * @throws IOException IO failure
