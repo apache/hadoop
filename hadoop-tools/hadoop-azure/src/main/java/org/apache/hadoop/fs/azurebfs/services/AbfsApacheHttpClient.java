@@ -70,7 +70,7 @@ final class AbfsApacheHttpClient implements Closeable {
     return usable;
   }
 
-  public AbfsApacheHttpClient(DelegatingSSLSocketFactory delegatingSSLSocketFactory,
+  AbfsApacheHttpClient(DelegatingSSLSocketFactory delegatingSSLSocketFactory,
       final int readTimeout, final KeepAliveCache keepAliveCache) {
     final AbfsConnectionManager connMgr = new AbfsConnectionManager(
         createSocketFactoryRegistry(
