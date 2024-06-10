@@ -194,8 +194,8 @@ public final class AbfsHttpConstants {
    * for a non-hierarchical-namespace account: {@value}
    */
   public static final String CPK_IN_NON_HNS_ACCOUNT_ERROR_MESSAGE =
-      "Non hierarchical-namespace account can not have configs enabled for Customer"
-          + "Provided Keys. Following configs can not be given with "
+      "Non hierarchical-namespace account can not have configs enabled for "
+          + "Customer Provided Keys. Following configs can not be given with "
           + "non-hierarchical-namespace account:"
           + CPK_CONFIG_LIST;
 
