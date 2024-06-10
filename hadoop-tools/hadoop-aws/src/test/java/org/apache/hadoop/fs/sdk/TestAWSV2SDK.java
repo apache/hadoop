@@ -17,10 +17,6 @@
  */
 
 package org.apache.hadoop.fs.sdk;
-import org.junit.Test;
-import org.apache.hadoop.test.AbstractHadoopTestBase;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -30,33 +26,39 @@ import java.util.List;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
-import static org.junit.Assert.assertNotEquals;
+import org.junit.Test;
+import org.apache.hadoop.test.AbstractHadoopTestBase;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Tests to verify AWS SDK based issues like duplicated shaded classes and others
  */
 public class TestAWSV2SDK extends AbstractHadoopTestBase {
 
-    Logger LOG = LoggerFactory.getLogger(this.getClass().getName());
+    private static final Logger LOG = LoggerFactory.getLogger(TestAWSV2SDK.class.getName());
+
     @Test
     public void testShadedClasses() throws IOException {
         String allClassPath = System.getProperty("java.class.path");
         LOG.debug("Current classpath:{}", allClassPath);
         String[] classPaths = allClassPath.split(File.pathSeparator);
         String v2ClassPath = null;
-        for(String classPath : classPaths){
+        for(String classPath : classPaths) {
             //Checking for only version 2.x sdk here
             if (classPath.contains("awssdk/bundle/2")) {
                 v2ClassPath = classPath;
                 break;
             }
         }
-        assertNotEquals("AWS V2 SDK should be present on the classpath",
-                v2ClassPath, null);
+        assertThat(v2ClassPath)
+                .as("AWS V2 SDK should be present on the classpath").isNotNull();
         List<String> listOfV2SdkClasses = getClassNamesFromJarFile(v2ClassPath);
         String awsSdkPrefix = "software/amazon/awssdk";
         List<String> unshadedClasses = new ArrayList<>();
-        for(String awsSdkClass : listOfV2SdkClasses){
+        for(String awsSdkClass : listOfV2SdkClasses) {
             if (!awsSdkClass.startsWith(awsSdkPrefix)) {
                 unshadedClasses.add(awsSdkClass);
             }
@@ -69,7 +71,13 @@ public class TestAWSV2SDK extends AbstractHadoopTestBase {
         }
     }
 
-    public List<String> getClassNamesFromJarFile(String jarFilePath) throws IOException {
+    /**
+     * Returns the list of classes in a jar file.
+     * @param jarFilePath: the location of the jar file from absolute path
+     * @return a list of classes contained by the jar file
+     * @throws IOException if the file is not present or the path is not readable
+     */
+    private List<String> getClassNamesFromJarFile(String jarFilePath) throws IOException {
         List<String> classNames = new ArrayList<>();
         try (JarFile jarFile = new JarFile(new File(jarFilePath))) {
             Enumeration<JarEntry> jarEntryEnumeration = jarFile.entries();
