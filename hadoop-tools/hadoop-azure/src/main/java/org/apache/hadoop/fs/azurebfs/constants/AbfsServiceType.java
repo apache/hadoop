@@ -16,45 +16,16 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azurebfs.services;
+package org.apache.hadoop.fs.azurebfs.constants;
 
 /**
- * The REST operation type (Read, Append, Other ).
+ * Azure Storage Offers two sets of Rest APIs for interacting with the storage account.
+ * <ol>
+ *   <li>Blob Rest API: <a href = https://learn.microsoft.com/en-us/rest/api/storageservices/blob-service-rest-api></a></li>
+ *   <li>Data Lake Rest API: <a href = https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/operation-groups></a></li>
+ * </ol>
  */
-public enum AbfsRestOperationType {
-    CreateFileSystem,
-    GetFileSystemProperties,
-    SetFileSystemProperties,
-    ListPaths,
-    DeleteFileSystem,
-    CreatePath,
-    RenamePath,
-    GetAcl,
-    GetPathProperties,
-    GetPathStatus,
-    SetAcl,
-    SetOwner,
-    SetPathProperties,
-    SetPermissions,
-    Append,
-    Flush,
-    ReadFile,
-    DeletePath,
-    CheckAccess,
-    LeasePath,
-    CreateContainer,
-    GetContainerProperties,
-    SetContainerMetadata,
-    DeleteContainer,
-    ListBlobs,
-    PutBlob,
-    PutBlock,
-    PutBlockList,
-    LeaseBlob,
-    GetBlob,
-    GetBlockList,
-    GetBlobProperties,
-    SetBlobMetadata,
-    DeleteBlob,
-    CopyBlob
+public enum AbfsServiceType {
+  DFS,
+  BLOB
 }

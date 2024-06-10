@@ -221,6 +221,10 @@ public class AzureBlobFileSystem extends FileSystem
       }
     }
 
+    // Validate the service type configured in the URI is valid for account type used.
+    abfsStore.validateConfiguredServiceType(new TracingContext(clientCorrelationId,
+        fileSystemId, FSOperationType.INIT, tracingHeaderFormat, listener));
+
     LOG.trace("Initiate check for delegation token manager");
     if (UserGroupInformation.isSecurityEnabled()) {
       this.delegationTokenEnabled = abfsConfiguration.isDelegationTokenManagerEnabled();

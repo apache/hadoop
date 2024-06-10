@@ -46,7 +46,16 @@ public final class AbfsHttpConstants {
   public static final String DEFAULT_LEASE_BREAK_PERIOD = "0";
   public static final String DEFAULT_TIMEOUT = "90";
   public static final String APPEND_BLOB_TYPE = "appendblob";
-  public static final String TOKEN_VERSION = "2";
+
+  //Abfs Client Constants for Blob Endpoint.
+  public static final String CONTAINER = "container";
+  public static final String METADATA = "metadata";
+  public static final String LIST = "list";
+  public static final String BLOCK = "block";
+  public static final String BLOCKLIST = "blocklist";
+  public static final String LEASE = "lease";
+  public static final String BLOCK_BLOB_TYPE = "BlockBlob";
+  public static final String BLOCK_TYPE_COMMITTED = "committed";
 
   public static final String JAVA_VENDOR = "java.vendor";
   public static final String JAVA_VERSION = "java.version";
@@ -56,6 +65,7 @@ public final class AbfsHttpConstants {
 
   public static final String APN_VERSION = "APN/1.0";
   public static final String CLIENT_VERSION = "Azure Blob FS/" + VersionInfo.getVersion();
+  public static final String TOKEN_VERSION = "2";
 
   // Abfs Http Verb
   public static final String HTTP_METHOD_DELETE = "DELETE";
@@ -88,6 +98,7 @@ public final class AbfsHttpConstants {
   public static final String HTTP_HEADER_PREFIX = "x-ms-";
   public static final String HASH = "#";
   public static final String TRUE = "true";
+  public static final String ZERO = "0";
 
   public static final String PLUS_ENCODE = "%20";
   public static final String FORWARD_SLASH_ENCODE = "%2F";
@@ -97,6 +108,9 @@ public final class AbfsHttpConstants {
   public static final String GMT_TIMEZONE = "GMT";
   public static final String APPLICATION_JSON = "application/json";
   public static final String APPLICATION_OCTET_STREAM = "application/octet-stream";
+  public static final String APPLICATION_XML = "application/xml";
+  public static final String XMS_PROPERTIES_ENCODING_DFS = "ISO-8859-1";
+  public static final String XMS_PROPERTIES_ENCODING_BLOB = "UTF-8";
 
   public static final String ROOT_PATH = "/";
   public static final String ACCESS_MASK = "mask:";
@@ -164,6 +178,38 @@ public final class AbfsHttpConstants {
    * </pre>
    */
   public static final Integer HTTP_STATUS_CATEGORY_QUOTIENT = 100;
+
+  // Abfs Client Constants for XML Response Parsing over Blob Endpoint.
+  public static final String XML_TAG_NAME = "Name";
+  public static final String XML_TAG_BLOB = "Blob";
+  public static final String XML_TAG_PREFIX = "Prefix";
+  public static final String XML_TAG_NEXT_MARKER = "NextMarker";
+  public static final String XML_TAG_METADATA = "Metadata";
+  public static final String XML_TAG_PROPERTIES = "Properties";
+  public static final String XML_TAG_BLOB_PREFIX = "BlobPrefix";
+  public static final String XML_TAG_CONTENT_LEN = "Content-Length";
+  public static final String XML_TAG_RESOURCE_TYPE = "ResourceType";
+  public static final String XML_TAG_INVALID_XML = "Invalid XML";
+  public static final String XML_TAG_HDI_ISFOLDER = "hdi_isfolder";
+  public static final String XML_TAG_ETAG = "Etag";
+  public static final String XML_TAG_LAST_MODIFIED_TIME = "Last-Modified";
+  public static final String XML_TAG_CREATION_TIME   = "Creation-Time";
+  public static final String XML_TAG_OWNER = "Owner";
+  public static final String XML_TAG_GROUP = "Group";
+  public static final String XML_TAG_PERMISSIONS = "Permissions";
+  public static final String XML_TAG_ACL = "Acl";
+  public static final String XML_TAG_COPY_ID = "CopyId";
+  public static final String XML_TAG_COPY_STATUS = "CopyStatus";
+  public static final String XML_TAG_COPY_SOURCE = "CopySource";
+  public static final String XML_TAG_COPY_PROGRESS = "CopyProgress";
+  public static final String XML_TAG_COPY_COMPLETION_TIME = "CopyCompletionTime";
+  public static final String XML_TAG_COPY_STATUS_DESCRIPTION = "CopyStatusDescription";
+  public static final String XML_TAG_BLOB_ERROR_CODE_START_XML = "<Code>";
+  public static final String XML_TAG_BLOB_ERROR_CODE_END_XML = "</Code>";
+  public static final String XML_TAG_BLOB_ERROR_MESSAGE_START_XML = "<Message>";
+  public static final String XML_TAG_BLOB_ERROR_MESSAGE_END_XML = "</Message>";
+  public static final String XML_TAG_COMMITTED_BLOCKS = "CommittedBlocks";
+  public static final String XML_TAG_BLOCK_NAME = "Block";
 
   private AbfsHttpConstants() {}
 }
