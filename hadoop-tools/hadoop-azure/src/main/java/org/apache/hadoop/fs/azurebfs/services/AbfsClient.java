@@ -41,6 +41,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsInvalidChecksumException;
@@ -205,7 +206,7 @@ public class AbfsClient implements Closeable {
     if (!metricFormat.toString().equals(EMPTY_STRING)) {
       String metricAccountName = abfsConfiguration.getMetricAccount();
       String metricAccountKey = abfsConfiguration.getMetricAccountKey();
-      if (!metricAccountName.equals(EMPTY_STRING) && !metricAccountKey.equals(EMPTY_STRING)) {
+      if (StringUtils.isNotEmpty(metricAccountName) && StringUtils.isNotEmpty(metricAccountKey)) {
         isMetricCollectionEnabled = true;
         abfsCounters.initializeMetrics(metricFormat);
         int dotIndex = metricAccountName.indexOf(AbfsHttpConstants.DOT);
@@ -218,8 +219,7 @@ public class AbfsClient implements Closeable {
               metricAccountName.substring(0, dotIndex),
               metricAccountKey);
         } catch (IllegalArgumentException e) {
-          throw new IOException(
-              "Exception while initializing metric credentials " + e);
+          throw new IOException("Exception while initializing metric credentials ", e);
         }
       }
     }
