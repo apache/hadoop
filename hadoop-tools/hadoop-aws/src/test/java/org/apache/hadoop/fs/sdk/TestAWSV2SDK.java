@@ -73,7 +73,6 @@ public class TestAWSV2SDK extends AbstractHadoopTestBase {
 
   /**
    * Returns the list of classes in a jar file.
-   *
    * @param jarFilePath: the location of the jar file from absolute path
    * @return a list of classes contained by the jar file
    * @throws IOException if the file is not present or the path is not readable
