@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azurebfs.constants;
+package org.apache.hadoop.fs.azurebfs.services;
 
 /**
  * The REST operation type (Read, Append, Other ).

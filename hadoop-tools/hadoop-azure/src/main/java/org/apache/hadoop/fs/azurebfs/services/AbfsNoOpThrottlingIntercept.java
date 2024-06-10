@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
-import org.apache.hadoop.fs.azurebfs.constants.AbfsRestOperationType;
-
 /**
  * Implementation of {@link AbfsThrottlingIntercept} that does not throttle
  * the ABFS process.

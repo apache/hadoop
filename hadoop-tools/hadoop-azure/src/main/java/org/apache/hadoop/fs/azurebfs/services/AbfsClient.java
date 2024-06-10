@@ -43,7 +43,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.constants.HttpOperationType;
-import org.apache.hadoop.fs.azurebfs.constants.AbfsRestOperationType;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsInvalidChecksumException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsDriverException;

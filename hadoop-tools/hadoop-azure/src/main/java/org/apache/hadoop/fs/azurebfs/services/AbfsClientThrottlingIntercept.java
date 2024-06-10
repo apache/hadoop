@@ -27,7 +27,6 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbfsStatistic;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
-import org.apache.hadoop.fs.azurebfs.constants.AbfsRestOperationType;
 
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 
