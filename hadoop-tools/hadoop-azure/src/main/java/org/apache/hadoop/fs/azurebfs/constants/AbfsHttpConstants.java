@@ -170,7 +170,7 @@ public final class AbfsHttpConstants {
   public static final Integer HTTP_STATUS_CATEGORY_QUOTIENT = 100;
 
   /**
-   * List of configurations that are related to Client-Provided-Keys.
+   * List of configurations that are related to Customer-Provided-Keys.
    * <ol>
    *   <li>
    *     {@value ConfigurationKeys#FS_AZURE_ENCRYPTION_CONTEXT_PROVIDER_TYPE}
@@ -190,11 +190,11 @@ public final class AbfsHttpConstants {
           + FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY_SHA;
 
   /**
-   * Exception message on filesystem init if client-provided-keys configs are provided
+   * Exception message on filesystem init if customer-provided-keys configs are provided
    * for a non-hierarchical-namespace account: {@value}
    */
   public static final String CPK_IN_NON_HNS_ACCOUNT_ERROR_MESSAGE =
-      "Non hierarchical-namespace account can not have configs enabled for Client"
+      "Non hierarchical-namespace account can not have configs enabled for Customer"
           + "Provided Keys. Following configs can not be given with "
           + "non-hierarchical-namespace account:"
           + CPK_CONFIG_LIST;

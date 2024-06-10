@@ -224,7 +224,7 @@ public class AzureBlobFileSystem extends FileSystem
     }
 
     /*
-     * Non-hierarchical-namespace account can not have a client-provided-key(CPK).
+     * Non-hierarchical-namespace account can not have a customer-provided-key(CPK).
      * Fail initialization of filesystem if the configs are provided. CPK is of
      * two types: GLOBAL_KEY, and ENCRYPTION_CONTEXT.
      */
