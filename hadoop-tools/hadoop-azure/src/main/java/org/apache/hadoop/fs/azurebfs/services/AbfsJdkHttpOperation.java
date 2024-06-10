@@ -31,7 +31,6 @@ import java.util.Map;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
 
-import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
 import org.slf4j.Logger;
@@ -117,7 +116,7 @@ public class AbfsJdkHttpOperation extends AbfsHttpOperation {
     startTime = System.nanoTime();
     OutputStream outputStream = null;
     // Updates the expected bytes to be sent based on length.
-    expectedBytesToBeSent = length;
+    setExpectedBytesToBeSent(length);
     try {
       try {
         /* Without expect header enabled, if getOutputStream() throws
@@ -127,7 +126,7 @@ public class AbfsJdkHttpOperation extends AbfsHttpOperation {
          */
         outputStream = getConnOutputStream();
       } catch (IOException e) {
-        connectionDisconnectedOnError = true;
+        setConnectionDisconnectedOnError();
         /* If getOutputStream fails with an expect-100 exception , we return back
            without throwing an exception to the caller. Else, we throw back the exception.
          */
@@ -147,8 +146,8 @@ public class AbfsJdkHttpOperation extends AbfsHttpOperation {
            * case of Expect-100 error. Reason being, in JDK, it stores the responseCode
            * in the HttpUrlConnection object before throwing exception to the caller.
            */
-          statusCode = getConnResponseCode();
-          statusDescription = getConnResponseMessage();
+          setStatusCode(getConnResponseCode());
+          setStatusDescription(getConnResponseMessage());
           return;
         } else {
           LOG.debug(
@@ -159,7 +158,7 @@ public class AbfsJdkHttpOperation extends AbfsHttpOperation {
       }
       // update bytes sent for successful as well as failed attempts via the
       // accompanying statusCode.
-      bytesSent = length;
+      setBytesSent(length);
 
       // If this fails with or without expect header enabled,
       // it throws an IOException.
@@ -169,7 +168,7 @@ public class AbfsJdkHttpOperation extends AbfsHttpOperation {
       if (outputStream != null) {
         outputStream.close();
       }
-      sendRequestTimeMs = elapsedTimeMs(startTime);
+      setSendRequestTimeMs(elapsedTimeMs(startTime));
     }
   }
 
@@ -195,7 +194,7 @@ public class AbfsJdkHttpOperation extends AbfsHttpOperation {
   public void processResponse(final byte[] buffer,
       final int offset,
       final int length) throws IOException {
-    if (connectionDisconnectedOnError) {
+    if (isConnectionDisconnectedOnError()) {
       LOG.debug("This connection was not successful or has been disconnected, "
           + "hence not parsing headers and inputStream");
       return;
@@ -220,16 +219,11 @@ public class AbfsJdkHttpOperation extends AbfsHttpOperation {
     long startTime = 0;
     startTime = System.nanoTime();
 
-    statusCode = getConnResponseCode();
-    recvResponseTimeMs = elapsedTimeMs(startTime);
+    setStatusCode(getConnResponseCode());
+    setRecvResponseTimeMs(elapsedTimeMs(startTime));
 
-    statusDescription = getConnResponseMessage();
-
-    requestId = this.connection.getHeaderField(
-        HttpHeaderConfigurations.X_MS_REQUEST_ID);
-    if (requestId == null) {
-      requestId = AbfsHttpConstants.EMPTY_STRING;
-    }
+    setStatusDescription(getConnResponseMessage());
+    setRequestId();
 
     // dump the headers
     AbfsIoUtils.dumpHeadersToDebugLog("Response Headers",
@@ -260,7 +254,7 @@ public class AbfsJdkHttpOperation extends AbfsHttpOperation {
     try {
       return (HttpURLConnection) getUrl().openConnection();
     } finally {
-      connectionTimeMs = (elapsedTimeMs(start));
+      setConnectionTimeMs(elapsedTimeMs(start));
     }
   }
 

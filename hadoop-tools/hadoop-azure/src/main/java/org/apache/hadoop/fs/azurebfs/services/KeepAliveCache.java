@@ -1,7 +1,28 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.NotSerializableException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.Stack;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -29,7 +50,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_MAX
  * number of connections it can create.</li>
  * </ol>
  */
-public class KeepAliveCache extends Stack<KeepAliveCache.KeepAliveEntry>
+public final class KeepAliveCache extends Stack<KeepAliveCache.KeepAliveEntry>
     implements
     Closeable {
 
@@ -166,6 +187,7 @@ public class KeepAliveCache extends Stack<KeepAliveCache.KeepAliveEntry>
    * connection is checked. Once a valid connection is found, it is returned.
    *
    * @return HttpClientConnection: if a valid connection is found, else null.
+   * @throws IOException: if the cache is closed.
    */
   public synchronized HttpClientConnection get()
       throws IOException {
@@ -208,6 +230,20 @@ public class KeepAliveCache extends Stack<KeepAliveCache.KeepAliveEntry>
     push(entry);
   }
 
+  @Override
+  public synchronized boolean equals(final Object o) {
+    if (o instanceof KeepAliveCache) {
+      KeepAliveCache inst = (KeepAliveCache) o;
+      for (int i = 0; i < size(); i++) {
+        if (!elementAt(i).equals((inst.elementAt(i)))) {
+          return false;
+        }
+      }
+      return true;
+    }
+    return false;
+  }
+
   /**
    * Entry data-structure in the cache.
    */
@@ -237,5 +273,14 @@ public class KeepAliveCache extends Stack<KeepAliveCache.KeepAliveEntry>
     public int hashCode() {
       return httpClientConnection.hashCode();
     }
+  }
+
+  // Methods to prevent serialization of the KeepAliveCache.
+  private void writeObject(ObjectOutputStream var1) throws IOException {
+    throw new NotSerializableException();
+  }
+
+  private void readObject(ObjectInputStream var1) throws IOException, ClassNotFoundException {
+    throw new NotSerializableException();
   }
 }

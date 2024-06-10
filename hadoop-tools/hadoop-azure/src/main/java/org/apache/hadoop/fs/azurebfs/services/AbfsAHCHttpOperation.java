@@ -229,15 +229,10 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
   void parseResponseHeaderAndBody(final byte[] buffer,
       final int offset,
       final int length) throws IOException {
-    statusCode = parseStatusCode(httpResponse);
+    setStatusCode(parseStatusCode(httpResponse));
 
-    statusDescription = httpResponse.getStatusLine().getReasonPhrase();
-
-    requestId = getResponseHeader(
-        HttpHeaderConfigurations.X_MS_REQUEST_ID);
-    if (requestId == null) {
-      requestId = AbfsHttpConstants.EMPTY_STRING;
-    }
+    setStatusDescription(httpResponse.getStatusLine().getReasonPhrase());
+    setRequestId();
 
     // dump the headers
     if (LOG.isDebugEnabled()) {
@@ -272,9 +267,9 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
       LOG.debug("Executing request: {}", httpRequestBase);
       HttpResponse response = abfsApacheHttpClient.execute(httpRequestBase,
           abfsHttpClientContext, getConnectionTimeout(), getReadTimeout());
-      connectionTimeMs = abfsHttpClientContext.getConnectTime();
-      sendRequestTimeMs = abfsHttpClientContext.getSendTime();
-      recvResponseTimeMs = abfsHttpClientContext.getReadTime();
+      setConnectionTimeMs(abfsHttpClientContext.getConnectTime());
+      setSendRequestTimeMs(abfsHttpClientContext.getSendTime());
+      setRecvResponseTimeMs(abfsHttpClientContext.getReadTime());
       return response;
     } catch (IOException e) {
       LOG.debug("Failed to execute request: {}", httpRequestBase, e);
@@ -337,7 +332,7 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
       return;
     }
 
-    expectedBytesToBeSent = length;
+    setExpectedBytesToBeSent(length);
     if (buffer != null) {
       HttpEntity httpEntity = new ByteArrayEntity(buffer, offset, length,
           TEXT_PLAIN);
@@ -355,7 +350,7 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
               + "Expect 100 assertion failed for uri {} with status code: {}",
           getMaskedUrl(), parseStatusCode(ex.getHttpResponse()),
           ex);
-      connectionDisconnectedOnError = true;
+      setConnectionDisconnectedOnError();
       httpResponse = ex.getHttpResponse();
     } catch (IOException ex) {
       LOG.debug("Getting output stream failed for uri {}, exception: {}",
@@ -366,9 +361,9 @@ public class AbfsAHCHttpOperation extends AbfsHttpOperation {
         LOG.debug("Request sent: {}; response {}", httpRequestBase,
             httpResponse);
       }
-      if (!connectionDisconnectedOnError
+      if (!isConnectionDisconnectedOnError()
           && httpRequestBase instanceof HttpEntityEnclosingRequestBase) {
-        bytesSent = length;
+        setBytesSent(length);
       }
     }
   }

@@ -63,24 +63,24 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
   private final URL url;
   private String maskedUrl;
   private String maskedEncodedUrl;
-  protected int statusCode;
-  protected String statusDescription;
+  private int statusCode;
+  private String statusDescription;
   private String storageErrorCode = "";
   private String storageErrorMessage = "";
-  protected String requestId = "";
+  private String requestId = "";
   private String expectedAppendPos = "";
   private ListResultSchema listResultSchema = null;
 
   // metrics
-  protected int bytesSent;
-  protected int expectedBytesToBeSent;
-  protected long bytesReceived;
+  private int bytesSent;
+  private int expectedBytesToBeSent;
+  private long bytesReceived;
 
-  protected long connectionTimeMs;
-  protected long sendRequestTimeMs;
-  protected long recvResponseTimeMs;
+  private long connectionTimeMs;
+  private long sendRequestTimeMs;
+  private long recvResponseTimeMs;
   private boolean shouldMask = false;
-  protected boolean connectionDisconnectedOnError = false;
+  private boolean connectionDisconnectedOnError = false;
 
   /**Request headers to be sent in the request.*/
   private final List<AbfsHttpHeader> requestHeaders;
@@ -110,7 +110,8 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
 
   public AbfsHttpOperation(
       final Logger log,
-      final URL url,final String method,
+      final URL url,
+      final String method,
       final List<AbfsHttpHeader> requestHeaders,
       final Duration connectionTimeout,
       final Duration readTimeout) {
@@ -487,7 +488,7 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
   /**
    * Get the error stream from the connection.
    * @return InputStream
-   * @throws IOException: if the error stream could not be created from the response stream.
+   * @throws IOException if the error stream could not be created from the response stream.
    */
   protected abstract InputStream getErrorStream() throws IOException;
 
@@ -593,6 +594,94 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
 
   public final long getRecvLatency() {
     return recvResponseTimeMs;
+  }
+
+  /**
+   * Set response status code for the server call.
+   *
+   * @param statusCode status code.
+   */
+  protected void setStatusCode(final int statusCode) {
+    this.statusCode = statusCode;
+  }
+
+  /**
+   * Sets response status description for the server call.
+   *
+   * @param statusDescription status description.
+   */
+  protected void setStatusDescription(final String statusDescription) {
+    this.statusDescription = statusDescription;
+  }
+
+  /**
+   * Set x-ms-request-id value from the server call response header.
+   */
+  protected void setRequestId() {
+    requestId = getResponseHeader(
+        HttpHeaderConfigurations.X_MS_REQUEST_ID);
+    if (requestId == null) {
+      requestId = AbfsHttpConstants.EMPTY_STRING;
+    }
+  }
+
+  /**
+   * Sets byteSent metric.
+   *
+   * @param bytesSent bytes sent.
+   */
+  protected void setBytesSent(final int bytesSent) {
+    this.bytesSent = bytesSent;
+  }
+
+  /**
+   * Sets expected bytes to be sent.
+   *
+   * @param expectedBytesToBeSent expected bytes to be sent.
+   */
+  protected void setExpectedBytesToBeSent(final int expectedBytesToBeSent) {
+    this.expectedBytesToBeSent = expectedBytesToBeSent;
+  }
+
+  /**
+   * Sets connection time in milliseconds taken to establish the connection.
+   *
+   * @param connectionTimeMs connection time in milliseconds.
+   */
+  protected void setConnectionTimeMs(final long connectionTimeMs) {
+    this.connectionTimeMs = connectionTimeMs;
+  }
+
+  /**
+   * Sets send request time in milliseconds.
+   *
+   * @param sendRequestTimeMs send request time in milliseconds.
+   */
+  protected void setSendRequestTimeMs(final long sendRequestTimeMs) {
+    this.sendRequestTimeMs = sendRequestTimeMs;
+  }
+
+  /**
+   * Sets receive response time in milliseconds.
+   *
+   * @param recvResponseTimeMs receive response time in milliseconds.
+   */
+  protected void setRecvResponseTimeMs(final long recvResponseTimeMs) {
+    this.recvResponseTimeMs = recvResponseTimeMs;
+  }
+
+  /**
+   * Marks network error and expect100 failures for send-payload phase.
+   */
+  protected void setConnectionDisconnectedOnError() {
+    this.connectionDisconnectedOnError = true;
+  }
+
+  /**
+   * @return value of {@link #connectionDisconnectedOnError}
+   */
+  protected boolean isConnectionDisconnectedOnError() {
+    return connectionDisconnectedOnError;
   }
 
   public static class AbfsHttpOperationWithFixedResult extends AbfsHttpOperation {
