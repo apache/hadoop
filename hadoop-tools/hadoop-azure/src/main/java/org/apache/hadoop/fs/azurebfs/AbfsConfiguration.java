@@ -23,6 +23,7 @@ import java.lang.reflect.Field;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.services.FixedSASTokenProvider;
+import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
 import org.apache.hadoop.util.Preconditions;
 
 import org.apache.commons.lang3.StringUtils;
@@ -291,6 +292,26 @@ public class AbfsConfiguration{
   @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_AUTOTHROTTLING,
       DefaultValue = DEFAULT_ENABLE_AUTOTHROTTLING)
   private boolean enableAutoThrottling;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_METRIC_IDLE_TIMEOUT,
+      DefaultValue = DEFAULT_METRIC_IDLE_TIMEOUT_MS)
+  private int metricIdleTimeout;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_METRIC_ANALYSIS_TIMEOUT,
+      DefaultValue = DEFAULT_METRIC_ANALYSIS_TIMEOUT_MS)
+  private int metricAnalysisTimeout;
+
+  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_METRIC_URI,
+          DefaultValue = EMPTY_STRING)
+  private String metricUri;
+
+  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_METRIC_ACCOUNT_NAME,
+          DefaultValue = EMPTY_STRING)
+  private String metricAccount;
+
+  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_METRIC_ACCOUNT_KEY,
+          DefaultValue = EMPTY_STRING)
+  private String metricAccountKey;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ACCOUNT_OPERATION_IDLE_TIMEOUT,
       DefaultValue = DEFAULT_ACCOUNT_OPERATION_IDLE_TIMEOUT_MS)
@@ -819,6 +840,26 @@ public class AbfsConfiguration{
     return this.enableAutoThrottling;
   }
 
+  public int getMetricIdleTimeout() {
+    return this.metricIdleTimeout;
+  }
+
+  public int getMetricAnalysisTimeout() {
+    return this.metricAnalysisTimeout;
+  }
+
+  public String getMetricUri() {
+    return metricUri;
+  }
+
+  public String getMetricAccount() {
+    return metricAccount;
+  }
+
+  public String getMetricAccountKey() {
+    return metricAccountKey;
+  }
+
   public int getAccountOperationIdleTimeout() {
     return accountOperationIdleTimeout;
   }
@@ -853,6 +894,10 @@ public class AbfsConfiguration{
    */
   public TracingHeaderFormat getTracingHeaderFormat() {
     return getEnum(FS_AZURE_TRACINGHEADER_FORMAT, TracingHeaderFormat.ALL_ID_FORMAT);
+  }
+
+  public MetricFormat getMetricFormat() {
+    return getEnum(FS_AZURE_METRIC_FORMAT, MetricFormat.EMPTY);
   }
 
   public AuthType getAuthType(String accountName) {
