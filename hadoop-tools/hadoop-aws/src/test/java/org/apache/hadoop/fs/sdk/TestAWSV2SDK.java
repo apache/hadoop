@@ -38,56 +38,57 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 public class TestAWSV2SDK extends AbstractHadoopTestBase {
 
-    private static final Logger LOG = LoggerFactory.getLogger(TestAWSV2SDK.class.getName());
+  private static final Logger LOG = LoggerFactory.getLogger(TestAWSV2SDK.class.getName());
 
-    @Test
-    public void testShadedClasses() throws IOException {
-        String allClassPath = System.getProperty("java.class.path");
-        LOG.debug("Current classpath:{}", allClassPath);
-        String[] classPaths = allClassPath.split(File.pathSeparator);
-        String v2ClassPath = null;
-        for(String classPath : classPaths) {
-            //Checking for only version 2.x sdk here
-            if (classPath.contains("awssdk/bundle/2")) {
-                v2ClassPath = classPath;
-                break;
-            }
-        }
-        assertThat(v2ClassPath)
-                .as("AWS V2 SDK should be present on the classpath").isNotNull();
-        List<String> listOfV2SdkClasses = getClassNamesFromJarFile(v2ClassPath);
-        String awsSdkPrefix = "software/amazon/awssdk";
-        List<String> unshadedClasses = new ArrayList<>();
-        for(String awsSdkClass : listOfV2SdkClasses) {
-            if (!awsSdkClass.startsWith(awsSdkPrefix)) {
-                unshadedClasses.add(awsSdkClass);
-            }
-        }
-        if (!unshadedClasses.isEmpty()) {
-            LOG.warn("Unshaded Classes Found :{}", unshadedClasses.size());
-            LOG.warn("List of unshaded classes:{}", unshadedClasses);
-        } else {
-            LOG.info("No Unshaded classes found in the sdk.");
-        }
+  @Test
+  public void testShadedClasses() throws IOException {
+    String allClassPath = System.getProperty("java.class.path");
+    LOG.debug("Current classpath:{}", allClassPath);
+    String[] classPaths = allClassPath.split(File.pathSeparator);
+    String v2ClassPath = null;
+    for (String classPath : classPaths) {
+      //Checking for only version 2.x sdk here
+      if (classPath.contains("awssdk/bundle/2")) {
+        v2ClassPath = classPath;
+        break;
+      }
     }
+    assertThat(v2ClassPath)
+            .as("AWS V2 SDK should be present on the classpath").isNotNull();
+    List<String> listOfV2SdkClasses = getClassNamesFromJarFile(v2ClassPath);
+    String awsSdkPrefix = "software/amazon/awssdk";
+    List<String> unshadedClasses = new ArrayList<>();
+    for (String awsSdkClass : listOfV2SdkClasses) {
+      if (!awsSdkClass.startsWith(awsSdkPrefix)) {
+        unshadedClasses.add(awsSdkClass);
+      }
+    }
+    if (!unshadedClasses.isEmpty()) {
+      LOG.warn("Unshaded Classes Found :{}", unshadedClasses.size());
+      LOG.warn("List of unshaded classes:{}", unshadedClasses);
+    } else {
+      LOG.info("No Unshaded classes found in the sdk.");
+    }
+  }
 
-    /**
-     * Returns the list of classes in a jar file.
-     * @param jarFilePath: the location of the jar file from absolute path
-     * @return a list of classes contained by the jar file
-     * @throws IOException if the file is not present or the path is not readable
-     */
-    private List<String> getClassNamesFromJarFile(String jarFilePath) throws IOException {
-        List<String> classNames = new ArrayList<>();
-        try (JarFile jarFile = new JarFile(new File(jarFilePath))) {
-            Enumeration<JarEntry> jarEntryEnumeration = jarFile.entries();
-            while(jarEntryEnumeration.hasMoreElements()){
-                JarEntry jarEntry = jarEntryEnumeration.nextElement();
-                if (jarEntry.getName().endsWith(".class")) {
-                    classNames.add(jarEntry.getName());
-                }
-            }
+  /**
+   * Returns the list of classes in a jar file.
+   *
+   * @param jarFilePath: the location of the jar file from absolute path
+   * @return a list of classes contained by the jar file
+   * @throws IOException if the file is not present or the path is not readable
+   */
+  private List<String> getClassNamesFromJarFile(String jarFilePath) throws IOException {
+    List<String> classNames = new ArrayList<>();
+    try (JarFile jarFile = new JarFile(new File(jarFilePath))) {
+      Enumeration<JarEntry> jarEntryEnumeration = jarFile.entries();
+      while (jarEntryEnumeration.hasMoreElements()) {
+        JarEntry jarEntry = jarEntryEnumeration.nextElement();
+        if (jarEntry.getName().endsWith(".class")) {
+          classNames.add(jarEntry.getName());
         }
-        return classNames;
+      }
     }
+    return classNames;
+  }
 }
