@@ -127,7 +127,7 @@ public class AsyncForEachRun<I, T, R> implements AsyncRun<R> {
       }
       return null;
     }).exceptionally(e ->
-        result.completeExceptionally(e.getCause()));
+        result.completeExceptionally(e));
   }
 
   /**
