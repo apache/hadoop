@@ -39,10 +39,14 @@ import org.apache.http.conn.routing.HttpRoute;
 class AbfsManagedApacheHttpConnection
     implements ManagedHttpClientConnection {
 
+  /**
+   * Underlying ApacheHttpClient connection that actually does the work over network.
+   */
   private final ManagedHttpClientConnection httpClientConnection;
 
-  private final HttpRoute httpRoute;
-
+  /**
+   * Managed HTTP context to track the connection level activity.
+   */
   private AbfsManagedHttpClientContext managedHttpContext;
 
   private final int hashCode;
@@ -50,54 +54,61 @@ class AbfsManagedApacheHttpConnection
   AbfsManagedApacheHttpConnection(ManagedHttpClientConnection conn,
       final HttpRoute route) {
     this.httpClientConnection = conn;
-    this.httpRoute = route;
     this.hashCode = (UUID.randomUUID().toString()
         + httpClientConnection.getId()).hashCode();
   }
 
-  HttpRoute getHttpRoute() {
-    return httpRoute;
-  }
-
+  /**
+   * Sets the managed HTTP context to track the connection level activity.
+   */
   void setManagedHttpContext(AbfsManagedHttpClientContext managedHttpContext) {
     this.managedHttpContext = managedHttpContext;
   }
 
+  /**{@inheritDoc}*/
   @Override
   public void close() throws IOException {
     httpClientConnection.close();
   }
+
+  /**{@inheritDoc}*/
 
   @Override
   public boolean isOpen() {
     return httpClientConnection.isOpen();
   }
 
+  /**{@inheritDoc}*/
   @Override
   public boolean isStale() {
     return httpClientConnection.isStale();
   }
 
+  /**{@inheritDoc}*/
   @Override
   public void setSocketTimeout(final int timeout) {
     httpClientConnection.setSocketTimeout(timeout);
   }
 
+  /**{@inheritDoc}*/
   @Override
   public int getSocketTimeout() {
     return httpClientConnection.getSocketTimeout();
   }
 
+  /**{@inheritDoc}*/
   @Override
   public void shutdown() throws IOException {
     httpClientConnection.shutdown();
   }
 
+  /**{@inheritDoc}*/
   @Override
   public HttpConnectionMetrics getMetrics() {
     return httpClientConnection.getMetrics();
   }
 
+  /**{@inheritDoc}*/
   @Override
   public boolean isResponseAvailable(final int timeout) throws IOException {
     long start = System.currentTimeMillis();
@@ -106,6 +117,7 @@ class AbfsManagedApacheHttpConnection
     return val;
   }
 
+  /**{@inheritDoc}*/
   @Override
   public void sendRequestHeader(final HttpRequest request)
       throws HttpException, IOException {
@@ -114,6 +126,7 @@ class AbfsManagedApacheHttpConnection
     managedHttpContext.addSendTime(System.currentTimeMillis() - start);
   }
 
+  /**{@inheritDoc}*/
   @Override
   public void sendRequestEntity(final HttpEntityEnclosingRequest request)
       throws HttpException, IOException {
@@ -122,6 +135,7 @@ class AbfsManagedApacheHttpConnection
     managedHttpContext.addSendTime(System.currentTimeMillis() - start);
   }
 
+  /**{@inheritDoc}*/
   @Override
   public HttpResponse receiveResponseHeader()
       throws HttpException, IOException {
@@ -131,6 +145,7 @@ class AbfsManagedApacheHttpConnection
     return response;
   }
 
+  /**{@inheritDoc}*/
   @Override
   public void receiveResponseEntity(final HttpResponse response)
       throws HttpException, IOException {
@@ -139,6 +154,7 @@ class AbfsManagedApacheHttpConnection
     managedHttpContext.addReadTime(System.currentTimeMillis() - start);
   }
 
+  /**{@inheritDoc}*/
   @Override
   public void flush() throws IOException {
     long start = System.currentTimeMillis();
@@ -146,41 +162,49 @@ class AbfsManagedApacheHttpConnection
     managedHttpContext.addSendTime(System.currentTimeMillis() - start);
   }
 
+  /**{@inheritDoc}*/
   @Override
   public String getId() {
     return httpClientConnection.getId();
   }
 
+  /**{@inheritDoc}*/
   @Override
   public void bind(final Socket socket) throws IOException {
     httpClientConnection.bind(socket);
   }
 
+  /**{@inheritDoc}*/
   @Override
   public Socket getSocket() {
     return httpClientConnection.getSocket();
   }
 
+  /**{@inheritDoc}*/
   @Override
   public SSLSession getSSLSession() {
     return httpClientConnection.getSSLSession();
   }
 
+  /**Gets the local address to which the socket is bound.*/
   @Override
   public InetAddress getLocalAddress() {
     return httpClientConnection.getLocalAddress();
   }
 
+  /**Gets the local port to which the socket is bound.*/
   @Override
   public int getLocalPort() {
     return httpClientConnection.getLocalPort();
   }
 
+  /**Returns the address to which the socket is connected.*/
   @Override
   public InetAddress getRemoteAddress() {
     return httpClientConnection.getRemoteAddress();
   }
 
+  /**Returns the remote port number to which this socket is connected.*/
   @Override
   public int getRemotePort() {
     return httpClientConnection.getRemotePort();

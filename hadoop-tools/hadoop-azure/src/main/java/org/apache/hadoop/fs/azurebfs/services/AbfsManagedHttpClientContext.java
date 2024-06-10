@@ -21,12 +21,18 @@ package org.apache.hadoop.fs.azurebfs.services;
 import org.apache.http.HttpClientConnection;
 import org.apache.http.client.protocol.HttpClientContext;
 
+/**
+ * Registers the latency of different phases of a network call.
+ */
 public class AbfsManagedHttpClientContext extends HttpClientContext {
 
+  /**Connection establishment time*/
   private long connectTime = 0L;
 
+  /**Time taken to receive and read response*/
   private long readTime = 0L;
 
+ /***Time taken to send request*/
   private long sendTime = 0L;
 
   public AbfsManagedHttpClientContext() {

@@ -395,7 +395,7 @@ public class AbfsConfiguration{
   private int maxApacheHttpClientIoExceptionsRetries;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_APACHE_HTTP_CLIENT_MAX_CACHE_CONNECTION_SIZE,
-      DefaultValue = DEFAULT_HTTP_CLIENT_CONN_MAX_IDLE_CONNECTIONS)
+      DefaultValue = DEFAULT_HTTP_CLIENT_CONN_MAX_CACHED_CONNECTIONS)
   private int maxApacheHttpClientCacheConnections;
 
   @LongConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_APACHE_HTTP_CLIENT_IDLE_CONNECTION_TTL,

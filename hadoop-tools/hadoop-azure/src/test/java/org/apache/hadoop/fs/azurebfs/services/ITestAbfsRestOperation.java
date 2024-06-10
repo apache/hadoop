@@ -286,8 +286,7 @@ public class ITestAbfsRestOperation extends AbstractAbfsIntegrationTest {
             .parseStatusCode(Mockito.nullable(
                 HttpResponse.class));
         Mockito.doThrow(
-                new AbfsApacheHttpExpect100Exception(EXPECT_100_JDK_ERROR,
-                    null))
+                new AbfsApacheHttpExpect100Exception(Mockito.mock(HttpResponse.class)))
             .when((AbfsAHCHttpOperation) httpOperation).executeRequest();
       }
       break;

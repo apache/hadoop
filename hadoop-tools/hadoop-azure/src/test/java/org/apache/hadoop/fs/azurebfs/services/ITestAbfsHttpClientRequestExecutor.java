@@ -234,7 +234,7 @@ public class ITestAbfsHttpClientRequestExecutor extends
                 HttpClientConnection.class));
             return context;
           })
-          .when(httpOperation).setFinalAbfsClientContext();
+          .when(httpOperation).getHttpClientContext();
       return httpOperation;
     }).when(op).createHttpOperation();
   }

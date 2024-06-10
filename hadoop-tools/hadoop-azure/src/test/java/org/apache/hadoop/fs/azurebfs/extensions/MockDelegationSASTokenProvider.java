@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -107,7 +108,7 @@ public class MockDelegationSASTokenProvider implements SASTokenProvider {
     requestBody.append("</Expiry></KeyInfo>");
 
     AbfsJdkHttpOperation op = new AbfsJdkHttpOperation(url, method, requestHeaders,
-            DEFAULT_HTTP_CONNECTION_TIMEOUT, DEFAULT_HTTP_READ_TIMEOUT);
+        Duration.ofMillis(DEFAULT_HTTP_CONNECTION_TIMEOUT), Duration.ofMillis(DEFAULT_HTTP_READ_TIMEOUT));
 
     byte[] requestBuffer = requestBody.toString().getBytes(StandardCharsets.UTF_8.toString());
     op.sendPayload(requestBuffer, 0, requestBuffer.length);

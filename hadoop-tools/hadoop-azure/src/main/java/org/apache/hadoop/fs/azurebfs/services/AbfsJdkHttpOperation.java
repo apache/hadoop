@@ -24,6 +24,7 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.ProtocolException;
 import java.net.URL;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
@@ -53,9 +54,7 @@ public class AbfsJdkHttpOperation extends AbfsHttpOperation {
   private static final Logger LOG = LoggerFactory.getLogger(
       AbfsJdkHttpOperation.class);
 
-  private HttpURLConnection connection;
-
-  private boolean connectionDisconnectedOnError = false;
+  private final HttpURLConnection connection;
 
   /**
    * Initializes a new HTTP request and opens the connection.
@@ -70,8 +69,8 @@ public class AbfsJdkHttpOperation extends AbfsHttpOperation {
   public AbfsJdkHttpOperation(final URL url,
       final String method,
       final List<AbfsHttpHeader> requestHeaders,
-      final int connectionTimeout,
-      final int readTimeout)
+      final Duration connectionTimeout,
+      final Duration readTimeout)
       throws IOException {
     super(LOG, url, method, requestHeaders, connectionTimeout, readTimeout);
 
@@ -85,8 +84,8 @@ public class AbfsJdkHttpOperation extends AbfsHttpOperation {
       }
     }
 
-    this.connection.setConnectTimeout(connectionTimeout);
-    this.connection.setReadTimeout(readTimeout);
+    this.connection.setConnectTimeout(getConnectionTimeout());
+    this.connection.setReadTimeout(getReadTimeout());
     this.connection.setRequestMethod(method);
 
     for (AbfsHttpHeader header : requestHeaders) {
@@ -94,30 +93,12 @@ public class AbfsJdkHttpOperation extends AbfsHttpOperation {
     }
   }
 
-  protected HttpURLConnection getConnection() {
-    return connection;
-  }
-
-  public String getClientRequestId() {
-    return this.connection
-        .getRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID);
-  }
-
+  /**{@inheritDoc}*/
   public String getResponseHeader(String httpHeader) {
     return connection.getHeaderField(httpHeader);
   }
 
-  /**
-   * Sends the HTTP request.  Note that HttpUrlConnection requires that an
-   * empty buffer be sent in order to set the "Content-Length: 0" header, which
-   * is required by our endpoint.
-   *
-   * @param buffer the request entity body.
-   * @param offset an offset into the buffer where the data beings.
-   * @param length the length of the data in the buffer.
-   *
-   * @throws IOException if an error occurs.
-   */
+  /**{@inheritDoc}*/
   public void sendPayload(byte[] buffer, int offset, int length)
       throws IOException {
     this.connection.setDoOutput(true);
@@ -136,7 +117,7 @@ public class AbfsJdkHttpOperation extends AbfsHttpOperation {
     startTime = System.nanoTime();
     OutputStream outputStream = null;
     // Updates the expected bytes to be sent based on length.
-    setExpectedBytesToBeSent(length);
+    expectedBytesToBeSent = length;
     try {
       try {
         /* Without expect header enabled, if getOutputStream() throws
@@ -166,8 +147,8 @@ public class AbfsJdkHttpOperation extends AbfsHttpOperation {
            * case of Expect-100 error. Reason being, in JDK, it stores the responseCode
            * in the HttpUrlConnection object before throwing exception to the caller.
            */
-          setStatusCode(getConnResponseCode());
-          setStatusDescription(getConnResponseMessage());
+          statusCode = getConnResponseCode();
+          statusDescription = getConnResponseMessage();
           return;
         } else {
           LOG.debug(
@@ -178,7 +159,7 @@ public class AbfsJdkHttpOperation extends AbfsHttpOperation {
       }
       // update bytes sent for successful as well as failed attempts via the
       // accompanying statusCode.
-      setBytesSent(length);
+      bytesSent = length;
 
       // If this fails with or without expect header enabled,
       // it throws an IOException.
@@ -188,34 +169,29 @@ public class AbfsJdkHttpOperation extends AbfsHttpOperation {
       if (outputStream != null) {
         outputStream.close();
       }
-      setSendRequestTimeMs(elapsedTimeMs(startTime));
+      sendRequestTimeMs = elapsedTimeMs(startTime);
     }
   }
 
+  /**{@inheritDoc}*/
   @Override
   String getRequestProperty(final String headerName) {
     return connection.getRequestProperty(headerName);
   }
 
+  /**{@inheritDoc}*/
   @Override
   Map<String, List<String>> getRequestProperties() {
     return connection.getRequestProperties();
   }
 
+  /**{@inheritDoc}*/
   @Override
-  InputStream getContentInputStream() throws IOException {
+  protected InputStream getContentInputStream() throws IOException {
     return connection.getInputStream();
   }
 
-  /**
-   * Gets and processes the HTTP response.
-   *
-   * @param buffer a buffer to hold the response entity body
-   * @param offset an offset in the buffer where the data will being.
-   * @param length the number of bytes to be written to the buffer.
-   *
-   * @throws IOException if an error occurs.
-   */
+  /**{@inheritDoc}*/
   public void processResponse(final byte[] buffer,
       final int offset,
       final int length) throws IOException {
@@ -227,6 +203,16 @@ public class AbfsJdkHttpOperation extends AbfsHttpOperation {
     processConnHeadersAndInputStreams(buffer, offset, length);
   }
 
+  /**
+   * Parses headers and body of the response. Execute server call if {@link #sendPayload(byte[], int, int)}
+   * is not called.
+   *
+   * @param buffer buffer to store the response body.
+   * @param offset offset in the buffer.
+   * @param length length of the response body.
+   *
+   * @throws IOException network error or parsing error.
+   */
   void processConnHeadersAndInputStreams(final byte[] buffer,
       final int offset,
       final int length) throws IOException {
@@ -234,17 +220,16 @@ public class AbfsJdkHttpOperation extends AbfsHttpOperation {
     long startTime = 0;
     startTime = System.nanoTime();
 
-    setStatusCode(getConnResponseCode());
-    setRecvResponseTimeMs(elapsedTimeMs(startTime));
+    statusCode = getConnResponseCode();
+    recvResponseTimeMs = elapsedTimeMs(startTime);
 
-    setStatusDescription(getConnResponseMessage());
+    statusDescription = getConnResponseMessage();
 
-    String requestId = this.connection.getHeaderField(
+    requestId = this.connection.getHeaderField(
         HttpHeaderConfigurations.X_MS_REQUEST_ID);
     if (requestId == null) {
       requestId = AbfsHttpConstants.EMPTY_STRING;
     }
-    setRequestId(requestId);
 
     // dump the headers
     AbfsIoUtils.dumpHeadersToDebugLog("Response Headers",
@@ -258,12 +243,15 @@ public class AbfsJdkHttpOperation extends AbfsHttpOperation {
     parseResponse(buffer, offset, length);
   }
 
+  /**{@inheritDoc}*/
   public void setRequestProperty(String key, String value) {
     this.connection.setRequestProperty(key, value);
   }
 
   /**
-   * Open the HTTP connection.
+   * Creates a new {@link HttpURLConnection} instance. This instance is not connected.
+   * Any API call on the instance would make it reuse an existing connection or
+   * establish a new connection.
    *
    * @throws IOException if an error occurs.
    */
@@ -272,45 +260,27 @@ public class AbfsJdkHttpOperation extends AbfsHttpOperation {
     try {
       return (HttpURLConnection) getUrl().openConnection();
     } finally {
-      setConnectionTimeMs(elapsedTimeMs(start));
+      connectionTimeMs = (elapsedTimeMs(start));
     }
   }
 
+  /**{@inheritDoc}*/
   @Override
   protected InputStream getErrorStream() {
     return connection.getErrorStream();
   }
 
-  /**
-   * Gets the connection request property for a key.
-   * @param key The request property key.
-   * @return request peoperty value.
-   */
+  /**{@inheritDoc}*/
   String getConnProperty(String key) {
     return connection.getRequestProperty(key);
   }
 
-  /**
-   * Gets the connection url.
-   * @return url.
-   */
+  /**{@inheritDoc}*/
   URL getConnUrl() {
     return connection.getURL();
   }
 
-  /**
-   * Gets the connection request method.
-   * @return request method.
-   */
-  String getConnRequestMethod() {
-    return connection.getRequestMethod();
-  }
-
-  /**
-   * Gets the connection response code.
-   * @return response code.
-   * @throws IOException
-   */
+  /**{@inheritDoc}*/
   Integer getConnResponseCode() throws IOException {
     return connection.getResponseCode();
   }
@@ -318,26 +288,18 @@ public class AbfsJdkHttpOperation extends AbfsHttpOperation {
   /**
    * Gets the connection output stream.
    * @return output stream.
-   * @throws IOException
+   * @throws IOException if creating outputStream on connection failed
    */
   OutputStream getConnOutputStream() throws IOException {
     return connection.getOutputStream();
   }
 
-  /**
-   * Gets the connection response message.
-   * @return response message.
-   * @throws IOException
-   */
+  /**{@inheritDoc}*/
   String getConnResponseMessage() throws IOException {
     return connection.getResponseMessage();
   }
 
-  @VisibleForTesting
-  boolean getConnectionDisconnectedOnError() {
-    return connectionDisconnectedOnError;
-  }
-
+  /**{@inheritDoc}*/
   @Override
   public String getTracingContextSuffix() {
     return AbfsApacheHttpClient.usable() ? JDK_IMPL : JDK_FALLBACK;

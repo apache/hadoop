@@ -213,7 +213,7 @@ public class TestAbfsRestOperationMockFailures {
         Mockito.mock(AbfsConfiguration.class)
     ));
 
-    AbfsJdkHttpOperation httpOperation = Mockito.mock(AbfsJdkHttpOperation.class);
+    AbfsHttpOperation httpOperation = Mockito.mock(AbfsHttpOperation.class);
     addGeneralMockBehaviourToRestOpAndHttpOp(abfsRestOperation, httpOperation);
 
     Stubber stubber = Mockito.doThrow(new SocketTimeoutException(CONNECTION_TIMEOUT_JDK_MESSAGE));
@@ -227,6 +227,8 @@ public class TestAbfsRestOperationMockFailures {
     Mockito.doReturn("").when(httpOperation).getStorageErrorMessage();
     Mockito.doReturn("").when(httpOperation).getStorageErrorCode();
     Mockito.doReturn("HEAD").when(httpOperation).getMethod();
+    Mockito.doReturn("").when(httpOperation).getMaskedUrl();
+    Mockito.doReturn("").when(httpOperation).getRequestId();
     Mockito.doReturn(EGRESS_OVER_ACCOUNT_LIMIT.getErrorMessage()).when(httpOperation).getStorageErrorMessage();
     Mockito.doReturn(tracingContext).when(abfsRestOperation).createNewTracingContext(any());
 
@@ -274,7 +276,7 @@ public class TestAbfsRestOperationMockFailures {
     // Assert that intercept.updateMetrics was called 2 times. Both the retried request fails with EGR.
     Mockito.verify(intercept, Mockito.times(2))
         .updateMetrics(nullable(AbfsRestOperationType.class), nullable(
-            AbfsJdkHttpOperation.class));
+            AbfsHttpOperation.class));
   }
 
   private void testClientRequestIdForStatusRetry(int status,
@@ -300,7 +302,7 @@ public class TestAbfsRestOperationMockFailures {
         Mockito.mock(AbfsConfiguration.class)
     ));
 
-    AbfsJdkHttpOperation httpOperation = Mockito.mock(AbfsJdkHttpOperation.class);
+    AbfsHttpOperation httpOperation = Mockito.mock(AbfsHttpOperation.class);
     addGeneralMockBehaviourToRestOpAndHttpOp(abfsRestOperation, httpOperation);
 
     Mockito.doNothing()
@@ -366,7 +368,7 @@ public class TestAbfsRestOperationMockFailures {
         Mockito.mock(AbfsConfiguration.class)
     ));
 
-    AbfsJdkHttpOperation httpOperation = Mockito.mock(AbfsJdkHttpOperation.class);
+    AbfsHttpOperation httpOperation = Mockito.mock(AbfsHttpOperation.class);
     addGeneralMockBehaviourToRestOpAndHttpOp(abfsRestOperation, httpOperation);
 
     Stubber stubber = Mockito.doThrow(exceptions[0]);

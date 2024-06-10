@@ -165,9 +165,12 @@ public final class AbfsHttpConstants {
    */
   public static final Integer HTTP_STATUS_CATEGORY_QUOTIENT = 100;
 
+  /**
+   * System property that define maximum number of cached-connection per fileSystem for
+   * ApacheHttpClient. JDK network library uses the same property to define maximum
+   * number of cached-connections at JVM level.
+   */
   public static final String HTTP_MAX_CONN_SYS_PROP = "http.maxConnections";
-  public static final Integer DEFAULT_MAX_CONN_SYS_PROP = 5;
-  public static final int KAC_DEFAULT_CONN_TTL = 5_000;
   public static final String JDK_IMPL = "JDK";
   public static final String APACHE_IMPL = "Apache";
   public static final String JDK_FALLBACK = "JDK_fallback";

@@ -23,6 +23,7 @@ import java.io.UncheckedIOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.UnknownHostException;
+import java.time.Duration;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -105,6 +106,9 @@ public class AbfsRestOperation {
    */
   private TracingContext lastUsedTracingContext;
 
+  /**
+   * Number of retries due to IOException.
+   */
   private int apacheHttpClientIoExceptions = 0;
 
   /**
@@ -370,7 +374,7 @@ public class AbfsRestOperation {
     } catch (IOException e) {
       LOG.debug("Auth failure: {}, {}", method, url);
       throw new AbfsRestOperationException(-1, null,
-          "Auth failure: " + e.getMessage(), e, result);
+          "Auth failure: " + e.getMessage(), e);
     }
 
     try {
@@ -493,6 +497,10 @@ public class AbfsRestOperation {
     return true;
   }
 
+  /**
+   * Registers switch off of ApacheHttpClient in case of IOException retries increases
+   * more than the threshold.
+   */
   private void registerApacheHttpClientIoException() {
     apacheHttpClientIoExceptions++;
     if (apacheHttpClientIoExceptions
@@ -551,24 +559,23 @@ public class AbfsRestOperation {
     return createAbfsHttpOperation();
   }
 
-  @VisibleForTesting
-  boolean isApacheClientUsable() {
+  private boolean isApacheClientUsable() {
     return AbfsApacheHttpClient.usable();
   }
 
   @VisibleForTesting
   AbfsJdkHttpOperation createAbfsHttpOperation() throws IOException {
     return new AbfsJdkHttpOperation(url, method, requestHeaders,
-        client.getAbfsConfiguration().getHttpConnectionTimeout(),
-        client.getAbfsConfiguration().getHttpReadTimeout());
+        Duration.ofMillis(client.getAbfsConfiguration().getHttpConnectionTimeout()),
+        Duration.ofMillis(client.getAbfsConfiguration().getHttpReadTimeout()));
   }
 
   @VisibleForTesting
-  AbfsAHCHttpOperation createAbfsAHCHttpOperation() {
+  AbfsAHCHttpOperation createAbfsAHCHttpOperation() throws IOException {
     return new AbfsAHCHttpOperation(url, method, requestHeaders,
-        client.getAbfsConfiguration().getHttpConnectionTimeout(),
-        client.getAbfsConfiguration().getHttpReadTimeout()
-    );
+        Duration.ofMillis(client.getAbfsConfiguration().getHttpConnectionTimeout()),
+        Duration.ofMillis(client.getAbfsConfiguration().getHttpReadTimeout()),
+        client.getAbfsApacheHttpClient());
   }
 
   /**

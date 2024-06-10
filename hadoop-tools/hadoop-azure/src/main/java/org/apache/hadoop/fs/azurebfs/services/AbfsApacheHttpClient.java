@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import java.io.Closeable;
 import java.io.IOException;
 
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
@@ -38,41 +39,44 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.HTTPS
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.HTTP_SCHEME;
 import static org.apache.http.conn.ssl.SSLConnectionSocketFactory.getDefaultHostnameVerifier;
 
-final class AbfsApacheHttpClient {
+/**
+ * Client for AzureBlobFileSystem to execute HTTP requests over ApacheHttpClient.
+ */
+final class AbfsApacheHttpClient implements Closeable {
 
+  /**
+   * ApacheHttpClient instance that executes HTTP request.
+   */
   private final CloseableHttpClient httpClient;
 
-  private static AbfsApacheHttpClient abfsApacheHttpClient = null;
-
+  /**
+   * Flag to indicate if the client is usable. This is a JVM level flag, state of
+   * this flag is shared across all instances of fileSystems. Once switched off,
+   * the ApacheHttpClient would not be used for whole JVM lifecycle.
+   */
   private static boolean usable = true;
 
+  /**
+   * Registers the switch off of ApacheHttpClient for all future use in the JVM.
+   */
   static void registerFallback() {
     usable = false;
   }
 
+  /**
+   * @return if ApacheHttpClient is usable.
+   */
   static boolean usable() {
     return usable;
   }
 
-  static synchronized void setClient(DelegatingSSLSocketFactory delegatingSSLSocketFactory,
-      final int readTimeout) {
-    if (abfsApacheHttpClient == null) {
-      abfsApacheHttpClient = new AbfsApacheHttpClient(
-          delegatingSSLSocketFactory, readTimeout);
-    }
-  }
-
-  static AbfsApacheHttpClient getClient() {
-    return abfsApacheHttpClient;
-  }
-
-  private AbfsApacheHttpClient(DelegatingSSLSocketFactory delegatingSSLSocketFactory,
-      final int readTimeout) {
+  public AbfsApacheHttpClient(DelegatingSSLSocketFactory delegatingSSLSocketFactory,
+      final int readTimeout, final KeepAliveCache keepAliveCache) {
     final AbfsConnectionManager connMgr = new AbfsConnectionManager(
         createSocketFactoryRegistry(
             new SSLConnectionSocketFactory(delegatingSSLSocketFactory,
                 getDefaultHostnameVerifier())),
-        new AbfsConnFactory());
+        new AbfsHttpClientConnectionFactory(), keepAliveCache);
     final HttpClientBuilder builder = HttpClients.custom();
     builder.setConnectionManager(connMgr)
         .setRequestExecutor(new AbfsManagedHttpRequestExecutor(readTimeout))
@@ -88,12 +92,24 @@ final class AbfsApacheHttpClient {
     httpClient = builder.build();
   }
 
+  @Override
   public void close() throws IOException {
     if (httpClient != null) {
       httpClient.close();
     }
   }
 
+  /**
+   * Executes the HTTP request.
+   *
+   * @param httpRequest HTTP request to execute.
+   * @param abfsHttpClientContext HttpClient context.
+   * @param connectTimeout Connection timeout.
+   * @param readTimeout Read timeout.
+   *
+   * @return HTTP response.
+   * @throws IOException network error.
+   */
   public HttpResponse execute(HttpRequestBase httpRequest,
       final AbfsManagedHttpClientContext abfsHttpClientContext,
       final int connectTimeout,
@@ -106,8 +122,13 @@ final class AbfsApacheHttpClient {
     return httpClient.execute(httpRequest, abfsHttpClientContext);
   }
 
-
-  private static Registry<ConnectionSocketFactory> createSocketFactoryRegistry(
+  /**
+   * Creates the socket factory registry for HTTP and HTTPS.
+   *
+   * @param sslSocketFactory SSL socket factory.
+   * @return Socket factory registry.
+   */
+  private Registry<ConnectionSocketFactory> createSocketFactoryRegistry(
       ConnectionSocketFactory sslSocketFactory) {
     if (sslSocketFactory == null) {
       return RegistryBuilder.<ConnectionSocketFactory>create()

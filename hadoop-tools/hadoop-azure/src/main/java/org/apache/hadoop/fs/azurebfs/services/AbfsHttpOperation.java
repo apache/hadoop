@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -31,7 +32,9 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AbfsPerfLoggable;
@@ -60,27 +63,41 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
   private final URL url;
   private String maskedUrl;
   private String maskedEncodedUrl;
-  private int statusCode;
-  private String statusDescription;
+  protected int statusCode;
+  protected String statusDescription;
   private String storageErrorCode = "";
   private String storageErrorMessage = "";
-  private String requestId = "";
+  protected String requestId = "";
   private String expectedAppendPos = "";
   private ListResultSchema listResultSchema = null;
 
   // metrics
-  private int bytesSent;
-  private int expectedBytesToBeSent;
-  private long bytesReceived;
+  protected int bytesSent;
+  protected int expectedBytesToBeSent;
+  protected long bytesReceived;
 
-  private long connectionTimeMs;
-  private long sendRequestTimeMs;
-  private long recvResponseTimeMs;
+  protected long connectionTimeMs;
+  protected long sendRequestTimeMs;
+  protected long recvResponseTimeMs;
   private boolean shouldMask = false;
+  protected boolean connectionDisconnectedOnError = false;
 
+  /**Request headers to be sent in the request.*/
   private final List<AbfsHttpHeader> requestHeaders;
 
-  private final int connectionTimeout, readTimeout;
+  /**
+   * Timeout that defines maximum allowed connection establishment time for a request.
+   * Timeout is in milliseconds. Not all requests need to establish a new connection,
+   * it depends on the connection pooling-heuristic of the networking library.
+   */
+  private final int connectionTimeout;
+
+  /**
+   * Timeout in milliseconds that defines maximum allowed time to read the response.
+   * This timeout starts once request is sent. It includes server reponse time,
+   * network latency, and time to read the response.
+   */
+  private final int readTimeout;
 
   public static AbfsHttpOperation getAbfsHttpOperationWithFixedResult(
       final URL url,
@@ -91,15 +108,18 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
     return httpOp;
   }
 
-  public AbfsHttpOperation(final Logger log, final URL url, final String method,
-      final List<AbfsHttpHeader> requestHeaders, final int connectionTimeout,
-      final int readTimeout) {
+  public AbfsHttpOperation(
+      final Logger log,
+      final URL url,final String method,
+      final List<AbfsHttpHeader> requestHeaders,
+      final Duration connectionTimeout,
+      final Duration readTimeout) {
     this.log = log;
     this.url = url;
     this.method = method;
     this.requestHeaders = requestHeaders;
-    this.connectionTimeout = connectionTimeout;
-    this.readTimeout = readTimeout;
+    this.connectionTimeout = (int) connectionTimeout.toMillis();
+    this.readTimeout = (int) readTimeout.toMillis();
   }
 
   /**
@@ -111,7 +131,7 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
   protected AbfsHttpOperation(final URL url,
       final String method,
       final int httpStatus) {
-    this.log = null;
+    this.log = LoggerFactory.getLogger(AbfsHttpOperation.class);
     this.url = url;
     this.method = method;
     this.statusCode = httpStatus;
@@ -130,12 +150,6 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
 
   List<AbfsHttpHeader> getRequestHeaders() {
     return requestHeaders;
-  }
-
-  void addHeaderToRequestHeaderList(AbfsHttpHeader abfsHttpHeader) {
-    if (requestHeaders != null) {
-      requestHeaders.add(abfsHttpHeader);
-    }
   }
 
   public String getMethod() {
@@ -162,7 +176,9 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
     return storageErrorMessage;
   }
 
-  public abstract String getClientRequestId();
+  public String getClientRequestId() {
+    return getRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID);
+  }
 
   public String getExpectedAppendPos() {
     return expectedAppendPos;
@@ -196,39 +212,13 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
     return listResultSchema;
   }
 
+  /**
+   * Get response header value for the given headerKey.
+   *
+   * @param httpHeader header key.
+   * @return header value.
+   */
   public abstract String getResponseHeader(String httpHeader);
-
-  void setExpectedBytesToBeSent(int expectedBytesToBeSent) {
-    this.expectedBytesToBeSent = expectedBytesToBeSent;
-  }
-
-  void setStatusCode(int statusCode) {
-    this.statusCode = statusCode;
-  }
-
-  void setStatusDescription(String statusDescription) {
-    this.statusDescription = statusDescription;
-  }
-
-  void setBytesSent(int bytesSent) {
-    this.bytesSent = bytesSent;
-  }
-
-  void setSendRequestTimeMs(long sendRequestTimeMs) {
-    this.sendRequestTimeMs = sendRequestTimeMs;
-  }
-
-  void setRecvResponseTimeMs(long recvResponseTimeMs) {
-    this.recvResponseTimeMs = recvResponseTimeMs;
-  }
-
-  void setRequestId(String requestId) {
-    this.requestId = requestId;
-  }
-
-  void setConnectionTimeMs(long connectionTimeMs) {
-    this.connectionTimeMs = connectionTimeMs;
-  }
 
   // Returns a trace message for the request
   @Override
@@ -292,6 +282,7 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
     return sb.toString();
   }
 
+  @VisibleForTesting
   public String getMaskedUrl() {
     if (!shouldMask) {
       return url.toString();
@@ -303,7 +294,7 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
     return maskedUrl;
   }
 
-  public String getMaskedEncodedUrl() {
+  public final String getMaskedEncodedUrl() {
     if (maskedEncodedUrl != null) {
       return maskedEncodedUrl;
     }
@@ -311,16 +302,52 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
     return maskedEncodedUrl;
   }
 
+  /**
+   * Sends the HTTP request.  Note that HttpUrlConnection requires that an
+   * empty buffer be sent in order to set the "Content-Length: 0" header, which
+   * is required by our endpoint.
+   *
+   * @param buffer the request entity body.
+   * @param offset an offset into the buffer where the data beings.
+   * @param length the length of the data in the buffer.
+   *
+   * @throws IOException if an error occurs.
+   */
+
   public abstract void sendPayload(byte[] buffer, int offset, int length) throws
       IOException;
 
+  /**
+   * Gets and processes the HTTP response.
+   *
+   * @param buffer a buffer to hold the response entity body
+   * @param offset an offset in the buffer where the data will being.
+   * @param length the number of bytes to be written to the buffer.
+   *
+   * @throws IOException if an error occurs.
+   */
   public abstract void processResponse(byte[] buffer,
       int offset,
       int length) throws IOException;
 
+  /**
+   * Set request header.
+   *
+   * @param key header key.
+   * @param value header value.
+   */
   public abstract void setRequestProperty(String key, String value);
 
-  void parseResponse(final byte[] buffer,
+  /**
+   * Parse response body from the connection.
+   *
+   * @param buffer byte array to store the response body.
+   * @param offset offset in the buffer.
+   * @param length length of the response body.
+   *
+   * @throws IOException if network error occurs while reading the response.
+   */
+  final void parseResponse(final byte[] buffer,
       final int offset,
       final int length) throws IOException {
     long startTime;
@@ -391,7 +418,12 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
     }
   }
 
-  abstract InputStream getContentInputStream() throws IOException;
+  /**
+   * Get the response stream from the connection.
+   * @return InputStream: response stream from the connection after network call.
+   * @throws IOException if the response stream could not be created from the connection.
+   */
+  protected abstract InputStream getContentInputStream() throws IOException;
 
   /**
    * When the request fails, this function is used to parse the responseAbfsHttpClient.LOG.debug("ExpectedError: ", ex);
@@ -410,7 +442,7 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
    * }
    *
    */
-  protected void processStorageErrorResponse() {
+  private void processStorageErrorResponse() {
     try (InputStream stream = getErrorStream()) {
       if (stream == null) {
         return;
@@ -452,6 +484,11 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
     }
   }
 
+  /**
+   * Get the error stream from the connection.
+   * @return InputStream
+   * @throws IOException: if the error stream could not be created from the response stream.
+   */
   protected abstract InputStream getErrorStream() throws IOException;
 
   /**
@@ -460,7 +497,7 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
    * @param stream InputStream contains the list results.
    * @throws IOException if the response cannot be deserialized.
    */
-  protected void parseListFilesResponse(final InputStream stream)
+  private void parseListFilesResponse(final InputStream stream)
       throws IOException {
     if (stream == null) {
       return;
@@ -484,7 +521,7 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
   /**
    * Returns the elapsed time in milliseconds.
    */
-  long elapsedTimeMs(final long startTime) {
+  final long elapsedTimeMs(final long startTime) {
     return (System.nanoTime() - startTime) / ONE_MILLION;
   }
 
@@ -492,7 +529,7 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
    * Check null stream, this is to pass findbugs's redundant check for NULL
    * @param stream InputStream
    */
-  boolean isNullInputStream(InputStream stream) {
+  private boolean isNullInputStream(InputStream stream) {
     return stream == null ? true : false;
   }
 
@@ -510,12 +547,6 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
   abstract URL getConnUrl();
 
   /**
-   * Gets the connection request method.
-   * @return request method.
-   */
-  abstract String getConnRequestMethod();
-
-  /**
    * Gets the connection response code.
    * @return response code.
    * @throws IOException
@@ -530,19 +561,37 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
    */
   abstract String getConnResponseMessage() throws IOException;
 
+  /**
+   * Get request headers.
+   *
+   * @return request headers.
+   */
   abstract Map<String, List<String>> getRequestProperties();
 
+  /**
+   * Get request header value for a header name.
+   *
+   * @param headerName header name.
+   * @return header value.
+   */
   abstract String getRequestProperty(String headerName);
 
-  abstract boolean getConnectionDisconnectedOnError();
+  boolean getConnectionDisconnectedOnError() {
+    return connectionDisconnectedOnError;
+  }
 
+  /**
+   * Get the suffix to add to the tracing context that defines what http-client is
+   * used to make the network call
+   * @return the suffix to distinguish http client
+   */
   public abstract String getTracingContextSuffix();
 
-  public long getSendLatency() {
+  public final long getSendLatency() {
     return sendRequestTimeMs;
   }
 
-  public long getRecvLatency() {
+  public final long getRecvLatency() {
     return recvResponseTimeMs;
   }
 
@@ -562,11 +611,6 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
     }
 
     @Override
-    public String getClientRequestId() {
-      return null;
-    }
-
-    @Override
     public void processResponse(final byte[] buffer,
         final int offset,
         final int length)
@@ -580,7 +624,7 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
     }
 
     @Override
-    InputStream getContentInputStream() throws IOException {
+    protected InputStream getContentInputStream() throws IOException {
       return null;
     }
 
@@ -596,11 +640,6 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
 
     @Override
     URL getConnUrl() {
-      return null;
-    }
-
-    @Override
-    String getConnRequestMethod() {
       return null;
     }
 
@@ -622,11 +661,6 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
     @Override
     String getRequestProperty(final String headerName) {
       return null;
-    }
-
-    @Override
-    boolean getConnectionDisconnectedOnError() {
-      return false;
     }
 
     @Override

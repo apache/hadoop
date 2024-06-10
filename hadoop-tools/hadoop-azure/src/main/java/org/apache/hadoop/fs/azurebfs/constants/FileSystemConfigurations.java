@@ -174,7 +174,7 @@ public final class FileSystemConfigurations {
 
   public static final long DEFAULT_HTTP_CLIENT_CONN_MAX_IDLE_TIME = 5_000L;
 
-  public static final int DEFAULT_HTTP_CLIENT_CONN_MAX_IDLE_CONNECTIONS = 5;
+  public static final int DEFAULT_HTTP_CLIENT_CONN_MAX_CACHED_CONNECTIONS = 5;
 
   private FileSystemConfigurations() {}
 }

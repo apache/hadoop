@@ -418,6 +418,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
             abfsConfig.getAccountName().substring(0,
                 abfsConfig.getAccountName().indexOf(DOT)), abfsConfig));
     when(client.getAbfsCounters()).thenReturn(abfsCounters);
+    Mockito.doReturn(baseAbfsClientInstance.getAbfsApacheHttpClient()).when(client).getAbfsApacheHttpClient();
 
     // override baseurl
     client = ITestAbfsClient.setAbfsClientField(client, "abfsConfiguration",
@@ -645,8 +646,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
             .parseStatusCode(Mockito.nullable(
                 HttpResponse.class));
         Mockito.doThrow(
-                new AbfsApacheHttpExpect100Exception(EXPECT_100_JDK_ERROR,
-                    null))
+                new AbfsApacheHttpExpect100Exception(Mockito.mock(HttpResponse.class)))
             .when((AbfsAHCHttpOperation) httpOperation)
             .executeRequest();
       }
