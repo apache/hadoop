@@ -187,7 +187,7 @@ public final class KeepAliveCache extends Stack<KeepAliveCache.KeepAliveEntry>
    * connection is checked. Once a valid connection is found, it is returned.
    *
    * @return HttpClientConnection: if a valid connection is found, else null.
-   * @throws IOException: if the cache is closed.
+   * @throws IOException if the cache is closed.
    */
   public synchronized HttpClientConnection get()
       throws IOException {
@@ -242,6 +242,11 @@ public final class KeepAliveCache extends Stack<KeepAliveCache.KeepAliveEntry>
       return true;
     }
     return false;
+  }
+
+  @Override
+  public synchronized int hashCode() {
+    return super.hashCode();
   }
 
   /**
