@@ -136,10 +136,11 @@ public final class CombinedHostsFileReader {
    */
   public static DatanodeAdminProperties[]
       readFileWithTimeout(final String hostsFile, final int readTimeout) throws IOException {
-    FutureTask<DatanodeAdminProperties[]> futureTask = new FutureTask<>(new Callable<DatanodeAdminProperties[]>() {
+    FutureTask<DatanodeAdminProperties[]> futureTask = new FutureTask<>(
+      new Callable<DatanodeAdminProperties[]>() {
         @Override
         public DatanodeAdminProperties[] call() throws Exception {
-            return readFile(hostsFile);
+          return readFile(hostsFile);
         }
     });
 
@@ -147,14 +148,14 @@ public final class CombinedHostsFileReader {
     thread.start();
 
     try {
-        return futureTask.get(readTimeout, TimeUnit.MILLISECONDS);
+      return futureTask.get(readTimeout, TimeUnit.MILLISECONDS);
     } catch (TimeoutException e) {
-        futureTask.cancel(true);
-        LOG.error("refresh File read operation timed out");
-        throw new IOException("host file read operation timed out");
+      futureTask.cancel(true);
+      LOG.error("refresh File read operation timed out");
+      throw new IOException("host file read operation timed out");
     } catch (InterruptedException | ExecutionException e) {
-        LOG.error("File read operation interrupted : " + e.getMessage());
-        throw new IOException("host file read operation timed out");
+      LOG.error("File read operation interrupted : " + e.getMessage());
+      throw new IOException("host file read operation timed out");
     }
   }
 }

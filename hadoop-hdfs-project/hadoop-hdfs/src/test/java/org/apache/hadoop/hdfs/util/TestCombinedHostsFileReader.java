@@ -32,8 +32,6 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.junit.rules.ExpectedException;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.when;
@@ -105,19 +103,20 @@ public class TestCombinedHostsFileReader {
   }
 
   /*
-   * When timeout is enabled, test for success when reading file within timeout limits
+   * When timeout is enabled, test for success when reading file within timeout
+   * limits
    */
   @Test
   public void testReadFileWithTimeoutSuccess() throws Exception {
 
-      DatanodeAdminProperties[] all =
-        CombinedHostsFileReader.readFileWithTimeout(
-          jsonFile.getAbsolutePath(), 1000);
-      assertEquals(7, all.length);
+    DatanodeAdminProperties[] all = CombinedHostsFileReader.readFileWithTimeout(
+        jsonFile.getAbsolutePath(), 1000);
+    assertEquals(7, all.length);
   }
 
   /*
-   * When timeout is enabled, test for IOException when reading file exceeds timeout limits
+   * When timeout is enabled, test for IOException when reading file exceeds
+   * timeout limits
    */
   @Test
   public void testReadFileWithTimeoutTimeoutException() throws Exception {
@@ -131,22 +130,22 @@ public class TestCombinedHostsFileReader {
     });
 
     CombinedHostsFileReader.readFileWithTimeout(
-      jsonFile.getAbsolutePath(), 1);
+        jsonFile.getAbsolutePath(), 1);
   }
 
   /*
-  * When timeout is enabled, test for IOException when execution is interrupted
-  */
- @Test(expected = IOException.class)
- public void testReadFileWithTimeoutInterruptedException() throws Exception {
-   when(callable.call()).thenAnswer(new Answer<Void>() {
-     @Override
-     public Void answer(InvocationOnMock invocation) throws Throwable {
-       throw new InterruptedException();
-     }
-   });
+   * When timeout is enabled, test for IOException when execution is interrupted
+   */
+  @Test(expected = IOException.class)
+  public void testReadFileWithTimeoutInterruptedException() throws Exception {
+    when(callable.call()).thenAnswer(new Answer<Void>() {
+      @Override
+      public Void answer(InvocationOnMock invocation) throws Throwable {
+        throw new InterruptedException();
+      }
+    });
 
-   CombinedHostsFileReader.readFileWithTimeout(
-     jsonFile.getAbsolutePath(), 1);
- }
+    CombinedHostsFileReader.readFileWithTimeout(
+        jsonFile.getAbsolutePath(), 1);
+  }
 }
