@@ -80,13 +80,14 @@ public class WorkloadIdentityTokenProvider extends AccessTokenProvider {
     // In case of, any clock skew issues, refresh token.
     long elapsedTimeSinceLastTokenRefreshInMillis =
         System.currentTimeMillis() - tokenFetchTime;
-    if (elapsedTimeSinceLastTokenRefreshInMillis < 0) {
+    boolean expiring = elapsedTimeSinceLastTokenRefreshInMillis < 0;
+    if (expiring) {
       // Clock Skew issue. Refresh token.
       LOG.debug("JWTToken: token renewing. Time elapsed since last token fetch:"
           + " {} milliseconds", elapsedTimeSinceLastTokenRefreshInMillis);
     }
 
-    return elapsedTimeSinceLastTokenRefreshInMillis < 0;
+    return expiring;
   }
 
   /**
