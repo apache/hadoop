@@ -22,16 +22,18 @@ import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Set;
-
 public class LeaderFollowerResolver implements OrderedResolver {
   protected static final Logger LOG =
       LoggerFactory.getLogger(LeaderFollowerResolver.class);
 
   @Override
   public String getFirstNamespace(String path, PathLocation loc) {
-    // always return first destination
     try {
+      // Always return first destination.
+      // In leader/follower mode, admin add sub-clusters
+      // by the order of leader,follower,follower...
+      // The first element is always the leader sub-cluster,
+      // so invoking getDefaultLocation is suitable here.
       RemoteLocation remoteLocation = loc.getDefaultLocation();
       return remoteLocation.getNameserviceId();
     } catch (Exception ex) {

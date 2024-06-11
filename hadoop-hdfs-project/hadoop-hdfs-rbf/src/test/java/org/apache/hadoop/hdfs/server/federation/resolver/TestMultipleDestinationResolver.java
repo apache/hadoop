@@ -353,7 +353,7 @@ public class TestMultipleDestinationResolver {
   @Test
   public void testLeaderFollower() throws IOException {
     PathLocation dest0 =
-            resolver.getDestinationForPath("/leaderfollower/folder0/file0.txt");
+        resolver.getDestinationForPath("/leaderfollower/folder0/file0.txt");
     assertDest("subcluster1", dest0);
   }
 
