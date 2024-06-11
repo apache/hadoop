@@ -420,7 +420,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     }
     try {
       LOG.debug("Get root ACL status");
-      getClient().getAclStatus(AbfsHttpConstants.ROOT_PATH, tracingContext);
+      clientHandler.getDfsClient().getAclStatus(AbfsHttpConstants.ROOT_PATH, tracingContext);
       isNamespaceEnabled = Trilean.getTrilean(true);
     } catch (AbfsRestOperationException ex) {
       // Get ACL status is a HEAD request, its response doesn't contain
