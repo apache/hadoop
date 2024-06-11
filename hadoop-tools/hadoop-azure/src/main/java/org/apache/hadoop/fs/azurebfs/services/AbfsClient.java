@@ -46,7 +46,6 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsInvalidChecksumExc
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsDriverException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
-import org.apache.hadoop.fs.azurebfs.utils.NamespaceUtil;
 import org.apache.hadoop.fs.store.LogExactlyOnce;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.Permissions;
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
@@ -160,7 +159,6 @@ public abstract class AbfsClient implements Closeable {
   private final AbfsThrottlingIntercept intercept;
 
   private final ListeningScheduledExecutorService executorService;
-  private Boolean isNamespaceEnabled;
 
   private boolean renameResilience;
   private TimerTask runningTimerTask;
@@ -395,9 +393,6 @@ public abstract class AbfsClient implements Closeable {
       List<AbfsHttpHeader> requestHeaders, boolean isCreateFileRequest,
       ContextEncryptionAdapter contextEncryptionAdapter, TracingContext tracingContext)
       throws AzureBlobFileSystemException {
-    if (!getIsNamespaceEnabled(tracingContext)) {
-      return;
-    }
     String encodedKey, encodedKeySHA256;
     switch (encryptionType) {
     case GLOBAL_KEY:
@@ -900,15 +895,6 @@ public abstract class AbfsClient implements Closeable {
     }
   }
 
-  private synchronized Boolean getIsNamespaceEnabled(TracingContext tracingContext)
-      throws AzureBlobFileSystemException {
-    if (isNamespaceEnabled == null) {
-      setIsNamespaceEnabled(NamespaceUtil.isNamespaceEnabled(this,
-          tracingContext));
-    }
-    return isNamespaceEnabled;
-  }
-
   protected Boolean getIsPaginatedDeleteEnabled() {
     return abfsConfiguration.isPaginatedDeleteEnabled();
   }
@@ -1094,11 +1080,6 @@ public abstract class AbfsClient implements Closeable {
   @VisibleForTesting
   void setEncryptionContextProvider(EncryptionContextProvider provider) {
     encryptionContextProvider = provider;
-  }
-
-  @VisibleForTesting
-  void setIsNamespaceEnabled(final Boolean isNamespaceEnabled) {
-    this.isNamespaceEnabled = isNamespaceEnabled;
   }
 
   /**
