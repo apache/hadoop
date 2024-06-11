@@ -100,10 +100,10 @@ public class ITestAzureBlobFileSystemCheckAccess
         false);
     // Since FS init now needs to know account type setting it before init to avoid that.
     conf.setBoolean(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, isHNSEnabled);
+    this.testUserFs = FileSystem.newInstance(conf);
     // Resetting the namespace enabled flag to unknown after file system init.
     ((AzureBlobFileSystem)testUserFs).getAbfsStore().setNamespaceEnabled(
         Trilean.UNKNOWN);
-    this.testUserFs = FileSystem.newInstance(conf);
   }
 
   private void setTestFsConf(final String fsConfKey,
