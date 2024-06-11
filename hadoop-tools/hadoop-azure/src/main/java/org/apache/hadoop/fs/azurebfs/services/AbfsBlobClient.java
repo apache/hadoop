@@ -570,7 +570,7 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href = https://learn.microsoft.com/en-us/rest/api/storageservices/put-block-list></a>.
+   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/put-block-list">Put Block List</a>.
    * The flush operation to commit the blocks.
    * @param buffer This has the xml in byte format with the blockIds to be flushed.
    * @param path The path to flush the data to.
