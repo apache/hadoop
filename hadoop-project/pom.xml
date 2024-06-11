@@ -250,7 +250,7 @@
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop.thirdparty</groupId>
-        <artifactId>hadoop-shaded-protobuf_3_23</artifactId>
+        <artifactId>hadoop-shaded-protobuf_3_25</artifactId>
         <version>${hadoop-thirdparty-protobuf.version}</version>
       </dependency>
       <dependency>
