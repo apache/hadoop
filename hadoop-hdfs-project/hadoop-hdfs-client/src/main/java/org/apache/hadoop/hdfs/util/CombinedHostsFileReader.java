@@ -137,12 +137,12 @@ public final class CombinedHostsFileReader {
   public static DatanodeAdminProperties[]
       readFileWithTimeout(final String hostsFile, final int readTimeout) throws IOException {
     FutureTask<DatanodeAdminProperties[]> futureTask = new FutureTask<>(
-      new Callable<DatanodeAdminProperties[]>() {
-        @Override
-        public DatanodeAdminProperties[] call() throws Exception {
-          return readFile(hostsFile);
+        new Callable<DatanodeAdminProperties[]>() {
+          @Override
+          public DatanodeAdminProperties[] call() throws Exception {
+            return readFile(hostsFile);
         }
-    });
+      });
 
     Thread thread = new Thread(futureTask);
     thread.start();

@@ -180,7 +180,7 @@ public class CombinedHostFileManager extends HostConfigManager {
   @Override
   public void refresh() throws IOException {
     refresh(conf.get(DFSConfigKeys.DFS_HOSTS, ""),
-      conf.getInt(DFSConfigKeys.DFS_HOSTS_TIMEOUT, DFSConfigKeys.DFS_HOSTS_TIMEOUT_DEFAULT)
+        conf.getInt(DFSConfigKeys.DFS_HOSTS_TIMEOUT, DFSConfigKeys.DFS_HOSTS_TIMEOUT_DEFAULT)
     );
   }
   private void refresh(final String hostsFile, final int readTimeout) throws IOException {
