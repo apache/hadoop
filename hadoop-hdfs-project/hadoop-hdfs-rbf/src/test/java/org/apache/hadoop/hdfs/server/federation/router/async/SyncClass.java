@@ -67,6 +67,16 @@ public class SyncClass implements BaseClass{
   }
 
   @Override
+  public String exceptionMethod(int input) throws IOException {
+    if (input == 2) {
+      throw new IOException("input 2 exception");
+    } else if (input == 3) {
+      throw new RuntimeException("input 3 exception");
+    }
+    return applyMethod(input);
+  }
+
+  @Override
   public String forEachMethod(List<Integer> list) {
     StringBuilder result = new StringBuilder();
     for (int input : list) {

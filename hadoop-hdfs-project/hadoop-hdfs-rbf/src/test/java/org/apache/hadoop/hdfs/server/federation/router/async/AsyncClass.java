@@ -113,6 +113,18 @@ public class AsyncClass extends SyncClass{
   }
 
   @Override
+  public String exceptionMethod(int input) {
+    if (input == 2) {
+      asyncThrowException(new IOException("input 2 exception"));
+      return null;
+    } else if (input == 3) {
+      asyncThrowException(new RuntimeException("input 3 exception"));
+      return null;
+    }
+    return applyMethod(input);
+  }
+
+  @Override
   public String forEachMethod(List<Integer> list) {
     StringBuilder result = new StringBuilder();
     asyncForEach(list.iterator(),

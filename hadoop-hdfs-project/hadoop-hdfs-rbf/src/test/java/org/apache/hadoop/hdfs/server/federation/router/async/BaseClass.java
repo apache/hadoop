@@ -48,6 +48,8 @@ public interface BaseClass {
 
   String applyMethod(int input, boolean canException) throws IOException;
 
+  String exceptionMethod(int input) throws IOException;
+
   String forEachMethod(List<Integer> list);
 
   String forEachBreakMethod(List<Integer> list);

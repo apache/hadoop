@@ -63,7 +63,7 @@ import static org.junit.Assert.assertTrue;
  *
  * The tests cover both synchronous (Sync) and asynchronous (Async)
  * configurations to ensure consistent behavior under different
- * settings.
+ * execution modes.
  *
  * @see AsyncUtil
  * @see BaseClass
@@ -83,8 +83,8 @@ public class TestAsyncUtil {
   }
 
   @Before
-  public void setUp(ExecutionMode setting) {
-    if (setting.equals(ExecutionMode.ASYNC)) {
+  public void setUp(ExecutionMode mode) {
+    if (mode.equals(ExecutionMode.ASYNC)) {
       baseClass = new AsyncClass(TIME_CONSUMING);
       enableAsync = true;
     } else {
@@ -100,21 +100,20 @@ public class TestAsyncUtil {
 
   @EnumSource(ExecutionMode.class)
   @ParameterizedTest
-  public void testApply(ExecutionMode setting)
+  public void testApply(ExecutionMode mode)
       throws Exception {
-    setUp(setting);
+    setUp(mode);
     long start = Time.monotonicNow();
     String result = baseClass.applyMethod(1);
     long cost = Time.monotonicNow() - start;
-    LOG.info("[{}] main thread cost: {} ms", setting, cost);
+    LOG.info("[{}] main thread cost: {} ms", mode, cost);
     checkResult("applyMethod[1]", result, TIME_CONSUMING, cost);
   }
 
   @EnumSource(ExecutionMode.class)
   @ParameterizedTest
-  public void testApplyException(ExecutionMode setting)
-      throws Exception {
-    setUp(setting);
+  public void testApplyException(ExecutionMode mode) throws Exception {
+    setUp(mode);
     checkException(
         () -> baseClass.applyMethod(2, true),
         IOException.class, "input 2 exception");
@@ -126,42 +125,61 @@ public class TestAsyncUtil {
 
   @EnumSource(ExecutionMode.class)
   @ParameterizedTest
-  public void testApplyThenApplyMethod(ExecutionMode setting) throws Exception {
-    setUp(setting);
+  public void testExceptionMethod(ExecutionMode mode) throws Exception {
+    setUp(mode);
+    checkException(
+        () -> baseClass.exceptionMethod(2),
+        IOException.class, "input 2 exception");
+
+    checkException(
+        () -> baseClass.exceptionMethod(3),
+        RuntimeException.class, "input 3 exception");
+
+    long start = Time.monotonicNow();
+    String result = baseClass.exceptionMethod(1);
+    long cost = Time.monotonicNow() - start;
+    LOG.info("[{}] main thread cost: {} ms", mode, cost);
+    checkResult("applyMethod[1]", result, TIME_CONSUMING, cost);
+  }
+
+  @EnumSource(ExecutionMode.class)
+  @ParameterizedTest
+  public void testApplyThenApplyMethod(ExecutionMode mode) throws Exception {
+    setUp(mode);
     long start = Time.monotonicNow();
     String result = baseClass.applyThenApplyMethod(1);
     long cost = Time.monotonicNow() - start;
     checkResult("[2]", result, TIME_CONSUMING, cost);
-    LOG.info("[{}] main thread cost: {} ms", setting, cost);
+    LOG.info("[{}] main thread cost: {} ms", mode, cost);
 
     start = Time.monotonicNow();
     result = baseClass.applyThenApplyMethod(3);
     cost = Time.monotonicNow() - start;
     checkResult("[3]", result, TIME_CONSUMING, cost);
-    LOG.info("[{}] main thread cost: {} ms", setting, cost);
+    LOG.info("[{}] main thread cost: {} ms", mode, cost);
   }
 
   @EnumSource(ExecutionMode.class)
   @ParameterizedTest
-  public void testCatchThenApplyMethod(ExecutionMode setting) throws Exception {
-    setUp(setting);
+  public void testCatchThenApplyMethod(ExecutionMode mode) throws Exception {
+    setUp(mode);
     long start = Time.monotonicNow();
     String result = baseClass.applyCatchThenApplyMethod(2);
     long cost = Time.monotonicNow() - start;
     checkResult("applyMethod[1]", result, TIME_CONSUMING, cost);
-    LOG.info("[{}] main thread cost: {} ms", setting, cost);
+    LOG.info("[{}] main thread cost: {} ms", mode, cost);
 
     start = Time.monotonicNow();
     result = baseClass.applyCatchThenApplyMethod(0);
     cost = Time.monotonicNow() - start;
     checkResult("[0]", result, TIME_CONSUMING, cost);
-    LOG.info("[{}] main thread cost: {} ms", setting, cost);
+    LOG.info("[{}] main thread cost: {} ms", mode, cost);
   }
 
   @EnumSource(ExecutionMode.class)
   @ParameterizedTest
-  public void testCatchFinallyMethod(ExecutionMode setting) throws Exception {
-    setUp(setting);
+  public void testCatchFinallyMethod(ExecutionMode mode) throws Exception {
+    setUp(mode);
     List<String> resource = new ArrayList<>();
     resource.add("resource1");
     checkException(
@@ -174,54 +192,54 @@ public class TestAsyncUtil {
     long cost = Time.monotonicNow() - start;
     checkResult("[0]", result, TIME_CONSUMING, cost);
     assertTrue(resource.size() == 0);
-    LOG.info("[{}] main thread cost: {} ms", setting, cost);
+    LOG.info("[{}] main thread cost: {} ms", mode, cost);
   }
 
   @EnumSource(ExecutionMode.class)
   @ParameterizedTest
-  public void testForEach(ExecutionMode setting) throws Exception {
-    setUp(setting);
+  public void testForEach(ExecutionMode mode) throws Exception {
+    setUp(mode);
     long start = Time.monotonicNow();
     String result = baseClass.forEachMethod(Arrays.asList(1, 2, 3));
     long cost = Time.monotonicNow() - start;
-    LOG.info("[{}] main thread cost: {} ms", setting, cost);
+    LOG.info("[{}] main thread cost: {} ms", mode, cost);
     checkResult("forEach[1],forEach[2],forEach[3],", result,
         TIME_CONSUMING, cost);
   }
 
   @EnumSource(ExecutionMode.class)
   @ParameterizedTest
-  public void testForEachBreak(ExecutionMode setting) throws Exception {
-    setUp(setting);
+  public void testForEachBreak(ExecutionMode mode) throws Exception {
+    setUp(mode);
     long start = Time.monotonicNow();
     String result = baseClass.forEachBreakMethod(Arrays.asList(1, 2, 3));
     long cost = Time.monotonicNow() - start;
-    LOG.info("[{}] main thread cost: {} ms", setting, cost);
+    LOG.info("[{}] main thread cost: {} ms", mode, cost);
     checkResult("forEach[1],", result, TIME_CONSUMING, cost);
   }
 
   @EnumSource(ExecutionMode.class)
   @ParameterizedTest
-  public void testForEachBreakByException(ExecutionMode setting)
+  public void testForEachBreakByException(ExecutionMode mode)
       throws Exception {
-    setUp(setting);
+    setUp(mode);
     long start = Time.monotonicNow();
     String result = baseClass.forEachBreakByExceptionMethod(Arrays.asList(1, 2, 3));
     long cost = Time.monotonicNow() - start;
-    LOG.info("[{}] main thread cost: {} ms", setting, cost);
+    LOG.info("[{}] main thread cost: {} ms", mode, cost);
     checkResult("forEach[1],java.io.IOException: input 2 exception,",
         result, TIME_CONSUMING, cost);
   }
 
   @EnumSource(ExecutionMode.class)
   @ParameterizedTest
-  public void testCurrentMethod(ExecutionMode setting)
+  public void testCurrentMethod(ExecutionMode mode)
       throws Exception {
-    setUp(setting);
+    setUp(mode);
     long start = Time.monotonicNow();
     String result = baseClass.currentMethod(Arrays.asList(1, 2, 3));
     long cost = Time.monotonicNow() - start;
-    LOG.info("[{}] main thread cost: {} ms", setting, cost);
+    LOG.info("[{}] main thread cost: {} ms", mode, cost);
     checkResult("[1],java.io.IOException: input 2 exception," +
             "java.lang.RuntimeException: input 3 exception,",
         result, TIME_CONSUMING, cost);
