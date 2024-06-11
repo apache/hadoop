@@ -19,7 +19,43 @@ package org.apache.hadoop.hdfs.server.federation.router.async;
 
 import java.io.IOException;
 
+/**
+ * The {@code BiFunction} interface is a functional interface that represents a function
+ * that accepts two arguments and produces a result. This interface is primarily used
+ * in methods that expect a function that performs some operation on two inputs and returns
+ * an output.
+ *
+ * <p>A {@code BiFunction} should be used where a function with two arguments is required.
+ * It can be implemented explicitly or a lambda expression can be provided to create an
+ * instance of {@code BiFunction}.</p>
+ *
+ * <p>For example, the following code demonstrates the use of a lambda expression
+ * to create a {@code BiFunction} that adds two integers:</p>
+ *
+ * <pre>
+ * {@code BiFunction<Integer, Integer, Integer> sum = (a, b) -> a + b;}
+ * </pre>
+ *
+ * <p>Or, it can be used in a method that expects a {@code BiFunction}:</p>
+ *
+ * <pre>
+ * {@code someMethod.acceptBiFunction((a, b) -> a * b);}
+ * </pre>
+ *
+ * @param <T> the type of the first argument to the function
+ * @param <P> the type of the second argument to the function
+ * @param <R> the type of the result of the function
+ */
 @FunctionalInterface
 public interface BiFunction<T, P, R> {
+
+  /**
+   * Applies this function to the given arguments.
+   *
+   * @param t the first function argument
+   * @param p the second function argument
+   * @return the result of applying the function
+   * @throws IOException if an I/O error occurs
+   */
   R apply(T t, P p) throws IOException;
 }

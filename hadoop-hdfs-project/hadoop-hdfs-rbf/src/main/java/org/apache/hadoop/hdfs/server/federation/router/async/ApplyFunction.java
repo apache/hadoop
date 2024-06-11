@@ -27,6 +27,15 @@ import java.util.concurrent.Executor;
  * This interface extends {@link Async} and provides methods to apply the function
  * asynchronously using {@link CompletableFuture}.
  *
+ * <p>ApplyFunction is used to implement the following semantics:</p>
+ * <pre>
+ * {@code
+ *    T res = doAsync(input);
+ *    // Can use ApplyFunction
+ *    R result = thenApply(res);
+ * }
+ * </pre>
+ *
  * @param <T> the type of the input to the function
  * @param <R> the type of the result of the function
  */

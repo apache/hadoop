@@ -36,6 +36,15 @@ import java.util.concurrent.Executor;
  * I/O operations or any operation that may take a significant amount
  * of time to complete.</p>
  *
+ * <p>AsyncApplyFunction is used to implement the following semantics:</p>
+ * <pre>
+ * {@code
+ *    T res = doAsync1(input);
+ *    // Can use AsyncApplyFunction
+ *    R result = doAsync2(res);
+ * }
+ * </pre>
+ *
  * @param <T> the type of the input to the function
  * @param <R> the type of the result of the function
  * @see ApplyFunction
