@@ -22,6 +22,12 @@ import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * LEADER_FOLLOWER can be used in cross-cluster disaster tolerance,
+ * and the order of namespaces is always "leader,follower,follower...".
+ * Write data in leader sub-cluster as many as possible. If leader
+ * sub-cluster failed, try followers then, the same goes for reading data.
+ */
 public class LeaderFollowerResolver implements OrderedResolver {
   protected static final Logger LOG =
       LoggerFactory.getLogger(LeaderFollowerResolver.class);
