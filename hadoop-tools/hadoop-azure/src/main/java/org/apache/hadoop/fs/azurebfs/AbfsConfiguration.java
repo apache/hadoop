@@ -520,7 +520,7 @@ public class AbfsConfiguration{
    */
   private String getMandatoryPasswordString(String key) throws IOException {
     String value = getPasswordString(key);
-    if (value == null) {
+    if (value == null || value.isEmpty()) {
       throw new ConfigurationPropertyNotFoundException(key);
     }
     return value;
