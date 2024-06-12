@@ -32,6 +32,7 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.junit.rules.ExpectedException;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.when;
@@ -60,6 +61,7 @@ public class TestCombinedHostsFileReader {
 
   @Before
   public void setUp() throws Exception {
+    callable = Mockito.mock(Callable.class);
   }
 
   @After
