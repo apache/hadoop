@@ -20,14 +20,18 @@ package org.apache.hadoop.fs.s3a.auth;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import software.amazon.awssdk.arns.Arn;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import software.amazon.awssdk.auth.signer.Aws4Signer;
 import software.amazon.awssdk.auth.signer.AwsS3V4Signer;
+import software.amazon.awssdk.auth.signer.internal.AbstractAwsS3V4Signer;
 import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
 import software.amazon.awssdk.core.signer.Signer;
 import software.amazon.awssdk.http.SdkHttpFullRequest;
@@ -38,8 +42,10 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
@@ -48,12 +54,18 @@ import org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenProvider;
 import org.apache.hadoop.security.UserGroupInformation;
 
 import static org.apache.hadoop.fs.s3a.Constants.CUSTOM_SIGNERS;
+import static org.apache.hadoop.fs.s3a.Constants.ENABLE_MULTI_DELETE;
 import static org.apache.hadoop.fs.s3a.Constants.SIGNING_ALGORITHM_S3;
+import static org.apache.hadoop.fs.s3a.MultipartTestUtils.createMagicFile;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 
 /**
  * Tests for custom Signers and SignerInitializers.
+ * Because the v2 sdk has had some problems with bulk delete
+ * and custom signing, this suite is parameterized.
  */
+@RunWith(Parameterized.class)
 public class ITestCustomSigner extends AbstractS3ATestBase {
 
   private static final Logger LOG = LoggerFactory
@@ -62,9 +74,32 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
   private static final String TEST_ID_KEY = "TEST_ID_KEY";
   private static final String TEST_REGION_KEY = "TEST_REGION_KEY";
 
+  /**
+   * Parameterization.
+   */
+  @Parameterized.Parameters(name = "{0}")
+  public static Collection<Object[]> params() {
+    return Arrays.asList(new Object[][]{
+        {"bulk delete",  true},
+        {"simple-delete", false},
+    });
+  }
+
+  private final boolean bulkDelete;
+
+  private final UserGroupInformation ugi1 = UserGroupInformation.createRemoteUser("user1");
+
+  private final UserGroupInformation ugi2 = UserGroupInformation.createRemoteUser("user2");
+
   private String regionName;
 
   private String endpoint;
+
+  public ITestCustomSigner(
+      final String ignored,
+      final boolean bulkDelete) {
+    this.bulkDelete = bulkDelete;
+  }
 
   @Override
   public void setup() throws Exception {
@@ -79,6 +114,17 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
     }
     LOG.info("Determined region name to be [{}] for bucket [{}]", regionName,
         fs.getBucket());
+    CustomSignerInitializer.reset();
+  }
+
+  /**
+   * Teardown closes all filesystems for the test UGIs.
+   */
+  @Override
+  public void teardown() throws Exception {
+    super.teardown();
+    FileSystem.closeAllForUGI(ugi1);
+    FileSystem.closeAllForUGI(ugi2);
   }
 
   @Test
@@ -86,12 +132,10 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
       throws IOException, InterruptedException {
 
     final Path basePath = path(getMethodName());
-    UserGroupInformation ugi1 = UserGroupInformation.createRemoteUser("user1");
-    FileSystem fs1 = runMkDirAndVerify(ugi1,
+    FileSystem fs1 = runStoreOperationsAndVerify(ugi1,
         new Path(basePath, "customsignerpath1"), "id1");
 
-    UserGroupInformation ugi2 = UserGroupInformation.createRemoteUser("user2");
-    FileSystem fs2 = runMkDirAndVerify(ugi2,
+    FileSystem fs2 = runStoreOperationsAndVerify(ugi2,
         new Path(basePath, "customsignerpath2"), "id2");
 
     Assertions.assertThat(CustomSignerInitializer.knownStores.size())
@@ -104,14 +148,15 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
         .as("Num registered stores mismatch").isEqualTo(0);
   }
 
-  private FileSystem runMkDirAndVerify(UserGroupInformation ugi,
+  private S3AFileSystem runStoreOperationsAndVerify(UserGroupInformation ugi,
       Path finalPath, String identifier)
       throws IOException, InterruptedException {
     Configuration conf = createTestConfig(identifier);
-    return ugi.doAs((PrivilegedExceptionAction<FileSystem>) () -> {
+    return ugi.doAs((PrivilegedExceptionAction<S3AFileSystem>) () -> {
       int instantiationCount = CustomSigner.getInstantiationCount();
       int invocationCount = CustomSigner.getInvocationCount();
-      FileSystem fs = finalPath.getFileSystem(conf);
+      S3AFileSystem fs = (S3AFileSystem)finalPath.getFileSystem(conf);
+
       fs.mkdirs(finalPath);
       Assertions.assertThat(CustomSigner.getInstantiationCount())
           .as("CustomSigner Instantiation count lower than expected")
@@ -130,6 +175,22 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
           .as("Configuration TEST_KEY mismatch in %s", CustomSigner.description())
           .isEqualTo(identifier);
 
+      // now do some more operations to make sure all is good.
+      final Path subdir = new Path(finalPath, "year=1970/month=1/day=1");
+      fs.mkdirs(subdir);
+
+      final Path file1 = new Path(subdir, "file1");
+      ContractTestUtils.touch(fs, new Path(subdir, "file1"));
+      fs.listStatus(subdir);
+      fs.delete(file1, false);
+      ContractTestUtils.touch(fs, new Path(subdir, "file1"));
+
+      // create a magic file.
+      createMagicFile(fs, subdir);
+      ContentSummary summary = fs.getContentSummary(finalPath);
+      fs.getS3AInternals().abortMultipartUploads(subdir);
+      fs.rename(subdir, new Path(finalPath, "renamed"));
+      fs.delete(finalPath, true);
       return fs;
     });
   }
@@ -143,10 +204,15 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
   private Configuration createTestConfig(String identifier) {
     Configuration conf = createConfiguration();
 
+    removeBaseAndBucketOverrides(conf,
+        CUSTOM_SIGNERS,
+        SIGNING_ALGORITHM_S3,
+        ENABLE_MULTI_DELETE);
     conf.set(CUSTOM_SIGNERS,
         "CustomS3Signer:" + CustomSigner.class.getName() + ":"
             + CustomSignerInitializer.class.getName());
     conf.set(SIGNING_ALGORITHM_S3, "CustomS3Signer");
+    conf.setBoolean(ENABLE_MULTI_DELETE, bulkDelete);
 
     conf.set(TEST_ID_KEY, identifier);
     conf.set(TEST_REGION_KEY, regionName);
@@ -162,7 +228,7 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
   }
 
   @Private
-  public static final class CustomSigner implements Signer {
+  public static final class CustomSigner extends AbstractAwsS3V4Signer implements Signer {
 
 
     private static final AtomicInteger INSTANTIATION_COUNT =
@@ -202,7 +268,8 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
       try {
         lastStoreValue = CustomSignerInitializer
             .getStoreValue(bucketName, UserGroupInformation.getCurrentUser());
-        LOG.info("Store value for bucket {} is {}", bucketName, lastStoreValue);
+        LOG.info("Store value for bucket {} is {}", bucketName,
+            (lastStoreValue == null) ? "unset" : "set");
       } catch (IOException e) {
         throw new RuntimeException("Failed to get current Ugi " + e, e);
       }
@@ -216,35 +283,7 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
     }
 
     private String parseBucketFromHost(String host) {
-      String[] hostBits = host.split("\\.");
-      String bucketName = hostBits[0];
-      String service = hostBits[1];
-
-      if (bucketName.equals("kms")) {
-        return bucketName;
-      }
-
-      if (service.contains("s3-accesspoint") || service.contains("s3-outposts")
-          || service.contains("s3-object-lambda")) {
-        // If AccessPoint then bucketName is of format `accessPoint-accountId`;
-        String[] accessPointBits = bucketName.split("-");
-        String accountId = accessPointBits[accessPointBits.length - 1];
-        // Extract the access point name from bucket name. eg: if bucket name is
-        // test-custom-signer-<accountId>, get the access point name test-custom-signer by removing
-        // -<accountId> from the bucket name.
-        String accessPointName =
-            bucketName.substring(0, bucketName.length() - (accountId.length() + 1));
-        Arn arn = Arn.builder()
-            .accountId(accountId)
-            .partition("aws")
-            .region(hostBits[2])
-            .resource("accesspoint" + "/" + accessPointName)
-            .service("s3").build();
-
-        bucketName = arn.toString();
-      }
-
-      return bucketName;
+      return CustomSdkSigner.parseBucketFromHost(host);
     }
 
     public static int getInstantiationCount() {
@@ -285,6 +324,13 @@ public class ITestCustomSigner extends AbstractS3ATestBase {
       StoreKey storeKey = new StoreKey(bucketName, storeUgi);
       LOG.info("Unregistering store {}", storeKey);
       knownStores.remove(storeKey);
+    }
+
+    /**
+     * Clear the stores; invoke during test setup.
+     */
+    public static void reset() {
+      knownStores.clear();
     }
 
     public static StoreValue getStoreValue(String bucketName,

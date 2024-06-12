@@ -59,7 +59,7 @@ To make most efficient use of S3, care is needed.
 The S3A FileSystem supports implementation of vectored read api using which
 a client can provide a list of file ranges to read returning a future read
 object associated with each range. For full api specification please see
-[FSDataInputStream](../../hadoop-common-project/hadoop-common/filesystem/fsdatainputstream.html).
+[FSDataInputStream](../../../../../../hadoop-common-project/hadoop-common/target/site/filesystem/fsdatainputstream.html).
 
 The following properties can be configured to optimise vectored reads based
 on the client requirements.
@@ -93,6 +93,86 @@ on the client requirements.
    </description>
 </property>
 ```
+
+## <a name="bulkdelete"></a> Improving delete performance through bulkdelete API.
+
+For bulk delete API spec refer to File System specification. [BulkDelete](../../../../../../hadoop-common-project/hadoop-common/target/site/filesystem/bulkdelete.html)
+
+The S3A client exports this API.
+
+### S3A Implementation of Bulk Delete.
+If multi-object delete is enabled (`fs.s3a.multiobjectdelete.enable` = true), as
+it is by default, then the page size is limited to that defined in
+`fs.s3a.bulk.delete.page.size`, which MUST be less than or equal to 1000.
+* The entire list of paths to delete is aggregated into a single bulk delete request,
+  issued to the store.
+* Provided the caller has the correct permissions, every entry in the list
+  will, if the path references an object, cause that object to be deleted.
+* If the path does not reference an object: the path will not be deleted
+  "This is for deleting objects, not directories"
+* No probes for the existence of parent directories will take place; no
+  parent directory markers will be created.
+  "If you need parent directories, call mkdir() yourself"
+* The list of failed keys listed in the `DeleteObjectsResponse` response
+  are converted into paths and returned along with their error messages.
+* Network and other IO errors are raised as exceptions.
+
+If multi-object delete is disabled (or the list of size 1)
+* A single `DELETE` call is issued
+* Any `AccessDeniedException` raised is converted to a result in the error list.
+* Any 404 response from a (non-AWS) store will be ignored.
+* Network and other IO errors are raised as exceptions.
+
+Because there are no probes to ensure the call does not overwrite a directory,
+or to see if a parentDirectory marker needs to be created,
+this API is still faster than issuing a normal `FileSystem.delete(path)` call.
+
+That is: all the overhead normally undertaken to preserve the Posix System model are omitted.
+
+
+### S3 Scalability and Performance
+
+Every entry in a bulk delete request counts as one write operation
+against AWS S3 storage.
+With the default write rate under a prefix on AWS S3 Standard storage
+restricted to 3,500 writes/second, it is very easy to overload
+the store by issuing a few bulk delete requests simultaneously.
+
+* If throttling is triggered then all clients interacting with
+  the store may observe performance issues.
+* The write quota applies even for paths which do not exist.
+* The S3A client *may* perform rate throttling as well as page size limiting.
+
+What does that mean? it means that attempting to issue multiple
+bulk delete calls in parallel can be counterproductive.
+
+When overloaded, the S3 store returns a 403 throttle response.
+This will trigger it back off and retry of posting the request.
+However, the repeated request will still include the same number of objects and
+*so generate the same load*.
+
+This can lead to a pathological situation where the repeated requests will
+never be satisfied because the request itself is sufficient to overload the store.
+See [HADOOP-16823.Large DeleteObject requests are their own Thundering Herd]
+(https://issues.apache.org/jira/browse/HADOOP-16823)
+for an example of where this did actually surface in production.
+
+This is why the default page size of S3A clients is 250 paths, not the store limit of 1000 entries.
+It is also why the S3A delete/rename operations do not attempt to do massive parallel deletions,
+Instead bulk delete requests are queued for a single blocking thread to issue.
+Consider a similar design.
+
+
+When working with versioned S3 buckets, every path deleted will add a tombstone marker
+to the store at that location, even if there was no object at that path.
+While this has no negative performance impact on the bulk delete call,
+it will slow down list requests subsequently made against that path.
+That is: bulk delete requests of paths which do not exist will hurt future queries.
+
+Avoid this. Note also that TPC-DS Benchmark do not create the right load to make the
+performance problems observable -but they can surface in production.
+* Configure buckets to have a limited number of days for tombstones to be preserved.
+* Do not delete paths which you know reference nonexistent files or directories.
 
 ## <a name="fadvise"></a> Improving data input performance through fadvise
 
@@ -196,40 +276,94 @@ Fix: Use one of the dedicated [S3A Committers](committers.md).
 
 ## <a name="tuning"></a> Options to Tune
 
-### <a name="pooling"></a> Thread and connection pool sizes.
+### <a name="pooling"></a> Thread and connection pool settings.
 
 Each S3A client interacting with a single bucket, as a single user, has its
-own dedicated pool of open HTTP 1.1 connections alongside a pool of threads used
-for upload and copy operations.
+own dedicated pool of open HTTP connections alongside a pool of threads used
+for background/parallel operations in addition to the worker threads of the
+actual application.
+
 The default pool sizes are intended to strike a balance between performance
 and memory/thread use.
 
 You can have a larger pool of (reused) HTTP connections and threads
-for parallel IO (especially uploads) by setting the properties
+for parallel IO (especially uploads, prefetching and vector reads) by setting the appropriate
+properties. Note: S3A Connectors have their own thread pools for job commit, but
+everything uses the same HTTP connection pool.
+
+| Property                       | Default | Meaning                                                          |
+|--------------------------------|---------|------------------------------------------------------------------|
+| `fs.s3a.threads.max`           | `96`    | Threads in the thread pool                                       |
+| `fs.s3a.threads.keepalivetime` | `60s`   | Expiry time for idle threads in the thread pool                  |
+| `fs.s3a.executor.capacity`     | `16`    | Maximum threads for any single operation                         |
+| `fs.s3a.max.total.tasks`       | `16`    | Extra tasks which can be queued excluding prefetching operations |
+
+### <a name="timeouts"></a> Timeouts.
+
+Network timeout options can be tuned to make the client fail faster *or* retry more.
+The choice is yours. Generally recovery is better, but sometimes fail-fast is more useful.
 
 
-| property | meaning | default |
-|----------|---------|---------|
-| `fs.s3a.threads.max`| Threads in the AWS transfer manager| 10 |
-| `fs.s3a.connection.maximum`| Maximum number of HTTP connections | 10|
+| Property                                | Default | V2  | Meaning                                               |
+|-----------------------------------------|---------|:----|-------------------------------------------------------|
+| `fs.s3a.connection.maximum`             | `500`   |     | Connection pool size                                  |
+| `fs.s3a.connection.keepalive`           | `false` | `*` | Use TCP keepalive on open channels                    |
+| `fs.s3a.connection.acquisition.timeout` | `60s`   | `*` | Timeout for waiting for a connection from the pool.   |
+| `fs.s3a.connection.establish.timeout`   | `30s`   |     | Time to establish the TCP/TLS connection              |
+| `fs.s3a.connection.idle.time`           | `60s`   | `*` | Maximum time for idle HTTP connections in the pool    |
+| `fs.s3a.connection.request.timeout`     | `60s`   |     | If greater than zero, maximum time for a response     |
+| `fs.s3a.connection.timeout`             | `200s`  |     | Timeout for socket problems on a TCP channel          |
+| `fs.s3a.connection.ttl`                 | `5m`    |     | Lifetime of HTTP connections from the pool            |
 
-We recommend using larger values for processes which perform
-a lot of IO: `DistCp`, Spark Workers and similar.
 
-```xml
-<property>
-  <name>fs.s3a.threads.max</name>
-  <value>20</value>
-</property>
-<property>
-  <name>fs.s3a.connection.maximum</name>
-  <value>20</value>
-</property>
-```
+Units:
+1. The default unit for all these options except for `fs.s3a.threads.keepalivetime` is milliseconds, unless a time suffix is declared.
+2. Versions of Hadoop built with the AWS V1 SDK *only* support milliseconds rather than suffix values.
+   If configurations are intended to apply across hadoop releases, you MUST use milliseconds without a suffix.
+3. `fs.s3a.threads.keepalivetime` has a default unit of seconds on all hadoop releases.
+4. Options flagged as "V2" are new with the AWS V2 SDK; they are ignored on V1 releases.
 
-Be aware, however, that processes which perform many parallel queries
-may consume large amounts of resources if each query is working with
-a different set of s3 buckets, or are acting on behalf of different users.
+---
+
+There are some hard tuning decisions related to pool size and expiry.
+As servers add more cores and services add many more worker threads, a larger pool size is more and more important:
+the default values in `core-default.xml` have been slowly increased over time but should be treated as
+"the best", simply what is considered a good starting case.
+With Vectored IO adding multiple GET requests per Spark/Hive worker thread,
+and stream prefetching performing background block prefetch, larger pool and thread sizes are even more important.
+
+In large hive deployments, thread and connection pools of thousands have been known to have been set.
+
+Small pool: small value in `fs.s3a.connection.maximum`.
+* Keeps network/memory cost of having many S3A instances in the same process low.
+* But: limit on how many connections can be open at at a time.
+
+* Large Pool. More HTTP connections can be created and kept, but cost of keeping network connections increases
+unless idle time is reduced through `fs.s3a.connection.idle.time`.
+
+If exceptions are raised with about timeouts acquiring connections from the pool, this can be a symptom of
+* Heavy load. Increase pool size and acquisition timeout `fs.s3a.connection.acquisition.timeout`
+* Process failing to close open input streams from the S3 store.
+  Fix: Find uses of `open()`/`openFile()` and make sure that the streams are being `close()d`
+
+*Retirement of HTTP Connections.*
+
+Connections are retired from the pool by `fs.s3a.connection.idle.time`, the maximum time for idle connections,
+and `fs.s3a.connection.ttl`, the maximum life of any connection in the pool, even if it repeatedly reused.
+
+Limiting idle time saves on network connections, at the cost of requiring new connections on subsequent S3 operations.
+
+Limiting connection TTL is useful to spread across load balancers and recover from some network
+connection problems, including those caused by proxies.
+
+*Request timeout*: `fs.s3a.connection.request.timeout`
+
+If set, this sets an upper limit on any non-streaming API call (i.e. everything but `GET`).
+
+A timeout is good to detect and recover from failures.
+However, it also sets a limit on the duration of a POST/PUT of data
+-which, if after a timeout, will only be repeated, ultimately to failure.
+
 
 ### For large data uploads, tune the block size: `fs.s3a.block.size`
 
@@ -327,18 +461,6 @@ efficient in terms of HTTP connection use, and reduce the IOP rate against
 the S3 bucket/shard.
 
 ```xml
-<property>
-  <name>fs.s3a.threads.max</name>
-  <value>20</value>
-</property>
-
-<property>
-  <name>fs.s3a.connection.maximum</name>
-  <value>30</value>
-  <descriptiom>
-   Make greater than both fs.s3a.threads.max and -numListstatusThreads
-   </descriptiom>
-</property>
 
 <property>
   <name>fs.s3a.experimental.input.fadvise</name>
@@ -405,7 +527,8 @@ An example of this is covered in [HADOOP-13871](https://issues.apache.org/jira/b
 
 1. For public data, use `curl`:
 
-        curl -O https://landsat-pds.s3.amazonaws.com/scene_list.gz
+        curl -O https://noaa-cors-pds.s3.amazonaws.com/raw/2023/001/akse/AKSE001a.23_.gz
+
 1. Use `nettop` to monitor a processes connections.
 
 
@@ -447,7 +570,7 @@ and rate of requests. Spreading data across different buckets, and/or using
 a more balanced directory structure may be beneficial.
 Consult [the AWS documentation](http://docs.aws.amazon.com/AmazonS3/latest/dev/request-rate-perf-considerations.html).
 
-Reading or writing data encrypted with SSE-KMS forces S3 to make calls of
+Reading or writing data encrypted with SSE-KMS or DSSE-KMS forces S3 to make calls of
 the AWS KMS Key Management Service, which comes with its own
 [Request Rate Limits](http://docs.aws.amazon.com/kms/latest/developerguide/limits.html).
 These default to 1200/second for an account, across all keys and all uses of
@@ -654,7 +777,7 @@ via `FileSystem.get()` or `Path.getFileSystem()`.
 The cache, `FileSystem.CACHE` will, for each user, cachec one instance of a filesystem
 for a given URI.
 All calls to `FileSystem.get` for a cached FS for a URI such
-as `s3a://landsat-pds/` will return that singe single instance.
+as `s3a://noaa-isd-pds/` will return that singe single instance.
 
 FileSystem instances are created on-demand for the cache,
 and will be done in each thread which requests an instance.
@@ -678,7 +801,7 @@ can be created simultaneously for different object stores/distributed
 filesystems.
 
 For example, a value of four would put an upper limit on the number
-of wasted instantiations of a connector for the `s3a://landsat-pds/`
+of wasted instantiations of a connector for the `s3a://noaa-isd-pds/`
 bucket.
 
 ```xml

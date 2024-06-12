@@ -30,6 +30,7 @@ import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
@@ -38,6 +39,8 @@ import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 
+import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.*;
 import static org.apache.hadoop.fs.s3a.performance.OperationCostValidator.probe;
@@ -72,6 +75,14 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
   public ITestS3ADeleteCost(final String name,
       final boolean keepMarkers) {
     super(keepMarkers);
+  }
+
+  @Override
+  public Configuration createConfiguration() {
+    Configuration conf = super.createConfiguration();
+    removeBaseAndBucketOverrides(conf, FS_S3A_CREATE_PERFORMANCE);
+    conf.setBoolean(FS_S3A_CREATE_PERFORMANCE, false);
+    return conf;
   }
 
   @Override

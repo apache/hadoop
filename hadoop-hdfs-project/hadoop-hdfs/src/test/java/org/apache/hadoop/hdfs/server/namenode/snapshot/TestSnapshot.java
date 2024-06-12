@@ -257,7 +257,7 @@ public class TestSnapshot {
         FSImageTestUtil.getFSImage(
         cluster.getNameNode()).getStorage().getStorageDir(0));
     assertNotNull("Didn't generate or can't find fsimage", originalFsimage);
-    PrintStream o = new PrintStream(NullOutputStream.NULL_OUTPUT_STREAM);
+    PrintStream o = new PrintStream(NullOutputStream.INSTANCE);
     PBImageXmlWriter v = new PBImageXmlWriter(new Configuration(), o);
     v.visit(new RandomAccessFile(originalFsimage, "r"));
   }

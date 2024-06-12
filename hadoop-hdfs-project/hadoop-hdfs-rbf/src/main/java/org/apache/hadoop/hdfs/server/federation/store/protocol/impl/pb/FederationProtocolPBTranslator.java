@@ -54,7 +54,7 @@ public class FederationProtocolPBTranslator<P extends GeneratedMessageV3,
    * the proto handler this translator holds.
    */
   @SuppressWarnings("unchecked")
-  public void setProto(Message p) {
+  public void setProto(Message p) throws IllegalArgumentException {
     if (protoClass.isInstance(p)) {
       if (this.builder != null) {
         // Merge with builder

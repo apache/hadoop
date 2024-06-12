@@ -38,8 +38,8 @@ RUN curl -SL --output vs_buildtools.exe https://aka.ms/vs/16/release/vs_buildtoo
     && del /q vs_buildtools.exe
 
 # Install Chocolatey.
+ENV chocolateyVersion=1.4.0
 RUN powershell -NoProfile -ExecutionPolicy Bypass -Command "iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))"
-RUN setx PATH "%PATH%;%ALLUSERSPROFILE%\chocolatey\bin"
 
 # Install git.
 RUN choco install git.install -y
@@ -55,24 +55,18 @@ RUN powershell .\vcpkg\vcpkg.exe install boost:x64-windows
 RUN powershell .\vcpkg\vcpkg.exe install protobuf:x64-windows
 RUN powershell .\vcpkg\vcpkg.exe install openssl:x64-windows
 RUN powershell .\vcpkg\vcpkg.exe install zlib:x64-windows
-ENV PROTOBUF_HOME "C:\vcpkg\installed\x64-windows"
 
 # Install Azul Java 8 JDK.
 RUN powershell Invoke-WebRequest -URI https://cdn.azul.com/zulu/bin/zulu8.62.0.19-ca-jdk8.0.332-win_x64.zip -OutFile $Env:TEMP\zulu8.62.0.19-ca-jdk8.0.332-win_x64.zip
 RUN powershell Expand-Archive -Path $Env:TEMP\zulu8.62.0.19-ca-jdk8.0.332-win_x64.zip -DestinationPath "C:\Java"
-ENV JAVA_HOME "C:\Java\zulu8.62.0.19-ca-jdk8.0.332-win_x64"
-RUN setx PATH "%PATH%;%JAVA_HOME%\bin"
 
 # Install Apache Maven.
-RUN powershell Invoke-WebRequest -URI https://archive.apache.org/dist/maven/maven-3/3.8.6/binaries/apache-maven-3.8.6-bin.zip -OutFile $Env:TEMP\apache-maven-3.8.6-bin.zip
-RUN powershell Expand-Archive -Path $Env:TEMP\apache-maven-3.8.6-bin.zip -DestinationPath "C:\Maven"
-RUN setx PATH "%PATH%;C:\Maven\apache-maven-3.8.6\bin"
-ENV MAVEN_OPTS '-Xmx2048M -Xss128M'
+RUN powershell Invoke-WebRequest -URI https://downloads.apache.org/maven/maven-3/3.8.8/binaries/apache-maven-3.8.8-bin.zip -OutFile $Env:TEMP\apache-maven-3.8.8-bin.zip
+RUN powershell Expand-Archive -Path $Env:TEMP\apache-maven-3.8.8-bin.zip -DestinationPath "C:\Maven"
 
 # Install CMake 3.19.0.
 RUN powershell Invoke-WebRequest -URI https://cmake.org/files/v3.19/cmake-3.19.0-win64-x64.zip -OutFile $Env:TEMP\cmake-3.19.0-win64-x64.zip
 RUN powershell Expand-Archive -Path $Env:TEMP\cmake-3.19.0-win64-x64.zip -DestinationPath "C:\CMake"
-RUN setx PATH "%PATH%;C:\CMake\cmake-3.19.0-win64-x64\bin"
 
 # Install zstd 1.5.4.
 RUN powershell Invoke-WebRequest -Uri https://github.com/facebook/zstd/releases/download/v1.5.4/zstd-v1.5.4-win64.zip -OutFile $Env:TEMP\zstd-v1.5.4-win64.zip
@@ -108,17 +102,50 @@ RUN powershell Copy-Item -Path "C:\LibXXHash\usr\bin\*.dll" -Destination "C:\Pro
 RUN powershell Copy-Item -Path "C:\LibZStd\usr\bin\*.dll" -Destination "C:\Program` Files\Git\usr\bin"
 RUN powershell Copy-Item -Path "C:\RSync\usr\bin\*" -Destination "C:\Program` Files\Git\usr\bin"
 
-# Install Python 3.10.11.
-RUN powershell Invoke-WebRequest -Uri https://www.python.org/ftp/python/3.10.11/python-3.10.11-embed-amd64.zip -OutFile $Env:TEMP\python-3.10.11-embed-amd64.zip
-RUN powershell Expand-Archive -Path $Env:TEMP\python-3.10.11-embed-amd64.zip -DestinationPath "C:\Python3"
-RUN powershell New-Item -ItemType HardLink -Value "C:\Python3\python.exe" -Path "C:\Python3\python3.exe"
-RUN setx path "%PATH%;C:\Python3"
+COPY pkg-resolver pkg-resolver
+
+## Install Python 3.11.8.
+# The Python installation steps below are derived from -
+# https://github.com/docker-library/python/blob/105d6f34e7d70aad6f8c3e249b8208efa591916a/3.11/windows/windowsservercore-ltsc2022/Dockerfile
+ENV PYTHONIOENCODING UTF-8
+ENV PYTHON_VERSION 3.11.8
+ENV PYTHON_PIP_VERSION 24.0
+ENV PYTHON_SETUPTOOLS_VERSION 65.5.1
+ENV PYTHON_GET_PIP_URL https://github.com/pypa/get-pip/raw/dbf0c85f76fb6e1ab42aa672ffca6f0a675d9ee4/public/get-pip.py
+ENV PYTHON_GET_PIP_SHA256 dfe9fd5c28dc98b5ac17979a953ea550cec37ae1b47a5116007395bfacff2ab9
+RUN powershell Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+RUN powershell pkg-resolver\install-python.ps1
+RUN powershell pkg-resolver\install-pip.ps1
+RUN powershell pip install python-dateutil
+
+# Create a user HadoopBuilder with basic privileges and use it for building Hadoop on Windows.
+RUN powershell New-LocalUser -Name 'HadoopBuilder' -Description 'User account for building Apache Hadoop' -Password ([securestring]::new()) -AccountNeverExpires -PasswordNeverExpires
+
+# Grant the privilege to create symbolic links to HadoopBuilder.
+RUN powershell secedit /export /cfg "C:\secpol.cfg"
+RUN powershell "(Get-Content C:\secpol.cfg).Replace('SeCreateSymbolicLinkPrivilege = ', 'SeCreateSymbolicLinkPrivilege = HadoopBuilder,') | Out-File C:\secpol.cfg"
+RUN powershell secedit /configure /db "C:\windows\security\local.sdb" /cfg "C:\secpol.cfg"
+RUN powershell Remove-Item -Force "C:\secpol.cfg" -Confirm:$false
+
+# Login as HadoopBuilder and set the necessary environment and PATH variables.
+USER HadoopBuilder
+ENV PROTOBUF_HOME "C:\vcpkg\installed\x64-windows"
+ENV JAVA_HOME "C:\Java\zulu8.62.0.19-ca-jdk8.0.332-win_x64"
+ENV MAVEN_OPTS '-Xmx2048M -Xss128M'
+ENV IS_WINDOWS 1
+RUN setx PATH "%PATH%;%ALLUSERSPROFILE%\chocolatey\bin"
+RUN setx PATH "%PATH%;%JAVA_HOME%\bin"
+RUN setx PATH "%PATH%;C:\Maven\apache-maven-3.8.8\bin"
+RUN setx PATH "%PATH%;C:\CMake\cmake-3.19.0-win64-x64\bin"
+RUN setx PATH "%PATH%;C:\ZStd"
+RUN setx PATH "%PATH%;C:\Program Files\Git\usr\bin"
 
 # We get strange Javadoc errors without this.
 RUN setx classpath ""
 
+# Setting Git configurations.
+RUN git config --global core.autocrlf true
 RUN git config --global core.longpaths true
-RUN setx PATH "%PATH%;C:\Program Files\Git\usr\bin"
 
 # Define the entry point for the docker container.
 ENTRYPOINT ["C:\\Program Files (x86)\\Microsoft Visual Studio\\2019\\BuildTools\\VC\\Auxiliary\\Build\\vcvars64.bat", "&&", "cmd.exe"]

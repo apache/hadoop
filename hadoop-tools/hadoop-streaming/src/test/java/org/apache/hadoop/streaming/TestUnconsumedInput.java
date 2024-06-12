@@ -24,14 +24,11 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.Test;
 
 public class TestUnconsumedInput {
@@ -54,12 +51,12 @@ public class TestUnconsumedInput {
 
   protected void createInput() throws IOException
   {
-      DataOutputStream out = new DataOutputStream(
-          new FileOutputStream(INPUT_FILE.getAbsoluteFile()));
+    try (DataOutputStream out = new DataOutputStream(
+            new FileOutputStream(INPUT_FILE.getAbsoluteFile()))) {
       for (int i=0; i<10000; ++i) {
-        out.write(input.getBytes("UTF-8"));
+        out.write(input.getBytes(StandardCharsets.UTF_8));
       }
-      out.close();
+    }
   }
 
   protected String[] genArgs() {

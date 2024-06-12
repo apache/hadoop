@@ -29,7 +29,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -100,22 +99,18 @@ public abstract class AbstractContractRootDirectoryTest extends AbstractFSContra
     final FileStatus[] originalChildren = listChildren(fs, root);
     LambdaTestUtils.eventually(
         OBJECTSTORE_RETRY_TIMEOUT,
-        new Callable<Void>() {
-          @Override
-          public Void call() throws Exception {
-            FileStatus[] deleted = deleteChildren(fs, root, true);
-            FileStatus[] children = listChildren(fs, root);
-            if (children.length > 0) {
-              fail(String.format(
-                  "After %d attempts: listing after rm /* not empty"
-                      + "\n%s\n%s\n%s",
-                  iterations.incrementAndGet(),
-                  dumpStats("final", children),
+        () -> {
+          iterations.incrementAndGet();
+          FileStatus[] deleted = deleteChildren(fs, root, true);
+          FileStatus[] children = listChildren(fs, root);
+          Assertions.assertThat(children)
+              .describedAs("After %d attempts: listing after rm /* not empty"
+                      + "\ndeleted: %s\n: original %s",
+                  iterations.get(),
                   dumpStats("deleted", deleted),
-                  dumpStats("original", originalChildren)));
-            }
-            return null;
-          }
+                  dumpStats("original", originalChildren))
+              .isEmpty();
+          return null;
         },
         new LambdaTestUtils.ProportionalRetryInterval(50, 1000));
     // then try to delete the empty one

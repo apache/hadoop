@@ -20,6 +20,8 @@ package org.apache.hadoop.fs.s3a;
 
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.exception.AbortedException;
+import software.amazon.awssdk.core.exception.ApiCallAttemptTimeoutException;
+import software.amazon.awssdk.core.exception.ApiCallTimeoutException;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.core.retry.RetryUtils;
 import software.amazon.awssdk.services.s3.model.S3Exception;
@@ -64,6 +66,7 @@ import java.nio.file.AccessDeniedException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -80,7 +83,7 @@ import static org.apache.hadoop.fs.s3a.impl.InstantiationIOException.isAbstract;
 import static org.apache.hadoop.fs.s3a.impl.InstantiationIOException.isNotInstanceOf;
 import static org.apache.hadoop.fs.s3a.impl.InstantiationIOException.unsupportedConstructor;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.*;
-import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.maybeExtractNetworkException;
+import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.maybeExtractIOException;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 import static org.apache.hadoop.util.functional.RemoteIterators.filteringRemoteIterator;
 
@@ -165,15 +168,22 @@ public final class S3AUtils {
    */
   @SuppressWarnings("ThrowableInstanceNeverThrown")
   public static IOException translateException(@Nullable String operation,
-      String path,
+      @Nullable String path,
       SdkException exception) {
     String message = String.format("%s%s: %s",
         operation,
         StringUtils.isNotEmpty(path)? (" on " + path) : "",
         exception);
+
+    if (path == null || path.isEmpty()) {
+      // handle null path by giving it a stub value.
+      // not ideal/informative, but ensures that the path is never null in
+      // exceptions constructed.
+      path = "/";
+    }
+
     if (!(exception instanceof AwsServiceException)) {
       // exceptions raised client-side: connectivity, auth, network problems...
-
       Exception innerCause = containsInterruptedException(exception);
       if (innerCause != null) {
         // interrupted IO, or a socket exception underneath that class
@@ -194,9 +204,23 @@ public final class S3AUtils {
         return ioe;
       }
       // network problems covered by an IOE inside the exception chain.
-      ioe = maybeExtractNetworkException(path, exception);
+      ioe = maybeExtractIOException(path, exception, message);
       if (ioe != null) {
         return ioe;
+      }
+      // timeout issues
+      // ApiCallAttemptTimeoutException: a single HTTP request attempt failed.
+      // ApiCallTimeoutException: a request with any configured retries failed.
+      // The ApiCallTimeoutException exception should be the only one seen in
+      // the S3A code, but for due diligence both are handled and mapped to
+      // our own AWSApiCallTimeoutException.
+      if (exception instanceof ApiCallTimeoutException
+          || exception instanceof ApiCallAttemptTimeoutException) {
+        // An API call to an AWS service timed out.
+        // This is a subclass of ConnectTimeoutException so
+        // all retry logic for that exception is handled without
+        // having to look down the stack for a
+        return new AWSApiCallTimeoutException(message, exception);
       }
       // no custom handling.
       return new AWSClientIOException(message, exception);
@@ -256,6 +280,11 @@ public final class S3AUtils {
         }
         break;
 
+      // Caused by duplicate create bucket call.
+      case SC_409_CONFLICT:
+        ioe = new AWSBadRequestException(message, ase);
+        break;
+
       // this also surfaces sometimes and is considered to
       // be ~ a not found exception.
       case SC_410_GONE:
@@ -266,17 +295,26 @@ public final class S3AUtils {
       // errors which stores can return from requests which
       // the store does not support.
       case SC_405_METHOD_NOT_ALLOWED:
-      case SC_412_PRECONDITION_FAILED:
       case SC_415_UNSUPPORTED_MEDIA_TYPE:
       case SC_501_NOT_IMPLEMENTED:
         ioe = new AWSUnsupportedFeatureException(message, s3Exception);
         break;
 
+      // precondition failure: the object is there, but the precondition
+      // (e.g. etag) didn't match. Assume remote file change during
+      // rename or status passed in to openfile had an etag which didn't match.
+      case SC_412_PRECONDITION_FAILED:
+        ioe = new RemoteFileChangedException(path, message, "", ase);
+        break;
+
       // out of range. This may happen if an object is overwritten with
-      // a shorter one while it is being read.
+      // a shorter one while it is being read or openFile() was invoked
+      // passing a FileStatus or file length less than that of the object.
+      // although the HTTP specification says that the response should
+      // include a range header specifying the actual range available,
+      // this isn't picked up here.
       case SC_416_RANGE_NOT_SATISFIABLE:
-        ioe = new EOFException(message);
-        ioe.initCause(ase);
+        ioe = new RangeNotSatisfiableEOFException(message, ase);
         break;
 
       // this has surfaced as a "no response from server" message.
@@ -291,6 +329,11 @@ public final class S3AUtils {
       case SC_429_TOO_MANY_REQUESTS_GCS:    // google cloud through this connector
       case SC_503_SERVICE_UNAVAILABLE:      // AWS
         ioe = new AWSServiceThrottledException(message, ase);
+        break;
+
+      // gateway timeout
+      case SC_504_GATEWAY_TIMEOUT:
+        ioe = new AWSApiCallTimeoutException(message, ase);
         break;
 
       // internal error
@@ -641,7 +684,7 @@ public final class S3AUtils {
       if (targetException instanceof IOException) {
         throw (IOException) targetException;
       } else if (targetException instanceof SdkException) {
-        throw translateException("Instantiate " + className, "", (SdkException) targetException);
+        throw translateException("Instantiate " + className, "/", (SdkException) targetException);
       } else {
         // supported constructor or factory method found, but the call failed
         throw instantiationException(uri, className, configKey, targetException);
@@ -844,7 +887,7 @@ public final class S3AUtils {
    */
   public static String stringify(S3Object s3Object) {
     StringBuilder builder = new StringBuilder(s3Object.key().length() + 100);
-    builder.append(s3Object.key()).append(' ');
+    builder.append("\"").append(s3Object.key()).append("\" ");
     builder.append("size=").append(s3Object.size());
     return builder.toString();
   }
@@ -1440,6 +1483,11 @@ public final class S3AUtils {
           diagnostics);
       break;
 
+    case DSSE_KMS:
+      LOG.debug("Using DSSE-KMS with {}",
+          diagnostics);
+      break;
+
     case NONE:
     default:
       LOG.debug("Data is unencrypted");
@@ -1622,4 +1670,48 @@ public final class S3AUtils {
   public static String formatRange(long rangeStart, long rangeEnd) {
     return String.format("bytes=%d-%d", rangeStart, rangeEnd);
   }
+
+  /**
+   * Get the equal op (=) delimited key-value pairs of the <code>name</code> property as
+   * a collection of pair of <code>String</code>s, trimmed of the leading and trailing whitespace
+   * after delimiting the <code>name</code> by comma and new line separator.
+   * If no such property is specified then empty <code>Map</code> is returned.
+   *
+   * @param configuration the configuration object.
+   * @param name property name.
+   * @return property value as a <code>Map</code> of <code>String</code>s, or empty
+   * <code>Map</code>.
+   */
+  public static Map<String, String> getTrimmedStringCollectionSplitByEquals(
+      final Configuration configuration,
+      final String name) {
+    String valueString = configuration.get(name);
+    if (null == valueString) {
+      return new HashMap<>();
+    }
+    return org.apache.hadoop.util.StringUtils
+        .getTrimmedStringCollectionSplitByEquals(valueString);
+  }
+
+
+  /**
+   * If classloader isolation is {@code true}
+   * (through {@link Constants#AWS_S3_CLASSLOADER_ISOLATION}) or not
+   * explicitly set, then the classLoader of the input configuration object
+   * will be set to the input classloader, otherwise nothing will happen.
+   * @param conf configuration object.
+   * @param classLoader isolated classLoader.
+   */
+  static void maybeIsolateClassloader(Configuration conf, ClassLoader classLoader) {
+    if (conf.getBoolean(Constants.AWS_S3_CLASSLOADER_ISOLATION,
+            Constants.DEFAULT_AWS_S3_CLASSLOADER_ISOLATION)) {
+      LOG.debug("Configuration classloader set to S3AFileSystem classloader: {}", classLoader);
+      conf.setClassLoader(classLoader);
+    } else {
+      LOG.debug("Configuration classloader not changed, support classes needed will be loaded " +
+                      "from the classloader that instantiated the Configuration object: {}",
+              conf.getClassLoader());
+    }
+  }
+
 }

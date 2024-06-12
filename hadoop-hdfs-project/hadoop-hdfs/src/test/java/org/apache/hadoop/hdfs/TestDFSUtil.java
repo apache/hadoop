@@ -83,6 +83,7 @@ import org.apache.hadoop.security.alias.CredentialProviderFactory;
 import org.apache.hadoop.security.alias.JavaKeyStoreProvider;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.util.Shell;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -865,13 +866,25 @@ public class TestDFSUtil {
 
   @Test (timeout=15000)
   public void testIsValidName() {
-    assertFalse(DFSUtil.isValidName("/foo/../bar"));
-    assertFalse(DFSUtil.isValidName("/foo/./bar"));
-    assertFalse(DFSUtil.isValidName("/foo//bar"));
-    assertTrue(DFSUtil.isValidName("/"));
-    assertTrue(DFSUtil.isValidName("/bar/"));
-    assertFalse(DFSUtil.isValidName("/foo/:/bar"));
-    assertFalse(DFSUtil.isValidName("/foo:bar"));
+    String validPaths[] = new String[]{"/", "/bar/"};
+    for (String path : validPaths) {
+      assertTrue("Should have been accepted '" + path + "'", DFSUtil.isValidName(path));
+    }
+
+    String invalidPaths[] =
+        new String[]{"/foo/../bar", "/foo/./bar", "/foo//bar", "/foo/:/bar", "/foo:bar"};
+    for (String path : invalidPaths) {
+      assertFalse("Should have been rejected '" + path + "'", DFSUtil.isValidName(path));
+    }
+
+    String windowsPath = "/C:/foo/bar";
+    if (Shell.WINDOWS) {
+      assertTrue("Should have been accepted '" + windowsPath + "' in windows os.",
+          DFSUtil.isValidName(windowsPath));
+    } else {
+      assertFalse("Should have been rejected '" + windowsPath + "' in unix os.",
+          DFSUtil.isValidName(windowsPath));
+    }
   }
   
   @Test(timeout=5000)
@@ -1114,14 +1127,83 @@ public class TestDFSUtil {
   @Test
   public void testAddTransferRateMetricForValidValues() {
     DataNodeMetrics mockMetrics = mock(DataNodeMetrics.class);
-    DFSUtil.addTransferRateMetric(mockMetrics, 100, 10);
-    verify(mockMetrics).addReadTransferRate(10000);
+    DFSUtil.addTransferRateMetric(mockMetrics, 3_251_854_872L, 129_593_000_000L);
+    verify(mockMetrics).addReadTransferRate(250_92_828L);
   }
 
   @Test
-  public void testAddTransferRateMetricForInvalidValue() {
+  public void testAddTransferRateMetricForZeroNSTransferDuration() {
     DataNodeMetrics mockMetrics = mock(DataNodeMetrics.class);
-    DFSUtil.addTransferRateMetric(mockMetrics, 100, 0);
-    verify(mockMetrics, times(0)).addReadTransferRate(anyLong());
+    DFSUtil.addTransferRateMetric(mockMetrics, 1L, 0);
+    verify(mockMetrics).addReadTransferRate(999_999_999L);
+  }
+
+  @Test
+  public void testAddTransferRateMetricNegativeTransferBytes() {
+    DataNodeMetrics mockMetrics = mock(DataNodeMetrics.class);
+    DFSUtil.addTransferRateMetric(mockMetrics, -1L, 0);
+    verify(mockMetrics).addReadTransferRate(0L);
+  }
+
+  @Test
+  public void testAddTransferRateMetricZeroTransferBytes() {
+    DataNodeMetrics mockMetrics = mock(DataNodeMetrics.class);
+    DFSUtil.addTransferRateMetric(mockMetrics, -1L, 0);
+    verify(mockMetrics).addReadTransferRate(0L);
+  }
+
+  @Test
+  public void testGetTransferRateInBytesPerSecond() {
+    assertEquals(999_999_999, DFSUtil.getTransferRateInBytesPerSecond(1L, 1L));
+    assertEquals(999_999_999, DFSUtil.getTransferRateInBytesPerSecond(1L, 0L));
+    assertEquals(102_400_000,
+        DFSUtil.getTransferRateInBytesPerSecond(512_000_000L, 5_000_000_000L));
+  }
+
+  @Test
+  public void testLazyResolved() {
+    // Not lazy resolved.
+    testLazyResolved(false);
+    // Lazy resolved.
+    testLazyResolved(true);
+  }
+
+  private void testLazyResolved(boolean isLazy) {
+    final String ns1Nn1 = "localhost:8020";
+    final String ns1Nn2 = "127.0.0.1:8020";
+    final String ns2Nn1 = "127.0.0.2:8020";
+    final String ns2Nn2 = "127.0.0.3:8020";
+
+    HdfsConfiguration conf = new HdfsConfiguration();
+
+    conf.set(DFS_NAMESERVICES, "ns1,ns2");
+    conf.set(DFSUtil.addKeySuffixes(DFS_HA_NAMENODES_KEY_PREFIX, "ns1"), "nn1,nn2");
+    conf.set(DFSUtil.addKeySuffixes(
+        DFS_NAMENODE_RPC_ADDRESS_KEY, "ns1", "nn1"), ns1Nn1);
+    conf.set(DFSUtil.addKeySuffixes(
+        DFS_NAMENODE_RPC_ADDRESS_KEY, "ns1", "nn2"), ns1Nn2);
+    conf.set(DFSUtil.addKeySuffixes(DFS_HA_NAMENODES_KEY_PREFIX, "ns2"), "nn1,nn2");
+    conf.set(DFSUtil.addKeySuffixes(
+        DFS_NAMENODE_RPC_ADDRESS_KEY, "ns2", "nn1"), ns2Nn1);
+    conf.set(DFSUtil.addKeySuffixes(
+        DFS_NAMENODE_RPC_ADDRESS_KEY, "ns2", "nn2"), ns2Nn2);
+
+    conf.setBoolean(HdfsClientConfigKeys.Failover.DFS_CLIENT_LAZY_RESOLVED, isLazy);
+
+    Map<String, Map<String, InetSocketAddress>> addresses =
+        DFSUtilClient.getAddresses(conf, null, DFS_NAMENODE_RPC_ADDRESS_KEY);
+
+    addresses.forEach((ns, inetSocketAddressMap) -> {
+      inetSocketAddressMap.forEach((nn, inetSocketAddress) -> {
+        if (isLazy) {
+          // Lazy resolved. There is no need to change host->ip in advance.
+          assertTrue(inetSocketAddress.isUnresolved());
+        }else {
+          // Need resolve all host->ip.
+          assertFalse(inetSocketAddress.isUnresolved());
+        }
+        assertEquals(inetSocketAddress.getPort(), 8020);
+      });
+    });
   }
 }

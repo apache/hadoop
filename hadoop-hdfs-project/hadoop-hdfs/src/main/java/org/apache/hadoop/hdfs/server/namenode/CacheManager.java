@@ -17,6 +17,12 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CRM_CHECKLOCKTIME_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CRM_CHECKLOCKTIME_ENABLE;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CRM_MAXLOCKTIME_MS;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CRM_MAXLOCKTIME_MS_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CRM_SLEEP_TIME_MS;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CRM_SLEEP_TIME_MS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_PATH_BASED_CACHE_BLOCK_MAP_ALLOCATION_PERCENT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_PATH_BASED_CACHE_BLOCK_MAP_ALLOCATION_PERCENT_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_LIST_CACHE_DIRECTIVES_NUM_RESPONSES;
@@ -194,6 +200,9 @@ public class CacheManager {
    * The CacheReplicationMonitor.
    */
   private CacheReplicationMonitor monitor;
+  private boolean isCheckLockTimeEnable;
+  private long maxLockTimeMs;
+  private long sleepTimeMs;
 
   public static final class PersistState {
     public final CacheManagerSection section;
@@ -235,10 +244,29 @@ public class CacheManager {
     this.cachedBlocks = enabled ? new LightWeightGSet<CachedBlock, CachedBlock>(
           LightWeightGSet.computeCapacity(cachedBlocksPercent,
               "cachedBlocks")) : new LightWeightGSet<>(0);
+    this.isCheckLockTimeEnable = conf.getBoolean(
+        DFS_NAMENODE_CRM_CHECKLOCKTIME_ENABLE,
+        DFS_NAMENODE_CRM_CHECKLOCKTIME_DEFAULT);
+    this.maxLockTimeMs = conf.getLong(DFS_NAMENODE_CRM_MAXLOCKTIME_MS,
+        DFS_NAMENODE_CRM_MAXLOCKTIME_MS_DEFAULT);
+    this.sleepTimeMs = conf.getLong(DFS_NAMENODE_CRM_SLEEP_TIME_MS,
+        DFS_NAMENODE_CRM_SLEEP_TIME_MS_DEFAULT);
   }
 
   public boolean isEnabled() {
     return enabled;
+  }
+
+  public boolean isCheckLockTimeEnable() {
+    return isCheckLockTimeEnable;
+  }
+
+  public long getMaxLockTimeMs() {
+    return this.maxLockTimeMs;
+  }
+
+  public long getSleepTimeMs() {
+    return this.sleepTimeMs;
   }
 
   /**

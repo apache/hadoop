@@ -31,6 +31,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.nio.channels.SocketChannel;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -332,7 +333,7 @@ public class TestWebHdfsTimeouts {
 
           // Write response.
           out = clientSocket.getOutputStream();
-          out.write(temporaryRedirect().getBytes("UTF-8"));
+          out.write(temporaryRedirect().getBytes(StandardCharsets.UTF_8));
         } catch (IOException e) {
           // Fail the test on any I/O error in the server thread.
           LOG.error("unexpected IOException in server thread", e);

@@ -36,7 +36,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.DigestOutputStream;
@@ -622,7 +622,7 @@ class OfflineImageReconstructor {
     inodeBld.setId(id);
     String name = node.removeChildStr(SECTION_NAME);
     if (name != null) {
-      inodeBld.setName(ByteString.copyFrom(name, "UTF8"));
+      inodeBld.setName(ByteString.copyFrom(name, StandardCharsets.UTF_8));
     }
     switch (type) {
     case "FILE":
@@ -838,7 +838,7 @@ class OfflineImageReconstructor {
     }
     String target = node.removeChildStr(INODE_SECTION_TARGET);
     if (target != null) {
-      bld.setTarget(ByteString.copyFrom(target, "UTF8"));
+      bld.setTarget(ByteString.copyFrom(target, StandardCharsets.UTF_8));
     }
     Long lval = node.removeChildLong(INODE_SECTION_MTIME);
     if (lval != null) {
@@ -900,7 +900,7 @@ class OfflineImageReconstructor {
         }
         val = new HexBinaryAdapter().unmarshal(valHex);
       } else {
-        val = valStr.getBytes("UTF8");
+        val = valStr.getBytes(StandardCharsets.UTF_8);
       }
       b.setValue(ByteString.copyFrom(val));
 
@@ -1232,7 +1232,7 @@ class OfflineImageReconstructor {
         }
         String name = inodeRef.removeChildStr("name");
         if (name != null) {
-          bld.setName(ByteString.copyFrom(name, "UTF8"));
+          bld.setName(ByteString.copyFrom(name, StandardCharsets.UTF_8));
         }
         Integer dstSnapshotId = inodeRef.removeChildInt(
             INODE_REFERENCE_SECTION_DST_SNAPSHOT_ID);
@@ -1468,7 +1468,7 @@ class OfflineImageReconstructor {
         bld.setChildrenSize(childrenSize);
         String name = dirDiff.removeChildStr(SECTION_NAME);
         if (name != null) {
-          bld.setName(ByteString.copyFrom(name, "UTF8"));
+          bld.setName(ByteString.copyFrom(name, StandardCharsets.UTF_8));
         }
         Node snapshotCopy = dirDiff.removeChild(
             SNAPSHOT_DIFF_SECTION_SNAPSHOT_COPY);
@@ -1514,7 +1514,7 @@ class OfflineImageReconstructor {
           }
           created.verifyNoRemainingKeys("created");
           FsImageProto.SnapshotDiffSection.CreatedListEntry.newBuilder().
-              setName(ByteString.copyFrom(cleName, "UTF8")).
+              setName(ByteString.copyFrom(cleName, StandardCharsets.UTF_8)).
               build().writeDelimitedTo(out);
           actualCreatedListSize++;
         }
@@ -1571,7 +1571,7 @@ class OfflineImageReconstructor {
         }
         String name = fileDiff.removeChildStr(SECTION_NAME);
         if (name != null) {
-          bld.setName(ByteString.copyFrom(name, "UTF8"));
+          bld.setName(ByteString.copyFrom(name, StandardCharsets.UTF_8));
         }
         Node snapshotCopy = fileDiff.removeChild(
             SNAPSHOT_DIFF_SECTION_SNAPSHOT_COPY);
@@ -1840,7 +1840,7 @@ class OfflineImageReconstructor {
       Files.deleteIfExists(Paths.get(outputPath));
       fout = Files.newOutputStream(Paths.get(outputPath));
       fis = Files.newInputStream(Paths.get(inputPath));
-      reader = new InputStreamReader(fis, Charset.forName("UTF-8"));
+      reader = new InputStreamReader(fis, StandardCharsets.UTF_8);
       out = new CountingOutputStream(
           new DigestOutputStream(
               new BufferedOutputStream(fout), digester));

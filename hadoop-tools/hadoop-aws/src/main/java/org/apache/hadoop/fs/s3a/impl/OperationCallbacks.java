@@ -69,7 +69,7 @@ public interface OperationCallbacks {
    * Create the read context for reading from the referenced file,
    * using FS state as well as the status.
    * @param fileStatus file status.
-   * @return a context for read and select operations.
+   * @return a context for read operations.
    */
   S3AReadOpContext createReadContext(
       FileStatus fileStatus);
@@ -164,4 +164,16 @@ public interface OperationCallbacks {
       Path path,
       String key)
       throws IOException;
+
+  /**
+   * Abort multipart uploads under a path; paged.
+   * @param prefix prefix for uploads to abort
+   * @return a count of aborts
+   * @throws IOException trouble; FileNotFoundExceptions are swallowed.
+   */
+  @Retries.RetryTranslated
+  default long abortMultipartUploadsUnderPrefix(String prefix)
+      throws IOException {
+    return 0;
+  }
 }

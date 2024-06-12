@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.s3a.commit.ITestCommitOperations;
 
 import static org.apache.hadoop.fs.s3a.Constants.ASSUMED_ROLE_ARN;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableCreateSession;
 import static org.apache.hadoop.fs.s3a.auth.RoleModel.*;
 import static org.apache.hadoop.fs.s3a.auth.RolePolicies.*;
 import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.*;
@@ -52,6 +53,11 @@ public class ITestAssumedRoleCommitOperations extends ITestCommitOperations {
    * A role FS; if non-null it is closed in teardown.
    */
   private S3AFileSystem roleFS;
+
+  @Override
+  protected Configuration createConfiguration() {
+    return disableCreateSession(super.createConfiguration());
+  }
 
   @Override
   public void setup() throws Exception {

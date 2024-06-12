@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.client.cli;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
 import java.util.Arrays;
@@ -32,6 +31,7 @@ import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.MissingArgumentException;
 import org.apache.commons.cli.Options;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.util.ToolRunner;
@@ -41,6 +41,8 @@ import org.apache.hadoop.yarn.client.util.FormattingCLIUtils;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+
+import static org.apache.hadoop.yarn.client.util.YarnClientUtils.isYarnFederationEnabled;
 
 @Private
 @Unstable
@@ -70,7 +72,8 @@ public class QueueCLI extends YarnCLI {
          "All child queues are displayed according to the parent queue. " +
          "If the value is all, all queues are displayed.");
     opts.getOption(LIST_CMD).setArgName("Parent Queue Name");
-
+    opts.addOption(OPTION_SUBCLUSTERID, true, "We support setting subClusterId in " +
+        "YARN Federation mode to specify specific subClusters.");
 
     CommandLine cliParser = null;
     try {
@@ -82,11 +85,19 @@ public class QueueCLI extends YarnCLI {
     }
     createAndStartYarnClient();
     if (cliParser.hasOption(STATUS_CMD)) {
-      if (args.length != 2) {
+      // Our possible options are -status root.a,
+      // -subcluster sc-1, we will have up to 4 args
+      if (args.length > 4) {
         printUsage(opts);
         return -1;
       }
-      return listQueue(cliParser.getOptionValue(STATUS_CMD));
+      String queue = cliParser.getOptionValue(STATUS_CMD);
+      String subClusterId = cliParser.getOptionValue(OPTION_SUBCLUSTERID);
+      if (isYarnFederationEnabled(getConf()) && StringUtils.isNotBlank(subClusterId)) {
+        return listQueue(queue, subClusterId);
+      } else {
+        return listQueue(queue);
+      }
     } else if (cliParser.hasOption(HELP_CMD)) {
       printUsage(opts);
       return 0;
@@ -116,23 +127,62 @@ public class QueueCLI extends YarnCLI {
   /**
    * Lists the Queue Information matching the given queue name.
    * 
-   * @param queueName
-   * @throws YarnException
-   * @throws IOException
+   * @param queueName Queue name to be queried.
+   * @throws YarnException YarnException indicates exceptions from yarn servers.
+   * @throws IOException I/O exception has occurred.
+   * @return 0, the command execution is successful; -1, the command execution fails.
    */
   private int listQueue(String queueName) throws YarnException, IOException {
     int rc;
     PrintWriter writer = new PrintWriter(
-        new OutputStreamWriter(sysout, Charset.forName("UTF-8")));
+        new OutputStreamWriter(sysout, StandardCharsets.UTF_8));
 
     QueueInfo queueInfo = client.getQueueInfo(queueName);
     if (queueInfo != null) {
+      if (isYarnFederationEnabled(getConf())) {
+        writer.println("Using YARN Federation mode.");
+      }
       writer.println("Queue Information : ");
       printQueueInfo(writer, queueInfo);
       rc = 0;
     } else {
       writer.println("Cannot get queue from RM by queueName = " + queueName
           + ", please check.");
+      rc = -1;
+    }
+    writer.flush();
+    return rc;
+  }
+
+  /**
+   * Lists the Queue Information matching the given queue name.
+   *
+   * @param queueName Queue name to be queried.
+   * @param subClusterId Subcluster id.
+   * @throws YarnException YarnException indicates exceptions from yarn servers.
+   * @throws IOException I/O exception has occurred.
+   * @return 0, the command execution is successful; -1, the command execution fails.
+   */
+  private int listQueue(String queueName, String subClusterId)
+      throws YarnException, IOException {
+    int rc;
+    PrintWriter writer = new PrintWriter(
+        new OutputStreamWriter(sysout, StandardCharsets.UTF_8));
+    QueueInfo queueInfo = client.getQueueInfo(queueName, subClusterId);
+    if (queueInfo != null) {
+      if (isYarnFederationEnabled(getConf())) {
+        writer.println("Using YARN Federation mode.");
+      }
+      if (StringUtils.isNotBlank(subClusterId)) {
+        writer.println("SubClusterId : " + subClusterId + ", Queue Information : ");
+      } else {
+        writer.println("Queue Information : ");
+      }
+      printQueueInfo(writer, queueInfo);
+      rc = 0;
+    } else {
+      writer.println("Cannot get queue from RM by queueName = " + queueName
+          + ", subClusterId = " + subClusterId + " please check.");
       rc = -1;
     }
     writer.flush();
@@ -149,7 +199,7 @@ public class QueueCLI extends YarnCLI {
   private int listChildQueues(String parentQueueName) throws IOException, YarnException {
     int exitCode;
     PrintWriter writer = new PrintWriter(new OutputStreamWriter(
-        sysout, Charset.forName(StandardCharsets.UTF_8.name())));
+        sysout, StandardCharsets.UTF_8));
     if (parentQueueName.equalsIgnoreCase(ALLTAG)) {
       List<QueueInfo> queueInfos = client.getAllQueues();
       if (queueInfos != null) {
@@ -174,6 +224,66 @@ public class QueueCLI extends YarnCLI {
   }
 
   private void printQueueInfo(PrintWriter writer, QueueInfo queueInfo) {
+    String schedulerType = queueInfo.getSchedulerType();
+
+    if (StringUtils.equals("FairScheduler", schedulerType)) {
+      printFairSchedulerQueue(writer, queueInfo);
+    } else {
+      printQueue(writer, queueInfo);
+    }
+  }
+
+  /**
+   * Print Queue information of FairScheduler.
+   *
+   * @param writer PrintWriter.
+   * @param queueInfo Queue Information.
+   */
+  private void printFairSchedulerQueue(PrintWriter writer, QueueInfo queueInfo) {
+    String generateQueueInfoMessage = generateQueueInfoMessage(queueInfo);
+    writer.print(generateQueueInfoMessage);
+  }
+
+  private String generateQueueInfoMessage(QueueInfo queueInfo) {
+    StringBuilder stringBuilder = new StringBuilder();
+    if (queueInfo.getSchedulerType() != null) {
+      stringBuilder.append("Scheduler Name : ").append(queueInfo.getSchedulerType()).append("\n");
+    }
+    stringBuilder.append("Queue Name : ").append(queueInfo.getQueueName()).append("\n");
+    DecimalFormat df = new DecimalFormat("0.00");
+    stringBuilder.append("\tWeight : ").append(df.format(queueInfo.getWeight())).append("\n");
+    stringBuilder.append("\tState : ").append(queueInfo.getQueueState()).append("\n");
+    stringBuilder.append("\tMinResource : ").append("<memory : ")
+        .append(queueInfo.getMinResourceMemory()).append(", vCores:")
+        .append(queueInfo.getMinResourceVCore()).append(">").append("\n");
+    stringBuilder.append("\tMaxResource : ").append("<memory : ")
+        .append(queueInfo.getMaxResourceMemory()).append(", vCores:")
+        .append(queueInfo.getMaxResourceVCore()).append(">").append("\n");
+    stringBuilder.append("\tReservedResource : ").append("<memory : ")
+        .append(queueInfo.getReservedResourceMemory()).append(", vCores:")
+        .append(queueInfo.getReservedResourceVCore()).append(">").append("\n");
+    stringBuilder.append("\tSteadyFairShare : ").append("<memory : ")
+        .append(queueInfo.getSteadyFairShareMemory()).append(", vCores:")
+        .append(queueInfo.getSteadyFairShareVCore()).append(">").append("\n");
+    Boolean queuePreemption = queueInfo.getPreemptionDisabled();
+    if (queuePreemption != null) {
+      stringBuilder.append("\tQueue Preemption : ")
+          .append(queuePreemption ? "enabled" : "disabled").append("\n");
+    }
+    return stringBuilder.toString();
+  }
+
+  /**
+   * Print Queue information.
+   *
+   * @param writer PrintWriter.
+   * @param queueInfo Queue Information.
+   */
+  private void printQueue(PrintWriter writer, QueueInfo queueInfo) {
+    if (queueInfo.getSchedulerType() != null) {
+      writer.print("Scheduler Name : ");
+      writer.println(queueInfo.getSchedulerType());
+    }
     writer.print("Queue Name : ");
     writer.println(queueInfo.getQueueName());
     writer.print("Queue Path : ");
@@ -208,7 +318,7 @@ public class QueueCLI extends YarnCLI {
       }
       labelList.append(nodeLabel);
     }
-    writer.println(labelList.toString());
+    writer.println(labelList);
 
     Boolean preemptStatus = queueInfo.getPreemptionDisabled();
     if (preemptStatus != null) {

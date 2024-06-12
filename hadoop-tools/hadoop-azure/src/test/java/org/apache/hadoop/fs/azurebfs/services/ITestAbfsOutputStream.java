@@ -18,21 +18,27 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 import org.apache.hadoop.test.LambdaTestUtils;
+
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_IS_EXPECT_HEADER_ENABLED;
 
 /**
  * Test create operation.
@@ -146,6 +152,61 @@ public class ITestAbfsOutputStream extends AbstractAbfsIntegrationTest {
       LambdaTestUtils
           .intercept(PathIOException.class, getMethodName(), out::close);
     }
+  }
+
+  @Test
+  public void testExpect100ContinueFailureInAppend() throws Exception {
+    Configuration configuration = new Configuration(getRawConfiguration());
+    configuration.set(FS_AZURE_ACCOUNT_IS_EXPECT_HEADER_ENABLED, "true");
+    AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(
+        configuration);
+    Path path = new Path("/testFile");
+    AbfsOutputStream os = Mockito.spy(
+        (AbfsOutputStream) fs.create(path).getWrappedStream());
+    AbfsClient spiedClient = Mockito.spy(os.getClient());
+    AbfsHttpOperation[] httpOpForAppendTest = new AbfsHttpOperation[2];
+    mockSetupForAppend(httpOpForAppendTest, spiedClient);
+    Mockito.doReturn(spiedClient).when(os).getClient();
+    fs.delete(path, true);
+    os.write(1);
+    LambdaTestUtils.intercept(FileNotFoundException.class, () -> {
+      os.close();
+    });
+    Assertions.assertThat(httpOpForAppendTest[0].getConnectionDisconnectedOnError())
+        .describedAs("First try from AbfsClient will have expect-100 "
+            + "header and should fail with expect-100 error.").isTrue();
+    Mockito.verify(httpOpForAppendTest[0], Mockito.times(0))
+        .processConnHeadersAndInputStreams(Mockito.any(byte[].class),
+            Mockito.anyInt(), Mockito.anyInt());
+
+    Assertions.assertThat(httpOpForAppendTest[1].getConnectionDisconnectedOnError())
+        .describedAs("The retried operation from AbfsClient should not "
+            + "fail with expect-100 error. The retried operation does not have"
+            + "expect-100 header.").isFalse();
+    Mockito.verify(httpOpForAppendTest[1], Mockito.times(1))
+        .processConnHeadersAndInputStreams(Mockito.any(byte[].class),
+            Mockito.anyInt(), Mockito.anyInt());
+  }
+
+  private void mockSetupForAppend(final AbfsHttpOperation[] httpOpForAppendTest,
+      final AbfsClient spiedClient) {
+    int[] index = new int[1];
+    index[0] = 0;
+    Mockito.doAnswer(abfsRestOpAppendGetInvocation -> {
+          AbfsRestOperation op = Mockito.spy(
+              (AbfsRestOperation) abfsRestOpAppendGetInvocation.callRealMethod());
+          Mockito.doAnswer(createHttpOpInvocation -> {
+            httpOpForAppendTest[index[0]] = Mockito.spy(
+                (AbfsHttpOperation) createHttpOpInvocation.callRealMethod());
+            return httpOpForAppendTest[index[0]++];
+          }).when(op).createHttpOperation();
+          return op;
+        })
+        .when(spiedClient)
+        .getAbfsRestOperation(Mockito.any(AbfsRestOperationType.class),
+            Mockito.anyString(), Mockito.any(
+                URL.class), Mockito.anyList(), Mockito.any(byte[].class),
+            Mockito.anyInt(), Mockito.anyInt(), Mockito.nullable(String.class));
   }
 
   /**

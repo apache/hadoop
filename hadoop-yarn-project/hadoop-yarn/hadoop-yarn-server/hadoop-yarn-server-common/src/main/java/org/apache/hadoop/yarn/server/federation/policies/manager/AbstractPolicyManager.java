@@ -21,6 +21,7 @@ import org.apache.hadoop.yarn.server.federation.policies.ConfigurableFederationP
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitializationContext;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitializationContextValidator;
 import org.apache.hadoop.yarn.server.federation.policies.amrmproxy.FederationAMRMProxyPolicy;
+import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
 import org.apache.hadoop.yarn.server.federation.policies.router.FederationRouterPolicy;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
@@ -53,10 +54,10 @@ public abstract class AbstractPolicyManager implements
    * @param federationPolicyContext the current context
    * @param oldInstance             the existing (possibly null) instance.
    *
-   * @return a valid and fully reinitalized {@link FederationAMRMProxyPolicy}
+   * @return a valid and fully reinitialized {@link FederationAMRMProxyPolicy}
    * instance
    *
-   * @throws FederationPolicyInitializationException if the reinitalization is
+   * @throws FederationPolicyInitializationException if the reinitialization is
    *                                                 not valid, and ensure
    *                                                 previous state is preserved
    */
@@ -89,10 +90,10 @@ public abstract class AbstractPolicyManager implements
    * @param federationPolicyContext the current context
    * @param oldInstance             the existing (possibly null) instance.
    *
-   * @return a valid and fully reinitalized {@link FederationRouterPolicy}
+   * @return a valid and fully reinitialized {@link FederationRouterPolicy}
    * instance
    *
-   * @throws FederationPolicyInitializationException if the reinitalization is
+   * @throws FederationPolicyInitializationException if the reinitialization is
    *                                                 not valid, and ensure
    *                                                 previous state is preserved
    */
@@ -187,4 +188,17 @@ public abstract class AbstractPolicyManager implements
                   federationPolicyContext.getHomeSubcluster());
   }
 
+  /**
+   * We get the WeightedPolicyInfo of the subCluster.
+   *
+   * @return WeightedPolicyInfo.
+   */
+  public abstract WeightedPolicyInfo getWeightedPolicyInfo();
+
+  /**
+   * We set the WeightedPolicyInfo of the subCluster.
+   *
+   * @param weightedPolicyInfo weightedPolicyInfo of the subCluster.
+   */
+  public abstract void setWeightedPolicyInfo(WeightedPolicyInfo weightedPolicyInfo);
 }

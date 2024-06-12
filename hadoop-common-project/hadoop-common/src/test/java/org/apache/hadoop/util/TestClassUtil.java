@@ -39,7 +39,7 @@ public class TestClassUtil {
         .exists();
     assertThat(jarFile.getName())
         .describedAs("Containing jar name %s", jarFile.getName())
-        .matches("log4j.*[.]jar");
+        .matches("reload4j.*[.]jar");
   }
 
   @Test(timeout = 10000)

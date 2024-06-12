@@ -102,7 +102,7 @@ public class DataNodeMetrics {
   final MutableQuantiles[]   ramDiskBlocksLazyPersistWindowMsQuantiles;
 
   @Metric MutableCounterLong fsyncCount;
-  
+
   @Metric MutableCounterLong volumeFailures;
 
   @Metric("Count of network errors on the datanode")
@@ -110,6 +110,12 @@ public class DataNodeMetrics {
 
   @Metric("Count of active dataNode xceivers")
   private MutableGaugeInt dataNodeActiveXceiversCount;
+
+  @Metric("Count of read active dataNode xceivers")
+  private MutableGaugeInt dataNodeReadActiveXceiversCount;
+
+  @Metric("Count of write active dataNode xceivers")
+  private MutableGaugeInt dataNodeWriteActiveXceiversCount;
 
   @Metric("Count of active DataNode packetResponder")
   private MutableGaugeInt dataNodePacketResponderCount;
@@ -126,6 +132,7 @@ public class DataNodeMetrics {
   @Metric MutableRate heartbeatsTotal;
   @Metric MutableRate lifelines;
   @Metric MutableRate blockReports;
+  @Metric private MutableRate blockReportsCreateCostMills;
   @Metric MutableRate incrementalBlockReports;
   @Metric MutableRate cacheReports;
   @Metric MutableRate packetAckRoundTripTimeNanos;
@@ -178,6 +185,8 @@ public class DataNodeMetrics {
   private MutableCounterLong numProcessedCommands;
   @Metric("Rate of processed commands of all BPServiceActors")
   private MutableRate processedCommandsOp;
+  @Metric("Number of blocks in IBRs that failed due to null storage")
+  private MutableCounterLong nullStorageBlockReports;
 
   // FsDatasetImpl local file process metrics.
   @Metric private MutableRate createRbwOp;
@@ -313,6 +322,10 @@ public class DataNodeMetrics {
     if (rpcMetricSuffix != null) {
       nnRpcLatency.add("BlockReportsFor" + rpcMetricSuffix, latency);
     }
+  }
+
+  public void addBlockReportCreateCost(long latency) {
+    blockReportsCreateCostMills.add(latency);
   }
 
   public void addIncrementalBlockReport(long latency,
@@ -599,6 +612,30 @@ public class DataNodeMetrics {
     return dataNodeActiveXceiversCount.value();
   }
 
+  public void incrDataNodeReadActiveXceiversCount(){
+    dataNodeReadActiveXceiversCount.incr();
+  }
+
+  public void decrDataNodeReadActiveXceiversCount(){
+    dataNodeReadActiveXceiversCount.decr();
+  }
+
+  public void setDataNodeReadActiveXceiversCount(int value){
+    dataNodeReadActiveXceiversCount.set(value);
+  }
+
+  public void incrDataNodeWriteActiveXceiversCount(){
+    dataNodeWriteActiveXceiversCount.incr();
+  }
+
+  public void decrDataNodeWriteActiveXceiversCount(){
+    dataNodeWriteActiveXceiversCount.decr();
+  }
+
+  public void setDataNodeWriteActiveXceiversCount(int value){
+    dataNodeWriteActiveXceiversCount.set(value);
+  }
+
   public void incrDataNodePacketResponderCount() {
     dataNodePacketResponderCount.incr();
   }
@@ -777,4 +814,7 @@ public class DataNodeMetrics {
     replaceBlockOpToOtherHost.incr();
   }
 
+  public void incrNullStorageBlockReports() {
+    nullStorageBlockReports.incr();
+  }
 }

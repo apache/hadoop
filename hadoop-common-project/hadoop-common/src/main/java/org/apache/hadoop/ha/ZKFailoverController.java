@@ -59,6 +59,8 @@ import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFact
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.security.SecurityUtil.TruststoreKeystore;
+
 @InterfaceAudience.LimitedPrivate("HDFS")
 public abstract class ZKFailoverController {
 
@@ -147,6 +149,7 @@ public abstract class ZKFailoverController {
   protected abstract InetSocketAddress getRpcAddressToBindTo();
   protected abstract PolicyProvider getPolicyProvider();
   protected abstract List<HAServiceTarget> getAllOtherNodes();
+  protected abstract boolean isSSLEnabled();
 
   /**
    * Return the name of a znode inside the configured parent znode in which
@@ -372,9 +375,10 @@ public abstract class ZKFailoverController {
     int maxRetryNum = conf.getInt(
         CommonConfigurationKeys.HA_FC_ELECTOR_ZK_OP_RETRIES_KEY,
         CommonConfigurationKeys.HA_FC_ELECTOR_ZK_OP_RETRIES_DEFAULT);
+    TruststoreKeystore truststoreKeystore = isSSLEnabled() ? new TruststoreKeystore(conf) : null;
     elector = new ActiveStandbyElector(zkQuorum,
         zkTimeout, getParentZnode(), zkAcls, zkAuths,
-        new ElectorCallbacks(), maxRetryNum);
+        new ElectorCallbacks(), maxRetryNum, truststoreKeystore);
   }
   
   private String getParentZnode() {
@@ -656,6 +660,7 @@ public abstract class ZKFailoverController {
   private void doGracefulFailover()
       throws ServiceFailedException, IOException, InterruptedException {
     int timeout = FailoverController.getGracefulFenceTimeout(conf) * 2;
+    Preconditions.checkArgument(timeout >= 0, "timeout should be non-negative.");
     
     // Phase 1: pre-flight checks
     checkEligibleForFailover();

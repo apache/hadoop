@@ -35,16 +35,18 @@ import org.mockito.Mockito;
 public class TestAvailableSpaceVolumeChoosingPolicy {
   
   private static final int RANDOMIZED_ITERATIONS = 10000;
+  private static final int BALANCED_SPACE_THRESHOLD = 1024 * 1024; // 1MB
   private static final float RANDOMIZED_ERROR_PERCENT = 0.05f;
   private static final long RANDOMIZED_ALLOWED_ERROR = (long) (RANDOMIZED_ERROR_PERCENT * RANDOMIZED_ITERATIONS);
   
   private static void initPolicy(VolumeChoosingPolicy<FsVolumeSpi> policy,
+      long balanceSpaceThreshold,
       float preferencePercent) {
     Configuration conf = new Configuration();
     // Set the threshold to consider volumes imbalanced to 1MB
     conf.setLong(
         DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_BALANCED_SPACE_THRESHOLD_KEY,
-        1024 * 1024); // 1MB
+        balanceSpaceThreshold);
     conf.setFloat(
         DFS_DATANODE_AVAILABLE_SPACE_VOLUME_CHOOSING_POLICY_BALANCED_SPACE_PREFERENCE_FRACTION_KEY,
         preferencePercent);
@@ -58,7 +60,7 @@ public class TestAvailableSpaceVolumeChoosingPolicy {
     @SuppressWarnings("unchecked")
     final AvailableSpaceVolumeChoosingPolicy<FsVolumeSpi> policy = 
         ReflectionUtils.newInstance(AvailableSpaceVolumeChoosingPolicy.class, null);
-    initPolicy(policy, 1.0f);
+    initPolicy(policy, BALANCED_SPACE_THRESHOLD, 1.0f);
     TestRoundRobinVolumeChoosingPolicy.testRR(policy);
   }
   
@@ -68,7 +70,7 @@ public class TestAvailableSpaceVolumeChoosingPolicy {
   public void testRRPolicyExceptionMessage() throws Exception {
     final AvailableSpaceVolumeChoosingPolicy<FsVolumeSpi> policy
         = new AvailableSpaceVolumeChoosingPolicy<FsVolumeSpi>();
-    initPolicy(policy, 1.0f);
+    initPolicy(policy, BALANCED_SPACE_THRESHOLD, 1.0f);
     TestRoundRobinVolumeChoosingPolicy.testRRPolicyExceptionMessage(policy);
   }
   
@@ -77,7 +79,7 @@ public class TestAvailableSpaceVolumeChoosingPolicy {
     @SuppressWarnings("unchecked")
     final AvailableSpaceVolumeChoosingPolicy<FsVolumeSpi> policy = 
         ReflectionUtils.newInstance(AvailableSpaceVolumeChoosingPolicy.class, null);
-    initPolicy(policy, 1.0f);
+    initPolicy(policy, BALANCED_SPACE_THRESHOLD, 1.0f);
     
     List<FsVolumeSpi> volumes = new ArrayList<FsVolumeSpi>();
     
@@ -120,7 +122,7 @@ public class TestAvailableSpaceVolumeChoosingPolicy {
 
     // We should alternate assigning between the two volumes with a lot of free
     // space.
-    initPolicy(policy, 1.0f);
+    initPolicy(policy, BALANCED_SPACE_THRESHOLD, 1.0f);
     Assert.assertEquals(volumes.get(1), policy.chooseVolume(volumes, 100,
         null));
     Assert.assertEquals(volumes.get(2), policy.chooseVolume(volumes, 100,
@@ -131,7 +133,7 @@ public class TestAvailableSpaceVolumeChoosingPolicy {
         null));
 
     // All writes should be assigned to the volume with the least free space.
-    initPolicy(policy, 0.0f);
+    initPolicy(policy, BALANCED_SPACE_THRESHOLD, 0.0f);
     Assert.assertEquals(volumes.get(0), policy.chooseVolume(volumes, 100,
         null));
     Assert.assertEquals(volumes.get(0), policy.chooseVolume(volumes, 100,
@@ -141,7 +143,57 @@ public class TestAvailableSpaceVolumeChoosingPolicy {
     Assert.assertEquals(volumes.get(0), policy.chooseVolume(volumes, 100,
         null));
   }
-  
+
+
+  @Test(timeout=60000)
+  public void testSameAvailableVolumeSpace() throws Exception {
+    @SuppressWarnings("unchecked")
+    final AvailableSpaceVolumeChoosingPolicy<FsVolumeSpi> policy =
+            ReflectionUtils.newInstance(AvailableSpaceVolumeChoosingPolicy.class, null);
+
+    List<FsVolumeSpi> volumes = new ArrayList<FsVolumeSpi>();
+
+    // first volume with 1MB free space
+    volumes.add(Mockito.mock(FsVolumeSpi.class));
+    Mockito.when(volumes.get(0).getAvailable()).thenReturn(1024L * 1024L);
+
+    // Second volume with 1MB free space
+    volumes.add(Mockito.mock(FsVolumeSpi.class));
+    Mockito.when(volumes.get(1).getAvailable()).thenReturn(1024L * 1024L);
+
+    // Third volume with 1MB free space
+    volumes.add(Mockito.mock(FsVolumeSpi.class));
+    Mockito.when(volumes.get(2).getAvailable()).thenReturn(1024L * 1024L);
+
+    // Fourth volume with 1MB free space
+    volumes.add(Mockito.mock(FsVolumeSpi.class));
+    Mockito.when(volumes.get(3).getAvailable()).thenReturn(1024L * 1024L);
+
+    // We should alternate assigning between all the above volumes
+    // for they have the same available space
+    initPolicy(policy, 0, 1.0f);
+    Assert.assertEquals(volumes.get(0), policy.chooseVolume(volumes, 100,
+            null));
+    Assert.assertEquals(volumes.get(1), policy.chooseVolume(volumes, 100,
+            null));
+    Assert.assertEquals(volumes.get(2), policy.chooseVolume(volumes, 100,
+            null));
+    Assert.assertEquals(volumes.get(3), policy.chooseVolume(volumes, 100,
+            null));
+
+    // We should alternate assigning between all the above volumes
+    // for they have the same available space
+    initPolicy(policy, 0, 0.0f);
+    Assert.assertEquals(volumes.get(0), policy.chooseVolume(volumes, 100,
+            null));
+    Assert.assertEquals(volumes.get(1), policy.chooseVolume(volumes, 100,
+            null));
+    Assert.assertEquals(volumes.get(2), policy.chooseVolume(volumes, 100,
+            null));
+    Assert.assertEquals(volumes.get(3), policy.chooseVolume(volumes, 100,
+            null));
+  }
+
   @Test(timeout=60000)
   public void testFourUnbalancedVolumes() throws Exception {
     @SuppressWarnings("unchecked")
@@ -169,7 +221,7 @@ public class TestAvailableSpaceVolumeChoosingPolicy {
 
     // We should alternate assigning between the two volumes with a lot of free
     // space.
-    initPolicy(policy, 1.0f);
+    initPolicy(policy, BALANCED_SPACE_THRESHOLD, 1.0f);
     Assert.assertEquals(volumes.get(2), policy.chooseVolume(volumes, 100,
         null));
     Assert.assertEquals(volumes.get(3), policy.chooseVolume(volumes, 100,
@@ -181,7 +233,7 @@ public class TestAvailableSpaceVolumeChoosingPolicy {
 
     // We should alternate assigning between the two volumes with less free
     // space.
-    initPolicy(policy, 0.0f);
+    initPolicy(policy, BALANCED_SPACE_THRESHOLD, 0.0f);
     Assert.assertEquals(volumes.get(0), policy.chooseVolume(volumes, 100,
         null));
     Assert.assertEquals(volumes.get(1), policy.chooseVolume(volumes, 100,
@@ -213,7 +265,7 @@ public class TestAvailableSpaceVolumeChoosingPolicy {
     // However, if the volume with the least free space doesn't have enough
     // space to accept the replica size, and another volume does have enough
     // free space, that should be chosen instead.
-    initPolicy(policy, 0.0f);
+    initPolicy(policy, BALANCED_SPACE_THRESHOLD, 0.0f);
     Assert.assertEquals(volumes.get(1), policy.chooseVolume(volumes,
         1024L * 1024L * 2, null));
   }
@@ -223,7 +275,7 @@ public class TestAvailableSpaceVolumeChoosingPolicy {
     @SuppressWarnings("unchecked")
     final AvailableSpaceVolumeChoosingPolicy<FsVolumeSpi> policy = 
         ReflectionUtils.newInstance(AvailableSpaceVolumeChoosingPolicy.class, null);
-    initPolicy(policy, 1.0f);
+    initPolicy(policy, BALANCED_SPACE_THRESHOLD, 1.0f);
     
     List<FsVolumeSpi> volumes = new ArrayList<FsVolumeSpi>();
     
@@ -292,7 +344,7 @@ public class TestAvailableSpaceVolumeChoosingPolicy {
       volumes.add(volume);
     }
 
-    initPolicy(policy, preferencePercent);
+    initPolicy(policy, BALANCED_SPACE_THRESHOLD, preferencePercent);
     long lowAvailableSpaceVolumeSelected = 0;
     long highAvailableSpaceVolumeSelected = 0;
     for (int i = 0; i < RANDOMIZED_ITERATIONS; i++) {

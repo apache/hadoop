@@ -26,7 +26,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.math.BigInteger;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -519,7 +519,7 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
       File pidDir = new File(procfsDir, pinfo.getPid());
       fReader = new InputStreamReader(
           new FileInputStream(
-              new File(pidDir, PROCFS_STAT_FILE)), Charset.forName("UTF-8"));
+              new File(pidDir, PROCFS_STAT_FILE)), StandardCharsets.UTF_8);
       in = new BufferedReader(fReader);
     } catch (FileNotFoundException f) {
       // The process vanished in the interim!
@@ -715,7 +715,7 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
         fReader = new InputStreamReader(
             new FileInputStream(
                 new File(new File(procfsDir, pid.toString()), PROCFS_CMDLINE_FILE)),
-                Charset.forName("UTF-8"));
+                StandardCharsets.UTF_8);
       } catch (FileNotFoundException f) {
         // The process vanished in the interim!
         return ret;
@@ -773,7 +773,7 @@ public class ProcfsBasedProcessTree extends ResourceCalculatorProcessTree {
         return;
       }
       fReader = new InputStreamReader(
-          new FileInputStream(file), Charset.forName("UTF-8"));
+          new FileInputStream(file), StandardCharsets.UTF_8);
       in = new BufferedReader(fReader);
       ProcessSmapMemoryInfo memoryMappingInfo = null;
       List<String> lines = IOUtils.readLines(in);

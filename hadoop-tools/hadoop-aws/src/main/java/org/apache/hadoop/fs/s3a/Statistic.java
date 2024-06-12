@@ -103,6 +103,10 @@ public enum Statistic {
       StoreStatisticNames.OP_ACCESS,
       "Calls of access()",
       TYPE_DURATION),
+  INVOCATION_BULK_DELETE(
+      StoreStatisticNames.OP_BULK_DELETE,
+      "Calls of bulk delete()",
+      TYPE_COUNTER),
   INVOCATION_COPY_FROM_LOCAL_FILE(
       StoreStatisticNames.OP_COPY_FROM_LOCAL_FILE,
       "Calls of copyFromLocalFile()",
@@ -242,7 +246,10 @@ public enum Statistic {
       StoreStatisticNames.OBJECT_MULTIPART_UPLOAD_ABORTED,
       "Object multipart upload aborted",
       TYPE_DURATION),
-  OBJECT_PUT_REQUESTS(
+  OBJECT_MULTIPART_UPLOAD_LIST(
+      StoreStatisticNames.OBJECT_MULTIPART_UPLOAD_LIST,
+      "Object multipart list request issued",
+      TYPE_DURATION),  OBJECT_PUT_REQUESTS(
       StoreStatisticNames.OBJECT_PUT_REQUEST,
       "Object put/multipart upload count",
       TYPE_DURATION),
@@ -262,10 +269,6 @@ public enum Statistic {
       StoreStatisticNames.OBJECT_PUT_BYTES_PENDING,
       "number of bytes queued for upload/being actively uploaded",
       TYPE_GAUGE),
-  OBJECT_SELECT_REQUESTS(
-      StoreStatisticNames.OBJECT_SELECT_REQUESTS,
-      "Count of S3 Select requests issued",
-      TYPE_COUNTER),
   STREAM_READ_ABORTED(
       StreamStatisticNames.STREAM_READ_ABORTED,
       "Count of times the TCP stream was aborted",
@@ -539,6 +542,10 @@ public enum Statistic {
   STORE_IO_RETRY(StoreStatisticNames.STORE_IO_RETRY,
       "retried requests made of the remote store",
       TYPE_COUNTER),
+
+  STORE_IO_RATE_LIMITED(StoreStatisticNames.STORE_IO_RATE_LIMITED_DURATION,
+      "Duration of rate limited operations",
+      TYPE_DURATION),
 
   STORE_IO_THROTTLED(
       StoreStatisticNames.STORE_IO_THROTTLED,

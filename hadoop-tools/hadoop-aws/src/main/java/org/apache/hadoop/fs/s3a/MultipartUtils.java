@@ -36,7 +36,7 @@ import org.apache.hadoop.fs.s3a.api.RequestFactory;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 
-import static org.apache.hadoop.fs.s3a.Statistic.MULTIPART_UPLOAD_LIST;
+import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_MULTIPART_UPLOAD_LIST;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfOperation;
 
 
@@ -66,7 +66,7 @@ public final class MultipartUtils {
    * @param maxKeys maximum batch size to request at a time from S3.
    * @return an iterator of matching uploads
    */
-  static MultipartUtils.UploadIterator listMultipartUploads(
+  static RemoteIterator<MultipartUpload> listMultipartUploads(
       final StoreContext storeContext,
       S3Client s3,
       @Nullable String prefix,
@@ -196,7 +196,7 @@ public final class MultipartUtils {
 
         listing = invoker.retry("listMultipartUploads", prefix, true,
             trackDurationOfOperation(storeContext.getInstrumentation(),
-                MULTIPART_UPLOAD_LIST.getSymbol(),
+                OBJECT_MULTIPART_UPLOAD_LIST.getSymbol(),
                 () -> s3.listMultipartUploads(requestBuilder.build())));
         LOG.debug("Listing found {} upload(s)",
             listing.uploads().size());

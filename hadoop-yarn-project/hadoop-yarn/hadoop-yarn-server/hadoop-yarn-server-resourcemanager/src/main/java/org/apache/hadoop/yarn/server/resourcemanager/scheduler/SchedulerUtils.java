@@ -43,8 +43,7 @@ import org.apache.hadoop.yarn.exceptions.InvalidLabelResourceRequestException;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException
         .InvalidResourceType;
-import org.apache.hadoop.yarn.exceptions
-        .SchedulerInvalidResoureRequestException;
+import org.apache.hadoop.yarn.exceptions.SchedulerInvalidResourceRequestException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.AccessType;
@@ -430,7 +429,7 @@ public class SchedulerUtils {
   public static MaxResourceValidationResult
       validateResourceRequestsAgainstQueueMaxResource(
       ResourceRequest resReq, Resource availableResource)
-      throws SchedulerInvalidResoureRequestException {
+      throws SchedulerInvalidResourceRequestException {
     final Resource reqResource = resReq.getCapability();
     Map<String, ResourceInformation> resourcesWithZeroAmount =
         getZeroResources(availableResource);

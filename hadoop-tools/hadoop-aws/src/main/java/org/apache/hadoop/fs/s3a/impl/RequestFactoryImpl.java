@@ -43,7 +43,6 @@ import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.MetadataDirective;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import software.amazon.awssdk.services.s3.model.SelectObjectContentRequest;
 import software.amazon.awssdk.services.s3.model.ServerSideEncryption;
 import software.amazon.awssdk.services.s3.model.StorageClass;
 import software.amazon.awssdk.services.s3.model.UploadPartRequest;
@@ -60,6 +59,7 @@ import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecretOperations;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.apache.hadoop.fs.s3a.S3AEncryptionMethods.UNKNOWN_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.DEFAULT_UPLOAD_PART_COUNT_LIMIT;
 import static org.apache.hadoop.util.Preconditions.checkArgument;
 import static org.apache.hadoop.util.Preconditions.checkNotNull;
@@ -273,24 +273,38 @@ public class RequestFactoryImpl implements RequestFactory {
       return;
     }
 
-    if (S3AEncryptionMethods.SSE_S3 == algorithm) {
+    switch (algorithm) {
+    case SSE_S3:
       copyObjectRequestBuilder.serverSideEncryption(algorithm.getMethod());
-    } else if (S3AEncryptionMethods.SSE_KMS == algorithm) {
+      break;
+    case SSE_KMS:
       copyObjectRequestBuilder.serverSideEncryption(ServerSideEncryption.AWS_KMS);
       // Set the KMS key if present, else S3 uses AWS managed key.
       EncryptionSecretOperations.getSSEAwsKMSKey(encryptionSecrets)
-          .ifPresent(kmsKey -> copyObjectRequestBuilder.ssekmsKeyId(kmsKey));
-    } else if (S3AEncryptionMethods.SSE_C == algorithm) {
+          .ifPresent(copyObjectRequestBuilder::ssekmsKeyId);
+      break;
+    case DSSE_KMS:
+      copyObjectRequestBuilder.serverSideEncryption(ServerSideEncryption.AWS_KMS_DSSE);
+      EncryptionSecretOperations.getSSEAwsKMSKey(encryptionSecrets)
+          .ifPresent(copyObjectRequestBuilder::ssekmsKeyId);
+      break;
+    case SSE_C:
       EncryptionSecretOperations.getSSECustomerKey(encryptionSecrets)
-          .ifPresent(base64customerKey -> {
-            copyObjectRequestBuilder.copySourceSSECustomerAlgorithm(
-                    ServerSideEncryption.AES256.name()).copySourceSSECustomerKey(base64customerKey)
-                .copySourceSSECustomerKeyMD5(
-                    Md5Utils.md5AsBase64(Base64.getDecoder().decode(base64customerKey)))
-                .sseCustomerAlgorithm(ServerSideEncryption.AES256.name())
-                .sseCustomerKey(base64customerKey).sseCustomerKeyMD5(
-                    Md5Utils.md5AsBase64(Base64.getDecoder().decode(base64customerKey)));
-          });
+          .ifPresent(base64customerKey -> copyObjectRequestBuilder
+              .copySourceSSECustomerAlgorithm(ServerSideEncryption.AES256.name())
+              .copySourceSSECustomerKey(base64customerKey)
+              .copySourceSSECustomerKeyMD5(
+                  Md5Utils.md5AsBase64(Base64.getDecoder().decode(base64customerKey)))
+              .sseCustomerAlgorithm(ServerSideEncryption.AES256.name())
+              .sseCustomerKey(base64customerKey).sseCustomerKeyMD5(
+                  Md5Utils.md5AsBase64(Base64.getDecoder().decode(base64customerKey))));
+      break;
+    case CSE_KMS:
+    case CSE_CUSTOM:
+    case NONE:
+      break;
+    default:
+      LOG.warn(UNKNOWN_ALGORITHM + ": " + algorithm);
     }
   }
   /**
@@ -348,20 +362,35 @@ public class RequestFactoryImpl implements RequestFactory {
     final S3AEncryptionMethods algorithm
         = getServerSideEncryptionAlgorithm();
 
-    if (S3AEncryptionMethods.SSE_S3 == algorithm) {
+    switch (algorithm) {
+    case SSE_S3:
       putObjectRequestBuilder.serverSideEncryption(algorithm.getMethod());
-    } else if (S3AEncryptionMethods.SSE_KMS == algorithm) {
+      break;
+    case SSE_KMS:
       putObjectRequestBuilder.serverSideEncryption(ServerSideEncryption.AWS_KMS);
       // Set the KMS key if present, else S3 uses AWS managed key.
       EncryptionSecretOperations.getSSEAwsKMSKey(encryptionSecrets)
-          .ifPresent(kmsKey -> putObjectRequestBuilder.ssekmsKeyId(kmsKey));
-    } else if (S3AEncryptionMethods.SSE_C == algorithm) {
+          .ifPresent(putObjectRequestBuilder::ssekmsKeyId);
+      break;
+    case DSSE_KMS:
+      putObjectRequestBuilder.serverSideEncryption(ServerSideEncryption.AWS_KMS_DSSE);
+      EncryptionSecretOperations.getSSEAwsKMSKey(encryptionSecrets)
+          .ifPresent(putObjectRequestBuilder::ssekmsKeyId);
+      break;
+    case SSE_C:
       EncryptionSecretOperations.getSSECustomerKey(encryptionSecrets)
-          .ifPresent(base64customerKey -> {
-            putObjectRequestBuilder.sseCustomerAlgorithm(ServerSideEncryption.AES256.name())
-                .sseCustomerKey(base64customerKey).sseCustomerKeyMD5(
-                    Md5Utils.md5AsBase64(Base64.getDecoder().decode(base64customerKey)));
-          });
+          .ifPresent(base64customerKey -> putObjectRequestBuilder
+              .sseCustomerAlgorithm(ServerSideEncryption.AES256.name())
+              .sseCustomerKey(base64customerKey)
+              .sseCustomerKeyMD5(Md5Utils.md5AsBase64(
+                  Base64.getDecoder().decode(base64customerKey))));
+      break;
+    case CSE_KMS:
+    case CSE_CUSTOM:
+    case NONE:
+      break;
+    default:
+      LOG.warn(UNKNOWN_ALGORITHM + ": " + algorithm);
     }
   }
 
@@ -409,20 +438,35 @@ public class RequestFactoryImpl implements RequestFactory {
       CreateMultipartUploadRequest.Builder mpuRequestBuilder) {
     final S3AEncryptionMethods algorithm = getServerSideEncryptionAlgorithm();
 
-    if (S3AEncryptionMethods.SSE_S3 == algorithm) {
+    switch (algorithm) {
+    case SSE_S3:
       mpuRequestBuilder.serverSideEncryption(algorithm.getMethod());
-    } else if (S3AEncryptionMethods.SSE_KMS == algorithm) {
+      break;
+    case SSE_KMS:
       mpuRequestBuilder.serverSideEncryption(ServerSideEncryption.AWS_KMS);
       // Set the KMS key if present, else S3 uses AWS managed key.
       EncryptionSecretOperations.getSSEAwsKMSKey(encryptionSecrets)
-          .ifPresent(kmsKey -> mpuRequestBuilder.ssekmsKeyId(kmsKey));
-    } else if (S3AEncryptionMethods.SSE_C == algorithm) {
+          .ifPresent(mpuRequestBuilder::ssekmsKeyId);
+      break;
+    case DSSE_KMS:
+      mpuRequestBuilder.serverSideEncryption(ServerSideEncryption.AWS_KMS_DSSE);
+      EncryptionSecretOperations.getSSEAwsKMSKey(encryptionSecrets)
+          .ifPresent(mpuRequestBuilder::ssekmsKeyId);
+      break;
+    case SSE_C:
       EncryptionSecretOperations.getSSECustomerKey(encryptionSecrets)
-          .ifPresent(base64customerKey -> {
-            mpuRequestBuilder.sseCustomerAlgorithm(ServerSideEncryption.AES256.name())
-                .sseCustomerKey(base64customerKey).sseCustomerKeyMD5(
-                    Md5Utils.md5AsBase64(Base64.getDecoder().decode(base64customerKey)));
-          });
+          .ifPresent(base64customerKey -> mpuRequestBuilder
+              .sseCustomerAlgorithm(ServerSideEncryption.AES256.name())
+              .sseCustomerKey(base64customerKey)
+              .sseCustomerKeyMD5(
+                  Md5Utils.md5AsBase64(Base64.getDecoder().decode(base64customerKey))));
+      break;
+    case CSE_KMS:
+    case CSE_CUSTOM:
+    case NONE:
+      break;
+    default:
+      LOG.warn(UNKNOWN_ALGORITHM + ": " + algorithm);
     }
   }
 
@@ -541,20 +585,6 @@ public class RequestFactoryImpl implements RequestFactory {
   }
 
   @Override
-  public SelectObjectContentRequest.Builder newSelectRequestBuilder(String key) {
-    SelectObjectContentRequest.Builder requestBuilder =
-        SelectObjectContentRequest.builder().bucket(bucket).key(key);
-
-    EncryptionSecretOperations.getSSECustomerKey(encryptionSecrets).ifPresent(base64customerKey -> {
-      requestBuilder.sseCustomerAlgorithm(ServerSideEncryption.AES256.name())
-          .sseCustomerKey(base64customerKey)
-          .sseCustomerKeyMD5(Md5Utils.md5AsBase64(Base64.getDecoder().decode(base64customerKey)));
-    });
-
-    return prepareRequest(requestBuilder);
-  }
-
-  @Override
   public ListObjectsRequest.Builder newListObjectsV1RequestBuilder(
       final String key,
       final String delimiter,
@@ -599,7 +629,7 @@ public class RequestFactoryImpl implements RequestFactory {
     return prepareRequest(DeleteObjectsRequest
         .builder()
         .bucket(bucket)
-        .delete(d -> d.objects(keysToDelete).quiet(true)));
+        .delete(d -> d.objects(keysToDelete).quiet(!LOG.isTraceEnabled())));
   }
 
   @Override

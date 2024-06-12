@@ -56,6 +56,7 @@ import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.Options.HandleOpt;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.impl.AbstractFSBuilderImpl;
+import org.apache.hadoop.fs.impl.DefaultBulkDeleteOperation;
 import org.apache.hadoop.fs.impl.FutureDataInputStreamBuilderImpl;
 import org.apache.hadoop.fs.impl.OpenFileParameters;
 import org.apache.hadoop.fs.permission.AclEntry;
@@ -169,7 +170,8 @@ import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapa
 @InterfaceAudience.Public
 @InterfaceStability.Stable
 public abstract class FileSystem extends Configured
-    implements Closeable, DelegationTokenIssuer, PathCapabilities {
+    implements Closeable, DelegationTokenIssuer,
+        PathCapabilities, BulkDeleteSource {
   public static final String FS_DEFAULT_NAME_KEY =
                    CommonConfigurationKeys.FS_DEFAULT_NAME_KEY;
   public static final String DEFAULT_FS =
@@ -3485,12 +3487,16 @@ public abstract class FileSystem extends Configured
   public boolean hasPathCapability(final Path path, final String capability)
       throws IOException {
     switch (validatePathCapabilityArgs(makeQualified(path), capability)) {
-    case CommonPathCapabilities.FS_SYMLINKS:
-      // delegate to the existing supportsSymlinks() call.
-      return supportsSymlinks() && areSymlinksEnabled();
-    default:
-      // the feature is not implemented.
-      return false;
+      case CommonPathCapabilities.BULK_DELETE:
+        // bulk delete has default implementation which
+        // can called on any FileSystem.
+        return true;
+      case CommonPathCapabilities.FS_SYMLINKS:
+        // delegate to the existing supportsSymlinks() call.
+        return supportsSymlinks() && areSymlinksEnabled();
+      default:
+        // the feature is not implemented.
+        return false;
     }
   }
 
@@ -4085,6 +4091,7 @@ public abstract class FileSystem extends Configured
       STATS_DATA_CLEANER.
           setName(StatisticsDataReferenceCleaner.class.getName());
       STATS_DATA_CLEANER.setDaemon(true);
+      STATS_DATA_CLEANER.setContextClassLoader(null);
       STATS_DATA_CLEANER.start();
     }
 
@@ -4953,6 +4960,24 @@ public abstract class FileSystem extends Configured
   }
 
   /**
+   * Return path of the enclosing root for a given path.
+   * The enclosing root path is a common ancestor that should be used for temp and staging dirs
+   * as well as within encryption zones and other restricted directories.
+   *
+   * Call makeQualified on the param path to ensure its part of the correct filesystem.
+   *
+   * @param path file path to find the enclosing root path for
+   * @return a path to the enclosing root
+   * @throws IOException early checks like failure to resolve path cause IO failures
+   */
+  @InterfaceAudience.Public
+  @InterfaceStability.Unstable
+  public Path getEnclosingRoot(Path path) throws IOException {
+    this.makeQualified(path);
+    return this.makeQualified(new Path("/"));
+  }
+
+  /**
    * Create a multipart uploader.
    * @param basePath file path under which all files are uploaded
    * @return a MultipartUploaderBuilder object to build the uploader
@@ -4964,5 +4989,19 @@ public abstract class FileSystem extends Configured
       throws IOException {
     methodNotSupported();
     return null;
+  }
+
+  /**
+   * Create a bulk delete operation.
+   * The default implementation returns an instance of {@link DefaultBulkDeleteOperation}.
+   * @param path base path for the operation.
+   * @return an instance of the bulk delete.
+   * @throws IllegalArgumentException any argument is invalid.
+   * @throws IOException if there is an IO problem.
+   */
+  @Override
+  public BulkDelete createBulkDelete(Path path)
+          throws IllegalArgumentException, IOException {
+    return new DefaultBulkDeleteOperation(path, this);
   }
 }

@@ -250,4 +250,10 @@ public abstract class YarnClientUtils {
         });
     return challenge;
   }
+
+  public static boolean isYarnFederationEnabled(Configuration conf) {
+    boolean isEnabled = conf.getBoolean(YarnConfiguration.FEDERATION_ENABLED,
+        YarnConfiguration.DEFAULT_FEDERATION_ENABLED);
+    return isEnabled;
+  }
 }

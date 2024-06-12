@@ -158,6 +158,8 @@ public abstract class NotificationTestCase extends HadoopTestCase {
   @After
   public void tearDown() throws Exception {
     stopHttpServer();
+    NotificationServlet.counter = 0;
+    NotificationServlet.failureCounter = 0;
     super.tearDown();
   }
 

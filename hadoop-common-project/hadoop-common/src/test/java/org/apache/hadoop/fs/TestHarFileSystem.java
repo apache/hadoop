@@ -255,6 +255,10 @@ public class TestHarFileSystem {
 
     FSDataOutputStream append(Path f, int bufferSize,
         Progressable progress, boolean appendToNewBlock) throws IOException;
+
+    Path getEnclosingRoot(Path path) throws IOException;
+
+    BulkDelete createBulkDelete(Path path) throws IllegalArgumentException, IOException;
   }
 
   @Test

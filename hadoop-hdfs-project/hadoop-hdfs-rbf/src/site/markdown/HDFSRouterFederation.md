@@ -469,6 +469,7 @@ The connection to the State Store and the internal caching at the Router.
 | dfs.federation.router.store.connection.test | 60000 | How often to check for the connection to the State Store in milliseconds. |
 | dfs.federation.router.cache.ttl | 60000 | How often to refresh the State Store caches in milliseconds. |
 | dfs.federation.router.store.membership.expiration | 300000 | Expiration time in milliseconds for a membership record. |
+| dfs.federation.router.store.driver.async.override.max.threads |  | Number of threads to overwrite and delete records asynchronously when overriding. |
 | dfs.federation.router.mount-table.cache.update | false | If true, Mount table cache is updated whenever a mount table entry is added, modified or removed for all the routers. |
 | dfs.federation.router.mount-table.cache.update.timeout | 1m | Max time to wait for all the routers to finish their mount table cache update. |
 | dfs.federation.router.mount-table.cache.update.client.max.time | 5m | Max time a RouterClient connection can be cached. |
@@ -539,7 +540,7 @@ More metrics info can see [RBF Metrics](../../hadoop-project-dist/hadoop-common/
 Router Federation Rename
 -------
 
-Enable Router to rename across namespaces. Currently it is implemented based on [HDFS Federation Balance](../../hadoop-federation-balance/HDFSFederationBalance.md) and has some limits comparing with normal rename.
+Enable Router to rename across namespaces. Currently it is implemented based on [HDFS Federation Balance](../../hadoop-federation-balance/HDFSFederationBalance.html) and has some limits comparing with normal rename.
 1. It is much slower than the normal rename so need a longer RPC timeout configuration. See `ipc.client.rpc-timeout.ms` and its description for more information about RPC timeout.
 2. It doesn't support snapshot path.
 3. It doesn't support to rename path with multiple destinations.

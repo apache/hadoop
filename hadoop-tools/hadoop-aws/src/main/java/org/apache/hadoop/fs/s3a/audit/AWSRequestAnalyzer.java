@@ -24,6 +24,7 @@ import software.amazon.awssdk.core.SdkRequest;
 import software.amazon.awssdk.services.s3.model.AbortMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.CreateSessionRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
 import software.amazon.awssdk.services.s3.model.GetBucketLocationRequest;
@@ -34,7 +35,6 @@ import software.amazon.awssdk.services.s3.model.ListObjectsRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import software.amazon.awssdk.services.s3.model.SelectObjectContentRequest;
 import software.amazon.awssdk.services.s3.model.UploadPartCopyRequest;
 import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 
@@ -49,7 +49,6 @@ import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_BULK_DE
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_DELETE_REQUEST;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_LIST_REQUEST;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_PUT_REQUEST;
-import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_SELECT_REQUESTS;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.STORE_EXISTS_PROBE;
 
 /**
@@ -131,12 +130,6 @@ public class AWSRequestAnalyzer {
       return writing(OBJECT_PUT_REQUEST,
           r.key(),
           0);
-    } else if (request instanceof SelectObjectContentRequest) {
-      SelectObjectContentRequest r =
-          (SelectObjectContentRequest) request;
-      return reading(OBJECT_SELECT_REQUESTS,
-          r.key(),
-          1);
     } else if (request instanceof UploadPartRequest) {
       UploadPartRequest r = (UploadPartRequest) request;
       return writing(MULTIPART_UPLOAD_PART_PUT,
@@ -196,7 +189,8 @@ public class AWSRequestAnalyzer {
       isRequestNotAlwaysInSpan(final Object request) {
     return request instanceof UploadPartCopyRequest
         || request instanceof CompleteMultipartUploadRequest
-        || request instanceof GetBucketLocationRequest;
+        || request instanceof GetBucketLocationRequest
+        || request instanceof CreateSessionRequest;
   }
 
   /**
@@ -292,6 +286,11 @@ public class AWSRequestAnalyzer {
 
   private static final String BYTES_PREFIX = "bytes=";
 
+  /**
+   * Given a range header, determine the size of the request.
+   * @param rangeHeader header string
+   * @return parsed size or -1 for problems
+   */
   private static Number sizeFromRangeHeader(String rangeHeader) {
     if (rangeHeader != null && rangeHeader.startsWith(BYTES_PREFIX)) {
       String[] values = rangeHeader
@@ -300,7 +299,7 @@ public class AWSRequestAnalyzer {
       if (values.length == 2) {
         try {
           long start = Long.parseUnsignedLong(values[0]);
-          long end = Long.parseUnsignedLong(values[0]);
+          long end = Long.parseUnsignedLong(values[1]);
           return end - start;
         } catch(NumberFormatException e) {
         }

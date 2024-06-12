@@ -26,7 +26,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -160,9 +160,12 @@ public class NativeAzureFileSystem extends FileSystem {
 
       // open redo file
       Path f = redoFile;
-      FSDataInputStream input = fs.open(f);
-      byte[] bytes = new byte[MAX_RENAME_PENDING_FILE_SIZE];
-      int l = input.read(bytes);
+      int l;
+      byte[] bytes;
+      try (FSDataInputStream input = fs.open(f)) {
+        bytes = new byte[MAX_RENAME_PENDING_FILE_SIZE];
+        l = input.read(bytes);
+      }
       if (l <= 0) {
         // Jira HADOOP-12678 -Handle empty rename pending metadata file during
         // atomic rename in redo path. If during renamepending file is created
@@ -178,7 +181,7 @@ public class NativeAzureFileSystem extends FileSystem {
             "Error reading pending rename file contents -- "
                 + "maximum file size exceeded");
       }
-      String contents = new String(bytes, 0, l, Charset.forName("UTF-8"));
+      String contents = new String(bytes, 0, l, StandardCharsets.UTF_8);
 
       // parse the JSON
       JsonNode json = null;
@@ -301,7 +304,7 @@ public class NativeAzureFileSystem extends FileSystem {
       // Write file.
       try {
         output = fs.createInternal(path, FsPermission.getFileDefault(), false, null);
-        output.write(contents.getBytes(Charset.forName("UTF-8")));
+        output.write(contents.getBytes(StandardCharsets.UTF_8));
       } catch (IOException e) {
         throw new IOException("Unable to write RenamePending file for folder rename from "
             + srcKey + " to " + dstKey, e);

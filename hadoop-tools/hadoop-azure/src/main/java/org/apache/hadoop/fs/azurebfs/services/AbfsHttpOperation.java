@@ -22,12 +22,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
+import java.net.ProtocolException;
 import java.net.URL;
 import java.util.List;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
 
@@ -43,6 +45,7 @@ import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AbfsPerfLoggable;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EXPECT_100_JDK_ERROR;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HUNDRED_CONTINUE;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.EXPECT;
 
@@ -51,9 +54,6 @@ import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.E
  */
 public class AbfsHttpOperation implements AbfsPerfLoggable {
   private static final Logger LOG = LoggerFactory.getLogger(AbfsHttpOperation.class);
-
-  private static final int CONNECT_TIMEOUT = 30 * 1000;
-  private static final int READ_TIMEOUT = 30 * 1000;
 
   private static final int CLEAN_UP_BUFFER_SIZE = 64 * 1024;
 
@@ -83,6 +83,7 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
   private long sendRequestTimeMs;
   private long recvResponseTimeMs;
   private boolean shouldMask = false;
+  private boolean connectionDisconnectedOnError = false;
 
   public static AbfsHttpOperation getAbfsHttpOperationWithFixedResult(
       final URL url,
@@ -259,10 +260,12 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
    * @param url The full URL including query string parameters.
    * @param method The HTTP method (PUT, PATCH, POST, GET, HEAD, or DELETE).
    * @param requestHeaders The HTTP request headers.READ_TIMEOUT
-   *
+   * @param connectionTimeout The Connection Timeout value to be used while establishing http connection
+   * @param readTimeout The Read Timeout value to be used with http connection while making a request
    * @throws IOException if an error occurs.
    */
-  public AbfsHttpOperation(final URL url, final String method, final List<AbfsHttpHeader> requestHeaders)
+  public AbfsHttpOperation(final URL url, final String method, final List<AbfsHttpHeader> requestHeaders,
+                           final int connectionTimeout, final int readTimeout)
       throws IOException {
     this.url = url;
     this.method = method;
@@ -276,9 +279,8 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
       }
     }
 
-    this.connection.setConnectTimeout(CONNECT_TIMEOUT);
-    this.connection.setReadTimeout(READ_TIMEOUT);
-
+    this.connection.setConnectTimeout(connectionTimeout);
+    this.connection.setReadTimeout(readTimeout);
     this.connection.setRequestMethod(method);
 
     for (AbfsHttpHeader header : requestHeaders) {
@@ -324,14 +326,26 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
          */
         outputStream = getConnOutputStream();
       } catch (IOException e) {
-        /* If getOutputStream fails with an exception and expect header
-           is enabled, we return back without throwing an exception to
-           the caller. The caller is responsible for setting the correct status code.
-           If expect header is not enabled, we throw back the exception.
+        connectionDisconnectedOnError = true;
+        /* If getOutputStream fails with an expect-100 exception , we return back
+           without throwing an exception to the caller. Else, we throw back the exception.
          */
         String expectHeader = getConnProperty(EXPECT);
-        if (expectHeader != null && expectHeader.equals(HUNDRED_CONTINUE)) {
+        if (expectHeader != null && expectHeader.equals(HUNDRED_CONTINUE)
+            && e instanceof ProtocolException
+            && EXPECT_100_JDK_ERROR.equals(e.getMessage())) {
           LOG.debug("Getting output stream failed with expect header enabled, returning back ", e);
+          /*
+           * In case expect-100 assertion has failed, headers and inputStream should not
+           * be parsed. Reason being, conn.getHeaderField(), conn.getHeaderFields(),
+           * conn.getInputStream() will lead to repeated server call.
+           * ref: https://bugs.openjdk.org/browse/JDK-8314978.
+           * Reading conn.responseCode() and conn.getResponseMessage() is safe in
+           * case of Expect-100 error. Reason being, in JDK, it stores the responseCode
+           * in the HttpUrlConnection object before throwing exception to the caller.
+           */
+          this.statusCode = getConnResponseCode();
+          this.statusDescription = getConnResponseMessage();
           return;
         } else {
           LOG.debug("Getting output stream failed without expect header enabled, throwing exception ", e);
@@ -364,7 +378,17 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
    * @throws IOException if an error occurs.
    */
   public void processResponse(final byte[] buffer, final int offset, final int length) throws IOException {
+    if (connectionDisconnectedOnError) {
+      LOG.debug("This connection was not successful or has been disconnected, "
+          + "hence not parsing headers and inputStream");
+      return;
+    }
+    processConnHeadersAndInputStreams(buffer, offset, length);
+  }
 
+  void processConnHeadersAndInputStreams(final byte[] buffer,
+      final int offset,
+      final int length) throws IOException {
     // get the response
     long startTime = 0;
     startTime = System.nanoTime();
@@ -606,6 +630,11 @@ public class AbfsHttpOperation implements AbfsPerfLoggable {
    */
   String getConnResponseMessage() throws IOException {
     return connection.getResponseMessage();
+  }
+
+  @VisibleForTesting
+  Boolean getConnectionDisconnectedOnError() {
+    return connectionDisconnectedOnError;
   }
 
   public static class AbfsHttpOperationWithFixedResult extends AbfsHttpOperation {

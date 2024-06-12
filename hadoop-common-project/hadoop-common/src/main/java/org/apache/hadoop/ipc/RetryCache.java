@@ -46,7 +46,7 @@ import org.slf4j.LoggerFactory;
 public class RetryCache {
   public static final Logger LOG = LoggerFactory.getLogger(RetryCache.class);
   private final RetryCacheMetrics retryCacheMetrics;
-  private static final int MAX_CAPACITY = 16;
+  private static final int MIN_CAPACITY = 16;
 
   /**
    * CacheEntry is tracked using unique client ID and callId of the RPC request.
@@ -195,7 +195,7 @@ public class RetryCache {
    */
   public RetryCache(String cacheName, double percentage, long expirationTime) {
     int capacity = LightWeightGSet.computeCapacity(percentage, cacheName);
-    capacity = Math.max(capacity, MAX_CAPACITY);
+    capacity = Math.max(capacity, MIN_CAPACITY);
     this.set = new LightWeightCache<CacheEntry, CacheEntry>(capacity, capacity,
         expirationTime, 0);
     this.expirationTime = expirationTime;

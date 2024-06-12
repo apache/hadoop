@@ -41,6 +41,10 @@ public final class ConfigurationKeys {
    */
   public static final String FS_AZURE_ACCOUNT_IS_EXPECT_HEADER_ENABLED = "fs.azure.account.expect.header.enabled";
   public static final String FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME = "fs.azure.account.key";
+  public static final String FS_AZURE_METRIC_ACCOUNT_NAME = "fs.azure.metric.account.name";
+  public static final String FS_AZURE_METRIC_ACCOUNT_KEY = "fs.azure.metric.account.key";
+  public static final String FS_AZURE_METRIC_URI = "fs.azure.metric.uri";
+
   public static final String FS_AZURE_ACCOUNT_KEY_PROPERTY_NAME_REGX = "fs\\.azure\\.account\\.key\\.(.*)";
   public static final String FS_AZURE_SECURE_MODE = "fs.azure.secure.mode";
   public static final String FS_AZURE_ACCOUNT_LEVEL_THROTTLING_ENABLED = "fs.azure.account.throttling.enabled";
@@ -48,9 +52,22 @@ public final class ConfigurationKeys {
   // Retry strategy defined by the user
   public static final String AZURE_MIN_BACKOFF_INTERVAL = "fs.azure.io.retry.min.backoff.interval";
   public static final String AZURE_MAX_BACKOFF_INTERVAL = "fs.azure.io.retry.max.backoff.interval";
+  public static final String AZURE_STATIC_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED = "fs.azure.static.retry.for.connection.timeout.enabled";
+  public static final String AZURE_STATIC_RETRY_INTERVAL = "fs.azure.static.retry.interval";
   public static final String AZURE_BACKOFF_INTERVAL = "fs.azure.io.retry.backoff.interval";
   public static final String AZURE_MAX_IO_RETRIES = "fs.azure.io.retry.max.retries";
   public static final String AZURE_CUSTOM_TOKEN_FETCH_RETRY_COUNT = "fs.azure.custom.token.fetch.retry.count";
+
+  /**
+   * Config to set HTTP Connection Timeout Value for Rest Operations.
+   * Value: {@value}.
+   */
+  public static final String AZURE_HTTP_CONNECTION_TIMEOUT = "fs.azure.http.connection.timeout";
+  /**
+   * Config to set HTTP Read Timeout Value for Rest Operations.
+   * Value: {@value}.
+   */
+  public static final String AZURE_HTTP_READ_TIMEOUT = "fs.azure.http.read.timeout";
 
   //  Retry strategy for getToken calls
   public static final String AZURE_OAUTH_TOKEN_FETCH_RETRY_COUNT = "fs.azure.oauth.token.fetch.retry.max.retries";
@@ -104,7 +121,22 @@ public final class ConfigurationKeys {
   public static final String AZURE_ENABLE_SMALL_WRITE_OPTIMIZATION = "fs.azure.write.enableappendwithflush";
   public static final String AZURE_READ_BUFFER_SIZE = "fs.azure.read.request.size";
   public static final String AZURE_READ_SMALL_FILES_COMPLETELY = "fs.azure.read.smallfilescompletely";
+  /**
+   * When parquet files are read, first few read are metadata reads before
+   * reading the actual data. First the read is done of last 8 bytes of parquet
+   * file to get the postion of metadta and next read is done for reading that
+   * metadata. With this optimization these two reads can be combined into 1.
+   * Value: {@value}
+   */
   public static final String AZURE_READ_OPTIMIZE_FOOTER_READ = "fs.azure.read.optimizefooterread";
+  /**
+   * In case of footer reads it was not required to read full buffer size.
+   * Most of the metadata information required was within 256 KB and it will be
+   * more performant to read less. 512 KB is a sweet spot.
+   * This config is used to define how much footer length the user wants to read.
+   * Value: {@value}
+   */
+  public static final String AZURE_FOOTER_READ_BUFFER_SIZE = "fs.azure.footer.read.request.size";
 
   /**
    * Read ahead range parameter which can be set by user.
@@ -122,6 +154,8 @@ public final class ConfigurationKeys {
   public static final String AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION = "fs.azure.createRemoteFileSystemDuringInitialization";
   public static final String AZURE_SKIP_USER_GROUP_METADATA_DURING_INITIALIZATION = "fs.azure.skipUserGroupMetadataDuringInitialization";
   public static final String FS_AZURE_ENABLE_AUTOTHROTTLING = "fs.azure.enable.autothrottling";
+  public static final String FS_AZURE_METRIC_IDLE_TIMEOUT = "fs.azure.metric.idle.timeout";
+  public static final String FS_AZURE_METRIC_ANALYSIS_TIMEOUT = "fs.azure.metric.analysis.timeout";
   public static final String FS_AZURE_ACCOUNT_OPERATION_IDLE_TIMEOUT = "fs.azure.account.operation.idle.timeout";
   public static final String FS_AZURE_ANALYSIS_PERIOD = "fs.azure.analysis.period";
   public static final String FS_AZURE_ALWAYS_USE_HTTPS = "fs.azure.always.use.https";
@@ -162,6 +196,7 @@ public final class ConfigurationKeys {
    * character constraints are not satisfied. **/
   public static final String FS_AZURE_CLIENT_CORRELATIONID = "fs.azure.client.correlationid";
   public static final String FS_AZURE_TRACINGHEADER_FORMAT = "fs.azure.tracingheader.format";
+  public static final String FS_AZURE_METRIC_FORMAT = "fs.azure.metric.format";
   public static final String FS_AZURE_CLUSTER_NAME = "fs.azure.cluster.name";
   public static final String FS_AZURE_CLUSTER_TYPE = "fs.azure.cluster.type";
   public static final String FS_AZURE_SSL_CHANNEL_MODE_KEY = "fs.azure.ssl.channel.mode";
@@ -203,8 +238,14 @@ public final class ConfigurationKeys {
 
   /** Setting this true will make the driver use it's own RemoteIterator implementation */
   public static final String FS_AZURE_ENABLE_ABFS_LIST_ITERATOR = "fs.azure.enable.abfslistiterator";
-  /** Server side encryption key */
-  public static final String FS_AZURE_CLIENT_PROVIDED_ENCRYPTION_KEY = "fs.azure.client-provided-encryption-key";
+  /** Server side encryption key encoded in Base6format {@value}.*/
+  public static final String FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY =
+      "fs.azure.encryption.encoded.client-provided-key";
+  /** SHA256 hash of encryption key encoded in Base64format */
+  public static final String FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY_SHA =
+      "fs.azure.encryption.encoded.client-provided-key-sha";
+  /** Custom EncryptionContextProvider type */
+  public static final String FS_AZURE_ENCRYPTION_CONTEXT_PROVIDER_TYPE = "fs.azure.encryption.context.provider.type";
 
   /** End point of ABFS account: {@value}. */
   public static final String AZURE_ABFS_ENDPOINT = "fs.azure.abfs.endpoint";
@@ -232,6 +273,8 @@ public final class ConfigurationKeys {
   public static final String FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN = "fs.azure.account.oauth2.refresh.token";
   /** Key for oauth AAD refresh token endpoint: {@value}. */
   public static final String FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN_ENDPOINT = "fs.azure.account.oauth2.refresh.token.endpoint";
+  /** Key for oauth AAD workload identity token file path: {@value}. */
+  public static final String FS_AZURE_ACCOUNT_OAUTH_TOKEN_FILE = "fs.azure.account.oauth2.token.file";
   /** Key for enabling the tracking of ABFS API latency and sending the latency numbers to the ABFS API service */
   public static final String FS_AZURE_ABFS_LATENCY_TRACK = "fs.azure.abfs.latency.track";
 
@@ -241,6 +284,14 @@ public final class ConfigurationKeys {
   /** Add extra resilience to rename failures, at the expense of performance. */
   public static final String FS_AZURE_ABFS_RENAME_RESILIENCE = "fs.azure.enable.rename.resilience";
 
+  /**
+   * Specify whether paginated behavior is to be expected or not in delete path. {@value}
+   */
+  public static final String FS_AZURE_ENABLE_PAGINATED_DELETE = "fs.azure.enable.paginated.delete";
+
+  /** Add extra layer of verification of the integrity of the request content during transport: {@value}. */
+  public static final String FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION = "fs.azure.enable.checksum.validation";
+
   public static String accountProperty(String property, String account) {
     return property + "." + account;
   }
@@ -248,7 +299,10 @@ public final class ConfigurationKeys {
   public static final String FS_AZURE_ENABLE_DELEGATION_TOKEN = "fs.azure.enable.delegation.token";
   public static final String FS_AZURE_DELEGATION_TOKEN_PROVIDER_TYPE = "fs.azure.delegation.token.provider.type";
 
-  /** Key for SAS token provider **/
+  /** Key for fixed SAS token: {@value}. **/
+  public static final String FS_AZURE_SAS_FIXED_TOKEN = "fs.azure.sas.fixed.token";
+
+  /** Key for SAS token provider: {@value}. **/
   public static final String FS_AZURE_SAS_TOKEN_PROVIDER_TYPE = "fs.azure.sas.token.provider.type";
 
   /** For performance, AbfsInputStream/AbfsOutputStream re-use SAS tokens until the expiry is within this number of seconds. **/

@@ -289,8 +289,11 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
         roleARN);
     removeBaseAndBucketOverrides(conf,
         DELEGATION_TOKEN_BINDING,
-        ENABLE_MULTI_DELETE);
+        ENABLE_MULTI_DELETE,
+        S3EXPRESS_CREATE_SESSION);
     conf.setBoolean(ENABLE_MULTI_DELETE, multiDelete);
+    disableCreateSession(conf);
+    disableFilesystemCaching(conf);
     return conf;
   }
 

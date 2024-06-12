@@ -39,6 +39,7 @@ public final class CSQueueInfoProvider {
 
   public static QueueInfo getQueueInfo(AbstractCSQueue csQueue) {
     QueueInfo queueInfo = RECORD_FACTORY.newRecordInstance(QueueInfo.class);
+    queueInfo.setSchedulerType("CapacityScheduler");
     queueInfo.setQueueName(csQueue.getQueuePathObject().getLeafName());
     queueInfo.setQueuePath(csQueue.getQueuePathObject().getFullPath());
     queueInfo.setAccessibleNodeLabels(csQueue.getAccessibleNodeLabels());

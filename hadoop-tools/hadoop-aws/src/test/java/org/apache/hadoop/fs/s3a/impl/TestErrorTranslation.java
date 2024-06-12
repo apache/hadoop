@@ -19,8 +19,10 @@
 package org.apache.hadoop.fs.s3a.impl;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.ConnectException;
 import java.net.NoRouteToHostException;
+import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.util.Collections;
 
@@ -31,9 +33,10 @@ import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.core.retry.RetryPolicyContext;
 
 import org.apache.hadoop.fs.PathIOException;
+import org.apache.hadoop.fs.s3a.auth.NoAwsCredentialsException;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
-import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.maybeExtractNetworkException;
+import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.maybeExtractIOException;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.assertTrue;
 
@@ -64,7 +67,7 @@ public class TestErrorTranslation extends AbstractHadoopTestBase {
             new UnknownHostException("bottom")));
     final IOException ioe = intercept(UnknownHostException.class, "top",
         () -> {
-          throw maybeExtractNetworkException("", thrown);
+          throw maybeExtractIOException("", thrown, "");
         });
 
     // the wrapped exception is the top level one: no stack traces have
@@ -79,10 +82,10 @@ public class TestErrorTranslation extends AbstractHadoopTestBase {
   public void testNoRouteToHostExceptionExtraction() throws Throwable {
     intercept(NoRouteToHostException.class, "top",
         () -> {
-          throw maybeExtractNetworkException("p2",
+          throw maybeExtractIOException("p2",
               sdkException("top",
                   sdkException("middle",
-                      new NoRouteToHostException("bottom"))));
+                      new NoRouteToHostException("bottom"))), null);
         });
   }
 
@@ -90,20 +93,38 @@ public class TestErrorTranslation extends AbstractHadoopTestBase {
   public void testConnectExceptionExtraction() throws Throwable {
     intercept(ConnectException.class, "top",
         () -> {
-          throw maybeExtractNetworkException("p1",
+          throw maybeExtractIOException("p1",
               sdkException("top",
                   sdkException("middle",
-                      new ConnectException("bottom"))));
+                      new ConnectException("bottom"))), null);
         });
   }
+
+  /**
+   * When there is an UncheckedIOException, its inner class is
+   * extracted.
+   */
+  @Test
+  public void testUncheckedIOExceptionExtraction() throws Throwable {
+    intercept(SocketTimeoutException.class, "top",
+        () -> {
+          final SdkClientException thrown = sdkException("top",
+              sdkException("middle",
+                  new UncheckedIOException(
+                      new SocketTimeoutException("bottom"))));
+          throw maybeExtractIOException("p1",
+              new NoAwsCredentialsException("IamProvider", thrown.toString(), thrown), null);
+        });
+  }
+
   @Test
   public void testNoConstructorExtraction() throws Throwable {
     intercept(PathIOException.class, NoConstructorIOE.MESSAGE,
         () -> {
-          throw maybeExtractNetworkException("p1",
+          throw maybeExtractIOException("p1",
               sdkException("top",
                   sdkException("middle",
-                      new NoConstructorIOE())));
+                      new NoConstructorIOE())), null);
         });
   }
 
@@ -127,8 +148,6 @@ public class TestErrorTranslation extends AbstractHadoopTestBase {
         .exception(ase)
         .build();
     RetryOnErrorCodeCondition retry = RetryOnErrorCodeCondition.create("");
-    assertTrue("retry policy of MultiObjectException",
-        retry.shouldRetry(context));
 
     Assertions.assertThat(retry.shouldRetry(context))
         .describedAs("retry policy of MultiObjectException")

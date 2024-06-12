@@ -28,6 +28,7 @@ import org.apache.hadoop.util.JsonSerialization;
 
 import java.io.EOFException;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 /**
  * Support for marshalling objects to and from JSON.
@@ -47,7 +48,6 @@ import java.io.IOException;
 @InterfaceStability.Evolving
 public class JsonSerDeser<T> extends JsonSerialization<T> {
 
-  private static final String UTF_8 = "UTF-8";
   public static final String E_NO_DATA = "No data at path";
   public static final String E_DATA_TOO_SHORT = "Data at path too short";
   public static final String E_MISSING_MARKER_STRING =
@@ -102,7 +102,7 @@ public class JsonSerDeser<T> extends JsonSerialization<T> {
     if (StringUtils.isNotEmpty(marker) && len < marker.length()) {
       throw new NoRecordException(path, E_DATA_TOO_SHORT);
     }
-    String json = new String(bytes, 0, len, UTF_8);
+    String json = new String(bytes, 0, len, StandardCharsets.UTF_8);
     if (StringUtils.isNotEmpty(marker)
         && !json.contains(marker)) {
       throw new NoRecordException(path, E_MISSING_MARKER_STRING + marker);

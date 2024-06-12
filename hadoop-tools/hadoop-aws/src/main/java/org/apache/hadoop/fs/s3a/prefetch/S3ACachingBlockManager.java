@@ -22,27 +22,16 @@ package org.apache.hadoop.fs.s3a.prefetch;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import javax.annotation.Nonnull;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.LocalDirAllocator;
-import org.apache.hadoop.fs.impl.prefetch.BlockData;
+import org.apache.hadoop.fs.impl.prefetch.BlockManagerParameters;
 import org.apache.hadoop.fs.impl.prefetch.CachingBlockManager;
-import org.apache.hadoop.fs.impl.prefetch.ExecutorServiceFuturePool;
 import org.apache.hadoop.fs.impl.prefetch.Validate;
-import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
-
-import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_PREFETCH_MAX_BLOCKS_COUNT;
-import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_MAX_BLOCKS_COUNT;
 
 /**
  * Provides access to S3 file one block at a time.
  */
 public class S3ACachingBlockManager extends CachingBlockManager {
-
-  private static final Logger LOG = LoggerFactory.getLogger(
-      S3ACachingBlockManager.class);
 
   /**
    * Reader that reads from S3 file.
@@ -52,32 +41,15 @@ public class S3ACachingBlockManager extends CachingBlockManager {
   /**
    * Constructs an instance of a {@code S3ACachingBlockManager}.
    *
-   * @param futurePool asynchronous tasks are performed in this pool.
+   * @param blockManagerParameters params for block manager.
    * @param reader reader that reads from S3 file.
-   * @param blockData information about each block of the S3 file.
-   * @param bufferPoolSize size of the in-memory cache in terms of number of blocks.
-   * @param streamStatistics statistics for this stream.
-   * @param conf the configuration.
-   * @param localDirAllocator the local dir allocator instance.
    * @throws IllegalArgumentException if reader is null.
    */
   public S3ACachingBlockManager(
-      ExecutorServiceFuturePool futurePool,
-      S3ARemoteObjectReader reader,
-      BlockData blockData,
-      int bufferPoolSize,
-      S3AInputStreamStatistics streamStatistics,
-      Configuration conf,
-      LocalDirAllocator localDirAllocator) {
+      @Nonnull final BlockManagerParameters blockManagerParameters,
+      final S3ARemoteObjectReader reader) {
 
-    super(futurePool,
-        blockData,
-        bufferPoolSize,
-        streamStatistics,
-        conf,
-        localDirAllocator,
-        conf.getInt(PREFETCH_MAX_BLOCKS_COUNT, DEFAULT_PREFETCH_MAX_BLOCKS_COUNT),
-        streamStatistics);
+    super(blockManagerParameters);
 
     Validate.checkNotNull(reader, "reader");
 

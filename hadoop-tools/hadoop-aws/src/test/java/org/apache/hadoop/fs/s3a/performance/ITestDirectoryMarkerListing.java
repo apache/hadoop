@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
+import org.assertj.core.api.Assertions;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -54,6 +55,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY;
 import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_DELETE;
 import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_MARKER_POLICY_KEEP;
+import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -80,8 +82,7 @@ import static org.apache.hadoop.util.functional.RemoteIterators.foreach;
  * <p></p>
  * Similarly: JUnit assertions over AssertJ.
  * <p></p>
- * The tests work with unguarded buckets only -the bucket settings are changed
- * appropriately.
+ * s3a create performance is disabled for consistent assertions.
  */
 @RunWith(Parameterized.class)
 public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
@@ -199,11 +200,13 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
 
     // directory marker options
     removeBaseAndBucketOverrides(bucketName, conf,
-        DIRECTORY_MARKER_POLICY);
+        DIRECTORY_MARKER_POLICY,
+        FS_S3A_CREATE_PERFORMANCE);
     conf.set(DIRECTORY_MARKER_POLICY,
         keepMarkers
             ? DIRECTORY_MARKER_POLICY_KEEP
             : DIRECTORY_MARKER_POLICY_DELETE);
+    conf.setBoolean(FS_S3A_CREATE_PERFORMANCE, false);
     return conf;
   }
 
@@ -682,7 +685,8 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
   }
 
   /**
-   * Expect the list of status objects to match that of the paths.
+   * Expect the list of status objects to match that of the paths,
+   * without enforcing ordering of the values.
    * @param statuses status object list
    * @param paths ordered varargs list of paths
    * @param <T> type of status objects
@@ -690,20 +694,11 @@ public class ITestDirectoryMarkerListing extends AbstractS3ATestBase {
   private <T extends FileStatus> void assertContainsExactlyStatusOfPaths(
       List<T> statuses, Path... paths) {
 
-    String actual = statuses.stream()
-        .map(Object::toString)
-        .collect(Collectors.joining(";"));
-    String expected = Arrays.stream(paths)
-        .map(Object::toString)
-        .collect(Collectors.joining(";"));
-    String summary = "expected [" + expected + "]"
-        + " actual = [" + actual + "]";
-    assertEquals("mismatch in size of listing " + summary,
-        paths.length, statuses.size());
-    for (int i = 0; i < statuses.size(); i++) {
-      assertEquals("Path mismatch at element " + i + " in " + summary,
-          paths[i], statuses.get(i).getPath());
-    }
+    final List<Path> pathList = statuses.stream()
+        .map(FileStatus::getPath)
+        .collect(Collectors.toList());
+    Assertions.assertThat(pathList)
+        .containsExactlyInAnyOrder(paths);
   }
 
   /**

@@ -73,12 +73,15 @@ public class AbstractMarkerToolTest extends AbstractS3ATestBase {
     removeBaseAndBucketOverrides(bucketName, conf,
         S3A_BUCKET_PROBE,
         DIRECTORY_MARKER_POLICY,
-        AUTHORITATIVE_PATH);
+        AUTHORITATIVE_PATH,
+        FS_S3A_CREATE_PERFORMANCE);
     // base FS is legacy
     conf.set(DIRECTORY_MARKER_POLICY, DIRECTORY_MARKER_POLICY_DELETE);
+    conf.setBoolean(FS_S3A_CREATE_PERFORMANCE, false);
 
     // turn off bucket probes for a bit of speedup in the connectors we create.
     conf.setInt(S3A_BUCKET_PROBE, 0);
+
     return conf;
   }
 

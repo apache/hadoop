@@ -582,6 +582,15 @@
   </property>
 
   <property>
+    <description>Host:Port of the ZooKeeper server to be used by the RM. This
+      must be supplied when using the ZooKeeper based implementation of the
+      RM state store and/or embedded automatic failover in an HA setting.
+    </description>
+    <name>yarn.resourcemanager.zk-address</name>
+    <!--value>127.0.0.1:2181</value-->
+  </property>
+
+  <property>
     <description>Full path of the ZooKeeper znode where RM state will be
     stored. This must be supplied when using
     org.apache.hadoop.yarn.server.resourcemanager.recovery.ZKRMStateStore
@@ -742,7 +751,11 @@
   </property>
 
   <property>
-    <description>Enable SSL/TLS encryption for the ZooKeeper communication.</description>
+    <description>
+      Enable SSL/TLS encryption for the ZooKeeper communication.
+      Note: if hadoop.zk.ssl.enabled is set to a value, then that central setting has precedence,
+      and this value will be overridden by the value of hadoop.zk.ssl.enabled.
+    </description>
     <name>yarn.resourcemanager.zk-client-ssl.enabled</name>
     <value>false</value>
   </property>
@@ -1485,6 +1498,15 @@
   </property>
 
   <property>
+    <description>
+      The admin JVM options used on forking ContainerLocalizer process
+      by the container executor.
+    </description>
+    <name>yarn.nodemanager.container-localizer.admin.java.opts</name>
+    <value></value>
+  </property>
+
+  <property>
     <name>yarn.nodemanager.container-localizer.java.opts.add-exports-as-default</name>
     <value>true</value>
     <description>Since on JDK17 it is no longer possible to use the reflection API to
@@ -2075,6 +2097,20 @@
   </property>
 
   <property>
+    <description>This property sets the mount path for CGroups v2.
+      This parameter is optional, and needed to be set only in mixed mode,
+      when CGroups v2 is mounted alongside with Cgroups v1.
+      For example, in hybrid mode, CGroups v1 controllers can be mounted under /sys/fs/cgroup/
+      (for example /sys/fs/cgroup/cpu,cpuacct), while v2 can be mounted in /sys/fs/cgroup/unified folder.
+
+      If this value is not set, the value of
+      yarn.nodemanager.linux-container-executor.cgroups.mount-path
+      will be used for CGroups v2 as well.
+    </description>
+    <name>yarn.nodemanager.linux-container-executor.cgroups.v2.mount-path</name>
+  </property>
+
+  <property>
     <description>Delay in ms between attempts to remove linux cgroup</description>
     <name>yarn.nodemanager.linux-container-executor.cgroups.delete-delay-ms</name>
     <value>20</value>
@@ -2449,6 +2485,12 @@
     </description>
     <name>yarn.nodemanager.linux-container-executor.cgroups.delete-timeout-ms</name>
     <value>1000</value>
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.linux-container-executor.cgroups.v2.enabled</name>
+    <value>false</value>
+    <description>Boolean indicating whether cgroup v2 is enabled.</description>
   </property>
 
   <property>
@@ -3766,12 +3808,28 @@
   </property>
 
   <property>
+    <description>
+      Host:Port of the ZooKeeper server to be used by the federation state store
+    </description>
+    <name>yarn.federation.state-store.zk.address</name>
+  </property>
+
+  <property>
    <description>
     The time in seconds after which the federation state store local cache
     will be refreshed periodically
    </description>
    <name>yarn.federation.cache-ttl.secs</name>
    <value>300</value>
+  </property>
+
+  <property>
+    <description>
+      The number of entries in the Federation cache.
+      default is 1000.
+    </description>
+    <name>yarn.federation.cache-entity.nums</name>
+    <value>1000</value>
   </property>
 
   <property>
@@ -5132,10 +5190,27 @@
 
   <property>
     <name>yarn.router.interceptor.user-thread-pool.keep-alive-time</name>
-    <value>0s</value>
+    <value>30s</value>
     <description>
       This configurable is used to set the keepAliveTime of the thread pool of the interceptor.
-      Default is 0s.
+      Default is 30s.
+    </description>
+  </property>
+
+  <property>
+    <name>yarn.router.interceptor.user-thread-pool.allow-core-thread-time-out</name>
+    <value>false</value>
+    <description>
+      This method configures the policy for core threads regarding termination
+      when no tasks arrive within the keep-alive time.
+      When set to false, core threads are never terminated due to a lack of tasks.
+      When set to true, the same keep-alive policy
+      that applies to non-core threads also applies to core threads.
+      To prevent constant thread replacement,
+      ensure that the keep-alive time is greater than zero when setting it to true.
+      It's advisable to call this method before the pool becomes actively used.
+      We need to ensure that
+        yarn.router.interceptor.user-thread-pool.keep-alive-time is greater than 0.
     </description>
   </property>
 
@@ -5704,6 +5779,29 @@
     </description>
     <name>yarn.nodemanager.least-load-policy-selector.multiplier</name>
     <value>50000</value>
+  </property>
+
+  <property>
+    <description>
+      Set the connect timeout interval, in milliseconds.
+      A value of 0 means no timeout, otherwise values must be between 1 and Integer#MAX_VALUE.
+      This ensures that the connection is established within a specified time,
+      or it triggers a connection timeout exception.
+    </description>
+    <name>yarn.federation.gpg.webapp.connect-timeout</name>
+    <value>30s</value>
+  </property>
+
+  <property>
+    <description>
+      Set the read timeout interval, in milliseconds.
+      A value of 0 means no timeout, otherwise values must be between 1 and Integer#MAX_VALUE.
+      This timeout specifies the maximum time a client should wait for data to be read from a server
+      once the connection has been established.
+      If data is not received within the specified time, a read timeout exception is raised.
+    </description>
+    <name>yarn.federation.gpg.webapp.read-timeout</name>
+    <value>30s</value>
   </property>
 
 </configuration>

@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -44,6 +45,7 @@ import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.OperationDuration;
 
 import static org.apache.hadoop.fs.s3a.S3AUtils.translateException;
+import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletionIgnoringExceptions;
 import static org.apache.hadoop.fs.store.audit.AuditingFunctions.callableWithinAuditSpan;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletion;
@@ -125,8 +127,17 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
       new ArrayList<>();
 
   /**
+   * Do directory operations purge pending uploads?
+   */
+  private final boolean dirOperationsPurgeUploads;
+
+  /**
+   * Count of uploads aborted.
+   */
+  private Optional<Long> uploadsAborted = Optional.empty();
+
+  /**
    * Initiate the rename.
-   *
    * @param storeContext store context
    * @param sourcePath source path
    * @param sourceKey key of source
@@ -136,6 +147,7 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
    * @param destStatus destination status.
    * @param callbacks callback provider
    * @param pageSize size of delete requests
+   * @param dirOperationsPurgeUploads Do directory operations purge pending uploads?
    */
   public RenameOperation(
       final StoreContext storeContext,
@@ -146,7 +158,8 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
       final String destKey,
       final S3AFileStatus destStatus,
       final OperationCallbacks callbacks,
-      final int pageSize) {
+      final int pageSize,
+      final boolean dirOperationsPurgeUploads) {
     super(storeContext);
     this.sourcePath = sourcePath;
     this.sourceKey = sourceKey;
@@ -159,6 +172,16 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
                     && pageSize <= InternalConstants.MAX_ENTRIES_TO_DELETE,
             "page size out of range: %s", pageSize);
     this.pageSize = pageSize;
+    this.dirOperationsPurgeUploads = dirOperationsPurgeUploads;
+  }
+
+  /**
+   * Get the count of uploads aborted.
+   * Non-empty iff enabled, and the operations completed without errors.
+   * @return count of aborted uploads.
+   */
+  public Optional<Long> getUploadsAborted() {
+    return uploadsAborted;
   }
 
   /**
@@ -341,6 +364,16 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
       throw new RenameFailedException(srcKey, dstKey,
           "cannot rename a directory to a subdirectory of itself ");
     }
+    // start the async dir cleanup
+    final CompletableFuture<Long> abortUploads;
+    if (dirOperationsPurgeUploads) {
+      final String key = srcKey;
+      LOG.debug("All uploads under {} will be deleted", key);
+      abortUploads = submit(getStoreContext().getExecutor(), () ->
+          callbacks.abortMultipartUploadsUnderPrefix(key));
+    } else {
+      abortUploads = null;
+    }
 
     if (destStatus != null
         && destStatus.isEmptyDirectory() == Tristate.TRUE) {
@@ -422,6 +455,8 @@ public class RenameOperation extends ExecutingStoreOperation<Long> {
     // have been deleted.
     completeActiveCopiesAndDeleteSources("final copy and delete");
 
+    // and if uploads were being aborted, wait for that to finish
+    uploadsAborted = waitForCompletionIgnoringExceptions(abortUploads);
   }
 
   /**

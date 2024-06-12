@@ -19,21 +19,33 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>3.4.0-SNAPSHOT</version>
+    <version>3.5.0-SNAPSHOT</version>
     <relativePath>../hadoop-project</relativePath>
   </parent>
   <artifactId>hadoop-maven-plugins</artifactId>
   <packaging>maven-plugin</packaging>
   <name>Apache Hadoop Maven Plugins</name>
   <properties>
-    <maven.dependency.version>3.0.5</maven.dependency.version>
-    <maven.plugin-tools.version>3.6.0</maven.plugin-tools.version>
+    <maven.dependency.version>3.9.5</maven.dependency.version>
+    <maven.plugin-tools.version>3.10.1</maven.plugin-tools.version>
+    <plexus.classworlds.version>2.7.0</plexus.classworlds.version>
+    <sisu.inject.version>0.3.5</sisu.inject.version>
   </properties>
   <dependencies>
     <dependency>
       <groupId>org.apache.maven</groupId>
       <artifactId>maven-plugin-api</artifactId>
       <version>${maven.dependency.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.eclipse.sisu</groupId>
+          <artifactId>org.eclipse.sisu.inject</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.codehaus.plexus</groupId>
+          <artifactId>plexus-classworlds</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.maven</groupId>
@@ -41,10 +53,28 @@
       <version>${maven.dependency.version}</version>
       <exclusions>
         <exclusion>
+          <groupId>org.eclipse.sisu</groupId>
+          <artifactId>org.eclipse.sisu.inject</artifactId>
+        </exclusion>
+        <exclusion>
           <groupId>org.sonatype.sisu</groupId>
           <artifactId>sisu-inject-plexus</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>org.codehaus.plexus</groupId>
+          <artifactId>plexus-classworlds</artifactId>
+        </exclusion>
       </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.codehaus.plexus</groupId>
+      <artifactId>plexus-classworlds</artifactId>
+      <version>${plexus.classworlds.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.sisu</groupId>
+      <artifactId>org.eclipse.sisu.inject</artifactId>
+      <version>${sisu.inject.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.maven.plugin-tools</groupId>

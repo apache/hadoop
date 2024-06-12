@@ -24,6 +24,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
@@ -46,7 +47,7 @@ public class TestClasspath {
       .class);
   private static final File TEST_DIR = GenericTestUtils.getTestDir(
       "TestClasspath");
-  private static final Charset UTF8 = Charset.forName("UTF-8");
+  private static final Charset UTF8 = StandardCharsets.UTF_8;
 
   static {
     ExitUtil.disableSystemExit();

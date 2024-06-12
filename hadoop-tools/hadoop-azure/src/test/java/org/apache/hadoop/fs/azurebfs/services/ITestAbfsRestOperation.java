@@ -49,15 +49,19 @@ import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_OK;
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APPEND_ACTION;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EXPECT_100_JDK_ERROR;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PATCH;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PUT;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HUNDRED_CONTINUE;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_HTTP_CONNECTION_TIMEOUT;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_HTTP_READ_TIMEOUT;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.EXPECT;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_HTTP_METHOD_OVERRIDE;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_ACTION;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_POSITION;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ABFS_ACCOUNT_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_CONFIGURATION_FILE_NAME;
+import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.EGRESS_OVER_ACCOUNT_LIMIT;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -201,7 +205,8 @@ public class ITestAbfsRestOperation extends AbstractAbfsIntegrationTest {
         appendRequestParameters.getoffset(),
         appendRequestParameters.getLength(), null));
 
-    AbfsHttpOperation abfsHttpOperation = Mockito.spy(new AbfsHttpOperation(url, HTTP_METHOD_PUT, requestHeaders));
+    AbfsHttpOperation abfsHttpOperation = Mockito.spy(new AbfsHttpOperation(url, HTTP_METHOD_PUT, requestHeaders,
+            DEFAULT_HTTP_CONNECTION_TIMEOUT, DEFAULT_HTTP_READ_TIMEOUT));
 
     // Sets the expect request property if expect header is enabled.
     if (expectHeaderEnabled) {
@@ -229,10 +234,15 @@ public class ITestAbfsRestOperation extends AbstractAbfsIntegrationTest {
       // mocked the response code and the response message to check different
       // behaviour based on response code.
       Mockito.doReturn(responseCode).when(abfsHttpOperation).getConnResponseCode();
+      if (responseCode == HTTP_UNAVAILABLE) {
+        Mockito.doReturn(EGRESS_OVER_ACCOUNT_LIMIT.getErrorMessage())
+            .when(abfsHttpOperation)
+            .getStorageErrorMessage();
+      }
       Mockito.doReturn(responseMessage)
           .when(abfsHttpOperation)
           .getConnResponseMessage();
-      Mockito.doThrow(new ProtocolException("Server rejected Operation"))
+      Mockito.doThrow(new ProtocolException(EXPECT_100_JDK_ERROR))
           .when(abfsHttpOperation)
           .getConnOutputStream();
       break;
@@ -290,6 +300,7 @@ public class ITestAbfsRestOperation extends AbstractAbfsIntegrationTest {
     TracingContext tracingContext = Mockito.spy(new TracingContext("abcd",
         "abcde", FSOperationType.APPEND,
         TracingHeaderFormat.ALL_ID_FORMAT, null));
+    Mockito.doReturn(tracingContext).when(op).createNewTracingContext(Mockito.any());
 
     switch (errorType) {
     case WRITE:

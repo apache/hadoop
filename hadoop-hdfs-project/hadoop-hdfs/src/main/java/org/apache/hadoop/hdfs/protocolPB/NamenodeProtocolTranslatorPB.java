@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.NamenodeCommandProto;
@@ -33,6 +34,7 @@ import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetBlockKeys
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetBlocksRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetEditLogManifestRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetMostRecentCheckpointTxIdRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetMostRecentNameNodeFileTxIdRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetNextSPSPathRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetNextSPSPathResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.GetTransactionIdRequestProto;
@@ -45,6 +47,7 @@ import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.RollEditLogR
 import org.apache.hadoop.hdfs.protocol.proto.NamenodeProtocolProtos.StartCheckpointRequestProto;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
+import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
@@ -101,11 +104,15 @@ public class NamenodeProtocolTranslatorPB implements NamenodeProtocol,
 
   @Override
   public BlocksWithLocations getBlocks(DatanodeInfo datanode, long size, long
-      minBlockSize, long timeInterval)
+      minBlockSize, long timeInterval, StorageType storageType)
       throws IOException {
-    GetBlocksRequestProto req = GetBlocksRequestProto.newBuilder()
+    GetBlocksRequestProto.Builder builder = GetBlocksRequestProto.newBuilder()
         .setDatanode(PBHelperClient.convert((DatanodeID)datanode)).setSize(size)
-        .setMinBlockSize(minBlockSize).setTimeInterval(timeInterval).build();
+        .setMinBlockSize(minBlockSize).setTimeInterval(timeInterval);
+    if (storageType != null) {
+      builder.setStorageType(PBHelperClient.convertStorageType(storageType));
+    }
+    GetBlocksRequestProto req = builder.build();
     return PBHelper.convert(ipc(() -> rpcProxy.getBlocks(NULL_CONTROLLER, req)
         .getBlocks()));
   }
@@ -127,6 +134,14 @@ public class NamenodeProtocolTranslatorPB implements NamenodeProtocol,
   public long getMostRecentCheckpointTxId() throws IOException {
     return ipc(() -> rpcProxy.getMostRecentCheckpointTxId(NULL_CONTROLLER,
         GetMostRecentCheckpointTxIdRequestProto.getDefaultInstance()).getTxId());
+  }
+
+  @Override
+  public long getMostRecentNameNodeFileTxId(NNStorage.NameNodeFile nnf) throws IOException {
+    return ipc(() -> rpcProxy.getMostRecentNameNodeFileTxId(NULL_CONTROLLER,
+        GetMostRecentNameNodeFileTxIdRequestProto.newBuilder()
+            .setNameNodeFile(nnf.toString()).build()).getTxId());
+
   }
 
   @Override

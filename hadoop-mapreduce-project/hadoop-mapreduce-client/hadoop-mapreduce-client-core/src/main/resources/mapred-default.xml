@@ -63,6 +63,15 @@
 </property>
 
 <property>
+  <name>mapreduce.task.spill.files.count.limit</name>
+  <value>-1</value>
+  <description>Number of spill files that can be created by a MapTask.
+  After breaching this, task will fail. Default value for this config is -1
+  which indicates that there is no limit on number of spill files being
+  created</description>
+</property>
+
+<property>
   <name>mapreduce.job.local-fs.single-disk-limit.bytes</name>
   <value>-1</value>
   <description>Enable an in task monitor thread to watch for single disk
@@ -1813,12 +1822,12 @@
 
 <property>
   <name>mapreduce.jvm.add-opens-as-default</name>
-  <value>true</value>
+  <value>false</value>
   <description>Since on JDK17 it's no longer possible to use the reflection API to
     access non-public fields and methods add-opens flags should be added to MR AM
     and map/reduce containers regardless of the user specified java opts. Setting
     this to true will add the flags to the container launch commands on nodes with
-    JDK17 or higher. Defaults to true, but the setting has no effect on nodes using
+    JDK17 or higher. Defaults to false, and the setting has no effect on nodes using
     JDK16 and before.
   </description>
 </property>

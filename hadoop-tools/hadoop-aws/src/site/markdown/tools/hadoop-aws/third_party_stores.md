@@ -39,11 +39,21 @@ The features which may be unavailable include:
 * Optional Bucket Probes at startup (`fs.s3a.bucket.probe = 0`).
   This is now the default -do not change it.
 * List API to use (`fs.s3a.list.version = 1`)
+* Bucket lifecycle rules to clean up pending uploads.
 
-## Configuring s3a to connect to a third party store
+### Disabling Change Detection
 
+The (default) etag-based change detection logic expects stores to provide an Etag header in HEAD/GET requests,
+and to support it as a precondition in subsequent GET and COPY calls.
+If a store does not do this, disable the checks.
 
-### Connecting to a third party object store over HTTPS
+```xml
+<property>
+  <name>fs.s3a.change.detection.mode</name>
+  <value>none</value>
+</property>
+```
+## Connecting to a third party object store over HTTPS
 
 The core setting for a third party store is to change the endpoint in `fs.s3a.endpoint`.
 
@@ -88,6 +98,57 @@ then these must be set, either in XML or (preferred) in a JCEKS file.
 ```
 
 If per-bucket settings are used here, then third-party stores and credentials may be used alongside an AWS store.
+
+
+
+## Other issues
+
+### Coping without bucket lifecycle rules
+
+Not all third-party stores support bucket lifecycle rules to clean up buckets
+of incomplete uploads.
+
+This can be addressed in two ways
+* Command line: `hadoop s3guard uploads -abort -force \<path>`.
+* With `fs.s3a.multipart.purge` and a purge age set in `fs.s3a.multipart.purge.age`
+* In rename/delete `fs.s3a.directory.operations.purge.uploads = true`.
+
+#### S3Guard uploads command
+
+This can be executed on a schedule, or manually
+
+```
+hadoop s3guard uploads -abort -force s3a://bucket/
+```
+
+Consult the [S3Guard documentation](s3guard.html) for the full set of parameters.
+
+#### In startup: `fs.s3a.multipart.purge`
+
+This lists all uploads in a bucket when a filesystem is created and deletes
+all of those above a certain age.
+
+This can hurt performance on a large bucket, as the purge scans the entire tree,
+and is executed whenever a filesystem is created -which can happen many times during
+hive, spark, distcp jobs.
+
+For this reason, this option may be deleted in future, however it has long been
+available in the S3A client and so guaranteed to work across versions.
+
+#### During rename and delete: `fs.s3a.directory.operations.purge.uploads`
+
+When `fs.s3a.directory.operations.purge.uploads` is set, when a directory is renamed
+or deleted, then in parallel with the delete an attempt is made to list
+all pending uploads.
+If there are any, they are aborted (sequentially).
+
+* This is disabled by default: it adds overhead and extra cost.
+* Because it only applies to the directories being processed, directories which
+  are not renamed or deleted will retain all incomplete uploads.
+* There is no age checking: all uploads will be aborted.
+* If any other process is writing to the same directory tree, their operations
+will be cancelled.
+
 
 # Troubleshooting
 
@@ -368,11 +429,6 @@ this makes renaming and deleting significantly slower.
   </property>
 
   <property>
-    <name>fs.s3a.bucket.gcs-container.select.enabled</name>
-    <value>false</value>
-  </property>
-
-  <property>
     <name>fs.s3a.bucket.gcs-container.path.style.access</name>
     <value>true</value>
   </property>
@@ -413,3 +469,4 @@ It is also a way to regression test foundational S3A third-party store compatibi
 
 _Note_ If anyone is set up to test this reguarly, please let the hadoop developer team know if regressions do surface,
 as it is not a common test configuration.
+[]

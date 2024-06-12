@@ -18,12 +18,16 @@
 
 package org.apache.hadoop.yarn.server.federation.store.utils;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.hadoop.yarn.server.federation.store.exception.FederationStateStoreInvalidInputException;
+import org.apache.hadoop.yarn.server.federation.store.records.DeleteSubClusterPoliciesConfigurationsRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.GetSubClusterPolicyConfigurationRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.SetSubClusterPolicyConfigurationRequest;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.List;
 
 /**
  * Utility class to validate the inputs to {@code FederationPolicyStore}, allows
@@ -140,4 +144,19 @@ public final class FederationPolicyStoreInputValidator {
     }
   }
 
+  public static void validate(DeleteSubClusterPoliciesConfigurationsRequest request)
+      throws FederationStateStoreInvalidInputException {
+    if (request == null) {
+      String message = "Missing DeleteSubClusterPoliciesConfigurationsRequest Request."
+          + " Please try again by specifying an policy insertion information.";
+      LOG.warn(message);
+      throw new FederationStateStoreInvalidInputException(message);
+    }
+
+    List<String> queues = request.getQueues();
+    if (CollectionUtils.isEmpty(queues)) {
+      throw new FederationStateStoreInvalidInputException(
+          "The queues that needs to be deleted cannot be empty.");
+    }
+  }
 }

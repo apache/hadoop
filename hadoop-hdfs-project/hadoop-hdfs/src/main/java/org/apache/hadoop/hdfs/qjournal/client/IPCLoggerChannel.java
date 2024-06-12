@@ -206,6 +206,7 @@ public class IPCLoggerChannel implements AsyncLogger {
       // making any more calls after this point (eg clear the queue)
       RPC.stopProxy(proxy);
     }
+    metrics.unregister();
   }
   
   protected QJournalProtocol getProxy() throws IOException {

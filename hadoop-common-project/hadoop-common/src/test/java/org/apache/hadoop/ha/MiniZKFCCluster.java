@@ -370,5 +370,10 @@ public class MiniZKFCCluster {
       }
       return services;
     }
+
+    @Override
+    protected boolean isSSLEnabled() {
+      return false;
+    }
   }
 }

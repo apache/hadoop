@@ -46,7 +46,7 @@ import javax.ws.rs.core.StreamingOutput;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.UndeclaredThrowableException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -120,7 +120,7 @@ public final class LogWebServiceUtils {
             .readAggregatedLogs(request, os);
         if (!findLogs) {
           os.write(("Can not find logs for container:" + containerIdStr)
-              .getBytes(Charset.forName("UTF-8")));
+              .getBytes(StandardCharsets.UTF_8));
         } else {
           if (printEmptyLocalContainerLog) {
             StringBuilder sb = new StringBuilder();
@@ -129,7 +129,7 @@ public final class LogWebServiceUtils {
                 + "\n");
             sb.append("LogContents:\n");
             sb.append(getNoRedirectWarning() + "\n");
-            os.write(sb.toString().getBytes(Charset.forName("UTF-8")));
+            os.write(sb.toString().getBytes(StandardCharsets.UTF_8));
           }
         }
       }

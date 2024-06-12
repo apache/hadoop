@@ -29,7 +29,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
@@ -66,7 +66,7 @@ public class RegexCopyFilter extends CopyFilter {
     try {
       InputStream is = Files.newInputStream(filtersFile.toPath());
       reader = new BufferedReader(new InputStreamReader(is,
-          Charset.forName("UTF-8")));
+          StandardCharsets.UTF_8));
       String line;
       while ((line = reader.readLine()) != null) {
         Pattern pattern = Pattern.compile(line);

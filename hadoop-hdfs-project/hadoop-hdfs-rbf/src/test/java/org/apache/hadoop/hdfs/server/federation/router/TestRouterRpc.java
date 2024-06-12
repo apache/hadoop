@@ -137,6 +137,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -263,6 +264,12 @@ public class TestRouterRpc {
         .getDatanodeManager().setHeartbeatExpireInterval(3000);
     cluster.getCluster().getNamesystem(1).getBlockManager()
         .getDatanodeManager().setHeartbeatExpireInterval(3000);
+  }
+
+  @After
+  public void cleanup() {
+    // clear client context
+    CallerContext.setCurrent(null);
   }
 
   @AfterClass
@@ -1157,6 +1164,21 @@ public class TestRouterRpc {
   }
 
   private void testConcat(
+      String source, String target, boolean failureExpected, boolean verfiyException, String msg) {
+    boolean failure = false;
+    try {
+      // Concat test file with fill block length file via router
+      routerProtocol.concat(target, new String[] {source});
+    } catch (IOException ex) {
+      failure = true;
+      if (verfiyException) {
+        assertExceptionContains(msg, ex);
+      }
+    }
+    assertEquals(failureExpected, failure);
+  }
+
+  private void testConcat(
       String source, String target, boolean failureExpected) {
     boolean failure = false;
     try {
@@ -1217,6 +1239,27 @@ public class TestRouterRpc {
     String badPath = "/unknownlocation/unknowndir";
     compareResponses(routerProtocol, nnProtocol, m,
         new Object[] {badPath, new String[] {routerFile}});
+
+    // Test when concat trg is a empty file
+    createFile(routerFS, existingFile, existingFileSize);
+    String sameRouterEmptyFile =
+        cluster.getFederatedTestDirectoryForNS(sameNameservice) +
+            "_newemptyfile";
+    createFile(routerFS, sameRouterEmptyFile, 0);
+    // Concat in same namespaces, succeeds
+    testConcat(existingFile, sameRouterEmptyFile, false);
+    FileStatus mergedStatus = getFileStatus(routerFS, sameRouterEmptyFile);
+    assertEquals(existingFileSize, mergedStatus.getLen());
+
+    // Test when concat srclist has some empty file, namenode will throw IOException.
+    String srcEmptyFile = cluster.getFederatedTestDirectoryForNS(sameNameservice) + "_srcEmptyFile";
+    createFile(routerFS, srcEmptyFile, 0);
+    String targetFile = cluster.getFederatedTestDirectoryForNS(sameNameservice) + "_targetFile";
+    createFile(routerFS, targetFile, existingFileSize);
+    // Concat in same namespaces, succeeds
+    testConcat(srcEmptyFile, targetFile, true, true,
+        "org.apache.hadoop.ipc.RemoteException(org.apache.hadoop.HadoopIllegalArgumentException): concat: source file "
+            + srcEmptyFile + " is invalid or empty or underConstruction");
   }
 
   @Test
@@ -1385,9 +1428,11 @@ public class TestRouterRpc {
 
     // Verify that checking that datanode works
     BlocksWithLocations routerBlockLocations =
-        routerNamenodeProtocol.getBlocks(dn0, 1024, 0, 0);
+        routerNamenodeProtocol.getBlocks(dn0, 1024, 0, 0,
+            null);
     BlocksWithLocations nnBlockLocations =
-        nnNamenodeProtocol.getBlocks(dn0, 1024, 0, 0);
+        nnNamenodeProtocol.getBlocks(dn0, 1024, 0, 0,
+            null);
     BlockWithLocations[] routerBlocks = routerBlockLocations.getBlocks();
     BlockWithLocations[] nnBlocks = nnBlockLocations.getBlocks();
     assertEquals(nnBlocks.length, routerBlocks.length);
@@ -2086,10 +2131,10 @@ public class TestRouterRpc {
 
     // The audit log should contains "callerContext=clientIp:...,clientContext"
     final String logOutput = auditlog.getOutput();
-    assertTrue(logOutput.contains("callerContext=clientIp:"));
-    assertTrue(logOutput.contains(",clientContext"));
-    assertTrue(logOutput.contains(",clientId"));
-    assertTrue(logOutput.contains(",clientCallId"));
+    assertTrue(logOutput.contains("clientIp:"));
+    assertTrue(logOutput.contains("clientContext"));
+    assertTrue(logOutput.contains("clientId"));
+    assertTrue(logOutput.contains("clientCallId"));
     assertTrue(verifyFileExists(routerFS, dirPath));
   }
 
@@ -2101,7 +2146,6 @@ public class TestRouterRpc {
 
     // Current callerContext is null
     assertNull(CallerContext.getCurrent());
-
     UserGroupInformation loginUser = UserGroupInformation.getLoginUser();
     UserGroupInformation realUser = UserGroupInformation
         .createUserForTesting("testRealUser", new String[]{"group"});

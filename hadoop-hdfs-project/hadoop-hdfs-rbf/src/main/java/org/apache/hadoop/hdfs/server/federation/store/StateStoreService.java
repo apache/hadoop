@@ -132,13 +132,15 @@ public class StateStoreService extends CompositeService {
     // Caches to maintain
     this.cachesToUpdateInternal = new ArrayList<>();
     this.cachesToUpdateExternal = new ArrayList<>();
+
+    this.cacheLastUpdateTime = 0;
   }
 
   /**
    * Initialize the State Store and the connection to the back-end.
    *
    * @param config Configuration for the State Store.
-   * @throws IOException Cannot create driver for the State Store.
+   * @throws Exception Cannot create driver for the State Store.
    */
   @Override
   protected void serviceInit(Configuration config) throws Exception {
@@ -239,7 +241,6 @@ public class StateStoreService extends CompositeService {
    *
    * @param <T> Type of the records stored.
    * @param clazz Class of the record store to track.
-   * @return New record store.
    * @throws ReflectiveOperationException
    */
   private <T extends RecordStore<?>> void addRecordStore(
@@ -428,7 +429,6 @@ public class StateStoreService extends CompositeService {
           result = cachedStore.loadCache(force);
         } catch (IOException e) {
           LOG.error("Error updating cache for {}", cacheName, e);
-          result = false;
         }
         if (!result) {
           success = false;

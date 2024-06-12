@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -28,6 +29,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import org.junit.Test;
+import org.mockito.Mockito;
+import org.mockito.stubbing.Stubber;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -36,16 +39,30 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
+import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
+import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultEntrySchema;
+import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
+import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
+import org.apache.hadoop.fs.azurebfs.services.AbfsClientTestUtil;
+import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderFormat;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 
+import static java.net.HttpURLConnection.HTTP_OK;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_LIST_MAX_RESULTS;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_TIMEOUT_JDK_MESSAGE;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertMkdirs;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathExists;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.rename;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.nullable;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.when;
 
 /**
  * Test listStatus operation.
@@ -53,6 +70,7 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 public class ITestAzureBlobFileSystemListStatus extends
     AbstractAbfsIntegrationTest {
   private static final int TEST_FILES_NUMBER = 6000;
+  private static final String TEST_CONTINUATION_TOKEN = "continuation";
 
   public ITestAzureBlobFileSystemListStatus() throws Exception {
     super();
@@ -64,32 +82,106 @@ public class ITestAzureBlobFileSystemListStatus extends
     config.set(AZURE_LIST_MAX_RESULTS, "5000");
     final AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem
         .newInstance(getFileSystem().getUri(), config);
-    final List<Future<Void>> tasks = new ArrayList<>();
+      final List<Future<Void>> tasks = new ArrayList<>();
 
-    ExecutorService es = Executors.newFixedThreadPool(10);
-    for (int i = 0; i < TEST_FILES_NUMBER; i++) {
-      final Path fileName = new Path("/test" + i);
-      Callable<Void> callable = new Callable<Void>() {
-        @Override
-        public Void call() throws Exception {
-          touch(fileName);
-          return null;
-        }
-      };
+      ExecutorService es = Executors.newFixedThreadPool(10);
+      for (int i = 0; i < TEST_FILES_NUMBER; i++) {
+        final Path fileName = new Path("/test" + i);
+        Callable<Void> callable = new Callable<Void>() {
+          @Override
+          public Void call() throws Exception {
+            touch(fileName);
+            return null;
+          }
+        };
 
-      tasks.add(es.submit(callable));
-    }
+        tasks.add(es.submit(callable));
+      }
 
-    for (Future<Void> task : tasks) {
-      task.get();
-    }
+      for (Future<Void> task : tasks) {
+        task.get();
+      }
 
-    es.shutdownNow();
+      es.shutdownNow();
+      fs.registerListener(
+              new TracingHeaderValidator(getConfiguration().getClientCorrelationId(),
+                      fs.getFileSystemId(), FSOperationType.LISTSTATUS, true, 0));
+      FileStatus[] files = fs.listStatus(new Path("/"));
+      assertEquals(TEST_FILES_NUMBER, files.length /* user directory */);
     fs.registerListener(
-        new TracingHeaderValidator(getConfiguration().getClientCorrelationId(),
-            fs.getFileSystemId(), FSOperationType.LISTSTATUS, true, 0));
-    FileStatus[] files = fs.listStatus(new Path("/"));
-    assertEquals(TEST_FILES_NUMBER, files.length /* user directory */);
+            new TracingHeaderValidator(getConfiguration().getClientCorrelationId(),
+                    fs.getFileSystemId(), FSOperationType.GET_ATTR, true, 0));
+    fs.close();
+  }
+
+  /**
+   * Test to verify that each paginated call to ListBlobs uses a new tracing context.
+   * @throws Exception
+   */
+  @Test
+  public void testListPathTracingContext() throws Exception {
+    final AzureBlobFileSystem fs = getFileSystem();
+    final AzureBlobFileSystem spiedFs = Mockito.spy(fs);
+    final AzureBlobFileSystemStore spiedStore = Mockito.spy(fs.getAbfsStore());
+    final AbfsClient spiedClient = Mockito.spy(fs.getAbfsClient());
+    final TracingContext spiedTracingContext = Mockito.spy(
+        new TracingContext(
+            fs.getClientCorrelationId(), fs.getFileSystemId(),
+            FSOperationType.LISTSTATUS, true, TracingHeaderFormat.ALL_ID_FORMAT, null));
+
+    Mockito.doReturn(spiedStore).when(spiedFs).getAbfsStore();
+    spiedStore.setClient(spiedClient);
+    spiedFs.setWorkingDirectory(new Path("/"));
+
+    AbfsClientTestUtil.setMockAbfsRestOperationForListPathOperation(spiedClient,
+        (httpOperation) -> {
+
+          ListResultEntrySchema entry = new ListResultEntrySchema()
+              .withName("a")
+              .withIsDirectory(true);
+          List<ListResultEntrySchema> paths = new ArrayList<>();
+          paths.add(entry);
+          paths.clear();
+          entry = new ListResultEntrySchema()
+              .withName("abc.txt")
+              .withIsDirectory(false);
+          paths.add(entry);
+          ListResultSchema schema1 = new ListResultSchema().withPaths(paths);
+          ListResultSchema schema2 = new ListResultSchema().withPaths(paths);
+
+          when(httpOperation.getListResultSchema()).thenReturn(schema1)
+              .thenReturn(schema2);
+          when(httpOperation.getResponseHeader(
+              HttpHeaderConfigurations.X_MS_CONTINUATION))
+              .thenReturn(TEST_CONTINUATION_TOKEN)
+              .thenReturn(EMPTY_STRING);
+
+          Stubber stubber = Mockito.doThrow(
+              new SocketTimeoutException(CONNECTION_TIMEOUT_JDK_MESSAGE));
+          stubber.doNothing().when(httpOperation).processResponse(
+              nullable(byte[].class), nullable(int.class), nullable(int.class));
+
+          when(httpOperation.getStatusCode()).thenReturn(-1).thenReturn(HTTP_OK);
+          return httpOperation;
+        });
+
+    List<FileStatus> fileStatuses = new ArrayList<>();
+    spiedStore.listStatus(new Path("/"), "", fileStatuses, true, null, spiedTracingContext);
+
+    // Assert that there were 2 paginated ListPath calls were made 1 and 2.
+    // 1. Without continuation token
+    Mockito.verify(spiedClient, times(1)).listPath(
+        "/", false,
+        spiedFs.getAbfsStore().getAbfsConfiguration().getListMaxResults(),
+        null, spiedTracingContext);
+    // 2. With continuation token
+    Mockito.verify(spiedClient, times(1)).listPath(
+        "/", false,
+        spiedFs.getAbfsStore().getAbfsConfiguration().getListMaxResults(),
+        TEST_CONTINUATION_TOKEN, spiedTracingContext);
+
+    // Assert that none of the API calls used the same tracing header.
+    Mockito.verify(spiedTracingContext, times(0)).constructHeader(any(), any(), any());
   }
 
   /**

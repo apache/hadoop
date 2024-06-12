@@ -43,6 +43,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerContext;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
@@ -128,10 +129,12 @@ public class TestCapacitySchedulerPlanFollower extends
 
     String reservationQ =
         ReservationSystemTestUtil.getFullReservationQueueName();
+    QueuePath reservationQueuePath =
+        ReservationSystemTestUtil.getFullReservationQueuePath();
     CapacitySchedulerConfiguration csConf = cs.getConfiguration();
-    csConf.setReservationWindow(reservationQ, 20L);
-    csConf.setMaximumCapacity(reservationQ, 40);
-    csConf.setAverageCapacity(reservationQ, 20);
+    csConf.setReservationWindow(reservationQueuePath, 20L);
+    csConf.setMaximumCapacity(reservationQueuePath, 40);
+    csConf.setAverageCapacity(reservationQueuePath, 20);
     policy.init(reservationQ, csConf);
   }
 

@@ -41,6 +41,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.Activi
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.AllocationState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.ResourceUsageMultiNodeLookupPolicy;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -137,16 +138,18 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
   private static void setupQueueConfiguration(
       CapacitySchedulerConfiguration config) {
     // Define top-level queues
-    config.setQueues(CapacitySchedulerConfiguration.ROOT,
+    final QueuePath root = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+    final QueuePath a = new QueuePath(CapacitySchedulerConfiguration.ROOT, "a");
+    final QueuePath b = new QueuePath(CapacitySchedulerConfiguration.ROOT, "b");
+
+    config.setQueues(root,
         new String[] {"a", "b"});
 
-    final String queueA = CapacitySchedulerConfiguration.ROOT + ".a";
-    config.setCapacity(queueA, 10.5f);
-    config.setMaximumCapacity(queueA, 50);
+    config.setCapacity(a, 10.5f);
+    config.setMaximumCapacity(a, 50);
 
-    final String queueB = CapacitySchedulerConfiguration.ROOT + ".b";
-    config.setCapacity(queueB, 89.5f);
-    config.setMaximumApplicationMasterResourcePerQueuePercent(queueB, 100);
+    config.setCapacity(b, 89.5f);
+    config.setMaximumApplicationMasterResourcePerQueuePercent(b, 100);
   }
 
   @Before

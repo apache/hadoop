@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a;
 
 import java.io.IOException;
+import java.util.Optional;
 
 import org.junit.Ignore;
 import org.junit.Test;
@@ -36,6 +37,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 import static org.apache.hadoop.fs.s3a.Constants.S3_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.EncryptionTestUtils.AWS_KMS_SSE_ALGORITHM;
+import static org.apache.hadoop.fs.s3a.EncryptionTestUtils.validateEncryptionFileAttributes;
 import static org.apache.hadoop.fs.s3a.S3AEncryptionMethods.SSE_KMS;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
@@ -97,6 +99,23 @@ public class ITestS3AEncryptionWithDefaultS3Settings extends
     EncryptionTestUtils.assertEncrypted(fs, path, SSE_KMS, kmsKey);
   }
 
+  @Test
+  public void testEncryptionFileAttributes() throws Exception {
+    describe("Test for correct encryption file attributes for SSE-KMS with user default setting.");
+    skipIfBucketNotKmsEncrypted();
+    Path path = path(createFilename(1024));
+    byte[] data = dataset(1024, 'a', 'z');
+    S3AFileSystem fs = getFileSystem();
+    writeDataset(fs, path, data, data.length, 1024 * 1024, true);
+    ContractTestUtils.verifyFileContents(fs, path, data);
+    Configuration c = fs.getConf();
+    String kmsKey = getS3EncryptionKey(getTestBucketName(c), c);
+    validateEncryptionFileAttributes(fs, path, AWS_KMS_SSE_ALGORITHM, Optional.of(kmsKey));
+  }
+
+
+
+
   @Override
   @Ignore
   @Test
@@ -115,20 +134,34 @@ public class ITestS3AEncryptionWithDefaultS3Settings extends
    */
   @Override
   public void testEncryptionOverRename() throws Throwable {
+    skipIfBucketNotKmsEncrypted();
+    super.testEncryptionOverRename();
+  }
+
+  /**
+   * If the test bucket is not configured with aws:kms encryption algorithm,
+   * skip the test.
+   *
+   * @throws IOException If the object creation/deletion/access fails.
+   */
+  private void skipIfBucketNotKmsEncrypted() throws IOException {
     S3AFileSystem fs = getFileSystem();
     Path path = path(getMethodName() + "find-encryption-algo");
     ContractTestUtils.touch(fs, path);
-    String sseAlgorithm = getS3AInternals().getObjectMetadata(path)
-        .serverSideEncryptionAsString();
-    if(StringUtils.isBlank(sseAlgorithm) ||
-            !sseAlgorithm.equals(AWS_KMS_SSE_ALGORITHM)) {
-      skip("Test bucket is not configured with " + AWS_KMS_SSE_ALGORITHM);
+    try {
+      String sseAlgorithm =
+          getS3AInternals().getObjectMetadata(path).serverSideEncryptionAsString();
+      if (StringUtils.isBlank(sseAlgorithm) || !sseAlgorithm.equals(AWS_KMS_SSE_ALGORITHM)) {
+        skip("Test bucket is not configured with " + AWS_KMS_SSE_ALGORITHM);
+      }
+    } finally {
+      ContractTestUtils.assertDeleted(fs, path, false);
     }
-    super.testEncryptionOverRename();
   }
 
   @Test
   public void testEncryptionOverRename2() throws Throwable {
+    skipIfBucketNotKmsEncrypted();
     S3AFileSystem fs = getFileSystem();
 
     // write the file with the unencrypted FS.

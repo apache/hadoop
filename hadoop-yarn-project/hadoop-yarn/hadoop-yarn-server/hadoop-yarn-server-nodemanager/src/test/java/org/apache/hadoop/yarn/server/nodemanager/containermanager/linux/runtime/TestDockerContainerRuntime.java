@@ -76,7 +76,7 @@ import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.attribute.FileAttribute;
@@ -1992,7 +1992,7 @@ public class TestDockerContainerRuntime {
         PrivilegedOperation.OperationType.RUN_DOCKER_CMD);
     String dockerCommandFile = op.getArguments().get(0);
     return Files.readAllLines(Paths.get(dockerCommandFile),
-        Charset.forName("UTF-8"));
+        StandardCharsets.UTF_8);
   }
 
   private List<String> getDockerCommandsForSignal(
@@ -2471,7 +2471,7 @@ public class TestDockerContainerRuntime {
     String dockerCommandFile = args.get(argsCounter++);
 
     List<String> dockerCommands = Files
-        .readAllLines(Paths.get(dockerCommandFile), Charset.forName("UTF-8"));
+        .readAllLines(Paths.get(dockerCommandFile), StandardCharsets.UTF_8);
 
     int expected = 14;
     int counter = 0;
@@ -2617,7 +2617,7 @@ public class TestDockerContainerRuntime {
     String dockerCommandFile = args.get((https) ? 14 : 12);
 
     List<String> dockerCommands = Files.readAllLines(
-        Paths.get(dockerCommandFile), Charset.forName("UTF-8"));
+        Paths.get(dockerCommandFile), StandardCharsets.UTF_8);
     return dockerCommands;
   }
 }

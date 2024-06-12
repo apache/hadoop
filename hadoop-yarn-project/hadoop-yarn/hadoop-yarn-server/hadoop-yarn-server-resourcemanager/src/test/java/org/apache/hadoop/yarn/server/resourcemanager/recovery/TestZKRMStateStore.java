@@ -213,7 +213,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
 
     private RMStateStore createStore(Configuration conf) throws Exception {
       workingZnode = "/jira/issue/3077/rmstore";
-      conf.set(CommonConfigurationKeys.ZK_ADDRESS,
+      conf.set(YarnConfiguration.RM_ZK_ADDRESS,
           curatorTestingServer.getConnectString());
       conf.set(YarnConfiguration.ZK_RM_STATE_STORE_PARENT_PATH, workingZnode);
       conf.setLong(YarnConfiguration.RM_EPOCH, epoch);
@@ -347,7 +347,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
       public RMStateStore getRMStateStore() throws Exception {
         YarnConfiguration conf = new YarnConfiguration();
         workingZnode = "/jira/issue/3077/rmstore";
-        conf.set(CommonConfigurationKeys.ZK_ADDRESS,
+        conf.set(YarnConfiguration.RM_ZK_ADDRESS,
             curatorTestingServer.getConnectString());
         conf.set(YarnConfiguration.ZK_RM_STATE_STORE_PARENT_PATH, workingZnode);
         this.store = new TestZKRMStateStoreInternal(conf, workingZnode) {
@@ -388,7 +388,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     conf.set(YarnConfiguration.RM_HA_IDS, rmIds);
     conf.setBoolean(YarnConfiguration.RECOVERY_ENABLED, true);
     conf.set(YarnConfiguration.RM_STORE, ZKRMStateStore.class.getName());
-    conf.set(CommonConfigurationKeys.ZK_ADDRESS,
+    conf.set(YarnConfiguration.RM_ZK_ADDRESS,
         curatorTestServer.getConnectString());
     conf.setInt(CommonConfigurationKeys.ZK_TIMEOUT_MS, ZK_TIMEOUT_MS);
     conf.set(YarnConfiguration.RM_HA_ID, rmId);
@@ -814,19 +814,19 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
       ApplicationAttemptId attemptId, Container container, long startTime,
       int amExitStatus) {
     Map<String, Long> resourceSecondsMap = new HashMap<>();
-    Map<String, Long> preemptedResoureSecondsMap = new HashMap<>();
+    Map<String, Long> preemptedResourceSecondsMap = new HashMap<>();
     resourceSecondsMap
         .put(ResourceInformation.MEMORY_MB.getName(), 0L);
     resourceSecondsMap
         .put(ResourceInformation.VCORES.getName(), 0L);
-    preemptedResoureSecondsMap.put(ResourceInformation.MEMORY_MB.getName(),
+    preemptedResourceSecondsMap.put(ResourceInformation.MEMORY_MB.getName(),
         0L);
-    preemptedResoureSecondsMap
+    preemptedResourceSecondsMap
         .put(ResourceInformation.VCORES.getName(), 0L);
     return ApplicationAttemptStateData.newInstance(attemptId,
         container, null, startTime, RMAppAttemptState.FINISHED,
         "myTrackingUrl", "attemptDiagnostics", FinalApplicationStatus.SUCCEEDED,
-        amExitStatus, 0, resourceSecondsMap, preemptedResoureSecondsMap, 0);
+        amExitStatus, 0, resourceSecondsMap, preemptedResourceSecondsMap, 0);
   }
 
   private ApplicationAttemptId storeAttempt(RMStateStore store,

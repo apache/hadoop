@@ -24,6 +24,7 @@ import software.amazon.awssdk.services.s3.model.MultipartUpload;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 
 import java.io.IOException;
@@ -76,7 +77,7 @@ public class ITestS3AMultipartUtils extends AbstractS3ATestBase {
 
       // 2. Verify all uploads are found listing by prefix
       describe("Verifying upload list by prefix");
-      MultipartUtils.UploadIterator uploads = fs.listUploads(getPartPrefix(fs));
+      RemoteIterator<MultipartUpload> uploads = fs.listUploads(getPartPrefix(fs));
       assertUploadsPresent(uploads, keySet);
 
       // 3. Verify all uploads are found listing without prefix
@@ -97,7 +98,7 @@ public class ITestS3AMultipartUtils extends AbstractS3ATestBase {
    * @param ourUploads set up uploads that should be present
    * @throws IOException on I/O error
    */
-  private void assertUploadsPresent(MultipartUtils.UploadIterator list,
+  private void assertUploadsPresent(RemoteIterator<MultipartUpload> list,
       Set<MultipartTestUtils.IdKey> ourUploads) throws IOException {
 
     // Don't modify passed-in set, use copy.

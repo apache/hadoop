@@ -413,6 +413,8 @@ class DataXceiverServer implements Runnable {
       peers.clear();
       peersXceiver.clear();
       datanode.metrics.setDataNodeActiveXceiversCount(0);
+      datanode.metrics.setDataNodeReadActiveXceiversCount(0);
+      datanode.metrics.setDataNodeWriteActiveXceiversCount(0);
       this.noPeers.signalAll();
     } finally {
       lock.unlock();

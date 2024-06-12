@@ -89,7 +89,7 @@ public class MultiNodeSortingManager<N extends SchedulerNode>
       MultiNodeSorter<N> mon = new MultiNodeSorter<N>(rmContext, policy);
       mon.init(conf);
       mon.start();
-      runningMultiNodeSorters.put(policy.getPolicyName(), mon);
+      runningMultiNodeSorters.put(policy.getPolicyClassName(), mon);
     }
   }
 

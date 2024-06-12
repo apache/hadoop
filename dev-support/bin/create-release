@@ -418,7 +418,8 @@ function option_parse
     fi
   fi
   if [ -n "$MVNEXTRAARGS" ]; then
-    MVN_ARGS+=("$MVNEXTRAARGS")
+    # shellcheck disable=SC2206
+    MVN_ARGS+=(${MVNEXTRAARGS[*]})
   fi
 
   if [[ "${SECURITYRELEASE}" = true ]]; then
@@ -504,9 +505,9 @@ function dockermode
     echo "LABEL org.apache.hadoop.create-release=\"cr-${RANDOM}\""
 
     # setup ownerships, etc
-    echo "RUN groupadd --non-unique -g ${group_id} ${user_name}"
-    echo "RUN useradd -g ${group_id} -u ${user_id} -m ${user_name}"
-    echo "RUN chown -R ${user_name} /home/${user_name}"
+    echo "RUN groupadd --non-unique -g ${group_id} ${user_name}; exit 0;"
+    echo "RUN useradd -g ${group_id} -u ${user_id} -m ${user_name}; exit 0;"
+    echo "RUN chown -R ${user_name} /home/${user_name}; exit 0;"
     echo "ENV HOME /home/${user_name}"
     echo "RUN mkdir -p /maven"
     echo "RUN chown -R ${user_name} /maven"
@@ -552,10 +553,12 @@ function makearelease
   mkdir -p "${LOGDIR}"
 
   # Install the Hadoop maven plugins first
-  run_and_redirect "${LOGDIR}/mvn_install_maven_plugins.log" "${MVN}" "${MVN_ARGS[@]}" -pl hadoop-maven-plugins -am clean install
+  # shellcheck disable=SC2086
+  run_and_redirect "${LOGDIR}/mvn_install_maven_plugins.log" "${MVN}" ${MVN_ARGS[*]} -pl hadoop-maven-plugins -am clean install
 
   # mvn clean for sanity
-  run_and_redirect "${LOGDIR}/mvn_clean.log" "${MVN}" "${MVN_ARGS[@]}" clean
+  # shellcheck disable=SC2086
+  run_and_redirect "${LOGDIR}/mvn_clean.log" "${MVN}" ${MVN_ARGS[*]} clean
 
   # Create staging dir for release artifacts
   run mkdir -p "${ARTIFACTS_DIR}"
@@ -563,7 +566,8 @@ function makearelease
   big_console_header "Apache RAT Check"
 
   # Create RAT report
-  run_and_redirect "${LOGDIR}/mvn_apache_rat.log" "${MVN}" "${MVN_ARGS[@]}" apache-rat:check
+  # shellcheck disable=SC2086
+  run_and_redirect "${LOGDIR}/mvn_apache_rat.log" "${MVN}" ${MVN_ARGS[*]} apache-rat:check
 
   big_console_header "Maven Build and Install"
 
@@ -577,9 +581,9 @@ function makearelease
   fi
 
   # Create SRC and BIN tarballs for release,
-  # shellcheck disable=SC2046
+  # shellcheck disable=SC2046,SC2086
   run_and_redirect "${LOGDIR}/mvn_${target}.log" \
-    "${MVN}" "${MVN_ARGS[@]}" ${target} \
+    "${MVN}" ${MVN_ARGS[*]} ${target} \
       -Pdist,src,yarn-ui \
       "${signflags[@]}" \
       -DskipTests -Dtar $(hadoop_native_flags)
@@ -608,8 +612,9 @@ function makearelease
   # we need to do install again so that jdiff and
   # a few other things get registered in the maven
   # universe correctly
+  # shellcheck disable=SC2206,SC2086
   run_and_redirect "${LOGDIR}/mvn_site.log" \
-    "${MVN}" "${MVN_ARGS[@]}" install \
+    "${MVN}" ${MVN_ARGS[*]} install \
       site site:stage \
       -DskipTests \
       -DskipShade \

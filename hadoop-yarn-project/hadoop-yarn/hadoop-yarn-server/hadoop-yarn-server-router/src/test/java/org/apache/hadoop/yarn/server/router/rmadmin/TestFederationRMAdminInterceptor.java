@@ -22,6 +22,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.DecommissionType;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -64,12 +65,20 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueu
 import org.apache.hadoop.yarn.server.api.protocolrecords.BatchSaveFederationQueuePoliciesResponse;
 import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.QueryFederationQueuePoliciesResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplicationRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationApplicationResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.GetSubClustersRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.GetSubClustersResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.FederationSubCluster;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationQueuePoliciesRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DeleteFederationQueuePoliciesResponse;
 import org.apache.hadoop.yarn.server.federation.policies.dao.WeightedPolicyInfo;
 import org.apache.hadoop.yarn.server.federation.policies.manager.WeightedLocalityPolicyManager;
 import org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterPolicyConfiguration;
+import org.apache.hadoop.yarn.server.federation.store.records.ApplicationHomeSubCluster;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreTestUtil;
 import org.junit.Assert;
@@ -639,15 +648,27 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
     LambdaTestUtils.intercept(YarnException.class, "Missing Queue information.",
         () -> interceptor.saveFederationQueuePolicy(request));
 
-    // routerWeight / amrmWeight
-    // The sum of the routerWeight is not equal to 1.
+    // PolicyManager needs to support weight
     FederationQueueWeight federationQueueWeight2 = FederationQueueWeight.newInstance(
         "SC-1:0.7,SC-2:0.3", "SC-1:0.8,SC-2:0.3", "1.0");
     SaveFederationQueuePolicyRequest request2 =
-        SaveFederationQueuePolicyRequest.newInstance("root.a", federationQueueWeight2, "-");
+        SaveFederationQueuePolicyRequest.newInstance("root.a", federationQueueWeight2,
+        "TestPolicyManager");
+    LambdaTestUtils.intercept(YarnException.class,
+        "TestPolicyManager does not support the use of queue weights.",
+        () -> interceptor.saveFederationQueuePolicy(request2));
+
+    // routerWeight / amrmWeight
+    // The sum of the routerWeight is not equal to 1.
+    String policyTypeName = WeightedLocalityPolicyManager.class.getCanonicalName();
+    FederationQueueWeight federationQueueWeight3 = FederationQueueWeight.newInstance(
+        "SC-1:0.7,SC-2:0.3", "SC-1:0.8,SC-2:0.3", "1.0");
+    SaveFederationQueuePolicyRequest request3 =
+        SaveFederationQueuePolicyRequest.newInstance("root.a", federationQueueWeight3,
+        policyTypeName);
     LambdaTestUtils.intercept(YarnException.class,
         "The sum of ratios for all subClusters must be equal to 1.",
-        () -> interceptor.saveFederationQueuePolicy(request2));
+        () -> interceptor.saveFederationQueuePolicy(request3));
   }
 
   @Test
@@ -988,5 +1009,84 @@ public class TestFederationRMAdminInterceptor extends BaseRouterRMAdminTest {
     LambdaTestUtils.intercept(YarnException.class,
         "The index of the records to be retrieved has exceeded the maximum index.",
         () -> interceptor.listFederationQueuePolicies(request8));
+  }
+
+  @Test
+  public void testDeleteFederationApplication() throws Exception {
+    ApplicationId applicationId = ApplicationId.newInstance(10, 1);
+    DeleteFederationApplicationRequest request1 =
+        DeleteFederationApplicationRequest.newInstance(applicationId.toString());
+    LambdaTestUtils.intercept(YarnException.class,
+        "Application application_10_0001 does not exist.",
+        () -> interceptor.deleteFederationApplication(request1));
+
+    ApplicationId applicationId2 = ApplicationId.newInstance(10, 2);
+    SubClusterId homeSubCluster = SubClusterId.newInstance("SC-1");
+    ApplicationHomeSubCluster appHomeSubCluster =
+        ApplicationHomeSubCluster.newInstance(applicationId2, homeSubCluster);
+    facade.addApplicationHomeSubCluster(appHomeSubCluster);
+    DeleteFederationApplicationRequest request2 =
+        DeleteFederationApplicationRequest.newInstance(applicationId2.toString());
+    DeleteFederationApplicationResponse deleteFederationApplicationResponse =
+        interceptor.deleteFederationApplication(request2);
+    assertNotNull(deleteFederationApplicationResponse);
+    assertEquals("applicationId = " + applicationId2 + " delete success.",
+        deleteFederationApplicationResponse.getMessage());
+  }
+
+  @Test
+  public void testGetFederationSubClusters() throws Exception {
+    LambdaTestUtils.intercept(YarnException.class,
+        "Missing getFederationSubClusters Request.",
+        () -> interceptor.getFederationSubClusters(null));
+
+    GetSubClustersRequest request = GetSubClustersRequest.newInstance();
+    GetSubClustersResponse federationSubClusters = interceptor.getFederationSubClusters(request);
+    assertNotNull(federationSubClusters);
+
+    List<FederationSubCluster> federationSubClustersList =
+        federationSubClusters.getFederationSubClusters();
+    assertNotNull(federationSubClustersList);
+    assertEquals(4, federationSubClustersList.size());
+  }
+
+  @Test
+  public void testDeleteFederationPoliciesByQueues() throws IOException, YarnException {
+    // subClusters
+    List<String> subClusterLists = new ArrayList<>();
+    subClusterLists.add("SC-1");
+    subClusterLists.add("SC-2");
+
+    // generate queue A, queue B, queue C
+    FederationQueueWeight rootA = generateFederationQueueWeight("root.a", subClusterLists);
+    FederationQueueWeight rootB = generateFederationQueueWeight("root.b", subClusterLists);
+    FederationQueueWeight rootC = generateFederationQueueWeight("root.c", subClusterLists);
+
+    List<FederationQueueWeight> federationQueueWeights = new ArrayList<>();
+    federationQueueWeights.add(rootA);
+    federationQueueWeights.add(rootB);
+    federationQueueWeights.add(rootC);
+
+    // Step1. Save Queue Policies in Batches
+    BatchSaveFederationQueuePoliciesRequest request =
+        BatchSaveFederationQueuePoliciesRequest.newInstance(federationQueueWeights);
+
+    BatchSaveFederationQueuePoliciesResponse policiesResponse =
+        interceptor.batchSaveFederationQueuePolicies(request);
+
+    assertNotNull(policiesResponse);
+    assertNotNull(policiesResponse.getMessage());
+    assertEquals("batch save policies success.", policiesResponse.getMessage());
+
+    // Step2. Delete the policy of root.c
+    List<String> deleteQueues = new ArrayList<>();
+    deleteQueues.add("root.c");
+    DeleteFederationQueuePoliciesRequest deleteRequest =
+        DeleteFederationQueuePoliciesRequest.newInstance(deleteQueues);
+    DeleteFederationQueuePoliciesResponse deleteResponse =
+        interceptor.deleteFederationPoliciesByQueues(deleteRequest);
+    assertNotNull(deleteResponse);
+    String message = deleteResponse.getMessage();
+    assertEquals("queues = root.c delete success.", message);
   }
 }

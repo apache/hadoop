@@ -106,6 +106,10 @@ public class HostsFileWriter {
         for (String hostNameAndPort : decommissionHostNameAndPorts) {
           DatanodeAdminProperties dn = new DatanodeAdminProperties();
           String[] hostAndPort = hostNameAndPort.split(":");
+          if (hostAndPort.length != 2) {
+            throw new IllegalArgumentException("The decommision host name and port format is "
+                + "invalid. The format should be in <host>:<port>, not " + hostNameAndPort);
+          }
           dn.setHostName(hostAndPort[0]);
           dn.setPort(Integer.parseInt(hostAndPort[1]));
           dn.setAdminState(AdminStates.DECOMMISSIONED);

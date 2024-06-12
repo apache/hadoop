@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 
 import org.junit.Test;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -571,7 +572,7 @@ public class TestFileOutputCommitter {
     String contents = null;
     try {
       in.read(buf, 0, len);
-      contents = new String(buf, "UTF-8");
+      contents = new String(buf, StandardCharsets.UTF_8);
     } finally {
       in.close();
     }

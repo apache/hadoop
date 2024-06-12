@@ -312,7 +312,7 @@ public interface MRJobConfig {
   public static final String MAPREDUCE_JVM_ADD_OPENS_JAVA_OPT =
     "mapreduce.jvm.add-opens-as-default";
 
-  public static final boolean MAPREDUCE_JVM_ADD_OPENS_JAVA_OPT_DEFAULT = true;
+  public static final boolean MAPREDUCE_JVM_ADD_OPENS_JAVA_OPT_DEFAULT = false;
 
   public static final String IO_SORT_FACTOR = "mapreduce.task.io.sort.factor";
 
@@ -323,6 +323,7 @@ public interface MRJobConfig {
   public static final int DEFAULT_IO_SORT_MB = 100;
 
   public static final String INDEX_CACHE_MEMORY_LIMIT = "mapreduce.task.index.cache.limit.bytes";
+  String SPILL_FILES_COUNT_LIMIT = "mapreduce.task.spill.files.count.limit";
 
   public static final String PRESERVE_FAILED_TASK_FILES = "mapreduce.task.files.preserve.failedtasks";
 

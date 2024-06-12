@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.hadoop.security.SecurityUtil;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -70,9 +71,9 @@ public class TestSecureZKCuratorManager {
             DELETE_DATA_DIRECTORY_ON_CLOSE, SERVER_ID, TICK_TIME, MAX_CLIENT_CNXNS,
             customConfiguration);
     this.server = new TestingServer(spec, true);
-    this.hadoopConf.set(CommonConfigurationKeys.ZK_ADDRESS, this.server.getConnectString());
+    String zkHostPort = this.server.getConnectString();
     this.curator = new ZKCuratorManager(this.hadoopConf);
-    this.curator.start(new ArrayList<>(), true);
+    this.curator.start(new ArrayList<>(), true, zkHostPort);
   }
 
   /**
@@ -146,7 +147,7 @@ public class TestSecureZKCuratorManager {
     // Validate that HadoopZooKeeperFactory will set ZKConfig with given principals
     ZKCuratorManager.HadoopZookeeperFactory factory =
         new ZKCuratorManager.HadoopZookeeperFactory(null, null, null, true,
-            new ZKCuratorManager.TruststoreKeystore(hadoopConf));
+            new SecurityUtil.TruststoreKeystore(hadoopConf));
     ZooKeeper zk = factory.newZooKeeper(this.server.getConnectString(), 1000, null, false);
     validateSSLConfiguration(this.hadoopConf.get(CommonConfigurationKeys.ZK_SSL_KEYSTORE_LOCATION),
         this.hadoopConf.get(CommonConfigurationKeys.ZK_SSL_KEYSTORE_PASSWORD),
@@ -183,8 +184,8 @@ public class TestSecureZKCuratorManager {
       Validate that the null values are converted into empty strings by the class.
      */
     Configuration conf = new Configuration();
-    ZKCuratorManager.TruststoreKeystore truststoreKeystore =
-        new ZKCuratorManager.TruststoreKeystore(conf);
+    SecurityUtil.TruststoreKeystore truststoreKeystore =
+        new SecurityUtil.TruststoreKeystore(conf);
 
     assertEquals("Validate that null value is converted to empty string.", "",
         truststoreKeystore.getKeystoreLocation());
@@ -200,8 +201,8 @@ public class TestSecureZKCuratorManager {
     conf.set(CommonConfigurationKeys.ZK_SSL_KEYSTORE_PASSWORD, "keystorePassword");
     conf.set(CommonConfigurationKeys.ZK_SSL_TRUSTSTORE_LOCATION, "/truststore.jks");
     conf.set(CommonConfigurationKeys.ZK_SSL_TRUSTSTORE_PASSWORD, "truststorePassword");
-    ZKCuratorManager.TruststoreKeystore truststoreKeystore1 =
-        new ZKCuratorManager.TruststoreKeystore(conf);
+    SecurityUtil.TruststoreKeystore truststoreKeystore1 =
+        new SecurityUtil.TruststoreKeystore(conf);
     assertEquals("Validate that non-null value kept intact.", "/keystore.jks",
         truststoreKeystore1.getKeystoreLocation());
     assertEquals("Validate that null value is converted to empty string.", "keystorePassword",

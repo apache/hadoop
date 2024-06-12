@@ -25,6 +25,7 @@ import java.net.URL;
 import java.time.Duration;
 
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.assertj.core.api.Assertions;
@@ -47,6 +48,8 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_PUT;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_HTTP_CONNECTION_TIMEOUT;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_HTTP_READ_TIMEOUT;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.SOURCE_PATH_NOT_FOUND;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.PATH_ALREADY_EXISTS;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.RENAME_DESTINATION_PARENT_PATH_NOT_FOUND;
@@ -158,6 +161,10 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
 
     // adding mock objects to current AbfsClient
     AbfsClient spyClient = Mockito.spy(fs.getAbfsStore().getClient());
+    AbfsConfiguration spiedConf = Mockito.spy(fs.getAbfsStore().getAbfsConfiguration());
+    Mockito.doReturn(DEFAULT_HTTP_CONNECTION_TIMEOUT).when(spiedConf).getHttpConnectionTimeout();
+    Mockito.doReturn(DEFAULT_HTTP_READ_TIMEOUT).when(spiedConf).getHttpReadTimeout();
+    Mockito.doReturn(spiedConf).when(spyClient).getAbfsConfiguration();
 
     Mockito.doAnswer(answer -> {
       AbfsRestOperation op = new AbfsRestOperation(AbfsRestOperationType.RenamePath,
@@ -191,9 +198,7 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     normalOp2.getConnection().setRequestProperty(HttpHeaderConfigurations.AUTHORIZATION,
             client.getAccessToken());
 
-    when(spiedRestOp.createHttpOperation())
-            .thenReturn(failingOperation)
-            .thenReturn(normalOp2);
+    Mockito.doReturn(failingOperation).doReturn(normalOp2).when(spiedRestOp).createHttpOperation();
   }
 
   /**

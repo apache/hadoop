@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
+import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_TIMEOUT_ABBREVIATION;
 
 /**
  * The TracingContext class to correlate Store requests using unique
@@ -62,11 +63,13 @@ public class TracingContext {
   private Listener listener = null;  // null except when testing
   //final concatenated ID list set into x-ms-client-request-id header
   private String header = EMPTY_STRING;
+  private String metricResults = EMPTY_STRING;
+  private String metricHeader = EMPTY_STRING;
 
   /**
    * If {@link #primaryRequestId} is null, this field shall be set equal
    * to the last part of the {@link #clientRequestId}'s UUID
-   * in {@link #constructHeader(AbfsHttpOperation, String)} only on the
+   * in {@link #constructHeader(AbfsHttpOperation, String, String)} only on the
    * first API call for an operation. Subsequent retries for that operation
    * will not change this field. In case {@link  #primaryRequestId} is non-null,
    * this field shall not be set.
@@ -111,6 +114,15 @@ public class TracingContext {
     }
   }
 
+  public TracingContext(String clientCorrelationID, String fileSystemID,
+      FSOperationType opType, boolean needsPrimaryReqId,
+      TracingHeaderFormat tracingHeaderFormat, Listener listener, String metricResults) {
+    this(clientCorrelationID, fileSystemID, opType, needsPrimaryReqId, tracingHeaderFormat,
+        listener);
+    this.metricResults = metricResults;
+  }
+
+
   public TracingContext(TracingContext originalTracingContext) {
     this.fileSystemID = originalTracingContext.fileSystemID;
     this.streamID = originalTracingContext.streamID;
@@ -122,8 +134,8 @@ public class TracingContext {
     if (originalTracingContext.listener != null) {
       this.listener = originalTracingContext.listener.getClone();
     }
+    this.metricResults = originalTracingContext.metricResults;
   }
-
   public static String validateClientCorrelationID(String clientCorrelationID) {
     if ((clientCorrelationID.length() > MAX_CLIENT_CORRELATION_ID_LENGTH)
         || (!clientCorrelationID.matches(CLIENT_CORRELATION_ID_PATTERN))) {
@@ -168,8 +180,10 @@ public class TracingContext {
    *                      connection
    * @param previousFailure Failure seen before this API trigger on same operation
    * from AbfsClient.
+   * @param retryPolicyAbbreviation Retry policy used to get retry interval before this
+   * API trigger on same operation from AbfsClient
    */
-  public void constructHeader(AbfsHttpOperation httpOperation, String previousFailure) {
+  public void constructHeader(AbfsHttpOperation httpOperation, String previousFailure, String retryPolicyAbbreviation) {
     clientRequestId = UUID.randomUUID().toString();
     switch (format) {
     case ALL_ID_FORMAT: // Optional IDs (e.g. streamId) may be empty
@@ -177,18 +191,25 @@ public class TracingContext {
           clientCorrelationID + ":" + clientRequestId + ":" + fileSystemID + ":"
               + getPrimaryRequestIdForHeader(retryCount > 0) + ":" + streamID
               + ":" + opType + ":" + retryCount;
-      header = addFailureReasons(header, previousFailure);
+      header = addFailureReasons(header, previousFailure, retryPolicyAbbreviation);
+      metricHeader += !(metricResults.trim().isEmpty()) ? metricResults  : "";
       break;
     case TWO_ID_FORMAT:
       header = clientCorrelationID + ":" + clientRequestId;
+      metricHeader += !(metricResults.trim().isEmpty()) ? metricResults  : "";
       break;
     default:
-      header = clientRequestId; //case SINGLE_ID_FORMAT
+      //case SINGLE_ID_FORMAT
+      header = clientRequestId;
+      metricHeader += !(metricResults.trim().isEmpty()) ? metricResults  : "";
     }
     if (listener != null) { //for testing
       listener.callTracingHeaderValidator(header, format);
     }
     httpOperation.setRequestProperty(HttpHeaderConfigurations.X_MS_CLIENT_REQUEST_ID, header);
+    if (!metricHeader.equals(EMPTY_STRING)) {
+      httpOperation.setRequestProperty(HttpHeaderConfigurations.X_MS_FECLIENT_METRICS, metricHeader);
+    }
     /*
     * In case the primaryRequestId is an empty-string and if it is the first try to
     * API call (previousFailure shall be null), maintain the last part of clientRequestId's
@@ -217,9 +238,12 @@ public class TracingContext {
   }
 
   private String addFailureReasons(final String header,
-      final String previousFailure) {
+      final String previousFailure, String retryPolicyAbbreviation) {
     if (previousFailure == null) {
       return header;
+    }
+    if (CONNECTION_TIMEOUT_ABBREVIATION.equals(previousFailure) && retryPolicyAbbreviation != null) {
+      return String.format("%s_%s_%s", header, previousFailure, retryPolicyAbbreviation);
     }
     return String.format("%s_%s", header, previousFailure);
   }

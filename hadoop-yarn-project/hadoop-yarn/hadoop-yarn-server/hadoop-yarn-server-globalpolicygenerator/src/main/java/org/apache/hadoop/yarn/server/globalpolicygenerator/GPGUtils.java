@@ -27,6 +27,7 @@ import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import javax.ws.rs.core.MediaType;
 
@@ -65,7 +66,7 @@ public final class GPGUtils {
    */
   public static <T> T invokeRMWebService(String webAddr, String path, final Class<T> returnType,
       Configuration conf, String selectParam) {
-    Client client = Client.create();
+    Client client = createJerseyClient(conf);
     T obj;
 
     // webAddr stores the form of host:port in subClusterInfo
@@ -127,5 +128,23 @@ public final class GPGUtils {
       weights.put(new SubClusterIdInfo(id), 1.0f);
     }
     return weights;
+  }
+
+  /**
+   * Create JerseyClient based on configuration file.
+   * We will set the timeout when creating JerseyClient.
+   *
+   * @param conf Configuration.
+   * @return JerseyClient.
+   */
+  public static Client createJerseyClient(Configuration conf) {
+    Client client = Client.create();
+    int connectTimeOut = (int) conf.getTimeDuration(YarnConfiguration.GPG_WEBAPP_CONNECT_TIMEOUT,
+        YarnConfiguration.DEFAULT_GPG_WEBAPP_CONNECT_TIMEOUT, TimeUnit.MILLISECONDS);
+    client.setConnectTimeout(connectTimeOut);
+    int readTimeout = (int) conf.getTimeDuration(YarnConfiguration.GPG_WEBAPP_READ_TIMEOUT,
+        YarnConfiguration.DEFAULT_GPG_WEBAPP_READ_TIMEOUT, TimeUnit.MILLISECONDS);
+    client.setReadTimeout(readTimeout);
+    return client;
   }
 }

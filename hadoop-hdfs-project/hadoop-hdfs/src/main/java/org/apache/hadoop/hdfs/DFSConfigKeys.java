@@ -192,6 +192,18 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.namenode.path.based.cache.block.map.allocation.percent";
   public static final float    DFS_NAMENODE_PATH_BASED_CACHE_BLOCK_MAP_ALLOCATION_PERCENT_DEFAULT = 0.25f;
 
+  public static final String DFS_NAMENODE_CRM_CHECKLOCKTIME_ENABLE =
+      "dfs.namenode.crm.checklocktime.enable";
+  public static final boolean DFS_NAMENODE_CRM_CHECKLOCKTIME_DEFAULT = false;
+
+  public static final String DFS_NAMENODE_CRM_MAXLOCKTIME_MS =
+      "dfs.namenode.crm.maxlocktime.ms";
+  public static final long DFS_NAMENODE_CRM_MAXLOCKTIME_MS_DEFAULT = 1000;
+
+  public static final String DFS_NAMENODE_CRM_SLEEP_TIME_MS =
+      "dfs.namenode.crm.sleeptime.ms";
+  public static final long DFS_NAMENODE_CRM_SLEEP_TIME_MS_DEFAULT = 300;
+
   public static final int     DFS_NAMENODE_HTTP_PORT_DEFAULT =
       HdfsClientConfigKeys.DFS_NAMENODE_HTTP_PORT_DEFAULT;
   public static final String  DFS_NAMENODE_HTTP_ADDRESS_KEY =
@@ -302,6 +314,13 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.namenode.reconstruction.pending.timeout-sec";
   public static final int
       DFS_NAMENODE_RECONSTRUCTION_PENDING_TIMEOUT_SEC_DEFAULT = 300;
+
+  public static final String  DFS_NAMENODE_EXCESS_REDUNDANCY_TIMEOUT_SEC_KEY =
+      "dfs.namenode.excess.redundancy.timeout-sec";
+  public static final long DFS_NAMENODE_EXCESS_REDUNDANCY_TIMEOUT_SEC_DEAFULT = 3600;
+  public static final String DFS_NAMENODE_EXCESS_REDUNDANCY_TIMEOUT_CHECK_LIMIT
+      = "dfs.namenode.excess.redundancy.timeout.check.limit";
+  public static final long DFS_NAMENODE_EXCESS_REDUNDANCY_TIMEOUT_CHECK_LIMIT_DEFAULT = 1000;
 
   public static final String  DFS_NAMENODE_MAINTENANCE_REPLICATION_MIN_KEY =
       "dfs.namenode.maintenance.replication.min";
@@ -1343,6 +1362,9 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final int DFS_HA_ZKFC_PORT_DEFAULT = 8019;
   public static final String DFS_HA_ZKFC_NN_HTTP_TIMEOUT_KEY = "dfs.ha.zkfc.nn.http.timeout.ms";
   public static final int DFS_HA_ZKFC_NN_HTTP_TIMEOUT_KEY_DEFAULT = 20000;
+  /** Enable Zookeeper SSL/TLS communication. */
+  public static final String ZK_CLIENT_SSL_ENABLED = "dfs.ha.zkfc.client.ssl.enabled";
+  public static final boolean DEFAULT_ZK_CLIENT_SSL_ENABLED = false;
   public static final String DFS_HA_NN_NOT_BECOME_ACTIVE_IN_SAFEMODE =
       "dfs.ha.nn.not-become-active-in-safemode";
   public static final boolean DFS_HA_NN_NOT_BECOME_ACTIVE_IN_SAFEMODE_DEFAULT =

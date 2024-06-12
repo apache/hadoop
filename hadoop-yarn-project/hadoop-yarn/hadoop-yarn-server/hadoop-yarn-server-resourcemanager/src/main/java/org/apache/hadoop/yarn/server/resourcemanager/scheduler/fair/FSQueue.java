@@ -234,6 +234,7 @@ public abstract class FSQueue implements Queue, Schedulable {
   @Override
   public QueueInfo getQueueInfo(boolean includeChildQueues, boolean recursive) {
     QueueInfo queueInfo = recordFactory.newRecordInstance(QueueInfo.class);
+    queueInfo.setSchedulerType("FairScheduler");
     queueInfo.setQueueName(getQueueName());
 
     if (scheduler.getClusterResource().getMemorySize() == 0) {
@@ -250,7 +251,37 @@ public abstract class FSQueue implements Queue, Schedulable {
           getFairShare().getMemorySize());
     }
 
-    ArrayList<QueueInfo> childQueueInfos = new ArrayList<QueueInfo>();
+    // set Weight
+    queueInfo.setWeight(getWeight());
+
+    // set MinShareResource
+    Resource minShareResource = getMinShare();
+    queueInfo.setMinResourceVCore(minShareResource.getVirtualCores());
+    queueInfo.setMinResourceMemory(minShareResource.getMemorySize());
+
+    // set MaxShareResource
+    Resource maxShareResource =
+        Resources.componentwiseMin(getMaxShare(), scheduler.getClusterResource());
+    queueInfo.setMaxResourceVCore(maxShareResource.getVirtualCores());
+    queueInfo.setMaxResourceMemory(maxShareResource.getMemorySize());
+
+    // set ReservedResource
+    Resource newReservedResource = getReservedResource();
+    queueInfo.setReservedResourceVCore(newReservedResource.getVirtualCores());
+    queueInfo.setReservedResourceMemory(newReservedResource.getMemorySize());
+
+    // set SteadyFairShare
+    Resource newSteadyFairShare = getSteadyFairShare();
+    queueInfo.setSteadyFairShareVCore(newSteadyFairShare.getVirtualCores());
+    queueInfo.setSteadyFairShareMemory(newSteadyFairShare.getMemorySize());
+
+    // set MaxRunningApp
+    queueInfo.setMaxRunningApp(getMaxRunningApps());
+
+    // set Preemption
+    queueInfo.setPreemptionDisabled(isPreemptable());
+
+    ArrayList<QueueInfo> childQueueInfos = new ArrayList<>();
     if (includeChildQueues) {
       Collection<FSQueue> childQueues = getChildQueues();
       for (FSQueue child : childQueues) {

@@ -63,6 +63,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.ChunkedArrayList;
 import org.apache.hadoop.util.Daemon;
+import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -106,6 +107,8 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_HA_NAMENODE
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_NAMENODE_RPC_ADDRESS_AUXILIARY_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_NAMESERVICES;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Failover.DFS_CLIENT_LAZY_RESOLVED;
+import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.Failover.DFS_CLIENT_LAZY_RESOLVED_DEFAULT;
 
 @InterfaceAudience.Private
 public class DFSUtilClient {
@@ -529,11 +532,18 @@ public class DFSUtilClient {
       String suffix = concatSuffixes(nsId, nnId);
       String address = checkKeysAndProcess(defaultValue, suffix, conf, keys);
       if (address != null) {
-        InetSocketAddress isa = NetUtils.createSocketAddr(address);
-        if (isa.isUnresolved()) {
-          LOG.warn("Namenode for {} remains unresolved for ID {}. Check your "
-              + "hdfs-site.xml file to ensure namenodes are configured "
-              + "properly.", nsId, nnId);
+        InetSocketAddress isa = null;
+        // There is no need to resolve host->ip in advance.
+        // Delay the resolution until the host is used.
+        if (conf.getBoolean(DFS_CLIENT_LAZY_RESOLVED, DFS_CLIENT_LAZY_RESOLVED_DEFAULT)) {
+          isa = NetUtils.createSocketAddrUnresolved(address);
+        }else {
+          isa = NetUtils.createSocketAddr(address);
+          if (isa.isUnresolved()) {
+            LOG.warn("Namenode for {} remains unresolved for ID {}. Check your "
+                + "hdfs-site.xml file to ensure namenodes are configured "
+                + "properly.", nsId, nnId);
+          }
         }
         ret.put(nnId, isa);
       }
@@ -660,6 +670,10 @@ public class DFSUtilClient {
     String[] components = StringUtils.split(src, '/');
     for (int i = 0; i < components.length; i++) {
       String element = components[i];
+      // For Windows, we must allow the : in the drive letter.
+      if (Shell.WINDOWS && i == 1 && element.endsWith(":")) {
+        continue;
+      }
       if (element.equals(".")  ||
           (element.contains(":"))  ||
           (element.contains("/"))) {

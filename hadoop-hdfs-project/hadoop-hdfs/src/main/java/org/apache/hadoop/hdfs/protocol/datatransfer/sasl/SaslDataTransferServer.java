@@ -28,6 +28,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
@@ -62,7 +63,6 @@ import org.apache.hadoop.util.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 
 /**
  * Negotiates SASL for DataTransferProtocol on behalf of a server.  There are
@@ -241,7 +241,7 @@ public class SaslDataTransferServer {
           continue; // realm is ignored
         } else {
           throw new UnsupportedCallbackException(callback,
-              "Unrecognized SASL DIGEST-MD5 Callback: " + callback);
+              "Unrecognized SASL Callback: " + callback);
         }
       }
 
@@ -326,7 +326,7 @@ public class SaslDataTransferServer {
     byte[] tokenPassword = blockPoolTokenSecretManager.retrievePassword(
       identifier);
     return (new String(Base64.encodeBase64(tokenPassword, false),
-      Charsets.UTF_8)).toCharArray();
+      StandardCharsets.UTF_8)).toCharArray();
   }
 
   /**
@@ -381,7 +381,7 @@ public class SaslDataTransferServer {
       if (secret != null || bpid != null) {
         // sanity check, if one is null, the other must also not be null
         assert(secret != null && bpid != null);
-        String qop = new String(secret, Charsets.UTF_8);
+        String qop = new String(secret, StandardCharsets.UTF_8);
         saslProps.put(Sasl.QOP, qop);
       }
       SaslParticipant sasl = SaslParticipant.createServerSaslParticipant(

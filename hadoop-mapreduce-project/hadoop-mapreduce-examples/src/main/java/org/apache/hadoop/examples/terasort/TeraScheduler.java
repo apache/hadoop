@@ -19,6 +19,7 @@
 package org.apache.hadoop.examples.terasort;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 import org.apache.hadoop.conf.Configuration;
@@ -28,7 +29,6 @@ import org.apache.hadoop.mapreduce.server.tasktracker.TTConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.thirdparty.com.google.common.base.Charsets;
 
 class TeraScheduler {
   private static final Logger LOG =
@@ -75,7 +75,7 @@ class TeraScheduler {
   List<String> readFile(String filename) throws IOException {
     List<String> result = new ArrayList<String>(10000);
     try (BufferedReader in = new BufferedReader(
-        new InputStreamReader(new FileInputStream(filename), Charsets.UTF_8))) {
+        new InputStreamReader(new FileInputStream(filename), StandardCharsets.UTF_8))) {
       String line = in.readLine();
       while (line != null) {
         result.add(line);

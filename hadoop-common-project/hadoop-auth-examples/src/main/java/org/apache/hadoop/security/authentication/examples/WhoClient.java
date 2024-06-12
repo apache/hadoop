@@ -19,7 +19,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 
 /**
  * Example that uses <code>AuthenticatedURL</code>.
@@ -42,7 +42,7 @@ public class WhoClient {
       if (conn.getResponseCode() == HttpURLConnection.HTTP_OK) {
         BufferedReader reader = new BufferedReader(
             new InputStreamReader(
-                conn.getInputStream(), Charset.forName("UTF-8")));
+                conn.getInputStream(), StandardCharsets.UTF_8));
         String line = reader.readLine();
         while (line != null) {
           System.out.println(line);
