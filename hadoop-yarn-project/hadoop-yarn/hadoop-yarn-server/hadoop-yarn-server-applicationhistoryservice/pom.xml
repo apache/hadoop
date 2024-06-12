@@ -177,8 +177,8 @@
     </dependency>
 
     <dependency>
-      <groupId>${leveldbjni.group}</groupId>
-      <artifactId>leveldbjni-all</artifactId>
+      <groupId>org.fusesource</groupId>
+      <artifactId>leveldbjni-cldr</artifactId>
     </dependency>
 
     <!-- 'mvn dependency:analyze' fails to detect use of this dependency -->

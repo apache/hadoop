@@ -120,8 +120,8 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>${leveldbjni.group}</groupId>
-      <artifactId>leveldbjni-all</artifactId>
+      <groupId>org.fusesource</groupId>
+      <artifactId>leveldbjni-cldr</artifactId>
     </dependency>
     <dependency>
       <groupId>javax.cache</groupId>

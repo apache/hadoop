@@ -149,8 +149,8 @@
           <artifactId>hadoop-yarn-common</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>${leveldbjni.group}</groupId>
-          <artifactId>leveldbjni-all</artifactId>
+          <groupId>org.fusesource</groupId>
+          <artifactId>leveldbjni-cldr</artifactId>
         </exclusion>
         <exclusion>
           <groupId>org.eclipse.jetty</groupId>
@@ -520,8 +520,8 @@
           <artifactId>hadoop-yarn-server-common</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>${leveldbjni.group}</groupId>
-          <artifactId>leveldbjni-all</artifactId>
+          <groupId>org.fusesource</groupId>
+          <artifactId>leveldbjni-cldr</artifactId>
         </exclusion>
         <exclusion>
           <groupId>org.eclipse.jetty</groupId>

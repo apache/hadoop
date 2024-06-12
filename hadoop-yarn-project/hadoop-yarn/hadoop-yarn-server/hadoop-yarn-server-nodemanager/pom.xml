@@ -185,8 +185,8 @@
       <artifactId>hadoop-yarn-server-common</artifactId>
     </dependency>
     <dependency>
-      <groupId>${leveldbjni.group}</groupId>
-      <artifactId>leveldbjni-all</artifactId>
+      <groupId>org.fusesource</groupId>
+      <artifactId>leveldbjni-cldr</artifactId>
     </dependency>
     <dependency>
       <groupId>net.java.dev.jna</groupId>

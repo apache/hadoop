@@ -1622,9 +1622,9 @@
       </dependency>
 
       <dependency>
-        <groupId>${leveldbjni.group}</groupId>
-        <artifactId>leveldbjni-all</artifactId>
-        <version>1.8</version>
+        <groupId>org.fusesource</groupId>
+        <artifactId>leveldbjni-cldr</artifactId>
+        <version>1.9</version>
         <exclusions>
           <exclusion>
             <groupId>com.fasterxml.jackson.core</groupId>
