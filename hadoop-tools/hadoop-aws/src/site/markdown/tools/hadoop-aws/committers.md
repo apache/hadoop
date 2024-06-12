@@ -362,6 +362,13 @@ the magic directory path rewriting is enabled by default.
 The Magic Committer has not been field tested to the extent of Netflix's committer;
 consider it the least mature of the committers.
 
+When there are less number of files to be written, The Magic committer has an option to store the commit data in-memory which can speed up the TaskCommit operation as well as save S3 cost. This can be enabled by the following property
+```xml
+<property>
+  <name>fs.s3a.committer.magic.track.commits.in.memory.enabled</name>
+  <value>true</value>
+</property>
+```
 
 ### Which Committer to Use?
 
@@ -713,7 +720,7 @@ such use case, The "MAGIC PATH" for each job is unique of the format `__magic_jo
 multiple job running simultaneously do not step into each other.
 
 Before attempting this, the committers must be set to not delete all incomplete uploads on job commit,
-by setting `fs.s3a.committer.abort.pending.uploads` to `false`. This is set to `false`by default
+by setting `fs.s3a.committer.abort.pending.uploads` to `false`. This is set to `true` by default.
 
 ```xml
 <property>

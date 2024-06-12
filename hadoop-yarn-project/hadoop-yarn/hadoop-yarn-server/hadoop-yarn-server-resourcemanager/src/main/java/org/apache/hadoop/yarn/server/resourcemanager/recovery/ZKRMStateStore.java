@@ -956,7 +956,7 @@ public class ZKRMStateStore extends RMStateStore {
           zkAcl, fencingNodePath);
       break;
     case REMOVE:
-      zkManager.safeDelete(path, zkAcl, fencingNodePath);
+      safeDeleteAndCheckNode(path, zkAcl, fencingNodePath);
       break;
     default:
       break;
@@ -1035,10 +1035,10 @@ public class ZKRMStateStore extends RMStateStore {
         for (ApplicationAttemptId attemptId : attempts) {
           String attemptRemovePath =
               getNodePath(appIdRemovePath, attemptId.toString());
-          zkManager.safeDelete(attemptRemovePath, zkAcl, fencingNodePath);
+          safeDeleteAndCheckNode(attemptRemovePath, zkAcl, fencingNodePath);
         }
       }
-      zkManager.safeDelete(appIdRemovePath, zkAcl, fencingNodePath);
+      safeDeleteAndCheckNode(appIdRemovePath, zkAcl, fencingNodePath);
     } else {
       CuratorFramework curatorFramework = zkManager.getCurator();
       curatorFramework.delete().deletingChildrenIfNeeded().
@@ -1099,7 +1099,7 @@ public class ZKRMStateStore extends RMStateStore {
     LOG.debug("Removing RMDelegationToken_{}",
         rmDTIdentifier.getSequenceNumber());
 
-    zkManager.safeDelete(nodeRemovePath, zkAcl, fencingNodePath);
+    safeDeleteAndCheckNode(nodeRemovePath, zkAcl, fencingNodePath);
 
     // Check if we should remove the parent app node as well.
     checkRemoveParentZnode(nodeRemovePath, splitIndex);
@@ -1160,7 +1160,7 @@ public class ZKRMStateStore extends RMStateStore {
 
     LOG.debug("Removing RMDelegationKey_{}", delegationKey.getKeyId());
 
-    zkManager.safeDelete(nodeRemovePath, zkAcl, fencingNodePath);
+    safeDeleteAndCheckNode(nodeRemovePath, zkAcl, fencingNodePath);
   }
 
   @Override
@@ -1200,12 +1200,12 @@ public class ZKRMStateStore extends RMStateStore {
     LOG.debug("Removing reservationallocation {} for plan {}",
         reservationIdName, planName);
 
-    zkManager.safeDelete(reservationPath, zkAcl, fencingNodePath);
+    safeDeleteAndCheckNode(reservationPath, zkAcl, fencingNodePath);
 
     List<String> reservationNodes = getChildren(planNodePath);
 
     if (reservationNodes.isEmpty()) {
-      zkManager.safeDelete(planNodePath, zkAcl, fencingNodePath);
+      safeDeleteAndCheckNode(planNodePath, zkAcl, fencingNodePath);
     }
   }
 
@@ -1439,6 +1439,29 @@ public class ZKRMStateStore extends RMStateStore {
   @VisibleForTesting
   void delete(final String path) throws Exception {
     zkManager.delete(path);
+  }
+
+  /**
+   * Deletes the path more safe.
+   * When NoNodeException is encountered, if the node does not exist,
+   * it will ignore this exception to avoid triggering
+   * a greater impact of ResourceManager failover on the cluster.
+   * @param path Path to be deleted.
+   * @param fencingACL fencingACL.
+   * @param fencingPath fencingNodePath.
+   * @throws Exception if any problem occurs while performing deletion.
+   */
+  public void safeDeleteAndCheckNode(String path, List<ACL> fencingACL,
+      String fencingPath) throws Exception {
+    try{
+      zkManager.safeDelete(path, fencingACL, fencingPath);
+    } catch (KeeperException.NoNodeException nne) {
+      if(!exists(path)){
+        LOG.info("Node " + path + " doesn't exist to delete");
+      } else {
+        throw new KeeperException.NodeExistsException("Node " + path + " should not exist");
+      }
+    }
   }
 
   /**

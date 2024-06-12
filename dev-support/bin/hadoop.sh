@@ -387,6 +387,11 @@ function personality_modules
       fi
     ;;
     unit)
+      if [[ "$IS_WINDOWS" && "$IS_WINDOWS" == 1 && (-z "$IS_NIGHTLY_BUILD" || "$IS_NIGHTLY_BUILD" == 0) ]]; then
+        echo "Won't run unit tests for Windows in pre-commit CI"
+        return
+      fi
+
       extra="-Dsurefire.rerunFailingTestsCount=2"
       if [[ "${BUILDMODE}" = full ]]; then
         ordering=mvnsrc
@@ -577,7 +582,6 @@ function shadedclient_rebuild
 
   extra=(
     "-Dtest=NoUnitTests"
-    "-Dsurefire.failIfNoSpecifiedTests=false"
     "-Dmaven.javadoc.skip=true"
     "-Dcheckstyle.skip=true"
     "-Dspotbugs.skip=true"
@@ -615,7 +619,7 @@ function shadedclient_rebuild
   echo_and_redirect "${logfile}" \
     "${MAVEN}" "${MAVEN_ARGS[@]}" verify -fae --batch-mode -am \
       "${modules[@]}" \
-      -DskipShade -Dtest=NoUnitTests -Dsurefire.failIfNoSpecifiedTests=false -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true \
+      -DskipShade -Dtest=NoUnitTests -Dmaven.javadoc.skip=true -Dcheckstyle.skip=true \
       -Dspotbugs.skip=true ${extra[*]}
 
   count=$("${GREP}" -c '\[ERROR\]' "${logfile}")

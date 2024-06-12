@@ -35,6 +35,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -453,7 +454,8 @@ public class DFSAdmin extends FsShell {
     "\t[-refreshSuperUserGroupsConfiguration]\n" +
     "\t[-refreshCallQueue]\n" +
     "\t[-refresh <host:ipc_port> <key> [arg1..argn]\n" +
-      "\t[-reconfig <namenode|datanode> <host:ipc_port|livenodes> <start|status|properties>]\n" +
+      "\t[-reconfig <namenode|datanode> <host:ipc_port|livenodes|decomnodes>\n" +
+        "\t<start|status|properties>]\n" +
     "\t[-printTopology]\n" +
       "\t[-refreshNamenodes datanode_host:ipc_port]\n" +
       "\t[-getVolumeReport datanode_host:ipc_port]\n" +
@@ -1251,14 +1253,15 @@ public class DFSAdmin extends FsShell {
 
     String refreshCallQueue = "-refreshCallQueue: Reload the call queue from config\n";
 
-    String reconfig = "-reconfig <namenode|datanode> <host:ipc_port|livenodes> " +
+    String reconfig = "-reconfig <namenode|datanode> <host:ipc_port|livenodes|decomnodes> " +
         "<start|status|properties>:\n" +
         "\tStarts or gets the status of a reconfiguration operation, \n" +
         "\tor gets a list of reconfigurable properties.\n" +
         "\tThe second parameter specifies the node type\n" +
         "\tThe third parameter specifies host address. For start or status, \n" +
-        "\tdatanode supports livenodes as third parameter, which will start \n" +
-        "\tor retrieve reconfiguration on all live datanodes.";
+        "\tdatanode supports livenodes and decomnodes as the third parameter, \n" +
+        "\twhich will start or retrieve reconfiguration on all live " +
+        "\tor decommissioning datanodes. \n";
     String genericRefresh = "-refresh: Arguments are <hostname:ipc_port>" +
             " <resource_identifier> [arg1..argn]\n" +
             "\tTriggers a runtime-refresh of the resource specified by " +
@@ -1928,14 +1931,14 @@ public class DFSAdmin extends FsShell {
     return -1;
   }
 
-  int startReconfiguration(final String nodeThpe, final String address)
+  int startReconfiguration(final String nodeType, final String address)
       throws IOException, InterruptedException {
-    return startReconfigurationUtil(nodeThpe, address, System.out, System.err);
+    return startReconfigurationUtil(nodeType, address, System.out, System.err);
   }
 
   int startReconfigurationUtil(final String nodeType, final String address, final PrintStream out,
       final PrintStream err) throws IOException, InterruptedException {
-    if (!"livenodes".equals(address)) {
+    if (!"livenodes".equals(address) && !"decomnodes".equals(address)) {
       return startReconfiguration(nodeType, address, out, err);
     }
     if (!"datanode".equals(nodeType)) {
@@ -1944,23 +1947,28 @@ public class DFSAdmin extends FsShell {
     }
     ExecutorService executorService = Executors.newFixedThreadPool(5);
     DistributedFileSystem dfs = getDFS();
-    DatanodeInfo[] nodes = dfs.getDataNodeStats(DatanodeReportType.LIVE);
+    final DatanodeInfo[] nodes = "livenodes".equals(address) ?
+        dfs.getDataNodeStats(DatanodeReportType.LIVE) :
+        dfs.getDataNodeStats(DatanodeReportType.DECOMMISSIONING);
     AtomicInteger successCount = new AtomicInteger();
     AtomicInteger failCount = new AtomicInteger();
     if (nodes != null) {
+      final CountDownLatch latch = new CountDownLatch(nodes.length);
       for (DatanodeInfo node : nodes) {
         executorService.submit(() -> {
-          int status = startReconfiguration(nodeType, node.getIpcAddr(false), out, err);
-          if (status == 0) {
-            successCount.incrementAndGet();
-          } else {
-            failCount.incrementAndGet();
+          try {
+            int status = startReconfiguration(nodeType, node.getIpcAddr(false), out, err);
+            if (status == 0) {
+              successCount.incrementAndGet();
+            } else {
+              failCount.incrementAndGet();
+            }
+          } finally {
+            latch.countDown();
           }
         });
       }
-      while ((successCount.get() + failCount.get()) < nodes.length) {
-        Thread.sleep(1000);
-      }
+      latch.await();
       executorService.shutdown();
       if (!executorService.awaitTermination(1, TimeUnit.MINUTES)) {
         err.println("Executor service could not be terminated in 60s. Please wait for"
@@ -2022,7 +2030,7 @@ public class DFSAdmin extends FsShell {
 
   int getReconfigurationStatusUtil(final String nodeType, final String address,
       final PrintStream out, final PrintStream err) throws IOException, InterruptedException {
-    if (!"livenodes".equals(address)) {
+    if (!"livenodes".equals(address) && !"decomnodes".equals(address)) {
       return getReconfigurationStatus(nodeType, address, out, err);
     }
     if (!"datanode".equals(nodeType)) {
@@ -2031,23 +2039,28 @@ public class DFSAdmin extends FsShell {
     }
     ExecutorService executorService = Executors.newFixedThreadPool(5);
     DistributedFileSystem dfs = getDFS();
-    DatanodeInfo[] nodes = dfs.getDataNodeStats(DatanodeReportType.LIVE);
+    final DatanodeInfo[] nodes = "livenodes".equals(address) ?
+        dfs.getDataNodeStats(DatanodeReportType.LIVE) :
+        dfs.getDataNodeStats(DatanodeReportType.DECOMMISSIONING);
     AtomicInteger successCount = new AtomicInteger();
     AtomicInteger failCount = new AtomicInteger();
     if (nodes != null) {
+      final CountDownLatch latch = new CountDownLatch(nodes.length);
       for (DatanodeInfo node : nodes) {
         executorService.submit(() -> {
-          int status = getReconfigurationStatus(nodeType, node.getIpcAddr(false), out, err);
-          if (status == 0) {
-            successCount.incrementAndGet();
-          } else {
-            failCount.incrementAndGet();
+          try {
+            int status = getReconfigurationStatus(nodeType, node.getIpcAddr(false), out, err);
+            if (status == 0) {
+              successCount.incrementAndGet();
+            } else {
+              failCount.incrementAndGet();
+            }
+          } finally {
+            latch.countDown();
           }
         });
       }
-      while ((successCount.get() + failCount.get()) < nodes.length) {
-        Thread.sleep(1000);
-      }
+      latch.await();
       executorService.shutdown();
       if (!executorService.awaitTermination(1, TimeUnit.MINUTES)) {
         err.println("Executor service could not be terminated in 60s. Please wait for"
@@ -2082,22 +2095,20 @@ public class DFSAdmin extends FsShell {
     if (errMsg != null) {
       err.println(errMsg);
       return 1;
-    } else {
-      out.print(outMsg);
     }
 
     if (status != null) {
       if (!status.hasTask()) {
-        out.println("no task was found.");
+        out.println(outMsg + "no task was found.");
         return 0;
       }
-      out.print("started at " + new Date(status.getStartTime()));
+      String startMsg = outMsg + "started at " + new Date(status.getStartTime());
       if (!status.stopped()) {
-        out.println(" and is still running.");
+        out.println(startMsg + " and is still running.");
         return 0;
       }
 
-      out.println(" and finished at "
+      out.println(startMsg + " and finished at "
           + new Date(status.getEndTime()).toString() + ".");
       if (status.getStatus() == null) {
         // Nothing to report.
@@ -2120,6 +2131,7 @@ public class DFSAdmin extends FsShell {
         }
       }
     } else {
+      out.println(outMsg);
       return 1;
     }
 
@@ -2312,7 +2324,7 @@ public class DFSAdmin extends FsShell {
                          + " [-refreshCallQueue]");
     } else if ("-reconfig".equals(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
-          + " [-reconfig <namenode|datanode> <host:ipc_port|livenodes> "
+          + " [-reconfig <namenode|datanode> <host:ipc_port|livenodes|decomnodes> "
           + "<start|status|properties>]");
     } else if ("-refresh".equals(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"

@@ -40,6 +40,7 @@ import org.apache.commons.lang3.SystemUtils;
 import org.apache.commons.lang3.time.FastDateFormat;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.log4j.LogManager;
@@ -78,6 +79,18 @@ public class StringUtils {
    */
   public static final Pattern ENV_VAR_PATTERN = Shell.WINDOWS ?
     WIN_ENV_VAR_PATTERN : SHELL_ENV_VAR_PATTERN;
+
+  /**
+   * {@link #getTrimmedStringCollectionSplitByEquals(String)} throws
+   * {@link IllegalArgumentException} with error message starting with this string
+   * if the argument provided is not valid representation of non-empty key-value
+   * pairs.
+   * Value = {@value}
+   */
+  @VisibleForTesting
+  public static final String STRING_COLLECTION_SPLIT_EQUALS_INVALID_ARG =
+      "Trimmed string split by equals does not correctly represent "
+          + "non-empty key-value pairs.";
 
   /**
    * Make a string representation of the exception.
@@ -494,10 +507,19 @@ public class StringUtils {
     String[] trimmedList = getTrimmedStrings(str);
     Map<String, String> pairs = new HashMap<>();
     for (String s : trimmedList) {
-      String[] splitByKeyVal = getTrimmedStringsSplitByEquals(s);
-      if (splitByKeyVal.length == 2) {
-        pairs.put(splitByKeyVal[0], splitByKeyVal[1]);
+      if (s.isEmpty()) {
+        continue;
       }
+      String[] splitByKeyVal = getTrimmedStringsSplitByEquals(s);
+      Preconditions.checkArgument(
+          splitByKeyVal.length == 2,
+          STRING_COLLECTION_SPLIT_EQUALS_INVALID_ARG + " Input: " + str);
+      boolean emptyKey = org.apache.commons.lang3.StringUtils.isEmpty(splitByKeyVal[0]);
+      boolean emptyVal = org.apache.commons.lang3.StringUtils.isEmpty(splitByKeyVal[1]);
+      Preconditions.checkArgument(
+          !emptyKey && !emptyVal,
+          STRING_COLLECTION_SPLIT_EQUALS_INVALID_ARG + " Input: " + str);
+      pairs.put(splitByKeyVal[0], splitByKeyVal[1]);
     }
     return pairs;
   }
@@ -1122,6 +1144,19 @@ public class StringUtils {
     StringBuilder str = new StringBuilder();
     for (StackTraceElement e : stackTrace) {
       str.append(e.toString() + "\n");
+    }
+    return str.toString();
+  }
+
+  /**
+   * Get stack trace from throwable exception.
+   * @param t Throwable.
+   * @return stack trace string.
+   */
+  public static String getStackTrace(Throwable t) {
+    StringBuilder str = new StringBuilder();
+    for (StackTraceElement e : t.getStackTrace()) {
+      str.append(e.toString() + "\n\t");
     }
     return str.toString();
   }

@@ -130,7 +130,7 @@ resource may also have optional minimum and maximum properties. The properties
 must be named `yarn.resource-types.<resource>.minimum-allocation` and
 `yarn.resource-types.<resource>.maximum-allocation`.
 
-The `yarn.resource-types` property and any unit, mimimum, or maximum properties
+The `yarn.resource-types` property and any unit, minimum, or maximum properties
 may be defined in either the usual `yarn-site.xml` file or in a file named
 `resource-types.xml`. For example, the following could appear in either file:
 

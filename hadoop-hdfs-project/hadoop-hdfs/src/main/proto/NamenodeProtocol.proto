@@ -108,6 +108,14 @@ message GetMostRecentCheckpointTxIdResponseProto{
   required uint64 txId = 1;
 }
 
+message GetMostRecentNameNodeFileTxIdRequestProto {
+  required string nameNodeFile = 1;
+}
+
+message GetMostRecentNameNodeFileTxIdResponseProto{
+  required uint64 txId = 1;
+}
+
 /**
  * registration - Namenode reporting the error
  * errorCode - error code indicating the error
@@ -252,6 +260,12 @@ service NamenodeProtocolService {
    */
   rpc getMostRecentCheckpointTxId(GetMostRecentCheckpointTxIdRequestProto) 
       returns(GetMostRecentCheckpointTxIdResponseProto);
+
+  /**
+   * Get the transaction ID of the NameNodeFile
+   */
+  rpc getMostRecentNameNodeFileTxId(GetMostRecentNameNodeFileTxIdRequestProto)
+      returns(GetMostRecentNameNodeFileTxIdResponseProto);
 
   /**
    * Close the current editlog and open a new one for checkpointing purposes

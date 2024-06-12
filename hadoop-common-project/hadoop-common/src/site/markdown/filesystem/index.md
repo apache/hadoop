@@ -44,3 +44,4 @@ HDFS as these are commonly expected by Hadoop client applications.
 1. [openFile()](openfile.html)
 1. [SafeMode](safemode.html)
 1. [LeaseRecoverable](leaserecoverable.html)
+1. [BulkDelete](bulkdelete.html)

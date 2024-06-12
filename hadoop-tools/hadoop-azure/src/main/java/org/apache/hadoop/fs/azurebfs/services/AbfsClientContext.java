@@ -25,14 +25,18 @@ package org.apache.hadoop.fs.azurebfs.services;
 public class AbfsClientContext {
 
   private final ExponentialRetryPolicy exponentialRetryPolicy;
+  private final StaticRetryPolicy staticRetryPolicy;
   private final AbfsPerfTracker abfsPerfTracker;
   private final AbfsCounters abfsCounters;
 
   AbfsClientContext(
       ExponentialRetryPolicy exponentialRetryPolicy,
+      StaticRetryPolicy staticRetryPolicy,
       AbfsPerfTracker abfsPerfTracker,
       AbfsCounters abfsCounters) {
     this.exponentialRetryPolicy = exponentialRetryPolicy;
+
+    this.staticRetryPolicy = staticRetryPolicy;
     this.abfsPerfTracker = abfsPerfTracker;
     this.abfsCounters = abfsCounters;
   }
@@ -41,11 +45,15 @@ public class AbfsClientContext {
     return exponentialRetryPolicy;
   }
 
+  public StaticRetryPolicy getStaticRetryPolicy() {
+    return staticRetryPolicy;
+  }
+
   public AbfsPerfTracker getAbfsPerfTracker() {
     return abfsPerfTracker;
   }
 
-  public AbfsCounters getAbfsCounters() {
+  AbfsCounters getAbfsCounters() {
     return abfsCounters;
   }
 }

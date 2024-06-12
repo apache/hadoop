@@ -313,6 +313,7 @@ class BPServiceActor implements Runnable {
     // This also initializes our block pool in the DN if we are
     // the first NN connection for this BP.
     bpos.verifyAndSetNamespaceInfo(this, nsInfo);
+    state = nsInfo.getState();
 
     /* set thread name again to include NamespaceInfo when it's available. */
     this.bpThread.setName(formatThreadName("heartbeating", nnAddr));
@@ -452,6 +453,7 @@ class BPServiceActor implements Runnable {
       // Log the block report processing stats from Datanode perspective
       long brSendCost = monotonicNow() - brSendStartTime;
       long brCreateCost = brSendStartTime - brCreateStartTime;
+      dn.getMetrics().addBlockReportCreateCost(brCreateCost);
       dn.getMetrics().addBlockReport(brSendCost, getRpcMetricSuffix());
       final int nCmds = cmds.size();
       LOG.info((success ? "S" : "Uns") +
@@ -1486,8 +1488,10 @@ class BPServiceActor implements Runnable {
     }
 
     void enqueue(DatanodeCommand[] cmds) throws InterruptedException {
-      queue.put(() -> processCommand(cmds));
-      dn.getMetrics().incrActorCmdQueueLength(1);
+      if (cmds.length != 0) {
+        queue.put(() -> processCommand(cmds));
+        dn.getMetrics().incrActorCmdQueueLength(1);
+      }
     }
   }
 

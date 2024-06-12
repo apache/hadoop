@@ -12,7 +12,7 @@
   limitations under the License. See accompanying LICENSE file.
 -->
 
-# Hadoop Azure Support: ABFS  — Azure Data Lake Storage Gen2
+# Hadoop Azure Support: ABFS  - Azure Data Lake Storage Gen2
 
 <!-- MACRO{toc|fromDepth=1|toDepth=3} -->
 
@@ -309,21 +309,21 @@ in different deployment situations.
 The ABFS client can be deployed in different ways, with its authentication needs
 driven by them.
 
-1. With the storage account's authentication secret in the configuration:
-"Shared Key".
-1. Using OAuth 2.0 tokens of one form or another.
-1. Deployed in-Azure with the Azure VMs providing OAuth 2.0 tokens to the application,
- "Managed Instance".
-1. Using Shared Access Signature (SAS) tokens provided by a custom implementation of the SASTokenProvider interface.
+1. With the storage account's authentication secret in the configuration: "Shared Key".
+2. Using OAuth 2.0 tokens of one form or another.
+3. Deployed in-Azure with the Azure VMs providing OAuth 2.0 tokens to the application, "Managed Instance".
+4. Using Shared Access Signature (SAS) tokens provided by a custom implementation of the SASTokenProvider interface.
+5. By directly configuring a fixed Shared Access Signature (SAS) token in the account configuration settings files.
+
+Note: SAS Based Authentication should be used only with HNS Enabled accounts.
 
 What can be changed is what secrets/credentials are used to authenticate the caller.
 
 The authentication mechanism is set in `fs.azure.account.auth.type` (or the
 account specific variant). The possible values are SharedKey, OAuth, Custom
-and SAS. For the various OAuth options use the config `fs.azure.account
-.oauth.provider.type`. Following are the implementations supported
-ClientCredsTokenProvider, UserPasswordTokenProvider, MsiTokenProvider and
-RefreshTokenBasedTokenProvider. An IllegalArgumentException is thrown if
+and SAS. For the various OAuth options use the config `fs.azure.account.oauth.provider.type`. Following are the implementations supported
+ClientCredsTokenProvider, UserPasswordTokenProvider, MsiTokenProvider,
+RefreshTokenBasedTokenProvider and WorkloadIdentityTokenProvider. An IllegalArgumentException is thrown if
 the specified provider type is not one of the supported.
 
 All secrets can be stored in JCEKS files. These are encrypted and password
@@ -355,14 +355,14 @@ the password, "key", retrieved from the XML/JCECKs configuration files.
 
 ```xml
 <property>
-  <name>fs.azure.account.auth.type.abfswales1.dfs.core.windows.net</name>
+  <name>fs.azure.account.auth.type.ACCOUNT_NAME.dfs.core.windows.net</name>
   <value>SharedKey</value>
   <description>
   </description>
 </property>
 <property>
-  <name>fs.azure.account.key.abfswales1.dfs.core.windows.net</name>
-  <value>ZGlkIHlvdSByZWFsbHkgdGhpbmsgSSB3YXMgZ29pbmcgdG8gcHV0IGEga2V5IGluIGhlcmU/IA==</value>
+  <name>fs.azure.account.key.ACCOUNT_NAME.dfs.core.windows.net</name>
+  <value>ACCOUNT_KEY</value>
   <description>
   The secret password. Never share these.
   </description>
@@ -560,6 +560,54 @@ The Azure Portal/CLI is used to create the service identity.
 </property>
 ```
 
+### <a name="workload-identity"></a> Azure Workload Identity
+
+[Azure Workload Identities](https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview), formerly "Azure AD pod identity".
+
+OAuth 2.0 tokens are written to a file that is only accessible
+from the executing pod (`/var/run/secrets/azure/tokens/azure-identity-token`).
+The issued credentials can be used to authenticate.
+
+The Azure Portal/CLI is used to create the service identity.
+
+```xml
+<property>
+  <name>fs.azure.account.auth.type</name>
+  <value>OAuth</value>
+  <description>
+  Use OAuth authentication
+  </description>
+</property>
+<property>
+  <name>fs.azure.account.oauth.provider.type</name>
+  <value>org.apache.hadoop.fs.azurebfs.oauth2.WorkloadIdentityTokenProvider</value>
+  <description>
+  Use Workload Identity for issuing OAuth tokens
+  </description>
+</property>
+<property>
+  <name>fs.azure.account.oauth2.msi.tenant</name>
+  <value>${env.AZURE_TENANT_ID}</value>
+  <description>
+  Optional MSI Tenant ID
+  </description>
+</property>
+<property>
+  <name>fs.azure.account.oauth2.client.id</name>
+  <value>${env.AZURE_CLIENT_ID}</value>
+  <description>
+  Optional Client ID
+  </description>
+</property>
+<property>
+  <name>fs.azure.account.oauth2.token.file</name>
+  <value>${env.AZURE_FEDERATED_TOKEN_FILE}</value>
+  <description>
+  Token file path
+  </description>
+</property>
+```
+
 ### Custom OAuth 2.0 Token Provider
 
 A Custom OAuth 2.0 token provider supplies the ABFS connector with an OAuth 2.0
@@ -609,21 +657,119 @@ In case delegation token is enabled, and the config `fs.azure.delegation.token
 
 ### Shared Access Signature (SAS) Token Provider
 
-A Shared Access Signature (SAS) token provider supplies the ABFS connector with SAS
-tokens by implementing the SASTokenProvider interface.
+A shared access signature (SAS) provides secure delegated access to resources in
+your storage account. With a SAS, you have granular control over how a client can access your data.
+To know more about how SAS Authentication works refer to
+[Grant limited access to Azure Storage resources using shared access signatures (SAS)](https://learn.microsoft.com/en-us/azure/storage/common/storage-sas-overview)
 
-```xml
-<property>
-  <name>fs.azure.account.auth.type</name>
-  <value>SAS</value>
-</property>
-<property>
-  <name>fs.azure.sas.token.provider.type</name>
-  <value>{fully-qualified-class-name-for-implementation-of-SASTokenProvider-interface}</value>
-</property>
-```
+There are three types of SAS supported by Azure Storage:
+- [User Delegation SAS](https://learn.microsoft.com/en-us/rest/api/storageservices/create-user-delegation-sas): Recommended for use with ABFS Driver with HNS Enabled ADLS Gen2 accounts. It is Identity based SAS that works at blob/directory level)
+- [Service SAS](https://learn.microsoft.com/en-us/rest/api/storageservices/create-service-sas): Global and works at container level.
+- [Account SAS](https://learn.microsoft.com/en-us/rest/api/storageservices/create-account-sas): Global and works at account level.
 
-The declared class must implement `org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider`.
+#### Known Issues With SAS
+- SAS Based Authentication works only with HNS Enabled ADLS Gen2 Accounts which
+is a recommended account type to be used with ABFS.
+- Certain root level operations are known to fail with SAS Based Authentication.
+
+#### Using User Delegation SAS with ABFS
+
+- **Description**: ABFS allows you to implement your custom SAS Token Provider
+that uses your identity to create a user delegation key which then can be used to
+create SAS instead of storage account key. The declared class must implement
+`org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider`.
+
+- **Configuration**: To use this method with ABFS Driver, specify the following properties in your `core-site.xml` file:
+    1. Authentication Type:
+        ```xml
+        <property>
+          <name>fs.azure.account.auth.type</name>
+          <value>SAS</value>
+        </property>
+        ```
+
+    1. Custom SAS Token Provider Class:
+        ```xml
+        <property>
+          <name>fs.azure.sas.token.provider.type</name>
+          <value>CUSTOM_SAS_TOKEN_PROVIDER_CLASS</value>
+        </property>
+        ```
+
+    Replace `CUSTOM_SAS_TOKEN_PROVIDER_CLASS` with fully qualified class name of
+your custom token provider implementation. Depending upon the implementation you
+might need to specify additional configurations that are required by your custom
+implementation.
+
+- **Example**: ABFS Hadoop Driver provides a [MockDelegationSASTokenProvider](https://github.com/apache/hadoop/blob/trunk/hadoop-tools/hadoop-azure/src/test/java/org/apache/hadoop/fs/azurebfs/extensions/MockDelegationSASTokenProvider.java)
+implementation that can be used as an example on how to implement your own custom
+SASTokenProvider. This requires the Application credentials to be specifed using
+the following configurations apart from above two:
+
+    1. App Service Principle Tenant Id:
+        ```xml
+        <property>
+          <name>fs.azure.test.app.service.principal.tenant.id</name>
+          <value>TENANT_ID</value>
+        </property>
+        ```
+    1. App Service Principle Object Id:
+        ```xml
+        <property>
+          <name>fs.azure.test.app.service.principal.object.id</name>
+          <value>OBJECT_ID</value>
+        </property>
+        ```
+    1. App Id:
+        ```xml
+        <property>
+          <name>fs.azure.test.app.id</name>
+          <value>APPLICATION_ID</value>
+        </property>
+        ```
+    1. App Secret:
+        ```xml
+        <property>
+          <name>fs.azure.test.app.secret</name>
+          <value>APPLICATION_SECRET</value>
+        </property>
+        ```
+
+- **Security**: More secure than Shared Key and allows granting limited access
+to data without exposing the access key. Recommended to be used only with HNS Enabled,
+ADLS Gen 2 storage accounts.
+
+#### Using Account/Service SAS with ABFS
+
+- **Description**: ABFS allows user to use Account/Service SAS for authenticating
+requests. User can specify them as fixed SAS Token to be used across all the requests.
+
+- **Configuration**: To use this method with ABFS Driver, specify the following properties in your `core-site.xml` file:
+
+    1. Authentication Type:
+        ```xml
+        <property>
+          <name>fs.azure.account.auth.type</name>
+          <value>SAS</value>
+        </property>
+        ```
+
+    1.  Fixed SAS Token:
+        ```xml
+        <property>
+          <name>fs.azure.sas.fixed.token</name>
+          <value>FIXED_SAS_TOKEN</value>
+        </property>
+        ```
+
+    Replace `FIXED_SAS_TOKEN` with fixed Account/Service SAS. You can also
+generate SAS from Azure portal. Account -> Security + Networking -> Shared Access Signature
+
+- **Security**: Account/Service SAS requires account keys to be used which makes
+them less secure. There is no scope of having delegated access to different users.
+
+*Note:* When `fs.azure.sas.token.provider.type` and `fs.azure.fixed.sas.token`
+are both configured, precedence will be given to the custom token provider implementation.
 
 ## <a name="technical"></a> Technical notes
 
@@ -941,7 +1087,7 @@ string retrieved from a GetFileStatus request to the server.
 implementing EncryptionContextProvider.
 
 ### <a name="serverconfigoptions"></a> Server Options
-When the config `fs.azure.io.read.tolerate.concurrent.append` is made true, the
+`fs.azure.io.read.tolerate.concurrent.append`: When the config is made true, the
 If-Match header sent to the server for read calls will be set as * otherwise the
 same will be set with ETag. This is basically a mechanism in place to handle the
 reads with optimistic concurrency.
@@ -949,13 +1095,22 @@ Please refer the following links for further information.
 1. https://docs.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/read
 2. https://azure.microsoft.com/de-de/blog/managing-concurrency-in-microsoft-azure-storage-2/
 
-listStatus API fetches the FileStatus information from server in a page by page
-manner. The config `fs.azure.list.max.results` used to set the maxResults URI
- param which sets the pagesize(maximum results per call). The value should
- be >  0. By default this will be 5000. Server has a maximum value for this
- parameter as 5000. So even if the config is above 5000 the response will only
+`fs.azure.list.max.results`: listStatus API fetches the FileStatus information
+from server in a page by page manner. The config is used to set the maxResults URI
+param which sets the page size(maximum results per call). The value should
+be >  0. By default, this will be 5000. Server has a maximum value for this
+parameter as 5000. So even if the config is above 5000 the response will only
 contain 5000 entries. Please refer the following link for further information.
 https://docs.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/list
+
+`fs.azure.enable.checksum.validation`: When the config is set to true, Content-MD5
+headers are sent to the server for read and append calls. This provides a way
+to verify the integrity of data during transport. This will have performance
+impact due to MD5 Hash re-computation on Client and Server side. Please refer
+to the Azure documentation for
+[Read](https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/read)
+and [Append](https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/update)
+APIs for more details
 
 ### <a name="throttlingconfigoptions"></a> Throttling Options
 ABFS driver has the capability to throttle read and write operations to achieve
@@ -1042,6 +1197,49 @@ logged with the last callee)
 Note that these performance numbers are also sent back to the ADLS Gen 2 API endpoints
 in the `x-ms-abfs-client-latency` HTTP headers in subsequent requests. Azure uses these
 settings to track their end-to-end latency.
+
+### <a name="drivermetricoptions"></a> Driver Metric Options
+
+Config `fs.azure.metric.format` provides an option to select the format of IDs included in the `header` for metrics.
+This config accepts a String value corresponding to the following enum options.
+`INTERNAL_METRIC_FORMAT` : backoff + footer metrics
+`INTERNAL_BACKOFF_METRIC_FORMAT` : backoff metrics
+`INTERNAL_FOOTER_METRIC_FORMAT` : footer metrics
+`EMPTY` : default
+
+`fs.azure.metric.account.name`: This configuration parameter is used to specify the name of the account which will be
+used to push the metrics to the backend. We can configure a separate account to push metrics to the store or use the
+same for as the existing account on which other requests are made.
+
+```xml
+
+<property>
+    <name>fs.azure.metric.account.name</name>
+    <value>METRICACCOUNTNAME.dfs.core.windows.net</value>
+</property>
+```
+
+`fs.azure.metric.account.key`: This is the access key for the storage account used for pushing metrics to the store.
+
+```xml
+
+<property>
+    <name>fs.azure.metric.account.key</name>
+    <value>ACCOUNTKEY</value>
+</property>
+```
+
+`fs.azure.metric.uri`: This configuration provides the uri in the format of 'https://`<accountname>`
+.dfs.core.windows.net/`<containername>`'. This should be a part of the config in order to prevent extra calls to create
+the filesystem. We use an existing filsystem to push the metrics.
+
+```xml
+
+<property>
+    <name>fs.azure.metric.uri</name>
+    <value>https://METRICACCOUNTNAME.dfs.core.windows.net/CONTAINERNAME</value>
+</property>
+```
 
 ## <a name="troubleshooting"></a> Troubleshooting
 
@@ -1219,6 +1417,11 @@ The fix is to mimic the ownership to the local OS user, by adding the below prop
 ```
 
 Once the above properties are configured, `hdfs dfs -ls abfs://container1@abfswales1.dfs.core.windows.net/` shows the ADLS Gen2 files/directories are now owned by 'user1'.
+
+## <a name="KnownIssues"></a> Known Issues
+
+Following failures are known and expected to fail as of now.
+1. AzureBlobFileSystem.setXAttr() and AzureBlobFileSystem.getXAttr() will fail when attempted on root ("/") path with `Operation failed: "The request URI is invalid.", HTTP 400 Bad Request`
 
 ## <a name="testing"></a> Testing ABFS
 

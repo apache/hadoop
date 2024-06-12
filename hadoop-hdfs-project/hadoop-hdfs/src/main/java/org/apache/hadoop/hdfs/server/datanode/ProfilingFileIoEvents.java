@@ -80,7 +80,7 @@ class ProfilingFileIoEvents {
 
   public long beforeFileIo(@Nullable FsVolumeSpi volume,
       FileIoProvider.OPERATION op, long len) {
-    if (isEnabled && ThreadLocalRandom.current().nextInt() < sampleRangeMax) {
+    if (isEnabled && ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE) < sampleRangeMax) {
       DataNodeVolumeMetrics metrics = getVolumeMetrics(volume);
       if (metrics != null) {
         return Time.monotonicNow();

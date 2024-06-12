@@ -582,6 +582,15 @@
   </property>
 
   <property>
+    <description>Host:Port of the ZooKeeper server to be used by the RM. This
+      must be supplied when using the ZooKeeper based implementation of the
+      RM state store and/or embedded automatic failover in an HA setting.
+    </description>
+    <name>yarn.resourcemanager.zk-address</name>
+    <!--value>127.0.0.1:2181</value-->
+  </property>
+
+  <property>
     <description>Full path of the ZooKeeper znode where RM state will be
     stored. This must be supplied when using
     org.apache.hadoop.yarn.server.resourcemanager.recovery.ZKRMStateStore
@@ -2088,6 +2097,20 @@
   </property>
 
   <property>
+    <description>This property sets the mount path for CGroups v2.
+      This parameter is optional, and needed to be set only in mixed mode,
+      when CGroups v2 is mounted alongside with Cgroups v1.
+      For example, in hybrid mode, CGroups v1 controllers can be mounted under /sys/fs/cgroup/
+      (for example /sys/fs/cgroup/cpu,cpuacct), while v2 can be mounted in /sys/fs/cgroup/unified folder.
+
+      If this value is not set, the value of
+      yarn.nodemanager.linux-container-executor.cgroups.mount-path
+      will be used for CGroups v2 as well.
+    </description>
+    <name>yarn.nodemanager.linux-container-executor.cgroups.v2.mount-path</name>
+  </property>
+
+  <property>
     <description>Delay in ms between attempts to remove linux cgroup</description>
     <name>yarn.nodemanager.linux-container-executor.cgroups.delete-delay-ms</name>
     <value>20</value>
@@ -2462,6 +2485,12 @@
     </description>
     <name>yarn.nodemanager.linux-container-executor.cgroups.delete-timeout-ms</name>
     <value>1000</value>
+  </property>
+
+  <property>
+    <name>yarn.nodemanager.linux-container-executor.cgroups.v2.enabled</name>
+    <value>false</value>
+    <description>Boolean indicating whether cgroup v2 is enabled.</description>
   </property>
 
   <property>
@@ -3779,12 +3808,28 @@
   </property>
 
   <property>
+    <description>
+      Host:Port of the ZooKeeper server to be used by the federation state store
+    </description>
+    <name>yarn.federation.state-store.zk.address</name>
+  </property>
+
+  <property>
    <description>
     The time in seconds after which the federation state store local cache
     will be refreshed periodically
    </description>
    <name>yarn.federation.cache-ttl.secs</name>
    <value>300</value>
+  </property>
+
+  <property>
+    <description>
+      The number of entries in the Federation cache.
+      default is 1000.
+    </description>
+    <name>yarn.federation.cache-entity.nums</name>
+    <value>1000</value>
   </property>
 
   <property>
