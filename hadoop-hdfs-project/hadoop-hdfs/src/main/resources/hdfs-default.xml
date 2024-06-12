@@ -6438,6 +6438,30 @@
   </property>
 
   <property>
+    <name>dfs.fast.copy.file.wait.time.ms</name>
+    <value>600000</value>
+    <description>
+      Default timeout value in milliseconds for fastcopy when copy a file.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.fast.copy.block.wait.time.ms</name>
+    <value>300000</value>
+    <description>
+      Default timeout value in milliseconds for fastcopy when copy a block in a file.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.fast.copy.block.executor.poolsize</name>
+    <value>2</value>
+    <description>
+      The thread num of fastcopy block executor.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.permissions.allow.owner.set.quota</name>
     <value>false</value>
     <description>

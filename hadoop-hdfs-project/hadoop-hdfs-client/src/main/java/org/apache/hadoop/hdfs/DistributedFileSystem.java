@@ -693,6 +693,12 @@ public class DistributedFileSystem extends FileSystem
     }.resolve(this, absF);
   }
 
+  @Override
+  public void fastCopy(Path src, Path dst, boolean overwrite) throws IOException {
+    FastCopy fastCopy = new FastCopy(getConf(), src, dst, overwrite);
+    fastCopy.copyFile();
+  }
+
   /**
    * Same as create(), except fails if parent directory doesn't already exist.
    */

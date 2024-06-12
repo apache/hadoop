@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIsDirectoryException;
+import org.apache.hadoop.fs.PathOperationException;
 import org.apache.hadoop.io.IOUtils;
 
 /** Various commands for copy files */
@@ -44,6 +45,7 @@ class CopyCommands {
   public static void registerCommands(CommandFactory factory) {
     factory.addClass(Merge.class, "-getmerge");
     factory.addClass(Cp.class, "-cp");
+    factory.addClass(FastCp.class, "-fastcp");
     factory.addClass(CopyFromLocal.class, "-copyFromLocal");
     factory.addClass(CopyToLocal.class, "-copyToLocal");
     factory.addClass(Get.class, "-get");
@@ -209,7 +211,81 @@ class CopyCommands {
       }
     }
   }
-  
+
+  static class FastCp extends CopyCommandWithMultiThread {
+    public static final String NAME = "fastcp";
+    public static final String USAGE =
+        "[-f] [-p | -p[topax]] [-d] [-t <thread count>]"
+            + " [-q <thread pool queue size>] <src> ... <dst>";
+    public static final String DESCRIPTION =
+        "FastCopy files that match the file pattern <src> to a destination."
+            + " When copying multiple files, the destination must be a "
+            + "directory.\nFlags :\n"
+            + "  -p[topax] : Preserve file attributes [topx] (timestamps, "
+            + "ownership, permission, ACL, XAttr). If -p is specified with "
+            + "no arg, then preserves timestamps, ownership, permission. "
+            + "If -pa is specified, then preserves permission also because "
+            + "ACL is a super-set of permission. Determination of whether raw "
+            + "namespace extended attributes are preserved is independent of "
+            + "the -p flag.\n"
+            + "  -f : Overwrite the destination if it already exists.\n"
+            + "  -d : Skip creation of temporary file(<dst>._COPYING_).\n"
+            + "  -t <thread count> : Number of threads to be used, "
+            + "default is 1.\n"
+            + "  -q <thread pool queue size> : Thread pool queue size to be "
+            + "used, default is 1024.\n";
+
+    @Override
+    protected void processOptions(LinkedList<String> args) throws IOException {
+      popPreserveOption(args);
+      CommandFormat cf = new CommandFormat(2, Integer.MAX_VALUE, "f", "d");
+      cf.addOptionWithValue("t");
+      cf.addOptionWithValue("q");
+      cf.parse(args);
+      setDirectWrite(cf.getOpt("d"));
+      setOverwrite(cf.getOpt("f"));
+      setThreadCount(cf.getOptValue("t"));
+      setThreadPoolQueueSize(cf.getOptValue("q"));
+      // should have a -r option
+      setRecursive(true);
+      getRemoteDestination(args);
+    }
+
+    private void popPreserveOption(List<String> args) {
+      for (Iterator<String> iter = args.iterator(); iter.hasNext(); ) {
+        String cur = iter.next();
+        if (cur.equals("--")) {
+          // stop parsing arguments when you see --
+          break;
+        } else if (cur.startsWith("-p")) {
+          iter.remove();
+          if (cur.length() == 2) {
+            setPreserve(true);
+          } else {
+            String attributes = cur.substring(2);
+            for (int index = 0; index < attributes.length(); index++) {
+              preserve(FileAttribute.getAttribute(attributes.charAt(index)));
+            }
+          }
+          return;
+        }
+      }
+    }
+
+    @Override
+    protected void processPath(PathData src, PathData dst) throws IOException {
+      if (src.stat.isSymlink()) {
+        // TODO: remove when FileContext is supported, this needs to either
+        // copy the symlink or deref the symlink
+        throw new PathOperationException(src.toString());
+      } else if (src.stat.isFile()) {
+        copyFileToTargetWithFastCp(src, dst);
+      } else if (src.stat.isDirectory() && !isRecursive()) {
+        throw new PathIsDirectoryException(src.toString());
+      }
+    }
+  }
+
   /** 
    * Copy local files to a remote filesystem
    */
