@@ -30,7 +30,7 @@ public enum DestinationOrder {
   RANDOM, // Random order
   HASH_ALL, // Follow consistent hashing
   SPACE, // Available space based order
-  LEADER_FOLLOWER; // try leader sub-cluster first, if failed, try followers
+  LEADER_FOLLOWER; // Try leader sub-cluster first, if failed, try followers
 
   /** Approaches that write folders in all subclusters. */
   public static final EnumSet<DestinationOrder> FOLDER_ALL = EnumSet.of(

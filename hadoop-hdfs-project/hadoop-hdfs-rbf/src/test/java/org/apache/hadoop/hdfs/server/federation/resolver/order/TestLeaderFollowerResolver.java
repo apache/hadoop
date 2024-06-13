@@ -42,7 +42,7 @@ public class TestLeaderFollowerResolver {
 
     // Add the mocks to the resolver
     MultipleDestinationMountTableResolver resolver =
-      new MultipleDestinationMountTableResolver(conf, router);
+        new MultipleDestinationMountTableResolver(conf, router);
     resolver.addResolver(DestinationOrder.LEADER_FOLLOWER, leaderFollowerResolver);
 
     Map<String, String> mapLocal = new LinkedHashMap<>();
