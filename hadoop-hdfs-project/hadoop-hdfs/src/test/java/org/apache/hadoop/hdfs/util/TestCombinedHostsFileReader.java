@@ -120,9 +120,8 @@ public class TestCombinedHostsFileReader {
    * When timeout is enabled, test for IOException when reading file exceeds
    * timeout limits
    */
-  @Test
+  @Test(expected = IOException.class)
   public void testReadFileWithTimeoutTimeoutException() throws Exception {
-    exception.expect(IOException.class);
     when(callable.call()).thenAnswer(new Answer<Void>() {
       @Override
       public Void answer(InvocationOnMock invocation) throws Throwable {
