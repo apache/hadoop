@@ -434,12 +434,12 @@ class BlockSender implements java.io.Closeable {
       blockIn = datanode.data.getBlockInputStream(block, offset); // seek to offset
       ris = new ReplicaInputStreams(
           blockIn, checksumIn, volumeRef, fileIoProvider);
-    } catch (IOException ioe) {
+    } catch (Throwable t) {
       IOUtils.cleanupWithLogger(null, volumeRef);
       IOUtils.closeStream(this);
       IOUtils.closeStream(blockIn);
       IOUtils.closeStream(checksumIn);
-      throw ioe;
+      throw t;
     }
   }
 

@@ -1149,6 +1149,19 @@ public class StringUtils {
   }
 
   /**
+   * Get stack trace from throwable exception.
+   * @param t Throwable.
+   * @return stack trace string.
+   */
+  public static String getStackTrace(Throwable t) {
+    StringBuilder str = new StringBuilder();
+    for (StackTraceElement e : t.getStackTrace()) {
+      str.append(e.toString() + "\n\t");
+    }
+    return str.toString();
+  }
+
+  /**
    * From a list of command-line arguments, remove both an option and the 
    * next argument.
    *

@@ -37,9 +37,11 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -1418,6 +1420,52 @@ public class TestDirectoryScanner {
     for (int i = 0; i < numFiles; i++) {
       final Path filePath = new Path(fileName + i);
       DFSTestUtil.createFile(fs, filePath, 1, (short) 1, 0);
+    }
+  }
+
+  @Test(timeout = 30000)
+  public void testNullStorage() throws Exception {
+    DataNodeFaultInjector oldInjector = DataNodeFaultInjector.get();
+
+    Configuration conf = getConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY, 1);
+    cluster = new MiniDFSCluster.Builder(conf).build();
+    try {
+      cluster.waitActive();
+      bpid = cluster.getNamesystem().getBlockPoolId();
+      fds = DataNodeTestUtils.getFSDataset(cluster.getDataNodes().get(0));
+      client = cluster.getFileSystem().getClient();
+      conf.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THREADS_KEY, 1);
+      createFile(GenericTestUtils.getMethodName(), BLOCK_LENGTH, false);
+      // Make sure checkAndUpdate will run
+      truncateBlockFile();
+
+      // Mock a volume corruption after DirectoryScanner.scan() but before checkAndUpdate()
+      FsVolumeImpl volumeToRemove = fds.getVolumeList().get(0);
+      DataNodeFaultInjector injector = new DataNodeFaultInjector() {
+        @Override
+        public void waitUntilStorageRemoved() {
+          Set<FsVolumeSpi> volumesToRemove = new HashSet<>();
+          volumesToRemove.add(volumeToRemove);
+          cluster.getDataNodes().get(0).handleVolumeFailures(volumesToRemove);
+        }
+      };
+      DataNodeFaultInjector.set(injector);
+
+      GenericTestUtils.LogCapturer logCapturer =
+          GenericTestUtils.LogCapturer.captureLogs(DataNode.LOG);
+      scanner = new DirectoryScanner(fds, conf);
+      scanner.setRetainDiffs(true);
+      scanner.reconcile();
+      assertFalse(logCapturer.getOutput()
+          .contains("Trying to add RDBI for null storage UUID " + volumeToRemove.getStorageID()));
+    } finally {
+      if (scanner != null) {
+        scanner.shutdown();
+        scanner = null;
+      }
+      cluster.shutdown();
+      DataNodeFaultInjector.set(oldInjector);
     }
   }
 }

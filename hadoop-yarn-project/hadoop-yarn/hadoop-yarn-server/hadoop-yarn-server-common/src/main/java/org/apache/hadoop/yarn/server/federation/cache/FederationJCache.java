@@ -91,7 +91,7 @@ public class FederationJCache extends FederationCache {
 
   @Override
   public void clearCache() {
-
+    this.cache.clear();
     this.cache = null;
   }
 

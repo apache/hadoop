@@ -4057,7 +4057,8 @@ public class DataNode extends ReconfigurableBase
     }
   }
 
-  private void handleVolumeFailures(Set<FsVolumeSpi> unhealthyVolumes) {
+  @VisibleForTesting
+  public void handleVolumeFailures(Set<FsVolumeSpi> unhealthyVolumes) {
     if (unhealthyVolumes.isEmpty()) {
       LOG.debug("handleVolumeFailures done with empty " +
           "unhealthyVolumes");

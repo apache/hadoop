@@ -1270,8 +1270,14 @@ public class AbstractLeafQueue extends AbstractCSQueue {
         }
       }
       if (!userAssignable) {
+        String userName = application.getUser();
+        User user = getUser(userName);
+        Resource usedResourceByUser =
+            user == null ? null : user.getUsed(candidates.getPartition());
         application.updateAMContainerDiagnostics(AMState.ACTIVATED,
-            "User capacity has reached its maximum limit.");
+            "User capacity has reached its maximum limit," +
+                " user limit is " + userLimit + ", resource used by " +
+                userName + " is " + usedResourceByUser + ".");
         ActivitiesLogger.APP.recordRejectedAppActivityFromLeafQueue(
             activitiesManager, node, application, application.getPriority(),
             ActivityDiagnosticConstant.QUEUE_HIT_USER_MAX_CAPACITY_LIMIT);

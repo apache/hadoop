@@ -1173,7 +1173,7 @@ public class TestFsDatasetImpl {
           .getReplicaInfo(block.getBlockPoolId(), newReplicaInfo.getBlockId())
           .getGenerationStamp());
       LambdaTestUtils.intercept(IOException.class, "Generation Stamp "
-              + "should be monotonically increased.",
+              + "should be monotonically increased",
           () -> fsDataSetImpl.finalizeNewReplica(newReplicaInfo, block));
       assertFalse(newReplicaInfo.blockDataExists());
 

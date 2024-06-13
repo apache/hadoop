@@ -62,7 +62,7 @@ containers run with both YARN cgroups and Nvidia Docker runtime v2.
 1. The pluggable device framework depends on LinuxContainerExecutor to handle
 resource isolation and Docker stuff. So LCE and Docker enabled on YARN is a
 must.
-See [Using CGroups with YARN](./NodeManagerCgroups.html) and [Docker on YARN](./DockerContainers.html)
+See [Using Cgroups with YARN](./NodeManagerCgroups.html) and [Docker on YARN](./DockerContainers.html)
 
 2. The sample plugin `NvidiaGPUPluginForRuntimeV2` requires Nvidia GPU drivers
 and Nvidia Docker runtime v2 installed in the nodes. See Nvidia official
