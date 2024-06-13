@@ -111,7 +111,7 @@
     <guava.version>27.0-jre</guava.version>
     <guice.version>4.2.3</guice.version>
 
-    <bouncycastle.version>1.78</bouncycastle.version>
+    <bouncycastle.version>1.78.1</bouncycastle.version>
 
     <!-- Required for testing LDAP integration -->
     <apacheds.version>2.0.0.AM26</apacheds.version>
@@ -134,6 +134,7 @@
     <kerby.version>2.0.3</kerby.version>
     <ehcache.version>3.8.2</ehcache.version>
     <cache.api.version>1.1.1</cache.api.version>
+    <caffeine.version>2.9.3</caffeine.version>
     <hikari.version>4.0.3</hikari.version>
     <derby.version>10.14.2.0</derby.version>
     <mssql.version>6.2.1.jre7</mssql.version>
@@ -169,7 +170,7 @@
 
     <!-- Plugin versions and config -->
     <maven-surefire-plugin.argLine>-Xmx2048m -XX:+HeapDumpOnOutOfMemoryError</maven-surefire-plugin.argLine>
-    <maven-surefire-plugin.version>3.2.5</maven-surefire-plugin.version>
+    <maven-surefire-plugin.version>3.0.0-M1</maven-surefire-plugin.version>
     <maven-surefire-report-plugin.version>${maven-surefire-plugin.version}</maven-surefire-report-plugin.version>
     <maven-failsafe-plugin.version>${maven-surefire-plugin.version}</maven-failsafe-plugin.version>
 
@@ -249,7 +250,7 @@
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop.thirdparty</groupId>
-        <artifactId>hadoop-shaded-protobuf_3_23</artifactId>
+        <artifactId>hadoop-shaded-protobuf_3_25</artifactId>
         <version>${hadoop-thirdparty-protobuf.version}</version>
       </dependency>
       <dependency>
@@ -1976,6 +1977,11 @@
           </exclusions>
         </dependency>
         <dependency>
+          <groupId>com.github.ben-manes.caffeine</groupId>
+          <artifactId>caffeine</artifactId>
+          <version>${caffeine.version}</version>
+        </dependency>
+        <dependency>
           <groupId>com.zaxxer</groupId>
           <artifactId>HikariCP</artifactId>
           <version>${hikari.version}</version>
@@ -2444,7 +2450,6 @@
             <DYLD_LIBRARY_PATH>${env.DYLD_LIBRARY_PATH}:${project.build.directory}/native/target/usr/local/lib:${hadoop.common.build.dir}/native/target/usr/local/lib</DYLD_LIBRARY_PATH>
             <MALLOC_ARENA_MAX>4</MALLOC_ARENA_MAX>
           </environmentVariables>
-          <failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
           <trimStackTrace>false</trimStackTrace>
           <systemPropertyVariables>
 

@@ -879,6 +879,42 @@ hierarchical namespace enabled, and set the following configuration settings:
    </property>
   -->
 
+  <!--2.5. If "WorkloadIdentityTokenProvider" is set as key provider, uncomment below and
+           set tenant, client id and token file path.
+
+           All service principals must have federated identity credentials for Kubernetes.
+           See Azure docs: https://learn.microsoft.com/en-us/azure/active-directory/workload-identities/workload-identity-federation-create-trust?pivots=identity-wif-apps-methods-azp#kubernetes
+
+           Retrieve the Azure identity token from kubernetes:
+           1. Create AKS cluster with Workload Identity: https://learn.microsoft.com/en-us/azure/aks/workload-identity-deploy-cluster
+           2. Create the pod:
+              kubectl apply -f src/test/resources/workload-identity-pod.yaml
+           3. After the pod is running, retrieve the identity token from the pod logs:
+              kubectl logs pod/workload-identity
+           4. Save the identity token to the token file path specified below.
+
+           The Azure identity token expires after 1 hour.
+  -->
+  <!--
+   <property>
+     <name>fs.azure.account.oauth2.msi.tenant.{ABFS_ACCOUNT_NAME}</name>
+     <value>{tenantGuid}</value>
+     <description>msi tenantGuid.</description>
+   </property>
+
+   <property>
+     <name>fs.azure.account.oauth2.client.id.{ABFS_ACCOUNT_NAME}</name>
+     <value>{client id}</value>
+     <description>AAD client id.</description>
+   </property>
+
+   <property>
+     <name>fs.azure.account.oauth2.client.token.file.{ABFS_ACCOUNT_NAME}</name>
+     <value>{token file path}</value>
+     <description>Azure identity token file path.</description>
+   </property>
+  -->
+
   <!--
     <property>
         <name>fs.azure.identity.transformer.enable.short.name</name>

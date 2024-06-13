@@ -60,7 +60,6 @@ import org.apache.hadoop.fs.azurebfs.security.ContextProviderEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.security.NoContextEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.utils.EncryptionType;
-import org.apache.hadoop.fs.azurebfs.utils.NamespaceUtil;
 import org.apache.hadoop.fs.impl.BackReference;
 import org.apache.hadoop.fs.PathIOException;
 
@@ -182,7 +181,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   private final AbfsConfiguration abfsConfiguration;
   private final Set<String> azureAtomicRenameDirSet;
   private Set<String> azureInfiniteLeaseDirSet;
-  private Trilean isNamespaceEnabled;
+  private volatile Trilean isNamespaceEnabled;
   private final AuthType authType;
   private final UserGroupInformation userGroupInformation;
   private final IdentityTransformerInterface identityTransformer;
@@ -364,17 +363,60 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     return authorityParts;
   }
 
+  /**
+   * Resolves namespace information of the filesystem from the state of {@link #isNamespaceEnabled}.
+   * if the state is UNKNOWN, it will be determined by making a GET_ACL request
+   * to the root of the filesystem. GET_ACL call is synchronized to ensure a single
+   * call is made to determine the namespace information in case multiple threads are
+   * calling this method at the same time. The resolution of namespace information
+   * would be stored back as state of {@link #isNamespaceEnabled}.
+   *
+   * @param tracingContext tracing context
+   * @return true if namespace is enabled, false otherwise.
+   * @throws AzureBlobFileSystemException server errors.
+   */
   public boolean getIsNamespaceEnabled(TracingContext tracingContext)
       throws AzureBlobFileSystemException {
     try {
-      return this.isNamespaceEnabled.toBoolean();
+      return isNamespaceEnabled();
     } catch (TrileanConversionException e) {
       LOG.debug("isNamespaceEnabled is UNKNOWN; fall back and determine through"
           + " getAcl server call", e);
     }
 
-    isNamespaceEnabled = Trilean.getTrilean(NamespaceUtil.isNamespaceEnabled(client, tracingContext));
+    return getNamespaceEnabledInformationFromServer(tracingContext);
+  }
+
+  private synchronized boolean getNamespaceEnabledInformationFromServer(
+      final TracingContext tracingContext) throws AzureBlobFileSystemException {
+    if (isNamespaceEnabled != Trilean.UNKNOWN) {
+      return isNamespaceEnabled.toBoolean();
+    }
+    try {
+      LOG.debug("Get root ACL status");
+      getClient().getAclStatus(AbfsHttpConstants.ROOT_PATH, tracingContext);
+      isNamespaceEnabled = Trilean.getTrilean(true);
+    } catch (AbfsRestOperationException ex) {
+      // Get ACL status is a HEAD request, its response doesn't contain
+      // errorCode
+      // So can only rely on its status code to determine its account type.
+      if (HttpURLConnection.HTTP_BAD_REQUEST != ex.getStatusCode()) {
+        throw ex;
+      }
+      isNamespaceEnabled = Trilean.getTrilean(false);
+    } catch (AzureBlobFileSystemException ex) {
+      throw ex;
+    }
     return isNamespaceEnabled.toBoolean();
+  }
+
+  /**
+   * @return true if namespace is enabled, false otherwise.
+   * @throws TrileanConversionException if namespaceEnabled information is UNKNOWN
+   */
+  @VisibleForTesting
+  boolean isNamespaceEnabled() throws TrileanConversionException {
+    return this.isNamespaceEnabled.toBoolean();
   }
 
   @VisibleForTesting
@@ -1729,7 +1771,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       creds = new SharedKeyCredentials(accountName.substring(0, dotIndex),
             abfsConfiguration.getStorageAccountKey());
     } else if (authType == AuthType.SAS) {
-      LOG.trace("Fetching SAS token provider");
+      LOG.trace("Fetching SAS Token Provider");
       sasTokenProvider = abfsConfiguration.getSASTokenProvider();
     } else {
       LOG.trace("Fetching token provider");

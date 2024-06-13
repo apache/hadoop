@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.contract;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -69,7 +70,7 @@ public abstract class AbstractContractBulkDeleteTest extends AbstractFSContractT
   public void setUp() throws Exception {
     fs = getFileSystem();
     basePath = path(getClass().getName());
-    pageSize = WrappedIO.bulkDelete_PageSize(getFileSystem(), basePath);
+    pageSize = WrappedIO.bulkDelete_pageSize(getFileSystem(), basePath);
     fs.mkdirs(basePath);
   }
 
@@ -165,6 +166,17 @@ public abstract class AbstractContractBulkDeleteTest extends AbstractFSContractT
     paths.add(pathNotUnderBase);
     intercept(IllegalArgumentException.class,
             () -> bulkDelete_delete(getFileSystem(), basePath, paths));
+  }
+
+  /**
+   * We should be able to delete the base path itself
+   * using bulk delete operation.
+   */
+  @Test
+  public void testDeletePathSameAsBasePath() throws Exception {
+    assertSuccessfulBulkDelete(bulkDelete_delete(getFileSystem(),
+            basePath,
+            Arrays.asList(basePath)));
   }
 
   /**

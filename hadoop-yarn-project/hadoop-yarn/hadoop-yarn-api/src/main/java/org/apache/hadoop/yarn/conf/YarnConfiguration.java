@@ -112,8 +112,6 @@ public class YarnConfiguration extends Configuration {
             SYSTEM_METRICS_PUBLISHER_ENABLED),
         new DeprecationDelta(RM_ZK_ACL, CommonConfigurationKeys.ZK_ACL),
         new DeprecationDelta(RM_ZK_AUTH, CommonConfigurationKeys.ZK_AUTH),
-        new DeprecationDelta(RM_ZK_ADDRESS,
-            CommonConfigurationKeys.ZK_ADDRESS),
         new DeprecationDelta(RM_ZK_NUM_RETRIES,
             CommonConfigurationKeys.ZK_NUM_RETRIES),
         new DeprecationDelta(RM_ZK_TIMEOUT_MS,
@@ -4037,6 +4035,9 @@ public class YarnConfiguration extends Configuration {
 
   public static final String DEFAULT_FEDERATION_STATESTORE_CLIENT_CLASS =
       "org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore";
+
+  public static final String FEDERATION_STATESTORE_ZK_ADDRESS =
+      FEDERATION_PREFIX + "state-store.zk.address";
 
   public static final String FEDERATION_CACHE_TIME_TO_LIVE_SECS =
       FEDERATION_PREFIX + "cache-ttl.secs";

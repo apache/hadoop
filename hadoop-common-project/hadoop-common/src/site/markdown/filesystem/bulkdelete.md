@@ -23,6 +23,7 @@ in an object store or filesystem.
 
 * An API for submitting a list of paths to delete.
 * This list must be no larger than the "page size" supported by the client; This size is also exposed as a method.
+* This list must not have any path outside the base path.
 * Triggers a request to delete files at the specific paths.
 * Returns a list of which paths were reported as delete failures by the store.
 * Does not consider a nonexistent file to be a failure.

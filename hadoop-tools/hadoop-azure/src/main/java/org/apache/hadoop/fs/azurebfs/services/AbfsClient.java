@@ -47,7 +47,6 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsInvalidChecksumExc
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsDriverException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
-import org.apache.hadoop.fs.azurebfs.utils.NamespaceUtil;
 import org.apache.hadoop.fs.store.LogExactlyOnce;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.Permissions;
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
@@ -134,7 +133,6 @@ public class AbfsClient implements Closeable {
   private final AbfsThrottlingIntercept intercept;
 
   private final ListeningScheduledExecutorService executorService;
-  private Boolean isNamespaceEnabled;
 
   private boolean renameResilience;
   private TimerTask runningTimerTask;
@@ -359,9 +357,6 @@ public class AbfsClient implements Closeable {
       List<AbfsHttpHeader> requestHeaders, boolean isCreateFileRequest,
       ContextEncryptionAdapter contextEncryptionAdapter, TracingContext tracingContext)
       throws AzureBlobFileSystemException {
-    if (!getIsNamespaceEnabled(tracingContext)) {
-      return;
-    }
     String encodedKey, encodedKeySHA256;
     switch (encryptionType) {
     case GLOBAL_KEY:
@@ -1065,6 +1060,7 @@ public class AbfsClient implements Closeable {
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_POSITION, Long.toString(position));
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RETAIN_UNCOMMITTED_DATA, String.valueOf(retainUncommittedData));
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_CLOSE, String.valueOf(isClose));
+
     // AbfsInputStream/AbfsOutputStream reuse SAS tokens for better performance
     String sasTokenForReuse = appendSASTokenToQuery(path, SASTokenProvider.WRITE_OPERATION,
         abfsUriQueryBuilder, cachedSasToken);
@@ -1160,6 +1156,7 @@ public class AbfsClient implements Closeable {
     }
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
+
     // AbfsInputStream/AbfsOutputStream reuse SAS tokens for better performance
     String sasTokenForReuse = appendSASTokenToQuery(path, SASTokenProvider.READ_OPERATION,
         abfsUriQueryBuilder, cachedSasToken);
@@ -1471,16 +1468,17 @@ public class AbfsClient implements Closeable {
           sasToken = cachedSasToken;
           LOG.trace("Using cached SAS token.");
         }
+
         // if SAS Token contains a prefix of ?, it should be removed
         if (sasToken.charAt(0) == '?') {
           sasToken = sasToken.substring(1);
         }
+
         queryBuilder.setSASToken(sasToken);
         LOG.trace("SAS token fetch complete for {} on {}", operation, path);
       } catch (Exception ex) {
-        throw new SASTokenProviderException(String.format("Failed to acquire a SAS token for %s on %s due to %s",
-            operation,
-            path,
+        throw new SASTokenProviderException(String.format(
+            "Failed to acquire a SAS token for %s on %s due to %s", operation, path,
             ex.toString()));
       }
     }
@@ -1545,15 +1543,6 @@ public class AbfsClient implements Closeable {
     } else {
       return null;
     }
-  }
-
-  private synchronized Boolean getIsNamespaceEnabled(TracingContext tracingContext)
-      throws AzureBlobFileSystemException {
-    if (isNamespaceEnabled == null) {
-      setIsNamespaceEnabled(NamespaceUtil.isNamespaceEnabled(this,
-          tracingContext));
-    }
-    return isNamespaceEnabled;
   }
 
   protected Boolean getIsPaginatedDeleteEnabled() {
@@ -1743,11 +1732,6 @@ public class AbfsClient implements Closeable {
   @VisibleForTesting
   void setEncryptionContextProvider(EncryptionContextProvider provider) {
     encryptionContextProvider = provider;
-  }
-
-  @VisibleForTesting
-  void setIsNamespaceEnabled(final Boolean isNamespaceEnabled) {
-    this.isNamespaceEnabled = isNamespaceEnabled;
   }
 
   /**

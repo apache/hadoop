@@ -560,6 +560,11 @@ public abstract class AbstractCGroupsHandler implements CGroupsHandler {
   }
 
   @Override
+  public String getCGroupV2MountPath() {
+    return this.cGroupsMountConfig.getV2MountPath();
+  }
+
+  @Override
   public String toString() {
     return CGroupsHandlerImpl.class.getName() + "{" +
         "mtabFile='" + mtabFile + '\'' +

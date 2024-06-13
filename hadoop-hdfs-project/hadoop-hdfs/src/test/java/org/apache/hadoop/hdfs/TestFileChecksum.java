@@ -30,9 +30,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -60,34 +58,34 @@ import static org.mockito.Mockito.mock;
 public class TestFileChecksum {
   private static final Logger LOG = LoggerFactory
       .getLogger(TestFileChecksum.class);
-  private final ErasureCodingPolicy ecPolicy =
+  private static final ErasureCodingPolicy ecPolicy =
       StripedFileTestUtil.getDefaultECPolicy();
-  private int dataBlocks = ecPolicy.getNumDataUnits();
-  private int parityBlocks = ecPolicy.getNumParityUnits();
+  private static final int dataBlocks = ecPolicy.getNumDataUnits();
+  private static final int parityBlocks = ecPolicy.getNumParityUnits();
 
-  private MiniDFSCluster cluster;
-  private DistributedFileSystem fs;
-  private Configuration conf;
-  private DFSClient client;
+  private static MiniDFSCluster cluster;
+  private static DistributedFileSystem fs;
+  private static Configuration conf;
+  private static DFSClient client;
 
-  private int cellSize = ecPolicy.getCellSize();
-  private int stripesPerBlock = 6;
-  private int blockSize = cellSize * stripesPerBlock;
-  private int numBlockGroups = 10;
-  private int stripSize = cellSize * dataBlocks;
-  private int blockGroupSize = stripesPerBlock * stripSize;
-  private int fileSize = numBlockGroups * blockGroupSize;
-  private int bytesPerCRC;
+  private static final int cellSize = ecPolicy.getCellSize();
+  private static final int stripesPerBlock = 6;
+  private static final int blockSize = cellSize * stripesPerBlock;
+  private static final int numBlockGroups = 10;
+  private static final int stripSize = cellSize * dataBlocks;
+  private static final int blockGroupSize = stripesPerBlock * stripSize;
+  private static final int fileSize = numBlockGroups * blockGroupSize;
+  private static int bytesPerCRC;
 
-  private String ecDir = "/striped";
-  private String stripedFile1 = ecDir + "/stripedFileChecksum1";
-  private String stripedFile2 = ecDir + "/stripedFileChecksum2";
-  private String replicatedFile = "/replicatedFileChecksum";
+  private static final String ecDir = "/striped";
+  private static final String stripedFile1 = ecDir + "/stripedFileChecksum1";
+  private static final String stripedFile2 = ecDir + "/stripedFileChecksum2";
+  private static final String replicatedFile = "/replicatedFileChecksum";
 
-  private String checksumCombineMode;
+  private static String checksumCombineMode;
 
-  public TestFileChecksum(String checksumCombineMode) {
-    this.checksumCombineMode = checksumCombineMode;
+  public TestFileChecksum(String mode) {
+    checksumCombineMode = mode;
   }
 
   @Parameterized.Parameters
@@ -100,8 +98,9 @@ public class TestFileChecksum {
   @Rule
   public ExpectedException exception = ExpectedException.none();
 
-  @Before
-  public void setup() throws IOException {
+  @Parameterized.BeforeParam
+  public static void setup(String mode) throws IOException {
+    checksumCombineMode = mode;
     int numDNs = dataBlocks + parityBlocks + 2;
     conf = new Configuration();
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
@@ -124,8 +123,8 @@ public class TestFileChecksum {
     GenericTestUtils.setLogLevel(FileChecksumHelper.LOG, Level.DEBUG);
   }
 
-  @After
-  public void tearDown() {
+  @Parameterized.AfterParam
+  public static void tearDown() {
     if (cluster != null) {
       cluster.shutdown();
       cluster = null;

@@ -273,6 +273,8 @@ public final class ConfigurationKeys {
   public static final String FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN = "fs.azure.account.oauth2.refresh.token";
   /** Key for oauth AAD refresh token endpoint: {@value}. */
   public static final String FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN_ENDPOINT = "fs.azure.account.oauth2.refresh.token.endpoint";
+  /** Key for oauth AAD workload identity token file path: {@value}. */
+  public static final String FS_AZURE_ACCOUNT_OAUTH_TOKEN_FILE = "fs.azure.account.oauth2.token.file";
   /** Key for enabling the tracking of ABFS API latency and sending the latency numbers to the ABFS API service */
   public static final String FS_AZURE_ABFS_LATENCY_TRACK = "fs.azure.abfs.latency.track";
 
@@ -297,7 +299,10 @@ public final class ConfigurationKeys {
   public static final String FS_AZURE_ENABLE_DELEGATION_TOKEN = "fs.azure.enable.delegation.token";
   public static final String FS_AZURE_DELEGATION_TOKEN_PROVIDER_TYPE = "fs.azure.delegation.token.provider.type";
 
-  /** Key for SAS token provider **/
+  /** Key for fixed SAS token: {@value}. **/
+  public static final String FS_AZURE_SAS_FIXED_TOKEN = "fs.azure.sas.fixed.token";
+
+  /** Key for SAS token provider: {@value}. **/
   public static final String FS_AZURE_SAS_TOKEN_PROVIDER_TYPE = "fs.azure.sas.token.provider.type";
 
   /** For performance, AbfsInputStream/AbfsOutputStream re-use SAS tokens until the expiry is within this number of seconds. **/
