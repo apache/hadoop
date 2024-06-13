@@ -22,17 +22,23 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.function.Supplier;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+
 /**
  * Functional utilities for IO operations.
  */
+@InterfaceAudience.Private
 public final class FunctionalIO {
+
+  private FunctionalIO() {
+  }
 
   /**
    * Invoke any operation, wrapping IOExceptions with
    * {@code UncheckedIOException}.
    * @param call callable
-   * @return result
    * @param <T> type of result
+   * @return result
    * @throws UncheckedIOException if an IOE was raised.
    */
   public static <T> T uncheckIOExceptions(CallableRaisingIOE<T> call) {
@@ -48,10 +54,10 @@ public final class FunctionalIO {
    * This is similar to {@link CommonCallableSupplier}, except that
    * only IOExceptions are caught and wrapped; all other exceptions are
    * propagated unchanged.
-   *
    * @param <T> type of result
    */
   private static final class UncheckedIOExceptionSupplier<T> implements Supplier<T> {
+
     private final CallableRaisingIOE<T> call;
 
     private UncheckedIOExceptionSupplier(CallableRaisingIOE<T> call) {
@@ -78,8 +84,8 @@ public final class FunctionalIO {
    * Invoke the supplier, catching any {@code UncheckedIOException} raised,
    * extracting the inner IOException and rethrowing it.
    * @param call call to invoke
-   * @return result
    * @param <T> type of result
+   * @return result
    * @throws IOException if the call raised an IOException wrapped by an UncheckedIOException.
    */
   public static <T> T extractIOExceptions(Supplier<T> call) throws IOException {
