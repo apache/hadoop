@@ -158,7 +158,7 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     this.errors = new StagingTestBase.ClientErrors();
     this.mockClient = newMockS3Client(results, errors);
     this.mockFS = createAndBindMockFSInstance(jobConf,
-        Pair.of(results, errors));
+        Pair.of(results, errors), mockClient);
     this.wrapperFS = lookupWrapperFS(jobConf);
     // and bind the FS
     wrapperFS.setAmazonS3Client(mockClient);

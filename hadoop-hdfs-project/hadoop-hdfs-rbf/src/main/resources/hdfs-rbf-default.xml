@@ -371,10 +371,27 @@
   </property>
 
   <property>
+    <name>dfs.federation.router.store.driver.async.override.max.threads</name>
+    <value>-1</value>
+    <description>
+      Number of threads used by StateStoreDriver to overwrite and delete records asynchronously.
+      Only used by MembershipStore and RouterStore. Non-positive values will make StateStoreDriver
+      run in sync mode.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.federation.router.store.connection.test</name>
     <value>60000</value>
     <description>
       How often to check for the connection to the State Store in milliseconds.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.store.driver.zk.address</name>
+    <description>
+      Host:Port of the ZooKeeper for StateStoreZooKeeperImpl.
     </description>
   </property>
 

@@ -241,7 +241,7 @@ public class SaslDataTransferServer {
           continue; // realm is ignored
         } else {
           throw new UnsupportedCallbackException(callback,
-              "Unrecognized SASL DIGEST-MD5 Callback: " + callback);
+              "Unrecognized SASL Callback: " + callback);
         }
       }
 

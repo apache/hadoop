@@ -218,17 +218,23 @@ public class BlockTokenSecretManager extends
     }
   }
 
+  public synchronized void addKeys(ExportedBlockKeys exportedKeys) throws IOException {
+    addKeys(exportedKeys, true);
+  }
+
   /**
    * Set block keys, only to be used in worker mode
    */
-  public synchronized void addKeys(ExportedBlockKeys exportedKeys)
-      throws IOException {
+  public synchronized void addKeys(ExportedBlockKeys exportedKeys,
+      boolean updateCurrentKey) throws IOException {
     if (isMaster || exportedKeys == null) {
       return;
     }
     LOG.info("Setting block keys. BlockPool = {} .", blockPoolId);
     removeExpiredKeys();
-    this.currentKey = exportedKeys.getCurrentKey();
+    if (updateCurrentKey || currentKey == null) {
+      this.currentKey = exportedKeys.getCurrentKey();
+    }
     BlockKey[] receivedKeys = exportedKeys.getAllKeys();
     for (int i = 0; i < receivedKeys.length; i++) {
       if (receivedKeys[i] != null) {

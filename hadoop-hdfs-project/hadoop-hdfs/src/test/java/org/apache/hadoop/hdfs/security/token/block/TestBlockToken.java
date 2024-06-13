@@ -467,7 +467,7 @@ public class TestBlockToken {
       bpMgr.addBlockPool(bpid, slaveHandler);
 
       ExportedBlockKeys keys = masterHandler.exportKeys();
-      bpMgr.addKeys(bpid, keys);
+      bpMgr.addKeys(bpid, keys, true);
       String[] storageIds = new String[] {"DS-9001"};
       tokenGenerationAndVerification(masterHandler, bpMgr.get(bpid),
           new StorageType[]{StorageType.DEFAULT}, storageIds);
@@ -480,7 +480,7 @@ public class TestBlockToken {
       tokenGenerationAndVerification(masterHandler, bpMgr.get(bpid), null,
           null);
       keys = masterHandler.exportKeys();
-      bpMgr.addKeys(bpid, keys);
+      bpMgr.addKeys(bpid, keys, true);
       tokenGenerationAndVerification(masterHandler, bpMgr.get(bpid),
           new StorageType[]{StorageType.DEFAULT}, new String[]{"DS-9001"});
       tokenGenerationAndVerification(masterHandler, bpMgr.get(bpid), null,

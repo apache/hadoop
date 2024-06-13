@@ -134,6 +134,18 @@ public final class PublicDatasetTestUtils {
   }
 
   /**
+   * To determine whether {@value S3ATestConstants#KEY_CSVTEST_FILE} is configured to be
+   * different from the default external file.
+   *
+   * @param conf Configuration object.
+   * @return True if the default external data file is being used.
+   */
+  public static boolean isUsingDefaultExternalDataFile(final Configuration conf) {
+    final String filename = getExternalData(conf).toUri().toString();
+    return DEFAULT_EXTERNAL_FILE.equals(filename);
+  }
+
+  /**
    * Get the test external file; assume() that it is not modified (i.e. we haven't
    * switched to a new storage infrastructure where the bucket is no longer
    * read only).

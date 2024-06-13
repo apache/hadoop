@@ -834,8 +834,13 @@ public class TestDiskBalancerCommand {
           .getIpcPort(), dataNode2.getIpcPort());
       final String cmdLine = String.format("hdfs diskbalancer %s", queryArg);
       List<String> outputs = runCommand(cmdLine);
-      assertThat(outputs.get(1), containsString("localhost:" + dataNode1.getIpcPort()));
-      assertThat(outputs.get(6), containsString("localhost:" + dataNode2.getIpcPort()));
+      assertEquals(12,  outputs.size());
+      assertTrue("Expected outputs: " + outputs,
+          outputs.get(1).contains("localhost:" + dataNode1.getIpcPort()) ||
+              outputs.get(6).contains("localhost:" + dataNode1.getIpcPort()));
+      assertTrue("Expected outputs: " + outputs,
+          outputs.get(1).contains("localhost:" + dataNode2.getIpcPort()) ||
+              outputs.get(6).contains("localhost:" + dataNode2.getIpcPort()));
     } finally {
       miniDFSCluster.shutdown();
     }
