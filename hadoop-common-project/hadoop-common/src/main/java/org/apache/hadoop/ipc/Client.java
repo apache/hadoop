@@ -96,6 +96,8 @@ public class Client implements AutoCloseable {
   private static final ThreadLocal<Integer> retryCount = new ThreadLocal<Integer>();
   private static final ThreadLocal<Object> EXTERNAL_CALL_HANDLER
       = new ThreadLocal<>();
+  public static final ThreadLocal<CompletableFuture<Object>> CALL_FUTURE_THREAD_LOCAL
+      = new ThreadLocal<>();
   private static final ThreadLocal<AsyncGet<? extends Writable, IOException>>
       ASYNC_RPC_RESPONSE = new ThreadLocal<>();
   private static final ThreadLocal<Boolean> asynchronousMode =
@@ -283,6 +285,7 @@ public class Client implements AutoCloseable {
     boolean done;               // true when call is done
     private final Object externalHandler;
     private AlignmentContext alignmentContext;
+    private final CompletableFuture<Object> completableFuture;
 
     private Call(RPC.RpcKind rpcKind, Writable param) {
       this.rpcKind = rpcKind;
@@ -304,6 +307,8 @@ public class Client implements AutoCloseable {
       }
 
       this.externalHandler = EXTERNAL_CALL_HANDLER.get();
+      this.completableFuture = CALL_FUTURE_THREAD_LOCAL.get();
+      CALL_FUTURE_THREAD_LOCAL.remove();
     }
 
     @Override
@@ -321,6 +326,9 @@ public class Client implements AutoCloseable {
         synchronized (externalHandler) {
           externalHandler.notify();
         }
+      }
+      if (completableFuture != null) {
+        completableFuture.complete(this);
       }
     }
 

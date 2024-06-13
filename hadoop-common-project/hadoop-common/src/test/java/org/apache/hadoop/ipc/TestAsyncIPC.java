@@ -28,6 +28,7 @@ import org.apache.hadoop.ipc.TestIPC.TestServer;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.concurrent.AsyncGetFuture;
 import org.junit.Assert;
 import org.junit.Before;
@@ -38,6 +39,8 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -45,6 +48,8 @@ import java.util.concurrent.TimeoutException;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class TestAsyncIPC {
 
@@ -134,6 +139,77 @@ public class TestAsyncIPC {
         }
       }
       Assert.assertFalse(failed);
+    }
+  }
+
+  /**
+   * For testing the asynchronous calls of the RPC client
+   * implemented with CompletableFuture.
+   */
+  static class AsyncCompletableFutureCaller extends Thread {
+    private final Client client;
+    private final InetSocketAddress server;
+    private final int count;
+    private final List<CompletableFuture<Object>> completableFutures = new ArrayList<>();
+    private final List<Long> expectedValues = new ArrayList<>();
+
+    AsyncCompletableFutureCaller(Client client, InetSocketAddress server, int count) {
+      this.client = client;
+      this.server = server;
+      this.count = count;
+      setName("Async CompletableFuture Caller");
+    }
+
+    @Override
+    public void run() {
+      // Set the RPC client to use asynchronous mode.
+      Client.setAsynchronousMode(true);
+      long startTime = Time.monotonicNow();
+      try {
+        for (int i = 0; i < count; i++) {
+          final long param = TestIPC.RANDOM.nextLong();
+          // Set the CompletableFuture object for the current Client.Call.
+          CompletableFuture<Object> completableFuture = new CompletableFuture<>();
+          Client.CALL_FUTURE_THREAD_LOCAL.set(completableFuture);
+          // Execute asynchronous call.
+          TestIPC.call(client, param, server, conf);
+          expectedValues.add(param);
+          // After the call is completed, the response thread
+          // (currently the Client.connection thread) retrieves the response
+          // using the AsyncGetFuture<Writable, IOException> object.
+          AsyncGetFuture<Writable, IOException> asyncRpcResponse = getAsyncRpcResponseFuture();
+          completableFuture = completableFuture.thenApply(call -> {
+            LOG.info("[{}] Async response for {}", Thread.currentThread().getName(), call);
+            assertTrue(Thread.currentThread().getName().contains("connection"));
+            try {
+              // Since the current call has already been completed,
+              // this method does not need to block.
+              return asyncRpcResponse.get();
+            } catch (Exception e) {
+              throw new CompletionException(e);
+            }
+          });
+          completableFutures.add(completableFuture);
+        }
+        // Since the run method is asynchronous,
+        // it does not need to wait for a response after sending a request,
+        // so the time taken by the run method is less than count * 100
+        // (where 100 is the time taken by the server to process a request).
+        long cost = Time.monotonicNow() - startTime;
+        assertTrue(cost < count * 100);
+        LOG.info("[{}] run cost {}ms", Thread.currentThread().getName(), cost);
+      } catch (Exception e) {
+        fail();
+      }
+    }
+
+    public void assertReturnValues()
+        throws InterruptedException, ExecutionException {
+      for (int i = 0; i < count; i++) {
+        LongWritable value = (LongWritable) completableFutures.get(i).get();
+        Assert.assertEquals("call" + i + " failed.",
+            expectedValues.get(i).longValue(), value.get());
+      }
     }
   }
 
@@ -536,6 +612,38 @@ public class TestAsyncIPC {
     final int startID = callIds.get(0).intValue();
     for (int i = 0; i < expectedCallCount; ++i) {
       assertEquals(startID + i, callIds.get(i).intValue());
+    }
+  }
+
+  @Test(timeout = 60000)
+  public void testAsyncCallWithCompletableFuture() throws IOException,
+      InterruptedException, ExecutionException {
+    // Override client to store the call id
+    final Client client = new Client(LongWritable.class, conf);
+
+    // Construct an RPC server, which includes a handler thread.
+    final TestServer server = new TestIPC.TestServer(1, false, conf);
+    server.callListener = () -> {
+      try {
+        // The server requires at least 100 milliseconds to process a request.
+        Thread.sleep(100);
+      } catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
+    };
+
+    try {
+      InetSocketAddress addr = NetUtils.getConnectAddress(server);
+      server.start();
+      // Send 10 asynchronous requests.
+      final AsyncCompletableFutureCaller caller =
+          new AsyncCompletableFutureCaller(client, addr, 10);
+      caller.run();
+      // Check if the values returned by the asynchronous call meet the expected values.
+      caller.assertReturnValues();
+    } finally {
+      client.stop();
+      server.stop();
     }
   }
 }
