@@ -25,12 +25,10 @@ import java.util.concurrent.Callable;
 import org.apache.hadoop.hdfs.protocol.DatanodeAdminProperties;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.After;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
-import org.junit.rules.ExpectedException;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 
@@ -52,9 +50,6 @@ public class TestCombinedHostsFileReader {
   private final File jsonFile = new File(TESTCACHEDATADIR, "dfs.hosts.json");
   private final File legacyFile =
       new File(TESTCACHEDATADIR, "legacy.dfs.hosts.json");
-
-  @Rule
-  public final ExpectedException exception = ExpectedException.none();
 
   @Mock
   private Callable<DatanodeAdminProperties[]> callable;
