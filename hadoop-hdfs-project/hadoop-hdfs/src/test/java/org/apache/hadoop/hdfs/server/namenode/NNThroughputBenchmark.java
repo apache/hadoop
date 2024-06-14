@@ -1295,7 +1295,8 @@ public class NNThroughputBenchmark implements Tool {
           clientProto.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_LEAVE,
                   false);
         } catch (Exception e){
-          LOG.error("Potentially insufficient permission: try running the tool with -nonSuperUser argument or login as super user");
+          LOG.error("Potentially insufficient permission: try running the tool" +
+                    " with -nonSuperUser argument or login as super user");
           throw e;
         }
       }
