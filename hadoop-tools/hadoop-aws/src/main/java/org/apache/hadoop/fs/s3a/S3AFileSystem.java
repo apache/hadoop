@@ -54,7 +54,6 @@ import javax.annotation.Nullable;
 
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.exception.SdkException;
-import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadResponse;
@@ -88,7 +87,6 @@ import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 import software.amazon.awssdk.transfer.s3.model.CompletedCopy;
 import software.amazon.awssdk.transfer.s3.model.CompletedFileUpload;
 import software.amazon.awssdk.transfer.s3.model.Copy;
-import software.amazon.awssdk.transfer.s3.S3TransferManager;
 import software.amazon.awssdk.transfer.s3.model.CopyRequest;
 import software.amazon.awssdk.transfer.s3.model.FileUpload;
 import software.amazon.awssdk.transfer.s3.model.UploadFileRequest;
@@ -123,6 +121,8 @@ import org.apache.hadoop.fs.s3a.impl.AWSHeaders;
 import org.apache.hadoop.fs.s3a.impl.BulkDeleteOperation;
 import org.apache.hadoop.fs.s3a.impl.BulkDeleteOperationCallbacksImpl;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
+import org.apache.hadoop.fs.s3a.impl.ClientManager;
+import org.apache.hadoop.fs.s3a.impl.ClientManagerImpl;
 import org.apache.hadoop.fs.s3a.impl.ConfigurationHelper;
 import org.apache.hadoop.fs.s3a.impl.ContextAccessors;
 import org.apache.hadoop.fs.s3a.impl.CopyFromLocalOperation;
@@ -152,6 +152,7 @@ import org.apache.hadoop.fs.s3a.tools.MarkerToolOperations;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperationsImpl;
 import org.apache.hadoop.fs.statistics.DurationTracker;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
+import org.apache.hadoop.fs.statistics.FileSystemStatisticNames;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsSource;
 import org.apache.hadoop.fs.statistics.IOStatisticsContext;
@@ -305,10 +306,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   private S3AStore store;
 
+  /**
+   * The core S3 client is created and managed by the +.
+   */
   private S3Client s3Client;
-
-  /** Async client is used for transfer manager. */
-  private S3AsyncClient s3AsyncClient;
 
   // initial callback policy is fail-once; it's there just to assist
   // some mock tests and other codepaths trying to call the low level
@@ -328,7 +329,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private Listing listing;
   private long partSize;
   private boolean enableMultiObjectsDelete;
-  private S3TransferManager transferManager;
   private ExecutorService boundedThreadPool;
   private ThreadPoolExecutor unboundedThreadPool;
 
@@ -548,6 +548,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     // get the host; this is guaranteed to be non-null, non-empty
     bucket = name.getHost();
     AuditSpan span = null;
+    // track initialization duration; will only be set after
+    // statistics are set up.
+    Optional<DurationTracker> trackInitialization = Optional.empty();
     try {
       LOG.debug("Initializing S3AFileSystem for {}", bucket);
       if (LOG.isTraceEnabled()) {
@@ -592,6 +595,18 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       super.initialize(uri, conf);
       setConf(conf);
 
+      // initialize statistics, after which statistics
+      // can be collected.
+      instrumentation = new S3AInstrumentation(uri);
+      initializeStatisticsBinding();
+
+      // track initialization duration.
+      // this should really be done in a onceTrackingDuration() call,
+      // but then all methods below would need to be in the lambda and
+      // it would create a merge/backport headache for all.
+      trackInitialization = Optional.of(
+          instrumentation.trackDuration(FileSystemStatisticNames.FILESYSTEM_INITIALIZATION));
+
       s3aInternals = createS3AInternals();
 
       // look for encryption data
@@ -600,8 +615,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           buildEncryptionSecrets(bucket, conf));
 
       invoker = new Invoker(new S3ARetryPolicy(getConf()), onRetry);
-      instrumentation = new S3AInstrumentation(uri);
-      initializeStatisticsBinding();
+
       // If CSE-KMS method is set then CSE is enabled.
       isCSEEnabled = S3AEncryptionMethods.CSE_KMS.getMethod()
           .equals(getS3EncryptionAlgorithm().getMethod());
@@ -687,7 +701,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // the FS came with a DT
       // this may do some patching of the configuration (e.g. setting
       // the encryption algorithms)
-      bindAWSClient(name, delegationTokensEnabled);
+      ClientManager clientManager = bindAWSClient(name, delegationTokensEnabled);
+      // the s3 client is immediately created.
+      s3Client = clientManager.getOrCreateS3Client();
 
       inputPolicy = S3AInputPolicy.getPolicy(
           conf.getTrimmed(INPUT_FADVISE,
@@ -763,7 +779,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       int rateLimitCapacity = intOption(conf, S3A_IO_RATE_LIMIT, DEFAULT_S3A_IO_RATE_LIMIT, 0);
       // now create the store
       store = new S3AStoreBuilder()
-          .withS3Client(s3Client)
+          .withClientManager(clientManager)
           .withDurationTrackerFactory(getDurationTrackerFactory())
           .withStoreContextFactory(this)
           .withAuditSpanSource(getAuditManager())
@@ -779,15 +795,18 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // This initiates a probe against S3 for the bucket existing.
       doBucketProbing();
       initMultipartUploads(conf);
+      trackInitialization.ifPresent(DurationTracker::close);
     } catch (SdkException e) {
       // amazon client exception: stop all services then throw the translation
       cleanupWithLogger(LOG, span);
       stopAllServices();
+      trackInitialization.ifPresent(DurationTracker::failed);
       throw translateException("initializing ", new Path(name), e);
     } catch (IOException | RuntimeException e) {
       // other exceptions: stop the services.
       cleanupWithLogger(LOG, span);
       stopAllServices();
+      trackInitialization.ifPresent(DurationTracker::failed);
       throw e;
     }
   }
@@ -1014,14 +1033,22 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   /**
    * Set up the client bindings.
    * If delegation tokens are enabled, the FS first looks for a DT
-   * ahead of any other bindings;.
+   * ahead of any other bindings.
    * If there is a DT it uses that to do the auth
-   * and switches to the DT authenticator automatically (and exclusively)
-   * @param name URI of the FS
+   * and switches to the DT authenticator automatically (and exclusively).
+   * <p>
+   * Delegation tokens are configured and started, but the actual
+   * S3 clients are not: instead a {@link ClientManager} is created
+   * and returned, from which they can be created on demand.
+   * This is to reduce delays in FS initialization, especially
+   * for features (transfer manager, async client) which are not
+   * always used.
+   * @param fsURI URI of the FS
    * @param dtEnabled are delegation tokens enabled?
+   * @return the client manager which can generate the clients.
    * @throws IOException failure.
    */
-  private void bindAWSClient(URI name, boolean dtEnabled) throws IOException {
+  private ClientManager bindAWSClient(URI fsURI, boolean dtEnabled) throws IOException {
     Configuration conf = getConf();
     credentials = null;
     String uaSuffix = "";
@@ -1059,7 +1086,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       uaSuffix = tokens.getUserAgentField();
     } else {
       // DT support is disabled, so create the normal credential chain
-      credentials = createAWSCredentialProviderList(name, conf);
+      credentials = createAWSCredentialProviderList(fsURI, conf);
     }
     LOG.debug("Using credential provider {}", credentials);
     Class<? extends S3ClientFactory> s3ClientFactoryClass = conf.getClass(
@@ -1069,7 +1096,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     S3ClientFactory.S3ClientCreationParameters parameters =
         new S3ClientFactory.S3ClientCreationParameters()
         .withCredentialSet(credentials)
-        .withPathUri(name)
+        .withPathUri(fsURI)
         .withEndpoint(endpoint)
         .withMetrics(statisticsContext.newStatisticsFromAwsSdk())
         .withPathStyleAccess(conf.getBoolean(PATH_STYLE_ACCESS, false))
@@ -1088,22 +1115,25 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             conf.getBoolean(CHECKSUM_VALIDATION, CHECKSUM_VALIDATION_DEFAULT));
 
     S3ClientFactory clientFactory = ReflectionUtils.newInstance(s3ClientFactoryClass, conf);
-    s3Client = clientFactory.createS3Client(getUri(), parameters);
-    createS3AsyncClient(clientFactory, parameters);
-    transferManager =  clientFactory.createS3TransferManager(getS3AsyncClient());
+    // this is where clients and the transfer manager are created on demand.
+    return createClientManager(clientFactory, parameters, getDurationTrackerFactory());
   }
 
   /**
-   * Creates and configures the S3AsyncClient.
-   * Uses synchronized method to suppress spotbugs error.
-   *
-   * @param clientFactory factory used to create S3AsyncClient
-   * @param parameters parameter object
-   * @throws IOException on any IO problem
+   * Create the Client Manager; protected to allow for mocking.
+   * @param clientFactory (reflection-bonded) client factory.
+   * @param clientCreationParameters parameters for client creation.
+   * @param durationTrackerFactory factory for duration tracking.
+   * @return a client manager instance.
    */
-  private void createS3AsyncClient(S3ClientFactory clientFactory,
-      S3ClientFactory.S3ClientCreationParameters parameters) throws IOException {
-    s3AsyncClient = clientFactory.createS3AsyncClient(getUri(), parameters);
+  @VisibleForTesting
+  protected ClientManager createClientManager(
+      final S3ClientFactory clientFactory,
+      final S3ClientFactory.S3ClientCreationParameters clientCreationParameters,
+      final DurationTrackerFactory durationTrackerFactory) throws IOException {
+    return new ClientManagerImpl(clientFactory,
+        clientCreationParameters,
+        durationTrackerFactory);
   }
 
   /**
@@ -1239,14 +1269,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @VisibleForTesting
   public RequestFactory getRequestFactory() {
     return requestFactory;
-  }
-
-  /**
-   * Get the S3 Async client.
-   * @return the async s3 client.
-   */
-  private S3AsyncClient getS3AsyncClient() {
-    return s3AsyncClient;
   }
 
   /**
@@ -3188,12 +3210,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   @Retries.OnceRaw
   public UploadInfo putObject(PutObjectRequest putObjectRequest, File file,
-      ProgressableProgressListener listener) {
+      ProgressableProgressListener listener) throws IOException {
     long len = getPutRequestLength(putObjectRequest);
     LOG.debug("PUT {} bytes to {} via transfer manager ", len, putObjectRequest.key());
     incrementPutStartStatistics(len);
 
-    FileUpload upload = transferManager.uploadFile(
+    FileUpload upload = store.getOrCreateTransferManager().uploadFile(
             UploadFileRequest.builder()
                 .putObjectRequest(putObjectRequest)
                 .source(file)
@@ -4344,35 +4366,43 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * both the expected state of this FS and of failures while being stopped.
    */
   protected synchronized void stopAllServices() {
-    closeAutocloseables(LOG, transferManager,
-        s3Client,
-        getS3AsyncClient());
-    transferManager = null;
-    s3Client = null;
-    s3AsyncClient = null;
+    try {
+      trackDuration(getDurationTrackerFactory(), FILESYSTEM_CLOSE.getSymbol(), () -> {
+        closeAutocloseables(LOG, store);
+        store = null;
+        s3Client = null;
 
-    // At this point the S3A client is shut down,
-    // now the executor pools are closed
-    HadoopExecutors.shutdown(boundedThreadPool, LOG,
-        THREAD_POOL_SHUTDOWN_DELAY_SECONDS, TimeUnit.SECONDS);
-    boundedThreadPool = null;
-    HadoopExecutors.shutdown(unboundedThreadPool, LOG,
-        THREAD_POOL_SHUTDOWN_DELAY_SECONDS, TimeUnit.SECONDS);
-    unboundedThreadPool = null;
-    if (futurePool != null) {
-      futurePool.shutdown(LOG, THREAD_POOL_SHUTDOWN_DELAY_SECONDS, TimeUnit.SECONDS);
-      futurePool = null;
+        // At this point the S3A client is shut down,
+        // now the executor pools are closed
+        HadoopExecutors.shutdown(boundedThreadPool, LOG,
+            THREAD_POOL_SHUTDOWN_DELAY_SECONDS, TimeUnit.SECONDS);
+        boundedThreadPool = null;
+        HadoopExecutors.shutdown(unboundedThreadPool, LOG,
+            THREAD_POOL_SHUTDOWN_DELAY_SECONDS, TimeUnit.SECONDS);
+        unboundedThreadPool = null;
+        if (futurePool != null) {
+          futurePool.shutdown(LOG, THREAD_POOL_SHUTDOWN_DELAY_SECONDS, TimeUnit.SECONDS);
+          futurePool = null;
+        }
+        // other services are shutdown.
+        cleanupWithLogger(LOG,
+            delegationTokens.orElse(null),
+            signerManager,
+            auditManager);
+        closeAutocloseables(LOG, credentials);
+        delegationTokens = Optional.empty();
+        signerManager = null;
+        credentials = null;
+        return null;
+      });
+    } catch (IOException e) {
+      // failure during shutdown.
+      // this should only be from the signature of trackDurationAndSpan().
+      LOG.warn("Failure during service shutdown", e);
     }
+    // and once this duration has been tracked, close the statistics
     // other services are shutdown.
-    cleanupWithLogger(LOG,
-        instrumentation,
-        delegationTokens.orElse(null),
-        signerManager,
-        auditManager);
-    closeAutocloseables(LOG, credentials);
-    delegationTokens = Optional.empty();
-    signerManager = null;
-    credentials = null;
+    cleanupWithLogger(LOG, instrumentation);
   }
 
   /**
@@ -4559,7 +4589,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           () -> {
             incrementStatistic(OBJECT_COPY_REQUESTS);
 
-            Copy copy = transferManager.copy(
+            Copy copy = store.getOrCreateTransferManager().copy(
                 CopyRequest.builder()
                     .copyObjectRequest(copyRequest)
                     .build());

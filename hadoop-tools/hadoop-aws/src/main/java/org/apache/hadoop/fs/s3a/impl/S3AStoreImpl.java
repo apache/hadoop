@@ -38,6 +38,7 @@ import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsResponse;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.S3Error;
+import software.amazon.awssdk.transfer.s3.S3TransferManager;
 
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.Retries;
@@ -60,7 +61,6 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.isThrottleException;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isObjectNotFound;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.DELETE_CONSIDERED_IDEMPOTENT;
-import static org.apache.hadoop.fs.statistics.StoreStatisticNames.STORE_IO_RATE_LIMITED_DURATION;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfOperation;
 import static org.apache.hadoop.util.Preconditions.checkArgument;
 
@@ -76,17 +76,14 @@ public class S3AStoreImpl implements S3AStore {
   /** Factory to create store contexts. */
   private final StoreContextFactory storeContextFactory;
 
-  /** The S3 client used to communicate with S3 bucket. */
-  private final S3Client s3Client;
+  /** Source of the S3 clients */
+  private final ClientManager clientManager;
 
   /** The S3 bucket to communicate with. */
   private final String bucket;
 
   /** Request factory for creating requests. */
   private final RequestFactory requestFactory;
-
-  /** Async client is used for transfer manager. */
-  private S3AsyncClient s3AsyncClient;
 
   /** Duration tracker factory. */
   private final DurationTrackerFactory durationTrackerFactory;
@@ -117,7 +114,7 @@ public class S3AStoreImpl implements S3AStore {
 
   /** Constructor to create S3A store. */
   S3AStoreImpl(StoreContextFactory storeContextFactory,
-      S3Client s3Client,
+      ClientManager clientManager,
       DurationTrackerFactory durationTrackerFactory,
       S3AInstrumentation instrumentation,
       S3AStatisticsContext statisticsContext,
@@ -126,7 +123,7 @@ public class S3AStoreImpl implements S3AStore {
       RateLimiting writeRateLimiter,
       AuditSpanSource<AuditSpanS3A> auditSpanSource) {
     this.storeContextFactory = requireNonNull(storeContextFactory);
-    this.s3Client = requireNonNull(s3Client);
+    this.clientManager = requireNonNull(clientManager);
     this.durationTrackerFactory = requireNonNull(durationTrackerFactory);
     this.instrumentation = requireNonNull(instrumentation);
     this.statisticsContext = requireNonNull(statisticsContext);
@@ -139,6 +136,12 @@ public class S3AStoreImpl implements S3AStore {
     this.bucket = storeContext.getBucket();
     this.requestFactory = storeContext.getRequestFactory();
   }
+
+  @Override
+  public void close() throws Exception {
+    clientManager.close();
+  }
+
 
   /** Acquire write capacity for rate limiting {@inheritDoc}. */
   @Override
@@ -166,8 +169,28 @@ public class S3AStoreImpl implements S3AStore {
     return storeContext;
   }
 
-  private S3Client getS3Client() {
-    return s3Client;
+  /**
+   * Get the S3 client.
+   * @return the S3 client.
+   * @throws IOException on any failure to create the client.
+   */
+  private S3Client getS3Client() throws IOException {
+    return clientManager.getOrCreateS3Client();
+  }
+
+  @Override
+  public S3TransferManager getOrCreateTransferManager() throws IOException {
+    return clientManager.getOrCreateTransferManager();
+  }
+
+  @Override
+  public S3Client getOrCreateS3Client() throws IOException {
+    return clientManager.getOrCreateS3Client();
+  }
+
+  @Override
+  public S3AsyncClient getOrCreateAsyncClient() throws IOException {
+    return clientManager.getOrCreateAsyncClient();
   }
 
   @Override
@@ -191,6 +214,15 @@ public class S3AStoreImpl implements S3AStore {
   @Override
   public RequestFactory getRequestFactory() {
     return requestFactory;
+  }
+
+  /**
+   * Get the client manager.
+   * @return the client manager.
+   */
+  @Override
+  public ClientManager clientManager() {
+    return clientManager;
   }
 
   /**
@@ -332,7 +364,7 @@ public class S3AStoreImpl implements S3AStore {
                                         true,
                                         durationToAcquireWriteCapacity);
                                 incrementStatistic(OBJECT_DELETE_OBJECTS, keyCount);
-                                return s3Client.deleteObjects(deleteRequest);
+                                return getS3Client().deleteObjects(deleteRequest);
                               }));
       if (!response.errors().isEmpty()) {
         // one or more of the keys could not be deleted.
@@ -378,7 +410,7 @@ public class S3AStoreImpl implements S3AStore {
                                 Duration durationToAcquireWriteCapacity = acquireWriteCapacity(1);
                                 instrumentation.recordDuration(STORE_IO_RATE_LIMITED,
                                         true, durationToAcquireWriteCapacity);
-                                return s3Client.deleteObject(request);
+                                return getS3Client().deleteObject(request);
                               }));
       d.close();
       return Tuples.pair(d.asDuration(), Optional.of(response));

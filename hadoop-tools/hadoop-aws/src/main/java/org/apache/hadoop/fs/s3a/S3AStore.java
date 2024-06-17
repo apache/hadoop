@@ -32,6 +32,7 @@ import software.amazon.awssdk.services.s3.model.DeleteObjectsResponse;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.s3a.api.RequestFactory;
+import org.apache.hadoop.fs.s3a.impl.ClientManager;
 import org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteException;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
@@ -42,10 +43,14 @@ import org.apache.hadoop.fs.statistics.IOStatisticsSource;
  * Interface for the S3A Store;
  * S3 client interactions should be via this; mocking
  * is possible for unit tests.
+ * <p>
+ * The {@link ClientManager} interface is used to create the AWS clients;
+ * the base implementation forwards to the implementation of this interface
+ * passed in at construction time.
  */
 @InterfaceAudience.LimitedPrivate("Extensions")
 @InterfaceStability.Unstable
-public interface S3AStore extends IOStatisticsSource {
+public interface S3AStore extends IOStatisticsSource, ClientManager {
 
   /**
    * Acquire write capacity for operations.
@@ -70,6 +75,8 @@ public interface S3AStore extends IOStatisticsSource {
   S3AStatisticsContext getStatisticsContext();
 
   RequestFactory getRequestFactory();
+
+  ClientManager clientManager();
 
   /**
    * Perform a bulk object delete operation against S3.
