@@ -32,7 +32,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public final class AbfsHttpConstants {
-  // Abfs Http client constants
+  // Abfs Http client constants.
   public static final String FILESYSTEM = "filesystem";
   public static final String FILE = "file";
   public static final String DIRECTORY = "directory";
