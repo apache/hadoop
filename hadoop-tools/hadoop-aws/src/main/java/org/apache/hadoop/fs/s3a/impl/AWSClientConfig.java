@@ -24,6 +24,7 @@ import java.net.URISyntaxException;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
@@ -433,25 +434,12 @@ public final class AWSClientConfig {
         // Nothing to do. The original signer override is already setup
     }
     if (configKey != null) {
-      String[] customHeaders = conf.getTrimmedStrings(configKey);
-      if (customHeaders == null || customHeaders.length == 0) {
-        LOG.debug("No custom headers specified");
-        return;
-      }
-
-      for (String customHeader : customHeaders) {
-        String[] parts = customHeader.split("=");
-        if (parts.length != 2) {
-          String message = "Invalid format (Expected header1=value1:value2,header2=value1) for Header: ["
-                          + customHeader
-                          + "]";
-          LOG.error(message);
-          throw new IllegalArgumentException(message);
-        }
-
-        List<String> values = Arrays.asList(parts[1].split(":"));
-        clientConfig.putHeader(parts[0], values);
-      }
+      Map<String, String> awsClientCustomHeadersMap =
+              S3AUtils.getTrimmedStringCollectionSplitByEquals(conf, configKey);
+      awsClientCustomHeadersMap.forEach((header, valueString) -> {
+        List<String> headerValues = Arrays.asList(valueString.split(":"));
+        clientConfig.putHeader(header, headerValues);
+      });
     }
   }
 

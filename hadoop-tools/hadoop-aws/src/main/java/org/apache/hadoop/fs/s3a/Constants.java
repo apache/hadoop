@@ -778,18 +778,18 @@ public final class Constants {
   /**
    * List of custom headers to be set on the service client.
    * Multiple parameters can be used to specify custom headers.
-   * fs.s3a.s3.custom.headers - headers to add on all the s3 requests.
-   * fs.s3a.sts.custom.headers - headers to add on all the sts requests.
+   * fs.s3a.client.s3.custom.headers - headers to add on all the s3 requests.
+   * fs.s3a.client.sts.custom.headers - headers to add on all the sts requests.
    * Examples
    * CustomHeader {@literal ->} 'Header1:Value1'
    * CustomHeaders {@literal ->} 'Header1=Value1:Value2,Header2=Value1'
    */
   public static final String CUSTOM_HEADERS_STS =
-      "fs.s3a." + Constants.AWS_SERVICE_IDENTIFIER_STS.toLowerCase()
+      "fs.s3a.client." + Constants.AWS_SERVICE_IDENTIFIER_STS.toLowerCase()
           + ".custom.headers";
 
   public static final String CUSTOM_HEADERS_S3 =
-          "fs.s3a." + Constants.AWS_SERVICE_IDENTIFIER_S3.toLowerCase()
+          "fs.s3a.client." + Constants.AWS_SERVICE_IDENTIFIER_S3.toLowerCase()
                   + ".custom.headers";
 
   public static final String S3N_FOLDER_SUFFIX = "_$folder$";
