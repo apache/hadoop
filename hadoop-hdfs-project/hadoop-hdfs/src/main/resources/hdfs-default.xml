@@ -6550,6 +6550,7 @@
       problem. In produce default set false, because it's have little performance loss.
     </description>
   </property>
+
   <property>
     <name>dfs.client.fsck.connect.timeout</name>
     <value>60000ms</value>
@@ -6558,6 +6559,7 @@
       before timing out.
     </description>
   </property>
+
   <property>
     <name>dfs.client.fsck.read.timeout</name>
     <value>60000ms</value>
@@ -6567,6 +6569,7 @@
       frequently than this time, the client will give up waiting.
     </description>
   </property>
+
   <property>
     <name>dfs.client.output.stream.uniq.default.key</name>
     <value>DEFAULT</value>
@@ -6575,6 +6578,7 @@
       If the namespace is DEFAULT, it's best to change this conf to other value.
     </description>
   </property>
+
   <property>
     <name>dfs.client.congestion.backoff.mean.time</name>
     <value>5000</value>
@@ -6583,6 +6587,7 @@
       client congestion backoff sleep time.
     </description>
   </property>
+
   <property>
     <name>dfs.client.congestion.backoff.max.time</name>
     <value>50000</value>
@@ -6591,6 +6596,7 @@
       the upper limit backoff sleep time for client.
     </description>
   </property>
+
   <property>
     <name>dfs.client.rbf.observer.read.enable</name>
     <value>false</value>
@@ -6598,4 +6604,21 @@
       Enables observer reads for clients. This should only be enabled when clients are using routers.
     </description>
   </property>
+
+  <property>
+    <name>dfs.datanode.print.lockheldinfo.enable</name>
+    <value>true</value>
+    <description>
+      Enables print dataSet lock held info when the lock holding time reaches the specified threshold.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.datanode.print.lockheldinfo.time.threshold</name>
+    <value>500</value>
+    <description>
+      Time threshold to print dataSet lock held info.
+    </description>
+  </property>
+
 </configuration>
