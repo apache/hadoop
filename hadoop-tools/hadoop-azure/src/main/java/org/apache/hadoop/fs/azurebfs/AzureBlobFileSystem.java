@@ -227,8 +227,9 @@ public class AzureBlobFileSystem extends FileSystem
      * Validate the service type configured in the URI is valid for account type used.
      * HNS Account Cannot have Blob Endpoint URI.
      */
-    abfsStore.validateConfiguredServiceType(new TracingContext(clientCorrelationId,
-        fileSystemId, FSOperationType.INIT, tracingHeaderFormat, listener));
+    abfsConfiguration.validateConfiguredServiceType(getIsNamespaceEnabled(
+        new TracingContext(clientCorrelationId, fileSystemId,
+            FSOperationType.INIT, tracingHeaderFormat, listener)));
 
     /*
      * Non-hierarchical-namespace account can not have a customer-provided-key(CPK).
