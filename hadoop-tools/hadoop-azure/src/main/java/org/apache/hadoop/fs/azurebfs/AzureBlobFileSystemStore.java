@@ -56,12 +56,10 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
 import org.apache.hadoop.fs.azurebfs.security.ContextProviderEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.security.NoContextEncryptionAdapter;
-import org.apache.hadoop.fs.azurebfs.services.AbfsBlobClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientHandler;
 import org.apache.hadoop.fs.azurebfs.services.AbfsDfsClient;
 import org.apache.hadoop.fs.azurebfs.utils.EncryptionType;
@@ -146,7 +144,6 @@ import org.apache.hadoop.util.SemaphoredDelegatingExecutor;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.http.client.utils.URIBuilder;
 
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.METADATA_INCOMPLETE_RENAME_FAILURES;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.RENAME_RECOVERY;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_EQUALS;
@@ -163,10 +160,8 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TOKEN_VE
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_ABFS_ENDPOINT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_FOOTER_READ_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_BUFFERED_PREAD_DISABLE;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_FNS_ACCOUNT_SERVICE_TYPE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_IDENTITY_TRANSFORM_CLASS;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_BLOB_DOMAIN_NAME;
-import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_DFS_DOMAIN_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_ENCRYPTION_CONTEXT;
 
 /**
@@ -405,7 +400,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     }
     try {
       LOG.debug("Get root ACL status");
-      getClientHandler().getDfsClient().getAclStatus(AbfsHttpConstants.ROOT_PATH, tracingContext);
+      AbfsClient client1 = getClient(AbfsServiceType.DFS);
+      getClient(AbfsServiceType.DFS).getAclStatus(AbfsHttpConstants.ROOT_PATH, tracingContext);
       isNamespaceEnabled = Trilean.getTrilean(true);
     } catch (AbfsRestOperationException ex) {
       // Get ACL status is a HEAD request, its response doesn't contain
@@ -1823,7 +1819,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           populateAbfsClientContext());
     }
 
-    this.client = getClientHandler().getClient(getConfiguredServiceType());
+    this.client = getClientHandler().getClient();
     LOG.trace("AbfsClient init complete");
   }
 
@@ -1834,28 +1830,6 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     // In case of DFS Domain name or any other custom endpoint, the service
     // type is to be identified as default DFS.
     return AbfsServiceType.DFS;
-  }
-
-  private AbfsServiceType getConfiguredServiceType() {
-    return abfsConfiguration.getFsConfiguredServiceType();
-  }
-
-  private URL changeUrlFromBlobToDfs(URL url) throws InvalidUriException {
-    try {
-      url = new URL(url.toString().replace(ABFS_BLOB_DOMAIN_NAME, ABFS_DFS_DOMAIN_NAME));
-    } catch (MalformedURLException ex) {
-      throw new InvalidUriException(url.toString());
-    }
-    return url;
-  }
-
-  private URL changeUrlFromDfsToBlob(URL url) throws InvalidUriException {
-    try {
-      url = new URL(url.toString().replace(ABFS_DFS_DOMAIN_NAME, ABFS_BLOB_DOMAIN_NAME));
-    } catch (MalformedURLException ex) {
-      throw new InvalidUriException(url.toString());
-    }
-    return url;
   }
 
   /**
@@ -2210,6 +2184,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   @VisibleForTesting
   public AbfsClient getClient() {
     return this.client;
+  }
+
+  @VisibleForTesting
+  public AbfsClient getClient(AbfsServiceType serviceType) {
+    return getClientHandler().getClient(serviceType);
   }
 
   @VisibleForTesting

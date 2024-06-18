@@ -32,13 +32,16 @@ public final class ConfigurationKeys {
   /**
    * Config to specify if the configured account is HNS enabled or not. If
    * this config is not set, getacl call is made on account filesystem root
-   * path to determine HNS status.
+   * path on DFS Endpoint to determine HNS status.
    */
   public static final String FS_AZURE_ACCOUNT_IS_HNS_ENABLED = "fs.azure.account.hns.enabled";
 
   /**
    * Config to specify which {@link  AbfsServiceType} to use with HNS-Disabled Account type.
-   * If not specified, service type identified from FS uri ("fs.defaultFS") will be used.
+   * Default value will be identified from URL used to initialize filesystem.
+   * This will allow an override to choose service endpoint in cases where any
+   * local DNS resolution is set for account and driver is unable to detect
+   * intended endpoint from the url used to initialize filesystem.
    * If configured Blob for HNS-Enabled account, FS init will fail.
    * Value {@value} case-insensitive "DFS" or "BLOB"
    */

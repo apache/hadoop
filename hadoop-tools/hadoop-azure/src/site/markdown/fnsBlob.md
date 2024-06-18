@@ -1,3 +1,17 @@
+<!---
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License. See accompanying LICENSE file.
+-->
+
 # ABFS Driver for FNS Accounts
 
 ### Note: FNS-BLOB Support is being built and not yet ready for usage.
@@ -18,7 +32,7 @@ Azure Services offers two set of endpoints for interacting with storage accounts
 
 ABFS Driver by default is designed to work with DFS Endpoint only which primarily
 supports HNS Enabled Accounts only. However, azure services does not recommended
-to interact with FNS accounts using DFS Endpoint as the behavior is not determined.
+to interact with FNS accounts using DFS Endpoint.
 
 To enable ABFS Driver to work with FNS Accounts, Support for Blob Endpoint is being added.
 ABFS Driver will only allow FNS Accounts to be accessed using Blob Endpoint.
@@ -32,27 +46,25 @@ Following configurations will be introduced to configure ABFS Driver for FNS Acc
     <property>
       <name>fs.azure.account.hns.enabled</name>
       <value>false</value>
-      <description>Type of account used with ABFS Driver</description>
     </property>
     ```
 
-2. Account Url: It is either configured using following config or the path url used.
-   Both must be blob endpoint url for FNS Account
+2. Account Url: It is the URL used to initialize the file system. It is either passed
+directly to file system or configured as default uri using "fs.DefaultFS" configuration.
+In both the cases the URL used must be the blob endpoint url of the account.
     ```xml
     <property>
       <name>fs.defaultFS</name>
       <value>https://ACCOUNT_NAME.blob.core.windows.net</value>
-      <description>Account URL for FNS Account</description>
     </property>
     ```
-2. Service Type for FNS Accounts: This will allow an override to choose service
-   type in cases where any local DNS resolution is set for the account and driver is
-   unable to detect the intended endpoint from above configured URL. If this is set
-   to blob for HNS Enabled Accounts, FS init will fail with InvalidConfiguration error.
+3. Service Type for FNS Accounts: This will allow an override to choose service
+type in cases where any local DNS resolution is set for the account and driver is
+unable to detect the intended endpoint from above configured URL. If this is set
+to blob for HNS Enabled Accounts, FS init will fail with InvalidConfiguration error.
     ```xml
    <property>
         <name>fs.azure.fns.account.service.type</name>
         <value>BLOB</value>
-        <description>Service Type for FNS Account</description>
     </property>
     ```

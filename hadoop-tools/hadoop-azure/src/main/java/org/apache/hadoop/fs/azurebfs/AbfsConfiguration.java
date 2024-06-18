@@ -475,8 +475,8 @@ public class AbfsConfiguration{
   /**
    * Checks if the service type configured is valid for account type used.
    * HNS Enabled accounts cannot have service type as BLOB.
-   * @param isHNSEnabled
-   * @throws InvalidConfigurationValueException
+   * @param isHNSEnabled Flag to indicate if HNS is enabled for the account.
+   * @throws InvalidConfigurationValueException if the service type is invalid.
    */
   public void validateConfiguredServiceType(boolean isHNSEnabled)
       throws InvalidConfigurationValueException {

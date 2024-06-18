@@ -183,7 +183,7 @@ public final class AbfsHttpConstants {
    */
   public static final Integer HTTP_STATUS_CATEGORY_QUOTIENT = 100;
 
-  // Abfs Client Constants for XML Response Parsing over Blob Endpoint.
+  // Constants for XML Response Parsing over Blob Endpoint.
   public static final String XML_TAG_NAME = "Name";
   public static final String XML_TAG_BLOB = "Blob";
   public static final String XML_TAG_PREFIX = "Prefix";
