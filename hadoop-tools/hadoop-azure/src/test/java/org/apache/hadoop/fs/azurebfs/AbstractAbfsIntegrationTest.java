@@ -566,16 +566,7 @@ public abstract class AbstractAbfsIntegrationTest extends
         currentAuthType == AuthType.SAS);
     if (currentAuthType == AuthType.SharedKey) {
       assumeValidTestConfigPresent(getRawConfiguration(), FS_AZURE_ACCOUNT_KEY);
-    } else if (currentAuthType == AuthType.OAuth) {
-      assumeValidTestConfigPresent(getRawConfiguration(),
-          FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME);
-      assumeValidTestConfigPresent(getRawConfiguration(),
-          FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID);
-      assumeValidTestConfigPresent(getRawConfiguration(),
-          FS_AZURE_ACCOUNT_OAUTH_CLIENT_SECRET);
-      assumeValidTestConfigPresent(getRawConfiguration(),
-          FS_AZURE_ACCOUNT_OAUTH_CLIENT_ENDPOINT);
-    } else if (currentAuthType == AuthType.Custom) {
+    } else {
       assumeValidTestConfigPresent(getRawConfiguration(),
           FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME);
     }
