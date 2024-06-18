@@ -20,6 +20,7 @@ See also:
 
 * [WASB](./wasb.html)
 * [ABFS](./abfs.html)
+* [FNS-Blob on ABFS](./fnsBlob.html)
 * [Testing](./testing_azure.html)
 
 ## Introduction
