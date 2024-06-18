@@ -307,7 +307,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private S3AStore store;
 
   /**
-   * The core S3 client is created and managed by the +.
+   * The core S3 client is created and managed by the ClientManager
    */
   private S3Client s3Client;
 
@@ -702,8 +702,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // this may do some patching of the configuration (e.g. setting
       // the encryption algorithms)
       ClientManager clientManager = bindAWSClient(name, delegationTokensEnabled);
-      // the s3 client is immediately created.
-      s3Client = clientManager.getOrCreateS3Client();
 
       inputPolicy = S3AInputPolicy.getPolicy(
           conf.getTrimmed(INPUT_FADVISE,
@@ -778,18 +776,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
       int rateLimitCapacity = intOption(conf, S3A_IO_RATE_LIMIT, DEFAULT_S3A_IO_RATE_LIMIT, 0);
       // now create the store
-      store = new S3AStoreBuilder()
-          .withClientManager(clientManager)
-          .withDurationTrackerFactory(getDurationTrackerFactory())
-          .withStoreContextFactory(this)
-          .withAuditSpanSource(getAuditManager())
-          .withInstrumentation(getInstrumentation())
-          .withStatisticsContext(statisticsContext)
-          .withStorageStatistics(getStorageStatistics())
-          .withReadRateLimiter(unlimitedRate())
-          .withWriteRateLimiter(RateLimitingFactory.create(rateLimitCapacity))
-          .build();
-
+      store = createS3AStore(clientManager, rateLimitCapacity);
+      // the s3 client is created through the store, rather than
+      // directly through the client manager.
+      // this is to aid mocking.
+      s3Client = store.getOrCreateS3Client();
       // The filesystem is now ready to perform operations against
       // S3
       // This initiates a probe against S3 for the bucket existing.
@@ -809,6 +800,28 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       trackInitialization.ifPresent(DurationTracker::failed);
       throw e;
     }
+  }
+
+  /**
+   * Create the S3AStore instance.
+   * This is protected so that tests can override it.
+   * @param clientManager client manager
+   * @param rateLimitCapacity rate limit
+   * @return a new store instance
+   */
+  @VisibleForTesting
+  protected S3AStore createS3AStore(final ClientManager clientManager, final int rateLimitCapacity) {
+    return new S3AStoreBuilder()
+        .withClientManager(clientManager)
+        .withDurationTrackerFactory(getDurationTrackerFactory())
+        .withStoreContextFactory(this)
+        .withAuditSpanSource(getAuditManager())
+        .withInstrumentation(getInstrumentation())
+        .withStatisticsContext(statisticsContext)
+        .withStorageStatistics(getStorageStatistics())
+        .withReadRateLimiter(unlimitedRate())
+        .withWriteRateLimiter(RateLimitingFactory.create(rateLimitCapacity))
+        .build();
   }
 
   /**
@@ -984,7 +997,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         STORE_EXISTS_PROBE, bucket, null, () ->
             invoker.retry("doesBucketExist", bucket, true, () -> {
               try {
-                s3Client.headBucket(HeadBucketRequest.builder().bucket(bucket).build());
+                getS3Client().headBucket(HeadBucketRequest.builder().bucket(bucket).build());
                 return true;
               } catch (AwsServiceException ex) {
                 int statusCode = ex.statusCode();
@@ -1121,6 +1134,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   /**
    * Create the Client Manager; protected to allow for mocking.
+   * Requires {@link #unboundedThreadPool} to be initialized.
    * @param clientFactory (reflection-bonded) client factory.
    * @param clientCreationParameters parameters for client creation.
    * @param durationTrackerFactory factory for duration tracking.
@@ -1133,7 +1147,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       final DurationTrackerFactory durationTrackerFactory) throws IOException {
     return new ClientManagerImpl(clientFactory,
         clientCreationParameters,
-        durationTrackerFactory);
+        durationTrackerFactory
+    );
   }
 
   /**
@@ -1357,7 +1372,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     invoker.retry("Purging multipart uploads", bucket, true,
         () -> {
           RemoteIterator<MultipartUpload> uploadIterator =
-              MultipartUtils.listMultipartUploads(createStoreContext(), s3Client, null, maxKeys);
+              MultipartUtils.listMultipartUploads(createStoreContext(), getS3Client(), null, maxKeys);
 
           while (uploadIterator.hasNext()) {
             MultipartUpload upload = uploadIterator.next();
@@ -1417,10 +1432,21 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * Set the client -used in mocking tests to force in a different client.
    * @param client client.
    */
+  @VisibleForTesting
   protected void setAmazonS3Client(S3Client client) {
     Preconditions.checkNotNull(client, "clientV2");
     LOG.debug("Setting S3V2 client to {}", client);
     s3Client = client;
+  }
+
+  /**
+   * Get the S3 client created in {@link #initialize(URI, Configuration)}.
+   * @return the s3Client
+   * @throws UncheckedIOException if the client could not be created.
+   */
+  @VisibleForTesting
+  protected S3Client getS3Client() {
+    return s3Client;
   }
 
   /**
@@ -1459,7 +1485,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     @Override
     public S3Client getAmazonS3Client(String reason) {
       LOG.debug("Access to S3 client requested, reason {}", reason);
-      return s3Client;
+      return getS3Client();
     }
 
     @Override
@@ -1492,7 +1518,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
                   // If accessPoint then region is known from Arn
                   accessPoint != null
                       ? accessPoint.getRegion()
-                      : s3Client.getBucketLocation(GetBucketLocationRequest.builder()
+                      : getS3Client().getBucketLocation(GetBucketLocationRequest.builder()
                           .bucket(bucketName)
                           .build())
                       .locationConstraintAsString()));
@@ -1881,7 +1907,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     public ResponseInputStream<GetObjectResponse> getObject(GetObjectRequest request) {
       // active the audit span used for the operation
       try (AuditSpan span = auditSpan.activate()) {
-        return s3Client.getObject(request);
+        return getS3Client().getObject(request);
       }
     }
 
@@ -1910,7 +1936,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     @Override
     public CompleteMultipartUploadResponse completeMultipartUpload(
         CompleteMultipartUploadRequest request) {
-      return s3Client.completeMultipartUpload(request);
+      return getS3Client().completeMultipartUpload(request);
     }
   }
 
@@ -2948,7 +2974,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             if (changeTracker != null) {
               changeTracker.maybeApplyConstraint(requestBuilder);
             }
-            HeadObjectResponse headObjectResponse = s3Client.headObject(requestBuilder.build());
+            HeadObjectResponse headObjectResponse = getS3Client().headObject(requestBuilder.build());
             if (changeTracker != null) {
               changeTracker.processMetadata(headObjectResponse, operation);
             }
@@ -2982,7 +3008,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     final HeadBucketResponse response = trackDurationAndSpan(STORE_EXISTS_PROBE, bucket, null,
         () -> invoker.retry("getBucketMetadata()", bucket, true, () -> {
           try {
-            return s3Client.headBucket(
+            return getS3Client().headBucket(
                 getRequestFactory().newHeadBucketRequestBuilder(bucket).build());
           } catch (NoSuchBucketException e) {
             throw new UnknownStoreException("s3a://" + bucket + "/", " Bucket does " + "not exist");
@@ -3017,9 +3043,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
               OBJECT_LIST_REQUEST,
               () -> {
                 if (useListV1) {
-                  return S3ListResult.v1(s3Client.listObjects(request.getV1()));
+                  return S3ListResult.v1(getS3Client().listObjects(request.getV1()));
                 } else {
-                  return S3ListResult.v2(s3Client.listObjectsV2(request.getV2()));
+                  return S3ListResult.v2(getS3Client().listObjectsV2(request.getV2()));
                 }
               }));
     }
@@ -3072,10 +3098,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
                     nextMarker = prevListResult.get(prevListResult.size() - 1).key();
                   }
 
-                  return S3ListResult.v1(s3Client.listObjects(
+                  return S3ListResult.v1(getS3Client().listObjects(
                       request.getV1().toBuilder().marker(nextMarker).build()));
                 } else {
-                  return S3ListResult.v2(s3Client.listObjectsV2(request.getV2().toBuilder()
+                  return S3ListResult.v2(getS3Client().listObjectsV2(request.getV2().toBuilder()
                       .continuationToken(prevResult.getV2().nextContinuationToken()).build()));
                 }
               }));
@@ -3256,8 +3282,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           trackDurationOfSupplier(nonNullDurationTrackerFactory(durationTrackerFactory),
               OBJECT_PUT_REQUESTS.getSymbol(),
               () -> isFile ?
-                  s3Client.putObject(putObjectRequest, RequestBody.fromFile(uploadData.getFile())) :
-                  s3Client.putObject(putObjectRequest,
+                  getS3Client().putObject(putObjectRequest, RequestBody.fromFile(uploadData.getFile())) :
+                  getS3Client().putObject(putObjectRequest,
                       RequestBody.fromInputStream(uploadData.getUploadStream(),
                           putObjectRequest.contentLength())));
       incrementPutCompletedStatistics(true, len);
@@ -3307,7 +3333,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       UploadPartResponse uploadPartResponse = trackDurationOfSupplier(
           nonNullDurationTrackerFactory(durationTrackerFactory),
           MULTIPART_UPLOAD_PART_PUT.getSymbol(), () ->
-              s3Client.uploadPart(request, body));
+              getS3Client().uploadPart(request, body));
       incrementPutCompletedStatistics(true, len);
       return uploadPartResponse;
     } catch (AwsServiceException e) {
@@ -4619,7 +4645,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             LOG.debug("copyFile: single part copy {} -> {} of size {}", srcKey, dstKey, size);
             incrementStatistic(OBJECT_COPY_REQUESTS);
             try {
-              return s3Client.copyObject(copyRequest);
+              return getS3Client().copyObject(copyRequest);
             } catch (SdkException awsException) {
               // if this is a 412 precondition failure, it may
               // be converted to a RemoteFileChangedException
@@ -4650,7 +4676,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     LOG.debug("Initiate multipart upload to {}", request.key());
     return trackDurationOfSupplier(getDurationTrackerFactory(),
         OBJECT_MULTIPART_UPLOAD_INITIATED.getSymbol(),
-        () -> s3Client.createMultipartUpload(request));
+        () -> getS3Client().createMultipartUpload(request));
   }
 
   /**
@@ -5373,7 +5399,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       p = prefix + "/";
     }
     // duration tracking is done in iterator.
-    return MultipartUtils.listMultipartUploads(storeContext, s3Client, p, maxKeys);
+    return MultipartUtils.listMultipartUploads(storeContext, getS3Client(), p, maxKeys);
   }
 
   /**
@@ -5398,7 +5424,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       final ListMultipartUploadsRequest request = getRequestFactory()
           .newListMultipartUploadsRequestBuilder(p).build();
       return trackDuration(getInstrumentation(), MULTIPART_UPLOAD_LIST.getSymbol(), () ->
-          s3Client.listMultipartUploads(request).uploads());
+          getS3Client().listMultipartUploads(request).uploads());
     });
   }
 
@@ -5413,7 +5439,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   public void abortMultipartUpload(String destKey, String uploadId) throws IOException {
     LOG.debug("Aborting multipart upload {} to {}", uploadId, destKey);
     trackDuration(getInstrumentation(), OBJECT_MULTIPART_UPLOAD_ABORTED.getSymbol(), () ->
-        s3Client.abortMultipartUpload(
+        getS3Client().abortMultipartUpload(
             getRequestFactory().newAbortMultipartUploadRequestBuilder(
                 destKey,
                 uploadId).build()));

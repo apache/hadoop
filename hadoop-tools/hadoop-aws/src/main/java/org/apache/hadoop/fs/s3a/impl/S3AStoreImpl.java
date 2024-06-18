@@ -138,10 +138,9 @@ public class S3AStoreImpl implements S3AStore {
   }
 
   @Override
-  public void close() throws Exception {
+  public void close() {
     clientManager.close();
   }
-
 
   /** Acquire write capacity for rate limiting {@inheritDoc}. */
   @Override
