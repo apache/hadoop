@@ -31,6 +31,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Hashtable;
 import java.util.List;
 import java.util.Locale;
 import java.util.Timer;
@@ -430,16 +431,18 @@ public abstract class AbfsClient implements Closeable {
   public abstract AbfsRestOperation createFilesystem(TracingContext tracingContext)
       throws AzureBlobFileSystemException;
 
-  public abstract AbfsRestOperation setFilesystemProperties(String properties,
+  public abstract AbfsRestOperation setFilesystemProperties(final Hashtable<String, String> properties,
       TracingContext tracingContext) throws AzureBlobFileSystemException;
 
-  public abstract AbfsRestOperation listPath(String relativePath, boolean recursive, int listMaxResults,
-      String continuation, TracingContext tracingContext)
+  public abstract AbfsRestOperation listPath(String relativePath, boolean recursive,
+      int listMaxResults, String continuation, TracingContext tracingContext)
       throws IOException;
 
-  public abstract AbfsRestOperation getFilesystemProperties(TracingContext tracingContext) throws AzureBlobFileSystemException;
+  public abstract AbfsRestOperation getFilesystemProperties(TracingContext tracingContext)
+      throws AzureBlobFileSystemException;
 
-  public abstract AbfsRestOperation deleteFilesystem(TracingContext tracingContext) throws AzureBlobFileSystemException;
+  public abstract AbfsRestOperation deleteFilesystem(TracingContext tracingContext)
+      throws AzureBlobFileSystemException;
 
   /**
    * Method for calling createPath API to the backend. Method can be called from:
@@ -477,13 +480,14 @@ public abstract class AbfsClient implements Closeable {
       ContextEncryptionAdapter contextEncryptionAdapter,
       TracingContext tracingContext) throws AzureBlobFileSystemException;
 
-  public abstract AbfsRestOperation acquireLease(String path, int duration, TracingContext tracingContext) throws AzureBlobFileSystemException;
+  public abstract AbfsRestOperation acquireLease(String path, int duration,
+      TracingContext tracingContext) throws AzureBlobFileSystemException;
 
   public abstract AbfsRestOperation renewLease(String path, String leaseId,
       TracingContext tracingContext) throws AzureBlobFileSystemException;
 
-  public abstract AbfsRestOperation releaseLease(String path,
-      String leaseId, TracingContext tracingContext) throws AzureBlobFileSystemException;
+  public abstract AbfsRestOperation releaseLease(String path, String leaseId,
+      TracingContext tracingContext) throws AzureBlobFileSystemException;
 
   public abstract AbfsRestOperation breakLease(String path,
       TracingContext tracingContext) throws AzureBlobFileSystemException;
@@ -597,11 +601,6 @@ public abstract class AbfsClient implements Closeable {
     return false;
   }
 
-  @VisibleForTesting
-  boolean isSourceDestEtagEqual(String sourceEtag, AbfsHttpOperation result) {
-    return sourceEtag.equals(extractEtagHeader(result));
-  }
-
   public abstract AbfsRestOperation append(String path, byte[] buffer,
       AppendRequestParameters reqParams, String cachedSasToken,
       ContextEncryptionAdapter contextEncryptionAdapter, TracingContext tracingContext)
@@ -661,7 +660,7 @@ public abstract class AbfsClient implements Closeable {
       String eTag,
       TracingContext tracingContext) throws AzureBlobFileSystemException;
 
-  public abstract AbfsRestOperation setPathProperties(String path, String properties,
+  public abstract AbfsRestOperation setPathProperties(String path, final Hashtable<String, String> properties,
       TracingContext tracingContext, ContextEncryptionAdapter contextEncryptionAdapter)
       throws AzureBlobFileSystemException;
 

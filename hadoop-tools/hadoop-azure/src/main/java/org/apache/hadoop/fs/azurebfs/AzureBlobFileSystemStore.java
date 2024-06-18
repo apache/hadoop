@@ -61,7 +61,6 @@ import org.apache.hadoop.fs.azurebfs.security.ContextProviderEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.security.NoContextEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientHandler;
-import org.apache.hadoop.fs.azurebfs.services.AbfsDfsClient;
 import org.apache.hadoop.fs.azurebfs.utils.EncryptionType;
 import org.apache.hadoop.fs.impl.BackReference;
 import org.apache.hadoop.fs.PathIOException;
@@ -497,15 +496,9 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
     try (AbfsPerfInfo perfInfo = startTracking("setFilesystemProperties",
             "setFilesystemProperties")) {
-      final String commaSeparatedProperties;
-      try {
-        commaSeparatedProperties = convertXmsPropertiesToCommaSeparatedString(properties);
-      } catch (CharacterCodingException ex) {
-        throw new InvalidAbfsRestOperationException(ex);
-      }
 
       final AbfsRestOperation op = getClient()
-          .setFilesystemProperties(commaSeparatedProperties, tracingContext);
+          .setFilesystemProperties(properties, tracingContext);
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
     }
   }
@@ -590,18 +583,13 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
               path,
               properties);
 
-      final String commaSeparatedProperties;
-      try {
-        commaSeparatedProperties = convertXmsPropertiesToCommaSeparatedString(properties);
-      } catch (CharacterCodingException ex) {
-        throw new InvalidAbfsRestOperationException(ex);
-      }
+
       final String relativePath = getRelativePath(path);
       final ContextEncryptionAdapter contextEncryptionAdapter
           = createEncryptionAdapterFromServerStoreContext(relativePath,
           tracingContext);
       final AbfsRestOperation op = getClient()
-          .setPathProperties(getRelativePath(path), commaSeparatedProperties,
+          .setPathProperties(getRelativePath(path), properties,
               tracingContext, contextEncryptionAdapter);
       contextEncryptionAdapter.destroy();
       perfInfo.registerResult(op.getResult()).registerSuccess(true);

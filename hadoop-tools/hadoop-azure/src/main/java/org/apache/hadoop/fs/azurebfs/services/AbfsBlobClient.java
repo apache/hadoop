@@ -20,10 +20,18 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLEncoder;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.Charset;
+import java.nio.charset.CharsetEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Hashtable;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.apache.commons.lang3.NotImplementedException;
@@ -35,6 +43,7 @@ import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
 import org.apache.hadoop.fs.azurebfs.extensions.SASTokenProvider;
@@ -68,6 +77,8 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.RENEW_LE
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SINGLE_WHITE_SPACE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.STAR;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TRUE;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.XMS_PROPERTIES_ENCODING_ASCII;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.XMS_PROPERTIES_ENCODING_UNICODE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ZERO;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.ACCEPT;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.CONTENT_LENGTH;
@@ -123,6 +134,11 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
     super.close();
   }
 
+  /**
+   * Create request headers for Rest Operation using the default API version.
+   * @return default request headers.
+   */
+  @Override
   public List<AbfsHttpHeader> createDefaultHeaders() {
     return this.createDefaultHeaders(getxMsVersion());
   }
@@ -143,7 +159,7 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href = https://learn.microsoft.com/en-us/rest/api/storageservices/create-container></a>.
+   * Get Rest Operation for API <a href=" https://learn.microsoft.com/en-us/rest/api/storageservices/create-container">Create Container</a>.
    * Creates a storage container as filesystem root.
    * @param tracingContext for tracing the service call.
    * @return executed rest operation containing response from server.
@@ -166,7 +182,7 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href = https://learn.microsoft.com/en-us/rest/api/storageservices/set-container-metadata></a>.
+   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/set-container-metadata">Set Container Metadata</a>.
    * Sets user-defined properties of the filesystem.
    * @param properties comma separated list of metadata key-value pairs.
    * @param tracingContext for tracing the service call.
@@ -174,11 +190,19 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
    * @throws AzureBlobFileSystemException if rest operation fails.
    */
   @Override
-  public AbfsRestOperation setFilesystemProperties(final String properties,
+  public AbfsRestOperation setFilesystemProperties(final Hashtable<String, String> properties,
       TracingContext tracingContext) throws AzureBlobFileSystemException  {
     List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-    List<AbfsHttpHeader> metadataRequestHeaders = getMetadataHeadersList(properties);
-    requestHeaders.addAll(metadataRequestHeaders);
+    /*
+     * Blob Endpoint supports Unicode characters but DFS Endpoint only allow ASCII.
+     * To match the behavior across endpoints, driver throws exception if non-ASCII characters are found.
+     */
+    try {
+      List<AbfsHttpHeader> metadataRequestHeaders = getMetadataHeadersList(properties);
+      requestHeaders.addAll(metadataRequestHeaders);
+    } catch (CharacterCodingException ex) {
+      throw new InvalidAbfsRestOperationException(ex);
+    }
 
     AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RESTYPE, CONTAINER);
@@ -193,7 +217,7 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href = https://learn.microsoft.com/en-us/rest/api/storageservices/get-container-properties></a>.
+   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/get-container-properties">Get Container Metadata</a>.
    * Gets all the properties of the filesystem.
    * @param tracingContext for tracing the service call.
    * @return executed rest operation containing response from server.
@@ -216,7 +240,7 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href = https://learn.microsoft.com/en-us/rest/api/storageservices/delete-container></a>.
+   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/delete-container">Delete Container</a>.
    * Deletes the Container acting as current filesystem.
    * @param tracingContext for tracing the service call.
    * @return executed rest operation containing response from server.
@@ -239,7 +263,7 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href = https://learn.microsoft.com/en-us/rest/api/storageservices/put-blob></a>.
+   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/put-blob">Put Blob</a>.
    * Creates a file or directory(marker file) at specified path.
    * @param path of the directory to be created.
    * @param tracingContext for tracing the service call.
@@ -296,7 +320,7 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href = https://learn.microsoft.com/en-us/rest/api/storageservices/list-blobs></a>.
+   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/list-blobs"></a>.
    * @param relativePath to return only blobs with names that begin with the specified prefix.
    * @param recursive to return all blobs in the path, including those in subdirectories.
    * @param listMaxResults maximum number of blobs to return.
@@ -314,7 +338,7 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href = https://learn.microsoft.com/en-us/rest/api/storageservices/lease-blob></a>.
+   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/lease-blob">Lease Blob</a>.
    * @param path on which lease has to be acquired.
    * @param duration for which lease has to be acquired.
    * @param tracingContext for tracing the service call.
@@ -341,7 +365,7 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href = https://learn.microsoft.com/en-us/rest/api/storageservices/lease-blob></a>.
+   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/lease-blob">Lease Blob</a>.
    * @param path on which lease has to be renewed.
    * @param leaseId of the lease to be renewed.
    * @param tracingContext for tracing the service call.
@@ -367,7 +391,7 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href = https://learn.microsoft.com/en-us/rest/api/storageservices/lease-blob></a>.
+   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/lease-blob">Lease Blob</a>.
    * @param path on which lease has to be released.
    * @param leaseId of the lease to be released.
    * @param tracingContext for tracing the service call.
@@ -393,7 +417,7 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href = https://learn.microsoft.com/en-us/rest/api/storageservices/lease-blob></a>.
+   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/lease-blob">Lease Blob</a>.
    * @param path on which lease has to be broken.
    * @param tracingContext for tracing the service call.
    * @return executed rest operation containing response from server.
@@ -430,7 +454,7 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href = https://learn.microsoft.com/en-us/rest/api/storageservices/get-blob></a>.
+   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/get-blob">Get Blob</a>.
    * Read the contents of the file at specified path
    * @param path of the file to be read.
    * @param position in the file from where data has to be read.
@@ -444,7 +468,6 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation fails.
    */
-  @SuppressWarnings("checkstyle:ParameterNumber")
   @Override
   public AbfsRestOperation read(final String path,
       final long position,
@@ -477,7 +500,7 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href = https://learn.microsoft.com/en-us/rest/api/storageservices/put-block></a>.
+   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/put-block">Put Block</a>.
    * Uploads data to be appended to a file.
    * @param path to which data has to be appended.
    * @param buffer containing data to be appended.
@@ -616,7 +639,7 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href = https://learn.microsoft.com/en-us/rest/api/storageservices/set-blob-metadata></a>.
+   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/set-blob-metadata">Set Blob Metadata</a>.
    * Set the properties of a file or directory.
    * @param path on which properties have to be set.
    * @param properties comma separated list of metadata key-value pairs.
@@ -627,13 +650,21 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
    */
   @Override
   public AbfsRestOperation setPathProperties(final String path,
-      final String properties,
+      final Hashtable<String, String> properties,
       final TracingContext tracingContext,
       final ContextEncryptionAdapter contextEncryptionAdapter)
       throws AzureBlobFileSystemException {
     List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-    List<AbfsHttpHeader> metadataRequestHeaders = getMetadataHeadersList(properties);
-    requestHeaders.addAll(metadataRequestHeaders);
+    /*
+     * Blob Endpoint supports Unicode characters but DFS Endpoint only allow ASCII.
+     * To match the behavior across endpoints, driver throws exception if non-ASCII characters are found.
+     */
+    try {
+      List<AbfsHttpHeader> metadataRequestHeaders = getMetadataHeadersList(properties);
+      requestHeaders.addAll(metadataRequestHeaders);
+    } catch (CharacterCodingException ex) {
+      throw new InvalidAbfsRestOperationException(ex);
+    }
 
     AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_COMP, METADATA);
@@ -648,7 +679,7 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href = https://learn.microsoft.com/en-us/rest/api/storageservices/get-blob-properties></a>.
+   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/get-blob-properties">Get Blob Properties</a>.
    * Get the properties of a file or directory.
    * @param path of which properties have to be fetched.
    * @param includeProperties to include user defined properties.
@@ -767,7 +798,7 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href = https://learn.microsoft.com/en-us/rest/api/storageservices/get-block-list></a>.
+   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/get-block-list">Get Block List</a>.
    * Get the list of committed block ids of the blob.
    * @param path The path to get the list of blockId's.
    * @param tracingContext for tracing the service call.
@@ -793,7 +824,7 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href = https://learn.microsoft.com/en-us/rest/api/storageservices/copy-blob></a>.
+   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/copy-blob">Copy Blob</a>.
    * This is an asynchronous API, it returns copyId and expects client
    * to poll the server on the destination and check the copy-progress.
    * @param sourceBlobPath path of source to be copied.
@@ -835,7 +866,7 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href = https://learn.microsoft.com/en-us/rest/api/storageservices/delete-blob></a>.
+   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/delete-blob">Delete Blob</a>.
    * Deletes the blob at the given path.
    * @param blobPath path of the blob to be deleted.
    * @param leaseId if path has an active lease.
@@ -861,12 +892,49 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
     return op;
   }
 
-  private List<AbfsHttpHeader> getMetadataHeadersList(final String properties) {
-    List<AbfsHttpHeader> metadataRequestHeaders = new ArrayList<AbfsHttpHeader>();
-    String[] propertiesArray = properties.split(",");
-    for (String property : propertiesArray) {
-      String[] keyValue = property.split("=");
-      metadataRequestHeaders.add(new AbfsHttpHeader(X_MS_METADATA_PREFIX + keyValue[0], keyValue[1]));
+  private static String encodeMetadataAttribute(String value)
+      throws UnsupportedEncodingException {
+    return value == null ? null
+        : URLEncoder.encode(value, XMS_PROPERTIES_ENCODING_UNICODE);
+  }
+
+  private static String decodeMetadataAttribute(String encoded)
+      throws UnsupportedEncodingException {
+    return encoded == null ? null :
+        java.net.URLDecoder.decode(encoded, XMS_PROPERTIES_ENCODING_UNICODE);
+  }
+
+  /**
+   * Checks if the value contains pure ASCII characters or not.
+   * @param value
+   * @return true if pureASCII.
+   * @throws CharacterCodingException if not pure ASCII
+   */
+  private boolean isPureASCII(String value) throws CharacterCodingException {
+    final CharsetEncoder encoder = Charset.forName(
+        XMS_PROPERTIES_ENCODING_ASCII).newEncoder();
+    boolean canEncodeValue = encoder.canEncode(value);
+    if (!canEncodeValue) {
+      throw new CharacterCodingException();
+    }
+    return true;
+  }
+
+  private List<AbfsHttpHeader> getMetadataHeadersList(final Hashtable<String, String> properties) throws AbfsRestOperationException,
+      CharacterCodingException {
+    List<AbfsHttpHeader> metadataRequestHeaders = new ArrayList<>();
+    for(Map.Entry<String,String> entry : properties.entrySet()) {
+      String key = X_MS_METADATA_PREFIX + entry.getKey();
+      String value = entry.getValue();
+      // AzureBlobFileSystem supports only ASCII Characters in property values.
+      if (isPureASCII(value)) {
+        try {
+          value = encodeMetadataAttribute(value);
+        } catch (UnsupportedEncodingException e) {
+          throw new InvalidAbfsRestOperationException(e);
+        }
+        metadataRequestHeaders.add(new AbfsHttpHeader(key, value));
+      }
     }
     return metadataRequestHeaders;
   }
