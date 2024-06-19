@@ -701,7 +701,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // the FS came with a DT
       // this may do some patching of the configuration (e.g. setting
       // the encryption algorithms)
-      ClientManager clientManager = bindAWSClient(name, delegationTokensEnabled);
+      ClientManager clientManager = createClientManager(name, delegationTokensEnabled);
 
       inputPolicy = S3AInputPolicy.getPolicy(
           conf.getTrimmed(INPUT_FADVISE,
@@ -1061,7 +1061,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @return the client manager which can generate the clients.
    * @throws IOException failure.
    */
-  private ClientManager bindAWSClient(URI fsURI, boolean dtEnabled) throws IOException {
+  private ClientManager createClientManager(URI fsURI, boolean dtEnabled) throws IOException {
     Configuration conf = getConf();
     credentials = null;
     String uaSuffix = "";

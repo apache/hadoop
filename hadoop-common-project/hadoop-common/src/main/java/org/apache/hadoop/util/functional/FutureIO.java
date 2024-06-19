@@ -32,6 +32,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Supplier;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -353,5 +354,24 @@ public final class FutureIO {
       result.completeExceptionally(tx);
     }
     return result;
+  }
+
+
+  /**
+   * Create a java supplier from a {@link CallableRaisingIOE},
+   * converting IOExceptions to UncheckedIOException.
+   * @param callable callable to invoke.
+   * @return supplier.
+   * @param <T> return type
+   */
+  public static <T> Supplier<T> toSupplier(
+      CallableRaisingIOE<T> callable) {
+    return () -> {
+      try {
+        return callable.apply();
+      } catch (IOException e) {
+        throw new UncheckedIOException(e);
+      }
+    };
   }
 }

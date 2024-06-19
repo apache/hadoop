@@ -47,9 +47,7 @@ import static org.apache.hadoop.util.Preconditions.checkState;
  */
 public class ClientManagerImpl implements ClientManager {
 
-  public static final Logger LOG = LoggerFactory.getLogger(
-      ClientManagerImpl.class);
-
+  public static final Logger LOG = LoggerFactory.getLogger(ClientManagerImpl.class);
   /**
    * Client factory to invoke.
    */

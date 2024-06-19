@@ -545,7 +545,7 @@ public enum Statistic {
   /* General Store operations */
   STORE_CLIENT_CREATION(
       StoreStatisticNames.STORE_CLIENT_CREATION,
-      "Filesystem close",
+      "Store Client Creation",
       TYPE_DURATION),
 
   STORE_EXISTS_PROBE(StoreStatisticNames.STORE_EXISTS_PROBE,
