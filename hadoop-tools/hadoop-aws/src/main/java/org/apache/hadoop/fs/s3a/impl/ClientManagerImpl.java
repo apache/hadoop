@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -71,13 +72,13 @@ public class ClientManagerImpl implements ClientManager {
   /**
    * Core S3 client.
    */
-  private S3Client s3Client;
+  private AtomicReference<S3Client> s3Client = new AtomicReference<>();
 
   /** Async client is used for transfer manager. */
-  private S3AsyncClient s3AsyncClient;
+  private AtomicReference<S3AsyncClient> s3AsyncClient = new AtomicReference<>();
 
   /** Transfer manager. */
-  private S3TransferManager transferManager;
+  private AtomicReference<S3TransferManager> transferManager = new AtomicReference<>();
 
   /**
    * Constructor.
@@ -96,63 +97,45 @@ public class ClientManagerImpl implements ClientManager {
   }
 
   @Override
-  public S3Client getOrCreateS3Client() throws IOException {
+  public synchronized S3Client getOrCreateS3Client() throws IOException {
     checkNotClosed();
-
-    if (s3Client == null) {
-      // demand create the S3 client.
-      synchronized (this) {
-        checkNotClosed();
-        if (s3Client == null) {
-          LOG.debug("Creating S3 client for {}", getUri());
-          s3Client = trackDuration(durationTrackerFactory,
-              STORE_CLIENT_CREATION.getSymbol(), () ->
-                  clientFactory.createS3Client(getUri(), clientCreationParameters));
-        }
-      }
+    if (s3Client.get()== null) {
+      LOG.debug("Creating S3 client for {}", getUri());
+      s3Client.set(trackDuration(durationTrackerFactory,
+          STORE_CLIENT_CREATION.getSymbol(), () ->
+              clientFactory.createS3Client(getUri(), clientCreationParameters)));
     }
-    return s3Client;
+    return s3Client.get();
   }
 
   @Override
-  public S3AsyncClient getOrCreateAsyncClient() throws IOException {
+  public synchronized S3AsyncClient getOrCreateAsyncClient() throws IOException {
 
     checkNotClosed();
     if (s3AsyncClient == null) {
-      // demand create the Async S3 client.
-      synchronized (this) {
-        checkNotClosed();
-        if (s3AsyncClient == null) {
-          LOG.debug("Creating Async S3 client for {}", getUri());
-          s3AsyncClient = trackDuration(durationTrackerFactory,
-              STORE_CLIENT_CREATION.getSymbol(), () ->
-                  clientFactory.createS3AsyncClient(
-                      getUri(),
-                      clientCreationParameters));
-        }
-      }
+      LOG.debug("Creating Async S3 client for {}", getUri());
+      s3AsyncClient.set(trackDuration(durationTrackerFactory,
+          STORE_CLIENT_CREATION.getSymbol(), () ->
+              clientFactory.createS3AsyncClient(
+                  getUri(),
+                  clientCreationParameters)));
     }
-    return s3AsyncClient;
+    return s3AsyncClient.get();
   }
 
   @Override
-  public S3TransferManager getOrCreateTransferManager() throws IOException {
+  public synchronized S3TransferManager getOrCreateTransferManager() throws IOException {
     checkNotClosed();
-    if (transferManager == null) {
-      synchronized (this) {
-        checkNotClosed();
-        if (transferManager == null) {
-          // get the async client, which is likely to be demand-created.
-          final S3AsyncClient asyncClient = getOrCreateAsyncClient();
-          // then create the transfer manager.
-          LOG.debug("Creating S3 transfer manager for {}", getUri());
-          transferManager = trackDuration(durationTrackerFactory,
-              STORE_CLIENT_CREATION.getSymbol(), () ->
-                  clientFactory.createS3TransferManager(asyncClient));
-        }
-      }
+    if (transferManager.get() == null) {
+      // get the async client, which is likely to be demand-created.
+      final S3AsyncClient asyncClient = getOrCreateAsyncClient();
+      // then create the transfer manager.
+      LOG.debug("Creating S3 transfer manager for {}", getUri());
+      transferManager.set(trackDuration(durationTrackerFactory,
+          STORE_CLIENT_CREATION.getSymbol(), () ->
+              clientFactory.createS3TransferManager(asyncClient)));
     }
-    return transferManager;
+    return transferManager.get();
   }
 
   /**
@@ -173,9 +156,9 @@ public class ClientManagerImpl implements ClientManager {
       // re-entrant close.
       return;
     }
-    close(transferManager);
-    close(s3AsyncClient);
-    close(s3Client);
+    close(transferManager.get());
+    close(s3AsyncClient.get());
+    close(s3Client.get());
   }
 
   /**

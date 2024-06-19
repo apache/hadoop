@@ -41,7 +41,7 @@ import org.apache.hadoop.test.AbstractHadoopTestBase;
 import static java.lang.Thread.sleep;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.apache.hadoop.util.functional.FutureIO.toSupplier;
+import static org.apache.hadoop.util.functional.FunctionalIO.toUncheckedIOExceptionSupplier;
 import static org.mockito.Mockito.mock;
 
 /**
@@ -218,7 +218,7 @@ public class TestClientManager extends AbstractHadoopTestBase {
 
     // execute the first creation in a separate thread.
     final CompletableFuture<S3Client> futureClient =
-        supplyAsync(toSupplier(() -> {
+        supplyAsync(toUncheckedIOExceptionSupplier(() -> {
           LOG.info("creating #1 s3 client");
           sem.release();
           final S3Client client = manager.getOrCreateS3Client();
@@ -263,7 +263,7 @@ public class TestClientManager extends AbstractHadoopTestBase {
 
     // execute the first creation in a separate thread.
     final CompletableFuture<S3TransferManager> futureClient =
-        supplyAsync(toSupplier(() -> {
+        supplyAsync(toUncheckedIOExceptionSupplier(() -> {
           LOG.info("creating #1 instance");
           sem.release();
           final S3TransferManager r = manager.getOrCreateTransferManager();
