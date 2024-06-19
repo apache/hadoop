@@ -169,7 +169,9 @@ public class AbfsDfsClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/filesystem/create">Filesystem - Create</a>.
+   * Get Rest Operation for API
+   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/filesystem/create">
+   *   Filesystem - Create</a>.
    * @param tracingContext for tracing the server calls.
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation fails.
@@ -191,7 +193,9 @@ public class AbfsDfsClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/filesystem/set-properties">Filesystem - Set Properties</a>.
+   * Get Rest Operation for API
+   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/filesystem/set-properties">
+   *   Filesystem - Set Properties</a>.
    * @param properties comma separated list of metadata key-value pairs.
    * @param tracingContext for tracing the server calls.
    * @return executed rest operation containing response from server.
@@ -226,7 +230,9 @@ public class AbfsDfsClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/filesystem/get-properties">Filesystem - Get Properties</a>.
+   * Get Rest Operation for API
+   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/filesystem/get-properties">
+   *   Filesystem - Get Properties</a>.
    * @param tracingContext for tracing the server calls.
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation fails.
@@ -248,7 +254,9 @@ public class AbfsDfsClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/filesystem/delete">Filesystem - Delete</a>.
+   * Get Rest Operation for API
+   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/filesystem/delete">
+   *   Filesystem - Delete</a>.
    * @param tracingContext for tracing the server calls.
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation fails.
@@ -270,7 +278,9 @@ public class AbfsDfsClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/list">Filesystem - List</a>.
+   * Get Rest Operation for API
+   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/list">
+   *   Filesystem - List</a>.
    * List paths and their properties in the current filesystem.
    * @param relativePath to return only blobs within this directory.
    * @param recursive to return all blobs in the path, including those in subdirectories.
@@ -310,7 +320,9 @@ public class AbfsDfsClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/create">Path - Create</a>.
+   * Get Rest Operation for API
+   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/create">
+   *   Path - Create</a>.
    * Create a path (file or directory) in the current filesystem.
    * @param path to be created inside the filesystem.
    * @param isFile to specify if the created path is file or directory.
@@ -390,7 +402,9 @@ public class AbfsDfsClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/lease">Path - Lease</a>.
+   * Get Rest Operation for API
+   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/lease">
+   *   Path - Lease</a>.
    * Acquire lease on specified path.
    * @param path on which lease has to be acquired.
    * @param duration for which lease has to be acquired.
@@ -418,7 +432,9 @@ public class AbfsDfsClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/lease">Path - Lease</a>.
+   * Get Rest Operation for API
+   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/lease">
+   *   Path - Lease</a>.
    * Renew lease on specified path.
    * @param path on which lease has to be renewed.
    * @param leaseId of the lease to be renewed.
@@ -444,7 +460,9 @@ public class AbfsDfsClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/lease">Path - Lease</a>.
+   * Get Rest Operation for API
+   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/lease">
+   *   Path - Lease</a>.
    * Release lease on specified path.
    * @param path on which lease has to be released.
    * @param leaseId of the lease to be released.
@@ -470,7 +488,9 @@ public class AbfsDfsClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/lease">Path - Lease</a>.
+   * Get Rest Operation for API
+   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/lease">
+   *   Path - Lease</a>.
    * Break lease on specified path.
    * @param path on which lease has to be broke.
    * @param tracingContext for tracing the server calls.
@@ -496,7 +516,9 @@ public class AbfsDfsClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/create">Path - Create</a>.
+   * Get Rest Operation for API
+   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/create">
+   *   Path - Create</a>.
    * @param source path to source file
    * @param destination destination of rename.
    * @param continuation continuation.
@@ -632,7 +654,9 @@ public class AbfsDfsClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/update">Path - Update</a>.
+   * Get Rest Operation for API
+   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/update">
+   *   Path - Update</a>.
    * Uploads data to be appended to a file.
    * @param path to which data has to be appended.
    * @param buffer containing data to be appended.
@@ -757,7 +781,9 @@ public class AbfsDfsClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/update">Path - Update</a>.
+   * Get Rest Operation for API
+   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/update">
+   *   Path - Update</a>.
    * Flush previously uploaded data to a file.
    * @param path on which data has to be flushed.
    * @param position to which data has to be flushed.
@@ -822,7 +848,9 @@ public class AbfsDfsClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/update">Path - Update</a>.
+   * Get Rest Operation for API
+   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/update">
+   *   Path - Update</a>.
    * Set the properties of a file or directory.
    * @param path on which properties have to be set.
    * @param properties comma separated list of metadata key-value pairs.
@@ -866,7 +894,9 @@ public class AbfsDfsClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/get-properties">Path - Get Properties</a>.
+   * Get Rest Operation for API
+   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/get-properties">
+   *   Path - Get Properties</a>.
    * Get the properties of a file or directory.
    * @param path of which properties have to be fetched.
    * @param includeProperties to include user defined properties.
@@ -908,7 +938,9 @@ public class AbfsDfsClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/read">Path - Read</a>.
+   * Get Rest Operation for API
+   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/read">
+   *   Path - Read</a>.
    * Read the contents of the file at specified path
    * @param path of the file to be read.
    * @param position in the file from where data has to be read.
@@ -968,7 +1000,9 @@ public class AbfsDfsClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/delete">Path - Delete</a>.
+   * Get Rest Operation for API
+   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/delete">
+   *   Path - Delete</a>.
    * Delete the file or directory at specified path.
    * @param path to be deleted.
    * @param recursive if the path is a directory, delete recursively.
@@ -1038,7 +1072,9 @@ public class AbfsDfsClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/update">Path - Update</a>.
+   * Get Rest Operation for API
+   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/update">
+   *   Path - Update</a>.
    * @param path on which owner has to be set.
    * @param owner to be set.
    * @param group to be set.
@@ -1076,7 +1112,9 @@ public class AbfsDfsClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/update">Path - Update</a>.
+   * Get Rest Operation for API
+   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/update">
+   *   Path - Update</a>.
    * @param path on which permission has to be set.
    * @param permission to be set.
    * @param tracingContext for tracing the server calls.
@@ -1108,7 +1146,9 @@ public class AbfsDfsClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/update">Path - Update</a>.
+   * Get Rest Operation for API
+   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/update">
+   *   Path - Update</a>.
    * @param path on which ACL has to be set.
    * @param aclSpecString to be set.
    * @param eTag to specify conditional headers. Set only if etag matches.
@@ -1150,7 +1190,9 @@ public class AbfsDfsClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/get-properties">Path - Get Properties</a>.
+   * Get Rest Operation for API
+   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/get-properties">
+   *   Path - Get Properties</a>.
    * Retrieves the properties of blob at specified path.
    * @param path of which properties have to be fetched.
    * @param useUPN whether to use UPN with rest operation.
@@ -1180,7 +1222,9 @@ public class AbfsDfsClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/get-properties">Path - Get Properties</a>.
+   * Get Rest Operation for API
+   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/get-properties">
+   *   Path - Get Properties</a>.
    * @param path Path for which access check needs to be performed
    * @param rwx The permission to be checked on the path
    * @param tracingContext for tracing the server calls.

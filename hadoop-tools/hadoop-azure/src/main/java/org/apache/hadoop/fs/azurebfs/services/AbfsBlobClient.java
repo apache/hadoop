@@ -27,7 +27,6 @@ import java.net.URLEncoder;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.List;
@@ -159,7 +158,9 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href=" https://learn.microsoft.com/en-us/rest/api/storageservices/create-container">Create Container</a>.
+   * Get Rest Operation for API
+   * <a href=" https://learn.microsoft.com/en-us/rest/api/storageservices/create-container">
+   *   Create Container</a>.
    * Creates a storage container as filesystem root.
    * @param tracingContext for tracing the service call.
    * @return executed rest operation containing response from server.
@@ -182,7 +183,9 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/set-container-metadata">Set Container Metadata</a>.
+   * Get Rest Operation for API
+   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/set-container-metadata">
+   *   Set Container Metadata</a>.
    * Sets user-defined properties of the filesystem.
    * @param properties comma separated list of metadata key-value pairs.
    * @param tracingContext for tracing the service call.
@@ -217,7 +220,9 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/get-container-properties">Get Container Metadata</a>.
+   * Get Rest Operation for API
+   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/get-container-properties">
+   *   Get Container Metadata</a>.
    * Gets all the properties of the filesystem.
    * @param tracingContext for tracing the service call.
    * @return executed rest operation containing response from server.
@@ -240,7 +245,9 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/delete-container">Delete Container</a>.
+   * Get Rest Operation for API
+   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/delete-container">
+   *   Delete Container</a>.
    * Deletes the Container acting as current filesystem.
    * @param tracingContext for tracing the service call.
    * @return executed rest operation containing response from server.
@@ -263,7 +270,9 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/put-blob">Put Blob</a>.
+   * Get Rest Operation for API
+   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/put-blob">
+   *   Put Blob</a>.
    * Creates a file or directory(marker file) at specified path.
    * @param path of the directory to be created.
    * @param tracingContext for tracing the service call.
@@ -593,7 +602,9 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/put-block-list">Put Block List</a>.
+   * Get Rest Operation for API
+   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/put-block-list">
+   *   Put Block List</a>.
    * The flush operation to commit the blocks.
    * @param buffer This has the xml in byte format with the blockIds to be flushed.
    * @param path The path to flush the data to.
@@ -639,7 +650,9 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/set-blob-metadata">Set Blob Metadata</a>.
+   * Get Rest Operation for API
+   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/set-blob-metadata">
+   *   Set Blob Metadata</a>.
    * Set the properties of a file or directory.
    * @param path on which properties have to be set.
    * @param properties comma separated list of metadata key-value pairs.
@@ -679,7 +692,9 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/get-blob-properties">Get Blob Properties</a>.
+   * Get Rest Operation for API
+   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/get-blob-properties">
+   *   Get Blob Properties</a>.
    * Get the properties of a file or directory.
    * @param path of which properties have to be fetched.
    * @param includeProperties to include user defined properties.
@@ -900,8 +915,8 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
 
   private static String decodeMetadataAttribute(String encoded)
       throws UnsupportedEncodingException {
-    return encoded == null ? null :
-        java.net.URLDecoder.decode(encoded, XMS_PROPERTIES_ENCODING_UNICODE);
+    return encoded == null ? null
+        : java.net.URLDecoder.decode(encoded, XMS_PROPERTIES_ENCODING_UNICODE);
   }
 
   /**
@@ -923,7 +938,7 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
   private List<AbfsHttpHeader> getMetadataHeadersList(final Hashtable<String, String> properties) throws AbfsRestOperationException,
       CharacterCodingException {
     List<AbfsHttpHeader> metadataRequestHeaders = new ArrayList<>();
-    for(Map.Entry<String,String> entry : properties.entrySet()) {
+    for (Map.Entry<String, String> entry : properties.entrySet()) {
       String key = X_MS_METADATA_PREFIX + entry.getKey();
       String value = entry.getValue();
       // AzureBlobFileSystem supports only ASCII Characters in property values.

@@ -431,7 +431,7 @@ public abstract class AbfsClient implements Closeable {
   public abstract AbfsRestOperation createFilesystem(TracingContext tracingContext)
       throws AzureBlobFileSystemException;
 
-  public abstract AbfsRestOperation setFilesystemProperties(final Hashtable<String, String> properties,
+  public abstract AbfsRestOperation setFilesystemProperties(Hashtable<String, String> properties,
       TracingContext tracingContext) throws AzureBlobFileSystemException;
 
   public abstract AbfsRestOperation listPath(String relativePath, boolean recursive,
@@ -660,7 +660,7 @@ public abstract class AbfsClient implements Closeable {
       String eTag,
       TracingContext tracingContext) throws AzureBlobFileSystemException;
 
-  public abstract AbfsRestOperation setPathProperties(String path, final Hashtable<String, String> properties,
+  public abstract AbfsRestOperation setPathProperties(String path, Hashtable<String, String> properties,
       TracingContext tracingContext, ContextEncryptionAdapter contextEncryptionAdapter)
       throws AzureBlobFileSystemException;
 
