@@ -79,7 +79,9 @@ public class FederationCaffeineCache extends FederationCache {
 
   @Override
   public void clearCache() {
-    this.cache.cleanUp();
+    if (this.cache != null) {
+      this.cache.cleanUp();
+    }
     this.cache = null;
   }
 

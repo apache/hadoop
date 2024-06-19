@@ -104,7 +104,7 @@ The bin/hadoop script ensures that the native hadoop library is on the library p
 During runtime, check the hadoop log files for your MapReduce tasks.
 
 * If everything is all right, then: `DEBUG util.NativeCodeLoader - Trying to load the custom-built native-hadoop library...` `INFO util.NativeCodeLoader - Loaded the native-hadoop library`
-* If something goes wrong, then: `INFO util.NativeCodeLoader - Unable to load native-hadoop library for your platform... using builtin-java classes where applicable`
+* If something goes wrong, then: `WARN util.NativeCodeLoader - Unable to load native-hadoop library for your platform... using builtin-java classes where applicable`
 
 Check
 -----
