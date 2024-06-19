@@ -18,33 +18,49 @@
 package org.apache.hadoop.hdfs.tools;
 
 import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.HdfsBlockLocation;
 import org.apache.hadoop.hdfs.BlockReader;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.client.impl.BlockReaderRemote;
 import org.apache.hadoop.hdfs.net.Peer;
+import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
@@ -53,11 +69,15 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.LocatedStripedBlock;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
+import org.apache.hadoop.hdfs.server.datanode.ReplicaNotFoundException;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.io.erasurecode.CodecUtil;
 import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureEncoder;
+import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Uninterruptibles;
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -76,6 +96,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetUtil;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -96,6 +117,7 @@ public class DebugAdmin extends Configured implements Tool {
       new ComputeMetaCommand(),
       new RecoverLeaseCommand(),
       new VerifyECCommand(),
+      new VerifyReadableCommand(),
       new HelpCommand()
   };
 
@@ -639,6 +661,252 @@ public class DebugAdmin extends Configured implements Tool {
       }
     }
 
+  }
+
+  /**
+   * Command to verify if files are readable via checking block meta on DNs.
+   */
+  private class VerifyReadableCommand extends DebugCommand {
+    private DistributedFileSystem dfs;
+    private boolean verbose = false;
+
+    VerifyReadableCommand() {
+      super("verifyReadable",
+          "verifyReadable "
+              + "[-path <path> | -input <input>] "
+              + "[-output <output>] "
+              + "[-concurrency <concurrency>] "
+              + "[-verbose]",
+          "  Verify if one or multiple paths are fully readable and have no missing blocks."
+              + System.lineSeparator()
+              + " -path HDFS path to check. Takes priority over -input."
+              + System.lineSeparator()
+              + " -input File with HDFS paths to check, one path per line."
+              + System.lineSeparator()
+              + " -output Output file with results, one result per line."
+              + System.lineSeparator()
+              + " -concurrency Maximum number of paths to process simultaneously."
+              + System.lineSeparator()
+              + " -verbose Print even for readable paths, write more detailed data to output file.");
+    }
+
+    @Override
+    int run(List<String> args) throws IOException {
+      if (args.isEmpty()) {
+        System.out.println(usageText);
+        System.out.println(helpText + System.lineSeparator());
+        return 1;
+      }
+      dfs = AdminHelper.getDFS(getConf());
+      String pathStr = StringUtils.popOptionWithArgument("-path", args);
+      String inputStr = StringUtils.popOptionWithArgument("-input", args);
+      String outputStr = StringUtils.popOptionWithArgument("-output", args);
+      String concurrencyStr = StringUtils.popOptionWithArgument("-concurrency", args);
+      verbose = StringUtils.popOption("-verbose", args);
+      if (pathStr == null && inputStr == null) {
+        System.out.println("Either -path or -input must be present.");
+        System.out.println(usageText);
+        System.out.println(helpText + System.lineSeparator());
+        return 1;
+      }
+      try {
+        return handleArgs(pathStr, inputStr, outputStr, concurrencyStr);
+      } catch (Exception e) {
+        System.err.println(
+            "Got IOE: " + StringUtils.stringifyException(e) + " for command: " + StringUtils.join(
+                ",", args));
+        return 1;
+      }
+    }
+
+    private int handleArgs(String pathStr, String inputStr, String outputStr, String concurrencyStr)
+        throws IOException, ExecutionException, InterruptedException {
+      BufferedWriter writer = null;
+      try {
+        Set<Path> paths = preparePaths(pathStr, inputStr);
+        if (outputStr != null) {
+          File output = new File(outputStr);
+          writer = new BufferedWriter(new OutputStreamWriter(Files.newOutputStream(output.toPath()),
+              StandardCharsets.UTF_8));
+        }
+        int concurrency =
+            (concurrencyStr == null || pathStr != null) ? 1 : Integer.parseInt(concurrencyStr);
+        return handlePaths(paths, writer, concurrency);
+      } finally {
+        if (writer != null) {
+          writer.flush();
+          writer.close();
+        }
+      }
+    }
+
+    private Set<Path> preparePaths(String pathStr, String inputStr) throws IOException {
+      Set<Path> paths = new HashSet<>();
+      if (pathStr != null) {
+        // -path takes priority over -input
+        paths.add(new Path(pathStr));
+      } else {
+        File input = new File(inputStr);
+        if (!input.exists()) {
+          return paths;
+        }
+        BufferedReader reader = new BufferedReader(
+            new InputStreamReader(Files.newInputStream(input.toPath()), StandardCharsets.UTF_8));
+        String line;
+        while ((line = reader.readLine()) != null) {
+          paths.add(new Path(line.trim()));
+        }
+        reader.close();
+      }
+      return paths;
+    }
+
+    private void writeToOutput(BufferedWriter writer, PathResult result) throws IOException {
+      if (writer == null) {
+        return;
+      }
+      writer.write(result.toString());
+      writer.write("\n");
+      writer.flush();
+    }
+
+    private int handlePaths(Set<Path> paths, BufferedWriter writer, int concurrency)
+        throws ExecutionException, InterruptedException, IOException {
+      if (paths.isEmpty()) {
+        return 1;
+      }
+      int total = paths.size();
+      long start = Time.monotonicNow();
+      ExecutorService threadPool = Executors.newFixedThreadPool(concurrency);
+      List<Callable<PathResult>> tasks = new ArrayList<>();
+      for (Path path : paths) {
+        tasks.add(() -> handlePath(path));
+      }
+      List<Future<PathResult>> futures =
+          tasks.stream().map(threadPool::submit).collect(Collectors.toList());
+
+      boolean failed = false;
+      int done = 0;
+      for (Future<PathResult> future : futures) {
+        done++;
+        if (done % 1000 == 0) {
+          long elapsed = Time.monotonicNow() - start;
+          double rate = (double) done / elapsed * 1000;
+          String msg = "Progress: %d/%d, elapsed: %d ms, rate: %5.2f files/s%n";
+          System.out.printf(msg, done, total, elapsed, rate);
+        }
+        PathResult result = future.get();
+        writeToOutput(writer, result);
+        failed |= result.failed != 0;
+      }
+      return failed ? 1 : 0;
+    }
+
+    private class PathResult {
+      int failed;
+      String path;
+      int verifiedBlocks;
+      int totalBlocks;
+      HdfsBlockLocation failedBlock;
+      HdfsBlockLocation[] locs;
+
+      @Override
+      public String toString() {
+        String str = path + "|" + failed;
+        if (verbose) {
+          str += String.format("|%d/%d|%s|%s", verifiedBlocks, totalBlocks, failedBlock,
+              Arrays.toString(locs));
+        }
+        return str;
+      }
+    }
+
+    private PathResult handlePath(Path path) {
+      PathResult result = new PathResult();
+      result.path = path.toString();
+      result.failed = 1; // Failed unless all checks pass
+      HdfsBlockLocation[] locs;
+      try {
+        locs = (HdfsBlockLocation[]) dfs.getFileBlockLocations(path, 0,
+            Long.MAX_VALUE);
+        result.locs = locs;
+        result.totalBlocks = locs.length;
+      } catch (FileNotFoundException e) {
+        System.err.println("Path not found: " + path);
+        return result;
+      } catch (AccessControlException e) {
+        System.err.println("No permission for path: " + path);
+        return result;
+      } catch (IOException e) {
+        System.err.println("Got IOE: " + StringUtils.stringifyException(e) + " for path: " + path);
+        return result;
+      }
+
+      // First pass: check for block with no live replicas
+      for (HdfsBlockLocation loc : locs) {
+        if (loc.getLocatedBlock().getLocations().length == 0) {
+          result.failedBlock = loc;
+          System.err.println("Path: " + path + ". No live replicas found: " + loc);
+          return result;
+        }
+      }
+
+      for (HdfsBlockLocation loc : locs) {
+        if (!verifyBlock(loc.getLocatedBlock())) {
+          result.failedBlock = loc;
+          System.err.println("Path: " + path + ". Block not readable: " + loc);
+          return result;
+        } else {
+          result.verifiedBlocks++;
+        }
+      }
+      if (verbose) {
+        System.out.println("No issue found with path " + path);
+      }
+      result.failed = 0;
+      return result;
+    }
+
+    private boolean verifyBlock(LocatedBlock loc) {
+      for (DatanodeInfo dn : loc.getLocations()) {
+        if (verifyReplica(loc, dn)) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    private boolean verifyReplica(LocatedBlock loc, DatanodeInfo dn) {
+      ClientDatanodeProtocol cdp = null;
+
+      try {
+        try {
+          DfsClientConf clientConf = dfs.getClient().getConf();
+          cdp = DFSUtilClient.createClientDatanodeProtocolProxy(dn, getConf(),
+              clientConf.getSocketTimeout(), clientConf.isConnectToDnViaHostname(), loc);
+          return cdp.getReplicaVisibleLength(loc.getBlock()) > 0;
+        } catch (RemoteException e) {
+          throw e.unwrapRemoteException();
+        }
+      } catch (ReplicaNotFoundException e) {
+        System.err.println("Block " + loc.getBlock() + " replica does not exist on DN " + dn);
+        return false;
+      } catch (ConnectException e) {
+        System.err.println("Block " + loc.getBlock() + " DN failed connection " + dn);
+        return false;
+      } catch (IOException e) {
+        System.err.println(
+            "Got IOE: " + StringUtils.stringifyException(e) + " for block: " + loc + " and dn: "
+                + dn);
+        // No need to throw exception since a failed call is a failed call
+        // But log it for handling
+        return false;
+      } finally {
+        if (cdp != null) {
+          RPC.stopProxy(cdp);
+        }
+      }
+    }
   }
 
   /**
