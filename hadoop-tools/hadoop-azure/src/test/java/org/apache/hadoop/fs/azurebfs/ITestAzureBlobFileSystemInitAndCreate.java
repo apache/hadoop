@@ -20,17 +20,27 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.FileNotFoundException;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.TrileanConversionException;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_BLOB_DOMAIN_NAME;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_DFS_DOMAIN_NAME;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Test filesystem initialization and creation.
@@ -95,5 +105,18 @@ public class ITestAzureBlobFileSystemInitAndCreate extends
 
     Mockito.verify(client, Mockito.times(0))
         .getAclStatus(Mockito.anyString(), Mockito.any(TracingContext.class));
+  }
+
+  // Todo: [FnsOverBlob] Remove this test case once Blob Endpoint Support is ready and enabled.
+  @Test
+  public void testFileSystemInitFailsWithBlobEndpoitUrl() throws Exception {
+    Configuration configuration = getRawConfiguration();
+    String defaultUri = configuration.get(FS_DEFAULT_NAME_KEY);
+    String blobUri = defaultUri.replace(ABFS_DFS_DOMAIN_NAME, ABFS_BLOB_DOMAIN_NAME);
+    AzureBlobFileSystemException ex =
+        intercept(AzureBlobFileSystemException.class, () ->
+            FileSystem.newInstance(new Path(blobUri).toUri(), configuration));
+    Assertions.assertThat(ex).isInstanceOf(InvalidConfigurationValueException.class);
+    Assertions.assertThat(ex.getMessage()).contains("Blob Endpoint Support not yet available");
   }
 }
