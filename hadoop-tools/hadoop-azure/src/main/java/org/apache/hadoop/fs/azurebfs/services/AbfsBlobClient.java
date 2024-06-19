@@ -159,7 +159,7 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
 
   /**
    * Get Rest Operation for API
-   * <a href=" https://learn.microsoft.com/en-us/rest/api/storageservices/create-container">
+   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/create-container">
    *   Create Container</a>.
    * Creates a storage container as filesystem root.
    * @param tracingContext for tracing the service call.
