@@ -1144,7 +1144,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   protected ClientManager createClientManager(
       final S3ClientFactory clientFactory,
       final S3ClientFactory.S3ClientCreationParameters clientCreationParameters,
-      final DurationTrackerFactory durationTrackerFactory) throws IOException {
+      final DurationTrackerFactory durationTrackerFactory) {
     return new ClientManagerImpl(clientFactory,
         clientCreationParameters,
         durationTrackerFactory
@@ -3233,6 +3233,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @param file the file to be uploaded
    * @param listener the progress listener for the request
    * @return the upload initiated
+   * @throws IOException if transfer manager creation failed.
    */
   @Retries.OnceRaw
   public UploadInfo putObject(PutObjectRequest putObjectRequest, File file,
