@@ -52,6 +52,7 @@ import java.util.concurrent.CompletionException;
  *
  * @param <R> the type of the result of the asynchronous operation
  */
+@FunctionalInterface
 public interface FinallyFunction<R> {
 
   /**
