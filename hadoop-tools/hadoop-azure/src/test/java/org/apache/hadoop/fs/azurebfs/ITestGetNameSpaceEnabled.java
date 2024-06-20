@@ -24,19 +24,23 @@ import java.util.UUID;
 import org.junit.Assume;
 import org.junit.Test;
 import org.assertj.core.api.Assertions;
+import org.mockito.Mockito;
 
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.enums.Trilean;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+import org.apache.kerby.config.Conf;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -48,6 +52,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_CR
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_IS_HNS_ENABLED;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.mockito.Mockito.when;
 
 /**
  * Test getIsNamespaceEnabled call.
@@ -217,4 +222,31 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
     return mockClient;
   }
 
+  @Test
+  public void ensureGetAclDetermineHnsStatusAccurately() throws Exception {
+    ensureGetAclDetermineHnsStatusAccuratelyInternal(400, false);
+    ensureGetAclDetermineHnsStatusAccuratelyInternal(404, true);
+    ensureGetAclDetermineHnsStatusAccuratelyInternal(500, false);
+    ensureGetAclDetermineHnsStatusAccuratelyInternal(503, false);
+  }
+
+  private void ensureGetAclDetermineHnsStatusAccuratelyInternal(int statusCode,
+      boolean expected) throws Exception {
+    AzureBlobFileSystemStore store = Mockito.spy(getFileSystem().getAbfsStore());
+    AbfsClient mockClient = mock(AbfsClient.class);
+    store.setNamespaceEnabled(Trilean.UNKNOWN);
+    doReturn(mockClient).when(store).getClient();
+    AbfsRestOperationException ex = new AbfsRestOperationException(
+        statusCode, null, Integer.toString(statusCode), null);
+    doThrow(ex).when(mockClient).getAclStatus(anyString(), any(TracingContext.class));
+
+    try {
+      boolean isHnsEnabled = store.getIsNamespaceEnabled(
+          getTestTracingContext(getFileSystem(), false));
+      Assertions.assertThat(isHnsEnabled).isEqualTo(expected);
+    } catch (AbfsRestOperationException caughtEx) {
+      Assertions.assertThat(caughtEx.getStatusCode()).isEqualTo(statusCode);
+      Assertions.assertThat(caughtEx.getErrorMessage()).isEqualTo(ex.getErrorMessage());
+    }
+  }
 }
