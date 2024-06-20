@@ -19,6 +19,7 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.util.UUID;
 
 import org.junit.Assume;
@@ -35,8 +36,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.enums.Trilean;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
-import org.apache.kerby.config.Conf;
 
+import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
+import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
+import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
+import static java.net.HttpURLConnection.HTTP_SERVER_ERROR;
+import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
@@ -52,7 +57,6 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_CR
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_IS_HNS_ENABLED;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
-import static org.mockito.Mockito.when;
 
 /**
  * Test getIsNamespaceEnabled call.
@@ -224,10 +228,10 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
 
   @Test
   public void ensureGetAclDetermineHnsStatusAccurately() throws Exception {
-    ensureGetAclDetermineHnsStatusAccuratelyInternal(400, false);
-    ensureGetAclDetermineHnsStatusAccuratelyInternal(404, true);
-    ensureGetAclDetermineHnsStatusAccuratelyInternal(500, false);
-    ensureGetAclDetermineHnsStatusAccuratelyInternal(503, false);
+    ensureGetAclDetermineHnsStatusAccuratelyInternal(HTTP_BAD_REQUEST, false);
+    ensureGetAclDetermineHnsStatusAccuratelyInternal(HTTP_NOT_FOUND, true);
+    ensureGetAclDetermineHnsStatusAccuratelyInternal(HTTP_INTERNAL_ERROR, false);
+    ensureGetAclDetermineHnsStatusAccuratelyInternal(HTTP_UNAVAILABLE, false);
   }
 
   private void ensureGetAclDetermineHnsStatusAccuratelyInternal(int statusCode,
