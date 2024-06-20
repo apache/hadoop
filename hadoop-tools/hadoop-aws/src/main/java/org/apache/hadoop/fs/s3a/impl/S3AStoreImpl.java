@@ -58,7 +58,14 @@ import org.apache.hadoop.util.functional.Tuples;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.s3a.S3AUtils.isThrottleException;
-import static org.apache.hadoop.fs.s3a.Statistic.*;
+import static org.apache.hadoop.fs.s3a.Statistic.IGNORED_ERRORS;
+import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_BULK_DELETE_REQUEST;
+import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_DELETE_OBJECTS;
+import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_DELETE_REQUEST;
+import static org.apache.hadoop.fs.s3a.Statistic.STORE_IO_RATE_LIMITED;
+import static org.apache.hadoop.fs.s3a.Statistic.STORE_IO_RETRY;
+import static org.apache.hadoop.fs.s3a.Statistic.STORE_IO_THROTTLED;
+import static org.apache.hadoop.fs.s3a.Statistic.STORE_IO_THROTTLE_RATE;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isObjectNotFound;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.DELETE_CONSIDERED_IDEMPOTENT;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfOperation;
@@ -76,7 +83,7 @@ public class S3AStoreImpl implements S3AStore {
   /** Factory to create store contexts. */
   private final StoreContextFactory storeContextFactory;
 
-  /** Source of the S3 clients */
+  /** Source of the S3 clients. */
   private final ClientManager clientManager;
 
   /** The S3 bucket to communicate with. */
@@ -329,7 +336,7 @@ public class S3AStoreImpl implements S3AStore {
   @Override
   @Retries.RetryRaw
   public Map.Entry<Duration, DeleteObjectsResponse> deleteObjects(
-          final DeleteObjectsRequest deleteRequest)
+      final DeleteObjectsRequest deleteRequest)
       throws SdkException {
 
     DeleteObjectsResponse response;
@@ -349,22 +356,22 @@ public class S3AStoreImpl implements S3AStore {
 
     try (DurationInfo d = new DurationInfo(LOG, false, "DELETE %d keys", keyCount)) {
       response =
-              invoker.retryUntranslated("delete",
-                      DELETE_CONSIDERED_IDEMPOTENT, (text, e, r, i) -> {
-                        // handle the failure
-                        retryHandler.bulkDeleteRetried(deleteRequest, e);
-                      },
-                      // duration is tracked in the bulk delete counters
-                      trackDurationOfOperation(getDurationTrackerFactory(),
-                              OBJECT_BULK_DELETE_REQUEST.getSymbol(), () -> {
-                                // acquire the write capacity for the number of keys to delete and record the duration.
-                                Duration durationToAcquireWriteCapacity = acquireWriteCapacity(keyCount);
-                                instrumentation.recordDuration(STORE_IO_RATE_LIMITED,
-                                        true,
-                                        durationToAcquireWriteCapacity);
-                                incrementStatistic(OBJECT_DELETE_OBJECTS, keyCount);
-                                return getS3Client().deleteObjects(deleteRequest);
-                              }));
+          invoker.retryUntranslated("delete",
+              DELETE_CONSIDERED_IDEMPOTENT, (text, e, r, i) -> {
+                // handle the failure
+                retryHandler.bulkDeleteRetried(deleteRequest, e);
+              },
+              // duration is tracked in the bulk delete counters
+              trackDurationOfOperation(getDurationTrackerFactory(),
+                  OBJECT_BULK_DELETE_REQUEST.getSymbol(), () -> {
+                    // acquire the write capacity for the number of keys to delete and record the duration.
+                    Duration durationToAcquireWriteCapacity = acquireWriteCapacity(keyCount);
+                    instrumentation.recordDuration(STORE_IO_RATE_LIMITED,
+                        true,
+                        durationToAcquireWriteCapacity);
+                    incrementStatistic(OBJECT_DELETE_OBJECTS, keyCount);
+                    return getS3Client().deleteObjects(deleteRequest);
+                  }));
       if (!response.errors().isEmpty()) {
         // one or more of the keys could not be deleted.
         // log and then throw
@@ -392,25 +399,25 @@ public class S3AStoreImpl implements S3AStore {
   @Override
   @Retries.RetryRaw
   public Map.Entry<Duration, Optional<DeleteObjectResponse>> deleteObject(
-          final DeleteObjectRequest request)
-          throws SdkException {
+      final DeleteObjectRequest request)
+      throws SdkException {
 
     String key = request.key();
     blockRootDelete(key);
     DurationInfo d = new DurationInfo(LOG, false, "deleting %s", key);
     try {
       DeleteObjectResponse response =
-              invoker.retryUntranslated(String.format("Delete %s:/%s", bucket, key),
-                      DELETE_CONSIDERED_IDEMPOTENT,
-                      trackDurationOfOperation(getDurationTrackerFactory(),
-                              OBJECT_DELETE_REQUEST.getSymbol(), () -> {
-                                incrementStatistic(OBJECT_DELETE_OBJECTS);
-                                // We try to acquire write capacity just before delete call.
-                                Duration durationToAcquireWriteCapacity = acquireWriteCapacity(1);
-                                instrumentation.recordDuration(STORE_IO_RATE_LIMITED,
-                                        true, durationToAcquireWriteCapacity);
-                                return getS3Client().deleteObject(request);
-                              }));
+          invoker.retryUntranslated(String.format("Delete %s:/%s", bucket, key),
+              DELETE_CONSIDERED_IDEMPOTENT,
+              trackDurationOfOperation(getDurationTrackerFactory(),
+                  OBJECT_DELETE_REQUEST.getSymbol(), () -> {
+                    incrementStatistic(OBJECT_DELETE_OBJECTS);
+                    // We try to acquire write capacity just before delete call.
+                    Duration durationToAcquireWriteCapacity = acquireWriteCapacity(1);
+                    instrumentation.recordDuration(STORE_IO_RATE_LIMITED,
+                        true, durationToAcquireWriteCapacity);
+                    return getS3Client().deleteObject(request);
+                  }));
       d.close();
       return Tuples.pair(d.asDuration(), Optional.of(response));
     } catch (AwsServiceException ase) {

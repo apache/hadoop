@@ -1,0 +1,122 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.hadoop.util.functional;
+
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.util.concurrent.atomic.AtomicReference;
+
+import static java.util.Objects.requireNonNull;
+import static org.apache.hadoop.util.functional.FunctionalIO.uncheckIOExceptions;
+
+/**
+ * A lazily constructed reference, whose reference
+ * constructor is a {@link CallableRaisingIOE} so
+ * may raise IOExceptions.
+ * <p>
+ * This {@code constructor}  is only invoked on demand
+ * when the reference is first needed,
+ * after which the same value is returned.
+ * @param <T> type of reference
+ */
+public class LazyAtomicReference<T> implements CallableRaisingIOE<T> {
+
+  /**
+   * Underlying reference.
+   */
+  protected final AtomicReference<T> reference = new AtomicReference<>();
+
+  /**
+   * Constructor for lazy creation.
+   */
+  protected final CallableRaisingIOE<? extends T> constructor;
+
+  /**
+   * Constructor for this instance.
+   * @param constructor method to invoke to actually construct the inner object.
+   */
+  public LazyAtomicReference(final CallableRaisingIOE<? extends T> constructor) {
+    this.constructor = requireNonNull(constructor);
+  }
+
+  /**
+   * Getter for the constructor.
+   * @return the constructor class
+   */
+  protected CallableRaisingIOE<? extends T> getConstructor() {
+    return constructor;
+  }
+
+  /**
+   * Get the reference.
+   * Subclasses working with this need to be careful working with this.
+   * @return the reference.
+   */
+  protected AtomicReference<T> getReference() {
+    return reference;
+  }
+
+  /**
+   * Get the value, constructing it if needed.
+   * @return the value
+   * @throws IOException on any evaluation failure
+   */
+  public final synchronized T get() throws IOException {
+    final T v = reference.get();
+    if (v != null) {
+      return v;
+    }
+    reference.set(constructor.apply());
+    return reference.get();
+  }
+
+  /**
+   * Invoke {@link #get()} and convert IOEs to
+   * UncheckedIOException.
+   * @return the value
+   * @throws UncheckedIOException if the constructor raised an IOException.
+   */
+  private final T getUnchecked() throws UncheckedIOException {
+    return uncheckIOExceptions(this::get);
+  }
+
+  /**
+   * Is the reference set?
+   * @return true if the reference has been set.
+   */
+  public final boolean isSet() {
+    return reference.get() != null;
+  }
+
+  /**
+   * Invoke {@link #get()}.
+   * @return the value
+   * @throws IOException on any evaluation failure
+   */
+  @Override
+  public final T apply() throws IOException {
+    return get();
+  }
+
+  @Override
+  public String toString() {
+    return "LazyAtomicReference{" +
+        "reference=" + reference + '}';
+  }
+}

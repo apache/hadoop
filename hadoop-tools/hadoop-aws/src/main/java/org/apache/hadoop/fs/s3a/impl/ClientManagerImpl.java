@@ -20,9 +20,11 @@ package org.apache.hadoop.fs.s3a.impl;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,13 +34,17 @@ import software.amazon.awssdk.transfer.s3.S3TransferManager;
 
 import org.apache.hadoop.fs.s3a.S3ClientFactory;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
+import org.apache.hadoop.util.functional.CallableRaisingIOE;
+import org.apache.hadoop.util.functional.LazyAutoCloseableReference;
 
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static java.util.concurrent.CompletableFuture.supplyAsync;
 import static org.apache.hadoop.fs.s3a.Statistic.STORE_CLIENT_CREATION;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDuration;
+import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfOperation;
 import static org.apache.hadoop.util.Preconditions.checkState;
+import static org.apache.hadoop.util.functional.FutureIO.awaitAllFutures;
 
 /**
  * Client manager for on-demand creation of S3 clients,
@@ -49,6 +55,7 @@ import static org.apache.hadoop.util.Preconditions.checkState;
 public class ClientManagerImpl implements ClientManager {
 
   public static final Logger LOG = LoggerFactory.getLogger(ClientManagerImpl.class);
+
   /**
    * Client factory to invoke.
    */
@@ -72,13 +79,13 @@ public class ClientManagerImpl implements ClientManager {
   /**
    * Core S3 client.
    */
-  private AtomicReference<S3Client> s3Client = new AtomicReference<>();
+  private final LazyAutoCloseableReference<S3Client> s3Client;
 
   /** Async client is used for transfer manager. */
-  private AtomicReference<S3AsyncClient> s3AsyncClient = new AtomicReference<>();
+  private final LazyAutoCloseableReference<S3AsyncClient> s3AsyncClient;
 
   /** Transfer manager. */
-  private AtomicReference<S3TransferManager> transferManager = new AtomicReference<>();
+  private final LazyAutoCloseableReference<S3TransferManager> transferManager;
 
   /**
    * Constructor.
@@ -94,47 +101,61 @@ public class ClientManagerImpl implements ClientManager {
     this.clientFactory = requireNonNull(clientFactory);
     this.clientCreationParameters = requireNonNull(clientCreationParameters);
     this.durationTrackerFactory = requireNonNull(durationTrackerFactory);
+    this.s3Client = new LazyAutoCloseableReference<>(createS3Client());
+    this.s3AsyncClient = new LazyAutoCloseableReference<>(createAyncClient());
+    this.transferManager = new LazyAutoCloseableReference<>(createTransferManager());
+  }
+
+  /**
+   * Create the function to create the S3 client.
+   * @return a callable which will create the client.
+   */
+  private CallableRaisingIOE<S3Client> createS3Client() {
+    return trackDurationOfOperation(
+        durationTrackerFactory,
+        STORE_CLIENT_CREATION.getSymbol(),
+        () -> clientFactory.createS3Client(getUri(), clientCreationParameters));
+  }
+
+  /**
+   * Create the function to create the S3 Async client.
+   * @return a callable which will create the client.
+   */
+  private CallableRaisingIOE<S3AsyncClient> createAyncClient() {
+    return trackDurationOfOperation(
+        durationTrackerFactory,
+        STORE_CLIENT_CREATION.getSymbol(),
+        () -> clientFactory.createS3AsyncClient(getUri(), clientCreationParameters));
+  }
+
+  /**
+   * Create the function to create the Transfer Manager.
+   * @return a callable which will create the component.
+   */
+  private CallableRaisingIOE<S3TransferManager> createTransferManager() {
+    return () -> {
+      final S3AsyncClient asyncClient = s3AsyncClient.get();
+      return trackDuration(durationTrackerFactory,
+          STORE_CLIENT_CREATION.getSymbol(), () ->
+              clientFactory.createS3TransferManager(asyncClient));
+    };
   }
 
   @Override
   public synchronized S3Client getOrCreateS3Client() throws IOException {
     checkNotClosed();
-    if (s3Client.get()== null) {
-      LOG.debug("Creating S3 client for {}", getUri());
-      s3Client.set(trackDuration(durationTrackerFactory,
-          STORE_CLIENT_CREATION.getSymbol(), () ->
-              clientFactory.createS3Client(getUri(), clientCreationParameters)));
-    }
     return s3Client.get();
   }
 
   @Override
   public synchronized S3AsyncClient getOrCreateAsyncClient() throws IOException {
-
     checkNotClosed();
-    if (s3AsyncClient == null) {
-      LOG.debug("Creating Async S3 client for {}", getUri());
-      s3AsyncClient.set(trackDuration(durationTrackerFactory,
-          STORE_CLIENT_CREATION.getSymbol(), () ->
-              clientFactory.createS3AsyncClient(
-                  getUri(),
-                  clientCreationParameters)));
-    }
     return s3AsyncClient.get();
   }
 
   @Override
   public synchronized S3TransferManager getOrCreateTransferManager() throws IOException {
     checkNotClosed();
-    if (transferManager.get() == null) {
-      // get the async client, which is likely to be demand-created.
-      final S3AsyncClient asyncClient = getOrCreateAsyncClient();
-      // then create the transfer manager.
-      LOG.debug("Creating S3 transfer manager for {}", getUri());
-      transferManager.set(trackDuration(durationTrackerFactory,
-          STORE_CLIENT_CREATION.getSymbol(), () ->
-              clientFactory.createS3TransferManager(asyncClient)));
-    }
     return transferManager.get();
   }
 
@@ -149,6 +170,8 @@ public class ClientManagerImpl implements ClientManager {
   /**
    * Close() is synchronized to avoid race conditions between
    * slow client creation and this close operation.
+   * <p>
+   * The objects are all deleted in parallel
    */
   @Override
   public synchronized void close() {
@@ -156,9 +179,20 @@ public class ClientManagerImpl implements ClientManager {
       // re-entrant close.
       return;
     }
-    close(transferManager.get());
-    close(s3AsyncClient.get());
-    close(s3Client.get());
+    // queue the closures.
+    List<Future<Object>> l = new ArrayList<>();
+    l.add(close(transferManager));
+    l.add(close(s3AsyncClient));
+    l.add(close(s3Client));
+
+    // once all are queued, await their completion
+    // and swallow any exception.
+    try {
+      awaitAllFutures(l);
+    } catch (Exception e) {
+      // should never happen.
+      LOG.warn("Exception in close", e);
+    }
   }
 
   /**
@@ -171,21 +205,22 @@ public class ClientManagerImpl implements ClientManager {
 
   /**
    * Queue closing a closeable, logging any exception, and returning null
-   * to use in assigning the field.
-   * @param closeable closeable.
+   * to use in when awaiting a result.
+   * @param reference closeable.
    * @param <T> type of closeable
    * @return null
    */
-  private <T extends AutoCloseable> CompletableFuture<T> close(T closeable) {
-    if (closeable == null) {
+  private <T extends AutoCloseable> CompletableFuture<Object> close(
+      LazyAutoCloseableReference<T> reference) {
+    if (!reference.isSet()) {
       // no-op
       return completedFuture(null);
     }
     return supplyAsync(() -> {
       try {
-        closeable.close();
+        reference.close();
       } catch (Exception e) {
-        LOG.warn("Failed to close {}", closeable, e);
+        LOG.warn("Failed to close {}", reference, e);
       }
       return null;
     });

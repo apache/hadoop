@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
-import software.amazon.awssdk.services.s3.S3Client;
-
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.S3AStorageStatistics;
 import org.apache.hadoop.fs.s3a.S3AStore;
@@ -59,8 +57,8 @@ public class S3AStoreBuilder {
   }
 
   public S3AStoreBuilder withClientManager(
-          final ClientManager clientManager) {
-    this.clientManager = clientManager;
+          final ClientManager manager) {
+    this.clientManager = manager;
     return this;
   }
 

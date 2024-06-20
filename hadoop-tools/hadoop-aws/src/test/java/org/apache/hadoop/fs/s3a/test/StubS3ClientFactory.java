@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.s3a.test;
 
 import java.io.IOException;
 import java.net.URI;
-import java.time.Duration;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import software.amazon.awssdk.services.s3.S3AsyncClient;
@@ -28,11 +27,18 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.transfer.s3.S3TransferManager;
 
 import org.apache.hadoop.fs.s3a.S3ClientFactory;
+import org.apache.hadoop.util.functional.InvocationRaisingIOE;
 
 /**
  * Stub implementation of {@link S3ClientFactory}.
  * returns the preconfigured clients.
  * No checks for null values are made.
+ * <p>
+ * The {@link #launcher} operation is invoked before creating
+ * the sync and async client libraries, which is where failures,
+ * delays etc can be added.
+ * It is not used in {@link #createS3TransferManager(S3AsyncClient)}
+ * because that is normally a fast phase.
  */
 public final class StubS3ClientFactory implements S3ClientFactory {
 
@@ -42,41 +48,36 @@ public final class StubS3ClientFactory implements S3ClientFactory {
   public static final String STUB_FACTORY = StubS3ClientFactory.class.getName();
 
   private final S3Client client;
+
   private final S3AsyncClient asyncClient;
+
   private final S3TransferManager transferManager;
 
-  private final Duration creationDelay;
+  private final InvocationRaisingIOE launcher;
 
   private AtomicInteger clientCreationCount = new AtomicInteger(0);
+
   private AtomicInteger asyncClientCreationCount = new AtomicInteger(0);
+
   private AtomicInteger transferManagerCreationCount = new AtomicInteger(0);
 
-  public StubS3ClientFactory(final S3Client client,
+  public StubS3ClientFactory(
+      final S3Client client,
       final S3AsyncClient asyncClient,
       final S3TransferManager transferManager,
-      final Duration creationDelay) {
+      final InvocationRaisingIOE launcher) {
+
     this.client = client;
     this.asyncClient = asyncClient;
     this.transferManager = transferManager;
-    this.creationDelay = creationDelay;
+    this.launcher = launcher;
   }
 
-  private void maybeSleep() {
-    if (creationDelay.isZero()) {
-      return;
-    }
-    try {
-      Thread.sleep(creationDelay.toMillis());
-    } catch (InterruptedException ignored) {
-
-    }
-
-  }
   @Override
   public S3Client createS3Client(final URI uri, final S3ClientCreationParameters parameters)
       throws IOException {
-    maybeSleep();
     clientCreationCount.incrementAndGet();
+    launcher.apply();
     return client;
   }
 
@@ -84,14 +85,13 @@ public final class StubS3ClientFactory implements S3ClientFactory {
   public S3AsyncClient createS3AsyncClient(final URI uri,
       final S3ClientCreationParameters parameters)
       throws IOException {
-    maybeSleep();
     asyncClientCreationCount.incrementAndGet();
+    launcher.apply();
     return asyncClient;
   }
 
   @Override
   public S3TransferManager createS3TransferManager(final S3AsyncClient s3AsyncClient) {
-    maybeSleep();
     transferManagerCreationCount.incrementAndGet();
     return transferManager;
   }
