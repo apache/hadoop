@@ -34,7 +34,7 @@ import org.slf4j.LoggerFactory;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests to verify AWS SDK based issues like duplicated shaded classes and others
+ * Tests to verify AWS SDK based issues like duplicated shaded classes and others.
  */
 public class TestAWSV2SDK extends AbstractHadoopTestBase {
 
@@ -53,6 +53,7 @@ public class TestAWSV2SDK extends AbstractHadoopTestBase {
         break;
       }
     }
+    LOG.debug("AWS SDK V2 Classpath:{}", v2ClassPath);
     assertThat(v2ClassPath)
             .as("AWS V2 SDK should be present on the classpath").isNotNull();
     List<String> listOfV2SdkClasses = getClassNamesFromJarFile(v2ClassPath);
