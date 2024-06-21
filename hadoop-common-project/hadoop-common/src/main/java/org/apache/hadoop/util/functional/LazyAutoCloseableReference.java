@@ -21,7 +21,7 @@ package org.apache.hadoop.util.functional;
 /**
  * A subclass of {@link LazyAtomicReference} which
  * holds an {@code AutoCloseable} reference and calls {@code close()}
- * on ot
+ * when it itself is closed.
  * @param <T> type of reference.
  */
 public class LazyAutoCloseableReference<T extends AutoCloseable>

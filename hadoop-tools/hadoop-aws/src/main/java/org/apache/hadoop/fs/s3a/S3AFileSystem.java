@@ -307,7 +307,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private S3AStore store;
 
   /**
-   * The core S3 client is created and managed by the ClientManager
+   * The core S3 client is created and managed by the ClientManager.
+   * It is copied here within {@link #initialize(URI, Configuration)}.
+   * Some mocking tests modify this so take care with changes.
    */
   private S3Client s3Client;
 
@@ -810,7 +812,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @return a new store instance
    */
   @VisibleForTesting
-  protected S3AStore createS3AStore(final ClientManager clientManager, final int rateLimitCapacity) {
+  protected S3AStore createS3AStore(final ClientManager clientManager,
+      final int rateLimitCapacity) {
     return new S3AStoreBuilder()
         .withClientManager(clientManager)
         .withDurationTrackerFactory(getDurationTrackerFactory())
@@ -1372,7 +1375,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     invoker.retry("Purging multipart uploads", bucket, true,
         () -> {
           RemoteIterator<MultipartUpload> uploadIterator =
-              MultipartUtils.listMultipartUploads(createStoreContext(), getS3Client(), null, maxKeys);
+              MultipartUtils.listMultipartUploads(createStoreContext(),
+                  getS3Client(), null, maxKeys);
 
           while (uploadIterator.hasNext()) {
             MultipartUpload upload = uploadIterator.next();
@@ -2974,7 +2978,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             if (changeTracker != null) {
               changeTracker.maybeApplyConstraint(requestBuilder);
             }
-            HeadObjectResponse headObjectResponse = getS3Client().headObject(requestBuilder.build());
+            HeadObjectResponse headObjectResponse = getS3Client()
+                .headObject(requestBuilder.build());
             if (changeTracker != null) {
               changeTracker.processMetadata(headObjectResponse, operation);
             }
@@ -3282,9 +3287,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       PutObjectResponse response =
           trackDurationOfSupplier(nonNullDurationTrackerFactory(durationTrackerFactory),
               OBJECT_PUT_REQUESTS.getSymbol(),
-              () -> isFile ?
-                  getS3Client().putObject(putObjectRequest, RequestBody.fromFile(uploadData.getFile())) :
-                  getS3Client().putObject(putObjectRequest,
+              () -> isFile
+                  ? getS3Client().putObject(putObjectRequest,
+                      RequestBody.fromFile(uploadData.getFile()))
+                  : getS3Client().putObject(putObjectRequest,
                       RequestBody.fromInputStream(uploadData.getUploadStream(),
                           putObjectRequest.contentLength())));
       incrementPutCompletedStatistics(true, len);

@@ -89,7 +89,7 @@ public class TestClientManager extends AbstractHadoopTestBase {
   }
 
   /**
-   * Create a stub client factory where there is a specific delay
+   * Create a stub client factory where there is a specific delay.
    * @param delay delay when creating a client.
    * @return the factory
    */
@@ -167,7 +167,7 @@ public class TestClientManager extends AbstractHadoopTestBase {
   }
 
   /**
-   * Create an async s3 client, verify it is only invoked once
+   * Get an async s3 client twice and verify it is only created once.
    */
   @Test
   public void testCreateAsyncS3Client() throws Throwable {
@@ -361,7 +361,8 @@ public class TestClientManager extends AbstractHadoopTestBase {
         String.format(GENERATED, 1),
         manager::getOrCreateS3Client);
 
-    // second will retry
+    // subsequent tests will also retry; the exception message changes each time,
+    // showing that it is regenerated rather than cached
     intercept(UnknownHostException.class, "[2]", manager::getOrCreateS3Client);
     intercept(UnknownHostException.class, "[3]", manager::getOrCreateAsyncClient);
     intercept(UnknownHostException.class, "[4]", manager::getOrCreateTransferManager);

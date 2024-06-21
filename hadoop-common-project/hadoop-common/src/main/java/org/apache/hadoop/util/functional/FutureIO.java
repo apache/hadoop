@@ -258,8 +258,7 @@ public final class FutureIO {
    * @param <U> type of builder
    * @return the builder passed in.
    */
-  public static <T, U extends FSBuilder<T, U>>
-  FSBuilder<T, U> propagateOptions(
+  public static <T, U extends FSBuilder<T, U>> FSBuilder<T, U> propagateOptions(
       final FSBuilder<T, U> builder,
       final Configuration conf,
       final String optionalPrefix,

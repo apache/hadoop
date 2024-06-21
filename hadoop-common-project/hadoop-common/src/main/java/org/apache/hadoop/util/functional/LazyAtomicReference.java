@@ -40,12 +40,12 @@ public class LazyAtomicReference<T> implements CallableRaisingIOE<T> {
   /**
    * Underlying reference.
    */
-  protected final AtomicReference<T> reference = new AtomicReference<>();
+  private final AtomicReference<T> reference = new AtomicReference<>();
 
   /**
    * Constructor for lazy creation.
    */
-  protected final CallableRaisingIOE<? extends T> constructor;
+  private final CallableRaisingIOE<? extends T> constructor;
 
   /**
    * Constructor for this instance.
@@ -92,7 +92,7 @@ public class LazyAtomicReference<T> implements CallableRaisingIOE<T> {
    * @return the value
    * @throws UncheckedIOException if the constructor raised an IOException.
    */
-  private final T getUnchecked() throws UncheckedIOException {
+  public final T getUnchecked() throws UncheckedIOException {
     return uncheckIOExceptions(this::get);
   }
 

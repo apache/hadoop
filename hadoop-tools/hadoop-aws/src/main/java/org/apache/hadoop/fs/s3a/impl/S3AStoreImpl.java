@@ -364,7 +364,8 @@ public class S3AStoreImpl implements S3AStore {
               // duration is tracked in the bulk delete counters
               trackDurationOfOperation(getDurationTrackerFactory(),
                   OBJECT_BULK_DELETE_REQUEST.getSymbol(), () -> {
-                    // acquire the write capacity for the number of keys to delete and record the duration.
+                    // acquire the write capacity for the number of keys to delete
+                    // and record the duration.
                     Duration durationToAcquireWriteCapacity = acquireWriteCapacity(keyCount);
                     instrumentation.recordDuration(STORE_IO_RATE_LIMITED,
                         true,

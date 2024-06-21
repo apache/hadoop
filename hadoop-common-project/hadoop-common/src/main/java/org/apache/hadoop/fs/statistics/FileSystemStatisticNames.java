@@ -27,7 +27,10 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public class FileSystemStatisticNames {
+public final class FileSystemStatisticNames {
+
+  private FileSystemStatisticNames() {
+  }
 
   /**
    * How long did filesystem initialization take?
