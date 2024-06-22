@@ -95,18 +95,18 @@ public class RouterSafemodeService extends PeriodicService {
   /**
    * Enter safe mode.
    */
-  synchronized void enter(boolean isSafeModeSetManually) {
+  void enter(boolean manualSetmode) {
     LOG.info("Entering safe mode");
     enterSafeModeTime = monotonicNow();
     safeMode = true;
     router.updateRouterState(RouterServiceState.SAFEMODE);
-    this.isSafeModeSetManually = isSafeModeSetManually;
+    this.isSafeModeSetManually = manualSetmode;
   }
 
   /**
    * Leave safe mode.
    */
-  synchronized void leave() {
+  void leave() {
     // Cache recently updated, leave safemode
     long timeInSafemode = monotonicNow() - enterSafeModeTime;
     LOG.info("Leaving safe mode after {} milliseconds", timeInSafemode);
@@ -152,7 +152,7 @@ public class RouterSafemodeService extends PeriodicService {
   }
 
   @Override
-  public synchronized void periodicInvoke() {
+  public void periodicInvoke() {
     long now = monotonicNow();
     long delta = now - startupTime;
     if (delta < startupInterval) {
