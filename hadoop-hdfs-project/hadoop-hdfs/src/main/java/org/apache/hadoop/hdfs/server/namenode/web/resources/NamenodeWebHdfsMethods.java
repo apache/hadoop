@@ -464,7 +464,7 @@ public class NamenodeWebHdfsMethods {
 
     int port = "http".equals(scheme) ? dn.getInfoPort() : dn
         .getInfoSecurePort();
-    final URI uri = new URI(scheme, null, dn.getHostName(), port, uripath,
+    final URI uri = new URI(scheme, null, dn.getIpAddr(), port, uripath,
         queryBuilder.toString(), null);
 
     if (LOG.isTraceEnabled()) {
