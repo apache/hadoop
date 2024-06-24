@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
+import java.io.UncheckedIOException;
 import java.net.URI;
 import java.net.UnknownHostException;
 import java.time.Duration;
@@ -40,8 +41,10 @@ import org.apache.hadoop.fs.s3a.test.StubS3ClientFactory;
 import org.apache.hadoop.fs.statistics.impl.StubDurationTrackerFactory;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 import org.apache.hadoop.util.functional.InvocationRaisingIOE;
+import org.apache.hadoop.util.functional.LazyAtomicReference;
 
 import static java.util.concurrent.CompletableFuture.supplyAsync;
+import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.util.functional.FunctionalIO.toUncheckedIOExceptionSupplier;
 import static org.mockito.Mockito.mock;
@@ -71,6 +74,8 @@ public class TestClientManager extends AbstractHadoopTestBase {
    * Format of exceptions raise.
    */
   private static final String GENERATED = "generated[%d]";
+
+  private final AtomicInteger counter = new AtomicInteger();
 
   private S3Client s3Client;
 
@@ -351,7 +356,6 @@ public class TestClientManager extends AbstractHadoopTestBase {
   @Test
   public void testClientCreationFailure() throws Throwable {
 
-    AtomicInteger counter = new AtomicInteger();
     final ClientManager manager = manager(factory(() -> {
       throw new UnknownHostException(String.format(GENERATED, counter.incrementAndGet()));
     }));
@@ -369,4 +373,51 @@ public class TestClientManager extends AbstractHadoopTestBase {
 
     manager.close();
   }
+
+  /**
+   * Test the underlying {@link LazyAtomicReference} integraton with java
+   * Supplier API.
+   */
+  @Test
+  public void testSupplierIntegration() throws Throwable {
+
+    LazyAtomicReference<Integer> ref = LazyAtomicReference.fromSupplier(counter::incrementAndGet);
+
+    // constructor does not invoke the supplier
+    Assertions.assertThat(counter.get())
+        .describedAs("state of counter after construction")
+        .isEqualTo(0);
+
+    // constructor does not invoke the supplier
+    Assertions.assertThat(counter.get())
+        .describedAs("state of counter after construction")
+        .isEqualTo(0);
+
+    // second invocation does not
+    Assertions.assertThat(ref.get())
+        .describedAs("second get of %s", ref)
+        .isEqualTo(1);
+    // nor does Callable.apply()
+    Assertions.assertThat(ref.apply())
+        .describedAs("second get of %s", ref)
+        .isEqualTo(1);
+  }
+  /**
+   * Test the underlying {@link LazyAtomicReference} integration with java
+   * Supplier API.
+   */
+  @Test
+  public void testSupplierIntegrationFailureHandling() throws Throwable {
+
+    LazyAtomicReference<Integer> ref = new LazyAtomicReference<>(() -> {
+      throw new UnknownHostException(String.format(GENERATED, counter.incrementAndGet()));
+    });
+
+    // the get() call will wrap the raised exception, which can be extracted.
+    UnknownHostException ex =
+        (UnknownHostException) intercept(UncheckedIOException.class, ref::get).getCause();
+    assertExceptionContains("[1]", ex);
+
+  }
+
 }

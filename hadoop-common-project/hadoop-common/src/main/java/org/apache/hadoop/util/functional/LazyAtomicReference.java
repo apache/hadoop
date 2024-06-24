@@ -21,6 +21,7 @@ package org.apache.hadoop.util.functional;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.util.functional.FunctionalIO.uncheckIOExceptions;
@@ -33,9 +34,15 @@ import static org.apache.hadoop.util.functional.FunctionalIO.uncheckIOExceptions
  * This {@code constructor}  is only invoked on demand
  * when the reference is first needed,
  * after which the same value is returned.
+ * <p>
+ * Implements {@link CallableRaisingIOE<T>} and {@code Supplier<T>}.
+ * so an instance of this can be used in a functional IO chain.
+ * As such, it can act as a delayed and caching invocator of a function:
+ * the supplier passed in is only ever invoked once, and only when requested.
  * @param <T> type of reference
  */
-public class LazyAtomicReference<T> implements CallableRaisingIOE<T> {
+public class LazyAtomicReference<T>
+    implements CallableRaisingIOE<T>, Supplier<T> {
 
   /**
    * Underlying reference.
@@ -77,7 +84,7 @@ public class LazyAtomicReference<T> implements CallableRaisingIOE<T> {
    * @return the value
    * @throws IOException on any evaluation failure
    */
-  public final synchronized T get() throws IOException {
+  public final synchronized T eval() throws IOException {
     final T v = reference.get();
     if (v != null) {
       return v;
@@ -87,13 +94,17 @@ public class LazyAtomicReference<T> implements CallableRaisingIOE<T> {
   }
 
   /**
-   * Invoke {@link #get()} and convert IOEs to
+   * Invoke {@link #eval()} and convert IOEs to
    * UncheckedIOException.
+   * <p>
+   * This is the {@code Supplier.get()} implementation, which allows
+   * this class to passed into anything taking a supplier.
    * @return the value
    * @throws UncheckedIOException if the constructor raised an IOException.
    */
-  public final T getUnchecked() throws UncheckedIOException {
-    return uncheckIOExceptions(this::get);
+  @Override
+  public final T get() throws UncheckedIOException {
+    return uncheckIOExceptions(this::eval);
   }
 
   /**
@@ -105,18 +116,31 @@ public class LazyAtomicReference<T> implements CallableRaisingIOE<T> {
   }
 
   /**
-   * Invoke {@link #get()}.
+   * Invoke {@link #eval()}.
    * @return the value
    * @throws IOException on any evaluation failure
    */
   @Override
   public final T apply() throws IOException {
-    return get();
+    return eval();
   }
 
   @Override
   public String toString() {
     return "LazyAtomicReference{" +
         "reference=" + reference + '}';
+  }
+
+
+  /**
+   * Create from a supplier.
+   * This is not a constructor to avoid ambiguity when a lambda-expression is
+   * passed in.
+   * @param supplier supplier implementation.
+   * @return a lazy reference.
+   * @param <T> type of reference
+   */
+  public static <T> LazyAtomicReference fromSupplier(Supplier<T> supplier) {
+    return new LazyAtomicReference<>(supplier::get);
   }
 }

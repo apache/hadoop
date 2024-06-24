@@ -134,7 +134,7 @@ public class ClientManagerImpl implements ClientManager {
    */
   private CallableRaisingIOE<S3TransferManager> createTransferManager() {
     return () -> {
-      final S3AsyncClient asyncClient = s3AsyncClient.get();
+      final S3AsyncClient asyncClient = s3AsyncClient.eval();
       return trackDuration(durationTrackerFactory,
           STORE_CLIENT_CREATION.getSymbol(), () ->
               clientFactory.createS3TransferManager(asyncClient));
@@ -144,19 +144,19 @@ public class ClientManagerImpl implements ClientManager {
   @Override
   public synchronized S3Client getOrCreateS3Client() throws IOException {
     checkNotClosed();
-    return s3Client.get();
+    return s3Client.eval();
   }
 
   @Override
   public synchronized S3AsyncClient getOrCreateAsyncClient() throws IOException {
     checkNotClosed();
-    return s3AsyncClient.get();
+    return s3AsyncClient.eval();
   }
 
   @Override
   public synchronized S3TransferManager getOrCreateTransferManager() throws IOException {
     checkNotClosed();
-    return transferManager.get();
+    return transferManager.eval();
   }
 
   /**
@@ -181,9 +181,9 @@ public class ClientManagerImpl implements ClientManager {
     }
     // queue the closures.
     List<Future<Object>> l = new ArrayList<>();
-    l.add(close(transferManager));
-    l.add(close(s3AsyncClient));
-    l.add(close(s3Client));
+    l.add(closeAsync(transferManager));
+    l.add(closeAsync(s3AsyncClient));
+    l.add(closeAsync(s3Client));
 
     // once all are queued, await their completion
     // and swallow any exception.
@@ -210,7 +210,7 @@ public class ClientManagerImpl implements ClientManager {
    * @param <T> type of closeable
    * @return null
    */
-  private <T extends AutoCloseable> CompletableFuture<Object> close(
+  private <T extends AutoCloseable> CompletableFuture<Object> closeAsync(
       LazyAutoCloseableReference<T> reference) {
     if (!reference.isSet()) {
       // no-op
