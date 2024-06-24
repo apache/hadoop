@@ -106,6 +106,33 @@
 </property>
 
 <property>
+  <name>dfs.namenode.msync.rpc-address</name>
+  <value></value>
+  <description>
+    NameNode RPC msync address.  This is an optional separate RPC address
+    that can be used to msync requests to protect against
+    resource exhaustion in the main RPC handler pool.  In the case of
+    HA/Federation where multiple NameNodes exist, the name service ID is added
+    to the name e.g. dfs.namenode.msync.rpc-address.ns1.  The value of this
+    property will take the form of nn-host1:rpc-port.  If this property is not
+    defined, then the NameNode will not start a msync RPC server.  By
+    default, the property is not defined.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.msync.rpc-bind-host</name>
+  <value></value>
+  <description>
+    The actual address the msync RPC server will bind to.  If this optional
+    address is set, it overrides only the hostname portion of
+    dfs.namenode.msync.rpc-address.  It can also be specified per name node
+    or name service for HA/Federation.  This is useful for making the name node
+    listen on all interfaces by setting it to 0.0.0.0.
+  </description>
+</property>
+
+<property>
   <name>dfs.namenode.secondary.http-address</name>
   <value>0.0.0.0:9868</value>
   <description>
