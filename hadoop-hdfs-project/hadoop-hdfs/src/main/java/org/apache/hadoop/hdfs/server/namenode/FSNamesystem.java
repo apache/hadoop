@@ -579,6 +579,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   private ExecutorService edekCacheLoader = null;
   private final int edekCacheLoaderDelay;
   private final int edekCacheLoaderInterval;
+  private final int edekCacheLoaderMaxRetries;
 
   /**
    * When an active namenode will roll its own edit log, in # edits
@@ -1012,6 +1013,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       this.edekCacheLoaderInterval = conf.getInt(
           DFSConfigKeys.DFS_NAMENODE_EDEKCACHELOADER_INTERVAL_MS_KEY,
           DFSConfigKeys.DFS_NAMENODE_EDEKCACHELOADER_INTERVAL_MS_DEFAULT);
+      this.edekCacheLoaderMaxRetries = conf.getInt(
+          DFSConfigKeys.DFS_NAMENODE_EDEKCACHELOADER_MAX_RETRIES_KEY,
+          DFSConfigKeys.DFS_NAMENODE_EDEKCACHELOADER_MAX_RETRIES_DEFAULT);
 
       this.leaseRecheckIntervalMs = conf.getLong(
           DFS_NAMENODE_LEASE_RECHECK_INTERVAL_MS_KEY,
@@ -1470,8 +1474,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             new ThreadFactoryBuilder().setDaemon(true)
                 .setNameFormat("Warm Up EDEK Cache Thread #%d")
                 .build());
-        FSDirEncryptionZoneOp.warmUpEdekCache(edekCacheLoader, dir,
-            edekCacheLoaderDelay, edekCacheLoaderInterval);
+        FSDirEncryptionZoneOp
+            .warmUpEdekCache(edekCacheLoader, dir, edekCacheLoaderDelay, edekCacheLoaderInterval,
+                edekCacheLoaderMaxRetries);
       }
       if (blockManager.getSPSManager() != null) {
         blockManager.getSPSManager().start();
