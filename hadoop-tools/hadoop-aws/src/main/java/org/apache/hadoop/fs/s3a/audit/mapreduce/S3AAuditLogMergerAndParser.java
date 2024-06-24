@@ -77,9 +77,8 @@ public class S3AAuditLogMergerAndParser {
    */
   public HashMap<String, String> parseAuditLog(String singleAuditLog) {
     HashMap<String, String> auditLogMap = new HashMap<>();
-    if (singleAuditLog == null || singleAuditLog.length() == 0) {
-      LOG.info(
-          "This is an empty string or null string, expected a valid string to parse");
+    if (singleAuditLog == null || singleAuditLog.isEmpty()) {
+      LOG.info("This is an empty string or null string, expected a valid string to parse");
       return auditLogMap;
     }
     final Matcher matcher = LOG_ENTRY_PATTERN.matcher(singleAuditLog);
@@ -110,7 +109,7 @@ public class S3AAuditLogMergerAndParser {
    */
   public HashMap<String, String> parseReferrerHeader(String referrerHeader) {
     HashMap<String, String> referrerHeaderMap = new HashMap<>();
-    if (referrerHeader == null || referrerHeader.length() == 0) {
+    if (referrerHeader == null || referrerHeader.isEmpty()) {
       LOG.info(
           "This is an empty string or null string, expected a valid string to parse");
       return referrerHeaderMap;
@@ -124,7 +123,7 @@ public class S3AAuditLogMergerAndParser {
 
     int lengthOfReferrer = httpReferrer.length();
     int start = 0;
-    LOG.info("HttpReferrer headers string: {}", httpReferrer);
+    LOG.debug("HttpReferrer headers string: {}", httpReferrer);
     while (start < lengthOfReferrer) {
       // splits "key" and "value" of each header
       int equals = httpReferrer.indexOf("=", start);
@@ -147,7 +146,7 @@ public class S3AAuditLogMergerAndParser {
       start = end + 1;
     }
 
-    LOG.info("HttpReferrer headers map:{}", referrerHeaderMap);
+    LOG.debug("HttpReferrer headers map:{}", referrerHeaderMap);
     return referrerHeaderMap;
   }
 
@@ -168,7 +167,7 @@ public class S3AAuditLogMergerAndParser {
     RemoteIterator<LocatedFileStatus> listOfLogFiles =
         fileSystem.listFiles(logsPath, true);
 
-    Path destFile = new Path(destPath, "AuditLogFile");
+    Path destFile = destPath;
 
     try (FSDataOutputStream fsDataOutputStream = fileSystem.create(destFile)) {
 
@@ -188,10 +187,10 @@ public class S3AAuditLogMergerAndParser {
 
           // Instantiate DatumWriter class
           DatumWriter<AvroS3LogEntryRecord> datumWriter =
-              new SpecificDatumWriter<AvroS3LogEntryRecord>(
+              new SpecificDatumWriter<>(
                   AvroS3LogEntryRecord.class);
           DataFileWriter<AvroS3LogEntryRecord> dataFileWriter =
-              new DataFileWriter<AvroS3LogEntryRecord>(datumWriter);
+              new DataFileWriter<>(datumWriter);
 
           List<String> longValues =
               Arrays.asList(TURNAROUNDTIME_GROUP, BYTESSENT_GROUP,
@@ -222,7 +221,7 @@ public class S3AAuditLogMergerAndParser {
 
               // Get the referrer header value from the audit logs.
               String referrerHeader = auditLogMap.get(REFERRER_HEADER_KEY);
-              LOG.info("Parsed referrer header : {}", referrerHeader);
+              LOG.debug("Parsed referrer header : {}", referrerHeader);
               // referrer header value isn't parse-able.
               if (StringUtils.isBlank(referrerHeader) || referrerHeader
                   .equals("-")) {
@@ -234,7 +233,7 @@ public class S3AAuditLogMergerAndParser {
               HashMap<String, String> referrerHeaderMap =
                   parseReferrerHeader(referrerHeader);
 
-              if (referrerHeaderMap.size() > 0) {
+              if (!referrerHeaderMap.isEmpty()) {
                 referrerHeaderLogParsed++;
               }
 
@@ -270,10 +269,9 @@ public class S3AAuditLogMergerAndParser {
         // Write byte array into a file in destination path.
         fsDataOutputStream.write(byteBuffer);
       }
-      LOG.info("Successfully generated avro data");
     }
 
-    LOG.info("Successfully parsed :{} audit logs and {} referrer headers logs "
+    LOG.info("Successfully parsed :{} audit logs and {} referrer header "
         + "in the logs", auditLogsParsed, referrerHeaderLogParsed);
     return true;
   }

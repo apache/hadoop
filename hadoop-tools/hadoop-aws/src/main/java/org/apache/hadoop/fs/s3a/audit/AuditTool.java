@@ -64,7 +64,7 @@ public class AuditTool extends Configured implements Tool, Closeable {
    * Purpose of this tool: {@value}.
    */
   public static final String PURPOSE =
-      "\n\nUSAGE:\nMerge, parse audit log files and convert into avro file "
+      "\n\nUSAGE:\nMerge and parse audit log files and convert into avro files "
           + "for "
           + "better "
           + "visualization";
@@ -76,8 +76,9 @@ public class AuditTool extends Configured implements Tool, Closeable {
 
   private static final String USAGE =
       "hadoop " + AUDIT_TOOL +
-          " s3a://<bucket_name>/<destination_dir_path>/" +
-          " s3a://<bucket_name>/<audit_logs_dir_path>/" + "\n";
+          " <path of source files>" +
+          " <path of output file>"
+          + "\n";
 
   private PrintWriter out;
 
@@ -113,9 +114,10 @@ public class AuditTool extends Configured implements Tool, Closeable {
     List<String> paths = Arrays.asList(args);
 
     // Path of audit log files
-    Path logsPath = new Path(paths.get(1));
-    // Path of destination directory
-    Path destPath = new Path(paths.get(0));
+    Path logsPath = new Path(paths.get(0));
+
+    // Path of destination file
+    Path destPath = new Path(paths.get(1));
 
     // Setting the file system
     URI fsURI = new URI(logsPath.toString());
@@ -127,14 +129,6 @@ public class AuditTool extends Configured implements Tool, Closeable {
           + " file which was passed as an argument");
       throw invalidArgs(
           "Expecting a directory, but " + logsPath.getName() + " is a"
-              + " file which was passed as an argument");
-    }
-    FileStatus destinationFileStatus = fileSystem.getFileStatus(destPath);
-    if (destinationFileStatus.isFile()) {
-      errorln("Expecting a directory, but " + destPath.getName() + " is a"
-          + " file which was passed as an argument");
-      throw invalidArgs(
-          "Expecting a directory, but " + destPath.getName() + " is a"
               + " file which was passed as an argument");
     }
 
@@ -153,9 +147,7 @@ public class AuditTool extends Configured implements Tool, Closeable {
   private void preConditionArgsSizeCheck(String[] args) {
     if (args.length != 2) {
       errorln(getUsage());
-      throw invalidArgs("Invalid number of arguments, please specify audit "
-          + "log files directory as 1st argument and destination directory "
-          + "as 2nd argument");
+      throw invalidArgs("Invalid number of arguments");
     }
   }
 
