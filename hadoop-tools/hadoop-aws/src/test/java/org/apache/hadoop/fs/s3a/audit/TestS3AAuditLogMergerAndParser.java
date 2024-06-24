@@ -30,16 +30,21 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
 import org.apache.hadoop.fs.s3a.audit.mapreduce.S3AAuditLogMergerAndParser;
+import org.apache.hadoop.test.HadoopTestBase;
 import org.apache.hadoop.util.Preconditions;
 
+import static org.apache.hadoop.fs.audit.AuditConstants.PARAM_PATH;
+import static org.apache.hadoop.fs.audit.AuditConstants.PARAM_PRINCIPAL;
+import static org.apache.hadoop.fs.s3a.audit.mapreduce.S3AAuditLogMergerAndParser.parseReferrerHeader;
+
 /**
- * This will implement different tests on S3AAuditLogMergerAndParser class.
+ * Unit tests on S3AAuditLogMergerAndParser class.
  */
-public class TestS3AAuditLogMergerAndParser extends AbstractS3ATestBase {
+public class TestS3AAuditLogMergerAndParser extends HadoopTestBase {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestS3AAuditLogMergerAndParser.class);
@@ -137,6 +142,8 @@ public class TestS3AAuditLogMergerAndParser extends AbstractS3ATestBase {
           + "&fs=e8ede3c7-8506-4a43-8268-fe8fcbb510a4&t1=156"
           + "&ts=1620905165700\"";
 
+  private final Configuration conf = new Configuration();
+
   /**
    * Sample directories and files to test.
    */
@@ -191,16 +198,15 @@ public class TestS3AAuditLogMergerAndParser extends AbstractS3ATestBase {
   @Test
   public void testParseReferrerHeader() {
     Map<String, String> parseReferrerHeaderResult =
-        s3AAuditLogMergerAndParser.parseReferrerHeader(sampleReferrerHeader);
-    assertNotNull("the result of parseReferrerHeaderResult should be not null",
-        parseReferrerHeaderResult);
+        parseReferrerHeader(sampleReferrerHeader);
     //verifying the path 'p1' from parsed referrer header
-    assertEquals("Mismatch in the path parsed from the referrer",
-        "fork-0001/test/testParseBrokenCSVFile",
-        parseReferrerHeaderResult.get("p1"));
-    //verifying the principal 'pr' from parsed referrer header
-    assertEquals("Mismatch in the principal parsed from the referrer", "alice",
-        parseReferrerHeaderResult.get("pr"));
+    Assertions.assertThat(parseReferrerHeaderResult)
+        .describedAs("Mismatch in the path parsed from the referrer")
+        .isNotNull()
+        .containsEntry(PARAM_PATH, "fork-0001/test/testParseBrokenCSVFile")
+        .describedAs("Referrer header map should contain the principal")
+        .containsEntry(PARAM_PRINCIPAL, "alice");
+
   }
 
   /**
@@ -209,14 +215,10 @@ public class TestS3AAuditLogMergerAndParser extends AbstractS3ATestBase {
    */
   @Test
   public void testParseReferrerHeaderEmptyAndNull() {
-    Map<String, String> parseReferrerHeaderResultEmpty =
-        s3AAuditLogMergerAndParser.parseReferrerHeader("");
-    assertTrue("the returned list should be empty for this test",
-        parseReferrerHeaderResultEmpty.isEmpty());
-    Map<String, String> parseReferrerHeaderResultNull =
-        s3AAuditLogMergerAndParser.parseReferrerHeader(null);
-    assertTrue("the returned list should be empty for this test",
-        parseReferrerHeaderResultNull.isEmpty());
+    Assertions.assertThat(parseReferrerHeader(""))
+        .isEmpty();
+    Assertions.assertThat(parseReferrerHeader(null))
+        .isEmpty();
   }
 
   /**
@@ -239,7 +241,7 @@ public class TestS3AAuditLogMergerAndParser extends AbstractS3ATestBase {
 
     sampleDestDir = Files.createTempDirectory("sampleDestDir").toFile();
     Path destPath = new Path(sampleDestDir.toURI());
-    FileSystem fileSystem = auditFilePath.getFileSystem(getConfiguration());
+    FileSystem fileSystem = auditFilePath.getFileSystem(conf);
     boolean mergeAndParseResult =
         s3AAuditLogMergerAndParser.mergeAndParseAuditLogFiles(fileSystem,
             auditDirPath, destPath);
@@ -275,7 +277,7 @@ public class TestS3AAuditLogMergerAndParser extends AbstractS3ATestBase {
     sampleDestDir = Files.createTempDirectory("sampleDestDir").toFile();
     Path logsPath = new Path(sampleDir.toURI());
     Path destPath = new Path(sampleDestDir.toURI());
-    FileSystem fileSystem = logsPath.getFileSystem(getConfiguration());
+    FileSystem fileSystem = logsPath.getFileSystem(conf);
     boolean mergeAndParseResult =
         s3AAuditLogMergerAndParser.mergeAndParseAuditLogFiles(fileSystem,
             logsPath, destPath);

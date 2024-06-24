@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a.audit;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.net.URI;
 import java.util.Arrays;
@@ -34,6 +35,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.audit.mapreduce.S3AAuditLogMergerAndParser;
+import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -47,9 +49,14 @@ import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_SUCCESS;
  * Its functionality is to parse the audit log files
  * and generate avro file.
  */
-public class AuditTool extends Configured implements Tool, Closeable {
+public class AuditTool extends S3GuardTool {
 
   private static final Logger LOG = LoggerFactory.getLogger(AuditTool.class);
+
+  /**
+   * Name of audit tool: {@value}.
+   */
+  public static final String AUDIT = "audit";
 
   private final S3AAuditLogMergerAndParser s3AAuditLogMergerAndParser =
       new S3AAuditLogMergerAndParser();
@@ -82,8 +89,8 @@ public class AuditTool extends Configured implements Tool, Closeable {
 
   private PrintWriter out;
 
-  public AuditTool() {
-    super();
+  public AuditTool(final Configuration conf) {
+    super(conf);
   }
 
   /**
@@ -101,7 +108,7 @@ public class AuditTool extends Configured implements Tool, Closeable {
 
   /**
    * This run method in AuditTool takes source and destination path of bucket,
-   * and check if there are directories and pass these paths to merge and
+   * and checks if there are directories and pass these paths to merge and
    * parse audit log files.
    *
    * @param args argument list
@@ -109,7 +116,11 @@ public class AuditTool extends Configured implements Tool, Closeable {
    * @throws Exception on any failure.
    */
   @Override
-  public int run(String[] args) throws Exception {
+  public int run(final String[] args, final PrintStream stream)
+      throws Exception, ExitUtil.ExitException {
+
+    this.out = new PrintWriter(stream);
+
     preConditionArgsSizeCheck(args);
     List<String> paths = Arrays.asList(args);
 
@@ -120,17 +131,7 @@ public class AuditTool extends Configured implements Tool, Closeable {
     Path destPath = new Path(paths.get(1));
 
     // Setting the file system
-    URI fsURI = new URI(logsPath.toString());
-    FileSystem fileSystem = FileSystem.get(fsURI, new Configuration());
-
-    FileStatus logsFileStatus = fileSystem.getFileStatus(logsPath);
-    if (logsFileStatus.isFile()) {
-      errorln("Expecting a directory, but " + logsPath.getName() + " is a"
-          + " file which was passed as an argument");
-      throw invalidArgs(
-          "Expecting a directory, but " + logsPath.getName() + " is a"
-              + " file which was passed as an argument");
-    }
+    FileSystem fileSystem = logsPath.getFileSystem(getConf());
 
     // Calls S3AAuditLogMergerAndParser for implementing merging, passing of
     // audit log files and converting into avro file
@@ -151,40 +152,9 @@ public class AuditTool extends Configured implements Tool, Closeable {
     }
   }
 
-  protected static void errorln(String x) {
-    System.err.println(x);
-  }
 
   /**
-   * Build the exception to raise on invalid arguments.
-   *
-   * @param format string format
-   * @param args   optional arguments for the string
-   * @return a new exception to throw
-   */
-  protected static ExitUtil.ExitException invalidArgs(
-      String format, Object... args) {
-    return exitException(INVALID_ARGUMENT, format, args);
-  }
-
-  /**
-   * Build a exception to throw with a formatted message.
-   *
-   * @param exitCode exit code to use
-   * @param format   string format
-   * @param args     optional arguments for the string
-   * @return a new exception to throw
-   */
-  protected static ExitUtil.ExitException exitException(
-      final int exitCode,
-      final String format,
-      final Object... args) {
-    return new ExitUtil.ExitException(exitCode,
-        String.format(format, args));
-  }
-
-  /**
-   * Flush all active output channels, including {@Code System.err},
+   * Flush all active output channels, including {@code System.err},
    * so as to stay in sync with any JRE log messages.
    */
   private void flush() {
@@ -196,44 +166,12 @@ public class AuditTool extends Configured implements Tool, Closeable {
     System.err.flush();
   }
 
-  @Override
-  public void close() throws IOException {
+
+  public void closeOutput() throws IOException {
     flush();
     if (out != null) {
       out.close();
     }
   }
 
-  /**
-   * Inner entry point, with no logging or system exits.
-   *
-   * @param conf configuration
-   * @param argv argument list
-   * @return an exception
-   * @throws Exception Exception.
-   */
-  public static int exec(Configuration conf, String... argv) throws Exception {
-    try (AuditTool auditTool = new AuditTool()) {
-      return ToolRunner.run(conf, auditTool, argv);
-    }
-  }
-
-  /**
-   * Main entry point.
-   *
-   * @param argv args list
-   */
-  public static void main(String[] argv) {
-    try {
-      ExitUtil.terminate(exec(new Configuration(), argv));
-    } catch (ExitUtil.ExitException e) {
-      LOG.error("Exception while Terminating the command ran :{}",
-          e.toString());
-      System.exit(e.status);
-    } catch (Exception e) {
-      LOG.error("Exception while Terminating the command ran :{}",
-          e.toString(), e);
-      ExitUtil.halt(-1, e);
-    }
-  }
 }

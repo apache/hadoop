@@ -22,6 +22,8 @@ import java.io.File;
 import java.io.FileWriter;
 import java.nio.file.Files;
 
+import org.assertj.core.api.Assertions;
+import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,30 +31,49 @@ import org.slf4j.LoggerFactory;
 import org.apache.avro.file.DataFileReader;
 import org.apache.avro.io.DatumReader;
 import org.apache.avro.specific.SpecificDatumReader;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
-import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
+import org.apache.hadoop.test.HadoopTestBase;
 
+import static org.apache.hadoop.fs.s3a.audit.S3LogParser.BUCKET_GROUP;
+import static org.apache.hadoop.fs.s3a.audit.S3LogParser.REMOTEIP_GROUP;
 import static org.apache.hadoop.fs.s3a.audit.TestS3AAuditLogMergerAndParser.SAMPLE_LOG_ENTRY;
 
 /**
- * This will implement tests on AuditTool class.
+ * AuditTool tests.
  */
-public class TestAuditTool extends AbstractS3ATestBase {
+public class TestAuditTool extends HadoopTestBase {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestAuditTool.class);
 
-  private final AuditTool auditTool = new AuditTool();
+  private final Configuration conf = new Configuration();
+
+  /**
+   * The audit tool.
+   */
+  private AuditTool auditTool;
+
+  /**
+   * Temporary directory to store the sample files; should be under target/
+   * though IDEs may put it elsewhere.
+   */
+  private File sampleDir;
 
   /**
    * Sample directories and files to test.
    */
   private File sampleFile;
-  private File sampleDir;
+
   private File sampleDestDir;
+
+  @Before
+  public void setup() throws Exception {
+    auditTool = new AuditTool(conf);
+  }
 
   /**
    * Testing run method in AuditTool class by passing source and destination
@@ -69,9 +90,9 @@ public class TestAuditTool extends AbstractS3ATestBase {
     sampleDestDir = Files.createTempDirectory("sampleDestDir").toFile();
     Path logsPath = new Path(sampleDir.toURI());
     Path destPath = new Path(sampleDestDir.toURI());
-    String[] args = {destPath.toString(), logsPath.toString()};
+    String[] args = {logsPath.toString(), destPath.toString()};
     auditTool.run(args);
-    FileSystem fileSystem = destPath.getFileSystem(getConfiguration());
+    FileSystem fileSystem = destPath.getFileSystem(conf);
     RemoteIterator<LocatedFileStatus> listOfDestFiles =
         fileSystem.listFiles(destPath, true);
     Path expectedPath = new Path(destPath, "AvroData.avro");
@@ -81,21 +102,25 @@ public class TestAuditTool extends AbstractS3ATestBase {
 
     //DeSerializing the objects
     DatumReader<AvroS3LogEntryRecord> datumReader =
-            new SpecificDatumReader<AvroS3LogEntryRecord>(AvroS3LogEntryRecord.class);
+        new SpecificDatumReader<>(AvroS3LogEntryRecord.class);
 
     //Instantiating DataFileReader
     DataFileReader<AvroS3LogEntryRecord> dataFileReader =
-            new DataFileReader<AvroS3LogEntryRecord>(avroFile, datumReader);
-    AvroS3LogEntryRecord avroS3LogEntryRecord = null;
+        new DataFileReader<>(avroFile, datumReader);
 
+    AvroS3LogEntryRecord record = new AvroS3LogEntryRecord();
     while (dataFileReader.hasNext()) {
-      avroS3LogEntryRecord = dataFileReader.next(avroS3LogEntryRecord);
-      //verifying the bucket from generated avro data
-      assertEquals("the expected and actual results should be same",
-              "bucket-london", avroS3LogEntryRecord.get("bucket").toString());
+      record = dataFileReader.next(record);
+      Assertions.assertThat(record.get(BUCKET_GROUP))
+          .describedAs(BUCKET_GROUP)
+          .extracting(Object::toString)
+          .isEqualTo("bucket-london");
+
       //verifying the remoteip from generated avro data
-      assertEquals("the expected and actual results should be same",
-              "109.157.171.174", avroS3LogEntryRecord.get("remoteip").toString());
+      Assertions.assertThat(record.get(REMOTEIP_GROUP))
+          .describedAs(BUCKET_GROUP)
+          .extracting(Object::toString)
+          .isEqualTo("109.157.171.174");
     }
   }
 }

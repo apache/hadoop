@@ -43,7 +43,10 @@ import org.apache.hadoop.fs.s3a.audit.AvroS3LogEntryRecord;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.LineRecordReader;
+import org.apache.hadoop.util.DurationInfo;
 
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_WHOLE_FILE;
 import static org.apache.hadoop.fs.s3a.audit.S3LogParser.AWS_LOG_REGEXP_GROUPS;
 import static org.apache.hadoop.fs.s3a.audit.S3LogParser.BYTESSENT_GROUP;
 import static org.apache.hadoop.fs.s3a.audit.S3LogParser.LOG_ENTRY_PATTERN;
@@ -65,8 +68,29 @@ public class S3AAuditLogMergerAndParser {
   private static final String REFERRER_HEADER_KEY = "referrer";
 
   // Basic parsing counters.
+
+  /**
+   * Number of audit log files parsed.
+   */
+  private long logFilesParsed = 0;
+
+  /**
+   * Number of log entries parsed.
+   */
   private long auditLogsParsed = 0;
+
+
+
+
+  /**
+   * How many referrer headers were parsed.
+   */
   private long referrerHeaderLogParsed = 0;
+
+  /**
+   * How many records were skipped due to lack of referrer or other reason.
+   */
+  private long recordsSkipped = 0;
 
   /**
    * parseAuditLog method helps in parsing the audit log
@@ -78,7 +102,7 @@ public class S3AAuditLogMergerAndParser {
   public HashMap<String, String> parseAuditLog(String singleAuditLog) {
     HashMap<String, String> auditLogMap = new HashMap<>();
     if (singleAuditLog == null || singleAuditLog.isEmpty()) {
-      LOG.info("This is an empty string or null string, expected a valid string to parse");
+      LOG.debug("This is an empty string or null string, expected a valid string to parse");
       return auditLogMap;
     }
     final Matcher matcher = LOG_ENTRY_PATTERN.matcher(singleAuditLog);
@@ -107,11 +131,10 @@ public class S3AAuditLogMergerAndParser {
    *                       audit log.
    * @return returns a map which contains key-value pairs of referrer headers
    */
-  public HashMap<String, String> parseReferrerHeader(String referrerHeader) {
+  public static HashMap<String, String> parseReferrerHeader(String referrerHeader) {
     HashMap<String, String> referrerHeaderMap = new HashMap<>();
     if (referrerHeader == null || referrerHeader.isEmpty()) {
-      LOG.info(
-          "This is an empty string or null string, expected a valid string to parse");
+      LOG.debug("This is an empty string or null string, expected a valid string to parse");
       return referrerHeaderMap;
     }
 
@@ -163,23 +186,26 @@ public class S3AAuditLogMergerAndParser {
       Path logsPath,
       Path destPath) throws IOException {
 
-    // Listing file in given path
+    // List source log files
     RemoteIterator<LocatedFileStatus> listOfLogFiles =
         fileSystem.listFiles(logsPath, true);
 
-    Path destFile = destPath;
+    Path destFile = new Path(destPath, "AuditLogFile.avro");
 
     try (FSDataOutputStream fsDataOutputStream = fileSystem.create(destFile)) {
 
       // Iterating over the list of files to merge and parse
       while (listOfLogFiles.hasNext()) {
+        logFilesParsed++;
         FileStatus fileStatus = listOfLogFiles.next();
         int fileLength = (int) fileStatus.getLen();
         byte[] byteBuffer = new byte[fileLength];
 
-        try (FSDataInputStream fsDataInputStream =
+        try (DurationInfo duration = new DurationInfo(LOG, "Processing %s", fileStatus.getPath());
+            FSDataInputStream fsDataInputStream =
             awaitFuture(fileSystem.openFile(fileStatus.getPath())
                 .withFileStatus(fileStatus)
+                .opt(FS_OPTION_OPENFILE_READ_POLICY, FS_OPTION_OPENFILE_READ_POLICY_WHOLE_FILE)
                 .build())) {
 
           // Instantiating generated AvroDataRecord class
@@ -226,6 +252,7 @@ public class S3AAuditLogMergerAndParser {
               if (StringUtils.isBlank(referrerHeader) || referrerHeader
                   .equals("-")) {
                 LOG.debug("Invalid referrer header for this audit log...");
+                recordsSkipped++;
                 continue;
               }
 
