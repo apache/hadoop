@@ -53,7 +53,7 @@ public class TestCombinedHostsFileReader {
       new File(TESTCACHEDATADIR, "legacy.dfs.hosts.json");
 
   @Mock
-  private Callable<DatanodeAdminProperties[]> callable = Mockito.mock(Callable.class);
+  private Callable<DatanodeAdminProperties[]> callable;
 
   @Before
   public void setUp() throws Exception {
