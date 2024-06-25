@@ -2006,4 +2006,9 @@ public class AbfsClient implements Closeable {
   AbfsApacheHttpClient getAbfsApacheHttpClient() {
     return abfsApacheHttpClient;
   }
+
+  @VisibleForTesting
+  KeepAliveCache getKeepAliveCache() {
+    return keepAliveCache;
+  }
 }

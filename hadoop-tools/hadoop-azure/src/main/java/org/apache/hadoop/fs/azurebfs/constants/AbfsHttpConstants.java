@@ -208,6 +208,7 @@ public final class AbfsHttpConstants {
   public static final String JDK_IMPL = "JDK";
   public static final String APACHE_IMPL = "Apache";
   public static final String JDK_FALLBACK = "JDK_fallback";
+  public static final String KEEP_ALIVE_CACHE_CLOSED = "KeepAliveCache is closed";
 
   private AbfsHttpConstants() {}
 }

@@ -20,19 +20,23 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.io.NotSerializableException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.util.Stack;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.http.HttpClientConnection;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_MAX_CONN_SYS_PROP;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.KEEP_ALIVE_CACHE_CLOSED;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_APACHE_HTTP_CLIENT_MAX_CACHE_CONNECTION_SIZE;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_HTTP_CLIENT_CONN_MAX_CACHED_CONNECTIONS;
 
 /**
  * Connection-pooling heuristics used by {@link AbfsConnectionManager}. Each
@@ -42,7 +46,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_MAX
  * connection-pooling:
  * <ol>
  * <li>PoolingHttpClientConnectionManager heuristic caches all the reusable connections it has created.
- * JDK's implementation only caches limited number of connections. The limit is given by JVM system
+ * JDK's implementation only caches a limited number of connections. The limit is given by JVM system
  * property "http.maxConnections". If there is no system-property, it defaults to 5.</li>
  * <li>In PoolingHttpClientConnectionManager, it expects the application to provide `setMaxPerRoute` and `setMaxTotal`,
  * which the implementation uses as the total number of connections it can create. For application using ABFS, it is not
@@ -54,20 +58,22 @@ public final class KeepAliveCache extends Stack<KeepAliveCache.KeepAliveEntry>
     implements
     Closeable {
 
+  private static final Logger LOG = LoggerFactory.getLogger(KeepAliveCache.class);
+
   /**
    * Scheduled timer that evicts idle connections.
    */
-  private final Timer timer;
+  private final transient Timer timer;
 
   /**
    * Task provided to the timer that owns eviction logic.
    */
-  private final TimerTask timerTask;
+  private final transient TimerTask timerTask;
 
   /**
    * Flag to indicate if the cache is closed.
    */
-  private boolean isClosed;
+  private AtomicBoolean isClosed = new AtomicBoolean(false);
 
   /**
    * Counter to keep track of the number of KeepAliveCache instances created.
@@ -87,42 +93,60 @@ public final class KeepAliveCache extends Stack<KeepAliveCache.KeepAliveEntry>
   /**
    * Flag to indicate if the eviction thread is paused.
    */
-  private boolean isPaused = false;
+  private AtomicBoolean isPaused = new AtomicBoolean(false);
 
   @VisibleForTesting
   synchronized void pauseThread() {
-    isPaused = true;
+    isPaused.set(true);
   }
 
   @VisibleForTesting
   synchronized void resumeThread() {
-    isPaused = false;
+    isPaused.set(false);
   }
 
   /**
-   * @return connectionIdleTTL
+   * @return connectionIdleTTL.
    */
   @VisibleForTesting
   public long getConnectionIdleTTL() {
     return connectionIdleTTL;
   }
 
+  /**
+   * Creates an {@link KeepAliveCache} instance using filesystem's configuration.
+   * <p>
+   * The size of the cache is determined by the configuration
+   * {@value org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys#FS_AZURE_APACHE_HTTP_CLIENT_MAX_CACHE_CONNECTION_SIZE}.
+   * If the configuration is not set, the system-property {@value org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants#HTTP_MAX_CONN_SYS_PROP}.
+   * If the system-property is not set or set to 0, the default value
+   * {@value org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations#DEFAULT_HTTP_CLIENT_CONN_MAX_CACHED_CONNECTIONS} is used.
+   * </p> <p>
+   * This schedules an eviction thread to run every connectionIdleTTL milliseconds
+   * given by the configuration {@link AbfsConfiguration#getMaxApacheHttpClientConnectionIdleTime()}.
+   * </p>
+   * @param abfsConfiguration Configuration of the filesystem.
+   */
   public KeepAliveCache(AbfsConfiguration abfsConfiguration) {
-    this.timer = new Timer(
-        String.format("abfs-kac-" + KAC_COUNTER.getAndIncrement()), true);
-    String sysPropMaxConn = System.getProperty(HTTP_MAX_CONN_SYS_PROP);
-    if (sysPropMaxConn == null) {
-      this.maxConn = abfsConfiguration.getMaxApacheHttpClientCacheConnections();
+    this.timer = new Timer("abfs-kac-" + KAC_COUNTER.getAndIncrement(), true);
+
+    int sysPropMaxConn = Integer.parseInt(System.getProperty(HTTP_MAX_CONN_SYS_PROP, "0"));
+    final int defaultMaxConn;
+    if (sysPropMaxConn > 0) {
+      defaultMaxConn = sysPropMaxConn;
     } else {
-      maxConn = Integer.parseInt(sysPropMaxConn);
+      defaultMaxConn = DEFAULT_HTTP_CLIENT_CONN_MAX_CACHED_CONNECTIONS;
     }
+    this.maxConn = abfsConfiguration.getInt(
+        FS_AZURE_APACHE_HTTP_CLIENT_MAX_CACHE_CONNECTION_SIZE,
+        defaultMaxConn);
 
     this.connectionIdleTTL
         = abfsConfiguration.getMaxApacheHttpClientConnectionIdleTime();
     this.timerTask = new TimerTask() {
       @Override
       public void run() {
-          if (isPaused) {
+          if (isPaused.get() || isClosed.get()) {
             return;
           }
           evictIdleConnection();
@@ -143,7 +167,7 @@ public final class KeepAliveCache extends Stack<KeepAliveCache.KeepAliveEntry>
       if ((currentTime - e.idleStartTime) > connectionIdleTTL
           || e.httpClientConnection.isStale()) {
         HttpClientConnection hc = e.httpClientConnection;
-        closeHtpClientConnection(hc);
+        closeHttpClientConnection(hc);
       } else {
         break;
       }
@@ -156,11 +180,11 @@ public final class KeepAliveCache extends Stack<KeepAliveCache.KeepAliveEntry>
    *
    * @param hc HttpClientConnection to be closed
    */
-  private void closeHtpClientConnection(final HttpClientConnection hc) {
+  private void closeHttpClientConnection(final HttpClientConnection hc) {
     try {
       hc.close();
-    } catch (IOException ignored) {
-
+    } catch (IOException ex) {
+      LOG.debug("Close failed for connection: " + hc, ex);
     }
   }
 
@@ -169,30 +193,35 @@ public final class KeepAliveCache extends Stack<KeepAliveCache.KeepAliveEntry>
    */
   @Override
   public synchronized void close() {
-    isClosed = true;
+
+    boolean closed = isClosed.getAndSet(true);
+    if (closed) {
+      return;
+    }
     timerTask.cancel();
     timer.purge();
     while (!empty()) {
       KeepAliveEntry e = pop();
-      closeHtpClientConnection(e.httpClientConnection);
+      closeHttpClientConnection(e.httpClientConnection);
     }
   }
 
   /**
+   * <p>
    * Gets the latest added HttpClientConnection from the cache. The returned connection
    * is non-stale and has been in the cache for less than connectionIdleTTL milliseconds.
-   *
+   * </p> <p>
    * The cache is checked from the top of the stack. If the connection is stale or has been
    * in the cache for more than connectionIdleTTL milliseconds, it is closed and the next
    * connection is checked. Once a valid connection is found, it is returned.
-   *
+   * </p>
    * @return HttpClientConnection: if a valid connection is found, else null.
    * @throws IOException if the cache is closed.
    */
   public synchronized HttpClientConnection get()
       throws IOException {
-    if (isClosed) {
-      throw new IOException("KeepAliveCache is closed");
+    if (isClosed.get()) {
+      throw new IOException(KEEP_ALIVE_CACHE_CLOSED);
     }
     if (empty()) {
       return null;
@@ -203,7 +232,7 @@ public final class KeepAliveCache extends Stack<KeepAliveCache.KeepAliveEntry>
       KeepAliveEntry e = pop();
       if ((currentTime - e.idleStartTime) > connectionIdleTTL
           || e.httpClientConnection.isStale()) {
-        closeHtpClientConnection(e.httpClientConnection);
+        closeHttpClientConnection(e.httpClientConnection);
       } else {
         hc = e.httpClientConnection;
       }
@@ -213,35 +242,31 @@ public final class KeepAliveCache extends Stack<KeepAliveCache.KeepAliveEntry>
 
   /**
    * Puts the HttpClientConnection in the cache. If the size of cache is equal to
-   * maxConn, the give HttpClientConnection is closed and not added in cache.
+   * maxConn, the oldest connection is closed and removed from the cache, which
+   * will make space for the new connection. If the cache is closed, the connection
+   * is closed and not added to the cache.
    *
    * @param httpClientConnection HttpClientConnection to be cached
+   * @return true if the HttpClientConnection is added in active cache, false otherwise.
    */
-  public synchronized void put(HttpClientConnection httpClientConnection) {
-    if (isClosed) {
-      return;
+  public synchronized boolean put(HttpClientConnection httpClientConnection) {
+    if (isClosed.get()) {
+      closeHttpClientConnection(httpClientConnection);
+      return false;
     }
-    if (size() >= maxConn) {
-      closeHtpClientConnection(httpClientConnection);
-      return;
+    if (size() == maxConn) {
+      closeHttpClientConnection(get(0).httpClientConnection);
+      subList(0, 1).clear();
     }
     KeepAliveEntry entry = new KeepAliveEntry(httpClientConnection,
         System.currentTimeMillis());
     push(entry);
+    return true;
   }
 
   @Override
   public synchronized boolean equals(final Object o) {
-    if (o instanceof KeepAliveCache) {
-      KeepAliveCache inst = (KeepAliveCache) o;
-      for (int i = 0; i < size(); i++) {
-        if (!elementAt(i).equals((inst.elementAt(i)))) {
-          return false;
-        }
-      }
-      return true;
-    }
-    return false;
+    return super.equals(o);
   }
 
   @Override
@@ -264,28 +289,5 @@ public final class KeepAliveCache extends Stack<KeepAliveCache.KeepAliveEntry>
       this.httpClientConnection = hc;
       this.idleStartTime = idleStartTime;
     }
-
-    @Override
-    public boolean equals(final Object o) {
-      if (o instanceof KeepAliveEntry) {
-        return httpClientConnection.equals(
-            ((KeepAliveEntry) o).httpClientConnection);
-      }
-      return false;
-    }
-
-    @Override
-    public int hashCode() {
-      return httpClientConnection.hashCode();
-    }
-  }
-
-  // Methods to prevent serialization of the KeepAliveCache.
-  private void writeObject(ObjectOutputStream var1) throws IOException {
-    throw new NotSerializableException();
-  }
-
-  private void readObject(ObjectInputStream var1) throws IOException, ClassNotFoundException {
-    throw new NotSerializableException();
   }
 }

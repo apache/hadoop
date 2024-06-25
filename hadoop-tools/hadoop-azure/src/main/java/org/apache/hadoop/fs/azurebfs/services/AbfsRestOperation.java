@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbfsStatistic;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.HttpOperationType;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsDriverException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperationException;
@@ -43,7 +44,9 @@ import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import java.util.Map;
 import org.apache.hadoop.fs.azurebfs.AbfsBackoffMetrics;
+import org.apache.http.impl.execchain.RequestAbortedException;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.KEEP_ALIVE_CACHE_CLOSED;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ZERO;
 import static org.apache.hadoop.util.Time.now;
 
@@ -478,6 +481,11 @@ public class AbfsRestOperation {
       retryPolicy = client.getRetryPolicy(failureReason);
       if (httpOperation instanceof AbfsAHCHttpOperation) {
         registerApacheHttpClientIoException();
+        if (ex instanceof RequestAbortedException
+            && ex.getCause() instanceof IOException
+            && KEEP_ALIVE_CACHE_CLOSED.equals(ex.getCause().getMessage())) {
+          throw new AbfsDriverException((IOException) ex.getCause());
+        }
       }
       if (!retryPolicy.shouldRetry(retryCount, -1)) {
         updateBackoffMetrics(retryCount, httpOperation.getStatusCode());

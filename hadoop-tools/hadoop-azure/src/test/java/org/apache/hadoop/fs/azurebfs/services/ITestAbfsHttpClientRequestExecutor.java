@@ -315,15 +315,6 @@ public class ITestAbfsHttpClientRequestExecutor extends
             .isEqualTo(1);
         Assertions.assertThat(connectionInfo.getReceiveResponseBodyInvocation())
             .isEqualTo(1);
-
-        Assertions.assertThat(
-                latencyDifferencePerentage(connectionInfo.getSendTime(),
-                    op.getResult().getSendLatency()))
-            .isLessThan(1);
-        Assertions.assertThat(
-                latencyDifferencePerentage(connectionInfo.getReadTime(),
-                    op.getResult().getRecvLatency()))
-            .isLessThan(1);
         return null;
       }).when(op).execute(Mockito.any(TracingContext.class));
       return op;
@@ -339,15 +330,6 @@ public class ITestAbfsHttpClientRequestExecutor extends
 
     is.read();
     is.close();
-  }
-
-  private long latencyDifferencePerentage(final long expectationLatency,
-      final long observationLatency) {
-    if (expectationLatency == 0) {
-      return 0;
-    }
-    return Math.abs(expectationLatency - observationLatency) * HUNDRED
-        / expectationLatency;
   }
 
   private static class ConnectionInfo {

@@ -394,10 +394,10 @@ public class AbfsConfiguration{
       FS_AZURE_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES, DefaultValue = DEFAULT_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES)
   private int maxApacheHttpClientIoExceptionsRetries;
 
-  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_APACHE_HTTP_CLIENT_MAX_CACHE_CONNECTION_SIZE,
-      DefaultValue = DEFAULT_HTTP_CLIENT_CONN_MAX_CACHED_CONNECTIONS)
-  private int maxApacheHttpClientCacheConnections;
-
+  /**
+   * Max idle TTL configuration for connection given in {@value org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys#FS_AZURE_APACHE_HTTP_CLIENT_IDLE_CONNECTION_TTL}
+   * with default of {@value org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations#DEFAULT_HTTP_CLIENT_CONN_MAX_IDLE_TIME}
+   */
   @LongConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_APACHE_HTTP_CLIENT_IDLE_CONNECTION_TTL,
       DefaultValue = DEFAULT_HTTP_CLIENT_CONN_MAX_IDLE_TIME)
   private long maxApacheHttpClientConnectionIdleTime;
@@ -501,6 +501,17 @@ public class AbfsConfiguration{
    */
   public long getLong(String key, long defaultValue) {
     return rawConfig.getLong(accountConf(key), rawConfig.getLong(key, defaultValue));
+  }
+
+  /**
+   * Returns the account-specific value if it exists, then looks for an
+   * account-agnostic value, and finally tries the default value.
+   * @param key Account-agnostic configuration key
+   * @param defaultValue Value returned if none is configured
+   * @return value if one exists, else the default value
+   */
+  public int getInt(String key, int defaultValue) {
+    return rawConfig.getInt(accountConf(key), rawConfig.getInt(key, defaultValue));
   }
 
   /**
@@ -912,10 +923,9 @@ public class AbfsConfiguration{
     return maxApacheHttpClientIoExceptionsRetries;
   }
 
-  public int getMaxApacheHttpClientCacheConnections() {
-    return maxApacheHttpClientCacheConnections;
-  }
-
+  /**
+   * @return {@link #maxApacheHttpClientConnectionIdleTime}.
+   */
   public long getMaxApacheHttpClientConnectionIdleTime() {
     return maxApacheHttpClientConnectionIdleTime;
   }
