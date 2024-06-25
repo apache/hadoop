@@ -57,6 +57,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.D
 public final class KeepAliveCache extends Stack<KeepAliveCache.KeepAliveEntry>
     implements
     Closeable {
+  private static final long serialVersionUID = 1L;
 
   private static final Logger LOG = LoggerFactory.getLogger(KeepAliveCache.class);
 

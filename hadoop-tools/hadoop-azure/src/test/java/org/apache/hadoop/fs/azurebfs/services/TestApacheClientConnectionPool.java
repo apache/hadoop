@@ -37,6 +37,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_MAX
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.KEEP_ALIVE_CACHE_CLOSED;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_HTTP_CLIENT_CONN_MAX_CACHED_CONNECTIONS;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_HTTP_CLIENT_CONN_MAX_IDLE_TIME;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.HUNDRED;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 public class TestApacheClientConnectionPool extends
@@ -135,8 +136,8 @@ public class TestApacheClientConnectionPool extends
       }).when(connection).close();
       keepAliveCache.put(connection);
 
-      while(!isConnClosed.get()) {
-        Thread.sleep(100);
+      while (!isConnClosed.get()) {
+        Thread.sleep(HUNDRED);
       }
 
       // Assert that the closed connection is removed from the cache.
