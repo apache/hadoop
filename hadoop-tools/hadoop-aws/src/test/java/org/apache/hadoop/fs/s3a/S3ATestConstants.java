@@ -193,6 +193,8 @@ public interface S3ATestConstants {
 
   /**
    * Fork ID passed down from maven if the test is running in parallel.
+   * If a build was also executed with job.id set, this is included in
+   * the fork ID.
    */
   String TEST_UNIQUE_FORK_ID = "test.unique.fork.id";
   String TEST_STS_ENABLED = "test.fs.s3a.sts.enabled";
@@ -273,4 +275,14 @@ public interface S3ATestConstants {
    * AWS ireland region.
    */
   String EU_WEST_1 = "eu-west-1";
+
+  /**
+   * System property for root tests being enabled: {@value}.
+   */
+  String ROOT_TESTS_ENABLED = "fs.s3a.root.tests.enabled";
+
+  /**
+   * Default policy on root tests: {@value}.
+   */
+  boolean DEFAULT_ROOT_TESTS_ENABLED = true;
 }

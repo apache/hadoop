@@ -21,7 +21,7 @@ package org.apache.hadoop.fs.s3a.scale;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
+import java.time.Duration;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -51,6 +51,8 @@ import org.apache.hadoop.fs.s3a.impl.ProgressListener;
 import org.apache.hadoop.fs.s3a.impl.ProgressListenerEvent;
 import org.apache.hadoop.fs.s3a.statistics.BlockOutputStreamStatistics;
 import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.io.ElasticByteBufferPool;
+import org.apache.hadoop.io.WeakReferencedElasticByteBufferPool;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.Progressable;
 
@@ -59,8 +61,6 @@ import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_BU
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_LENGTH;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_WHOLE_FILE;
-import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_SPLIT_END;
-import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_SPLIT_START;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.validateVectoredReadResult;
 import static org.apache.hadoop.fs.s3a.Constants.*;
@@ -78,11 +78,11 @@ import static org.apache.hadoop.util.functional.RemoteIterators.filteringRemoteI
 
 /**
  * Scale test which creates a huge file.
- *
+ * <p>
  * <b>Important:</b> the order in which these tests execute is fixed to
  * alphabetical order. Test cases are numbered {@code test_123_} to impose
  * an ordering based on the numbers.
- *
+ * <p>
  * Having this ordering allows the tests to assume that the huge file
  * exists. Even so: they should all have a {@link #assumeHugeFileExists()}
  * check at the start, in case an individual test is executed.
@@ -111,6 +111,16 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     uploadBlockSize = uploadBlockSize();
     filesize = getTestPropertyBytes(getConf(), KEY_HUGE_FILESIZE,
         DEFAULT_HUGE_FILESIZE);
+  }
+
+  /**
+   * Test dir deletion is removed from test case teardown so the
+   * subsequent tests see the output.
+   * @throws IOException failure
+   */
+  @Override
+  protected void deleteTestDirInTeardown() throws IOException {
+    /* no-op */
   }
 
   /**
@@ -584,54 +594,94 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
         toHuman(timer.nanosPerOperation(ops)));
   }
 
+  /**
+   * Should this test suite use direct buffers for
+   * the Vector IO operations?
+   * @return true if direct buffers are desired.
+   */
+  protected boolean isDirectVectorBuffer() {
+    return false;
+  }
+
   @Test
   public void test_045_vectoredIOHugeFile() throws Throwable {
     assumeHugeFileExists();
-    List<FileRange> rangeList = new ArrayList<>();
-    rangeList.add(FileRange.createFileRange(5856368, 116770));
-    rangeList.add(FileRange.createFileRange(3520861, 116770));
-    rangeList.add(FileRange.createFileRange(8191913, 116770));
-    rangeList.add(FileRange.createFileRange(1520861, 116770));
-    rangeList.add(FileRange.createFileRange(2520861, 116770));
-    rangeList.add(FileRange.createFileRange(9191913, 116770));
-    rangeList.add(FileRange.createFileRange(2820861, 156770));
-    IntFunction<ByteBuffer> allocate = ByteBuffer::allocate;
+    final ElasticByteBufferPool pool =
+              new WeakReferencedElasticByteBufferPool();
+    boolean direct = isDirectVectorBuffer();
+    IntFunction<ByteBuffer> allocate = size -> pool.getBuffer(direct, size);
+
+    // build a list of ranges for both reads.
+    final int rangeLength = 116770;
+    long base = 1520861;
+    long pos = base;
+    List<FileRange> rangeList = range(pos, rangeLength);
+    pos += rangeLength;
+    range(rangeList, pos, rangeLength);
+    pos += rangeLength;
+    range(rangeList, pos, rangeLength);
+    pos += rangeLength;
+    range(rangeList, pos, rangeLength);
+    pos += rangeLength;
+    range(rangeList, pos, rangeLength);
+    pos += rangeLength;
+    range(rangeList, pos, rangeLength);
+
     FileSystem fs = getFileSystem();
 
-    // read into a buffer first
-    // using sequential IO
+    final int validateSize = (int) totalReadSize(rangeList);
 
-    int validateSize = (int) Math.min(filesize, 10 * _1MB);
-    byte[] readFullRes;
-    IOStatistics sequentialIOStats, vectorIOStats;
+    // read the same ranges using readFully into a buffer.
+    // this is to both validate the range resolution logic,
+    // and to compare performance of sequential GET requests
+    // with the vector IO.
+    byte[] readFullRes = new byte[validateSize];
+    IOStatistics readIOStats, vectorIOStats;
+    DurationInfo readFullyTime = new DurationInfo(LOG, true, "Sequential read of %,d bytes",
+        validateSize);
     try (FSDataInputStream in = fs.openFile(hugefile)
-        .optLong(FS_OPTION_OPENFILE_LENGTH, validateSize)  // lets us actually force a shorter read
-        .optLong(FS_OPTION_OPENFILE_SPLIT_START, 0)
-        .opt(FS_OPTION_OPENFILE_SPLIT_END, validateSize)
-        .opt(FS_OPTION_OPENFILE_READ_POLICY, "sequential")
+        .optLong(FS_OPTION_OPENFILE_LENGTH, filesize)
+        .opt(FS_OPTION_OPENFILE_READ_POLICY, "random")
         .opt(FS_OPTION_OPENFILE_BUFFER_SIZE, uploadBlockSize)
-        .build().get();
-         DurationInfo ignored = new DurationInfo(LOG, "Sequential read of %,d bytes",
-             validateSize)) {
-      readFullRes = new byte[validateSize];
-      in.readFully(0, readFullRes);
-      sequentialIOStats = in.getIOStatistics();
+        .build().get()) {
+      for (FileRange range : rangeList) {
+        in.readFully(range.getOffset(),
+            readFullRes,
+            (int)(range.getOffset() - base),
+            range.getLength());
+      }
+      readIOStats = in.getIOStatistics();
+    } finally {
+      readFullyTime.close();
     }
 
     // now do a vector IO read
+    DurationInfo vectorTime = new DurationInfo(LOG, true, "Vector Read");
     try (FSDataInputStream in = fs.openFile(hugefile)
         .optLong(FS_OPTION_OPENFILE_LENGTH, filesize)
         .opt(FS_OPTION_OPENFILE_READ_POLICY, "vector, random")
-        .build().get();
-         DurationInfo ignored = new DurationInfo(LOG, "Vector Read")) {
-
+        .build().get()) {
+      // initiate the read.
       in.readVectored(rangeList, allocate);
-      // Comparing vectored read results with read fully.
-      validateVectoredReadResult(rangeList, readFullRes);
+      // Wait for the results and compare with read fully.
+      validateVectoredReadResult(rangeList, readFullRes, base);
       vectorIOStats = in.getIOStatistics();
+    } finally {
+      vectorTime.close();
+      // release the pool
+      pool.release();
     }
 
-    LOG.info("Bulk read IOStatistics={}", ioStatisticsToPrettyString(sequentialIOStats));
+    final Duration readFullyDuration = readFullyTime.asDuration();
+    final Duration vectorDuration = vectorTime.asDuration();
+    final Duration diff = readFullyDuration.minus(vectorDuration);
+    double ratio = readFullyDuration.toNanos() / (double) vectorDuration.toNanos();
+    String format = String.format("Vector read to %s buffer taking %s was %s faster than"
+            + " readFully() (%s); ratio=%,.2fX",
+        direct ? "direct" : "heap",
+        vectorDuration, diff, readFullyDuration, ratio);
+    LOG.info(format);
+    LOG.info("Bulk read IOStatistics={}", ioStatisticsToPrettyString(readIOStats));
     LOG.info("Vector IOStatistics={}", ioStatisticsToPrettyString(vectorIOStats));
   }
 
@@ -790,5 +840,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     getFileSystem().delete(path, recursive);
     timer.end("time to delete %s", path);
   }
+
+
 
 }

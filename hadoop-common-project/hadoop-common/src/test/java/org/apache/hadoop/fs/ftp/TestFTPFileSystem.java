@@ -48,6 +48,7 @@ import org.junit.rules.Timeout;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Test basic @{link FTPFileSystem} class methods. Contract tests are in
@@ -235,5 +236,51 @@ public class TestFTPFileSystem {
     conf.setLong(FTPFileSystem.FS_FTP_TIMEOUT, timeout);
     ftp.setTimeout(client, conf);
     assertEquals(client.getControlKeepAliveTimeout(), timeout);
+  }
+
+  private static void touch(FileSystem fs, Path filePath)
+          throws IOException {
+    touch(fs, filePath, null);
+  }
+
+  private static void touch(FileSystem fs, Path path, byte[] data)
+          throws IOException {
+    FSDataOutputStream out = null;
+    try {
+      out = fs.create(path);
+      if (data != null) {
+        out.write(data);
+      }
+    } finally {
+      if (out != null) {
+        out.close();
+      }
+    }
+  }
+
+  /**
+   * Test renaming a file.
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testRenameFileWithFullQualifiedPath() throws Exception {
+    BaseUser user = server.addUser("test", "password", new WritePermission());
+    Configuration configuration = new Configuration();
+    configuration.set("fs.defaultFS", "ftp:///");
+    configuration.set("fs.ftp.host", "localhost");
+    configuration.setInt("fs.ftp.host.port", server.getPort());
+    configuration.set("fs.ftp.user.localhost", user.getName());
+    configuration.set("fs.ftp.password.localhost", user.getPassword());
+    configuration.setBoolean("fs.ftp.impl.disable.cache", true);
+
+    FileSystem fs = FileSystem.get(configuration);
+
+
+    Path ftpDir = fs.makeQualified(new Path(testDir.toAbsolutePath().toString()));
+    Path file1 = fs.makeQualified(new Path(ftpDir, "renamefile" + "1"));
+    Path file2 = fs.makeQualified(new Path(ftpDir, "renamefile" + "2"));
+    touch(fs, file1);
+    assertTrue(fs.rename(file1, file2));
   }
 }

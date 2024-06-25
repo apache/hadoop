@@ -173,5 +173,5 @@ class and want to give it a try in your Hadoop cluster.
 
 
 Firstly, put the jar file under a directory in Hadooop classpath.
-(recommend $HADOOP_COMMOND_HOME/share/hadoop/yarn). Secondly,
+(recommend $HADOOP_COMMAND_HOME/share/hadoop/yarn). Secondly,
 follow the configurations described in [Pluggable Device Framework](./PluggableDeviceFramework.html) and restart YARN.

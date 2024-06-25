@@ -18,17 +18,25 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import java.util.List;
+
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
 
 public final class AbfsClientUtils {
   private AbfsClientUtils() {
 
   }
-  public static void setIsNamespaceEnabled(final AbfsClient abfsClient, final Boolean isNamespaceEnabled) {
-    abfsClient.setIsNamespaceEnabled(isNamespaceEnabled);
-  }
 
   public static void setEncryptionContextProvider(final AbfsClient abfsClient, final EncryptionContextProvider provider) {
     abfsClient.setEncryptionContextProvider(provider);
+  }
+
+  public static String getHeaderValue(List<AbfsHttpHeader> reqHeaders, String headerName) {
+    for (AbfsHttpHeader header : reqHeaders) {
+      if (header.getName().equals(headerName)) {
+        return header.getValue();
+      }
+    }
+    return "";
   }
 }

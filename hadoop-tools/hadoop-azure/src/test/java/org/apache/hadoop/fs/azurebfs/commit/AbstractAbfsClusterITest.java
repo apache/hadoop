@@ -23,17 +23,19 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 import org.junit.AfterClass;
+import org.junit.Assume;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.azure.integration.AzureTestConstants;
+import org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes;
 import org.apache.hadoop.fs.azurebfs.contract.ABFSContractTestBinding;
 import org.apache.hadoop.fs.azurebfs.contract.AbfsFileSystemContract;
+import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.AbstractManifestCommitterTest;
 import org.apache.hadoop.mapreduce.v2.MiniMRYarnCluster;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
@@ -41,6 +43,10 @@ import org.apache.hadoop.util.DurationInfo;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.azure.integration.AzureTestUtils.assumeScaleTestsEnabled;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_OVERRIDE_OWNER_SP;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_OVERRIDE_OWNER_SP_LIST;
+import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_BLOB_FS_CLIENT_SERVICE_PRINCIPAL_OBJECT_ID;
 import static org.apache.hadoop.io.IOUtils.closeStream;
 
 /**
@@ -226,6 +232,18 @@ public abstract class AbstractAbfsClusterITest extends
   protected JobConf newJobConf() throws IOException {
     JobConf jobConf = new JobConf(getYarn().getConfig());
     jobConf.addResource(getConfiguration());
+
+    if (getConfiguration().getEnum(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME,
+        AuthType.SharedKey) == AuthType.OAuth) {
+      assumeValidTestConfigPresent(
+          FS_AZURE_BLOB_FS_CLIENT_SERVICE_PRINCIPAL_OBJECT_ID);
+      String pid = jobConf.get(FS_AZURE_BLOB_FS_CLIENT_SERVICE_PRINCIPAL_OBJECT_ID);
+      jobConf.set(FS_AZURE_OVERRIDE_OWNER_SP, pid);
+      jobConf.set(FS_AZURE_OVERRIDE_OWNER_SP_LIST, "*");
+      jobConf.setBoolean(String.format("fs.%s.impl.disable.cache",
+          FileSystemUriSchemes.ABFS_SECURE_SCHEME), true);
+    }
+
     applyCustomConfigOptions(jobConf);
     return jobConf;
   }
@@ -255,6 +273,11 @@ public abstract class AbstractAbfsClusterITest extends
    */
   protected void requireScaleTestsEnabled() {
     assumeScaleTestsEnabled(getConfiguration());
+  }
+
+  protected void assumeValidTestConfigPresent(final String key) {
+    String configuredValue = getConfiguration().get(key);
+    Assume.assumeTrue(configuredValue != null && !configuredValue.isEmpty());
   }
 
 }

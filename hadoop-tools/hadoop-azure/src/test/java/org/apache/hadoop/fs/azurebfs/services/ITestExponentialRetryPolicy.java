@@ -111,7 +111,7 @@ public class ITestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
 
     configuration.setBoolean(FS_AZURE_ENABLE_AUTOTHROTTLING, true);
     configuration.setBoolean(FS_AZURE_ACCOUNT_LEVEL_THROTTLING_ENABLED, true);
-    // On disabling throttling AbfsClientThrottlingIntercept object is returned
+    // On enabling throttling AbfsClientThrottlingIntercept object is returned
     AbfsConfiguration abfsConfiguration1 = new AbfsConfiguration(configuration,
         "dummy1.dfs.core.windows.net");
     AbfsClient abfsClient1 = ITestAbfsClient.createTestClientFromCurrentContext(fs.getAbfsStore().getClient(), abfsConfiguration1);

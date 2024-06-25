@@ -23,12 +23,10 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_REDUNDANCY_CONSI
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.addDirectory;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.countContents;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.createFile;
-import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.createNamenodeReport;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.deleteFile;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.getFileStatus;
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.verifyFileExists;
 import static org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.TEST_STRING;
-import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.FEDERATION_STORE_MEMBERSHIP_EXPIRATION_MS;
 import static org.apache.hadoop.ipc.CallerContext.PROXY_USER_PORT;
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -74,7 +72,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
@@ -118,7 +115,6 @@ import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.metrics.FederationRPCMetrics;
 import org.apache.hadoop.hdfs.server.federation.metrics.NamenodeBeanMetrics;
 import org.apache.hadoop.hdfs.server.federation.metrics.RBFMetrics;
-import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
@@ -1168,6 +1164,21 @@ public class TestRouterRpc {
   }
 
   private void testConcat(
+      String source, String target, boolean failureExpected, boolean verfiyException, String msg) {
+    boolean failure = false;
+    try {
+      // Concat test file with fill block length file via router
+      routerProtocol.concat(target, new String[] {source});
+    } catch (IOException ex) {
+      failure = true;
+      if (verfiyException) {
+        assertExceptionContains(msg, ex);
+      }
+    }
+    assertEquals(failureExpected, failure);
+  }
+
+  private void testConcat(
       String source, String target, boolean failureExpected) {
     boolean failure = false;
     try {
@@ -1228,6 +1239,27 @@ public class TestRouterRpc {
     String badPath = "/unknownlocation/unknowndir";
     compareResponses(routerProtocol, nnProtocol, m,
         new Object[] {badPath, new String[] {routerFile}});
+
+    // Test when concat trg is a empty file
+    createFile(routerFS, existingFile, existingFileSize);
+    String sameRouterEmptyFile =
+        cluster.getFederatedTestDirectoryForNS(sameNameservice) +
+            "_newemptyfile";
+    createFile(routerFS, sameRouterEmptyFile, 0);
+    // Concat in same namespaces, succeeds
+    testConcat(existingFile, sameRouterEmptyFile, false);
+    FileStatus mergedStatus = getFileStatus(routerFS, sameRouterEmptyFile);
+    assertEquals(existingFileSize, mergedStatus.getLen());
+
+    // Test when concat srclist has some empty file, namenode will throw IOException.
+    String srcEmptyFile = cluster.getFederatedTestDirectoryForNS(sameNameservice) + "_srcEmptyFile";
+    createFile(routerFS, srcEmptyFile, 0);
+    String targetFile = cluster.getFederatedTestDirectoryForNS(sameNameservice) + "_targetFile";
+    createFile(routerFS, targetFile, existingFileSize);
+    // Concat in same namespaces, succeeds
+    testConcat(srcEmptyFile, targetFile, true, true,
+        "org.apache.hadoop.ipc.RemoteException(org.apache.hadoop.HadoopIllegalArgumentException): concat: source file "
+            + srcEmptyFile + " is invalid or empty or underConstruction");
   }
 
   @Test
@@ -2330,47 +2362,5 @@ public class TestRouterRpc {
       fileSystem1.delete(new Path(testPath1), true);
       fileSystem1.delete(new Path(testPath2), true);
     }
-  }
-
-  @Test
-  public void testClearStaleNamespacesInRouterStateIdContext() throws Exception {
-    Router testRouter = new Router();
-    Configuration routerConfig = DFSRouter.getConfiguration();
-    routerConfig.set(FEDERATION_STORE_MEMBERSHIP_EXPIRATION_MS, "2000");
-    routerConfig.set(RBFConfigKeys.DFS_ROUTER_SAFEMODE_ENABLE, "false");
-    // Mock resolver classes
-    routerConfig.setClass(RBFConfigKeys.FEDERATION_NAMENODE_RESOLVER_CLIENT_CLASS,
-        MockResolver.class, ActiveNamenodeResolver.class);
-    routerConfig.setClass(RBFConfigKeys.FEDERATION_FILE_RESOLVER_CLIENT_CLASS,
-        MockResolver.class, FileSubclusterResolver.class);
-
-    testRouter.init(routerConfig);
-    String nsID1 = cluster.getNameservices().get(0);
-    String nsID2 = cluster.getNameservices().get(1);
-    MockResolver resolver = (MockResolver)testRouter.getNamenodeResolver();
-    resolver.registerNamenode(createNamenodeReport(nsID1, "nn1",
-        HAServiceProtocol.HAServiceState.ACTIVE));
-    resolver.registerNamenode(createNamenodeReport(nsID2, "nn1",
-        HAServiceProtocol.HAServiceState.ACTIVE));
-
-    RouterRpcServer rpcServer = testRouter.getRpcServer();
-
-    rpcServer.getRouterStateIdContext().getNamespaceStateId(nsID1);
-    rpcServer.getRouterStateIdContext().getNamespaceStateId(nsID2);
-
-    resolver.disableNamespace(nsID1);
-    Thread.sleep(3000);
-    RouterStateIdContext context = rpcServer.getRouterStateIdContext();
-    assertEquals(2, context.getNamespaceIdMap().size());
-
-    testRouter.start();
-    Thread.sleep(3000);
-    // wait clear stale namespaces
-    RouterStateIdContext routerStateIdContext = rpcServer.getRouterStateIdContext();
-    int size = routerStateIdContext.getNamespaceIdMap().size();
-    assertEquals(1, size);
-    rpcServer.stop();
-    rpcServer.close();
-    testRouter.close();
   }
 }

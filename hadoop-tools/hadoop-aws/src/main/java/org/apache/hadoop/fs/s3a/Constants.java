@@ -1423,12 +1423,12 @@ public final class Constants {
   /**
    * Default minimum seek in bytes during vectored reads : {@value}.
    */
-  public static final int DEFAULT_AWS_S3_VECTOR_READS_MIN_SEEK_SIZE = 4896; // 4K
+  public static final int DEFAULT_AWS_S3_VECTOR_READS_MIN_SEEK_SIZE = 4096; // 4K
 
   /**
    * Default maximum read size in bytes during vectored reads : {@value}.
    */
-  public static final int DEFAULT_AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE = 1253376; //1M
+  public static final int DEFAULT_AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE = 1048576; //1M
 
   /**
    * Maximum number of range reads a single input stream can have
@@ -1624,4 +1624,33 @@ public final class Constants {
    * Value: {@value}.
    */
   public static final boolean DEFAULT_AWS_S3_CLASSLOADER_ISOLATION = true;
+
+  /**
+   * Flag {@value}
+   * to enable S3 Access Grants to control authorization to S3 data. More information:
+   * https://aws.amazon.com/s3/features/access-grants/
+   * and
+   * https://github.com/aws/aws-s3-accessgrants-plugin-java-v2/
+   */
+  public static final String AWS_S3_ACCESS_GRANTS_ENABLED = "fs.s3a.access.grants.enabled";
+
+  /**
+   * Flag {@value} to enable jobs fall back to the Job Execution IAM role in
+   * case they get Access Denied from the S3 Access Grants call. More information:
+   * https://github.com/aws/aws-s3-accessgrants-plugin-java-v2/
+   */
+  public static final String AWS_S3_ACCESS_GRANTS_FALLBACK_TO_IAM_ENABLED =
+          "fs.s3a.access.grants.fallback.to.iam";
+  /**
+   * Default value for {@link #S3A_IO_RATE_LIMIT}.
+   * Value: {@value}.
+   * 0 means no rate limiting.
+   */
+  public static final int DEFAULT_S3A_IO_RATE_LIMIT = 0;
+
+  /**
+   * Config to set the rate limit for S3A IO operations.
+   * Value: {@value}.
+   */
+  public static final String S3A_IO_RATE_LIMIT = "fs.s3a.io.rate.limit";
 }
