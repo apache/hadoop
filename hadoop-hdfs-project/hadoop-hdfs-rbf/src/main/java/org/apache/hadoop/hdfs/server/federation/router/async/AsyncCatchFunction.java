@@ -154,32 +154,19 @@ public interface AsyncCatchFunction<R, E extends Throwable>
   @Override
   default CompletableFuture<R> apply(
       CompletableFuture<R> in, Class<E> eClazz) {
-    CompletableFuture<R> result = new CompletableFuture<>();
-    in.handle((r, e) -> {
+    return in.handle((r, e) -> {
       if (e == null) {
-        result.complete(r);
-        return r;
+        return in;
       }
       Throwable cause = e.getCause();
-
       if (eClazz.isInstance(cause)) {
         try {
-          async(r, (E) cause).handle((r1, ex) -> {
-            if (ex != null) {
-              result.completeExceptionally(ex);
-            } else {
-              result.complete(r1);
-            }
-            return null;
-          });
-        } catch (IOException ioe) {
-          result.completeExceptionally(new CompletionException(ioe));
+          return async(r, (E) cause);
+        } catch (IOException ex) {
+          throw new CompletionException(ex);
         }
-      } else {
-        result.completeExceptionally(e);
       }
-      return r;
-    });
-    return result;
+      throw (RuntimeException)e;
+    }).thenCompose(result -> result);
   }
 }

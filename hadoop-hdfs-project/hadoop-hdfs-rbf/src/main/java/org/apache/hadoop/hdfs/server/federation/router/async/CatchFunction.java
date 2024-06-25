@@ -105,16 +105,14 @@ public interface CatchFunction<R, E extends Throwable>
         return r;
       }
       Throwable cause = e.getCause();
-      assert cause != null;
       if (eClazz.isInstance(cause)) {
         try {
           return CatchFunction.this.apply(r, (E) cause);
         } catch (IOException ioe) {
           throw new CompletionException(ioe);
         }
-      } else {
-        throw new CompletionException(cause);
       }
+      throw (RuntimeException)e;
     });
   }
 }
