@@ -308,7 +308,9 @@ public class Client implements AutoCloseable {
 
       this.externalHandler = EXTERNAL_CALL_HANDLER.get();
       this.completableFuture = CALL_FUTURE_THREAD_LOCAL.get();
-      CALL_FUTURE_THREAD_LOCAL.remove();
+      if (completableFuture  != null) {
+        CALL_FUTURE_THREAD_LOCAL.remove();
+      }
     }
 
     @Override

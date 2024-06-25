@@ -46,6 +46,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import static org.apache.hadoop.ipc.TestAsyncIPC.AsyncCompletableFutureCaller.RPC_SERVER_COST_MS;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -147,6 +148,7 @@ public class TestAsyncIPC {
    * implemented with CompletableFuture.
    */
   static class AsyncCompletableFutureCaller extends Thread {
+    public static final long RPC_SERVER_COST_MS = 100;
     private final Client client;
     private final InetSocketAddress server;
     private final int count;
@@ -183,7 +185,7 @@ public class TestAsyncIPC {
             assertTrue(Thread.currentThread().getName().contains("connection"));
             try {
               // Since the current call has already been completed,
-              // this method does not need to block.
+              // this method does not need to wait.
               return asyncRpcResponse.get();
             } catch (Exception e) {
               throw new CompletionException(e);
@@ -196,7 +198,7 @@ public class TestAsyncIPC {
         // so the time taken by the run method is less than count * 100
         // (where 100 is the time taken by the server to process a request).
         long cost = Time.monotonicNow() - startTime;
-        assertTrue(cost < count * 100);
+        assertTrue(cost < count * RPC_SERVER_COST_MS);
         LOG.info("[{}] run cost {}ms", Thread.currentThread().getName(), cost);
       } catch (Exception e) {
         fail();
@@ -615,6 +617,20 @@ public class TestAsyncIPC {
     }
   }
 
+  /**
+   * Tests the asynchronous call functionality using {@link CompletableFuture}.
+   *
+   * <p>The test sets up an RPC server with a specified number of handler threads,
+   * starts the server, and sends a predefined number of asynchronous requests.
+   * Each request is expected to take a certain amount of time to process as defined
+   * by RPC_SERVER_COST_MS. The test verifies that the server responses are received
+   * and match the expected values, thus validating the asynchronous call mechanism.</p>
+   *
+   * @throws IOException If an I/O error occurs during the test.
+   * @throws InterruptedException If the current thread is interrupted while waiting.
+   * @throws ExecutionException If an exception is thrown while computing the result of a
+   *                             {@link CompletableFuture}.
+   */
   @Test(timeout = 60000)
   public void testAsyncCallWithCompletableFuture() throws IOException,
       InterruptedException, ExecutionException {
@@ -626,7 +642,7 @@ public class TestAsyncIPC {
     server.callListener = () -> {
       try {
         // The server requires at least 100 milliseconds to process a request.
-        Thread.sleep(100);
+        Thread.sleep(RPC_SERVER_COST_MS);
       } catch (InterruptedException e) {
         throw new RuntimeException(e);
       }
