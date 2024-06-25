@@ -757,6 +757,8 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       "dfs.namenode.hosts.provider.classname";
   public static final String  DFS_HOSTS = "dfs.hosts";
   public static final String  DFS_HOSTS_EXCLUDE = "dfs.hosts.exclude";
+  public static final String  DFS_HOSTS_TIMEOUT = "dfs.hosts.timeout";
+  public static final int     DFS_HOSTS_TIMEOUT_DEFAULT = 0;
   public static final String  DFS_NAMENODE_AUDIT_LOGGERS_KEY = "dfs.namenode.audit.loggers";
   public static final String  DFS_NAMENODE_DEFAULT_AUDIT_LOGGER_NAME = "default";
   public static final String  DFS_NAMENODE_AUDIT_LOG_TOKEN_TRACKING_ID_KEY = "dfs.namenode.audit.log.token.tracking.id";
@@ -1420,6 +1422,9 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final int DFS_NAMENODE_EDEKCACHELOADER_INTERVAL_MS_DEFAULT = 1000;
   public static final String DFS_NAMENODE_EDEKCACHELOADER_INITIAL_DELAY_MS_KEY = "dfs.namenode.edekcacheloader.initial.delay.ms";
   public static final int DFS_NAMENODE_EDEKCACHELOADER_INITIAL_DELAY_MS_DEFAULT = 3000;
+  public static final String DFS_NAMENODE_EDEKCACHELOADER_MAX_RETRIES_KEY =
+      "dfs.namenode.edekcacheloader.max-retries";
+  public static final int DFS_NAMENODE_EDEKCACHELOADER_MAX_RETRIES_DEFAULT = 10;
   public static final String DFS_NAMENODE_REENCRYPT_SLEEP_INTERVAL_KEY = "dfs.namenode.reencrypt.sleep.interval";
   public static final String DFS_NAMENODE_REENCRYPT_SLEEP_INTERVAL_DEFAULT = "1m";
   public static final String DFS_NAMENODE_REENCRYPT_BATCH_SIZE_KEY = "dfs.namenode.reencrypt.batch.size";

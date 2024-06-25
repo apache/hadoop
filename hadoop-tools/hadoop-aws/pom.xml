@@ -56,6 +56,11 @@
 
     <!-- Is prefetch enabled? -->
     <fs.s3a.prefetch.enabled>unset</fs.s3a.prefetch.enabled>
+    <!-- Job ID; allows for parallel jobs on same bucket -->
+    <!-- job.id is used to build the path for tests; default is 00.-->
+    <job.id>00</job.id>
+    <!-- are root tests enabled. Set to false when running parallel jobs on same bucket -->
+    <root.tests.enabled>unset</root.tests.enabled>
   </properties>
 
   <profiles>
@@ -115,14 +120,8 @@
                 <test.build.data>${test.build.data}/${surefire.forkNumber}</test.build.data>
                 <test.build.dir>${test.build.dir}/${surefire.forkNumber}</test.build.dir>
                 <hadoop.tmp.dir>${hadoop.tmp.dir}/${surefire.forkNumber}</hadoop.tmp.dir>
+                <test.unique.fork.id>job-${job.id}-fork-000${surefire.forkNumber}</test.unique.fork.id>
 
-                <!-- Due to a Maven quirk, setting this to just -->
-                <!-- surefire.forkNumber won't do the parameter -->
-                <!-- substitution.  Putting a prefix in front of it like -->
-                <!-- "fork-" makes it work. -->
-                <!-- Important: Those leading 0s are needed to guarantee that -->
-                <!-- trailing three chars are always numeric and unique -->
-                <test.unique.fork.id>fork-000${surefire.forkNumber}</test.unique.fork.id>
                 <!-- Propagate scale parameters -->
                 <fs.s3a.scale.test.enabled>${fs.s3a.scale.test.enabled}</fs.s3a.scale.test.enabled>
                 <fs.s3a.scale.test.huge.filesize>${fs.s3a.scale.test.huge.filesize}</fs.s3a.scale.test.huge.filesize>
@@ -163,7 +162,7 @@
                     <!-- surefire.forkNumber won't do the parameter -->
                     <!-- substitution.  Putting a prefix in front of it like -->
                     <!-- "fork-" makes it work. -->
-                    <test.unique.fork.id>fork-000${surefire.forkNumber}</test.unique.fork.id>
+                    <test.unique.fork.id>job-${job.id}-fork-000${surefire.forkNumber}</test.unique.fork.id>
                     <!-- Propagate scale parameters -->
                     <fs.s3a.scale.test.enabled>${fs.s3a.scale.test.enabled}</fs.s3a.scale.test.enabled>
                     <fs.s3a.scale.test.huge.filesize>${fs.s3a.scale.test.huge.filesize}</fs.s3a.scale.test.huge.filesize>
@@ -174,14 +173,14 @@
                     <test.default.timeout>${test.integration.timeout}</test.default.timeout>
                     <!-- Prefetch -->
                     <fs.s3a.prefetch.enabled>${fs.s3a.prefetch.enabled}</fs.s3a.prefetch.enabled>
+                    <!-- are root tests enabled. Set to false when running parallel jobs on same bucket -->
+                    <fs.s3a.root.tests.enabled>${root.tests.enabled}</fs.s3a.root.tests.enabled>
+
                   </systemPropertyVariables>
                   <!-- Some tests cannot run in parallel.  Tests that cover -->
                   <!-- access to the root directory must run in isolation -->
                   <!-- from anything else that could modify the bucket. -->
-                  <!-- S3A tests that cover multi-part upload must run in -->
-                  <!-- isolation, because the file system is configured to -->
-                  <!-- purge existing multi-part upload data on -->
-                  <!-- initialization.  MiniYARNCluster has not yet been -->
+                  <!-- MiniYARNCluster has not yet been -->
                   <!-- changed to handle parallel test execution gracefully. -->
                   <!-- Exclude all of these tests from parallel execution, -->
                   <!-- and instead run them sequentially in a separate -->
@@ -228,6 +227,9 @@
                     <fs.s3a.directory.marker.audit>${fs.s3a.directory.marker.audit}</fs.s3a.directory.marker.audit>
                     <!-- Prefetch -->
                     <fs.s3a.prefetch.enabled>${fs.s3a.prefetch.enabled}</fs.s3a.prefetch.enabled>
+                    <!-- are root tests enabled. Set to false when running parallel jobs on same bucket -->
+                    <fs.s3a.root.tests.enabled>${root.tests.enabled}</fs.s3a.root.tests.enabled>
+                    <test.unique.fork.id>job-${job.id}</test.unique.fork.id>
                   </systemPropertyVariables>
                   <!-- Do a sequential run for tests that cannot handle -->
                   <!-- parallel execution. -->
@@ -289,6 +291,7 @@
                     <fs.s3a.directory.marker.audit>${fs.s3a.directory.marker.audit}</fs.s3a.directory.marker.audit>
                     <!-- Prefetch -->
                     <fs.s3a.prefetch.enabled>${fs.s3a.prefetch.enabled}</fs.s3a.prefetch.enabled>
+                    <test.unique.fork.id>job-${job.id}</test.unique.fork.id>
                   </systemPropertyVariables>
                   <forkedProcessTimeoutInSeconds>${fs.s3a.scale.test.timeout}</forkedProcessTimeoutInSeconds>
                 </configuration>
