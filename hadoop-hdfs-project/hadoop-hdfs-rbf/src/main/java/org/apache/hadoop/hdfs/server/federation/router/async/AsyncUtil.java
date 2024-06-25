@@ -378,4 +378,3 @@ public final class AsyncUtil {
     CUR_COMPLETABLE_FUTURE.set((CompletableFuture<Object>) result);
   }
 }
-

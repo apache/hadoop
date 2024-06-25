@@ -72,4 +72,3 @@ public interface AsyncRun<R> extends Async<R> {
     return completableFuture;
   }
 }
-

@@ -246,5 +246,4 @@ public class AsyncClass extends SyncClass{
     Async.CUR_COMPLETABLE_FUTURE.set(result);
     return null;
   }
-
 }
