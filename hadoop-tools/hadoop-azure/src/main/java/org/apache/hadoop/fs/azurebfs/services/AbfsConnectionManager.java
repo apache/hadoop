@@ -129,8 +129,12 @@ class AbfsConnectionManager implements HttpClientConnectionManager {
       return;
     }
     if (conn.isOpen() && conn instanceof AbfsManagedApacheHttpConnection) {
-      kac.put(conn);
-      LOG.debug("Connection released: {}", conn);
+      boolean connAddedInKac = kac.put(conn);
+      if (connAddedInKac) {
+        LOG.debug("Connection cached: {}", conn);
+      } else {
+        LOG.debug("Connection not cached, and is released: {}", conn);
+      }
     }
   }
 
