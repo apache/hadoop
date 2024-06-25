@@ -73,7 +73,7 @@ public class AsyncForEachRun<I, R> implements AsyncRun<R> {
   /**
    * Initiates the asynchronous foreach operation by starting the iteration process
    * over the elements provided by the iterator. This method sets up the initial
-   * call to {@link #doOnce(R)} with a null result, which begins the recursive
+   * call to doOnce(R) with a null result, which begins the recursive
    * application of the async function to each element of the iterator.
    *
    * <p>This method is an implementation of the {@link AsyncRun} interface's
@@ -94,7 +94,6 @@ public class AsyncForEachRun<I, R> implements AsyncRun<R> {
    * chain further operations or handle the final result once the foreach loop
    * completes.</p>
    *
-   * @see #doOnce(R)
    * @see AsyncRun
    * @see Async#setCurCompletableFuture(CompletableFuture)
    */
