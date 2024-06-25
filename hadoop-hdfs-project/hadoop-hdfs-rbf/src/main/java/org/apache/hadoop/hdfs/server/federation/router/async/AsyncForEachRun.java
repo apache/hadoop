@@ -60,13 +60,10 @@ import java.util.concurrent.CompletionException;
 public class AsyncForEachRun<I, R> implements AsyncRun<R> {
 
   // Indicates whether the iteration should be broken immediately
-  // after the nextasynchronous operation is completed.
+  // after the next asynchronous operation is completed.
   private boolean shouldBreak = false;
   // The Iterator over the elements to process asynchronously.
   private Iterator<I> iterator;
-  // A CompletableFuture that will complete with the final result of the asynchronous
-  // operations when the iteration is finished or broken.
-  private final CompletableFuture<R> result = new CompletableFuture<>();
   // The async function to apply to each element from the iterator.
   private AsyncBiFunction<AsyncForEachRun<I, R>, I, R> asyncDoOnce;
 
@@ -99,9 +96,15 @@ public class AsyncForEachRun<I, R> implements AsyncRun<R> {
    */
   @Override
   public void run() {
+    if (iterator == null || !iterator.hasNext()) {
+      setCurCompletableFuture(CompletableFuture.completedFuture(null));
+      return;
+    }
+    CompletableFuture<R> result;
     try {
-      doOnce(null);
+      result = doOnce(iterator.next());
     } catch (IOException ioe) {
+      result = new CompletableFuture<>();
       result.completeExceptionally(new CompletionException(ioe));
     }
     setCurCompletableFuture(result);
@@ -122,34 +125,21 @@ public class AsyncForEachRun<I, R> implements AsyncRun<R> {
    * handles the iteration logic, including breaking the loop if the
    * {@link #shouldBreak} flag is set to true.</p>
    *
-   * @param ret The current result from the async function application, which may be null.
+   * @param element The current element from the async function application.
    * @throws IOException if an I/O error occurs during the application of the async function.
    */
-  private void doOnce(R ret) throws IOException {
-    // If there are no more elements, complete the future with the last result
-    if (!iterator.hasNext()) {
-      result.complete(ret);
-      return;
-    }
-    // Apply the async function to the next element
-    I next = iterator.next();
-    CompletableFuture<R> completableFuture = asyncDoOnce.async(AsyncForEachRun.this, next);
-    completableFuture.thenApply(res -> {
-      // If the break flag is set, complete the future
-      // with the current result and stop further processing
-      if (shouldBreak) {
-        result.complete(res);
-        return null;
+  private CompletableFuture<R> doOnce(I element) throws IOException {
+    CompletableFuture<R> completableFuture = asyncDoOnce.async(AsyncForEachRun.this, element);
+    return completableFuture.thenCompose(res -> {
+      if (shouldBreak || !iterator.hasNext()) {
+        return completableFuture;
       }
       try {
-        // Recursively call doOnce with the new result to continue the iteration
-        doOnce(res);
+        return doOnce(iterator.next());
       } catch (IOException e) {
         throw new CompletionException(e);
       }
-      return null;
-    }).exceptionally(e ->
-        result.completeExceptionally(e));
+    });
   }
 
   /**
