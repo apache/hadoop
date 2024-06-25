@@ -85,5 +85,4 @@ public interface ApplyFunction<T, R> extends Async<R>{
       }
     }, executor);
   }
-
 }

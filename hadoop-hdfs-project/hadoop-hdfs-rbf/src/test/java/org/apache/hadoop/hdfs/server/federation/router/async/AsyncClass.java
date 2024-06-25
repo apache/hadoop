@@ -128,10 +128,12 @@ public class AsyncClass extends SyncClass{
   public String forEachMethod(List<Integer> list) {
     StringBuilder result = new StringBuilder();
     asyncForEach(list.iterator(),
-        input -> timeConsumingMethod(input),
-        (forEachRun, res) -> {
-          result.append("forEach" + res + ",");
-          return result.toString();
+        (forEach, input) -> {
+          timeConsumingMethod(input);
+          asyncApply(res -> {
+            result.append("forEach" + res + ",");
+            return result.toString();
+          });
         });
     return asyncReturn(String.class);
   }
@@ -140,14 +142,16 @@ public class AsyncClass extends SyncClass{
   public String forEachBreakMethod(List<Integer> list) {
     StringBuilder result = new StringBuilder();
     asyncForEach(list.iterator(),
-        input -> timeConsumingMethod(input),
-        (forEachRun, res) -> {
-          if (res.equals("[2]")) {
-            forEachRun.breakNow();
-          } else {
-            result.append("forEach" + res + ",");
-          }
-          return result.toString();
+        (forEach, input) -> {
+          timeConsumingMethod(input);
+          asyncApply(res -> {
+            if (res.equals("[2]")) {
+              forEach.breakNow();
+            } else {
+              result.append("forEach" + res + ",");
+            }
+            return result.toString();
+          });
         });
     return asyncReturn(String.class);
   }
@@ -155,30 +159,23 @@ public class AsyncClass extends SyncClass{
   @Override
   public String forEachBreakByExceptionMethod(List<Integer> list) {
     StringBuilder result = new StringBuilder();
-    boolean[] breakNow = {false};
     asyncForEach(list.iterator(),
-        input -> {
+        (forEach, input) -> {
           asyncTry(() -> {
             applyMethod(input, true);
             asyncApply(res -> {
               result.append("forEach" + res + ",");
-              return res;
+              return result.toString();
             });
           });
           asyncCatch((res, e) -> {
             if (e instanceof IOException) {
               result.append(e + ",");
             } else if (e instanceof RuntimeException) {
-              breakNow[0] = true;
+              forEach.breakNow();
             }
-            return res;
+            return result.toString();
           }, Exception.class);
-        },
-        (forEachRun, res) -> {
-          if (breakNow[0]) {
-            forEachRun.breakNow();
-          }
-          return result.toString();
         });
     return asyncReturn(String.class);
   }

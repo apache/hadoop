@@ -117,5 +117,4 @@ public interface CatchFunction<R, E extends Throwable>
       }
     });
   }
-
 }

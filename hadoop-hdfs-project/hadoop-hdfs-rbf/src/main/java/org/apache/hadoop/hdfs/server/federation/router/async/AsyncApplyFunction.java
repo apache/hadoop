@@ -86,7 +86,22 @@ public interface AsyncApplyFunction<T, R> extends ApplyFunction<T, R> {
     return result();
   }
 
-
+  /**
+   * Initiates the asynchronous application of this function to the given result.
+   * <p>
+   * This method calls applyAsync to start the asynchronous operation and then retrieves
+   * the current thread's CompletableFuture using getCurCompletableFuture.
+   * It returns this CompletableFuture, which will be completed with the result of the
+   * asynchronous operation once it is finished.
+   * <p>
+   * This method is useful for chaining with other asynchronous operations, as it allows the
+   * current operation to be part of a larger asynchronous workflow.
+   *
+   * @param t the function argument
+   * @return a CompletableFuture that will be completed with the result of the
+   *         asynchronous operation
+   * @throws IOException if an I/O error occurs during the initiation of the asynchronous operation
+   */
   default CompletableFuture<R> async(T t) throws IOException {
     applyAsync(t);
     CompletableFuture<R> completableFuture = getCurCompletableFuture();
@@ -117,7 +132,6 @@ public interface AsyncApplyFunction<T, R> extends ApplyFunction<T, R> {
       }
     });
   }
-
 
   /**
    * Asynchronously applies this function to the result of the given

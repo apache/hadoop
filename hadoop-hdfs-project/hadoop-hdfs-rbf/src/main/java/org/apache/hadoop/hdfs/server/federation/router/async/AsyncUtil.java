@@ -53,6 +53,7 @@ import static org.apache.hadoop.hdfs.server.federation.router.async.Async.CUR_CO
  * @see CatchFunction
  * @see AsyncCatchFunction
  * @see FinallyFunction
+ * @see AsyncBiFunction
  */
 public final class AsyncUtil {
   private static final Boolean BOOLEAN_RESULT = false;
@@ -60,7 +61,6 @@ public final class AsyncUtil {
   private static final Object NULL_RESULT = null;
 
   private AsyncUtil(){}
-
 
   /**
    * Provides a default value based on the type specified.
@@ -87,6 +87,32 @@ public final class AsyncUtil {
     return (R) NULL_RESULT;
   }
 
+  /**
+   * Synchronously returns the result of the current asynchronous operation.
+   * This method is designed to be used in scenarios where the result of an
+   * asynchronous operation is needed synchronously, and it is known that
+   * the operation has completed.
+   *
+   * <p>The method retrieves the current thread's {@link CompletableFuture} and
+   * attempts to get the result. If the future is not yet complete, this
+   * method will block until the result is available. If the future completed
+   * exceptionally, the cause of the exception is thrown as a runtime
+   * exception wrapped in an {@link ExecutionException}.</p>
+   *
+   * <p>This method is typically used after an asynchronous operation has been
+   * initiated and the caller needs to obtain the result in a synchronous
+   * manner, for example, when bridging between asynchronous and synchronous
+   * code paths.</p>
+   *
+   * @param <R> the type of the result to be returned
+   * @param clazz the {@link Class} object representing the type of the value
+   *              to be returned, used to cast the result to the correct type
+   * @return the result of the asynchronous operation as an object of the
+   *         specified class
+   * @throws Exception if an error occurs during the synchronous retrieval of
+   *                    the result, including the original exception if the
+   *                    future completed exceptionally
+   */
   public static <R> R syncReturn(Class<R> clazz)
       throws Exception {
     CompletableFuture<Object> completableFuture = CUR_COMPLETABLE_FUTURE.get();
@@ -271,33 +297,30 @@ public final class AsyncUtil {
   }
 
   /**
-   * Applies an asynchronous operation to each element in an Iterator,
-   * using the provided functions to process each element and to
-   * determine the final result.
+   * Executes an asynchronous operation for each element in an Iterator, applying
+   * a given async function to each element. This method is part of the asynchronous
+   * utilities provided to facilitate non-blocking operations on collections of elements.
    *
-   * <p>This method is useful for performing operations on a collection
-   * of items in a non-blocking way. It iterates over each element
-   * provided by the Iterator, applies the asyncDo operation to it,
-   * and then uses the then function to process the results.</p>
+   * <p>The provided {@code asyncDo} is an {@link AsyncBiFunction} that encapsulates
+   * the logic to be executed asynchronously for each element. It is executed in
+   * the context of the current CompletableFuture, allowing for chaining further
+   * asynchronous operations based on the result or exception of each iteration.</p>
    *
-   * @param forEach The Iterator over the elements to process.
-   * @param asyncDo The asynchronous operation to apply to each element.
-   *                It implements {@link AsyncApplyFunction}.
-   * @param then     The function to apply after all elements have been
-   *                processed by asyncDo. It implements
-   *                {@link BiFunction} and determines how to combine
-   *                the results into a final output.
-   * @param <I>      The type of the elements being iterated over.
-   * @param <T>      The type of the intermediate result from asyncDo.
-   * @param <R>      The type of the final result after applying the then function.
-   * @see AsyncApplyFunction
-   * @see BiFunction
+   * <p>The method is particularly useful for performing asynchronous iterations
+   * over collections where the processing of each element is independent.</p>
+   *
+   * @param forEach the Iterator over which to iterate and apply the async function
+   * @param asyncDo the asynchronous function to apply to each element of the Iterator,
+   *                 implemented as an {@link AsyncBiFunction}
+   * @param <I> the type of the elements being iterated over
+   * @param <R> the type of the result produced by the asynchronous task applied to each element
+   * @see AsyncBiFunction
+   * @see AsyncForEachRun
    */
-  public static <I, T, R> void asyncForEach(
-      Iterator<I> forEach, AsyncApplyFunction<I, T> asyncDo,
-      BiFunction<AsyncForEachRun<I, T, R>, T, R> then) {
-    AsyncForEachRun<I, T, R> asyncForEachRun = new AsyncForEachRun<>();
-    asyncForEachRun.forEach(forEach).asyncDo(asyncDo).then(then).run();
+  public static <I, R> void asyncForEach(
+      Iterator<I> forEach, AsyncBiFunction<AsyncForEachRun<I, R>, I, R> asyncDo) {
+    AsyncForEachRun<I, R> asyncForEachRun = new AsyncForEachRun<>();
+    asyncForEachRun.forEach(forEach).asyncDo(asyncDo).run();
   }
 
   /**
