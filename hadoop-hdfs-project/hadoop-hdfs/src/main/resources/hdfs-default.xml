@@ -1068,7 +1068,14 @@
   not permitted to connect to the namenode.  The full pathname of the
   file must be specified.  If the value is empty, no hosts are
   excluded.</description>
-</property> 
+</property>
+
+<property>
+  <name>dfs.hosts.timeout</name>
+  <value>0</value>
+  <description>Specifies a timeout (in milliseconds) for reading the dfs.hosts file.
+  A value of zero indicates no timeout to be set.</description>
+</property>
 
 <property>
   <name>dfs.namenode.max.objects</name>
