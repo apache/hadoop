@@ -527,7 +527,7 @@ public class TestDirectoryCollection {
         PosixFilePermissions.fromString("rwx------"));
     Files.setPosixFilePermissions(testFile.toPath(),
         PosixFilePermissions.fromString("-w--w--w-"));
-    DirectoryCollection dc = new DirectoryCollection(new String[]{ testDir.toString() });
+    DirectoryCollection dc = new DirectoryCollection(new String[]{testDir.toString()});
     Map<String, DirectoryCollection.DiskErrorInformation> diskErrorInformationMap =
         dc.testDirs(Collections.singletonList(testDir.toString()), Collections.emptySet());
     Assert.assertEquals(1, diskErrorInformationMap.size());

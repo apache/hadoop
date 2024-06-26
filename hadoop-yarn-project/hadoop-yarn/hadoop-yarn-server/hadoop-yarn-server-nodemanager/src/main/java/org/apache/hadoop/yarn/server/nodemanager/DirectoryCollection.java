@@ -601,7 +601,7 @@ public class DirectoryCollection {
         if (sub.isDirectory()) {
           DiskChecker.checkDir(sub);
         } else if (!Files.isReadable(sub.toPath())) {
-          return new DiskErrorInformation(DiskErrorCause.OTHER,"Can not read " + sub);
+          return new DiskErrorInformation(DiskErrorCause.OTHER, "Can not read " + sub);
         } else {
           LOG.debug("{} under {} is accessible", sub, dir);
         }
