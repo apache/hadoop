@@ -619,17 +619,11 @@ public class TestAsyncIPC {
 
   /**
    * Tests the asynchronous call functionality using {@link CompletableFuture}.
-   *
-   * <p>The test sets up an RPC server with a specified number of handler threads,
+   * The test sets up an RPC server with a specified number of handler threads,
    * starts the server, and sends a predefined number of asynchronous requests.
    * Each request is expected to take a certain amount of time to process as defined
    * by RPC_SERVER_COST_MS. The test verifies that the server responses are received
-   * and match the expected values, thus validating the asynchronous call mechanism.</p>
-   *
-   * @throws IOException If an I/O error occurs during the test.
-   * @throws InterruptedException If the current thread is interrupted while waiting.
-   * @throws ExecutionException If an exception is thrown while computing the result of a
-   *                             {@link CompletableFuture}.
+   * and match the expected values, thus validating the asynchronous call mechanism.
    */
   @Test(timeout = 60000)
   public void testAsyncCallWithCompletableFuture() throws IOException,
