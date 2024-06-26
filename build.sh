@@ -15,13 +15,34 @@
 # limitations under the License.
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-set -e
+
+set -eu
+
 mkdir -p build
-if [ ! -d "$DIR/build/apache-rat-0.12" ]; then
-   wget 'https://www.apache.org/dyn/mirrors/mirrors.cgi?action=download&filename=creadur/apache-rat-0.13/apache-rat-0.13-bin.tar.gz' -O $DIR/build/apache-rat.tar.gz
-	cd $DIR/build
-	tar zvxf apache-rat.tar.gz
-	cd -
+
+rat_version=0.16.1
+
+if [ ! -d "$DIR/build/apache-rat-${rat_version}" ]; then
+  url="https://dlcdn.apache.org/creadur/apache-rat-${rat_version}/apache-rat-${rat_version}-bin.tar.gz"
+  output="$DIR/build/apache-rat.tar.gz"
+  if type wget 2> /dev/null; then
+    wget -O "$output" "$url"
+  elif type curl 2> /dev/null; then
+    curl -LSs -o "$output" "$url"
+  else
+    exit 1
+  fi
+  cd $DIR/build
+  tar zvxf apache-rat.tar.gz
+  cd -
 fi
-java -jar $DIR/build/apache-rat-0.13/apache-rat-0.13.jar $DIR -e public -e apache-rat-0.12 -e .git -e .gitignore
-docker build -t apache/hadoop-runner .
+
+java -jar $DIR/build/apache-rat-${rat_version}/apache-rat-${rat_version}.jar $DIR -e .dockerignore -e public -e apache-rat-${rat_version} -e .git -e .gitignore
+
+if [[ $# -ge 1 ]]; then
+  for v in "$@"; do
+    docker build --progress plain --build-arg "JAVA_VERSION=$v" -t apache/hadoop-runner:jdk${v}-dev .
+  done
+else
+  docker build --progress plain -t apache/hadoop-runner:dev .
+fi
