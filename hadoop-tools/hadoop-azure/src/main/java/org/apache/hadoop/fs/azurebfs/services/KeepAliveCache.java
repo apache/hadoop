@@ -54,7 +54,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.D
  * number of connections it can create.</li>
  * </ol>
  */
-public final class KeepAliveCache extends Stack<KeepAliveCache.KeepAliveEntry>
+class KeepAliveCache extends Stack<KeepAliveCache.KeepAliveEntry>
     implements
     Closeable {
   private static final long serialVersionUID = 1L;
@@ -128,7 +128,7 @@ public final class KeepAliveCache extends Stack<KeepAliveCache.KeepAliveEntry>
    * </p>
    * @param abfsConfiguration Configuration of the filesystem.
    */
-  public KeepAliveCache(AbfsConfiguration abfsConfiguration) {
+  KeepAliveCache(AbfsConfiguration abfsConfiguration) {
     this.timer = new Timer("abfs-kac-" + KAC_COUNTER.getAndIncrement(), true);
 
     int sysPropMaxConn = Integer.parseInt(System.getProperty(HTTP_MAX_CONN_SYS_PROP, "0"));
@@ -198,6 +198,11 @@ public final class KeepAliveCache extends Stack<KeepAliveCache.KeepAliveEntry>
     if (closed) {
       return;
     }
+    closeInternal();
+  }
+
+  @VisibleForTesting
+  void closeInternal() {
     timerTask.cancel();
     timer.purge();
     while (!empty()) {

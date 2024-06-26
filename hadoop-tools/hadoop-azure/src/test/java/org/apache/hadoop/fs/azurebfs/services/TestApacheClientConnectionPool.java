@@ -96,12 +96,12 @@ public class TestApacheClientConnectionPool extends
       }
 
       for (int i = 0; i < size; i++) {
-        keepAliveCache.put(connections[i]);
+        Assertions.assertThat(keepAliveCache.put(connections[i])).isTrue();
         Mockito.verify(connections[i], Mockito.times(0)).close();
       }
 
       for (int i = size; i < size * 2; i++) {
-        keepAliveCache.put(connections[i]);
+        Assertions.assertThat(keepAliveCache.put(connections[i])).isTrue();
         Mockito.verify(connections[i - size], Mockito.times(1)).close();
       }
 
@@ -235,8 +235,8 @@ public class TestApacheClientConnectionPool extends
 
   @Test
   public void testKeepAliveCacheClosed() throws Exception {
-    KeepAliveCache keepAliveCache = new KeepAliveCache(
-        new AbfsConfiguration(new Configuration(), EMPTY_STRING));
+    KeepAliveCache keepAliveCache = Mockito.spy(new KeepAliveCache(
+        new AbfsConfiguration(new Configuration(), EMPTY_STRING)));
     keepAliveCache.put(Mockito.mock(HttpClientConnection.class));
     keepAliveCache.close();
     IOException ex = intercept(IOException.class,
@@ -246,5 +246,7 @@ public class TestApacheClientConnectionPool extends
     HttpClientConnection conn = Mockito.mock(HttpClientConnection.class);
     Assertions.assertThat(keepAliveCache.put(conn)).isFalse();
     Mockito.verify(conn, Mockito.times(1)).close();
+    keepAliveCache.close();
+    Mockito.verify(keepAliveCache, Mockito.times(1)).closeInternal();
   }
 }
