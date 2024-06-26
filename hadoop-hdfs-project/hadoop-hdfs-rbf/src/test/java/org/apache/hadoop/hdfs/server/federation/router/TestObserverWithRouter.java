@@ -618,6 +618,7 @@ public class TestObserverWithRouter {
     Configuration conf = new Configuration();
     conf.setBoolean(RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_DEFAULT_KEY, true);
     conf.set(RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_OVERRIDES, "ns1");
+    conf.setInt(RBFConfigKeys.DFS_ROUTER_OBSERVER_FEDERATED_STATE_PROPAGATION_MAXSIZE, 1);
 
     RouterStateIdContext routerStateIdContext = new RouterStateIdContext(conf);
 
