@@ -21,12 +21,12 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.function.Function;
 
 import static org.apache.hadoop.hdfs.server.federation.router.async.Async.CUR_COMPLETABLE_FUTURE;
+import static org.apache.hadoop.hdfs.server.federation.router.async.Async.warpCompletionException;
 
 /**
  * The AsyncUtil class provides a collection of utility methods to simplify
@@ -147,7 +147,7 @@ public final class AsyncUtil {
    */
   public static void asyncThrowException(Throwable e) {
     CompletableFuture<Object> result = new CompletableFuture<>();
-    result.completeExceptionally(new CompletionException(e));
+    result.completeExceptionally(warpCompletionException(e));
     CUR_COMPLETABLE_FUTURE.set(result);
   }
 
@@ -369,7 +369,7 @@ public final class AsyncUtil {
         future = asyncDo.async(entry);
       } catch (IOException e) {
         future = new CompletableFuture<>();
-        future.completeExceptionally(new CompletionException(e));
+        future.completeExceptionally(warpCompletionException(e));
       }
       completableFutures[i++] = future;
     }

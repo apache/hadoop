@@ -19,7 +19,9 @@ package org.apache.hadoop.hdfs.server.federation.router.async;
 
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
+
+import static org.apache.hadoop.hdfs.server.federation.router.async.Async.unWarpCompletionException;
+import static org.apache.hadoop.hdfs.server.federation.router.async.Async.warpCompletionException;
 
 /**
  * The AsyncCatchFunction interface represents a function that handles exceptions
@@ -158,15 +160,15 @@ public interface AsyncCatchFunction<R, E extends Throwable>
       if (e == null) {
         return in;
       }
-      Throwable cause = e.getCause();
-      if (eClazz.isInstance(cause)) {
+      Throwable readException = unWarpCompletionException(e);
+      if (eClazz.isInstance(readException)) {
         try {
-          return async(r, (E) cause);
+          return async(r, (E) readException);
         } catch (IOException ex) {
-          throw new CompletionException(ex);
+          throw warpCompletionException(ex);
         }
       }
-      throw (RuntimeException)e;
+      throw warpCompletionException(e);
     }).thenCompose(result -> result);
   }
 }

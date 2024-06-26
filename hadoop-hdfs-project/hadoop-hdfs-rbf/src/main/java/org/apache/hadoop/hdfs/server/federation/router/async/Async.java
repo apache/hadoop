@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.federation.router.async;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.CompletionException;
 
 /**
  * An interface for asynchronous operations, providing utility methods
@@ -81,5 +82,34 @@ public interface Async<R> {
       }
       throw new IOException(e);
     }
+  }
+
+  /**
+   * Extracts the real cause of an exception wrapped by CompletionException.
+   *
+   * @param e The incoming exception, which may be a CompletionException.
+   * @return Returns the real cause of the original exception,
+   * or the original exception if there is no cause.
+   */
+  static Throwable unWarpCompletionException(Throwable e) {
+    if (e instanceof CompletionException) {
+      if (e.getCause() != null) {
+        return e.getCause();
+      }
+    }
+    return e;
+  }
+
+  /**
+   * Wraps the incoming exception in a new CompletionException.
+   *
+   * @param e The incoming exception, which may be any type of Throwable.
+   * @return Returns a new CompletionException with the original exception as its cause.
+   */
+  static CompletionException warpCompletionException(Throwable e) {
+    if (e instanceof CompletionException) {
+      return (CompletionException) e;
+    }
+    return new CompletionException(e);
   }
 }

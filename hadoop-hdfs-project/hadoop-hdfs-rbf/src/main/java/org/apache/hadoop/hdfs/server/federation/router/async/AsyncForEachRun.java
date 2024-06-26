@@ -22,6 +22,8 @@ import java.util.Iterator;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
+import static org.apache.hadoop.hdfs.server.federation.router.async.Async.warpCompletionException;
+
 /**
  * The AsyncForEachRun class is part of the asynchronous operation utilities
  * within the Hadoop Distributed File System (HDFS) Federation router.
@@ -105,7 +107,7 @@ public class AsyncForEachRun<I, R> implements AsyncRun<R> {
       result = doOnce(iterator.next());
     } catch (IOException ioe) {
       result = new CompletableFuture<>();
-      result.completeExceptionally(new CompletionException(ioe));
+      result.completeExceptionally(warpCompletionException(ioe));
     }
     setCurCompletableFuture(result);
   }
@@ -137,7 +139,7 @@ public class AsyncForEachRun<I, R> implements AsyncRun<R> {
       try {
         return doOnce(iterator.next());
       } catch (IOException e) {
-        throw new CompletionException(e);
+        throw warpCompletionException(e);
       }
     });
   }

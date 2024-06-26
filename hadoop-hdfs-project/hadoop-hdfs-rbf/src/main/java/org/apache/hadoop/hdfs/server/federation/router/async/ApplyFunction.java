@@ -19,8 +19,9 @@ package org.apache.hadoop.hdfs.server.federation.router.async;
 
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
+
+import static org.apache.hadoop.hdfs.server.federation.router.async.Async.warpCompletionException;
 
 /**
  * Represents a function that accepts a value of type T and produces a result of type R.
@@ -63,7 +64,7 @@ public interface ApplyFunction<T, R> extends Async<R>{
       try {
         return ApplyFunction.this.apply(t);
       } catch (IOException e) {
-        throw new CompletionException(e);
+        throw warpCompletionException(e);
       }
     });
   }
@@ -81,7 +82,7 @@ public interface ApplyFunction<T, R> extends Async<R>{
       try {
         return ApplyFunction.this.apply(t);
       } catch (IOException e) {
-        throw new CompletionException(e);
+        throw warpCompletionException(e);
       }
     }, executor);
   }

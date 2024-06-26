@@ -19,7 +19,8 @@ package org.apache.hadoop.hdfs.server.federation.router.async;
 
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
+
+import static org.apache.hadoop.hdfs.server.federation.router.async.Async.warpCompletionException;
 
 /**
  * The {@code FinallyFunction} interface represents a function that is used to perform
@@ -83,12 +84,12 @@ public interface FinallyFunction<R> {
       try {
         R ret = apply(r);
         if (e != null) {
-          throw new CompletionException(e.getCause());
+          throw warpCompletionException(e);
         } else {
           return ret;
         }
-      } catch (IOException ex) {
-        throw new CompletionException(ex);
+      } catch (IOException ioe) {
+        throw warpCompletionException(ioe);
       }
     });
   }
