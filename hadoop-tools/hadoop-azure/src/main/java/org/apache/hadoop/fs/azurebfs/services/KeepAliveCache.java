@@ -243,14 +243,14 @@ public final class KeepAliveCache extends Stack<KeepAliveCache.KeepAliveEntry>
   /**
    * Puts the HttpClientConnection in the cache. If the size of cache is equal to
    * maxConn, the oldest connection is closed and removed from the cache, which
-   * will make space for the new connection. If the cache is closed, the connection
-   * is closed and not added to the cache.
+   * will make space for the new connection. If the cache is closed or of zero suze,
+   * the connection is closed and not added to the cache.
    *
    * @param httpClientConnection HttpClientConnection to be cached
    * @return true if the HttpClientConnection is added in active cache, false otherwise.
    */
   public synchronized boolean put(HttpClientConnection httpClientConnection) {
-    if (isClosed.get()) {
+    if (isClosed.get() || maxConn == 0) {
       closeHttpClientConnection(httpClientConnection);
       return false;
     }

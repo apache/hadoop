@@ -35,6 +35,7 @@ import org.apache.http.HttpClientConnection;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_MAX_CONN_SYS_PROP;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.KEEP_ALIVE_CACHE_CLOSED;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_APACHE_HTTP_CLIENT_MAX_CACHE_CONNECTION_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_HTTP_CLIENT_CONN_MAX_CACHED_CONNECTIONS;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_HTTP_CLIENT_CONN_MAX_IDLE_TIME;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.HUNDRED;
@@ -70,6 +71,17 @@ public class TestApacheClientConnectionPool extends
     final String customPoolSize = "0";
     System.setProperty(HTTP_MAX_CONN_SYS_PROP, customPoolSize);
     validatePoolSize(DEFAULT_HTTP_CLIENT_CONN_MAX_CACHED_CONNECTIONS);
+  }
+
+  @Test
+  public void testEmptySizePool() throws Exception {
+    Configuration configuration = new Configuration();
+    configuration.set(FS_AZURE_APACHE_HTTP_CLIENT_MAX_CACHE_CONNECTION_SIZE, "0");
+    AbfsConfiguration abfsConfiguration = new AbfsConfiguration(configuration, EMPTY_STRING);
+    try (KeepAliveCache keepAliveCache = new KeepAliveCache(abfsConfiguration)) {
+      Assertions.assertThat(keepAliveCache.put(Mockito.mock(HttpClientConnection.class))).isFalse();
+      Assertions.assertThat(keepAliveCache.get()).isNull();
+    }
   }
 
   private void validatePoolSize(int size) throws Exception {
