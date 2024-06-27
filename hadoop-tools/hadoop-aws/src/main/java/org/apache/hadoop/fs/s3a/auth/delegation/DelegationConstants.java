@@ -160,18 +160,6 @@ public final class DelegationConstants {
    */
   public static final String STS_STANDARD = "sts.amazonaws.com";
 
-  /**
-   * The format of the STS Endpoint
-   */
-  public static final String STS_ENDPOINT_URI_PATTERN = "^sts\\..*\\.amazonaws\\.com$";
-
-  /**
-   * Error thrown is the STS endpoint is not of the correct pattern.
-   */
-  public static final String E_INVALID_STS_ENDPOINT_PATTERN =
-      "Invalid STS Endpoint %s. The STS endpoint should match "
-          + STS_ENDPOINT_URI_PATTERN;
-
   private DelegationConstants() {
   }
 }
