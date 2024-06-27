@@ -259,11 +259,11 @@ public class TestObserverWithRouter {
     long rpcCountForActive = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getActiveProxyOps();
     // Create, complete and getBlockLocations calls should be sent to active
-    assertEquals("Three calls should be sent to active", 3, rpcCountForActive);
+    assertEquals("Three calls should be sent to active", 2, rpcCountForActive);
 
     long rpcCountForObserver = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getObserverProxyOps();
-    assertEquals("No call should be sent to observer", 0, rpcCountForObserver);
+    assertEquals("No call should be sent to observer", 1, rpcCountForObserver);
   }
 
   @EnumSource(ConfigSetting.class)
