@@ -6674,7 +6674,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           .put("infoSecureAddr", node.getInfoSecureAddr())
           .put("xferaddr", node.getXferAddr())
           .put("location", node.getNetworkLocation())
-          .put("uuid", node.getDatanodeUuid())
+          .put("uuid", node.getDatanodeUuidForMetric())
           .put("lastContact", getLastContact(node))
           .put("usedSpace", getDfsUsed(node))
           .put("adminState", node.getAdminState().toString())
@@ -6728,7 +6728,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           .put("adminState", node.getAdminState().toString())
           .put("xferaddr", node.getXferAddr())
           .put("location", node.getNetworkLocation())
-          .put("uuid", node.getDatanodeUuid())
+          .put("uuid", node.getDatanodeUuidForMetric())
           .build();
       info.put(node.getXferAddrWithHostname(), innerinfo);
     }
@@ -6751,7 +6751,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           .<String, Object> builder()
           .put("xferaddr", node.getXferAddr())
           .put("location", node.getNetworkLocation())
-          .put("uuid", node.getDatanodeUuid())
+          .put("uuid", node.getDatanodeUuidForMetric())
           .put("underReplicatedBlocks",
           node.getLeavingServiceStatus().getUnderReplicatedBlocks())
           .put("decommissionOnlyReplicas",
@@ -6782,7 +6782,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           .<String, Object> builder()
           .put("xferaddr", node.getXferAddr())
           .put("location", node.getNetworkLocation())
-          .put("uuid", node.getDatanodeUuid())
+          .put("uuid", node.getDatanodeUuidForMetric())
           .put("underReplicatedBlocks",
               node.getLeavingServiceStatus().getUnderReplicatedBlocks())
           .put("maintenanceOnlyReplicas",

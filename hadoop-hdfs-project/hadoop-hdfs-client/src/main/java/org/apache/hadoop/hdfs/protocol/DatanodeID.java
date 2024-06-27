@@ -149,6 +149,14 @@ public class DatanodeID implements Comparable<DatanodeID> {
     return datanodeUuid;
   }
 
+  /**
+   * @return data node ID for metrics.
+   * @since HDFS-17559.
+   */
+  public String getDatanodeUuidForMetric() {
+    return datanodeUuid != null ? datanodeUuid : "";
+  }
+
   public ByteString getDatanodeUuidBytes() {
     return datanodeUuidBytes;
   }
