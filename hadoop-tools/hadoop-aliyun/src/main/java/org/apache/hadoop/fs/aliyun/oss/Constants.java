@@ -211,4 +211,54 @@ public final class Constants {
   public static final String LIST_VERSION = "fs.oss.list.version";
 
   public static final int DEFAULT_LIST_VERSION = 2;
+
+  /**
+   * What is the smallest reasonable seek in bytes such
+   * that we group ranges together during vectored read operation.
+   * Value : {@value}.
+   */
+  public static final String OSS_VECTOR_READS_MIN_SEEK_SIZE =
+      "fs.oss.vectored.read.min.seek.size";
+
+  /**
+   * What is the largest merged read size in bytes such
+   * that we group ranges together during vectored read.
+   * Setting this value to 0 will disable merging of ranges.
+   * Value : {@value}.
+   */
+  public static final String OSS_VECTOR_READS_MAX_MERGED_READ_SIZE =
+      "fs.oss.vectored.read.max.merged.size";
+
+  /**
+   * Default minimum seek in bytes during vectored reads : {@value}.
+   */
+  public static final int DEFAULT_OSS_VECTOR_READS_MIN_SEEK_SIZE = 4896; // 4K
+
+  /**
+   * Default maximum read size in bytes during vectored reads : {@value}.
+   */
+  public static final int DEFAULT_OSS_VECTOR_READS_MAX_MERGED_READ_SIZE = 1253376; //1M
+
+  /**
+   * Maximum number of range reads a single input stream can have
+   * active (downloading, or queued) to the central FileSystem
+   * instance's pool of queued operations.
+   * This stops a single stream overloading the shared thread pool.
+   * {@value}
+   * <p>
+   * Default is {@link #DEFAULT_OSS_VECTOR_ACTIVE_RANGE_READS}
+   */
+  public static final String OSS_VECTOR_ACTIVE_RANGE_READS =
+      "fs.oss.vectored.active.ranged.reads";
+
+  /**
+   * Limit of queued range data download operations during vectored
+   * read. Value: {@value}
+   */
+  public static final int DEFAULT_OSS_VECTOR_ACTIVE_RANGE_READS = 4;
+
+  /**
+   * size of a buffer to create when draining the stream.
+   */
+  public static final int DRAIN_BUFFER_SIZE = 16384;
 }

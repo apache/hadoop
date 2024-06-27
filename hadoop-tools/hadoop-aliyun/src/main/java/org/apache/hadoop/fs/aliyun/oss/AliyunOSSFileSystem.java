@@ -85,6 +85,15 @@ public class AliyunOSSFileSystem extends FileSystem {
   private ExecutorService boundedThreadPool;
   private ExecutorService boundedCopyThreadPool;
 
+  /** Vectored IO context. */
+  private VectoredIOContext vectoredIOContext;
+
+  /**
+   * Maximum number of active range read operation a single
+   * input stream can have.
+   */
+  private int vectoredActiveRangeReads;
+
   private static final PathFilter DEFAULT_FILTER = new PathFilter() {
     @Override
     public boolean accept(Path file) {
@@ -396,6 +405,10 @@ public class AliyunOSSFileSystem extends FileSystem {
     this.boundedCopyThreadPool = BlockingThreadPoolExecutorService.newInstance(
         maxCopyThreads, maxCopyTasks, 60L,
         TimeUnit.SECONDS, "oss-copy-unbounded");
+
+    vectoredIOContext = populateVectoredIOContext(conf);
+    vectoredActiveRangeReads = intOption(conf, OSS_VECTOR_ACTIVE_RANGE_READS,
+        DEFAULT_OSS_VECTOR_ACTIVE_RANGE_READS, 1);
   }
 
 /**
@@ -611,7 +624,10 @@ public class AliyunOSSFileSystem extends FileSystem {
     return new FSDataInputStream(new AliyunOSSInputStream(getConf(),
         new SemaphoredDelegatingExecutor(
             boundedThreadPool, maxReadAheadPartNumber, true),
-        maxReadAheadPartNumber, store, pathToKey(path), fileStatus.getLen(),
+        maxReadAheadPartNumber,
+        new SemaphoredDelegatingExecutor(
+            boundedThreadPool, vectoredActiveRangeReads, true),
+        vectoredIOContext, store, pathToKey(path), fileStatus.getLen(),
         statistics));
   }
 
@@ -781,5 +797,22 @@ public class AliyunOSSFileSystem extends FileSystem {
   @VisibleForTesting
   BlockOutputStreamStatistics getBlockOutputStreamStatistics() {
     return blockOutputStreamStatistics;
+  }
+
+  /**
+   * Populates the configurations related to vectored IO operation
+   * in the context which has to passed down to input streams.
+   * @param conf configuration object.
+   * @return VectoredIOContext.
+   */
+  private VectoredIOContext populateVectoredIOContext(Configuration conf) {
+    final int minSeekVectored = (int) longOption(conf, OSS_VECTOR_READS_MIN_SEEK_SIZE,
+        DEFAULT_OSS_VECTOR_READS_MIN_SEEK_SIZE, 0);
+    final int maxReadSizeVectored = (int) longOption(conf, OSS_VECTOR_READS_MAX_MERGED_READ_SIZE,
+        DEFAULT_OSS_VECTOR_READS_MAX_MERGED_READ_SIZE, 0);
+    return new VectoredIOContext()
+        .setMinSeekForVectoredReads(minSeekVectored)
+        .setMaxReadSizeForVectoredReads(maxReadSizeVectored)
+        .build();
   }
 }
