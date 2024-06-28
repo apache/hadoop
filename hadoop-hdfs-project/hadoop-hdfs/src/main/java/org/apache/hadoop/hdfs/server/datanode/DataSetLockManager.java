@@ -168,7 +168,7 @@ public class DataSetLockManager implements DataNodeLockManager<AutoCloseDataSetL
       AutoCloseDataSetLock bpLock = getReadLock(LockLevel.BLOCK_POOl, resources[0]);
       AutoCloseDataSetLock volLock = getReadLock(LockLevel.VOLUME, resources[0], resources[1]);
       volLock.setParentLock(bpLock);
-      AutoCloseDataSetLock dirLock = getWriteLock(level, resources);
+      AutoCloseDataSetLock dirLock = getReadLock(level, resources);
       dirLock.setParentLock(volLock);
       if (openLockTrace) {
         LOG.debug("Sub lock " + resources[0] + resources[1] + resources[2] + " parent lock " +
@@ -195,7 +195,7 @@ public class DataSetLockManager implements DataNodeLockManager<AutoCloseDataSetL
       AutoCloseDataSetLock bpLock = getReadLock(LockLevel.BLOCK_POOl, resources[0]);
       AutoCloseDataSetLock volLock = getReadLock(LockLevel.VOLUME, resources[0], resources[1]);
       volLock.setParentLock(bpLock);
-      AutoCloseDataSetLock dirLock = getReadLock(level, resources);
+      AutoCloseDataSetLock dirLock = getWriteLock(level, resources);
       dirLock.setParentLock(volLock);
       if (openLockTrace) {
         LOG.debug("Sub lock " + resources[0] + resources[1] + resources[2] + " parent lock " +
