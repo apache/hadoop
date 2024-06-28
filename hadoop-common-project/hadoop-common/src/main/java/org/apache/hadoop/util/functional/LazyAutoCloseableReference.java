@@ -18,6 +18,12 @@
 
 package org.apache.hadoop.util.functional;
 
+import java.io.IOException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
+
+import static org.apache.hadoop.util.Preconditions.checkState;
+
 /**
  * A subclass of {@link LazyAtomicReference} which
  * holds an {@code AutoCloseable} reference and calls {@code close()}
@@ -26,6 +32,9 @@ package org.apache.hadoop.util.functional;
  */
 public class LazyAutoCloseableReference<T extends AutoCloseable>
     extends LazyAtomicReference<T> implements AutoCloseable {
+
+  /** Closed flag. */
+  private final AtomicBoolean closed = new AtomicBoolean(false);
 
   /**
    * Constructor for this instance.
@@ -36,6 +45,24 @@ public class LazyAutoCloseableReference<T extends AutoCloseable>
   }
 
   /**
+   * {@inheritDoc}
+   * @throws IllegalStateException if the reference is closed.
+   */
+  @Override
+  public synchronized T eval() throws IOException {
+    checkState(!closed.get(), "Reference is closed");
+    return super.eval();
+  }
+
+  /**
+   * Is the reference closed?
+   * @return true if the reference is closed.
+   */
+  public boolean isClosed() {
+    return closed.get();
+  }
+
+  /**
    * Close the reference value if it is non-null.
    * Sets the reference to null afterwards, even on
    * a failure.
@@ -43,7 +70,13 @@ public class LazyAutoCloseableReference<T extends AutoCloseable>
    */
   @Override
   public synchronized void close() throws Exception {
+    if (closed.getAndSet(true)) {
+      // already closed
+      return;
+    }
     final T v = getReference().get();
+    // check the state.
+    // A null reference means it has not yet been evaluated,
     if (v != null) {
       try {
         v.close();
@@ -52,5 +85,18 @@ public class LazyAutoCloseableReference<T extends AutoCloseable>
         getReference().set(null);
       }
     }
+  }
+
+
+  /**
+   * Create from a supplier.
+   * This is not a constructor to avoid ambiguity when a lambda-expression is
+   * passed in.
+   * @param supplier supplier implementation.
+   * @return a lazy reference.
+   * @param <T> type of reference
+   */
+  public static <T extends AutoCloseable> LazyAutoCloseableReference<T> lazyAutoCloseablefromSupplier(Supplier<T> supplier) {
+    return new LazyAutoCloseableReference<>(supplier::get);
   }
 }

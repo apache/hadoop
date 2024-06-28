@@ -34,9 +34,10 @@ import static org.apache.hadoop.util.functional.FunctionalIO.uncheckIOExceptions
  * This {@code constructor}  is only invoked on demand
  * when the reference is first needed,
  * after which the same value is returned.
+ * This value MUST NOT be null.
  * <p>
- * Implements {@link CallableRaisingIOE<T>} and {@code Supplier<T>}.
- * so an instance of this can be used in a functional IO chain.
+ * Implements {@link CallableRaisingIOE} and {@code java.util.function.Supplier}.
+ * An instance of this can therefore  be used in a functional IO chain.
  * As such, it can act as a delayed and caching invocator of a function:
  * the supplier passed in is only ever invoked once, and only when requested.
  * @param <T> type of reference
@@ -83,17 +84,31 @@ public class LazyAtomicReference<T>
    * Get the value, constructing it if needed.
    * @return the value
    * @throws IOException on any evaluation failure
+   * @throws NullPointerException if the evaluated function returned null.
    */
-  public final synchronized T eval() throws IOException {
+  public synchronized T eval() throws IOException {
     final T v = reference.get();
     if (v != null) {
       return v;
     }
-    reference.set(constructor.apply());
+    reference.set(requireNonNull(constructor.apply()));
     return reference.get();
   }
 
   /**
+   * Implementation of {@code CallableRaisingIOE.apply()}.
+   * Invoke {@link #eval()}.
+   * @return the value
+   * @throws IOException on any evaluation failure
+   */
+  @Override
+  public final T apply() throws IOException {
+    return eval();
+  }
+
+  /**
+   * Implementation of {@code Supplier.get()}.
+   * <p>
    * Invoke {@link #eval()} and convert IOEs to
    * UncheckedIOException.
    * <p>
@@ -115,16 +130,6 @@ public class LazyAtomicReference<T>
     return reference.get() != null;
   }
 
-  /**
-   * Invoke {@link #eval()}.
-   * @return the value
-   * @throws IOException on any evaluation failure
-   */
-  @Override
-  public final T apply() throws IOException {
-    return eval();
-  }
-
   @Override
   public String toString() {
     return "LazyAtomicReference{" +
@@ -140,7 +145,8 @@ public class LazyAtomicReference<T>
    * @return a lazy reference.
    * @param <T> type of reference
    */
-  public static <T> LazyAtomicReference fromSupplier(Supplier<T> supplier) {
+  public static <T> LazyAtomicReference<T> lazyAtomicReferenceFromSupplier(
+      Supplier<T> supplier) {
     return new LazyAtomicReference<>(supplier::get);
   }
 }

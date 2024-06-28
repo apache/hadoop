@@ -75,8 +75,6 @@ public class TestClientManager extends AbstractHadoopTestBase {
    */
   private static final String GENERATED = "generated[%d]";
 
-  private final AtomicInteger counter = new AtomicInteger();
-
   private S3Client s3Client;
 
   private S3AsyncClient asyncClient;
@@ -356,6 +354,10 @@ public class TestClientManager extends AbstractHadoopTestBase {
   @Test
   public void testClientCreationFailure() throws Throwable {
 
+    // counter is incremented on every eval(), so can be used to assert
+    // the number of invocations.
+    final AtomicInteger counter = new AtomicInteger(0);
+
     final ClientManager manager = manager(factory(() -> {
       throw new UnknownHostException(String.format(GENERATED, counter.incrementAndGet()));
     }));
@@ -372,52 +374,6 @@ public class TestClientManager extends AbstractHadoopTestBase {
     intercept(UnknownHostException.class, "[4]", manager::getOrCreateTransferManager);
 
     manager.close();
-  }
-
-  /**
-   * Test the underlying {@link LazyAtomicReference} integraton with java
-   * Supplier API.
-   */
-  @Test
-  public void testSupplierIntegration() throws Throwable {
-
-    LazyAtomicReference<Integer> ref = LazyAtomicReference.fromSupplier(counter::incrementAndGet);
-
-    // constructor does not invoke the supplier
-    Assertions.assertThat(counter.get())
-        .describedAs("state of counter after construction")
-        .isEqualTo(0);
-
-    // constructor does not invoke the supplier
-    Assertions.assertThat(counter.get())
-        .describedAs("state of counter after construction")
-        .isEqualTo(0);
-
-    // second invocation does not
-    Assertions.assertThat(ref.get())
-        .describedAs("second get of %s", ref)
-        .isEqualTo(1);
-    // nor does Callable.apply()
-    Assertions.assertThat(ref.apply())
-        .describedAs("second get of %s", ref)
-        .isEqualTo(1);
-  }
-  /**
-   * Test the underlying {@link LazyAtomicReference} integration with java
-   * Supplier API.
-   */
-  @Test
-  public void testSupplierIntegrationFailureHandling() throws Throwable {
-
-    LazyAtomicReference<Integer> ref = new LazyAtomicReference<>(() -> {
-      throw new UnknownHostException(String.format(GENERATED, counter.incrementAndGet()));
-    });
-
-    // the get() call will wrap the raised exception, which can be extracted.
-    UnknownHostException ex =
-        (UnknownHostException) intercept(UncheckedIOException.class, ref::get).getCause();
-    assertExceptionContains("[1]", ex);
-
   }
 
 }
