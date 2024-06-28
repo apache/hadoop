@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,32 +15,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.protocol.datatransfer;
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+package org.apache.hadoop.fs;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.io.Text;
 
 /**
- * A little struct class to wrap an InputStream and an OutputStream.
+ * This class contains constants for configuration keys and default values.
  */
-@InterfaceAudience.Private
-public class IOStreamPair implements Closeable {
-  public final InputStream in;
-  public final OutputStream out;
+@InterfaceAudience.LimitedPrivate({"YARN", "HDFS"})
+@InterfaceStability.Evolving
+public final class HdfsCommonConstants {
 
-  public IOStreamPair(InputStream in, OutputStream out) {
-    this.in = in;
-    this.out = out;
+  /**
+   * HDFS DELEGATION KIND value.
+   */
+  public static final Text HDFS_DELEGATION_KIND =
+      new Text("HDFS_DELEGATION_TOKEN");
+
+  /**
+   * DFS_ADMIN configuration: {@value}.
+   */
+  public static final String DFS_ADMIN = "dfs.cluster.administrators";
+
+  private HdfsCommonConstants() {
   }
 
-  @Override
-  public void close() throws IOException {
-    IOUtils.closeStream(in);
-    IOUtils.closeStream(out);
-  }
 }
