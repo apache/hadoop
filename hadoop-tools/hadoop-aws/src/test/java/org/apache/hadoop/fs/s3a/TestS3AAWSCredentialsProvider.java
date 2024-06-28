@@ -237,7 +237,7 @@ public class TestS3AAWSCredentialsProvider extends AbstractS3ATestBase {
     Assertions
         .assertThat(credentials.size())
         .describedAs("List of Credentials providers")
-        .isEqualTo(TERMINATION_TIMEOUT);
+        .isEqualTo(3);
   }
 
   /**
