@@ -263,7 +263,7 @@ public class TestObserverWithRouter {
 
     long rpcCountForObserver = routerContext.getRouter().getRpcServer()
         .getRPCMetrics().getObserverProxyOps();
-    assertEquals("No call should be sent to observer", 1, rpcCountForObserver);
+    assertEquals("One call should be sent to observer", 1, rpcCountForObserver);
   }
 
   @EnumSource(ConfigSetting.class)
