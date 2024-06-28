@@ -101,6 +101,9 @@ public class FastCopy {
 
   private final DFSClient srcDFSClient;
   private final DistributedFileSystem dstFs;
+  private long chunkOffset = 0;
+  private long chunkLength = Long.MAX_VALUE;
+
 
   public FastCopy(Configuration conf, Path sourcePath, Path dstPath, boolean overwrite) throws IOException {
     this.conf = conf;
@@ -132,6 +135,12 @@ public class FastCopy {
     this.copyBlockExecutorPoolSize = conf.getInt(DFS_FAST_COPY_BLOCK_EXECUTOR_POOLSIZE,
         DFS_FAST_COPY_BLOCK_EXECUTOR_POOLSIZE_DEFAULT);
     this.copyBlockExecutor = HadoopExecutors.newFixedThreadPool(this.copyBlockExecutorPoolSize);
+  }
+
+  public FastCopy(Configuration conf, Path sourcePath, Path dstPath, boolean overwrite, long chunkOffset, long chunkLength) throws IOException {
+     this(conf,sourcePath,dstPath,overwrite);
+     this.chunkOffset = chunkOffset;
+     this.chunkLength = chunkLength;
   }
 
   private class CopyBlockCrossNamespace implements Runnable {
@@ -466,7 +475,7 @@ public class FastCopy {
 
     LOG.info("Start to copy {} to {}.", src, dst);
     try {
-      LocatedBlocks blocks = srcDFSClient.getLocatedBlocks(src, 0, srcFileStatus.getLen());
+      LocatedBlocks blocks = srcDFSClient.getLocatedBlocks(src, chunkOffset, chunkLength);
       List<LocatedBlock> blocksList = blocks.getLocatedBlocks();
       LOG.debug("FastCopy : Block locations retrieved for {} : {}.", src, blocksList);
 

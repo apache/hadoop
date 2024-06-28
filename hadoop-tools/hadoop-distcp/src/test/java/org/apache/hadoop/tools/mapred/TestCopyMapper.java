@@ -21,8 +21,6 @@ package org.apache.hadoop.tools.mapred;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -44,6 +42,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -76,7 +75,8 @@ public class TestCopyMapper {
   private static final int DEFAULT_FILE_SIZE = 1024;
   private static final long NON_DEFAULT_BLOCK_SIZE = 4096;
 
-  private static MiniDFSCluster cluster;
+  protected static MiniDFSCluster cluster;
+  protected static DataNode datanode;
 
   private static final String SOURCE_PATH = "/tmp/source";
   private static final String TARGET_PATH = "/tmp/target";
@@ -88,6 +88,7 @@ public class TestCopyMapper {
                 .numDataNodes(1)
                 .format(true)
                 .build());
+    datanode = cluster.getDataNodes().get(0);
   }
 
   /**
@@ -287,14 +288,32 @@ public class TestCopyMapper {
 
   @Test(timeout=40000)
   public void testRun() throws Exception {
+    long numFastCopy1 = datanode.getMetrics().getBlocksReplicatedViaHardlink();
+    testCopy(false, true);
+    long numFastCopy2 = datanode.getMetrics().getBlocksReplicatedViaHardlink();
+    Assert.assertTrue(numFastCopy2 - numFastCopy1 > 0);
+
     testCopy(false);
+    long numFastCopy3 = datanode.getMetrics().getBlocksReplicatedViaHardlink();
+    Assert.assertEquals(0, numFastCopy3 - numFastCopy2);
   }
 
   @Test
   public void testCopyWithAppend() throws Exception {
+    long numFastCopy1 = datanode.getMetrics().getBlocksReplicatedViaHardlink();
+    testCopyWithAppend(true);
+    long numFastCopy2 = datanode.getMetrics().getBlocksReplicatedViaHardlink();
+    Assert.assertTrue(numFastCopy2 - numFastCopy1 > 0);
+
+    testCopyWithAppend(false);
+    long numFastCopy3 = datanode.getMetrics().getBlocksReplicatedViaHardlink();
+    Assert.assertEquals(0, numFastCopy3 - numFastCopy2);
+  }
+
+  public void testCopyWithAppend(boolean fastCopy) throws Exception {
     final FileSystem fs = cluster.getFileSystem();
     // do the first distcp
-    testCopy(false);
+    testCopy(false, fastCopy);
     // start appending data to source
     appendSourceData();
 
@@ -310,6 +329,10 @@ public class TestCopyMapper {
     // Enable append 
     context.getConfiguration().setBoolean(
         DistCpOptionSwitch.APPEND.getConfigLabel(), true);
+    if (fastCopy) {
+      context.getConfiguration().setBoolean(
+        DistCpOptionSwitch.USE_FASTCOPY.getConfigLabel(), true);
+    }
     copyMapper.setup(context);
 
     int numFiles = 0;
@@ -334,6 +357,9 @@ public class TestCopyMapper {
         .getValue());
     Assert.assertEquals(numFiles, stubContext.getReporter().
         getCounter(CopyMapper.Counter.COPY).getValue());
+    if (fastCopy) {
+      return;
+    }
     rb = getMetrics(cluster.getDataNodes().get(0).getMetrics().name());
     /*
      * added as part of HADOOP-15292 to ensure that multiple readBlock()
@@ -346,6 +372,10 @@ public class TestCopyMapper {
   }
 
   private void testCopy(boolean preserveChecksum) throws Exception {
+    testCopy(preserveChecksum, false);
+  }
+
+  private void testCopy(boolean preserveChecksum, boolean fastCopy) throws Exception {
     deleteState();
     if (preserveChecksum) {
       createSourceDataWithDifferentChecksumType();
@@ -372,6 +402,9 @@ public class TestCopyMapper {
     }
     configuration.set(DistCpOptionSwitch.PRESERVE_STATUS.getConfigLabel(),
             DistCpUtils.packAttributes(fileAttributes));
+    if (fastCopy) {
+      configuration.setBoolean(DistCpOptionSwitch.USE_FASTCOPY.getConfigLabel(), true);
+    }
 
     copyMapper.setup(context);
 

@@ -36,6 +36,7 @@ public class TestCopyMapperCompositeCrc extends TestCopyMapper {
                 .numDataNodes(1)
                 .format(true)
                 .build());
+    datanode = cluster.getDataNodes().get(0);
   }
 
   @Override

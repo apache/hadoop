@@ -45,6 +45,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.tools.util.DistCpTestUtils;
 import org.apache.hadoop.util.ToolRunner;
@@ -63,10 +64,10 @@ public class TestDistCpSystem {
 
   private static final String SRCDAT = "srcdat";
   private static final String DSTDAT = "dstdat";
-  private static final long BLOCK_SIZE = 1024;
+  protected static long BLOCK_SIZE = 1024;
 
-  private static MiniDFSCluster cluster;
-  private static Configuration conf;
+  protected static MiniDFSCluster cluster;
+  protected static Configuration conf;
 
   private class FileEntry {
     String path;
@@ -128,13 +129,14 @@ public class TestDistCpSystem {
           DFSTestUtil.createFile(fs, newPath, bufSize,
               fileSize, BLOCK_SIZE, replicationFactor, seed);
         } else {
+          ErasureCodingPolicy ecPolicy = fs.getErasureCodingPolicy(new Path("/"));
+          int num = ecPolicy == null ? 1 : ecPolicy.getNumDataUnits();
           // Create a variable length block file, by creating
           // one block of half block size at the chunk boundary
-          long seg1 = chunkSize * BLOCK_SIZE - BLOCK_SIZE / 2;
+          long seg1 = chunkSize * BLOCK_SIZE * num - BLOCK_SIZE / 2;
           long seg2 = fileSize - seg1;
-          DFSTestUtil.createFile(fs, newPath, bufSize,
-              seg1, BLOCK_SIZE, replicationFactor, seed);
-          DFSTestUtil.appendFileNewBlock(fs, newPath, (int)seg2);
+          DFSTestUtil.createFile(fs, newPath, bufSize, seg1, BLOCK_SIZE, replicationFactor, seed);
+          DFSTestUtil.appendFileNewBlock(fs, newPath, (int) seg2);
         }
       }
       seed = System.currentTimeMillis() + rand.nextLong();
@@ -160,7 +162,7 @@ public class TestDistCpSystem {
   
 
   /** delete directory and everything underneath it.*/
-  private static void deldir(FileSystem fs, String topdir) throws IOException {
+  protected static void deldir(FileSystem fs, String topdir) throws IOException {
     fs.delete(new Path(topdir), true);
   }
 
@@ -336,6 +338,10 @@ public class TestDistCpSystem {
   }
 
   private void chunkCopy(FileEntry[] srcFiles) throws Exception {
+    chunkCopy(srcFiles, false);
+  }
+
+  private void chunkCopy(FileEntry[] srcFiles, boolean fastCopy) throws Exception {
     final String testRoot = "/testdir";
     final String testSrcRel = SRCDAT;
     final String testSrc = testRoot + "/" + testSrcRel;
@@ -358,9 +364,14 @@ public class TestDistCpSystem {
 
     createDestDir(fs, testDst, srcStats, srcFiles);
 
-    String[] args = new String[] {"-pugp", "-blocksperchunk",
-        String.valueOf(chunkSize),
-        nnUri + testSrc, nnUri + testDst};
+    String[] args;
+    if (!fastCopy) {
+      args = new String[] {"-pugp", "-blocksperchunk", String.valueOf(chunkSize), nnUri + testSrc,
+          nnUri + testDst};
+    } else {
+      args = new String[] {"-fastcopy", "-pugp", "-blocksperchunk", String.valueOf(chunkSize),
+          nnUri + testSrc, nnUri + testDst};
+    }
 
     copyAndVerify(fs, srcFiles, srcStats, testDst, args);
     // Do it again
@@ -378,11 +389,13 @@ public class TestDistCpSystem {
     }
     // get file status after modifying file
     srcStats = getFileStatus(fs, testRoot, srcFiles);
-
-    args = new String[] {"-pugp", "-update", "-blocksperchunk",
-        String.valueOf(chunkSize),
-        nnUri + testSrc, nnUri + testDst + "/" + testSrcRel};
-
+    if (!fastCopy) {
+      args = new String[] {"-pugp", "-update", "-blocksperchunk", String.valueOf(chunkSize),
+          nnUri + testSrc, nnUri + testDst + "/" + testSrcRel};
+    } else {
+      args = new String[] {"-fastcopy", "-pugp", "-update", "-blocksperchunk",
+          String.valueOf(chunkSize), nnUri + testSrc, nnUri + testDst + "/" + testSrcRel};
+    }
     copyAndVerify(fs, srcFiles, srcStats, testDst, args);
 
     deldir(fs, testRoot);
@@ -398,6 +411,7 @@ public class TestDistCpSystem {
         new FileEntry(SRCDAT + "/dir1/file1", false)
     };
     chunkCopy(srcFiles);
+    chunkCopy(srcFiles, true);
   }
 
   @Test
@@ -407,10 +421,16 @@ public class TestDistCpSystem {
         new FileEntry(SRCDAT + "/file0", false)
     };
     chunkCopy(srcFiles);
+    chunkCopy(srcFiles, true);
   }
 
   @Test
   public void testDistcpLargeFile() throws Exception {
+    testDistcpLargeFile(false);
+    testDistcpLargeFile(true);
+  }
+
+  public void testDistcpLargeFile(boolean fastCopy) throws Exception {
     FileEntry[] srcfiles = {
         new FileEntry(SRCDAT, true),
         new FileEntry(SRCDAT + "/file", false)
@@ -444,12 +464,15 @@ public class TestDistCpSystem {
     for (int i = 0; i < srcfiles.length; i++) {
       fs.setOwner(srcstats[i].getPath(), "u" + i, null);
     }
-    String[] args = new String[] {
-        "-blocksperchunk",
-        String.valueOf(chunkSize),
-        nnUri + testSrc,
-        nnUri + testDst
-    };
+
+    String[] args;
+    if (fastCopy) {
+      args = new String[] {"-fastcopy", "-blocksperchunk", String.valueOf(chunkSize), nnUri + testSrc,
+              nnUri + testDst};
+    } else {
+      args = new String[] {"-blocksperchunk", String.valueOf(chunkSize), nnUri + testSrc,
+          nnUri + testDst};
+    }
 
     LOG.info("_____ running distcp: " + args[0] + " " + args[1]);
     ToolRunner.run(conf, new DistCp(), args);
@@ -461,6 +484,51 @@ public class TestDistCpSystem {
 
     this.compareFiles(fs,  srcstats[srcstats.length-1],
         dststat[dststat.length-1]);
+    deldir(fs, testRoot);
+  }
+
+  @Test
+  public void testDistcpFastCopy() throws Exception {
+    FileEntry[] srcfiles = {
+        new FileEntry(SRCDAT, true),
+        new FileEntry(SRCDAT + "/file0", false),
+        new FileEntry(SRCDAT + "/sub1/file1", false),
+        new FileEntry(SRCDAT + "/sub2/file2", false),
+        new FileEntry(SRCDAT + "/sub3/file3", false),
+        new FileEntry(SRCDAT + "/sub3/file4", false)
+    };
+
+    final String testRoot = "/testdir";
+    final String testSrcRel = SRCDAT;
+    final String testSrc = testRoot + "/" + testSrcRel;
+    final String testDstRel = DSTDAT;
+    final String testDst = testRoot + "/" + testDstRel;
+
+    String nnUri = FileSystem.getDefaultUri(conf).toString();
+    DistributedFileSystem fs =
+        (DistributedFileSystem) FileSystem.get(URI.create(nnUri), conf);
+    fs.mkdirs(new Path(testRoot));
+    fs.mkdirs(new Path(testSrc));
+    fs.mkdirs(new Path(testDst));
+    createFiles(fs, testRoot, srcfiles, -1);
+
+    String[] args = new String[] {
+        "-pug",
+        "-fastcopy",
+        nnUri + testSrc,
+        nnUri + testDst
+    };
+
+    LOG.info("_____ running distcp: " + args[0] + " " + args[1]);
+    ToolRunner.run(conf, new DistCp(), args);
+
+    FileStatus[] srcstat = getFileStatus(fs, testRoot, srcfiles);
+    FileStatus[] dststat = getFileStatus(fs, testDst, srcfiles);
+
+    for (int i=0; i< srcstat.length; i++) {
+      compareFiles(fs, srcstat[i], dststat[i]);
+    }
+
     deldir(fs, testRoot);
   }
 
