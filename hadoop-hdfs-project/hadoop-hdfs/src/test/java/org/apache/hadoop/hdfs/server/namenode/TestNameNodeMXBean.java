@@ -1170,13 +1170,13 @@ public class TestNameNodeMXBean {
       fsn.getBlockManager().getDatanodeManager().refreshNodes(conf);
       DatanodeManager dm = cluster.getNameNode().getNamesystem().
           getBlockManager().getDatanodeManager();
-      LOG.info("Get all include nodes: {}",dm.getHostConfigManager().getIncludes());
+      LOG.info("Get all include nodes: {}", dm.getHostConfigManager().getIncludes());
 
       // get attribute DeadNodes
       String deadNodeInfo = (String) (mbs.getAttribute(mxbeanName,
           "DeadNodes"));
       assertEquals(fsn.getDeadNodes(), deadNodeInfo);
-      LOG.info("Get deadNode info: {}",deadNodeInfo);
+      LOG.info("Get deadNode info: {}", deadNodeInfo);
       Map<String, Map<String, Object>> deadNodes =
           (Map<String, Map<String, Object>>) JSON.parse(deadNodeInfo);
       assertEquals(1, deadNodes.size());
