@@ -89,7 +89,7 @@ public class DatanodeManager {
 
   private volatile long heartbeatIntervalSeconds;
   private volatile int heartbeatRecheckInterval;
-  /** Used by {@link HeartbeatManager} */
+  /** Used by {@link HeartbeatManager}. */
   private volatile int heartbeatRecheckIntervalForMonitor;
   /**
    * Stores the datanode -> block map.  
@@ -2193,7 +2193,8 @@ public class DatanodeManager {
     refreshHeartbeatRecheckIntervalForMonitor();
   }
 
-  private void refreshHeartbeatRecheckIntervalForMonitor() {
+  @VisibleForTesting
+  public void refreshHeartbeatRecheckIntervalForMonitor() {
     if (avoidStaleDataNodesForWrite && staleInterval < heartbeatRecheckInterval) {
       heartbeatRecheckIntervalForMonitor = (int) staleInterval;
       LOG.info("Setting heartbeat recheck interval to " + staleInterval
