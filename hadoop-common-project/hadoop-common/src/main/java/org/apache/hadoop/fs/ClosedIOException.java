@@ -20,9 +20,19 @@ package org.apache.hadoop.fs;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+/**
+ * Exception to denote if the underlying stream, cache or other closable resource
+ * is closed.
+ */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 public class ClosedIOException extends PathIOException {
+
+  /**
+   * Appends the custom error-message to the default error message.
+   * @param path path that encountered the closed resource.
+   * @param message custom error message.
+   */
   public ClosedIOException(String path, String message) {
     super(path, message);
   }
