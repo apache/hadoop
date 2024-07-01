@@ -47,7 +47,6 @@ import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
  * <p>
  * For JDK netlib usage, the child class would be {@link AbfsJdkHttpOperation}. <br>
  * For ApacheHttpClient netlib usage, the child class would be {@link AbfsAHCHttpOperation}.
- * </p>
  */
 public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
 

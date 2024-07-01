@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import org.junit.Test;
 
+import org.apache.hadoop.fs.ClosedIOException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
@@ -28,6 +29,7 @@ import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsDriverException;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.KEEP_ALIVE_CACHE_CLOSED;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.apache.hadoop.test.LambdaTestUtils.verifyCause;
 
 /**
  * This test class tests the exception handling in ABFS thrown by the
@@ -41,13 +43,16 @@ public class ITestApacheClientConnectionPool extends
   }
 
   @Test
-  public void testKacIsClosed() throws Exception {
-    try(AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(getRawConfiguration())) {
+  public void testKacIsClosed() throws Throwable {
+    try (AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(
+        getRawConfiguration())) {
       KeepAliveCache kac = fs.getAbfsStore().getClient().getKeepAliveCache();
       kac.close();
-      intercept(AbfsDriverException.class, KEEP_ALIVE_CACHE_CLOSED, () -> {
-        fs.create(new Path("/test"));
-      });
+      AbfsDriverException ex = intercept(AbfsDriverException.class,
+          KEEP_ALIVE_CACHE_CLOSED, () -> {
+            fs.create(new Path("/test"));
+          });
+      verifyCause(ClosedIOException.class, ex);
     }
   }
 }

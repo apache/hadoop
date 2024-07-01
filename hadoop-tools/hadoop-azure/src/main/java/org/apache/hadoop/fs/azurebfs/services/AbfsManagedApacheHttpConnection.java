@@ -32,6 +32,8 @@ import org.apache.http.HttpResponse;
 import org.apache.http.conn.ManagedHttpClientConnection;
 import org.apache.http.conn.routing.HttpRoute;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.COLON;
+
 /**
  * This class wraps the {@link ManagedHttpClientConnection} and provides
  * insights onto the connection level activity.
@@ -222,5 +224,17 @@ class AbfsManagedApacheHttpConnection
   @Override
   public int hashCode() {
     return hashCode;
+  }
+
+  @Override
+  public String toString() {
+    StringBuilder stringBuilder = new StringBuilder();
+    stringBuilder.append(
+            httpClientConnection.getRemoteAddress().getHostName())
+        .append(COLON)
+        .append(httpClientConnection.getRemotePort())
+        .append(COLON)
+        .append(hashCode());
+    return stringBuilder.toString();
   }
 }

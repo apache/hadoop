@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
@@ -32,6 +33,7 @@ import org.apache.http.conn.ConnectionPoolTimeoutException;
 import org.apache.http.conn.ConnectionRequest;
 import org.apache.http.conn.HttpClientConnectionManager;
 import org.apache.http.conn.HttpClientConnectionOperator;
+import org.apache.http.conn.ManagedHttpClientConnection;
 import org.apache.http.conn.routing.HttpRoute;
 import org.apache.http.conn.socket.ConnectionSocketFactory;
 import org.apache.http.impl.conn.DefaultHttpClientConnectionOperator;
@@ -90,15 +92,20 @@ class AbfsConnectionManager implements HttpClientConnectionManager {
           final TimeUnit timeUnit)
           throws InterruptedException, ExecutionException,
           ConnectionPoolTimeoutException {
-        LOG.debug("Connection requested");
+        String requestId = UUID.randomUUID().toString();
+        logDebug("Connection requested for request {}", requestId);
         try {
           HttpClientConnection clientConn = kac.get();
           if (clientConn != null) {
-            LOG.debug("Connection retrieved from KAC: {}", clientConn);
+            logDebug("Connection retrieved from KAC: {} for requestId: {}",
+                clientConn, requestId);
             return clientConn;
           }
-          LOG.debug("Creating new connection");
-          return httpConnectionFactory.create(route, null);
+          logDebug("Creating new connection for requestId: {}", requestId);
+          ManagedHttpClientConnection conn = httpConnectionFactory.create(route,
+              null);
+          logDebug("Connection created: {} for requestId: {}", conn, requestId);
+          return conn;
         } catch (IOException ex) {
           throw new ExecutionException(ex);
         }
@@ -131,9 +138,9 @@ class AbfsConnectionManager implements HttpClientConnectionManager {
     if (conn.isOpen() && conn instanceof AbfsManagedApacheHttpConnection) {
       boolean connAddedInKac = kac.put(conn);
       if (connAddedInKac) {
-        LOG.debug("Connection cached: {}", conn);
+        logDebug("Connection cached: {}", conn);
       } else {
-        LOG.debug("Connection not cached, and is released: {}", conn);
+        logDebug("Connection not cached, and is released: {}", conn);
       }
     }
   }
@@ -145,11 +152,11 @@ class AbfsConnectionManager implements HttpClientConnectionManager {
       final int connectTimeout,
       final HttpContext context) throws IOException {
     long start = System.currentTimeMillis();
-    LOG.debug("Connecting {} to {}", conn, route.getTargetHost());
+    logDebug("Connecting {} to {}", conn, route.getTargetHost());
     connectionOperator.connect((AbfsManagedApacheHttpConnection) conn,
         route.getTargetHost(), route.getLocalSocketAddress(),
         connectTimeout, SocketConfig.DEFAULT, context);
-    LOG.debug("Connection established: {}", conn);
+    logDebug("Connection established: {}", conn);
     if (context instanceof AbfsManagedHttpClientContext) {
       ((AbfsManagedHttpClientContext) context).setConnectTime(
           System.currentTimeMillis() - start);
@@ -190,5 +197,11 @@ class AbfsConnectionManager implements HttpClientConnectionManager {
   @Override
   public void shutdown() {
     kac.close();
+  }
+
+  private void logDebug(String message, Object... args) {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(message, args);
+    }
   }
 }
