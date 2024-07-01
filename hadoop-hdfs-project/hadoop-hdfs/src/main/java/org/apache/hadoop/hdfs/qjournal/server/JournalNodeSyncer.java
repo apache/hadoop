@@ -18,6 +18,9 @@
 package org.apache.hadoop.hdfs.qjournal.server;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
+import org.apache.hadoop.hdfs.server.common.StorageInfo;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -168,6 +171,10 @@ public class JournalNodeSyncer {
 
   private void startSyncJournalsDaemon() {
     syncJournalDaemon = new Daemon(() -> {
+      // Format the journal with namespace info from the other JNs if it is not formatted
+      if (!journal.isFormatted()) {
+        formatWithSyncer();
+      }
       // Wait for journal to be formatted to create edits.sync directory
       while(!journal.isFormatted()) {
         try {
@@ -187,7 +194,8 @@ public class JournalNodeSyncer {
       while(shouldSync) {
         try {
           if (!journal.isFormatted()) {
-            LOG.warn("Journal cannot sync. Not formatted.");
+            LOG.warn("Journal cannot sync. Not formatted. Trying to format with the syncer");
+            formatWithSyncer();
           } else {
             syncJournals();
           }
@@ -231,6 +239,36 @@ public class JournalNodeSyncer {
   private void syncJournals() {
     syncWithJournalAtIndex(journalNodeIndexForSync);
     journalNodeIndexForSync = (journalNodeIndexForSync + 1) % numOtherJNs;
+  }
+
+  private void formatWithSyncer() {
+    LOG.info("Trying to format the journal with the syncer");
+    try {
+      StorageInfo storage = null;
+      for (JournalNodeProxy jnProxy : otherJNProxies) {
+        try {
+          HdfsServerProtos.StorageInfoProto storageInfoResponse = jnProxy.jnProxy.getStorageInfo(jid, null);
+          storage = PBHelper.convert(storageInfoResponse, HdfsServerConstants.NodeType.JOURNAL_NODE);
+          if (storage.getNamespaceID() == 0) {
+            LOG.error("Got invalid StorageInfo from " + jnProxy);
+            continue;
+          }
+          LOG.info("Got StorageInfo " + storage + " from " + jnProxy);
+          break;
+        } catch (IOException e) {
+          LOG.error("Could not get StorageInfo from " + jnProxy, e);
+        }
+      }
+      if (storage == null) {
+        LOG.error("Could not get StorageInfo from any JournalNode. " +
+            "JournalNodeSyncer cannot format the journal.");
+        return;
+      }
+      NamespaceInfo nsInfo = new NamespaceInfo(storage);
+      journal.format(nsInfo, true);
+    } catch (IOException e) {
+      LOG.error("Exception in formatting the journal with the syncer", e);
+    }
   }
 
   private void syncWithJournalAtIndex(int index) {
