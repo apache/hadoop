@@ -19,7 +19,6 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.net.HttpURLConnection;
 import java.util.UUID;
 
 import org.junit.Assume;
@@ -40,7 +39,6 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
-import static java.net.HttpURLConnection.HTTP_SERVER_ERROR;
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -228,14 +226,18 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
 
   @Test
   public void ensureGetAclDetermineHnsStatusAccurately() throws Exception {
-    ensureGetAclDetermineHnsStatusAccuratelyInternal(HTTP_BAD_REQUEST, false);
-    ensureGetAclDetermineHnsStatusAccuratelyInternal(HTTP_NOT_FOUND, true);
-    ensureGetAclDetermineHnsStatusAccuratelyInternal(HTTP_INTERNAL_ERROR, false);
-    ensureGetAclDetermineHnsStatusAccuratelyInternal(HTTP_UNAVAILABLE, false);
+    ensureGetAclDetermineHnsStatusAccuratelyInternal(HTTP_BAD_REQUEST,
+        false, false);
+    ensureGetAclDetermineHnsStatusAccuratelyInternal(HTTP_NOT_FOUND,
+        true, true);
+    ensureGetAclDetermineHnsStatusAccuratelyInternal(HTTP_INTERNAL_ERROR,
+        true, true);
+    ensureGetAclDetermineHnsStatusAccuratelyInternal(HTTP_UNAVAILABLE,
+        true, true);
   }
 
   private void ensureGetAclDetermineHnsStatusAccuratelyInternal(int statusCode,
-      boolean expected) throws Exception {
+      boolean expectedValue, boolean isExceptionExpected) throws Exception {
     AzureBlobFileSystemStore store = Mockito.spy(getFileSystem().getAbfsStore());
     AbfsClient mockClient = mock(AbfsClient.class);
     store.setNamespaceEnabled(Trilean.UNKNOWN);
@@ -244,13 +246,23 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
         statusCode, null, Integer.toString(statusCode), null);
     doThrow(ex).when(mockClient).getAclStatus(anyString(), any(TracingContext.class));
 
-    try {
-      boolean isHnsEnabled = store.getIsNamespaceEnabled(
-          getTestTracingContext(getFileSystem(), false));
-      Assertions.assertThat(isHnsEnabled).isEqualTo(expected);
-    } catch (AbfsRestOperationException caughtEx) {
-      Assertions.assertThat(caughtEx.getStatusCode()).isEqualTo(statusCode);
-      Assertions.assertThat(caughtEx.getErrorMessage()).isEqualTo(ex.getErrorMessage());
+    if (isExceptionExpected) {
+      try {
+        store.getIsNamespaceEnabled(getTestTracingContext(getFileSystem(), false));
+        Assertions.fail(
+            "Exception Should have been thrown with status code: " + statusCode);
+      } catch (AbfsRestOperationException caughtEx) {
+        Assertions.assertThat(caughtEx.getStatusCode()).isEqualTo(statusCode);
+        Assertions.assertThat(caughtEx.getErrorMessage()).isEqualTo(ex.getErrorMessage());
+      }
     }
+    // This should not trigger extra getAcl() call in case of exceptions.
+    boolean isHnsEnabled = store.getIsNamespaceEnabled(
+        getTestTracingContext(getFileSystem(), false));
+    Assertions.assertThat(isHnsEnabled).isEqualTo(expectedValue);
+
+    // GetAcl() should be called only once to determine the HNS status.
+    Mockito.verify(mockClient, times(1))
+        .getAclStatus(anyString(), any(TracingContext.class));
   }
 }
