@@ -73,7 +73,7 @@ import static org.apache.hadoop.hdfs.server.federation.router.async.AsyncUtil.as
  */
 public class AsyncClass extends SyncClass{
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestAsyncUtil.class);
+      LoggerFactory.getLogger(AsyncClass.class);
   private ExecutorService executorService;
   private final static String ASYNC_WORKER = "Async Worker";
 

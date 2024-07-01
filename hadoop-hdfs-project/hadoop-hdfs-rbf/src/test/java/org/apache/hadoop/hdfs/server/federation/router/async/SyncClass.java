@@ -17,9 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router.async;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -39,8 +36,6 @@ import java.util.concurrent.Future;
  * @see AsyncClass
  */
 public class SyncClass implements BaseClass{
-  private static final Logger LOG =
-      LoggerFactory.getLogger(TestAsyncUtil.class);
   private long timeConsuming;
 
   public SyncClass(long timeConsuming) {
