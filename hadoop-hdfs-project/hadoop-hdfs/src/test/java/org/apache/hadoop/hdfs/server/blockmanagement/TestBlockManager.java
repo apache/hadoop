@@ -2444,6 +2444,30 @@ public class TestBlockManager {
       storageList.get(0).getDatanodeDescriptor().decrementPendingReplicationWithoutTargets();
     }
 
+    // Case 1.7: If no block is missing, but three block are busy, and the other block
+    //   is decommissioning. we should get replication work.
+    clearStorageForStripedBlock(stripedBlock);
+    addStorageForStripedBlock(stripedBlock, storageList.subList(0, 5),
+        blockIndices.subList(0, 5));
+    storageList.get(0).getDatanodeDescriptor().startDecommission();
+    for (int m = 1; m < 4; m++) {
+      for (int i = 0; i < bm.getReplicationStreamsHardLimit(); i++) {
+        storageList.get(m).getDatanodeDescriptor().incrementPendingReplicationWithoutTargets();
+      }
+    }
+    replWork = (ErasureCodingReplicationWork) bm.scheduleReconstruction(stripedBlock, 0);
+    assertEquals(1, replWork.getAdditionalReplRequired());
+    assertEquals(1, replWork.getSrcNodes().length);
+    assertEquals(storageList.get(0).getDatanodeDescriptor(), replWork.getSrcNodes()[0]);
+    assertEquals(1, replWork.getSrcIndices().length);
+    assertEquals(0, (byte) replWork.getSrcIndices()[0]);
+    updateDataNodeAdminState(storageList.get(0).getDatanodeDescriptor(), AdminStates.NORMAL);
+    for (int m = 1; m < 4; m++) {
+      for (int i = 0; i < bm.getReplicationStreamsHardLimit(); i++) {
+        storageList.get(m).getDatanodeDescriptor().decrementPendingReplicationWithoutTargets();
+      }
+    }
+
     // Case 2: One block is missing
     // Case 2.1: If one block is missing, we will get one ErasureCodingWork, and require one replicas
     clearStorageForStripedBlock(stripedBlock);
