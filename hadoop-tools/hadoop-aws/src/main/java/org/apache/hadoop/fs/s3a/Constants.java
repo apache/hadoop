@@ -779,7 +779,7 @@ public final class Constants {
   public static final String FS_S3A_CLIENT_PREFIX = "fs.s3a.client.";
 
   /** Custom headers postfix */
-  public static final String CUSTOM_HEADER_POSTFIX = ".custom.headers";
+  public static final String CUSTOM_HEADERS_POSTFIX = ".custom.headers";
 
   /**
    * List of custom headers to be set on the service client.
@@ -792,11 +792,11 @@ public final class Constants {
    */
   public static final String CUSTOM_HEADERS_STS =
       FS_S3A_CLIENT_PREFIX + Constants.AWS_SERVICE_IDENTIFIER_STS.toLowerCase()
-          + CUSTOM_HEADER_POSTFIX;
+          + CUSTOM_HEADERS_POSTFIX;
 
   public static final String CUSTOM_HEADERS_S3 =
       FS_S3A_CLIENT_PREFIX + Constants.AWS_SERVICE_IDENTIFIER_S3.toLowerCase()
-          + CUSTOM_HEADER_POSTFIX;
+          + CUSTOM_HEADERS_POSTFIX;
 
   public static final String S3N_FOLDER_SUFFIX = "_$folder$";
   public static final String FS_S3A_BLOCK_SIZE = "fs.s3a.block.size";
