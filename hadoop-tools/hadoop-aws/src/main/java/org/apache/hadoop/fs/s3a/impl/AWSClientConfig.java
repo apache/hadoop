@@ -440,6 +440,7 @@ public final class AWSClientConfig {
         List<String> headerValues = Arrays.asList(valueString.split(":"));
         clientConfig.putHeader(header, headerValues);
       });
+      LOG.debug("headers for {} client = {}", awsServiceIdentifier, clientConfig.headers());
     }
   }
 
