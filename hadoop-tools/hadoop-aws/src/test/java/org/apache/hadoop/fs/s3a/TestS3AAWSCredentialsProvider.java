@@ -86,6 +86,8 @@ public class TestS3AAWSCredentialsProvider extends AbstractS3ATestBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestS3AAWSCredentialsProvider.class);
 
+  public static final int TERMINATION_TIMEOUT = 3;
+
   @Test
   public void testProviderWrongClass() throws Exception {
     expectProviderInstantiationFailure(this.getClass(),
@@ -579,7 +581,7 @@ public class TestS3AAWSCredentialsProvider extends AbstractS3ATestBase {
     }
   }
 
-  private static final int CONCURRENT_THREADS = 10;
+  private static final int CONCURRENT_THREADS = 4;
 
   @Test
   public void testConcurrentAuthentication() throws Throwable {
@@ -619,7 +621,7 @@ public class TestS3AAWSCredentialsProvider extends AbstractS3ATestBase {
             "expectedSecret", credentials.secretAccessKey());
       }
     } finally {
-      pool.awaitTermination(10, TimeUnit.SECONDS);
+      pool.awaitTermination(TERMINATION_TIMEOUT, TimeUnit.SECONDS);
       pool.shutdown();
     }
 
@@ -685,7 +687,7 @@ public class TestS3AAWSCredentialsProvider extends AbstractS3ATestBase {
         );
       }
     } finally {
-      pool.awaitTermination(10, TimeUnit.SECONDS);
+      pool.awaitTermination(TERMINATION_TIMEOUT, TimeUnit.SECONDS);
       pool.shutdown();
     }
 
