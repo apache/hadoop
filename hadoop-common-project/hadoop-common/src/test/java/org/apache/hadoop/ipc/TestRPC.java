@@ -1941,8 +1941,8 @@ public class TestRPC extends TestRpcBase {
           String connectionInfo = conns[0].toString();
           LOG.info("Connection is from: {}", connectionInfo);
           assertEquals(
-              "Connection string representation should include only IP address for healthy connection",
-              1, connectionInfo.split(" / ").length);
+              "Connection string representation should include only IP address for healthy "
+                  + "connection", 1, connectionInfo.split(" / ").length);
           // verify whether the connection should have been reused.
           if (isDisconnected) {
             assertNotSame(reqName, lastConn, conns[0]);
