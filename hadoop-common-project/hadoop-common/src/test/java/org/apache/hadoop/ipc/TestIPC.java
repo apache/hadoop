@@ -1177,7 +1177,7 @@ public class TestIPC {
     Connection connection = server.getConnections()[0];
     LOG.info("Connection is from: {}", connection);
     assertEquals(
-        "Connection string representation should include both IP address and Host name", 2,
+        "Connection string representation should include only IP address for healthy connection", 1,
         connection.toString().split(" / ").length);
     int serviceClass2 = connection.getServiceClass();
     assertFalse(noChanged ^ serviceClass == serviceClass2);
