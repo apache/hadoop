@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.Arrays;
 
-import org.apache.hadoop.util.Lists;
 import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Test;
@@ -31,6 +30,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
+import org.apache.hadoop.util.Lists;
 
 import static org.apache.hadoop.fs.s3a.Constants.AWS_SERVICE_IDENTIFIER_S3;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_SERVICE_IDENTIFIER_STS;
