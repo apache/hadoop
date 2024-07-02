@@ -188,7 +188,7 @@ class KeepAliveCache extends Stack<KeepAliveCache.KeepAliveEntry>
     try {
       hc.close();
     } catch (IOException ex) {
-      if(LOG.isDebugEnabled()) {
+      if (LOG.isDebugEnabled()) {
         LOG.debug("Close failed for connection: {}", hc, ex);
       }
     }

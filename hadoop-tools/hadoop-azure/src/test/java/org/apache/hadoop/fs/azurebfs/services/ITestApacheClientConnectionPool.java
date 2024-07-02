@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import org.junit.Test;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ClosedIOException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -28,6 +29,8 @@ import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsDriverException;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.KEEP_ALIVE_CACHE_CLOSED;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_NETWORKING_LIBRARY;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpOperationType.APACHE_HTTP_CLIENT;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.test.LambdaTestUtils.verifyCause;
 
@@ -44,8 +47,10 @@ public class ITestApacheClientConnectionPool extends
 
   @Test
   public void testKacIsClosed() throws Throwable {
+    Configuration configuration = new Configuration(getRawConfiguration());
+    configuration.set(FS_AZURE_NETWORKING_LIBRARY, APACHE_HTTP_CLIENT.name());
     try (AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(
-        getRawConfiguration())) {
+        configuration)) {
       KeepAliveCache kac = fs.getAbfsStore().getClient().getKeepAliveCache();
       kac.close();
       AbfsDriverException ex = intercept(AbfsDriverException.class,
