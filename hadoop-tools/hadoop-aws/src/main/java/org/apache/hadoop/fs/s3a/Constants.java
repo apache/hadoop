@@ -778,7 +778,7 @@ public final class Constants {
   /** Prefix for S3A client-specific properties. */
   public static final String FS_S3A_CLIENT_PREFIX = "fs.s3a.client.";
 
-  /** Custom headers postfix */
+  /** Custom headers postfix. */
   public static final String CUSTOM_HEADERS_POSTFIX = ".custom.headers";
 
   /**

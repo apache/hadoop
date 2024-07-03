@@ -221,18 +221,22 @@ public class TestAwsClientConfig extends AbstractHadoopTestBase {
             .describedAs("Custom client headers for s3 %s", CUSTOM_HEADERS_S3)
             .isNull();
 
-    Assertions.assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_S3).headers().size())
-            .describedAs("Count of S3 client headers")
-            .isEqualTo(0);
-    Assertions.assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_STS).headers().size())
-            .describedAs("Count of STS client headers")
-            .isEqualTo(2);
-    Assertions.assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_STS).headers().get("foo"))
-            .describedAs("STS client 'foo' header value")
-            .isEqualTo(Lists.newArrayList("bar", "baz"));
-    Assertions.assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_STS).headers().get("qux"))
-            .describedAs("STS client 'qux' header value")
-            .isEqualTo(Lists.newArrayList("quux"));
+    Assertions.assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_S3)
+            .headers().size())
+        .describedAs("Count of S3 client headers")
+        .isEqualTo(0);
+    Assertions.assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_STS)
+            .headers().size())
+        .describedAs("Count of STS client headers")
+        .isEqualTo(2);
+    Assertions.assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_STS)
+            .headers().get("foo"))
+        .describedAs("STS client 'foo' header value")
+        .isEqualTo(Lists.newArrayList("bar", "baz"));
+    Assertions.assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_STS)
+            .headers().get("qux"))
+        .describedAs("STS client 'qux' header value")
+        .isEqualTo(Lists.newArrayList("quux"));
   }
 
   /**
@@ -247,17 +251,21 @@ public class TestAwsClientConfig extends AbstractHadoopTestBase {
             .describedAs("Custom client headers for STS %s", CUSTOM_HEADERS_STS)
             .isNull();
 
-    Assertions.assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_STS).headers().size())
-            .describedAs("Count of STS client headers")
-            .isEqualTo(0);
-    Assertions.assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_S3).headers().size())
-            .describedAs("Count of S3 client headers")
-            .isEqualTo(2);
-    Assertions.assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_S3).headers().get("foo"))
-            .describedAs("S3 client 'foo' header value")
-            .isEqualTo(Lists.newArrayList("bar", "baz"));
-    Assertions.assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_S3).headers().get("qux"))
-            .describedAs("S3 client 'qux' header value")
-            .isEqualTo(Lists.newArrayList("quux"));
+    Assertions.assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_STS)
+            .headers().size())
+        .describedAs("Count of STS client headers")
+        .isEqualTo(0);
+    Assertions.assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_S3)
+            .headers().size())
+        .describedAs("Count of S3 client headers")
+        .isEqualTo(2);
+    Assertions.assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_S3)
+            .headers().get("foo"))
+        .describedAs("S3 client 'foo' header value")
+        .isEqualTo(Lists.newArrayList("bar", "baz"));
+    Assertions.assertThat(createClientConfigBuilder(conf, AWS_SERVICE_IDENTIFIER_S3)
+            .headers().get("qux"))
+        .describedAs("S3 client 'qux' header value")
+        .isEqualTo(Lists.newArrayList("quux"));
   }
 }

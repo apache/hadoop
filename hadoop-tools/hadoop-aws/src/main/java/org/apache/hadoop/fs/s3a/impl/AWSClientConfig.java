@@ -424,14 +424,14 @@ public final class AWSClientConfig {
       ClientOverrideConfiguration.Builder clientConfig, String awsServiceIdentifier) {
     String configKey = null;
     switch (awsServiceIdentifier) {
-      case AWS_SERVICE_IDENTIFIER_S3:
-        configKey = CUSTOM_HEADERS_S3;
-        break;
-      case AWS_SERVICE_IDENTIFIER_STS:
-        configKey = CUSTOM_HEADERS_STS;
-        break;
-      default:
-        // Nothing to do. The original signer override is already setup
+    case AWS_SERVICE_IDENTIFIER_S3:
+      configKey = CUSTOM_HEADERS_S3;
+      break;
+    case AWS_SERVICE_IDENTIFIER_STS:
+      configKey = CUSTOM_HEADERS_STS;
+      break;
+    default:
+      // Nothing to do. The original signer override is already setup
     }
     if (configKey != null) {
       Map<String, String> awsClientCustomHeadersMap =
