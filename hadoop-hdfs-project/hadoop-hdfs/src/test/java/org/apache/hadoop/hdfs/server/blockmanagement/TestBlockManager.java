@@ -2421,7 +2421,7 @@ public class TestBlockManager {
         storageList.subList(0, 5).stream().map(s -> s.getDatanodeDescriptor())
             .collect(Collectors.toSet())));
     assertEquals(0, replWork.getLiveReplicaStorages().size());
-    for (int i = 0; i < 5 ; i++) {
+    for (int i = 0; i < 5; i++) {
       assertEquals(storageList.get(i).getDatanodeDescriptor(), replWork.getSrcNodes()[i]);
       assertEquals(blockIndices.get(i), replWork.getSrcIndices()[i]);
     }
@@ -2469,7 +2469,8 @@ public class TestBlockManager {
     }
 
     // Case 2: One block is missing
-    // Case 2.1: If one block is missing, we will get one ErasureCodingWork, and require one replicas
+    // Case 2.1: If one block is missing, we will get one ErasureCodingWork,
+    //   and require one replicas
     clearStorageForStripedBlock(stripedBlock);
     addStorageForStripedBlock(stripedBlock, storageList.subList(0, 4),
         blockIndices.subList(0, 4));

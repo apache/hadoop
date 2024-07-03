@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import com.google.common.base.Objects;
+
 import java.util.concurrent.ThreadLocalRandom;
 
 import static org.apache.hadoop.hdfs.server.blockmanagement.NumberReplicas.StoredReplicaState.LIVE;
@@ -83,7 +85,7 @@ class NumberReplicasStriped extends NumberReplicas {
     return states[blockIndex];
   }
 
-  public boolean isBusy (int blockIndex) {
+  public boolean isBusy(int blockIndex) {
     assert considerBusy;
     return this.busys[blockIndex];
   }
@@ -108,5 +110,28 @@ class NumberReplicasStriped extends NumberReplicas {
   public int readableReplicas() {
     return this.liveReplicas() + this.readOnlyReplicas() + this.decommissioning() +
         this.liveEnteringMaintenanceReplicas();
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+    NumberReplicasStriped that = (NumberReplicasStriped) o;
+    return considerBusy == that.considerBusy &&
+        Objects.equal(storages, that.storages) &&
+        Objects.equal(states, that.states) &&
+        Objects.equal(busys, that.busys);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hashCode(super.hashCode(), storages, states, considerBusy, busys);
   }
 }
