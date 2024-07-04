@@ -468,15 +468,15 @@ public class TestDecommissionWithStriped {
    */
   @Test(timeout = 120000)
   public void testBusyAfterDecommissionNode() throws Exception {
-    byte busyDNIndex = 0;
-    //1. create EC file
+    int busyDNIndex = 0;
+    //1. create EC file.
     final Path ecFile = new Path(ecDir, "testBusyAfterDecommissionNode");
     int writeBytes = cellSize * dataBlocks;
     writeStripedFile(dfs, ecFile, writeBytes);
     Assert.assertEquals(0, bm.numOfUnderReplicatedBlocks());
     FileChecksum fileChecksum1 = dfs.getFileChecksum(ecFile, writeBytes);
 
-    //2. make once DN busy
+    //2. make once DN busy.
     final INodeFile fileNode = cluster.getNamesystem().getFSDirectory()
         .getINode4Write(ecFile.toString()).asFile();
     BlockInfo firstBlock = fileNode.getBlocks()[0];
@@ -487,7 +487,7 @@ public class TestDecommissionWithStriped {
       busyNode.incrementPendingReplicationWithoutTargets();
     }
 
-    //3. decomission one node
+    //3. decomission one node.
     List<DatanodeInfo> decommisionNodes = new ArrayList<>();
     decommisionNodes.add(busyNode);
     decommissionNode(0, decommisionNodes, AdminStates.DECOMMISSION_INPROGRESS);
@@ -500,8 +500,9 @@ public class TestDecommissionWithStriped {
     }
     assertEquals(decommisionNodes.size(), liveDecommissioning);
 
-    //4. wait for decommission block to replicate
-    Thread.sleep(3000);
+    //4. wait for decommission block to replicate.
+    GenericTestUtils.waitFor(() -> bm.getLowRedundancyBlocksCount() == 1,
+        100, 3000);
 
     int blocksScheduled = 0;
     final List<DatanodeDescriptor> dnList = new ArrayList<>();
