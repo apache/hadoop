@@ -643,8 +643,8 @@ public class TestBlockManager {
     assertEquals("Block not initially pending reconstruction", 0,
         bm.pendingReconstruction.getNumReplicas(block));
     assertEquals(
-        "computeBlockReconstructionWork should indicate reconstruction is needed",
-        1, bm.computeReconstructionWorkForBlocks(list_all));
+        "scheduleBlockReconstructionWork should indicate reconstruction is needed",
+        1, bm.scheduleReconstructionWorkForBlocks(list_all));
     assertTrue("reconstruction is pending after work is computed",
         bm.pendingReconstruction.getNumReplicas(block) > 0);
 
@@ -897,7 +897,7 @@ public class TestBlockManager {
     aBlockInfoStriped.setBlockCollectionId(mockINodeId);
 
     // reconstruction should be scheduled
-    BlockReconstructionWork work = bm.scheduleReconstruction(aBlockInfoStriped, 3);
+    BlockReconstructionWork work = bm.generateReconstructionForBlock(aBlockInfoStriped, 3);
     assertNotNull(work);
 
     // simulate the 2 nodes reach maxReplicationStreams
@@ -907,7 +907,7 @@ public class TestBlockManager {
     }
 
     // reconstruction should be skipped since the number of non-busy nodes are not enough
-    work = bm.scheduleReconstruction(aBlockInfoStriped, 3);
+    work = bm.generateReconstructionForBlock(aBlockInfoStriped, 3);
     assertNull(work);
   }
 
@@ -941,7 +941,7 @@ public class TestBlockManager {
     aBlockInfoStriped.setBlockCollectionId(mockINodeId);
 
     // reconstruction should be scheduled
-    BlockReconstructionWork work = bm.scheduleReconstruction(aBlockInfoStriped, 3);
+    BlockReconstructionWork work = bm.generateReconstructionForBlock(aBlockInfoStriped, 3);
     assertNotNull(work);
 
     // simulate the 1 node reaches maxReplicationStreams
@@ -950,7 +950,7 @@ public class TestBlockManager {
     }
 
     // reconstruction should still be scheduled since there are 2 source nodes to create 2 blocks
-    work = bm.scheduleReconstruction(aBlockInfoStriped, 3);
+    work = bm.generateReconstructionForBlock(aBlockInfoStriped, 3);
     assertNotNull(work);
 
     // simulate the 1 more node reaches maxReplicationStreams
@@ -959,7 +959,7 @@ public class TestBlockManager {
     }
 
     // reconstruction should be skipped since the number of non-busy nodes are not enough
-    work = bm.scheduleReconstruction(aBlockInfoStriped, 3);
+    work = bm.generateReconstructionForBlock(aBlockInfoStriped, 3);
     assertNull(work);
   }
 
@@ -995,7 +995,7 @@ public class TestBlockManager {
     aBlockInfoStriped.setBlockCollectionId(mockINodeId);
 
     // Reconstruction should be scheduled.
-    BlockReconstructionWork work = bm.scheduleReconstruction(aBlockInfoStriped, 3);
+    BlockReconstructionWork work = bm.generateReconstructionForBlock(aBlockInfoStriped, 3);
     assertNotNull(work);
 
     ExtendedBlock dummyBlock = new ExtendedBlock("bpid", 1, 1, 1);
@@ -1011,7 +1011,7 @@ public class TestBlockManager {
     }
 
     // Reconstruction should be skipped since the number of non-busy nodes are not enough.
-    work = bm.scheduleReconstruction(aBlockInfoStriped, 3);
+    work = bm.generateReconstructionForBlock(aBlockInfoStriped, 3);
     assertNull(work);
   }
 
@@ -2062,7 +2062,7 @@ public class TestBlockManager {
     assertFalse(status.isPlacementPolicySatisfied());
     DatanodeStorageInfo newNode = DFSTestUtil.createDatanodeStorageInfo(
             "storage8", "8.8.8.8", "/rackA", "host8");
-    BlockReconstructionWork work = bm.scheduleReconstruction(blockInfo, 3);
+    BlockReconstructionWork work = bm.generateReconstructionForBlock(blockInfo, 3);
     assertNotNull(work);
     assertEquals(1, work.getAdditionalReplRequired());
     // the new targets in rack A.

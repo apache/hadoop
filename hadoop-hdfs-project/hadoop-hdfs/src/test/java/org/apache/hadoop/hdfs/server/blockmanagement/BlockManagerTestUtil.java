@@ -235,7 +235,7 @@ public class BlockManagerTestUtil {
    */
   public static int computeAllPendingWork(BlockManager bm) {
     int work = computeInvalidationWork(bm);
-    work += bm.computeBlockReconstructionWork(Integer.MAX_VALUE);
+    work += bm.scheduleBlockReconstructionWork(Integer.MAX_VALUE);
     return work;
   }
 

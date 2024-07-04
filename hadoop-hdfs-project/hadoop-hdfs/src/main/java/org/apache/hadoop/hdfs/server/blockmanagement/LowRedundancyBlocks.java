@@ -520,43 +520,56 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
 
     int count = 0;
     int priority = 0;
-    HashSet<BlockInfo> toRemove = new HashSet<>();
     for (; count < blocksToProcess && priority < LEVEL; priority++) {
-      // Go through all blocks that need reconstructions with current priority.
-      // Set the iterator to the first unprocessed block at this priority level
-      // We do not want to skip QUEUE_WITH_CORRUPT_BLOCKS because we still need
-      // to look for deleted blocks if any.
+      List<BlockInfo> blocks = new ArrayList<>();
+      int processed = chooseLowRedundancyBlocksForPriority(priority, blocksToProcess, blocks);
       final boolean inCorruptLevel = (QUEUE_WITH_CORRUPT_BLOCKS == priority);
-      final Iterator<BlockInfo> i = priorityQueues.get(priority).getBookmark();
-      final List<BlockInfo> blocks = new LinkedList<>();
       if (!inCorruptLevel) {
         blocksToReconstruct.add(blocks);
       }
-      for(; count < blocksToProcess && i.hasNext(); count++) {
-        BlockInfo block = i.next();
-        if (block.isDeleted()) {
-          toRemove.add(block);
-          continue;
-        }
-        if (!inCorruptLevel) {
-          blocks.add(block);
-        }
-      }
-      for (BlockInfo bInfo : toRemove) {
-        remove(bInfo, priority);
-      }
-      toRemove.clear();
+      count += processed;
     }
 
     if (priority == LEVEL || resetIterators) {
       // Reset all bookmarks because there were no recently added blocks.
-      for (LightWeightLinkedSet<BlockInfo> q : priorityQueues) {
-        q.resetBookmark();
-      }
+      resetIterators();
     }
-
     return blocksToReconstruct;
   }
+
+  synchronized void resetIterators(){
+    for (LightWeightLinkedSet<BlockInfo> q : priorityQueues) {
+      q.resetBookmark();
+    }
+  }
+
+  synchronized int chooseLowRedundancyBlocksForPriority(
+          int priority, int blocksToProcess, List<BlockInfo> blocks) {
+    HashSet<BlockInfo> toRemove = new HashSet<>();
+    int count = 0;
+    // Go through all blocks that need reconstructions with current priority.
+    // Set the iterator to the first unprocessed block at this priority level
+    // We do not want to skip QUEUE_WITH_CORRUPT_BLOCKS because we still need
+    // to look for deleted blocks if any.
+    final boolean inCorruptLevel = (QUEUE_WITH_CORRUPT_BLOCKS == priority);
+    final Iterator<BlockInfo> i = priorityQueues.get(priority).getBookmark();
+    for(; count < blocksToProcess && i.hasNext(); count++) {
+      BlockInfo block = i.next();
+      if (block.isDeleted()) {
+        toRemove.add(block);
+        continue;
+      }
+      if (!inCorruptLevel) {
+        blocks.add(block);
+      }
+    }
+    for (BlockInfo bInfo : toRemove) {
+      remove(bInfo, priority);
+    }
+    toRemove.clear();
+    return count;
+  }
+
 
   /** Returns an iterator of all blocks in a given priority queue. */
   synchronized Iterator<BlockInfo> iterator(int level) {
