@@ -870,7 +870,7 @@ public class BlockManager implements BlockStatsMXBean {
     synchronized (neededReconstruction) {
       out.println("Metasave: Blocks waiting for reconstruction: "
           + neededReconstruction.getLowRedundancyBlockCount());
-      for (int i = 0; i < LEVEL; i++) {
+      for (int i = 0; i < neededReconstruction.LEVEL; i++) {
         if (i != neededReconstruction.QUEUE_WITH_CORRUPT_BLOCKS) {
           for (Iterator<BlockInfo> it = neededReconstruction.iterator(i);
                it.hasNext();) {
@@ -970,7 +970,7 @@ public class BlockManager implements BlockStatsMXBean {
     // source node returned is not used
     chooseSourceDatanodes(blockInfo, containingNodes,
         containingLiveReplicasNodes, numReplicas, new ArrayList<Byte>(),
-        new ArrayList<Byte>(), new ArrayList<Byte>(), LEVEL);
+        new ArrayList<Byte>(), new ArrayList<Byte>(), LowRedundancyBlocks.LEVEL);
     
     // containingLiveReplicasNodes can include READ_ONLY_SHARED replicas which are 
     // not included in the numReplicas.liveReplicas() count
@@ -2132,7 +2132,7 @@ public class BlockManager implements BlockStatsMXBean {
     // Step 1: categorize at-risk blocks into replication and EC tasks
     try {
       synchronized (neededReconstruction) {
-        for (; blocksToProcess > 0 && priority < LEVEL; priority++) {
+        for (; blocksToProcess > 0 && priority < neededReconstruction.LEVEL; priority++) {
           List<BlockInfo> blocks = new ArrayList<>();
           int processed = neededReconstruction.
                   chooseLowRedundancyBlocksForPriority(priority, blocksToProcess, blocks);
@@ -4962,7 +4962,7 @@ public class BlockManager implements BlockStatsMXBean {
       DatanodeStorageInfo.decrementBlocksScheduled(remove.getTargets()
           .toArray(new DatanodeStorageInfo[remove.getTargets().size()]));
     }
-    neededReconstruction.remove(block, LEVEL);
+    neededReconstruction.remove(block, LowRedundancyBlocks.LEVEL);
     postponedMisreplicatedBlocks.remove(block);
   }
 
