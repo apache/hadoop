@@ -210,7 +210,7 @@ public class DecommissionManager {
         pendingNodes.add(node);
       }
     } else {
-      LOG.trace("startDecommission: Node {} in {}, nothing to do." +
+      LOG.info("startDecommission: Node {} in {}, nothing to do." +
           node, node.getAdminState());
     }
   }
