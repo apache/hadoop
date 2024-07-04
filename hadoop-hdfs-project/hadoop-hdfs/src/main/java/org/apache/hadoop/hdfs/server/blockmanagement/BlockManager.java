@@ -2131,7 +2131,7 @@ public class BlockManager implements BlockStatsMXBean {
     // Step 1: categorize at-risk blocks into replication and EC tasks
     try {
       synchronized (neededReconstruction) {
-        for (; blocksToProcess > 0 && priority < neededReconstruction.LEVEL; priority++) {
+        for (; blocksToProcess > 0 && priority < LowRedundancyBlocks.LEVEL; priority++) {
           List<BlockInfo> blocks = new ArrayList<>();
           int processed = neededReconstruction.
                   chooseLowRedundancyBlocksForPriority(priority, blocksToProcess, blocks);
@@ -2151,7 +2151,7 @@ public class BlockManager implements BlockStatsMXBean {
     } finally {
       namesystem.writeUnlock("generateReconstructionWorkForBlocks");
     }
-    if (priority == LEVEL || resetIterators) {
+    if (priority == LowRedundancyBlocks.LEVEL || resetIterators) {
       // Reset all bookmarks because there were no recently added blocks.
       neededReconstruction.resetIterators();
     }
