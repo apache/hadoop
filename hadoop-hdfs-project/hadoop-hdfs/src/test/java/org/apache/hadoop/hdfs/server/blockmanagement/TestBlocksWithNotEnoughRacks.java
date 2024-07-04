@@ -600,7 +600,7 @@ public class TestBlocksWithNotEnoughRacks {
     }
   }
 
-  static BlockReconstructionWork generateReconstruction(
+  static BlockReconstructionWork generateReconstructionForBlock(
       FSNamesystem fsn, BlockInfo block, int priority) {
     fsn.writeLock();
     try {
