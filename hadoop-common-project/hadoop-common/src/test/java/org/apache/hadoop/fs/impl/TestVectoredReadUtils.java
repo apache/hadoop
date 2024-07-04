@@ -702,12 +702,11 @@ public class TestVectoredReadUtils extends HadoopTestBase {
   }
 
   /**
-   * Empty ranges cannot be sorted.
+   * Empty ranges are allowed.
    */
   @Test
-  public void testEmptyRangesRaisesIllegalArgument() throws Throwable {
-    intercept(IllegalArgumentException.class,
-        () -> validateAndSortRanges(Collections.emptyList(), Optional.empty()));
+  public void testEmptyRangesAllowed() throws Throwable {
+    validateAndSortRanges(Collections.emptyList(), Optional.empty());
   }
 
   /**
