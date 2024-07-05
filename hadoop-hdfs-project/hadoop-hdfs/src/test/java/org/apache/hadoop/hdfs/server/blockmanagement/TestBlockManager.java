@@ -121,11 +121,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION;
 import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -2327,6 +2323,54 @@ public class TestBlockManager {
       assertEquals(0, blockManager.getExcessBlocksCount());
     } finally {
       DataNodeFaultInjector.set(oldInjector);
+    }
+  }
+
+  /**
+   * Test the log mechasim is working as expected when storage is not chosen
+   * @throws IOException
+   * @throws InterruptedException
+   * @throws TimeoutException
+   */
+  @Test(timeout = 6000)
+  public void testStorageNotChosenReason() throws InterruptedException {
+    String storageID = "storageID";
+    DatanodeStorageInfo targetDN = BlockManagerTestUtil
+            .newDatanodeStorageInfo(DFSTestUtil.getLocalDatanodeDescriptor(),
+                    new DatanodeStorage("storage_test_0"));
+    BlockInfo blk = new BlockInfoContiguous(new Block(0), (short) 0);
+    StorageNotChosenReason.start();
+    String reason = StorageNotChosenReason.getStorageNotChosenReason(blk);
+    assertTrue(reason.contains(storageID) );
+    assertFalse(reason.contains(targetDN.toString()));
+    assertTrue(reason.contains("successfully chosen storage"));
+    assertFalse(reason.contains("is not chosen since"));
+    assertFalse(reason.contains("Reason statistics"));
+
+    int threadNum = 10;
+    Thread[] threads = new Thread[threadNum];
+    for(int i = 0; i<threadNum;i++){
+      final int index = i;
+      threads[i] = new Thread(() -> {
+        String newStorageID = "storageID"+index;
+        StorageNotChosenReason.start();
+        DatanodeStorageInfo newTargetStorage = BlockManagerTestUtil
+                .newDatanodeStorageInfo(DFSTestUtil.getLocalDatanodeDescriptor(),
+                        new DatanodeStorage(newStorageID));
+        BlockInfo newBlk = new BlockInfoContiguous(new Block(index), (short) index);
+        StorageNotChosenReason.genStorageIsNotChooseForReplication(newTargetStorage,
+                StorageNotChosenReason.REPLICA_DECOMMISSIONED, null);
+        String reason1 = StorageNotChosenReason.getStorageNotChosenReason(newBlk);
+        assertTrue(reason1.contains(newBlk.toString()));
+        assertTrue(reason1.contains(newStorageID));
+        assertTrue(reason1.contains(newTargetStorage.toString()));
+        assertTrue(reason1.contains("is not chosen since"));
+        assertTrue(reason1.contains("Reason statistics"));
+      });
+    }
+    for(int i = 0;i<threadNum;i++){
+      threads[i].start();
+      threads[i].join(0);
     }
   }
 }

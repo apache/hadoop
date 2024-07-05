@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import static org.apache.hadoop.hdfs.protocol.BlockType.CONTIGUOUS;
 import static org.apache.hadoop.hdfs.protocol.BlockType.STRIPED;
+import static org.apache.hadoop.hdfs.server.blockmanagement.StorageNotChosenReason.*;
 import static org.apache.hadoop.util.ExitUtil.terminate;
 import static org.apache.hadoop.util.Time.now;
 
@@ -2244,6 +2245,9 @@ public class BlockManager implements BlockStatsMXBean {
     final DatanodeDescriptor[] srcNodes = chooseSourceDatanodes(block,
         containingNodes, liveReplicaNodes, numReplicas,
         liveBlockIndices, liveBusyBlockIndices, excludeReconstructed, priority);
+    if(LOG.isDebugEnabled()){
+      LOG.debug(getStorageNotChosenReason(block));
+    }
     short requiredRedundancy = getExpectedLiveRedundancyNum(block,
         numReplicas);
     if (srcNodes == null || srcNodes.length == 0) {
@@ -2571,6 +2575,7 @@ public class BlockManager implements BlockStatsMXBean {
     final boolean isStriped = block.isStriped();
     DatanodeDescriptor decommissionedSrc = null;
 
+    StorageNotChosenReason.start();
     BitSet liveBitSet = null;
     BitSet decommissioningBitSet = null;
     if (isStriped) {
@@ -2595,6 +2600,7 @@ public class BlockManager implements BlockStatsMXBean {
       // do not select the replica if it is corrupt or excess
       if (state == StoredReplicaState.CORRUPT ||
           state == StoredReplicaState.EXCESS) {
+        logStorageIsNotChooseForReplication(storage, StorageNotChosenReason.REPLICA_CORRUPT_OR_EXCESS);
         continue;
       }
 
@@ -2602,6 +2608,7 @@ public class BlockManager implements BlockStatsMXBean {
       // or unknown state replicas.
       if (state == null
           || state == StoredReplicaState.MAINTENANCE_NOT_FOR_READ) {
+        logStorageIsNotChooseForReplication(storage, StorageNotChosenReason.REPLICA_MAINTENANCE_NOT_FOR_READ);
         continue;
       }
 
@@ -2613,6 +2620,7 @@ public class BlockManager implements BlockStatsMXBean {
             ThreadLocalRandom.current().nextBoolean()) {
           decommissionedSrc = node;
         }
+        logStorageIsNotChooseForReplication(storage, StorageNotChosenReason.REPLICA_DECOMMISSIONED);
         continue;
       }
 
@@ -2637,6 +2645,7 @@ public class BlockManager implements BlockStatsMXBean {
           //HDFS-16566 ExcludeReconstructed won't be reconstructed.
           excludeReconstructed.add(blockIndex);
         }
+        logStorageIsNotChooseForReplication(storage, StorageNotChosenReason.REPLICA_ALREADY_REACH_REPLICATION_LIMIT);
         continue; // already reached replication limit
       }
 
@@ -2648,6 +2657,7 @@ public class BlockManager implements BlockStatsMXBean {
           //HDFS-16566 ExcludeReconstructed won't be reconstructed.
           excludeReconstructed.add(blockIndex);
         }
+        logStorageIsNotChooseForReplication(storage, StorageNotChosenReason.REPLICA_ALREADY_REACH_REPLICATION_HARD_LIMIT);
         continue;
       }
 
