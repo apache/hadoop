@@ -38,9 +38,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSBuilder;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 /**
  * Future IO Helper methods.
  * <p>
@@ -62,7 +59,6 @@ import org.slf4j.LoggerFactory;
 @InterfaceStability.Unstable
 public final class FutureIO {
 
-  private static final Logger LOG = LoggerFactory.getLogger(FutureIO.class.getName());
   private FutureIO() {
   }
 
@@ -129,7 +125,6 @@ public final class FutureIO {
    * If any future throws an exception during its execution, this method
    * extracts and rethrows that exception.
    * </p>
-   *
    * @param collection collection of futures to be evaluated
    * @param <T> type of the result.
    * @return the list of future's result, if all went well.
@@ -140,19 +135,10 @@ public final class FutureIO {
   public static <T> List<T> awaitAllFutures(final Collection<Future<T>> collection)
       throws InterruptedIOException, IOException, RuntimeException {
     List<T> results = new ArrayList<>();
-    try {
-      for (Future<T> future : collection) {
-        results.add(future.get());
-      }
-      return results;
-    } catch (InterruptedException e) {
-      LOG.debug("Execution of future interrupted ", e);
-      throw (InterruptedIOException) new InterruptedIOException(e.toString())
-          .initCause(e);
-    } catch (ExecutionException e) {
-      LOG.debug("Execution of future failed with exception", e.getCause());
-      return raiseInnerCause(e);
+    for (Future<T> future : collection) {
+      results.add(awaitFuture(future));
     }
+    return results;
   }
 
   /**
@@ -163,7 +149,6 @@ public final class FutureIO {
    * the timeout expires, whichever happens first. If any future throws an
    * exception during its execution, this method extracts and rethrows that exception.
    * </p>
-   *
    * @param collection collection of futures to be evaluated
    * @param duration timeout duration
    * @param <T> type of the result.
@@ -176,21 +161,12 @@ public final class FutureIO {
   public static <T> List<T> awaitAllFutures(final Collection<Future<T>> collection,
       final Duration duration)
       throws InterruptedIOException, IOException, RuntimeException,
-      TimeoutException {
+             TimeoutException {
     List<T> results = new ArrayList<>();
-    try {
-      for (Future<T> future : collection) {
-        results.add(future.get(duration.toMillis(), TimeUnit.MILLISECONDS));
-      }
-      return results;
-    } catch (InterruptedException e) {
-      LOG.debug("Execution of future interrupted ", e);
-      throw (InterruptedIOException) new InterruptedIOException(e.toString())
-          .initCause(e);
-    } catch (ExecutionException e) {
-      LOG.debug("Execution of future failed with exception", e.getCause());
-      return raiseInnerCause(e);
+    for (Future<T> future : collection) {
+      results.add(awaitFuture(future, duration.toMillis(), TimeUnit.MILLISECONDS));
     }
+    return results;
   }
 
   /**
@@ -199,7 +175,6 @@ public final class FutureIO {
    * This will always raise an exception, either the inner IOException,
    * an inner RuntimeException, or a new IOException wrapping the raised
    * exception.
-   *
    * @param e exception.
    * @param <T> type of return value.
    * @return nothing, ever.
@@ -283,12 +258,11 @@ public final class FutureIO {
    * @param <U> type of builder
    * @return the builder passed in.
    */
-  public static <T, U extends FSBuilder<T, U>>
-      FSBuilder<T, U> propagateOptions(
-        final FSBuilder<T, U> builder,
-        final Configuration conf,
-        final String optionalPrefix,
-        final String mandatoryPrefix) {
+  public static <T, U extends FSBuilder<T, U>> FSBuilder<T, U> propagateOptions(
+      final FSBuilder<T, U> builder,
+      final Configuration conf,
+      final String optionalPrefix,
+      final String mandatoryPrefix) {
     propagateOptions(builder, conf,
         optionalPrefix, false);
     propagateOptions(builder, conf,

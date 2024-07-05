@@ -146,11 +146,18 @@ public class StagingTestBase {
     return mockFs;
   }
 
-  private static S3AFileSystem mockS3AFileSystemRobustly(S3Client mockS3Client) {
+  private static S3AFileSystem mockS3AFileSystemRobustly(S3Client mockS3Client) throws IOException {
+
     S3AFileSystem mockFS = mock(S3AFileSystem.class);
+    S3AStore store = mock(S3AStore.class);
+    when(store.getOrCreateS3Client())
+        .thenReturn(mockS3Client);
+
     S3AInternals s3AInternals = mock(S3AInternals.class);
+
     when(mockFS.getS3AInternals()).thenReturn(s3AInternals);
-    when(s3AInternals.getStore()).thenReturn(mock(S3AStore.class));
+
+    when(s3AInternals.getStore()).thenReturn(store);
     when(s3AInternals.getAmazonS3Client(anyString()))
         .thenReturn(mockS3Client);
     doNothing().when(mockFS).incrementReadOperations();

@@ -47,8 +47,6 @@ import static org.apache.hadoop.fs.s3a.Constants.S3EXPRESS_CREATE_SESSION_DEFAUL
  * implementing only the deprecated method will work.
  * See https://github.com/apache/hbase-filesystem
  *
- * @deprecated This interface will be replaced by one which uses the AWS SDK V2 S3 client as part of
- * upgrading S3A to SDK V2. See HADOOP-18073.
  */
 @InterfaceAudience.LimitedPrivate("HBoss")
 @InterfaceStability.Evolving
