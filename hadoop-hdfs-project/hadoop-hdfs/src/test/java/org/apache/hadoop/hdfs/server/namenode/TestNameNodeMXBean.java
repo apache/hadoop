@@ -18,6 +18,8 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.util.Optional;
 import java.util.function.Supplier;
 
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
@@ -1163,7 +1165,7 @@ public class TestNameNodeMXBean {
           new DatanodeID("127.0.0.2", "127.0.0.2", "",
               5000, 5001, 5002, 5003));
 
-      assertEquals("", mockNode.getDatanodeUuidForMetric());
+      assertEquals("", Optional.ofNullable(mockNode.getDatanodeUuid()).orElse(""));
       hosts.add(mockNode.getXferAddrWithHostname());
       hostsFileWriter.initIncludeHosts(hosts.toArray(
           new String[hosts.size()]));
