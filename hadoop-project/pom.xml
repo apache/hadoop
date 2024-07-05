@@ -63,7 +63,7 @@
     <java.security.egd>file:///dev/urandom</java.security.egd>
 
     <!-- avro version -->
-    <avro.version>1.9.2</avro.version>
+    <avro.version>1.11.3</avro.version>
 
     <!-- jersey version -->
     <jersey.version>1.19.4</jersey.version>
@@ -108,7 +108,7 @@
     <findbugs.version>3.0.5</findbugs.version>
     <dnsjava.version>3.4.0</dnsjava.version>
 
-    <guava.version>27.0-jre</guava.version>
+    <guava.version>32.0.1-jre</guava.version>
     <guice.version>4.2.3</guice.version>
 
     <bouncycastle.version>1.78.1</bouncycastle.version>
@@ -152,7 +152,7 @@
     <protobuf-maven-plugin.version>0.5.1</protobuf-maven-plugin.version>
     <maven-replacer-plugin.version>1.5.3</maven-replacer-plugin.version>
 
-    <protobuf-compile.version>3.5.1</protobuf-compile.version>
+    <protobuf-compile.version>3.16.3</protobuf-compile.version>
     <grpc.version>1.10.0</grpc.version>
     <os-maven-plugin.version>1.7.0</os-maven-plugin.version>
 
@@ -170,7 +170,7 @@
 
     <!-- Plugin versions and config -->
     <maven-surefire-plugin.argLine>-Xmx2048m -XX:+HeapDumpOnOutOfMemoryError</maven-surefire-plugin.argLine>
-    <maven-surefire-plugin.version>3.0.0-M1</maven-surefire-plugin.version>
+    <maven-surefire-plugin.version>3.2.5</maven-surefire-plugin.version>
     <maven-surefire-report-plugin.version>${maven-surefire-plugin.version}</maven-surefire-report-plugin.version>
     <maven-failsafe-plugin.version>${maven-surefire-plugin.version}</maven-failsafe-plugin.version>
 
