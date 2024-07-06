@@ -18,7 +18,11 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.util.Optional;
 import java.util.function.Supplier;
+
+import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.Uninterruptibles;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -1129,6 +1133,66 @@ public class TestNameNodeMXBean {
       if (cluster != null) {
         cluster.shutdown();
       }
+    }
+  }
+
+  @SuppressWarnings({ "unchecked" })
+  @Test
+  public void testDeadNodesInNameNodeMXBean() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setInt(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 1);
+    MiniDFSCluster cluster = null;
+    HostsFileWriter hostsFileWriter = new HostsFileWriter();
+    hostsFileWriter.initialize(conf, "temp/TestNameNodeMXBean");
+
+    try {
+      cluster = new MiniDFSCluster.Builder(conf, baseDir.getRoot()).numDataNodes(3).build();
+      cluster.waitActive();
+
+      FSNamesystem fsn = cluster.getNameNode().namesystem;
+
+      MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+      ObjectName mxbeanName = new ObjectName(
+          "Hadoop:service=NameNode,name=NameNodeInfo");
+
+      List<String> hosts = new ArrayList<>();
+      for(DataNode dn : cluster.getDataNodes()) {
+        hosts.add(dn.getDisplayName());
+      }
+
+      DatanodeDescriptor mockNode = new DatanodeDescriptor(
+          new DatanodeID("127.0.0.2", "127.0.0.2", "",
+              5000, 5001, 5002, 5003));
+
+      assertEquals("", Optional.ofNullable(mockNode.getDatanodeUuid()).orElse(""));
+      hosts.add(mockNode.getXferAddrWithHostname());
+      hostsFileWriter.initIncludeHosts(hosts.toArray(
+          new String[hosts.size()]));
+      fsn.getBlockManager().getDatanodeManager().refreshNodes(conf);
+      DatanodeManager dm = cluster.getNameNode().getNamesystem().
+          getBlockManager().getDatanodeManager();
+      LOG.info("Get all include nodes: {}", dm.getHostConfigManager().getIncludes());
+
+      // get attribute DeadNodes
+      String deadNodeInfo = (String) (mbs.getAttribute(mxbeanName,
+          "DeadNodes"));
+      assertEquals(fsn.getDeadNodes(), deadNodeInfo);
+      LOG.info("Get deadNode info: {}", deadNodeInfo);
+      Map<String, Map<String, Object>> deadNodes =
+          (Map<String, Map<String, Object>>) JSON.parse(deadNodeInfo);
+      assertEquals(1, deadNodes.size());
+      for (Map<String, Object> deadNode : deadNodes.values()) {
+        assertTrue(deadNode.containsKey("lastContact"));
+        assertTrue(deadNode.containsKey("adminState"));
+        assertTrue(deadNode.containsKey("xferaddr"));
+        assertEquals("", deadNode.get("uuid"));
+      }
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+      hostsFileWriter.cleanup();
     }
   }
 
