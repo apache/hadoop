@@ -47,12 +47,18 @@ public enum StorageNotChosenReason {
     }
 
     public static void logStorageIsNotChooseForReplication(DatanodeStorageInfo storage,
+                                                           StorageNotChosenReason reason) {
+        if(LOG.isDebugEnabled()){
+            genStorageIsNotChooseForReplication(storage, reason, null);
+        }
+    }
+
+    public static void logStorageIsNotChooseForReplication(DatanodeStorageInfo storage,
                                                             StorageNotChosenReason reason, String reasonDetails) {
         if(LOG.isDebugEnabled()){
             genStorageIsNotChooseForReplication(storage, reason, reasonDetails);
         }
     }
-
 
     @VisibleForTesting
     static void genStorageIsNotChooseForReplication(DatanodeStorageInfo storage,
