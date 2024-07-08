@@ -2181,6 +2181,7 @@ public class BlockManager implements BlockStatsMXBean {
       for (BlockReconstructionWork rw : reconWork) {
         final DatanodeStorageInfo[] targets = rw.getTargets();
         if (targets == null || targets.length == 0) {
+          logStorageIsNotChooseForReplication();
           rw.resetTargets();
           continue;
         }
@@ -2188,6 +2189,9 @@ public class BlockManager implements BlockStatsMXBean {
         synchronized (neededReconstruction) {
           if (validateReconstructionWork(rw)) {
             scheduledWork++;
+          }
+          else{
+
           }
         }
       }

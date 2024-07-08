@@ -30,7 +30,9 @@ public enum StorageNotChosenReason {
     REPLICA_MAINTENANCE_NOT_FOR_READ("stored replica is maintenance not for read"),
     REPLICA_DECOMMISSIONED("replica is already decommissioned"),
     REPLICA_ALREADY_REACH_REPLICATION_LIMIT("replica already reached replication soft limit"),
-    REPLICA_ALREADY_REACH_REPLICATION_HARD_LIMIT("replica already reached replication hard limit");
+    REPLICA_ALREADY_REACH_REPLICATION_HARD_LIMIT("replica already reached replication hard limit"),
+    NO_AVAILABLE_TARGET_FOUND("cannot find available target"),
+    RECONSTRUCTION_WORK_NOT_PASS_VALIDATION("validation for reconstruction work failed");
 
     public static final Logger LOG = LoggerFactory.getLogger(
             BlockManager.class);
