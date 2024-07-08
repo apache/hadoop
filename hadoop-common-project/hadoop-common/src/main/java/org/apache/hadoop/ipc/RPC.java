@@ -1089,7 +1089,7 @@ public class RPC {
    
    Map<ProtoNameVer, ProtoClassProtoImpl> getProtocolImplMap(RPC.RpcKind rpcKind) {
      if (protocolImplMapArray.size() == 0) {// initialize for all rpc kinds
-       for (int i=0; i <= RpcKind.MAX_INDEX; ++i) {
+       for (int i = 0; i < RpcKind.MAX_INDEX; ++i) {
          protocolImplMapArray.add(
              new HashMap<ProtoNameVer, ProtoClassProtoImpl>(10));
        }
