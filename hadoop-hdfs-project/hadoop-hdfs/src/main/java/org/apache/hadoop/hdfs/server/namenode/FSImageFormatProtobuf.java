@@ -641,7 +641,12 @@ public final class FSImageFormatProtobuf {
       return inodesPerSubSection;
     }
 
-    /**
+    public OutputStream getSectionOutputStream() {
+      return sectionOutputStream;
+    }
+
+
+      /**
      * Commit the length and offset of a fsimage section to the summary index,
      * including the sub section, which will be committed before the section is
      * committed.
@@ -650,9 +655,9 @@ public final class FSImageFormatProtobuf {
      * @param subSectionName The name of the sub-section to commit
      * @throws IOException
      */
-    public void commitSectionAndSubSection(FileSummary.Builder summary,
+    public void commitSectionAndLastSubSection(FileSummary.Builder summary,
         SectionName name, SectionName subSectionName) throws IOException {
-      commitSubSection(summary, subSectionName);
+      commitSubSection(summary, subSectionName, true);
       commitSection(summary, name);
     }
 
@@ -673,6 +678,11 @@ public final class FSImageFormatProtobuf {
       subSectionOffset = currentOffset;
     }
 
+    public void commitSubSection(FileSummary.Builder summary, SectionName name)
+            throws IOException {
+      this.commitSubSection(summary, name, false);
+    }
+
     /**
      * Commit the length and offset of a fsimage sub-section to the summary
      * index.
@@ -680,17 +690,20 @@ public final class FSImageFormatProtobuf {
      * @param name The name of the sub-section to commit
      * @throws IOException
      */
-    public OutputStream commitSubSection(FileSummary.Builder summary, SectionName name)
-            throws IOException {
+    public void commitSubSection(FileSummary.Builder summary, SectionName name, Boolean isLast)
+        throws IOException {
       if (!writeSubSections) {
-        return null;
+        return;
       }
 
       LOG.debug("Saving a subsection for {}", name.toString());
       // The output stream must be flushed before the length is obtained
       // as the flush can move the length forward.
       flushSectionOutputStream();
-      if (codec != null) {
+
+      // To avoid empty sub-section, Do not create CompressionOutputStream
+      // if sub-section is last sub-section of each section
+      if (codec != null && !isLast) {
         sectionOutputStream = codec.createOutputStream(underlyingOutputStream);
       } else {
         sectionOutputStream = underlyingOutputStream;
@@ -698,17 +711,17 @@ public final class FSImageFormatProtobuf {
       long length = fileChannel.position() - subSectionOffset;
       if (length == 0) {
         LOG.warn("The requested section for {} is empty. It will not be " +
-                "output to the image", name.toString());
-        return null;
+            "output to the image", name.toString());
+        return;
       }
       summary.addSections(FileSummary.Section.newBuilder().setName(name.name)
-              .setLength(length).setOffset(subSectionOffset));
+          .setLength(length).setOffset(subSectionOffset));
       subSectionOffset += length;
-      return sectionOutputStream;
     }
 
     private void flushSectionOutputStream() throws IOException {
-      if (codec != null) {
+      boolean isCompressedStream = !sectionOutputStream.getClass().getSimpleName().equals("DigestOutputStream");
+      if (isCompressedStream) {
         ((CompressionOutputStream) sectionOutputStream).finish();
       }
       sectionOutputStream.flush();

@@ -788,11 +788,12 @@ public final class FSImageFormatPBINode {
         }
         if (outputInodes >= parent.getInodesPerSubSection()) {
           outputInodes = 0;
-          out = parent.commitSubSection(summary,
+          parent.commitSubSection(summary,
               FSImageFormatProtobuf.SectionName.INODE_DIR_SUB);
+          out = parent.getSectionOutputStream();
         }
       }
-      parent.commitSectionAndSubSection(summary,
+      parent.commitSectionAndLastSubSection(summary,
           FSImageFormatProtobuf.SectionName.INODE_DIR,
           FSImageFormatProtobuf.SectionName.INODE_DIR_SUB);
     }
@@ -815,11 +816,12 @@ public final class FSImageFormatPBINode {
           context.checkCancelled();
         }
         if (i % parent.getInodesPerSubSection() == 0) {
-          out = parent.commitSubSection(summary,
+          parent.commitSubSection(summary,
               FSImageFormatProtobuf.SectionName.INODE_SUB);
+          out = parent.getSectionOutputStream();
         }
       }
-      parent.commitSectionAndSubSection(summary,
+      parent.commitSectionAndLastSubSection(summary,
           FSImageFormatProtobuf.SectionName.INODE,
           FSImageFormatProtobuf.SectionName.INODE_SUB);
     }
