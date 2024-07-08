@@ -2122,6 +2122,7 @@ public class BlockManager implements BlockStatsMXBean {
         // in this case, we will try another round immediately to avoid waste the tick
         foundBlocks = neededReconstruction.chooseLowRedundancyBlocks(remaining, reset, blocksToReconstruct);
         remaining -= computeReconstructionWorkForBlocks(blocksToReconstruct);
+        LOG.info("Found " + foundBlocks + " low redundancy blocks. Remaining is " + remaining);
       } finally {
         namesystem.writeUnlock("computeBlockReconstructionWork");
       }
