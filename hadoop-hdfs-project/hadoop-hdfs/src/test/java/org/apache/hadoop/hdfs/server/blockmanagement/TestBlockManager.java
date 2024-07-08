@@ -2332,7 +2332,7 @@ public class TestBlockManager {
 
   @Test(timeout = 360000)
   public void testReplicationWorkConstructionWhenMostSrcUnavailable() {
-    LOG.info("Starting testReplicationWorkConstructionWhenMostSrcUnavailable. {} ", );
+    LOG.info("Starting testReplicationWorkConstructionWhenMostSrcUnavailable. ");
     NetworkTopology clusterMap = bm.getDatanodeManager().getNetworkTopology();
     LOG.info("Before adding Nodes, Cluster map is {}, numOfLeaves {}", clusterMap.toString(), clusterMap.getNumOfLeaves() );
     addNodes(nodes);
