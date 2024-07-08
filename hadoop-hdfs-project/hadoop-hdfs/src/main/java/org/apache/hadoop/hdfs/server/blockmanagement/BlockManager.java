@@ -2593,9 +2593,12 @@ public class BlockManager implements BlockStatsMXBean {
     }
 
     for (DatanodeStorageInfo storage : blocksMap.getStorages(block)) {
+
       final DatanodeDescriptor node = getDatanodeDescriptorFromStorage(storage);
       final StoredReplicaState state = checkReplicaOnStorage(numReplicas, block,
           storage, corruptReplicas.getNodes(block), false);
+      LOG.info("storage for block " + block + " is " + storage + ", replica state is "
+              + state + ", node state is " + node.getAdminState());
       if (state == StoredReplicaState.LIVE) {
         if (storage.getStorageType() == StorageType.PROVIDED) {
           storage = new DatanodeStorageInfo(node, storage.getStorageID(),
@@ -2650,6 +2653,10 @@ public class BlockManager implements BlockStatsMXBean {
           //HDFS-16566 ExcludeReconstructed won't be reconstructed.
           excludeReconstructed.add(blockIndex);
         }
+        LOG.info("storage for block " + block + " is " + storage + ", state is "
+                + state + ", too busy. getNumberOfBlocksToBeReplicated"
+                + node.getNumberOfBlocksToBeReplicated()
+                + ", maxReplicationStreams "+ maxReplicationStreams);
         continue; // already reached replication limit
       }
 
@@ -5178,6 +5185,8 @@ public class BlockManager implements BlockStatsMXBean {
   public short getExpectedLiveRedundancyNum(BlockInfo block,
       NumberReplicas numberReplicas) {
     final short expectedRedundancy = getExpectedRedundancyNum(block);
+    LOG.info("expected live redundancy number for block " + block + " is " + expectedRedundancy + ", " + (expectedRedundancy -
+            numberReplicas.maintenanceReplicas()) + ", minstorage is " + getMinMaintenanceStorageNum(block));
     return (short)Math.max(expectedRedundancy -
         numberReplicas.maintenanceReplicas(),
         getMinMaintenanceStorageNum(block));
