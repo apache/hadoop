@@ -2329,4 +2329,35 @@ public class TestBlockManager {
       DataNodeFaultInjector.set(oldInjector);
     }
   }
+
+  @Test(timeout = 360000)
+  public void testReplicationWorkConstructionWhenMostSrcUnavailable() {
+    for(int i = 1; i<=10;i++){
+      Block block = new Block(i);
+      BlockInfo blockInfo = new BlockInfoContiguous(block, (short) 4);
+      // We set it curReplicas to 1 to make its priority as QUEUE_WITH_CORRUPT_BLOCKS
+      assertTrue("Should add successfully to neededReconstruction",
+              bm.neededReconstruction.add(blockInfo, 1, 0, 0, 3));;
+      // These low redundancy blocks are all located on nodes[0]
+      addBlockOnNodes(block.getBlockId(), Arrays.asList(nodes.get(0)));
+    }
+
+    Block block11 = new Block(11);
+    BlockInfo blockInfo11 = new BlockInfoContiguous(block11, (short) 4);
+    // The priority should be QUEUE_LOW_REDUNDANCY
+    bm.neededReconstruction.add(blockInfo11, 2, 0, 0, 3);
+    addBlockOnNodes(block11.getBlockId(), Arrays.asList(nodes.get(0), nodes.get(1)));
+
+    // simulate the 2 nodes reach maxReplicationStreams
+    for(int i = 0; i < bm.getMaxReplicationStreams(); i++){
+      nodes.get(0).incrementPendingReplicationWithoutTargets();
+    }
+
+
+    List<List<BlockInfo>> blocksToReconstruct = new ArrayList<>(LowRedundancyBlocks.LEVEL);
+    assertEquals("There should exist 11 low-redundancy blocks", bm.neededReconstruction.getLowRedundancyBlocks(), 11);
+
+    int scheduledReconstruction = bm.computeBlockReconstructionWork(4);
+    assertEquals("The actual scheduled BlockReconstructionWork should include the block11", scheduledReconstruction, 1);
+  }
 }

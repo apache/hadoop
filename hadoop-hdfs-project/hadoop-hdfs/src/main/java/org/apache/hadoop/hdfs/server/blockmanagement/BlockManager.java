@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import static org.apache.hadoop.hdfs.protocol.BlockType.CONTIGUOUS;
 import static org.apache.hadoop.hdfs.protocol.BlockType.STRIPED;
+import static org.apache.hadoop.hdfs.server.blockmanagement.LowRedundancyBlocks.LEVEL;
 import static org.apache.hadoop.util.ExitUtil.terminate;
 import static org.apache.hadoop.util.Time.now;
 
@@ -869,7 +870,7 @@ public class BlockManager implements BlockStatsMXBean {
     synchronized (neededReconstruction) {
       out.println("Metasave: Blocks waiting for reconstruction: "
           + neededReconstruction.getLowRedundancyBlockCount());
-      for (int i = 0; i < neededReconstruction.LEVEL; i++) {
+      for (int i = 0; i < LEVEL; i++) {
         if (i != neededReconstruction.QUEUE_WITH_CORRUPT_BLOCKS) {
           for (Iterator<BlockInfo> it = neededReconstruction.iterator(i);
                it.hasNext();) {
@@ -969,7 +970,7 @@ public class BlockManager implements BlockStatsMXBean {
     // source node returned is not used
     chooseSourceDatanodes(blockInfo, containingNodes,
         containingLiveReplicasNodes, numReplicas, new ArrayList<Byte>(),
-        new ArrayList<Byte>(), new ArrayList<Byte>(), LowRedundancyBlocks.LEVEL);
+        new ArrayList<Byte>(), new ArrayList<Byte>(), LEVEL);
     
     // containingLiveReplicasNodes can include READ_ONLY_SHARED replicas which are 
     // not included in the numReplicas.liveReplicas() count
@@ -2100,25 +2101,35 @@ public class BlockManager implements BlockStatsMXBean {
    *         iteration.
    */
   int computeBlockReconstructionWork(int blocksToProcess) {
-    List<List<BlockInfo>> blocksToReconstruct = null;
-    namesystem.writeLock();
-    try {
-      boolean reset = false;
-      if (replQueueResetToHeadThreshold > 0) {
-        if (replQueueCallsSinceReset >= replQueueResetToHeadThreshold) {
-          reset = true;
-          replQueueCallsSinceReset = 0;
-        } else {
-          replQueueCallsSinceReset++;
+    List<List<BlockInfo>> blocksToReconstruct = new ArrayList<>(LowRedundancyBlocks.LEVEL);
+    int remaining = blocksToProcess;
+    int foundBlocks;
+    int maxAttemptInATick = 10;
+    do{
+      namesystem.writeLock();
+      try {
+        boolean reset = false;
+        if (replQueueResetToHeadThreshold > 0) {
+          if (replQueueCallsSinceReset >= replQueueResetToHeadThreshold) {
+            reset = true;
+            replQueueCallsSinceReset = 0;
+          } else {
+            replQueueCallsSinceReset++;
+          }
         }
+        // Choose the blocks to be reconstructed.
+        // Some candidates may not be actually used to construct BlockReconstructionWork,
+        // in this case, we will try another round immediately to avoid waste the tick
+        foundBlocks = neededReconstruction.chooseLowRedundancyBlocks(remaining, reset, blocksToReconstruct);
+        remaining -= computeReconstructionWorkForBlocks(blocksToReconstruct);
+      } finally {
+        namesystem.writeUnlock("computeBlockReconstructionWork");
       }
-        // Choose the blocks to be reconstructed
-      blocksToReconstruct = neededReconstruction
-          .chooseLowRedundancyBlocks(blocksToProcess, reset);
-    } finally {
-      namesystem.writeUnlock("computeBlockReconstructionWork");
-    }
-    return computeReconstructionWorkForBlocks(blocksToReconstruct);
+      // We may meet the case that most found blocks are not used for ReconstructionWork,
+      // in this case, we will try to find more blocks for reconstruction in this tick
+    }while (remaining > 0 && foundBlocks > 0 && --maxAttemptInATick > 0);
+    // return the actual number of BlockReconstructionWork
+    return blocksToProcess - remaining;
   }
 
   /**
@@ -4956,7 +4967,7 @@ public class BlockManager implements BlockStatsMXBean {
       DatanodeStorageInfo.decrementBlocksScheduled(remove.getTargets()
           .toArray(new DatanodeStorageInfo[remove.getTargets().size()]));
     }
-    neededReconstruction.remove(block, LowRedundancyBlocks.LEVEL);
+    neededReconstruction.remove(block, LEVEL);
     postponedMisreplicatedBlocks.remove(block);
   }
 
