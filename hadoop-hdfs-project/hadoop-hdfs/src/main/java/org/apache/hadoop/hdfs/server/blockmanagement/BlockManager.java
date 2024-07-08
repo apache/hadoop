@@ -2124,6 +2124,7 @@ public class BlockManager implements BlockStatsMXBean {
         remaining -= computeReconstructionWorkForBlocks(blocksToReconstruct);
         LOG.info("Found " + foundBlocks + " low redundancy blocks. Remaining is " + remaining
                 + ", reset = " + reset + ", replQueueCallsSinceReset = " + replQueueCallsSinceReset);
+        LOG.info("stack is " + Arrays.toString(Thread.currentThread().getStackTrace()).replace( ',', '\n' ));
       } finally {
         namesystem.writeUnlock("computeBlockReconstructionWork");
       }

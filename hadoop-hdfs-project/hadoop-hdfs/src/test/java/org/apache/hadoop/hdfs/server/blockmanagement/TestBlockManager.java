@@ -2337,7 +2337,7 @@ public class TestBlockManager {
     LOG.info("Before adding Nodes, Cluster map is {}, numOfLeaves {}", clusterMap.toString(), clusterMap.getNumOfLeaves() );
     addNodes(nodes);
     LOG.info("After adding Nodes, Cluster map is {}, numOfLeaves {}", clusterMap.toString(), clusterMap.getNumOfLeaves() );
-    for(int i = 1; i<=10;i++){
+    for(int i = 881; i<=890;i++){
       //Block block = new Block(i);
       //BlockInfo blockInfo = new BlockInfoContiguous(block, (short) 4);
       //blockInfo.setBlockCollectionId(mockINodeId);
@@ -2353,7 +2353,7 @@ public class TestBlockManager {
                       3));
     }
 
-    addBlockOnNodes(11, getNodes(0,1));
+    addBlockOnNodes(891, getNodes(0,1));
     // The priority should be QUEUE_LOW_REDUNDANCY
     assertTrue("Should add successfully to neededReconstruction",
             bm.neededReconstruction.add(bm.getStoredBlock(new Block(11)),
