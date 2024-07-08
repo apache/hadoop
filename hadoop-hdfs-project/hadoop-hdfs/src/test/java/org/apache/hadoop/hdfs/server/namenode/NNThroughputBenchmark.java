@@ -26,11 +26,14 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
-
-import org.apache.hadoop.util.Preconditions;
+import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.fs.CreateFlag;
@@ -80,12 +83,12 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.GenericOptionsParser;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.util.VersionInfo;
-import org.slf4j.event.Level;
 
 /**
  * Main class for a series of name-node benchmarks.
@@ -162,11 +165,12 @@ public class NNThroughputBenchmark implements Tool {
    * specific name-node operation.
    */
   abstract class OperationStatsBase {
-    private String baseDirName = "/nnThroughputBenchmark";
+    protected static final String BASE_DIR_NAME = "/nnThroughputBenchmark";
     protected static final String OP_ALL_NAME = "all";
     protected static final String OP_ALL_USAGE = "-op all <other ops options>";
 
     private String baseDir;
+    private String baseDirName;
     protected short replication;
     protected int blockSize;
     protected int  numThreads = 0;        // number of threads
@@ -229,7 +233,6 @@ public class NNThroughputBenchmark implements Tool {
     abstract void printResults();
 
     OperationStatsBase() {
-      baseDir = baseDirName + "/" + getOpName();
       replication = (short) config.getInt(DFSConfigKeys.DFS_REPLICATION_KEY, 3);
       blockSize = config.getInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
       numOpsRequired = 10;
@@ -312,12 +315,7 @@ public class NNThroughputBenchmark implements Tool {
         }
       }
     }
-    public String getBaseDirName() {
-      return baseDirName;
-    }
-    public void setBaseDirName(String baseDirName) {
-      this.baseDirName = baseDirName;
-    }
+
     int getNumOpsExecuted() {
       return numOpsExecuted;
     }
@@ -339,12 +337,14 @@ public class NNThroughputBenchmark implements Tool {
     }
 
     public String getBaseDir() {
-      setBaseDir(baseDirName + "/" + getOpName());
       return baseDir;
     }
 
-    public void setBaseDir(String baseDir) {
-      this.baseDir = baseDir;
+    /**
+     * Path where operation will be executed.
+     */
+    String getBaseDirName() {
+      return baseDirName;
     }
 
     String getClientName(int idx) {
@@ -400,6 +400,22 @@ public class NNThroughputBenchmark implements Tool {
         args.remove(ugrcIndex);
       }
 
+      int baseDirNameIndex = args.indexOf("-baseDirName");
+      if (baseDirNameIndex >= 0) {
+        if (args.size() <= baseDirNameIndex + 1) {
+          printUsage();
+        }
+        this.baseDirName = args.get(baseDirNameIndex + 1);
+        if (!this.baseDirName.startsWith("/")) {
+          this.baseDirName = "/" + this.baseDirName;
+        }
+        args.remove(baseDirNameIndex + 1);
+        args.remove(baseDirNameIndex);
+      } else {
+        this.baseDirName = BASE_DIR_NAME;
+      }
+      baseDir = this.baseDirName + "/" + getOpName();
+
       String type = args.get(1);
       if(OP_ALL_NAME.equals(type)) {
         type = getOpName();
@@ -411,11 +427,11 @@ public class NNThroughputBenchmark implements Tool {
     }
 
     void printStats() {
-      LOG.info("--- " + getOpName() + " stats  ---");
-      LOG.info("# operations: " + getNumOpsExecuted());
-      LOG.info("Elapsed Time: " + getElapsedTime());
-      LOG.info(" Ops per sec: " + getOpsPerSecond());
-      LOG.info("Average Time: " + getAverageTime());
+      LOG.info("--- {} in {} stats  ---", getOpName(), getBaseDir());
+      LOG.info("# operations: {}", getNumOpsExecuted());
+      LOG.info("Elapsed Time: {}", getElapsedTime());
+      LOG.info(" Ops per sec: {}", getOpsPerSecond());
+      LOG.info("Average Time: {}", getAverageTime());
     }
   }
 
@@ -535,7 +551,7 @@ public class NNThroughputBenchmark implements Tool {
         }
       }
       long start = Time.now();
-      clientProto.delete(getBaseDirName(), true);
+      clientProto.delete(this.getBaseDirName(), true);
       long end = Time.now();
       return end-start;
     }
@@ -543,7 +559,7 @@ public class NNThroughputBenchmark implements Tool {
     @Override
     void printResults() {
       LOG.info("--- " + getOpName() + " inputs ---");
-      LOG.info("Remove directory " + getBaseDirName());
+      LOG.info("Remove directory " + this.getBaseDirName());
       printStats();
     }
   }
@@ -568,7 +584,7 @@ public class NNThroughputBenchmark implements Tool {
 
     CreateFileStats(List<String> args) {
       super();
-      parseArguments(args);
+      parseArguments(new ArrayList<>(args));
     }
 
     @Override
@@ -582,7 +598,7 @@ public class NNThroughputBenchmark implements Tool {
       int nrFilesPerDir = 4;
       closeUponCreate = false;
       for (int i = 2; i < args.size(); i++) {       // parse command line
-        if(args.get(i).equals("-files")) {
+        if (args.get(i).equals("-files")) {
           if(i+1 == args.size())  printUsage();
           numOpsRequired = Integer.parseInt(args.get(++i));
         } else if (args.get(i).equals("-blockSize")) {
@@ -594,11 +610,6 @@ public class NNThroughputBenchmark implements Tool {
         } else if(args.get(i).equals("-filesPerDir")) {
           if(i+1 == args.size())  printUsage();
           nrFilesPerDir = Integer.parseInt(args.get(++i));
-        } else if(args.get(i).equals("-baseDirName")) {
-          if (i + 1 == args.size()) {
-            printUsage();
-          }
-          setBaseDirName(args.get(++i));
         } else if(args.get(i).equals("-close")) {
           closeUponCreate = true;
         } else if(!ignoreUnrelatedOptions)
@@ -720,11 +731,6 @@ public class NNThroughputBenchmark implements Tool {
         } else if(args.get(i).equals("-dirsPerDir")) {
           if(i+1 == args.size())  printUsage();
           nrDirsPerDir = Integer.parseInt(args.get(++i));
-        } else if(args.get(i).equals("-baseDirName")) {
-          if (i + 1 == args.size()) {
-            printUsage();
-          }
-          setBaseDirName(args.get(++i));
         } else if(!ignoreUnrelatedOptions)
           printUsage();
       }
@@ -1225,7 +1231,7 @@ public class NNThroughputBenchmark implements Tool {
       this.blocksPerFile = 10;
       // set heartbeat interval to 3 min, so that expiration were 40 min
       config.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 3 * 60);
-      parseArguments(args);
+      parseArguments(new ArrayList<>(args));
       // adjust replication to the number of data-nodes
       this.replication = (short)Math.min(replication, getNumDatanodes());
     }
@@ -1261,11 +1267,6 @@ public class NNThroughputBenchmark implements Tool {
         } else if (args.get(i).equals("-blockSize")) {
           if(i+1 == args.size())  printUsage();
           blockSize = Integer.parseInt(args.get(++i));
-        } else if(args.get(i).equals("-baseDirName")) {
-          if (i + 1 == args.size()) {
-            printUsage();
-          }
-          setBaseDirName(args.get(++i));
         } else if(!ignoreUnrelatedOptions)
           printUsage();
       }
@@ -1499,11 +1500,6 @@ public class NNThroughputBenchmark implements Tool {
         } else if (args.get(i).equals("-blockSize")) {
           if(i+1 == args.size())  printUsage();
           blockSize = Integer.parseInt(args.get(++i));
-        } else if(args.get(i).equals("-baseDirName")) {
-          if (i + 1 == args.size()) {
-            printUsage();
-          }
-          setBaseDirName(args.get(++i));
         } else if(!ignoreUnrelatedOptions)
           printUsage();
       }
@@ -1637,68 +1633,88 @@ public class NNThroughputBenchmark implements Tool {
    */
   @Override // Tool
   public int run(String[] aArgs) throws Exception {
-    List<String> args = new ArrayList<String>(Arrays.asList(aArgs));
-    if(args.size() < 2 || ! args.get(0).startsWith("-op"))
-      printUsage();
+    List<String> plainArgs = new ArrayList<String>(Arrays.asList(aArgs));
+    List<List<String>> operationsArgs = new ArrayList<>();
+    int startIndex = 0;
+    int curIndex = startIndex;
+    for (String arg : plainArgs) {
+      if (arg.startsWith("-op") && curIndex != 0) {
+        operationsArgs.add(plainArgs.subList(startIndex, curIndex));
+        startIndex = curIndex;
+      }
+      curIndex++;
+      if (curIndex == plainArgs.size()) {
+        operationsArgs.add(plainArgs.subList(startIndex, curIndex));
+      }
+    }
 
-    String type = args.get(1);
-    boolean runAll = OperationStatsBase.OP_ALL_NAME.equals(type);
-
-    final URI nnUri = FileSystem.getDefaultUri(config);
-    // Start the NameNode
-    String[] argv = new String[] {};
-
-    List<OperationStatsBase> ops = new ArrayList<OperationStatsBase>();
-    OperationStatsBase opStat = null;
-    try {
-      if(runAll || CreateFileStats.OP_CREATE_NAME.equals(type)) {
-        opStat = new CreateFileStats(args);
-        ops.add(opStat);
-      }
-      if(runAll || MkdirsStats.OP_MKDIRS_NAME.equals(type)) {
-        opStat = new MkdirsStats(args);
-        ops.add(opStat);
-      }
-      if(runAll || OpenFileStats.OP_OPEN_NAME.equals(type)) {
-        opStat = new OpenFileStats(args);
-        ops.add(opStat);
-      }
-      if(runAll || DeleteFileStats.OP_DELETE_NAME.equals(type)) {
-        opStat = new DeleteFileStats(args);
-        ops.add(opStat);
-      }
-      if (runAll || AppendFileStats.OP_APPEND_NAME.equals(type)) {
-        opStat = new AppendFileStats(args);
-        ops.add(opStat);
-      }
-      if(runAll || FileStatusStats.OP_FILE_STATUS_NAME.equals(type)) {
-        opStat = new FileStatusStats(args);
-        ops.add(opStat);
-      }
-      if(runAll || RenameFileStats.OP_RENAME_NAME.equals(type)) {
-        opStat = new RenameFileStats(args);
-        ops.add(opStat);
-      }
-      if(runAll || BlockReportStats.OP_BLOCK_REPORT_NAME.equals(type)) {
-        opStat = new BlockReportStats(args);
-        ops.add(opStat);
-      }
-      if(runAll || ReplicationStats.OP_REPLICATION_NAME.equals(type)) {
-        if (nnUri.getScheme() != null && nnUri.getScheme().equals("hdfs")) {
-          LOG.warn("The replication test is ignored as it does not support " +
-              "standalone namenode in another process or on another host. ");
-        } else {
-          opStat = new ReplicationStats(args);
-          ops.add(opStat);
-        }
-      }
-      if(runAll || CleanAllStats.OP_CLEAN_NAME.equals(type)) {
-        opStat = new CleanAllStats(args);
-        ops.add(opStat);
-      }
-      if (ops.isEmpty()) {
+    for (List<String> args : operationsArgs) {
+      if (args.size() < 2 || !args.get(0).startsWith("-op")) {
         printUsage();
       }
+    }
+
+    List<OperationStatsBase> ops = new ArrayList<OperationStatsBase>();
+    final URI nnUri = FileSystem.getDefaultUri(config);
+
+    try {
+      for (List<String> args : operationsArgs) {
+        String type = args.get(1);
+        boolean runAll = OperationStatsBase.OP_ALL_NAME.equals(type);
+        OperationStatsBase opStat = null;
+
+        if(runAll || CreateFileStats.OP_CREATE_NAME.equals(type)) {
+          opStat = new CreateFileStats(new ArrayList<>(args));
+          ops.add(opStat);
+        }
+        if(runAll || MkdirsStats.OP_MKDIRS_NAME.equals(type)) {
+          opStat = new MkdirsStats(new ArrayList<>(args));
+          ops.add(opStat);
+        }
+        if(runAll || OpenFileStats.OP_OPEN_NAME.equals(type)) {
+          opStat = new OpenFileStats(new ArrayList<>(args));
+          ops.add(opStat);
+        }
+        if(runAll || DeleteFileStats.OP_DELETE_NAME.equals(type)) {
+          opStat = new DeleteFileStats(new ArrayList<>(args));
+          ops.add(opStat);
+        }
+        if (runAll || AppendFileStats.OP_APPEND_NAME.equals(type)) {
+          opStat = new AppendFileStats(new ArrayList<>(args));
+          ops.add(opStat);
+        }
+        if(runAll || FileStatusStats.OP_FILE_STATUS_NAME.equals(type)) {
+          opStat = new FileStatusStats(new ArrayList<>(args));
+          ops.add(opStat);
+        }
+        if(runAll || RenameFileStats.OP_RENAME_NAME.equals(type)) {
+          opStat = new RenameFileStats(new ArrayList<>(args));
+          ops.add(opStat);
+        }
+        if(runAll || BlockReportStats.OP_BLOCK_REPORT_NAME.equals(type)) {
+          opStat = new BlockReportStats(new ArrayList<>(args));
+          ops.add(opStat);
+        }
+        if(runAll || ReplicationStats.OP_REPLICATION_NAME.equals(type)) {
+          if (nnUri.getScheme() != null && nnUri.getScheme().equals("hdfs")) {
+            LOG.warn("The replication test is ignored as it does not support " +
+                    "standalone namenode in another process or on another host. ");
+          } else {
+            opStat = new ReplicationStats(new ArrayList<>(args));
+            ops.add(opStat);
+          }
+        }
+        if(runAll || CleanAllStats.OP_CLEAN_NAME.equals(type)) {
+          opStat = new CleanAllStats(new ArrayList<>(args));
+          ops.add(opStat);
+        }
+        if (ops.isEmpty()) {
+          printUsage();
+        }
+      }
+
+      // Start the NameNode
+      String[] argv = new String[] {};
 
       if (nnUri.getScheme() == null || nnUri.getScheme().equals("file")) {
         LOG.info("Remote NameNode is not specified. Creating one.");
@@ -1724,17 +1740,36 @@ public class NNThroughputBenchmark implements Tool {
             DFSTestUtil.getRefreshUserMappingsProtocolProxy(config, nnAddr);
         getBlockPoolId(dfs);
       }
-      // run each benchmark
-      for(OperationStatsBase op : ops) {
-        LOG.info("Starting benchmark: " + op.getOpName() + ", baseDir: " + op.getBaseDir());
-        op.benchmark();
-        op.cleanUp();
+
+      // group operations by base directories and run in parallel
+      Map<String, List<OperationStatsBase>> operationsByBaseDirs =
+          ops.stream().collect(Collectors.groupingBy(OperationStatsBase::getBaseDirName));
+
+      CountDownLatch latch = new CountDownLatch(operationsByBaseDirs.size());
+      for (Map.Entry<String, List<OperationStatsBase>> opsByDir : operationsByBaseDirs.entrySet()) {
+        new Thread(() -> {
+          try {
+            // run each benchmark
+            for (OperationStatsBase op : opsByDir.getValue()) {
+              LOG.info("Starting benchmark {} in {}", op.getOpName(), opsByDir.getKey());
+              op.benchmark();
+              op.cleanUp();
+            }
+            // print statistics
+            for (OperationStatsBase op : ops) {
+              LOG.info("");
+              op.printResults();
+              LOG.info("");
+            }
+          } catch (Exception e) {
+            LOG.error(StringUtils.stringifyException(e));
+          } finally {
+            latch.countDown();
+          }
+        }).start();
       }
-      // print statistics
-      for(OperationStatsBase op : ops) {
-        LOG.info("");
-        op.printResults();
-      }
+      // wait for all of the parallel running benchmarks to finish
+      latch.await();
     } catch(Exception e) {
       LOG.error(StringUtils.stringifyException(e));
       throw e;

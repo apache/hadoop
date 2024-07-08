@@ -214,6 +214,43 @@ public class TestNNThroughputBenchmark {
   }
 
   /**
+   * This test runs all 3 below scenarios in parallel:
+   * 1. create benchmark in /nnThroughputBenchmark1 dir;
+   * 2. mkdirs benchmark in /nnThroughputBenchmark2 dir;
+   * 3. all benchmarks in /nnThroughputBenchmark3 dir.
+   */
+  @Test(timeout = 120000)
+  public void testNNBenchmarkRunningInMultipleDirectoriesInParallel() throws Exception {
+    final Configuration conf = new HdfsConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_MIN_BLOCK_SIZE_KEY, 16);
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(0).build();
+      cluster.waitActive();
+      final Configuration benchConf = new HdfsConfiguration();
+      benchConf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 16);
+      FileSystem.setDefaultUri(benchConf, cluster.getURI());
+      DistributedFileSystem fs = cluster.getFileSystem();
+
+      NNThroughputBenchmark.runBenchmark(benchConf,
+          new String[] {
+              "-op", "create", "-baseDirName", "nnThroughputBenchmark1", "-files", "3",
+              "-op", "mkdirs", "-keepResults", "-baseDirName", "nnThroughputBenchmark2",
+              "-op", "all", "-keepResults", "-baseDirName", "nnThroughputBenchmark3"});
+
+      Assert.assertTrue(fs.exists(new Path("/nnThroughputBenchmark1")));
+      Assert.assertTrue(fs.exists(new Path("/nnThroughputBenchmark2")));
+      Assert.assertFalse("Remove operation is not executed for -op all!",
+          fs.exists(new Path("/nnThroughputBenchmark3")));
+      Assert.assertFalse(fs.exists(new Path("/nnThroughputBenchmark")));
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  /**
    * This test runs {@link NNThroughputBenchmark} against a mini DFS cluster
    * with explicit -baseDirName option.
    */
@@ -237,8 +274,9 @@ public class TestNNThroughputBenchmark {
       Assert.assertFalse(fs.exists(new Path("/nnThroughputBenchmark")));
 
       NNThroughputBenchmark.runBenchmark(benchConf,
-          new String[] {"-op", "all", "-baseDirName", "/nnThroughputBenchmark1"});
-      Assert.assertTrue(fs.exists(new Path("/nnThroughputBenchmark1")));
+          new String[] {"-op", "all", "-keepResults", "-baseDirName", "/nnThroughputBenchmark2"});
+      Assert.assertFalse("Remove operation is not executed for -op all!",
+          fs.exists(new Path("/nnThroughputBenchmark2")));
       Assert.assertFalse(fs.exists(new Path("/nnThroughputBenchmark")));
     } finally {
       if (cluster != null) {

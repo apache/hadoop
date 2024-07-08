@@ -30,7 +30,10 @@ The benchmark first generates inputs for each thread so that the input generatio
 
 The general command line syntax is:
 
-`hadoop org.apache.hadoop.hdfs.server.namenode.NNThroughputBenchmark [genericOptions] [commandOptions]`
+`hadoop org.apache.hadoop.hdfs.server.namenode.NNThroughputBenchmark [genericOptions] [commandOptions] .. [genericOptions] [commandOptions]`
+
+Each genericOptions starts with `-op`. You may specify many commands in one run (each starting with `-op`).
+Operations will run in parallel per `-baseDirName`. Separate statistics will be printed per `-baseDirName`.
 
 #### Generic Options
 
