@@ -2334,22 +2334,29 @@ public class TestBlockManager {
   public void testReplicationWorkConstructionWhenMostSrcUnavailable() {
     LOG.info("Starting testReplicationWorkConstructionWhenMostSrcUnavailable.");
     for(int i = 1; i<=10;i++){
-      Block block = new Block(i);
-      BlockInfo blockInfo = new BlockInfoContiguous(block, (short) 4);
-      blockInfo.setBlockCollectionId(mockINodeId);
+      //Block block = new Block(i);
+      //BlockInfo blockInfo = new BlockInfoContiguous(block, (short) 4);
+      //blockInfo.setBlockCollectionId(mockINodeId);
       // We set it curReplicas to 1 to make its priority as QUEUE_WITH_CORRUPT_BLOCKS
-      assertTrue("Should add successfully to neededReconstruction",
-              bm.neededReconstruction.add(blockInfo, 1, 0, 0, 3));;
+
       // These low redundancy blocks are all located on nodes[0]
-      addBlockOnNodes(block.getBlockId(), Arrays.asList(nodes.get(0)));
+      addBlockOnNodes(i, getNodes(0));
+      assertTrue("Should add successfully to neededReconstruction",
+              bm.neededReconstruction.add(bm.getStoredBlock(new Block(i)),
+                      1,
+                      0,
+                      0,
+                      3));;
     }
 
-    Block blockAbleToReconstruct = new Block(11);
-    BlockInfo blockInfoAbleToReconstruct = new BlockInfoContiguous(blockAbleToReconstruct, (short) 4);
-    blockInfoAbleToReconstruct.setBlockCollectionId(mockINodeId);
+    addBlockOnNodes(11, getNodes(0,1));
     // The priority should be QUEUE_LOW_REDUNDANCY
-    bm.neededReconstruction.add(blockInfoAbleToReconstruct, 2, 0, 0, 3);
-    addBlockOnNodes(blockAbleToReconstruct.getBlockId(), Arrays.asList(nodes.get(0), nodes.get(1)));
+    assertTrue("Should add successfully to neededReconstruction",
+            bm.neededReconstruction.add(bm.getStoredBlock(new Block(11)),
+                    1,
+                    0,
+                    0,
+                    3));
 
     // simulate the 2 nodes reach maxReplicationStreams
     for(int i = 0; i < bm.getMaxReplicationStreams(); i++){
@@ -2359,6 +2366,9 @@ public class TestBlockManager {
     LOG.info("low redundancy block is " + bm.neededReconstruction.getLowRedundancyBlocks());
     assertEquals("There should exist 11 low-redundancy blocks", 11, bm.neededReconstruction.getLowRedundancyBlocks());
 
+    for (DatanodeStorageInfo storage : bm.getStorages(new Block(11))) {
+      LOG.info("Storage for block is " + storage + ", block " + bm.getStoredBlock(new Block(11)));
+    }
     int scheduledReconstruction = bm.computeBlockReconstructionWork(4);
     assertEquals("The actual scheduled BlockReconstructionWork should include the blockAbleToReconstruct", 1, scheduledReconstruction);
   }
