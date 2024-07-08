@@ -2642,7 +2642,11 @@ public class BlockManager implements BlockStatsMXBean {
         countLiveAndDecommissioningReplicas(numReplicas, state,
             liveBitSet, decommissioningBitSet, blockIndex);
       }
-
+      LOG.info("storage for block " + block + " is " + storage + ", state is "
+              + state + ", too busy. getNumberOfBlocksToBeReplicated"
+              + node.getNumberOfBlocksToBeReplicated()
+              + ", maxReplicationStreams "+ maxReplicationStreams
+              + ", hard limit is " + replicationStreamsHardLimit);
       if (priority != LowRedundancyBlocks.QUEUE_HIGHEST_PRIORITY
           && (!node.isDecommissionInProgress() && !node.isEnteringMaintenance())
           && node.getNumberOfBlocksToBeReplicated() +
@@ -2653,10 +2657,6 @@ public class BlockManager implements BlockStatsMXBean {
           //HDFS-16566 ExcludeReconstructed won't be reconstructed.
           excludeReconstructed.add(blockIndex);
         }
-        LOG.info("storage for block " + block + " is " + storage + ", state is "
-                + state + ", too busy. getNumberOfBlocksToBeReplicated"
-                + node.getNumberOfBlocksToBeReplicated()
-                + ", maxReplicationStreams "+ maxReplicationStreams);
         continue; // already reached replication limit
       }
 

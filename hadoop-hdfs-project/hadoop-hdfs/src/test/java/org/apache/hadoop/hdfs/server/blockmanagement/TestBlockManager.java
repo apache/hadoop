@@ -2346,7 +2346,7 @@ public class TestBlockManager {
                       1,
                       0,
                       0,
-                      3));;
+                      3));
     }
 
     addBlockOnNodes(11, getNodes(0,1));
@@ -2361,6 +2361,10 @@ public class TestBlockManager {
     // simulate the 2 nodes reach maxReplicationStreams
     for(int i = 0; i < bm.getMaxReplicationStreams(); i++){
       nodes.get(0).incrementPendingReplicationWithoutTargets();
+    }
+
+    for(int i = 0; i < nodes.size(); i++){
+      LOG.info("pendingReplicationWithoutTargets for node " + nodes.get(i) + " is " + nodes.get(i).getNumberOfBlocksToBeReplicated());
     }
 
     LOG.info("low redundancy block is " + bm.neededReconstruction.getLowRedundancyBlocks());
