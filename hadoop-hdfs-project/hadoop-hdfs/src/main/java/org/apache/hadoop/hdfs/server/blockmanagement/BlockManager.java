@@ -2371,6 +2371,7 @@ public class BlockManager implements BlockStatsMXBean {
     // Recheck since global lock was released
     // skip abandoned block or block reopened for append
     if (block.isDeleted() || !block.isCompleteOrCommitted()) {
+      LOG.info("block will be removed from reconstruction." + block + ". " + block.isDeleted() + "," + block.isCompleteOrCommitted());
       neededReconstruction.remove(block, priority);
       rw.resetTargets();
       return false;
@@ -2384,6 +2385,8 @@ public class BlockManager implements BlockStatsMXBean {
     if (hasEnoughEffectiveReplicas(block, numReplicas, pendingNum)) {
       neededReconstruction.remove(block, priority);
       rw.resetTargets();
+      LOG.info("BLOCK* Removing {} from neededReconstruction as it has enough replicas", block);
+
       blockLog.debug("BLOCK* Removing {} from neededReconstruction as it has enough replicas",
           block);
       return false;
@@ -2401,6 +2404,18 @@ public class BlockManager implements BlockStatsMXBean {
         // If the new targets do not meet the placement policy, or at least
         // reduce the number of replicas needed, then no use continuing.
         rw.resetTargets();
+        LOG.info("BLOCK* Removing {} from neededReconstruction as policy not satisfied." +
+                " live replicas {}, requiredRedundancy {}, placementstatus {}, " +
+                        "new placement status satisfied {}," +
+                        "newPlacementStatus.getAdditionalReplicasRequired {} ," +
+                        "placementStatus.getAdditionalReplicasRequired {}",
+                block,
+                numReplicas.liveReplicas(),
+                requiredRedundancy,
+                placementStatus.isPlacementPolicySatisfied(),
+                newPlacementStatus.isPlacementPolicySatisfied(),
+                newPlacementStatus.getAdditionalReplicasRequired(),
+                placementStatus.getAdditionalReplicasRequired());
         return false;
       }
       // mark that the reconstruction work is to replicate internal block to a
