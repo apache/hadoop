@@ -521,7 +521,7 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
     return blocksToReconstruct;
   }
 
-  synchronized int chooseLowRedundancyBlocks(
+  public synchronized int chooseLowRedundancyBlocks(
           int blocksToProcess, boolean resetIterators, List<List<BlockInfo>> blocksToReconstruct) {
     //final List<List<BlockInfo>> blocksToReconstruct = new ArrayList<>(LEVEL);
     int foundBlocks = 0;

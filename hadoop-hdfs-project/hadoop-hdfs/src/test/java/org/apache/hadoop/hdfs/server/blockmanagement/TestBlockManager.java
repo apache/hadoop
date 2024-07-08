@@ -2353,11 +2353,9 @@ public class TestBlockManager {
       nodes.get(0).incrementPendingReplicationWithoutTargets();
     }
 
-
-    List<List<BlockInfo>> blocksToReconstruct = new ArrayList<>(LowRedundancyBlocks.LEVEL);
-    assertEquals("There should exist 11 low-redundancy blocks", bm.neededReconstruction.getLowRedundancyBlocks(), 11);
+    assertEquals("There should exist 11 low-redundancy blocks", 11, bm.neededReconstruction.getLowRedundancyBlocks());
 
     int scheduledReconstruction = bm.computeBlockReconstructionWork(4);
-    assertEquals("The actual scheduled BlockReconstructionWork should include the block11", scheduledReconstruction, 1);
+    assertEquals("The actual scheduled BlockReconstructionWork should include the block11", 1, scheduledReconstruction);
   }
 }
