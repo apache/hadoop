@@ -523,12 +523,12 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
 
   public synchronized int chooseLowRedundancyBlocks(
           int blocksToProcess, boolean resetIterators, List<List<BlockInfo>> blocksToReconstruct) {
-    //final List<List<BlockInfo>> blocksToReconstruct = new ArrayList<>(LEVEL);
     int foundBlocks = 0;
     int count = 0;
     int priority = 0;
     HashSet<BlockInfo> toRemove = new HashSet<>();
     for (; count < blocksToProcess && priority < LEVEL; priority++) {
+      NameNode.blockStateChangeLog.info("processing priority " + priority);
       // Go through all blocks that need reconstructions with current priority.
       // Set the iterator to the first unprocessed block at this priority level
       // We do not want to skip QUEUE_WITH_CORRUPT_BLOCKS because we still need
@@ -541,7 +541,9 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
       }
       for(; count < blocksToProcess && i.hasNext(); count++) {
         BlockInfo block = i.next();
+        NameNode.blockStateChangeLog.info("Checking block " + block);
         if (block.isDeleted()) {
+          NameNode.blockStateChangeLog.info("Deleted block " + block);
           toRemove.add(block);
           continue;
         }
@@ -557,6 +559,7 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
     }
 
     if (priority == LEVEL || resetIterators) {
+      NameNode.blockStateChangeLog.info("Reset iterators" );
       // Reset all bookmarks because there were no recently added blocks.
       for (LightWeightLinkedSet<BlockInfo> q : priorityQueues) {
         q.resetBookmark();
