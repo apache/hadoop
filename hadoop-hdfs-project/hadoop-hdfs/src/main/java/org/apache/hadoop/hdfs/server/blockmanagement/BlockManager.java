@@ -2189,7 +2189,7 @@ public class BlockManager implements BlockStatsMXBean {
       LOG.info("Choosing target for block {}, with placementPolicy {}, excluding {}",
               rw.getBlock(), placementPolicy, excludedNodes);
       rw.chooseTargets(placementPolicy, storagePolicySuite, excludedNodes);
-      LOG.info("Chosed target for block {}, with placementPolicy {}, excluding {}, result is ",
+      LOG.info("Chosed target for block {}, with placementPolicy {}, excluding {}, result is {} ",
               rw.getBlock(), placementPolicy, excludedNodes, rw.getTargets());
     }
 
@@ -2199,7 +2199,7 @@ public class BlockManager implements BlockStatsMXBean {
     try {
       for (BlockReconstructionWork rw : reconWork) {
         final DatanodeStorageInfo[] targets = rw.getTargets();
-        LOG.info("targets for block {} is {}", rw.getBlock(), targets );
+        LOG.info("targets for block {} is {}", rw.getBlock(), targets);
         if (targets == null || targets.length == 0) {
           rw.resetTargets();
           continue;
