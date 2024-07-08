@@ -27,7 +27,7 @@ import java.util.Set;
 
 /**
  * This class is used internally by
- * {@link BlockManager#scheduleReconstructionWorkForBlocks} to represent a
+ * {@link BlockManager#computeReconstructionWorkForBlocks} to represent a
  * task to reconstruct a block through replication or erasure coding.
  * Reconstruction is done by transferring data from srcNodes to targets
  */

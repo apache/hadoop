@@ -550,7 +550,7 @@ public class TestPendingReconstruction {
 
       // call schedule replication on blockInfo2 will fail the re-replication.
       // because there is no source data to replicate from.
-      bm.generateReconstructionForBlock(blockInfo2, 0);
+      bm.scheduleReconstruction(blockInfo2, 0);
 
       GenericTestUtils.waitFor(new Supplier<Boolean>() {
         @Override

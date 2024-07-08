@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import static org.apache.hadoop.hdfs.protocol.BlockType.CONTIGUOUS;
 import static org.apache.hadoop.hdfs.protocol.BlockType.STRIPED;
-import static org.apache.hadoop.hdfs.server.blockmanagement.LowRedundancyBlocks.LEVEL;
 import static org.apache.hadoop.util.ExitUtil.terminate;
 import static org.apache.hadoop.util.Time.now;
 
@@ -870,7 +869,7 @@ public class BlockManager implements BlockStatsMXBean {
     synchronized (neededReconstruction) {
       out.println("Metasave: Blocks waiting for reconstruction: "
           + neededReconstruction.getLowRedundancyBlockCount());
-      for (int i = 0; i < LEVEL; i++) {
+      for (int i = 0; i < neededReconstruction.LEVEL; i++) {
         if (i != neededReconstruction.QUEUE_WITH_CORRUPT_BLOCKS) {
           for (Iterator<BlockInfo> it = neededReconstruction.iterator(i);
                it.hasNext();) {
@@ -970,7 +969,7 @@ public class BlockManager implements BlockStatsMXBean {
     // source node returned is not used
     chooseSourceDatanodes(blockInfo, containingNodes,
         containingLiveReplicasNodes, numReplicas, new ArrayList<Byte>(),
-        new ArrayList<Byte>(), new ArrayList<Byte>(), LEVEL);
+        new ArrayList<Byte>(), new ArrayList<Byte>(), LowRedundancyBlocks.LEVEL);
     
     // containingLiveReplicasNodes can include READ_ONLY_SHARED replicas which are 
     // not included in the numReplicas.liveReplicas() count
@@ -2100,21 +2099,27 @@ public class BlockManager implements BlockStatsMXBean {
    * @return number of blocks scheduled for reconstruction during this
    *         iteration.
    */
-  int scheduleBlockReconstructionWork(int blocksToProcess) {
+  int computeBlockReconstructionWork(int blocksToProcess) {
     List<List<BlockInfo>> blocksToReconstruct = null;
     namesystem.writeLock();
-    boolean reset = false;
-    if (replQueueResetToHeadThreshold > 0) {
-      if (replQueueCallsSinceReset >= replQueueResetToHeadThreshold) {
-        reset = true;
-        replQueueCallsSinceReset = 0;
-      } else {
-        replQueueCallsSinceReset++;
+    try {
+      boolean reset = false;
+      if (replQueueResetToHeadThreshold > 0) {
+        if (replQueueCallsSinceReset >= replQueueResetToHeadThreshold) {
+          reset = true;
+          replQueueCallsSinceReset = 0;
+        } else {
+          replQueueCallsSinceReset++;
+        }
       }
+        // Choose the blocks to be reconstructed
+      blocksToReconstruct = neededReconstruction
+          .chooseLowRedundancyBlocks(blocksToProcess, reset);
+    } finally {
+      namesystem.writeUnlock("computeBlockReconstructionWork");
     }
-    return scheduleReconstructionWorkForBlocks(blocksToProcess, reset);
+    return computeReconstructionWorkForBlocks(blocksToReconstruct);
   }
-
 
   /**
    * Reconstruct a set of blocks to full strength through replication or
@@ -2124,39 +2129,29 @@ public class BlockManager implements BlockStatsMXBean {
    * @return the number of blocks scheduled for replication
    */
   @VisibleForTesting
-  int scheduleReconstructionWorkForBlocks(int blocksToProcess, boolean resetIterators) {
+  int computeReconstructionWorkForBlocks(
+      List<List<BlockInfo>> blocksToReconstruct) {
     int scheduledWork = 0;
     List<BlockReconstructionWork> reconWork = new ArrayList<>();
-    namesystem.writeLock();
-    int priority = 0;
+
     // Step 1: categorize at-risk blocks into replication and EC tasks
+    namesystem.writeLock();
     try {
       synchronized (neededReconstruction) {
-        for (; blocksToProcess > 0 && priority < LEVEL; priority++) {
-          List<BlockInfo> blocks = new ArrayList<>();
-          int processed = neededReconstruction.
-                  chooseLowRedundancyBlocksForPriority(priority, blocksToProcess, blocks);
-          if(processed == 0)
-            break;
-          for (BlockInfo block : blocks) {
-            BlockReconstructionWork rw = generateReconstructionForBlock(block,
-                    priority);
+        for (int priority = 0; priority < blocksToReconstruct
+            .size(); priority++) {
+          for (BlockInfo block : blocksToReconstruct.get(priority)) {
+            BlockReconstructionWork rw = scheduleReconstruction(block,
+                priority);
             if (rw != null) {
               reconWork.add(rw);
-              // if we constructed effective work, reduce the budget
-              blocksToProcess--;
             }
           }
         }
       }
     } finally {
-      namesystem.writeUnlock("generateReconstructionWorkForBlocks");
+      namesystem.writeUnlock("computeReconstructionWorkForBlocks");
     }
-    if (priority == LEVEL || resetIterators) {
-      // Reset all bookmarks because there were no recently added blocks.
-      neededReconstruction.resetIterators();
-    }
-
 
     // Step 2: choose target nodes for each reconstruction task
     for (BlockReconstructionWork rw : reconWork) {
@@ -2166,7 +2161,7 @@ public class BlockManager implements BlockStatsMXBean {
 
       // Exclude all nodes which already exists as targets for the block
       List<DatanodeStorageInfo> targets =
-              pendingReconstruction.getTargets(rw.getBlock());
+          pendingReconstruction.getTargets(rw.getBlock());
       if (targets != null) {
         for (DatanodeStorageInfo dn : targets) {
           excludedNodes.add(dn.getDatanodeDescriptor());
@@ -2175,7 +2170,7 @@ public class BlockManager implements BlockStatsMXBean {
 
       // choose replication targets: NOT HOLDING THE GLOBAL LOCK
       final BlockPlacementPolicy placementPolicy =
-              placementPolicies.getPolicy(rw.getBlock().getBlockType());
+          placementPolicies.getPolicy(rw.getBlock().getBlockType());
       rw.chooseTargets(placementPolicy, storagePolicySuite, excludedNodes);
     }
 
@@ -2196,7 +2191,7 @@ public class BlockManager implements BlockStatsMXBean {
         }
       }
     } finally {
-      namesystem.writeUnlock("scheduleReconstructionWorkForBlocks");
+      namesystem.writeUnlock("computeReconstructionWorkForBlocks");
     }
 
     if (blockLog.isDebugEnabled()) {
@@ -2209,16 +2204,15 @@ public class BlockManager implements BlockStatsMXBean {
             targetList.append(' ').append(target.getDatanodeDescriptor());
           }
           blockLog.debug("BLOCK* ask {} to replicate {} to {}",
-                  rw.getSrcNodes(), rw.getBlock(), targetList);
+              rw.getSrcNodes(), rw.getBlock(), targetList);
         }
       }
       blockLog.debug("BLOCK* neededReconstruction = {} pendingReconstruction = {}",
-              neededReconstruction.size(), pendingReconstruction.size());
+          neededReconstruction.size(), pendingReconstruction.size());
     }
 
     return scheduledWork;
   }
-
 
   // Check if the number of live + pending replicas satisfies
   // the expected redundancy.
@@ -2231,7 +2225,7 @@ public class BlockManager implements BlockStatsMXBean {
   }
 
   @VisibleForTesting
-  BlockReconstructionWork generateReconstructionForBlock(BlockInfo block,
+  BlockReconstructionWork scheduleReconstruction(BlockInfo block,
       int priority) {
     // skip abandoned block or block reopened for append
     if (block.isDeleted() || !block.isCompleteOrCommitted()) {
@@ -2623,7 +2617,7 @@ public class BlockManager implements BlockStatsMXBean {
       }
 
       // for EC here need to make sure the numReplicas replicates state correct
-      // because in the generateReconstructionForBlock it need the numReplicas to check
+      // because in the scheduleReconstruction it need the numReplicas to check
       // whether need to reconstruct the ec internal block
       byte blockIndex = -1;
       if (isStriped) {
@@ -4962,7 +4956,7 @@ public class BlockManager implements BlockStatsMXBean {
       DatanodeStorageInfo.decrementBlocksScheduled(remove.getTargets()
           .toArray(new DatanodeStorageInfo[remove.getTargets().size()]));
     }
-    neededReconstruction.remove(block, LEVEL);
+    neededReconstruction.remove(block, LowRedundancyBlocks.LEVEL);
     postponedMisreplicatedBlocks.remove(block);
   }
 
@@ -5413,7 +5407,7 @@ public class BlockManager implements BlockStatsMXBean {
     final int nodesToProcess = (int) Math.ceil(numlive
         * this.blocksInvalidateWorkPct);
 
-    int workFound = this.scheduleBlockReconstructionWork(blocksToProcess);
+    int workFound = this.computeBlockReconstructionWork(blocksToProcess);
 
     // Update counters
     namesystem.writeLock();
