@@ -35,7 +35,7 @@ import org.apache.hadoop.fs.azurebfs.security.EncodingHelper;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientUtils;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.assertj.core.api.Assertions;
-import org.junit.Assume;
+import org.assertj.core.api.Assumptions;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -57,9 +57,11 @@ import org.apache.hadoop.fs.azurebfs.utils.EncryptionType;
 import org.apache.hadoop.fs.impl.OpenFileParameters;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Lists;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CPK_IN_NON_HNS_ACCOUNT_ERROR_MESSAGE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENCRYPTION_CONTEXT_PROVIDER_TYPE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY_SHA;
@@ -171,9 +173,6 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
   }
 
   public ITestAbfsCustomEncryption() throws Exception {
-    Assume.assumeTrue("Account should be HNS enabled for CPK",
-        getConfiguration().getBoolean(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT,
-            false));
     new Random().nextBytes(cpk);
     cpkSHAEncoded = EncodingHelper.getBase64EncodedString(
         EncodingHelper.getSHA256Hash(cpk));
@@ -181,7 +180,13 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
 
   @Test
   public void testCustomEncryptionCombinations() throws Exception {
-    AzureBlobFileSystem fs = getOrCreateFS();
+    try (AzureBlobFileSystem fs = getOrCreateFS()) {
+      validateCpkResponseHeadersForCombination(fs);
+    }
+  }
+
+  private void validateCpkResponseHeadersForCombination(final AzureBlobFileSystem fs)
+      throws Exception {
     Path testPath = path("/testFile");
     String relativePath = fs.getAbfsStore().getRelativePath(testPath);
     MockEncryptionContextProvider ecp =
@@ -375,9 +380,7 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
         + getAccountName());
     configuration.unset(FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY_SHA + "."
         + getAccountName());
-    AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(configuration);
-    fileSystemsOpenedInTest.add(fs);
-    return fs;
+    return getAzureBlobFileSystem(configuration);
   }
 
   private AzureBlobFileSystem getCPKEnabledFS() throws IOException {
@@ -390,9 +393,34 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
     conf.set(FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY_SHA + "."
         + getAccountName(), cpkEncodedSHA);
     conf.unset(FS_AZURE_ENCRYPTION_CONTEXT_PROVIDER_TYPE);
-    AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(conf);
-    fileSystemsOpenedInTest.add(fs);
-    return fs;
+    return getAzureBlobFileSystem(conf);
+  }
+
+  private AzureBlobFileSystem getAzureBlobFileSystem(final Configuration conf) {
+    try {
+      AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(
+          conf);
+      fileSystemsOpenedInTest.add(fs);
+      Assertions.assertThat(
+          getConfiguration().getBoolean(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT,
+              false))
+          .describedAs("Encryption tests should run only on namespace enabled account")
+          .isTrue();
+      return fs;
+    } catch (IOException ex) {
+      GenericTestUtils.assertExceptionContains(
+          CPK_IN_NON_HNS_ACCOUNT_ERROR_MESSAGE, ex,
+          "Exception message should contain the expected message");
+      Assertions.assertThat(
+              getConfiguration().getBoolean(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT,
+                  false))
+          .describedAs("Encryption tests should run only on namespace enabled account")
+          .isFalse();
+
+      //Skip the test
+      Assumptions.assumeThat(true).isFalse();
+      return null;
+    }
   }
 
   private AzureBlobFileSystem getOrCreateFS() throws Exception {
@@ -423,18 +451,18 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
    * was used to create the x-ms-encryption-context value used for creating the file.
    */
   private EncryptionContextProvider createEncryptedFile(Path testPath) throws Exception {
-    AzureBlobFileSystem fs;
-    if (getFileSystem().getAbfsClient().getEncryptionType() == fileEncryptionType) {
-      fs = getFileSystem();
-    } else {
-      fs = fileEncryptionType == ENCRYPTION_CONTEXT
-          ? getECProviderEnabledFS()
-          : getCPKEnabledFS();
+    try (AzureBlobFileSystem fs = getFileSystemForFileEncryption()) {
+      String relativePath = fs.getAbfsStore().getRelativePath(testPath);
+      try (FSDataOutputStream out = fs.create(new Path(relativePath))) {
+        out.write(SERVER_FILE_CONTENT.getBytes());
+      }
+      verifyFileEncryption(fs, relativePath);
+      return fs.getAbfsClient().getEncryptionContextProvider();
     }
-    String relativePath = fs.getAbfsStore().getRelativePath(testPath);
-    try (FSDataOutputStream out = fs.create(new Path(relativePath))) {
-      out.write(SERVER_FILE_CONTENT.getBytes());
-    }
+  }
+
+  private void verifyFileEncryption(final AzureBlobFileSystem fs,
+      final String relativePath) throws Exception {
     // verify file is encrypted by calling getPathStatus (with properties)
     // without encryption headers in request
     if (fileEncryptionType != EncryptionType.NONE) {
@@ -448,7 +476,19 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
                   getTestTracingContext(fs, false), abfsClient)));
       fs.getAbfsClient().setEncryptionType(fileEncryptionType);
     }
-    return fs.getAbfsClient().getEncryptionContextProvider();
+  }
+
+  private AzureBlobFileSystem getFileSystemForFileEncryption() throws Exception {
+    AzureBlobFileSystem fs;
+    if (getFileSystem().getAbfsClient().getEncryptionType() == fileEncryptionType) {
+      fs = (AzureBlobFileSystem) FileSystem.newInstance(
+          getConfiguration().getRawConfiguration());
+    } else {
+      fs = fileEncryptionType == ENCRYPTION_CONTEXT
+          ? getECProviderEnabledFS()
+          : getCPKEnabledFS();
+    }
+    return fs;
   }
 
   @Override

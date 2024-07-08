@@ -60,11 +60,10 @@ public class TestZKCuratorManager {
     this.server = new TestingServer();
 
     Configuration conf = new Configuration();
-    conf.set(
-        CommonConfigurationKeys.ZK_ADDRESS, this.server.getConnectString());
+    String zkHostPort = this.server.getConnectString();
 
     this.curator = new ZKCuratorManager(conf);
-    this.curator.start();
+    this.curator.start(zkHostPort);
   }
 
   @After

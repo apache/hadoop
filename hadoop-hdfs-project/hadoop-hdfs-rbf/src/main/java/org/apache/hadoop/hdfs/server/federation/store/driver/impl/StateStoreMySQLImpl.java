@@ -125,6 +125,7 @@ public class StateStoreMySQLImpl extends StateStoreSerializableImpl {
 
   @Override
   public void close() throws Exception {
+    super.close();
     connectionFactory.shutdown();
   }
 

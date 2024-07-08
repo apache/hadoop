@@ -112,8 +112,6 @@ public class YarnConfiguration extends Configuration {
             SYSTEM_METRICS_PUBLISHER_ENABLED),
         new DeprecationDelta(RM_ZK_ACL, CommonConfigurationKeys.ZK_ACL),
         new DeprecationDelta(RM_ZK_AUTH, CommonConfigurationKeys.ZK_AUTH),
-        new DeprecationDelta(RM_ZK_ADDRESS,
-            CommonConfigurationKeys.ZK_ADDRESS),
         new DeprecationDelta(RM_ZK_NUM_RETRIES,
             CommonConfigurationKeys.ZK_NUM_RETRIES),
         new DeprecationDelta(RM_ZK_TIMEOUT_MS,
@@ -2733,6 +2731,10 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_LINUX_CONTAINER_CGROUPS_MOUNT_PATH =
     NM_PREFIX + "linux-container-executor.cgroups.mount-path";
 
+  /** Where the linux container executor should mount cgroups v2 if not found. */
+  public static final String NM_LINUX_CONTAINER_CGROUPS_V2_MOUNT_PATH =
+      NM_PREFIX + "linux-container-executor.cgroups.v2.mount-path";
+
   /**
    * Whether the apps should run in strict resource usage mode(not allowed to
    * use spare CPU)
@@ -4033,6 +4035,9 @@ public class YarnConfiguration extends Configuration {
 
   public static final String DEFAULT_FEDERATION_STATESTORE_CLIENT_CLASS =
       "org.apache.hadoop.yarn.server.federation.store.impl.MemoryFederationStateStore";
+
+  public static final String FEDERATION_STATESTORE_ZK_ADDRESS =
+      FEDERATION_PREFIX + "state-store.zk.address";
 
   public static final String FEDERATION_CACHE_TIME_TO_LIVE_SECS =
       FEDERATION_PREFIX + "cache-ttl.secs";

@@ -358,14 +358,14 @@ public abstract class AbstractCGroupsHandler implements CGroupsHandler {
         } else {
           // Unexpected: we just checked that it was missing
           throw new ResourceHandlerException(getErrorWithDetails(
-              "Unexpected: Cannot create yarn cgroup",
+              "Unexpected: Cannot create yarn cgroup hierarchy",
               subsystemName,
               yarnHierarchy.getAbsolutePath()
           ));
         }
       } catch (SecurityException e) {
         throw new ResourceHandlerException(getErrorWithDetails(
-            "No permissions to create yarn cgroup",
+            "No permissions to create yarn cgroup hierarchy",
             subsystemName,
             yarnHierarchy.getAbsolutePath()
         ), e);
@@ -378,15 +378,7 @@ public abstract class AbstractCGroupsHandler implements CGroupsHandler {
       ));
     }
 
-    try {
-      updateEnabledControllersInHierarchy(yarnHierarchy, controller);
-    } catch (ResourceHandlerException e) {
-      throw new ResourceHandlerException(getErrorWithDetails(
-          "Failed to update cgroup.subtree_control in yarn hierarchy",
-          subsystemName,
-          yarnHierarchy.getAbsolutePath()
-      ));
-    }
+    updateEnabledControllersInHierarchy(yarnHierarchy, controller);
   }
 
   protected abstract void updateEnabledControllersInHierarchy(
@@ -401,7 +393,7 @@ public abstract class AbstractCGroupsHandler implements CGroupsHandler {
    * @param yarnCgroupPath cgroup path that failed
    * @return a string builder that can be appended by the caller
    */
-  private String getErrorWithDetails(
+  protected String getErrorWithDetails(
       String errorMessage,
       String subsystemName,
       String yarnCgroupPath) {
@@ -565,6 +557,11 @@ public abstract class AbstractCGroupsHandler implements CGroupsHandler {
   @Override
   public String getCGroupMountPath() {
     return this.cGroupsMountConfig.getMountPath();
+  }
+
+  @Override
+  public String getCGroupV2MountPath() {
+    return this.cGroupsMountConfig.getV2MountPath();
   }
 
   @Override
