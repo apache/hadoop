@@ -293,6 +293,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
                                     final BlockStoragePolicy storagePolicy,
                                     EnumSet<AddBlockFlag> addBlockFlags,
                                     EnumMap<StorageType, Integer> sTypes) {
+    LOG.info("Cluster map is {}, numOfRePlicas {}, numOfLeaves {}", clusterMap.toString(), numOfReplicas, clusterMap.getNumOfLeaves() );
     if (numOfReplicas == 0 || clusterMap.getNumOfLeaves()==0) {
       return DatanodeStorageInfo.EMPTY_ARRAY;
     }
@@ -464,7 +465,6 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     if (numOfReplicas == 0 || clusterMap.getNumOfLeaves()==0) {
       return (writer instanceof DatanodeDescriptor) ? writer : null;
     }
-    LOG.info("Cluster map is " + clusterMap.toString());
     final int numOfResults = results.size();
     final int totalReplicasExpected = numOfReplicas + numOfResults;
     if ((writer == null || !(writer instanceof DatanodeDescriptor)) && !newBlock) {
