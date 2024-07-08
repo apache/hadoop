@@ -2103,10 +2103,10 @@ public class BlockManager implements BlockStatsMXBean {
   int computeBlockReconstructionWork(int blocksToProcess) {
     List<List<BlockInfo>> blocksToReconstruct = new ArrayList<>(LowRedundancyBlocks.LEVEL);
     int remaining = blocksToProcess;
-    int foundBlocks;
-    int maxAttemptInATick = 10;
+    int maxAttemptInATick = 100;
+    int lowRedundancyBlocksCount = neededReconstruction.getLowRedundancyBlockCount();
     do{
-      namesystem.writeLock();
+      namesystem.writeLock(); // TODO need to check the lock
       try {
         boolean reset = false;
         if (replQueueResetToHeadThreshold > 0) {
@@ -2120,17 +2120,16 @@ public class BlockManager implements BlockStatsMXBean {
         // Choose the blocks to be reconstructed.
         // Some candidates may not be actually used to construct BlockReconstructionWork,
         // in this case, we will try another round immediately to avoid waste the tick
-        foundBlocks = neededReconstruction.chooseLowRedundancyBlocks(remaining, reset, blocksToReconstruct);
+        lowRedundancyBlocksCount -= neededReconstruction.chooseLowRedundancyBlocks(remaining, reset, blocksToReconstruct);
         remaining -= computeReconstructionWorkForBlocks(blocksToReconstruct);
-        LOG.info("Found " + foundBlocks + " low redundancy blocks. Remaining is " + remaining
+        LOG.info("Remaining low redanduncy blocks " + lowRedundancyBlocksCount + " low redundancy blocks. Remaining is " + remaining
                 + ", reset = " + reset + ", replQueueCallsSinceReset = " + replQueueCallsSinceReset);
-        LOG.info("stack is " + Arrays.toString(Thread.currentThread().getStackTrace()).replace( ',', '\n' ));
       } finally {
         namesystem.writeUnlock("computeBlockReconstructionWork");
       }
       // We may meet the case that most found blocks are not used for ReconstructionWork,
       // in this case, we will try to find more blocks for reconstruction in this tick
-    }while (remaining > 0 && foundBlocks > 0 && --maxAttemptInATick > 0);
+    }while (remaining > 0 && lowRedundancyBlocksCount > 0 && --maxAttemptInATick > 0);
     // return the actual number of BlockReconstructionWork
     return blocksToProcess - remaining;
   }
@@ -2621,8 +2620,12 @@ public class BlockManager implements BlockStatsMXBean {
       final DatanodeDescriptor node = getDatanodeDescriptorFromStorage(storage);
       final StoredReplicaState state = checkReplicaOnStorage(numReplicas, block,
           storage, corruptReplicas.getNodes(block), false);
-      LOG.info("storage for block " + block + " is " + storage + ", replica state is "
-              + state + ", node state is " + node.getAdminState());
+      LOG.info("storage for block " + block + " is " + storage + ", state is "
+              + state + ", too busy. getNumberOfBlocksToBeReplicated"
+              + node.getNumberOfBlocksToBeReplicated()
+              + ", maxReplicationStreams "+ maxReplicationStreams
+              + ", hard limit is " + replicationStreamsHardLimit);
+      LOG.info("stack is " + Arrays.toString(Thread.currentThread().getStackTrace()).replace( ',', '\n' ));
       if (state == StoredReplicaState.LIVE) {
         if (storage.getStorageType() == StorageType.PROVIDED) {
           storage = new DatanodeStorageInfo(node, storage.getStorageID(),
@@ -2666,11 +2669,7 @@ public class BlockManager implements BlockStatsMXBean {
         countLiveAndDecommissioningReplicas(numReplicas, state,
             liveBitSet, decommissioningBitSet, blockIndex);
       }
-      LOG.info("storage for block " + block + " is " + storage + ", state is "
-              + state + ", too busy. getNumberOfBlocksToBeReplicated"
-              + node.getNumberOfBlocksToBeReplicated()
-              + ", maxReplicationStreams "+ maxReplicationStreams
-              + ", hard limit is " + replicationStreamsHardLimit);
+
       if (priority != LowRedundancyBlocks.QUEUE_HIGHEST_PRIORITY
           && (!node.isDecommissionInProgress() && !node.isEnteringMaintenance())
           && node.getNumberOfBlocksToBeReplicated() +

@@ -2352,11 +2352,11 @@ public class TestBlockManager {
                       0,
                       3));
     }
-
-    addBlockOnNodes(891, getNodes(0,1));
+    int id = 891;
+    addBlockOnNodes(id, getNodes(0,1));
     // The priority should be QUEUE_LOW_REDUNDANCY
     assertTrue("Should add successfully to neededReconstruction",
-            bm.neededReconstruction.add(bm.getStoredBlock(new Block(891)),
+            bm.neededReconstruction.add(bm.getStoredBlock(new Block(id)),
                     1,
                     0,
                     0,
@@ -2374,8 +2374,8 @@ public class TestBlockManager {
     LOG.info("low redundancy block is " + bm.neededReconstruction.getLowRedundancyBlocks());
     assertEquals("There should exist 11 low-redundancy blocks", 11, bm.neededReconstruction.getLowRedundancyBlocks());
 
-    for (DatanodeStorageInfo storage : bm.getStorages(new Block(11))) {
-      LOG.info("Storage for block is " + storage + ", block " + bm.getStoredBlock(new Block(11)));
+    for (DatanodeStorageInfo storage : bm.getStorages(new Block(id))) {
+      LOG.info("Storage for block is " + storage + ", block " + bm.getStoredBlock(new Block(id)));
     }
     int scheduledReconstruction = bm.computeBlockReconstructionWork(4);
     assertEquals("The actual scheduled BlockReconstructionWork should include the blockAbleToReconstruct", 1, scheduledReconstruction);
