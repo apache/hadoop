@@ -2356,7 +2356,7 @@ public class TestBlockManager {
     addBlockOnNodes(891, getNodes(0,1));
     // The priority should be QUEUE_LOW_REDUNDANCY
     assertTrue("Should add successfully to neededReconstruction",
-            bm.neededReconstruction.add(bm.getStoredBlock(new Block(11)),
+            bm.neededReconstruction.add(bm.getStoredBlock(new Block(891)),
                     1,
                     0,
                     0,
