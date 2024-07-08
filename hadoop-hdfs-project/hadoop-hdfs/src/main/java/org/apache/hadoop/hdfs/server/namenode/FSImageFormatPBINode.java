@@ -788,7 +788,7 @@ public final class FSImageFormatPBINode {
         }
         if (outputInodes >= parent.getInodesPerSubSection()) {
           outputInodes = 0;
-          parent.commitSubSection(summary,
+          out = parent.commitSubSection(summary,
               FSImageFormatProtobuf.SectionName.INODE_DIR_SUB);
         }
       }
@@ -815,7 +815,7 @@ public final class FSImageFormatPBINode {
           context.checkCancelled();
         }
         if (i % parent.getInodesPerSubSection() == 0) {
-          parent.commitSubSection(summary,
+          out = parent.commitSubSection(summary,
               FSImageFormatProtobuf.SectionName.INODE_SUB);
         }
       }

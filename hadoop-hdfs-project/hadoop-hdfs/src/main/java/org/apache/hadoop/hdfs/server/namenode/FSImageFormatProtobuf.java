@@ -584,18 +584,6 @@ public final class FSImageFormatProtobuf {
 
   private static boolean enableParallelSaveAndLoad(Configuration conf) {
     boolean loadInParallel = enableParallelLoad;
-    boolean compressionEnabled = conf.getBoolean(
-        DFSConfigKeys.DFS_IMAGE_COMPRESS_KEY,
-        DFSConfigKeys.DFS_IMAGE_COMPRESS_DEFAULT);
-
-    if (loadInParallel) {
-      if (compressionEnabled) {
-        LOG.warn("Parallel Image loading and saving is not supported when {}" +
-                " is set to true. Parallel will be disabled.",
-            DFSConfigKeys.DFS_IMAGE_COMPRESS_KEY);
-        loadInParallel = false;
-      }
-    }
     return loadInParallel;
   }
 
@@ -692,25 +680,31 @@ public final class FSImageFormatProtobuf {
      * @param name The name of the sub-section to commit
      * @throws IOException
      */
-    public void commitSubSection(FileSummary.Builder summary, SectionName name)
-        throws IOException {
+    public OutputStream commitSubSection(FileSummary.Builder summary, SectionName name)
+            throws IOException {
       if (!writeSubSections) {
-        return;
+        return null;
       }
 
       LOG.debug("Saving a subsection for {}", name.toString());
       // The output stream must be flushed before the length is obtained
       // as the flush can move the length forward.
-      sectionOutputStream.flush();
+      flushSectionOutputStream();
+      if (codec != null) {
+        sectionOutputStream = codec.createOutputStream(underlyingOutputStream);
+      } else {
+        sectionOutputStream = underlyingOutputStream;
+      }
       long length = fileChannel.position() - subSectionOffset;
       if (length == 0) {
         LOG.warn("The requested section for {} is empty. It will not be " +
-            "output to the image", name.toString());
-        return;
+                "output to the image", name.toString());
+        return null;
       }
       summary.addSections(FileSummary.Section.newBuilder().setName(name.name)
-          .setLength(length).setOffset(subSectionOffset));
+              .setLength(length).setOffset(subSectionOffset));
       subSectionOffset += length;
+      return sectionOutputStream;
     }
 
     private void flushSectionOutputStream() throws IOException {

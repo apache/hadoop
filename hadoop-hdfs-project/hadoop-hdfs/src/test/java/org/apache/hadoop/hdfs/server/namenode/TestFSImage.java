@@ -1142,11 +1142,11 @@ public class TestFSImage {
           getSubSectionsOfName(sections, SectionName.INODE_SUB);
       ArrayList<Section> dirSubSections =
           getSubSectionsOfName(sections, SectionName.INODE_DIR_SUB);
-
-      // As compression is enabled, there should be no sub-sections in the
-      // image header
-      assertEquals(0, inodeSubSections.size());
-      assertEquals(0, dirSubSections.size());
+      //Compression and parallel can be enabled at the same time.
+//      // As compression is enabled, there should be no sub-sections in the
+//      // image header
+//      assertEquals(0, inodeSubSections.size());
+//      assertEquals(0, dirSubSections.size());
     } finally {
       if (cluster != null) {
         cluster.shutdown();

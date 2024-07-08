@@ -530,7 +530,7 @@ public class FSImageFormatPBSnapshot {
           context.checkCancelled();
         }
         if (i % parent.getInodesPerSubSection() == 0) {
-          parent.commitSubSection(headers,
+          out = parent.commitSubSection(headers,
               FSImageFormatProtobuf.SectionName.SNAPSHOT_DIFF_SUB);
         }
       }
