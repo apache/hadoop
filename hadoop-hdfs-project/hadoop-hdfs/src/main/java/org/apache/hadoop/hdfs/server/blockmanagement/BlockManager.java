@@ -2168,6 +2168,7 @@ public class BlockManager implements BlockStatsMXBean {
 
     // Step 2: choose target nodes for each reconstruction task
     for (BlockReconstructionWork rw : reconWork) {
+      LOG.info("Chosing reconswork target for block  {}", rw.getBlock());
       // Exclude all of the containing nodes from being targets.
       // This list includes decommissioning or corrupt nodes.
       final Set<Node> excludedNodes = new HashSet<>(rw.getContainingNodes());
@@ -2177,6 +2178,7 @@ public class BlockManager implements BlockStatsMXBean {
           pendingReconstruction.getTargets(rw.getBlock());
       if (targets != null) {
         for (DatanodeStorageInfo dn : targets) {
+          LOG.info("Excluding existing target {}", dn);
           excludedNodes.add(dn.getDatanodeDescriptor());
         }
       }
@@ -2184,14 +2186,20 @@ public class BlockManager implements BlockStatsMXBean {
       // choose replication targets: NOT HOLDING THE GLOBAL LOCK
       final BlockPlacementPolicy placementPolicy =
           placementPolicies.getPolicy(rw.getBlock().getBlockType());
+      LOG.info("Choosing target for block {}, with placementPolicy {}, excluding {}",
+              rw.getBlock(), placementPolicy, excludedNodes);
       rw.chooseTargets(placementPolicy, storagePolicySuite, excludedNodes);
+      LOG.info("Chosed target for block {}, with placementPolicy {}, excluding {}, result is ",
+              rw.getBlock(), placementPolicy, excludedNodes, rw.getTargets());
     }
+
 
     // Step 3: add tasks to the DN
     namesystem.writeLock();
     try {
       for (BlockReconstructionWork rw : reconWork) {
         final DatanodeStorageInfo[] targets = rw.getTargets();
+        LOG.info("targets for block {} is {}", rw.getBlock(), targets );
         if (targets == null || targets.length == 0) {
           rw.resetTargets();
           continue;
