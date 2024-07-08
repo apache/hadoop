@@ -2359,7 +2359,7 @@ public class TestBlockManager {
                     3));
 
     // simulate the 2 nodes reach maxReplicationStreams
-    for(int i = 0; i < bm.getMaxReplicationStreams(); i++){
+    for(int i = 0; i < bm.getReplicationStreamsHardLimit(); i++){
       nodes.get(0).incrementPendingReplicationWithoutTargets();
     }
 
