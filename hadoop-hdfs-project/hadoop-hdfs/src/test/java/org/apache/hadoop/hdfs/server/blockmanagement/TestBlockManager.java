@@ -2336,6 +2336,7 @@ public class TestBlockManager {
     for(int i = 1; i<=10;i++){
       Block block = new Block(i);
       BlockInfo blockInfo = new BlockInfoContiguous(block, (short) 4);
+      blockInfo.setBlockCollectionId(mockINodeId);
       // We set it curReplicas to 1 to make its priority as QUEUE_WITH_CORRUPT_BLOCKS
       assertTrue("Should add successfully to neededReconstruction",
               bm.neededReconstruction.add(blockInfo, 1, 0, 0, 3));;
@@ -2344,9 +2345,10 @@ public class TestBlockManager {
     }
 
     Block blockAbleToReconstruct = new Block(11);
-    BlockInfo blockInfo11 = new BlockInfoContiguous(blockAbleToReconstruct, (short) 4);
+    BlockInfo blockInfoAbleToReconstruct = new BlockInfoContiguous(blockAbleToReconstruct, (short) 4);
+    blockInfoAbleToReconstruct.setBlockCollectionId(mockINodeId);
     // The priority should be QUEUE_LOW_REDUNDANCY
-    bm.neededReconstruction.add(blockInfo11, 2, 0, 0, 3);
+    bm.neededReconstruction.add(blockInfoAbleToReconstruct, 2, 0, 0, 3);
     addBlockOnNodes(blockAbleToReconstruct.getBlockId(), Arrays.asList(nodes.get(0), nodes.get(1)));
 
     // simulate the 2 nodes reach maxReplicationStreams
