@@ -2337,6 +2337,7 @@ public class TestBlockManager {
    */
   @Test(timeout = 6000)
   public void testStorageNotChosenReason() throws InterruptedException {
+    final AtomicBoolean failure = new AtomicBoolean();
 //    String storageID = "storageID";
 //    DatanodeStorageInfo targetDN = BlockManagerTestUtil
 //            .newDatanodeStorageInfo(DFSTestUtil.getLocalDatanodeDescriptor(),
@@ -2355,41 +2356,49 @@ public class TestBlockManager {
     for(int i = 0; i<threadNum;i++){
       final int index = i;
       threads[i] = new Thread(() -> {
-        String newStorageID = "storageID"+index;
-        BlockSkippedForReconstructionReason.start();
-        DatanodeStorageInfo sourceStorage = BlockManagerTestUtil
-                .newDatanodeStorageInfo(DFSTestUtil.getLocalDatanodeDescriptor(),
-                        new DatanodeStorage(newStorageID));
-        BlockInfo newBlk = new BlockInfoContiguous(new Block(index), (short) index);
-        BlockSkippedForReconstructionReason.genStorageIsNotChooseForReplication(newBlk, sourceStorage,
-                BlockSkippedForReconstructionReason.SOURCE_NODE_UNAVAILABLE, DetailedReason.REPLICA_DECOMMISSIONED);
-        String reason1 = BlockSkippedForReconstructionReason.summaryBlockSkippedForReconstructionReason();
-        assertTrue(reason1.contains(newBlk.toString()));
-        assertTrue(reason1.contains(sourceStorage.toString()));
-        assertTrue(reason1.contains(SOURCE_NODE_UNAVAILABLE.toString()));
+        try{
+          String newStorageID = "storageID"+index;
+          BlockSkippedForReconstructionReason.start();
+          DatanodeStorageInfo sourceStorage = BlockManagerTestUtil
+                  .newDatanodeStorageInfo(DFSTestUtil.getLocalDatanodeDescriptor(),
+                          new DatanodeStorage(newStorageID));
+          BlockInfo newBlk = new BlockInfoContiguous(new Block(index), (short) index);
+          BlockSkippedForReconstructionReason.genStorageIsNotChooseForReplication(newBlk, sourceStorage,
+                  BlockSkippedForReconstructionReason.SOURCE_NODE_UNAVAILABLE, DetailedReason.REPLICA_DECOMMISSIONED);
+          String reason1 = BlockSkippedForReconstructionReason.summaryBlockSkippedForReconstructionReason();
+          LOG.info("Reason1 for " + newBlk + " in storage " + newStorageID + " is " + reason1);
+          assertTrue(reason1.contains(newBlk.toString()));
+          assertTrue(reason1.contains(sourceStorage.toString()));
+          assertTrue(reason1.contains(SOURCE_NODE_UNAVAILABLE.toString()));
 
-        LOG.info("Reason1 for " + newBlk + " in storage " + newStorageID + " is " + reason1);
 
-        BlockSkippedForReconstructionReason.start();
-        BlockSkippedForReconstructionReason.genStorageIsNotChooseForReplication(newBlk, null,
-                BlockSkippedForReconstructionReason.RECONSTRUCTION_WORK_NOT_PASS_VALIDATION, null);
-        String reason2 = BlockSkippedForReconstructionReason.summaryBlockSkippedForReconstructionReason();
-        assertTrue(reason2.contains(newBlk.toString()));
-        assertTrue(reason2.contains(BlockSkippedForReconstructionReason.RECONSTRUCTION_WORK_NOT_PASS_VALIDATION.toString()));
-        LOG.info("Reason2 for " + newBlk + " in storage " + newStorageID + " is " + reason2);
+          BlockSkippedForReconstructionReason.start();
+          BlockSkippedForReconstructionReason.genStorageIsNotChooseForReplication(newBlk, null,
+                  BlockSkippedForReconstructionReason.RECONSTRUCTION_WORK_NOT_PASS_VALIDATION, null);
+          String reason2 = BlockSkippedForReconstructionReason.summaryBlockSkippedForReconstructionReason();
+          LOG.info("Reason2 for " + newBlk + " in storage " + newStorageID + " is " + reason2);
+          assertTrue(reason2.contains(newBlk.toString()));
+          assertTrue(reason2.contains(BlockSkippedForReconstructionReason.RECONSTRUCTION_WORK_NOT_PASS_VALIDATION.toString()));
 
-        BlockSkippedForReconstructionReason.start();
-        BlockSkippedForReconstructionReason.genStorageIsNotChooseForReplication(newBlk, null,
-                BlockSkippedForReconstructionReason.NO_AVAILABLE_TARGET_HOST_FOUND, null);
-        String reason3 = BlockSkippedForReconstructionReason.summaryBlockSkippedForReconstructionReason();
-        assertTrue(reason3.contains(newBlk.toString()));
-        assertTrue(reason3.contains(BlockSkippedForReconstructionReason.RECONSTRUCTION_WORK_NOT_PASS_VALIDATION.toString()));
-        LOG.info("Reason3 for " + newBlk + " in storage " + newStorageID + " is " + reason3);
+
+          BlockSkippedForReconstructionReason.start();
+          BlockSkippedForReconstructionReason.genStorageIsNotChooseForReplication(newBlk, null,
+                  BlockSkippedForReconstructionReason.NO_AVAILABLE_TARGET_HOST_FOUND, null);
+          LOG.info("Reason3 for " + newBlk + " in storage " + newStorageID + " is " + reason3);
+          String reason3 = BlockSkippedForReconstructionReason.summaryBlockSkippedForReconstructionReason();
+          assertTrue(reason3.contains(newBlk.toString()));
+          assertTrue(reason3.contains(BlockSkippedForReconstructionReason.RECONSTRUCTION_WORK_NOT_PASS_VALIDATION.toString()));
+
+        }catch (Exception e){
+          e.printStackTrace();
+          failure.set(true);
+        }
       });
     }
     for(int i = 0;i<threadNum;i++){
       threads[i].start();
       threads[i].join(0);
     }
+    assertFalse(failure.get());
   }
 }
