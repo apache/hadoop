@@ -530,7 +530,7 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
    * @param blocksToReconstruct - The found candidates blocks need to be reconstructed
    * @return Return the number of found low-redundancy blocks(They are put in blocksToReconstruct)
    */
-  public synchronized int chooseLowRedundancyBlocks(
+  synchronized int chooseLowRedundancyBlocks(
           int blocksToProcess, boolean resetIterators, List<List<BlockInfo>> blocksToReconstruct) {
     int foundBlocks = 0;
     int count = 0;
