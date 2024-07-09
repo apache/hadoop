@@ -265,6 +265,31 @@ public class TestRouterAdminCLI {
     testAddOrderMountTable(DestinationOrder.RANDOM);
     testAddOrderMountTable(DestinationOrder.HASH_ALL);
     testAddOrderMountTable(DestinationOrder.SPACE);
+    testAddOrderMountTable(DestinationOrder.LEADER_FOLLOWER);
+  }
+
+  @Test
+  public void testLeaderFollower() throws Exception {
+    DestinationOrder order = DestinationOrder.LEADER_FOLLOWER;
+    final String mnt = "/newAdd1" + order;
+    final String nsId = "ns1,ns2,ns0";
+    final String dest = "/changAdd";
+
+    String[] argv = new String[] {
+        "-add", mnt, nsId, dest, "-order", order.toString()};
+    assertEquals(0, ToolRunner.run(admin, argv));
+
+    stateStore.loadCache(MountTableStoreImpl.class, true);
+    MountTableManager mountTable = client.getMountTableManager();
+    GetMountTableEntriesRequest request =
+            GetMountTableEntriesRequest.newInstance(mnt);
+    GetMountTableEntriesResponse response =
+            mountTable.getMountTableEntries(request);
+    List<MountTable> entries = response.getEntries();
+    assertEquals(1, entries.size());
+    assertEquals("ns1", entries.get(0).getDestinations().get(0).getNameserviceId());
+    assertEquals("ns2", entries.get(0).getDestinations().get(1).getNameserviceId());
+    assertEquals("ns0", entries.get(0).getDestinations().get(2).getNameserviceId());
   }
 
   @Test
@@ -795,7 +820,7 @@ public class TestRouterAdminCLI {
     assertTrue("Wrong message: " + out, out.toString().contains(
         "\t[-add <source> <nameservice1, nameservice2, ...> <destination> "
             + "[-readonly] [-faulttolerant] "
-            + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
+            + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE|LEADER_FOLLOWER] "
             + "-owner <owner> -group <group> -mode <mode>]"));
     out.reset();
 
@@ -804,7 +829,7 @@ public class TestRouterAdminCLI {
     assertTrue("Wrong message: " + out, out.toString().contains(
         "\t[-update <source> [<nameservice1, nameservice2, ...> <destination>] "
             + "[-readonly true|false] [-faulttolerant true|false] "
-            + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
+            + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE|LEADER_FOLLOWER] "
             + "-owner <owner> -group <group> -mode <mode>]"));
     out.reset();
 
@@ -852,18 +877,18 @@ public class TestRouterAdminCLI {
     String expected = "Usage: hdfs dfsrouteradmin :\n"
         + "\t[-add <source> <nameservice1, nameservice2, ...> <destination> "
         + "[-readonly] [-faulttolerant] "
-        + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
+        + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE|LEADER_FOLLOWER] "
         + "-owner <owner> -group <group> -mode <mode>]\n"
         + "\t[-addAll <source1> <nameservice1,nameservice2,...> <destination1> "
-        + "[-readonly] [-faulttolerant] [-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
+        + "[-readonly] [-faulttolerant] [-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE|LEADER_FOLLOWER] "
         + "-owner <owner1> -group <group1> -mode <mode1>"
         + " , <source2> <nameservice1,nameservice2,...> <destination2> "
-        + "[-readonly] [-faulttolerant] [-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
+        + "[-readonly] [-faulttolerant] [-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE|LEADER_FOLLOWER] "
         + "-owner <owner2> -group <group2> -mode <mode2> , ...]\n"
         + "\t[-update <source> [<nameservice1, nameservice2, ...> "
         + "<destination>] [-readonly true|false]"
         + " [-faulttolerant true|false] "
-        + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
+        + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE|LEADER_FOLLOWER] "
         + "-owner <owner> -group <group> -mode <mode>]\n" + "\t[-rm <source>]\n"
         + "\t[-ls [-d] <path>]\n"
         + "\t[-getDestination <path>]\n"

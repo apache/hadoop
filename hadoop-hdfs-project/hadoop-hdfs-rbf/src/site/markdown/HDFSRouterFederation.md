@@ -288,6 +288,7 @@ For deciding where to create a new file/folder it uses the order parameter, it c
 * RANDOM: Random subcluster. This is usually useful for balancing the load across. Folders are created in all subclusters.
 * HASH_ALL: Follow consistent hashing at all the levels. This approach tries to balance the reads and writes evenly across subclusters. Folders are created in all subclusters.
 * SPACE: Try to write data in the subcluster with the most available space. Folders are created in all subclusters.
+* LEADER_FOLLOWER: Try to write data in the leader subcluster as much as possible, if failed, try follower subclusters. Folders are created in all subclusters.
 
 For the hash-based approaches, the difference is that HASH would make all the files/folders within a folder belong to the same subcluster while HASH_ALL will spread all files under a mount point.
 For example, assuming we have a HASH mount point for `/data/hash`, files and folders under `/data/hash/folder0` will all be in the same subcluster.
@@ -296,6 +297,9 @@ On the other hand, a HASH_ALL mount point for `/data/hash_all`, will spread file
 RANDOM can be used for reading and writing data from/into different subclusters.
 The common use for this approach is to have the same data in multiple subclusters and balance the reads across subclusters.
 For example, if thousands of containers need to read the same data (e.g., a library), one can use RANDOM to read the data from any of the subclusters.
+
+LEADER_FOLLOWER can be used in cross-cluster disaster tolerance, it's not for sharing overloads among sub-clusters. When using this mode like `-add /data ns2,ns1 /data -order LEADER_FOLLOWER`,
+`ns2` is considered an active subcluster and `ns1` is considered a follower subcluster. The order of namespaces is always `leader,follower,follower...`.
 
 To determine which subcluster contains a file:
 
