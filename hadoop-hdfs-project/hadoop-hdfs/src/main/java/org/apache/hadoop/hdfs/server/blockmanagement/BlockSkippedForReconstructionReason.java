@@ -106,7 +106,7 @@ public enum BlockSkippedForReconstructionReason {
         }
         switch (reason){
             case SOURCE_NODE_UNAVAILABLE:
-                reasonForBlock.append(" Source node storage ").append(storage).append(" is not chosen since ").append(reason);
+                reasonForBlock.append(" Source node storage ").append(storage==null?"None":storage).append(" is not chosen since ").append(reason);
                 break;
             case NO_AVAILABLE_TARGET_HOST_FOUND:
             case RECONSTRUCTION_WORK_NOT_PASS_VALIDATION:

@@ -2367,6 +2367,24 @@ public class TestBlockManager {
         assertTrue(reason1.contains(newBlk.toString()));
         assertTrue(reason1.contains(sourceStorage.toString()));
         assertTrue(reason1.contains(SOURCE_NODE_UNAVAILABLE.toString()));
+
+        LOG.info("Reason1 for " + newBlk + " in storage " + newStorageID + " is " + reason1);
+
+        BlockSkippedForReconstructionReason.start();
+        BlockSkippedForReconstructionReason.genStorageIsNotChooseForReplication(newBlk, null,
+                BlockSkippedForReconstructionReason.RECONSTRUCTION_WORK_NOT_PASS_VALIDATION, null);
+        String reason2 = BlockSkippedForReconstructionReason.summaryBlockSkippedForReconstructionReason();
+        assertTrue(reason2.contains(newBlk.toString()));
+        assertTrue(reason2.contains(BlockSkippedForReconstructionReason.RECONSTRUCTION_WORK_NOT_PASS_VALIDATION.toString()));
+        LOG.info("Reason2 for " + newBlk + " in storage " + newStorageID + " is " + reason2);
+
+        BlockSkippedForReconstructionReason.start();
+        BlockSkippedForReconstructionReason.genStorageIsNotChooseForReplication(newBlk, null,
+                BlockSkippedForReconstructionReason.NO_AVAILABLE_TARGET_HOST_FOUND, null);
+        String reason3 = BlockSkippedForReconstructionReason.summaryBlockSkippedForReconstructionReason();
+        assertTrue(reason3.contains(newBlk.toString()));
+        assertTrue(reason3.contains(BlockSkippedForReconstructionReason.RECONSTRUCTION_WORK_NOT_PASS_VALIDATION.toString()));
+        LOG.info("Reason3 for " + newBlk + " in storage " + newStorageID + " is " + reason3);
       });
     }
     for(int i = 0;i<threadNum;i++){
