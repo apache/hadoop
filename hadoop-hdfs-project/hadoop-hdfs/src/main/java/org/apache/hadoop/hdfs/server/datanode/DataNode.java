@@ -1088,12 +1088,10 @@ public class DataNode extends ReconfigurableBase
       throws ReconfigurationException {
     String result = null;
     try {
-      if (property.equals(DFS_DN_EC_RECONSTRUCTION_THREADS_KEY)) {
-        int size = (newVal == null ? DFS_DN_EC_RECONSTRUCTION_THREADS_DEFAULT :
-            Integer.parseInt(newVal));
-        result = Long.toString(size);
-        ecWorker.setStripedReconstructionPoolSize(size);
-      }
+      int size = (newVal == null ? DFS_DN_EC_RECONSTRUCTION_THREADS_DEFAULT :
+          Integer.parseInt(newVal));
+      result = Long.toString(size);
+      ecWorker.setStripedReconstructionPoolSize(size);
       return result;
     } catch (IllegalArgumentException e) {
       throw new ReconfigurationException(property, newVal, getConf().get(property), e);
