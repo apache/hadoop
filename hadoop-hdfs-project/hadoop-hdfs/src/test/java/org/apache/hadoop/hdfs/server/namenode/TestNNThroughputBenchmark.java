@@ -285,4 +285,23 @@ public class TestNNThroughputBenchmark {
               "-blockSize", "32", "-close"});
     }
   }
+
+  /**
+   * This test runs {@link NNThroughputBenchmark} against a mini DFS cluster
+   * with explicit -blockSize option like 1m.
+   */
+  @Test(timeout = 120000)
+  public void testNNThroughputBlockSizeSuffixedWithLetter() throws Exception {
+    final Configuration conf = new HdfsConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_MIN_BLOCK_SIZE_KEY, 16);
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build()) {
+      cluster.waitActive();
+      final Configuration benchConf = new HdfsConfiguration();
+      benchConf.setLong(DFSConfigKeys.DFS_NAMENODE_MIN_BLOCK_SIZE_KEY, 16);
+      FileSystem.setDefaultUri(benchConf, cluster.getURI());
+      NNThroughputBenchmark.runBenchmark(benchConf,
+          new String[]{"-op", "create", "-keepResults", "-files", "3",
+              "-blockSize", "1m", "-close"});
+    }
+  }
 }

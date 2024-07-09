@@ -587,7 +587,7 @@ public class NNThroughputBenchmark implements Tool {
           numOpsRequired = Integer.parseInt(args.get(++i));
         } else if (args.get(i).equals("-blockSize")) {
           if(i+1 == args.size())  printUsage();
-          blockSize = Long.parseLong(args.get(++i));
+          blockSize = StringUtils.TraditionalBinaryPrefix.string2long(args.get(++i));
         } else if(args.get(i).equals("-threads")) {
           if(i+1 == args.size())  printUsage();
           numThreads = Integer.parseInt(args.get(++i));
