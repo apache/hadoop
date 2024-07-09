@@ -104,6 +104,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
+import static org.apache.hadoop.fs.impl.FlagSet.createFlagSet;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletion;
 import static org.apache.hadoop.fs.s3a.impl.S3ExpressStorage.STORE_CAPABILITY_S3_EXPRESS_STORAGE;
@@ -994,7 +995,9 @@ public final class S3ATestUtils {
         .setMultiObjectDeleteEnabled(multiDelete)
         .setUseListV1(false)
         .setContextAccessors(accessors)
-        .setPerformanceFlags(FlagSet.createFlagSet(PerformanceFlagEnum.class,FS_S3A_PERFORMANCE_FLAGS))
+        .setPerformanceFlags(createFlagSet(
+            PerformanceFlagEnum.class,
+            FS_S3A_PERFORMANCE_FLAGS))
         .build();
   }
 
