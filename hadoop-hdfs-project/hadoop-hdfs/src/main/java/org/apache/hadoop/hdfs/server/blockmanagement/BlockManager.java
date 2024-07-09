@@ -2096,8 +2096,8 @@ public class BlockManager implements BlockStatsMXBean {
    * The number of process blocks equals either twice the number of live
    * data-nodes or the number of low redundancy blocks whichever is less.
    *
-   * In the case that some blocks are skipped for scheduling BlockReconstructionWork for somehow reasons like src/target unavailble,
-   * will immediately find more blocks, until
+   * In the case the found low-redundancy blocks cannot be scheduled for reconstruction, we will
+   * immediately find more low-redundancy blocks to avoid the waste of this tick
    * @return number of blocks scheduled for reconstruction during this
    *         iteration.
    */
