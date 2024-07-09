@@ -2384,8 +2384,8 @@ public class TestBlockManager {
           BlockSkippedForReconstructionReason.start();
           BlockSkippedForReconstructionReason.genStorageIsNotChooseForReplication(newBlk, null,
                   BlockSkippedForReconstructionReason.NO_AVAILABLE_TARGET_HOST_FOUND, null);
-          LOG.info("Reason3 for " + newBlk + " in storage " + newStorageID + " is " + reason3);
           String reason3 = BlockSkippedForReconstructionReason.summaryBlockSkippedForReconstructionReason();
+          LOG.info("Reason3 for " + newBlk + " in storage " + newStorageID + " is " + reason3);
           assertTrue(reason3.contains(newBlk.toString()));
           assertTrue(reason3.contains(BlockSkippedForReconstructionReason.RECONSTRUCTION_WORK_NOT_PASS_VALIDATION.toString()));
 
