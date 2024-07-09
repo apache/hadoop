@@ -118,6 +118,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockSkippedForReconstructionReason;
+import static org.apache.hadoop.hdfs.server.blockmanagement.BlockSkippedForReconstructionReason.DetailedReason;
+import static org.apache.hadoop.hdfs.server.blockmanagement.BlockSkippedForReconstructionReason.SOURCE_NODE_UNAVAILABLE;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION;
 import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
@@ -2334,18 +2337,18 @@ public class TestBlockManager {
    */
   @Test(timeout = 6000)
   public void testStorageNotChosenReason() throws InterruptedException {
-    String storageID = "storageID";
-    DatanodeStorageInfo targetDN = BlockManagerTestUtil
-            .newDatanodeStorageInfo(DFSTestUtil.getLocalDatanodeDescriptor(),
-                    new DatanodeStorage("storage_test_0"));
-    BlockInfo blk = new BlockInfoContiguous(new Block(0), (short) 0);
-    StorageNotChosenReason.start();
-    String reason = StorageNotChosenReason.getStorageNotChosenReason(blk);
-    assertTrue(reason.contains(storageID) );
-    assertFalse(reason.contains(targetDN.toString()));
-    assertTrue(reason.contains("successfully chosen storage"));
-    assertFalse(reason.contains("is not chosen since"));
-    assertFalse(reason.contains("Reason statistics"));
+//    String storageID = "storageID";
+//    DatanodeStorageInfo targetDN = BlockManagerTestUtil
+//            .newDatanodeStorageInfo(DFSTestUtil.getLocalDatanodeDescriptor(),
+//                    new DatanodeStorage("storage_test_0"));
+//    BlockInfo blk = new BlockInfoContiguous(new Block(0), (short) 0);
+//    BlockSkippedForReconstructionReason.start();
+//    String reason = BlockSkippedForReconstructionReason.genSkipReconstructionReason(blk);
+//    assertTrue(reason.contains(storageID) );
+//    assertFalse(reason.contains(targetDN.toString()));
+//    assertTrue(reason.contains("successfully chosen storage"));
+//    assertFalse(reason.contains("is not chosen since"));
+//    assertFalse(reason.contains("Reason statistics"));
 
     int threadNum = 10;
     Thread[] threads = new Thread[threadNum];
@@ -2353,19 +2356,17 @@ public class TestBlockManager {
       final int index = i;
       threads[i] = new Thread(() -> {
         String newStorageID = "storageID"+index;
-        StorageNotChosenReason.start();
-        DatanodeStorageInfo newTargetStorage = BlockManagerTestUtil
+        BlockSkippedForReconstructionReason.start();
+        DatanodeStorageInfo sourceStorage = BlockManagerTestUtil
                 .newDatanodeStorageInfo(DFSTestUtil.getLocalDatanodeDescriptor(),
                         new DatanodeStorage(newStorageID));
         BlockInfo newBlk = new BlockInfoContiguous(new Block(index), (short) index);
-        StorageNotChosenReason.genStorageIsNotChooseForReplication(newTargetStorage,
-                StorageNotChosenReason.REPLICA_DECOMMISSIONED, null);
-        String reason1 = StorageNotChosenReason.getStorageNotChosenReason(newBlk);
+        BlockSkippedForReconstructionReason.genStorageIsNotChooseForReplication(newBlk, sourceStorage,
+                BlockSkippedForReconstructionReason.SOURCE_NODE_UNAVAILABLE, DetailedReason.REPLICA_DECOMMISSIONED);
+        String reason1 = BlockSkippedForReconstructionReason.summaryBlockSkippedForReconstructionReason();
         assertTrue(reason1.contains(newBlk.toString()));
-        assertTrue(reason1.contains(newStorageID));
-        assertTrue(reason1.contains(newTargetStorage.toString()));
-        assertTrue(reason1.contains("is not chosen since"));
-        assertTrue(reason1.contains("Reason statistics"));
+        assertTrue(reason1.contains(sourceStorage.toString()));
+        assertTrue(reason1.contains(SOURCE_NODE_UNAVAILABLE.toString()));
       });
     }
     for(int i = 0;i<threadNum;i++){

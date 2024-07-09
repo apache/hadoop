@@ -20,7 +20,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import static org.apache.hadoop.hdfs.protocol.BlockType.CONTIGUOUS;
 import static org.apache.hadoop.hdfs.protocol.BlockType.STRIPED;
-import static org.apache.hadoop.hdfs.server.blockmanagement.StorageNotChosenReason.*;
+import static org.apache.hadoop.hdfs.server.blockmanagement.BlockSkippedForReconstructionReason.DetailedReason;
 import static org.apache.hadoop.util.ExitUtil.terminate;
 import static org.apache.hadoop.util.Time.now;
 
@@ -2134,7 +2134,6 @@ public class BlockManager implements BlockStatsMXBean {
       List<List<BlockInfo>> blocksToReconstruct) {
     int scheduledWork = 0;
     List<BlockReconstructionWork> reconWork = new ArrayList<>();
-
     // Step 1: categorize at-risk blocks into replication and EC tasks
     namesystem.writeLock();
     try {
@@ -2181,7 +2180,8 @@ public class BlockManager implements BlockStatsMXBean {
       for (BlockReconstructionWork rw : reconWork) {
         final DatanodeStorageInfo[] targets = rw.getTargets();
         if (targets == null || targets.length == 0) {
-          logStorageIsNotChooseForReplication();
+          BlockSkippedForReconstructionReason.genSkipReconstructionReason(rw.getBlock(), null,
+                  BlockSkippedForReconstructionReason.NO_AVAILABLE_TARGET_HOST_FOUND);
           rw.resetTargets();
           continue;
         }
@@ -2191,7 +2191,8 @@ public class BlockManager implements BlockStatsMXBean {
             scheduledWork++;
           }
           else{
-
+            BlockSkippedForReconstructionReason.genSkipReconstructionReason(rw.getBlock(), null,
+                    BlockSkippedForReconstructionReason.RECONSTRUCTION_WORK_NOT_PASS_VALIDATION);
           }
         }
       }
@@ -2249,9 +2250,6 @@ public class BlockManager implements BlockStatsMXBean {
     final DatanodeDescriptor[] srcNodes = chooseSourceDatanodes(block,
         containingNodes, liveReplicaNodes, numReplicas,
         liveBlockIndices, liveBusyBlockIndices, excludeReconstructed, priority);
-    if(LOG.isDebugEnabled()){
-      LOG.debug(getStorageNotChosenReason(block));
-    }
     short requiredRedundancy = getExpectedLiveRedundancyNum(block,
         numReplicas);
     if (srcNodes == null || srcNodes.length == 0) {
@@ -2578,8 +2576,6 @@ public class BlockManager implements BlockStatsMXBean {
     liveBlockIndices.clear();
     final boolean isStriped = block.isStriped();
     DatanodeDescriptor decommissionedSrc = null;
-
-    StorageNotChosenReason.start();
     BitSet liveBitSet = null;
     BitSet decommissioningBitSet = null;
     if (isStriped) {
@@ -2604,7 +2600,9 @@ public class BlockManager implements BlockStatsMXBean {
       // do not select the replica if it is corrupt or excess
       if (state == StoredReplicaState.CORRUPT ||
           state == StoredReplicaState.EXCESS) {
-        logStorageIsNotChooseForReplication(storage, StorageNotChosenReason.REPLICA_CORRUPT_OR_EXCESS);
+        BlockSkippedForReconstructionReason.genSkipReconstructionReason(block, storage,
+                BlockSkippedForReconstructionReason.SOURCE_NODE_UNAVAILABLE,
+                DetailedReason.REPLICA_CORRUPT_OR_EXCESS);
         continue;
       }
 
@@ -2612,7 +2610,9 @@ public class BlockManager implements BlockStatsMXBean {
       // or unknown state replicas.
       if (state == null
           || state == StoredReplicaState.MAINTENANCE_NOT_FOR_READ) {
-        logStorageIsNotChooseForReplication(storage, StorageNotChosenReason.REPLICA_MAINTENANCE_NOT_FOR_READ);
+        BlockSkippedForReconstructionReason.genSkipReconstructionReason(block, storage,
+                BlockSkippedForReconstructionReason.SOURCE_NODE_UNAVAILABLE,
+                DetailedReason.REPLICA_MAINTENANCE_NOT_FOR_READ);
         continue;
       }
 
@@ -2624,7 +2624,9 @@ public class BlockManager implements BlockStatsMXBean {
             ThreadLocalRandom.current().nextBoolean()) {
           decommissionedSrc = node;
         }
-        logStorageIsNotChooseForReplication(storage, StorageNotChosenReason.REPLICA_DECOMMISSIONED);
+        BlockSkippedForReconstructionReason.genSkipReconstructionReason(block, storage,
+                BlockSkippedForReconstructionReason.SOURCE_NODE_UNAVAILABLE,
+                DetailedReason.REPLICA_DECOMMISSIONED);
         continue;
       }
 
@@ -2649,7 +2651,9 @@ public class BlockManager implements BlockStatsMXBean {
           //HDFS-16566 ExcludeReconstructed won't be reconstructed.
           excludeReconstructed.add(blockIndex);
         }
-        logStorageIsNotChooseForReplication(storage, StorageNotChosenReason.REPLICA_ALREADY_REACH_REPLICATION_LIMIT);
+        BlockSkippedForReconstructionReason.genSkipReconstructionReason(block, storage,
+                BlockSkippedForReconstructionReason.SOURCE_NODE_UNAVAILABLE,
+                DetailedReason.REPLICA_ALREADY_REACH_REPLICATION_LIMIT);
         continue; // already reached replication limit
       }
 
@@ -2661,7 +2665,9 @@ public class BlockManager implements BlockStatsMXBean {
           //HDFS-16566 ExcludeReconstructed won't be reconstructed.
           excludeReconstructed.add(blockIndex);
         }
-        logStorageIsNotChooseForReplication(storage, StorageNotChosenReason.REPLICA_ALREADY_REACH_REPLICATION_HARD_LIMIT);
+        BlockSkippedForReconstructionReason.genSkipReconstructionReason(block, storage,
+                BlockSkippedForReconstructionReason.SOURCE_NODE_UNAVAILABLE,
+                DetailedReason.REPLICA_ALREADY_REACH_REPLICATION_HARD_LIMIT);
         continue;
       }
 
@@ -5420,9 +5426,13 @@ public class BlockManager implements BlockStatsMXBean {
         * this.blocksReplWorkMultiplier;
     final int nodesToProcess = (int) Math.ceil(numlive
         * this.blocksInvalidateWorkPct);
-
+    if(LOG.isDebugEnabled()){
+      BlockSkippedForReconstructionReason.start();
+    }
     int workFound = this.computeBlockReconstructionWork(blocksToProcess);
-
+    if(LOG.isDebugEnabled()){
+      BlockSkippedForReconstructionReason.summaryBlockSkippedForReconstructionReason();
+    }
     // Update counters
     namesystem.writeLock();
     try {
