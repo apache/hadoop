@@ -655,7 +655,7 @@ public final class FSImageFormatProtobuf {
      * @param subSectionName The name of the sub-section to commit
      * @throws IOException
      */
-    public void commitSectionAndLastSubSection(FileSummary.Builder summary,
+    public void commitSectionAndSubSection(FileSummary.Builder summary,
         SectionName name, SectionName subSectionName) throws IOException {
       commitSubSection(summary, subSectionName, true);
       commitSection(summary, name);
@@ -664,12 +664,16 @@ public final class FSImageFormatProtobuf {
     public void commitSection(FileSummary.Builder summary, SectionName name)
         throws IOException {
       long oldOffset = currentOffset;
-      flushSectionOutputStream();
+      if (canHaveSubSection(name) && writeSubSections) {
+        flushLastSubSectionOutputStream();
+      } else {
+        flushSectionOutputStream();
+      }
 
       if (codec != null) {
         sectionOutputStream = codec.createOutputStream(underlyingOutputStream);
       } else {
-        sectionOutputStream = underlyingOutputStream;
+        sectionOutputStream = codec.createOutputStream(underlyingOutputStream);
       }
       long length = fileChannel.position() - oldOffset;
       summary.addSections(FileSummary.Section.newBuilder().setName(name.name)
@@ -688,9 +692,10 @@ public final class FSImageFormatProtobuf {
      * index.
      * @param summary The image summary object
      * @param name The name of the sub-section to commit
+     * @param isLast True if sub-section is the last sub-section of each section
      * @throws IOException
      */
-    public void commitSubSection(FileSummary.Builder summary, SectionName name, Boolean isLast)
+    public void commitSubSection(FileSummary.Builder summary, SectionName name, boolean isLast)
         throws IOException {
       if (!writeSubSections) {
         return;
@@ -701,12 +706,12 @@ public final class FSImageFormatProtobuf {
       // as the flush can move the length forward.
       flushSectionOutputStream();
 
+    if (codec == null || isLast) {
       // To avoid empty sub-section, Do not create CompressionOutputStream
       // if sub-section is last sub-section of each section
-      if (codec != null && !isLast) {
-        sectionOutputStream = codec.createOutputStream(underlyingOutputStream);
-      } else {
         sectionOutputStream = underlyingOutputStream;
+      } else {
+        sectionOutputStream = codec.createOutputStream(underlyingOutputStream);
       }
       long length = fileChannel.position() - subSectionOffset;
       if (length == 0) {
@@ -720,10 +725,15 @@ public final class FSImageFormatProtobuf {
     }
 
     private void flushSectionOutputStream() throws IOException {
-      boolean isCompressedStream = !sectionOutputStream.getClass().getSimpleName().equals("DigestOutputStream");
-      if (isCompressedStream) {
+      if (codec != null) {
         ((CompressionOutputStream) sectionOutputStream).finish();
       }
+      sectionOutputStream.flush();
+    }
+
+    private void flushLastSubSectionOutputStream() throws IOException {
+      // sectionOutputStream is not CompressionOutputStream type
+      // when previous sub-section is last subsection
       sectionOutputStream.flush();
     }
 
@@ -1037,6 +1047,12 @@ public final class FSImageFormatProtobuf {
       this.name = name;
     }
   }
+
+  private static boolean canHaveSubSection(SectionName name) {
+      return name == SectionName.INODE || name == SectionName.INODE_DIR
+              || name == SectionName.SNAPSHOT_DIFF;
+  }
+
 
   private static int getOndiskTrunkSize(
       org.apache.hadoop.thirdparty.protobuf.GeneratedMessageV3 s) {
