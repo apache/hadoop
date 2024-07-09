@@ -2096,6 +2096,8 @@ public class BlockManager implements BlockStatsMXBean {
    * The number of process blocks equals either twice the number of live
    * data-nodes or the number of low redundancy blocks whichever is less.
    *
+   * In the case that some blocks are skipped for scheduling BlockReconstructionWork for somehow reasons like src/target unavailble,
+   * will immediately find more blocks, until
    * @return number of blocks scheduled for reconstruction during this
    *         iteration.
    */
@@ -2105,7 +2107,7 @@ public class BlockManager implements BlockStatsMXBean {
     int maxAttemptInATick = 100;
     int lowRedundancyBlocksCount = neededReconstruction.getLowRedundancyBlockCount();
     do{
-      namesystem.writeLock(); // TODO need to check the lock
+      namesystem.writeLock();
       try {
         boolean reset = false;
         if (replQueueResetToHeadThreshold > 0) {
@@ -2116,20 +2118,18 @@ public class BlockManager implements BlockStatsMXBean {
             replQueueCallsSinceReset++;
           }
         }
-        // Choose the blocks to be reconstructed.
+        // Choose the blocks to be reconstructed
         // Some candidates may not be actually used to construct BlockReconstructionWork,
         // in this case, we will try another round immediately to avoid waste the tick
         lowRedundancyBlocksCount -= neededReconstruction.chooseLowRedundancyBlocks(remaining, reset, blocksToReconstruct);
-        remaining -= computeReconstructionWorkForBlocks(blocksToReconstruct);
-        LOG.info("Remaining low redanduncy blocks " + lowRedundancyBlocksCount + " low redundancy blocks. Remaining is " + remaining
-                + ", reset = " + reset + ", replQueueCallsSinceReset = " + replQueueCallsSinceReset);
       } finally {
         namesystem.writeUnlock("computeBlockReconstructionWork");
       }
-      // We may meet the case that most found blocks are not used for ReconstructionWork,
-      // in this case, we will try to find more blocks for reconstruction in this tick
+      remaining -= computeReconstructionWorkForBlocks(blocksToReconstruct);
+      // in this case that many found blocks are skipped(src or target unavailable) for BlockReconstructionWork,
+      // find more blocks immediately for reconstruction in this tick
     }while (remaining > 0 && lowRedundancyBlocksCount > 0 && --maxAttemptInATick > 0);
-    // return the actual number of BlockReconstructionWork
+    // return the actual effective number of BlockReconstructionWork
     return blocksToProcess - remaining;
   }
 
@@ -2185,7 +2185,6 @@ public class BlockManager implements BlockStatsMXBean {
           placementPolicies.getPolicy(rw.getBlock().getBlockType());
       rw.chooseTargets(placementPolicy, storagePolicySuite, excludedNodes);
     }
-
 
     // Step 3: add tasks to the DN
     namesystem.writeLock();

@@ -521,6 +521,15 @@ class LowRedundancyBlocks implements Iterable<BlockInfo> {
     return blocksToReconstruct;
   }
 
+  /**
+   * @param blocksToProcess - number of blocks to fetch from low redundancy
+   *          blocks.
+   * @param resetIterators - After gathering the list of blocks reset the
+   *           position of all queue iterators to the head of the queue so
+   *           subsequent calls will begin at the head of the queue
+   * @param blocksToReconstruct - The found candidates blocks need to be reconstructed
+   * @return Return the number of found low-redundancy blocks(They are put in blocksToReconstruct)
+   */
   public synchronized int chooseLowRedundancyBlocks(
           int blocksToProcess, boolean resetIterators, List<List<BlockInfo>> blocksToReconstruct) {
     int foundBlocks = 0;
