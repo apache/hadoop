@@ -90,7 +90,7 @@ public class DatanodeManager {
   private volatile long heartbeatIntervalSeconds;
   private volatile int heartbeatRecheckInterval;
   /** Used by {@link HeartbeatManager}. */
-  private volatile int heartbeatRecheckIntervalForMonitor;
+  private volatile long heartbeatRecheckIntervalForMonitor;
   /**
    * Stores the datanode -> block map.  
    * <p>
@@ -2196,7 +2196,7 @@ public class DatanodeManager {
   @VisibleForTesting
   public void refreshHeartbeatRecheckIntervalForMonitor() {
     if (avoidStaleDataNodesForWrite && staleInterval < heartbeatRecheckInterval) {
-      heartbeatRecheckIntervalForMonitor = (int) staleInterval;
+      heartbeatRecheckIntervalForMonitor = staleInterval;
       LOG.info("Setting heartbeat recheck interval to " + staleInterval
           + " since " + DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_KEY
           + " is less than " + heartbeatRecheckInterval);
@@ -2345,7 +2345,7 @@ public class DatanodeManager {
     return slowPeerCollectionInterval;
   }
 
-  public int getHeartbeatRecheckIntervalForMonitor() {
+  public long getHeartbeatRecheckIntervalForMonitor() {
     return heartbeatRecheckIntervalForMonitor;
   }
 }
