@@ -97,6 +97,10 @@ class KeepAliveCache extends Stack<KeepAliveCache.KeepAliveEntry>
    */
   private final AtomicBoolean isPaused = new AtomicBoolean(false);
 
+  /**
+   * Account name for which the cache is created. To be used only in exception
+   * messages.
+   */
   private final String accountNamePath;
 
   @VisibleForTesting

@@ -85,18 +85,18 @@ public class TestApacheClientConnectionPool extends
         abfsConfiguration)) {
       assertCachePutFail(keepAliveCache,
           Mockito.mock(HttpClientConnection.class));
-      assertCacheGetNull(keepAliveCache);
+      assertCacheGetIsNull(keepAliveCache);
     }
   }
 
-  private void assertCacheGetNull(final KeepAliveCache keepAliveCache)
+  private void assertCacheGetIsNull(final KeepAliveCache keepAliveCache)
       throws IOException {
     Assertions.assertThat(keepAliveCache.get())
         .describedAs("cache.get()")
         .isNull();
   }
 
-  private void assertCacheGetNonNull(final KeepAliveCache keepAliveCache)
+  private void assertCacheGetIsNonNull(final KeepAliveCache keepAliveCache)
       throws IOException {
     Assertions.assertThat(keepAliveCache.get())
         .describedAs("cache.get()")
@@ -140,9 +140,9 @@ public class TestApacheClientConnectionPool extends
 
       for (int i = 0; i < size * 2; i++) {
         if (i < size) {
-          assertCacheGetNonNull(keepAliveCache);
+          assertCacheGetIsNonNull(keepAliveCache);
         } else {
-          assertCacheGetNull(keepAliveCache);
+          assertCacheGetIsNull(keepAliveCache);
         }
       }
       System.clearProperty(HTTP_MAX_CONN_SYS_PROP);
@@ -159,7 +159,7 @@ public class TestApacheClientConnectionPool extends
 
       keepAliveCache.put(connection);
 
-      assertCacheGetNonNull(keepAliveCache);
+      assertCacheGetIsNonNull(keepAliveCache);
     }
   }
 
@@ -188,7 +188,7 @@ public class TestApacheClientConnectionPool extends
       }
 
       // Assert that the closed connection is removed from the cache.
-      assertCacheGetNull(keepAliveCache);
+      assertCacheGetIsNull(keepAliveCache);
       Mockito.verify(connection, Mockito.times(1)).close();
     }
   }
@@ -212,7 +212,7 @@ public class TestApacheClientConnectionPool extends
        * remove the TTL-elapsed connection.
        */
       Mockito.verify(connection, Mockito.times(0)).close();
-      assertCacheGetNull(keepAliveCache);
+      assertCacheGetIsNull(keepAliveCache);
       Mockito.verify(connection, Mockito.times(1)).close();
       keepAliveCache.resumeThread();
     }
@@ -227,9 +227,9 @@ public class TestApacheClientConnectionPool extends
           HttpClientConnection.class);
       keepAliveCache.put(connection);
 
-      assertCacheGetNonNull(keepAliveCache);
+      assertCacheGetIsNonNull(keepAliveCache);
       keepAliveCache.put(connection);
-      assertCacheGetNonNull(keepAliveCache);
+      assertCacheGetIsNonNull(keepAliveCache);
     }
   }
 
@@ -261,10 +261,10 @@ public class TestApacheClientConnectionPool extends
           i--) {
         // The last two connections are not stale and would be returned.
         if (i >= (DEFAULT_HTTP_CLIENT_CONN_MAX_CACHED_CONNECTIONS - 2)) {
-          assertCacheGetNonNull(keepAliveCache);
+          assertCacheGetIsNonNull(keepAliveCache);
         } else {
           // Stale connections are closed and removed.
-          assertCacheGetNull(keepAliveCache);
+          assertCacheGetIsNull(keepAliveCache);
           Mockito.verify(connections[i], Mockito.times(1)).close();
         }
       }
