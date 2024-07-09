@@ -39,6 +39,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -630,10 +632,23 @@ public class TestTrash {
   public void testPluggableTrash() throws IOException {
     Configuration conf = new Configuration();
 
-    // Test plugged TrashPolicy
-    conf.setClass("fs.trash.classname", TestTrashPolicy.class, TrashPolicy.class);
-    Trash trash = new Trash(conf);
-    assertTrue(trash.getTrashPolicy().getClass().equals(TestTrashPolicy.class));
+    {
+      // Test plugged TrashPolicy
+      conf.setClass("fs.trash.classname", TestTrashPolicy.class, TrashPolicy.class);
+      Trash trash = new Trash(conf);
+      assertInstanceOf(TestTrashPolicy.class, trash.getTrashPolicy());
+    }
+
+    {
+      // Test FileSystem implementation that implements getTrashPolicy to return custom TrashPolicy
+      // regardless of fs.trash.classname
+      conf.setClass("fs.file.impl", TestLFSWithCustomTrashPolicy.class, FileSystem.class);
+      conf.setBoolean("fs.file.impl.disable.cache", true);
+      FileSystem fs = FileSystem.getLocal(conf);
+      conf.set("fs.defaultFS", fs.getUri().toString());
+      Trash trash = new Trash(fs, conf);
+      assertInstanceOf(TestLFSWithCustomTrashPolicy.CustomTrashPolicy.class, trash.getTrashPolicy());
+    }
   }
 
   @Test
@@ -874,6 +889,24 @@ public class TestTrash {
       uriName = URI.create(uri);
     }
   }
+
+  public static class TestLFSWithCustomTrashPolicy extends TestLFS {
+
+    @Override
+    public String getScheme() {
+      return "testlfswithcustomtrashpolicy";
+    }
+
+    @Override
+    public TrashPolicy getTrashPolicy(Configuration conf) {
+      return new CustomTrashPolicy();
+    }
+
+    public static class CustomTrashPolicy extends TrashPolicyDefault {
+    }
+  }
+
+
   
   /**
    *  test same file deletion - multiple time

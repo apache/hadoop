@@ -3431,6 +3431,29 @@ public abstract class FileSystem extends Configured
   }
 
   /**
+   * Get the trash policy implementation used by this FileSystem. This trash policy
+   * is used by classes of {@link Trash} to implement the trash behavior.
+   * <p>
+   * FileSystem implementation can consider overriding this method to handle
+   * situation where a single FileSystem client shares a configuration, but
+   * each FileSystem scheme requires a distinct TrashPolicy implementation.
+   *
+   * @param conf configuration which can be used to choose the TrashPolicy
+   *             implementation.
+   * @return TrashPolicy implementation by this filesystem.
+   *         The default implementation returns the configured TrashPolicy
+   *         based on the value of the configuration parameter fs.trash.classname
+   *         of the passed configuration.
+   */
+  @InterfaceAudience.Public
+  @InterfaceStability.Unstable
+  public TrashPolicy getTrashPolicy(Configuration conf) {
+    Class<? extends TrashPolicy> trashClass = conf.getClass(
+        "fs.trash.classname", TrashPolicyDefault.class, TrashPolicy.class);
+    return ReflectionUtils.newInstance(trashClass, conf);
+  }
+
+  /**
    * Get the root directory of Trash for current user when the path specified
    * is deleted.
    *

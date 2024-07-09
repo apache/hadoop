@@ -636,6 +636,36 @@ The path does not have to exist, but the path does need to be valid and reconcil
 * The path returned is a directory
 
 
+###  `TrashPolicy getTrashPolicy(Configuration conf)`
+
+Get the trash policy implementation used by this FileSystem.
+
+This method allows different FileSystem implementations to use different TrashPolicy
+implementations. This is important in environments where multiple FileSystem schemes
+are used (e.g., HDFS and Ozone), as each may require a distinct TrashPolicy.
+
+#### Preconditions
+
+#### Postconditions
+
+    result = a valid TrashPolicy instance associated with the FileSystem implementation
+
+The default implementation:
+1. Reads the configuration parameter `fs.trash.classname` (defaults to `TrashPolicyDefault`)
+2. Instantiates the specified TrashPolicy class
+3. Initializes the TrashPolicy with the given configuration
+4. Returns the initialized TrashPolicy
+
+#### Implementation Notes
+
+* FileSystem implementations MAY override this method to provide filesystem-specific
+  TrashPolicy implementations. For example, Ozone `getTrashPolicy` can return its custom trash policy,
+  while HDFS can still use `TrashPolicyDefault`.
+* The returned TrashPolicy should not be null.
+* FileSystem implementations with multiple child file systems (e.g. `ViewFileSystem`)
+  should NOT implement this method since the Hadoop trash mechanism should resolve to the underlying filesystem 
+  before invoking `getTrashPolicy`.
+
 ## <a name="state_changing_operations"></a> State Changing Operations
 
 ### `boolean mkdirs(Path p, FsPermission permission)`

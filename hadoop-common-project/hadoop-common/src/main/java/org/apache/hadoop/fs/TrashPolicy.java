@@ -127,6 +127,16 @@ public abstract class TrashPolicy extends Configured {
   public abstract Runnable getEmptier() throws IOException;
 
   /**
+   * Return the deletion interval associated with the trash policy. Deletion interval
+   * can be used as trash emptier {@link #getEmptier()} check interval, as well as used
+   * as the trash expiry configuration used in the checkpoint {@link #deleteCheckpoint()}
+   * @return deletion interval.
+   */
+  public final long getDeletionInterval() {
+    return deletionInterval;
+  }
+
+  /**
    * Get an instance of the configured TrashPolicy based on the value
    * of the configuration parameter fs.trash.classname.
    *
@@ -146,18 +156,19 @@ public abstract class TrashPolicy extends Configured {
   }
 
   /**
-   * Get an instance of the configured TrashPolicy based on the value
-   * of the configuration parameter fs.trash.classname.
+   * Get an instance of the TrashPolicy associated with the FileSystem implementation of
+   * {@link FileSystem#getTrashPolicy(Configuration)}. The configuration passed might be used
+   * by the FileSystem implementation to pick the {@link TrashPolicy} implementation. The default
+   * {@link FileSystem#getTrashPolicy(Configuration)} checks fs.trash.classname to pick the
+   * {@link TrashPolicy} implementation.
    *
    * @param conf the configuration to be used
    * @param fs the file system to be used
    * @return an instance of TrashPolicy
    */
   public static TrashPolicy getInstance(Configuration conf, FileSystem fs) {
-    Class<? extends TrashPolicy> trashClass = conf.getClass(
-        "fs.trash.classname", TrashPolicyDefault.class, TrashPolicy.class);
-    TrashPolicy trash = ReflectionUtils.newInstance(trashClass, conf);
-    trash.initialize(conf, fs); // initialize TrashPolicy
-    return trash;
+    TrashPolicy trashPolicy = fs.getTrashPolicy(conf);
+    trashPolicy.initialize(conf, fs); // initialize TrashPolicy
+    return trashPolicy;
   }
 }

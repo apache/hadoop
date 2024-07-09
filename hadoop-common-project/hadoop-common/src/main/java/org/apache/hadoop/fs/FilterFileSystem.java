@@ -687,6 +687,11 @@ public class FilterFileSystem extends FileSystem {
   }
 
   @Override
+  public TrashPolicy getTrashPolicy(Configuration conf) {
+    return fs.getTrashPolicy(conf);
+  }
+
+  @Override
   public Path getTrashRoot(Path path) {
     return fs.getTrashRoot(path);
   }
