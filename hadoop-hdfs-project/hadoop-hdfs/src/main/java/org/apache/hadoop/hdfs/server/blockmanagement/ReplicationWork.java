@@ -47,9 +47,6 @@ class ReplicationWork extends BlockReconstructionWork {
       // BlockCommand.NO_ACK (LONG.MAX_VALUE) . This kind of block we don't need
       // to send for replication or reconstruction
       if (!getBlock().isDeleted()) {
-        LOG.info("srcPath is {}, getAdditionalReplRequired is {}, " +
-                        "writer is {}, getLiveReplicaStorages {}, excludedNodes {} ",
-                getSrcPath(), getAdditionalReplRequired(), getSrcNodes()[0], getLiveReplicaStorages(), excludedNodes);
         chosenTargets = blockplacement.chooseTarget(getSrcPath(),
             getAdditionalReplRequired(), getSrcNodes()[0],
             getLiveReplicaStorages(), false, excludedNodes, getBlockSize(),

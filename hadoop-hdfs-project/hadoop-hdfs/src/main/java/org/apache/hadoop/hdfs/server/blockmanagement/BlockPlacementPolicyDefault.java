@@ -293,7 +293,6 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
                                     final BlockStoragePolicy storagePolicy,
                                     EnumSet<AddBlockFlag> addBlockFlags,
                                     EnumMap<StorageType, Integer> sTypes) {
-    LOG.info("Cluster map is {}, numOfRePlicas {}, numOfLeaves {}", clusterMap.toString(), numOfReplicas, clusterMap.getNumOfLeaves() );
     if (numOfReplicas == 0 || clusterMap.getNumOfLeaves()==0) {
       return DatanodeStorageInfo.EMPTY_ARRAY;
     }
@@ -322,9 +321,6 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
         && addBlockFlags.contains(AddBlockFlag.NO_LOCAL_WRITE)
         && writer != null
         && !excludedNodes.contains(writer));
-    LOG.info("avoidStaleNodes is {}, avoidLocalRack is {}, " +
-            "avoidLocalNode is {}, maxNodesPerRack {}, excludedNodes {} , numReplicas {}",
-            avoidStaleNodes, avoidLocalRack, avoidLocalNode, maxNodesPerRack, excludedNodes, numOfReplicas);
     // Attempt to exclude local rack if the client suggests so. If no enough
     // nodes can be obtained or number of racks are less than three, it falls
     // back to the default block placement
@@ -491,9 +487,6 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
             + " unavailableStorages=" + unavailableStorages
             + ", storagePolicy=" + storagePolicy);
       }
-      LOG.info("Choosing target in order for {}, excludedNodes  {}, maxNodesPerRack {}, " +
-              "results {}, avoidStaleNodes {}, newBlock {}, storageTypes {}",
-              numOfReplicas, excludedNodes, maxNodesPerRack, results, avoidStaleNodes, newBlock, storageTypes);
       writer = chooseTargetInOrder(numOfReplicas, writer, excludedNodes, blocksize,
           maxNodesPerRack, results, avoidStaleNodes, newBlock, storageTypes);
     } catch (NotEnoughReplicasException e) {
