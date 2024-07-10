@@ -663,11 +663,11 @@ public final class FSImageFormatProtobuf {
 
     public void commitSection(FileSummary.Builder summary, SectionName name)
             throws IOException {
-        commitSection(summary, name, false);
+      commitSection(summary, name, false);
     }
 
-    public void commitSection(FileSummary.Builder summary, SectionName name, boolean afterSubSectionCommit)
-        throws IOException {
+    public void commitSection(FileSummary.Builder summary, SectionName name,
+        boolean afterSubSectionCommit) throws IOException {
       long oldOffset = currentOffset;
       boolean subSectionCommitted = afterSubSectionCommit && writeSubSections;
       if (!subSectionCommitted) {
