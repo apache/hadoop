@@ -677,7 +677,7 @@ public final class FSImageFormatProtobuf {
       if (codec != null) {
         sectionOutputStream = codec.createOutputStream(underlyingOutputStream);
       } else {
-        sectionOutputStream = codec.createOutputStream(underlyingOutputStream);
+        sectionOutputStream = underlyingOutputStream;
       }
       long length = fileChannel.position() - oldOffset;
       summary.addSections(FileSummary.Section.newBuilder().setName(name.name)
