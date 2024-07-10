@@ -2334,49 +2334,43 @@ public class TestBlockManager {
   public void testReplicationWorkConstructionWhenMostSrcUnavailable() {
     LOG.info("Starting testReplicationWorkConstructionWhenMostSrcUnavailable. ");
     NetworkTopology clusterMap = bm.getDatanodeManager().getNetworkTopology();
-    LOG.info("Before adding Nodes, Cluster map is {}, numOfLeaves {}", clusterMap.toString(), clusterMap.getNumOfLeaves() );
     addNodes(nodes);
-    LOG.info("After adding Nodes, Cluster map is {}, numOfLeaves {}", clusterMap.toString(), clusterMap.getNumOfLeaves() );
-    for(int i = 881; i<=890;i++){
+    int blk_index = 0;
+    // We bind block_0 ~ block_9 on nodes[0]
+    for(; blk_index < 10 ;blk_index++){
       //Block block = new Block(i);
       //BlockInfo blockInfo = new BlockInfoContiguous(block, (short) 4);
       //blockInfo.setBlockCollectionId(mockINodeId);
       // We set it curReplicas to 1 to make its priority as QUEUE_WITH_CORRUPT_BLOCKS
 
       // These low redundancy blocks are all located on nodes[0]
-      addBlockOnNodes(i, getNodes(0));
+      addBlockOnNodes(blk_index, getNodes(0));
       assertTrue("Should add successfully to neededReconstruction",
-              bm.neededReconstruction.add(bm.getStoredBlock(new Block(i)),
+              bm.neededReconstruction.add(bm.getStoredBlock(new Block(blk_index)),
                       1,
                       0,
                       0,
                       3));
     }
-    int id = 891;
-    addBlockOnNodes(id, getNodes(0,1));
+    // We bind block_10 on node[0] and node[1]
+    addBlockOnNodes(blk_index, getNodes(0,1));
     // The priority should be QUEUE_LOW_REDUNDANCY
     assertTrue("Should add successfully to neededReconstruction",
-            bm.neededReconstruction.add(bm.getStoredBlock(new Block(id)),
+            bm.neededReconstruction.add(bm.getStoredBlock(new Block(blk_index)),
                     1,
                     0,
                     0,
                     3));
 
-    // simulate the 2 nodes reach maxReplicationStreams
+    // simulate node[0] to reach maxReplicationStreams, so node[1] is able to work as source node for blk_10 Reconstruction
     for(int i = 0; i < bm.getReplicationStreamsHardLimit(); i++){
       nodes.get(0).incrementPendingReplicationWithoutTargets();
     }
 
-    for(int i = 0; i < nodes.size(); i++){
-      LOG.info("pendingReplicationWithoutTargets for node " + nodes.get(i) + " is " + nodes.get(i).getNumberOfBlocksToBeReplicated());
-    }
-
-    LOG.info("low redundancy block is " + bm.neededReconstruction.getLowRedundancyBlocks());
     assertEquals("There should exist 11 low-redundancy blocks", 11, bm.neededReconstruction.getLowRedundancyBlocks());
 
-    for (DatanodeStorageInfo storage : bm.getStorages(new Block(id))) {
-      LOG.info("Storage for block is " + storage + ", block " + bm.getStoredBlock(new Block(id)));
-    }
+    // We schedule reconstruction. the blk_0 ~ blk_9 cannot be scheduled because their source node reached ReplicationStreamsHardLimit,
+    // but computeBlockReconstructionWork() will move fast forward to schedule blk_10 inside this tick, instead of scheduling it in the next-next tick
     int scheduledReconstruction = bm.computeBlockReconstructionWork(4);
     assertEquals("The actual scheduled BlockReconstructionWork should include the blockAbleToReconstruct", 1, scheduledReconstruction);
   }
