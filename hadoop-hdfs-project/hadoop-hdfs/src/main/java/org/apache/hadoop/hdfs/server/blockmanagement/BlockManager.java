@@ -20,7 +20,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import static org.apache.hadoop.hdfs.protocol.BlockType.CONTIGUOUS;
 import static org.apache.hadoop.hdfs.protocol.BlockType.STRIPED;
-import static org.apache.hadoop.hdfs.server.blockmanagement.BlockSkippedForReconstructionReason.DetailedReason;
+import static org.apache.hadoop.hdfs.server.blockmanagement.ReconstructionSkipReason.DetailedReason;
 import static org.apache.hadoop.util.ExitUtil.terminate;
 import static org.apache.hadoop.util.Time.now;
 
@@ -2180,8 +2180,8 @@ public class BlockManager implements BlockStatsMXBean {
       for (BlockReconstructionWork rw : reconWork) {
         final DatanodeStorageInfo[] targets = rw.getTargets();
         if (targets == null || targets.length == 0) {
-          BlockSkippedForReconstructionReason.genSkipReconstructionReason(rw.getBlock(), null,
-                  BlockSkippedForReconstructionReason.NO_AVAILABLE_TARGET_HOST_FOUND);
+          ReconstructionSkipReason.genReasonWithDetail(rw.getBlock(), null,
+                  ReconstructionSkipReason.TARGET_UNAVAILABLE);
           rw.resetTargets();
           continue;
         }
@@ -2191,8 +2191,8 @@ public class BlockManager implements BlockStatsMXBean {
             scheduledWork++;
           }
           else{
-            BlockSkippedForReconstructionReason.genSkipReconstructionReason(rw.getBlock(), null,
-                    BlockSkippedForReconstructionReason.RECONSTRUCTION_WORK_NOT_PASS_VALIDATION);
+            ReconstructionSkipReason.genReasonWithDetail(rw.getBlock(), null,
+                    ReconstructionSkipReason.VALIDATION_FAILED);
           }
         }
       }
@@ -2600,9 +2600,9 @@ public class BlockManager implements BlockStatsMXBean {
       // do not select the replica if it is corrupt or excess
       if (state == StoredReplicaState.CORRUPT ||
           state == StoredReplicaState.EXCESS) {
-        BlockSkippedForReconstructionReason.genSkipReconstructionReason(block, storage,
-                BlockSkippedForReconstructionReason.SOURCE_NODE_UNAVAILABLE,
-                DetailedReason.REPLICA_CORRUPT_OR_EXCESS);
+        ReconstructionSkipReason.genReasonWithDetail(block, storage,
+                ReconstructionSkipReason.SOURCE_UNAVAILABLE,
+                DetailedReason.CORRUPT_OR_EXCESS);
         continue;
       }
 
@@ -2610,8 +2610,8 @@ public class BlockManager implements BlockStatsMXBean {
       // or unknown state replicas.
       if (state == null
           || state == StoredReplicaState.MAINTENANCE_NOT_FOR_READ) {
-        BlockSkippedForReconstructionReason.genSkipReconstructionReason(block, storage,
-                BlockSkippedForReconstructionReason.SOURCE_NODE_UNAVAILABLE,
+        ReconstructionSkipReason.genReasonWithDetail(block, storage,
+                ReconstructionSkipReason.SOURCE_UNAVAILABLE,
                 DetailedReason.REPLICA_MAINTENANCE_NOT_FOR_READ);
         continue;
       }
@@ -2624,8 +2624,8 @@ public class BlockManager implements BlockStatsMXBean {
             ThreadLocalRandom.current().nextBoolean()) {
           decommissionedSrc = node;
         }
-        BlockSkippedForReconstructionReason.genSkipReconstructionReason(block, storage,
-                BlockSkippedForReconstructionReason.SOURCE_NODE_UNAVAILABLE,
+        ReconstructionSkipReason.genReasonWithDetail(block, storage,
+                ReconstructionSkipReason.SOURCE_UNAVAILABLE,
                 DetailedReason.REPLICA_DECOMMISSIONED);
         continue;
       }
@@ -2651,9 +2651,9 @@ public class BlockManager implements BlockStatsMXBean {
           //HDFS-16566 ExcludeReconstructed won't be reconstructed.
           excludeReconstructed.add(blockIndex);
         }
-        BlockSkippedForReconstructionReason.genSkipReconstructionReason(block, storage,
-                BlockSkippedForReconstructionReason.SOURCE_NODE_UNAVAILABLE,
-                DetailedReason.REPLICA_ALREADY_REACH_REPLICATION_LIMIT);
+        ReconstructionSkipReason.genReasonWithDetail(block, storage,
+                ReconstructionSkipReason.SOURCE_UNAVAILABLE,
+                DetailedReason.REACH_REPLICATION_SOFT_LIMIT);
         continue; // already reached replication limit
       }
 
@@ -2665,9 +2665,9 @@ public class BlockManager implements BlockStatsMXBean {
           //HDFS-16566 ExcludeReconstructed won't be reconstructed.
           excludeReconstructed.add(blockIndex);
         }
-        BlockSkippedForReconstructionReason.genSkipReconstructionReason(block, storage,
-                BlockSkippedForReconstructionReason.SOURCE_NODE_UNAVAILABLE,
-                DetailedReason.REPLICA_ALREADY_REACH_REPLICATION_HARD_LIMIT);
+        ReconstructionSkipReason.genReasonWithDetail(block, storage,
+                ReconstructionSkipReason.SOURCE_UNAVAILABLE,
+                DetailedReason.REACH_REPLICATION_HARD_LIMIT);
         continue;
       }
 
@@ -5427,11 +5427,11 @@ public class BlockManager implements BlockStatsMXBean {
     final int nodesToProcess = (int) Math.ceil(numlive
         * this.blocksInvalidateWorkPct);
     if(LOG.isDebugEnabled()){
-      BlockSkippedForReconstructionReason.start();
+      ReconstructionSkipReason.start();
     }
     int workFound = this.computeBlockReconstructionWork(blocksToProcess);
     if(LOG.isDebugEnabled()){
-      BlockSkippedForReconstructionReason.summaryBlockSkippedForReconstructionReason();
+      ReconstructionSkipReason.summary();
     }
     // Update counters
     namesystem.writeLock();

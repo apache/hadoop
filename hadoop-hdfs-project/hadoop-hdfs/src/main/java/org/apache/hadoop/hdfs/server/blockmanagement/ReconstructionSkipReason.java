@@ -34,24 +34,25 @@ import java.util.Map;
  *  - For the detailed reason of `No source node is available`,  I put it into DetailedReason enum
  *  - For the detailed reason of `No Target node is available`,  we already has NodeNotChosenReason in BlockPlacementPolicyDefault
  */
-public enum BlockSkippedForReconstructionReason {
-    SOURCE_NODE_UNAVAILABLE("source node or storage unavailable"),
-    NO_AVAILABLE_TARGET_HOST_FOUND("cannot find available target host"),
-    RECONSTRUCTION_WORK_NOT_PASS_VALIDATION("validation for reconstruction work failed");
+public enum ReconstructionSkipReason {
+    SOURCE_UNAVAILABLE("source node or storage unavailable"),
+    TARGET_UNAVAILABLE("cannot find available target host"),
+    VALIDATION_FAILED("validation for reconstruction work failed");
 
     enum DetailedReason {
-        REPLICA_CORRUPT_OR_EXCESS("stored replica state is corrupt or excess"),
-        REPLICA_MAINTENANCE_NOT_FOR_READ("stored replica is maintenance not for read"),
-        REPLICA_DECOMMISSIONED("replica is already decommissioned"),
-        REPLICA_ALREADY_REACH_REPLICATION_LIMIT("replica already reached replication soft limit"),
-        REPLICA_ALREADY_REACH_REPLICATION_HARD_LIMIT("replica already reached replication hard limit");
+        CORRUPT_OR_EXCESS("stored replica state is corrupt or excess"),
+        MAINTENANCE_NOT_FOR_READ("stored replica is maintenance not for read"),
+        DECOMMISSIONED("replica is already decommissioned"),
+        REACH_REPLICATION_SOFT_LIMIT("replica already reached replication soft limit"),
+        REACH_REPLICATION_HARD_LIMIT("replica already reached replication hard limit");
         private final String text;
 
         DetailedReason(final String logText) {
             text = logText;
         }
 
-        private String getText() {
+        @Override
+        public String toString() {
             return text;
         }
     }
@@ -64,11 +65,12 @@ public enum BlockSkippedForReconstructionReason {
 
     private final String text;
 
-    BlockSkippedForReconstructionReason(final String logText) {
+    ReconstructionSkipReason(final String logText) {
         text = logText;
     }
 
-    private String getText() {
+    @Override
+    public String toString() {
         return text;
     }
 
@@ -76,45 +78,44 @@ public enum BlockSkippedForReconstructionReason {
         blockNotChosenReasonMap.get().clear();
     }
 
-    public static void genSkipReconstructionReason(BlockInfo block, DatanodeStorageInfo storage,
-                                                   BlockSkippedForReconstructionReason reason) {
+    public static void genReasonWithDetail(BlockInfo block, DatanodeStorageInfo storage,
+                                           ReconstructionSkipReason reason) {
         if(LOG.isDebugEnabled()){
-            genStorageIsNotChooseForReplication(block, storage, reason, null);
+            genReasonImpl(block, storage, reason, null);
         }
     }
 
-    public static void genSkipReconstructionReason(BlockInfo block, DatanodeStorageInfo storage,
-                                                   BlockSkippedForReconstructionReason reason, DetailedReason reasonDetails) {
+    public static void genReasonWithDetail(BlockInfo block, DatanodeStorageInfo storage,
+                                           ReconstructionSkipReason reason, DetailedReason reasonDetails) {
         if(LOG.isDebugEnabled()){
-            genStorageIsNotChooseForReplication(block, storage, reason, reasonDetails);
+            genReasonImpl(block, storage, reason, reasonDetails);
         }
     }
 
     @VisibleForTesting
-    static void genStorageIsNotChooseForReplication(BlockInfo block, DatanodeStorageInfo storage,
-                                                    BlockSkippedForReconstructionReason reason, DetailedReason reasonDetails){
+    static void genReasonImpl(BlockInfo block, DatanodeStorageInfo storage,
+                              ReconstructionSkipReason reason, DetailedReason reasonDetails){
         // build the error message for later use.
         HashMap<BlockInfo, StringBuilder> blockReason =  blockNotChosenReasonMap.get();
         StringBuilder reasonForBlock = null;
         blockReason.putIfAbsent(block, new StringBuilder()
                 .append("Block [")
                 .append(block)
-                .append("] is not scheduled for reconstruction since: \n ["));
+                .append("] is not scheduled for reconstruction since: \n [ "));
         reasonForBlock = blockReason.get(block);
-        reasonForBlock.append(" ").append(reason.getText());
+        reasonForBlock.append(" ").append(reason);
         if(storage != null)
             reasonForBlock.append(" on node ").append(storage);
         if (reasonDetails != null) {
-            reasonForBlock.append(". Detail Reason: [").append(reasonDetails.getText()).append("]");
+            reasonForBlock.append(". Detail Reason: [").append(reasonDetails).append("]");
         }
-        reasonForBlock.append(".");
     }
 
     @VisibleForTesting
-    static String summaryBlockSkippedForReconstructionReason(){
+    static String summary(){
         StringBuilder finalReasonForAllBlocks = new StringBuilder();
         for(Map.Entry<BlockInfo, StringBuilder> blockReason: blockNotChosenReasonMap.get().entrySet()){
-            blockReason.getValue().append("]\n");
+            blockReason.getValue().append(" ]\n");
             finalReasonForAllBlocks.append(blockReason.getValue());
         }
         blockNotChosenReasonMap.get().clear();

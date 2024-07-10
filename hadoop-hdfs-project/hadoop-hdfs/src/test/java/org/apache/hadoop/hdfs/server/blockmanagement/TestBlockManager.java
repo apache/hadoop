@@ -118,12 +118,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockSkippedForReconstructionReason;
-import static org.apache.hadoop.hdfs.server.blockmanagement.BlockSkippedForReconstructionReason.DetailedReason;
-import static org.apache.hadoop.hdfs.server.blockmanagement.BlockSkippedForReconstructionReason.SOURCE_NODE_UNAVAILABLE;
+import static org.apache.hadoop.hdfs.server.blockmanagement.ReconstructionSkipReason.DetailedReason;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION;
-import static org.apache.hadoop.test.MetricsAsserts.getLongCounter;
-import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
+import static org.apache.hadoop.test.MetricsAsserts.*;
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
@@ -2358,38 +2355,39 @@ public class TestBlockManager {
       threads[i] = new Thread(() -> {
         try{
           String newStorageID = "storageID_"+index;
-          BlockSkippedForReconstructionReason.start();
+          ReconstructionSkipReason.start();
           DatanodeStorageInfo sourceStorage = BlockManagerTestUtil
                   .newDatanodeStorageInfo(DFSTestUtil.getLocalDatanodeDescriptor(),
                           new DatanodeStorage(newStorageID));
           BlockInfo newBlk = new BlockInfoContiguous(new Block(index), (short) index);
-          BlockSkippedForReconstructionReason.genStorageIsNotChooseForReplication(newBlk, sourceStorage,
-                  BlockSkippedForReconstructionReason.SOURCE_NODE_UNAVAILABLE, DetailedReason.REPLICA_DECOMMISSIONED);
-          String reason1 = BlockSkippedForReconstructionReason.summaryBlockSkippedForReconstructionReason();
-          LOG.info("Reason1 for " + newBlk + " in storage " + newStorageID + " is " + reason1);
-          assertTrue("reason should contain block ID " + newBlk, reason1.contains(newBlk.toString()));
-          assertTrue("reason should contain source node", reason1.contains(sourceStorage.toString()));
-          assertTrue("reason should  contain "+ SOURCE_NODE_UNAVAILABLE, reason1.contains(SOURCE_NODE_UNAVAILABLE.toString()));
+          ReconstructionSkipReason.genReasonImpl(newBlk, sourceStorage,
+                  ReconstructionSkipReason.SOURCE_UNAVAILABLE, DetailedReason.DECOMMISSIONED);
+          String reasonForSrcNodeUnavailable = ReconstructionSkipReason.summary();
+          LOG.info("Reason for " + newBlk + " in storage " + newStorageID + " is " + reasonForSrcNodeUnavailable);
+          assertTrue("reason for reconstruction not-scheduled should contain block ID " + newBlk, reasonForSrcNodeUnavailable.contains(newBlk.toString()));
+          assertTrue("reason for reconstruction not-scheduled should contain source node ID", reasonForSrcNodeUnavailable.contains(sourceStorage.toString()));
+          assertTrue("reason for reconstruction not-scheduled should be correct", reasonForSrcNodeUnavailable.contains(ReconstructionSkipReason.SOURCE_UNAVAILABLE.toString()));
+          assertTrue("reason detail for reconstruction not-scheduled should be correct", reasonForSrcNodeUnavailable.contains(DetailedReason.REPLICA_DECOMMISSIONED.toString()));
+          assertEquals("after summary, the reason should be cleared", "", ReconstructionSkipReason.summary());
 
+          ReconstructionSkipReason.start();
+          ReconstructionSkipReason.genReasonImpl(newBlk, null,
+                  ReconstructionSkipReason.VALIDATION_FAILED, null);
+          String reasonForValidationNotPass = ReconstructionSkipReason.summary();
+          LOG.info("Reason for " + newBlk + " in storage " + newStorageID + " is " + reasonForValidationNotPass);
+          assertTrue("reason for reconstruction not-scheduled should contain block ID" + newBlk, reasonForValidationNotPass.contains(newBlk.toString()));
+          assertTrue("reason for reconstruction not-scheduled should be correct",
+                  reasonForValidationNotPass.contains(ReconstructionSkipReason.VALIDATION_FAILED.toString()));
+          assertEquals("after summary, the reason should be cleared", "", ReconstructionSkipReason.summary());
 
-          BlockSkippedForReconstructionReason.start();
-          BlockSkippedForReconstructionReason.genStorageIsNotChooseForReplication(newBlk, null,
-                  BlockSkippedForReconstructionReason.RECONSTRUCTION_WORK_NOT_PASS_VALIDATION, null);
-          String reason2 = BlockSkippedForReconstructionReason.summaryBlockSkippedForReconstructionReason();
-          LOG.info("Reason2 for " + newBlk + " in storage " + newStorageID + " is " + reason2);
-          assertTrue("reason should contain block ID " + newBlk, reason2.contains(newBlk.toString()));
-          assertTrue("reason should contain [" + BlockSkippedForReconstructionReason.RECONSTRUCTION_WORK_NOT_PASS_VALIDATION + "]",
-                  reason2.contains(BlockSkippedForReconstructionReason.RECONSTRUCTION_WORK_NOT_PASS_VALIDATION.toString()));
-
-
-          BlockSkippedForReconstructionReason.start();
-          BlockSkippedForReconstructionReason.genStorageIsNotChooseForReplication(newBlk, null,
-                  BlockSkippedForReconstructionReason.NO_AVAILABLE_TARGET_HOST_FOUND, null);
-          String reason3 = BlockSkippedForReconstructionReason.summaryBlockSkippedForReconstructionReason();
-          LOG.info("Reason3 for " + newBlk + " in storage " + newStorageID + " is " + reason3);
-          assertTrue("reason should contain block ID " + newBlk, reason3.contains(newBlk.toString()));
-          assertTrue("reason should contain [" + BlockSkippedForReconstructionReason.NO_AVAILABLE_TARGET_HOST_FOUND + "]", reason3.contains(BlockSkippedForReconstructionReason.NO_AVAILABLE_TARGET_HOST_FOUND.toString()));
-
+          ReconstructionSkipReason.start();
+          ReconstructionSkipReason.genReasonImpl(newBlk, null,
+                  ReconstructionSkipReason.TARGET_UNAVAILABLE, null);
+          String reasonForTargetNotFound = ReconstructionSkipReason.summary();
+          LOG.info("Reason for " + newBlk + " in storage " + newStorageID + " is " + reasonForTargetNotFound);
+          assertTrue("reason for reconstruction not-scheduled should contain block ID" + newBlk, reasonForTargetNotFound.contains(newBlk.toString()));
+          assertTrue("reason for reconstruction not-scheduled should be correct", reasonForTargetNotFound.contains(ReconstructionSkipReason.TARGET_UNAVAILABLE.toString()));
+          assertEquals("after summary, the reason should be cleared", "", ReconstructionSkipReason.summary());
         }catch (Throwable e){
           e.printStackTrace();
           failure.set(true);
