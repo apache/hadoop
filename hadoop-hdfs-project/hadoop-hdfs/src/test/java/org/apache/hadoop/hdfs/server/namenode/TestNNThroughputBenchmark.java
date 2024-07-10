@@ -291,7 +291,7 @@ public class TestNNThroughputBenchmark {
    * with explicit -blockSize option like 1m.
    */
   @Test(timeout = 120000)
-  public void testNNThroughputBlockSizeSuffixedWithLetter() throws Exception {
+  public void testNNThroughputBlockSizeArgWithLetterSuffix() throws Exception {
     final Configuration conf = new HdfsConfiguration();
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_MIN_BLOCK_SIZE_KEY, 16);
     try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build()) {

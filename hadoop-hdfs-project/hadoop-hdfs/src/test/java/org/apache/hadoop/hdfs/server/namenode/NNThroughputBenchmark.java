@@ -1260,7 +1260,7 @@ public class NNThroughputBenchmark implements Tool {
           blocksPerFile = Integer.parseInt(args.get(++i));
         } else if (args.get(i).equals("-blockSize")) {
           if(i+1 == args.size())  printUsage();
-          blockSize = Long.parseLong(args.get(++i));
+          blockSize = StringUtils.TraditionalBinaryPrefix.string2long(args.get(++i));
         } else if(args.get(i).equals("-baseDirName")) {
           if (i + 1 == args.size()) {
             printUsage();
@@ -1498,7 +1498,7 @@ public class NNThroughputBenchmark implements Tool {
           replication = Short.parseShort(args.get(++i));
         } else if (args.get(i).equals("-blockSize")) {
           if(i+1 == args.size())  printUsage();
-          blockSize = Long.parseLong(args.get(++i));
+          blockSize = StringUtils.TraditionalBinaryPrefix.string2long(args.get(++i));
         } else if(args.get(i).equals("-baseDirName")) {
           if (i + 1 == args.size()) {
             printUsage();
