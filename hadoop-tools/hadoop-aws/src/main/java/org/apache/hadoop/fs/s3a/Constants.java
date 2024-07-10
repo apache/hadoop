@@ -1124,6 +1124,22 @@ public final class Constants {
    */
   public static final String RETRY_THROTTLE_INTERVAL_DEFAULT = "500ms";
 
+
+  /**
+   * Should S3A connector retry on all 5xx errors which don't have
+   * explicit support: {@value}?
+   * <p>
+   * This is in addition to any retries the AWS SDK itself does, which
+   * is known to retry on many of these (e.g. 500).
+   */
+  public static final String RETRY_HTTP_5XX_ERRORS =
+      "fs.s3a.retry.http.5xx.errors";
+
+  /**
+   * Default value for {@link #RETRY_HTTP_5XX_ERRORS}: {@value}.
+   */
+  public static final boolean DEFAULT_RETRY_HTTP_5XX_ERRORS = false;
+
   /**
    * Should etags be exposed as checksums?
    */

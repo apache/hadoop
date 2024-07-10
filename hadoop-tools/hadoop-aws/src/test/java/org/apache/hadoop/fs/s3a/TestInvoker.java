@@ -26,6 +26,7 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.assertj.core.api.Assertions;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.core.exception.SdkException;
@@ -44,6 +45,9 @@ import static org.apache.hadoop.fs.s3a.Invoker.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.verifyExceptionClass;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_400_BAD_REQUEST;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_500_INTERNAL_SERVER_ERROR;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_501_NOT_IMPLEMENTED;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_504_GATEWAY_TIMEOUT;
 import static org.apache.hadoop.test.LambdaTestUtils.*;
 
 /**
@@ -85,6 +89,9 @@ public class TestInvoker extends Assert {
    */
   public static final int SAFE_RETRY_COUNT = 5;
 
+  public static final String INTERNAL_ERROR_PLEASE_TRY_AGAIN =
+      "We encountered an internal error. Please try again";
+
   static {
     FAST_RETRY_CONF = new Configuration();
     String interval = "10ms";
@@ -92,11 +99,16 @@ public class TestInvoker extends Assert {
     FAST_RETRY_CONF.set(RETRY_THROTTLE_INTERVAL, interval);
     FAST_RETRY_CONF.setInt(RETRY_LIMIT, ACTIVE_RETRY_LIMIT);
     FAST_RETRY_CONF.setInt(RETRY_THROTTLE_LIMIT, ACTIVE_RETRY_LIMIT);
+    FAST_RETRY_CONF.setBoolean(RETRY_HTTP_5XX_ERRORS, DEFAULT_RETRY_HTTP_5XX_ERRORS);
   }
 
   private static final S3ARetryPolicy RETRY_POLICY =
       new S3ARetryPolicy(FAST_RETRY_CONF);
 
+  /**
+   * Count of retries performed when invoking an operation which
+   * failed.
+   */
   private int retryCount;
   private Invoker invoker = new Invoker(RETRY_POLICY,
       (text, e, retries, idempotent) -> retryCount++);
@@ -158,17 +170,99 @@ public class TestInvoker extends Assert {
 
   @Test
   public void testS3500isStatus500Exception() throws Exception {
-    verifyTranslated(500, AWSStatus500Exception.class);
+    verifyTranslated(SC_500_INTERNAL_SERVER_ERROR, AWSStatus500Exception.class);
   }
 
   @Test
-  public void test500isStatus500Exception() throws Exception {
-    AwsServiceException ex = AwsServiceException.builder()
-        .message("")
-        .statusCode(500)
+  public void test500isMappedTooAWSStatus500Exception() throws Exception {
+    AwsServiceException ex = awsException(SC_500_INTERNAL_SERVER_ERROR,
+        INTERNAL_ERROR_PLEASE_TRY_AGAIN);
+
+    AWSStatus500Exception ex500 =
+        verifyTranslated(AWSStatus500Exception.class,
+            ex);
+    Assertions.assertThat(ex500.statusCode())
+        .describedAs("status code of %s", ex)
+        .isEqualTo(SC_500_INTERNAL_SERVER_ERROR);
+
+    Assertions.assertThat(invoker.getRetryPolicy()
+        .shouldRetry(ex500, 1, 0, false).action)
+        .describedAs("should retry %s", ex500)
+        .isEqualTo(RetryPolicy.RetryAction.FAIL.action);
+
+    assertRetryAction("Expected retry on first throttle",
+        RETRY_POLICY, RetryPolicy.RetryAction.FAIL,
+        ex, 0, true);
+  }
+
+  /**
+   * A 501 error is never retried.
+   */
+  @Test
+  public void testUnsupportedFeatureNoRetry() throws Throwable {
+
+    AwsServiceException ex = awsException(501,
+        "501 We encountered an internal error. Please try again");
+    final AWSUnsupportedFeatureException ex501 =
+        intercept(AWSUnsupportedFeatureException.class, "501", () ->
+            invoker.retry("ex", null, true, () -> {
+              throw ex;
+            }));
+    Assertions.assertThat(ex501.statusCode())
+        .describedAs("status code of %s", ex)
+        .isEqualTo(501);
+    Assertions.assertThat(retryCount)
+        .describedAs("retry count")
+        .isEqualTo(0);
+  }
+
+  /**
+   * Construct an S3Exception.
+   * @param statusCode status code
+   * @param message message
+   * @return the exception
+   */
+  private static AwsServiceException awsException(final int statusCode, final String message) {
+    return S3Exception.builder()
+        .statusCode(statusCode)
+        .message(message)
+        .requestId("reqID")
+        .extendedRequestId("extreqID")
         .build();
-    verifyTranslated(AWSStatus500Exception.class,
-        ex);
+  }
+
+  /**
+   * Various 5xx exceptions when 5xx errors are disable (default).
+   */
+  @Test
+  public void test5xxRetriesDisabled() throws Throwable {
+    final S3ARetryPolicy policy = RETRY_POLICY;
+    assertRetryAction("500", policy, RetryPolicy.RetryAction.FAIL,
+        awsException(SC_500_INTERNAL_SERVER_ERROR, INTERNAL_ERROR_PLEASE_TRY_AGAIN), 1, true);
+    assertRetryAction("501", policy, RetryPolicy.RetryAction.FAIL,
+        awsException(SC_501_NOT_IMPLEMENTED, INTERNAL_ERROR_PLEASE_TRY_AGAIN), 1, true);
+    assertRetryAction("510", policy, RetryPolicy.RetryAction.FAIL,
+        awsException(510, INTERNAL_ERROR_PLEASE_TRY_AGAIN), 1, true);
+    assertRetryAction("gateway", policy, RetryPolicy.RetryAction.RETRY,
+        awsException(SC_504_GATEWAY_TIMEOUT, "gateway"), 1, true);
+  }
+
+  /**
+   * Various 5xx exceptions when 5xx errors are enabled.
+   */
+  @Test
+  public void test5xxRetriesEnabled() throws Throwable {
+    final Configuration conf = new Configuration(FAST_RETRY_CONF);
+    conf.setBoolean(RETRY_HTTP_5XX_ERRORS, true);
+    final S3ARetryPolicy policy = new S3ARetryPolicy(conf);
+    assertRetryAction("500", policy, RetryPolicy.RetryAction.RETRY,
+        awsException(SC_500_INTERNAL_SERVER_ERROR, INTERNAL_ERROR_PLEASE_TRY_AGAIN), 1, true);
+    assertRetryAction("501", policy, RetryPolicy.RetryAction.FAIL,
+        awsException(SC_501_NOT_IMPLEMENTED, INTERNAL_ERROR_PLEASE_TRY_AGAIN), 1, true);
+    assertRetryAction("510", policy, RetryPolicy.RetryAction.RETRY,
+        awsException(510, INTERNAL_ERROR_PLEASE_TRY_AGAIN), 1, true);
+    assertRetryAction("gateway", policy, RetryPolicy.RetryAction.RETRY,
+        awsException(SC_504_GATEWAY_TIMEOUT, "gateway"), 1, true);
   }
 
   @Test

@@ -233,14 +233,12 @@ public class WriteOperationHelper implements WriteOperations {
    * @param destKey destination key
    * @param length size, if known. Use -1 for not known
    * @param options options for the request
-   * @param isFile is data to be uploaded a file
    * @return the request
    */
   @Retries.OnceRaw
   public PutObjectRequest createPutObjectRequest(String destKey,
       long length,
-      final PutObjectOptions options,
-      boolean isFile) {
+      final PutObjectOptions options) {
 
     activateAuditSpan();
 
@@ -508,20 +506,19 @@ public class WriteOperationHelper implements WriteOperations {
    * file, from the content length of the header.
    * @param putObjectRequest the request
    * @param putOptions put object options
-   * @param durationTrackerFactory factory for duration tracking
    * @param uploadData data to be uploaded
-   * @param isFile is data to be uploaded a file
-   *
+   * @param durationTrackerFactory factory for duration tracking
    * @return the upload initiated
    * @throws IOException on problems
    */
   @Retries.RetryTranslated
   public PutObjectResponse putObject(PutObjectRequest putObjectRequest,
-      PutObjectOptions putOptions, S3ADataBlocks.BlockUploadData uploadData, boolean isFile,
+      PutObjectOptions putOptions,
+      S3ADataBlocks.BlockUploadData uploadData,
       DurationTrackerFactory durationTrackerFactory)
       throws IOException {
     return retry("Writing Object", putObjectRequest.key(), true, withinAuditSpan(getAuditSpan(),
-        () -> owner.putObjectDirect(putObjectRequest, putOptions, uploadData, isFile,
+        () -> owner.putObjectDirect(putObjectRequest, putOptions, uploadData,
             durationTrackerFactory)));
   }
 

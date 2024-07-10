@@ -298,7 +298,7 @@ public final class S3AUtils {
       case SC_405_METHOD_NOT_ALLOWED:
       case SC_415_UNSUPPORTED_MEDIA_TYPE:
       case SC_501_NOT_IMPLEMENTED:
-        ioe = new AWSUnsupportedFeatureException(message, s3Exception);
+        ioe = new AWSUnsupportedFeatureException(message, ase);
         break;
 
       // precondition failure: the object is there, but the precondition

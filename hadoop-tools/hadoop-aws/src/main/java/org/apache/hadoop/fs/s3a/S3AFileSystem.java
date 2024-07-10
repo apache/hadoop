@@ -21,7 +21,6 @@ package org.apache.hadoop.fs.s3a;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InterruptedIOException;
 import java.io.UncheckedIOException;
 import java.net.URI;
@@ -149,6 +148,7 @@ import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.impl.StoreContextBuilder;
 import org.apache.hadoop.fs.s3a.impl.StoreContextFactory;
+import org.apache.hadoop.fs.s3a.impl.UploadContentProviders;
 import org.apache.hadoop.fs.s3a.prefetch.S3APrefetchingInputStream;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperations;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperationsImpl;
@@ -248,6 +248,7 @@ import static org.apache.hadoop.fs.s3a.impl.CreateFileBuilder.OPTIONS_CREATE_FIL
 import static org.apache.hadoop.fs.s3a.impl.CreateFileBuilder.OPTIONS_CREATE_FILE_PERFORMANCE;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isObjectNotFound;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isUnknownBucket;
+import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.CONTENT_TYPE_OCTET_STREAM;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.AP_REQUIRED_EXCEPTION;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.ARN_BUCKET_OPTION;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.CSE_PADDING_LENGTH;
@@ -734,7 +735,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       }
       blockOutputBuffer = conf.getTrimmed(FAST_UPLOAD_BUFFER,
           DEFAULT_FAST_UPLOAD_BUFFER);
-      blockFactory = S3ADataBlocks.createFactory(this, blockOutputBuffer);
+      blockFactory = S3ADataBlocks.createFactory(createStoreContext(), blockOutputBuffer);
       blockOutputActiveBlocks = intOption(conf,
           FAST_UPLOAD_ACTIVE_BLOCKS, DEFAULT_FAST_UPLOAD_ACTIVE_BLOCKS, 1);
       // If CSE is enabled, do multipart uploads serially.
@@ -3297,9 +3298,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * <i>Important: this call will close any input stream in the request.</i>
    * @param putObjectRequest the request
    * @param putOptions put object options
-   * @param durationTrackerFactory factory for duration tracking
    * @param uploadData data to be uploaded
-   * @param isFile represents if data to be uploaded is a file
+   * @param durationTrackerFactory factory for duration tracking
    * @return the upload initiated
    * @throws SdkException on problems
    */
@@ -3307,22 +3307,24 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @Retries.OnceRaw("For PUT; post-PUT actions are RetryExceptionsSwallowed")
   PutObjectResponse putObjectDirect(PutObjectRequest putObjectRequest,
       PutObjectOptions putOptions,
-      S3ADataBlocks.BlockUploadData uploadData, boolean isFile,
+      S3ADataBlocks.BlockUploadData uploadData,
       DurationTrackerFactory durationTrackerFactory)
       throws SdkException {
+
     long len = getPutRequestLength(putObjectRequest);
     LOG.debug("PUT {} bytes to {}", len, putObjectRequest.key());
     incrementPutStartStatistics(len);
+    final UploadContentProviders.BaseContentProvider provider =
+        uploadData.getContentProvider();
     try {
       PutObjectResponse response =
           trackDurationOfSupplier(nonNullDurationTrackerFactory(durationTrackerFactory),
               OBJECT_PUT_REQUESTS.getSymbol(),
-              () -> isFile
-                  ? getS3Client().putObject(putObjectRequest,
-                      RequestBody.fromFile(uploadData.getFile()))
-                  : getS3Client().putObject(putObjectRequest,
-                      RequestBody.fromInputStream(uploadData.getUploadStream(),
-                          putObjectRequest.contentLength())));
+              () -> getS3Client().putObject(putObjectRequest,
+                  RequestBody.fromContentProvider(
+                      provider,
+                      provider.getSize(),
+                      CONTENT_TYPE_OCTET_STREAM)));
       incrementPutCompletedStatistics(true, len);
       // apply any post-write actions.
       finishedWrite(putObjectRequest.key(), len,
@@ -4837,18 +4839,16 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @Retries.RetryTranslated
   private void createEmptyObject(final String objectName, PutObjectOptions putOptions)
       throws IOException {
-    final InputStream im = new InputStream() {
-      @Override
-      public int read() throws IOException {
-        return -1;
-      }
-    };
 
-    S3ADataBlocks.BlockUploadData uploadData = new S3ADataBlocks.BlockUploadData(im);
+    S3ADataBlocks.BlockUploadData uploadData = new S3ADataBlocks.BlockUploadData(
+        new byte[0], 0, 0, null);
 
     invoker.retry("PUT 0-byte object ", objectName, true,
-        () -> putObjectDirect(getRequestFactory().newDirectoryMarkerRequest(objectName).build(),
-            putOptions, uploadData, false, getDurationTrackerFactory()));
+        () -> putObjectDirect(
+            getRequestFactory().newDirectoryMarkerRequest(objectName).build(),
+            putOptions,
+            uploadData,
+            getDurationTrackerFactory()));
     incrementPutProgressStatistics(objectName, 0);
     instrumentation.directoryCreated();
   }
