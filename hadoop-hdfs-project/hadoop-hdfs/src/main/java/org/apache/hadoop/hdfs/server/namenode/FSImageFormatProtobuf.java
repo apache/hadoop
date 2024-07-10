@@ -658,15 +658,19 @@ public final class FSImageFormatProtobuf {
     public void commitSectionAndSubSection(FileSummary.Builder summary,
         SectionName name, SectionName subSectionName) throws IOException {
       commitSubSection(summary, subSectionName, true);
-      commitSection(summary, name);
+      commitSection(summary, name, true);
     }
 
     public void commitSection(FileSummary.Builder summary, SectionName name)
+            throws IOException {
+        commitSection(summary, name, false);
+    }
+
+    public void commitSection(FileSummary.Builder summary, SectionName name, boolean afterSubSectionCommit)
         throws IOException {
       long oldOffset = currentOffset;
-      if (canHaveSubSection(name) && writeSubSections) {
-        flushLastSubSectionOutputStream();
-      } else {
+      boolean subSectionCommitted = afterSubSectionCommit && writeSubSections;
+      if (!subSectionCommitted) {
         flushSectionOutputStream();
       }
 
@@ -728,12 +732,6 @@ public final class FSImageFormatProtobuf {
       if (codec != null) {
         ((CompressionOutputStream) sectionOutputStream).finish();
       }
-      sectionOutputStream.flush();
-    }
-
-    private void flushLastSubSectionOutputStream() throws IOException {
-      // sectionOutputStream is not CompressionOutputStream type
-      // when previous sub-section is last subsection
       sectionOutputStream.flush();
     }
 
@@ -1047,12 +1045,6 @@ public final class FSImageFormatProtobuf {
       this.name = name;
     }
   }
-
-  private static boolean canHaveSubSection(SectionName name) {
-      return name == SectionName.INODE || name == SectionName.INODE_DIR
-              || name == SectionName.SNAPSHOT_DIFF;
-  }
-
 
   private static int getOndiskTrunkSize(
       org.apache.hadoop.thirdparty.protobuf.GeneratedMessageV3 s) {
