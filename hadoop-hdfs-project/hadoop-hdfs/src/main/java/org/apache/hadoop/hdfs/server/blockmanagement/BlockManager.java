@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import static org.apache.hadoop.hdfs.protocol.BlockType.CONTIGUOUS;
 import static org.apache.hadoop.hdfs.protocol.BlockType.STRIPED;
-import static org.apache.hadoop.hdfs.server.blockmanagement.ReconstructionSkipReason.SourceUnavailableDetail;
 import static org.apache.hadoop.util.ExitUtil.terminate;
 import static org.apache.hadoop.util.Time.now;
 
@@ -90,6 +89,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.NumberReplicas.StoredReplic
 import org.apache.hadoop.hdfs.server.blockmanagement.PendingDataNodeMessages.ReportedBlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.PendingReconstructionBlocks.PendingBlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.ExcessRedundancyMap.ExcessBlockInfo;
+import org.apache.hadoop.hdfs.server.blockmanagement.ReconstructionSkipReason.SourceUnavailableDetail;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
 import org.apache.hadoop.hdfs.server.namenode.CachedBlock;
@@ -2134,6 +2134,7 @@ public class BlockManager implements BlockStatsMXBean {
       List<List<BlockInfo>> blocksToReconstruct) {
     int scheduledWork = 0;
     List<BlockReconstructionWork> reconWork = new ArrayList<>();
+
     // Step 1: categorize at-risk blocks into replication and EC tasks
     namesystem.writeLock();
     try {

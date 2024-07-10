@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -31,8 +31,8 @@ import java.util.Map;
  * 2. No Target node is available
  * 3. ReconstructionWork is built but validation failed
  * I put above 3 cases as ReconstructionSkipReason.
- *  - For the detailed reason of `No source node is available`,  I put it into SourceUnavailableDetail enum
- *  - For the detailed reason of `No Target node is available`,  we already has NodeNotChosenReason in BlockPlacementPolicyDefault
+ * - For the detailed reason of `No source node is available`,  I put it into SourceUnavailableDetail enum
+ * - For the detailed reason of `No Target node is available`,  we already has NodeNotChosenReason in BlockPlacementPolicyDefault
  */
 public enum ReconstructionSkipReason {
     SOURCE_UNAVAILABLE("source node or storage unavailable"),
@@ -56,6 +56,7 @@ public enum ReconstructionSkipReason {
             return text;
         }
     }
+
     public static final Logger LOG = LoggerFactory.getLogger(
             BlockManager.class);
 
@@ -74,29 +75,29 @@ public enum ReconstructionSkipReason {
         return text;
     }
 
-    public static void start(){
+    public static void start() {
         blockNotChosenReasonMap.get().clear();
     }
 
     public static void genReasonWithDetail(BlockInfo block, DatanodeStorageInfo storage,
                                            ReconstructionSkipReason reason) {
-        if(LOG.isDebugEnabled()){
+        if (LOG.isDebugEnabled()) {
             genReasonImpl(block, storage, reason, null);
         }
     }
 
     public static void genReasonWithDetail(BlockInfo block, DatanodeStorageInfo storage,
                                            ReconstructionSkipReason reason, SourceUnavailableDetail reasonDetails) {
-        if(LOG.isDebugEnabled()){
+        if (LOG.isDebugEnabled()) {
             genReasonImpl(block, storage, reason, reasonDetails);
         }
     }
 
     @VisibleForTesting
     static void genReasonImpl(BlockInfo block, DatanodeStorageInfo storage,
-                              ReconstructionSkipReason reason, SourceUnavailableDetail reasonDetails){
+                              ReconstructionSkipReason reason, SourceUnavailableDetail reasonDetails) {
         // build the error message for later use.
-        HashMap<BlockInfo, StringBuilder> blockReason =  blockNotChosenReasonMap.get();
+        HashMap<BlockInfo, StringBuilder> blockReason = blockNotChosenReasonMap.get();
         StringBuilder reasonForBlock = null;
         blockReason.putIfAbsent(block, new StringBuilder()
                 .append("Block ")
@@ -104,7 +105,7 @@ public enum ReconstructionSkipReason {
                 .append(" is not scheduled for reconstruction since: ["));
         reasonForBlock = blockReason.get(block);
         reasonForBlock.append("\n").append(reason);
-        if(storage != null)
+        if (storage != null)
             reasonForBlock.append(" on node ").append(storage);
         if (reasonDetails != null) {
             reasonForBlock.append(". Detail : [").append(reasonDetails).append("]");
@@ -112,9 +113,9 @@ public enum ReconstructionSkipReason {
     }
 
     @VisibleForTesting
-    static String summary(){
+    static String summary() {
         StringBuilder finalReasonForAllBlocks = new StringBuilder();
-        for(Map.Entry<BlockInfo, StringBuilder> blockReason: blockNotChosenReasonMap.get().entrySet()){
+        for (Map.Entry<BlockInfo, StringBuilder> blockReason : blockNotChosenReasonMap.get().entrySet()) {
             blockReason.getValue().append("\n]");
             finalReasonForAllBlocks.append(blockReason.getValue());
         }
