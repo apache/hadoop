@@ -710,9 +710,9 @@ public final class FSImageFormatProtobuf {
       // as the flush can move the length forward.
       flushSectionOutputStream();
 
-    if (codec == null || isLast) {
-      // To avoid empty sub-section, Do not create CompressionOutputStream
-      // if sub-section is last sub-section of each section
+      if (codec == null || isLast) {
+        // To avoid empty sub-section, Do not create CompressionOutputStream
+        // if sub-section is last sub-section of each section
         sectionOutputStream = underlyingOutputStream;
       } else {
         sectionOutputStream = codec.createOutputStream(underlyingOutputStream);
