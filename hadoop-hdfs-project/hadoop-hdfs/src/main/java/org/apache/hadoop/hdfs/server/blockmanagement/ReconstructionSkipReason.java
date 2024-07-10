@@ -43,8 +43,8 @@ public enum ReconstructionSkipReason {
         CORRUPT_OR_EXCESS("stored replica state is corrupt or excess"),
         MAINTENANCE_NOT_FOR_READ("stored replica is maintenance not for read"),
         DECOMMISSIONED("replica is already decommissioned"),
-        REACH_REPLICATION_SOFT_LIMIT("replica already reached replication soft limit"),
-        REACH_REPLICATION_HARD_LIMIT("replica already reached replication hard limit");
+        REPLICATION_SOFT_LIMIT("replica already reached replication soft limit"),
+        REPLICATION_HARD_LIMIT("replica already reached replication hard limit");
         private final String text;
 
         DetailedReason(final String logText) {

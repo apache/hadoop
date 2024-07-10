@@ -2612,7 +2612,7 @@ public class BlockManager implements BlockStatsMXBean {
           || state == StoredReplicaState.MAINTENANCE_NOT_FOR_READ) {
         ReconstructionSkipReason.genReasonWithDetail(block, storage,
                 ReconstructionSkipReason.SOURCE_UNAVAILABLE,
-                DetailedReason.REPLICA_MAINTENANCE_NOT_FOR_READ);
+                DetailedReason.MAINTENANCE_NOT_FOR_READ);
         continue;
       }
 
@@ -2653,7 +2653,7 @@ public class BlockManager implements BlockStatsMXBean {
         }
         ReconstructionSkipReason.genReasonWithDetail(block, storage,
                 ReconstructionSkipReason.SOURCE_UNAVAILABLE,
-                DetailedReason.REACH_REPLICATION_SOFT_LIMIT);
+                DetailedReason.REPLICATION_SOFT_LIMIT);
         continue; // already reached replication limit
       }
 
@@ -2667,7 +2667,7 @@ public class BlockManager implements BlockStatsMXBean {
         }
         ReconstructionSkipReason.genReasonWithDetail(block, storage,
                 ReconstructionSkipReason.SOURCE_UNAVAILABLE,
-                DetailedReason.REACH_REPLICATION_HARD_LIMIT);
+                DetailedReason.REPLICATION_HARD_LIMIT);
         continue;
       }
 
