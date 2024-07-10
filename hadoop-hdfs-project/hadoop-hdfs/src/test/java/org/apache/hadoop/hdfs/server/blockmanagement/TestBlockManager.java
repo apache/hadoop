@@ -2337,7 +2337,7 @@ public class TestBlockManager {
    */
   @Test(timeout = 6000)
   public void testStorageNotChosenReason() throws InterruptedException {
-    final AtomicBoolean failure = new AtomicBoolean();
+    final AtomicBoolean failure = new AtomicBoolean(false);
 //    String storageID = "storageID";
 //    DatanodeStorageInfo targetDN = BlockManagerTestUtil
 //            .newDatanodeStorageInfo(DFSTestUtil.getLocalDatanodeDescriptor(),
@@ -2367,9 +2367,9 @@ public class TestBlockManager {
                   BlockSkippedForReconstructionReason.SOURCE_NODE_UNAVAILABLE, DetailedReason.REPLICA_DECOMMISSIONED);
           String reason1 = BlockSkippedForReconstructionReason.summaryBlockSkippedForReconstructionReason();
           LOG.info("Reason1 for " + newBlk + " in storage " + newStorageID + " is " + reason1);
-          assertTrue(reason1.contains(newBlk.toString()));
-          assertTrue(reason1.contains(sourceStorage.toString()));
-          assertTrue(reason1.contains(SOURCE_NODE_UNAVAILABLE.toString()));
+          assertTrue("reason should contain block ID " + newBlk, reason1.contains(newBlk.toString()));
+          assertTrue("reason should contain source node", reason1.contains(sourceStorage.toString()));
+          assertTrue("reason should  contain "+ SOURCE_NODE_UNAVAILABLE, reason1.contains(SOURCE_NODE_UNAVAILABLE.toString()));
 
 
           BlockSkippedForReconstructionReason.start();
@@ -2377,8 +2377,9 @@ public class TestBlockManager {
                   BlockSkippedForReconstructionReason.RECONSTRUCTION_WORK_NOT_PASS_VALIDATION, null);
           String reason2 = BlockSkippedForReconstructionReason.summaryBlockSkippedForReconstructionReason();
           LOG.info("Reason2 for " + newBlk + " in storage " + newStorageID + " is " + reason2);
-          assertTrue(reason2.contains(newBlk.toString()));
-          assertTrue(reason2.contains(BlockSkippedForReconstructionReason.RECONSTRUCTION_WORK_NOT_PASS_VALIDATION.toString()));
+          assertTrue("reason should contain block ID " + newBlk, reason2.contains(newBlk.toString()));
+          assertTrue("reason should contain [" + BlockSkippedForReconstructionReason.RECONSTRUCTION_WORK_NOT_PASS_VALIDATION + "]",
+                  reason2.contains(BlockSkippedForReconstructionReason.RECONSTRUCTION_WORK_NOT_PASS_VALIDATION.toString()));
 
 
           BlockSkippedForReconstructionReason.start();
@@ -2386,10 +2387,10 @@ public class TestBlockManager {
                   BlockSkippedForReconstructionReason.NO_AVAILABLE_TARGET_HOST_FOUND, null);
           String reason3 = BlockSkippedForReconstructionReason.summaryBlockSkippedForReconstructionReason();
           LOG.info("Reason3 for " + newBlk + " in storage " + newStorageID + " is " + reason3);
-          assertTrue(reason3.contains(newBlk.toString()));
-          assertTrue(reason3.contains(BlockSkippedForReconstructionReason.RECONSTRUCTION_WORK_NOT_PASS_VALIDATION.toString()));
+          assertTrue("reason should contain block ID " + newBlk, reason3.contains(newBlk.toString()));
+          assertTrue("reason should contain [" + BlockSkippedForReconstructionReason.NO_AVAILABLE_TARGET_HOST_FOUND + "]", reason3.contains(BlockSkippedForReconstructionReason.NO_AVAILABLE_TARGET_HOST_FOUND.toString()));
 
-        }catch (Exception e){
+        }catch (Throwable e){
           e.printStackTrace();
           failure.set(true);
         }
