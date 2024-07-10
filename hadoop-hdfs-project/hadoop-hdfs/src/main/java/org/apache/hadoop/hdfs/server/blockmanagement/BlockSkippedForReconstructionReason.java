@@ -39,7 +39,7 @@ public enum BlockSkippedForReconstructionReason {
     NO_AVAILABLE_TARGET_HOST_FOUND("cannot find available target host"),
     RECONSTRUCTION_WORK_NOT_PASS_VALIDATION("validation for reconstruction work failed");
 
-    enum DetailedReason{
+    enum DetailedReason {
         REPLICA_CORRUPT_OR_EXCESS("stored replica state is corrupt or excess"),
         REPLICA_MAINTENANCE_NOT_FOR_READ("stored replica is maintenance not for read"),
         REPLICA_DECOMMISSIONED("replica is already decommissioned"),
@@ -97,20 +97,15 @@ public enum BlockSkippedForReconstructionReason {
         HashMap<BlockInfo, StringBuilder> blockReason =  blockNotChosenReasonMap.get();
         StringBuilder reasonForBlock = null;
         blockReason.putIfAbsent(block, new StringBuilder()
-                .append("Block ")
+                .append("Block [")
                 .append(block)
-                .append(" didn't schedule ReconstructionWork for below reasons: \n ["));
+                .append("] is not scheduled for reconstruction since: \n ["));
         reasonForBlock = blockReason.get(block);
-        switch (reason){
-            case SOURCE_NODE_UNAVAILABLE:
-                reasonForBlock.append(" Source node storage ").append(storage==null?"None":storage).append(" is not chosen since ").append(reason);
-                break;
-            case NO_AVAILABLE_TARGET_HOST_FOUND:
-            case RECONSTRUCTION_WORK_NOT_PASS_VALIDATION:
-                reasonForBlock.append(" ").append(reason);
-        }
+        reasonForBlock.append(" ").append(reason.getText());
+        if(storage != null)
+            reasonForBlock.append(" on node ").append(storage);
         if (reasonDetails != null) {
-            reasonForBlock.append(" ").append(reasonDetails.getText());
+            reasonForBlock.append(". Detail Reason: [").append(reasonDetails.getText()).append("]");
         }
         reasonForBlock.append(".");
     }
@@ -120,7 +115,7 @@ public enum BlockSkippedForReconstructionReason {
         StringBuilder finalReasonForAllBlocks = new StringBuilder();
         for(Map.Entry<BlockInfo, StringBuilder> blockReason: blockNotChosenReasonMap.get().entrySet()){
             blockReason.getValue().append("]\n");
-            finalReasonForAllBlocks.append(blockReason);
+            finalReasonForAllBlocks.append(blockReason.getValue());
         }
         blockNotChosenReasonMap.get().clear();
         return finalReasonForAllBlocks.toString();
