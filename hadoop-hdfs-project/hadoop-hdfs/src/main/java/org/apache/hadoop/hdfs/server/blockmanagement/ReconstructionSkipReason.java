@@ -39,7 +39,7 @@ public enum ReconstructionSkipReason {
     TARGET_UNAVAILABLE("cannot find available target host"),
     VALIDATION_FAILED("validation for reconstruction work failed");
 
-    enum DetailedReason {
+    enum SourceUnavailableDetail {
         CORRUPT_OR_EXCESS("stored replica state is corrupt or excess"),
         MAINTENANCE_NOT_FOR_READ("stored replica is maintenance not for read"),
         DECOMMISSIONED("replica is already decommissioned"),
@@ -47,7 +47,7 @@ public enum ReconstructionSkipReason {
         REPLICATION_HARD_LIMIT("replica already reached replication hard limit");
         private final String text;
 
-        DetailedReason(final String logText) {
+        SourceUnavailableDetail(final String logText) {
             text = logText;
         }
 
@@ -86,7 +86,7 @@ public enum ReconstructionSkipReason {
     }
 
     public static void genReasonWithDetail(BlockInfo block, DatanodeStorageInfo storage,
-                                           ReconstructionSkipReason reason, DetailedReason reasonDetails) {
+                                           ReconstructionSkipReason reason, SourceUnavailableDetail reasonDetails) {
         if(LOG.isDebugEnabled()){
             genReasonImpl(block, storage, reason, reasonDetails);
         }
@@ -94,7 +94,7 @@ public enum ReconstructionSkipReason {
 
     @VisibleForTesting
     static void genReasonImpl(BlockInfo block, DatanodeStorageInfo storage,
-                              ReconstructionSkipReason reason, DetailedReason reasonDetails){
+                              ReconstructionSkipReason reason, SourceUnavailableDetail reasonDetails){
         // build the error message for later use.
         HashMap<BlockInfo, StringBuilder> blockReason =  blockNotChosenReasonMap.get();
         StringBuilder reasonForBlock = null;

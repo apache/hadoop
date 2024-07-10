@@ -20,7 +20,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import static org.apache.hadoop.hdfs.protocol.BlockType.CONTIGUOUS;
 import static org.apache.hadoop.hdfs.protocol.BlockType.STRIPED;
-import static org.apache.hadoop.hdfs.server.blockmanagement.ReconstructionSkipReason.DetailedReason;
+import static org.apache.hadoop.hdfs.server.blockmanagement.ReconstructionSkipReason.SourceUnavailableDetail;
 import static org.apache.hadoop.util.ExitUtil.terminate;
 import static org.apache.hadoop.util.Time.now;
 
@@ -2602,7 +2602,7 @@ public class BlockManager implements BlockStatsMXBean {
           state == StoredReplicaState.EXCESS) {
         ReconstructionSkipReason.genReasonWithDetail(block, storage,
                 ReconstructionSkipReason.SOURCE_UNAVAILABLE,
-                DetailedReason.CORRUPT_OR_EXCESS);
+                SourceUnavailableDetail.CORRUPT_OR_EXCESS);
         continue;
       }
 
@@ -2612,7 +2612,7 @@ public class BlockManager implements BlockStatsMXBean {
           || state == StoredReplicaState.MAINTENANCE_NOT_FOR_READ) {
         ReconstructionSkipReason.genReasonWithDetail(block, storage,
                 ReconstructionSkipReason.SOURCE_UNAVAILABLE,
-                DetailedReason.MAINTENANCE_NOT_FOR_READ);
+                SourceUnavailableDetail.MAINTENANCE_NOT_FOR_READ);
         continue;
       }
 
@@ -2626,7 +2626,7 @@ public class BlockManager implements BlockStatsMXBean {
         }
         ReconstructionSkipReason.genReasonWithDetail(block, storage,
                 ReconstructionSkipReason.SOURCE_UNAVAILABLE,
-                DetailedReason.DECOMMISSIONED);
+                SourceUnavailableDetail.DECOMMISSIONED);
         continue;
       }
 
@@ -2653,7 +2653,7 @@ public class BlockManager implements BlockStatsMXBean {
         }
         ReconstructionSkipReason.genReasonWithDetail(block, storage,
                 ReconstructionSkipReason.SOURCE_UNAVAILABLE,
-                DetailedReason.REPLICATION_SOFT_LIMIT);
+                SourceUnavailableDetail.REPLICATION_SOFT_LIMIT);
         continue; // already reached replication limit
       }
 
@@ -2667,7 +2667,7 @@ public class BlockManager implements BlockStatsMXBean {
         }
         ReconstructionSkipReason.genReasonWithDetail(block, storage,
                 ReconstructionSkipReason.SOURCE_UNAVAILABLE,
-                DetailedReason.REPLICATION_HARD_LIMIT);
+                SourceUnavailableDetail.REPLICATION_HARD_LIMIT);
         continue;
       }
 

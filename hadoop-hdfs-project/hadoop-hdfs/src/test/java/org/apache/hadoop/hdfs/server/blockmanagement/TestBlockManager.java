@@ -118,9 +118,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static org.apache.hadoop.hdfs.server.blockmanagement.ReconstructionSkipReason.DetailedReason;
-import static org.apache.hadoop.hdfs.server.blockmanagement.ReconstructionSkipReason.DetailedReason.CORRUPT_OR_EXCESS;
-import static org.apache.hadoop.hdfs.server.blockmanagement.ReconstructionSkipReason.DetailedReason.DECOMMISSIONED;
+import static org.apache.hadoop.hdfs.server.blockmanagement.ReconstructionSkipReason.SourceUnavailableDetail.CORRUPT_OR_EXCESS;
+import static org.apache.hadoop.hdfs.server.blockmanagement.ReconstructionSkipReason.SourceUnavailableDetail.DECOMMISSIONED;
 import static org.apache.hadoop.hdfs.server.blockmanagement.ReconstructionSkipReason.SOURCE_UNAVAILABLE;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState.UNDER_CONSTRUCTION;
 import static org.apache.hadoop.test.MetricsAsserts.*;
