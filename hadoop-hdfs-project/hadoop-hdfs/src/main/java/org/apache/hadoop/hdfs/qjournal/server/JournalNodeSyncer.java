@@ -251,6 +251,7 @@ public class JournalNodeSyncer {
           storage = PBHelper.convert(storageInfoResponse, HdfsServerConstants.NodeType.JOURNAL_NODE);
           if (storage.getNamespaceID() == 0) {
             LOG.error("Got invalid StorageInfo from " + jnProxy);
+            storage = null;
             continue;
           }
           LOG.info("Got StorageInfo " + storage + " from " + jnProxy);
