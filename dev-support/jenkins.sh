@@ -197,7 +197,7 @@ function run_ci() {
 
   # don't let these tests cause -1s because we aren't really paying that
   # much attention to them
-  YETUS_ARGS+=("--tests-filter=checkstyle")
+  YETUS_ARGS+=("--tests-filter=checkstyle,test4tests")
 
   # effectively treat dev-suport as a custom maven module
   YETUS_ARGS+=("--skip-dirs=dev-support")
