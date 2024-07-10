@@ -206,7 +206,7 @@ public class ShellCommandFencer
    */
   private void setConfAsEnvVars(Map<String, String> env) {
     for (Map.Entry<String, String> pair : getConf()) {
-      env.put(pair.getKey().replace('.', '_'), pair.getValue());
+      env.put(pair.getKey().replaceAll("[.-]", "_"), pair.getValue());
     }
   }
 
