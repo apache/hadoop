@@ -96,14 +96,11 @@ public enum BlockSkippedForReconstructionReason {
         // build the error message for later use.
         HashMap<BlockInfo, StringBuilder> blockReason =  blockNotChosenReasonMap.get();
         StringBuilder reasonForBlock = null;
-        if(!blockReason.containsKey(block)){
-            reasonForBlock = new StringBuilder()
-                    .append("Block ")
-                    .append(block)
-                    .append(" didn't schedule ReconstructionWork for below reasons: \n [");
-        }else{
-            reasonForBlock = blockReason.get(block);
-        }
+        blockReason.putIfAbsent(block, new StringBuilder()
+                .append("Block ")
+                .append(block)
+                .append(" didn't schedule ReconstructionWork for below reasons: \n ["));
+        reasonForBlock = blockReason.get(block);
         switch (reason){
             case SOURCE_NODE_UNAVAILABLE:
                 reasonForBlock.append(" Source node storage ").append(storage==null?"None":storage).append(" is not chosen since ").append(reason);

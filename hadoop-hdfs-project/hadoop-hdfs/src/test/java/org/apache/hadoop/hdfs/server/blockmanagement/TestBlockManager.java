@@ -2357,7 +2357,7 @@ public class TestBlockManager {
       final int index = i;
       threads[i] = new Thread(() -> {
         try{
-          String newStorageID = "storageID"+index;
+          String newStorageID = "storageID_"+index;
           BlockSkippedForReconstructionReason.start();
           DatanodeStorageInfo sourceStorage = BlockManagerTestUtil
                   .newDatanodeStorageInfo(DFSTestUtil.getLocalDatanodeDescriptor(),
@@ -2400,6 +2400,6 @@ public class TestBlockManager {
       threads[i].start();
       threads[i].join(0);
     }
-    assertFalse(failure.get());
+    assertFalse("TestStorageNotChosenReason has error. Check the log for the details.", failure.get());
   }
 }
