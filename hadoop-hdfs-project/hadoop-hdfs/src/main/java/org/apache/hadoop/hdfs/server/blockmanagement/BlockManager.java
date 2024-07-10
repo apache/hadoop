@@ -2626,7 +2626,7 @@ public class BlockManager implements BlockStatsMXBean {
         }
         ReconstructionSkipReason.genReasonWithDetail(block, storage,
                 ReconstructionSkipReason.SOURCE_UNAVAILABLE,
-                DetailedReason.REPLICA_DECOMMISSIONED);
+                DetailedReason.DECOMMISSIONED);
         continue;
       }
 
