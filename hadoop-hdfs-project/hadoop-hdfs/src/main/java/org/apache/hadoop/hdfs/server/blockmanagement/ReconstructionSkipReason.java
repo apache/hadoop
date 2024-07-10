@@ -26,12 +26,12 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * When scheduling ReconstructionWork for a low-redundancy block, the scheduling may fail for overall 3 reasons:
+ * When scheduling ReconstructionWork for a low-redundancy block, the scheduling may fail for overall 3 high-level reasons:
  * 1. No source node is available
  * 2. No Target node is available
- * 3. ReconstructionWork validation failed
- * I put above 3 cases as BlockSkippedForReconstruction.
- *  - For the detailed reason of `No source node is available`,  I put it into DetailedReason enum
+ * 3. ReconstructionWork is built but validation failed
+ * I put above 3 cases as ReconstructionSkipReason.
+ *  - For the detailed reason of `No source node is available`,  I put it into SourceUnavailableDetail enum
  *  - For the detailed reason of `No Target node is available`,  we already has NodeNotChosenReason in BlockPlacementPolicyDefault
  */
 public enum ReconstructionSkipReason {

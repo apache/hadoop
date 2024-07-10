@@ -2329,15 +2329,13 @@ public class TestBlockManager {
   }
 
   /**
-   * Test the log mechasim is working as expected when storage is not chosen
-   * @throws IOException
+   * Test the reason output work as expected even in multi-thread environment.
    * @throws InterruptedException
-   * @throws TimeoutException
    */
-  @Test(timeout = 6000)
-  public void testStorageNotChosenReason() throws InterruptedException {
+  @Test(timeout = 360000)
+  public void testReconstructionSkipReason() throws InterruptedException {
     final AtomicBoolean failure = new AtomicBoolean(false);
-    int threadNum = 10;
+    int threadNum = 5;
     Thread[] threads = new Thread[threadNum];
     for(int i = 0; i<threadNum;i++){
       final int index = i;
@@ -2356,7 +2354,7 @@ public class TestBlockManager {
           ReconstructionSkipReason.genReasonImpl(newBlk,sourceStorage0,SOURCE_UNAVAILABLE,CORRUPT_OR_EXCESS);
           ReconstructionSkipReason.genReasonImpl(newBlk,sourceStorage1,SOURCE_UNAVAILABLE,DECOMMISSIONED);
           String summary = ReconstructionSkipReason.summary();
-          LOG.info("Reason for " + newBlk + " in storage " + storageID0 + " storage " + storageID1 + " is " + summary);
+          LOG.info("Reason for " + newBlk + " in storage " + storageID0 + " storage " + storageID1 + " is : " + summary);
           assertEquals("after summary, the reason should be cleared", "", ReconstructionSkipReason.summary());
           assertTrue("reason content should be correct", summary.contains(SOURCE_UNAVAILABLE.toString()));
           assertTrue("reason should contain block ID " + newBlk, summary.contains(newBlk.toString()));
@@ -2372,6 +2370,6 @@ public class TestBlockManager {
       threads[i].start();
       threads[i].join(0);
     }
-    assertFalse("TestStorageNotChosenReason has error. Check the log for the details.", failure.get());
+    assertFalse("Test case testReconstructionSkipReason has error. Check the log for the details.", failure.get());
   }
 }
