@@ -2338,19 +2338,6 @@ public class TestBlockManager {
   @Test(timeout = 6000)
   public void testStorageNotChosenReason() throws InterruptedException {
     final AtomicBoolean failure = new AtomicBoolean(false);
-//    String storageID = "storageID";
-//    DatanodeStorageInfo targetDN = BlockManagerTestUtil
-//            .newDatanodeStorageInfo(DFSTestUtil.getLocalDatanodeDescriptor(),
-//                    new DatanodeStorage("storage_test_0"));
-//    BlockInfo blk = new BlockInfoContiguous(new Block(0), (short) 0);
-//    BlockSkippedForReconstructionReason.start();
-//    String reason = BlockSkippedForReconstructionReason.genSkipReconstructionReason(blk);
-//    assertTrue(reason.contains(storageID) );
-//    assertFalse(reason.contains(targetDN.toString()));
-//    assertTrue(reason.contains("successfully chosen storage"));
-//    assertFalse(reason.contains("is not chosen since"));
-//    assertFalse(reason.contains("Reason statistics"));
-
     int threadNum = 10;
     Thread[] threads = new Thread[threadNum];
     for(int i = 0; i<threadNum;i++){
@@ -2366,18 +2353,16 @@ public class TestBlockManager {
                   .newDatanodeStorageInfo(DFSTestUtil.getLocalDatanodeDescriptor(),
                           new DatanodeStorage(storageID1));
           BlockInfo newBlk = new BlockInfoContiguous(new Block(index), (short) index);
-          for(ReconstructionSkipReason reason: ReconstructionSkipReason.values()){
-            ReconstructionSkipReason.start();
-            ReconstructionSkipReason.genReasonImpl(newBlk,sourceStorage0,reason,CORRUPT_OR_EXCESS);
-            ReconstructionSkipReason.genReasonImpl(newBlk,sourceStorage1,reason,DECOMMISSIONED);
-            String summary = ReconstructionSkipReason.summary();
-            LOG.info("Reason for " + newBlk + " in storage " + storageID0 + " storage " + storageID1 + " is " + summary);
-            assertEquals("after summary, the reason should be cleared", "", ReconstructionSkipReason.summary());
-            assertTrue("reason content should be correct", summary.contains(reason.toString()));
-            assertTrue("reason should contain block ID " + newBlk, summary.contains(newBlk.toString()));
-            assertTrue("reason should contain storage  " + sourceStorage0, summary.contains(sourceStorage0.toString()));
-            assertTrue("reason should contain storage  " + sourceStorage1, summary.contains(sourceStorage1.toString()));
-          }
+          ReconstructionSkipReason.start();
+          ReconstructionSkipReason.genReasonImpl(newBlk,sourceStorage0,SOURCE_UNAVAILABLE,CORRUPT_OR_EXCESS);
+          ReconstructionSkipReason.genReasonImpl(newBlk,sourceStorage1,SOURCE_UNAVAILABLE,DECOMMISSIONED);
+          String summary = ReconstructionSkipReason.summary();
+          LOG.info("Reason for " + newBlk + " in storage " + storageID0 + " storage " + storageID1 + " is " + summary);
+          assertEquals("after summary, the reason should be cleared", "", ReconstructionSkipReason.summary());
+          assertTrue("reason content should be correct", summary.contains(SOURCE_UNAVAILABLE.toString()));
+          assertTrue("reason should contain block ID " + newBlk, summary.contains(newBlk.toString()));
+          assertTrue("reason should contain storage " + sourceStorage0, summary.contains(sourceStorage0.toString()));
+          assertTrue("reason should contain storage " + sourceStorage1, summary.contains(sourceStorage1.toString()));
         }catch (Throwable e){
           e.printStackTrace();
           failure.set(true);

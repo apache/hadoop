@@ -99,15 +99,15 @@ public enum ReconstructionSkipReason {
         HashMap<BlockInfo, StringBuilder> blockReason =  blockNotChosenReasonMap.get();
         StringBuilder reasonForBlock = null;
         blockReason.putIfAbsent(block, new StringBuilder()
-                .append("Block [")
+                .append("Block ")
                 .append(block)
-                .append("] is not scheduled for reconstruction since: \n [ "));
+                .append(" is not scheduled for reconstruction since: ["));
         reasonForBlock = blockReason.get(block);
-        reasonForBlock.append(" ").append(reason);
+        reasonForBlock.append("\n").append(reason);
         if(storage != null)
             reasonForBlock.append(" on node ").append(storage);
         if (reasonDetails != null) {
-            reasonForBlock.append(". Detail Reason: [").append(reasonDetails).append("]");
+            reasonForBlock.append(". Detail : [").append(reasonDetails).append("]");
         }
     }
 
@@ -115,7 +115,7 @@ public enum ReconstructionSkipReason {
     static String summary(){
         StringBuilder finalReasonForAllBlocks = new StringBuilder();
         for(Map.Entry<BlockInfo, StringBuilder> blockReason: blockNotChosenReasonMap.get().entrySet()){
-            blockReason.getValue().append(" ]\n");
+            blockReason.getValue().append("\n]");
             finalReasonForAllBlocks.append(blockReason.getValue());
         }
         blockNotChosenReasonMap.get().clear();
