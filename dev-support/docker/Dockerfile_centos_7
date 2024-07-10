@@ -50,6 +50,7 @@ RUN yum update -y \
 # Apply the script again because centos-release-scl creates new YUM repo files
 RUN pkg-resolver/set-vault-as-baseurl-centos.sh centos:7
 
+# hadolint ignore=DL3008,SC2046
 RUN yum install -y $(pkg-resolver/resolve.py centos:7)
 
 # Set GCC 9 as the default C/C++ compiler
