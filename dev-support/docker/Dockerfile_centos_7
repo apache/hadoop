@@ -31,6 +31,13 @@ RUN chmod a+x pkg-resolver/*.sh pkg-resolver/*.py \
     && chmod a+r pkg-resolver/*.json
 
 ######
+# Centos 7 has reached its EOL and the packages
+# are no longer available on mirror.centos.org site.
+# Please see https://www.centos.org/centos-linux-eol/
+######
+RUN pkg-resolver/set-vault-as-baseurl-centos.sh centos:7
+
+######
 # Install packages from yum
 ######
 # hadolint ignore=DL3008,SC2046
@@ -38,8 +45,13 @@ RUN yum update -y \
     && yum groupinstall -y "Development Tools" \
     && yum install -y \
         centos-release-scl \
-        python3 \
-    && yum install -y $(pkg-resolver/resolve.py centos:7)
+        python3
+
+# Apply the script again because centos-release-scl creates new YUM repo files
+RUN pkg-resolver/set-vault-as-baseurl-centos.sh centos:7
+
+# hadolint ignore=DL3008,SC2046
+RUN yum install -y $(pkg-resolver/resolve.py centos:7)
 
 # Set GCC 9 as the default C/C++ compiler
 RUN echo "source /opt/rh/devtoolset-9/enable" >> /etc/bashrc
