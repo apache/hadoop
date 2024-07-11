@@ -63,6 +63,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Lists;
+import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -522,6 +523,10 @@ public class SaslDataTransferClient {
       BlockTokenIdentifier blockTokenIdentifier =
           accessToken.decodeIdentifier();
       final byte[] first = sasl.evaluateChallengeOrResponse(EMPTY_BYTE_ARRAY);
+      if (LOG.isDebugEnabled()) {
+        LOG.info("first: {}", first == null ? null : first.length == 0 ? "<empty>"
+            : StringUtils.byteToHexString(first));
+      }
       if (blockTokenIdentifier != null) {
         byte[] handshakeSecret =
             accessToken.decodeIdentifier().getHandshakeMsg();
