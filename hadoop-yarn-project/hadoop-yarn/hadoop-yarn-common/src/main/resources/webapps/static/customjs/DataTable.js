@@ -51,9 +51,9 @@
 
         // Customise the display text
         labels: {
-            placeholder: "Search...", // The search input placeholder
-            perPage: "{select} entries per page", // per-page dropdown label
-            noRows: "No entries found", // Message shown when there are no search results
+            placeholder: "Search:", // The search input placeholder
+            perPage: "Show {select} entries", // per-page dropdown label
+            noRows: "No data available in table", // Message shown when there are no search results
             info: "Showing {start} to {end} of {rows} entries" //
         },
 
@@ -193,10 +193,13 @@
      * @return {Object}
      */
     var button = function (c, p, t) {
-        return createElement("li", {
-            class: c,
-            html: '<a href="#" data-page="' + p + '">' + t + "</a>"
+        let btn = createElement("a", {
+            class: `paginate_button ${(t === "&lsaquo;")? "previous" : (t === "&rsaquo;")? "next" : ""} ${c}`,
+            href: "#",
         });
+        btn.dataset.page = p;
+        btn.innerText = (t === "&lsaquo;") ? "<" : (t === "&rsaquo;") ? ">" : t;
+        return btn;
     };
 
     /**
@@ -288,9 +291,9 @@
             }
         }
         each(h, function (c) {
-            var d = c.children[0].getAttribute("data-page");
+            var d = c.getAttribute("data-page");
             if (j) {
-                var e = j.children[0].getAttribute("data-page");
+                var e = j.getAttribute("data-page");
                 if (d - e == 2) i.push(a[e]);
                 else if (d - e != 1) {
                     var f = createElement("li", {
@@ -1006,7 +1009,7 @@
      * @return {Void}
      */
     proto.init = function (options) {
-        if (this.initialized || classList.contains(this.table, "dataTable-table")) {
+        if (this.initialized || classList.contains(this.table, "dataTables_wrapper")) {
             return false;
         }
 
@@ -1199,30 +1202,28 @@
 
         // Build
         that.wrapper = createElement("div", {
-            class: "dataTable-wrapper dataTable-loading"
+            class: "dataTables_wrapper no-footer",
+            id: "apps_wrapper"
         });
 
         // Template for custom layouts
-        template += "<div class='dataTable-top'>";
         template += o.layout.top;
-        template += "</div>";
-        template += "<div class='dataTable-container'></div>";
-        template += "<div class='dataTable-bottom'>";
+        template += "<div class='dataTables_container'></div>";
         template += o.layout.bottom;
-        template += "</div>";
 
         // Info placement
-        template = template.replace("{info}", "<div class='dataTable-info'></div>");
+        template = template.replace("{info}", "<div class='dataTables_info'></div>");
 
         // Per Page Select
         if (o.perPageSelect) {
-            var wrap = "<div class='dataTable-dropdown'><label>";
+            var wrap = "<div class='dataTables_length' id='apps_length'><label>";
             wrap += o.labels.perPage;
             wrap += "</label></div>";
 
             // Create the select
             var select = createElement("select", {
-                class: "dataTable-selector"
+                name: "apps_length",
+                class: "dataTables_selector"
             });
 
             // Create the options
@@ -1244,9 +1245,8 @@
         // Searchable
         if (o.searchable) {
             var form =
-                "<div class='dataTable-search'><input class='dataTable-input' placeholder='" +
-                o.labels.placeholder +
-                "' type='text'></div>";
+                "<div id='apps_filter' class='dataTables_filter'>\n<label>" + o.labels.placeholder +
+                "<input type='search' class placeholder aria-controls='apps'></label></div>";
 
             // Search input placement
             template = template.replace("{search}", form);
@@ -1260,25 +1260,38 @@
         }
 
         // Add table class
-        classList.add(that.table, "dataTable-table");
+        classList.add(that.table, "dataTable");
 
         // Paginator
         var w = createElement("div", {
-            class: "dataTable-pagination"
+            class: "dataTables_paginate",
+            id: "apps_paginate"
         });
-        var paginator = createElement("ul");
-        w.appendChild(paginator);
+        var paginator_button_first = createElement("a", {
+            class: "paginate_button previous",
+            id: "apps_previous",
+            innerText: "<"
+        });
+        var paginator_button_next = createElement("a", {
+            class: "paginate_button next",
+            id: "apps_next",
+            innerText: ">",
+        })
+        var paginator_span = createElement("span")
+        w.appendChild(paginator_button_first);
+        w.appendChild(paginator_span);
+        w.appendChild(paginator_button_next);
 
         // Pager(s) placement
         template = template.replace(/\{pager\}/g, w.outerHTML);
 
         that.wrapper.innerHTML = template;
 
-        that.container = that.wrapper.querySelector(".dataTable-container");
+        that.container = that.wrapper.querySelector(".dataTables_container");
 
-        that.pagers = that.wrapper.querySelectorAll(".dataTable-pagination");
+        that.pagers = that.wrapper.querySelectorAll(".dataTables_paginate");
 
-        that.label = that.wrapper.querySelector(".dataTable-info");
+        that.label = that.wrapper.querySelector(".dataTables_info");
 
         // Insert in to DOM tree
         that.table.parentNode.replaceChild(that.wrapper, that.table);
@@ -1476,7 +1489,7 @@
 
                 that.labels[i] = th.textContent;
 
-                if (classList.contains(th.firstElementChild, "dataTable-sorter")) {
+                if (classList.contains(th.firstElementChild, "dataTables_sorter")) {
                     th.innerHTML = th.firstElementChild.innerHTML;
                 }
 
@@ -1486,7 +1499,7 @@
                 if (that.options.sortable && th.sortable) {
                     var link = createElement("a", {
                         href: "#",
-                        class: "dataTable-sorter",
+                        class: "dataTables_sorter",
                         html: th.innerHTML
                     });
 
@@ -1510,7 +1523,7 @@
 
         // Per page selector
         if (o.perPageSelect) {
-            var selector = that.wrapper.querySelector(".dataTable-selector");
+            var selector = that.wrapper.querySelector(".dataTables_selector");
             if (selector) {
                 // Change per page
                 on(selector, "change", function (e) {
@@ -1526,9 +1539,12 @@
 
         // Search input
         if (o.searchable) {
-            that.input = that.wrapper.querySelector(".dataTable-input");
+            that.input = that.wrapper.querySelector('input[type="search"]');
             if (that.input) {
                 on(that.input, "keyup", function (e) {
+                    that.search(this.value);
+                });
+                on(that.input, "input", function (e) {
                     that.search(this.value);
                 });
             }
@@ -1543,7 +1559,7 @@
                     e.preventDefault();
                 } else if (
                     o.sortable &&
-                    classList.contains(t, "dataTable-sorter") &&
+                    classList.contains(t, "dataTables_sorter") &&
                     t.parentNode.getAttribute("data-sortable") != "false"
                 ) {
                     that.columns().sort(that.activeHeadings.indexOf(t.parentNode) + 1);
@@ -1617,6 +1633,12 @@
         if (that.hasRows) {
             each(that.data, function (row, i) {
                 row.dataIndex = i;
+                if (i % 2 == 0){
+                    row.classList.add("even");
+                }
+                else {
+                    row.classList.add("odd");
+                }
                 each(row.cells, function (cell) {
                     cell.data = cell.innerHTML;
                 });
@@ -1650,7 +1672,7 @@
         this.table.innerHTML = this.initialLayout;
 
         // Remove the className
-        classList.remove(this.table, "dataTable-table");
+        classList.remove(this.table, "dataTables_wrapper");
 
         // Remove the containers
         this.wrapper.parentNode.replaceChild(this.table, this.wrapper);
@@ -1663,7 +1685,7 @@
      * @return {Void}
      */
     proto.update = function () {
-        classList.remove(this.wrapper, "dataTable-empty");
+        classList.remove(this.wrapper, "dataTables_empty");
 
         this.paginate(this);
         this.render("page");
@@ -1856,10 +1878,8 @@
             classList.remove(that.wrapper, "search-results");
 
             that.setMessage(that.options.labels.noRows);
-        } else {
-            that.update();
         }
-
+        that.update();
         this.emit("datatable.search", query, this.searchData);
     };
 
@@ -2352,7 +2372,7 @@
             colspan = this.data[0].cells.length;
         }
 
-        classList.add(this.wrapper, "dataTable-empty");
+        classList.add(this.wrapper, "dataTables_empty");
 
         this.clear(
             createElement("tr", {

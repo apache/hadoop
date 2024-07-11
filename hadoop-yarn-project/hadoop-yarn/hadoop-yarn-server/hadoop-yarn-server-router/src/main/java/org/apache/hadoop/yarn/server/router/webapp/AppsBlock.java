@@ -172,7 +172,8 @@ public class AppsBlock extends RouterBlock {
 
     appsTableData.append("]");
     html.script().$type("text/javascript")
-        .__("var appsTableData=" + appsTableData).__();
+            .__("appsTableData=" + appsTableData + "\nopts.data = {data: appsTableData}" +
+                    "\nappsDataTable = DataTableHelper(elId, opts, true)").__();
 
     tbody.__().__();
   }

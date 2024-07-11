@@ -31,6 +31,7 @@ import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TABLE;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TBODY;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TR;
 import org.apache.hadoop.yarn.webapp.view.HtmlBlock;
+import org.apache.commons.text.StringEscapeUtils;
 
 import com.google.inject.Inject;
 
@@ -55,28 +56,52 @@ public class NodeLabelsPage extends RmView {
           th(".totalResource", "Total Resource").
           __().__().
           tbody();
-  
+
+      // List to store JSON data for DataTables
+      StringBuilder nodeLabelsTableData = new StringBuilder("[\n");
+
+      // Fetch node labels data
       RMNodeLabelsManager nlm = rm.getRMContext().getNodeLabelManager();
       for (RMNodeLabel info : nlm.pullRMNodeLabelsInfo()) {
-        TR<TBODY<TABLE<Hamlet>>> row =
-            tbody.tr().td(info.getLabelName().isEmpty()
-                ? NodeLabel.DEFAULT_NODE_LABEL_PARTITION : info.getLabelName());
-        String type =
-            (info.getIsExclusive()) ? "Exclusive Partition"
-                : "Non Exclusive Partition";
-        row = row.td(type);
+        String labelName = info.getLabelName().isEmpty() ? NodeLabel.DEFAULT_NODE_LABEL_PARTITION : info.getLabelName();
+        String labelType = info.getIsExclusive() ? "Exclusive Partition" : "Non Exclusive Partition";
         int nActiveNMs = info.getNumActiveNMs();
+        String totalResource = info.getResource().toFormattedString();
+
+        // Append data to JSON string
+        nodeLabelsTableData
+                .append("[\"")
+                .append(StringEscapeUtils.escapeEcmaScript(StringEscapeUtils.escapeHtml4(labelName)))
+                .append("\",\"")
+                .append(StringEscapeUtils.escapeEcmaScript(StringEscapeUtils.escapeHtml4(labelType)))
+                .append("\",\"")
+                .append(nActiveNMs)
+                .append("\",\"")
+                .append(StringEscapeUtils.escapeEcmaScript(StringEscapeUtils.escapeHtml4(totalResource)))
+                .append("\"],\n");
+
+        // Generate HTML table rows
+        TR<TBODY<TABLE<Hamlet>>> row = tbody.tr().td(labelName).td(labelType);
+
         if (nActiveNMs > 0) {
-          row = row.td()
-          .a(url("nodes",
-              "?" + YarnWebParams.NODE_LABEL + "=" + info.getLabelName()),
-              String.valueOf(nActiveNMs))
-           .__();
+          row = row.td().a(url("nodes", "?" + YarnWebParams.NODE_LABEL + "=" + labelName), String.valueOf(nActiveNMs)).__();
         } else {
           row = row.td(String.valueOf(nActiveNMs));
         }
-        row.td(info.getResource().toFormattedString()).__();
+
+        row.td(totalResource).__();
       }
+
+      if (nodeLabelsTableData.charAt(nodeLabelsTableData.length() - 2) == ',') {
+        nodeLabelsTableData.delete(nodeLabelsTableData.length() - 2, nodeLabelsTableData.length() - 1);
+      }
+      nodeLabelsTableData.append("]");
+
+      // Include DataTables initialization script with the JSON data
+      html.script().$type("text/javascript")
+              .__("nodeLabelsTableData=" + nodeLabelsTableData + "\nopts.data = {data: nodeLabelsTableData}" +
+                      "\nnodeLabelsDataTable = DataTableHelper('#nodelabels', opts, false);").__();
+
       tbody.__().__();
     }
   }
