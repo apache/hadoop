@@ -113,51 +113,51 @@ pipeline {
             }
         }
 
-        // This is an optional stage which runs only when there's a change in
-        // C++/C++ build/platform.
-        // This stage serves as a means of cross platform validation, which is
-        // really needed to ensure that any C++ related/platform change doesn't
-        // break the Hadoop build on Centos 7.
-        stage ('precommit-run Centos 7') {
-            environment {
-                SOURCEDIR = "${WORKSPACE}/centos-7/src"
-                PATCHDIR = "${WORKSPACE}/centos-7/out"
-                DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile_centos_7"
-                IS_OPTIONAL = 1
-            }
-
-            steps {
-                withCredentials(getGithubCreds()) {
-                    sh '''#!/usr/bin/env bash
-
-                    chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
-                    "${SOURCEDIR}/dev-support/jenkins.sh" run_ci
-                    '''
-                }
-            }
-
-            post {
-                // Since this is an optional platform, we want to copy the artifacts
-                // and archive it only if the build fails, to help with debugging.
-                failure {
-                    sh '''#!/usr/bin/env bash
-
-                    cp -Rp "${WORKSPACE}/centos-7/out" "${WORKSPACE}"
-                    '''
-                    archiveArtifacts "out/**"
-                }
-
-                cleanup() {
-                    script {
-                        sh '''#!/usr/bin/env bash
-
-                        chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
-                        "${SOURCEDIR}/dev-support/jenkins.sh" cleanup_ci_proc
-                        '''
-                    }
-                }
-            }
-        }
+//        // This is an optional stage which runs only when there's a change in
+//        // C++/C++ build/platform.
+//        // This stage serves as a means of cross platform validation, which is
+//        // really needed to ensure that any C++ related/platform change doesn't
+//        // break the Hadoop build on Centos 7.
+//        stage ('precommit-run Centos 7') {
+//            environment {
+//                SOURCEDIR = "${WORKSPACE}/centos-7/src"
+//                PATCHDIR = "${WORKSPACE}/centos-7/out"
+//                DOCKERFILE = "${SOURCEDIR}/dev-support/docker/Dockerfile_centos_7"
+//                IS_OPTIONAL = 1
+//            }
+//
+//            steps {
+//                withCredentials(getGithubCreds()) {
+//                    sh '''#!/usr/bin/env bash
+//
+//                    chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
+//                    "${SOURCEDIR}/dev-support/jenkins.sh" run_ci
+//                    '''
+//                }
+//            }
+//
+//            post {
+//                // Since this is an optional platform, we want to copy the artifacts
+//                // and archive it only if the build fails, to help with debugging.
+//                failure {
+//                    sh '''#!/usr/bin/env bash
+//
+//                    cp -Rp "${WORKSPACE}/centos-7/out" "${WORKSPACE}"
+//                    '''
+//                    archiveArtifacts "out/**"
+//                }
+//
+//                cleanup() {
+//                    script {
+//                        sh '''#!/usr/bin/env bash
+//
+//                        chmod u+x "${SOURCEDIR}/dev-support/jenkins.sh"
+//                        "${SOURCEDIR}/dev-support/jenkins.sh" cleanup_ci_proc
+//                        '''
+//                    }
+//                }
+//            }
+//        }
 
         // This is an optional stage which runs only when there's a change in
         // C++/C++ build/platform.

@@ -33,13 +33,14 @@ RUN chmod a+x pkg-resolver/*.sh pkg-resolver/*.py \
 ######
 # Install packages from yum
 ######
-# hadolint ignore=DL3008,SC2046
+# hadolint ignore=DL3008,SC2046,DL3033
 RUN yum update -y \
     && yum groupinstall -y "Development Tools" \
     && yum install -y \
         centos-release-scl \
         python3 \
-    && yum install -y $(pkg-resolver/resolve.py centos:7)
+    && yum install -y $(pkg-resolver/resolve.py centos:7) \
+    && yum clean all
 
 # Set GCC 9 as the default C/C++ compiler
 RUN echo "source /opt/rh/devtoolset-9/enable" >> /etc/bashrc

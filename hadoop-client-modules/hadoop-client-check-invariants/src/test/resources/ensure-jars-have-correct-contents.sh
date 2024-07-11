@@ -104,6 +104,7 @@ for artifact in "${artifact_list[@]}"; do
   fi
 done
 
+
 if [ "${bad_artifacts}" -gt 0 ]; then
   exit 1
 fi
