@@ -23,7 +23,6 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
@@ -33,6 +32,7 @@ import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.util.ConfigurationHelper;
 import org.apache.hadoop.util.Preconditions;
 
+import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.util.ConfigurationHelper.mapEnumNamesToValues;
 
 /**
@@ -48,9 +48,21 @@ import static org.apache.hadoop.util.ConfigurationHelper.mapEnumNamesToValues;
 public final class FlagSet<E extends Enum<E>> implements StreamCapabilities {
 
   /**
+   * Class of the enum.
+   * Used for duplicating the flags as java type erasure
+   * loses this information otherwise.
+   */
+  private final Class<E> enumClass;
+
+  /**
+   * Prefix for path capabilities probe.
+   */
+  private final String prefix;
+
+  /**
    * Set of flags.
    */
-  private final Set<E> flags;
+  private final EnumSet<E> flags;
 
   /**
    * Is the set immutable?
@@ -71,7 +83,8 @@ public final class FlagSet<E extends Enum<E>> implements StreamCapabilities {
   private FlagSet(final Class<E> enumClass,
       final String prefix,
       @Nullable final EnumSet<E> flags) {
-
+    this.enumClass = requireNonNull(enumClass, "null enumClass");
+    this.prefix = requireNonNull(prefix, "null prefix");
     this.flags = flags != null
         ? EnumSet.copyOf(flags)
         : EnumSet.noneOf(enumClass);
@@ -164,6 +177,22 @@ public final class FlagSet<E extends Enum<E>> implements StreamCapabilities {
     immutable.set(true);
   }
 
+  /**
+   * Is the FlagSet immutable?
+   * @return true iff the FlagSet is immutable.
+   */
+  public boolean isImmutable() {
+    return immutable.get();
+  }
+
+  /**
+   * Get the enum class.
+   * @return the enum class.
+   */
+  public Class<E> getEnumClass() {
+    return enumClass;
+  }
+
   @Override
   public String toString() {
     return "{" +
@@ -183,11 +212,16 @@ public final class FlagSet<E extends Enum<E>> implements StreamCapabilities {
         .collect(Collectors.toList());
   }
 
-
   /**
-   * Equality is based on the set.
+   * Equality is based on the value of {@link #enumClass} and
+   * {@link #prefix} and the contents of the set, which must match.
+   * <p>
+   * The immutability flag is not considered, nor is the
+   * {@link #namesToValues} map, though as that is generated from
+   * the enumeration and prefix, it is implicitly equal if the prefix
+   * and enumClass fields are equal.
    * @param o other object
-   * @return true iff the flags are equal.
+   * @return true iff the equality condition is met.
    */
   @Override
   public boolean equals(final Object o) {
@@ -198,7 +232,9 @@ public final class FlagSet<E extends Enum<E>> implements StreamCapabilities {
       return false;
     }
     FlagSet<?> flagSet = (FlagSet<?>) o;
-    return Objects.equals(flags, flagSet.flags);
+    return Objects.equals(enumClass, flagSet.enumClass)
+        && Objects.equals(prefix, flagSet.prefix)
+        && Objects.equals(flags, flagSet.flags);
   }
 
   /**
@@ -211,13 +247,21 @@ public final class FlagSet<E extends Enum<E>> implements StreamCapabilities {
   }
 
   /**
+   * Create a copy of the FlagSet.
+   * @return a new mutable instance with a separate copy of the flags
+   */
+  public FlagSet<E> copy() {
+    return new FlagSet<>(enumClass,  prefix, flags);
+  }
+
+  /**
    * Convert to a string which can be then set in a configuration.
    * This is effectively a marshalled form of the flags.
    * @return a comma separated list of flag names.
    */
   public String toConfigurationString() {
     return flags.stream()
-        .map(e -> e.name())
+        .map(Enum::name)
         .collect(Collectors.joining(", "));
   }
 
@@ -244,12 +288,17 @@ public final class FlagSet<E extends Enum<E>> implements StreamCapabilities {
    * @param <E> enum type
    * @return a mutable FlagSet
    */
+  @SafeVarargs
   public static <E extends Enum<E>> FlagSet<E> createFlagSet(
       final Class<E> enumClass,
       final String prefix,
       final E... enabled) {
     final FlagSet<E> flagSet = new FlagSet<>(enumClass, prefix, null);
-    Arrays.stream(enabled).forEach(flagSet::enable);
+    Arrays.stream(enabled).forEach(flag -> {
+      if (flag != null) {
+        flagSet.enable(flag);
+      }
+    });
     return flagSet;
   }
 

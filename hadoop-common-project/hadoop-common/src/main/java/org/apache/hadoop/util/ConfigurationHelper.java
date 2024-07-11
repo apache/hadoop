@@ -55,13 +55,13 @@ public final class ConfigurationHelper {
    * trim the list, map to enum values in the message (case insensitive)
    * and return the set.
    * Special handling of "*" meaning: all values.
-   * @param key key for error messages.
+   * @param key Configuration object key -used in error messages.
    * @param valueString value from Configuration
    * @param enumClass class of enum
    * @param ignoreUnknown should unknown values be ignored?
    * @param <E> enum type
-   * @return a mutable set of enum values listed in the valueString, with any unknown
-   * matches stripped.
+   * @return a mutable set of enum values parsed from the valueString, with any unknown
+   * matches stripped if {@code ignoreUnknown} is true.
    * @throws IllegalArgumentException if one of the entries was unknown and ignoreUnknown is false,
    * or there are two entries in the enum which differ only by case.
    */

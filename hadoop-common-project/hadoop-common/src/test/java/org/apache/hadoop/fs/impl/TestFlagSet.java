@@ -59,6 +59,11 @@ public final class TestFlagSet extends AbstractHadoopTestBase {
   private enum SimpleEnum { a, b, c }
 
   /**
+   * Enum with a single value.
+   */
+  private enum OtherEnum { a }
+
+  /**
    * Test that an entry can be enabled and disabled.
    */
   @Test
@@ -312,6 +317,50 @@ public final class TestFlagSet extends AbstractHadoopTestBase {
         .isNotEqualTo(s2);
   }
 
+  @Test
+  public void testClassInequality() {
+    final FlagSet<?> s1 =
+        createFlagSet(SimpleEnum.class, KEYDOT, noneOf(SimpleEnum.class));
+    final FlagSet<?> s2 =
+        createFlagSet(OtherEnum.class, KEYDOT, OtherEnum.a);
+    Assertions.assertThat(s1)
+        .describedAs("s1 == s2")
+        .isNotEqualTo(s2);
+  }
+
+  /**
+   * The copy operation creates a new instance which is now mutable,
+   * even if the original was immutable.
+   */
+  @Test
+  public void testCopy() throws Throwable {
+    FlagSet<SimpleEnum> s1 =
+            createFlagSet(SimpleEnum.class, KEYDOT, SimpleEnum.a, SimpleEnum.b);
+    s1.makeImmutable();
+    FlagSet<SimpleEnum> s2 = s1.copy();
+    Assertions.assertThat(s2)
+        .describedAs("copy of %s", s1)
+        .isNotSameAs(s1);
+    Assertions.assertThat(!s2.isImmutable())
+        .describedAs("set %s is immutable", s2)
+        .isTrue();
+    Assertions.assertThat(s1)
+        .describedAs("s1 == s2")
+        .isEqualTo(s2);
+  }
+
+  @Test
+  public void testCreateNullEnumClass() throws Throwable {
+    intercept(NullPointerException.class, () ->
+        createFlagSet(null, KEYDOT, SimpleEnum.a));
+  }
+
+  @Test
+  public void testCreateNullPrefix() throws Throwable {
+    intercept(NullPointerException.class, () ->
+        createFlagSet(SimpleEnum.class, null, SimpleEnum.a));
+  }
+
   /**
    * Round trip a FlagSet.
    * @param flagset FlagSet to save to a configuration and retrieve.
@@ -354,7 +403,7 @@ public final class TestFlagSet extends AbstractHadoopTestBase {
   }
 
   /**
-   * Assert that a flagset contains an exclusive set of values.
+   * Assert that a FlagSet contains an exclusive set of values.
    * @param flags flags which must be set.
    */
   private void assertFlagSetMatches(

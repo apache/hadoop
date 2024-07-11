@@ -82,25 +82,25 @@ public class TestConfigurationHelper extends AbstractHadoopTestBase {
   }
 
   @Test
-  public void testEnumParseAll() throws Throwable {
+  public void testEnumParseAll() {
     assertEnumParse("*", SimpleEnum.class, false)
         .containsExactly(SimpleEnum.a, SimpleEnum.b, SimpleEnum.c, SimpleEnum.i);
   }
 
   @Test
-  public void testEnumParse() throws Throwable {
+  public void testEnumParse() {
     assertEnumParse("a, b,c", SimpleEnum.class, false)
         .containsExactly(SimpleEnum.a, SimpleEnum.b, SimpleEnum.c);
   }
 
   @Test
-  public void testEnumCaseIndependence() throws Throwable {
+  public void testEnumCaseIndependence() {
     assertEnumParse("A, B, C, I", SimpleEnum.class, false)
         .containsExactly(SimpleEnum.a, SimpleEnum.b, SimpleEnum.c, SimpleEnum.i);
   }
 
   @Test
-  public void testEmptyArguments() throws Throwable {
+  public void testEmptyArguments() {
     assertEnumParse(" ", SimpleEnum.class, false)
         .isEmpty();
   }
@@ -119,15 +119,9 @@ public class TestConfigurationHelper extends AbstractHadoopTestBase {
   }
 
   @Test
-  public void testUnknownEnumIgnored() throws Throwable {
+  public void testUnknownEnumIgnored() {
     assertEnumParse("c, d", SimpleEnum.class, true)
         .containsExactly(SimpleEnum.c);
-  }
-
-  @Test
-  public void testStarEnum() throws Throwable {
-    assertEnumParse("*", SimpleEnum.class, false)
-        .containsExactly(SimpleEnum.a, SimpleEnum.b, SimpleEnum.c, SimpleEnum.i);
   }
 
   @Test
@@ -137,7 +131,7 @@ public class TestConfigurationHelper extends AbstractHadoopTestBase {
   }
 
   @Test
-  public void testUnknownStarEnumIgnored() throws Throwable {
+  public void testUnknownStarEnumIgnored() {
     assertEnumParse("*, d", SimpleEnum.class, true)
         .containsExactly(SimpleEnum.a, SimpleEnum.b, SimpleEnum.c, SimpleEnum.i);
   }
@@ -157,7 +151,7 @@ public class TestConfigurationHelper extends AbstractHadoopTestBase {
   }
 
   @Test
-  public void testEmptyEnumMap() throws Throwable {
+  public void testEmptyEnumMap() {
     Assertions.assertThat(mapEnumNamesToValues("", EmptyEnum.class))
         .isEmpty();
   }
@@ -166,8 +160,15 @@ public class TestConfigurationHelper extends AbstractHadoopTestBase {
    * A star enum for an empty enum must be empty.
    */
   @Test
-  public void testEmptyStarEnum() throws Throwable {
+  public void testEmptyStarEnum() {
     assertEnumParse("*", EmptyEnum.class, false)
         .isEmpty();
   }
+
+  @Test
+  public void testDuplicateValues() {
+    assertEnumParse("a, a, c, b, c", SimpleEnum.class, true)
+        .containsExactly(SimpleEnum.a, SimpleEnum.b, SimpleEnum.c);
+  }
+
 }
