@@ -270,7 +270,8 @@ class NodesPage extends RmView {
       }
       nodeTableData.append("]");
       html.script().$type("text/javascript")
-          .__("var nodeTableData=" + nodeTableData).__();
+              .__("nodeTableData=" + nodeTableData + "\nopts.data = {data: nodeTableData}" +
+                      "\nnodeDataTable = DataTableHelper(elId, opts, false)").__();
       tbody.__().__();
     }
   }
@@ -296,7 +297,7 @@ class NodesPage extends RmView {
   }
 
   private String nodesTableInit() {
-    StringBuilder b = tableInit().append(", 'aaData': nodeTableData")
+    StringBuilder b = tableInit()
         .append(", bDeferRender: true").append(", bProcessing: true")
         .append(", aoColumnDefs: [")
         .append("{'bSearchable': false, 'aTargets': [ 7 ]}")
