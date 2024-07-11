@@ -156,7 +156,7 @@
     <os-maven-plugin.version>1.7.0</os-maven-plugin.version>
 
     <!-- define the Java language version used by the compiler -->
-    <javac.version>17</javac.version>
+    <javac.version>1.8</javac.version>
     <javadoc.skip.jdk11>false</javadoc.skip.jdk11>
 
     <!-- The java version enforced by the maven enforcer -->
