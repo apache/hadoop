@@ -895,7 +895,7 @@ can be provided at the initialization of the filesystem:
    2. Default value: 5.
 3. `fs.azure.apache.http.client.max.io.exception.retries`:
    1. Maximum number of times the client will retry on IOExceptions for a single request
-      with ApacheHttpClient networking-layer. Breach of this limit would turn off 
+      with ApacheHttpClient networking-layer. Breach of this limit would turn off
       the future uses of the ApacheHttpClient library in the current JVM instance.
    2. Default value: 3.
 
