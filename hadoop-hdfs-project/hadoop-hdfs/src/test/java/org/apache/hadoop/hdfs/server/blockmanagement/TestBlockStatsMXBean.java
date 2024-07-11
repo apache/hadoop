@@ -291,4 +291,30 @@ public class TestBlockStatsMXBean {
             5000);
     IOUtils.closeStreams(hotSpFileStream, coldSpFileStream);
   }
+
+  @Test
+  public void testStorageTypePercentJMX() throws Exception {
+    URL baseUrl = new URL(cluster.getHttpUri(0));
+    String result = readOutput(new URL(baseUrl, "/jmx"));
+
+    Map<String, Object> stat = (Map<String, Object>) JSON.parse(result);
+    Object[] beans = (Object[]) stat.get("beans");
+    Map<String, Object> blockStats = null;
+    for (Object bean : beans) {
+      Map<String, Object> map = (Map<String, Object>) bean;
+      if (map.get("name").equals("Hadoop:service=NameNode,name=BlockStats")) {
+        blockStats = map;
+      }
+    }
+    assertNotNull(blockStats);
+    Object[] storageTypeStatsList =
+        (Object[]) blockStats.get("StorageTypeStats");
+    assertNotNull(storageTypeStatsList);
+    Map<String, Object> entry = (Map<String, Object>) storageTypeStatsList[0];
+    Map<String, Object> storageTypeStats = (Map<String, Object>) entry.get("value");
+
+    assertTrue(storageTypeStats.containsKey("percentUsed"));
+    assertTrue(storageTypeStats.containsKey("percentBlockPoolUsed"));
+    assertTrue(storageTypeStats.containsKey("percentRemaining"));
+  }
 }

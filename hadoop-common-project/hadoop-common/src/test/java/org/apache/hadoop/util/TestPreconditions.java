@@ -73,7 +73,6 @@ public class TestPreconditions {
 
     // failure with Null message
     LambdaTestUtils.intercept(NullPointerException.class,
-        null,
         () -> Preconditions.checkNotNull(null, errorMessage));
 
     // failure with message format
@@ -162,7 +161,6 @@ public class TestPreconditions {
     errorMessage = null;
     // failure with Null message
     LambdaTestUtils.intercept(IllegalArgumentException.class,
-        null,
         () -> Preconditions.checkArgument(false, errorMessage));
     // failure with message
     errorMessage = EXPECTED_ERROR_MSG;
@@ -200,7 +198,6 @@ public class TestPreconditions {
     // failure with Null supplier
     final Supplier<String> nullSupplier = null;
     LambdaTestUtils.intercept(IllegalArgumentException.class,
-        null,
         () -> Preconditions.checkArgument(false, nullSupplier));
 
     // ignore illegal format in supplier
@@ -262,7 +259,6 @@ public class TestPreconditions {
     errorMessage = null;
     // failure with Null message
     LambdaTestUtils.intercept(IllegalStateException.class,
-        null,
         () -> Preconditions.checkState(false, errorMessage));
     // failure with message
     errorMessage = EXPECTED_ERROR_MSG;
@@ -300,7 +296,6 @@ public class TestPreconditions {
     // failure with Null supplier
     final Supplier<String> nullSupplier = null;
     LambdaTestUtils.intercept(IllegalStateException.class,
-        null,
         () -> Preconditions.checkState(false, nullSupplier));
 
     // ignore illegal format in supplier

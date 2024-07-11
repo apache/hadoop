@@ -1038,7 +1038,7 @@ public class TestRPC extends TestRpcBase {
     // disable ping & timeout to minimize traffic
     clientConf.setBoolean(CommonConfigurationKeys.IPC_CLIENT_PING_KEY, false);
     clientConf.setInt(CommonConfigurationKeys.IPC_CLIENT_RPC_TIMEOUT_KEY, 0);
-    RPC.setProtocolEngine(clientConf, TestRpcService.class, ProtobufRpcEngine.class);
+    RPC.setProtocolEngine(clientConf, TestRpcService.class, ProtobufRpcEngine2.class);
     // set async mode so that we don't need to implement the input stream
     final boolean wasAsync = Client.isAsynchronousMode();
     TestRpcService client = null;
@@ -1165,7 +1165,7 @@ public class TestRPC extends TestRpcBase {
     clientConf.set(CommonConfigurationKeys.IPC_MAXIMUM_RESPONSE_LENGTH,
         "xxx");
     RPC.setProtocolEngine(clientConf, TestRpcService.class,
-        ProtobufRpcEngine.class);
+        ProtobufRpcEngine2.class);
     TestRpcService client = null;
     int threadCount = Thread.getAllStackTraces().size();
     try {

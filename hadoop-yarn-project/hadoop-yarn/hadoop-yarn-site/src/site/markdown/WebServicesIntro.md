@@ -48,7 +48,7 @@ Currently only GET is supported. It retrieves information about the resource spe
 
 ### Security
 
-The web service REST API's go through the same security as the web UI. If your cluster adminstrators have filters enabled you must authenticate via the mechanism they specified.
+The web service REST API's go through the same security as the web UI. If your cluster administrators have filters enabled you must authenticate via the mechanism they specified.
 
 ### Headers Supported
 
@@ -70,7 +70,7 @@ This release supports gzip compression if you specify gzip in the Accept-Encodin
 
 This release of the web service REST APIs supports responses in JSON and XML formats. JSON is the default. To set the response format, you can specify the format in the Accept header of the HTTP request.
 
-As specified in HTTP Response Codes, the response body can contain the data that represents the resource or an error message. In the case of success, the response body is in the selected format, either JSON or XML. In the case of error, the resonse body is in either JSON or XML based on the format requested. The Content-Type header of the response contains the format requested. If the application requests an unsupported format, the response status code is 500. Note that the order of the fields within response body is not specified and might change. Also, additional fields might be added to a response body. Therefore, your applications should use parsing routines that can extract data from a response body in any order.
+As specified in HTTP Response Codes, the response body can contain the data that represents the resource or an error message. In the case of success, the response body is in the selected format, either JSON or XML. In the case of error, the response body is in either JSON or XML based on the format requested. The Content-Type header of the response contains the format requested. If the application requests an unsupported format, the response status code is 500. Note that the order of the fields within response body is not specified and might change. Also, additional fields might be added to a response body. Therefore, your applications should use parsing routines that can extract data from a response body in any order.
 
 ### Response Errors
 
@@ -101,7 +101,7 @@ Response Body:
 
 ```json
 {
-  app":
+  "app":
   {
     "id":"application_1324057493980_0001",
     "user":"user1",

@@ -32,7 +32,6 @@ import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.RetryNTimes;
 import org.apache.curator.test.TestingServer;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreUtils;
 import org.apache.hadoop.hdfs.server.federation.store.driver.impl.StateStoreZooKeeperImpl;
@@ -71,7 +70,7 @@ public class TestStateStoreZK extends TestStateStoreDriverBase {
     // Create the ZK State Store
     Configuration conf =
         getStateStoreConfiguration(StateStoreZooKeeperImpl.class);
-    conf.set(CommonConfigurationKeys.ZK_ADDRESS, connectString);
+    conf.set(RBFConfigKeys.FEDERATION_STORE_ZK_ADDRESS, connectString);
     // Disable auto-repair of connection
     conf.setLong(RBFConfigKeys.FEDERATION_STORE_CONNECTION_TEST_MS,
         TimeUnit.HOURS.toMillis(1));
@@ -140,17 +139,28 @@ public class TestStateStoreZK extends TestStateStoreDriverBase {
       insertList.add(newRecord);
     }
     // Insert Multiple on sync mode
-    long startSync = Time.now();
+    long startSyncPut = Time.now();
     stateStoreDriver.putAll(insertList, true, false);
-    long endSync = Time.now();
+    long endSyncPut = Time.now();
+    // Removing 1000 records synchronously is painfully slow so test with only 5 records
+    // Then remove the rest with removeAll()
+    long startSyncRemove = Time.now();
+    for (MountTable entry : insertList.subList(0, 5)) {
+      stateStoreDriver.remove(entry);
+    }
+    long endSyncRemove = Time.now();
     stateStoreDriver.removeAll(MembershipState.class);
 
     stateStoreDriver.setEnableConcurrent(true);
     // Insert Multiple on async mode
-    long startAsync = Time.now();
+    long startAsyncPut = Time.now();
     stateStoreDriver.putAll(insertList, true, false);
-    long endAsync = Time.now();
-    assertTrue((endSync - startSync) > (endAsync - startAsync));
+    long endAsyncPut = Time.now();
+    long startAsyncRemove = Time.now();
+    stateStoreDriver.removeMultiple(insertList.subList(0, 5));
+    long endAsyncRemove = Time.now();
+    assertTrue((endSyncPut - startSyncPut) > (endAsyncPut - startAsyncPut));
+    assertTrue((endSyncRemove - startSyncRemove) > (endAsyncRemove - startAsyncRemove));
   }
 
   @Test

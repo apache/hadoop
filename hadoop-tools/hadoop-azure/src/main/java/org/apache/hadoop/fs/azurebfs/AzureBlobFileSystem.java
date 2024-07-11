@@ -41,16 +41,15 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-
 import javax.annotation.Nullable;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.impl.BackReference;
 import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -115,6 +114,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL_DEFAULT;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_STANDARD_OPTIONS;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.*;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CPK_IN_NON_HNS_ACCOUNT_ERROR_MESSAGE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.DATA_BLOCKS_BUFFER;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_BLOCK_UPLOAD_ACTIVE_BLOCKS;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_BLOCK_UPLOAD_BUFFER_DIR;
@@ -223,6 +223,26 @@ public class AzureBlobFileSystem extends FileSystem
       }
     }
 
+    /*
+     * Non-hierarchical-namespace account can not have a customer-provided-key(CPK).
+     * Fail initialization of filesystem if the configs are provided. CPK is of
+     * two types: GLOBAL_KEY, and ENCRYPTION_CONTEXT.
+     */
+    if ((isEncryptionContextCPK(abfsConfiguration) || isGlobalKeyCPK(
+        abfsConfiguration))
+        && !getIsNamespaceEnabled(
+        new TracingContext(clientCorrelationId, fileSystemId,
+            FSOperationType.CREATE_FILESYSTEM, tracingHeaderFormat,
+            listener))) {
+      /*
+       * Close the filesystem gracefully before throwing exception. Graceful close
+       * will ensure that all resources are released properly.
+       */
+      close();
+      throw new PathIOException(uri.getPath(),
+          CPK_IN_NON_HNS_ACCOUNT_ERROR_MESSAGE);
+    }
+
     LOG.trace("Initiate check for delegation token manager");
     if (UserGroupInformation.isSecurityEnabled()) {
       this.delegationTokenEnabled = abfsConfiguration.isDelegationTokenManagerEnabled();
@@ -237,6 +257,15 @@ public class AzureBlobFileSystem extends FileSystem
 
     rateLimiting = RateLimitingFactory.create(abfsConfiguration.getRateLimit());
     LOG.debug("Initializing AzureBlobFileSystem for {} complete", uri);
+  }
+
+  private boolean isGlobalKeyCPK(final AbfsConfiguration abfsConfiguration) {
+    return StringUtils.isNotEmpty(
+        abfsConfiguration.getEncodedClientProvidedEncryptionKey());
+  }
+
+  private boolean isEncryptionContextCPK(final AbfsConfiguration abfsConfiguration) {
+    return abfsConfiguration.createEncryptionContextProvider() != null;
   }
 
   @Override
@@ -279,7 +308,7 @@ public class AzureBlobFileSystem extends FileSystem
     try {
       TracingContext tracingContext = new TracingContext(clientCorrelationId,
           fileSystemId, FSOperationType.OPEN, tracingHeaderFormat, listener);
-      InputStream inputStream = abfsStore
+      InputStream inputStream = getAbfsStore()
           .openFileForRead(qualifiedPath, parameters, statistics, tracingContext);
       return new FSDataInputStream(inputStream);
     } catch (AzureBlobFileSystemException ex) {
@@ -700,6 +729,18 @@ public class AzureBlobFileSystem extends FileSystem
     if (isClosed) {
       return;
     }
+    if (abfsStore.getClient().isMetricCollectionEnabled()) {
+      TracingContext tracingMetricContext = new TracingContext(
+              clientCorrelationId,
+              fileSystemId, FSOperationType.GET_ATTR, true,
+              tracingHeaderFormat,
+              listener, abfsCounters.toString());
+      try {
+        getAbfsClient().getMetricCall(tracingMetricContext);
+      } catch (IOException e) {
+        throw new IOException(e);
+      }
+    }
     // does all the delete-on-exit calls, and may be slow.
     super.close();
     LOG.debug("AzureBlobFileSystem.close");
@@ -952,7 +993,7 @@ public class AzureBlobFileSystem extends FileSystem
   }
 
   /**
-   * Set the value of an attribute for a path.
+   * Set the value of an attribute for a non-root path.
    *
    * @param path The path on which to set the attribute
    * @param name The attribute to set
@@ -979,32 +1020,22 @@ public class AzureBlobFileSystem extends FileSystem
       TracingContext tracingContext = new TracingContext(clientCorrelationId,
           fileSystemId, FSOperationType.SET_ATTR, true, tracingHeaderFormat,
           listener);
-      Hashtable<String, String> properties;
+      Hashtable<String, String> properties = abfsStore
+          .getPathStatus(qualifiedPath, tracingContext);
       String xAttrName = ensureValidAttributeName(name);
-
-      if (path.isRoot()) {
-        properties = abfsStore.getFilesystemProperties(tracingContext);
-      } else {
-        properties = abfsStore.getPathStatus(qualifiedPath, tracingContext);
-      }
-
       boolean xAttrExists = properties.containsKey(xAttrName);
       XAttrSetFlag.validate(name, xAttrExists, flag);
 
       String xAttrValue = abfsStore.decodeAttribute(value);
       properties.put(xAttrName, xAttrValue);
-      if (path.isRoot()) {
-        abfsStore.setFilesystemProperties(properties, tracingContext);
-      } else {
-        abfsStore.setPathProperties(qualifiedPath, properties, tracingContext);
-      }
+      abfsStore.setPathProperties(qualifiedPath, properties, tracingContext);
     } catch (AzureBlobFileSystemException ex) {
       checkException(path, ex);
     }
   }
 
   /**
-   * Get the value of an attribute for a path.
+   * Get the value of an attribute for a non-root path.
    *
    * @param path The path on which to get the attribute
    * @param name The attribute to get
@@ -1029,15 +1060,9 @@ public class AzureBlobFileSystem extends FileSystem
       TracingContext tracingContext = new TracingContext(clientCorrelationId,
           fileSystemId, FSOperationType.GET_ATTR, true, tracingHeaderFormat,
           listener);
-      Hashtable<String, String> properties;
+      Hashtable<String, String> properties = abfsStore
+          .getPathStatus(qualifiedPath, tracingContext);
       String xAttrName = ensureValidAttributeName(name);
-
-      if (path.isRoot()) {
-        properties = abfsStore.getFilesystemProperties(tracingContext);
-      } else {
-        properties = abfsStore.getPathStatus(qualifiedPath, tracingContext);
-      }
-
       if (properties.containsKey(xAttrName)) {
         String xAttrValue = properties.get(xAttrName);
         value = abfsStore.encodeAttribute(xAttrValue);
@@ -1308,10 +1333,9 @@ public class AzureBlobFileSystem extends FileSystem
 
   /**
    * Incrementing exists() calls from superclass for statistic collection.
-   *
    * @param f source path.
    * @return true if the path exists.
-   * @throws IOException
+   * @throws IOException if some issue in checking path.
    */
   @Override
   public boolean exists(Path f) throws IOException {
@@ -1696,3 +1720,4 @@ public class AzureBlobFileSystem extends FileSystem
     return abfsCounters != null ? abfsCounters.getIOStatistics() : null;
   }
 }
+

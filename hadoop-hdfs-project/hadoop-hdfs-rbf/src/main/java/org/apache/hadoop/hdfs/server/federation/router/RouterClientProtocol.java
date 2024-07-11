@@ -106,6 +106,7 @@ import java.io.Serializable;
 import java.net.ConnectException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -667,39 +668,28 @@ public class RouterClientProtocol implements ClientProtocol {
   public void concat(String trg, String[] src) throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.WRITE);
 
-    // See if the src and target files are all in the same namespace
-    LocatedBlocks targetBlocks = getBlockLocations(trg, 0, 1);
-    if (targetBlocks == null) {
-      throw new IOException("Cannot locate blocks for target file - " + trg);
+    // Concat only effects when all files in the same namespace.
+    RemoteLocation targetDestination = getFileRemoteLocation(trg);
+    if (targetDestination == null) {
+      throw new IOException("Cannot find target file - " + trg);
     }
-    LocatedBlock lastLocatedBlock = targetBlocks.getLastLocatedBlock();
-    String targetBlockPoolId = lastLocatedBlock.getBlock().getBlockPoolId();
-    for (String source : src) {
-      LocatedBlocks sourceBlocks = getBlockLocations(source, 0, 1);
-      if (sourceBlocks == null) {
-        throw new IOException(
-            "Cannot located blocks for source file " + source);
-      }
-      String sourceBlockPoolId =
-          sourceBlocks.getLastLocatedBlock().getBlock().getBlockPoolId();
-      if (!sourceBlockPoolId.equals(targetBlockPoolId)) {
-        throw new IOException("Cannot concatenate source file " + source
-            + " because it is located in a different namespace"
-            + " with block pool id " + sourceBlockPoolId
-            + " from the target file with block pool id "
-            + targetBlockPoolId);
-      }
-    }
+    String targetNameService = targetDestination.getNameserviceId();
 
-    // Find locations in the matching namespace.
-    final RemoteLocation targetDestination =
-        rpcServer.getLocationForPath(trg, true, targetBlockPoolId);
     String[] sourceDestinations = new String[src.length];
     for (int i = 0; i < src.length; i++) {
       String sourceFile = src[i];
-      RemoteLocation location =
-          rpcServer.getLocationForPath(sourceFile, true, targetBlockPoolId);
-      sourceDestinations[i] = location.getDest();
+      RemoteLocation srcLocation = getFileRemoteLocation(sourceFile);
+      if (srcLocation == null) {
+        throw new IOException("Cannot find source file - " + sourceFile);
+      }
+      sourceDestinations[i] = srcLocation.getDest();
+
+      if (!targetNameService.equals(srcLocation.getNameserviceId())) {
+        throw new IOException("Cannot concatenate source file " + sourceFile
+            + " because it is located in a different namespace" + " with nameservice "
+            + srcLocation.getNameserviceId() + " from the target file with nameservice "
+            + targetNameService);
+      }
     }
     // Invoke
     RemoteMethod method = new RemoteMethod("concat",
@@ -1007,6 +997,28 @@ public class RouterClientProtocol implements ClientProtocol {
     }
 
     return ret;
+  }
+
+  public RemoteLocation getFileRemoteLocation(String path) throws IOException {
+    rpcServer.checkOperation(NameNode.OperationCategory.READ);
+
+    final List<RemoteLocation> locations = rpcServer.getLocationsForPath(path, false, false);
+    if (locations.size() == 1) {
+      return locations.get(0);
+    }
+    RemoteLocation remoteLocation = null;
+    for (RemoteLocation location : locations) {
+      RemoteMethod method =
+          new RemoteMethod("getFileInfo", new Class<?>[] {String.class}, new RemoteParam());
+      HdfsFileStatus ret = rpcClient.invokeSequential(Collections.singletonList(location), method,
+          HdfsFileStatus.class, null);
+      if (ret != null) {
+        remoteLocation = location;
+        break;
+      }
+    }
+
+    return remoteLocation;
   }
 
   @Override

@@ -21,6 +21,10 @@ package org.apache.hadoop.util.functional;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.UncheckedIOException;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -115,12 +119,62 @@ public final class FutureIO {
   }
 
   /**
+   * Evaluates a collection of futures and returns their results as a list.
+   * <p>
+   * This method blocks until all futures in the collection have completed.
+   * If any future throws an exception during its execution, this method
+   * extracts and rethrows that exception.
+   * </p>
+   * @param collection collection of futures to be evaluated
+   * @param <T> type of the result.
+   * @return the list of future's result, if all went well.
+   * @throws InterruptedIOException future was interrupted
+   * @throws IOException if something went wrong
+   * @throws RuntimeException any nested RTE thrown
+   */
+  public static <T> List<T> awaitAllFutures(final Collection<Future<T>> collection)
+      throws InterruptedIOException, IOException, RuntimeException {
+    List<T> results = new ArrayList<>();
+    for (Future<T> future : collection) {
+      results.add(awaitFuture(future));
+    }
+    return results;
+  }
+
+  /**
+   * Evaluates a collection of futures and returns their results as a list,
+   * but only waits up to the specified timeout for each future to complete.
+   * <p>
+   * This method blocks until all futures in the collection have completed or
+   * the timeout expires, whichever happens first. If any future throws an
+   * exception during its execution, this method extracts and rethrows that exception.
+   * </p>
+   * @param collection collection of futures to be evaluated
+   * @param duration timeout duration
+   * @param <T> type of the result.
+   * @return the list of future's result, if all went well.
+   * @throws InterruptedIOException future was interrupted
+   * @throws IOException if something went wrong
+   * @throws RuntimeException any nested RTE thrown
+   * @throws TimeoutException the future timed out.
+   */
+  public static <T> List<T> awaitAllFutures(final Collection<Future<T>> collection,
+      final Duration duration)
+      throws InterruptedIOException, IOException, RuntimeException,
+             TimeoutException {
+    List<T> results = new ArrayList<>();
+    for (Future<T> future : collection) {
+      results.add(awaitFuture(future, duration.toMillis(), TimeUnit.MILLISECONDS));
+    }
+    return results;
+  }
+
+  /**
    * From the inner cause of an execution exception, extract the inner cause
    * if it is an IOE or RTE.
    * This will always raise an exception, either the inner IOException,
    * an inner RuntimeException, or a new IOException wrapping the raised
    * exception.
-   *
    * @param e exception.
    * @param <T> type of return value.
    * @return nothing, ever.
@@ -204,12 +258,11 @@ public final class FutureIO {
    * @param <U> type of builder
    * @return the builder passed in.
    */
-  public static <T, U extends FSBuilder<T, U>>
-      FSBuilder<T, U> propagateOptions(
-        final FSBuilder<T, U> builder,
-        final Configuration conf,
-        final String optionalPrefix,
-        final String mandatoryPrefix) {
+  public static <T, U extends FSBuilder<T, U>> FSBuilder<T, U> propagateOptions(
+      final FSBuilder<T, U> builder,
+      final Configuration conf,
+      final String optionalPrefix,
+      final String mandatoryPrefix) {
     propagateOptions(builder, conf,
         optionalPrefix, false);
     propagateOptions(builder, conf,

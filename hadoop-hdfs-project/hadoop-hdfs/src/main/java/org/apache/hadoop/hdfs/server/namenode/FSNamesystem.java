@@ -97,6 +97,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DIFF_LI
 import static org.apache.hadoop.hdfs.DFSUtil.isParentEntry;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.text.CaseUtils;
@@ -579,6 +580,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   private ExecutorService edekCacheLoader = null;
   private final int edekCacheLoaderDelay;
   private final int edekCacheLoaderInterval;
+  private final int edekCacheLoaderMaxRetries;
 
   /**
    * When an active namenode will roll its own edit log, in # edits
@@ -1012,6 +1014,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       this.edekCacheLoaderInterval = conf.getInt(
           DFSConfigKeys.DFS_NAMENODE_EDEKCACHELOADER_INTERVAL_MS_KEY,
           DFSConfigKeys.DFS_NAMENODE_EDEKCACHELOADER_INTERVAL_MS_DEFAULT);
+      this.edekCacheLoaderMaxRetries = conf.getInt(
+          DFSConfigKeys.DFS_NAMENODE_EDEKCACHELOADER_MAX_RETRIES_KEY,
+          DFSConfigKeys.DFS_NAMENODE_EDEKCACHELOADER_MAX_RETRIES_DEFAULT);
 
       this.leaseRecheckIntervalMs = conf.getLong(
           DFS_NAMENODE_LEASE_RECHECK_INTERVAL_MS_KEY,
@@ -1401,7 +1406,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         editLogTailer.catchupDuringFailover();
         
         blockManager.setPostponeBlocksFromFuture(false);
-        blockManager.getDatanodeManager().markAllDatanodesStale();
+        blockManager.getDatanodeManager().markAllDatanodesStaleAndSetKeyUpdateIfNeed();
         blockManager.clearQueues();
         blockManager.processAllPendingDNMessages();
         blockManager.getBlockIdManager().applyImpendingGenerationStamp();
@@ -1470,8 +1475,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             new ThreadFactoryBuilder().setDaemon(true)
                 .setNameFormat("Warm Up EDEK Cache Thread #%d")
                 .build());
-        FSDirEncryptionZoneOp.warmUpEdekCache(edekCacheLoader, dir,
-            edekCacheLoaderDelay, edekCacheLoaderInterval);
+        FSDirEncryptionZoneOp
+            .warmUpEdekCache(edekCacheLoader, dir, edekCacheLoaderDelay, edekCacheLoaderInterval,
+                edekCacheLoaderMaxRetries);
       }
       if (blockManager.getSPSManager() != null) {
         blockManager.getSPSManager().start();
@@ -1531,10 +1537,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       if (dir != null && getFSImage() != null) {
         if (getFSImage().editLog != null) {
           getFSImage().editLog.close();
+          // Update the fsimage with the last txid that we wrote
+          // so that the tailer starts from the right spot.
+          getFSImage().updateLastAppliedTxIdFromWritten();
         }
-        // Update the fsimage with the last txid that we wrote
-        // so that the tailer starts from the right spot.
-        getFSImage().updateLastAppliedTxIdFromWritten();
       }
       if (dir != null) {
         dir.ezManager.stopReencryptThread();
@@ -1577,6 +1583,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     if (!isObserver && standbyShouldCheckpoint) {
       standbyCheckpointer = new StandbyCheckpointer(conf, this);
       standbyCheckpointer.start();
+    }
+    if (isNoManualAndResourceLowSafeMode()) {
+      LOG.info("Standby should not enter safe mode when resources are low, exiting safe mode.");
+      leaveSafeMode(false);
     }
   }
 
@@ -2614,9 +2624,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    * @throws  IOException
    */
   BlockStoragePolicy getStoragePolicy(String src) throws IOException {
+    final String operationName = "getStoragePolicy";
     checkOperation(OperationCategory.READ);
     final FSPermissionChecker pc = getPermissionChecker();
-    FSPermissionChecker.setOperationType(null);
+    FSPermissionChecker.setOperationType(operationName);
     readLock();
     try {
       checkOperation(OperationCategory.READ);
@@ -2642,9 +2653,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   long getPreferredBlockSize(String src) throws IOException {
+    final String operationName = "getPreferredBlockSize";
     checkOperation(OperationCategory.READ);
     final FSPermissionChecker pc = getPermissionChecker();
-    FSPermissionChecker.setOperationType(null);
+    FSPermissionChecker.setOperationType(operationName);
     readLock();
     try {
       checkOperation(OperationCategory.READ);
@@ -2705,6 +2717,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       String storagePolicy, boolean logRetryCache) throws IOException {
 
     HdfsFileStatus status;
+    final String operationName = "create";
+    FSPermissionChecker.setOperationType(operationName);
     try {
       status = startFileInt(src, permissions, holder, clientMachine, flag,
           createParent, replication, blockSize, supportedVersions, ecPolicyName,
@@ -2760,7 +2774,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
     checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = getPermissionChecker();
-    FSPermissionChecker.setOperationType(null);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -2853,9 +2866,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   boolean recoverLease(String src, String holder, String clientMachine)
       throws IOException {
     boolean skipSync = false;
+    final String operationName = "recoverLease";
     checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = getPermissionChecker();
-    FSPermissionChecker.setOperationType(null);
+    FSPermissionChecker.setOperationType(operationName);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -3101,9 +3115,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     final byte storagePolicyID;
     final List<DatanodeStorageInfo> chosen;
     final BlockType blockType;
+    final String operationName = "getAdditionalDatanode";
     checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = getPermissionChecker();
-    FSPermissionChecker.setOperationType(null);
+    FSPermissionChecker.setOperationType(operationName);
     readLock();
     try {
       // Changing this operation category to WRITE instead of making getAdditionalDatanode as a
@@ -3151,10 +3166,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   void abandonBlock(ExtendedBlock b, long fileId, String src, String holder)
       throws IOException {
+    final String operationName = "abandonBlock";
     NameNode.stateChangeLog.debug("BLOCK* NameSystem.abandonBlock: {} of file {}", b, src);
     checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = getPermissionChecker();
-    FSPermissionChecker.setOperationType(null);
+    FSPermissionChecker.setOperationType(operationName);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -3218,9 +3234,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
                        ExtendedBlock last, long fileId)
     throws IOException {
     boolean success = false;
+    final String operationName = "completeFile";
     checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = getPermissionChecker();
-    FSPermissionChecker.setOperationType(null);
+    FSPermissionChecker.setOperationType(operationName);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -3662,10 +3679,11 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   void fsync(String src, long fileId, String clientName, long lastBlockLength)
       throws IOException {
+    final String operationName = "fsync";
     NameNode.stateChangeLog.info("BLOCK* fsync: " + src + " for " + clientName);
     checkOperation(OperationCategory.WRITE);
     final FSPermissionChecker pc = getPermissionChecker();
-    FSPermissionChecker.setOperationType(null);
+    FSPermissionChecker.setOperationType(operationName);
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -5253,10 +5271,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     String cmd = "Use \"hdfs dfsadmin -safemode leave\" to turn safe mode off.";
     synchronized (this) {
       if (resourceLowSafeMode) {
-        return "Resources are low on NN. Please add or free up more resources"
-            + "then turn off safe mode manually. NOTE:  If you turn off safe "
-            + "mode before adding resources, the NN will immediately return to "
-            + "safe mode. " + cmd;
+        return "Resources are low on NN. Please add or free up more resources. "
+            + "NOTE:  If you turn off safe mode before adding resources, the "
+            + "NN will immediately return to safe mode. ";
       } else if (manualSafeMode) {
         return "It was turned on manually. " + cmd;
       }
@@ -6658,7 +6675,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           .put("infoSecureAddr", node.getInfoSecureAddr())
           .put("xferaddr", node.getXferAddr())
           .put("location", node.getNetworkLocation())
-          .put("uuid", node.getDatanodeUuid())
+          .put("uuid", Optional.ofNullable(node.getDatanodeUuid()).orElse(""))
           .put("lastContact", getLastContact(node))
           .put("usedSpace", getDfsUsed(node))
           .put("adminState", node.getAdminState().toString())
@@ -6712,7 +6729,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           .put("adminState", node.getAdminState().toString())
           .put("xferaddr", node.getXferAddr())
           .put("location", node.getNetworkLocation())
-          .put("uuid", node.getDatanodeUuid())
+          .put("uuid", Optional.ofNullable(node.getDatanodeUuid()).orElse(""))
           .build();
       info.put(node.getXferAddrWithHostname(), innerinfo);
     }
@@ -6735,7 +6752,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           .<String, Object> builder()
           .put("xferaddr", node.getXferAddr())
           .put("location", node.getNetworkLocation())
-          .put("uuid", node.getDatanodeUuid())
+          .put("uuid", Optional.ofNullable(node.getDatanodeUuid()).orElse(""))
           .put("underReplicatedBlocks",
           node.getLeavingServiceStatus().getUnderReplicatedBlocks())
           .put("decommissionOnlyReplicas",
@@ -6766,7 +6783,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           .<String, Object> builder()
           .put("xferaddr", node.getXferAddr())
           .put("location", node.getNetworkLocation())
-          .put("uuid", node.getDatanodeUuid())
+          .put("uuid", Optional.ofNullable(node.getDatanodeUuid()).orElse(""))
           .put("underReplicatedBlocks",
               node.getLeavingServiceStatus().getUnderReplicatedBlocks())
           .put("maintenanceOnlyReplicas",

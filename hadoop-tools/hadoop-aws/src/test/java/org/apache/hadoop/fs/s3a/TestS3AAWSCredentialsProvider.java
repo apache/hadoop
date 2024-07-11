@@ -70,6 +70,7 @@ import static org.apache.hadoop.fs.s3a.impl.InstantiationIOException.DOES_NOT_IM
 import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.getExternalData;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.test.LambdaTestUtils.interceptFuture;
+import static org.apache.hadoop.util.StringUtils.STRING_COLLECTION_SPLIT_EQUALS_INVALID_ARG;
 
 /**
  * Unit tests for {@link Constants#AWS_CREDENTIALS_PROVIDER} logic.
@@ -84,6 +85,8 @@ public class TestS3AAWSCredentialsProvider extends AbstractS3ATestBase {
       PublicDatasetTestUtils.DEFAULT_EXTERNAL_FILE).toUri();
 
   private static final Logger LOG = LoggerFactory.getLogger(TestS3AAWSCredentialsProvider.class);
+
+  public static final int TERMINATION_TIMEOUT = 3;
 
   @Test
   public void testProviderWrongClass() throws Exception {
@@ -578,7 +581,7 @@ public class TestS3AAWSCredentialsProvider extends AbstractS3ATestBase {
     }
   }
 
-  private static final int CONCURRENT_THREADS = 10;
+  private static final int CONCURRENT_THREADS = 4;
 
   @Test
   public void testConcurrentAuthentication() throws Throwable {
@@ -618,7 +621,7 @@ public class TestS3AAWSCredentialsProvider extends AbstractS3ATestBase {
             "expectedSecret", credentials.secretAccessKey());
       }
     } finally {
-      pool.awaitTermination(10, TimeUnit.SECONDS);
+      pool.awaitTermination(TERMINATION_TIMEOUT, TimeUnit.SECONDS);
       pool.shutdown();
     }
 
@@ -684,7 +687,7 @@ public class TestS3AAWSCredentialsProvider extends AbstractS3ATestBase {
         );
       }
     } finally {
-      pool.awaitTermination(10, TimeUnit.SECONDS);
+      pool.awaitTermination(TERMINATION_TIMEOUT, TimeUnit.SECONDS);
       pool.shutdown();
     }
 
@@ -722,8 +725,8 @@ public class TestS3AAWSCredentialsProvider extends AbstractS3ATestBase {
    * Tests for the string utility that will be used by S3A credentials provider.
    */
   @Test
-  public void testStringCollectionSplitByEquals() {
-    final Configuration configuration = new Configuration();
+  public void testStringCollectionSplitByEqualsSuccess() {
+    final Configuration configuration = new Configuration(false);
     configuration.set("custom_key", "");
     Map<String, String> splitMap =
         S3AUtils.getTrimmedStringCollectionSplitByEquals(
@@ -775,8 +778,7 @@ public class TestS3AAWSCredentialsProvider extends AbstractS3ATestBase {
             + "element.abc.val5 ,\n \n \n "
             + " element.xyz.key6      =       element.abc.val6 \n , \n"
             + "element.xyz.key7=element.abc.val7,\n");
-    splitMap = S3AUtils.getTrimmedStringCollectionSplitByEquals(
-        configuration, "custom_key");
+    splitMap = S3AUtils.getTrimmedStringCollectionSplitByEquals(configuration, "custom_key");
 
     Assertions
         .assertThat(splitMap)
@@ -790,6 +792,75 @@ public class TestS3AAWSCredentialsProvider extends AbstractS3ATestBase {
         .containsEntry("element.xyz.key5", "element.abc.val5")
         .containsEntry("element.xyz.key6", "element.abc.val6")
         .containsEntry("element.xyz.key7", "element.abc.val7");
+
+    configuration.set("custom_key",
+        "element.first.key1 = element.first.val2 ,element.first.key1 =element.first.val1");
+    splitMap =
+        S3AUtils.getTrimmedStringCollectionSplitByEquals(
+            configuration, "custom_key");
+    Assertions
+        .assertThat(splitMap)
+        .describedAs("Map of key value pairs split by equals(=) and comma(,)")
+        .hasSize(1)
+        .containsEntry("element.first.key1", "element.first.val1");
+
+    configuration.set("custom_key",
+        ",,, , ,, ,element.first.key1 = element.first.val2 ,"
+            + "element.first.key1 = element.first.val1 , ,,, ,");
+    splitMap = S3AUtils.getTrimmedStringCollectionSplitByEquals(
+        configuration, "custom_key");
+    Assertions
+        .assertThat(splitMap)
+        .describedAs("Map of key value pairs split by equals(=) and comma(,)")
+        .hasSize(1)
+        .containsEntry("element.first.key1", "element.first.val1");
+
+    configuration.set("custom_key", ",, , ,      ,, ,");
+    splitMap = S3AUtils.getTrimmedStringCollectionSplitByEquals(
+        configuration, "custom_key");
+    Assertions
+        .assertThat(splitMap)
+        .describedAs("Map of key value pairs split by equals(=) and comma(,)")
+        .hasSize(0);
+  }
+
+  /**
+   * Validates that the argument provided is invalid by intercepting the expected
+   * Exception.
+   *
+   * @param propKey The property key to validate.
+   * @throws Exception If any error occurs.
+   */
+  private static void expectInvalidArgument(final String propKey) throws Exception {
+    final Configuration configuration = new Configuration(false);
+    configuration.set("custom_key", propKey);
+
+    intercept(
+        IllegalArgumentException.class,
+        STRING_COLLECTION_SPLIT_EQUALS_INVALID_ARG,
+        () -> S3AUtils.getTrimmedStringCollectionSplitByEquals(
+            configuration, "custom_key"));
+  }
+
+  /**
+   * Tests for the string utility that will be used by S3A credentials provider.
+   */
+  @Test
+  public void testStringCollectionSplitByEqualsFailure() throws Exception {
+    expectInvalidArgument(" = element.abc.val1");
+    expectInvalidArgument("=element.abc.val1");
+    expectInvalidArgument("= element.abc.val1");
+    expectInvalidArgument(" =element.abc.val1");
+    expectInvalidArgument("element.abc.key1=");
+    expectInvalidArgument("element.abc.key1= ");
+    expectInvalidArgument("element.abc.key1 =");
+    expectInvalidArgument("element.abc.key1 = ");
+    expectInvalidArgument("=");
+    expectInvalidArgument(" =");
+    expectInvalidArgument("= ");
+    expectInvalidArgument(" = ");
+    expectInvalidArgument("== = =    =");
+    expectInvalidArgument(", = ");
   }
 
   /**
