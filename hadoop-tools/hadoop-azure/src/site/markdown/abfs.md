@@ -866,6 +866,45 @@ and all associated tests to see how to make use of these extension points.
 
 _Warning_ These extension points are unstable.
 
+### <a href="networking"></a>Networking Layer:
+
+ABFS Driver can use the following networking libraries:
+- ApacheHttpClient:
+  -  <a href = "https://hc.apache.org/httpcomponents-client-4.5.x/index.html">Library Documentation</a>.
+  - Default networking library.
+- JDK networking library:
+  - <a href="https://docs.oracle.com/javase/8/docs/api/java/net/HttpURLConnection.html">Library documentation</a>.
+
+The networking library can be configured using the configuration `fs.azure.networking.library`
+while initializing the filesystem.
+Following are the supported values:
+- `APACHE_HTTP_CLIENT` : Use Apache HttpClient [Default]
+- `JDK_HTTP_URL_CONNECTION` : Use JDK networking library
+
+#### <a href="ahc_networking_conf"></a>ApacheHttpClient networking layer configuration Options:
+
+Following are the configuration options for ApacheHttpClient networking layer that
+can be provided at the initialization of the filesystem:
+1. `fs.azure.apache.http.client.idle.connection.ttl`:
+   1. Maximum idle time in milliseconds for a connection to be kept alive in the connection pool.
+      If the connection is not reused within the time limit, the connection shall be closed.
+   2. Default value: 5000 milliseconds.
+2. `fs.azure.apache.http.client.max.cache.connection.size`:
+   1. Maximum number of connections that can be cached in the connection pool for
+      a filesystem instance. Total number of concurrent connections has no limit.
+   2. Default value: 5.
+3. `fs.azure.apache.http.client.max.io.exception.retries`:
+   1. Maximum number of times the client will retry on IOExceptions for a single request
+      with ApacheHttpClient networking-layer. Breach of this limit would turn off 
+      the future uses of the ApacheHttpClient library in the current JVM instance.
+   2. Default value: 3.
+
+#### <a href="ahc_classpath"></a> ApacheHttpClient classpath requirements:
+
+ApacheHttpClient is a `compile` maven dependency in hadoop-azure and would be
+included in the hadoop-azure jar. For using hadoop-azure with ApacheHttpClient no
+additional information is required in the classpath.
+
 ## <a href="options"></a> Other configuration options
 
 Consult the javadocs for `org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys`,
