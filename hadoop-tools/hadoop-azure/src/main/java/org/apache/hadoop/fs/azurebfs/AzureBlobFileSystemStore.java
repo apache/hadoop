@@ -404,9 +404,12 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         // If getAcl fails with anything other than 400, namespace is enabled.
         isNamespaceEnabled = Trilean.getTrilean(true);
         // Continue to throw exception as earlier.
+        LOG.debug("Failed to get ACL status with non 400. Inferring namespace enabled", ex);
         throw ex;
       }
       // If getAcl fails with 400, namespace is disabled.
+      LOG.debug("Failed to get ACL status with 400. "
+          + "Inferring namespace disabled and ignoring error", ex);
       isNamespaceEnabled = Trilean.getTrilean(false);
     } catch (AzureBlobFileSystemException ex) {
       throw ex;
