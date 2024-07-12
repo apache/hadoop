@@ -5063,6 +5063,16 @@
 </property>
 
 <property>
+  <name>dfs.journalnode.enable.sync.format</name>
+  <value>false</value>
+  <description>
+    If true, the journal node syncer daemon that tries to sync edit
+    logs between journal nodes will try to format its journal if it is not.
+    It will query the other journal nodes for the storage info required to format.
+  </description>
+</property>
+
+<property>
   <name>dfs.journalnode.edit-cache-size.bytes</name>
   <value></value>
   <description>

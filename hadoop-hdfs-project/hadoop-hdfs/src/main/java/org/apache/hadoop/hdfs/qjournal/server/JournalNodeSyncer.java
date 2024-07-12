@@ -82,6 +82,7 @@ public class JournalNodeSyncer {
   private int numOtherJNs;
   private int journalNodeIndexForSync = 0;
   private final long journalSyncInterval;
+  private final boolean tryFormatting;
   private final int logSegmentTransferTimeout;
   private final DataTransferThrottler throttler;
   private final JournalMetrics metrics;
@@ -101,6 +102,9 @@ public class JournalNodeSyncer {
     logSegmentTransferTimeout = conf.getInt(
         DFSConfigKeys.DFS_EDIT_LOG_TRANSFER_TIMEOUT_KEY,
         DFSConfigKeys.DFS_EDIT_LOG_TRANSFER_TIMEOUT_DEFAULT);
+    tryFormatting = conf.getBoolean(
+        DFSConfigKeys.DFS_JOURNALNODE_ENABLE_SYNC_FORMAT_KEY,
+        DFSConfigKeys.DFS_JOURNALNODE_ENABLE_SYNC_FORMAT_DEFAULT);
     throttler = getThrottler(conf);
     metrics = journal.getMetrics();
     journalSyncerStarted = false;
@@ -196,6 +200,13 @@ public class JournalNodeSyncer {
           if (!journal.isFormatted()) {
             LOG.warn("Journal cannot sync. Not formatted. Trying to format with the syncer");
             formatWithSyncer();
+            if (journal.isFormatted() && !createEditsSyncDir()) {
+              LOG.error("Failed to create directory for downloading log " +
+                      "segments: {}. Stopping Journal Node Sync.",
+                  journal.getStorage().getEditsSyncDir());
+              return;
+            }
+            continue;
           } else {
             syncJournals();
           }
@@ -242,13 +253,19 @@ public class JournalNodeSyncer {
   }
 
   private void formatWithSyncer() {
+    if (!tryFormatting) {
+      return;
+    }
     LOG.info("Trying to format the journal with the syncer");
     try {
       StorageInfo storage = null;
       for (JournalNodeProxy jnProxy : otherJNProxies) {
         try {
-          HdfsServerProtos.StorageInfoProto storageInfoResponse = jnProxy.jnProxy.getStorageInfo(jid, null);
-          storage = PBHelper.convert(storageInfoResponse, HdfsServerConstants.NodeType.JOURNAL_NODE);
+          HdfsServerProtos.StorageInfoProto storageInfoResponse =
+              jnProxy.jnProxy.getStorageInfo(jid, null);
+          storage = PBHelper.convert(
+              storageInfoResponse, HdfsServerConstants.NodeType.JOURNAL_NODE
+          );
           if (storage.getNamespaceID() == 0) {
             LOG.error("Got invalid StorageInfo from " + jnProxy);
             storage = null;
