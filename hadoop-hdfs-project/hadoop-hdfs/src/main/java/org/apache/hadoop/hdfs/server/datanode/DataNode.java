@@ -1090,7 +1090,7 @@ public class DataNode extends ReconfigurableBase
     try {
       int size = (newVal == null ? DFS_DN_EC_RECONSTRUCTION_THREADS_DEFAULT :
           Integer.parseInt(newVal));
-      result = Long.toString(size);
+      result = Integer.toString(size);
       ecWorker.setStripedReconstructionPoolSize(size);
       return result;
     } catch (IllegalArgumentException e) {
