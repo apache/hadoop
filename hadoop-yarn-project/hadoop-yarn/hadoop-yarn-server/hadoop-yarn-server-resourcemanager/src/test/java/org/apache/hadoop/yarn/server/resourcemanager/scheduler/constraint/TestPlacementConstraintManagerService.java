@@ -194,10 +194,8 @@ public class TestPlacementConstraintManagerService {
     // AC = null
     // GC = null
     constraint = pcm.getMultilevelConstraint(appId1, null, c1);
-    Assert.assertTrue(constraint.getConstraintExpr() instanceof And);
-    mergedConstraint = (And) constraint.getConstraintExpr();
-    Assert.assertEquals(1, mergedConstraint.getChildren().size());
-    Assert.assertEquals(c1, mergedConstraint.getChildren().get(0).build());
+    Assert.assertTrue(constraint.getConstraintExpr().getClass() == c1.getConstraintExpr().getClass());
+    Assert.assertEquals(c1, constraint);
 
     // RC = null
     // AC = tag1->c1, tag2->c2
@@ -213,11 +211,7 @@ public class TestPlacementConstraintManagerService {
     Assert.assertEquals(0, mergedConstraint.getChildren().size());
     // if a mapping is found for a given source tag
     constraint = pcm.getMultilevelConstraint(appId1, sourceTag1, null);
-    Assert.assertTrue(constraint.getConstraintExpr() instanceof And);
-    mergedConstraint = (And) constraint.getConstraintExpr();
-    // AND(c1)
-    Assert.assertEquals(1, mergedConstraint.getChildren().size());
-    Assert.assertEquals(c1, mergedConstraint.getChildren().get(0).build());
+    Assert.assertEquals(c1, constraint);
     pcm.unregisterApplication(appId1);
 
     // RC = null
@@ -226,11 +220,7 @@ public class TestPlacementConstraintManagerService {
     pcm.addGlobalConstraint(sourceTag1, c1, true);
     constraint = pcm.getMultilevelConstraint(appId1,
         Sets.newHashSet(sourceTag1), null);
-    Assert.assertTrue(constraint.getConstraintExpr() instanceof And);
-    mergedConstraint = (And) constraint.getConstraintExpr();
-    // AND(c1)
-    Assert.assertEquals(1, mergedConstraint.getChildren().size());
-    Assert.assertEquals(c1, mergedConstraint.getChildren().get(0).build());
+    Assert.assertEquals(c1, constraint);
     pcm.removeGlobalConstraint(sourceTag1);
 
     // RC = c2
