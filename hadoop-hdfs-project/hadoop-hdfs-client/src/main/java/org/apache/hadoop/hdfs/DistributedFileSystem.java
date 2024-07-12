@@ -513,7 +513,7 @@ public class DistributedFileSystem extends FileSystem
     }
     return this.create(f, permission,
             flag, bufferSize, replication,
-            blockSize, progress, null);
+            blockSize, progress);
   }
 
   /**
