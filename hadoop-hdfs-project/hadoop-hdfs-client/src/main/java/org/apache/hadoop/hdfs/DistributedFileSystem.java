@@ -509,7 +509,7 @@ public class DistributedFileSystem extends FileSystem
       flag.add(CreateFlag.OVERWRITE);
     }
     if(noLocalWrite){
-      flag.add(CreateFlag.NO_LOCAL_WRITE);
+      flag.add(CreateFlag.IGNORE_CLIENT_LOCALITY);
     }
     return this.create(f, permission,
             flag, bufferSize, replication,
