@@ -256,4 +256,9 @@ public interface ContractOptions {
    * HDFS does not do this.
    */
   String METADATA_UPDATED_ON_HSYNC = "metadata_updated_on_hsync";
+
+  /**
+   * Does vector read check file length on open rather than in the read call?
+   */
+  String VECTOR_IO_EARLY_EOF_CHECK = "vector-io-early-eof-check";
 }

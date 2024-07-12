@@ -19,6 +19,9 @@
 package org.apache.hadoop.util;
 
 import java.util.Locale;
+
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.apache.hadoop.util.StringUtils.STRING_COLLECTION_SPLIT_EQUALS_INVALID_ARG;
 import static org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix.long2String;
 import static org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix.string2long;
 import static org.junit.Assert.assertArrayEquals;
@@ -515,7 +518,7 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
   }
 
   @Test
-  public void testStringCollectionSplitByEquals() {
+  public void testStringCollectionSplitByEqualsSuccess() {
     Map<String, String> splitMap =
         StringUtils.getTrimmedStringCollectionSplitByEquals("");
     Assertions
@@ -566,6 +569,68 @@ public class TestStringUtils extends UnitTestcaseTimeLimit {
         .containsEntry("element.xyz.key5", "element.abc.val5")
         .containsEntry("element.xyz.key6", "element.abc.val6")
         .containsEntry("element.xyz.key7", "element.abc.val7");
+
+    splitMap = StringUtils.getTrimmedStringCollectionSplitByEquals(
+        "element.first.key1 = element.first.val2 ,element.first.key1 =element.first.val1");
+    Assertions
+        .assertThat(splitMap)
+        .describedAs("Map of key value pairs split by equals(=) and comma(,)")
+        .hasSize(1)
+        .containsEntry("element.first.key1", "element.first.val1");
+
+    splitMap = StringUtils.getTrimmedStringCollectionSplitByEquals(
+        ",,, , ,, ,element.first.key1 = element.first.val2 ,"
+            + "element.first.key1 = element.first.val1 , ,,, ,");
+    Assertions
+        .assertThat(splitMap)
+        .describedAs("Map of key value pairs split by equals(=) and comma(,)")
+        .hasSize(1)
+        .containsEntry("element.first.key1", "element.first.val1");
+
+    splitMap = StringUtils.getTrimmedStringCollectionSplitByEquals(
+        ",, , ,      ,, ,");
+    Assertions
+        .assertThat(splitMap)
+        .describedAs("Map of key value pairs split by equals(=) and comma(,)")
+        .hasSize(0);
+
+  }
+
+  @Test
+  public void testStringCollectionSplitByEqualsFailure() throws Exception {
+    intercept(
+        IllegalArgumentException.class,
+        STRING_COLLECTION_SPLIT_EQUALS_INVALID_ARG,
+        () -> StringUtils.getTrimmedStringCollectionSplitByEquals(" = element.abc.val1"));
+
+    intercept(
+        IllegalArgumentException.class,
+        STRING_COLLECTION_SPLIT_EQUALS_INVALID_ARG,
+        () -> StringUtils.getTrimmedStringCollectionSplitByEquals("element.abc.key1="));
+
+    intercept(
+        IllegalArgumentException.class,
+        STRING_COLLECTION_SPLIT_EQUALS_INVALID_ARG,
+        () -> StringUtils.getTrimmedStringCollectionSplitByEquals("="));
+
+    intercept(
+        IllegalArgumentException.class,
+        STRING_COLLECTION_SPLIT_EQUALS_INVALID_ARG,
+        () -> StringUtils.getTrimmedStringCollectionSplitByEquals("== = =    ="));
+
+    intercept(
+        IllegalArgumentException.class,
+        STRING_COLLECTION_SPLIT_EQUALS_INVALID_ARG,
+        () -> StringUtils.getTrimmedStringCollectionSplitByEquals(",="));
+  }
+
+  @Test
+  public void testForGetStackTrace() {
+    Throwable throwable = new Throwable();
+    int stackLength = throwable.getStackTrace().length;
+    String stackTrace = StringUtils.getStackTrace(new Throwable());
+    String[] splitTrace = stackTrace.split("\n\t");
+    assertEquals(stackLength, splitTrace.length);
   }
 
   // Benchmark for StringUtils split

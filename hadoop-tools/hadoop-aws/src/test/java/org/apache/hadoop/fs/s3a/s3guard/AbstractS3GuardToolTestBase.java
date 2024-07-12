@@ -118,12 +118,12 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
    * Run a S3GuardTool command from a varags list, catch any raised
    * ExitException and verify the status code matches that expected.
    * @param status expected status code of the exception
+   * @param conf configuration object.
    * @param args argument list
    * @throws Exception any exception
    */
-  protected void runToFailure(int status, Object... args)
+  protected void runToFailure(int status, Configuration conf, Object... args)
       throws Exception {
-    final Configuration conf = getConfiguration();
     ExitUtil.ExitException ex =
         intercept(ExitUtil.ExitException.class, () ->
             runS3GuardCommand(conf, args));
@@ -247,7 +247,7 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
     describe("Verify the unsupported tools are rejected");
     for (String tool : UNSUPPORTED_COMMANDS) {
       describe("Probing %s", tool);
-      runToFailure(E_S3GUARD_UNSUPPORTED, tool);
+      runToFailure(E_S3GUARD_UNSUPPORTED, getConfiguration(), tool);
     }
   }
 

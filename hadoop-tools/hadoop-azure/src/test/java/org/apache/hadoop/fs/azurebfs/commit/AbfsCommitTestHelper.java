@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.azurebfs.contract.ABFSContractTestBinding;
 import org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_READ_SMALL_FILES_COMPLETELY;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_CLEANUP_PARALLEL_DELETE_BASE_FIRST;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterConstants.OPT_STORE_OPERATIONS_CLASS;
 
 /**
@@ -51,9 +52,10 @@ final class AbfsCommitTestHelper {
     final String size = Integer.toString(192);
     conf.setIfUnset(ManifestCommitterConstants.OPT_IO_PROCESSORS, size);
     conf.setIfUnset(ManifestCommitterConstants.OPT_WRITER_QUEUE_CAPACITY, size);
-    // no need for parallel delete here as we aren't at the scale where unified delete
-    // is going to time out
-    conf.setBooleanIfUnset(ManifestCommitterConstants.OPT_CLEANUP_PARALLEL_DELETE, false);
+    // enable parallel delete but ask for base deletion first,
+    // which is now our recommended azure option
+    conf.setBoolean(ManifestCommitterConstants.OPT_CLEANUP_PARALLEL_DELETE, true);
+    conf.setBoolean(OPT_CLEANUP_PARALLEL_DELETE_BASE_FIRST, true);
 
     return conf;
   }

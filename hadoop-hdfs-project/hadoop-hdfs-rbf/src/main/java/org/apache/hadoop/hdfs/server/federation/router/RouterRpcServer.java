@@ -1089,13 +1089,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   DatanodeInfo[] getCachedDatanodeReport(DatanodeReportType type)
       throws IOException {
     try {
-      DatanodeInfo[] dns = this.dnCache.get(type);
-      if (dns == null) {
-        LOG.debug("Get null DN report from cache");
-        dns = getCachedDatanodeReportImpl(type);
-        this.dnCache.put(type, dns);
-      }
-      return dns;
+      return this.dnCache.get(type);
     } catch (ExecutionException e) {
       LOG.error("Cannot get the DN report for {}", type, e);
       Throwable cause = e.getCause();
@@ -1701,42 +1695,6 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   @Override // NamenodeProtocol
   public Long getNextSPSPath() throws IOException {
     return nnProto.getNextSPSPath();
-  }
-
-  /**
-   * Locate the location with the matching block pool id.
-   *
-   * @param path Path to check.
-   * @param failIfLocked Fail the request if locked (top mount point).
-   * @param blockPoolId The block pool ID of the namespace to search for.
-   * @return Prioritized list of locations in the federated cluster.
-   * @throws IOException if the location for this path cannot be determined.
-   */
-  protected RemoteLocation getLocationForPath(
-      String path, boolean failIfLocked, String blockPoolId)
-          throws IOException {
-
-    final List<RemoteLocation> locations =
-        getLocationsForPath(path, failIfLocked);
-
-    String nameserviceId = null;
-    Set<FederationNamespaceInfo> namespaces =
-        this.namenodeResolver.getNamespaces();
-    for (FederationNamespaceInfo namespace : namespaces) {
-      if (namespace.getBlockPoolId().equals(blockPoolId)) {
-        nameserviceId = namespace.getNameserviceId();
-        break;
-      }
-    }
-    if (nameserviceId != null) {
-      for (RemoteLocation location : locations) {
-        if (location.getNameserviceId().equals(nameserviceId)) {
-          return location;
-        }
-      }
-    }
-    throw new IOException(
-        "Cannot locate a nameservice for block pool " + blockPoolId);
   }
 
   /**

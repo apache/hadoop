@@ -43,7 +43,7 @@ is a more specific lie and harder to make. And, if you get caught out: you
 lose all credibility with the project.
 
 You don't need to test from a VM within the AWS infrastructure; with the
-`-Dparallel=tests` option the non-scale tests complete in under ten minutes.
+`-Dparallel-tests` option the non-scale tests complete in under twenty minutes.
 Because the tests clean up after themselves, they are also designed to be low
 cost. It's neither hard nor expensive to run the tests; if you can't,
 there's no guarantee your patch works. The reviewers have enough to do, and
@@ -539,12 +539,51 @@ Otherwise, set a large timeout in `fs.s3a.scale.test.timeout`
 The tests are executed in an order to only clean up created files after
 the end of all the tests. If the tests are interrupted, the test data will remain.
 
+## <a name="CI"/> Testing through continuous integration
+
+### Parallel CI builds.
+For CI testing of the module, including the integration tests,
+it is generally necessary to support testing multiple PRs simultaneously.
+
+To do this
+1. A job ID must be supplied in the `job.id` property, so each job works on an isolated directory
+   tree. This should be a number or unique string, which will be used within a path element, so
+   must only contain characters valid in an S3/hadoop path element.
+2. Root directory tests need to be disabled by setting `fs.s3a.root.tests.enabled` to
+   `false`, either in the command line to maven or in the XML configurations.
+
+```
+mvn verify -T 1C -Dparallel-tests -DtestsThreadCount=14 -Dscale -Dfs.s3a.root.tests.enabled=false -Djob.id=001
+```
+
+This parallel execution feature is only for isolated builds sharing a single S3 bucket; it does
+not support parallel builds and tests from the same local source tree.
+
+Without the root tests being executed, set up a scheduled job to purge the test bucket of all
+data on a regular basis, to keep costs down.
+The easiest way to do this is to have a bucket lifecycle rule for the bucket to delete all files more than a few days old,
+alongside one to abort all pending uploads more than 24h old.
+
+
+### Securing CI builds
+
+It's clearly unsafe to have CI infrastructure testing PRs submitted to apache github account
+with AWS credentials -which is why it isn't done by the Yetus-initiated builds.
+
+Anyone doing this privately should:
+* Review incoming patches before triggering the tests.
+* Have a dedicated IAM role with restricted access to the test bucket, any KMS keys used, and the
+  external bucket containing the CSV test file.
+* Have a build process which generates short-lived session credentials for this role.
+* Run the tests in an EC2 VM/container which collects the restricted IAM credentials
+  from the IAM instance/container credentials provider.
+
 ## <a name="load"></a> Load tests.
 
-Some are designed to overload AWS services with more
+Some tests are designed to overload AWS services with more
 requests per second than an AWS account is permitted.
 
-The operation of these test maybe observable to other users of the same
+The operation of these tests may be observable to other users of the same
 account -especially if they are working in the AWS region to which the
 tests are targeted.
 
@@ -555,6 +594,10 @@ These tests all have the prefix `ILoadTest`
 They do not run automatically: they must be explicitly run from the command line or an IDE.
 
 Look in the source for these and reads the Javadocs before executing.
+
+Note: one fear here was that asking for two many session/role credentials in a short period
+of time would actually lock an account out of a region. It doesn't: it simply triggers
+throttling of STS requests.
 
 ## <a name="alternate_s3"></a> Testing against non-AWS S3 Stores.
 
@@ -1141,6 +1184,7 @@ your IDE or via maven.
 1. Run a full AWS-test suite with S3 client-side encryption enabled by
  setting `fs.s3a.encryption.algorithm` to 'CSE-KMS' and setting up AWS-KMS
   Key ID in `fs.s3a.encryption.key`.
+2. Verify that the output of test `TestAWSV2SDK` doesn't contain any unshaded classes.
 
 The dependency chain of the `hadoop-aws` module should be similar to this, albeit
 with different version numbers:

@@ -789,7 +789,7 @@ public class BlockManager implements BlockStatsMXBean {
     checkNSRunning = false;
   }
 
-  private boolean isBlockTokenEnabled() {
+  protected boolean isBlockTokenEnabled() {
     return blockTokenSecretManager != null;
   }
 
@@ -2396,7 +2396,9 @@ public class BlockManager implements BlockStatsMXBean {
     }
 
     // Add block to the datanode's task list
-    rw.addTaskToDatanode(numReplicas);
+    if (!rw.addTaskToDatanode(numReplicas)) {
+      return false;
+    }
     DatanodeStorageInfo.incrementBlocksScheduled(targets);
 
     // Move the block-replication into a "pending" state.
@@ -3263,6 +3265,7 @@ public class BlockManager implements BlockStatsMXBean {
     for (BlockReportReplica iblk : report) {
       ReplicaState reportedState = iblk.getState();
 
+      removeQueuedBlock(storageInfo, iblk);
       if (LOG.isDebugEnabled()) {
         LOG.debug("Initial report of block {} on {} size {} replicaState = {}",
             iblk.getBlockName(), storageInfo.getDatanodeDescriptor(),
@@ -3348,6 +3351,7 @@ public class BlockManager implements BlockStatsMXBean {
     // scan the report and process newly reported blocks
     for (BlockReportReplica iblk : newReport) {
       ReplicaState iState = iblk.getState();
+      removeQueuedBlock(storageInfo, iblk);
       LOG.debug("Reported block {} on {} size {} replicaState = {}", iblk, dn,
           iblk.getNumBytes(), iState);
       BlockInfo storedBlock = processReportedBlock(storageInfo,
@@ -3416,7 +3420,6 @@ public class BlockManager implements BlockStatsMXBean {
 
     LOG.debug("Reported block {} on {} size {} replicaState = {}", block, dn,
         block.getNumBytes(), reportedState);
-
     if (shouldPostponeBlocksFromFuture && isGenStampInFuture(block)) {
       queueReportedBlock(storageInfo, block, reportedState,
           QUEUE_REASON_FUTURE_GENSTAMP);
@@ -3494,6 +3497,16 @@ public class BlockManager implements BlockStatsMXBean {
           block, reportedState, storageInfo.getDatanodeDescriptor(), reason);
     }
     pendingDNMessages.enqueueReportedBlock(storageInfo, block, reportedState);
+  }
+
+  /**
+   * Queue the given reported block for later processing in the
+   * standby node. @see PendingDataNodeMessages.
+   */
+  private void removeQueuedBlock(DatanodeStorageInfo storageInfo, Block block) {
+    LOG.debug("Removing queued block {} from datanode {} from pending queue.",
+        block, storageInfo.getDatanodeDescriptor());
+    pendingDNMessages.removeQueuedBlock(storageInfo, block);
   }
 
   /**
@@ -4558,6 +4571,7 @@ public class BlockManager implements BlockStatsMXBean {
 
     final DatanodeDescriptor node = storageInfo.getDatanodeDescriptor();
 
+    removeQueuedBlock(storageInfo, block);
     LOG.debug("Reported block {} on {} size {} replicaState = {}",
         block, node, block.getNumBytes(), reportedState);
 

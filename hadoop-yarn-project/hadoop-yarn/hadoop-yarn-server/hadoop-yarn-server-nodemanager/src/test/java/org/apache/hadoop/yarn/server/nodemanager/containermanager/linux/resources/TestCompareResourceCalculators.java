@@ -98,7 +98,7 @@ public class TestCompareResourceCalculators {
         new ProcfsBasedProcessTree(Long.toString(getPid()));
     CGroupsResourceCalculator cgroupsCalculator =
         new CGroupsResourceCalculator(Long.toString(getPid()));
-    cgroupsCalculator.setCGroupFilePaths();
+    cgroupsCalculator.initialize();
 
     for (int i = 0; i < 5; ++i) {
       Thread.sleep(3000);

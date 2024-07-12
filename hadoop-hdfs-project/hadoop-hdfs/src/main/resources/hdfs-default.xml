@@ -1131,7 +1131,14 @@
   not permitted to connect to the namenode.  The full pathname of the
   file must be specified.  If the value is empty, no hosts are
   excluded.</description>
-</property> 
+</property>
+
+<property>
+  <name>dfs.hosts.timeout</name>
+  <value>0</value>
+  <description>Specifies a timeout (in milliseconds) for reading the dfs.hosts file.
+  A value of zero indicates no timeout to be set.</description>
+</property>
 
 <property>
   <name>dfs.namenode.max.objects</name>
@@ -3604,6 +3611,14 @@
   <value>3000</value>
   <description>When KeyProvider is configured, the time delayed until the first
     attempt to warm up edek cache on NN start up / become active.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.edekcacheloader.max-retries</name>
+  <value>10</value>
+  <description>When KeyProvider is configured, the max retries allowed to attempt
+    warm up edek cache if none of key successful on NN start up / become active.
   </description>
 </property>
 

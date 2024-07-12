@@ -1173,7 +1173,7 @@ public class TestFsDatasetImpl {
           .getReplicaInfo(block.getBlockPoolId(), newReplicaInfo.getBlockId())
           .getGenerationStamp());
       LambdaTestUtils.intercept(IOException.class, "Generation Stamp "
-              + "should be monotonically increased.",
+              + "should be monotonically increased",
           () -> fsDataSetImpl.finalizeNewReplica(newReplicaInfo, block));
       assertFalse(newReplicaInfo.blockDataExists());
 
@@ -2100,6 +2100,48 @@ public class TestFsDatasetImpl {
     } finally {
       cluster.shutdown();
       DataNodeFaultInjector.set(oldDnInjector);
+    }
+  }
+
+  @Test(timeout = 30000)
+  public void testAppend() {
+    MiniDFSCluster cluster = null;
+    try {
+      cluster = new MiniDFSCluster.Builder(conf)
+          .numDataNodes(1)
+          .storageTypes(new StorageType[]{StorageType.DISK, StorageType.DISK})
+          .storagesPerDatanode(2)
+          .build();
+      FileSystem fs = cluster.getFileSystem();
+      DataNode dataNode = cluster.getDataNodes().get(0);
+
+      // Create test file
+      Path filePath = new Path("testData");
+      FsDatasetImpl fsDataSetImpl = (FsDatasetImpl) dataNode.getFSDataset();
+      DFSTestUtil.createFile(fs, filePath, 100, (short) 1, 0);
+      ExtendedBlock block = DFSTestUtil.getFirstBlock(fs, filePath);
+      ReplicaInfo replicaInfo = fsDataSetImpl.getReplicaInfo(block);
+      long oldMetaLength = replicaInfo.getMetadataLength();
+      long oldDfsUsed = fsDataSetImpl.getDfsUsed();
+
+      // Append to file
+      int appendLength = 100;
+      DFSTestUtil.appendFile(fs, filePath, appendLength);
+
+      block = DFSTestUtil.getFirstBlock(fs, filePath);
+      replicaInfo = fsDataSetImpl.getReplicaInfo(block);
+      long newMetaLength = replicaInfo.getMetadataLength();
+      long newDfsUsed = fsDataSetImpl.getDfsUsed();
+
+      assert newDfsUsed == oldDfsUsed + appendLength + (newMetaLength - oldMetaLength) :
+          "When appending a file, the dfsused statistics of datanode are incorrect.";
+    } catch (Exception ex) {
+      LOG.info("Exception in testAppend ", ex);
+      fail("Exception while testing testAppend ");
+    } finally {
+      if (cluster.isClusterUp()) {
+        cluster.shutdown();
+      }
     }
   }
 }

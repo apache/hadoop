@@ -54,7 +54,7 @@ public class TestBlockCache extends AbstractHadoopTestBase {
         () -> cache.put(42, null, null, null));
 
 
-    intercept(NullPointerException.class, null,
+    intercept(NullPointerException.class,
         () -> new SingleFilePerBlockCache(null, 2, null));
 
   }

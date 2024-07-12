@@ -36,6 +36,8 @@ import org.apache.hadoop.security.AccessControlException;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
+
 import static org.apache.hadoop.util.Time.now;
 
 class FSDirMkdirOp {
@@ -221,8 +223,8 @@ class FSDirMkdirOp {
     final INodeDirectory dir = new INodeDirectory(inodeId, name, permission,
         timestamp);
 
-    INodesInPath iip =
-        fsd.addLastINode(parent, dir, permission.getPermission(), true);
+    INodesInPath iip = fsd.addLastINode(parent, dir, permission.getPermission(),
+        true, Optional.empty());
     if (iip != null && aclEntries != null) {
       AclStorage.updateINodeAcl(dir, aclEntries, Snapshot.CURRENT_STATE_ID);
     }
