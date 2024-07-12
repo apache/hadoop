@@ -37,7 +37,6 @@ function DataTableHelper(dtSelector, opts, hasDate, headings) {
       d[9] = renderHadoopDate(d[9], 'display', true);
       return d;
     })
-    console.log(parsedData);
     return parsedData;
   }
     // Ensure opts.data.data is always defined, even if empty

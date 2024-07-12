@@ -24,7 +24,6 @@ var Accordion = function (element, options, selector) {
         el.classList.add("ui-accordion", "ui-widget", "ui-helper-reset");
         [].forEach.call(el.querySelectorAll("." + sel),
             (item, idx) => {
-                console.log(item);
                 item.innerHTML = "<span class='ui-accordion-header-icon ui-icon ui-icon-triangle-1-e'></span>" + item.innerHTML;
                 item.setAttribute("id", `ui-id-${((idx * 2) + 1)}`)
                 item.classList.add(...titleClasses);
@@ -47,8 +46,6 @@ var Accordion = function (element, options, selector) {
 
     function onClick(e) {
         //do nothing if not clickable element
-        console.log("Clicked!!");
-        console.log(e);
         if (e.target.className.indexOf(titleClasses[0]) === -1) {
             return;
         }
@@ -58,7 +55,6 @@ var Accordion = function (element, options, selector) {
         }
 
         let nextContent = e.target.nextElementSibling;
-        console.log(nextContent);
         e.target.classList.toggle('ui-state-active');
         e.target.children[0].classList.toggle("ui-icon-triangle-1-e");
         e.target.children[0].classList.toggle("ui-icon-triangle-1-s");
@@ -66,7 +62,6 @@ var Accordion = function (element, options, selector) {
         if (nextContent.style.display !== 'none') {
             // toggle current element if open
             e.target.nextElementSibling.style.display = "none";
-            console.log(e.target.nextElementSibling);
         }
 
         if (oneOpen) {
