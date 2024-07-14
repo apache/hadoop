@@ -260,6 +260,11 @@ public class JournalNodeSyncer {
     try {
       StorageInfo storage = null;
       for (JournalNodeProxy jnProxy : otherJNProxies) {
+        if (!hasEditLogs(jnProxy)) {
+          // This avoids a race condition between `hdfs namenode -format` and
+          // JN syncer by checking if the other JN is not newly formatted.
+          continue;
+        }
         try {
           HdfsServerProtos.StorageInfoProto storageInfoResponse =
               jnProxy.jnProxy.getStorageInfo(jid, null);
@@ -287,6 +292,26 @@ public class JournalNodeSyncer {
     } catch (IOException e) {
       LOG.error("Exception in formatting the journal with the syncer", e);
     }
+  }
+
+  private boolean hasEditLogs(JournalNodeProxy journalProxy) {
+    GetEditLogManifestResponseProto editLogManifest;
+    try {
+      editLogManifest = journalProxy.jnProxy.getEditLogManifestFromJournal(
+          jid, nameServiceId, 0, false);
+    } catch (IOException e) {
+      LOG.error("Could not get edit log manifest from " + journalProxy, e);
+      return false;
+    }
+
+    List<RemoteEditLog> otherJournalEditLogs = PBHelper.convert(
+        editLogManifest.getManifest()).getLogs();
+    if (otherJournalEditLogs == null || otherJournalEditLogs.isEmpty()) {
+      LOG.warn("Journal at " + journalProxy.jnAddr + " has no edit logs");
+      return false;
+    }
+
+    return true;
   }
 
   private void syncWithJournalAtIndex(int index) {

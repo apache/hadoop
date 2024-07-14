@@ -76,6 +76,7 @@ public class TestJournalNodeSync {
     conf = new HdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_JOURNALNODE_ENABLE_SYNC_KEY, true);
     conf.setLong(DFSConfigKeys.DFS_JOURNALNODE_SYNC_INTERVAL_KEY, 1000L);
+    conf.setBoolean(DFSConfigKeys.DFS_JOURNALNODE_ENABLE_SYNC_FORMAT_KEY, true);
     if (testName.getMethodName().equals(
         "testSyncAfterJNdowntimeWithoutQJournalQueue")) {
       conf.setInt(DFSConfigKeys.DFS_QJOURNAL_QUEUE_SIZE_LIMIT_KEY, 0);
@@ -83,9 +84,6 @@ public class TestJournalNodeSync {
     if (testName.getMethodName().equals("testSyncDuringRollingUpgrade")) {
       conf.setInt(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY,
           DFS_HA_TAILEDITS_PERIOD_SECONDS);
-    }
-    if (testName.getMethodName().equals("testFormatWithSyncer")) {
-      conf.setBoolean(DFSConfigKeys.DFS_JOURNALNODE_ENABLE_SYNC_FORMAT_KEY, true);
     }
     qjmhaCluster = new MiniQJMHACluster.Builder(conf).setNumNameNodes(2)
       .build();
