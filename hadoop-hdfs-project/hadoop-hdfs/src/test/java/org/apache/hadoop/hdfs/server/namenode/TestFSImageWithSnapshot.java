@@ -517,6 +517,32 @@ public class TestFSImageWithSnapshot {
     hdfs = cluster.getFileSystem();
   }
 
+  /**
+   * Test parallel compressed fsimage can be loaded serially
+   */
+  @Test
+  public void testLoadParallelCompressedImageSerial() throws Exception {
+    int s = 0;
+    cluster.shutdown();
+
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATANODES).build();
+    cluster.waitActive();
+    fsn = cluster.getNamesystem();
+    hdfs = cluster.getFileSystem();
+    hdfs.mkdirs(dir);
+    SnapshotTestHelper.createSnapshot(hdfs, dir, "s");
+
+    Path sub1 = new Path(dir, "sub1");
+    Path sub1file1 = new Path(sub1, "sub1file1");
+    Path sub1file2 = new Path(sub1, "sub1file2");
+    DFSTestUtil.createFile(hdfs, sub1file1, BLOCKSIZE, (short) 1, seed);
+    DFSTestUtil.createFile(hdfs, sub1file2, BLOCKSIZE, (short) 1, seed);
+
+    conf.setBoolean(DFSConfigKeys.DFS_IMAGE_COMPRESS_KEY, false);
+    conf.setBoolean(DFSConfigKeys.DFS_IMAGE_PARALLEL_LOAD_KEY, false);
+    checkImage(s);
+  }
+
   void rename(Path src, Path dst) throws Exception {
     printTree("Before rename " + src + " -> " + dst);
     hdfs.rename(src, dst);
