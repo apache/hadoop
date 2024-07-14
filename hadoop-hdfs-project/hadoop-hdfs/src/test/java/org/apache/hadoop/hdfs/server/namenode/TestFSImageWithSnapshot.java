@@ -518,7 +518,7 @@ public class TestFSImageWithSnapshot {
   }
 
   /**
-   * Test parallel compressed fsimage can be loaded serially
+   * Test parallel compressed fsimage can be loaded serially.
    */
   @Test
   public void testLoadParallelCompressedImageSerial() throws Exception {
