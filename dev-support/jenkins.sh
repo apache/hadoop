@@ -122,7 +122,7 @@ function run_ci() {
     YETUS_ARGS+=("--docker")
     YETUS_ARGS+=("--dockerfile=${DOCKERFILE}")
     YETUS_ARGS+=("--mvn-custom-repos")
-    YETUS_ARGS+=("--dockermemlimit=22g")
+    YETUS_ARGS+=("--dockermemlimit=32g")
 
     # test with Java 17
     YETUS_ARGS+=("--java-home=/usr/lib/jvm/java-17-openjdk-amd64")
