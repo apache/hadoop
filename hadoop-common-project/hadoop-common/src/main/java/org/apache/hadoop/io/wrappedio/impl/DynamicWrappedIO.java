@@ -34,12 +34,13 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.util.dynamic.DynMethods;
 
-import static org.apache.hadoop.io.wrappedio.impl.BindingUtils.available;
-import static org.apache.hadoop.io.wrappedio.impl.BindingUtils.checkAvailable;
-import static org.apache.hadoop.io.wrappedio.impl.BindingUtils.extractIOEs;
-import static org.apache.hadoop.io.wrappedio.impl.BindingUtils.loadClass;
-import static org.apache.hadoop.io.wrappedio.impl.BindingUtils.loadStaticMethod;
+import static org.apache.hadoop.util.dynamic.BindingUtils.available;
+import static org.apache.hadoop.util.dynamic.BindingUtils.checkAvailable;
+import static org.apache.hadoop.util.dynamic.BindingUtils.extractIOEs;
+import static org.apache.hadoop.util.dynamic.BindingUtils.loadClass;
+import static org.apache.hadoop.util.dynamic.BindingUtils.loadStaticMethod;
 
 /**
  * The wrapped IO methods in {@code org.apache.hadoop.io.wrappedio.WrappedIO},

@@ -17,27 +17,31 @@
  *  under the License.
  */
 
-package org.apache.hadoop.io.wrappedio.impl;
+package org.apache.hadoop.util.dynamic;
 
 import java.util.concurrent.Callable;
 
 import org.junit.Assert;
 import org.junit.Test;
 
+import org.apache.hadoop.test.AbstractHadoopTestBase;
+
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Derived from {@code org.apache.parquet.util} test suites.
  */
-public class TestDynConstructors {
+public class TestDynConstructors extends AbstractHadoopTestBase {
 
   @Test
   public void testNoImplCall() throws Exception {
     final DynConstructors.Builder builder = new DynConstructors.Builder();
 
-    intercept(NoSuchMethodException.class, (Callable) builder::buildChecked);
+    intercept(NoSuchMethodException.class,
+        (Callable<DynMethods.UnboundMethod>) builder::buildChecked);
 
-    intercept(RuntimeException.class, () -> builder.build());
+    intercept(RuntimeException.class, () ->
+        builder.build());
   }
 
   @Test
@@ -45,9 +49,10 @@ public class TestDynConstructors {
     final DynConstructors.Builder builder = new DynConstructors.Builder()
         .impl("not.a.RealClass");
 
-    intercept(NoSuchMethodException.class, (Callable) builder::buildChecked);
+    intercept(NoSuchMethodException.class,
+        (Callable<DynMethods.UnboundMethod>) builder::buildChecked);
 
-    intercept(RuntimeException.class, (Callable) builder::build);
+    intercept(RuntimeException.class, (Callable<DynMethods.UnboundMethod>) builder::build);
   }
 
   @Test
@@ -55,9 +60,11 @@ public class TestDynConstructors {
     final DynConstructors.Builder builder = new DynConstructors.Builder()
         .impl(Concatenator.class, String.class, String.class);
 
-    intercept(NoSuchMethodException.class, (Callable) builder::buildChecked);
+    intercept(NoSuchMethodException.class,
+        (Callable<DynMethods.UnboundMethod>) builder::buildChecked);
 
-    intercept(RuntimeException.class, (Callable) builder::build);
+    intercept(RuntimeException.class,
+        (Callable<DynMethods.UnboundMethod>) builder::build);
   }
 
   @Test
@@ -72,9 +79,11 @@ public class TestDynConstructors {
     Assert.assertEquals("Should construct with the 1-arg version",
         "a-b", dashCat.concat("a", "b"));
 
-    intercept(IllegalArgumentException.class, () -> sepCtor.newInstanceChecked("/", "-"));
+    intercept(IllegalArgumentException.class, () ->
+        sepCtor.newInstanceChecked("/", "-"));
 
-    intercept(IllegalArgumentException.class, () -> sepCtor.newInstance("/", "-"));
+    intercept(IllegalArgumentException.class, () ->
+        sepCtor.newInstance("/", "-"));
 
     DynConstructors.Ctor<Concatenator> defaultCtor = new DynConstructors.Builder()
         .impl("not.a.RealClass", String.class)
@@ -95,7 +104,8 @@ public class TestDynConstructors {
         .impl(Concatenator.class, Exception.class)
         .buildChecked();
 
-    intercept(Concatenator.SomeCheckedException.class, () -> sepCtor.newInstanceChecked(exc));
+    intercept(Concatenator.SomeCheckedException.class, () ->
+        sepCtor.newInstanceChecked(exc));
 
     intercept(RuntimeException.class, () -> sepCtor.newInstance(exc));
   }
@@ -111,7 +121,8 @@ public class TestDynConstructors {
 
   @Test
   public void testHiddenMethod() throws Exception {
-    intercept(NoSuchMethodException.class, () -> new DynMethods.Builder("setSeparator")
+    intercept(NoSuchMethodException.class, () ->
+        new DynMethods.Builder("setSeparator")
             .impl(Concatenator.class, char.class)
             .buildChecked());
 
@@ -135,7 +146,8 @@ public class TestDynConstructors {
 
     Assert.assertTrue("Should always be static", ctor.isStatic());
 
-    intercept(IllegalStateException.class, () -> ctor.bind(null));
+    intercept(IllegalStateException.class, () ->
+        ctor.bind(null));
   }
 
   @Test
@@ -144,9 +156,11 @@ public class TestDynConstructors {
         .impl(Concatenator.class.getName())
         .buildChecked();
 
-    intercept(IllegalArgumentException.class, () -> ctor.invokeChecked("a"));
+    intercept(IllegalArgumentException.class, () ->
+        ctor.invokeChecked("a"));
 
-    intercept(IllegalArgumentException.class, () -> ctor.invoke("a"));
+    intercept(IllegalArgumentException.class, () ->
+        ctor.invoke("a"));
 
     Assert.assertNotNull("Should allow invokeChecked(null, ...)",
         ctor.invokeChecked(null));

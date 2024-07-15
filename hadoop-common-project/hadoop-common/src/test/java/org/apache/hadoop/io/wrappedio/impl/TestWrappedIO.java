@@ -52,7 +52,7 @@ import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_RE
 import static org.apache.hadoop.fs.StreamCapabilities.IOSTATISTICS_CONTEXT;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.file;
-import static org.apache.hadoop.io.wrappedio.impl.BindingUtils.loadClass;
+import static org.apache.hadoop.util.dynamic.BindingUtils.loadClass;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.util.functional.Tuples.pair;
 

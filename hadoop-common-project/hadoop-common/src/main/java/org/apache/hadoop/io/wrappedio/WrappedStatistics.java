@@ -23,6 +23,7 @@ import java.io.Serializable;
 import java.io.UncheckedIOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Function;
 import javax.annotation.Nullable;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -296,6 +297,24 @@ public final class WrappedStatistics {
    */
   public static Serializable iostatisticsContext_snapshot() {
     return getCurrentIOStatisticsContext().snapshot();
+  }
+
+  /**
+   * Aggregate into the IOStatistics context the statistics passed in via
+   * IOStatistics/source parameter.
+   * <p>
+   * Returns false if the source is null or does not contain any statistics.
+   * @param source implementation of {@link IOStatisticsSource} or {@link IOStatistics}
+   * @return true if the the source object was aggregated.
+   */
+  public static boolean iostatisticsContext_aggregate(Object source) {
+    IOStatistics stats = retrieveIOStatistics(source);
+    if (stats != null) {
+      getCurrentIOStatisticsContext().getAggregator().aggregate(stats);
+      return true;
+    } else {
+      return false;
+    }
   }
 
   /**

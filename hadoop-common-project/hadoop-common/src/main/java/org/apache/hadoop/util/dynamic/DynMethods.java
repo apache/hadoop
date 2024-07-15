@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.hadoop.io.wrappedio.impl;
+package org.apache.hadoop.util.dynamic;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;

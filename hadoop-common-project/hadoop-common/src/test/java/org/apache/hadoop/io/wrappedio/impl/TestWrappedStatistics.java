@@ -42,11 +42,13 @@ import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 import org.apache.hadoop.util.functional.Tuples;
 
+import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticCounter;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfInvocation;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Unit tests for IOStatistics wrapping.
+ * <p>
  * This mixes direct use of the API to generate statistics data for
  * the reflection accessors to retrieve and manipulate.
  */
@@ -189,7 +191,7 @@ public class TestWrappedStatistics extends AbstractHadoopTestBase {
    * JSON round trip of the statistics.
    */
   @Test
-  public void testIOStatisticsContext() throws Throwable {
+  public void testIOStatisticsContextMethods() {
 
     Assertions.assertThat(statistics.ioStatisticsContextAvailable())
         .describedAs("ioStatisticsContextAvailable() of %s", statistics)
@@ -243,6 +245,37 @@ public class TestWrappedStatistics extends AbstractHadoopTestBase {
 
     // and reset
     statistics.iostatisticsContext_reset();
+
+    // now aggregate the retrieved stats into it.
+    Assertions.assertThat(statistics.iostatisticsContext_aggregate(retrieved))
+        .describedAs("iostatisticsContext_aggregate of %s", retrieved)
+        .isTrue();
+  }
+
+
+  /**
+   * Perform some real IOStatisticsContext operations.
+   */
+  @Test
+  public void testIOStatisticsContextInteraction() {
+    statistics.iostatisticsContext_reset();
+
+    // create a snapshot with a counter
+    final IOStatisticsSnapshot snapshot =
+        (IOStatisticsSnapshot) statistics.iostatisticsSnapshot_create();
+    snapshot.setCounter( "c1", 10);
+
+    // aggregate twice
+    statistics.iostatisticsContext_aggregate(snapshot);
+    statistics.iostatisticsContext_aggregate(snapshot);
+
+    // take a snapshot
+    final IOStatisticsSnapshot snap2 =
+        (IOStatisticsSnapshot) statistics.iostatisticsContext_snapshot();
+
+    // assert the valuue
+    assertThatStatisticCounter(snap2, "c1")
+        .isEqualTo(20);
   }
 
   /**
@@ -265,9 +298,12 @@ public class TestWrappedStatistics extends AbstractHadoopTestBase {
     return statistics.iostatisticsSnapshot_toJsonString(snapshot);
   }
 
+  /**
+   * Create an empty snapshot, save it then load back.
+   */
   @Test
   public void testLocalSaveOfEmptySnapshot() throws Throwable {
-    final Serializable snapshot = statistics.iostatisticsContext_snapshot();
+    final Serializable snapshot = statistics.iostatisticsSnapshot_create();
     statistics.iostatisticsSnapshot_save(snapshot, local, jsonPath, true);
     final Serializable loaded = statistics.iostatisticsSnapshot_load(local, jsonPath);
     LOG.info("loaded statistics {}",
@@ -352,6 +388,10 @@ public class TestWrappedStatistics extends AbstractHadoopTestBase {
 
   }
 
+  /**
+   * Sleep for some milliseconds; interruptions are swallowed.
+   * @param millis time in milliseconds
+   */
   private static void sleep(final int millis) {
     try {
       Thread.sleep(millis);

@@ -457,7 +457,7 @@
 
   <!-- class cast after an assignableFrom check. -->
   <Match>
-    <Class name="org.apache.hadoop.io.wrappedio.impl.DynMethods" />
+    <Class name="org.apache.hadoop.util.dynamic.DynMethods" />
     <Bug pattern="BC_UNCONFIRMED_CAST" />
   </Match>
 </FindBugsFilter>

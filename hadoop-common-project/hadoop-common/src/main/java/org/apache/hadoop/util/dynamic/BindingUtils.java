@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.io.wrappedio.impl;
+package org.apache.hadoop.util.dynamic;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -152,7 +152,7 @@ public final class BindingUtils {
    *
    * @return a no-op method.
    */
-  static DynMethods.UnboundMethod noop(final String name) {
+  public static DynMethods.UnboundMethod noop(final String name) {
     return new DynMethods.Builder(name).orNoop().build();
   }
 
@@ -163,7 +163,7 @@ public final class BindingUtils {
    *
    * @return true if they are all implemented
    */
-  static boolean implemented(DynMethods.UnboundMethod... methods) {
+  public static boolean implemented(DynMethods.UnboundMethod... methods) {
     for (DynMethods.UnboundMethod method : methods) {
       if (method.isNoop()) {
         return false;
@@ -177,7 +177,7 @@ public final class BindingUtils {
    * @param method method to probe
    * @throws UnsupportedOperationException if the method was not found.
    */
-  static void checkAvailable(DynMethods.UnboundMethod method)
+  public static void checkAvailable(DynMethods.UnboundMethod method)
       throws UnsupportedOperationException {
     if (method.isNoop()) {
       throw new UnsupportedOperationException("Unbound " + method);
@@ -189,7 +189,7 @@ public final class BindingUtils {
    * @param method method to probe
    * @return true iff the method is found and loaded.
    */
-  static boolean available(DynMethods.UnboundMethod method) {
+  public static boolean available(DynMethods.UnboundMethod method) {
     return !method.isNoop();
   }
 

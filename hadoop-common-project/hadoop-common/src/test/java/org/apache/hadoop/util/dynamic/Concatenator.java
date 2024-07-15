@@ -17,10 +17,11 @@
  *  under the License.
  */
 
-package org.apache.hadoop.io.wrappedio.impl;
+package org.apache.hadoop.util.dynamic;
 
 /**
- * This is a class for testing DynMethods and DynConstructors.
+ * This is a class for testing {@link DynMethods} and {@code DynConstructors}.
+ * <p>
  * Derived from {@code org.apache.parquet.util} test suites.
  */
 public class Concatenator {

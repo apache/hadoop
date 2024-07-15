@@ -17,27 +17,31 @@
  *  under the License.
  */
 
-package org.apache.hadoop.io.wrappedio.impl;
+package org.apache.hadoop.util.dynamic;
 
 import java.util.concurrent.Callable;
 
 import org.junit.Assert;
 import org.junit.Test;
 
+import org.apache.hadoop.test.AbstractHadoopTestBase;
+
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
- * Derived from {@code org.apache.parquet.util} test suites.
+ * Copied from {@code org.apache.parquet.util} test suites.
  */
-public class TestDynMethods {
+public class TestDynMethods extends AbstractHadoopTestBase {
 
   @Test
   public void testNoImplCall() throws Exception {
     final DynMethods.Builder builder = new DynMethods.Builder("concat");
 
-    intercept(NoSuchMethodException.class, (Callable) builder::buildChecked);
+    intercept(NoSuchMethodException.class,
+        (Callable<DynMethods.UnboundMethod>) builder::buildChecked);
 
-    intercept(RuntimeException.class, (Callable) builder::build);
+    intercept(RuntimeException.class,
+        (Callable<DynMethods.UnboundMethod>) builder::build);
   }
 
   @Test
@@ -45,9 +49,11 @@ public class TestDynMethods {
     final DynMethods.Builder builder = new DynMethods.Builder("concat")
         .impl("not.a.RealClass", String.class, String.class);
 
-    intercept(NoSuchMethodException.class, (Callable) builder::buildChecked);
+    intercept(NoSuchMethodException.class,
+        (Callable<DynMethods.UnboundMethod>) builder::buildChecked);
 
-    intercept(RuntimeException.class, () -> builder.build());
+    intercept(RuntimeException.class, () ->
+        builder.build());
   }
 
   @Test
@@ -55,9 +61,11 @@ public class TestDynMethods {
     final DynMethods.Builder builder = new DynMethods.Builder("concat")
         .impl(Concatenator.class, "cat2strings", String.class, String.class);
 
-    intercept(NoSuchMethodException.class, (Callable) builder::buildChecked);
+    intercept(NoSuchMethodException.class,
+        (Callable<DynMethods.UnboundMethod>) builder::buildChecked);
 
-    intercept(RuntimeException.class, () -> builder.build());
+    intercept(RuntimeException.class, () ->
+        builder.build());
 
   }
 
@@ -113,9 +121,11 @@ public class TestDynMethods {
         .impl(Concatenator.class, String.class, String.class)
         .buildChecked();
 
-    intercept(IllegalArgumentException.class, () -> cat.invoke(obj, 3, 4));
+    intercept(IllegalArgumentException.class, () ->
+        cat.invoke(obj, 3, 4));
 
-    intercept(IllegalArgumentException.class, () -> cat.invokeChecked(obj, 3, 4));
+    intercept(IllegalArgumentException.class, () ->
+        cat.invokeChecked(obj, 3, 4));
   }
 
   @Test
@@ -127,9 +137,11 @@ public class TestDynMethods {
         .impl(Concatenator.class, Exception.class)
         .buildChecked();
 
-    intercept(Concatenator.SomeCheckedException.class, () -> cat.invokeChecked(obj, exc));
+    intercept(Concatenator.SomeCheckedException.class, () ->
+        cat.invokeChecked(obj, exc));
 
-    intercept(RuntimeException.class, () -> cat.invoke(obj, exc));
+    intercept(RuntimeException.class, () ->
+        cat.invoke(obj, exc));
   }
 
   @Test
@@ -204,14 +216,17 @@ public class TestDynMethods {
     final DynMethods.Builder builder = new DynMethods.Builder("cat")
         .impl(Concatenator.class, String[].class);
 
-    intercept(IllegalStateException.class, () -> builder.buildChecked(new Concatenator()));
+    intercept(IllegalStateException.class, () ->
+        builder.buildChecked(new Concatenator()));
 
-    intercept(IllegalStateException.class, () -> builder.build(new Concatenator()));
+    intercept(IllegalStateException.class, () ->
+        builder.build(new Concatenator()));
 
     final DynMethods.UnboundMethod staticCat = builder.buildChecked();
     Assert.assertTrue("Should be static", staticCat.isStatic());
 
-    intercept(IllegalStateException.class, () -> staticCat.bind(new Concatenator()));
+    intercept(IllegalStateException.class, () ->
+        staticCat.bind(new Concatenator()));
   }
 
   @Test
@@ -256,8 +271,10 @@ public class TestDynMethods {
         newConcatenator.isNoop());
 
     // constructors cannot be bound
-    intercept(IllegalStateException.class, () -> builder.buildChecked(new Concatenator()));
-    intercept(IllegalStateException.class, () -> builder.build(new Concatenator()));
+    intercept(IllegalStateException.class, () ->
+        builder.buildChecked(new Concatenator()));
+    intercept(IllegalStateException.class, () ->
+        builder.build(new Concatenator()));
 
     Concatenator concatenator = newConcatenator.asStatic().invoke("*");
     Assert.assertEquals("Should function as a concatenator",

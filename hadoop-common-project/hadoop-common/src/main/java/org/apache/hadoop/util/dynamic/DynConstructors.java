@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.hadoop.io.wrappedio.impl;
+package org.apache.hadoop.util.dynamic;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -29,7 +29,7 @@ import java.util.Map;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-import static org.apache.hadoop.io.wrappedio.impl.DynMethods.throwIfInstance;
+import static org.apache.hadoop.util.dynamic.DynMethods.throwIfInstance;
 import static org.apache.hadoop.util.Preconditions.checkArgument;
 
 /**

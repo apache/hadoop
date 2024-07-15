@@ -25,11 +25,14 @@ import javax.annotation.Nullable;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.statistics.IOStatistics;
+import org.apache.hadoop.fs.statistics.IOStatisticsSource;
+import org.apache.hadoop.util.dynamic.DynMethods;
 
-import static org.apache.hadoop.io.wrappedio.impl.BindingUtils.available;
-import static org.apache.hadoop.io.wrappedio.impl.BindingUtils.checkAvailable;
-import static org.apache.hadoop.io.wrappedio.impl.BindingUtils.loadClass;
-import static org.apache.hadoop.io.wrappedio.impl.BindingUtils.loadStaticMethod;
+import static org.apache.hadoop.util.dynamic.BindingUtils.available;
+import static org.apache.hadoop.util.dynamic.BindingUtils.checkAvailable;
+import static org.apache.hadoop.util.dynamic.BindingUtils.loadClass;
+import static org.apache.hadoop.util.dynamic.BindingUtils.loadStaticMethod;
 
 /**
  * The wrapped IOStatistics methods in {@code WrappedStatistics},
@@ -59,6 +62,11 @@ public final class DynamicWrappedStatistics {
    * Method name: {@value}.
    */
   public static final String IS_IOSTATISTICS_SNAPSHOT = "isIOStatisticsSnapshot";
+
+  /**
+   * IOStatisticsContext method: {@value}.
+   */
+  public static final String IOSTATISTICS_CONTEXT_AGGREGATE = "iostatisticsContext_aggregate";
 
   /**
    * IOStatisticsContext method: {@value}.
@@ -163,11 +171,16 @@ public final class DynamicWrappedStatistics {
    */
   private final boolean loaded;
 
+  /*
+   IOStatisticsContext methods.
+   */
+  private final DynMethods.UnboundMethod iostatisticsContextAggregateMethod;
+
   private final DynMethods.UnboundMethod iostatisticsContextEnabledMethod;
 
-  private final DynMethods.UnboundMethod iostatisticsContextResetMethod;
-
   private final DynMethods.UnboundMethod iostatisticsContextGetCurrentMethod;
+
+  private final DynMethods.UnboundMethod iostatisticsContextResetMethod;
 
   private final DynMethods.UnboundMethod iostatisticsContextSetThreadContextMethod;
 
@@ -228,16 +241,16 @@ public final class DynamicWrappedStatistics {
         Boolean.class, IS_IOSTATISTICS_SNAPSHOT, Serializable.class);
 
     // IOStatisticsContext operations
-    iostatisticsContextGetCurrentMethod = loadStaticMethod(wrappedClass,
-        Object.class, IOSTATISTICS_CONTEXT_GET_CURRENT);
-
-    iostatisticsContextSetThreadContextMethod = loadStaticMethod(wrappedClass,
-        Void.class, IOSTATISTICS_CONTEXT_SET_THREAD_CONTEXT, Object.class);
-
+    iostatisticsContextAggregateMethod = loadStaticMethod(wrappedClass,
+        Boolean.class, IOSTATISTICS_CONTEXT_AGGREGATE, Object.class);
     iostatisticsContextEnabledMethod = loadStaticMethod(wrappedClass,
         Boolean.class, IOSTATISTICS_CONTEXT_ENABLED);
+    iostatisticsContextGetCurrentMethod = loadStaticMethod(wrappedClass,
+        Object.class, IOSTATISTICS_CONTEXT_GET_CURRENT);
     iostatisticsContextResetMethod = loadStaticMethod(wrappedClass,
         Void.class, IOSTATISTICS_CONTEXT_RESET);
+    iostatisticsContextSetThreadContextMethod = loadStaticMethod(wrappedClass,
+        Void.class, IOSTATISTICS_CONTEXT_SET_THREAD_CONTEXT, Object.class);
     iostatisticsContextSnapshotMethod = loadStaticMethod(wrappedClass,
         Serializable.class, IOSTATISTICS_CONTEXT_SNAPSHOT);
 
@@ -356,7 +369,6 @@ public final class DynamicWrappedStatistics {
     return available(iostatisticsContextEnabledMethod);
   }
 
-
   /**
    * Require a IOStatistics to be available.
    * @throws UnsupportedOperationException if the method was not found.
@@ -463,6 +475,18 @@ public final class DynamicWrappedStatistics {
       throws UnsupportedOperationException {
     checkIoStatisticsContextAvailable();
     return iostatisticsContextSnapshotMethod.invoke(null);
+  }
+  /**
+   * Aggregate into the IOStatistics context the statistics passed in via
+   * IOStatistics/source parameter.
+   * <p>
+   * Returns false if the source is null or does not contain any statistics.
+   * @param source implementation of {@link IOStatisticsSource} or {@link IOStatistics}
+   * @return true if the the source object was aggregated.
+   */
+  public boolean iostatisticsContext_aggregate(Object source) {
+    checkIoStatisticsContextAvailable();
+    return iostatisticsContextAggregateMethod.invoke(null, source);
   }
 
   /**
