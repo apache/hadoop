@@ -42,6 +42,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsInvalidChecksumException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsDriverException;
@@ -183,7 +184,7 @@ public abstract class AbfsClient implements Closeable {
     this.abfsConfiguration = abfsConfiguration;
     this.exponentialRetryPolicy = abfsClientContext.getExponentialRetryPolicy();
     this.staticRetryPolicy = abfsClientContext.getStaticRetryPolicy();
-    this.accountName = abfsConfiguration.getAccountName().substring(0, abfsConfiguration.getAccountName().indexOf(DOT));
+    this.accountName = abfsConfiguration.getAccountName().substring(0, abfsConfiguration.getAccountName().indexOf(AbfsHttpConstants.DOT));
     this.authType = abfsConfiguration.getAuthType(accountName);
     this.intercept = AbfsThrottlingInterceptFactory.getInstance(accountName, abfsConfiguration);
     this.renameResilience = abfsConfiguration.getRenameResilience();
@@ -205,7 +206,7 @@ public abstract class AbfsClient implements Closeable {
     if (this.baseUrl.toString().startsWith(HTTPS_SCHEME)) {
       try {
         LOG.trace("Initializing DelegatingSSLSocketFactory with {} SSL "
-            + "Channel Mode", this.abfsConfiguration.getPreferredSSLFactoryOption());
+                + "Channel Mode", this.abfsConfiguration.getPreferredSSLFactoryOption());
         DelegatingSSLSocketFactory.initializeDefaultFactory(this.abfsConfiguration.getPreferredSSLFactoryOption());
         sslProviderName = DelegatingSSLSocketFactory.getDefaultFactory().getProviderName();
       } catch (IOException e) {
@@ -231,15 +232,15 @@ public abstract class AbfsClient implements Closeable {
       isMetricCollectionEnabled = true;
       abfsCounters.initializeMetrics(metricFormat);
       String metricAccountName = abfsConfiguration.getMetricAccount();
-      int dotIndex = metricAccountName.indexOf(DOT);
+      int dotIndex = metricAccountName.indexOf(AbfsHttpConstants.DOT);
       if (dotIndex <= 0) {
         throw new InvalidUriException(
-            metricAccountName + " - account name is not fully qualified.");
+                metricAccountName + " - account name is not fully qualified.");
       }
       String metricAccountKey = abfsConfiguration.getMetricAccountKey();
       try {
         metricSharedkeyCredentials = new SharedKeyCredentials(metricAccountName.substring(0, dotIndex),
-            metricAccountKey);
+                metricAccountKey);
       } catch (IllegalArgumentException e) {
         throw new IOException("Exception while initializing metric credentials " + e);
       }
@@ -255,10 +256,10 @@ public abstract class AbfsClient implements Closeable {
   }
 
   public AbfsClient(final URL baseUrl, final SharedKeyCredentials sharedKeyCredentials,
-      final AbfsConfiguration abfsConfiguration,
-      final AccessTokenProvider tokenProvider,
-      final EncryptionContextProvider encryptionContextProvider,
-      final AbfsClientContext abfsClientContext)
+                    final AbfsConfiguration abfsConfiguration,
+                    final AccessTokenProvider tokenProvider,
+                    final EncryptionContextProvider encryptionContextProvider,
+                    final AbfsClientContext abfsClientContext)
       throws IOException {
     this(baseUrl, sharedKeyCredentials, abfsConfiguration,
         encryptionContextProvider, abfsClientContext);
@@ -266,10 +267,10 @@ public abstract class AbfsClient implements Closeable {
   }
 
   public AbfsClient(final URL baseUrl, final SharedKeyCredentials sharedKeyCredentials,
-      final AbfsConfiguration abfsConfiguration,
-      final SASTokenProvider sasTokenProvider,
-      final EncryptionContextProvider encryptionContextProvider,
-      final AbfsClientContext abfsClientContext)
+                    final AbfsConfiguration abfsConfiguration,
+                    final SASTokenProvider sasTokenProvider,
+                    final EncryptionContextProvider encryptionContextProvider,
+                    final AbfsClientContext abfsClientContext)
       throws IOException {
     this(baseUrl, sharedKeyCredentials, abfsConfiguration,
         encryptionContextProvider, abfsClientContext);
@@ -527,12 +528,12 @@ public abstract class AbfsClient implements Closeable {
   protected abstract boolean checkIsDir(AbfsHttpOperation result);
 
   @VisibleForTesting
-  protected AbfsRestOperation createRenameRestOperation(URL url, List<AbfsHttpHeader> requestHeaders) {
+  AbfsRestOperation createRenameRestOperation(URL url, List<AbfsHttpHeader> requestHeaders) {
     AbfsRestOperation op = getAbfsRestOperation(
-        AbfsRestOperationType.RenamePath,
-        HTTP_METHOD_PUT,
-        url,
-        requestHeaders);
+            AbfsRestOperationType.RenamePath,
+            HTTP_METHOD_PUT,
+            url,
+            requestHeaders);
     return op;
   }
 
@@ -567,9 +568,9 @@ public abstract class AbfsClient implements Closeable {
 
     // removing isDir from debug logs as it can be misleading
     LOG.debug("rename({}, {}) failure {}; retry={} etag {}",
-        source, destination, op.getResult().getStatusCode(), op.isARetriedRequest(), sourceEtag);
+              source, destination, op.getResult().getStatusCode(), op.isARetriedRequest(), sourceEtag);
     if (!(op.isARetriedRequest()
-        && (op.getResult().getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND))) {
+            && (op.getResult().getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND))) {
       // only attempt recovery if the failure was a 404 on a retried rename request.
       return false;
     }
@@ -578,16 +579,16 @@ public abstract class AbfsClient implements Closeable {
       // Server has returned HTTP 404, we have an etag, so see
       // if the rename has actually taken place,
       LOG.info("rename {} to {} failed, checking etag of destination",
-          source, destination);
+              source, destination);
       try {
         final AbfsRestOperation destStatusOp = getPathStatus(destination,
             false, tracingContext, null);
         final AbfsHttpOperation result = destStatusOp.getResult();
 
         final boolean recovered = result.getStatusCode() == HttpURLConnection.HTTP_OK
-            && sourceEtag.equals(extractEtagHeader(result));
+                && sourceEtag.equals(extractEtagHeader(result));
         LOG.info("File rename has taken place: recovery {}",
-            recovered ? "succeeded" : "failed");
+                recovered ? "succeeded" : "failed");
         return recovered;
 
       } catch (AzureBlobFileSystemException ex) {
@@ -629,7 +630,7 @@ public abstract class AbfsClient implements Closeable {
   // Hence, we pass/succeed the appendblob append call
   // in case we are doing a retry after checking the length of the file
   public boolean appendSuccessCheckOp(AbfsRestOperation op, final String path,
-      final long length, TracingContext tracingContext)
+                                      final long length, TracingContext tracingContext)
       throws AzureBlobFileSystemException {
     if ((op.isARetriedRequest())
         && (op.getResult().getStatusCode() == HttpURLConnection.HTTP_BAD_REQUEST)) {
@@ -799,9 +800,9 @@ public abstract class AbfsClient implements Closeable {
    * @throws SASTokenProviderException if SAS token cannot be acquired.
    */
   protected String appendSASTokenToQuery(String path,
-      String operation,
-      AbfsUriQueryBuilder queryBuilder,
-      String cachedSasToken)
+                                         String operation,
+                                         AbfsUriQueryBuilder queryBuilder,
+                                         String cachedSasToken)
       throws SASTokenProviderException {
     String sasToken = null;
     if (this.authType == AuthType.SAS) {
@@ -841,7 +842,7 @@ public abstract class AbfsClient implements Closeable {
 
   @VisibleForTesting
   protected URL createRequestUrl(final String path, final String query)
-      throws AzureBlobFileSystemException {
+          throws AzureBlobFileSystemException {
     return createRequestUrl(baseUrl, path, query);
   }
 
@@ -880,7 +881,7 @@ public abstract class AbfsClient implements Closeable {
           .replace(PLUS, PLUS_ENCODE)
           .replace(FORWARD_SLASH_ENCODE, FORWARD_SLASH);
     } catch (UnsupportedEncodingException ex) {
-      throw new InvalidUriException(value);
+        throw new InvalidUriException(value);
     }
 
     return encodedString;
@@ -1155,31 +1156,31 @@ public abstract class AbfsClient implements Closeable {
    */
   boolean timerOrchestrator(TimerFunctionality timerFunctionality, TimerTask timerTask) {
     switch (timerFunctionality) {
-    case RESUME:
-      if (isMetricCollectionStopped.get()) {
-        synchronized (this) {
-          if (isMetricCollectionStopped.get()) {
-            resumeTimer();
+      case RESUME:
+        if (isMetricCollectionStopped.get()) {
+          synchronized (this) {
+            if (isMetricCollectionStopped.get()) {
+              resumeTimer();
+            }
           }
         }
-      }
-      break;
-    case SUSPEND:
-      long now = System.currentTimeMillis();
-      long lastExecutionTime = abfsCounters.getLastExecutionTime().get();
-      if (isMetricCollectionEnabled && (now - lastExecutionTime >= metricAnalysisPeriod)) {
-        synchronized (this) {
-          if (!isMetricCollectionStopped.get()) {
-            timerTask.cancel();
-            timer.purge();
-            isMetricCollectionStopped.set(true);
-            return true;
+        break;
+      case SUSPEND:
+        long now = System.currentTimeMillis();
+        long lastExecutionTime = abfsCounters.getLastExecutionTime().get();
+        if (isMetricCollectionEnabled && (now - lastExecutionTime >= metricAnalysisPeriod)) {
+          synchronized (this) {
+            if (!isMetricCollectionStopped.get()) {
+              timerTask.cancel();
+              timer.purge();
+              isMetricCollectionStopped.set(true);
+              return true;
+            }
           }
         }
-      }
-      break;
-    default:
-      break;
+        break;
+      default:
+        break;
     }
     return false;
   }
@@ -1207,10 +1208,10 @@ public abstract class AbfsClient implements Closeable {
     final URL url = createRequestUrl(new URL(abfsMetricUrl), EMPTY_STRING, abfsUriQueryBuilder.toString());
 
     final AbfsRestOperation op = getAbfsRestOperation(
-        AbfsRestOperationType.GetFileSystemProperties,
-        HTTP_METHOD_HEAD,
-        url,
-        requestHeaders);
+            AbfsRestOperationType.GetFileSystemProperties,
+            HTTP_METHOD_HEAD,
+            url,
+            requestHeaders);
     try {
       op.execute(tracingContext);
     } finally {
@@ -1234,11 +1235,11 @@ public abstract class AbfsClient implements Closeable {
     public void run() {
       try {
         if (timerOrchestrator(TimerFunctionality.SUSPEND, this)) {
-          try {
-            getMetricCall(getMetricTracingContext());
-          } finally {
-            abfsCounters.initializeMetrics(metricFormat);
-          }
+            try {
+              getMetricCall(getMetricTracingContext());
+            } finally {
+              abfsCounters.initializeMetrics(metricFormat);
+            }
         }
       } catch (IOException e) {
       }

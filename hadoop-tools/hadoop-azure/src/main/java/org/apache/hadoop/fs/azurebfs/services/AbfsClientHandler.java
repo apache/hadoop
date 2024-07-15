@@ -39,7 +39,6 @@ public class AbfsClientHandler {
   private AbfsServiceType defaultServiceType;
   private AbfsServiceType ingressServiceType;
   private final AbfsDfsClient dfsAbfsClient;
-  private final AbfsBlobClient blobAbfsClient;
 
   public AbfsClientHandler(final URL baseUrl,
       final SharedKeyCredentials sharedKeyCredentials,
@@ -50,10 +49,6 @@ public class AbfsClientHandler {
     this.dfsAbfsClient = createDfsClient(baseUrl, sharedKeyCredentials,
         abfsConfiguration, tokenProvider, null, encryptionContextProvider,
         abfsClientContext);
-    this.blobAbfsClient = createBlobClient(baseUrl, sharedKeyCredentials,
-        abfsConfiguration, tokenProvider, null, encryptionContextProvider,
-        abfsClientContext);
-    initServiceType(abfsConfiguration);
   }
 
   public AbfsClientHandler(final URL baseUrl,
@@ -65,10 +60,6 @@ public class AbfsClientHandler {
     this.dfsAbfsClient = createDfsClient(baseUrl, sharedKeyCredentials,
         abfsConfiguration, null, sasTokenProvider, encryptionContextProvider,
         abfsClientContext);
-    this.blobAbfsClient = createBlobClient(baseUrl, sharedKeyCredentials,
-        abfsConfiguration, null, sasTokenProvider, encryptionContextProvider,
-        abfsClientContext);
-    initServiceType(abfsConfiguration);
   }
 
   private void initServiceType(final AbfsConfiguration abfsConfiguration) {
@@ -85,15 +76,11 @@ public class AbfsClientHandler {
   }
 
   public AbfsClient getClient(AbfsServiceType serviceType) {
-    return serviceType == AbfsServiceType.DFS ? dfsAbfsClient : blobAbfsClient;
+    return serviceType == AbfsServiceType.DFS ? dfsAbfsClient : null;
   }
 
   public AbfsDfsClient getDfsClient() {
     return dfsAbfsClient;
-  }
-
-  public AbfsBlobClient getBlobClient() {
-    return blobAbfsClient;
   }
 
   private AbfsDfsClient createDfsClient(final URL baseUrl,
@@ -110,25 +97,6 @@ public class AbfsClientHandler {
           abfsClientContext);
     } else {
       return new AbfsDfsClient(dfsUrl, creds, abfsConfiguration,
-          sasTokenProvider, encryptionContextProvider,
-          abfsClientContext);
-    }
-  }
-
-  private AbfsBlobClient createBlobClient(final URL baseUrl,
-      final SharedKeyCredentials creds,
-      final AbfsConfiguration abfsConfiguration,
-      final AccessTokenProvider tokenProvider,
-      final SASTokenProvider sasTokenProvider,
-      final EncryptionContextProvider encryptionContextProvider,
-      final AbfsClientContext abfsClientContext) throws IOException {
-    URL blobUrl = changeUrlFromDfsToBlob(baseUrl);
-    if (tokenProvider != null) {
-      return new AbfsBlobClient(blobUrl, creds, abfsConfiguration,
-          tokenProvider, encryptionContextProvider,
-          abfsClientContext);
-    } else {
-      return new AbfsBlobClient(blobUrl, creds, abfsConfiguration,
           sasTokenProvider, encryptionContextProvider,
           abfsClientContext);
     }
