@@ -1149,7 +1149,7 @@ public class AbfsClient implements Closeable {
     AbfsHttpHeader rangeHeader = new AbfsHttpHeader(RANGE,
         String.format("bytes=%d-%d", position, position + bufferLength - 1));
     requestHeaders.add(rangeHeader);
-    if (!StringUtils.isEmpty(eTag)) {
+    if (StringUtils.isNotEmpty(eTag)) {
       requestHeaders.add(new AbfsHttpHeader(IF_MATCH, eTag));
     }
 

@@ -160,8 +160,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     this.eTag = eTag;
     this.fileStatusInformationPresent = StringUtils.isNotEmpty(eTag);
     this.prefetchTriggerOnFirstRead =
-        abfsInputStreamContext.isPrefetchTriggerOnFirstRead()
-            && getFileStatusInformationPresent();
+        abfsInputStreamContext.isPrefetchTriggerOnFirstRead();
     this.readAheadRange = abfsInputStreamContext.getReadAheadRange();
     this.readAheadEnabled = abfsInputStreamContext.isReadAheadEnabled();
     this.alwaysReadBufferSize
@@ -317,7 +316,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   }
 
   private boolean shouldReadFully(int lengthToRead) {
-    if (!getFileStatusInformationPresent()) {
+    if (!hasFileStatusInfo()) {
       /*
        * In case the fileStatus information is not available, the content length
        * of the file is not known at this instant. In such cases, it would be marked
@@ -337,7 +336,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   }
 
   private boolean shouldReadLastBlock(int lengthToRead) {
-    if (!getFileStatusInformationPresent()) {
+    if (!hasFileStatusInfo()) {
       /*
        * In case the fileStatus information is not available, the content length
        * of the file is not known at this instant. In such cases, it would be marked
@@ -362,7 +361,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     //If buffer is empty, then fill the buffer.
     if (bCursor == limit) {
       //If EOF, then return -1
-      if (getFileStatusInformationPresent() && fCursor >= getContentLength()) {
+      if (hasFileStatusInfo() && fCursor >= getContentLength()) {
         return -1;
       }
 
@@ -415,7 +414,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     // data need to be copied to user buffer from index bCursor, bCursor has
     // to be the current fCusor
     bCursor = (int) fCursor;
-    if (!getFileStatusInformationPresent()) {
+    if (!hasFileStatusInfo()) {
       return optimisedRead(b, off, len, 0, bufferSize, true);
     }
     return optimisedRead(b, off, len, 0, getContentLength(), false);
@@ -434,7 +433,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     // data need to be copied to user buffer from index bCursor,
     // AbfsInutStream buffer is going to contain data from last block start. In
     // that case bCursor will be set to fCursor - lastBlockStart
-    if (!getFileStatusInformationPresent()) {
+    if (!hasFileStatusInfo()) {
       long lastBlockStart = max(0, (fCursor + len) - footerReadSize);
       bCursor = (int) (fCursor - lastBlockStart);
       return optimisedRead(b, off, len, lastBlockStart, min(fCursor + len, footerReadSize), true);
@@ -454,7 +453,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     int lastBytesRead = 0;
     try {
       buffer = new byte[bufferSize];
-      boolean fileStatusInformationPresentBeforeRead = getFileStatusInformationPresent();
+      boolean fileStatusInformationPresentBeforeRead = hasFileStatusInfo();
       /*
        * Content length would not be available for the first optimized read in case
        * of lazy head optimization in inputStream. In such case, read of the first optimized read
@@ -462,7 +461,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
        * would be present and should be used for further reads.
        */
       for (int i = 0;
-           i < MAX_OPTIMIZED_READ_ATTEMPTS && (!getFileStatusInformationPresent()
+           i < MAX_OPTIMIZED_READ_ATTEMPTS && (!hasFileStatusInfo()
                || fCursor < getContentLength()); i++) {
         lastBytesRead = readInternal(fCursor, buffer, limit,
             (int) actualLen - limit, true);
@@ -472,36 +471,22 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
           fCursor += lastBytesRead;
           fCursorAfterLastRead = fCursor;
 
-          /*
-           * In non-lazily opened inputStream, the contentLength would be available before
-           * opening the inputStream. In such case, optimized read would always be done
-           * on the last part of the file.
-           *
-           * In lazily opened inputStream, the contentLength would not be available before
-           * opening the inputStream. In such case, contentLength conditioning would not be
-           * applied to execute optimizedRead. Hence, the optimized read may not be done on the
-           * last part of the file. If the optimized read is done on the non-last part of the
-           * file, inputStream should read only the amount of data requested by optimizedRead,
-           * as the buffer supplied would be only of the size of the data requested by optimizedRead.
-           */
-          boolean shouldBreak = !fileStatusInformationPresentBeforeRead
-              && totalBytesRead == (int) actualLen;
-          if (shouldBreak) {
+          if (shouldBreakLazyOptimizedRead((int) actualLen, totalBytesRead,
+              fileStatusInformationPresentBeforeRead)) {
             break;
           }
         }
       }
+    } catch (FileNotFoundException ex) {
+      /*
+       * FileNotFoundException in AbfsInputStream read can happen only in case of
+       * lazy optimization enabled. In such case, the contentLength is not known
+       * before opening the inputStream, and the first read can give a
+       * FileNotFoundException, and if this exception is raised, it has to be
+       * thrown back to the application and make a readOneBlock call.
+       */
+      throw ex;
     } catch (IOException e) {
-      if (e instanceof FileNotFoundException) {
-        /*
-         * FileNotFoundException in AbfsInputStream read can happen only in case of
-         * lazy optimization enabled. In such case, the contentLength is not known
-         * before opening the inputStream, and the first read can give a
-         * FileNotFoundException, and if this exception is raised, it has to be
-         * thrown back to the application and make a readOneBlock call.
-         */
-        throw e;
-      }
       LOG.debug("Optimized read failed. Defaulting to readOneBlock {}", e);
       restorePointerState();
       return readOneBlock(b, off, len);
@@ -522,12 +507,37 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     return copyToUserBuffer(b, off, len, isOptimizedReadWithoutContentLengthInformation);
   }
 
+  /**
+   * In non-lazily opened inputStream, the contentLength would be available before
+   * opening the inputStream. In such case, optimized read would always be done
+   * on the last part of the file.
+   *
+   * In lazily opened inputStream, the contentLength would not be available before
+   * opening the inputStream. In such case, contentLength conditioning would not be
+   * applied to execute optimizedRead. Hence, the optimized read may not be done on the
+   * last part of the file. If the optimized read is done on the non-last part of the
+   * file, inputStream should read only the amount of data requested by optimizedRead,
+   * as the buffer supplied would be only of the size of the data requested by optimizedRead.
+   *
+   * @param actualLen actual length to read.
+   * @param totalBytesRead total bytes read.
+   * @param fileStatusInformationPresentBeforeRead file status information present before read.
+   *
+   * @return true if should break lazy optimized read, false otherwise.
+   */
+  private boolean shouldBreakLazyOptimizedRead(final int actualLen,
+      final int totalBytesRead,
+      final boolean fileStatusInformationPresentBeforeRead) {
+    return !fileStatusInformationPresentBeforeRead
+        && totalBytesRead == actualLen;
+  }
+
   @VisibleForTesting
   long getContentLength() {
     return contentLength;
   }
 
-  boolean getFileStatusInformationPresent() {
+  private boolean hasFileStatusInfo() {
     return fileStatusInformationPresent;
   }
 
@@ -556,7 +566,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     Preconditions.checkNotNull(b);
     LOG.debug("read one block requested b.length = {} off {} len {}", b.length,
         off, len);
-    if (getFileStatusInformationPresent() && this.available() == 0) {
+    if (hasFileStatusInfo() && this.available() == 0) {
       return false;
     }
 
@@ -567,7 +577,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   }
 
   private int copyToUserBuffer(byte[] b, int off, int len,
-      final boolean isOptimizedReadWithoutContentLengthInformation){
+      final boolean isOptimizedReadWithoutContentLengthInfo){
     /*
      * If the ABFS is running with head optimization for opening InputStream, the
      * application can give invalid indexes such that the required data is out of file length,
@@ -575,7 +585,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
      * read in the AbfsInputStream buffer. But since, the application has asked for
      * invalid indexes, it will receive a -1.
      */
-    if (isOptimizedReadWithoutContentLengthInformation && bCursor > limit) {
+    if (isOptimizedReadWithoutContentLengthInfo && bCursor > limit) {
       bCursor = limit;
       nextReadPos = getContentLength();
       return -1;
@@ -601,7 +611,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   private int readInternal(final long position, final byte[] b, final int offset, final int length,
                            final boolean bypassReadAhead) throws IOException {
-    if (readAheadEnabled && !bypassReadAhead && (prefetchTriggerOnFirstRead || sequentialReadStarted)) {
+    if (readAheadEnabled && !bypassReadAhead && effectiveReadAhead()) {
       // try reading from read-ahead
       if (offset != 0) {
         throw new IllegalArgumentException("readahead buffers cannot have non-zero buffer offsets");
@@ -649,11 +659,26 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     }
   }
 
+  /**
+   * ReadAhead can happen only if the sequential read has started or if the
+   * inputStream has the HEAD information of the path and the config
+   * {@link org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys#FS_AZURE_PREFETCH_ON_FIRST_READ_ENABLED}
+   * is enabled. In case of lazy head optimization, the contentLength is not known
+   * before opening the inputStream. In such case, the readAhead can happen only
+   * after the first successful sequential read.
+   *
+   * @return true if readAhead can be triggered, false otherwise.
+   */
+  private boolean effectiveReadAhead() {
+    return (prefetchTriggerOnFirstRead && hasFileStatusInfo())
+        || sequentialReadStarted;
+  }
+
   int readRemote(long position, byte[] b, int offset, int length, TracingContext tracingContext) throws IOException {
     if (position < 0) {
       throw new IllegalArgumentException("attempting to read from negative offset");
     }
-    if (getFileStatusInformationPresent() && position >= getContentLength()) {
+    if (hasFileStatusInfo() && position >= getContentLength()) {
       return -1;  // Hadoop prefers -1 to EOFException
     }
     if (b == null) {
@@ -698,13 +723,16 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
          * opening the inputStream.
          */
         if (ere.getStatusCode() == READ_PATH_REQUEST_NOT_SATISFIABLE
-            && !getFileStatusInformationPresent()) {
+            && !hasFileStatusInfo()) {
+          LOG.error("Read range is out of contentLength range. "
+              + "This can happen only in case of lazy head optimization. "
+              + "Path" + path + " position " + position + " length " + length, ere);
           return -1;
         }
       }
       throw new IOException(ex);
     } finally {
-      if (!getFileStatusInformationPresent() && abfsHttpOperation != null) {
+      if (!hasFileStatusInfo() && abfsHttpOperation != null) {
         initPropertiesFromReadResponseHeader(abfsHttpOperation);
       }
     }
@@ -721,17 +749,9 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   }
 
   private void initPropertiesFromReadResponseHeader(final AbfsHttpOperation op) throws IOException {
-    if (DIRECTORY.equals(
-        op.getResponseHeader(HttpHeaderConfigurations.X_MS_RESOURCE_TYPE))) {
-      throw new FileNotFoundException(
-          "read must be used with files and not directories. Path: " + path);
-    }
+    validateFileResourceTypeAndParseETag(op);
     contentLength = parseFromRange(
         op.getResponseHeader(HttpHeaderConfigurations.CONTENT_RANGE));
-    eTag = op.getResponseHeader(HttpHeaderConfigurations.ETAG);
-    if (eTag != null && contentLength >= 0) {
-      fileStatusInformationPresent = true;
-    }
   }
 
   private long parseFromRange(final String responseHeader) {
@@ -769,7 +789,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     if (n < 0) {
       throw new EOFException(FSExceptionMessages.NEGATIVE_SEEK);
     }
-    if (getFileStatusInformationPresent() && n > getContentLength()) {
+    if (hasFileStatusInfo() && n > getContentLength()) {
       throw new EOFException(FSExceptionMessages.CANNOT_SEEK_PAST_EOF);
     }
 
@@ -788,7 +808,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       throw new IOException(FSExceptionMessages.STREAM_IS_CLOSED);
     }
     long currentPos = getPos();
-    if (getFileStatusInformationPresent() && currentPos == getContentLength()) {
+    if (hasFileStatusInfo() && currentPos == getContentLength()) {
       if (n > 0) {
         throw new EOFException(FSExceptionMessages.CANNOT_SEEK_PAST_EOF);
       }
@@ -798,7 +818,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       newPos = 0;
       n = newPos - currentPos;
     }
-    if (getFileStatusInformationPresent() && newPos > getContentLength()) {
+    if (hasFileStatusInfo() && newPos > getContentLength()) {
       newPos = getContentLength();
       n = newPos - currentPos;
     }
@@ -821,24 +841,29 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       throw new IOException(
           FSExceptionMessages.STREAM_IS_CLOSED);
     }
-    if (!getFileStatusInformationPresent()) {
+    if (!hasFileStatusInfo()) {
       AbfsRestOperation op = client.getPathStatus(path, false, tracingContext,
           null);
-      if (DIRECTORY.equals(
-          op.getResult()
-              .getResponseHeader(
-                  HttpHeaderConfigurations.X_MS_RESOURCE_TYPE))) {
-        throw new FileNotFoundException(
-            "read must be used with files and not directories. Path: " + path);
-      }
+      validateFileResourceTypeAndParseETag(op.getResult());
       contentLength = Long.parseLong(
           op.getResult().getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH));
-      eTag = op.getResult().getResponseHeader(HttpHeaderConfigurations.ETAG);
-      fileStatusInformationPresent = true;
     }
     final long remaining = getContentLength() - this.getPos();
     return remaining <= Integer.MAX_VALUE
         ? (int) remaining : Integer.MAX_VALUE;
+  }
+
+  private void validateFileResourceTypeAndParseETag(final AbfsHttpOperation op)
+      throws FileNotFoundException {
+    if (DIRECTORY.equals(
+        op
+            .getResponseHeader(
+                HttpHeaderConfigurations.X_MS_RESOURCE_TYPE))) {
+      throw new FileNotFoundException(
+          "read must be used with files and not directories. Path: " + path);
+    }
+    eTag = op.getResponseHeader(HttpHeaderConfigurations.ETAG);
+    fileStatusInformationPresent = true;
   }
 
   /**

@@ -920,8 +920,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         }
       }
 
-      if ((fileStatus != null || !abfsConfiguration.isInputStreamLazyOptimizationEnabled())
-          && parseIsDirectory(resourceType)) {
+      if (parseIsDirectory(resourceType)) {
         throw new AbfsRestOperationException(
             AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode(),
             AzureServiceErrorCode.PATH_NOT_FOUND.getErrorCode(),
