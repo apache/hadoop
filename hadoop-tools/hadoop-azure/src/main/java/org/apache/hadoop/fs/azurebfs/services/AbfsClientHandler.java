@@ -49,6 +49,7 @@ public class AbfsClientHandler {
     this.dfsAbfsClient = createDfsClient(baseUrl, sharedKeyCredentials,
         abfsConfiguration, tokenProvider, null, encryptionContextProvider,
         abfsClientContext);
+    initServiceType(abfsConfiguration);
   }
 
   public AbfsClientHandler(final URL baseUrl,
@@ -60,6 +61,7 @@ public class AbfsClientHandler {
     this.dfsAbfsClient = createDfsClient(baseUrl, sharedKeyCredentials,
         abfsConfiguration, null, sasTokenProvider, encryptionContextProvider,
         abfsClientContext);
+    initServiceType(abfsConfiguration);
   }
 
   private void initServiceType(final AbfsConfiguration abfsConfiguration) {
