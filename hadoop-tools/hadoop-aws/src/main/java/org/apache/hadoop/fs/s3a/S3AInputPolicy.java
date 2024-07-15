@@ -28,7 +28,9 @@ import org.apache.hadoop.classification.InterfaceStability;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_ADAPTIVE;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_AVRO;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_COLUMNAR;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_CSV;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_DEFAULT;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_JSON;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_ORC;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_PARQUET;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_RANDOM;
@@ -102,7 +104,6 @@ public enum S3AInputPolicy {
     case FS_OPTION_OPENFILE_READ_POLICY_VECTOR:
       return Random;
 
-
       // columnar formats currently map to random IO,
       // though in future this may be enhanced.
     case FS_OPTION_OPENFILE_READ_POLICY_COLUMNAR:
@@ -110,7 +111,10 @@ public enum S3AInputPolicy {
     case FS_OPTION_OPENFILE_READ_POLICY_PARQUET:
       return Random;
 
+      // hadle the sequential formats.
     case FS_OPTION_OPENFILE_READ_POLICY_AVRO:
+    case FS_OPTION_OPENFILE_READ_POLICY_CSV:
+    case FS_OPTION_OPENFILE_READ_POLICY_JSON:
     case FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL:
     case FS_OPTION_OPENFILE_READ_POLICY_WHOLE_FILE:
       return Sequential;

@@ -26,6 +26,7 @@ import org.apache.hadoop.io.wrappedio.impl.TestWrappedIO;
  * Test WrappedIO access to ABFS.
  */
 public class ITestAbfsWrappedIO extends TestWrappedIO {
+
   private final boolean isSecure;
   private final ABFSContractTestBinding binding;
 
