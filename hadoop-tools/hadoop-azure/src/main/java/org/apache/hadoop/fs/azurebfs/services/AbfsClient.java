@@ -88,7 +88,6 @@ import static org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.extractEtag
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APN_VERSION;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CLIENT_VERSION;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DEFAULT_TIMEOUT;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DOT;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FILESYSTEM;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FORWARD_SLASH;
@@ -599,7 +598,7 @@ public abstract class AbfsClient implements Closeable {
     } else {
       LOG.debug("No source etag; unable to probe for the operation's success");
     }
-    return false;
+      return false;
   }
 
   public abstract AbfsRestOperation append(String path, byte[] buffer,
@@ -630,7 +629,7 @@ public abstract class AbfsClient implements Closeable {
   // Hence, we pass/succeed the appendblob append call
   // in case we are doing a retry after checking the length of the file
   public boolean appendSuccessCheckOp(AbfsRestOperation op, final String path,
-                                      final long length, TracingContext tracingContext)
+                                       final long length, TracingContext tracingContext)
       throws AzureBlobFileSystemException {
     if ((op.isARetriedRequest())
         && (op.getResult().getStatusCode() == HttpURLConnection.HTTP_BAD_REQUEST)) {
@@ -739,7 +738,7 @@ public abstract class AbfsClient implements Closeable {
       throws AzureBlobFileSystemException;
 
   public AbfsRestOperation getAclStatus(final String path, TracingContext tracingContext)
-      throws AzureBlobFileSystemException {
+          throws AzureBlobFileSystemException {
     return getAclStatus(path, abfsConfiguration.isUpnUsed(), tracingContext);
   }
 
@@ -848,7 +847,7 @@ public abstract class AbfsClient implements Closeable {
 
   @VisibleForTesting
   protected URL createRequestUrl(final URL baseUrl, final String path, final String query)
-      throws AzureBlobFileSystemException {
+          throws AzureBlobFileSystemException {
     String encodedPath = path;
     try {
       encodedPath = urlEncode(path);
