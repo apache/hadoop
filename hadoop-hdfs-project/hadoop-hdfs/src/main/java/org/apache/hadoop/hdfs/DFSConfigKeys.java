@@ -669,7 +669,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       10000; //ms
   public static final String DFS_DATANODE_LOCK_FAIR_KEY =
       "dfs.datanode.lock.fair";
-  public static final boolean DFS_DATANODE_LOCK_FAIR_DEFAULT = true;
+  public static final boolean DFS_DATANODE_LOCK_FAIR_DEFAULT = false;
 
   public static final String  DFS_UPGRADE_DOMAIN_FACTOR = "dfs.namenode.upgrade.domain.factor";
   public static final int DFS_UPGRADE_DOMAIN_FACTOR_DEFAULT = DFS_REPLICATION_DEFAULT;

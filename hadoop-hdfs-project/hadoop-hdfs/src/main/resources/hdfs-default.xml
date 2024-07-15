@@ -3540,7 +3540,7 @@
 
 <property>
   <name>dfs.datanode.lock.fair</name>
-  <value>true</value>
+  <value>false</value>
   <description>If this is true, the Datanode FsDataset lock will be used in Fair
     mode, which will help to prevent writer threads from being starved, but can
     lower lock throughput. See java.util.concurrent.locks.ReentrantReadWriteLock
