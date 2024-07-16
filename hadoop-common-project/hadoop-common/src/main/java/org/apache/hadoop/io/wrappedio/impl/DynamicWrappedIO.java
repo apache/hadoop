@@ -182,14 +182,14 @@ public final class DynamicWrappedIO {
 
     // path and stream capabilities
     pathCapabilitiesHasPathCapabilityMethod = loadStaticMethod(wrappedClass,
-        Boolean.class,
+        boolean.class,
         PATH_CAPABILITIES_HAS_PATH_CAPABILITY,
-        FileSystem.class,
+        Object.class,
         Path.class,
         String.class);
 
     streamCapabilitiesHasCapabilityMethod = loadStaticMethod(wrappedClass,
-        Boolean.class,
+        boolean.class,
         STREAM_CAPABILITIES_HAS_CAPABILITY,
         Object.class,
         String.class);
@@ -216,6 +216,31 @@ public final class DynamicWrappedIO {
   public boolean loaded() {
     return loaded;
   }
+
+
+  /**
+   * For testing: verify that all methods were found.
+   * @throws UnsupportedOperationException if the method was not found.
+   */
+  void requireAllMethodsAvailable()  throws UnsupportedOperationException {
+
+    final DynMethods.UnboundMethod[] methods = {
+        bulkDeleteDeleteMethod,
+        bulkDeletePageSizeMethod,
+        fileSystemOpenFileMethod,
+        pathCapabilitiesHasPathCapabilityMethod,
+        streamCapabilitiesHasCapabilityMethod,
+        byteBufferPositionedReadableReadFullyAvailableMethod,
+        byteBufferPositionedReadableReadFullyMethod,
+    };
+    for (DynMethods.UnboundMethod method : methods) {
+      LOG.info("Checking method {}", method);
+      if (!available(method)) {
+        throw new UnsupportedOperationException("Unbound " + method);
+      }
+    }
+  }
+
 
   /**
    * Are the bulk delete methods available?
@@ -471,4 +496,5 @@ public final class DynamicWrappedIO {
     }
     return stream;
   }
+
 }

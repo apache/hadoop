@@ -47,6 +47,7 @@ import org.apache.hadoop.io.wrappedio.WrappedIO;
 import org.apache.hadoop.util.Lists;
 
 import static java.nio.ByteBuffer.allocate;
+import static org.apache.hadoop.fs.CommonPathCapabilities.BULK_DELETE;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_LENGTH;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
 import static org.apache.hadoop.fs.StreamCapabilities.IOSTATISTICS_CONTEXT;
@@ -107,6 +108,10 @@ public class TestWrappedIO extends AbstractFSContractTestBase {
     intercept(AssertionError.class, () -> clazz("no.such.class"));
   }
 
+  @Test
+  public void testAllMethodsFound() throws Throwable {
+    io.requireAllMethodsAvailable();
+  }
 
   /**
    * Test the openFile operation.
@@ -196,6 +201,9 @@ public class TestWrappedIO extends AbstractFSContractTestBase {
     }
 
     // if we get this far, do a bulk delete
+    Assertions.assertThat(io.pathCapabilities_hasPathCapability(fs, path, BULK_DELETE))
+        .describedAs("Path capability %s", BULK_DELETE)
+        .isTrue();
 
     // first assert page size was picked up
     Assertions.assertThat(io.bulkDelete_pageSize(fs, path))

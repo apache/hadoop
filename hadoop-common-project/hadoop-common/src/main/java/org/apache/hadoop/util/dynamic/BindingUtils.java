@@ -141,6 +141,9 @@ public final class BindingUtils {
 
     final DynMethods.UnboundMethod method =
         loadInvocation(source, returnType, name, parameterTypes);
+    if (!available(method)) {
+      LOG.debug("Method not found: {}", name);
+    }
     checkState(method.isStatic(), "Method is not static %s", method);
     return method;
   }
@@ -179,7 +182,7 @@ public final class BindingUtils {
    */
   public static void checkAvailable(DynMethods.UnboundMethod method)
       throws UnsupportedOperationException {
-    if (method.isNoop()) {
+    if (!available(method)) {
       throw new UnsupportedOperationException("Unbound " + method);
     }
   }
