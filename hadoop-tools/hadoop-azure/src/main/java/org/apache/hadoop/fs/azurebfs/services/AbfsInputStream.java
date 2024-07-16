@@ -132,7 +132,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   /** ABFS instance to be held by the input stream to avoid GC close. */
   private final BackReference fsBackRef;
 
-  private boolean fileStatusInformationPresent;
+  private volatile boolean fileStatusInformationPresent;
 
   /**
    * Defines if the inputStream has been read sequentially. Prefetches would
@@ -533,8 +533,12 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
   }
 
   @VisibleForTesting
-  long getContentLength() {
+  synchronized long getContentLength() {
     return contentLength;
+  }
+
+  private synchronized void setContentLength(long contentLength) {
+    this.contentLength = contentLength;
   }
 
   private boolean hasFileStatusInfo() {
@@ -750,8 +754,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
 
   private void initPropertiesFromReadResponseHeader(final AbfsHttpOperation op) throws IOException {
     validateFileResourceTypeAndParseETag(op);
-    contentLength = parseFromRange(
-        op.getResponseHeader(HttpHeaderConfigurations.CONTENT_RANGE));
+    setContentLength(parseFromRange(
+        op.getResponseHeader(HttpHeaderConfigurations.CONTENT_RANGE)));
   }
 
   private long parseFromRange(final String responseHeader) {
@@ -845,8 +849,8 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       AbfsRestOperation op = client.getPathStatus(path, false, tracingContext,
           null);
       validateFileResourceTypeAndParseETag(op.getResult());
-      contentLength = Long.parseLong(
-          op.getResult().getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH));
+      setContentLength(Long.parseLong(
+          op.getResult().getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH)));
     }
     final long remaining = getContentLength() - this.getPos();
     return remaining <= Integer.MAX_VALUE
