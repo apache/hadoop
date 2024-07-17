@@ -894,7 +894,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         contextEncryptionAdapter = new ContextProviderEncryptionAdapter(
             client.getEncryptionContextProvider(), getRelativePath(path),
             encryptionContext.getBytes(StandardCharsets.UTF_8));
-      } else if (fileStatus != null
+      } else if (fileStatus == null
           && !abfsConfiguration.isInputStreamLazyOptimizationEnabled()) {
         PathInformation pathInformation = getPathInformation(relativePath,
             tracingContext);
