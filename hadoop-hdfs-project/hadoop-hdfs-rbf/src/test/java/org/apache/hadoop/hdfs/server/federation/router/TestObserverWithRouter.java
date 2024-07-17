@@ -618,7 +618,6 @@ public class TestObserverWithRouter {
     Configuration conf = new Configuration();
     conf.setBoolean(RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_DEFAULT_KEY, true);
     conf.set(RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_OVERRIDES, "ns1");
-    conf.setInt(RBFConfigKeys.DFS_ROUTER_OBSERVER_FEDERATED_STATE_PROPAGATION_MAXSIZE, 1);
 
     RouterStateIdContext routerStateIdContext = new RouterStateIdContext(conf);
 
@@ -640,6 +639,46 @@ public class TestObserverWithRouter {
     // Only ns0 will be in latestFederateState
     Assertions.assertEquals(1, latestFederateState.size());
     Assertions.assertEquals(10L, latestFederateState.get("ns0"));
+  }
+
+  @Test
+  @Tag(SKIP_BEFORE_EACH_CLUSTER_STARTUP)
+  public void testRouterResponseHeaderStateMaxSizeLimit() {
+    Configuration conf = new Configuration();
+    conf.setBoolean(RBFConfigKeys.DFS_ROUTER_OBSERVER_READ_DEFAULT_KEY, true);
+    conf.setInt(RBFConfigKeys.DFS_ROUTER_OBSERVER_FEDERATED_STATE_PROPAGATION_MAXSIZE, 1);
+
+    RouterStateIdContext routerStateIdContext = new RouterStateIdContext(conf);
+
+    ConcurrentHashMap<String, LongAccumulator> namespaceIdMap =
+        routerStateIdContext.getNamespaceIdMap();
+    namespaceIdMap.put("ns0", new LongAccumulator(Math::max, 10));
+    namespaceIdMap.put("ns1", new LongAccumulator(Math::max, Long.MIN_VALUE));
+
+    RpcHeaderProtos.RpcResponseHeaderProto.Builder responseHeaderBuilder =
+        RpcHeaderProtos.RpcResponseHeaderProto
+            .newBuilder()
+            .setCallId(1)
+            .setStatus(RpcHeaderProtos.RpcResponseHeaderProto.RpcStatusProto.SUCCESS);
+    routerStateIdContext.updateResponseState(responseHeaderBuilder);
+
+    Map<String, Long> latestFederateState = RouterStateIdContext.getRouterFederatedStateMap(
+        responseHeaderBuilder.build().getRouterFederatedState());
+    // Validate that ns0 is still part of the header
+    Assertions.assertEquals(1, latestFederateState.size());
+
+    namespaceIdMap.put("ns2", new LongAccumulator(Math::max, 20));
+    // Rebuild header
+    responseHeaderBuilder =
+        RpcHeaderProtos.RpcResponseHeaderProto
+            .newBuilder()
+            .setCallId(1)
+            .setStatus(RpcHeaderProtos.RpcResponseHeaderProto.RpcStatusProto.SUCCESS);
+    routerStateIdContext.updateResponseState(responseHeaderBuilder);
+    latestFederateState = RouterStateIdContext.getRouterFederatedStateMap(
+        responseHeaderBuilder.build().getRouterFederatedState());
+    // Validate that ns0 is still part of the header
+    Assertions.assertEquals(0, latestFederateState.size());
   }
 
   @EnumSource(ConfigSetting.class)
