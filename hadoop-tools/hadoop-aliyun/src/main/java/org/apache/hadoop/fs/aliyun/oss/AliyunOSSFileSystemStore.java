@@ -92,6 +92,7 @@ public class AliyunOSSFileSystemStore {
   private int maxKeys;
   private String serverSideEncryptionAlgorithm;
   private boolean useListV1;
+  private boolean useStandardHttpRangeBehavior = false;
 
   public void initialize(URI uri, Configuration conf, String user,
                          FileSystem.Statistics stat) throws IOException {
@@ -178,6 +179,8 @@ public class AliyunOSSFileSystemStore {
           "version 2", listVersion);
     }
     useListV1 = (listVersion == 1);
+    useStandardHttpRangeBehavior = conf.getBoolean(OSS_USE_HTTP_STANDARD_RANGE,
+        OSS_USE_HTTP_STANDARD_RANGE_DEFAULT);
   }
 
   /**
@@ -527,17 +530,14 @@ public class AliyunOSSFileSystemStore {
    * @return This method returns null if the key is not found.
    */
   public InputStream retrieve(String key, long byteStart, long byteEnd) {
-    try {
-      GetObjectRequest request = new GetObjectRequest(bucketName, key);
-      request.setRange(byteStart, byteEnd);
-      InputStream in = ossClient.getObject(request).getObjectContent();
-      statistics.incrementReadOps(1);
-      return in;
-    } catch (OSSException | ClientException e) {
-      LOG.error("Exception thrown when store retrieves key: "
-              + key + ", exception: " + e);
-      return null;
+    GetObjectRequest request = new GetObjectRequest(bucketName, key);
+    if (useStandardHttpRangeBehavior) {
+      request.addHeader("x-oss-range-behavior", "standard");
     }
+    request.setRange(byteStart, byteEnd);
+    InputStream in = ossClient.getObject(request).getObjectContent();
+    statistics.incrementReadOps(1);
+    return in;
   }
 
   /**

@@ -24,12 +24,14 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.aliyun.oss.statistics.BlockOutputStreamStatistics;
 import org.apache.hadoop.fs.aliyun.oss.statistics.impl.OutputStreamStatistics;
+import org.apache.hadoop.fs.impl.OpenFileParameters;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.MoreExecutors;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -49,6 +51,7 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
+import org.apache.hadoop.util.LambdaUtils;
 import org.apache.hadoop.util.Progressable;
 
 import com.aliyun.oss.model.OSSObjectSummary;
@@ -58,6 +61,8 @@ import org.apache.hadoop.util.SemaphoredDelegatingExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
 import static org.apache.hadoop.fs.aliyun.oss.AliyunOSSUtils.intOption;
 import static org.apache.hadoop.fs.aliyun.oss.AliyunOSSUtils.longOption;
 import static org.apache.hadoop.fs.aliyun.oss.AliyunOSSUtils.objectRepresentsDirectory;
@@ -93,6 +98,7 @@ public class AliyunOSSFileSystem extends FileSystem {
    * input stream can have.
    */
   private int vectoredActiveRangeReads;
+  private OpenFileSupport openFileHelper;
 
   private static final PathFilter DEFAULT_FILTER = new PathFilter() {
     @Override
@@ -409,6 +415,9 @@ public class AliyunOSSFileSystem extends FileSystem {
     vectoredIOContext = populateVectoredIOContext(conf);
     vectoredActiveRangeReads = intOption(conf, OSS_VECTOR_ACTIVE_RANGE_READS,
         DEFAULT_OSS_VECTOR_ACTIVE_RANGE_READS, 1);
+    openFileHelper = new OpenFileSupport(username,
+        intOption(conf, IO_FILE_BUFFER_SIZE_KEY,
+            IO_FILE_BUFFER_SIZE_DEFAULT, 0));
   }
 
 /**
@@ -613,12 +622,24 @@ public class AliyunOSSFileSystem extends FileSystem {
     } while (fPart != null);
   }
 
-  @Override
-  public FSDataInputStream open(Path path, int bufferSize) throws IOException {
-    final FileStatus fileStatus = getFileStatus(path);
-    if (fileStatus.isDirectory()) {
-      throw new FileNotFoundException("Can't open " + path +
-          " because it is a directory");
+  /**
+   * Opens an FSDataInputStream at the indicated Path.
+   * The {@code fileInformation} parameter controls how the file
+   * is opened.
+   * @param path the file to open
+   * @param fileInformation information about the file to open
+   * @throws IOException IO failure.
+   */
+  private FSDataInputStream executeOpen(
+      final Path path,
+      final OpenFileSupport.OpenFileInformation fileInfo) throws IOException {
+    FileStatus fileStatus = fileInfo.getStatus();
+    if (fileStatus == null) {
+      fileStatus = getFileStatus(path);
+      if (fileStatus.isDirectory()) {
+        throw new FileNotFoundException("Can't open " + path +
+            " because it is a directory");
+      }
     }
 
     return new FSDataInputStream(new AliyunOSSInputStream(getConf(),
@@ -629,6 +650,39 @@ public class AliyunOSSFileSystem extends FileSystem {
             boundedThreadPool, vectoredActiveRangeReads, true),
         vectoredIOContext, store, pathToKey(path), fileStatus.getLen(),
         statistics));
+  }
+
+  @Override
+  public FSDataInputStream open(Path path, int bufferSize) throws IOException {
+    OpenFileSupport.OpenFileInformation fileInformation =
+        openFileHelper.openSimpleFile(bufferSize);
+    return executeOpen(path, fileInformation);
+  }
+
+  /**
+   * Initiate the open() operation.
+   * This is invoked from both the FileSystem and FileContext APIs.
+   * It's declared as an audit entry point but the span creation is pushed
+   * down into the open operation s it ultimately calls.
+   * @param rawPath path to the file
+   * @param parameters open file parameters from the builder.
+   * @return a future which will evaluate to the opened file.
+   * @throws IOException failure to resolve the link.
+   * @throws IllegalArgumentException unknown mandatory key
+   */
+  @Override
+  public CompletableFuture<FSDataInputStream> openFileWithOptions(
+      final Path rawPath,
+      final OpenFileParameters parameters) throws IOException {
+    final Path path = rawPath.makeQualified(uri, workingDir);
+    OpenFileSupport.OpenFileInformation fileInformation =
+        openFileHelper.prepareToOpenFile(
+            path,
+            parameters,
+            getDefaultBlockSize());
+    return LambdaUtils.eval(
+        new CompletableFuture<>(), () ->
+            executeOpen(path, fileInformation));
   }
 
   @Override

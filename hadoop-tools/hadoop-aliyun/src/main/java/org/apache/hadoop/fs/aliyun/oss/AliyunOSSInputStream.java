@@ -63,8 +63,8 @@ public class AliyunOSSInputStream extends FSInputStream implements StreamCapabil
   private Statistics statistics;
   private boolean closed;
   private long contentLength;
-  private long position;
-  private long partRemaining;
+  private long position = 0;
+  private long partRemaining = 0;
   private byte[] buffer;
   private int maxReadAheadPartNumber;
   private long expectNextPos;
@@ -105,7 +105,6 @@ public class AliyunOSSInputStream extends FSInputStream implements StreamCapabil
 
     this.expectNextPos = 0;
     this.lastByteStart = -1;
-    reopen(0);
     closed = false;
   }
 
@@ -461,6 +460,15 @@ public class AliyunOSSInputStream extends FSInputStream implements StreamCapabil
         byte[] drainBuffer = new byte[(int) (drainQuantity - drainBytes)];
         readCount = objectContent.read(drainBuffer);
       }
+      if (readCount < 0) {
+        // read request failed; often network issues.
+        // no attempt is made to recover at this point.
+        final String s = String.format(
+            "End of stream reached draining data between ranges; expected %,d bytes;"
+                + " only drained %,d bytes before -1 returned (position=%,d)",
+            drainQuantity, drainBytes, position + drainBytes);
+        throw new EOFException(s);
+      }
       drainBytes += readCount;
     }
     LOG.debug("{} bytes drained from stream ", drainBytes);
@@ -566,7 +574,6 @@ public class AliyunOSSInputStream extends FSInputStream implements StreamCapabil
     List<? extends FileRange> sortedRanges = validateAndSortRanges(ranges,
         Optional.of(contentLength));
     for (FileRange range : ranges) {
-      validateRangeRequest(range);
       CompletableFuture<ByteBuffer> result = new CompletableFuture<>();
       range.setData(result);
     }

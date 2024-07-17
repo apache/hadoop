@@ -232,12 +232,12 @@ public final class Constants {
   /**
    * Default minimum seek in bytes during vectored reads : {@value}.
    */
-  public static final int DEFAULT_OSS_VECTOR_READS_MIN_SEEK_SIZE = 4896; // 4K
+  public static final int DEFAULT_OSS_VECTOR_READS_MIN_SEEK_SIZE = 4096; // 4K
 
   /**
    * Default maximum read size in bytes during vectored reads : {@value}.
    */
-  public static final int DEFAULT_OSS_VECTOR_READS_MAX_MERGED_READ_SIZE = 1253376; //1M
+  public static final int DEFAULT_OSS_VECTOR_READS_MAX_MERGED_READ_SIZE = 1048576; //1M
 
   /**
    * Maximum number of range reads a single input stream can have
@@ -261,4 +261,13 @@ public final class Constants {
    * size of a buffer to create when draining the stream.
    */
   public static final int DRAIN_BUFFER_SIZE = 16384;
+
+  /**
+   * OSS will return the whole object if http range is invalid.
+   * We can pass this header to OSS and it will act as expected.
+   */
+  public static final boolean OSS_USE_HTTP_STANDARD_RANGE_DEFAULT = false;
+
+  public static final String OSS_USE_HTTP_STANDARD_RANGE =
+      "fs.oss.use.http.standard.range";
 }

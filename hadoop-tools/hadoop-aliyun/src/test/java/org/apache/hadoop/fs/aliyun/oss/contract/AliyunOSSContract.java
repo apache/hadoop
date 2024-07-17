@@ -46,7 +46,7 @@ public class AliyunOSSContract extends AbstractBondedFSContract {
 
   @Override
   public FileSystem getTestFileSystem() throws IOException {
-    return AliyunOSSTestUtils.createTestFileSystem(new Configuration());
+    return AliyunOSSTestUtils.createTestFileSystem(getConf());
   }
 
   @Override

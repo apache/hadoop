@@ -18,17 +18,33 @@
 
 package org.apache.hadoop.fs.aliyun.oss.contract;
 
+import com.aliyun.oss.OSSException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileRange;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.aliyun.oss.AliyunOSSFileSystem;
 import org.apache.hadoop.fs.aliyun.oss.AliyunOSSTestUtils;
 import org.apache.hadoop.fs.aliyun.oss.Constants;
 import org.apache.hadoop.fs.contract.AbstractContractVectoredReadTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.EOFException;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_LENGTH;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_ADAPTIVE;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.range;
+import static org.apache.hadoop.test.LambdaTestUtils.interceptFuture;
 import static org.apache.hadoop.test.MoreAsserts.assertEqual;
 
 public class TestAliyunOSSContractVectoredRead extends AbstractContractVectoredReadTest {
@@ -40,7 +56,59 @@ public class TestAliyunOSSContractVectoredRead extends AbstractContractVectoredR
 
   @Override
   protected AbstractFSContract createContract(Configuration conf) {
+    conf.setBoolean(Constants.OSS_USE_HTTP_STANDARD_RANGE, true);
     return new AliyunOSSContract(conf);
+  }
+
+  /**
+   * Verify response to a vector read request which is beyond the
+   * real length of the file.
+   * Unlike the {@link #testEOFRanges()} test, the input stream in
+   * this test thinks the file is longer than it is, so the call
+   * fails in the GET request.
+   */
+  @Test
+  public void testEOFRanges416Handling() throws Exception {
+    FileSystem fs = getFileSystem();
+
+    final int extendedLen = DATASET_LEN + 1024;
+    CompletableFuture<FSDataInputStream> builder =
+        fs.openFile(path(VECTORED_READ_FILE_NAME))
+            .mustLong(FS_OPTION_OPENFILE_LENGTH, extendedLen)
+            .opt(FS_OPTION_OPENFILE_READ_POLICY,
+                FS_OPTION_OPENFILE_READ_POLICY_ADAPTIVE)
+            .build();
+    List<FileRange> fileRanges = range(DATASET_LEN, 100);
+
+    // read starting past EOF generates a 416 response, mapped to
+    // RangeNotSatisfiableEOFException
+    describe("Read starting from past EOF");
+    try (FSDataInputStream in = builder.get()) {
+      in.readVectored(fileRanges, getAllocate());
+      FileRange res = fileRanges.get(0);
+      CompletableFuture<ByteBuffer> data = res.getData();
+      interceptFuture(OSSException.class,
+          "",
+          ContractTestUtils.VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS,
+          TimeUnit.SECONDS,
+          data);
+    }
+
+    // a read starting before the EOF and continuing past it does generate
+    // an EOF exception, but not a 416.
+    describe("Read starting 0 continuing past EOF");
+    try (FSDataInputStream in = fs.openFile(path(VECTORED_READ_FILE_NAME))
+        .mustLong(FS_OPTION_OPENFILE_LENGTH, extendedLen)
+        .build().get()) {
+      final FileRange range = FileRange.createFileRange(0, extendedLen);
+      in.readVectored(Arrays.asList(range), getAllocate());
+      CompletableFuture<ByteBuffer> data = range.getData();
+      interceptFuture(EOFException.class, "",
+          ContractTestUtils.VECTORED_READ_OPERATION_TEST_TIMEOUT_SECONDS,
+          TimeUnit.SECONDS,
+          data);
+    }
+
   }
 
   @Test
