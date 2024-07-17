@@ -2189,7 +2189,7 @@ public class YarnConfiguration extends Configuration {
       NM_DISK_HEALTH_CHECK_PREFIX + "working-dir-content-accessibility-validation.enabled";
 
   public static final boolean DEFAULT_NM_WORKING_DIR_CONTENT_ACCESSIBILITY_VALIDATION_ENABLED =
-      true;
+      false;
 
   /** The health checker scripts. */
   public static final String NM_HEALTH_CHECK_SCRIPTS =
