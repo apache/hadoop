@@ -684,7 +684,7 @@ public class DatanodeManager {
             } else if (s2 == null) {
               return 1;
             } else {
-              return s2.compareTo(s1);
+              return s1.compareTo(s2);
             }
           });
       secondarySort = list -> Collections.sort(list, comp);

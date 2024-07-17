@@ -395,14 +395,21 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     try {
       LOG.debug("Get root ACL status");
       getClient().getAclStatus(AbfsHttpConstants.ROOT_PATH, tracingContext);
+      // If getAcl succeeds, namespace is enabled.
       isNamespaceEnabled = Trilean.getTrilean(true);
     } catch (AbfsRestOperationException ex) {
-      // Get ACL status is a HEAD request, its response doesn't contain
-      // errorCode
-      // So can only rely on its status code to determine its account type.
+      // Get ACL status is a HEAD request, its response doesn't contain errorCode
+      // So can only rely on its status code to determine account type.
       if (HttpURLConnection.HTTP_BAD_REQUEST != ex.getStatusCode()) {
+        // If getAcl fails with anything other than 400, namespace is enabled.
+        isNamespaceEnabled = Trilean.getTrilean(true);
+        // Continue to throw exception as earlier.
+        LOG.debug("Failed to get ACL status with non 400. Inferring namespace enabled", ex);
         throw ex;
       }
+      // If getAcl fails with 400, namespace is disabled.
+      LOG.debug("Failed to get ACL status with 400. "
+          + "Inferring namespace disabled and ignoring error", ex);
       isNamespaceEnabled = Trilean.getTrilean(false);
     } catch (AzureBlobFileSystemException ex) {
       throw ex;
