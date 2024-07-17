@@ -74,23 +74,18 @@ public class TestFSImageWithSnapshot {
   MiniDFSCluster cluster;
   FSNamesystem fsn;
   DistributedFileSystem hdfs;
+
+  public void createCluster() throws IOException {
+    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATANODES).build();
+    cluster.waitActive();
+    fsn = cluster.getNamesystem();
+    hdfs = cluster.getFileSystem();
+  }
   
   @Before
   public void setUp() throws Exception {
     conf = new Configuration();
-    cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATANODES)
-        .build();
-    // turn on both parallelization and compression
-    conf.setBoolean(DFSConfigKeys.DFS_IMAGE_COMPRESS_KEY, true);
-    conf.set(DFSConfigKeys.DFS_IMAGE_COMPRESSION_CODEC_KEY,
-            "org.apache.hadoop.io.compress.GzipCodec");
-    conf.set(DFSConfigKeys.DFS_IMAGE_PARALLEL_LOAD_KEY, "true");
-    conf.set(DFSConfigKeys.DFS_IMAGE_PARALLEL_INODE_THRESHOLD_KEY, "2");
-    conf.set(DFSConfigKeys.DFS_IMAGE_PARALLEL_TARGET_SECTIONS_KEY, "2");
-    conf.set(DFSConfigKeys.DFS_IMAGE_PARALLEL_THREADS_KEY, "2");
-    cluster.waitActive();
-    fsn = cluster.getNamesystem();
-    hdfs = cluster.getFileSystem();
+    createCluster();
   }
 
   @After
