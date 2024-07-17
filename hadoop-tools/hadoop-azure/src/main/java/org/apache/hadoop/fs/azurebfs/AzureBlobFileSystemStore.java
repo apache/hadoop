@@ -862,62 +862,44 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       String resourceType = null, eTag = null;
       long contentLength = -1;
       ContextEncryptionAdapter contextEncryptionAdapter = NoContextEncryptionAdapter.getInstance();
-      /*
-      * GetPathStatus API has to be called in case of:
-      *   1.  fileStatus is null or not an object of VersionedFileStatus: as eTag
-      *       would not be there in the fileStatus object. This shall be called
-      *       only if inputStream's lazy optimization is disabled.
-      *   2.  fileStatus is an object of VersionedFileStatus and the object doesn't
-      *       have encryptionContext field when client's encryptionType is
-      *       ENCRYPTION_CONTEXT.
-      */
-      if ((fileStatus instanceof VersionedFileStatus) && (
-          client.getEncryptionType() != EncryptionType.ENCRYPTION_CONTEXT
-              || ((VersionedFileStatus) fileStatus).getEncryptionContext()
-              != null)) {
+      String encryptionContext = null;
+      if (fileStatus instanceof VersionedFileStatus) {
+        VersionedFileStatus versionedFileStatus
+            = (VersionedFileStatus) fileStatus;
         path = path.makeQualified(this.uri, path);
         Preconditions.checkArgument(fileStatus.getPath().equals(path),
-            String.format(
-                "Filestatus path [%s] does not match with given path [%s]",
-                fileStatus.getPath(), path));
+            "Filestatus path [%s] does not match with given path [%s]",
+            fileStatus.getPath(), path);
         resourceType = fileStatus.isFile() ? FILE : DIRECTORY;
         contentLength = fileStatus.getLen();
-        eTag = ((VersionedFileStatus) fileStatus).getVersion();
-        final String encryptionContext
-            = ((VersionedFileStatus) fileStatus).getEncryptionContext();
-        if (client.getEncryptionType() == EncryptionType.ENCRYPTION_CONTEXT) {
-          contextEncryptionAdapter = new ContextProviderEncryptionAdapter(
-              client.getEncryptionContextProvider(), getRelativePath(path),
-              encryptionContext.getBytes(StandardCharsets.UTF_8));
-        }
-      } else {
-        if (client.getEncryptionType() == EncryptionType.ENCRYPTION_CONTEXT
-            || !abfsConfiguration.isInputStreamLazyOptimizationEnabled()) {
-          final AbfsHttpOperation op = client.getPathStatus(relativePath, false,
-              tracingContext, null).getResult();
-          resourceType = op.getResponseHeader(
-              HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
-          contentLength = Long.parseLong(
-              op.getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH));
-          eTag = op.getResponseHeader(HttpHeaderConfigurations.ETAG);
+        eTag = versionedFileStatus.getVersion();
+        encryptionContext = versionedFileStatus.getEncryptionContext();
+      }
 
-          /*
-           * For file created with ENCRYPTION_CONTEXT, client shall receive
-           * encryptionContext from header field: X_MS_ENCRYPTION_CONTEXT.
-           */
-          if (client.getEncryptionType() == EncryptionType.ENCRYPTION_CONTEXT) {
-            final String fileEncryptionContext = op.getResponseHeader(
-                HttpHeaderConfigurations.X_MS_ENCRYPTION_CONTEXT);
-            if (fileEncryptionContext == null) {
-              LOG.debug("EncryptionContext missing in GetPathStatus response");
-              throw new PathIOException(path.toString(),
-                  "EncryptionContext not present in GetPathStatus response headers");
-            }
-            contextEncryptionAdapter = new ContextProviderEncryptionAdapter(
-                client.getEncryptionContextProvider(), getRelativePath(path),
-                fileEncryptionContext.getBytes(StandardCharsets.UTF_8));
+      if (client.getEncryptionType() == EncryptionType.ENCRYPTION_CONTEXT) {
+        if (encryptionContext == null) {
+          PathInformation pathInformation = getPathInformation(relativePath,
+              tracingContext);
+          resourceType = pathInformation.getResourceType();
+          contentLength = Long.parseLong(pathInformation.getContentLength());
+          eTag = pathInformation.getETag();
+          encryptionContext = pathInformation.getEncryptionContext();
+
+          if (encryptionContext == null) {
+            LOG.debug("EncryptionContext missing in GetPathStatus response");
+            throw new PathIOException(path.toString(),
+                "EncryptionContext not present in GetPathStatus response headers");
           }
         }
+        contextEncryptionAdapter = new ContextProviderEncryptionAdapter(
+            client.getEncryptionContextProvider(), getRelativePath(path),
+            encryptionContext.getBytes(StandardCharsets.UTF_8));
+      } else if (!abfsConfiguration.isInputStreamLazyOptimizationEnabled()) {
+        PathInformation pathInformation = getPathInformation(relativePath,
+            tracingContext);
+        resourceType = pathInformation.getResourceType();
+        contentLength = Long.parseLong(pathInformation.getContentLength());
+        eTag = pathInformation.getETag();
       }
 
       if (parseIsDirectory(resourceType)) {
@@ -937,6 +919,23 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           contextEncryptionAdapter),
           eTag, tracingContext);
     }
+  }
+
+  private PathInformation getPathInformation(String relativePath,
+      TracingContext tracingContext) throws AzureBlobFileSystemException {
+    AbfsRestOperation op = client.getPathStatus(relativePath, false,
+        tracingContext, null);
+    String contentLength = op.getResult()
+        .getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH);
+    String eTag = op.getResult()
+        .getResponseHeader(HttpHeaderConfigurations.ETAG);
+    String resourceType = op.getResult()
+        .getResponseHeader(HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
+    String encryptionContext = op.getResult()
+        .getResponseHeader(HttpHeaderConfigurations.X_MS_ENCRYPTION_CONTEXT);
+
+    return new PathInformation(eTag, contentLength, resourceType,
+        encryptionContext);
   }
 
   private AbfsInputStreamContext populateAbfsInputStreamContext(
@@ -2062,6 +2061,36 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       sb.append("; version='").append(version).append('\'');
       sb.append('}');
       return sb.toString();
+    }
+  }
+
+  private static final class PathInformation {
+    private String eTag;
+    private String contentLength;
+    private String resourceType;
+    private String encryptionContext;
+
+    public PathInformation(String eTag, String contentLength, String resourceType, String encryptionContext) {
+      this.eTag = eTag;
+      this.contentLength = contentLength;
+      this.resourceType = resourceType;
+      this.encryptionContext = encryptionContext;
+    }
+
+    public String getETag() {
+      return eTag;
+    }
+
+    public String getContentLength() {
+      return contentLength;
+    }
+
+    public String getResourceType() {
+      return resourceType;
+    }
+
+    public String getEncryptionContext() {
+      return encryptionContext;
     }
   }
 
