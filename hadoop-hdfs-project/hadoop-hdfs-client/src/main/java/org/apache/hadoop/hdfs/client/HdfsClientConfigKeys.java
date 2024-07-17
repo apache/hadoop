@@ -296,6 +296,10 @@ public interface HdfsClientConfigKeys {
   int DFS_CLIENT_CONGESTION_BACKOFF_MAX_TIME_DEFAULT =
       DFS_CLIENT_CONGESTION_BACKOFF_MEAN_TIME_DEFAULT * 10;
 
+  String DFS_CLIENT_VERIFY_CHECKSUM_ENABLED =
+    "dfs.client.verify.checksum.enabled";
+  boolean DFS_CLIENT_VERIFY_CHECKSUM_ENABLED_DEFAULT = true;
+
   /**
    * These are deprecated config keys to client code.
    */
