@@ -267,7 +267,7 @@ public class JournalNodeSyncer {
         }
         try {
           HdfsServerProtos.StorageInfoProto storageInfoResponse =
-              jnProxy.jnProxy.getStorageInfo(jid, null);
+              jnProxy.jnProxy.getStorageInfo(jid, nameServiceId);
           storage = PBHelper.convert(
               storageInfoResponse, HdfsServerConstants.NodeType.JOURNAL_NODE
           );

@@ -260,7 +260,7 @@ public class JournalNodeRpcServer implements QJournalProtocol,
   @Override
   public StorageInfoProto getStorageInfo(String jid,
       String nameServiceId) throws IOException {
-    StorageInfo storage = jn.getOrCreateJournal(jid).getStorage();
+    StorageInfo storage = jn.getOrCreateJournal(jid, nameServiceId).getStorage();
     return PBHelper.convert(storage);
   }
 
