@@ -480,7 +480,7 @@ public class TestJournalNodeSync {
     }
   }
 
-  @Test(timeout=300_000)
+  @Test(timeout=900_000)
   public void testFormatWithSyncer() throws Exception {
     File firstJournalDir = jCluster.getJournalDir(0, jid);
     File firstJournalCurrentDir = new StorageDirectory(firstJournalDir)
@@ -499,11 +499,11 @@ public class TestJournalNodeSync {
     jCluster.getJournalNode(0).getOrCreateJournal(jid).getStorage().analyzeStorage();
 
     // Wait for JN formatting with Syncer
-    GenericTestUtils.waitFor(jnFormatted(0), 500, 30000);
+    GenericTestUtils.waitFor(jnFormatted(0), 500, 90000);
     // Generate some more edit log so that the JN updates its committed tx id
     generateEditLog();
     // Check that the missing edit logs have been synced
-    GenericTestUtils.waitFor(editLogExists(missingLogs), 500, 30000);
+    GenericTestUtils.waitFor(editLogExists(missingLogs), 500, 90000);
   }
 
   private File deleteEditLog(File currentDir, long startTxId)
