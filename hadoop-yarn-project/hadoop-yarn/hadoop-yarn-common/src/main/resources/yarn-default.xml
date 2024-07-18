@@ -1998,7 +1998,7 @@
   <property>
     <description>Validate content of the node manager directories can be accessed</description>
     <name>yarn.nodemanager.disk-health-checker.working-dir-content-accessibility-validation.enabled</name>
-    <value>true</value>
+    <value>false</value>
   </property>
 
   <property>
