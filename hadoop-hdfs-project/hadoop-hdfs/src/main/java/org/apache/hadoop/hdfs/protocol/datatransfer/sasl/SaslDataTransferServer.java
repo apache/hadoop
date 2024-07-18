@@ -222,7 +222,7 @@ public class SaslDataTransferServer {
      *
      * @param passwordFunction for determing the user's password
      */
-    public SaslServerCallbackHandler(Configuration conf, PasswordFunction passwordFunction) {
+    SaslServerCallbackHandler(Configuration conf, PasswordFunction passwordFunction) {
       this.passwordFunction = passwordFunction;
 
       final Class<? extends CustomizedCallbackHandler> clazz = conf.getClass(

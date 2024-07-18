@@ -38,7 +38,7 @@ public class TestCustomizedCallbackHandler {
   static class MyCallbackHandler implements CustomizedCallbackHandler {
     @Override
     public void handleCallback(List<Callback> callbacks, String name, char[] password) {
-      LOG.info("Handling {} for {}", callbacks, name);
+      LOG.info("{}: handling {} for {}", getClass().getSimpleName(), callbacks, name);
     }
   }
 
