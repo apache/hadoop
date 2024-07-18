@@ -269,12 +269,24 @@ public class ValueQueue <E> {
    * Initializes the Value Queues for the provided keys by calling the
    * fill Method with "numInitValues" values
    * @param keyNames Array of key Names
-   * @throws ExecutionException executionException.
+   * @throws IOException if initialization fails for any provided keys
    */
-  public void initializeQueuesForKeys(String... keyNames)
-      throws ExecutionException {
+  public void initializeQueuesForKeys(String... keyNames) throws IOException {
+    int successfulInitializations = 0;
+    ExecutionException lastException = null;
+
     for (String keyName : keyNames) {
-      keyQueues.get(keyName);
+      try {
+        keyQueues.get(keyName);
+        successfulInitializations++;
+      } catch (ExecutionException e) {
+        lastException = e;
+      }
+    }
+
+    if (keyNames.length > 0 && successfulInitializations != keyNames.length) {
+      throw new IOException(String.format("Failed to initialize %s queues for the provided keys.",
+          keyNames.length - successfulInitializations), lastException);
     }
   }
 

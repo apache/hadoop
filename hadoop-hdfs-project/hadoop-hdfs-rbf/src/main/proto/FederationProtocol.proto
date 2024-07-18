@@ -142,6 +142,7 @@ message MountTableRecordProto {
     RANDOM = 2;
     HASH_ALL = 3;
     SPACE = 4;
+    LEADER_FOLLOWER = 5;
   }
   optional DestOrder destOrder = 6 [default = HASH];
 
