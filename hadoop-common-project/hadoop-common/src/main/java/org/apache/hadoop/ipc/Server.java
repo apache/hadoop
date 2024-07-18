@@ -3478,7 +3478,7 @@ public abstract class Server {
         throw new IllegalArgumentException(AuthenticationMethod.TOKEN +
             " authentication requires a secret manager");
       } 
-    } else if (secretManager != null) {
+    } else if (secretManager != null && !isTokenMigrationModeEnabled(conf)) {
       LOG.debug("{} authentication enabled for secret manager", AuthenticationMethod.TOKEN);
       // most preferred, go to the front of the line!
       authMethods.add(AuthenticationMethod.TOKEN.getAuthMethod());
@@ -3488,7 +3488,32 @@ public abstract class Server {
     LOG.debug("Server accepts auth methods:{}", authMethods);
     return authMethods;
   }
-  
+
+  /**
+   *
+   * Handles an edge case in block token migration mode:
+   *
+   * - Client requests LocatedBlocks from NameNode
+   * - NameNode responds and includes block access tokens
+   * - SaslRpcClient sees the tokens and forces SASL auth against DataNode
+   * - Since DataNode is in migration mode, it did not register the block pool's tokens when it
+   *   registered with NameNode. It returns with IllegalStateException.
+   * - SaslRpcClient does not handle that appropriately
+   *
+   * This is not a problem for SaslDataTransferClient, which is what most HDFS client processes use.
+   * But specifically, when trying to read a file this is still open and being appended to,
+   * DFSInputStream tries to get the visible length of the block. This call goes through
+   * SaslRpcClient instead of SaslDataTransferClient, and this is where we see the issue.
+   *
+   * We work around it by not enabling AuthMethod.TOKEN when in migration mode.
+   * So when SaslRpcClient tries to connect with SASL to the DataNode,
+   * it responds with "I only support SIMPLE."
+   * The SaslRpcClient can then try again using simple, and all works.
+   */
+  private static boolean isTokenMigrationModeEnabled(Configuration conf) {
+    return conf.getBoolean("dfs.datanode.block.access.token.unsafe.allowed-not-required", false);
+  }
+
   private void closeConnection(Connection connection) {
     connectionManager.close(connection);
   }
@@ -3900,6 +3925,11 @@ public abstract class Server {
    */
   public int getNumReaders() {
     return readThreads;
+  }
+
+  @VisibleForTesting
+  List<AuthMethod> getEnabledAuthMethods() {
+    return enabledAuthMethods;
   }
 
   /**

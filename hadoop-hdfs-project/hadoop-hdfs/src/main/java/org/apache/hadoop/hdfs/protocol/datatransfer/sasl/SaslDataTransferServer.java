@@ -20,8 +20,10 @@ package org.apache.hadoop.hdfs.protocol.datatransfer.sasl;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DATA_TRANSFER_PROTECTION_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_ENCRYPT_DATA_TRANSFER_CIPHER_SUITES_KEY;
 import static org.apache.hadoop.hdfs.protocol.datatransfer.sasl.DataTransferSaslUtil.*;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_UNSAFE_SASL_ALLOWED_NOT_REQUIRED_KEY;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -32,6 +34,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
+import javax.annotation.Nullable;
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.CallbackHandler;
 import javax.security.auth.callback.NameCallback;
@@ -76,8 +79,8 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 public class SaslDataTransferServer {
 
-  private static final Logger LOG = LoggerFactory.getLogger(
-    SaslDataTransferServer.class);
+  @VisibleForTesting
+  static final Logger LOG = LoggerFactory.getLogger(SaslDataTransferServer.class);
 
   private final BlockPoolTokenSecretManager blockPoolTokenSecretManager;
   private final DNConf dnConf;
@@ -128,7 +131,7 @@ public class SaslDataTransferServer {
         "SASL server skipping handshake in secured configuration for "
         + "peer = {}, datanodeId = {}", peer, datanodeId);
       return new IOStreamPair(underlyingIn, underlyingOut);
-    } else if (dnConf.getSaslPropsResolver() != null) {
+    } else if (dnConf.getSaslPropsResolver() != null || dnConf.getUnsafeAcceptSasl()) {
       LOG.debug(
         "SASL server doing general handshake for peer = {}, datanodeId = {}",
         peer, datanodeId);
@@ -295,8 +298,18 @@ public class SaslDataTransferServer {
     }
 
     SaslPropertiesResolver saslPropsResolver = dnConf.getSaslPropsResolver();
-    Map<String, String> saslProps = saslPropsResolver.getServerProperties(
-      getPeerAddress(peer));
+    Map<String, String> saslProps;
+    if (saslPropsResolver != null) {
+      saslProps = saslPropsResolver.getServerProperties(
+              getPeerAddress(peer));
+    } else if (dnConf.getUnsafeAcceptSasl()) {
+      // This path provides a way to accept encrypted connections even we don't make them
+      // (saslPropsResolver == null)
+      // In this mode, all QOPs are accepted.
+      saslProps = createSaslPropertiesAllQops(dnConf.getEncryptionAlgorithm());
+    } else {
+      saslProps = null;
+    }
 
     CallbackHandler callbackHandler = new SaslServerCallbackHandler(
       new PasswordFunction() {
@@ -362,17 +375,45 @@ public class SaslDataTransferServer {
    * @throws IOException for any error
    */
   private IOStreamPair doSaslHandshake(Peer peer, OutputStream underlyingOut,
-      InputStream underlyingIn, Map<String, String> saslProps,
+      InputStream underlyingIn, @Nullable Map<String, String> saslProps,
       CallbackHandler callbackHandler) throws IOException {
 
-    DataInputStream in = new DataInputStream(underlyingIn);
+    DataInputStream in;
+    if (dnConf.getUnsafeAcceptSasl()) {
+      // If necessary by configuration, create an InputStream with the ability to check the
+      // first four bytes and then back up and replay them.
+      BufferedInputStream bufferedIn = new BufferedInputStream(underlyingIn);
+      in = new DataInputStream(bufferedIn);
+      in.mark(4);
+    } else {
+      in = new DataInputStream(underlyingIn);
+    }
     DataOutputStream out = new DataOutputStream(underlyingOut);
 
     int magicNumber = in.readInt();
     if (magicNumber != SASL_TRANSFER_MAGIC_NUMBER) {
-      throw new InvalidMagicNumberException(magicNumber, 
-          dnConf.getEncryptDataTransfer());
+      if (dnConf.getUnsafeAcceptSasl()) {
+        // If the first four bytes sent to us did not indicate the start of a SASL handshake,
+        // and configuration allows, process those bytes and the remainder as a plaintext payload.
+        LOG.warn("A SASL handshake was attempted with peer {},"
+                + "but the magic number {} was not seen. "
+                + "Because {} is true, skipping handshake and using plaintext connection.",
+                peer, String.format("0x%X", SASL_TRANSFER_MAGIC_NUMBER),
+            DFS_DATANODE_UNSAFE_SASL_ALLOWED_NOT_REQUIRED_KEY);
+        in.reset();
+        return new IOStreamPair(in, out);
+      } else {
+        throw new InvalidMagicNumberException(magicNumber,
+                dnConf.getEncryptDataTransfer());
+      }
     }
+
+    if (saslProps == null) {
+      throw new IllegalStateException(String.format(
+          "No SASL properties set, have you forgotten to set %s and/or %s?",
+          DFS_DATA_TRANSFER_PROTECTION_KEY, DFS_DATANODE_UNSAFE_SASL_ALLOWED_NOT_REQUIRED_KEY));
+    }
+
     try {
       // step 1
       SaslMessageWithHandshake message = readSaslMessageWithHandshakeSecret(in);

@@ -48,6 +48,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SYNCONCLOSE_DEFA
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SYNCONCLOSE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_TRANSFERTO_ALLOWED_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_TRANSFERTO_ALLOWED_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_UNSAFE_SASL_ALLOWED_NOT_REQUIRED_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_UNSAFE_SASL_ALLOWED_NOT_REQUIRED_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_XCEIVER_STOP_TIMEOUT_MILLIS_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_XCEIVER_STOP_TIMEOUT_MILLIS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT;
@@ -122,6 +124,7 @@ public class DNConf {
   final SaslPropertiesResolver saslPropsResolver;
   final TrustedChannelResolver trustedChannelResolver;
   private final boolean ignoreSecurePortsForTesting;
+  private final boolean unsafeAcceptSasl;
   
   final long xceiverStopTimeout;
   final long restartReplicaExpiry;
@@ -257,7 +260,8 @@ public class DNConf {
     this.ignoreSecurePortsForTesting = getConf().getBoolean(
         IGNORE_SECURE_PORTS_FOR_TESTING_KEY,
         IGNORE_SECURE_PORTS_FOR_TESTING_DEFAULT);
-    
+    this.unsafeAcceptSasl = getConf().getBoolean(DFS_DATANODE_UNSAFE_SASL_ALLOWED_NOT_REQUIRED_KEY,
+        DFS_DATANODE_UNSAFE_SASL_ALLOWED_NOT_REQUIRED_DEFAULT);
     this.xceiverStopTimeout = getConf().getLong(
         DFS_DATANODE_XCEIVER_STOP_TIMEOUT_MILLIS_KEY,
         DFS_DATANODE_XCEIVER_STOP_TIMEOUT_MILLIS_DEFAULT);
@@ -419,6 +423,15 @@ public class DNConf {
    */
   public boolean getIgnoreSecurePortsForTesting() {
     return ignoreSecurePortsForTesting;
+  }
+
+  /**
+   * Returns true if configuration is set to optionally accept SASL for incoming
+   * DataTransferProtocol connections, but not require it. Intended to be used in a
+   * transition stage between having an insecure cluster and secure cluster.
+   */
+  public boolean getUnsafeAcceptSasl() {
+    return unsafeAcceptSasl;
   }
 
   public boolean getAllowNonLocalLazyPersist() {

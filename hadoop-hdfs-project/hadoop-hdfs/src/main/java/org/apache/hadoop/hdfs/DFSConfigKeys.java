@@ -1065,6 +1065,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final long    DFS_BLOCK_ACCESS_TOKEN_LIFETIME_DEFAULT = 600L;
   public static final String  DFS_BLOCK_ACCESS_TOKEN_PROTOBUF_ENABLE = "dfs.block.access.token.protobuf.enable";
   public static final boolean DFS_BLOCK_ACCESS_TOKEN_PROTOBUF_ENABLE_DEFAULT = false;
+  public static final String  DFS_DATANODE_BLOCK_ACCESS_TOKEN_UNSAFE_ALLOWED_NOT_REQUIRED_KEY =
+      "dfs.datanode.block.access.token.unsafe.allowed-not-required";
+  public static final boolean DFS_DATANODE_BLOCK_ACCESS_TOKEN_UNSAFE_ALLOWED_NOT_REQUIRED_DEFAULT =
+      false;
 
   public static final String DFS_BLOCK_REPLICATOR_CLASSNAME_KEY = "dfs.block.replicator.classname";
   public static final Class<BlockPlacementPolicyDefault> DFS_BLOCK_REPLICATOR_CLASSNAME_DEFAULT = BlockPlacementPolicyDefault.class;
@@ -1587,6 +1591,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String IGNORE_SECURE_PORTS_FOR_TESTING_KEY =
       "ignore.secure.ports.for.testing";
   public static final boolean IGNORE_SECURE_PORTS_FOR_TESTING_DEFAULT = false;
+
+  public static final String DFS_DATANODE_UNSAFE_SASL_ALLOWED_NOT_REQUIRED_KEY =
+          "dfs.datanode.unsafe.sasl.allowed-not-required";
+  public static final boolean DFS_DATANODE_UNSAFE_SASL_ALLOWED_NOT_REQUIRED_DEFAULT = false;
 
   // nntop Configurations
   public static final String NNTOP_ENABLED_KEY =

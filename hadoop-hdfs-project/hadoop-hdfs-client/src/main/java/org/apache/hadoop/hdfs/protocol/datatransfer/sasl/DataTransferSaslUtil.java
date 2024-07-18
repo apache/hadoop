@@ -140,6 +140,24 @@ public final class DataTransferSaslUtil {
   }
 
   /**
+   * Creates SASL properties allowing any QOP. Intended to be used in a
+   * transition from an unsecured cluster to a secured cluster.
+   *
+   * @param encryptionAlgorithm to use for SASL negotation
+   */
+  public static Map<String, String> createSaslPropertiesAllQops(
+          String encryptionAlgorithm) {
+    Map<String, String> saslProps = Maps.newHashMapWithExpectedSize(3);
+    saslProps.put(Sasl.QOP, String.format("%s,%s,%s",
+            QualityOfProtection.PRIVACY.getSaslQop(),
+            QualityOfProtection.INTEGRITY.getSaslQop(),
+            QualityOfProtection.AUTHENTICATION.getSaslQop()));
+    saslProps.put(Sasl.SERVER_AUTH, "true");
+    saslProps.put("com.sun.security.sasl.digest.cipher", encryptionAlgorithm);
+    return saslProps;
+  }
+
+  /**
    * For an encrypted SASL negotiation, encodes an encryption key to a SASL
    * password.
    *

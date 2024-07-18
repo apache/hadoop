@@ -640,6 +640,18 @@
 </property>
 
 <property>
+  <name>dfs.datanode.block.access.token.unsafe.allowed-not-required</name>
+  <value>false</value>
+  <description>
+    If true, allow DataNodes to register with NameNodes even if some NameNodes use block access
+    tokens, and some do not. If false, fail DataNode startup or new NameNode registration in this
+    situation. This is intended to be used to help you enable block access tokens on your NameNodes
+    without causing cluster downtime. Once that is complete, this setting should be removed.
+    See the Secure Mode documentation for more information about usage.
+  </description>
+</property>
+
+<property>
   <name>dfs.block.access.key.update.interval</name>
   <value>600</value>
   <description>
@@ -2638,6 +2650,21 @@
     SaslPropertiesResolver used to resolve the QOP used for a connection to the
     DataNode when reading or writing block data. If not specified, the value of
     hadoop.security.saslproperties.resolver.class is used as the default value.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.unsafe.sasl.allowed-not-required</name>
+  <value>false</value>
+  <description>
+    Boolean used to allow, but not require, SASL handshakes for connections to DataNodes when
+    reading and writing block data. If dfs.encrypt.data.transfer is set to true, then it supersedes
+    this setting and enforces that all connections must use a specialized encrypted SASL handshake.
+    This property is intended to help you transition a cluster from non-secure mode into secure
+    mode, and is not intended to be enabled permanently. Once transitioned, you are expected to
+    use dfs.encrypt.data.transfer or dfs.data.transfer.protection to require authentication and/or
+    encryption, and remove this setting. While enabled, all QOPs are accepted. See the Secure Mode
+    documentation for more information about usage.
   </description>
 </property>
 

@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_BLOCK_ACCESS_TOKEN_UNSAFE_ALLOWED_NOT_REQUIRED_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -35,6 +36,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.BlockReader;
+import org.apache.hadoop.hdfs.StripedFileTestUtil;
 import org.apache.hadoop.hdfs.client.impl.BlockReaderFactory;
 import org.apache.hadoop.hdfs.ClientContext;
 import org.apache.hadoop.hdfs.DFSClient;
@@ -363,6 +365,99 @@ public class TestBlockTokenWithDFS {
         cluster.shutdown();
       }
     }
+  }
+
+  /**
+   * Tests migrating without downtime into enabling block access tokens.
+   */
+  @Test
+  public void testReadWithMigration() throws Exception {
+    doTestReadWithMigration(getConf(2), 2, false);
+  }
+
+  protected void doTestReadWithMigration(Configuration conf, int numDataNodes, boolean isStriped)
+      throws Exception {
+    MiniDFSCluster cluster = null;
+
+    //
+    // At first, migration mode is enabled and access tokens disabled.
+    // Namenodes will start up without access tokens, but DN's will be prepared to ignore
+    // them if they receive them.
+    //
+    conf.setBoolean(DFS_DATANODE_BLOCK_ACCESS_TOKEN_UNSAFE_ALLOWED_NOT_REQUIRED_KEY, true);
+    conf.setBoolean(DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, false);
+
+    try {
+      // prefer non-ephemeral port to avoid port collision on restartNameNode
+      cluster = new MiniDFSCluster.Builder(conf)
+          .nameNodePort(ServerSocketUtil.getPort(18020, 100))
+          .nameNodeHttpPort(ServerSocketUtil.getPort(19870, 100))
+          .numDataNodes(numDataNodes)
+          .build();
+      cluster.waitActive();
+      assertEquals(numDataNodes, cluster.getDataNodes().size());
+
+      if (isStriped) {
+        cluster.getFileSystem().enableErasureCodingPolicy(
+            StripedFileTestUtil.getDefaultECPolicy().getName());
+        cluster.getFileSystem().getClient()
+            .setErasureCodingPolicy("/", StripedFileTestUtil.getDefaultECPolicy().getName());
+      }
+
+      //
+      // Now we enable access tokens on the namenodes. Previously, DataNodes would
+      // fail with "Inconsistent configuration of block access tokens". Since
+      // we have migration mode enabled, they are able to proceed with re-registry.
+      //
+      for (int i = 0; i < cluster.getNumNameNodes(); i++) {
+        cluster.getConfiguration(i).setBoolean(
+            DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_ENABLE_KEY, true);
+        cluster.restartNameNode(i);
+      }
+      cluster.triggerHeartbeats();
+
+      //
+      // Do a test read, which confirms that migration mode is working
+      //
+      doSimpleTestRead(conf, cluster);
+
+      //
+      // Now that access tokens are enabled on the NameNode without downtime, we can
+      // turn off migration mode and restart datanodes. When they start up,
+      // they will register and get the block access tokens and use them going forward.
+      //
+
+      conf.setBoolean(DFS_DATANODE_BLOCK_ACCESS_TOKEN_UNSAFE_ALLOWED_NOT_REQUIRED_KEY, false);
+      while (cluster.getDataNodes().size() > 0) {
+        cluster.stopDataNode(0);
+      }
+      cluster.startDataNodes(conf, numDataNodes, true, null, null);
+      cluster.waitActive();
+
+      //
+      // Do another test read which verifies that everything is working
+      // with fully enabled block access tokens.
+      //
+
+      doSimpleTestRead(conf, cluster);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  protected void doSimpleTestRead(Configuration conf, MiniDFSCluster cluster) throws IOException {
+    final NameNode nn = cluster.getNameNode();
+    final NamenodeProtocols nnProto = nn.getRpcServer();
+    Path fileToRead = new Path(FILE_TO_READ);
+    FileSystem fs = cluster.getFileSystem();
+    byte[] expected = generateBytes(FILE_SIZE);
+    createFile(fs, fileToRead, expected);
+    List<LocatedBlock> locatedBlocks = nnProto.getBlockLocations(
+        FILE_TO_READ, 0, FILE_SIZE).getLocatedBlocks();
+    LocatedBlock lblock = locatedBlocks.get(0); // first block
+    tryRead(conf, lblock, true);
   }
 
   protected void doTestRead(Configuration conf, MiniDFSCluster cluster,

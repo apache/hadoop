@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.protocol.datatransfer.sasl;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_UNSAFE_SASL_ALLOWED_NOT_REQUIRED_KEY;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DATA_TRANSFER_PROTECTION_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HTTP_POLICY_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.IGNORE_SECURE_PORTS_FOR_TESTING_KEY;
@@ -63,6 +64,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.Timeout;
 import org.mockito.Mockito;
+import org.slf4j.event.Level;
 
 public class TestSaslDataTransfer extends SaslDataTransferTestCase {
 
@@ -155,6 +157,54 @@ public class TestSaslDataTransfer extends SaslDataTransferTestCase {
     GenericTestUtils.assertMatches(logs.getOutput(),
         "Failed to read expected SASL data transfer protection " +
         "handshake from client at");
+  }
+
+  @Test
+  public void testServerMigrationModeNoClientSasl() throws Exception {
+    HdfsConfiguration clusterConf = createSecureConfig("authentication,integrity,privacy");
+    // Set short retry timeouts so this test runs faster
+    clusterConf.setInt(HdfsClientConfigKeys.Retry.WINDOW_BASE_KEY, 10);
+    clusterConf.setBoolean(DFS_DATANODE_UNSAFE_SASL_ALLOWED_NOT_REQUIRED_KEY, true);
+    startCluster(clusterConf);
+    HdfsConfiguration clientConf = new HdfsConfiguration(clusterConf);
+    clientConf.set(DFS_DATA_TRANSFER_PROTECTION_KEY, "");
+
+    GenericTestUtils.setLogLevel(SaslDataTransferServer.LOG, Level.DEBUG);
+    LogCapturer logs = GenericTestUtils.LogCapturer.captureLogs(
+        LoggerFactory.getLogger(SaslDataTransferServer.class));
+    try {
+      doTest(clientConf);
+    } finally {
+      logs.stopCapturing();
+    }
+
+    GenericTestUtils.assertMatches(logs.getOutput(), "SASL server doing general handshake");
+    GenericTestUtils.assertMatches(logs.getOutput(),
+        "Because dfs.datanode.unsafe.sasl.allowed-not-required is true, "
+            + "skipping handshake and using plaintext connection.");
+  }
+
+  @Test
+  public void testServerMigrationModeSaslClient() throws Exception {
+    HdfsConfiguration clusterConf = createSecureConfig("");
+    // Set short retry timeouts so this test runs faster
+    clusterConf.setInt(HdfsClientConfigKeys.Retry.WINDOW_BASE_KEY, 10);
+    clusterConf.setBoolean(DFS_DATANODE_UNSAFE_SASL_ALLOWED_NOT_REQUIRED_KEY, true);
+    clusterConf.setBoolean(IGNORE_SECURE_PORTS_FOR_TESTING_KEY, true);
+    startCluster(clusterConf);
+    HdfsConfiguration clientConf = new HdfsConfiguration(clusterConf);
+    clientConf.set(DFS_DATA_TRANSFER_PROTECTION_KEY, "authentication,integrity,privacy");
+
+    GenericTestUtils.setLogLevel(SaslDataTransferServer.LOG, Level.DEBUG);
+    LogCapturer logs = GenericTestUtils.LogCapturer.captureLogs(
+        LoggerFactory.getLogger(SaslDataTransferServer.class));
+    try {
+      doTest(clientConf);
+    } finally {
+      logs.stopCapturing();
+    }
+
+    GenericTestUtils.assertMatches(logs.getOutput(), "SASL server doing general handshake");
   }
 
   @Test
