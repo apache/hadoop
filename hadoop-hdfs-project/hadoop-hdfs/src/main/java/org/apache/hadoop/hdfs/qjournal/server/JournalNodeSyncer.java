@@ -175,13 +175,11 @@ public class JournalNodeSyncer {
 
   private void startSyncJournalsDaemon() {
     syncJournalDaemon = new Daemon(() -> {
-      // Format the journal with namespace info from the other JNs if it is not formatted
-      if (!journal.isFormatted()) {
-        formatWithSyncer();
-      }
       // Wait for journal to be formatted to create edits.sync directory
       while(!journal.isFormatted()) {
         try {
+          // Format the journal with namespace info from the other JNs if it is not formatted
+          formatWithSyncer();
           Thread.sleep(journalSyncInterval);
         } catch (InterruptedException e) {
           LOG.error("JournalNodeSyncer daemon received Runtime exception.", e);
