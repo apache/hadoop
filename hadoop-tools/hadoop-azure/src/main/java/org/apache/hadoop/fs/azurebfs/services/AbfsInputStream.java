@@ -713,7 +713,6 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
     } catch (AzureBlobFileSystemException ex) {
       if (ex instanceof AbfsRestOperationException) {
         AbfsRestOperationException ere = (AbfsRestOperationException) ex;
-        abfsHttpOperation = ((AbfsRestOperationException) ex).getAbfsHttpOperation();
         if (ere.getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
           throw new FileNotFoundException(ere.getMessage());
         }
