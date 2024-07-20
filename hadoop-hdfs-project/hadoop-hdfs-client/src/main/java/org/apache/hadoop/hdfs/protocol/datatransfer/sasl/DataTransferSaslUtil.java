@@ -102,9 +102,9 @@ public final class DataTransferSaslUtil {
     Set<String> requestedQop = ImmutableSet.copyOf(Arrays.asList(
         saslProps.get(Sasl.QOP).split(",")));
     String negotiatedQop = sasl.getNegotiatedQop();
-    LOG.debug("Verifying QOP, requested QOP = {}, negotiated QOP = {}",
-        requestedQop, negotiatedQop);
-    if (!requestedQop.contains(negotiatedQop)) {
+    LOG.debug("{}: Verifying QOP: requested = {}, negotiated = {}",
+        sasl, requestedQop, negotiatedQop);
+    if (negotiatedQop != null && !requestedQop.contains(negotiatedQop)) {
       throw new IOException(String.format("SASL handshake completed, but " +
           "channel does not have acceptable quality of protection, " +
           "requested = %s, negotiated = %s", requestedQop, negotiatedQop));
