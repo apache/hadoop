@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.protocol.datatransfer.sasl;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.util.Map;
+import java.util.Objects;
 import javax.security.auth.callback.CallbackHandler;
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslClient;
@@ -110,7 +111,7 @@ class SaslParticipant {
    * @param saslServer to wrap
    */
   private SaslParticipant(SaslServer saslServer) {
-    this.saslServer = saslServer;
+    this.saslServer = Objects.requireNonNull(saslServer, "saslServer == null");
     this.saslClient = null;
   }
 
@@ -121,7 +122,7 @@ class SaslParticipant {
    */
   private SaslParticipant(SaslClient saslClient) {
     this.saslServer = null;
-    this.saslClient = saslClient;
+    this.saslClient = Objects.requireNonNull(saslClient, "saslClient == null");
   }
 
   /**
@@ -227,5 +228,10 @@ class SaslParticipant {
           new SaslInputStream(in, saslServer),
           new SaslOutputStream(out, saslServer));
     }
+  }
+
+  @Override
+  public String toString() {
+    return "Sasl" + (saslServer != null? "Server" : "Client");
   }
 }
