@@ -8838,10 +8838,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       UserGroupInformation ugi = Server.getRemoteUser();
       String userName = ugi != null ? ugi.toString() : null;
       InetAddress addr = Server.getRemoteIp();
-      if (addr != null) {
-        // The host name resolution on InetAddress provides Hostname with IP address
-        addr.getHostName();
-      }
       StringBuilder sb = new StringBuilder();
       String s = escapeJava(src);
       String d = escapeJava(dst);
