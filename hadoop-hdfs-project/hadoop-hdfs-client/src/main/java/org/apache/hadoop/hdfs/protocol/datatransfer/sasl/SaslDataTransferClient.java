@@ -63,7 +63,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Lists;
-import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -84,8 +83,6 @@ public class SaslDataTransferClient {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       SaslDataTransferClient.class);
-
-  private static final byte[] EMPTY_BYTE_ARRAY = {};
 
   private final Configuration conf;
   private final AtomicBoolean fallbackToSimpleAuth;
@@ -522,29 +519,25 @@ public class SaslDataTransferClient {
       // In which case there will be no encrypted secret sent from NN.
       BlockTokenIdentifier blockTokenIdentifier =
           accessToken.decodeIdentifier();
-      final byte[] first = sasl.evaluateChallengeOrResponse(EMPTY_BYTE_ARRAY);
-      if (LOG.isDebugEnabled()) {
-        LOG.info("first: {}", first == null ? null : first.length == 0 ? "<empty>"
-            : StringUtils.byteToHexString(first));
-      }
       if (blockTokenIdentifier != null) {
         byte[] handshakeSecret =
             accessToken.decodeIdentifier().getHandshakeMsg();
         if (handshakeSecret == null || handshakeSecret.length == 0) {
           LOG.debug("Handshake secret is null, "
               + "sending without handshake secret.");
-          sendSaslMessage(out, first);
+          sendSaslMessage(out, new byte[0]);
         } else {
           LOG.debug("Sending handshake secret.");
           BlockTokenIdentifier identifier = new BlockTokenIdentifier();
           identifier.readFields(new DataInputStream(
               new ByteArrayInputStream(accessToken.getIdentifier())));
           String bpid = identifier.getBlockPoolId();
-          sendSaslMessageHandshakeSecret(out, first, handshakeSecret, bpid);
+          sendSaslMessageHandshakeSecret(out, new byte[0],
+              handshakeSecret, bpid);
         }
       } else {
         LOG.debug("Block token id is null, sending without handshake secret.");
-        sendSaslMessage(out, first);
+        sendSaslMessage(out, new byte[0]);
       }
 
       // step 1
@@ -572,7 +565,6 @@ public class SaslDataTransferClient {
           cipherOptions.add(option);
         }
       }
-      LOG.debug("{}: cipherOptions={}", sasl, cipherOptions);
       sendSaslMessageAndNegotiationCipherOptions(out, localResponse,
           cipherOptions);
 
