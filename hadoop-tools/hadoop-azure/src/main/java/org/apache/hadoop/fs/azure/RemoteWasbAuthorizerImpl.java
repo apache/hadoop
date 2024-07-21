@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.azure;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.commons.lang3.StringUtils;
@@ -34,9 +33,9 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.utils.URIBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.util.concurrent.TimeUnit;
 
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.fs.azure.WasbRemoteCallHelper.REMOTE_CALL_SUCCESS_CODE;
 
@@ -51,7 +50,8 @@ public class RemoteWasbAuthorizerImpl implements WasbAuthorizerInterface {
   public static final Logger LOG = LoggerFactory
       .getLogger(RemoteWasbAuthorizerImpl.class);
   private static final ObjectReader RESPONSE_READER = JacksonUtil
-      .createReaderFor(RemoteWasbAuthorizerResponse.class);
+      .createBasicObjectMapper()
+      .readerFor(RemoteWasbAuthorizerResponse.class);
 
   /**
    * Configuration parameter name expected in the Configuration object to
@@ -177,7 +177,7 @@ public class RemoteWasbAuthorizerImpl implements WasbAuthorizerInterface {
       uriBuilder
           .addParameter(WASB_ABSOLUTE_PATH_QUERY_PARAM_NAME, wasbAbsolutePath);
       uriBuilder.addParameter(ACCESS_OPERATION_QUERY_PARAM_NAME, accessType);
-      if (resourceOwner != null && StringUtils.isNotEmpty(resourceOwner)) {
+      if (StringUtils.isNotEmpty(resourceOwner)) {
         uriBuilder.addParameter(WASB_RESOURCE_OWNER_QUERY_PARAM_NAME,
             resourceOwner);
       }

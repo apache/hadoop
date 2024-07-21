@@ -61,7 +61,6 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.util.MinimalPrettyPrinter;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -275,7 +274,7 @@ public class FileSystemTimelineWriter extends TimelineWriter{
   }
 
   private ObjectMapper createObjectMapper() {
-    ObjectMapper mapper = new ObjectMapper();
+    ObjectMapper mapper = JacksonUtil.createBasicObjectMapper();
     mapper.setAnnotationIntrospector(
         new JaxbAnnotationIntrospector(TypeFactory.defaultInstance()));
     mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);

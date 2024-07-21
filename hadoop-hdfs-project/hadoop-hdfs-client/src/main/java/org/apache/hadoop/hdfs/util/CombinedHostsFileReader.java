@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hdfs.util;
 
-import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
@@ -111,7 +110,7 @@ public final class CombinedHostsFileReader {
 
     if (tryOldFormat) {
       ObjectReader objectReader =
-          JacksonUtil.createReaderFor(DatanodeAdminProperties.class);
+          JacksonUtil.createBasicObjectMapper().readerFor(DatanodeAdminProperties.class);
       List<DatanodeAdminProperties> all = new ArrayList<>();
       try (Reader input =
           new InputStreamReader(Files.newInputStream(Paths.get(hostsFilePath)),

@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hdfs.server.diskbalancer.command;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 
 import org.apache.commons.cli.CommandLine;

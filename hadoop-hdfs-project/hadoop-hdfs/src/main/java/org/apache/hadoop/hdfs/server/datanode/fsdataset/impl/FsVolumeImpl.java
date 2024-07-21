@@ -104,9 +104,9 @@ import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFact
 public class FsVolumeImpl implements FsVolumeSpi {
   public static final Logger LOG =
       LoggerFactory.getLogger(FsVolumeImpl.class);
-  private static final ObjectWriter WRITER =
-      JacksonUtil.createBasicObjectMapper().writerWithDefaultPrettyPrinter();
-  private static final ObjectReader READER = JacksonUtil.createReaderFor(BlockIteratorState.class);
+  private static final ObjectMapper MAPPER = JacksonUtil.createBasicObjectMapper();
+  private static final ObjectWriter WRITER = MAPPER.writerWithDefaultPrettyPrinter();
+  private static final ObjectReader READER = MAPPER.readerFor(BlockIteratorState.class);
 
   private final FsDatasetImpl dataset;
   private final String storageID;

@@ -97,7 +97,6 @@ import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_ST
 import static org.apache.hadoop.fs.azure.NativeAzureFileSystemHelper.*;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.classification.VisibleForTesting;
 import com.microsoft.azure.storage.StorageException;
 

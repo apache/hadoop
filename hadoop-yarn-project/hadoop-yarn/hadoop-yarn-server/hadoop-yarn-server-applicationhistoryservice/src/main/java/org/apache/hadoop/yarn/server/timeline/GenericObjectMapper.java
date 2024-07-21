@@ -39,8 +39,9 @@ import org.apache.hadoop.util.JacksonUtil;
 public class GenericObjectMapper {
   private static final byte[] EMPTY_BYTES = new byte[0];
 
-  public static final ObjectReader OBJECT_READER = JacksonUtil.createReaderFor(Object.class);
-  public static final ObjectWriter OBJECT_WRITER = JacksonUtil.createBasicWriter();
+  private static final ObjectMapper OBJECT_MAPPER = JacksonUtil.createBasicObjectMapper();
+  public static final ObjectReader OBJECT_READER = OBJECT_MAPPER.readerFor(Object.class);
+  public static final ObjectWriter OBJECT_WRITER = OBJECT_MAPPER.writer();
 
   /**
    * Serializes an Object into a byte array. Along with {@link #read(byte[])},

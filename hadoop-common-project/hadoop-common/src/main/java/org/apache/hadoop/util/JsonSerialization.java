@@ -76,11 +76,9 @@ public class JsonSerialization<T> {
   private final Class<T> classType;
   private final ObjectMapper mapper;
 
-  private static final ObjectWriter WRITER = JacksonUtil
-      .createBasicObjectMapper()
-      .writerWithDefaultPrettyPrinter();
-
-  private static final ObjectReader MAP_READER = JacksonUtil.createReaderFor(Map.class);
+  private static final ObjectMapper OBJECT_MAPPER = JacksonUtil.createBasicObjectMapper();
+  private static final ObjectWriter WRITER = OBJECT_MAPPER.writerWithDefaultPrettyPrinter();
+  private static final ObjectReader MAP_READER = OBJECT_MAPPER.readerFor(Map.class);
 
   /**
    * @return an ObjectWriter which pretty-prints its output

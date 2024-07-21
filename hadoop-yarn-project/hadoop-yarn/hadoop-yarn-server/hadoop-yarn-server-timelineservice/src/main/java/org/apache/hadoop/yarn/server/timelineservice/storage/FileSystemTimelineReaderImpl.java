@@ -105,10 +105,10 @@ public class FileSystemTimelineReaderImpl extends AbstractService
     return rootPath.toString();
   }
 
-  private static final ObjectMapper mapper = JacksonUtil.createBasicObjectMapper();
+  private static final ObjectMapper OBJECT_MAPPER = JacksonUtil.createBasicObjectMapper();
 
   static {
-    YarnJacksonJaxbJsonProvider.configObjectMapper(mapper);
+    YarnJacksonJaxbJsonProvider.configObjectMapper(OBJECT_MAPPER);
   }
 
   /**
@@ -127,7 +127,7 @@ public class FileSystemTimelineReaderImpl extends AbstractService
   public static <T> T getTimelineRecordFromJSON(
       String jsonString, Class<T> clazz)
       throws JsonGenerationException, JsonMappingException, IOException {
-    return mapper.readValue(jsonString, clazz);
+    return OBJECT_MAPPER.readValue(jsonString, clazz);
   }
 
   private static void fillFields(TimelineEntity finalEntity,

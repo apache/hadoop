@@ -38,7 +38,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import javax.management.ObjectName;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 
 import org.apache.hadoop.security.UserGroupInformation;
@@ -147,7 +146,7 @@ public class DecayRpcScheduler implements RpcScheduler,
   public static final Logger LOG =
       LoggerFactory.getLogger(DecayRpcScheduler.class);
 
-  private static final ObjectWriter WRITER = JacksonUtil.createBasicWriter();
+  private static final ObjectWriter WRITER = JacksonUtil.createBasicObjectMapper().writer();
 
   // Track the decayed and raw (no decay) number of calls for each schedulable
   // identity from all previous decay windows: idx 0 for decayed call cost and

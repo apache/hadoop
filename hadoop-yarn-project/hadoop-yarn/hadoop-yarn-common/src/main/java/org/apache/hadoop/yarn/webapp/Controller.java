@@ -43,7 +43,7 @@ import com.google.inject.servlet.RequestScoped;
 @InterfaceAudience.LimitedPrivate({"YARN", "MapReduce"})
 public abstract class Controller implements Params {
   public static final Logger LOG = LoggerFactory.getLogger(Controller.class);
-  static final ObjectMapper jsonMapper = JacksonUtil.createBasicObjectMapper();
+  static final ObjectMapper OBJECT_MAPPER = JacksonUtil.createBasicObjectMapper();
 
   @RequestScoped
   public static class RequestContext{
@@ -226,7 +226,7 @@ public abstract class Controller implements Params {
     context().rendered = true;
     context().response.setContentType(MimeType.JSON);
     try {
-      jsonMapper.writeValue(writer(), object);
+      OBJECT_MAPPER.writeValue(writer(), object);
     } catch (Exception e) {
       throw new WebAppException(e);
     }

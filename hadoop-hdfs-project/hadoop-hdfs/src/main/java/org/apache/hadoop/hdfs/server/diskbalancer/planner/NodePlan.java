@@ -41,7 +41,7 @@ public class NodePlan {
   private long timeStamp;
 
   private static final ObjectMapper MAPPER = JacksonUtil.createBasicObjectMapper();
-  private static final ObjectReader READER = JacksonUtil.createReaderFor(NodePlan.class);
+  private static final ObjectReader READER = MAPPER.readerFor(NodePlan.class);
   private static final ObjectWriter WRITER = MAPPER.writerFor(
       MAPPER.constructType(NodePlan.class));
   /**

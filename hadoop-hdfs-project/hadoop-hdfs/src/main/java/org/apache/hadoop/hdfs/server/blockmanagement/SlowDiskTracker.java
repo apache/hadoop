@@ -71,7 +71,7 @@ public class SlowDiskTracker {
   /**
    * ObjectWriter to convert JSON reports to String.
    */
-  private static final ObjectWriter WRITER = JacksonUtil.createBasicWriter();
+  private static final ObjectWriter WRITER = JacksonUtil.createBasicObjectMapper().writer();
 
   /**
    * Number of disks to include in JSON report per operation. We will return

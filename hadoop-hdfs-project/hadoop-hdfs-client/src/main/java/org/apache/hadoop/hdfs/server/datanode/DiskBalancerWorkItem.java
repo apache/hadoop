@@ -37,8 +37,7 @@ import java.io.IOException;
 @JsonInclude(JsonInclude.Include.NON_DEFAULT)
 public class DiskBalancerWorkItem {
   private static final ObjectMapper MAPPER = JacksonUtil.createBasicObjectMapper();
-  private static final ObjectReader READER =
-      JacksonUtil.createReaderFor(DiskBalancerWorkItem.class);
+  private static final ObjectReader READER = MAPPER.readerFor(DiskBalancerWorkItem.class);
 
   private  long startTime;
   private long secondsElapsed;

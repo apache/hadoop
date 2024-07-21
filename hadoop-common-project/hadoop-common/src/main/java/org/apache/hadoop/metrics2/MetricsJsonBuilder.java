@@ -47,7 +47,7 @@ public class MetricsJsonBuilder extends MetricsRecordBuilder {
   private Map<String, Object> innerMetrics = new LinkedHashMap<>();
 
   private static final ObjectWriter WRITER =
-      JacksonUtil.createBasicWriter();
+      JacksonUtil.createBasicObjectMapper().writer();
 
   /**
    * Build an instance.

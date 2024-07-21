@@ -34,7 +34,7 @@ import java.io.IOException;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class DiskBalancerVolume {
   private static final ObjectReader READER =
-      JacksonUtil.createReaderFor(DiskBalancerVolume.class);
+      JacksonUtil.createBasicObjectMapper().readerFor(DiskBalancerVolume.class);
 
   private static final Logger LOG =
       LoggerFactory.getLogger(DiskBalancerVolume.class);

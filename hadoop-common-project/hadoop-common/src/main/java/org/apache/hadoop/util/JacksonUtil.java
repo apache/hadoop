@@ -18,10 +18,7 @@
 package org.apache.hadoop.util;
 
 import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectReader;
-import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 
 /**
@@ -31,16 +28,14 @@ import com.fasterxml.jackson.databind.json.JsonMapper;
  */
 public class JacksonUtil {
 
-  private static final JsonFactory DEFAULT_JSON_FACTORY = createBasicJsonFactory();
-  private static final ObjectMapper DEFAULT_OBJECT_MAPPER = createBasicObjectMapper();
-
   /**
    * Creates a new {@link JsonFactory} instance with basic configuration.
    *
    * @return an {@link JsonFactory} with basic configuration
    */
   public static JsonFactory createBasicJsonFactory() {
-    // do not expose DEFAULT_JSON_FACTORY because we don't want anyone to access it and modify it
+    // deliberately return a new instance instead of sharing one because we can't trust
+    // that users won't modify this instance
     return new JsonFactory();
   }
 
@@ -50,8 +45,9 @@ public class JacksonUtil {
    * @return an {@link ObjectMapper} with basic configuration
    */
   public static ObjectMapper createBasicObjectMapper() {
-    // do not expose DEFAULT_OBJECT_MAPPER because we don't want anyone to access it and modify it
-    return JsonMapper.builder(DEFAULT_JSON_FACTORY).build();
+    // deliberately return a new instance instead of sharing one because we can't trust
+    // that users won't modify this instance
+    return JsonMapper.builder(createBasicJsonFactory()).build();
   }
 
   /**
@@ -65,32 +61,5 @@ public class JacksonUtil {
     return JsonMapper.builder(jsonFactory).build();
   }
 
-  /**
-   * Creates a new {@link ObjectReader} for the provided type.
-   *
-   * @param type a class instance
-   * @return an {@link ObjectReader} with basic configuration
-   */
-  public static ObjectReader createReaderFor(final Class<?> type) {
-    return DEFAULT_OBJECT_MAPPER.readerFor(type);
-  }
-
-  /**
-   * Creates a new {@link ObjectReader} for the provided type.
-   *
-   * @param type a {@link JavaType} instance
-   * @return an {@link ObjectReader} with basic configuration
-   */
-  public static ObjectReader createReaderFor(final JavaType type) {
-    return DEFAULT_OBJECT_MAPPER.readerFor(type);
-  }
-
-  /**
-   * Creates a new {@link ObjectWriter} with basic configuration.
-   *
-   * @return an {@link ObjectWriter} with basic configuration
-   */
-  public static ObjectWriter createBasicWriter() {
-    return DEFAULT_OBJECT_MAPPER.writer();
-  }
+  private JacksonUtil() {}
 }

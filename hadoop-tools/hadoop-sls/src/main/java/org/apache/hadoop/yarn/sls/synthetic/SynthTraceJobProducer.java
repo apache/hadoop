@@ -88,7 +88,7 @@ public class SynthTraceJobProducer implements JobStoryProducer {
     this.rand = new JDKRandomGenerator();
 
     JsonFactoryBuilder jsonFactoryBuilder = new JsonFactoryBuilder();
-    jsonFactoryBuilder.configure(JsonFactory.Feature.INTERN_FIELD_NAMES, true)
+    jsonFactoryBuilder.configure(JsonFactory.Feature.INTERN_FIELD_NAMES, true);
 
     ObjectMapper mapper = JacksonUtil.createObjectMapper(jsonFactoryBuilder.build());
     mapper.configure(FAIL_ON_UNKNOWN_PROPERTIES, false);

@@ -19,7 +19,6 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
@@ -76,7 +75,7 @@ public class SlowPeerTracker {
   /**
    * ObjectWriter to convert JSON reports to String.
    */
-  private static final ObjectWriter WRITER = JacksonUtil.createBasicWriter();
+  private static final ObjectWriter WRITER = JacksonUtil.createBasicObjectMapper().writer();
 
   /**
    * Number of nodes to include in JSON report. We will return nodes with

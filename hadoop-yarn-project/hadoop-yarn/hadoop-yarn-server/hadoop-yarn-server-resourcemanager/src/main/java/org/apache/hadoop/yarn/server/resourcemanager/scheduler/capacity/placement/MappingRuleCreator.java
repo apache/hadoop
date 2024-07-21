@@ -26,7 +26,6 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule.MappingRule;
