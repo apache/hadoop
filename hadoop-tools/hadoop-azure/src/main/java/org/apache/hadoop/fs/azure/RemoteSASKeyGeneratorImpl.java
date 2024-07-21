@@ -31,6 +31,7 @@ import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 
+import org.apache.hadoop.util.JacksonUtil;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.utils.URIBuilder;
@@ -40,7 +41,6 @@ import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import static org.apache.hadoop.fs.azure.WasbRemoteCallHelper.REMOTE_CALL_SUCCESS_CODE;
 
@@ -53,8 +53,8 @@ public class RemoteSASKeyGeneratorImpl extends SASKeyGeneratorImpl {
 
   public static final Logger LOG =
       LoggerFactory.getLogger(AzureNativeFileSystemStore.class);
-  private static final ObjectReader RESPONSE_READER = new ObjectMapper()
-      .readerFor(RemoteSASKeyGenerationResponse.class);
+  private static final ObjectReader RESPONSE_READER = JacksonUtil
+      .createReaderFor(RemoteSASKeyGenerationResponse.class);
 
   /**
    * Configuration parameter name expected in the Configuration

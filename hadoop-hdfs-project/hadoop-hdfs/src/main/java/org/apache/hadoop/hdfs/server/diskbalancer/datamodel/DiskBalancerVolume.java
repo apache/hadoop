@@ -19,10 +19,10 @@ package org.apache.hadoop.hdfs.server.diskbalancer.datamodel;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 
 import org.apache.hadoop.hdfs.web.JsonUtil;
+import org.apache.hadoop.util.JacksonUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,7 +34,7 @@ import java.io.IOException;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class DiskBalancerVolume {
   private static final ObjectReader READER =
-      new ObjectMapper().readerFor(DiskBalancerVolume.class);
+      JacksonUtil.createReaderFor(DiskBalancerVolume.class);
 
   private static final Logger LOG =
       LoggerFactory.getLogger(DiskBalancerVolume.class);

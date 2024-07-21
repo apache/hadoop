@@ -23,7 +23,6 @@ import java.io.OutputStream;
 import java.util.List;
 
 import com.fasterxml.jackson.core.JsonEncoding;
-import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -141,9 +140,8 @@ public class TestHistograms {
         Path goldFilePath = new Path(filePath.getParent(), "gold"+testName);
 
         ObjectMapper mapper = new ObjectMapper();
-        JsonFactory factory = mapper.getFactory();
         FSDataOutputStream ostream = lfs.create(goldFilePath, true);
-        JsonGenerator gen = factory.createGenerator((OutputStream)ostream,
+        JsonGenerator gen = mapper.createGenerator((OutputStream)ostream,
             JsonEncoding.UTF8);
         gen.useDefaultPrettyPrinter();
         

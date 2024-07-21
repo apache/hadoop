@@ -44,6 +44,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.tools.rumen.Anonymizer;
 import org.apache.hadoop.tools.rumen.datatypes.DataType;
+import org.apache.hadoop.util.JacksonUtil;
 
 /**
  * A pool of states. States used by {@link DataType}'s can be managed the 
@@ -206,7 +207,7 @@ public class StatePool {
   }
   
   private void read(DataInput in) throws IOException {
-    ObjectMapper mapper = new ObjectMapper();
+    ObjectMapper mapper = JacksonUtil.createBasicObjectMapper();
     // define a module
     SimpleModule module = new SimpleModule("State Serializer",  
         new Version(0, 1, 1, "FINAL", "", ""));
@@ -216,7 +217,7 @@ public class StatePool {
     // register the module with the object-mapper
     mapper.registerModule(module);
 
-    JsonParser parser = mapper.getFactory().createParser((InputStream)in);
+    JsonParser parser = mapper.createParser((InputStream)in);
     StatePool statePool = mapper.readValue(parser, StatePool.class);
     this.setStates(statePool.getStates());
     parser.close();
@@ -273,7 +274,7 @@ public class StatePool {
   private void write(DataOutput out) throws IOException {
     // This is just a JSON experiment
     System.out.println("Dumping the StatePool's in JSON format.");
-    ObjectMapper outMapper = new ObjectMapper();
+    ObjectMapper outMapper = JacksonUtil.createBasicObjectMapper();
     // define a module
     SimpleModule module = new SimpleModule("State Serializer",  
         new Version(0, 1, 1, "FINAL", "", ""));
@@ -283,9 +284,8 @@ public class StatePool {
     // register the module with the object-mapper
     outMapper.registerModule(module);
 
-    JsonFactory outFactory = outMapper.getFactory();
     JsonGenerator jGen =
-        outFactory.createGenerator((OutputStream)out, JsonEncoding.UTF8);
+        outMapper.createGenerator((OutputStream)out, JsonEncoding.UTF8);
     jGen.useDefaultPrettyPrinter();
 
     jGen.writeObject(this);

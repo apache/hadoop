@@ -29,7 +29,6 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.security.DockerCredentialTokenIdentifier;
 
-import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -97,8 +96,7 @@ public final class DockerClientConfigHandler {
 
     // Parse the JSON and create the Tokens/Credentials.
     ObjectMapper mapper = new ObjectMapper();
-    JsonFactory factory = mapper.getFactory();
-    JsonParser parser = factory.createParser(contents);
+    JsonParser parser = mapper.createParser(contents);
     JsonNode rootNode = mapper.readTree(parser);
 
     Credentials credentials = new Credentials();

@@ -41,6 +41,7 @@ import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdenti
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSelector;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticatedURL;
 import org.apache.hadoop.util.HttpExceptionUtils;
+import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.util.JsonSerialization;
 import org.apache.hadoop.util.KMSUtil;
 import org.apache.http.client.utils.URIBuilder;
@@ -128,6 +129,13 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
   public static final String AUTH_RETRY = CONFIG_PREFIX
       + "authentication.retry-count";
   public static final int DEFAULT_AUTH_RETRY = 1;
+
+  /**
+   * It is more performant to reuse ObjectMapper instances but keeping the instance
+   * private makes it harder for someone to reconfigure it which might have unwanted
+   * side effects.
+   */
+  private static final ObjectMapper OBJECT_MAPPER = JacksonUtil.createBasicObjectMapper();
 
   private final ValueQueue<EncryptedKeyVersion> encKeyVersionQueue;
 
@@ -592,11 +600,10 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
         && conn.getContentType().trim().toLowerCase()
             .startsWith(APPLICATION_JSON_MIME)
         && klass != null) {
-      ObjectMapper mapper = new ObjectMapper();
       InputStream is = null;
       try {
         is = conn.getInputStream();
-        ret = mapper.readValue(is, klass);
+        ret = OBJECT_MAPPER.readValue(is, klass);
       } finally {
         IOUtils.closeStream(is);
       }

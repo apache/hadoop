@@ -29,9 +29,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.databind.SerializationFeature;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -327,14 +329,14 @@ public class FSConfigToCSConfigConverter {
           placementConverter.convertPlacementPolicy(placementManager,
               ruleHandler, capacitySchedulerConfig, usePercentages);
 
-      ObjectMapper mapper = new ObjectMapper();
+      final ObjectMapper mapper = JacksonUtil.createBasicObjectMapper();
       // close output stream if we write to a file, leave it open otherwise
       if (!consoleMode && rulesToFile) {
         mapper.configure(JsonGenerator.Feature.AUTO_CLOSE_TARGET, true);
       } else {
         mapper.configure(JsonGenerator.Feature.AUTO_CLOSE_TARGET, false);
       }
-      ObjectWriter writer = mapper.writer(new DefaultPrettyPrinter());
+      ObjectWriter writer = mapper.writerWithDefaultPrettyPrinter();
 
       if (consoleMode && rulesToFile) {
         System.out.println("======= " + MAPPING_RULES_JSON + " =======");

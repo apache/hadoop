@@ -21,7 +21,6 @@ import java.io.IOException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.Phase;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress;
@@ -31,6 +30,7 @@ import org.apache.hadoop.hdfs.server.namenode.startupprogress.StepType;
 import org.apache.hadoop.io.IOUtils;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.util.JacksonUtil;
 
 /**
  * Servlet that provides a JSON representation of the namenode's current startup
@@ -61,7 +61,7 @@ public class StartupProgressServlet extends DfsServlet {
     StartupProgress prog = NameNodeHttpServer.getStartupProgressFromContext(
       getServletContext());
     StartupProgressView view = prog.createView();
-    JsonGenerator json = new JsonFactory().createGenerator(resp.getWriter());
+    JsonGenerator json = JacksonUtil.createBasicJsonFactory().createGenerator(resp.getWriter());
     try {
       json.writeStartObject();
       json.writeNumberField(ELAPSED_TIME, view.getElapsedTime());

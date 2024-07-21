@@ -76,11 +76,11 @@ public class JsonSerialization<T> {
   private final Class<T> classType;
   private final ObjectMapper mapper;
 
-  private static final ObjectWriter WRITER =
-      new ObjectMapper().writerWithDefaultPrettyPrinter();
+  private static final ObjectWriter WRITER = JacksonUtil
+      .createBasicObjectMapper()
+      .writerWithDefaultPrettyPrinter();
 
-  private static final ObjectReader MAP_READER =
-      new ObjectMapper().readerFor(Map.class);
+  private static final ObjectReader MAP_READER = JacksonUtil.createReaderFor(Map.class);
 
   /**
    * @return an ObjectWriter which pretty-prints its output
@@ -106,7 +106,7 @@ public class JsonSerialization<T> {
       boolean failOnUnknownProperties, boolean pretty) {
     Preconditions.checkArgument(classType != null, "null classType");
     this.classType = classType;
-    this.mapper = new ObjectMapper();
+    this.mapper = JacksonUtil.createBasicObjectMapper();
     mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES,
         failOnUnknownProperties);
     mapper.configure(SerializationFeature.INDENT_OUTPUT, pretty);

@@ -26,7 +26,9 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule.MappingRule;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule.MappingRuleAction;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule.MappingRuleActions;
@@ -50,6 +52,13 @@ public class MappingRuleCreator {
   private static final String ALL_USER = "*";
   private static Logger LOG = LoggerFactory.getLogger(MappingRuleCreator.class);
 
+  /**
+   * It is more performant to reuse ObjectMapper instances but keeping the instance
+   * private makes it harder for someone to reconfigure it which might have unwanted
+   * side effects.
+   */
+  private static final ObjectMapper OBJECT_MAPPER = JacksonUtil.createBasicObjectMapper();
+
   public MappingRulesDescription getMappingRulesFromJsonFile(String filePath)
       throws IOException {
     byte[] fileContents = Files.readAllBytes(Paths.get(filePath));
@@ -58,14 +67,12 @@ public class MappingRuleCreator {
 
   MappingRulesDescription getMappingRulesFromJson(byte[] contents)
       throws IOException {
-    ObjectMapper objectMapper = new ObjectMapper();
-    return objectMapper.readValue(contents, MappingRulesDescription.class);
+    return OBJECT_MAPPER.readValue(contents, MappingRulesDescription.class);
   }
 
   MappingRulesDescription getMappingRulesFromJson(String contents)
       throws IOException {
-    ObjectMapper objectMapper = new ObjectMapper();
-    return objectMapper.readValue(contents, MappingRulesDescription.class);
+    return OBJECT_MAPPER.readValue(contents, MappingRulesDescription.class);
   }
 
   public List<MappingRule> getMappingRulesFromFile(String jsonPath)

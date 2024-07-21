@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.protocol.*;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.StringUtils;
 
@@ -56,7 +57,7 @@ public class JsonUtil {
   // ObjectMapper is thread safe as long as we always configure instance
   // before use. We don't have a re-entrant call pattern in WebHDFS,
   // so we just need to worry about thread-safety.
-  private static final ObjectMapper MAPPER = new ObjectMapper();
+  private static final ObjectMapper MAPPER = JacksonUtil.createBasicObjectMapper();
 
   /** Convert a token object to a Json string. */
   public static String toJsonString(final Token<? extends TokenIdentifier> token

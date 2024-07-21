@@ -84,6 +84,7 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticatedURL;
+import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.util.LambdaUtils;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.Time;
@@ -127,7 +128,7 @@ public class NativeAzureFileSystem extends FileSystem {
     private static final int FORMATTING_BUFFER = 10000;
     private boolean committed;
     public static final String SUFFIX = "-RenamePending.json";
-    private static final ObjectReader READER = new ObjectMapper()
+    private static final ObjectReader READER = JacksonUtil.createBasicObjectMapper()
         .configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true)
         .readerFor(JsonNode.class);
 

@@ -26,6 +26,7 @@ import org.apache.hadoop.net.Node;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.net.HttpHeaders;
+import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.util.StringUtils;
 
 import javax.servlet.ServletContext;
@@ -123,7 +124,7 @@ public class NetworkTopologyServlet extends DfsServlet {
 
   protected void printJsonFormat(PrintStream stream, Map<String,
       TreeSet<String>> tree, ArrayList<String> racks) throws IOException {
-    JsonFactory dumpFactory = new JsonFactory();
+    JsonFactory dumpFactory = JacksonUtil.createBasicJsonFactory();
     JsonGenerator dumpGenerator = dumpFactory.createGenerator(stream);
     dumpGenerator.writeStartArray();
 

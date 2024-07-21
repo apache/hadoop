@@ -28,6 +28,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.CounterGroup;
 import org.apache.hadoop.mapreduce.Counters;
+import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 
 /**
@@ -41,7 +42,7 @@ public final class JobHistoryEventUtils {
   public static final int ATS_CONFIG_PUBLISH_SIZE_BYTES = 10 * 1024;
 
   public static JsonNode countersToJSON(Counters counters) {
-    ObjectMapper mapper = new ObjectMapper();
+    ObjectMapper mapper = JacksonUtil.createBasicObjectMapper();
     ArrayNode nodes = mapper.createArrayNode();
     if (counters != null) {
       for (CounterGroup counterGroup : counters) {

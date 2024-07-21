@@ -23,6 +23,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.tools.rumen.JobTraceReader;
 import org.apache.hadoop.tools.rumen.LoggedJob;
+import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ReservationId;
@@ -122,15 +123,14 @@ public class AMRunner {
    * Parse workload from a SLS trace file.
    */
   private void startAMFromSLSTrace(String inputTrace) throws IOException {
-    JsonFactory jsonF = new JsonFactory();
-    ObjectMapper mapper = new ObjectMapper();
+    ObjectMapper mapper = JacksonUtil.createBasicObjectMapper();
 
     try (Reader input = new InputStreamReader(
         new FileInputStream(inputTrace), StandardCharsets.UTF_8)) {
       JavaType type = mapper.getTypeFactory().
           constructMapType(Map.class, String.class, String.class);
       Iterator<Map<String, String>> jobIter = mapper.readValues(
-          jsonF.createParser(input), type);
+          mapper.createParser(input), type);
 
       while (jobIter.hasNext()) {
         try {

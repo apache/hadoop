@@ -45,6 +45,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
+import org.apache.hadoop.util.JacksonUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -146,7 +147,7 @@ public class JMXJsonServlet extends HttpServlet {
   public void init() throws ServletException {
     // Retrieve the MBean server
     mBeanServer = ManagementFactory.getPlatformMBeanServer();
-    jsonFactory = new JsonFactory();
+    jsonFactory = JacksonUtil.createBasicJsonFactory();
   }
 
   protected boolean isInstrumentationAccessAllowed(HttpServletRequest request, 

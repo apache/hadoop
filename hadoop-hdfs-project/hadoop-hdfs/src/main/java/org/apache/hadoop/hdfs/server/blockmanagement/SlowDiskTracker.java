@@ -21,7 +21,6 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
@@ -32,6 +31,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports.DiskOp;
+import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Timer;
 import org.slf4j.Logger;
@@ -71,7 +71,7 @@ public class SlowDiskTracker {
   /**
    * ObjectWriter to convert JSON reports to String.
    */
-  private static final ObjectWriter WRITER = new ObjectMapper().writer();
+  private static final ObjectWriter WRITER = JacksonUtil.createBasicWriter();
 
   /**
    * Number of disks to include in JSON report per operation. We will return

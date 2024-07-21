@@ -19,8 +19,8 @@ package org.apache.hadoop.hdfs.server.diskbalancer.datamodel;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
+import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.util.Preconditions;
 
 import org.apache.commons.io.FileUtils;
@@ -73,7 +73,7 @@ public class DiskBalancerCluster {
   private static final Logger LOG =
       LoggerFactory.getLogger(DiskBalancerCluster.class);
   private static final ObjectReader READER =
-      new ObjectMapper().readerFor(DiskBalancerCluster.class);
+      JacksonUtil.createReaderFor(DiskBalancerCluster.class);
   private final Set<String> exclusionList;
   private final Set<String> inclusionList;
   private ClusterConnector clusterConnector;

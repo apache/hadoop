@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.resource;
 import org.apache.hadoop.classification.VisibleForTesting;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.hadoop.util.JacksonUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -73,6 +74,13 @@ public class ResourceProfilesManagerImpl implements ResourceProfilesManager {
           + " (by setting " + YarnConfiguration.RM_RESOURCE_PROFILES_ENABLED
           + " to true)";
 
+  /**
+   * It is more performant to reuse ObjectMapper instances but keeping the instance
+   * private makes it harder for someone to reconfigure it which might have unwanted
+   * side effects.
+   */
+  private static final ObjectMapper OBJECT_MAPPER = JacksonUtil.createBasicObjectMapper();
+
   public ResourceProfilesManagerImpl() {
     ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     readLock = lock.readLock();
@@ -105,8 +113,7 @@ public class ResourceProfilesManagerImpl implements ResourceProfilesManager {
         resourcesFile = tmp.getPath();
       }
     }
-    ObjectMapper mapper = new ObjectMapper();
-    Map data = mapper.readValue(new File(resourcesFile), Map.class);
+    Map data = OBJECT_MAPPER.readValue(new File(resourcesFile), Map.class);
     Iterator iterator = data.entrySet().iterator();
     while (iterator.hasNext()) {
       Map.Entry entry = (Map.Entry) iterator.next();

@@ -42,6 +42,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.AtomicDoubleArray;
 import org.apache.commons.lang3.exception.ExceptionUtils;
@@ -146,7 +147,7 @@ public class DecayRpcScheduler implements RpcScheduler,
   public static final Logger LOG =
       LoggerFactory.getLogger(DecayRpcScheduler.class);
 
-  private static final ObjectWriter WRITER = new ObjectMapper().writer();
+  private static final ObjectWriter WRITER = JacksonUtil.createBasicWriter();
 
   // Track the decayed and raw (no decay) number of calls for each schedulable
   // identity from all previous decay windows: idx 0 for decayed call cost and

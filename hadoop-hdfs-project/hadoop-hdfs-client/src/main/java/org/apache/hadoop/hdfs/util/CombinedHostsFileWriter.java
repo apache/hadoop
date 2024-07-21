@@ -31,6 +31,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 import org.apache.hadoop.hdfs.protocol.DatanodeAdminProperties;
+import org.apache.hadoop.util.JacksonUtil;
 
 /**
  * Writer support for JSON-based datanode configuration, an alternative format
@@ -59,7 +60,7 @@ public final class CombinedHostsFileWriter {
    */
   public static void writeFile(final String hostsFile,
       final Set<DatanodeAdminProperties> allDNs) throws IOException {
-    final ObjectMapper objectMapper = new ObjectMapper();
+    final ObjectMapper objectMapper = JacksonUtil.createBasicObjectMapper();
 
     try (Writer output =
         new OutputStreamWriter(Files.newOutputStream(Paths.get(hostsFile)),

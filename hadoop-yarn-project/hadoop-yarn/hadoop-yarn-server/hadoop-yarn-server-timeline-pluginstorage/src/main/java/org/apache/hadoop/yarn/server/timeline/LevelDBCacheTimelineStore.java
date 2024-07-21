@@ -25,6 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.timeline.util.LeveldbUtils;
@@ -298,7 +299,7 @@ public class LevelDBCacheTimelineStore extends KeyValueBasedTimelineStore {
         }
       };
     }
-    static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    static final ObjectMapper OBJECT_MAPPER = JacksonUtil.createBasicObjectMapper();
 
     @SuppressWarnings("unchecked")
     private V getEntityForKey(byte[] key) throws IOException {

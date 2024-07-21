@@ -46,6 +46,7 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineHealth;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
@@ -104,10 +105,9 @@ public class FileSystemTimelineReaderImpl extends AbstractService
     return rootPath.toString();
   }
 
-  private static ObjectMapper mapper;
+  private static final ObjectMapper mapper = JacksonUtil.createBasicObjectMapper();
 
   static {
-    mapper = new ObjectMapper();
     YarnJacksonJaxbJsonProvider.configObjectMapper(mapper);
   }
 

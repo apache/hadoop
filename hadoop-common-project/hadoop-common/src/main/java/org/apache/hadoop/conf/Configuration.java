@@ -101,6 +101,7 @@ import org.apache.hadoop.security.alias.CredentialProvider.CredentialEntry;
 import org.apache.hadoop.security.alias.CredentialProviderFactory;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.hadoop.util.ConfigurationHelper;
+import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringInterner;
@@ -3792,7 +3793,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       throw new IllegalArgumentException("Property " +
           propertyName + " not found");
     } else {
-      JsonFactory dumpFactory = new JsonFactory();
+      final JsonFactory dumpFactory = JacksonUtil.createBasicJsonFactory();
       JsonGenerator dumpGenerator = dumpFactory.createGenerator(out);
       dumpGenerator.writeStartObject();
       dumpGenerator.writeFieldName("property");
@@ -3831,7 +3832,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   public static void dumpConfiguration(Configuration config,
       Writer out) throws IOException {
-    JsonFactory dumpFactory = new JsonFactory();
+    final JsonFactory dumpFactory = JacksonUtil.createBasicJsonFactory();
     JsonGenerator dumpGenerator = dumpFactory.createGenerator(out);
     dumpGenerator.writeStartObject();
     dumpGenerator.writeFieldName("properties");

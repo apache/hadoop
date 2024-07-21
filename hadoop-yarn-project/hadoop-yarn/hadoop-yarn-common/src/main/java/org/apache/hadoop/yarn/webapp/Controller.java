@@ -30,6 +30,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.yarn.webapp.view.DefaultPage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,7 +43,7 @@ import com.google.inject.servlet.RequestScoped;
 @InterfaceAudience.LimitedPrivate({"YARN", "MapReduce"})
 public abstract class Controller implements Params {
   public static final Logger LOG = LoggerFactory.getLogger(Controller.class);
-  static final ObjectMapper jsonMapper = new ObjectMapper();
+  static final ObjectMapper jsonMapper = JacksonUtil.createBasicObjectMapper();
 
   @RequestScoped
   public static class RequestContext{

@@ -79,6 +79,7 @@ import org.apache.hadoop.util.CloseableReferenceCount;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
+import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Timer;
 import org.slf4j.Logger;
@@ -104,9 +105,8 @@ public class FsVolumeImpl implements FsVolumeSpi {
   public static final Logger LOG =
       LoggerFactory.getLogger(FsVolumeImpl.class);
   private static final ObjectWriter WRITER =
-      new ObjectMapper().writerWithDefaultPrettyPrinter();
-  private static final ObjectReader READER =
-      new ObjectMapper().readerFor(BlockIteratorState.class);
+      JacksonUtil.createBasicObjectMapper().writerWithDefaultPrettyPrinter();
+  private static final ObjectReader READER = JacksonUtil.createReaderFor(BlockIteratorState.class);
 
   private final FsDatasetImpl dataset;
   private final String storageID;

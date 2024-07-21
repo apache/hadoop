@@ -60,6 +60,7 @@ import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.server.datanode.checker.VolumeCheckResult;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
+import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Timer;
@@ -369,7 +370,7 @@ class ProvidedVolumeImpl extends FsVolumeImpl {
   }
 
   private static final ObjectWriter WRITER =
-      new ObjectMapper().writerWithDefaultPrettyPrinter();
+      JacksonUtil.createBasicObjectMapper().writerWithDefaultPrettyPrinter();
 
   private static class ProvidedBlockIteratorState {
     ProvidedBlockIteratorState() {

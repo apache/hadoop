@@ -43,6 +43,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.protocol.DatanodeAdminProperties;
 
+import org.apache.hadoop.util.JacksonUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,6 +67,13 @@ public final class CombinedHostsFileReader {
   public static final Logger LOG =
       LoggerFactory.getLogger(CombinedHostsFileReader.class);
 
+  /**
+   * It is more performant to reuse ObjectMapper instances but keeping the instance
+   * private makes it harder for someone to reconfigure it which might have unwanted
+   * side effects.
+   */
+  private static final ObjectMapper OBJECT_MAPPER = JacksonUtil.createBasicObjectMapper();
+
   private CombinedHostsFileReader() {
   }
 
@@ -83,7 +91,6 @@ public final class CombinedHostsFileReader {
   public static DatanodeAdminProperties[]
       readFile(final String hostsFilePath) throws IOException {
     DatanodeAdminProperties[] allDNs = new DatanodeAdminProperties[0];
-    ObjectMapper objectMapper = new ObjectMapper();
     File hostFile = new File(hostsFilePath);
     boolean tryOldFormat = false;
 
@@ -91,7 +98,7 @@ public final class CombinedHostsFileReader {
       try (Reader input =
           new InputStreamReader(
               Files.newInputStream(hostFile.toPath()), StandardCharsets.UTF_8)) {
-        allDNs = objectMapper.readValue(input, DatanodeAdminProperties[].class);
+        allDNs = OBJECT_MAPPER.readValue(input, DatanodeAdminProperties[].class);
       } catch (JsonMappingException jme) {
         // The old format doesn't have json top-level token to enclose
         // the array.
@@ -104,14 +111,13 @@ public final class CombinedHostsFileReader {
 
     if (tryOldFormat) {
       ObjectReader objectReader =
-          objectMapper.readerFor(DatanodeAdminProperties.class);
-      JsonFactory jsonFactory = new JsonFactory();
+          JacksonUtil.createReaderFor(DatanodeAdminProperties.class);
       List<DatanodeAdminProperties> all = new ArrayList<>();
       try (Reader input =
           new InputStreamReader(Files.newInputStream(Paths.get(hostsFilePath)),
                   StandardCharsets.UTF_8)) {
         Iterator<DatanodeAdminProperties> iterator =
-            objectReader.readValues(jsonFactory.createParser(input));
+            objectReader.readValues(OBJECT_MAPPER.createParser(input));
         while (iterator.hasNext()) {
           DatanodeAdminProperties properties = iterator.next();
           all.add(properties);

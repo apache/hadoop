@@ -28,6 +28,7 @@ import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.QueueState;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -531,7 +532,7 @@ public class QueueManager {
       return;
     }
     
-    JsonFactory dumpFactory = new JsonFactory();
+    JsonFactory dumpFactory = JacksonUtil.createBasicJsonFactory();
     JsonGenerator dumpGenerator = dumpFactory.createGenerator(out);
     QueueConfigurationParser parser;
     boolean aclsEnabled = false;

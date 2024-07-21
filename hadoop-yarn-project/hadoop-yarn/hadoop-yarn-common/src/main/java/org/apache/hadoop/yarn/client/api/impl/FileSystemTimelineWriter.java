@@ -38,6 +38,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
+import org.apache.hadoop.util.JacksonUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -365,8 +366,8 @@ public class FileSystemTimelineWriter extends TimelineWriter{
 
     protected void prepareForWrite() throws IOException{
       this.stream = createLogFileStream(fs, logPath);
-      this.jsonGenerator = new JsonFactory().createGenerator(
-          (OutputStream)stream);
+      this.jsonGenerator = JacksonUtil.createBasicJsonFactory()
+          .createGenerator((OutputStream)stream);
       this.jsonGenerator.setPrettyPrinter(new MinimalPrettyPrinter("\n"));
       this.lastModifiedTime = Time.monotonicNow();
     }

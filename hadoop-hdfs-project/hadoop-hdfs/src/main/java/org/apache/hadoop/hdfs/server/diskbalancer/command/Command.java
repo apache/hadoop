@@ -47,6 +47,7 @@ import org.apache.hadoop.hdfs.tools.DiskBalancerCLI;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.HostsFileReader;
+import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.util.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -78,7 +79,7 @@ import java.util.TreeSet;
  */
 public abstract class Command extends Configured implements Closeable {
   private static final ObjectReader READER =
-      new ObjectMapper().readerFor(HashMap.class);
+      JacksonUtil.createBasicObjectMapper().readerFor(HashMap.class);
   static final Logger LOG = LoggerFactory.getLogger(Command.class);
   private Map<String, String> validArgs = new HashMap<>();
   private URI clusterURI;

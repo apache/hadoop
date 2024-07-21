@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.azure.security.Constants;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryUtils;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.JacksonUtil;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.utils.URIBuilder;
 import org.slf4j.Logger;
@@ -49,8 +50,8 @@ public class RemoteWasbAuthorizerImpl implements WasbAuthorizerInterface {
 
   public static final Logger LOG = LoggerFactory
       .getLogger(RemoteWasbAuthorizerImpl.class);
-  private static final ObjectReader RESPONSE_READER = new ObjectMapper()
-      .readerFor(RemoteWasbAuthorizerResponse.class);
+  private static final ObjectReader RESPONSE_READER = JacksonUtil
+      .createReaderFor(RemoteWasbAuthorizerResponse.class);
 
   /**
    * Configuration parameter name expected in the Configuration object to

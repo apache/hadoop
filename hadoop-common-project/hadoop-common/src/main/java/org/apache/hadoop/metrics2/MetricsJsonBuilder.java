@@ -22,8 +22,8 @@ import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
+import org.apache.hadoop.util.JacksonUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,7 +47,7 @@ public class MetricsJsonBuilder extends MetricsRecordBuilder {
   private Map<String, Object> innerMetrics = new LinkedHashMap<>();
 
   private static final ObjectWriter WRITER =
-      new ObjectMapper().writer();
+      JacksonUtil.createBasicWriter();
 
   /**
    * Build an instance.

@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
 import java.io.BufferedReader;
@@ -64,8 +65,14 @@ import static org.apache.hadoop.yarn.conf.YarnConfiguration.NM_RUNC_NUM_MANIFEST
 public class ImageTagToManifestPlugin extends AbstractService
     implements RuncImageTagToManifestPlugin {
 
+  /**
+   * It is more performant to reuse ObjectMapper instances but keeping the instance
+   * private makes it harder for someone to reconfigure it which might have unwanted
+   * side effects.
+   */
+  private static final ObjectMapper OBJECT_MAPPER = JacksonUtil.createBasicObjectMapper();
+
   private Map<String, ImageManifest> manifestCache;
-  private ObjectMapper objMapper;
   private AtomicReference<Map<String, String>> localImageToHashCache =
       new AtomicReference<>(new HashMap<>());
   private AtomicReference<Map<String, String>> hdfsImageToHashCache =
@@ -107,7 +114,7 @@ public class ImageTagToManifestPlugin extends AbstractService
     }
 
     byte[] bytes = IOUtils.toByteArray(input);
-    manifest = objMapper.readValue(bytes, ImageManifest.class);
+    manifest = OBJECT_MAPPER.readValue(bytes, ImageManifest.class);
 
     manifestCache.put(hash, manifest);
     return manifest;
@@ -279,7 +286,6 @@ public class ImageTagToManifestPlugin extends AbstractService
         DEFAULT_NM_RUNC_IMAGE_TOPLEVEL_DIR) + "/manifests/";
     int numManifestsToCache = conf.getInt(NM_RUNC_NUM_MANIFESTS_TO_CACHE,
         DEFAULT_NUM_MANIFESTS_TO_CACHE);
-    this.objMapper = new ObjectMapper();
     this.manifestCache = Collections.synchronizedMap(
         new LRUCache(numManifestsToCache, 0.75f));
 
