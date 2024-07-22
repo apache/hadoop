@@ -345,9 +345,6 @@ public class Client implements AutoCloseable {
       }
 
       this.externalHandler = EXTERNAL_CALL_HANDLER.get();
-      if (externalHandler != null) {
-        Object o = EXTERNAL_CALL_HANDLER.get();
-      }
       this.rpcResponseFuture = new CompletableFuture<>();
     }
 
