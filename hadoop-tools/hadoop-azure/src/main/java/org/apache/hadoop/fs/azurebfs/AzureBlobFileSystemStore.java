@@ -878,12 +878,12 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
       if (client.getEncryptionType() == EncryptionType.ENCRYPTION_CONTEXT) {
         if (encryptionContext == null) {
-          PathInformation pathInformation = getPathInformation(relativePath,
+          FileStatusInternal fileStatusInternal = getFileStatusInternal(relativePath,
               tracingContext);
-          resourceType = pathInformation.getResourceType();
-          contentLength = Long.parseLong(pathInformation.getContentLength());
-          eTag = pathInformation.getETag();
-          encryptionContext = pathInformation.getEncryptionContext();
+          resourceType = fileStatusInternal.getResourceType();
+          contentLength = Long.parseLong(fileStatusInternal.getContentLength());
+          eTag = fileStatusInternal.getETag();
+          encryptionContext = fileStatusInternal.getEncryptionContext();
 
           if (encryptionContext == null) {
             LOG.debug("EncryptionContext missing in GetPathStatus response");
@@ -896,11 +896,11 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             encryptionContext.getBytes(StandardCharsets.UTF_8));
       } else if (fileStatus == null
           && !abfsConfiguration.isInputStreamLazyOptimizationEnabled()) {
-        PathInformation pathInformation = getPathInformation(relativePath,
+        FileStatusInternal fileStatusInternal = getFileStatusInternal(relativePath,
             tracingContext);
-        resourceType = pathInformation.getResourceType();
-        contentLength = Long.parseLong(pathInformation.getContentLength());
-        eTag = pathInformation.getETag();
+        resourceType = fileStatusInternal.getResourceType();
+        contentLength = Long.parseLong(fileStatusInternal.getContentLength());
+        eTag = fileStatusInternal.getETag();
       }
 
       if (parseIsDirectory(resourceType)) {
@@ -922,7 +922,19 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     }
   }
 
-  private PathInformation getPathInformation(String relativePath,
+  /**
+   * Calls pathStatus API on the path and returns the FileStatusInternal which
+   * contains the ETag, ContentLength, ResourceType and EncryptionContext parsed
+   * from the API response.
+   *
+   * @param relativePath Path to get the status of.
+   * @param tracingContext TracingContext instance.
+   *
+   * @return FileStatusInternal instance containing the ETag, ContentLength,
+   *        ResourceType and EncryptionContext of the path.
+   * @throws AzureBlobFileSystemException server error.
+   */
+  private FileStatusInternal getFileStatusInternal(String relativePath,
       TracingContext tracingContext) throws AzureBlobFileSystemException {
     AbfsRestOperation op = client.getPathStatus(relativePath, false,
         tracingContext, null);
@@ -935,7 +947,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     String encryptionContext = op.getResult()
         .getResponseHeader(HttpHeaderConfigurations.X_MS_ENCRYPTION_CONTEXT);
 
-    return new PathInformation(eTag, contentLength, resourceType,
+    return new FileStatusInternal(eTag, contentLength, resourceType,
         encryptionContext);
   }
 
@@ -2065,13 +2077,13 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     }
   }
 
-  private static final class PathInformation {
+  private static final class FileStatusInternal {
     private String eTag;
     private String contentLength;
     private String resourceType;
     private String encryptionContext;
 
-    public PathInformation(String eTag, String contentLength, String resourceType, String encryptionContext) {
+    private FileStatusInternal(String eTag, String contentLength, String resourceType, String encryptionContext) {
       this.eTag = eTag;
       this.contentLength = contentLength;
       this.resourceType = resourceType;
