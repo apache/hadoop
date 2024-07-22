@@ -16,28 +16,19 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azurebfs.services;
+package org.apache.hadoop.fs.azurebfs.contracts.exceptions;
+
+import org.apache.http.HttpResponse;
+
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EXPECT_100_JDK_ERROR;
 
 /**
- * Implementation of {@link AbfsThrottlingIntercept} that does not throttle
- * the ABFS process.
+ * Exception that marks expect100 handshake error. This exception is thrown when
+ * the expect100 handshake fails with ADLS server sending 4xx or 5xx status code.
  */
-final class AbfsNoOpThrottlingIntercept implements AbfsThrottlingIntercept {
+public class AbfsApacheHttpExpect100Exception extends HttpResponseException {
 
-  public static final AbfsNoOpThrottlingIntercept INSTANCE = new AbfsNoOpThrottlingIntercept();
-
-  private AbfsNoOpThrottlingIntercept() {
-  }
-
-  /**{@inheritDoc}*/
-  @Override
-  public void updateMetrics(final AbfsRestOperationType operationType,
-      final AbfsHttpOperation httpOperation) {
-  }
-
-  /**{@inheritDoc}*/
-  @Override
-  public void sendingRequest(final AbfsRestOperationType operationType,
-      final AbfsCounters abfsCounters) {
+  public AbfsApacheHttpExpect100Exception(final HttpResponse httpResponse) {
+    super(EXPECT_100_JDK_ERROR, httpResponse);
   }
 }

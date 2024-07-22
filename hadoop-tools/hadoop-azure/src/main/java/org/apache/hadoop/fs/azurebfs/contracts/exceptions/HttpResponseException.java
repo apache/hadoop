@@ -16,28 +16,25 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azurebfs.services;
+package org.apache.hadoop.fs.azurebfs.contracts.exceptions;
+
+import java.io.IOException;
+import java.util.Objects;
+
+import org.apache.http.HttpResponse;
 
 /**
- * Implementation of {@link AbfsThrottlingIntercept} that does not throttle
- * the ABFS process.
+ * Encapsulates an exception thrown from ApacheHttpClient response parsing.
  */
-final class AbfsNoOpThrottlingIntercept implements AbfsThrottlingIntercept {
-
-  public static final AbfsNoOpThrottlingIntercept INSTANCE = new AbfsNoOpThrottlingIntercept();
-
-  private AbfsNoOpThrottlingIntercept() {
+public class HttpResponseException extends IOException {
+  private final HttpResponse httpResponse;
+  public HttpResponseException(final String s, final HttpResponse httpResponse) {
+    super(s);
+    Objects.requireNonNull(httpResponse, "httpResponse should be non-null");
+    this.httpResponse = httpResponse;
   }
 
-  /**{@inheritDoc}*/
-  @Override
-  public void updateMetrics(final AbfsRestOperationType operationType,
-      final AbfsHttpOperation httpOperation) {
-  }
-
-  /**{@inheritDoc}*/
-  @Override
-  public void sendingRequest(final AbfsRestOperationType operationType,
-      final AbfsCounters abfsCounters) {
+  public HttpResponse getHttpResponse() {
+    return httpResponse;
   }
 }

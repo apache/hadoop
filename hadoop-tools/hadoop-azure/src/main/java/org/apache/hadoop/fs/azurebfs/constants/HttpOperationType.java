@@ -16,28 +16,9 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azurebfs.services;
+package org.apache.hadoop.fs.azurebfs.constants;
 
-/**
- * Implementation of {@link AbfsThrottlingIntercept} that does not throttle
- * the ABFS process.
- */
-final class AbfsNoOpThrottlingIntercept implements AbfsThrottlingIntercept {
-
-  public static final AbfsNoOpThrottlingIntercept INSTANCE = new AbfsNoOpThrottlingIntercept();
-
-  private AbfsNoOpThrottlingIntercept() {
-  }
-
-  /**{@inheritDoc}*/
-  @Override
-  public void updateMetrics(final AbfsRestOperationType operationType,
-      final AbfsHttpOperation httpOperation) {
-  }
-
-  /**{@inheritDoc}*/
-  @Override
-  public void sendingRequest(final AbfsRestOperationType operationType,
-      final AbfsCounters abfsCounters) {
-  }
+public enum HttpOperationType {
+  JDK_HTTP_URL_CONNECTION,
+  APACHE_HTTP_CLIENT;
 }
