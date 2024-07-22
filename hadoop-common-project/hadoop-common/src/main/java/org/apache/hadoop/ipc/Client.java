@@ -96,10 +96,8 @@ public class Client implements AutoCloseable {
   private static final ThreadLocal<Integer> retryCount = new ThreadLocal<Integer>();
   private static final ThreadLocal<Object> EXTERNAL_CALL_HANDLER
       = new ThreadLocal<>();
-  public static final ThreadLocal<CompletableFuture<Object>> CALL_FUTURE_THREAD_LOCAL
+  private static final ThreadLocal<CompletableFuture<Writable>> ASYNC_RPC_RESPONSE
       = new ThreadLocal<>();
-  private static final ThreadLocal<AsyncGet<? extends Writable, IOException>>
-      ASYNC_RPC_RESPONSE = new ThreadLocal<>();
   private static final ThreadLocal<Boolean> asynchronousMode =
       new ThreadLocal<Boolean>() {
         @Override
@@ -112,7 +110,50 @@ public class Client implements AutoCloseable {
   @Unstable
   public static <T extends Writable> AsyncGet<T, IOException>
       getAsyncRpcResponse() {
-    return (AsyncGet<T, IOException>) ASYNC_RPC_RESPONSE.get();
+    CompletableFuture<Writable> responseFuture = ASYNC_RPC_RESPONSE.get();
+    return new AsyncGet<T, IOException>() {
+      @Override
+      public T get(long timeout, TimeUnit unit)
+          throws IOException, TimeoutException, InterruptedException {
+        try {
+          if (unit == null || timeout < 0) {
+            return (T) responseFuture.get();
+          }
+          return (T) responseFuture.get(timeout, unit);
+        } catch (ExecutionException e) {
+          Throwable cause = e.getCause();
+          if (cause == null) {
+            throw new IOException(e);
+          }
+          if (cause instanceof IOException) {
+            throw (IOException) cause;
+          } else {
+            throw new IOException(cause);
+          }
+        }
+      }
+
+      @Override
+      public boolean isDone() {
+        return responseFuture.isDone();
+      }
+    };
+  }
+
+  /**
+   * Retrieves the current response future from the thread-local storage.
+   *
+   * @return A {@link CompletableFuture} of type T that represents the
+   *         asynchronous operation. If no response future is present in
+   *         the thread-local storage, this method returns {@code null}.
+   * @param <T> The type of the value completed by the returned
+   *            {@link CompletableFuture}. It must be a subclass of
+   *            {@link Writable}.
+   * @see CompletableFuture
+   * @see Writable
+   */
+  public static <T extends Writable> CompletableFuture<T> getResponseFuture() {
+    return (CompletableFuture<T>) ASYNC_RPC_RESPONSE.get();
   }
 
   /**
@@ -285,7 +326,7 @@ public class Client implements AutoCloseable {
     boolean done;               // true when call is done
     private final Object externalHandler;
     private AlignmentContext alignmentContext;
-    private final CompletableFuture<Object> completableFuture;
+    private CompletableFuture<Object> completableFuture;
 
     private Call(RPC.RpcKind rpcKind, Writable param) {
       this.rpcKind = rpcKind;
@@ -307,8 +348,9 @@ public class Client implements AutoCloseable {
       }
 
       this.externalHandler = EXTERNAL_CALL_HANDLER.get();
-      this.completableFuture = CALL_FUTURE_THREAD_LOCAL.get();
-      CALL_FUTURE_THREAD_LOCAL.remove();
+      if (Client.isAsynchronousMode()) {
+        completableFuture = new CompletableFuture<>();
+      }
     }
 
     @Override
@@ -1503,36 +1545,16 @@ public class Client implements AutoCloseable {
     }
 
     if (isAsynchronousMode()) {
-      final AsyncGet<Writable, IOException> asyncGet
-          = new AsyncGet<Writable, IOException>() {
-        @Override
-        public Writable get(long timeout, TimeUnit unit)
-            throws IOException, TimeoutException{
-          boolean done = true;
-          try {
-            final Writable w = getRpcResponse(call, connection, timeout, unit);
-            if (w == null) {
-              done = false;
-              throw new TimeoutException(call + " timed out "
-                  + timeout + " " + unit);
-            }
-            return w;
-          } finally {
-            if (done) {
-              releaseAsyncCall();
-            }
-          }
+      CompletableFuture<Writable> result = call.completableFuture.thenApply(o -> {
+        try {
+          return getRpcResponse(call, connection, -1, null);
+        } catch (IOException e) {
+          throw new CompletionException(e);
+        } finally {
+          releaseAsyncCall();
         }
-
-        @Override
-        public boolean isDone() {
-          synchronized (call) {
-            return call.done;
-          }
-        }
-      };
-
-      ASYNC_RPC_RESPONSE.set(asyncGet);
+      });
+      ASYNC_RPC_RESPONSE.set(result);
       return null;
     } else {
       return getRpcResponse(call, connection, -1, null);
