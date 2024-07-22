@@ -863,63 +863,51 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       LOG.debug("openFileForRead filesystem: {} path: {}",
           client.getFileSystem(), path);
 
-      FileStatus fileStatus = parameters.map(OpenFileParameters::getStatus)
+      final FileStatus fileStatus = parameters.map(OpenFileParameters::getStatus)
           .orElse(null);
       String relativePath = getRelativePath(path);
-      String resourceType, eTag;
-      long contentLength;
+      String resourceType = null, eTag = null;
+      long contentLength = -1;
       ContextEncryptionAdapter contextEncryptionAdapter = NoContextEncryptionAdapter.getInstance();
-      /*
-      * GetPathStatus API has to be called in case of:
-      *   1.  fileStatus is null or not an object of VersionedFileStatus: as eTag
-      *       would not be there in the fileStatus object.
-      *   2.  fileStatus is an object of VersionedFileStatus and the object doesn't
-      *       have encryptionContext field when client's encryptionType is
-      *       ENCRYPTION_CONTEXT.
-      */
-      if ((fileStatus instanceof VersionedFileStatus) && (
-          client.getEncryptionType() != EncryptionType.ENCRYPTION_CONTEXT
-              || ((VersionedFileStatus) fileStatus).getEncryptionContext()
-              != null)) {
+      String encryptionContext = null;
+      if (fileStatus instanceof VersionedFileStatus) {
+        VersionedFileStatus versionedFileStatus
+            = (VersionedFileStatus) fileStatus;
         path = path.makeQualified(this.uri, path);
         Preconditions.checkArgument(fileStatus.getPath().equals(path),
-            String.format(
-                "Filestatus path [%s] does not match with given path [%s]",
-                fileStatus.getPath(), path));
+            "Filestatus path [%s] does not match with given path [%s]",
+            fileStatus.getPath(), path);
         resourceType = fileStatus.isFile() ? FILE : DIRECTORY;
         contentLength = fileStatus.getLen();
-        eTag = ((VersionedFileStatus) fileStatus).getVersion();
-        final String encryptionContext
-            = ((VersionedFileStatus) fileStatus).getEncryptionContext();
-        if (client.getEncryptionType() == EncryptionType.ENCRYPTION_CONTEXT) {
-          contextEncryptionAdapter = new ContextProviderEncryptionAdapter(
-              client.getEncryptionContextProvider(), getRelativePath(path),
-              encryptionContext.getBytes(StandardCharsets.UTF_8));
-        }
-      } else {
-        AbfsHttpOperation op = client.getPathStatus(relativePath, false,
-            tracingContext, null).getResult();
-        resourceType = op.getResponseHeader(
-            HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
-        contentLength = Long.parseLong(
-            op.getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH));
-        eTag = op.getResponseHeader(HttpHeaderConfigurations.ETAG);
-        /*
-         * For file created with ENCRYPTION_CONTEXT, client shall receive
-         * encryptionContext from header field: X_MS_ENCRYPTION_CONTEXT.
-         */
-        if (client.getEncryptionType() == EncryptionType.ENCRYPTION_CONTEXT) {
-          final String fileEncryptionContext = op.getResponseHeader(
-              HttpHeaderConfigurations.X_MS_ENCRYPTION_CONTEXT);
-          if (fileEncryptionContext == null) {
+        eTag = versionedFileStatus.getVersion();
+        encryptionContext = versionedFileStatus.getEncryptionContext();
+      }
+
+      if (client.getEncryptionType() == EncryptionType.ENCRYPTION_CONTEXT) {
+        if (encryptionContext == null) {
+          FileStatusInternal fileStatusInternal = getFileStatusInternal(relativePath,
+              tracingContext);
+          resourceType = fileStatusInternal.getResourceType();
+          contentLength = Long.parseLong(fileStatusInternal.getContentLength());
+          eTag = fileStatusInternal.getETag();
+          encryptionContext = fileStatusInternal.getEncryptionContext();
+
+          if (encryptionContext == null) {
             LOG.debug("EncryptionContext missing in GetPathStatus response");
             throw new PathIOException(path.toString(),
                 "EncryptionContext not present in GetPathStatus response headers");
           }
-          contextEncryptionAdapter = new ContextProviderEncryptionAdapter(
-              client.getEncryptionContextProvider(), getRelativePath(path),
-              fileEncryptionContext.getBytes(StandardCharsets.UTF_8));
         }
+        contextEncryptionAdapter = new ContextProviderEncryptionAdapter(
+            client.getEncryptionContextProvider(), getRelativePath(path),
+            encryptionContext.getBytes(StandardCharsets.UTF_8));
+      } else if (fileStatus == null
+          && !abfsConfiguration.isInputStreamLazyOptimizationEnabled()) {
+        FileStatusInternal fileStatusInternal = getFileStatusInternal(relativePath,
+            tracingContext);
+        resourceType = fileStatusInternal.getResourceType();
+        contentLength = Long.parseLong(fileStatusInternal.getContentLength());
+        eTag = fileStatusInternal.getETag();
       }
 
       if (parseIsDirectory(resourceType)) {
@@ -939,6 +927,35 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           contextEncryptionAdapter),
           eTag, tracingContext);
     }
+  }
+
+  /**
+   * Calls pathStatus API on the path and returns the FileStatusInternal which
+   * contains the ETag, ContentLength, ResourceType and EncryptionContext parsed
+   * from the API response.
+   *
+   * @param relativePath Path to get the status of.
+   * @param tracingContext TracingContext instance.
+   *
+   * @return FileStatusInternal instance containing the ETag, ContentLength,
+   *        ResourceType and EncryptionContext of the path.
+   * @throws AzureBlobFileSystemException server error.
+   */
+  private FileStatusInternal getFileStatusInternal(String relativePath,
+      TracingContext tracingContext) throws AzureBlobFileSystemException {
+    AbfsRestOperation op = client.getPathStatus(relativePath, false,
+        tracingContext, null);
+    String contentLength = op.getResult()
+        .getResponseHeader(HttpHeaderConfigurations.CONTENT_LENGTH);
+    String eTag = op.getResult()
+        .getResponseHeader(HttpHeaderConfigurations.ETAG);
+    String resourceType = op.getResult()
+        .getResponseHeader(HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
+    String encryptionContext = op.getResult()
+        .getResponseHeader(HttpHeaderConfigurations.X_MS_ENCRYPTION_CONTEXT);
+
+    return new FileStatusInternal(eTag, contentLength, resourceType,
+        encryptionContext);
   }
 
   private AbfsInputStreamContext populateAbfsInputStreamContext(
@@ -965,6 +982,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
             .withBufferedPreadDisabled(bufferedPreadDisabled)
             .withEncryptionAdapter(contextEncryptionAdapter)
             .withAbfsBackRef(fsBackRef)
+            .withPrefetchTriggerOnFirstRead(
+                abfsConfiguration.isPrefetchOnFirstReadEnabled())
             .build();
   }
 
@@ -2062,6 +2081,36 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       sb.append("; version='").append(version).append('\'');
       sb.append('}');
       return sb.toString();
+    }
+  }
+
+  private static final class FileStatusInternal {
+    private String eTag;
+    private String contentLength;
+    private String resourceType;
+    private String encryptionContext;
+
+    private FileStatusInternal(String eTag, String contentLength, String resourceType, String encryptionContext) {
+      this.eTag = eTag;
+      this.contentLength = contentLength;
+      this.resourceType = resourceType;
+      this.encryptionContext = encryptionContext;
+    }
+
+    public String getETag() {
+      return eTag;
+    }
+
+    public String getContentLength() {
+      return contentLength;
+    }
+
+    public String getResourceType() {
+      return resourceType;
+    }
+
+    public String getEncryptionContext() {
+      return encryptionContext;
     }
   }
 

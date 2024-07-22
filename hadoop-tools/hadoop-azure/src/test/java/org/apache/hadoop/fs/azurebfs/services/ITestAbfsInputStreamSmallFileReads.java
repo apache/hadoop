@@ -22,7 +22,9 @@ import java.io.IOException;
 import java.util.Map;
 
 import org.junit.Test;
+import org.mockito.Mockito;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataInputStream;
@@ -31,6 +33,12 @@ import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
+import static java.lang.Math.min;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FALSE;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TRUE;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_READ_OPTIMIZE_FOOTER_READ;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_READ_SMALL_FILES_COMPLETELY;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_INPUT_STREAM_LAZY_OPEN_OPTIMIZATION_ENABLED;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -218,14 +226,29 @@ public class ITestAbfsInputStreamSmallFileReads extends
 
       final int readBufferSize = conf.getReadBufferSize();
       final int fileContentLength = fileContent.length;
-      final boolean smallFile = fileContentLength <= readBufferSize;
+      final boolean smallFile;
+      final boolean headOptimization = getConfiguration().isInputStreamLazyOptimizationEnabled();
+
+      if (headOptimization) {
+        smallFile = ((seekPos + length) <= readBufferSize);
+      } else {
+        smallFile = fileContentLength <= readBufferSize;
+      }
       int expectedLimit, expectedFCursor;
       int expectedBCursor;
       if (conf.readSmallFilesCompletely() && smallFile) {
         abfsInputStreamTestUtils.assertAbfsInputStreamBufferNotEqualToContentStartSubsequence(fileContent, abfsInputStream, conf, testFilePath);
-        expectedFCursor = fileContentLength;
-        expectedLimit = fileContentLength;
-        expectedBCursor = seekPos + length;
+        /*
+         * If head optimization is enabled. The stream can do full read file optimization on the first read if
+         * the seekPos is less than readBufferSize and the length is such that (seekPos + length) < readBufferSize.
+         * Since it is unaware of the contentLength, it would try to read the full buffer size.
+         *
+         * In case of the head optimization is enabled, and readBufferSize < fileContentLength, the stream will
+         * read only the readBuffer and would set internal pointers to the end of readBufferLength.
+         */
+        expectedFCursor = min(readBufferSize, fileContentLength);
+        expectedLimit = min(readBufferSize, fileContentLength);
+        expectedBCursor = min(readBufferSize, seekPos + length);
       } else {
         if ((seekPos == 0)) {
           abfsInputStreamTestUtils.assertAbfsInputStreamBufferNotEqualToContentStartSubsequence(fileContent, abfsInputStream, conf, testFilePath);
@@ -275,12 +298,16 @@ public class ITestAbfsInputStreamSmallFileReads extends
       AbfsInputStream abfsInputStream = (AbfsInputStream) iStream
           .getWrappedStream();
       abfsInputStream = spy(abfsInputStream);
-      doReturn(10)
-          .doReturn(10)
-          .doCallRealMethod()
-          .when(abfsInputStream)
-          .readRemote(anyLong(), any(), anyInt(), anyInt(),
-              any(TracingContext.class));
+      Mockito.doReturn((long) fileContent.length).when(abfsInputStream).getContentLength();
+      int[] readRemoteIteration = {0};
+      Mockito.doAnswer(answer -> {
+        readRemoteIteration[0]++;
+        if (readRemoteIteration[0] <= 2) {
+          return 10;
+        }
+        return answer.callRealMethod();
+      }).when(abfsInputStream).readRemote(anyLong(), any(), anyInt(), anyInt(),
+          any(TracingContext.class));
 
       iStream = new FSDataInputStream(abfsInputStream);
       abfsInputStreamTestUtils.seek(iStream, seekPos);
@@ -352,6 +379,144 @@ public class ITestAbfsInputStreamSmallFileReads extends
       assertTrue(abfsInputStream.getLimit() > length - someDataLength);
     } finally {
       iStream.close();
+    }
+  }
+
+  /**
+   * Test read full file optimization getting executed when there is head
+   * optimization enabled and the file is smaller than the buffer size.
+   *
+   * The read call sent to inputStream is for full buffer size, assert that
+   * the inputStream correctly fills the application buffer, and also fills the
+   * inputStream buffer with the file content. Any next read should be catered
+   * from the inputStream buffer.
+   */
+  @Test
+  public void testHeadOptimizationOnFileLessThanBufferSize() throws Exception {
+    Configuration configuration = new Configuration(getRawConfiguration());
+    configuration.set(FS_AZURE_INPUT_STREAM_LAZY_OPEN_OPTIMIZATION_ENABLED, TRUE);
+    configuration.set(AZURE_READ_SMALL_FILES_COMPLETELY, TRUE);
+    try (FileSystem fs = FileSystem.newInstance(configuration)) {
+      int readBufferSize = getConfiguration().getReadBufferSize();
+      byte[] fileContent = abfsInputStreamTestUtils.getRandomBytesArray(
+          readBufferSize / 2);
+      Path path = abfsInputStreamTestUtils.createFileWithContent(fs,
+          methodName.getMethodName(), fileContent);
+
+      try (FSDataInputStream is = fs.open(path)) {
+        is.seek(readBufferSize / 4);
+        byte[] buffer = new byte[readBufferSize / 2];
+        int readLength = is.read(buffer, 0, readBufferSize / 2);
+        assertEquals(readLength, readBufferSize / 4);
+        abfsInputStreamTestUtils.assertContentReadCorrectly(fileContent,
+            readBufferSize / 4, readLength,
+            buffer, path);
+
+        is.seek(0);
+        readLength = is.read(buffer, 0, readBufferSize / 2);
+        assertEquals(readLength, readBufferSize / 2);
+        abfsInputStreamTestUtils.assertContentReadCorrectly(fileContent, 0,
+            readLength, buffer, path);
+
+        AbfsInputStream abfsInputStream
+            = (AbfsInputStream) is.getWrappedStream();
+        AbfsInputStreamStatisticsImpl streamStatistics =
+            (AbfsInputStreamStatisticsImpl) abfsInputStream.getStreamStatistics();
+        assertEquals(1, streamStatistics.getSeekInBuffer());
+        assertEquals(1, streamStatistics.getRemoteReadOperations());
+      }
+    }
+  }
+
+  /**
+   * Test read full file optimization getting executed when there is head optimization
+   * is there on a file which has more contentLength than the readBufferSize, but the
+   * read call results final fcursor lesser than readBufferLength.
+   */
+  @Test
+  public void testHeadOptimizationOnFileBiggerThanBufferSize()
+      throws Exception {
+    Configuration configuration = new Configuration(getRawConfiguration());
+    configuration.set(FS_AZURE_INPUT_STREAM_LAZY_OPEN_OPTIMIZATION_ENABLED, TRUE);
+    configuration.set(AZURE_READ_SMALL_FILES_COMPLETELY, TRUE);
+    try (FileSystem fs = FileSystem.newInstance(configuration)) {
+      int readBufferSize = getConfiguration().getReadBufferSize();
+      byte[] fileContent = abfsInputStreamTestUtils.getRandomBytesArray(
+          readBufferSize);
+      Path path = abfsInputStreamTestUtils.createFileWithContent(fs,
+          methodName.getMethodName(), fileContent);
+
+      try (FSDataInputStream is = fs.open(path)) {
+        is.seek(readBufferSize / 4);
+        byte[] buffer = new byte[readBufferSize / 2];
+        int readLength = is.read(buffer, 0, readBufferSize / 2);
+        assertEquals(readLength, readBufferSize / 2);
+        abfsInputStreamTestUtils.assertContentReadCorrectly(fileContent,
+            readBufferSize / 4, readLength, buffer, path);
+
+        readLength = is.read(buffer, 0, readBufferSize / 4);
+        assertEquals(readLength, readBufferSize / 4);
+        abfsInputStreamTestUtils.assertContentReadCorrectly(fileContent,
+            3 * readBufferSize / 4, readLength, buffer, path);
+
+        AbfsInputStream abfsInputStream
+            = (AbfsInputStream) is.getWrappedStream();
+        AbfsInputStreamStatisticsImpl streamStatistics =
+            (AbfsInputStreamStatisticsImpl) abfsInputStream.getStreamStatistics();
+        assertEquals(1, streamStatistics.getSeekInBuffer());
+        assertEquals(1, streamStatistics.getRemoteReadOperations());
+      }
+
+      try (FSDataInputStream is = fs.open(path)) {
+        is.seek(readBufferSize / 2);
+        byte[] buffer = new byte[readBufferSize];
+        int readLength = is.read(buffer, 0, readBufferSize / 2);
+
+        assertEquals(readLength, readBufferSize / 2);
+        abfsInputStreamTestUtils.assertContentReadCorrectly(fileContent,
+            readBufferSize / 2, readLength, buffer, path);
+
+        byte[] zeroBuffer = new byte[readBufferSize / 2];
+        abfsInputStreamTestUtils.assertContentReadCorrectly(buffer,
+            readBufferSize / 2, readBufferSize / 2, zeroBuffer, path);
+      }
+    }
+  }
+
+  @Test
+  public void testHeadOptimizationPerformingOutOfRangeRead()
+      throws Exception {
+    Configuration configuration = new Configuration(getRawConfiguration());
+    configuration.set(FS_AZURE_INPUT_STREAM_LAZY_OPEN_OPTIMIZATION_ENABLED,
+        TRUE);
+    configuration.set(AZURE_READ_SMALL_FILES_COMPLETELY, TRUE);
+    configuration.set(AZURE_READ_OPTIMIZE_FOOTER_READ, FALSE);
+
+    try (AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(
+        configuration)) {
+      int readBufferSize = getConfiguration().getReadBufferSize();
+      byte[] fileContent = abfsInputStreamTestUtils.getRandomBytesArray(
+          readBufferSize / 2);
+      Path path = abfsInputStreamTestUtils.createFileWithContent(fs,
+          methodName.getMethodName(), fileContent);
+
+      try (FSDataInputStream is = fs.open(path)) {
+        is.seek(readBufferSize / 2 + 1);
+        byte[] buffer = new byte[readBufferSize / 2];
+        int readLength = is.read(buffer, 0, readBufferSize / 2 - 1);
+        assertEquals(readLength, -1);
+
+        is.seek(0);
+        readLength = is.read(buffer, 0, readBufferSize / 2);
+        assertEquals(readLength, readBufferSize / 2);
+
+        AbfsInputStream abfsInputStream
+            = (AbfsInputStream) is.getWrappedStream();
+        AbfsInputStreamStatisticsImpl streamStatistics =
+            (AbfsInputStreamStatisticsImpl) abfsInputStream.getStreamStatistics();
+        assertEquals(1, streamStatistics.getSeekInBuffer());
+        assertEquals(1, streamStatistics.getRemoteReadOperations());
+      }
     }
   }
 

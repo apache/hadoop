@@ -994,6 +994,19 @@ to 100 MB). The default value will be 8388608 (8 MB).
 bytes. The value should be between 16384 to 104857600 both inclusive (16 KB to
 100 MB). The default value will be 4194304 (4 MB).
 
+`fs.azure.input.stream.lazy.open.optimization.enabled`: Enable lazy open of the
+inputStream. This would prevent the metadata server call for opening inputStream.
+The metadata call is called to get the contentLength and eTag of the inputStream
+path. This information is available in the read server response. The first read
+call would populate these fields in the inputStream for the subsequent read calls.
+If this config is true, the first read call would not make read-ahead calls. After
+the first read call, the read-ahead mechanism would get enabled. The default value
+will be false.
+
+`fs.azure.prefetch.on.first.read.enabled`: If disabled, the first read call on the
+inputStream will not make read-ahead calls. After first read call, the read-ahead
+mechanism will get enabled. The default value will be true.
+
 `fs.azure.read.alwaysReadBufferSize`: Read request size configured by
 `fs.azure.read.request.size` will be honoured only when the reads done are in
 sequential pattern. When the read pattern is detected to be random, read size

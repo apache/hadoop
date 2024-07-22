@@ -321,5 +321,21 @@ public final class ConfigurationKeys {
    * @see FileSystem#openFile(org.apache.hadoop.fs.Path)
    */
   public static final String FS_AZURE_BUFFERED_PREAD_DISABLE = "fs.azure.buffered.pread.disable";
+
+  /**
+   * Enable lazy opening of an inputStream. Lazy opening would not call HEAD call
+   * to get file metadata before creating inputStream. ReadPath API of server
+   * would give the contentLength and eTag which would be used in subsequent calls
+   * for if-match headers.
+   */
+  public static final String
+      FS_AZURE_INPUT_STREAM_LAZY_OPEN_OPTIMIZATION_ENABLED = "fs.azure.input.stream.lazy.open.optimization.enabled";
+
+  /**
+   * Enable prefetch on the first read to {@link org.apache.hadoop.fs.azurebfs.services.AbfsInputStream}.
+   * If disabled, first call would not trigger prefetch. Prefetch would be switched on
+   * after first read call.
+   */
+  public static final String FS_AZURE_PREFETCH_ON_FIRST_READ_ENABLED = "fs.azure.prefetch.on.first.read.enabled";
   private ConfigurationKeys() {}
 }

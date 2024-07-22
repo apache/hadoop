@@ -48,7 +48,12 @@ import org.apache.hadoop.util.functional.FutureIO;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.FALSE;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TRUE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_FOOTER_READ_BUFFER_SIZE;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_READ_OPTIMIZE_FOOTER_READ;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_READ_SMALL_FILES_COMPLETELY;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_INPUT_STREAM_LAZY_OPEN_OPTIMIZATION_ENABLED;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_FOOTER_READ_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsInputStreamTestUtils.HUNDRED;
@@ -330,12 +335,19 @@ public class ITestAbfsInputStreamReadFooter extends AbstractAbfsScaleTest {
       byte[] buffer = new byte[length];
       long bytesRead = iStream.read(buffer, 0, length);
 
-      long footerStart = max(0,
-          actualContentLength - AbfsInputStream.FOOTER_SIZE);
-      boolean optimizationOn =
-          conf.optimizeFooterRead() && seekPos >= footerStart;
+      final boolean optimizationOn;
+      long actualLength;
 
-      long actualLength = length;
+      if (getConfiguration().isInputStreamLazyOptimizationEnabled()) {
+        optimizationOn = conf.optimizeFooterRead() && length <= AbfsInputStream.FOOTER_SIZE;
+      } else {
+        long footerStart = max(0,
+            actualContentLength - AbfsInputStream.FOOTER_SIZE);
+        optimizationOn =
+            conf.optimizeFooterRead() && seekPos >= footerStart;
+      }
+      actualLength = length;
+
       if (seekPos + length > actualContentLength) {
         long delta = seekPos + length - actualContentLength;
         actualLength = length - delta;
@@ -343,7 +355,68 @@ public class ITestAbfsInputStreamReadFooter extends AbstractAbfsScaleTest {
       long expectedLimit;
       long expectedBCursor;
       long expectedFCursor;
-      if (optimizationOn) {
+      if (getConfiguration().isInputStreamLazyOptimizationEnabled()
+          && optimizationOn) {
+        // For file smaller than the footerReadBufferSize.
+        if (seekPos + actualLength <= footerReadBufferSize) {
+          /*
+           * If the intended length of read is such that the intended read end
+           * will go outside the contentLength range. Now, on the footer read,
+           * it would be able to read only the data allowed in contentLength range.
+           *
+           * If the intended length of read is such that the intended read will
+           * end be in the contentLength range. Then, the read would be allowed
+           * to read whole required data.
+           */
+          if (seekPos + length > actualContentLength) {
+            /*
+             * The ending of the required data would be more than the contentLength.
+             * So, the footer read would be able to read only the data allowed in
+             * contentLength range. This would be represented in the expectedLimit
+             * of the buffer read.
+             */
+            long footerReadStart = max(0,
+                seekPos + length - footerReadBufferSize);
+            /*
+             * Amount of data filled in buffer is equal to number of bytes from
+             * footerReadStart and contentLength.
+             */
+            expectedLimit = actualContentLength - footerReadStart;
+            /*
+             * Pointer in buffer which represent the starting of actual required data
+             * is equal to the bytes between footerReadStart and seekPos.
+             */
+            expectedBCursor = seekPos - footerReadStart;
+          } else {
+            /*
+             * This would execute a read from the start of the file to (seekPos + actualLength)
+             * The reason of this is that footerReadBufferSize is bigger than
+             * (seekPos + actualLength).
+             */
+            expectedLimit = seekPos + actualLength;
+            expectedBCursor = seekPos;
+          }
+        } else {
+          // FileSize is bigger than footerReadBufferSize.
+
+          if (seekPos + length > actualContentLength) {
+            // Partial data of footerReadBufferSize range is read as part of the
+            // required data is out of contentLength range.
+            long footerReadStart = seekPos + length - footerReadBufferSize;
+            expectedLimit = actualContentLength - footerReadStart;
+            expectedBCursor = seekPos - footerReadStart;
+          } else {
+            // full data of footerReadBufferSize range is read.
+            expectedLimit = footerReadBufferSize;
+            expectedBCursor = footerReadBufferSize - actualLength;
+          }
+        }
+        long bytesRemaining = expectedLimit - expectedBCursor;
+        long bytesToRead = min(actualLength, bytesRemaining);
+        expectedBCursor += bytesToRead;
+        expectedFCursor = seekPos + actualLength;
+      } else if (!getConfiguration().isInputStreamLazyOptimizationEnabled()
+          && optimizationOn) {
         if (actualContentLength <= footerReadBufferSize) {
           expectedLimit = actualContentLength;
           expectedBCursor = seekPos + actualLength;
@@ -374,7 +447,11 @@ public class ITestAbfsInputStreamReadFooter extends AbstractAbfsScaleTest {
       //  Verify data read to AbfsInputStream buffer
       int from = seekPos;
       if (optimizationOn) {
-        from = (int) max(0, actualContentLength - footerReadBufferSize);
+        if (!getConfiguration().isInputStreamLazyOptimizationEnabled()) {
+          from = (int) max(0, actualContentLength - footerReadBufferSize);
+        } else {
+          from = (int) (expectedFCursor - expectedLimit);
+        }
       }
       abfsInputStreamTestUtils.assertContentReadCorrectly(fileContent, from, (int) abfsInputStream.getLimit(),
           abfsInputStream.getBuffer(), testFilePath);
@@ -417,14 +494,14 @@ public class ITestAbfsInputStreamReadFooter extends AbstractAbfsScaleTest {
         validatePartialReadWithNoData(spiedFs, testFilePath,
             fileSize - AbfsInputStream.FOOTER_SIZE,
             AbfsInputStream.FOOTER_SIZE,
-            fileContent, footerReadBufferSize, readBufferSize);
+            fileContent, footerReadBufferSize, fileSize, readBufferSize);
       }
     }
   }
 
   private void validatePartialReadWithNoData(final FileSystem fs,
       final Path testFilePath, final int seekPos, final int length,
-      final byte[] fileContent, int footerReadBufferSize, final int readBufferSize) throws IOException {
+      final byte[] fileContent, int footerReadBufferSize, final int fileSize, final int readBufferSize) throws IOException {
     FSDataInputStream iStream = fs.open(testFilePath);
     try {
       AbfsInputStream abfsInputStream = (AbfsInputStream) iStream
@@ -437,6 +514,7 @@ public class ITestAbfsInputStreamReadFooter extends AbstractAbfsScaleTest {
       doReturn(10).doReturn(10).doCallRealMethod().when(abfsInputStream)
           .readRemote(anyLong(), any(), anyInt(), anyInt(),
               any(TracingContext.class));
+      doReturn((long) fileSize).when(abfsInputStream).getContentLength();
 
       iStream = new FSDataInputStream(abfsInputStream);
       abfsInputStreamTestUtils.seek(iStream, seekPos);
@@ -444,7 +522,8 @@ public class ITestAbfsInputStreamReadFooter extends AbstractAbfsScaleTest {
       byte[] buffer = new byte[length];
       int bytesRead = iStream.read(buffer, 0, length);
       assertEquals(length, bytesRead);
-      abfsInputStreamTestUtils.assertContentReadCorrectly(fileContent, seekPos, length, buffer, testFilePath);
+      abfsInputStreamTestUtils.assertContentReadCorrectly(fileContent, seekPos,
+          length, buffer, testFilePath);
       assertEquals(fileContent.length, abfsInputStream.getFCursor());
       assertEquals(length, abfsInputStream.getBCursor());
       assertTrue(abfsInputStream.getLimit() >= length);
@@ -546,7 +625,9 @@ public class ITestAbfsInputStreamReadFooter extends AbstractAbfsScaleTest {
 
       // Verify that value set in config is used if builder is not used
       AbfsConfiguration spiedConfig = fs.getAbfsStore().getAbfsConfiguration();
-      Mockito.doReturn(footerReadBufferSizeConfig).when(spiedConfig).getFooterReadBufferSize();
+      Mockito.doReturn(footerReadBufferSizeConfig)
+          .when(spiedConfig)
+          .getFooterReadBufferSize();
       iStream = fs.open(testFilePath);
       verifyConfigValueInStream(iStream, footerReadBufferSizeConfig);
 
@@ -560,16 +641,60 @@ public class ITestAbfsInputStreamReadFooter extends AbstractAbfsScaleTest {
 
       // Verify that when builder is used value set in parameters is used
       // even if config is set
-      Mockito.doReturn(footerReadBufferSizeConfig).when(spiedConfig).getFooterReadBufferSize();
+      Mockito.doReturn(footerReadBufferSizeConfig)
+          .when(spiedConfig)
+          .getFooterReadBufferSize();
       iStream = builder.build().get();
       verifyConfigValueInStream(iStream, footerReadBufferSizeBuilder);
 
       // Verify that when the builder is used and parameter in builder is not set,
       // the value set in configuration is used
-      Mockito.doReturn(footerReadBufferSizeConfig).when(spiedConfig).getFooterReadBufferSize();
+      Mockito.doReturn(footerReadBufferSizeConfig)
+          .when(spiedConfig)
+          .getFooterReadBufferSize();
       builder = fs.openFile(testFilePath);
       iStream = builder.build().get();
       verifyConfigValueInStream(iStream, footerReadBufferSizeConfig);
+    }
+  }
+
+  @Test
+  public void testHeadOptimizationPerformingOutOfRangeRead() throws Exception {
+    Configuration configuration = new Configuration(getRawConfiguration());
+    configuration.set(FS_AZURE_INPUT_STREAM_LAZY_OPEN_OPTIMIZATION_ENABLED, TRUE);
+    configuration.set(AZURE_READ_SMALL_FILES_COMPLETELY, FALSE);
+    configuration.set(AZURE_READ_OPTIMIZE_FOOTER_READ, TRUE);
+
+    try (AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(configuration)) {
+      int footerBufferRead = getConfiguration().getFooterReadBufferSize();
+      Path testFilePath = createPathAndFileWithContent(fs, 0, footerBufferRead);
+      try (FSDataInputStream iStream = fs.open(testFilePath)) {
+        iStream.seek(2 * footerBufferRead - AbfsInputStream.FOOTER_SIZE + 1);
+        byte[] buffer = new byte[AbfsInputStream.FOOTER_SIZE];
+        int bytesRead = iStream.read(buffer, 0, AbfsInputStream.FOOTER_SIZE);
+        assertEquals(-1, bytesRead);
+      }
+
+      try (FSDataInputStream iStream = fs.open(testFilePath)) {
+        iStream.seek(footerBufferRead + AbfsInputStream.FOOTER_SIZE);
+        byte[] buffer = new byte[AbfsInputStream.FOOTER_SIZE];
+        int bytesRead = iStream.read(buffer, 0, AbfsInputStream.FOOTER_SIZE);
+        assertEquals(-1, bytesRead);
+        assertEquals(footerBufferRead, iStream.getPos());
+
+        int expectedReadLen = footerBufferRead - (2 * AbfsInputStream.FOOTER_SIZE);
+        iStream.seek(2 * AbfsInputStream.FOOTER_SIZE);
+        buffer = new byte[expectedReadLen];
+        bytesRead = iStream.read(buffer, 0, expectedReadLen);
+        assertEquals(expectedReadLen, bytesRead);
+
+        AbfsInputStream abfsInputStream
+            = (AbfsInputStream) iStream.getWrappedStream();
+        AbfsInputStreamStatisticsImpl streamStatistics =
+            (AbfsInputStreamStatisticsImpl) abfsInputStream.getStreamStatistics();
+        assertEquals(1, streamStatistics.getSeekInBuffer());
+        assertEquals(1, streamStatistics.getRemoteReadOperations());
+      }
     }
   }
 

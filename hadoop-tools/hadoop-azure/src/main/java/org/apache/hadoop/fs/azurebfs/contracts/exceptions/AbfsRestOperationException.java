@@ -34,6 +34,7 @@ public class AbfsRestOperationException extends AzureBlobFileSystemException {
   private final int statusCode;
   private final AzureServiceErrorCode errorCode;
   private final String errorMessage;
+  private final AbfsHttpOperation abfsHttpOperation;
 
   public AbfsRestOperationException(
       final int statusCode,
@@ -45,6 +46,7 @@ public class AbfsRestOperationException extends AzureBlobFileSystemException {
     this.statusCode = statusCode;
     this.errorCode = AzureServiceErrorCode.getAzureServiceCode(this.statusCode, errorCode);
     this.errorMessage = errorMessage;
+    this.abfsHttpOperation = null;
   }
 
   public AbfsRestOperationException(
@@ -55,6 +57,7 @@ public class AbfsRestOperationException extends AzureBlobFileSystemException {
       final AbfsHttpOperation abfsHttpOperation) {
     super(formatMessage(abfsHttpOperation), innerException);
 
+    this.abfsHttpOperation = abfsHttpOperation;
     this.statusCode = statusCode;
     this.errorCode = AzureServiceErrorCode.getAzureServiceCode(this.statusCode, errorCode);
     this.errorMessage = errorMessage;
@@ -66,6 +69,7 @@ public class AbfsRestOperationException extends AzureBlobFileSystemException {
     this.statusCode = innerException.getHttpErrorCode();
     this.errorCode = AzureServiceErrorCode.UNKNOWN;
     this.errorMessage = innerException.getMessage();
+    this.abfsHttpOperation = null;
   }
 
   public int getStatusCode() {
@@ -78,6 +82,10 @@ public class AbfsRestOperationException extends AzureBlobFileSystemException {
 
   public String getErrorMessage() {
     return this.errorMessage;
+  }
+
+  public AbfsHttpOperation getAbfsHttpOperation() {
+    return this.abfsHttpOperation;
   }
 
   private static String formatMessage(final AbfsHttpOperation abfsHttpOperation) {

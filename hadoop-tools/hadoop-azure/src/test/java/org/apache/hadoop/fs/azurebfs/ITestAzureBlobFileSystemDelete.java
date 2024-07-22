@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.azurebfs;
 
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -76,6 +77,34 @@ public class ITestAzureBlobFileSystemDelete extends
 
   public ITestAzureBlobFileSystemDelete() throws Exception {
     super();
+  }
+
+
+  @Override
+  public AzureBlobFileSystem getFileSystem() throws IOException {
+    if (!getConfiguration().isInputStreamLazyOptimizationEnabled()) {
+      return super.getFileSystem();
+    }
+    try {
+      AzureBlobFileSystem fs = super.getFileSystem();
+      AzureBlobFileSystem spiedFs = Mockito.spy(fs);
+      Mockito.doAnswer(answer -> {
+        Path path = (Path) answer.getArgument(0);
+        FileStatus status = fs.getFileStatus(path);
+        if (status.isDirectory()) {
+          throw new FileNotFoundException(path.toString());
+        }
+        return fs.openFile(path)
+            .withFileStatus(status)
+            .build()
+            .join();
+      }).when(spiedFs).open(Mockito.any(Path.class));
+
+      Mockito.doNothing().when(spiedFs).close();
+      return spiedFs;
+    } catch (Exception ex) {
+      throw new RuntimeException(ex);
+    }
   }
 
   @Test
@@ -225,7 +254,8 @@ public class ITestAzureBlobFileSystemDelete extends
   @Test
   public void testDeleteIdempotencyTriggerHttp404() throws Exception {
 
-    final AzureBlobFileSystem fs = getFileSystem();
+    final AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(
+        getRawConfiguration());
     AbfsClient client = ITestAbfsClient.createTestClientFromCurrentContext(
         fs.getAbfsStore().getClient(),
         this.getConfiguration());

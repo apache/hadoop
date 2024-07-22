@@ -124,7 +124,9 @@ public class TestAbfsInputStream extends
         null,
         FORWARD_SLASH + fileName,
         THREE_KB,
-        inputStreamContext.withReadBufferSize(ONE_KB).withReadAheadQueueDepth(10).withReadAheadBlockSize(ONE_KB),
+        inputStreamContext.withReadBufferSize(ONE_KB).withReadAheadQueueDepth(10)
+            .withReadAheadBlockSize(ONE_KB)
+            .withPrefetchTriggerOnFirstRead(true),
         "eTag",
         getTestTracingContext(null, false));
 
@@ -250,11 +252,14 @@ public class TestAbfsInputStream extends
         source)))).getPathStatus(anyString(), anyBoolean(), any(TracingContext.class), any(
         ContextEncryptionAdapter.class));
 
-    // verify GetPathStatus invoked when FileStatus not provided
+    // verify GetPathStatus invoked when FileStatus not provided and the head optimization is disabled
     abfsStore.openFileForRead(testFile,
         Optional.empty(), null,
         tracingContext);
-    verify(mockClient, times(1).description(
+    verify(mockClient, times(
+        getConfiguration().isInputStreamLazyOptimizationEnabled()
+            ? 0
+            : 1).description(
         "GetPathStatus should be invoked when FileStatus not provided"))
         .getPathStatus(anyString(), anyBoolean(), any(TracingContext.class), nullable(
             ContextEncryptionAdapter.class));

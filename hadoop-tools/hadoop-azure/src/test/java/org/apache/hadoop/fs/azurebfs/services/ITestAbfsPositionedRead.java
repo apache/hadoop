@@ -73,18 +73,43 @@ public class ITestAbfsPositionedRead extends AbstractAbfsIntegrationTest {
       // Read only 10 bytes from offset 0. But by default it will do the seek
       // and read where the entire 100 bytes get read into the
       // AbfsInputStream buffer.
+
+      boolean readOnlyBytesToReadData =
+          getConfiguration().isInputStreamLazyOptimizationEnabled()
+              && !getConfiguration().readSmallFilesCompletely()
+              && getConfiguration().optimizeFooterRead();
+      /*
+       * If the head optimization and footer optimization is enabled, and readSmallFile
+       * optimization is disabled, the first read would read the given number of bytes
+       * only in the first read call. Reason being, due to the head optimization it would not
+       * know the contentLength and because the byteLength required is less than the
+       * footerReadThreshold, it would read from the starting of the file to the given
+       * byteLength only.
+       *
+       * At this point, the inputStream is at position 0 and the read request from
+       * application is 10 Byte. If the read full-file optimization is enabled,
+       * the inputStream would attempt to read the first readBuffer block
+       * from the file, which would read the whole file as the fileContentLength
+       * is smaller than the readBuffer size.
+       */
       Assertions
           .assertThat(Arrays.copyOfRange(
               ((AbfsInputStream) inputStream.getWrappedStream()).getBuffer(), 0,
-              TEST_FILE_DATA_SIZE))
+              readOnlyBytesToReadData ? bytesToRead : TEST_FILE_DATA_SIZE))
           .describedAs(
               "AbfsInputStream pread did not read more data into its buffer")
-          .containsExactly(data);
+          .containsExactly(readOnlyBytesToReadData ? Arrays.copyOfRange(data, 0, bytesToRead)
+              : data);
       // Check statistics
       assertStatistics(inputStream.getIOStatistics(), bytesToRead, 1, 1,
-          TEST_FILE_DATA_SIZE);
+          readOnlyBytesToReadData ? bytesToRead : TEST_FILE_DATA_SIZE);
 
       readPos = 50;
+      /*
+       * In case of the head optimization enabled, the second read would read the remaining bytes of file
+       * after the given readPos (this would become read of TEST_FILE_DATA_SIZE - readPos).
+       * In case of the head optimization disabled, the first read would have read the entire file.
+       */
       Assertions
           .assertThat(inputStream.read(readPos, readBuffer, 0, bytesToRead))
           .describedAs(
@@ -95,8 +120,11 @@ public class ITestAbfsPositionedRead extends AbstractAbfsIntegrationTest {
           .containsExactly(
               Arrays.copyOfRange(data, readPos, readPos + bytesToRead));
       // Check statistics
-      assertStatistics(inputStream.getIOStatistics(), 2 * bytesToRead, 2, 1,
-          TEST_FILE_DATA_SIZE);
+      assertStatistics(inputStream.getIOStatistics(), 2 * bytesToRead, 2,
+          readOnlyBytesToReadData ? 2 : 1,
+          readOnlyBytesToReadData
+              ? TEST_FILE_DATA_SIZE - readPos + bytesToRead
+              : TEST_FILE_DATA_SIZE);
       // Did positioned read from pos 0 and then 50 but the stream pos should
       // remain at 0.
       Assertions.assertThat(inputStream.getPos())

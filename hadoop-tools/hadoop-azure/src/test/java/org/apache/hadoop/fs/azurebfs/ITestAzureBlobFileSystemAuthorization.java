@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Arrays;
 import java.util.UUID;
 
@@ -326,7 +327,15 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
       fs.open(reqPath);
       break;
     case Open:
-      fs.open(reqPath);
+      try(InputStream is = fs.open(reqPath)) {
+        if (getConfiguration().isInputStreamLazyOptimizationEnabled()) {
+          try {
+            is.read();
+          } catch (IOException ex) {
+            throw (IOException) ex.getCause();
+          }
+        }
+      }
       break;
     case DeletePath:
       fs.delete(reqPath, false);

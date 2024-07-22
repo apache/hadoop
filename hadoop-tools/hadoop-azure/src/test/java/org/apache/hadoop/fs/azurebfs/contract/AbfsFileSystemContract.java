@@ -18,11 +18,25 @@
 
 package org.apache.hadoop.fs.azurebfs.contract;
 
+import java.io.IOException;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+
+import org.mockito.Mockito;
+
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FutureDataInputStreamBuilder;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes;
 import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
 import org.apache.hadoop.fs.contract.AbstractBondedFSContract;
+
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_INPUT_STREAM_LAZY_OPEN_OPTIMIZATION_ENABLED;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.DEFAULT_HEAD_OPTIMIZATION_INPUT_STREAM;
 
 /**
  * Azure BlobFileSystem Contract. Test paths are created using any maven fork
@@ -60,5 +74,60 @@ public class AbfsFileSystemContract extends AbstractBondedFSContract {
     sb.append(super.toString());
     sb.append('}');
     return sb.toString();
+  }
+
+  @Override
+  public FileSystem getTestFileSystem() throws IOException {
+    final FileSystem fileSystem = super.getTestFileSystem();
+    if (!getConf().getBoolean(
+        FS_AZURE_INPUT_STREAM_LAZY_OPEN_OPTIMIZATION_ENABLED, DEFAULT_HEAD_OPTIMIZATION_INPUT_STREAM)) {
+      return fileSystem;
+    }
+    try {
+      AzureBlobFileSystem fs = (AzureBlobFileSystem) fileSystem;
+      AzureBlobFileSystem spiedFs = Mockito.spy(fs);
+      Mockito.doAnswer(answer -> {
+        Path path = (Path) answer.getArgument(0);
+        FileStatus status = fs.getFileStatus(path);
+
+        try {
+          return fs.openFile(path)
+              .withFileStatus(status)
+              .build()
+              .join();
+        } catch (CompletionException ex) {
+          throw ex.getCause();
+        }
+      }).when(spiedFs).open(Mockito.any(Path.class));
+
+      Mockito.doAnswer(answer -> {
+        Path path = (Path) answer.getArgument(0);
+        try {
+          FileStatus fileStatus = fs.getFileStatus(path);
+          FutureDataInputStreamBuilder builder = Mockito.spy(
+              fs.openFile(path).withFileStatus(fileStatus));
+          Mockito.doAnswer(builderBuild -> {
+            return fs.openFile(path).withFileStatus(fileStatus).build();
+          }).when(builder).build();
+          return builder;
+        } catch (IOException ex) {
+          CompletableFuture<FSDataInputStream> future
+              = new CompletableFuture<>();
+          future.completeExceptionally(ex);
+
+          FutureDataInputStreamBuilder builder = Mockito.spy(fs.openFile(path));
+          Mockito.doAnswer(futureAnswer -> {
+            futureAnswer.callRealMethod();
+            return future;
+          }).when(builder).build();
+          return builder;
+        }
+      }).when(spiedFs).openFile(Mockito.any(Path.class));
+
+      Mockito.doNothing().when(spiedFs).close();
+      return spiedFs;
+    } catch (Exception ex) {
+      throw new RuntimeException(ex);
+    }
   }
 }

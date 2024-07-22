@@ -92,6 +92,7 @@ public final class AbfsHttpConstants {
   public static final String HTTP_HEADER_PREFIX = "x-ms-";
   public static final String HASH = "#";
   public static final String TRUE = "true";
+  public static final String FALSE = "false";
 
   public static final String PLUS_ENCODE = "%20";
   public static final String FORWARD_SLASH_ENCODE = "%2F";
@@ -168,6 +169,8 @@ public final class AbfsHttpConstants {
    * </pre>
    */
   public static final Integer HTTP_STATUS_CATEGORY_QUOTIENT = 100;
+
+  public static final Integer READ_PATH_REQUEST_NOT_SATISFIABLE = 416;
 
   /**
    * List of configurations that are related to Customer-Provided-Keys.

@@ -226,15 +226,28 @@ public class ITestAbfsInputStreamStatistics
        * readOps - Since each time read operation is performed OPERATIONS
        * times, total number of read operations would be equal to OPERATIONS.
        *
-       * remoteReadOps - Only a single remote read operation is done. Hence,
+       * remoteReadOps -
+       * In case of Head Optimization and footer optimization enabled, and readSmallFile
+       * disabled for InputStream, the first read operation would read only the asked range
+       * and would not be able to read the entire file as it has no information on the contentLength
+       * of the file. The second read would be able to read entire file (1MB) in buffer. Hence,
+       * total remote read ops would be 2.
+       * In case of no Head Optimization for InputStream, it is aware of the contentLength and
+       * only a single remote read operation is done. Hence,
        * total remote read ops is 1.
-       *
+       * In case of Head Optimization enabled and readSmallFile enabled for inputStream,
+       * on the first read request from the application, it will read first readBufferSize
+       * block of the file, which would contain the whole file. Hence, total remote read ops
+       * would be 1.
        */
       assertEquals("Mismatch in bytesRead value", OPERATIONS,
           stats.getBytesRead());
       assertEquals("Mismatch in readOps value", OPERATIONS,
           stats.getReadOperations());
-      assertEquals("Mismatch in remoteReadOps value", 1,
+      assertEquals("Mismatch in remoteReadOps value",
+          getConfiguration().isInputStreamLazyOptimizationEnabled()
+              && !getConfiguration().readSmallFilesCompletely()
+              && getConfiguration().optimizeFooterRead() ? 2 : 1,
           stats.getRemoteReadOperations());
 
       in.close();

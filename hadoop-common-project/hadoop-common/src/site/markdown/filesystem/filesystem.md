@@ -817,7 +817,9 @@ Implementations without a compliant call SHOULD throw `UnsupportedOperationExcep
 
 This is a critical precondition. Implementations of some FileSystems (e.g.
 Object stores) could shortcut one round trip by postponing their HTTP GET
-operation until the first `read()` on the returned `FSDataInputStream`.
+operation until the first `read()` on the returned `FSDataInputStream`. This
+lazy open may not surface file non-existence or access permission failures
+until the first `read()` of the actual data.
 However, much client code does depend on the existence check being performed
 at the time of the `open()` operation. Implementations MUST check for the
 presence of the file at the time of creation. This does not imply that

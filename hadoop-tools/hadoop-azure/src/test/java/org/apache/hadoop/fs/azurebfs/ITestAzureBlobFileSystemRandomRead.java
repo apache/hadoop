@@ -192,7 +192,11 @@ public class ITestAzureBlobFileSystemRandomRead extends
     Path testPath = path(TEST_FILE_PREFIX + "_testSkipBounds");
     long testFileLength = assumeHugeFileExists(testPath);
 
-    try (FSDataInputStream inputStream = this.getFileSystem().open(testPath)) {
+    try (FSDataInputStream inputStream = this.getFileSystem()
+        .openFile(testPath)
+        .withFileStatus(getFileSystem().getFileStatus(testPath))
+        .build()
+        .get()) {
       ContractTestUtils.NanoTimer timer = new ContractTestUtils.NanoTimer();
 
       long skipped = inputStream.skip(-1);
@@ -232,8 +236,13 @@ public class ITestAzureBlobFileSystemRandomRead extends
   public void testValidateSeekBounds() throws Exception {
     Path testPath = path(TEST_FILE_PREFIX + "_testValidateSeekBounds");
     long testFileLength = assumeHugeFileExists(testPath);
+    FileStatus status = getFileSystem().getFileStatus(testPath);
 
-    try (FSDataInputStream inputStream = this.getFileSystem().open(testPath)) {
+    try (FSDataInputStream inputStream = this.getFileSystem()
+        .openFile(testPath)
+        .withFileStatus(status)
+        .build()
+        .get()) {
       ContractTestUtils.NanoTimer timer = new ContractTestUtils.NanoTimer();
 
       inputStream.seek(0);

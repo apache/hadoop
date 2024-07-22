@@ -167,5 +167,9 @@ public final class FileSystemConfigurations {
   public static final int HUNDRED = 100;
   public static final long THOUSAND = 1000L;
 
+  public static final boolean DEFAULT_HEAD_OPTIMIZATION_INPUT_STREAM = false;
+
+  public static final boolean DEFAULT_PREFETCH_READAHEAD_ON_FIRST_READ = true;
+
   private FileSystemConfigurations() {}
 }

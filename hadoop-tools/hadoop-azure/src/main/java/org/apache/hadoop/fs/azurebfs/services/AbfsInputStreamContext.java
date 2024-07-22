@@ -62,6 +62,8 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
 
   private ContextEncryptionAdapter contextEncryptionAdapter = null;
 
+  private boolean prefetchTriggerOnFirstRead;
+
   public AbfsInputStreamContext(final long sasTokenRenewPeriodForStreamsInSeconds) {
     super(sasTokenRenewPeriodForStreamsInSeconds);
   }
@@ -150,6 +152,12 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
       return this;
     }
 
+  public AbfsInputStreamContext withPrefetchTriggerOnFirstRead(
+      final boolean prefetchTriggerOnFirstRead) {
+    this.prefetchTriggerOnFirstRead = prefetchTriggerOnFirstRead;
+    return this;
+  }
+
   public AbfsInputStreamContext build() {
     if (readBufferSize > readAheadBlockSize) {
       LOG.debug(
@@ -220,4 +228,8 @@ public class AbfsInputStreamContext extends AbfsStreamContext {
     public ContextEncryptionAdapter getEncryptionAdapter() {
       return contextEncryptionAdapter;
     }
+
+  public boolean isPrefetchTriggerOnFirstRead() {
+    return prefetchTriggerOnFirstRead;
+  }
 }

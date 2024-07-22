@@ -18,11 +18,16 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 
+import java.util.concurrent.ExecutionException;
+
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FutureDataInputStreamBuilder;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
@@ -31,8 +36,12 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_INPUT_STREAM_LAZY_OPEN_OPTIMIZATION_ENABLED;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ONE_MB;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsInputStreamTestUtils.HUNDRED;
+
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -123,12 +132,39 @@ public class ITestAbfsInputStream extends AbstractAbfsIntegrationTest {
     }
   }
 
+  @Test
+  public void testDirectoryReadWithHeadOptimization() throws Exception {
+    Configuration configuration = new Configuration(getRawConfiguration());
+    configuration.setBoolean(
+        FS_AZURE_INPUT_STREAM_LAZY_OPEN_OPTIMIZATION_ENABLED, true);
+    AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(configuration);
+    Path path = new Path("/testPath");
+    fs.mkdirs(path);
+    try (FSDataInputStream in = fs.open(path)) {
+      intercept(FileNotFoundException.class, () -> in.read());
+    }
+  }
+
+  @Test
+  public void testInvalidPathReadWithHeadOptimization() throws Exception {
+    Configuration configuration = new Configuration(getRawConfiguration());
+    configuration.setBoolean(
+        FS_AZURE_INPUT_STREAM_LAZY_OPEN_OPTIMIZATION_ENABLED, true);
+    AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(configuration);
+    Path path = new Path("/testPath");
+    try (FSDataInputStream in = fs.open(path)) {
+      intercept(FileNotFoundException.class, () -> in.read());
+    }
+  }
+
   private void testExceptionInOptimization(final FileSystem fs,
       final Path testFilePath,
       final int seekPos, final int length, final byte[] fileContent)
-      throws IOException {
+      throws IOException, ExecutionException, InterruptedException {
 
-    FSDataInputStream iStream = fs.open(testFilePath);
+    FutureDataInputStreamBuilder builder = fs.openFile(testFilePath);
+    builder.withFileStatus(fs.getFileStatus(testFilePath));
+    FSDataInputStream iStream = builder.build().get();
     try {
       AbfsInputStream abfsInputStream = (AbfsInputStream) iStream
           .getWrappedStream();
