@@ -199,5 +199,16 @@ public final class AbfsHttpConstants {
           + "non-hierarchical-namespace account:"
           + CPK_CONFIG_LIST;
 
+  /**
+   * System property that define maximum number of cached-connection per fileSystem for
+   * ApacheHttpClient. JDK network library uses the same property to define maximum
+   * number of cached-connections at JVM level.
+   */
+  public static final String HTTP_MAX_CONN_SYS_PROP = "http.maxConnections";
+  public static final String JDK_IMPL = "JDK";
+  public static final String APACHE_IMPL = "Apache";
+  public static final String JDK_FALLBACK = "JDK_fallback";
+  public static final String KEEP_ALIVE_CACHE_CLOSED = "KeepAliveCache is closed";
+
   private AbfsHttpConstants() {}
 }

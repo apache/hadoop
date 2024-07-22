@@ -130,6 +130,7 @@ public final class AbfsClientThrottlingIntercept implements AbfsThrottlingInterc
 
   /**
    * Updates the metrics for successful and failed read and write operations.
+   *
    * @param operationType Only applicable for read and write operations.
    * @param abfsHttpOperation Used for status code and data transferred.
    */
@@ -170,7 +171,7 @@ public final class AbfsClientThrottlingIntercept implements AbfsThrottlingInterc
         }
         break;
       case ReadFile:
-        String range = abfsHttpOperation.getConnection().getRequestProperty(HttpHeaderConfigurations.RANGE);
+        String range = abfsHttpOperation.getRequestProperty(HttpHeaderConfigurations.RANGE);
         contentLength = getContentLengthIfKnown(range);
         if (contentLength > 0) {
           readThrottler.addBytesTransferred(contentLength,

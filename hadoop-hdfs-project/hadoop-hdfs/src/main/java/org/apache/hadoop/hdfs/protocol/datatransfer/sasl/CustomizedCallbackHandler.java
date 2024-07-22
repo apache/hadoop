@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,29 +15,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.hdfs.protocol.datatransfer.sasl;
 
-package org.apache.hadoop.fs.azurebfs.services;
+import javax.security.auth.callback.Callback;
+import javax.security.auth.callback.UnsupportedCallbackException;
+import java.io.IOException;
+import java.util.List;
 
-/**
- * Implementation of {@link AbfsThrottlingIntercept} that does not throttle
- * the ABFS process.
- */
-final class AbfsNoOpThrottlingIntercept implements AbfsThrottlingIntercept {
-
-  public static final AbfsNoOpThrottlingIntercept INSTANCE = new AbfsNoOpThrottlingIntercept();
-
-  private AbfsNoOpThrottlingIntercept() {
+/** For handling customized {@link Callback}. */
+public interface CustomizedCallbackHandler {
+  class DefaultHandler implements CustomizedCallbackHandler{
+    @Override
+    public void handleCallback(List<Callback> callbacks, String username, char[] password)
+        throws UnsupportedCallbackException {
+      if (!callbacks.isEmpty()) {
+        throw new UnsupportedCallbackException(callbacks.get(0));
+      }
+    }
   }
 
-  /**{@inheritDoc}*/
-  @Override
-  public void updateMetrics(final AbfsRestOperationType operationType,
-      final AbfsHttpOperation httpOperation) {
-  }
-
-  /**{@inheritDoc}*/
-  @Override
-  public void sendingRequest(final AbfsRestOperationType operationType,
-      final AbfsCounters abfsCounters) {
-  }
+  void handleCallback(List<Callback> callbacks, String name, char[] password)
+      throws UnsupportedCallbackException, IOException;
 }

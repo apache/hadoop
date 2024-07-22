@@ -99,14 +99,14 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     // SuccessFul Result.
     AbfsRestOperation successOp =
         new AbfsRestOperation(AbfsRestOperationType.RenamePath, mockClient,
-            HTTP_METHOD_PUT, null, null);
+            HTTP_METHOD_PUT, null, null, mockClient.getAbfsConfiguration());
     AbfsClientRenameResult successResult = mock(AbfsClientRenameResult.class);
     doReturn(successOp).when(successResult).getOp();
     when(successResult.isIncompleteMetadataState()).thenReturn(false);
 
     // Failed Result.
     AbfsRestOperation failedOp = new AbfsRestOperation(AbfsRestOperationType.RenamePath, mockClient,
-        HTTP_METHOD_PUT, null, null);
+        HTTP_METHOD_PUT, null, null, mockClient.getAbfsConfiguration());
     AbfsClientRenameResult recoveredMetaDataIncompleteResult =
         mock(AbfsClientRenameResult.class);
 
@@ -167,12 +167,17 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     Mockito.doReturn(spiedConf).when(spyClient).getAbfsConfiguration();
 
     Mockito.doAnswer(answer -> {
-      AbfsRestOperation op = new AbfsRestOperation(AbfsRestOperationType.RenamePath,
-              spyClient, HTTP_METHOD_PUT, answer.getArgument(0), answer.getArgument(1));
-      AbfsRestOperation spiedOp = Mockito.spy(op);
-      addSpyBehavior(spiedOp, op, spyClient);
-      return spiedOp;
-    }).when(spyClient).createRenameRestOperation(Mockito.any(URL.class), anyList());
+          AbfsRestOperation op = new AbfsRestOperation(
+              AbfsRestOperationType.RenamePath,
+              spyClient, HTTP_METHOD_PUT, answer.getArgument(0),
+              answer.getArgument(1),
+              spyClient.getAbfsConfiguration());
+          AbfsRestOperation spiedOp = Mockito.spy(op);
+          addSpyBehavior(spiedOp, op, spyClient);
+          return spiedOp;
+        })
+        .when(spyClient)
+        .createRenameRestOperation(Mockito.any(URL.class), anyList());
 
     return spyClient;
 
@@ -195,7 +200,7 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
     AbfsHttpOperation normalOp1 = normalRestOp.createHttpOperation();
     executeThenFail(client, normalRestOp, failingOperation, normalOp1);
     AbfsHttpOperation normalOp2 = normalRestOp.createHttpOperation();
-    normalOp2.getConnection().setRequestProperty(HttpHeaderConfigurations.AUTHORIZATION,
+    normalOp2.setRequestProperty(HttpHeaderConfigurations.AUTHORIZATION,
             client.getAccessToken());
 
     Mockito.doReturn(failingOperation).doReturn(normalOp2).when(spiedRestOp).createHttpOperation();
@@ -221,14 +226,14 @@ public class TestAbfsRenameRetryRecovery extends AbstractAbfsIntegrationTest {
       final int offset = answer.getArgument(1);
       final int length = answer.getArgument(2);
       normalRestOp.signRequest(normalOp, length);
-      normalOp.sendRequest(buffer, offset, length);
+      normalOp.sendPayload(buffer, offset, length);
       normalOp.processResponse(buffer, offset, length);
       LOG.info("Actual outcome is {} \"{}\" \"{}\"; injecting failure",
           normalOp.getStatusCode(),
           normalOp.getStorageErrorCode(),
           normalOp.getStorageErrorMessage());
       throw new SocketException("connection-reset");
-    }).when(failingOperation).sendRequest(Mockito.nullable(byte[].class),
+    }).when(failingOperation).sendPayload(Mockito.nullable(byte[].class),
         Mockito.nullable(int.class), Mockito.nullable(int.class));
 
   }
