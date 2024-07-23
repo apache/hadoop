@@ -618,8 +618,7 @@ function hadoop_bootstrap
 
   export HADOOP_OS_TYPE=${HADOOP_OS_TYPE:-$(uname -s)}
 
-  # defaults
-  export HADOOP_OPTS=${HADOOP_OPTS:-"-Djava.net.preferIPv4Stack=true"}
+ export HADOOP_OPTS="${HADOOP_OPTS:-"-Djava.net.preferIPv4Stack=true"} -XX:+IgnoreUnrecognizedVMOptions --add-exports=java.base/sun.security.x509=ALL-UNNAMED --add-exports=java.base/sun.security.util=ALL-UNNAMED"
   hadoop_debug "Initial HADOOP_OPTS=${HADOOP_OPTS}"
 }
 
