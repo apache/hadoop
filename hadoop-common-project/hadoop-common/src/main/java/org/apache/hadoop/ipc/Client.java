@@ -122,14 +122,10 @@ public class Client implements AutoCloseable {
           return (T) responseFuture.get(timeout, unit);
         } catch (ExecutionException e) {
           Throwable cause = e.getCause();
-          if (cause == null) {
-            throw new IOException(e);
-          }
           if (cause instanceof IOException) {
             throw (IOException) cause;
-          } else {
-            throw new IOException(cause);
           }
+          throw new IllegalStateException(e);
         }
       }
 
@@ -382,18 +378,7 @@ public class Client implements AutoCloseable {
      * 
      * @param error exception thrown by the call; either local or remote
      */
-    public synchronized void setException(IOException error, Connection connection) {
-      if (error instanceof RemoteException ||
-          error instanceof SaslException) {
-        error.fillInStackTrace();
-      } else { // local exception
-        InetSocketAddress address = connection.getRemoteAddress();
-        error = NetUtils.wrapException(address.getHostName(),
-            address.getPort(),
-            NetUtils.getHostname(),
-            0,
-            error);
-      }
+    public synchronized void setException(IOException error) {
       callComplete(null, error);
     }
     
@@ -1287,7 +1272,7 @@ public class Client implements AutoCloseable {
           RemoteException re = new RemoteException(exceptionClassName, errorMsg, erCode);
           if (status == RpcStatusProto.ERROR) {
             final Call call = calls.remove(callId);
-            call.setException(re, this);
+            call.setException(re);
           } else if (status == RpcStatusProto.FATAL) {
             // Close the connection
             markClosed(re);
@@ -1359,7 +1344,7 @@ public class Client implements AutoCloseable {
       while (itor.hasNext()) {
         Call c = itor.next().getValue(); 
         itor.remove();
-        c.setException(closeException, this); // local exception
+        c.setException(closeException); // local exception
       }
     }
   }
@@ -1548,14 +1533,15 @@ public class Client implements AutoCloseable {
           (rpcResponse, e) -> {
             releaseAsyncCall();
             if (e != null) {
-              throw new CompletionException(e);
+              IOException ioe = (IOException) e;
+              throw new CompletionException(warpIOException(ioe, connection));
             }
             return rpcResponse;
           });
       ASYNC_RPC_RESPONSE.set(result);
       return null;
     } else {
-      return getRpcResponse(call);
+      return getRpcResponse(call, connection);
     }
   }
 
@@ -1592,7 +1578,7 @@ public class Client implements AutoCloseable {
   }
 
   /** @return the rpc response or, in case of timeout, null. */
-  private Writable getRpcResponse(final Call call)
+  private Writable getRpcResponse(final Call call, final Connection connection)
       throws IOException {
     try {
       return call.rpcResponseFuture.get();
@@ -1602,9 +1588,24 @@ public class Client implements AutoCloseable {
     } catch (ExecutionException e) {
       Throwable cause = e.getCause();
       if (cause instanceof IOException) {
-        throw (IOException) cause;
+        throw warpIOException((IOException) cause, connection);
       }
       throw new IllegalStateException(e);
+    }
+  }
+
+  private IOException warpIOException(IOException ioe, Connection connection) {
+    if (ioe instanceof RemoteException ||
+        ioe instanceof SaslException) {
+      ioe.fillInStackTrace();
+      return ioe;
+    } else { // local exception
+      InetSocketAddress address = connection.getRemoteAddress();
+      return NetUtils.wrapException(address.getHostName(),
+          address.getPort(),
+          NetUtils.getHostname(),
+          0,
+          ioe);
     }
   }
 
