@@ -111,6 +111,7 @@ import org.apache.hadoop.fs.Globber;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.impl.OpenFileParameters;
 import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.s3a.api.S3ObjectStorageClassFilter;
 import org.apache.hadoop.fs.s3a.audit.AuditSpanS3A;
 import org.apache.hadoop.fs.s3a.auth.SignerManager;
 import org.apache.hadoop.fs.s3a.auth.delegation.DelegationOperations;
@@ -456,6 +457,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private boolean isCSEEnabled;
 
   /**
+   * {@link S3ObjectStorageClassFilter} will filter the S3 files based on the
+   * {@code fs.s3a.glacier.read.restored.objects} configuration.
+   */
+  private S3ObjectStorageClassFilter s3ObjectStorageClassFilter;
+
+  /**
    * Bucket AccessPoint.
    */
   private ArnResource accessPoint;
@@ -610,6 +617,18 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           instrumentation.trackDuration(FileSystemStatisticNames.FILESYSTEM_INITIALIZATION));
 
       s3aInternals = createS3AInternals();
+
+      try {
+        s3ObjectStorageClassFilter = Optional.of(conf.getTrimmed(READ_RESTORED_GLACIER_OBJECTS,
+                DEFAULT_READ_RESTORED_GLACIER_OBJECTS))
+            .map(String::toUpperCase)
+            .map(S3ObjectStorageClassFilter::valueOf).get();
+      } catch (IllegalArgumentException e) {
+        LOG.warn("Invalid value for the config {} is set. Valid values are:" +
+                "READ_ALL, SKIP_ALL_GLACIER, READ_RESTORED_GLACIER_OBJECTS. Defaulting to READ_ALL",
+            READ_RESTORED_GLACIER_OBJECTS);
+        s3ObjectStorageClassFilter = S3ObjectStorageClassFilter.READ_ALL;
+      }
 
       // look for encryption data
       // DT Bindings may override this
@@ -5714,6 +5733,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .setContextAccessors(new ContextAccessorsImpl())
         .setAuditor(getAuditor())
         .setEnableCSE(isCSEEnabled)
+        .setS3ObjectStorageClassFilter(s3ObjectStorageClassFilter)
         .build();
   }
 
