@@ -853,8 +853,7 @@ public class TestObserverWithRouter {
         break;
       case USE_ROUTER_OBSERVER_READ_PROXY_PROVIDER:
       case USE_ROUTER_OBSERVER_READ_CONFIGURED_FAILOVER_PROXY_PROVIDER:
-        // An msync is sent to each active namenode for each read.
-        // Total msyncs will be (1 * num_of_nameservices).
+        // An msync is sent to each active namenode.
         assertEquals("Msyncs sent to the active namenodes",
             NUM_NAMESERVICES * 1, rpcCountForActive);
         // All reads should be sent of the observer.
