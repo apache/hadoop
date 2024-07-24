@@ -76,8 +76,8 @@ public final class TestAbfsPerfTracker {
 
     try (AbfsPerfInfo tracker = new AbfsPerfInfo(abfsPerfTracker, "disablingCaller",
             "disablingCallee")) {
-      AbfsHttpOperation op = new AbfsHttpOperation(url, "GET", new ArrayList<>(),
-              DEFAULT_HTTP_CONNECTION_TIMEOUT, DEFAULT_HTTP_READ_TIMEOUT);
+      AbfsJdkHttpOperation op = new AbfsJdkHttpOperation(url, "GET", new ArrayList<>(),
+          Duration.ofMillis(DEFAULT_HTTP_CONNECTION_TIMEOUT), Duration.ofMillis(DEFAULT_HTTP_READ_TIMEOUT));
       tracker.registerResult(op).registerSuccess(true);
     }
 
@@ -95,8 +95,8 @@ public final class TestAbfsPerfTracker {
     assertThat(latencyDetails).describedAs("AbfsPerfTracker should be empty").isNull();
 
     List<Callable<Integer>> tasks = new ArrayList<>();
-    AbfsHttpOperation httpOperation = new AbfsHttpOperation(url, "GET", new ArrayList<>(),
-            DEFAULT_HTTP_CONNECTION_TIMEOUT, DEFAULT_HTTP_READ_TIMEOUT);
+    AbfsJdkHttpOperation httpOperation = new AbfsJdkHttpOperation(url, "GET", new ArrayList<>(),
+        Duration.ofMillis(DEFAULT_HTTP_CONNECTION_TIMEOUT), Duration.ofMillis(DEFAULT_HTTP_READ_TIMEOUT));
 
     for (int i = 0; i < numTasks; i++) {
       tasks.add(() -> {
@@ -135,8 +135,8 @@ public final class TestAbfsPerfTracker {
     assertThat(latencyDetails).describedAs("AbfsPerfTracker should be empty").isNull();
 
     List<Callable<Integer>> tasks = new ArrayList<>();
-    AbfsHttpOperation httpOperation = new AbfsHttpOperation(url, "GET", new ArrayList<>(),
-            DEFAULT_HTTP_CONNECTION_TIMEOUT, DEFAULT_HTTP_READ_TIMEOUT);
+    AbfsJdkHttpOperation httpOperation = new AbfsJdkHttpOperation(url, "GET", new ArrayList<>(),
+        Duration.ofMillis(DEFAULT_HTTP_CONNECTION_TIMEOUT), Duration.ofMillis(DEFAULT_HTTP_READ_TIMEOUT));
 
     for (int i = 0; i < numTasks; i++) {
       tasks.add(() -> {
@@ -175,8 +175,8 @@ public final class TestAbfsPerfTracker {
     long aggregateLatency = 0;
     AbfsPerfTracker abfsPerfTracker = new AbfsPerfTracker(accountName, filesystemName, false);
     List<Callable<Long>> tasks = new ArrayList<>();
-    final AbfsHttpOperation httpOperation = new AbfsHttpOperation(url, "GET", new ArrayList<>(),
-            DEFAULT_HTTP_CONNECTION_TIMEOUT, DEFAULT_HTTP_READ_TIMEOUT);
+    final AbfsJdkHttpOperation httpOperation = new AbfsJdkHttpOperation(url, "GET", new ArrayList<>(),
+        Duration.ofMillis(DEFAULT_HTTP_CONNECTION_TIMEOUT), Duration.ofMillis(DEFAULT_HTTP_READ_TIMEOUT));
 
     for (int i = 0; i < numTasks; i++) {
       tasks.add(() -> {
@@ -211,8 +211,8 @@ public final class TestAbfsPerfTracker {
     long aggregateLatency = 0;
     AbfsPerfTracker abfsPerfTracker = new AbfsPerfTracker(accountName, filesystemName, false);
     List<Callable<Long>> tasks = new ArrayList<>();
-    final AbfsHttpOperation httpOperation = new AbfsHttpOperation(url, "GET", new ArrayList<>(),
-            DEFAULT_HTTP_CONNECTION_TIMEOUT, DEFAULT_HTTP_READ_TIMEOUT);
+    final AbfsJdkHttpOperation httpOperation = new AbfsJdkHttpOperation(url, "GET", new ArrayList<>(),
+        Duration.ofMillis(DEFAULT_HTTP_CONNECTION_TIMEOUT), Duration.ofMillis(DEFAULT_HTTP_READ_TIMEOUT));
 
     for (int i = 0; i < numTasks; i++) {
       tasks.add(() -> {
@@ -276,8 +276,8 @@ public final class TestAbfsPerfTracker {
     long aggregateLatency = 0;
     AbfsPerfTracker abfsPerfTracker = new AbfsPerfTracker(accountName, filesystemName, true);
     List<Callable<Long>> tasks = new ArrayList<>();
-    final AbfsHttpOperation httpOperation = new AbfsHttpOperation(url, "GET", new ArrayList<>(),
-            DEFAULT_HTTP_CONNECTION_TIMEOUT, DEFAULT_HTTP_READ_TIMEOUT);
+    final AbfsJdkHttpOperation httpOperation = new AbfsJdkHttpOperation(url, "GET", new ArrayList<>(),
+        Duration.ofMillis(DEFAULT_HTTP_CONNECTION_TIMEOUT), Duration.ofMillis(DEFAULT_HTTP_READ_TIMEOUT));
 
     for (int i = 0; i < numTasks; i++) {
       tasks.add(() -> {
@@ -311,8 +311,8 @@ public final class TestAbfsPerfTracker {
     long aggregateLatency = 0;
     AbfsPerfTracker abfsPerfTracker = new AbfsPerfTracker(accountName, filesystemName, true);
     List<Callable<Long>> tasks = new ArrayList<>();
-    final AbfsHttpOperation httpOperation = new AbfsHttpOperation(url, "GET", new ArrayList<>(),
-            DEFAULT_HTTP_CONNECTION_TIMEOUT, DEFAULT_HTTP_READ_TIMEOUT);
+    final AbfsJdkHttpOperation httpOperation = new AbfsJdkHttpOperation(url, "GET", new ArrayList<>(),
+        Duration.ofMillis(DEFAULT_HTTP_CONNECTION_TIMEOUT), Duration.ofMillis(DEFAULT_HTTP_READ_TIMEOUT));
 
     for (int i = 0; i < numTasks; i++) {
       tasks.add(() -> {
@@ -372,8 +372,8 @@ public final class TestAbfsPerfTracker {
     Instant testInstant = Instant.now();
     AbfsPerfTracker abfsPerfTrackerDisabled = new AbfsPerfTracker(accountName, filesystemName, false);
     AbfsPerfTracker abfsPerfTrackerEnabled = new AbfsPerfTracker(accountName, filesystemName, true);
-    final AbfsHttpOperation httpOperation = new AbfsHttpOperation(url, "GET", new ArrayList<AbfsHttpHeader>(),
-            DEFAULT_HTTP_CONNECTION_TIMEOUT, DEFAULT_HTTP_READ_TIMEOUT);
+    final AbfsJdkHttpOperation httpOperation = new AbfsJdkHttpOperation(url, "GET", new ArrayList<AbfsHttpHeader>(),
+        Duration.ofMillis(DEFAULT_HTTP_CONNECTION_TIMEOUT), Duration.ofMillis(DEFAULT_HTTP_READ_TIMEOUT));
 
     verifyNoException(abfsPerfTrackerDisabled);
     verifyNoException(abfsPerfTrackerEnabled);
@@ -381,8 +381,8 @@ public final class TestAbfsPerfTracker {
 
   private void verifyNoException(AbfsPerfTracker abfsPerfTracker) throws Exception {
     Instant testInstant = Instant.now();
-    final AbfsHttpOperation httpOperation = new AbfsHttpOperation(url, "GET", new ArrayList<AbfsHttpHeader>(),
-            DEFAULT_HTTP_CONNECTION_TIMEOUT, DEFAULT_HTTP_READ_TIMEOUT);
+    final AbfsJdkHttpOperation httpOperation = new AbfsJdkHttpOperation(url, "GET", new ArrayList<AbfsHttpHeader>(),
+        Duration.ofMillis(DEFAULT_HTTP_CONNECTION_TIMEOUT), Duration.ofMillis(DEFAULT_HTTP_READ_TIMEOUT));
 
     try (
             AbfsPerfInfo tracker01 = new AbfsPerfInfo(abfsPerfTracker, null, null);

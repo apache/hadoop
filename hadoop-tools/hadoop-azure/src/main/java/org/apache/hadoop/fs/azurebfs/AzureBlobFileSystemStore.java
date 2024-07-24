@@ -29,11 +29,9 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.ByteBuffer;
-import java.nio.CharBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
-import java.nio.charset.CharsetEncoder;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
@@ -56,6 +54,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
+import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
 import org.apache.hadoop.fs.azurebfs.security.ContextProviderEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
@@ -108,7 +107,6 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsClientContext;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientContextBuilder;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientRenameResult;
 import org.apache.hadoop.fs.azurebfs.services.AbfsCounters;
-import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStreamContext;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStreamStatisticsImpl;
@@ -402,14 +400,21 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     try {
       LOG.debug("Get root ACL status");
       getClient().getAclStatus(AbfsHttpConstants.ROOT_PATH, tracingContext);
+      // If getAcl succeeds, namespace is enabled.
       isNamespaceEnabled = Trilean.getTrilean(true);
     } catch (AbfsRestOperationException ex) {
-      // Get ACL status is a HEAD request, its response doesn't contain
-      // errorCode
-      // So can only rely on its status code to determine its account type.
+      // Get ACL status is a HEAD request, its response doesn't contain errorCode
+      // So can only rely on its status code to determine account type.
       if (HttpURLConnection.HTTP_BAD_REQUEST != ex.getStatusCode()) {
+        // If getAcl fails with anything other than 400, namespace is enabled.
+        isNamespaceEnabled = Trilean.getTrilean(true);
+        // Continue to throw exception as earlier.
+        LOG.debug("Failed to get ACL status with non 400. Inferring namespace enabled", ex);
         throw ex;
       }
+      // If getAcl fails with 400, namespace is disabled.
+      LOG.debug("Failed to get ACL status with 400. "
+          + "Inferring namespace disabled and ignoring error", ex);
       isNamespaceEnabled = Trilean.getTrilean(false);
     } catch (AzureBlobFileSystemException ex) {
       throw ex;
@@ -683,7 +688,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           populateAbfsOutputStreamContext(
               isAppendBlob,
               lease,
-              client,
+              getClient(),
               statistics,
               relativePath,
               0,
@@ -922,7 +927,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       perfInfo.registerSuccess(true);
 
       // Add statistics for InputStream
-      return new AbfsInputStream(client, statistics, relativePath,
+      return new AbfsInputStream(getClient(), statistics, relativePath,
           contentLength, populateAbfsInputStreamContext(
           parameters.map(OpenFileParameters::getOptions),
           contextEncryptionAdapter),

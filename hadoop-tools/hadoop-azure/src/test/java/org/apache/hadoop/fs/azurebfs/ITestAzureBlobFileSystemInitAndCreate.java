@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.TrileanConversionException;
+import org.apache.hadoop.fs.azurebfs.enums.Trilean;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
@@ -77,6 +78,7 @@ public class ITestAzureBlobFileSystemInitAndCreate extends
     Mockito.doThrow(TrileanConversionException.class)
         .when(store)
         .isNamespaceEnabled();
+    store.setNamespaceEnabled(Trilean.UNKNOWN);
 
     TracingContext tracingContext = getSampleTracingContext(fs, true);
     Mockito.doReturn(Mockito.mock(AbfsRestOperation.class))

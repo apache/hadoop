@@ -80,6 +80,15 @@ public abstract class AbstractS3AMockTest {
     conf.setInt(ASYNC_DRAIN_THRESHOLD, Integer.MAX_VALUE);
     // set the region to avoid the getBucketLocation on FS init.
     conf.set(AWS_REGION, "eu-west-1");
+
+    // tight retry logic as all failures are simulated
+    final String interval = "1ms";
+    final int limit = 3;
+    conf.set(RETRY_THROTTLE_INTERVAL, interval);
+    conf.setInt(RETRY_THROTTLE_LIMIT, limit);
+    conf.set(RETRY_INTERVAL, interval);
+    conf.setInt(RETRY_LIMIT, limit);
+
     return conf;
   }
 

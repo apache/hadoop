@@ -168,5 +168,14 @@ public final class FileSystemConfigurations {
   public static final int HUNDRED = 100;
   public static final long THOUSAND = 1000L;
 
+  public static final HttpOperationType DEFAULT_NETWORKING_LIBRARY
+      = HttpOperationType.APACHE_HTTP_CLIENT;
+
+  public static final int DEFAULT_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES = 3;
+
+  public static final long DEFAULT_HTTP_CLIENT_CONN_MAX_IDLE_TIME = 5_000L;
+
+  public static final int DEFAULT_HTTP_CLIENT_CONN_MAX_CACHED_CONNECTIONS = 5;
+
   private FileSystemConfigurations() {}
 }

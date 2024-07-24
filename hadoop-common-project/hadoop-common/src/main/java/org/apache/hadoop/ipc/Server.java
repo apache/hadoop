@@ -106,6 +106,7 @@ import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcSaslProto.SaslState;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RPCTraceInfoProto;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.SaslConstants;
 import org.apache.hadoop.security.SaslPropertiesResolver;
 import org.apache.hadoop.security.SaslRpcServer;
 import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
@@ -2034,11 +2035,7 @@ public abstract class Server {
      * Address to which the socket is connected to.
      */
     private final InetAddress addr;
-    /**
-     * Client Host address from where the socket connection is being established to the Server.
-     */
-    private final String hostName;
-    
+
     IpcConnectionContextProto connectionContext;
     String protocolName;
     SaslServer saslServer;
@@ -2081,12 +2078,9 @@ public abstract class Server {
       this.isOnAuxiliaryPort = isOnAuxiliaryPort;
       if (addr == null) {
         this.hostAddress = "*Unknown*";
-        this.hostName = this.hostAddress;
       } else {
         // host IP address
         this.hostAddress = addr.getHostAddress();
-        // host name for the IP address
-        this.hostName = addr.getHostName();
       }
       this.remotePort = socket.getPort();
       this.responseQueue = new LinkedList<RpcCall>();
@@ -2102,7 +2096,7 @@ public abstract class Server {
 
     @Override
     public String toString() {
-      return hostName + ":" + remotePort + " / " + hostAddress + ":" + remotePort;
+      return hostAddress + ":" + remotePort;
     }
 
     boolean setShouldClose() {
@@ -2516,6 +2510,7 @@ public abstract class Server {
           }
 
           if (!RpcConstants.HEADER.equals(dataLengthBuffer)) {
+            final String hostName = addr == null ? this.hostAddress : addr.getHostName();
             LOG.warn("Incorrect RPC Header length from {}:{} / {}:{}. Expected: {}. Actual: {}",
                 hostName, remotePort, hostAddress, remotePort, RpcConstants.HEADER,
                 dataLengthBuffer);
@@ -2523,6 +2518,7 @@ public abstract class Server {
             return -1;
           }
           if (version != CURRENT_VERSION) {
+            final String hostName = addr == null ? this.hostAddress : addr.getHostName();
             //Warning is ok since this is not supposed to happen.
             LOG.warn("Version mismatch from {}:{} / {}:{}. "
                     + "Expected version: {}. Actual version: {} ", hostName,
@@ -2609,7 +2605,8 @@ public abstract class Server {
       RpcSaslProto negotiateMessage = negotiateResponse;
       // accelerate token negotiation by sending initial challenge
       // in the negotiation response
-      if (enabledAuthMethods.contains(AuthMethod.TOKEN)) {
+      if (enabledAuthMethods.contains(AuthMethod.TOKEN)
+          && SaslConstants.SASL_MECHANISM_DEFAULT.equals(AuthMethod.TOKEN.getMechanismName())) {
         saslServer = createSaslServer(AuthMethod.TOKEN);
         byte[] challenge = saslServer.evaluateResponse(new byte[0]);
         RpcSaslProto.Builder negotiateBuilder =

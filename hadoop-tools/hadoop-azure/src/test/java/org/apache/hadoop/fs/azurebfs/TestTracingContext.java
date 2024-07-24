@@ -38,9 +38,9 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
 import org.apache.hadoop.fs.azurebfs.enums.Trilean;
-import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
+import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderFormat;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
@@ -51,6 +51,8 @@ import org.apache.hadoop.util.Preconditions;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLIENT_CORRELATIONID;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.MIN_BUFFER_SIZE;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpOperationType.APACHE_HTTP_CLIENT;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpOperationType.JDK_HTTP_URL_CONNECTION;
 import static org.apache.hadoop.fs.azurebfs.services.RetryPolicyConstants.EXPONENTIAL_RETRY_POLICY_ABBREVIATION;
 import static org.apache.hadoop.fs.azurebfs.services.RetryPolicyConstants.STATIC_RETRY_POLICY_ABBREVIATION;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_TIMEOUT_ABBREVIATION;
@@ -135,10 +137,16 @@ public class TestTracingContext extends AbstractAbfsIntegrationTest {
 
     testClasses.put(new ITestAzureBlobFileSystemListStatus(), //liststatus
         ITestAzureBlobFileSystemListStatus.class.getMethod("testListPath"));
-    testClasses.put(new ITestAbfsReadWriteAndSeek(MIN_BUFFER_SIZE, true), //open,
+    testClasses.put(new ITestAbfsReadWriteAndSeek(MIN_BUFFER_SIZE, true, JDK_HTTP_URL_CONNECTION), //open,
         // read, write
         ITestAbfsReadWriteAndSeek.class.getMethod("testReadAheadRequestID"));
-    testClasses.put(new ITestAbfsReadWriteAndSeek(MIN_BUFFER_SIZE, false), //read (bypassreadahead)
+    testClasses.put(new ITestAbfsReadWriteAndSeek(MIN_BUFFER_SIZE, true, APACHE_HTTP_CLIENT), //open,
+        // read, write
+        ITestAbfsReadWriteAndSeek.class.getMethod("testReadAheadRequestID"));
+    testClasses.put(new ITestAbfsReadWriteAndSeek(MIN_BUFFER_SIZE, false, JDK_HTTP_URL_CONNECTION), //read (bypassreadahead)
+        ITestAbfsReadWriteAndSeek.class
+            .getMethod("testReadAndWriteWithDifferentBufferSizesAndSeek"));
+    testClasses.put(new ITestAbfsReadWriteAndSeek(MIN_BUFFER_SIZE, false, APACHE_HTTP_CLIENT), //read (bypassreadahead)
         ITestAbfsReadWriteAndSeek.class
             .getMethod("testReadAndWriteWithDifferentBufferSizesAndSeek"));
     testClasses.put(new ITestAzureBlobFileSystemAppend(), //append

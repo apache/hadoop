@@ -294,7 +294,14 @@ public final class VectoredReadUtils {
       final Optional<Long> fileLength) throws EOFException {
 
     requireNonNull(input, "Null input list");
-    checkArgument(!input.isEmpty(), "Empty input list");
+
+    if (input.isEmpty()) {
+      // this may seem a pathological case, but it was valid
+      // before and somehow Spark can call it through parquet.
+      LOG.debug("Empty input list");
+      return input;
+    }
+
     final List<? extends FileRange> sortedRanges;
 
     if (input.size() == 1) {

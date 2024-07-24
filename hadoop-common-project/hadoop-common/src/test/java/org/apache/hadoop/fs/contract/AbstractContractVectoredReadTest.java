@@ -340,6 +340,17 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
     }
   }
 
+  @Test
+  public void testEmptyRanges() throws Exception {
+    List<FileRange> fileRanges = new ArrayList<>();
+    try (FSDataInputStream in = openVectorFile()) {
+      in.readVectored(fileRanges, allocate);
+      Assertions.assertThat(fileRanges)
+          .describedAs("Empty ranges must stay empty")
+          .isEmpty();
+    }
+  }
+
   /**
    * Test to validate EOF ranges.
    * <p>

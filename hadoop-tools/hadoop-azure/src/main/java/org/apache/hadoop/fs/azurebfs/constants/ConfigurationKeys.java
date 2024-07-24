@@ -347,5 +347,17 @@ public final class ConfigurationKeys {
    * @see FileSystem#openFile(org.apache.hadoop.fs.Path)
    */
   public static final String FS_AZURE_BUFFERED_PREAD_DISABLE = "fs.azure.buffered.pread.disable";
+  /**Defines what network library to use for server IO calls: {@value}*/
+  public static final String FS_AZURE_NETWORKING_LIBRARY = "fs.azure.networking.library";
+  /**
+   * Maximum number of IOExceptions retries for a single server call on ApacheHttpClient.
+   * Breach of this count would turn off future uses of the ApacheHttpClient library
+   * in the JVM lifecycle: {@value}
+   */
+  public static final String FS_AZURE_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES = "fs.azure.apache.http.client.max.io.exception.retries";
+  /**Maximum ApacheHttpClient-connection cache size at filesystem level: {@value}*/
+  public static final String FS_AZURE_APACHE_HTTP_CLIENT_MAX_CACHE_CONNECTION_SIZE = "fs.azure.apache.http.client.max.cache.connection.size";
+  /**Maximum idle time for a ApacheHttpClient-connection: {@value}*/
+  public static final String FS_AZURE_APACHE_HTTP_CLIENT_IDLE_CONNECTION_TTL = "fs.azure.apache.http.client.idle.connection.ttl";
   private ConfigurationKeys() {}
 }
