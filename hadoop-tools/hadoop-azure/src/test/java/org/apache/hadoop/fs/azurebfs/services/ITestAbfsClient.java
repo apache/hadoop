@@ -20,23 +20,30 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.net.HttpURLConnection;
 import java.net.ProtocolException;
+import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import java.util.regex.Pattern;
 
 import org.assertj.core.api.Assertions;
+import org.junit.Assume;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.mockito.Mockito;
 
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.TestAbfsConfigurationFieldsValidation;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
+import org.apache.hadoop.fs.azurebfs.constants.HttpOperationType;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsApacheHttpExpect100Exception;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AppendRequestParameters;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
@@ -45,6 +52,7 @@ import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderFormat;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
+import org.apache.http.HttpResponse;
 
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.APPEND_ACTION;
@@ -58,6 +66,8 @@ import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_ACTION;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_POSITION;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ABFS_ACCOUNT_NAME;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpOperationType.APACHE_HTTP_CLIENT;
+import static org.apache.hadoop.fs.azurebfs.constants.HttpOperationType.JDK_HTTP_URL_CONNECTION;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -84,6 +94,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST
  * Test useragent of abfs client.
  *
  */
+@RunWith(Parameterized.class)
 public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 
   private static final String ACCOUNT_NAME = "bogusAccountName.dfs.core.windows.net";
@@ -96,6 +107,17 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
   public static final int BUFFER_OFFSET = 0;
 
   private final Pattern userAgentStringPattern;
+
+  @Parameterized.Parameter
+  public HttpOperationType httpOperationType;
+
+  @Parameterized.Parameters(name = "{0}")
+  public static Iterable<Object[]> params() {
+    return Arrays.asList(new Object[][]{
+        {HttpOperationType.JDK_HTTP_URL_CONNECTION},
+        {APACHE_HTTP_CLIENT}
+    });
+  }
 
   public ITestAbfsClient() throws Exception {
     StringBuilder regEx = new StringBuilder();
@@ -147,6 +169,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 
   @Test
   public void verifyBasicInfo() throws Exception {
+    Assume.assumeTrue(JDK_HTTP_URL_CONNECTION == httpOperationType);
     final Configuration configuration = new Configuration();
     configuration.addResource(TEST_CONFIGURATION_FILE_NAME);
     AbfsConfiguration abfsConfiguration = new AbfsConfiguration(configuration,
@@ -176,6 +199,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
   @Test
   public void verifyUserAgentPrefix()
       throws IOException, IllegalAccessException {
+    Assume.assumeTrue(JDK_HTTP_URL_CONNECTION == httpOperationType);
     final Configuration configuration = new Configuration();
     configuration.addResource(TEST_CONFIGURATION_FILE_NAME);
     configuration.set(ConfigurationKeys.FS_AZURE_USER_AGENT_PREFIX_KEY, FS_AZURE_USER_AGENT_PREFIX);
@@ -210,6 +234,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
   @Test
   public void verifyUserAgentExpectHeader()
           throws IOException, IllegalAccessException {
+    Assume.assumeTrue(JDK_HTTP_URL_CONNECTION == httpOperationType);
     final Configuration configuration = new Configuration();
     configuration.addResource(TEST_CONFIGURATION_FILE_NAME);
     configuration.set(ConfigurationKeys.FS_AZURE_USER_AGENT_PREFIX_KEY, FS_AZURE_USER_AGENT_PREFIX);
@@ -236,6 +261,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 
   @Test
   public void verifyUserAgentWithoutSSLProvider() throws Exception {
+    Assume.assumeTrue(JDK_HTTP_URL_CONNECTION == httpOperationType);
     final Configuration configuration = new Configuration();
     configuration.addResource(TEST_CONFIGURATION_FILE_NAME);
     configuration.set(ConfigurationKeys.FS_AZURE_SSL_CHANNEL_MODE_KEY,
@@ -259,6 +285,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 
   @Test
   public void verifyUserAgentClusterName() throws Exception {
+    Assume.assumeTrue(JDK_HTTP_URL_CONNECTION == httpOperationType);
     final String clusterName = "testClusterName";
     final Configuration configuration = new Configuration();
     configuration.addResource(TEST_CONFIGURATION_FILE_NAME);
@@ -287,6 +314,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 
   @Test
   public void verifyUserAgentClusterType() throws Exception {
+    Assume.assumeTrue(JDK_HTTP_URL_CONNECTION == httpOperationType);
     final String clusterType = "testClusterType";
     final Configuration configuration = new Configuration();
     configuration.addResource(TEST_CONFIGURATION_FILE_NAME);
@@ -380,6 +408,8 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
         AbfsThrottlingInterceptFactory.getInstance(
             abfsConfig.getAccountName().substring(0,
                 abfsConfig.getAccountName().indexOf(DOT)), abfsConfig));
+    Mockito.doReturn(baseAbfsClientInstance.getAbfsApacheHttpClient()).when(client).getAbfsApacheHttpClient();
+
     // override baseurl
     client = ITestAbfsClient.setAbfsClientField(client, "abfsConfiguration",
         abfsConfig);
@@ -464,13 +494,14 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
       AbfsClient client,
       String method,
       URL url,
-      List<AbfsHttpHeader> requestHeaders) {
+      List<AbfsHttpHeader> requestHeaders, AbfsConfiguration abfsConfiguration) {
     return new AbfsRestOperation(
         type,
         client,
         method,
         url,
-        requestHeaders);
+        requestHeaders,
+        abfsConfiguration);
   }
 
   public static AccessTokenProvider getAccessTokenProvider(AbfsClient client) {
@@ -488,6 +519,14 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     return b;
   }
 
+  @Override
+  public AzureBlobFileSystem getFileSystem(final Configuration configuration)
+      throws Exception {
+    Configuration conf = new Configuration(configuration);
+    conf.set(ConfigurationKeys.FS_AZURE_NETWORKING_LIBRARY, httpOperationType.toString());
+    return (AzureBlobFileSystem) FileSystem.newInstance(conf);
+  }
+
   /**
    * Test to verify that client retries append request without
    * expect header enabled if append with expect header enabled fails
@@ -497,9 +536,10 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
   @Test
   public void testExpectHundredContinue() throws Exception {
     // Get the filesystem.
-    final AzureBlobFileSystem fs = getFileSystem();
+    final AzureBlobFileSystem fs = getFileSystem(getRawConfiguration());
 
-    final Configuration configuration = new Configuration();
+    final Configuration configuration = fs.getAbfsStore().getAbfsConfiguration()
+        .getRawConfiguration();
     configuration.addResource(TEST_CONFIGURATION_FILE_NAME);
     AbfsClient abfsClient = fs.getAbfsStore().getClient();
 
@@ -559,44 +599,49 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
         url,
         requestHeaders, buffer,
         appendRequestParameters.getoffset(),
-        appendRequestParameters.getLength(), null));
+        appendRequestParameters.getLength(), null, abfsConfig));
 
-    AbfsHttpOperation abfsHttpOperation = Mockito.spy(new AbfsHttpOperation(url,
-        HTTP_METHOD_PUT, requestHeaders, DEFAULT_HTTP_CONNECTION_TIMEOUT, DEFAULT_HTTP_READ_TIMEOUT));
+    Mockito.doAnswer(answer -> {
+      AbfsHttpOperation httpOperation = Mockito.spy((AbfsHttpOperation) answer.callRealMethod());
+      // Sets the expect request property if expect header is enabled.
+      if (appendRequestParameters.isExpectHeaderEnabled()) {
+        Mockito.doReturn(HUNDRED_CONTINUE).when(httpOperation)
+            .getConnProperty(EXPECT);
+      }
+      Mockito.doNothing().when(httpOperation).setRequestProperty(Mockito
+          .any(), Mockito.any());
+      Mockito.doReturn(url).when(httpOperation).getConnUrl();
 
-    // Sets the expect request property if expect header is enabled.
-    if (appendRequestParameters.isExpectHeaderEnabled()) {
-      Mockito.doReturn(HUNDRED_CONTINUE).when(abfsHttpOperation)
-          .getConnProperty(EXPECT);
-    }
+      // Give user error code 404 when processResponse is called.
+      Mockito.doReturn(HTTP_METHOD_PUT).when(httpOperation).getMethod();
+      Mockito.doReturn(HTTP_NOT_FOUND).when(httpOperation).getStatusCode();
+      Mockito.doReturn("Resource Not Found")
+          .when(httpOperation)
+          .getConnResponseMessage();
 
-    HttpURLConnection urlConnection = mock(HttpURLConnection.class);
-    Mockito.doNothing().when(urlConnection).setRequestProperty(Mockito
-        .any(), Mockito.any());
-    Mockito.doReturn(HTTP_METHOD_PUT).when(urlConnection).getRequestMethod();
-    Mockito.doReturn(url).when(urlConnection).getURL();
-    Mockito.doReturn(urlConnection).when(abfsHttpOperation).getConnection();
+      if (httpOperation instanceof AbfsJdkHttpOperation) {
+        // Make the getOutputStream throw IOException to see it returns from the sendRequest correctly.
+        Mockito.doThrow(new ProtocolException(EXPECT_100_JDK_ERROR))
+            .when((AbfsJdkHttpOperation) httpOperation)
+            .getConnOutputStream();
+      }
 
-    Mockito.doNothing().when(abfsHttpOperation).setRequestProperty(Mockito
-        .any(), Mockito.any());
-    Mockito.doReturn(url).when(abfsHttpOperation).getConnUrl();
-
-    // Give user error code 404 when processResponse is called.
-    Mockito.doReturn(HTTP_METHOD_PUT).when(abfsHttpOperation).getConnRequestMethod();
-    Mockito.doReturn(HTTP_NOT_FOUND).when(abfsHttpOperation).getConnResponseCode();
-    Mockito.doReturn("Resource Not Found")
-        .when(abfsHttpOperation)
-        .getConnResponseMessage();
-
-    // Make the getOutputStream throw IOException to see it returns from the sendRequest correctly.
-    Mockito.doThrow(new ProtocolException(EXPECT_100_JDK_ERROR))
-        .when(abfsHttpOperation)
-        .getConnOutputStream();
-
-    // Sets the httpOperation for the rest operation.
-    Mockito.doReturn(abfsHttpOperation)
-        .when(op)
-        .createHttpOperation();
+      if (httpOperation instanceof AbfsAHCHttpOperation) {
+        Mockito.doNothing()
+            .when((AbfsAHCHttpOperation) httpOperation)
+            .parseResponseHeaderAndBody(Mockito.any(byte[].class),
+                Mockito.anyInt(), Mockito.anyInt());
+        Mockito.doReturn(HTTP_NOT_FOUND)
+            .when((AbfsAHCHttpOperation) httpOperation)
+            .parseStatusCode(Mockito.nullable(
+                HttpResponse.class));
+        Mockito.doThrow(
+                new AbfsApacheHttpExpect100Exception(Mockito.mock(HttpResponse.class)))
+            .when((AbfsAHCHttpOperation) httpOperation)
+            .executeRequest();
+      }
+      return httpOperation;
+    }).when(op).createHttpOperation();
 
     // Mock the restOperation for the client.
     Mockito.doReturn(op)
