@@ -225,7 +225,7 @@ public final class TestFlagSet extends AbstractHadoopTestBase {
    */
   private void assertHasCapability(final String capability) {
     Assertions.assertThat(flagSet.hasCapability(capability))
-        .describedAs("Capabiilty of %s on %s", capability, flagSet)
+        .describedAs("Capability of %s on %s", capability, flagSet)
         .isTrue();
   }
 
@@ -235,7 +235,7 @@ public final class TestFlagSet extends AbstractHadoopTestBase {
    */
   private void assertLacksCapability(final String capability) {
     Assertions.assertThat(flagSet.hasCapability(capability))
-        .describedAs("Capabiilty of %s on %s", capability, flagSet)
+        .describedAs("Capability of %s on %s", capability, flagSet)
         .isFalse();
   }
 
