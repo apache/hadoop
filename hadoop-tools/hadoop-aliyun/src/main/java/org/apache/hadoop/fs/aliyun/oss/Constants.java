@@ -211,4 +211,8 @@ public final class Constants {
   public static final String LIST_VERSION = "fs.oss.list.version";
 
   public static final int DEFAULT_LIST_VERSION = 2;
+
+  // oss redirect
+  public static final String REDIRECT_ENABLE_KEY = "fs.oss.redirect.enable";
+  public static final boolean REDIRECT_ENABLE_DEFAULT = true;
 }
