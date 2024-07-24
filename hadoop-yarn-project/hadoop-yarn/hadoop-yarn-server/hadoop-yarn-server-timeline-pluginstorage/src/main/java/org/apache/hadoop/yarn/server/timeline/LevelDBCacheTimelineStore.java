@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.server.timeline;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -299,7 +298,6 @@ public class LevelDBCacheTimelineStore extends KeyValueBasedTimelineStore {
         }
       };
     }
-    static final ObjectMapper OBJECT_MAPPER = JacksonUtil.createBasicObjectMapper();
 
     @SuppressWarnings("unchecked")
     private V getEntityForKey(byte[] key) throws IOException {
@@ -307,7 +305,7 @@ public class LevelDBCacheTimelineStore extends KeyValueBasedTimelineStore {
       if (resultRaw == null) {
         return null;
       }
-      return (V) OBJECT_MAPPER.readValue(resultRaw, TimelineEntity.class);
+      return (V) JacksonUtil.getSharedReader().readValue(resultRaw, TimelineEntity.class);
     }
 
     private byte[] getStartTimeKey(K entityId) {

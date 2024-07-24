@@ -44,19 +44,11 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placemen
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.classification.VisibleForTesting;
 
 public class MappingRuleCreator {
   private static final String ALL_USER = "*";
   private static Logger LOG = LoggerFactory.getLogger(MappingRuleCreator.class);
-
-  /**
-   * It is more performant to reuse ObjectMapper instances but keeping the instance
-   * private makes it harder for someone to reconfigure it which might have unwanted
-   * side effects.
-   */
-  private static final ObjectMapper OBJECT_MAPPER = JacksonUtil.createBasicObjectMapper();
 
   public MappingRulesDescription getMappingRulesFromJsonFile(String filePath)
       throws IOException {
@@ -66,12 +58,12 @@ public class MappingRuleCreator {
 
   MappingRulesDescription getMappingRulesFromJson(byte[] contents)
       throws IOException {
-    return OBJECT_MAPPER.readValue(contents, MappingRulesDescription.class);
+    return JacksonUtil.getSharedReader().readValue(contents, MappingRulesDescription.class);
   }
 
   MappingRulesDescription getMappingRulesFromJson(String contents)
       throws IOException {
-    return OBJECT_MAPPER.readValue(contents, MappingRulesDescription.class);
+    return JacksonUtil.getSharedReader().readValue(contents, MappingRulesDescription.class);
   }
 
   public List<MappingRule> getMappingRulesFromFile(String jsonPath)

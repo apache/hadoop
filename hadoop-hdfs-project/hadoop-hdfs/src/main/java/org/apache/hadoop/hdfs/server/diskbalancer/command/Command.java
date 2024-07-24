@@ -77,8 +77,7 @@ import java.util.TreeSet;
  * Common interface for command handling.
  */
 public abstract class Command extends Configured implements Closeable {
-  private static final ObjectReader READER =
-      JacksonUtil.createBasicObjectMapper().readerFor(HashMap.class);
+  private static final ObjectReader READER = JacksonUtil.createBasicReaderFor(HashMap.class);
   static final Logger LOG = LoggerFactory.getLogger(Command.class);
   private Map<String, String> validArgs = new HashMap<>();
   private URI clusterURI;

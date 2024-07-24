@@ -54,10 +54,10 @@ public class TimelineUtils {
       "TIMELINE_FLOW_RUN_ID_TAG";
   public final static String DEFAULT_FLOW_VERSION = "1";
 
-  private static final ObjectMapper mapper = JacksonUtil.createBasicObjectMapper();
+  private static final ObjectMapper OBJECT_MAPPER = JacksonUtil.createBasicObjectMapper();
 
   static {
-    YarnJacksonJaxbJsonProvider.configObjectMapper(mapper);
+    YarnJacksonJaxbJsonProvider.configObjectMapper(OBJECT_MAPPER);
   }
 
   /**
@@ -90,9 +90,9 @@ public class TimelineUtils {
   public static String dumpTimelineRecordtoJSON(Object o, boolean pretty)
       throws JsonGenerationException, JsonMappingException, IOException {
     if (pretty) {
-      return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(o);
+      return OBJECT_MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(o);
     } else {
-      return mapper.writeValueAsString(o);
+      return OBJECT_MAPPER.writeValueAsString(o);
     }
   }
 

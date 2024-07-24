@@ -19,6 +19,8 @@ package org.apache.hadoop.util;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 
 /**
@@ -26,7 +28,13 @@ import com.fasterxml.jackson.databind.json.JsonMapper;
  *
  * @since 3.5.0
  */
-public class JacksonUtil {
+public final class JacksonUtil {
+
+  private static final ObjectMapper SHARED_BASIC_OBJECT_MAPPER = createBasicObjectMapper();
+  private static final ObjectReader SHARED_BASIC_OBJECT_READER = SHARED_BASIC_OBJECT_MAPPER.reader();
+  private static final ObjectWriter SHARED_BASIC_OBJECT_WRITER = SHARED_BASIC_OBJECT_MAPPER.writer();
+  private static final ObjectWriter SHARED_BASIC_OBJECT_WRITER_PRETTY =
+      SHARED_BASIC_OBJECT_MAPPER.writerWithDefaultPrettyPrinter();
 
   /**
    * Creates a new {@link JsonFactory} instance with basic configuration.
@@ -59,6 +67,51 @@ public class JacksonUtil {
    */
   public static ObjectMapper createObjectMapper(final JsonFactory jsonFactory) {
     return JsonMapper.builder(jsonFactory).build();
+  }
+
+  /**
+   * Returns a shared {@link ObjectReader} instance with basic configuration.
+   *
+   * @return a shared {@link ObjectReader} instance with basic configuration
+   */
+  public static ObjectReader getSharedReader() {
+    return SHARED_BASIC_OBJECT_READER;
+  }
+
+  /**
+   * Returns an {@link ObjectReader} for the given type instance with basic configuration.
+   *
+   * @return an {@link ObjectReader} instance with basic configuration
+   */
+  public static ObjectReader createBasicReaderFor(Class<?> type) {
+    return SHARED_BASIC_OBJECT_MAPPER.readerFor(type);
+  }
+
+  /**
+   * Returns a shared {@link ObjectWriter} instance with basic configuration.
+   *
+   * @return a shared {@link ObjectWriter} instance with basic configuration
+   */
+  public static ObjectWriter getSharedWriter() {
+    return SHARED_BASIC_OBJECT_WRITER;
+  }
+
+  /**
+   * Returns a shared {@link ObjectWriter} instance with pretty print and basic configuration.
+   *
+   * @return a shared {@link ObjectWriter} instance with pretty print and basic configuration
+   */
+  public static ObjectWriter getSharedWriterWithPrettyPrint() {
+    return SHARED_BASIC_OBJECT_WRITER_PRETTY;
+  }
+
+  /**
+   * Returns an {@link ObjectWriter} for the given type instance with basic configuration.
+   *
+   * @return an {@link ObjectWriter} instance with basic configuration
+   */
+  public static ObjectWriter createBasicWriterFor(Class<?> type) {
+    return SHARED_BASIC_OBJECT_MAPPER.writerFor(type);
   }
 
   private JacksonUtil() {}

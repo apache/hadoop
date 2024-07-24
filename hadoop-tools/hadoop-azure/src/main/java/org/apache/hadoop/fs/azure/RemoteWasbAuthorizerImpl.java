@@ -50,8 +50,7 @@ public class RemoteWasbAuthorizerImpl implements WasbAuthorizerInterface {
   public static final Logger LOG = LoggerFactory
       .getLogger(RemoteWasbAuthorizerImpl.class);
   private static final ObjectReader RESPONSE_READER = JacksonUtil
-      .createBasicObjectMapper()
-      .readerFor(RemoteWasbAuthorizerResponse.class);
+      .createBasicReaderFor(RemoteWasbAuthorizerResponse.class);
 
   /**
    * Configuration parameter name expected in the Configuration object to

@@ -79,7 +79,6 @@ import java.util.concurrent.ExecutionException;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.CryptoExtension;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
@@ -129,13 +128,6 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
   public static final String AUTH_RETRY = CONFIG_PREFIX
       + "authentication.retry-count";
   public static final int DEFAULT_AUTH_RETRY = 1;
-
-  /**
-   * It is more performant to reuse ObjectMapper instances but keeping the instance
-   * private makes it harder for someone to reconfigure it which might have unwanted
-   * side effects.
-   */
-  private static final ObjectMapper OBJECT_MAPPER = JacksonUtil.createBasicObjectMapper();
 
   private final ValueQueue<EncryptedKeyVersion> encKeyVersionQueue;
 
@@ -603,7 +595,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
       InputStream is = null;
       try {
         is = conn.getInputStream();
-        ret = OBJECT_MAPPER.readValue(is, klass);
+        ret = JacksonUtil.getSharedReader().readValue(is, klass);
       } finally {
         IOUtils.closeStream(is);
       }

@@ -54,8 +54,7 @@ public class RemoteSASKeyGeneratorImpl extends SASKeyGeneratorImpl {
   public static final Logger LOG =
       LoggerFactory.getLogger(AzureNativeFileSystemStore.class);
   private static final ObjectReader RESPONSE_READER = JacksonUtil
-      .createBasicObjectMapper()
-      .readerFor(RemoteSASKeyGenerationResponse.class);
+      .createBasicReaderFor(RemoteSASKeyGenerationResponse.class);
 
   /**
    * Configuration parameter name expected in the Configuration

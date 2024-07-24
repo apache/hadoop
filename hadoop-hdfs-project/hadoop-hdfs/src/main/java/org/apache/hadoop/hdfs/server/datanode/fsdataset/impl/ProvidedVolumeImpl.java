@@ -369,7 +369,7 @@ class ProvidedVolumeImpl extends FsVolumeImpl {
   }
 
   private static final ObjectWriter WRITER =
-      JacksonUtil.createBasicObjectMapper().writerWithDefaultPrettyPrinter();
+      JacksonUtil.getSharedWriterWithPrettyPrint();
 
   private static class ProvidedBlockIteratorState {
     ProvidedBlockIteratorState() {

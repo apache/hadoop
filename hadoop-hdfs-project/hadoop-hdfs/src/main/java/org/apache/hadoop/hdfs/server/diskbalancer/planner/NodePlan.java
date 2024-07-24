@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.server.diskbalancer.planner;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import org.apache.hadoop.util.JacksonUtil;
@@ -40,10 +39,8 @@ public class NodePlan {
   private int port;
   private long timeStamp;
 
-  private static final ObjectMapper MAPPER = JacksonUtil.createBasicObjectMapper();
-  private static final ObjectReader READER = MAPPER.readerFor(NodePlan.class);
-  private static final ObjectWriter WRITER = MAPPER.writerFor(
-      MAPPER.constructType(NodePlan.class));
+  private static final ObjectReader READER = JacksonUtil.createBasicReaderFor(NodePlan.class);
+  private static final ObjectWriter WRITER = JacksonUtil.createBasicWriterFor(NodePlan.class);
   /**
    * returns timestamp when this plan was created.
    *

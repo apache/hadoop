@@ -59,7 +59,7 @@ public class NetworkTagMappingJsonManager implements NetworkTagMappingManager {
           YarnConfiguration.NM_NETWORK_TAG_MAPPING_FILE_PATH);
     }
     try {
-      networkTagMapping = JacksonUtil.createBasicObjectMapper().readValue(new File(mappingJsonFile),
+      networkTagMapping = JacksonUtil.getSharedReader().readValue(new File(mappingJsonFile),
           NetworkTagMapping.class);
     } catch (Exception e) {
       throw new YarnRuntimeException(e);

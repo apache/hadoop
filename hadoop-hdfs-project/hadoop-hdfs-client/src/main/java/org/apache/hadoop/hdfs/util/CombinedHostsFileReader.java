@@ -19,7 +19,6 @@
 package org.apache.hadoop.hdfs.util;
 
 import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 
 import java.io.File;
@@ -66,13 +65,6 @@ public final class CombinedHostsFileReader {
   public static final Logger LOG =
       LoggerFactory.getLogger(CombinedHostsFileReader.class);
 
-  /**
-   * It is more performant to reuse ObjectMapper instances but keeping the instance
-   * private makes it harder for someone to reconfigure it which might have unwanted
-   * side effects.
-   */
-  private static final ObjectMapper OBJECT_MAPPER = JacksonUtil.createBasicObjectMapper();
-
   private CombinedHostsFileReader() {
   }
 
@@ -97,7 +89,8 @@ public final class CombinedHostsFileReader {
       try (Reader input =
           new InputStreamReader(
               Files.newInputStream(hostFile.toPath()), StandardCharsets.UTF_8)) {
-        allDNs = OBJECT_MAPPER.readValue(input, DatanodeAdminProperties[].class);
+        allDNs = JacksonUtil.getSharedReader()
+            .readValue(input, DatanodeAdminProperties[].class);
       } catch (JsonMappingException jme) {
         // The old format doesn't have json top-level token to enclose
         // the array.
@@ -109,14 +102,12 @@ public final class CombinedHostsFileReader {
     }
 
     if (tryOldFormat) {
-      ObjectReader objectReader =
-          JacksonUtil.createBasicObjectMapper().readerFor(DatanodeAdminProperties.class);
+      ObjectReader objectReader = JacksonUtil.createBasicReaderFor(DatanodeAdminProperties.class);
       List<DatanodeAdminProperties> all = new ArrayList<>();
       try (Reader input =
           new InputStreamReader(Files.newInputStream(Paths.get(hostsFilePath)),
                   StandardCharsets.UTF_8)) {
-        Iterator<DatanodeAdminProperties> iterator =
-            objectReader.readValues(OBJECT_MAPPER.createParser(input));
+        Iterator<DatanodeAdminProperties> iterator = objectReader.readValues(input);
         while (iterator.hasNext()) {
           DatanodeAdminProperties properties = iterator.next();
           all.add(properties);

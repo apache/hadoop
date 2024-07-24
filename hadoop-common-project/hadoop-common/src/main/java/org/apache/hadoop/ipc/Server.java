@@ -3844,7 +3844,7 @@ public abstract class Server {
    */
   public String getNumOpenConnectionsPerUser() {
     try {
-      return JacksonUtil.createBasicObjectMapper()
+      return JacksonUtil.getSharedWriter()
           .writeValueAsString(connectionManager.getUserToConnectionsMap());
     } catch (IOException ignored) {
     }

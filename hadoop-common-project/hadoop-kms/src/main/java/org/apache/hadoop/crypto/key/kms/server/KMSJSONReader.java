@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.crypto.key.kms.server;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.util.JacksonUtil;
 
@@ -39,7 +37,6 @@ import java.util.Map;
 @Consumes(MediaType.APPLICATION_JSON)
 @InterfaceAudience.Private
 public class KMSJSONReader implements MessageBodyReader<Object> {
-  private static final ObjectMapper MAPPER = JacksonUtil.createBasicObjectMapper();
 
   @Override
   public boolean isReadable(Class<?> type, Type genericType,
@@ -53,6 +50,6 @@ public class KMSJSONReader implements MessageBodyReader<Object> {
       Annotation[] annotations, MediaType mediaType,
       MultivaluedMap<String, String> httpHeaders, InputStream entityStream)
       throws IOException, WebApplicationException {
-    return MAPPER.readValue(entityStream, type);
+    return JacksonUtil.getSharedReader().readValue(entityStream, type);
   }
 }

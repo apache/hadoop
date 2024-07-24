@@ -30,7 +30,6 @@ import java.util.Map;
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
-import org.apache.hadoop.util.JacksonUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,6 +39,7 @@ import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AbfsPerfLoggable;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultSchema;
 import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
+import org.apache.hadoop.util.JacksonUtil;
 
 /**
  * Base Http operation class for orchestrating server IO calls. Child classes would
@@ -509,7 +509,8 @@ public abstract class AbfsHttpOperation implements AbfsPerfLoggable {
     }
 
     try {
-      this.listResultSchema = JacksonUtil.createBasicObjectMapper().readValue(stream, ListResultSchema.class);
+      this.listResultSchema = JacksonUtil.getSharedReader().readValue(stream,
+          ListResultSchema.class);
     } catch (IOException ex) {
       log.error("Unable to deserialize list results", ex);
       throw ex;

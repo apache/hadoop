@@ -146,7 +146,7 @@ public class DecayRpcScheduler implements RpcScheduler,
   public static final Logger LOG =
       LoggerFactory.getLogger(DecayRpcScheduler.class);
 
-  private static final ObjectWriter WRITER = JacksonUtil.createBasicObjectMapper().writer();
+  private static final ObjectWriter WRITER = JacksonUtil.getSharedWriter();
 
   // Track the decayed and raw (no decay) number of calls for each schedulable
   // identity from all previous decay windows: idx 0 for decayed call cost and

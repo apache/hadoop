@@ -654,7 +654,7 @@ public class JsonUtilClient {
     }
 
     final String namesInJson = (String) json.get("XAttrNames");
-    ObjectReader reader = JacksonUtil.createBasicObjectMapper().readerFor(List.class);
+    ObjectReader reader = JacksonUtil.createBasicReaderFor(List.class);
     final List<Object> xattrs = reader.readValue(namesInJson);
     final List<String> names =
         Lists.newArrayListWithCapacity(json.keySet().size());

@@ -26,7 +26,6 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Set;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -60,12 +59,10 @@ public final class CombinedHostsFileWriter {
    */
   public static void writeFile(final String hostsFile,
       final Set<DatanodeAdminProperties> allDNs) throws IOException {
-    final ObjectMapper objectMapper = JacksonUtil.createBasicObjectMapper();
-
     try (Writer output =
         new OutputStreamWriter(Files.newOutputStream(Paths.get(hostsFile)),
             StandardCharsets.UTF_8)) {
-      objectMapper.writeValue(output, allDNs);
+      JacksonUtil.getSharedWriter().writeValue(output, allDNs);
     }
   }
 }

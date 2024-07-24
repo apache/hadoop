@@ -43,7 +43,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,13 +63,6 @@ import static org.apache.hadoop.yarn.conf.YarnConfiguration.NM_RUNC_NUM_MANIFEST
 @InterfaceStability.Unstable
 public class ImageTagToManifestPlugin extends AbstractService
     implements RuncImageTagToManifestPlugin {
-
-  /**
-   * It is more performant to reuse ObjectMapper instances but keeping the instance
-   * private makes it harder for someone to reconfigure it which might have unwanted
-   * side effects.
-   */
-  private static final ObjectMapper OBJECT_MAPPER = JacksonUtil.createBasicObjectMapper();
 
   private Map<String, ImageManifest> manifestCache;
   private AtomicReference<Map<String, String>> localImageToHashCache =
@@ -114,7 +106,7 @@ public class ImageTagToManifestPlugin extends AbstractService
     }
 
     byte[] bytes = IOUtils.toByteArray(input);
-    manifest = OBJECT_MAPPER.readValue(bytes, ImageManifest.class);
+    manifest = JacksonUtil.getSharedReader().readValue(bytes, ImageManifest.class);
 
     manifestCache.put(hash, manifest);
     return manifest;
@@ -321,7 +313,7 @@ public class ImageTagToManifestPlugin extends AbstractService
   }
 
   private static class LRUCache extends LinkedHashMap<String, ImageManifest> {
-    private int cacheSize;
+    private final int cacheSize;
 
     LRUCache(int initialCapacity, float loadFactor) {
       super(initialCapacity, loadFactor, true);
