@@ -21,7 +21,6 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.ProtocolException;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.List;
