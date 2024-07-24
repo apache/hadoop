@@ -351,12 +351,7 @@ public class Client implements AutoCloseable {
 
     /** Indicate when the call is complete and the
      * value or error are available.  Notifies by default.  */
-    protected synchronized void callComplete(Writable rpcResponse, IOException error) {
-      if (error != null) {
-        rpcResponseFuture.completeExceptionally(error);
-      } else {
-        rpcResponseFuture.complete(rpcResponse);
-      }
+    protected synchronized void callComplete() {
       if (externalHandler != null) {
         synchronized (externalHandler) {
           externalHandler.notify();
@@ -379,7 +374,8 @@ public class Client implements AutoCloseable {
      * @param error exception thrown by the call; either local or remote
      */
     public synchronized void setException(IOException error) {
-      callComplete(null, error);
+      rpcResponseFuture.completeExceptionally(error);
+      callComplete();
     }
     
     /** Set the return value when there is no error. 
@@ -388,7 +384,8 @@ public class Client implements AutoCloseable {
      * @param rpcResponse return value of the rpc call.
      */
     public synchronized void setRpcResponse(Writable rpcResponse) {
-      callComplete(rpcResponse, null);
+      rpcResponseFuture.complete(rpcResponse);
+      callComplete();
     }
   }
 
