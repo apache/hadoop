@@ -460,7 +460,7 @@ public class TestAccountConfiguration {
       // Test that we managed to instantiate an MsiTokenProvider without having to define the tenant and client ID.
       // Those 2 fields are optional as they can automatically be determined by the Azure Metadata service when
       // running on an Azure VM.
-      Assertions.assertThat(tokenProviderTypeName).isInstanceOf(MsiTokenProvider.class);
+      Assertions.assertThat(tokenProviderTypeName).describedAs("Token Provider Should be MsiTokenProvider").isInstanceOf(MsiTokenProvider.class);
   }
 
   public void testGlobalAndAccountOAuthPrecedence(AbfsConfiguration abfsConf,
