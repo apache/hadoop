@@ -305,9 +305,8 @@ public class Client implements AutoCloseable {
     }
   }
 
-  Call createCall(RPC.RpcKind rpcKind, Writable rpcRequest,
-      AlignmentContext alignmentContext) {
-    return new Call(rpcKind, rpcRequest, alignmentContext);
+  Call createCall(RPC.RpcKind rpcKind, Writable rpcRequest) {
+    return new Call(rpcKind, rpcRequest);
   }
 
   /** 
@@ -320,13 +319,11 @@ public class Client implements AutoCloseable {
     private final CompletableFuture<Writable> rpcResponseFuture;
     final RPC.RpcKind rpcKind;      // Rpc EngineKind
     private final Object externalHandler;
-    private final AlignmentContext alignmentContext;
+    private AlignmentContext alignmentContext;
 
-    private Call(RPC.RpcKind rpcKind, Writable param,
-        AlignmentContext alignmentContext) {
+    private Call(RPC.RpcKind rpcKind, Writable param) {
       this.rpcKind = rpcKind;
       this.rpcRequest = param;
-      this.alignmentContext = alignmentContext;
 
       final Integer id = callId.get();
       if (id == null) {
@@ -354,7 +351,12 @@ public class Client implements AutoCloseable {
 
     /** Indicate when the call is complete and the
      * value or error are available.  Notifies by default.  */
-    protected void callComplete() {
+    protected synchronized void callComplete(Writable rpcResponse, IOException error) {
+      if (error != null) {
+        rpcResponseFuture.completeExceptionally(error);
+      } else {
+        rpcResponseFuture.complete(rpcResponse);
+      }
       if (externalHandler != null) {
         synchronized (externalHandler) {
           externalHandler.notify();
@@ -362,14 +364,22 @@ public class Client implements AutoCloseable {
       }
     }
 
+    /**
+     * Set an AlignmentContext for the call to update when call is done.
+     *
+     * @param ac alignment context to update.
+     */
+    public synchronized void setAlignmentContext(AlignmentContext ac) {
+      this.alignmentContext = ac;
+    }
+
     /** Set the exception when there is an error.
      * Notify the caller the call is done.
      * 
      * @param error exception thrown by the call; either local or remote
      */
-    public void setException(IOException error) {
-      rpcResponseFuture.completeExceptionally(error);
-      callComplete();
+    public synchronized void setException(IOException error) {
+      callComplete(null, error);
     }
     
     /** Set the return value when there is no error. 
@@ -377,9 +387,8 @@ public class Client implements AutoCloseable {
      * 
      * @param rpcResponse return value of the rpc call.
      */
-    public void setRpcResponse(Writable rpcResponse) {
-      rpcResponseFuture.complete(rpcResponse);
-      callComplete();
+    public synchronized void setRpcResponse(Writable rpcResponse) {
+      callComplete(rpcResponse, null);
     }
   }
 
@@ -1494,7 +1503,8 @@ public class Client implements AutoCloseable {
       ConnectionId remoteId, int serviceClass,
       AtomicBoolean fallbackToSimpleAuth, AlignmentContext alignmentContext)
       throws IOException {
-    final Call call = createCall(rpcKind, rpcRequest, alignmentContext);
+    final Call call = createCall(rpcKind, rpcRequest);
+    call.setAlignmentContext(alignmentContext);
     final Connection connection = getConnection(remoteId, call, serviceClass,
         fallbackToSimpleAuth);
 

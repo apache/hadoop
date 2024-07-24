@@ -1301,9 +1301,8 @@ public class TestIPC {
     // Override client to store the call info and check response
     final Client client = new Client(LongWritable.class, conf) {
       @Override
-      Call createCall(RpcKind rpcKind, Writable rpcRequest,
-          AlignmentContext alignmentContext) {
-        final Call call = super.createCall(rpcKind, rpcRequest, alignmentContext);
+      Call createCall(RpcKind rpcKind, Writable rpcRequest) {
+        final Call call = super.createCall(rpcKind, rpcRequest);
         info.id = call.id;
         info.retry = call.retry;
         return call;

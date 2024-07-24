@@ -422,13 +422,12 @@ public class TestAsyncIPC {
     // Override client to store the call info and check response
     final Client client = new Client(LongWritable.class, conf) {
       @Override
-      Call createCall(RpcKind rpcKind, Writable rpcRequest,
-          AlignmentContext alignmentContext) {
+      Call createCall(RpcKind rpcKind, Writable rpcRequest) {
         // Set different call id and retry count for the next call
         Client.setCallIdAndRetryCount(Client.nextCallId(),
             TestIPC.RANDOM.nextInt(255), null);
 
-        final Call call = super.createCall(rpcKind, rpcRequest, alignmentContext);
+        final Call call = super.createCall(rpcKind, rpcRequest);
 
         CallInfo info = new CallInfo();
         info.id = call.id;
