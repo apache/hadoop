@@ -365,7 +365,7 @@ public class FileSystemTimelineWriter extends TimelineWriter{
 
     protected void prepareForWrite() throws IOException{
       this.stream = createLogFileStream(fs, logPath);
-      this.jsonGenerator = JacksonUtil.createBasicJsonFactory()
+      this.jsonGenerator = JacksonUtil.getSharedWriter()
           .createGenerator((OutputStream)stream);
       this.jsonGenerator.setPrettyPrinter(new MinimalPrettyPrinter("\n"));
       this.lastModifiedTime = Time.monotonicNow();

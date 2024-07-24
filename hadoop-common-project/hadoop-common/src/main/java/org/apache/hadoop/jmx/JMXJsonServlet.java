@@ -43,7 +43,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 import org.apache.hadoop.util.JacksonUtil;
 import org.slf4j.Logger;
@@ -136,18 +135,12 @@ public class JMXJsonServlet extends HttpServlet {
   protected transient MBeanServer mBeanServer;
 
   /**
-   * Json Factory to create Json generators for write objects in json format
-   */
-  protected transient JsonFactory jsonFactory;
-
-  /**
    * Initialize this servlet.
    */
   @Override
   public void init() throws ServletException {
     // Retrieve the MBean server
     mBeanServer = ManagementFactory.getPlatformMBeanServer();
-    jsonFactory = JacksonUtil.createBasicJsonFactory();
   }
 
   protected boolean isInstrumentationAccessAllowed(HttpServletRequest request, 
@@ -188,7 +181,7 @@ public class JMXJsonServlet extends HttpServlet {
         response.setHeader(ACCESS_CONTROL_ALLOW_METHODS, "GET");
         response.setHeader(ACCESS_CONTROL_ALLOW_ORIGIN, "*");
 
-        jg = jsonFactory.createGenerator(writer);
+        jg = JacksonUtil.getSharedWriter().createGenerator(writer);
         jg.disable(JsonGenerator.Feature.AUTO_CLOSE_TARGET);
         jg.useDefaultPrettyPrinter();
         jg.writeStartObject();

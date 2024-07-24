@@ -61,7 +61,7 @@ public class StartupProgressServlet extends DfsServlet {
     StartupProgress prog = NameNodeHttpServer.getStartupProgressFromContext(
       getServletContext());
     StartupProgressView view = prog.createView();
-    JsonGenerator json = JacksonUtil.createBasicJsonFactory().createGenerator(resp.getWriter());
+    JsonGenerator json = JacksonUtil.getSharedWriter().createGenerator(resp.getWriter());
     try {
       json.writeStartObject();
       json.writeNumberField(ELAPSED_TIME, view.getElapsedTime());

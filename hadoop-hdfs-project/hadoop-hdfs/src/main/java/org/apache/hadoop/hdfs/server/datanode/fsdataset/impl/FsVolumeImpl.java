@@ -104,7 +104,8 @@ public class FsVolumeImpl implements FsVolumeSpi {
   public static final Logger LOG =
       LoggerFactory.getLogger(FsVolumeImpl.class);
   private static final ObjectWriter WRITER = JacksonUtil.getSharedWriterWithPrettyPrint();
-  private static final ObjectReader READER = JacksonUtil.createBasicReaderFor(BlockIteratorState.class);
+  private static final ObjectReader READER =
+      JacksonUtil.createBasicReaderFor(BlockIteratorState.class);
 
   private final FsDatasetImpl dataset;
   private final String storageID;

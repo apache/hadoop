@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.mapred;
 
-import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerationException;
 import com.fasterxml.jackson.core.JsonGenerator;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -532,8 +531,7 @@ public class QueueManager {
       return;
     }
     
-    JsonFactory dumpFactory = JacksonUtil.createBasicJsonFactory();
-    JsonGenerator dumpGenerator = dumpFactory.createGenerator(out);
+    JsonGenerator dumpGenerator = JacksonUtil.getSharedWriter().createGenerator(out);
     QueueConfigurationParser parser;
     boolean aclsEnabled = false;
     if (conf != null) {

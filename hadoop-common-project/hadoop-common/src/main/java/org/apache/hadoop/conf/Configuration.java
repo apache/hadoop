@@ -22,7 +22,6 @@ import com.ctc.wstx.api.ReaderConfig;
 import com.ctc.wstx.io.StreamBootstrapper;
 import com.ctc.wstx.io.SystemId;
 import com.ctc.wstx.stax.WstxInputFactory;
-import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 
 import java.io.BufferedInputStream;
@@ -3793,8 +3792,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       throw new IllegalArgumentException("Property " +
           propertyName + " not found");
     } else {
-      final JsonFactory dumpFactory = JacksonUtil.createBasicJsonFactory();
-      JsonGenerator dumpGenerator = dumpFactory.createGenerator(out);
+      JsonGenerator dumpGenerator = JacksonUtil.getSharedWriter().createGenerator(out);
       dumpGenerator.writeStartObject();
       dumpGenerator.writeFieldName("property");
       appendJSONProperty(dumpGenerator, config, propertyName,
@@ -3832,8 +3830,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   public static void dumpConfiguration(Configuration config,
       Writer out) throws IOException {
-    final JsonFactory dumpFactory = JacksonUtil.createBasicJsonFactory();
-    JsonGenerator dumpGenerator = dumpFactory.createGenerator(out);
+    JsonGenerator dumpGenerator = JacksonUtil.getSharedWriter().createGenerator(out);
     dumpGenerator.writeStartObject();
     dumpGenerator.writeFieldName("properties");
     dumpGenerator.writeStartArray();

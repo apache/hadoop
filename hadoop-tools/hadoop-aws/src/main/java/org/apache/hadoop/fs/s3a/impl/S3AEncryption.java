@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.hadoop.util.JacksonUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -91,8 +91,8 @@ public final class S3AEncryption {
       if (encryptionContextMap.isEmpty()) {
         return "";
       }
-      final String encryptionContextJson = new ObjectMapper().writeValueAsString(
-          encryptionContextMap);
+      final String encryptionContextJson = JacksonUtil.getSharedWriter()
+          .writeValueAsString(encryptionContextMap);
       return Base64.encodeBase64String(encryptionContextJson.getBytes(StandardCharsets.UTF_8));
     } catch (IOException e) {
       if (propagateExceptions) {

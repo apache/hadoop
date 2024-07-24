@@ -31,8 +31,10 @@ import com.fasterxml.jackson.databind.json.JsonMapper;
 public final class JacksonUtil {
 
   private static final ObjectMapper SHARED_BASIC_OBJECT_MAPPER = createBasicObjectMapper();
-  private static final ObjectReader SHARED_BASIC_OBJECT_READER = SHARED_BASIC_OBJECT_MAPPER.reader();
-  private static final ObjectWriter SHARED_BASIC_OBJECT_WRITER = SHARED_BASIC_OBJECT_MAPPER.writer();
+  private static final ObjectReader SHARED_BASIC_OBJECT_READER =
+      SHARED_BASIC_OBJECT_MAPPER.reader();
+  private static final ObjectWriter SHARED_BASIC_OBJECT_WRITER =
+      SHARED_BASIC_OBJECT_MAPPER.writer();
   private static final ObjectWriter SHARED_BASIC_OBJECT_WRITER_PRETTY =
       SHARED_BASIC_OBJECT_MAPPER.writerWithDefaultPrettyPrinter();
 
@@ -81,6 +83,7 @@ public final class JacksonUtil {
   /**
    * Returns an {@link ObjectReader} for the given type instance with basic configuration.
    *
+   * @param type the class that the reader has to support
    * @return an {@link ObjectReader} instance with basic configuration
    */
   public static ObjectReader createBasicReaderFor(Class<?> type) {
@@ -108,6 +111,7 @@ public final class JacksonUtil {
   /**
    * Returns an {@link ObjectWriter} for the given type instance with basic configuration.
    *
+   * @param type the class that the writer has to support
    * @return an {@link ObjectWriter} instance with basic configuration
    */
   public static ObjectWriter createBasicWriterFor(Class<?> type) {
