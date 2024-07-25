@@ -229,6 +229,7 @@
                         <exclude>jnamed*</exclude>
                         <exclude>lookup*</exclude>
                         <exclude>update*</exclude>
+                        <exclude>META-INF/versions/21/**/*</exclude>
                       </excludes>
                     </filter>
                     <filter>
@@ -243,6 +244,7 @@
                       <excludes>
                         <exclude>META-INF/versions/9/module-info.class</exclude>
                         <exclude>META-INF/versions/11/module-info.class</exclude>
+                        <exclude>META-INF/versions/21/module-info.class</exclude>
                       </excludes>
                     </filter>
 
