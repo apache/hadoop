@@ -58,6 +58,7 @@ import static org.apache.hadoop.hdfs.server.federation.router.async.Async.warpCo
 public final class AsyncUtil {
   private static final Boolean BOOLEAN_RESULT = false;
   private static final Long LONG_RESULT = -1L;
+  private static final Integer INT_RESULT = -1;
   private static final Object NULL_RESULT = null;
 
   private AsyncUtil(){}
@@ -83,6 +84,8 @@ public final class AsyncUtil {
       return (R) BOOLEAN_RESULT;
     } else if (clazz.equals(Long.class)) {
       return (R) LONG_RESULT;
+    } else if (clazz.equals(Integer.class)) {
+      return (R) INT_RESULT;
     }
     return (R) NULL_RESULT;
   }
@@ -135,6 +138,10 @@ public final class AsyncUtil {
   public static <R> void asyncComplete(R value) {
     CUR_COMPLETABLE_FUTURE.set(
         CompletableFuture.completedFuture(value));
+  }
+
+  public static <R> void asyncCompleteWith(CompletableFuture<R> completableFuture) {
+    CUR_COMPLETABLE_FUTURE.set((CompletableFuture<Object>) completableFuture);
   }
 
   /**
