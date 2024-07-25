@@ -23,10 +23,10 @@ import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -347,7 +347,8 @@ public class TestLinuxContainerExecutorWithMocks {
   
   @Test
   public void testContainerLaunchError()
-      throws IOException, ContainerExecutionException, URISyntaxException, IllegalAccessException {
+      throws IOException, ContainerExecutionException, URISyntaxException, IllegalAccessException,
+      NoSuchFieldException {
 
     final String[] expecetedMessage = {"badcommand", "Exit code: 24"};
     final String[] executor = {
@@ -393,15 +394,10 @@ public class TestLinuxContainerExecutorWithMocks {
       NodeManager nodeManager = new NodeManager();
       NodeManager.NMContext nmContext =
           nodeManager.createNMContext(null, null, null, false, conf);
-      try{
-        Field LceNmContext = LinuxContainerExecutor.class.getDeclaredField("nmContext");
-        LceNmContext.setAccessible(true);
-        LceNmContext.set(mockExec, nmContext);
-      }catch(NoSuchFieldException e){
-        fail("Could not find the 'nmContext' field in the LinuxContainerExecution class "
-            + "when attempted to set it using reflection.");
-      };
-      
+      Field lceNmContext = LinuxContainerExecutor.class.getDeclaredField("nmContext");
+      lceNmContext.setAccessible(true);
+      lceNmContext.set(mockExec, nmContext);
+
       String appSubmitter = "nobody";
       String cmd = String
           .valueOf(PrivilegedOperation.RunAsUserCommand.LAUNCH_CONTAINER.
@@ -616,8 +612,6 @@ public class TestLinuxContainerExecutorWithMocks {
     LinuxContainerRuntime runtime = new DefaultLinuxContainerRuntime(
         spyPrivilegedExecutor);
     runtime.initialize(conf, null);
-    mockExec = new LinuxContainerExecutor(runtime);
-    mockExec.setConf(conf);
     LinuxContainerExecutor lce = new LinuxContainerExecutor(runtime) {
       @Override
       protected PrivilegedOperationExecutor getPrivilegedOperationExecutor() {
@@ -625,6 +619,23 @@ public class TestLinuxContainerExecutorWithMocks {
       }
     };
     lce.setConf(conf);
+
+    //set the private nmContext field without initing the LinuxContainerExecutor
+    NodeManager nodeManager = new NodeManager();
+    NodeManager.NMContext nmContext =
+        nodeManager.createNMContext(null, null, null, false, conf);
+    NodeManager.NMContext spyNmContext = spy(nmContext);
+
+    //initialize a mock NodeStatusUpdater
+    NodeStatusUpdaterImpl nodeStatusUpdater = mock(NodeStatusUpdaterImpl.class);
+    nmContext.setNodeStatusUpdater(nodeStatusUpdater);
+    //imitate a void method call on the NodeStatusUpdater when setting NM unhealthy.
+    doNothing().when(nodeStatusUpdater).reportException(any());
+
+    Field lceNmContext = LinuxContainerExecutor.class.getDeclaredField("nmContext");
+    lceNmContext.setAccessible(true);
+    lceNmContext.set(lce, nmContext);
+
     InetSocketAddress address = InetSocketAddress.createUnresolved(
         "localhost", 8040);
     Path nmPrivateCTokensPath= new Path("file:///bin/nmPrivateCTokensPath");
@@ -687,6 +698,9 @@ public class TestLinuxContainerExecutorWithMocks {
       assertTrue("Unexpected exception " + e,
           e.getMessage().contains("exit code"));
     }
+
+    //verify that the NM was set unhealthy on PrivilegedOperationException
+    verify(nodeStatusUpdater, times(1)).reportException(any());
   }
 
   @Test
