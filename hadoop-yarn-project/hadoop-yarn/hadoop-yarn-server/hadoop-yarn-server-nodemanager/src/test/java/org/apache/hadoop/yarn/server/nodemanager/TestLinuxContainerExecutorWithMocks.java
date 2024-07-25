@@ -23,6 +23,7 @@ import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.doAnswer;
@@ -37,6 +38,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.LineNumberReader;
+import java.lang.reflect.Field;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -345,7 +347,7 @@ public class TestLinuxContainerExecutorWithMocks {
   
   @Test
   public void testContainerLaunchError()
-      throws IOException, ContainerExecutionException, URISyntaxException {
+      throws IOException, ContainerExecutionException, URISyntaxException, IllegalAccessException {
 
     final String[] expecetedMessage = {"badcommand", "Exit code: 24"};
     final String[] executor = {
@@ -387,6 +389,19 @@ public class TestLinuxContainerExecutorWithMocks {
       dirsHandler.init(conf);
       mockExec.setConf(conf);
 
+      //set the private nmContext field without initing the LinuxContainerExecutor
+      NodeManager nodeManager = new NodeManager();
+      NodeManager.NMContext nmContext =
+          nodeManager.createNMContext(null, null, null, false, conf);
+      try{
+        Field LceNmContext = LinuxContainerExecutor.class.getDeclaredField("nmContext");
+        LceNmContext.setAccessible(true);
+        LceNmContext.set(mockExec, nmContext);
+      }catch(NoSuchFieldException e){
+        fail("Could not find the 'nmContext' field in the LinuxContainerExecution class "
+            + "when attempted to set it using reflection.");
+      };
+      
       String appSubmitter = "nobody";
       String cmd = String
           .valueOf(PrivilegedOperation.RunAsUserCommand.LAUNCH_CONTAINER.
