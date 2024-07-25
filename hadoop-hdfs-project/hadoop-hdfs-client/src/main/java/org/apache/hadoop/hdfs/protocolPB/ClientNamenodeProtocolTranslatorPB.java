@@ -272,7 +272,7 @@ import static org.apache.hadoop.ipc.internal.ShadedProtobufHelper.ipc;
 @InterfaceStability.Stable
 public class ClientNamenodeProtocolTranslatorPB implements
     ProtocolMetaInterface, ClientProtocol, Closeable, ProtocolTranslator {
-  final protected ClientNamenodeProtocolPB rpcProxy;
+  final private ClientNamenodeProtocolPB rpcProxy;
 
   protected static final GetServerDefaultsRequestProto VOID_GET_SERVER_DEFAULT_REQUEST =
       GetServerDefaultsRequestProto.newBuilder().build();

@@ -200,15 +200,9 @@ import org.apache.hadoop.security.proto.SecurityProtos.CancelDelegationTokenRequ
 import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenRequestProto;
 import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenRequestProto;
 import org.apache.hadoop.security.token.Token;
-
 import org.apache.hadoop.thirdparty.protobuf.ByteString;
-
 import org.apache.hadoop.util.Lists;
 
-import static org.apache.hadoop.ha.proto.HAServiceProtocolProtos.HAServiceStateProto.ACTIVE;
-import static org.apache.hadoop.ha.proto.HAServiceProtocolProtos.HAServiceStateProto.INITIALIZING;
-import static org.apache.hadoop.ha.proto.HAServiceProtocolProtos.HAServiceStateProto.OBSERVER;
-import static org.apache.hadoop.hdfs.protocol.proto.HdfsServerProtos.NNHAStatusHeartbeatProto.State.STANDBY;
 import static org.apache.hadoop.hdfs.protocolPB.AsyncRpcProtocolPBUtil.asyncIpcClient;
 
 /**
@@ -219,9 +213,11 @@ import static org.apache.hadoop.hdfs.protocolPB.AsyncRpcProtocolPBUtil.asyncIpcC
 @InterfaceAudience.Private
 @InterfaceStability.Stable
 public class RouterClientProtocolTranslatorPB extends ClientNamenodeProtocolTranslatorPB {
+  private final ClientNamenodeProtocolPB rpcProxy;
 
   public RouterClientProtocolTranslatorPB(ClientNamenodeProtocolPB proxy) {
     super(proxy);
+    rpcProxy = proxy;
   }
 
   @Override
@@ -1827,7 +1823,7 @@ public class RouterClientProtocolTranslatorPB extends ClientNamenodeProtocolTran
   public void enableErasureCodingPolicy(String ecPolicyName)
       throws IOException {
     if (!Client.isAsynchronousMode()) {
-      super.removeErasureCodingPolicy(ecPolicyName);
+      super.enableErasureCodingPolicy(ecPolicyName);
       return;
     }
     EnableErasureCodingPolicyRequestProto.Builder builder =
@@ -1843,7 +1839,7 @@ public class RouterClientProtocolTranslatorPB extends ClientNamenodeProtocolTran
   public void disableErasureCodingPolicy(String ecPolicyName)
       throws IOException {
     if (!Client.isAsynchronousMode()) {
-      super.removeErasureCodingPolicy(ecPolicyName);
+      super.disableErasureCodingPolicy(ecPolicyName);
       return;
     }
     DisableErasureCodingPolicyRequestProto.Builder builder =
