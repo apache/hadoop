@@ -29,7 +29,8 @@ import org.junit.Test;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
-import org.apache.hadoop.http.HttpServer2;
+
+import static org.apache.hadoop.http.HttpServer2.XFrameOption.SAMEORIGIN;
 
 /**
  * A class to test the XFrame options of Router HTTP Server.
@@ -40,23 +41,25 @@ public class TestRouterHttpServerXFrame {
   public void testRouterXFrame() throws IOException {
     Configuration conf = new HdfsConfiguration();
     conf.setBoolean(DFSConfigKeys.DFS_XFRAME_OPTION_ENABLED, true);
-    conf.set(DFSConfigKeys.DFS_XFRAME_OPTION_VALUE, "SAMEORIGIN");
+    conf.set(DFSConfigKeys.DFS_XFRAME_OPTION_VALUE, SAMEORIGIN.toString());
 
     Router router = new Router();
-    router.init(conf);
-    router.start();
+    try {
+      router.init(conf);
+      router.start();
 
-    InetSocketAddress httpAddress = router.getHttpServerAddress();
-    URL url =
-        URI.create("http://" + httpAddress.getHostName() + ":" + httpAddress.getPort()).toURL();
-    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-    conn.connect();
+      InetSocketAddress httpAddress = router.getHttpServerAddress();
+      URL url =
+          URI.create("http://" + httpAddress.getHostName() + ":" + httpAddress.getPort()).toURL();
+      HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+      conn.connect();
 
-    String xfoHeader = conn.getHeaderField("X-FRAME-OPTIONS");
-    Assert.assertNotNull("X-FRAME-OPTIONS is absent in the header", xfoHeader);
-    Assert.assertTrue(xfoHeader.endsWith(HttpServer2.XFrameOption.SAMEORIGIN.toString()));
-
-    router.stop();
-    router.close();
+      String xfoHeader = conn.getHeaderField("X-FRAME-OPTIONS");
+      Assert.assertNotNull("X-FRAME-OPTIONS is absent in the header", xfoHeader);
+      Assert.assertTrue(xfoHeader.endsWith(SAMEORIGIN.toString()));
+    } finally {
+      router.stop();
+      router.close();
+    }
   }
 }
