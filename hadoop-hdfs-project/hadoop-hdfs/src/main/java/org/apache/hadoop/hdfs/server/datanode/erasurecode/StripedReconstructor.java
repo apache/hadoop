@@ -288,10 +288,6 @@ abstract class StripedReconstructor {
     return decoder;
   }
 
-  int getNumLiveBlocks(){
-    return liveBitSet.cardinality();
-  }
-
   void cleanup() {
     if (decoder != null) {
       decoder.release();
