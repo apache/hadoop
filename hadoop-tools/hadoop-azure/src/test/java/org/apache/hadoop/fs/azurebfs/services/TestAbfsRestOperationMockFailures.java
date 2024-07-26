@@ -28,6 +28,7 @@ import org.junit.Test;
 import org.mockito.Mockito;
 import org.mockito.stubbing.Stubber;
 
+import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
@@ -207,7 +208,8 @@ public class TestAbfsRestOperationMockFailures {
         abfsClient,
         "PUT",
         null,
-        new ArrayList<>()
+        new ArrayList<>(),
+        Mockito.mock(AbfsConfiguration.class)
     ));
 
     AbfsHttpOperation httpOperation = Mockito.mock(AbfsHttpOperation.class);
@@ -224,6 +226,8 @@ public class TestAbfsRestOperationMockFailures {
     Mockito.doReturn("").when(httpOperation).getStorageErrorMessage();
     Mockito.doReturn("").when(httpOperation).getStorageErrorCode();
     Mockito.doReturn("HEAD").when(httpOperation).getMethod();
+    Mockito.doReturn("").when(httpOperation).getMaskedUrl();
+    Mockito.doReturn("").when(httpOperation).getRequestId();
     Mockito.doReturn(EGRESS_OVER_ACCOUNT_LIMIT.getErrorMessage()).when(httpOperation).getStorageErrorMessage();
     Mockito.doReturn(tracingContext).when(abfsRestOperation).createNewTracingContext(any());
 
@@ -270,7 +274,8 @@ public class TestAbfsRestOperationMockFailures {
 
     // Assert that intercept.updateMetrics was called 2 times. Both the retried request fails with EGR.
     Mockito.verify(intercept, Mockito.times(2))
-        .updateMetrics(nullable(AbfsRestOperationType.class), nullable(AbfsHttpOperation.class));
+        .updateMetrics(nullable(AbfsRestOperationType.class), nullable(
+            AbfsHttpOperation.class));
   }
 
   private void testClientRequestIdForStatusRetry(int status,
@@ -292,7 +297,8 @@ public class TestAbfsRestOperationMockFailures {
         abfsClient,
         "PUT",
         null,
-        new ArrayList<>()
+        new ArrayList<>(),
+        Mockito.mock(AbfsConfiguration.class)
     ));
 
     AbfsHttpOperation httpOperation = Mockito.mock(AbfsHttpOperation.class);
@@ -357,7 +363,8 @@ public class TestAbfsRestOperationMockFailures {
         abfsClient,
         "PUT",
         null,
-        new ArrayList<>()
+        new ArrayList<>(),
+        Mockito.mock(AbfsConfiguration.class)
     ));
 
     AbfsHttpOperation httpOperation = Mockito.mock(AbfsHttpOperation.class);
