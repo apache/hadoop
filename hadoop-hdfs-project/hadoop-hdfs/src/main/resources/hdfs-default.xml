@@ -6462,6 +6462,14 @@
   </property>
 
   <property>
+    <name>dfs.datanode.fast.copy.check.target.block.access.enable</name>
+    <value>false</value>
+    <description>
+      Whether to check target block acess. If true, fastcopy will not work with different nameservices that are not federation cluster.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.permissions.allow.owner.set.quota</name>
     <value>false</value>
     <description>

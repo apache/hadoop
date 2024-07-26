@@ -3022,6 +3022,7 @@ public class DataNode extends ReconfigurableBase
      */
     private DataTransferThrottler throttler;
     private boolean copyBlockCrossNamespace;
+    private Token<BlockTokenIdentifier> targetBlockToken;
 
     /**
      * Connect to the first item in the target list.  Pass along the
@@ -3056,10 +3057,11 @@ public class DataNode extends ReconfigurableBase
 
     DataTransfer(DatanodeInfo[] targets, StorageType[] targetStorageTypes,
         String[] targetStorageIds, ExtendedBlock source, ExtendedBlock target,
-        BlockConstructionStage stage, final String clientname) {
+        BlockConstructionStage stage, final String clientname, Token<BlockTokenIdentifier> targetBlockToken) {
       this(targets, targetStorageTypes, targetStorageIds, source, stage, clientname);
       this.target = target;
       this.copyBlockCrossNamespace = true;
+      this.targetBlockToken = targetBlockToken;
     }
 
     /**
@@ -3087,7 +3089,8 @@ public class DataNode extends ReconfigurableBase
         //
         // Header info
         //
-        Token<BlockTokenIdentifier> accessToken =
+        Token<BlockTokenIdentifier> accessToken = targetBlockToken != null ?
+            targetBlockToken :
             getBlockAccessToken(target, EnumSet.of(BlockTokenIdentifier.AccessMode.WRITE),
                 targetStorageTypes, targetStorageIds);
 
@@ -4411,7 +4414,7 @@ public class DataNode extends ReconfigurableBase
   }
 
   public void copyBlockCrossNamespace(ExtendedBlock sourceBlk, ExtendedBlock targetBlk,
-      DatanodeInfo targetDn) throws IOException {
+      DatanodeInfo targetDn, Token<BlockTokenIdentifier> targetBlockToken) throws IOException {
     if (!data.isValidBlock(sourceBlk)) {
       // block does not exist or is under-construction
       String errStr =
@@ -4436,7 +4439,7 @@ public class DataNode extends ReconfigurableBase
       result = copyBlockCrossNamespaceExecutor.submit(new LocalBlockCopy(sourceBlk, targetBlk));
     } else {
       result = copyBlockCrossNamespaceExecutor.submit(
-          new DataCopy(targetDn, sourceBlk, targetBlk).getDataTransfer());
+          new DataCopy(targetDn, sourceBlk, targetBlk, targetBlockToken).getDataTransfer());
     }
     try {
       result.get(getDnConf().getCopyBlockCrossNamespaceSocketTimeout(), TimeUnit.MILLISECONDS);
@@ -4449,7 +4452,7 @@ public class DataNode extends ReconfigurableBase
   private class DataCopy {
     private final DataTransfer dataTransfer;
 
-    DataCopy(DatanodeInfo targetDn, ExtendedBlock sourceBlk, ExtendedBlock targetBlk) {
+    DataCopy(DatanodeInfo targetDn, ExtendedBlock sourceBlk, ExtendedBlock targetBlk, Token<BlockTokenIdentifier> targetBlockToken) {
       FsVolumeImpl volume = (FsVolumeImpl) data.getVolume(sourceBlk);
       StorageType storageType = volume.getStorageType();
       String storageId = volume.getStorageID();
@@ -4459,7 +4462,7 @@ public class DataNode extends ReconfigurableBase
       String[] targetStorageIds = new String[] {storageId};
       dataTransfer =
           new DataTransfer(targets, targetStorageTypes, targetStorageIds, sourceBlk, targetBlk,
-              PIPELINE_SETUP_CREATE, "");
+              PIPELINE_SETUP_CREATE, "", targetBlockToken);
     }
 
     public DataTransfer getDataTransfer() {

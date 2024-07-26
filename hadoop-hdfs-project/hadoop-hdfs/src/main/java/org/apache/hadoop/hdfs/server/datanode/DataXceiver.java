@@ -89,6 +89,8 @@ import java.nio.channels.ClosedChannelException;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_FAST_COPY_CHECK_TARGET_BLOCK_ACCESS_ENABLE;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_FAST_COPY_CHECK_TARGET_BLOCK_ACCESS_ENABLE_DEFAULT;
 import static org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ShortCircuitFdResponse.DO_NOT_USE_RECEIPT_VERIFICATION;
 import static org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ShortCircuitFdResponse.USE_RECEIPT_VERIFICATION;
 import static org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status.ERROR;
@@ -1099,11 +1101,14 @@ class DataXceiver extends Receiver implements Runnable {
     DataOutputStream reply = getBufferedOutputStream();
     checkAccess(reply, true, sourceBlk, sourceBlockToken, Op.COPY_BLOCK_CROSSNAMESPACE,
         BlockTokenIdentifier.AccessMode.READ);
-    checkAccess(reply, true, targetBlk, targetBlockToken, Op.COPY_BLOCK_CROSSNAMESPACE,
-        BlockTokenIdentifier.AccessMode.WRITE);
+    if (dnConf.getConf().getBoolean(DFS_DATANODE_FAST_COPY_CHECK_TARGET_BLOCK_ACCESS_ENABLE,
+        DFS_DATANODE_FAST_COPY_CHECK_TARGET_BLOCK_ACCESS_ENABLE_DEFAULT)) {
+      checkAccess(reply, true, targetBlk, targetBlockToken, Op.COPY_BLOCK_CROSSNAMESPACE,
+          BlockTokenIdentifier.AccessMode.WRITE);
+    }
 
     try {
-      datanode.copyBlockCrossNamespace(sourceBlk, targetBlk, targetDatanode);
+      datanode.copyBlockCrossNamespace(sourceBlk, targetBlk, targetDatanode, targetBlockToken);
       sendResponse(SUCCESS, null);
     } catch (IOException ioe) {
       LOG.warn("copyBlockCrossNamespace from {} to {} to {} received exception,", sourceBlk,
