@@ -58,7 +58,7 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.util.functional.Tuples.pair;
 
 /**
- * Test wrapped operations.
+ * Test WrappedIO operations.
  * <p>
  * This is a contract test; the base class is bonded to the local fs;
  * it is possible for other stores to implement themselves.
@@ -290,7 +290,6 @@ public class TestWrappedIO extends AbstractFSContractTestBase {
       final String status = statistics.iostatisticsSnapshot_toJsonString(iostats);
       final Serializable roundTripped = statistics.iostatisticsSnapshot_fromJsonString(
           status);
-
 
       final Path path = methodPath();
       statistics.iostatisticsSnapshot_save(roundTripped, fs, path, true);

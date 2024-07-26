@@ -67,19 +67,9 @@ public class TestWrappedStatistics extends AbstractHadoopTestBase {
   private final DynamicWrappedStatistics statistics = new DynamicWrappedStatistics();
 
   /**
-   * temp dir for saving snapshots.
-   */
-  private File tempDir;
-
-  /**
    * Local FS.
    */
   private LocalFileSystem local;
-
-  /**
-   * Temporary file.
-   */
-  private File jsonFile;
 
   /**
    * Path to temporary file.
@@ -89,9 +79,10 @@ public class TestWrappedStatistics extends AbstractHadoopTestBase {
   @Before
   public void setUp() throws Exception {
     String testDataDir = new FileSystemTestHelper().getTestRootDir();
-    tempDir = new File(testDataDir);
+    File tempDir = new File(testDataDir);
     local = FileSystem.getLocal(new Configuration());
-    jsonFile = new File(tempDir, "snapshot.json");
+    // Temporary file.
+    File jsonFile = new File(tempDir, "snapshot.json");
     jsonPath = new Path(jsonFile.toURI());
   }
 
@@ -457,8 +448,14 @@ public class TestWrappedStatistics extends AbstractHadoopTestBase {
 
   }
 
+
   /**
-   * Bind to an empty class to simulate a runtime where none of the methods were found
+   * Empty class to bind against and ensure all methods fail to bind.
+   */
+  private static final class StubClass { }
+
+  /**
+   * Bind to {@link StubClass} to simulate a runtime where none of the methods were found
    * through reflection, and verify the expected failure semantics.
    */
   @Test
@@ -482,10 +479,17 @@ public class TestWrappedStatistics extends AbstractHadoopTestBase {
         missing.iostatisticsContext_setThreadIOStatisticsContext(null));
   }
 
+
   /**
-   * Empty class to bind against and ensure all methods fail to bind.
+   * Validate class checks in {@code iostatisticsSnapshot_aggregate()}.
    */
-  private static final class StubClass { }
+  @Test
+  public void testStatisticCasting() throws Throwable {
+    Serializable iostats = statistics.iostatisticsSnapshot_create(null);
+    final String wrongType = "wrong type";
+    intercept(IllegalArgumentException.class, () ->
+        statistics.iostatisticsSnapshot_aggregate(iostats, wrongType));
+  }
 
 }
 

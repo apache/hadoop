@@ -18,12 +18,10 @@
 
 package org.apache.hadoop.io.wrappedio;
 
-import java.io.IOException;
 import java.io.Serializable;
 import java.io.UncheckedIOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Function;
 import javax.annotation.Nullable;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -120,7 +118,7 @@ public final class WrappedStatistics {
    * Create a new {@link IOStatisticsSnapshot} instance.
    * @param source optional source statistics
    * @return an IOStatisticsSnapshot.
-   * @throws ClassCastException if the {@code source}
+   * @throws ClassCastException if the {@code source} is not null and not an IOStatistics instance
    */
   public static Serializable iostatisticsSnapshot_create(@Nullable Object source) {
     return new IOStatisticsSnapshot((IOStatistics) source);
@@ -342,21 +340,18 @@ public final class WrappedStatistics {
       Serializable source,
       FunctionRaisingIOE<IOStatisticsSnapshot, T> fun) {
 
-    requireIOStatisticsSnapshot(source);
-    try {
-      return fun.apply((IOStatisticsSnapshot) source);
-    } catch (IOException e) {
-      throw new UncheckedIOException(e);
-    }
+    return fun.unchecked(requireIOStatisticsSnapshot(source));
   }
 
   /**
    * Require the parameter to be an instance of {@link IOStatisticsSnapshot}.
-   * @param snapshot class to validate
+   * @param snapshot object to validate
+   * @return cast value
    * @throws IllegalArgumentException if the supplied class is not a snapshot
    */
-  private static void requireIOStatisticsSnapshot(final Serializable snapshot) {
+  private static IOStatisticsSnapshot requireIOStatisticsSnapshot(final Serializable snapshot) {
     checkArgument(snapshot instanceof IOStatisticsSnapshot,
         "Not an IOStatisticsSnapshot %s", snapshot);
+    return (IOStatisticsSnapshot) snapshot;
   }
 }
