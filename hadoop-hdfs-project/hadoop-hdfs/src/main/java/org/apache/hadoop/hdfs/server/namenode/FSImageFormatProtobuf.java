@@ -645,7 +645,6 @@ public final class FSImageFormatProtobuf {
       return sectionOutputStream;
     }
 
-
       /**
      * Commit the length and offset of a fsimage section to the summary index,
      * including the sub section, which will be committed before the section is
