@@ -25,6 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
+import org.apache.hadoop.io.compress.GzipCodec;
 import org.apache.hadoop.test.GenericTestUtils;
 
 /**
@@ -42,12 +43,11 @@ public class TestFSImageWithSnapshotParallelAndCompress extends TestFSImageWithS
 
     // turn on both parallelization and compression
     conf.setBoolean(DFSConfigKeys.DFS_IMAGE_COMPRESS_KEY, true);
-    conf.set(DFSConfigKeys.DFS_IMAGE_COMPRESSION_CODEC_KEY,
-        "org.apache.hadoop.io.compress.GzipCodec");
-    conf.set(DFSConfigKeys.DFS_IMAGE_PARALLEL_LOAD_KEY, "true");
-    conf.set(DFSConfigKeys.DFS_IMAGE_PARALLEL_INODE_THRESHOLD_KEY, "2");
-    conf.set(DFSConfigKeys.DFS_IMAGE_PARALLEL_TARGET_SECTIONS_KEY, "2");
-    conf.set(DFSConfigKeys.DFS_IMAGE_PARALLEL_THREADS_KEY, "2");
+    conf.set(DFSConfigKeys.DFS_IMAGE_COMPRESSION_CODEC_KEY, GzipCodec.class.getCanonicalName());
+    conf.setBoolean(DFSConfigKeys.DFS_IMAGE_PARALLEL_LOAD_KEY, true);
+    conf.setInt(DFSConfigKeys.DFS_IMAGE_PARALLEL_INODE_THRESHOLD_KEY, 2);
+    conf.setInt(DFSConfigKeys.DFS_IMAGE_PARALLEL_TARGET_SECTIONS_KEY, 2);
+    conf.setInt(DFSConfigKeys.DFS_IMAGE_PARALLEL_THREADS_KEY, 2);
 
     conf = new Configuration();
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(NUM_DATANODES).build();
