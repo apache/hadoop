@@ -37,6 +37,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.azurebfs.constants.HttpOperationType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsInvalidChecksumException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsDriverException;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
@@ -122,6 +123,10 @@ public class AbfsClient implements Closeable {
 
   private boolean renameResilience;
 
+  private KeepAliveCache keepAliveCache;
+
+  private AbfsApacheHttpClient abfsApacheHttpClient;
+
   /**
    * logging the rename failure if metadata is in an incomplete state.
    */
@@ -170,6 +175,15 @@ public class AbfsClient implements Closeable {
             + "{}", e.getMessage());
       }
     }
+    if (abfsConfiguration.getPreferredHttpOperationType()
+        == HttpOperationType.APACHE_HTTP_CLIENT) {
+      keepAliveCache = new KeepAliveCache(abfsConfiguration);
+
+      abfsApacheHttpClient = new AbfsApacheHttpClient(
+          DelegatingSSLSocketFactory.getDefaultFactory(),
+          abfsConfiguration.getHttpReadTimeout(),
+          keepAliveCache);
+    }
 
     this.userAgent = initializeUserAgent(abfsConfiguration, sslProviderName);
     this.abfsPerfTracker = abfsClientContext.getAbfsPerfTracker();
@@ -205,6 +219,12 @@ public class AbfsClient implements Closeable {
 
   @Override
   public void close() throws IOException {
+    if (keepAliveCache != null) {
+      keepAliveCache.close();
+    }
+    if (abfsApacheHttpClient != null) {
+      abfsApacheHttpClient.close();
+    }
     if (tokenProvider instanceof Closeable) {
       IOUtils.cleanupWithLogger(LOG,
           (Closeable) tokenProvider);
@@ -1161,7 +1181,8 @@ public class AbfsClient implements Closeable {
             this,
             HTTP_METHOD_DELETE,
             url,
-            requestHeaders);
+            requestHeaders,
+            abfsConfiguration);
     try {
     op.execute(tracingContext);
     } catch (AzureBlobFileSystemException e) {
@@ -1539,6 +1560,9 @@ public class AbfsClient implements Closeable {
       sb.append(HUNDRED_CONTINUE);
       sb.append(SEMICOLON);
     }
+    sb.append(SINGLE_WHITE_SPACE)
+        .append(abfsConfiguration.getPreferredHttpOperationType())
+        .append(SEMICOLON);
 
     sb.append(SINGLE_WHITE_SPACE);
     sb.append(abfsConfiguration.getClusterName());
@@ -1745,7 +1769,8 @@ public class AbfsClient implements Closeable {
         buffer,
         bufferOffset,
         bufferLength,
-        sasTokenForReuse);
+        sasTokenForReuse,
+        abfsConfiguration);
   }
 
   /**
@@ -1766,7 +1791,8 @@ public class AbfsClient implements Closeable {
         this,
         httpMethod,
         url,
-        requestHeaders
+        requestHeaders,
+        abfsConfiguration
     );
   }
 
@@ -1790,6 +1816,16 @@ public class AbfsClient implements Closeable {
         this,
         httpMethod,
         url,
-        requestHeaders, sasTokenForReuse);
+        requestHeaders, sasTokenForReuse, abfsConfiguration);
+  }
+
+  @VisibleForTesting
+  AbfsApacheHttpClient getAbfsApacheHttpClient() {
+    return abfsApacheHttpClient;
+  }
+
+  @VisibleForTesting
+  KeepAliveCache getKeepAliveCache() {
+    return keepAliveCache;
   }
 }

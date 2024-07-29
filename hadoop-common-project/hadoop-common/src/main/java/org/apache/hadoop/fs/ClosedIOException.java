@@ -15,29 +15,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.hadoop.fs;
 
-package org.apache.hadoop.fs.azurebfs.services;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * Implementation of {@link AbfsThrottlingIntercept} that does not throttle
- * the ABFS process.
+ * Exception to denote if the underlying stream, cache or other closable resource
+ * is closed.
  */
-final class AbfsNoOpThrottlingIntercept implements AbfsThrottlingIntercept {
+@InterfaceAudience.Public
+@InterfaceStability.Unstable
+public class ClosedIOException extends PathIOException {
 
-  public static final AbfsNoOpThrottlingIntercept INSTANCE = new AbfsNoOpThrottlingIntercept();
-
-  private AbfsNoOpThrottlingIntercept() {
-  }
-
-  /**{@inheritDoc}*/
-  @Override
-  public void updateMetrics(final AbfsRestOperationType operationType,
-      final AbfsHttpOperation httpOperation) {
-  }
-
-  /**{@inheritDoc}*/
-  @Override
-  public void sendingRequest(final AbfsRestOperationType operationType,
-      final AbfsCounters abfsCounters) {
+  /**
+   * Appends the custom error-message to the default error message.
+   * @param path path that encountered the closed resource.
+   * @param message custom error message.
+   */
+  public ClosedIOException(String path, String message) {
+    super(path, message);
   }
 }
