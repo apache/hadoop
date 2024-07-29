@@ -1405,6 +1405,11 @@ public final class Constants {
       FS_S3A_CREATE_PERFORMANCE + ".enabled";
 
   /**
+   * Comma separated list of performance flags.
+   */
+  public static final String FS_S3A_PERFORMANCE_FLAGS =
+      "fs.s3a.performance.flags";
+  /**
    * Prefix for adding a header to the object when created.
    * The actual value must have a "." suffix and then the actual header.
    * This is *not* a configuration option; it is only for use in the
