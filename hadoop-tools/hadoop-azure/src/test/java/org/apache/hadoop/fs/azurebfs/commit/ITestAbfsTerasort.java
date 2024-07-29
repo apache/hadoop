@@ -39,6 +39,7 @@ import org.apache.hadoop.examples.terasort.TeraSort;
 import org.apache.hadoop.examples.terasort.TeraSortConfigKeys;
 import org.apache.hadoop.examples.terasort.TeraValidate;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.IOStatisticsLogging;
 import org.apache.hadoop.fs.statistics.IOStatisticsSnapshot;
 import org.apache.hadoop.mapred.JobConf;
@@ -52,6 +53,9 @@ import org.apache.hadoop.util.functional.RemoteIterators;
 import static java.util.Optional.empty;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL_INFO;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.snapshotIOStatistics;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_RENAME_FILE;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterStatisticNames.OP_SAVE_TASK_MANIFEST;
+import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterTestSupport.assertNoFailureStatistics;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterTestSupport.loadSuccessFile;
 import static org.apache.hadoop.mapreduce.lib.output.committer.manifest.ManifestCommitterTestSupport.validateSuccessFile;
 
@@ -94,6 +98,11 @@ public class ITestAbfsTerasort extends AbstractAbfsClusterITest {
    */
   protected static final IOStatisticsSnapshot JOB_IOSTATS =
       snapshotIOStatistics();
+
+  /**
+   * Map of stage -> success file.
+   */
+  private static final Map<String, ManifestSuccessData> SUCCESS_FILES = new HashMap<>();
 
   /** Base path for all the terasort input and output paths. */
   private Path terasortPath;
@@ -188,9 +197,10 @@ public class ITestAbfsTerasort extends AbstractAbfsClusterITest {
    * @param tool tool to run.
    * @param args args for the tool.
    * @param minimumFileCount minimum number of files to have been created
+   * @return the job success file.
    * @throws Exception any failure
    */
-  private void executeStage(
+  private ManifestSuccessData executeStage(
       final String stage,
       final JobConf jobConf,
       final Path dest,
@@ -213,9 +223,20 @@ public class ITestAbfsTerasort extends AbstractAbfsClusterITest {
         + " failed", 0, result);
     final ManifestSuccessData successFile = validateSuccessFile(getFileSystem(), dest,
         minimumFileCount, "");
-    JOB_IOSTATS.aggregate(successFile.getIOStatistics());
-
+    final IOStatistics iostats = successFile.getIOStatistics();
+    JOB_IOSTATS.aggregate(iostats);
+    SUCCESS_FILES.put(stage, successFile);
     completedStage(stage, d);
+
+    // now assert there were no failures recorded in the IO statistics
+    // for critical functions.
+    // these include collected statistics from manifest save
+    // operations.
+    assertNoFailureStatistics(iostats,
+        stage,
+        OP_SAVE_TASK_MANIFEST,
+        OP_RENAME_FILE);
+    return successFile;
   }
 
   /**
@@ -319,6 +340,7 @@ public class ITestAbfsTerasort extends AbstractAbfsClusterITest {
     File resultsFile = File.createTempFile("results", ".csv");
     FileUtils.write(resultsFile, text, StandardCharsets.UTF_8);
     LOG.info("Results are in {}\n{}", resultsFile, text);
+    LOG.info("Report directory {}", getReportDir());
   }
 
   /**

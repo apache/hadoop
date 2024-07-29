@@ -20,8 +20,17 @@ package org.apache.hadoop.yarn.server.nodemanager;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.attribute.PosixFilePermissions;
+import java.util.Collections;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Map;
+
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -32,16 +41,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.DirectoryCollection.DirsChangeListener;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
 
 public class TestDirectoryCollection {
 
-  private static final File testDir = new File("target",
-      TestDirectoryCollection.class.getName()).getAbsoluteFile();
-  private static final File testFile = new File(testDir, "testfile");
+  private File testDir;
+  private File testFile;
 
   private Configuration conf;
   private FileContext localFs;
@@ -50,7 +54,8 @@ public class TestDirectoryCollection {
   public void setupForTests() throws IOException {
     conf = new Configuration();
     localFs = FileContext.getLocalFSFileContext(conf);
-    testDir.mkdirs();
+    testDir = Files.createTempDirectory(TestDirectoryCollection.class.getName()).toFile();
+    testFile = new File(testDir, "testfile");
     testFile.createNewFile();
   }
 
@@ -514,6 +519,21 @@ public class TestDirectoryCollection {
     Assert.assertEquals(listener1.num, 3);
     Assert.assertEquals(listener2.num, 2);
     Assert.assertEquals(listener3.num, 1);
+  }
+
+  @Test
+  public void testNonAccessibleSub() throws IOException {
+    Files.setPosixFilePermissions(testDir.toPath(),
+        PosixFilePermissions.fromString("rwx------"));
+    Files.setPosixFilePermissions(testFile.toPath(),
+        PosixFilePermissions.fromString("-w--w--w-"));
+    DirectoryCollection dc = new DirectoryCollection(new String[]{testDir.toString()});
+    dc.setSubAccessibilityValidationEnabled(true);
+    Map<String, DirectoryCollection.DiskErrorInformation> diskErrorInformationMap =
+        dc.testDirs(Collections.singletonList(testDir.toString()), Collections.emptySet());
+    Assert.assertEquals(1, diskErrorInformationMap.size());
+    Assert.assertTrue(diskErrorInformationMap.values().iterator().next()
+        .message.contains(testFile.getName()));
   }
 
   static class DirsChangeListenerTest implements DirsChangeListener {

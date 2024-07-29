@@ -326,6 +326,15 @@ Each metrics record contains tags such as HAState and Hostname as additional inf
 | `FSN(Read/Write)LockOverallNanosAvgTime` | Average time of holding the lock by all operations in nanoseconds |
 | `PendingSPSPaths` | The number of paths to be processed by storage policy satisfier |
 
+BlockManager
+-------------
+
+The metrics present statistics from the BlockManager's perspective.
+
+| Name | Description                                                                                                                     |
+|:---- |:--------------------------------------------------------------------------------------------------------------------------------|
+| `StorageTypeStats` | key represents different StorageTypes, and value represents the detailed storage information corresponding to each StorageType. |
+
 JournalNode
 -----------
 
@@ -523,6 +532,7 @@ Each metrics record contains tags such as SessionId and Hostname as additional i
 | `NumProcessedCommands` | Num of processed commands of all BPServiceActors |
 | `ProcessedCommandsOpNumOps` | Total number of processed commands operations |
 | `ProcessedCommandsOpAvgTime` | Average time of processed commands operations in milliseconds |
+| `NullStorageBlockReports` | Number of blocks in IBRs that failed due to null storage |
 
 FsVolume
 --------

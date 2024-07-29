@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.s3a.api.RequestFactory;
 import org.apache.hadoop.fs.s3a.audit.AuditTestSupport;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.fs.s3a.commit.staging.StagingTestBase;
+import org.apache.hadoop.fs.s3a.impl.ClientManager;
 import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
 import org.apache.hadoop.fs.s3a.impl.RequestFactoryImpl;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
@@ -118,6 +119,12 @@ public class MockS3AFileSystem extends S3AFileSystem {
   }
 
   private static void prepareRequest(SdkRequest.Builder t) {}
+
+  @Override
+  protected S3AStore createS3AStore(final ClientManager clientManager,
+      final int rateLimitCapacity) {
+    return super.createS3AStore(clientManager, rateLimitCapacity);
+  }
 
   @Override
   public RequestFactory getRequestFactory() {
@@ -353,7 +360,11 @@ public class MockS3AFileSystem extends S3AFileSystem {
       String key,
       boolean isFile)
       throws SdkException, IOException {
-    deleteObject(key);
+    mock.getS3AInternals()
+            .getAmazonS3Client("test")
+            .deleteObject(getRequestFactory()
+            .newDeleteObjectRequestBuilder(key)
+            .build());
   }
 
   @Override

@@ -265,9 +265,10 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     baseZNode = conf.get(
         YarnConfiguration.FEDERATION_STATESTORE_ZK_PARENT_PATH,
         YarnConfiguration.DEFAULT_FEDERATION_STATESTORE_ZK_PARENT_PATH);
+    String zkHostPort = conf.get(YarnConfiguration.FEDERATION_STATESTORE_ZK_ADDRESS);
     try {
       this.zkManager = new ZKCuratorManager(conf);
-      this.zkManager.start();
+      this.zkManager.start(zkHostPort);
     } catch (IOException e) {
       LOG.error("Cannot initialize the ZK connection", e);
     }

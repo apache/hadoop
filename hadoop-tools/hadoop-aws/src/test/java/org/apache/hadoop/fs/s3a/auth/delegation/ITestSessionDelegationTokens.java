@@ -116,7 +116,7 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
   public void testSaveLoadTokens() throws Throwable {
     File tokenFile = File.createTempFile("token", "bin");
     EncryptionSecrets encryptionSecrets = new EncryptionSecrets(
-        S3AEncryptionMethods.SSE_KMS, KMS_KEY);
+        S3AEncryptionMethods.SSE_KMS, KMS_KEY, "");
     Token<AbstractS3ATokenIdentifier> dt
         = delegationTokens.createDelegationToken(encryptionSecrets, null);
     final SessionTokenIdentifier origIdentifier
@@ -171,7 +171,7 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
     assertNull("Current User has delegation token",
         delegationTokens.selectTokenFromFSOwner());
     EncryptionSecrets secrets = new EncryptionSecrets(
-        S3AEncryptionMethods.SSE_KMS, KMS_KEY);
+        S3AEncryptionMethods.SSE_KMS, KMS_KEY, "");
     Token<AbstractS3ATokenIdentifier> originalDT
         = delegationTokens.createDelegationToken(secrets, null);
     assertEquals("Token kind mismatch", getTokenKind(), originalDT.getKind());
@@ -229,7 +229,7 @@ public class ITestSessionDelegationTokens extends AbstractDelegationIT {
     assertNull("Current User has delegation token",
         delegationTokens.selectTokenFromFSOwner());
     EncryptionSecrets secrets = new EncryptionSecrets(
-        S3AEncryptionMethods.SSE_KMS, KMS_KEY);
+        S3AEncryptionMethods.SSE_KMS, KMS_KEY, "");
     Token<AbstractS3ATokenIdentifier> dt
         = delegationTokens.createDelegationToken(secrets, renewer);
     assertEquals("Token kind mismatch", getTokenKind(), dt.getKind());

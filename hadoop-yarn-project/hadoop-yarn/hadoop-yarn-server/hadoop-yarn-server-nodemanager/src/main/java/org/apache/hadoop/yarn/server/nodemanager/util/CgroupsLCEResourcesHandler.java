@@ -175,7 +175,7 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
           String.valueOf(limits[0]));
       updateCgroup(CONTROLLER_CPU, "", CPU_QUOTA_US,
           String.valueOf(limits[1]));
-    } else if (CGroupsCpuResourceHandlerImpl.cpuLimitsExist(
+    } else if (CGroupsCpuResourceHandlerImpl.checkCgroupV1CPULimitExists(
         pathForCgroup(CONTROLLER_CPU, ""))) {
       LOG.info("Removing CPU constraints for YARN containers.");
       updateCgroup(CONTROLLER_CPU, "", CPU_QUOTA_US, String.valueOf(-1));
@@ -400,7 +400,7 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
     Map<String, Set<String>> ret = new HashMap<String, Set<String>>();
     BufferedReader in = null;
     Set<String> validCgroups =
-        CGroupsHandler.CGroupController.getValidCGroups();
+        CGroupsHandler.CGroupController.getValidV1CGroups();
 
     try {
       FileInputStream fis = new FileInputStream(new File(getMtabFileName()));

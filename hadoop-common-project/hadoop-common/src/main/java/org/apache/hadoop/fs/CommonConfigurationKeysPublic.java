@@ -773,6 +773,9 @@ public class CommonConfigurationKeysPublic {
    */
   public static final String HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_KEY =
     "hadoop.security.crypto.jce.provider";
+  public static final String HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_AUTO_ADD_KEY =
+      "hadoop.security.crypto.jce.provider.auto-add";
+  public static final boolean HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_AUTO_ADD_DEFAULT = true;
   /**
    * @see
    * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
@@ -1019,6 +1022,7 @@ public class CommonConfigurationKeysPublic {
           "fs.s3a.*.server-side-encryption.key",
           "fs.s3a.encryption.algorithm",
           "fs.s3a.encryption.key",
+          "fs.s3a.encryption.context",
           "fs.azure\\.account.key.*",
           "credential$",
           "oauth.*secret",

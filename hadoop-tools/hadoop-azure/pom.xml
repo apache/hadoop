@@ -45,6 +45,8 @@
     <fs.azure.scale.test.timeout>7200</fs.azure.scale.test.timeout>
     <fs.azure.scale.test.list.performance.threads>10</fs.azure.scale.test.list.performance.threads>
     <fs.azure.scale.test.list.performance.files>1000</fs.azure.scale.test.list.performance.files>
+    <!-- http connection pool size; passed down as a system property -->
+    <http.maxConnections>100</http.maxConnections>
   </properties>
 
   <build>
@@ -400,7 +402,8 @@
                     <fs.azure.scale.test.timeout>${fs.azure.scale.test.timeout}</fs.azure.scale.test.timeout>
                     <fs.azure.scale.test.list.performance.threads>${fs.azure.scale.test.list.performance.threads}</fs.azure.scale.test.list.performance.threads>
                     <fs.azure.scale.test.list.performance.files>${fs.azure.scale.test.list.performance.files}</fs.azure.scale.test.list.performance.files>
-                  </systemPropertyVariables>
+                    <!-- http connection pool size -->
+                    <http.maxConnections>${http.maxConnections}</http.maxConnections>                  </systemPropertyVariables>
                   <includes>
                     <include>**/azure/Test*.java</include>
                     <include>**/azure/**/Test*.java</include>
@@ -431,6 +434,8 @@
                     <fs.azure.scale.test.timeout>${fs.azure.scale.test.timeout}</fs.azure.scale.test.timeout>
                     <fs.azure.scale.test.list.performance.threads>${fs.azure.scale.test.list.performance.threads}</fs.azure.scale.test.list.performance.threads>
                     <fs.azure.scale.test.list.performance.files>${fs.azure.scale.test.list.performance.files}</fs.azure.scale.test.list.performance.files>
+                    <!-- http connection pool size -->
+                    <http.maxConnections>${http.maxConnections}</http.maxConnections>
                   </systemPropertyVariables>
                   <includes>
                     <include>**/azure/**/TestRollingWindowAverage*.java</include>
@@ -604,6 +609,8 @@
                     <!-- Propagate scale parameters -->
                     <fs.azure.scale.test.enabled>${fs.azure.scale.test.enabled}</fs.azure.scale.test.enabled>
                     <fs.azure.scale.test.timeout>${fs.azure.scale.test.timeout}</fs.azure.scale.test.timeout>
+                    <!-- http connection pool size -->
+                    <http.maxConnections>${http.maxConnections}</http.maxConnections>
                   </systemPropertyVariables>
 
                   <includes>
@@ -792,6 +799,8 @@
                     <fs.azure.scale.test.timeout>${fs.azure.scale.test.timeout}</fs.azure.scale.test.timeout>
                     <fs.azure.scale.test.list.performance.threads>${fs.azure.scale.test.list.performance.threads}</fs.azure.scale.test.list.performance.threads>
                     <fs.azure.scale.test.list.performance.files>${fs.azure.scale.test.list.performance.files}</fs.azure.scale.test.list.performance.files>
+                    <!-- http connection pool size -->
+                    <http.maxConnections>${http.maxConnections}</http.maxConnections>
                   </systemPropertyVariables>
                   <!-- Some tests cannot run in parallel.  Tests that cover -->
                   <!-- access to the root directory must run in isolation -->
@@ -842,7 +851,8 @@
                     <fs.azure.scale.test.timeout>${fs.azure.scale.test.timeout}</fs.azure.scale.test.timeout>
                     <fs.azure.scale.test.list.performance.threads>${fs.azure.scale.test.list.performance.threads}</fs.azure.scale.test.list.performance.threads>
                     <fs.azure.scale.test.list.performance.files>${fs.azure.scale.test.list.performance.files}</fs.azure.scale.test.list.performance.files>
-                  </systemPropertyVariables>
+                    <!-- http connection pool size -->
+                    <http.maxConnections>${http.maxConnections}</http.maxConnections>                  </systemPropertyVariables>
                   <includes>
                     <include>**/ITestWasbAbfsCompatibility.java</include>
                     <include>**/ITestFileSystemOperationsExceptionHandlingMultiThreaded.java</include>
@@ -891,6 +901,8 @@
                     <fs.azure.scale.test.timeout>${fs.azure.scale.test.timeout}</fs.azure.scale.test.timeout>
                     <fs.azure.scale.test.list.performance.threads>${fs.azure.scale.test.list.performance.threads}</fs.azure.scale.test.list.performance.threads>
                     <fs.azure.scale.test.list.performance.files>${fs.azure.scale.test.list.performance.files}</fs.azure.scale.test.list.performance.files>
+                    <!-- http connection pool size -->
+                    <http.maxConnections>${http.maxConnections}</http.maxConnections>
                   </systemPropertyVariables>
                   <forkedProcessTimeoutInSeconds>${fs.azure.scale.test.timeout}</forkedProcessTimeoutInSeconds>
                   <trimStackTrace>false</trimStackTrace>

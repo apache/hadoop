@@ -24,6 +24,7 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.StorageType;
+import org.apache.hadoop.hdfs.DFSUtilClient;
 
 /**
  * Statistics per StorageType.
@@ -105,6 +106,24 @@ public class StorageTypeStats {
       return blockPoolUsed/nodesInService;
     }
     return blockPoolUsed;
+  }
+
+  public float getPercentUsed() {
+    long used = getCapacityUsed();
+    long total = getCapacityTotal();
+    return DFSUtilClient.getPercentUsed(used, total);
+  }
+
+  public float getPercentBlockPoolUsed() {
+    long poolUsed = getBlockPoolUsed();
+    long total = getCapacityTotal();
+    return DFSUtilClient.getPercentUsed(poolUsed, total);
+  }
+
+  public float getPercentRemaining() {
+    long remaining = getCapacityRemaining();
+    long total = getCapacityTotal();
+    return DFSUtilClient.getPercentUsed(remaining, total);
   }
 
   public int getNodesInService() {

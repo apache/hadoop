@@ -598,7 +598,8 @@ public class TestJobThroughManifestCommitter
   public void test_0900_cleanupJob() throws Throwable {
     describe("Cleanup job");
     CleanupJobStage.Arguments arguments = new CleanupJobStage.Arguments(
-        OP_STAGE_JOB_CLEANUP, true, true, false);
+        OP_STAGE_JOB_CLEANUP, true, true,
+        false, false, 0);
     // the first run will list the three task attempt dirs and delete each
     // one before the toplevel dir.
     CleanupJobStage.Result result = new CleanupJobStage(
@@ -615,7 +616,7 @@ public class TestJobThroughManifestCommitter
    * Needed to clean up the shared test root, as test case teardown
    * does not do it.
    */
-  //@Test
+  @Test
   public void test_9999_cleanupTestDir() throws Throwable {
     if (shouldDeleteTestRootAtEndOfTestRun()) {
       deleteSharedTestRoot();

@@ -40,7 +40,7 @@
   <dependencies>
     <dependency>
       <groupId>org.apache.hadoop.thirdparty</groupId>
-      <artifactId>hadoop-shaded-protobuf_3_23</artifactId>
+      <artifactId>hadoop-shaded-protobuf_3_25</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -1095,8 +1095,9 @@
                         <goal>exec</goal>
                     </goals>
                     <configuration>
-                        <executable>${basedir}/../../dev-support/bin/releasedocmaker</executable>
+                        <executable>${shell-executable}</executable>
                         <arguments>
+                            <argument>${basedir}/../../dev-support/bin/releasedocmaker</argument>
                             <argument>--index</argument>
                             <argument>--license</argument>
                             <argument>--outputdir</argument>

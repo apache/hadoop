@@ -72,7 +72,7 @@ public class TestRedundancyMonitor {
       NetworkTopology clusterMap = replicator.clusterMap;
       NetworkTopology spyClusterMap = spy(clusterMap);
       replicator.clusterMap = spyClusterMap;
-      doAnswer(delayer).when(spyClusterMap).getNumOfRacks();
+      doAnswer(delayer).when(spyClusterMap).getNumOfNonEmptyRacks();
 
       ExecutorService pool = Executors.newFixedThreadPool(2);
 
