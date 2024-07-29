@@ -109,8 +109,10 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSDataOutputStreamBuilder;
 import org.apache.hadoop.fs.Globber;
 import org.apache.hadoop.fs.Options;
+import org.apache.hadoop.fs.impl.FlagSet;
 import org.apache.hadoop.fs.impl.OpenFileParameters;
 import org.apache.hadoop.fs.permission.FsAction;
+import org.apache.hadoop.fs.s3a.api.PerformanceFlagEnum;
 import org.apache.hadoop.fs.s3a.audit.AuditSpanS3A;
 import org.apache.hadoop.fs.s3a.auth.SignerManager;
 import org.apache.hadoop.fs.s3a.auth.delegation.DelegationOperations;
@@ -223,6 +225,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY;
 import static org.apache.hadoop.fs.CommonPathCapabilities.DIRECTORY_LISTING_INCONSISTENT;
+import static org.apache.hadoop.fs.impl.FlagSet.buildFlagSet;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.Invoker.*;
@@ -369,8 +372,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private S3AStatisticsContext statisticsContext;
   /** Storage Statistics Bonded to the instrumentation. */
   private S3AStorageStatistics storageStatistics;
-  /** Should all create files be "performance" unless unset. */
-  private boolean performanceCreation;
+
+  /**
+   * Performance flags.
+   */
+  private FlagSet<PerformanceFlagEnum> performanceFlags;
+
   /**
    * Default input policy; may be overridden in
    * {@code openFile()}.
@@ -735,10 +742,23 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // verify there's no S3Guard in the store config.
       checkNoS3Guard(this.getUri(), getConf());
 
+      // read in performance options and parse them to a list of flags.
+      performanceFlags = buildFlagSet(
+          PerformanceFlagEnum.class,
+          conf,
+          FS_S3A_PERFORMANCE_FLAGS,
+          true);
       // performance creation flag for code which wants performance
       // at the risk of overwrites.
-      performanceCreation = conf.getBoolean(FS_S3A_CREATE_PERFORMANCE,
-          FS_S3A_CREATE_PERFORMANCE_DEFAULT);
+      // this uses the performance flags as the default and then
+      // updates the performance flags to match.
+      // a bit convoluted.
+      boolean performanceCreation = conf.getBoolean(FS_S3A_CREATE_PERFORMANCE,
+          performanceFlags.enabled(PerformanceFlagEnum.Create));
+      performanceFlags.set(PerformanceFlagEnum.Create, performanceCreation);
+      // freeze.
+      performanceFlags.makeImmutable();
+
       LOG.debug("{} = {}", FS_S3A_CREATE_PERFORMANCE, performanceCreation);
       allowAuthoritativePaths = S3Guard.getAuthoritativePaths(this);
 
@@ -1281,6 +1301,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @VisibleForTesting
   public RequestFactory getRequestFactory() {
     return requestFactory;
+  }
+
+  /**
+   * Get the performance flags.
+   * @return performance flags.
+   */
+  public FlagSet<PerformanceFlagEnum> getPerformanceFlags() {
+    return performanceFlags;
   }
 
   /**
@@ -2030,9 +2058,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
     // work out the options to pass down
     CreateFileBuilder.CreateFileOptions options;
-    if (performanceCreation) {
+    if (getPerformanceFlags().enabled(PerformanceFlagEnum.Create)) {
       options = OPTIONS_CREATE_FILE_PERFORMANCE;
-    }else {
+    } else {
       options = overwrite
           ? OPTIONS_CREATE_FILE_OVERWRITE
           : OPTIONS_CREATE_FILE_NO_OVERWRITE;
@@ -2203,7 +2231,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       builder
           .create()
           .overwrite(true)
-          .must(FS_S3A_CREATE_PERFORMANCE, performanceCreation);
+          .must(FS_S3A_CREATE_PERFORMANCE,
+              getPerformanceFlags().enabled(PerformanceFlagEnum.Create));
       return builder;
     } catch (IOException e) {
       // catch any IOEs raised in span creation and convert to
@@ -2268,7 +2297,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .withFlags(flags)
         .blockSize(blockSize)
         .bufferSize(bufferSize)
-        .must(FS_S3A_CREATE_PERFORMANCE, performanceCreation);
+        .must(FS_S3A_CREATE_PERFORMANCE,
+            getPerformanceFlags().enabled(PerformanceFlagEnum.Create));
     if (progress != null) {
       builder.progress(progress);
     }
@@ -4839,6 +4869,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     sb.append(", partSize=").append(partSize);
     sb.append(", enableMultiObjectsDelete=").append(enableMultiObjectsDelete);
     sb.append(", maxKeys=").append(maxKeys);
+    sb.append(", performanceFlags=").append(performanceFlags);
     if (cannedACL != null) {
       sb.append(", cannedACL=").append(cannedACL);
     }
@@ -5551,7 +5582,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
     // is the FS configured for create file performance
     case FS_S3A_CREATE_PERFORMANCE_ENABLED:
-      return performanceCreation;
+      return performanceFlags.enabled(PerformanceFlagEnum.Create);
 
       // is the optimized copy from local enabled.
     case OPTIMIZED_COPY_FROM_LOCAL:
@@ -5562,8 +5593,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       return fipsEnabled;
 
     default:
-      return super.hasPathCapability(p, cap);
+      // is it a performance flag?
+      if (performanceFlags.hasCapability(capability)) {
+        return true;
+      }
+      // fall through
     }
+
+    // hand off to superclass
+    return super.hasPathCapability(p, cap);
   }
 
   /**
@@ -5687,23 +5725,27 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @Override
   @InterfaceAudience.Private
   public StoreContext createStoreContext() {
-    return new StoreContextBuilder().setFsURI(getUri())
+
+    // please keep after setFsURI() in alphabetical order
+    return new StoreContextBuilder()
+        .setFsURI(getUri())
+        .setAuditor(getAuditor())
         .setBucket(getBucket())
+        .setChangeDetectionPolicy(changeDetectionPolicy)
         .setConfiguration(getConf())
-        .setUsername(getUsername())
-        .setOwner(owner)
+        .setContextAccessors(new ContextAccessorsImpl())
+        .setEnableCSE(isCSEEnabled)
         .setExecutor(boundedThreadPool)
         .setExecutorCapacity(executorCapacity)
-        .setInvoker(invoker)
-        .setInstrumentation(statisticsContext)
-        .setStorageStatistics(getStorageStatistics())
         .setInputPolicy(getInputPolicy())
-        .setChangeDetectionPolicy(changeDetectionPolicy)
+        .setInstrumentation(statisticsContext)
+        .setInvoker(invoker)
         .setMultiObjectDeleteEnabled(enableMultiObjectsDelete)
+        .setOwner(owner)
+        .setPerformanceFlags(performanceFlags)
+        .setStorageStatistics(getStorageStatistics())
         .setUseListV1(useListV1)
-        .setContextAccessors(new ContextAccessorsImpl())
-        .setAuditor(getAuditor())
-        .setEnableCSE(isCSEEnabled)
+        .setUsername(getUsername())
         .build();
   }
 

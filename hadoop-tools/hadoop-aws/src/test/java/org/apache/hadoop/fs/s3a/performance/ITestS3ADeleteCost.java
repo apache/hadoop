@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
+import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_PERFORMANCE_FLAGS;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.*;
@@ -80,7 +81,9 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
   @Override
   public Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
-    removeBaseAndBucketOverrides(conf, FS_S3A_CREATE_PERFORMANCE);
+    removeBaseAndBucketOverrides(conf,
+        FS_S3A_CREATE_PERFORMANCE,
+        FS_S3A_PERFORMANCE_FLAGS);
     conf.setBoolean(FS_S3A_CREATE_PERFORMANCE, false);
     return conf;
   }
