@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
+import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_PERFORMANCE_FLAGS;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 
 /**
@@ -71,7 +72,8 @@ public class ITestS3AContractCreate extends AbstractContractCreateTest {
   protected Configuration createConfiguration() {
     final Configuration conf = super.createConfiguration();
     removeBaseAndBucketOverrides(conf,
-        FS_S3A_CREATE_PERFORMANCE);
+        FS_S3A_CREATE_PERFORMANCE,
+        FS_S3A_PERFORMANCE_FLAGS);
     conf.setBoolean(FS_S3A_CREATE_PERFORMANCE, createPerformance);
     S3ATestUtils.disableFilesystemCaching(conf);
     return conf;

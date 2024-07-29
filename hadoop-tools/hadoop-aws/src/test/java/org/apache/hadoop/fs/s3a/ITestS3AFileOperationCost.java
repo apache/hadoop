@@ -41,6 +41,7 @@ import java.util.EnumSet;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
+import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_PERFORMANCE_FLAGS;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.*;
@@ -80,7 +81,9 @@ public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
   @Override
   public Configuration createConfiguration() {
     final Configuration conf = super.createConfiguration();
-    removeBaseAndBucketOverrides(conf, FS_S3A_CREATE_PERFORMANCE);
+    removeBaseAndBucketOverrides(conf,
+        FS_S3A_CREATE_PERFORMANCE,
+        FS_S3A_PERFORMANCE_FLAGS);
     conf.setBoolean(FS_S3A_CREATE_PERFORMANCE, isKeepingMarkers());
     return conf;
   }

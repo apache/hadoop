@@ -44,6 +44,7 @@ import static org.apache.hadoop.fs.s3a.Constants.CONNECTION_IDLE_TIME;
 import static org.apache.hadoop.fs.s3a.Constants.CONNECTION_TTL;
 import static org.apache.hadoop.fs.s3a.Constants.ESTABLISH_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
+import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_PERFORMANCE_FLAGS;
 import static org.apache.hadoop.fs.s3a.Constants.MAXIMUM_CONNECTIONS;
 import static org.apache.hadoop.fs.s3a.Constants.MAX_ERROR_RETRIES;
 import static org.apache.hadoop.fs.s3a.Constants.PREFETCH_ENABLED_KEY;
@@ -88,7 +89,8 @@ public class ITestConnectionTimeouts extends AbstractS3ATestBase {
         PREFETCH_ENABLED_KEY,
         REQUEST_TIMEOUT,
         SOCKET_TIMEOUT,
-        FS_S3A_CREATE_PERFORMANCE
+        FS_S3A_CREATE_PERFORMANCE,
+        FS_S3A_PERFORMANCE_FLAGS
     );
 
     // only one connection is allowed, and the establish timeout is low
