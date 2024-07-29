@@ -76,7 +76,8 @@ public final class FunctionalIO {
   /**
    * Convert a {@link FunctionRaisingIOE} as a {@link Supplier}.
    * @param fun function to wrap
-   * @param <T> type of result
+   * @param <T> type of input
+   * @param <R> type of return value.
    * @return a new function which invokes the inner function and wraps
    * exceptions.
    */

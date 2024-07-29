@@ -18,8 +18,10 @@
 
 package org.apache.hadoop.util.functional;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.function.Function;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
@@ -28,6 +30,7 @@ import org.apache.hadoop.test.AbstractHadoopTestBase;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.util.functional.FunctionalIO.extractIOExceptions;
+import static org.apache.hadoop.util.functional.FunctionalIO.toUncheckedFunction;
 import static org.apache.hadoop.util.functional.FunctionalIO.toUncheckedIOExceptionSupplier;
 import static org.apache.hadoop.util.functional.FunctionalIO.uncheckIOExceptions;
 
@@ -94,4 +97,11 @@ public class TestFunctionalIO extends AbstractHadoopTestBase {
         .isSameAs(raised);
   }
 
+  @Test
+  public void testUncheckedFunction() throws Throwable {
+    final Function<String, Object> fn =
+        toUncheckedFunction((String a) -> {throw new FileNotFoundException(a);});
+    intercept(UncheckedIOException.class, "404", () ->
+        fn.apply("missing"));
+  }
 }

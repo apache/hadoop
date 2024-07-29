@@ -254,7 +254,7 @@ public class TestWrappedStatistics extends AbstractHadoopTestBase {
     // create a snapshot with a counter
     final IOStatisticsSnapshot snapshot =
         (IOStatisticsSnapshot) statistics.iostatisticsSnapshot_create();
-    snapshot.setCounter( "c1", 10);
+    snapshot.setCounter("c1", 10);
 
     // aggregate twice
     statistics.iostatisticsContext_aggregate(snapshot);
