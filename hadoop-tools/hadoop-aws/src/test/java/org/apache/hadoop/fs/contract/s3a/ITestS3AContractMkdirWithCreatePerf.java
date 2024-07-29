@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
+import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_PERFORMANCE_FLAGS;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 
 /**
@@ -42,9 +43,10 @@ public class ITestS3AContractMkdirWithCreatePerf extends AbstractContractMkdirTe
     Configuration conf = super.createConfiguration();
     removeBaseAndBucketOverrides(
         conf,
-        FS_S3A_CREATE_PERFORMANCE);
-    conf.setBoolean(FS_S3A_CREATE_PERFORMANCE,
-        true);
+        FS_S3A_CREATE_PERFORMANCE,
+        FS_S3A_PERFORMANCE_FLAGS);
+    conf.setStrings(FS_S3A_PERFORMANCE_FLAGS,
+        "create,mkdir");
     return conf;
   }
 

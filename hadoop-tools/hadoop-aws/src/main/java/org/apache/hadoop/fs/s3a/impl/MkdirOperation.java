@@ -63,12 +63,24 @@ public class MkdirOperation extends ExecutingStoreOperation<Boolean> {
   private static final Logger LOG = LoggerFactory.getLogger(
       MkdirOperation.class);
 
+  /**
+   * Path of the directory to be created.
+   */
   private final Path dir;
 
+  /**
+   * Mkdir Callbacks object to be used by the Mkdir operation.
+   */
   private final MkdirCallbacks callbacks;
 
-  private final boolean performanceCreation;
+  /**
+   * Whether to skip the validation of the parent directory.
+   */
+  private final boolean performanceMkdir;
 
+  /**
+   * Whether the path is magic commit path.
+   */
   private final boolean isMagicPath;
 
   /**
@@ -78,7 +90,7 @@ public class MkdirOperation extends ExecutingStoreOperation<Boolean> {
    * @param dir Dir path of the directory.
    * @param callbacks MkdirCallbacks object used by the Mkdir operation.
    * @param isMagicPath True if the path is magic commit path.
-   * @param performanceCreation If true, skip validation of the parent directory
+   * @param performanceMkdir If true, skip validation of the parent directory
    * structure.
    */
   public MkdirOperation(
@@ -86,12 +98,12 @@ public class MkdirOperation extends ExecutingStoreOperation<Boolean> {
       final Path dir,
       final MkdirCallbacks callbacks,
       final boolean isMagicPath,
-      final boolean performanceCreation) {
+      final boolean performanceMkdir) {
     super(storeContext);
     this.dir = dir;
     this.callbacks = callbacks;
     this.isMagicPath = isMagicPath;
-    this.performanceCreation = performanceCreation;
+    this.performanceMkdir = performanceMkdir;
   }
 
   /**
@@ -140,7 +152,7 @@ public class MkdirOperation extends ExecutingStoreOperation<Boolean> {
 
     // if performance creation mode is set, no need to check
     // whether the closest ancestor is dir.
-    if (!performanceCreation) {
+    if (!performanceMkdir) {
       verifyFileStatusOfClosestAncestor();
     }
 

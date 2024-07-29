@@ -3829,7 +3829,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             path,
             createMkdirOperationCallbacks(),
             isMagicCommitPath(path),
-            performanceCreation));
+            performanceFlags.enabled(PerformanceFlagEnum.Mkdir)));
   }
 
   /**
@@ -4284,7 +4284,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
               path,
               createMkdirOperationCallbacks(),
               false,
-              performanceCreation));
+              performanceFlags.enabled(PerformanceFlagEnum.Mkdir)));
     }
   }
 

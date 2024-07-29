@@ -21,6 +21,7 @@ import org.apache.hadoop.fs.FileContextCreateMkdirBaseTest;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
+import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_PERFORMANCE_FLAGS;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
@@ -36,9 +37,10 @@ public class ITestS3AFileContextCreateMkdirCreatePerf
     Configuration conf = new Configuration();
     removeBaseAndBucketOverrides(
         conf,
-        FS_S3A_CREATE_PERFORMANCE);
-    conf.setBoolean(FS_S3A_CREATE_PERFORMANCE,
-        true);
+        FS_S3A_CREATE_PERFORMANCE,
+        FS_S3A_PERFORMANCE_FLAGS);
+    conf.setStrings(FS_S3A_PERFORMANCE_FLAGS,
+        "mkdir");
     fc = S3ATestUtils.createTestFileContext(conf);
     super.setUp();
   }
