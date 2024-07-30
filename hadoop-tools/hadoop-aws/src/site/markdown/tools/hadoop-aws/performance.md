@@ -299,8 +299,11 @@ understands the risks.
 | *Option* | *Meaning*          | Since |
 |----------|--------------------|:------|
 | `create` | Create Performance | 3.4.1 |
+| `mkdir`  | Mkdir Performance  | 3.4.1 |
 
-The `create` flag has the same semantics as [`fs.s3a.create.performance`](#create-performance)
+
+* The `create` flag has the same semantics as [`fs.s3a.create.performance`](#create-performance)
+* The `mkdir` flag semantics are explained in [Mkdir Performance](#mkdir-performance)
 
 
 ### <a name="create-performance"></a> Create Performance `fs.s3a.create.performance`
@@ -320,6 +323,22 @@ It may however result in
 * Creation of directory structures which can no longer be navigated through filesystem APIs.
 
 Use with care, and, ideally, enable versioning on the S3 store.
+
+
+### <a name="mkdir-performance"></a> Mkdir Performance
+
+`fs.s3a.performance.flag` flag option `mkdir`:
+
+* Mkdir does not check whether the parent is directory or file.
+
+This avoids the verification of the file status of the parent file
+or the closest ancestor. Unlike the default mkdir operation, if the
+parent is not a directory, the mkdir operation does not throw any
+error.
+
+This option can help with mkdir performance improvement but must be used
+only if the person setting them understands the above-mentioned risk.
+
 
 ### <a name="threads"></a> Thread and connection pool settings.
 
