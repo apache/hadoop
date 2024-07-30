@@ -59,9 +59,19 @@ In both the cases the URL used must be the blob endpoint url of the account.
     </property>
     ```
 3. Service Type for FNS Accounts: This will allow an override to choose service
-type in cases where any local DNS resolution is set for the account and driver is
+type specially in cases where any local DNS resolution is set for the account and driver is
 unable to detect the intended endpoint from above configured URL. If this is set
 to blob for HNS Enabled Accounts, FS init will fail with InvalidConfiguration error.
+    ```xml
+   <property>
+        <name>fs.azure.fns.account.service.type</name>
+        <value>BLOB</value>
+    </property>
+    ```
+
+4. Service Type for Ingress Operations: This will allow an override to choose service
+type only for Ingress Related Operations. All other operations will still use the 
+configured service type.
     ```xml
    <property>
         <name>fs.azure.fns.account.service.type</name>
