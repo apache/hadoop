@@ -229,7 +229,7 @@ public class AzureBlobFileSystem extends FileSystem
       LOG.debug("File system configured with Invalid Service Type", ex);
       throw ex;
     } catch (AzureBlobFileSystemException ex) {
-      LOG.debug("Enable to determine account type for service type validation", ex);
+      LOG.debug("Failed to determine account type for service type validation", ex);
       throw new InvalidConfigurationValueException(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, ex);
     }
 
@@ -1435,8 +1435,6 @@ public class AzureBlobFileSystem extends FileSystem
         statIncrement(ERROR_IGNORED);
         return true;
       }
-      throw ex;
-    } catch (AzureBlobFileSystemException ex) {
       throw ex;
     }
   }

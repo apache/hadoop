@@ -224,7 +224,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
     try {
       this.abfsConfiguration = new AbfsConfiguration(abfsStoreBuilder.configuration,
-          accountName, identifyAbfsServiceTypeFromUrl());
+          accountName, getAbfsServiceTypeFromUrl());
     } catch (IllegalAccessException exception) {
       throw new FileSystemOperationUnhandledException(exception);
     }
@@ -1817,12 +1817,13 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     LOG.trace("AbfsClient init complete");
   }
 
-  private AbfsServiceType identifyAbfsServiceTypeFromUrl() {
+  private AbfsServiceType getAbfsServiceTypeFromUrl() {
     if (uri.toString().contains(ABFS_BLOB_DOMAIN_NAME)) {
       return AbfsServiceType.BLOB;
     }
     // In case of DFS Domain name or any other custom endpoint, the service
     // type is to be identified as default DFS.
+    LOG.debug("Falling back to default service type DFS");
     return AbfsServiceType.DFS;
   }
 

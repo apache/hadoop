@@ -483,6 +483,11 @@ public class AbfsConfiguration{
     return getEnum(FS_AZURE_INGRESS_SERVICE_TYPE, getFsConfiguredServiceType());
   }
 
+  /**
+   * Returns whether there is a need to move traffic from DFS to Blob.
+   * Needed when the service type is DFS and operations are experiencing compatibility issues.
+   * @return true if fallback enabled.
+   */
   public boolean isDfsToBlobFallbackEnabled() {
     return isDfsToBlobFallbackEnabled;
   }

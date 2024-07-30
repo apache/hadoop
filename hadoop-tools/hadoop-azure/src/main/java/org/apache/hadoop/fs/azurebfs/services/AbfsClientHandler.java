@@ -73,16 +73,8 @@ public class AbfsClientHandler {
     return getClient(defaultServiceType);
   }
 
-  public AbfsClient getIngressClient() {
-    return getClient(ingressServiceType);
-  }
-
   public AbfsClient getClient(AbfsServiceType serviceType) {
     return serviceType == AbfsServiceType.DFS ? dfsAbfsClient : null;
-  }
-
-  public AbfsDfsClient getDfsClient() {
-    return dfsAbfsClient;
   }
 
   private AbfsDfsClient createDfsClient(final URL baseUrl,

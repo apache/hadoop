@@ -173,6 +173,13 @@ public final class UriUtils {
     return url.toString().replace(queryString, maskedQueryString);
   }
 
+  /**
+   * Changes Blob Endpoint URL to DFS Endpoint URL.
+   * If original url is not Blob Endpoint URL, it will return the original URL.
+   * @param url to be converted.
+   * @return updated URL
+   * @throws InvalidUriException in case of MalformedURLException.
+   */
   public static URL changeUrlFromBlobToDfs(URL url) throws InvalidUriException {
     try {
       url = new URL(url.toString().replace(ABFS_BLOB_DOMAIN_NAME, ABFS_DFS_DOMAIN_NAME));
@@ -182,6 +189,13 @@ public final class UriUtils {
     return url;
   }
 
+  /**
+   * Changes DFS Endpoint URL to Blob Endpoint URL.
+   * If original url is not DFS Endpoint URL, it will return the original URL.
+   * @param url to be converted.
+   * @return updated URL
+   * @throws InvalidUriException in case of MalformedURLException.
+   */
   public static URL changeUrlFromDfsToBlob(URL url) throws InvalidUriException {
     try {
       url = new URL(url.toString().replace(ABFS_DFS_DOMAIN_NAME, ABFS_BLOB_DOMAIN_NAME));

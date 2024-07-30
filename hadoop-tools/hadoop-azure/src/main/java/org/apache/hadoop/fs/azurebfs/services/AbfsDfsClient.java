@@ -48,6 +48,7 @@ import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.utils.Base64;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
+import org.apache.hadoop.util.StringUtils;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.hadoop.fs.azurebfs.AzureBlobFileSystemStore.extractEtagHeader;
@@ -196,7 +197,7 @@ public class AbfsDfsClient extends AbfsClient implements Closeable {
    * Get Rest Operation for API
    * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/filesystem/set-properties">
    *   Filesystem - Set Properties</a>.
-   * @param properties comma separated list of metadata key-value pairs.
+   * @param properties list of metadata key-value pairs.
    * @param tracingContext for tracing the server calls.
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation fails.
@@ -853,7 +854,7 @@ public class AbfsDfsClient extends AbfsClient implements Closeable {
    *   Path - Update</a>.
    * Set the properties of a file or directory.
    * @param path on which properties have to be set.
-   * @param properties comma separated list of metadata key-value pairs.
+   * @param properties list of metadata key-value pairs.
    * @param tracingContext for tracing the server calls.
    * @param contextEncryptionAdapter to provide encryption context.
    * @return executed rest operation containing response from server.
@@ -1193,7 +1194,7 @@ public class AbfsDfsClient extends AbfsClient implements Closeable {
    * Get Rest Operation for API
    * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/path/get-properties">
    *   Path - Get Properties</a>.
-   * Retrieves the properties of blob at specified path.
+   * Retrieves the ACL properties of blob at specified path.
    * @param path of which properties have to be fetched.
    * @param useUPN whether to use UPN with rest operation.
    * @param tracingContext for tracing the server calls.
@@ -1261,8 +1262,7 @@ public class AbfsDfsClient extends AbfsClient implements Closeable {
   public boolean checkIsDir(AbfsHttpOperation result) {
     String resourceType = result.getResponseHeader(
         HttpHeaderConfigurations.X_MS_RESOURCE_TYPE);
-    return resourceType != null
-        && resourceType.equalsIgnoreCase(DIRECTORY);
+    return StringUtils.equalsIgnoreCase(resourceType, DIRECTORY);
   }
 
   /**

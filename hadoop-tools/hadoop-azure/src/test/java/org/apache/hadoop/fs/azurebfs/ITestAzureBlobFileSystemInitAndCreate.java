@@ -26,10 +26,13 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
 import org.assertj.core.api.Assertions;
+import org.junit.Assume;
 import org.junit.Test;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsInvalidChecksumException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.TrileanConversionException;
@@ -39,9 +42,11 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_IS_HNS_ENABLED;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_BLOB_DOMAIN_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_DFS_DOMAIN_NAME;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.mockito.ArgumentMatchers.any;
 
 /**
  * Test filesystem initialization and creation.
@@ -83,11 +88,11 @@ public class ITestAzureBlobFileSystemInitAndCreate extends
     TracingContext tracingContext = getSampleTracingContext(fs, true);
     Mockito.doReturn(Mockito.mock(AbfsRestOperation.class))
         .when(client)
-        .getAclStatus(Mockito.anyString(), Mockito.any(TracingContext.class));
+        .getAclStatus(Mockito.anyString(), any(TracingContext.class));
     store.getIsNamespaceEnabled(tracingContext);
 
     Mockito.verify(client, Mockito.times(1))
-        .getAclStatus(Mockito.anyString(), Mockito.any(TracingContext.class));
+        .getAclStatus(Mockito.anyString(), any(TracingContext.class));
   }
 
   @Test
@@ -106,7 +111,7 @@ public class ITestAzureBlobFileSystemInitAndCreate extends
     store.getIsNamespaceEnabled(tracingContext);
 
     Mockito.verify(client, Mockito.times(0))
-        .getAclStatus(Mockito.anyString(), Mockito.any(TracingContext.class));
+        .getAclStatus(Mockito.anyString(), any(TracingContext.class));
   }
 
   // Todo: [FnsOverBlob] Remove this test case once Blob Endpoint Support is ready and enabled.
@@ -120,5 +125,18 @@ public class ITestAzureBlobFileSystemInitAndCreate extends
             FileSystem.newInstance(new Path(blobUri).toUri(), configuration));
     Assertions.assertThat(ex).isInstanceOf(InvalidConfigurationValueException.class);
     Assertions.assertThat(ex.getMessage()).contains("Blob Endpoint Support not yet available");
+  }
+
+  @Test
+  public void testFileSystemInitFailsIfNotAbleToDetermineAccountType() throws Exception {
+    AzureBlobFileSystem fs = ((AzureBlobFileSystem) FileSystem.newInstance(
+        getRawConfiguration()));
+    AzureBlobFileSystem mockedFs = Mockito.spy(fs);
+    Mockito.doThrow(new AbfsRestOperationException(503, "Throttled", "Throttled", null)).when(mockedFs).getIsNamespaceEnabled(any());
+    AzureBlobFileSystemException ex =
+        intercept(AzureBlobFileSystemException.class, () ->
+            mockedFs.initialize(fs.getUri(), getRawConfiguration()));
+    Assertions.assertThat(ex).isInstanceOf(InvalidConfigurationValueException.class);
+    Assertions.assertThat(ex.getMessage()).contains(FS_AZURE_ACCOUNT_IS_HNS_ENABLED);
   }
 }

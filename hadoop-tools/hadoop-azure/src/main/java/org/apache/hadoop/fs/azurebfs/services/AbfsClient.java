@@ -448,19 +448,54 @@ public abstract class AbfsClient implements Closeable {
     return abfsUriQueryBuilder;
   }
 
+  /**
+   * Create a new filesystem using Azure REST API Service.
+   * @param tracingContext for tracing the server calls.
+   * @return executed rest operation containing response from server.
+   * @throws AzureBlobFileSystemException if rest operation fails.
+   */
   public abstract AbfsRestOperation createFilesystem(TracingContext tracingContext)
       throws AzureBlobFileSystemException;
 
+  /**
+   * Sets user-defined metadata on filesystem.
+   * @param properties list of metadata key-value pairs.
+   * @param tracingContext for tracing the server calls.
+   * @return executed rest operation containing response from server.
+   * @throws AzureBlobFileSystemException if rest operation fails.
+   */
   public abstract AbfsRestOperation setFilesystemProperties(Hashtable<String, String> properties,
       TracingContext tracingContext) throws AzureBlobFileSystemException;
 
+  /**
+   * List paths and their properties in the current filesystem.
+   * @param relativePath to return only blobs within this directory.
+   * @param recursive to return all blobs in the path, including those in subdirectories.
+   * @param listMaxResults maximum number of blobs to return.
+   * @param continuation marker to specify the continuation token.
+   * @param tracingContext for tracing the server calls.
+   * @return executed rest operation containing response from server.
+   * @throws AzureBlobFileSystemException if rest operation or response parsing fails.
+   */
   public abstract AbfsRestOperation listPath(String relativePath, boolean recursive,
       int listMaxResults, String continuation, TracingContext tracingContext)
       throws IOException;
 
+  /**
+   * Retrieves user-defined metadata on filesystem.
+   * @param tracingContext for tracing the server calls.
+   * @return executed rest operation containing response from server.
+   * @throws AzureBlobFileSystemException if rest operation fails.
+   * */
   public abstract AbfsRestOperation getFilesystemProperties(TracingContext tracingContext)
       throws AzureBlobFileSystemException;
 
+  /**
+   * Deletes the filesystem using Azure REST API Service.
+   * @param tracingContext for tracing the server calls.
+   * @return executed rest operation containing response from server.
+   * @throws AzureBlobFileSystemException if rest operation fails.
+   */
   public abstract AbfsRestOperation deleteFilesystem(TracingContext tracingContext)
       throws AzureBlobFileSystemException;
 
@@ -500,15 +535,46 @@ public abstract class AbfsClient implements Closeable {
       ContextEncryptionAdapter contextEncryptionAdapter,
       TracingContext tracingContext) throws AzureBlobFileSystemException;
 
+  /**
+   * Acquire lease on specified path.
+   * @param path on which lease has to be acquired.
+   * @param duration for which lease has to be acquired.
+   * @param tracingContext for tracing the server calls.
+   * @return executed rest operation containing response from server.
+   * @throws AzureBlobFileSystemException if rest operation fails.
+   */
   public abstract AbfsRestOperation acquireLease(String path, int duration,
       TracingContext tracingContext) throws AzureBlobFileSystemException;
 
+  /**
+   * Renew lease on specified path.
+   * @param path on which lease has to be renewed.
+   * @param leaseId of the lease to be renewed.
+   * @param tracingContext for tracing the server calls.
+   * @return executed rest operation containing response from server.
+   * @throws AzureBlobFileSystemException if rest operation fails.
+   */
   public abstract AbfsRestOperation renewLease(String path, String leaseId,
       TracingContext tracingContext) throws AzureBlobFileSystemException;
 
+  /**
+   * Release lease on specified path.
+   * @param path on which lease has to be released.
+   * @param leaseId of the lease to be released.
+   * @param tracingContext for tracing the server calls.
+   * @return executed rest operation containing response from server.
+   * @throws AzureBlobFileSystemException if rest operation fails.
+   */
   public abstract AbfsRestOperation releaseLease(String path, String leaseId,
       TracingContext tracingContext) throws AzureBlobFileSystemException;
 
+  /**
+   * Break lease on specified path.
+   * @param path on which lease has to be broke.
+   * @param tracingContext for tracing the server calls.
+   * @return executed rest operation containing response from server.
+   * @throws AzureBlobFileSystemException if rest operation fails.
+   */
   public abstract AbfsRestOperation breakLease(String path,
       TracingContext tracingContext) throws AzureBlobFileSystemException;
 
@@ -544,6 +610,11 @@ public abstract class AbfsClient implements Closeable {
       boolean isNamespaceEnabled)
       throws IOException;
 
+  /**
+   * Checks if the rest operation results indicate if the path is a directory.
+   * @param result executed rest operation containing response from server.
+   * @return True if the path is a directory, False otherwise.
+   */
   protected abstract boolean checkIsDir(AbfsHttpOperation result);
 
   @VisibleForTesting
@@ -621,6 +692,17 @@ public abstract class AbfsClient implements Closeable {
       return false;
   }
 
+  /**
+   * Uploads data to be appended to a file.
+   * @param path to which data has to be appended.
+   * @param buffer containing data to be appended.
+   * @param reqParams containing parameters for append operation like offset, length etc.
+   * @param cachedSasToken to be used for the authenticating operation.
+   * @param contextEncryptionAdapter to provide encryption context.
+   * @param tracingContext for tracing the server calls.
+   * @return executed rest operation containing response from server.
+   * @throws AzureBlobFileSystemException if rest operation fails.
+   */
   public abstract AbfsRestOperation append(String path, byte[] buffer,
       AppendRequestParameters reqParams, String cachedSasToken,
       ContextEncryptionAdapter contextEncryptionAdapter, TracingContext tracingContext)
@@ -666,12 +748,36 @@ public abstract class AbfsClient implements Closeable {
     return false;
   }
 
+  /**
+   * Flush previously uploaded data to a file.
+   * @param path on which data has to be flushed.
+   * @param position to which data has to be flushed.
+   * @param retainUncommittedData whether to retain uncommitted data after flush.
+   * @param isClose specify if this is the last flush to the file.
+   * @param cachedSasToken to be used for the authenticating operation.
+   * @param leaseId if there is an active lease on the path.
+   * @param contextEncryptionAdapter to provide encryption context.
+   * @param tracingContext for tracing the server calls.
+   * @return executed rest operation containing response from server.
+   * @throws AzureBlobFileSystemException if rest operation fails.
+   */
   public abstract AbfsRestOperation flush(String path, long position,
       boolean retainUncommittedData, boolean isClose,
       String cachedSasToken, String leaseId,
       ContextEncryptionAdapter contextEncryptionAdapter, TracingContext tracingContext)
       throws AzureBlobFileSystemException;
 
+  /**
+   * Flush previously uploaded data to a file.
+   * @param buffer containing blockIds to be flushed.
+   * @param path on which data has to be flushed.
+   * @param isClose specify if this is the last flush to the file.
+   * @param cachedSasToken to be used for the authenticating operation.
+   * @param leaseId if there is an active lease on the path.
+   * @param tracingContext for tracing the server calls.
+   * @return executed rest operation containing response from server.
+   * @throws AzureBlobFileSystemException if rest operation fails.
+   */
   public abstract AbfsRestOperation flush(byte[] buffer,
       String path,
       boolean isClose,
@@ -680,15 +786,47 @@ public abstract class AbfsClient implements Closeable {
       String eTag,
       TracingContext tracingContext) throws AzureBlobFileSystemException;
 
+  /**
+   * Set the properties of a file or directory.
+   * @param path on which properties have to be set.
+   * @param properties list of metadata key-value pairs.
+   * @param tracingContext for tracing the server calls.
+   * @param contextEncryptionAdapter to provide encryption context.
+   * @return executed rest operation containing response from server.
+   * @throws AzureBlobFileSystemException if rest operation fails.
+   */
   public abstract AbfsRestOperation setPathProperties(String path, Hashtable<String, String> properties,
       TracingContext tracingContext, ContextEncryptionAdapter contextEncryptionAdapter)
       throws AzureBlobFileSystemException;
 
+  /**
+   * Get the properties of a file or directory.
+   * @param path of which properties have to be fetched.
+   * @param includeProperties to include user defined properties.
+   * @param tracingContext for tracing the server calls.
+   * @param contextEncryptionAdapter to provide encryption context.
+   * @return executed rest operation containing response from server.
+   * @throws AzureBlobFileSystemException if rest operation fails.
+   */
   public abstract AbfsRestOperation getPathStatus(String path,
       boolean includeProperties, TracingContext tracingContext,
       ContextEncryptionAdapter contextEncryptionAdapter)
       throws AzureBlobFileSystemException;
 
+  /**
+   * Read the contents of the file at specified path
+   * @param path of the file to be read.
+   * @param position in the file from where data has to be read.
+   * @param buffer to store the data read.
+   * @param bufferOffset offset in the buffer to start storing the data.
+   * @param bufferLength length of data to be read.
+   * @param eTag to specify conditional headers.
+   * @param cachedSasToken to be used for the authenticating operation.
+   * @param contextEncryptionAdapter to provide encryption context.
+   * @param tracingContext for tracing the server calls.
+   * @return executed rest operation containing response from server.
+   * @throws AzureBlobFileSystemException if rest operation fails.
+   */
   public abstract AbfsRestOperation read(String path,
       long position,
       byte[] buffer,
@@ -699,6 +837,16 @@ public abstract class AbfsClient implements Closeable {
       ContextEncryptionAdapter contextEncryptionAdapter,
       TracingContext tracingContext) throws AzureBlobFileSystemException;
 
+  /**
+   * Delete the file or directory at specified path.
+   * @param path to be deleted.
+   * @param recursive if the path is a directory, delete recursively.
+   * @param continuation to specify continuation token.
+   * @param tracingContext for tracing the server calls.
+   * @param isNamespaceEnabled specify if the namespace is enabled.
+   * @return executed rest operation containing response from server.
+   * @throws AzureBlobFileSystemException if rest operation fails.
+   */
   public abstract AbfsRestOperation deletePath(String path, boolean recursive,
       String continuation,
       TracingContext tracingContext,
@@ -740,28 +888,77 @@ public abstract class AbfsClient implements Closeable {
     return op;
   }
 
+  /**
+   * Sets the owner on tha path.
+   * @param path on which owner has to be set.
+   * @param owner to be set.
+   * @param group to be set.
+   * @param tracingContext for tracing the server calls.
+   * @return executed rest operation containing response from server.
+   * @throws AzureBlobFileSystemException if rest operation fails.
+   */
   public abstract AbfsRestOperation setOwner(String path, String owner, String group,
       TracingContext tracingContext)
       throws AzureBlobFileSystemException;
 
+  /**
+   * Sets the permission on the path.
+   * @param path on which permission has to be set.
+   * @param permission to be set.
+   * @param tracingContext for tracing the server calls.
+   * @return executed rest operation containing response from server.
+   * @throws AzureBlobFileSystemException if rest operation fails.
+   */
   public abstract AbfsRestOperation setPermission(String path, String permission,
       TracingContext tracingContext)
       throws AzureBlobFileSystemException;
 
+  /**
+   * Sets the ACL
+   * @param path on which ACL has to be set.
+   * @param aclSpecString to be set.
+   * @param tracingContext for tracing the server calls.
+   * @return executed rest operation containing response from server.
+   * @throws AzureBlobFileSystemException if rest operation fails.
+   */
   public AbfsRestOperation setAcl(final String path, final String aclSpecString,
       TracingContext tracingContext) throws AzureBlobFileSystemException {
     return setAcl(path, aclSpecString, EMPTY_STRING, tracingContext);
   }
 
+  /**
+   * Sets the ACL on the path that matches ETag.
+   * @param path on which ACL has to be set.
+   * @param aclSpecString to be set.
+   * @param eTag to specify conditional headers. Set only if etag matches.
+   * @param tracingContext for tracing the server calls.
+   * @return executed rest operation containing response from server.
+   * @throws AzureBlobFileSystemException if rest operation fails.
+   */
   public abstract AbfsRestOperation setAcl(String path, String aclSpecString, String eTag,
       TracingContext tracingContext)
       throws AzureBlobFileSystemException;
 
+  /**
+   * Retrieves the ACL properties of blob at specified path.
+   * @param path of which properties have to be fetched.
+   * @param tracingContext for tracing the server calls.
+   * @return executed rest operation containing response from server.
+   * @throws AzureBlobFileSystemException if rest operation fails.
+   */
   public AbfsRestOperation getAclStatus(final String path, TracingContext tracingContext)
           throws AzureBlobFileSystemException {
     return getAclStatus(path, abfsConfiguration.isUpnUsed(), tracingContext);
   }
 
+  /**
+   * Retrieves the ACL properties of blob at specified path.
+   * @param path of which properties have to be fetched.
+   * @param useUPN whether to use UPN with rest operation.
+   * @param tracingContext for tracing the server calls.
+   * @return executed rest operation containing response from server.
+   * @throws AzureBlobFileSystemException if rest operation fails.
+   */
   public abstract AbfsRestOperation getAclStatus(String path, boolean useUPN,
       TracingContext tracingContext) throws AzureBlobFileSystemException;
 
