@@ -75,7 +75,7 @@ public class TestRestCsrfPreventionFilter {
 
     verify(mockRes, atLeastOnce()).sendError(
         HttpServletResponse.SC_BAD_REQUEST, EXPECTED_MESSAGE);
-    Mockito.verifyZeroInteractions(mockChain);
+    Mockito.verifyNoInteractions(mockChain);
   }
 
   @Test
@@ -110,7 +110,7 @@ public class TestRestCsrfPreventionFilter {
 
     verify(mockRes, atLeastOnce()).sendError(
         HttpServletResponse.SC_BAD_REQUEST, EXPECTED_MESSAGE);
-    Mockito.verifyZeroInteractions(mockChain);
+    Mockito.verifyNoInteractions(mockChain);
   }
 
   @Test
@@ -228,7 +228,7 @@ public class TestRestCsrfPreventionFilter {
     filter.init(filterConfig);
     filter.doFilter(mockReq, mockRes, mockChain);
 
-    Mockito.verifyZeroInteractions(mockChain);
+    Mockito.verifyNoInteractions(mockChain);
   }
 
   @Test
@@ -260,7 +260,7 @@ public class TestRestCsrfPreventionFilter {
     filter.init(filterConfig);
     filter.doFilter(mockReq, mockRes, mockChain);
 
-    Mockito.verifyZeroInteractions(mockChain);
+    Mockito.verifyNoInteractions(mockChain);
   }
 
   @Test
@@ -356,6 +356,6 @@ public class TestRestCsrfPreventionFilter {
     filter.init(filterConfig);
     filter.doFilter(mockReq, mockRes, mockChain);
 
-    Mockito.verifyZeroInteractions(mockChain);
+    Mockito.verifyNoInteractions(mockChain);
   }
 }
