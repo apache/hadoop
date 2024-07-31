@@ -1324,7 +1324,7 @@
       <dependency>
         <groupId>org.mockito</groupId>
         <artifactId>mockito-core</artifactId>
-        <version>2.28.2</version>
+        <version>4.11.0</version>
         <exclusions>
           <exclusion>
             <groupId>log4j</groupId>
