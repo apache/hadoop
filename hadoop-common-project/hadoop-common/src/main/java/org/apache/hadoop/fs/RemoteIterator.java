@@ -24,9 +24,9 @@ import java.util.NoSuchElementException;
  */
 public interface RemoteIterator<E> {
   /**
-   * Returns <tt>true</tt> if the iteration has more elements.
+   * Returns <code>true</code> if the iteration has more elements.
    *
-   * @return <tt>true</tt> if the iterator has more elements.
+   * @return <code>true</code> if the iterator has more elements.
    * @throws IOException if any IO error occurs
    */
   boolean hasNext() throws IOException;
