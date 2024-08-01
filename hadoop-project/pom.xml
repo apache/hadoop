@@ -2313,7 +2313,7 @@
           <executions>
             <execution>
               <id>replace-generated-sources</id>
-              <phase>process-sources</phase>
+              <phase>generate-sources</phase>
               <goals>
                 <goal>replace</goal>
               </goals>
@@ -2333,7 +2333,7 @@
             </execution>
             <execution>
               <id>replace-generated-test-sources</id>
-              <phase>process-test-resources</phase>
+              <phase>generate-test-resources</phase>
               <goals>
                 <goal>replace</goal>
               </goals>
@@ -2353,7 +2353,7 @@
             </execution>
             <execution>
               <id>replace-sources</id>
-              <phase>process-sources</phase>
+              <phase>generate-sources</phase>
               <goals>
                 <goal>replace</goal>
               </goals>
@@ -2373,7 +2373,7 @@
             </execution>
             <execution>
               <id>replace-test-sources</id>
-              <phase>process-test-sources</phase>
+              <phase>generate-test-sources</phase>
               <goals>
                 <goal>replace</goal>
               </goals>
