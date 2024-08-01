@@ -26,7 +26,7 @@ import org.apache.hadoop.typedbytes.TypedBytesWritable;
 /**
  * This class is used to resolve a string identifier into the required IO
  * classes. By extending this class and pointing the property
- * <tt>stream.io.identifier.resolver.class</tt> to this extension, additional
+ * <code>stream.io.identifier.resolver.class</code> to this extension, additional
  * IO classes can be added by external code.
  */
 public class IdentifierResolver {

@@ -275,7 +275,7 @@ public class Parser {
 
     /**
      * Let the first actual define the InputFormat and the second define
-     * the <tt>mapred.input.dir</tt> property.
+     * the <code>mapred.input.dir</code> property.
      */
     public void parse(List<Token> ll, JobConf job) throws IOException {
       StringBuilder sb = new StringBuilder();
