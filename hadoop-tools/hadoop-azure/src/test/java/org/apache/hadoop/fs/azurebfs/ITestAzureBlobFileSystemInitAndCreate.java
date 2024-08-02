@@ -26,12 +26,10 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Assume;
 import org.junit.Test;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsInvalidChecksumException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
@@ -41,6 +39,7 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
+import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_IS_HNS_ENABLED;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_BLOB_DOMAIN_NAME;
@@ -132,7 +131,8 @@ public class ITestAzureBlobFileSystemInitAndCreate extends
     AzureBlobFileSystem fs = ((AzureBlobFileSystem) FileSystem.newInstance(
         getRawConfiguration()));
     AzureBlobFileSystem mockedFs = Mockito.spy(fs);
-    Mockito.doThrow(new AbfsRestOperationException(503, "Throttled", "Throttled", null)).when(mockedFs).getIsNamespaceEnabled(any());
+    Mockito.doThrow(new AbfsRestOperationException(HTTP_UNAVAILABLE, "Throttled",
+        "Throttled", null)).when(mockedFs).getIsNamespaceEnabled(any());
     AzureBlobFileSystemException ex =
         intercept(AzureBlobFileSystemException.class, () ->
             mockedFs.initialize(fs.getUri(), getRawConfiguration()));

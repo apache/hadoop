@@ -36,7 +36,6 @@ import static org.apache.hadoop.fs.azurebfs.utils.UriUtils.changeUrlFromBlobToDf
 public class AbfsClientHandler {
 
   private AbfsServiceType defaultServiceType;
-  private AbfsServiceType ingressServiceType;
   private final AbfsDfsClient dfsAbfsClient;
 
   public AbfsClientHandler(final URL baseUrl,
@@ -65,7 +64,6 @@ public class AbfsClientHandler {
 
   private void initServiceType(final AbfsConfiguration abfsConfiguration) {
     this.defaultServiceType = abfsConfiguration.getFsConfiguredServiceType();
-    this.ingressServiceType = abfsConfiguration.getIngressServiceType();
   }
 
   public AbfsClient getClient() {
