@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.server.federation.router.async;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
@@ -73,6 +75,7 @@ public final class AsyncUtil {
    *         <ul>
    *           <li>{@code false} if {@code clazz} is {@link Boolean},
    *           <li>-1 if {@code clazz} is {@link Long},
+   *           <li>-1 if {@code clazz} is {@link Integer},
    *           <li>{@code null} for any other type.
    *         </ul>
    */
@@ -80,11 +83,14 @@ public final class AsyncUtil {
     if (clazz == null) {
       return null;
     }
-    if (clazz.equals(Boolean.class)) {
+    if (clazz.equals(Boolean.class)
+        || clazz.equals(boolean.class)) {
       return (R) BOOLEAN_RESULT;
-    } else if (clazz.equals(Long.class)) {
+    } else if (clazz.equals(Long.class)
+        || clazz.equals(long.class)) {
       return (R) LONG_RESULT;
-    } else if (clazz.equals(Integer.class)) {
+    } else if (clazz.equals(Integer.class)
+        || clazz.equals(int.class)) {
       return (R) INT_RESULT;
     }
     return (R) NULL_RESULT;
@@ -140,6 +146,12 @@ public final class AsyncUtil {
         CompletableFuture.completedFuture(value));
   }
 
+  /**
+   * Completes the current asynchronous operation with the specified completableFuture.
+   *
+   * @param completableFuture The completableFuture to complete the future with.
+   * @param <R>    The type of the value to be completed.
+   */
   public static <R> void asyncCompleteWith(CompletableFuture<R> completableFuture) {
     CUR_COMPLETABLE_FUTURE.set((CompletableFuture<Object>) completableFuture);
   }
@@ -375,6 +387,28 @@ public final class AsyncUtil {
       try {
         future = asyncDo.async(entry);
       } catch (IOException e) {
+        future = new CompletableFuture<>();
+        future.completeExceptionally(warpCompletionException(e));
+      }
+      completableFutures[i++] = future;
+    }
+    CompletableFuture<P> result = CompletableFuture.allOf(completableFutures)
+        .handle((unused, throwable) -> then.apply(completableFutures));
+    CUR_COMPLETABLE_FUTURE.set((CompletableFuture<Object>) result);
+  }
+
+  public static <R, P> void asyncCurrent(
+      List<Callable<Object>> callables,
+      Function<CompletableFuture<R>[], P> then) {
+    CompletableFuture<R>[] completableFutures =
+        new CompletableFuture[callables.size()];
+    int i = 0;
+    for (Callable<Object> callable : callables) {
+      CompletableFuture<R> future = null;
+      try {
+        callable.call();
+        future = (CompletableFuture<R>) CUR_COMPLETABLE_FUTURE.get();
+      } catch (Exception e) {
         future = new CompletableFuture<>();
         future.completeExceptionally(warpCompletionException(e));
       }

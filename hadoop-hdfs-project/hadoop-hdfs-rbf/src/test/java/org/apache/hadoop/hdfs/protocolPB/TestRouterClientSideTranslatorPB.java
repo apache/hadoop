@@ -52,6 +52,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.apache.hadoop.crypto.CryptoProtocolVersion.ENCRYPTION_ZONES;
@@ -81,6 +82,7 @@ public class TestRouterClientSideTranslatorPB {
 
   @BeforeClass
   public static void setUp() throws Exception {
+    AsyncRpcProtocolPBUtil.setWorker(ForkJoinPool.commonPool());
     conf = new HdfsConfiguration();
     cluster = (new MiniDFSCluster.Builder(conf))
         .numDataNodes(1).build();
