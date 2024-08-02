@@ -32,6 +32,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import javax.net.SocketFactory;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.hdfs.protocolPB.RouterClientProtocolTranslatorPB;
+import org.apache.hadoop.hdfs.protocolPB.RouterGetUserMappingsProtocolTranslatorPB;
+import org.apache.hadoop.hdfs.protocolPB.RouterNamenodeProtocolTranslatorPB;
+import org.apache.hadoop.hdfs.protocolPB.RouterRefreshUserMappingsProtocolTranslatorPB;
 import org.apache.hadoop.ipc.AlignmentContext;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -41,9 +45,7 @@ import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolPB;
-import org.apache.hadoop.hdfs.protocolPB.ClientNamenodeProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolPB;
-import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.retry.RetryPolicy;
@@ -55,10 +57,8 @@ import org.apache.hadoop.security.RefreshUserMappingsProtocol;
 import org.apache.hadoop.security.SaslRpcServer;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.protocolPB.RefreshUserMappingsProtocolClientSideTranslatorPB;
 import org.apache.hadoop.security.protocolPB.RefreshUserMappingsProtocolPB;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
-import org.apache.hadoop.tools.protocolPB.GetUserMappingsProtocolClientSideTranslatorPB;
 import org.apache.hadoop.tools.protocolPB.GetUserMappingsProtocolPB;
 import org.apache.hadoop.util.Time;
 import org.eclipse.jetty.util.ajax.JSON;
@@ -117,15 +117,15 @@ public class ConnectionPool {
   static {
     PROTO_MAP.put(ClientProtocol.class,
         new ProtoImpl(ClientNamenodeProtocolPB.class,
-            ClientNamenodeProtocolTranslatorPB.class));
+            RouterClientProtocolTranslatorPB.class));
     PROTO_MAP.put(NamenodeProtocol.class, new ProtoImpl(
-        NamenodeProtocolPB.class, NamenodeProtocolTranslatorPB.class));
+        NamenodeProtocolPB.class, RouterNamenodeProtocolTranslatorPB.class));
     PROTO_MAP.put(RefreshUserMappingsProtocol.class,
         new ProtoImpl(RefreshUserMappingsProtocolPB.class,
-            RefreshUserMappingsProtocolClientSideTranslatorPB.class));
+            RouterRefreshUserMappingsProtocolTranslatorPB.class));
     PROTO_MAP.put(GetUserMappingsProtocol.class,
         new ProtoImpl(GetUserMappingsProtocolPB.class,
-            GetUserMappingsProtocolClientSideTranslatorPB.class));
+            RouterGetUserMappingsProtocolTranslatorPB.class));
   }
 
   /** Class to store the protocol implementation. */

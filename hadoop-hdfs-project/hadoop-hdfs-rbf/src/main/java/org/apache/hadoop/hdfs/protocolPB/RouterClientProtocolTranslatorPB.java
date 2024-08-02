@@ -15,9 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.hadoop.hdfs.protocolPB;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.EnumSet;
@@ -25,7 +25,6 @@ import java.util.HashMap;
 import java.util.List;
 
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -48,7 +47,6 @@ import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.ha.HAServiceProtocol;
-import org.apache.hadoop.ha.proto.HAServiceProtocolProtos.HAServiceStateProto;
 import org.apache.hadoop.hdfs.AddBlockFlag;
 import org.apache.hadoop.hdfs.inotify.EventBatchList;
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
@@ -58,7 +56,6 @@ import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
-import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.CorruptFileBlocks;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -82,7 +79,6 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.OpenFilesIterator.OpenFilesType;
 import org.apache.hadoop.hdfs.protocol.ReplicatedBlockStats;
 import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
-import org.apache.hadoop.hdfs.protocol.OpenFilesIterator;
 import org.apache.hadoop.hdfs.protocol.ZoneReencryptionStatus;
 import org.apache.hadoop.hdfs.protocol.RollingUpgradeInfo;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
@@ -90,7 +86,6 @@ import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotStatus;
 import org.apache.hadoop.hdfs.protocol.proto.AclProtos.GetAclStatusRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.AclProtos.GetAclStatusResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.AclProtos.ModifyAclEntriesRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.AclProtos.RemoveAclEntriesRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.AclProtos.RemoveAclRequestProto;
@@ -102,71 +97,45 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AddCac
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AddCachePoolRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AllowSnapshotRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AppendRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.AppendResponseProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CachePoolEntryProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CheckAccessRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CompleteRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ConcatRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CreateRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CreateResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CreateSnapshotRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CreateSymlinkRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.DeleteRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.DeleteSnapshotRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.DisallowSnapshotRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.FinalizeUpgradeRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.FsyncRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetAdditionalDatanodeRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetBatchedListingRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetBatchedListingResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetBlockLocationsRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetBlockLocationsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetContentSummaryRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetCurrentEditLogTxidRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetDataEncryptionKeyRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetDataEncryptionKeyResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetDatanodeReportRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetDatanodeStorageReportRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetEditsFromTxidRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetEnclosingRootRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetEnclosingRootResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFileInfoRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFileInfoResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFileLinkInfoRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFileLinkInfoResponseProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsECBlockGroupStatsRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsReplicatedBlockStatsRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetFsStatusRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetLinkTargetRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetLinkTargetResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetListingRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetListingResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetLocatedFileInfoRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetLocatedFileInfoResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetPreferredBlockSizeRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetQuotaUsageRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetServerDefaultsRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSlowDatanodeReportRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSnapshotDiffReportRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSnapshotDiffReportResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSnapshotDiffReportListingRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSnapshotDiffReportListingResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSnapshottableDirListingRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSnapshottableDirListingResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSnapshotListingRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetSnapshotListingResponseProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetStoragePoliciesRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetStoragePoliciesResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.GetStoragePolicyRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.HAServiceStateRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.IsFileClosedRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCacheDirectivesRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCacheDirectivesResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCachePoolsRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCachePoolsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListCorruptFileBlocksRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListOpenFilesRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ListOpenFilesResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.MetaSaveRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.MkdirsRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ModifyCacheDirectiveRequestProto;
@@ -174,7 +143,6 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.Modify
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.MsyncRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.OpenFilesBatchResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RecoverLeaseRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RefreshNodesRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RemoveCacheDirectiveRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RemoveCachePoolRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.Rename2RequestProto;
@@ -183,10 +151,7 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.Rename
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RenewLeaseRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.ReportBadBlocksRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RestoreFailedStorageRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RollEditsRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RollEditsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RollingUpgradeRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.RollingUpgradeResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.SaveNamespaceRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.SetBalancerBandwidthRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.SetOwnerRequestProto;
@@ -200,35 +165,25 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.Trunca
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.UnsetStoragePolicyRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.UpdateBlockForPipelineRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.UpdatePipelineRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.UpgradeStatusRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.UpgradeStatusResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.SatisfyStoragePolicyRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.*;
 import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.CreateEncryptionZoneRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.EncryptionZoneProto;
 import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.GetEZForPathRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.ListEncryptionZonesRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.ListReencryptionStatusRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.ListReencryptionStatusResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.ZoneReencryptionStatusProto;
 import org.apache.hadoop.hdfs.protocol.proto.EncryptionZonesProtos.ReencryptEncryptionZoneRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.AddErasureCodingPoliciesRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.AddErasureCodingPoliciesResponseProto;
-import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetErasureCodingPoliciesRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetErasureCodingPoliciesResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetErasureCodingPolicyRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetErasureCodingPolicyResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.RemoveErasureCodingPolicyRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.EnableErasureCodingPolicyRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.DisableErasureCodingPolicyRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetErasureCodingCodecsRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetErasureCodingCodecsResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.SetErasureCodingPolicyRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.UnsetErasureCodingPolicyRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.CodecProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BatchedDirectoryListingProto;
 import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetECTopologyResultForPoliciesRequestProto;
-import org.apache.hadoop.hdfs.protocol.proto.ErasureCodingProtos.GetECTopologyResultForPoliciesResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ErasureCodingPolicyProto;
 import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.GetXAttrsRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos.ListXAttrsRequestProto;
@@ -239,29 +194,16 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.retry.AsyncCallHandler;
 import org.apache.hadoop.ipc.Client;
-import org.apache.hadoop.ipc.ProtobufRpcEngine2;
-import org.apache.hadoop.ipc.ProtocolMetaInterface;
-import org.apache.hadoop.ipc.ProtocolTranslator;
-import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.ipc.RpcClientUtil;
 import org.apache.hadoop.security.proto.SecurityProtos.CancelDelegationTokenRequestProto;
 import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenRequestProto;
-import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenResponseProto;
 import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenRequestProto;
 import org.apache.hadoop.security.token.Token;
-
 import org.apache.hadoop.thirdparty.protobuf.ByteString;
-import org.apache.hadoop.thirdparty.protobuf.Message;
-import org.apache.hadoop.thirdparty.protobuf.ServiceException;
-
 import org.apache.hadoop.util.Lists;
-import org.apache.hadoop.util.concurrent.AsyncGet;
 
-import static org.apache.hadoop.ipc.internal.ShadedProtobufHelper.getRemoteException;
-import static org.apache.hadoop.ipc.internal.ShadedProtobufHelper.ipc;
+import static org.apache.hadoop.hdfs.protocolPB.AsyncRpcProtocolPBUtil.asyncIpcClient;
 
 /**
  * This class forwards NN's ClientProtocol calls as RPC calls to the NN server
@@ -270,93 +212,62 @@ import static org.apache.hadoop.ipc.internal.ShadedProtobufHelper.ipc;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Stable
-public class ClientNamenodeProtocolTranslatorPB implements
-    ProtocolMetaInterface, ClientProtocol, Closeable, ProtocolTranslator {
-  final private ClientNamenodeProtocolPB rpcProxy;
+public class RouterClientProtocolTranslatorPB extends ClientNamenodeProtocolTranslatorPB {
+  private final ClientNamenodeProtocolPB rpcProxy;
 
-  protected static final GetServerDefaultsRequestProto VOID_GET_SERVER_DEFAULT_REQUEST =
-      GetServerDefaultsRequestProto.newBuilder().build();
-
-  protected final static GetFsStatusRequestProto VOID_GET_FSSTATUS_REQUEST =
-      GetFsStatusRequestProto.newBuilder().build();
-
-  protected final static GetFsReplicatedBlockStatsRequestProto
-      VOID_GET_FS_REPLICATED_BLOCK_STATS_REQUEST =
-      GetFsReplicatedBlockStatsRequestProto.newBuilder().build();
-
-  protected final static GetFsECBlockGroupStatsRequestProto
-      VOID_GET_FS_ECBLOCKGROUP_STATS_REQUEST =
-      GetFsECBlockGroupStatsRequestProto.newBuilder().build();
-
-  protected final static RollEditsRequestProto VOID_ROLLEDITS_REQUEST =
-      RollEditsRequestProto.getDefaultInstance();
-
-  protected final static RefreshNodesRequestProto VOID_REFRESH_NODES_REQUEST =
-      RefreshNodesRequestProto.newBuilder().build();
-
-  protected final static FinalizeUpgradeRequestProto
-      VOID_FINALIZE_UPGRADE_REQUEST =
-      FinalizeUpgradeRequestProto.newBuilder().build();
-
-  protected final static UpgradeStatusRequestProto
-      VOID_UPGRADE_STATUS_REQUEST =
-      UpgradeStatusRequestProto.newBuilder().build();
-
-  protected final static GetDataEncryptionKeyRequestProto
-      VOID_GET_DATA_ENCRYPTIONKEY_REQUEST =
-      GetDataEncryptionKeyRequestProto.newBuilder().build();
-
-  protected final static GetStoragePoliciesRequestProto
-      VOID_GET_STORAGE_POLICIES_REQUEST =
-      GetStoragePoliciesRequestProto.newBuilder().build();
-
-  protected final static GetErasureCodingPoliciesRequestProto
-      VOID_GET_EC_POLICIES_REQUEST = GetErasureCodingPoliciesRequestProto
-      .newBuilder().build();
-
-  protected final static GetErasureCodingCodecsRequestProto
-      VOID_GET_EC_CODEC_REQUEST = GetErasureCodingCodecsRequestProto
-      .newBuilder().build();
-
-
-  public ClientNamenodeProtocolTranslatorPB(ClientNamenodeProtocolPB proxy) {
+  public RouterClientProtocolTranslatorPB(ClientNamenodeProtocolPB proxy) {
+    super(proxy);
     rpcProxy = proxy;
   }
 
   @Override
   public void close() {
-    RPC.stopProxy(rpcProxy);
+    super.close();
   }
 
   @Override
   public LocatedBlocks getBlockLocations(String src, long offset, long length)
       throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.getBlockLocations(src, offset, length);
+    }
     GetBlockLocationsRequestProto req = GetBlockLocationsRequestProto
         .newBuilder()
         .setSrc(src)
         .setOffset(offset)
         .setLength(length)
         .build();
-    GetBlockLocationsResponseProto resp = ipc(() -> rpcProxy.getBlockLocations(null,
-        req));
-    return resp.hasLocations() ?
-        PBHelperClient.convert(resp.getLocations()) : null;
+
+    return asyncIpcClient(() -> rpcProxy.getBlockLocations(null, req),
+        res -> res.hasLocations() ? PBHelperClient.convert(res.getLocations()) : null,
+        LocatedBlocks.class);
   }
 
   @Override
   public FsServerDefaults getServerDefaults() throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.getServerDefaults();
+    }
     GetServerDefaultsRequestProto req = VOID_GET_SERVER_DEFAULT_REQUEST;
-    return PBHelperClient
-        .convert(ipc(() -> rpcProxy.getServerDefaults(null, req).getServerDefaults()));
+
+    return asyncIpcClient(() -> rpcProxy.getServerDefaults(null, req),
+        res -> PBHelperClient.convert(res.getServerDefaults()),
+        FsServerDefaults.class);
   }
 
   @Override
-  public HdfsFileStatus create(String src, FsPermission masked,
+  public HdfsFileStatus create(
+      String src, FsPermission masked,
       String clientName, EnumSetWritable<CreateFlag> flag,
       boolean createParent, short replication, long blockSize,
       CryptoProtocolVersion[] supportedVersions, String ecPolicyName,
-      String storagePolicy)
-      throws IOException {
+      String storagePolicy) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.create(
+          src, masked, clientName, flag, createParent, replication,
+          blockSize, supportedVersions, ecPolicyName, storagePolicy);
+    }
+
     CreateRequestProto.Builder builder = CreateRequestProto.newBuilder()
         .setSrc(src)
         .setMasked(PBHelperClient.convert(masked))
@@ -378,117 +289,134 @@ public class ClientNamenodeProtocolTranslatorPB implements
     builder.addAllCryptoProtocolVersion(
         PBHelperClient.convert(supportedVersions));
     CreateRequestProto req = builder.build();
-    CreateResponseProto res = ipc(() -> rpcProxy.create(null, req));
-    return res.hasFs() ? PBHelperClient.convert(res.getFs()) : null;
+
+    return asyncIpcClient(() -> rpcProxy.create(null, req),
+        res -> res.hasFs() ? PBHelperClient.convert(res.getFs()) : null,
+        HdfsFileStatus.class);
   }
 
   @Override
   public boolean truncate(String src, long newLength, String clientName)
       throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.truncate(src, newLength, clientName);
+    }
+
     TruncateRequestProto req = TruncateRequestProto.newBuilder()
         .setSrc(src)
         .setNewLength(newLength)
         .setClientName(clientName)
         .build();
-    return ipc(() -> rpcProxy.truncate(null, req).getResult());
+
+    return asyncIpcClient(() -> rpcProxy.truncate(null, req),
+        res -> res.getResult(), Boolean.class);
   }
 
   @Override
   public LastBlockWithStatus append(String src, String clientName,
-      EnumSetWritable<CreateFlag> flag) throws IOException {
+                                    EnumSetWritable<CreateFlag> flag) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.append(src, clientName, flag);
+    }
+
     AppendRequestProto req = AppendRequestProto.newBuilder().setSrc(src)
         .setClientName(clientName).setFlag(
             PBHelperClient.convertCreateFlag(flag))
         .build();
-    AppendResponseProto res = ipc(() -> rpcProxy.append(null, req));
-    LocatedBlock lastBlock = res.hasBlock() ? PBHelperClient
-        .convertLocatedBlockProto(res.getBlock()) : null;
-    HdfsFileStatus stat = (res.hasStat()) ?
-        PBHelperClient.convert(res.getStat()) : null;
-    return new LastBlockWithStatus(lastBlock, stat);
+
+    return asyncIpcClient(() -> rpcProxy.append(null, req),
+        res -> {
+          LocatedBlock lastBlock = res.hasBlock() ? PBHelperClient
+              .convertLocatedBlockProto(res.getBlock()) : null;
+          HdfsFileStatus stat = (res.hasStat()) ?
+              PBHelperClient.convert(res.getStat()) : null;
+          return new LastBlockWithStatus(lastBlock, stat);
+        }, LastBlockWithStatus.class);
   }
 
   @Override
   public boolean setReplication(String src, short replication)
       throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.setReplication(src, replication);
+    }
     SetReplicationRequestProto req = SetReplicationRequestProto.newBuilder()
         .setSrc(src)
         .setReplication(replication)
         .build();
-    return ipc(() -> rpcProxy.setReplication(null, req)).getResult();
+
+    return asyncIpcClient(() -> rpcProxy.setReplication(null, req),
+        res -> res.getResult(), Boolean.class);
   }
 
   @Override
   public void setPermission(String src, FsPermission permission)
       throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      super.setPermission(src, permission);
+      return;
+    }
     SetPermissionRequestProto req = SetPermissionRequestProto.newBuilder()
         .setSrc(src)
         .setPermission(PBHelperClient.convert(permission))
         .build();
-    if (Client.isAsynchronousMode()) {
-      ipc(() -> rpcProxy.setPermission(null, req));
-      setAsyncReturnValue();
-    } else {
-      ipc(() -> rpcProxy.setPermission(null, req));
-    }
-  }
 
-  private void setAsyncReturnValue() {
-    final AsyncGet<Message, Exception> asyncReturnMessage
-        = ProtobufRpcEngine2.getAsyncReturnMessage();
-    final AsyncGet<Void, Exception> asyncGet
-        = new AsyncGet<Void, Exception>() {
-      @Override
-      public Void get(long timeout, TimeUnit unit) throws Exception {
-        asyncReturnMessage.get(timeout, unit);
-        return null;
-      }
-
-      @Override
-      public boolean isDone() {
-        return asyncReturnMessage.isDone();
-      }
-    };
-    AsyncCallHandler.setLowerLayerAsyncReturn(asyncGet);
+    asyncIpcClient(() -> rpcProxy.setPermission(null, req),
+        res -> null, null);
   }
 
   @Override
   public void setOwner(String src, String username, String groupname)
       throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      super.setOwner(src, username, groupname);
+      return;
+    }
     SetOwnerRequestProto.Builder req = SetOwnerRequestProto.newBuilder()
         .setSrc(src);
-    if (username != null)
+    if (username != null) {
       req.setUsername(username);
-    if (groupname != null)
-      req.setGroupname(groupname);
-    if (Client.isAsynchronousMode()) {
-      ipc(() -> rpcProxy.setOwner(null, req.build()));
-      setAsyncReturnValue();
-    } else {
-      ipc(() -> rpcProxy.setOwner(null, req.build()));
     }
+    if (groupname != null) {
+      req.setGroupname(groupname);
+    }
+
+    asyncIpcClient(() -> rpcProxy.setOwner(null, req.build()),
+        res -> null, null);
   }
 
   @Override
   public void abandonBlock(ExtendedBlock b, long fileId, String src,
-      String holder) throws IOException {
+                           String holder) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      super.abandonBlock(b, fileId, src, holder);
+      return;
+    }
     AbandonBlockRequestProto req = AbandonBlockRequestProto.newBuilder()
         .setB(PBHelperClient.convert(b)).setSrc(src).setHolder(holder)
         .setFileId(fileId).build();
-    ipc(() -> rpcProxy.abandonBlock(null, req));
+    asyncIpcClient(() -> rpcProxy.abandonBlock(null, req),
+        res -> null, null);
   }
 
   @Override
-  public LocatedBlock addBlock(String src, String clientName,
+  public LocatedBlock addBlock(
+      String src, String clientName,
       ExtendedBlock previous, DatanodeInfo[] excludeNodes, long fileId,
       String[] favoredNodes, EnumSet<AddBlockFlag> addBlockFlags)
       throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.addBlock(src, clientName, previous, excludeNodes,
+          fileId, favoredNodes, addBlockFlags);
+    }
     AddBlockRequestProto.Builder req = AddBlockRequestProto.newBuilder()
         .setSrc(src).setClientName(clientName).setFileId(fileId);
-    if (previous != null)
+    if (previous != null) {
       req.setPrevious(PBHelperClient.convert(previous));
-    if (excludeNodes != null)
+    }
+    if (excludeNodes != null) {
       req.addAllExcludeNodes(PBHelperClient.convert(excludeNodes));
+    }
     if (favoredNodes != null) {
       req.addAllFavoredNodes(Arrays.asList(favoredNodes));
     }
@@ -496,15 +424,22 @@ public class ClientNamenodeProtocolTranslatorPB implements
       req.addAllFlags(PBHelperClient.convertAddBlockFlags(
           addBlockFlags));
     }
-    return PBHelperClient.convertLocatedBlockProto(
-        ipc(() -> rpcProxy.addBlock(null, req.build())).getBlock());
+
+    return asyncIpcClient(() -> rpcProxy.addBlock(null, req.build()),
+        res -> PBHelperClient.convertLocatedBlockProto(res.getBlock()),
+        LocatedBlock.class);
   }
 
   @Override
-  public LocatedBlock getAdditionalDatanode(String src, long fileId,
+  public LocatedBlock getAdditionalDatanode(
+      String src, long fileId,
       ExtendedBlock blk, DatanodeInfo[] existings, String[] existingStorageIDs,
       DatanodeInfo[] excludes, int numAdditionalNodes, String clientName)
       throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.getAdditionalDatanode(src, fileId, blk, existings,
+          existingStorageIDs, excludes, numAdditionalNodes, clientName);
+    }
     GetAdditionalDatanodeRequestProto req = GetAdditionalDatanodeRequestProto
         .newBuilder()
         .setSrc(src)
@@ -516,44 +451,68 @@ public class ClientNamenodeProtocolTranslatorPB implements
         .setNumAdditionalNodes(numAdditionalNodes)
         .setClientName(clientName)
         .build();
-    return PBHelperClient.convertLocatedBlockProto(
-        ipc(() -> rpcProxy.getAdditionalDatanode(null, req)).getBlock());
+
+    return asyncIpcClient(() -> rpcProxy.getAdditionalDatanode(null, req),
+        res -> PBHelperClient.convertLocatedBlockProto(res.getBlock()),
+        LocatedBlock.class);
   }
 
   @Override
   public boolean complete(String src, String clientName,
-      ExtendedBlock last, long fileId) throws IOException {
+                          ExtendedBlock last, long fileId) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.complete(src, clientName, last, fileId);
+    }
     CompleteRequestProto.Builder req = CompleteRequestProto.newBuilder()
         .setSrc(src)
         .setClientName(clientName)
         .setFileId(fileId);
-    if (last != null)
+    if (last != null) {
       req.setLast(PBHelperClient.convert(last));
-    return ipc(() -> rpcProxy.complete(null, req.build())).getResult();
+    }
+
+    return asyncIpcClient(() -> rpcProxy.complete(null, req.build()),
+        res -> res.getResult(),
+        Boolean.class);
   }
 
   @Override
   public void reportBadBlocks(LocatedBlock[] blocks) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      super.reportBadBlocks(blocks);
+      return;
+    }
     ReportBadBlocksRequestProto req = ReportBadBlocksRequestProto.newBuilder()
         .addAllBlocks(Arrays.asList(
             PBHelperClient.convertLocatedBlocks(blocks)))
         .build();
-    ipc(() -> rpcProxy.reportBadBlocks(null, req));
+
+    asyncIpcClient(() -> rpcProxy.reportBadBlocks(null, req),
+        res -> null, Void.class);
   }
 
   @Override
   public boolean rename(String src, String dst) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.rename(src, dst);
+    }
     RenameRequestProto req = RenameRequestProto.newBuilder()
         .setSrc(src)
         .setDst(dst).build();
 
-    return ipc(() -> rpcProxy.rename(null, req)).getResult();
+    return asyncIpcClient(() -> rpcProxy.rename(null, req),
+        res -> res.getResult(),
+        Boolean.class);
   }
 
 
   @Override
   public void rename2(String src, String dst, Rename... options)
       throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      super.rename2(src, dst, options);
+      return;
+    }
     boolean overwrite = false;
     boolean toTrash = false;
     if (options != null) {
@@ -572,33 +531,44 @@ public class ClientNamenodeProtocolTranslatorPB implements
         setOverwriteDest(overwrite).
         setMoveToTrash(toTrash).
         build();
-    if (Client.isAsynchronousMode()) {
-      ipc(() -> rpcProxy.rename2(null, req));
-      setAsyncReturnValue();
-    } else {
-      ipc(() -> rpcProxy.rename2(null, req));
-    }
+
+    asyncIpcClient(() -> rpcProxy.rename2(null, req),
+        res -> null, Void.class);
   }
 
   @Override
   public void concat(String trg, String[] srcs) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      super.concat(trg, srcs);
+      return;
+    }
     ConcatRequestProto req = ConcatRequestProto.newBuilder().
         setTrg(trg).
         addAllSrcs(Arrays.asList(srcs)).build();
-    ipc(() -> rpcProxy.concat(null, req));
+
+    asyncIpcClient(() -> rpcProxy.concat(null, req),
+        res -> null, Void.class);
   }
 
 
   @Override
   public boolean delete(String src, boolean recursive) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.delete(src, recursive);
+    }
     DeleteRequestProto req = DeleteRequestProto.newBuilder().setSrc(src)
         .setRecursive(recursive).build();
-    return ipc(() -> rpcProxy.delete(null, req).getResult());
+
+    return asyncIpcClient(() -> rpcProxy.delete(null, req),
+        res -> res.getResult(), Boolean.class);
   }
 
   @Override
   public boolean mkdirs(String src, FsPermission masked, boolean createParent)
       throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.mkdirs(src, masked, createParent);
+    }
     MkdirsRequestProto.Builder builder = MkdirsRequestProto.newBuilder()
         .setSrc(src)
         .setMasked(PBHelperClient.convert(masked))
@@ -608,255 +578,367 @@ public class ClientNamenodeProtocolTranslatorPB implements
       builder.setUnmasked(PBHelperClient.convert(unmasked));
     }
     MkdirsRequestProto req = builder.build();
-    return ipc(() -> rpcProxy.mkdirs(null, req)).getResult();
+
+    return asyncIpcClient(() -> rpcProxy.mkdirs(null, req),
+        res -> res.getResult(), Boolean.class);
   }
 
   @Override
-  public DirectoryListing getListing(String src, byte[] startAfter,
-      boolean needLocation) throws IOException {
+  public DirectoryListing getListing(
+      String src, byte[] startAfter, boolean needLocation) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.getListing(src, startAfter, needLocation);
+    }
     GetListingRequestProto req = GetListingRequestProto.newBuilder()
         .setSrc(src)
         .setStartAfter(ByteString.copyFrom(startAfter))
         .setNeedLocation(needLocation).build();
-    GetListingResponseProto result = ipc(() -> rpcProxy.getListing(null, req));
-    if (result.hasDirList()) {
-      return PBHelperClient.convert(result.getDirList());
-    }
-    return null;
+
+    return asyncIpcClient(() -> rpcProxy.getListing(null, req),
+        res -> {
+          if (res.hasDirList()) {
+            return PBHelperClient.convert(res.getDirList());
+          }
+          return null;
+        }, DirectoryListing.class);
   }
 
   @Override
   public BatchedDirectoryListing getBatchedListing(
       String[] srcs, byte[] startAfter, boolean needLocation)
       throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.getBatchedListing(srcs, startAfter, needLocation);
+    }
     GetBatchedListingRequestProto req = GetBatchedListingRequestProto
         .newBuilder()
         .addAllPaths(Arrays.asList(srcs))
         .setStartAfter(ByteString.copyFrom(startAfter))
         .setNeedLocation(needLocation).build();
-    GetBatchedListingResponseProto result =
-        ipc(() -> rpcProxy.getBatchedListing(null, req));
 
-    if (result.getListingsCount() > 0) {
-      HdfsPartialListing[] listingArray =
-          new HdfsPartialListing[result.getListingsCount()];
-      int listingIdx = 0;
-      for (BatchedDirectoryListingProto proto : result.getListingsList()) {
-        HdfsPartialListing listing;
-        if (proto.hasException()) {
-          HdfsProtos.RemoteExceptionProto reProto = proto.getException();
-          RemoteException ex = new RemoteException(
-              reProto.getClassName(), reProto.getMessage());
-          listing = new HdfsPartialListing(proto.getParentIdx(), ex);
-        } else {
-          List<HdfsFileStatus> statuses =
-              PBHelperClient.convertHdfsFileStatus(
-                  proto.getPartialListingList());
-          listing = new HdfsPartialListing(proto.getParentIdx(), statuses);
-        }
-        listingArray[listingIdx++] = listing;
-      }
-      BatchedDirectoryListing batchedListing =
-          new BatchedDirectoryListing(listingArray, result.getHasMore(),
-              result.getStartAfter().toByteArray());
-      return batchedListing;
-    }
-    return null;
+    return asyncIpcClient(() -> rpcProxy.getBatchedListing(null, req),
+        res -> {
+          if (res.getListingsCount() > 0) {
+            HdfsPartialListing[] listingArray =
+                new HdfsPartialListing[res.getListingsCount()];
+            int listingIdx = 0;
+            for (BatchedDirectoryListingProto proto : res.getListingsList()) {
+              HdfsPartialListing listing;
+              if (proto.hasException()) {
+                HdfsProtos.RemoteExceptionProto reProto = proto.getException();
+                RemoteException ex = new RemoteException(
+                    reProto.getClassName(), reProto.getMessage());
+                listing = new HdfsPartialListing(proto.getParentIdx(), ex);
+              } else {
+                List<HdfsFileStatus> statuses =
+                    PBHelperClient.convertHdfsFileStatus(
+                        proto.getPartialListingList());
+                listing = new HdfsPartialListing(proto.getParentIdx(), statuses);
+              }
+              listingArray[listingIdx++] = listing;
+            }
+            BatchedDirectoryListing batchedListing =
+                new BatchedDirectoryListing(listingArray, res.getHasMore(),
+                    res.getStartAfter().toByteArray());
+            return batchedListing;
+          }
+          return null;
+        }, BatchedDirectoryListing.class);
   }
 
 
   @Override
   public void renewLease(String clientName, List<String> namespaces)
       throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      super.renewLease(clientName, namespaces);
+      return;
+    }
     RenewLeaseRequestProto.Builder builder = RenewLeaseRequestProto
         .newBuilder().setClientName(clientName);
     if (namespaces != null && !namespaces.isEmpty()) {
       builder.addAllNamespaces(namespaces);
     }
-    ipc(() -> rpcProxy.renewLease(null, builder.build()));
+
+    asyncIpcClient(() -> rpcProxy.renewLease(null, builder.build()),
+        res -> null, Void.class);
   }
 
   @Override
   public boolean recoverLease(String src, String clientName)
       throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.recoverLease(src, clientName);
+    }
     RecoverLeaseRequestProto req = RecoverLeaseRequestProto.newBuilder()
         .setSrc(src)
         .setClientName(clientName).build();
-    return ipc(() -> rpcProxy.recoverLease(null, req)).getResult();
+
+    return asyncIpcClient(() -> rpcProxy.recoverLease(null, req),
+        res -> res.getResult(), Boolean.class);
   }
 
   @Override
   public long[] getStats() throws IOException {
-    return PBHelperClient.convert(ipc(() -> rpcProxy.getFsStats(null,
-        VOID_GET_FSSTATUS_REQUEST)));
+    if (!Client.isAsynchronousMode()) {
+      return super.getStats();
+    }
+
+    return asyncIpcClient(() -> rpcProxy.getFsStats(null, VOID_GET_FSSTATUS_REQUEST),
+        res -> PBHelperClient.convert(res), long[].class);
   }
 
   @Override
   public ReplicatedBlockStats getReplicatedBlockStats() throws IOException {
-    return PBHelperClient.convert(ipc(() -> rpcProxy.getFsReplicatedBlockStats(null,
-        VOID_GET_FS_REPLICATED_BLOCK_STATS_REQUEST)));
+    if (!Client.isAsynchronousMode()) {
+      return super.getReplicatedBlockStats();
+    }
+
+    return asyncIpcClient(() -> rpcProxy.getFsReplicatedBlockStats(null,
+        VOID_GET_FS_REPLICATED_BLOCK_STATS_REQUEST),
+        res -> PBHelperClient.convert(res), ReplicatedBlockStats.class);
   }
 
   @Override
   public ECBlockGroupStats getECBlockGroupStats() throws IOException {
-    return PBHelperClient.convert(ipc(() -> rpcProxy.getFsECBlockGroupStats(null,
-        VOID_GET_FS_ECBLOCKGROUP_STATS_REQUEST)));
+    if (!Client.isAsynchronousMode()) {
+      return super.getECBlockGroupStats();
+    }
+
+    return asyncIpcClient(() -> rpcProxy.getFsECBlockGroupStats(null,
+        VOID_GET_FS_ECBLOCKGROUP_STATS_REQUEST),
+        res -> PBHelperClient.convert(res), ECBlockGroupStats.class);
   }
 
   @Override
   public DatanodeInfo[] getDatanodeReport(DatanodeReportType type)
       throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.getDatanodeReport(type);
+    }
     GetDatanodeReportRequestProto req = GetDatanodeReportRequestProto
         .newBuilder()
         .setType(PBHelperClient.convert(type)).build();
-    return PBHelperClient.convert(
-        ipc(() -> rpcProxy.getDatanodeReport(null, req)).getDiList());
+
+    return asyncIpcClient(() -> rpcProxy.getDatanodeReport(null, req),
+        res -> PBHelperClient.convert(res.getDiList()), DatanodeInfo[].class);
   }
 
   @Override
   public DatanodeStorageReport[] getDatanodeStorageReport(
       DatanodeReportType type) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.getDatanodeStorageReport(type);
+    }
     final GetDatanodeStorageReportRequestProto req
         = GetDatanodeStorageReportRequestProto.newBuilder()
         .setType(PBHelperClient.convert(type)).build();
-    return PBHelperClient.convertDatanodeStorageReports(
-        ipc(() -> rpcProxy.getDatanodeStorageReport(null, req)
-            .getDatanodeStorageReportsList()));
+
+    return asyncIpcClient(() -> rpcProxy.getDatanodeStorageReport(null, req),
+        res -> PBHelperClient.convertDatanodeStorageReports(
+            res.getDatanodeStorageReportsList()), DatanodeStorageReport[].class);
   }
 
   @Override
   public long getPreferredBlockSize(String filename) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.getPreferredBlockSize(filename);
+    }
     GetPreferredBlockSizeRequestProto req = GetPreferredBlockSizeRequestProto
         .newBuilder()
         .setFilename(filename)
         .build();
-    return ipc(() -> rpcProxy.getPreferredBlockSize(null, req)).getBsize();
+
+    return asyncIpcClient(() -> rpcProxy.getPreferredBlockSize(null, req),
+        res -> res.getBsize(), Long.class);
   }
 
   @Override
   public boolean setSafeMode(SafeModeAction action, boolean isChecked)
       throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.setSafeMode(action, isChecked);
+    }
     SetSafeModeRequestProto req = SetSafeModeRequestProto.newBuilder()
         .setAction(PBHelperClient.convert(action))
         .setChecked(isChecked).build();
-    return ipc(() -> rpcProxy.setSafeMode(null, req)).getResult();
+
+    return asyncIpcClient(() -> rpcProxy.setSafeMode(null, req),
+        res -> res.getResult(), Boolean.class);
   }
 
   @Override
   public boolean saveNamespace(long timeWindow, long txGap) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.saveNamespace(timeWindow, txGap);
+    }
     SaveNamespaceRequestProto req = SaveNamespaceRequestProto.newBuilder()
         .setTimeWindow(timeWindow).setTxGap(txGap).build();
-    return ipc(() -> rpcProxy.saveNamespace(null, req)).getSaved();
+
+    return asyncIpcClient(() -> rpcProxy.saveNamespace(null, req),
+        res -> res.getSaved(), Boolean.class);
   }
 
   @Override
   public long rollEdits() throws IOException {
-    RollEditsResponseProto resp = ipc(() -> rpcProxy.rollEdits(null,
-        VOID_ROLLEDITS_REQUEST));
-    return resp.getNewSegmentTxId();
+    if (!Client.isAsynchronousMode()) {
+      return super.rollEdits();
+    }
+    return asyncIpcClient(() -> rpcProxy.rollEdits(null, VOID_ROLLEDITS_REQUEST),
+        res -> res.getNewSegmentTxId(), Long.class);
   }
 
   @Override
   public boolean restoreFailedStorage(String arg) throws IOException{
+    if (!Client.isAsynchronousMode()) {
+      return super.restoreFailedStorage(arg);
+    }
     RestoreFailedStorageRequestProto req = RestoreFailedStorageRequestProto
         .newBuilder()
         .setArg(arg).build();
-    return ipc(() -> rpcProxy.restoreFailedStorage(null, req)).getResult();
+
+    return asyncIpcClient(() -> rpcProxy.restoreFailedStorage(null, req),
+        res -> res.getResult(), Boolean.class);
   }
 
   @Override
   public void refreshNodes() throws IOException {
-    ipc(() -> rpcProxy.refreshNodes(null, VOID_REFRESH_NODES_REQUEST));
+    if (!Client.isAsynchronousMode()) {
+      super.refreshNodes();
+      return;
+    }
+    asyncIpcClient(() -> rpcProxy.refreshNodes(null, VOID_REFRESH_NODES_REQUEST),
+        res -> null, Void.class);
   }
 
   @Override
   public void finalizeUpgrade() throws IOException {
-    ipc(() -> rpcProxy.finalizeUpgrade(null, VOID_FINALIZE_UPGRADE_REQUEST));
+    if (!Client.isAsynchronousMode()) {
+      super.finalizeUpgrade();
+      return;
+    }
+    asyncIpcClient(() -> rpcProxy.finalizeUpgrade(null, VOID_FINALIZE_UPGRADE_REQUEST),
+        res -> null, Void.class);
   }
 
   @Override
   public boolean upgradeStatus() throws IOException {
-    final UpgradeStatusResponseProto proto = ipc(() -> rpcProxy.upgradeStatus(
-        null, VOID_UPGRADE_STATUS_REQUEST));
-    return proto.getUpgradeFinalized();
+    if (!Client.isAsynchronousMode()) {
+      return super.upgradeStatus();
+    }
+    return asyncIpcClient(() -> rpcProxy.upgradeStatus(null, VOID_UPGRADE_STATUS_REQUEST),
+        res -> res.getUpgradeFinalized(), Boolean.class);
   }
 
   @Override
   public RollingUpgradeInfo rollingUpgrade(RollingUpgradeAction action)
       throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.rollingUpgrade(action);
+    }
     final RollingUpgradeRequestProto r = RollingUpgradeRequestProto.newBuilder()
         .setAction(PBHelperClient.convert(action)).build();
-    final RollingUpgradeResponseProto proto =
-        ipc(() -> rpcProxy.rollingUpgrade(null, r));
-    if (proto.hasRollingUpgradeInfo()) {
-      return PBHelperClient.convert(proto.getRollingUpgradeInfo());
-    }
-    return null;
+
+    return asyncIpcClient(() -> rpcProxy.rollingUpgrade(null, r),
+        res -> PBHelperClient.convert(res.getRollingUpgradeInfo()),
+        RollingUpgradeInfo.class);
   }
 
   @Override
   public CorruptFileBlocks listCorruptFileBlocks(String path, String cookie)
       throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.listCorruptFileBlocks(path, cookie);
+    }
     ListCorruptFileBlocksRequestProto.Builder req =
         ListCorruptFileBlocksRequestProto.newBuilder().setPath(path);
-    if (cookie != null)
+    if (cookie != null) {
       req.setCookie(cookie);
-    return PBHelperClient.convert(
-        ipc(() -> rpcProxy.listCorruptFileBlocks(null, req.build())).getCorrupt());
+    }
+
+    return asyncIpcClient(() -> rpcProxy.listCorruptFileBlocks(null, req.build()),
+        res ->PBHelperClient.convert(res.getCorrupt()), CorruptFileBlocks.class);
   }
 
   @Override
   public void metaSave(String filename) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      super.metaSave(filename);
+      return;
+    }
     MetaSaveRequestProto req = MetaSaveRequestProto.newBuilder()
         .setFilename(filename).build();
-    ipc(() -> rpcProxy.metaSave(null, req));
+
+    asyncIpcClient(() -> rpcProxy.metaSave(null, req),
+        res -> null, Void.class);
   }
 
   @Override
   public HdfsFileStatus getFileInfo(String src) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.getFileInfo(src);
+    }
     GetFileInfoRequestProto req = GetFileInfoRequestProto.newBuilder()
         .setSrc(src)
         .build();
-    GetFileInfoResponseProto res = ipc(() -> rpcProxy.getFileInfo(null, req));
-    return res.hasFs() ? PBHelperClient.convert(res.getFs()) : null;
+
+    return asyncIpcClient(() -> rpcProxy.getFileInfo(null, req),
+        res -> res.hasFs() ? PBHelperClient.convert(res.getFs()) : null,
+        HdfsFileStatus.class);
   }
 
   @Override
-  public HdfsLocatedFileStatus getLocatedFileInfo(String src,
-      boolean needBlockToken) throws IOException {
+  public HdfsLocatedFileStatus getLocatedFileInfo(
+      String src, boolean needBlockToken) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.getLocatedFileInfo(src, needBlockToken);
+    }
     GetLocatedFileInfoRequestProto req =
         GetLocatedFileInfoRequestProto.newBuilder()
             .setSrc(src)
             .setNeedBlockToken(needBlockToken)
             .build();
-    GetLocatedFileInfoResponseProto res =
-        ipc(() -> rpcProxy.getLocatedFileInfo(null, req));
-    return (HdfsLocatedFileStatus) (res.hasFs()
-        ? PBHelperClient.convert(res.getFs())
-        : null);
+
+    return asyncIpcClient(() -> rpcProxy.getLocatedFileInfo(null, req),
+        res -> (HdfsLocatedFileStatus) (res.hasFs() ? PBHelperClient.convert(res.getFs()) : null),
+        HdfsLocatedFileStatus.class);
   }
 
   @Override
   public HdfsFileStatus getFileLinkInfo(String src) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.getFileLinkInfo(src);
+    }
     GetFileLinkInfoRequestProto req = GetFileLinkInfoRequestProto.newBuilder()
         .setSrc(src).build();
-    GetFileLinkInfoResponseProto result = ipc(() -> rpcProxy.getFileLinkInfo(null, req));
-    return result.hasFs() ? PBHelperClient.convert(result.getFs()) : null;
+
+    return asyncIpcClient(() -> rpcProxy.getFileLinkInfo(null, req),
+        res -> res.hasFs() ? PBHelperClient.convert(res.getFs()) : null,
+        HdfsFileStatus.class);
   }
 
   @Override
   public ContentSummary getContentSummary(String path) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.getContentSummary(path);
+    }
     GetContentSummaryRequestProto req = GetContentSummaryRequestProto
         .newBuilder()
         .setPath(path)
         .build();
-    return PBHelperClient.convert(ipc(() -> rpcProxy.getContentSummary(null, req))
-        .getSummary());
+
+    return asyncIpcClient(() -> rpcProxy.getContentSummary(null, req),
+        res -> PBHelperClient.convert(res.getSummary()), ContentSummary.class);
   }
 
   @Override
-  public void setQuota(String path, long namespaceQuota, long storagespaceQuota,
+  public void setQuota(
+      String path, long namespaceQuota, long storagespaceQuota,
       StorageType type) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      super.setQuota(path, namespaceQuota, storagespaceQuota, type);
+      return;
+    }
     final SetQuotaRequestProto.Builder builder
         = SetQuotaRequestProto.newBuilder()
         .setPath(path)
@@ -866,64 +948,99 @@ public class ClientNamenodeProtocolTranslatorPB implements
       builder.setStorageType(PBHelperClient.convertStorageType(type));
     }
     final SetQuotaRequestProto req = builder.build();
-    ipc(() -> rpcProxy.setQuota(null, req));
+
+    asyncIpcClient(() -> rpcProxy.setQuota(null, req),
+        res -> null, Void.class);
   }
 
   @Override
-  public void fsync(String src, long fileId, String client,
-      long lastBlockLength) throws IOException {
+  public void fsync(
+      String src, long fileId, String client, long lastBlockLength) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      super.fsync(src, fileId, client, lastBlockLength);
+      return;
+    }
     FsyncRequestProto req = FsyncRequestProto.newBuilder().setSrc(src)
         .setClient(client).setLastBlockLength(lastBlockLength)
         .setFileId(fileId).build();
-    ipc(() -> rpcProxy.fsync(null, req));
+
+    asyncIpcClient(() -> rpcProxy.fsync(null, req),
+        res -> null, Void.class);
   }
 
   @Override
   public void setTimes(String src, long mtime, long atime) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      super.setTimes(src, mtime, atime);
+      return;
+    }
     SetTimesRequestProto req = SetTimesRequestProto.newBuilder()
         .setSrc(src)
         .setMtime(mtime)
         .setAtime(atime)
         .build();
-    ipc(() -> rpcProxy.setTimes(null, req));
+
+    asyncIpcClient(() -> rpcProxy.setTimes(null, req),
+        res -> null, Void.class);
   }
 
   @Override
-  public void createSymlink(String target, String link, FsPermission dirPerm,
+  public void createSymlink(
+      String target, String link, FsPermission dirPerm,
       boolean createParent) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      super.createSymlink(target, link, dirPerm, createParent);
+      return;
+    }
     CreateSymlinkRequestProto req = CreateSymlinkRequestProto.newBuilder()
         .setTarget(target)
         .setLink(link)
         .setDirPerm(PBHelperClient.convert(dirPerm))
         .setCreateParent(createParent)
         .build();
-    ipc(() -> rpcProxy.createSymlink(null, req));
+
+    asyncIpcClient(() -> rpcProxy.createSymlink(null, req),
+        res -> null, Void.class);
   }
 
   @Override
   public String getLinkTarget(String path) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.getLinkTarget(path);
+    }
     GetLinkTargetRequestProto req = GetLinkTargetRequestProto.newBuilder()
         .setPath(path).build();
-    GetLinkTargetResponseProto rsp = ipc(() -> rpcProxy.getLinkTarget(null, req));
-    return rsp.hasTargetPath() ? rsp.getTargetPath() : null;
+
+    return asyncIpcClient(() -> rpcProxy.getLinkTarget(null, req),
+        res -> res.hasTargetPath() ? res.getTargetPath() : null,
+        String.class);
   }
 
   @Override
-  public LocatedBlock updateBlockForPipeline(ExtendedBlock block,
-      String clientName) throws IOException {
+  public LocatedBlock updateBlockForPipeline(
+      ExtendedBlock block, String clientName) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.updateBlockForPipeline(block, clientName);
+    }
     UpdateBlockForPipelineRequestProto req = UpdateBlockForPipelineRequestProto
         .newBuilder()
         .setBlock(PBHelperClient.convert(block))
         .setClientName(clientName)
         .build();
-    return PBHelperClient.convertLocatedBlockProto(
-        ipc(() -> rpcProxy.updateBlockForPipeline(null, req)).getBlock());
+
+    return asyncIpcClient(() -> rpcProxy.updateBlockForPipeline(null, req),
+        res -> PBHelperClient.convertLocatedBlockProto(res.getBlock()),
+        LocatedBlock.class);
   }
 
   @Override
-  public void updatePipeline(String clientName, ExtendedBlock oldBlock,
-      ExtendedBlock newBlock, DatanodeID[] newNodes, String[] storageIDs)
-      throws IOException {
+  public void updatePipeline(
+      String clientName, ExtendedBlock oldBlock, ExtendedBlock newBlock,
+      DatanodeID[] newNodes, String[] storageIDs) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      super.updatePipeline(clientName, oldBlock, newBlock, newNodes, storageIDs);
+      return;
+    }
     UpdatePipelineRequestProto req = UpdatePipelineRequestProto.newBuilder()
         .setClientName(clientName)
         .setOldBlock(PBHelperClient.convert(oldBlock))
@@ -931,390 +1048,451 @@ public class ClientNamenodeProtocolTranslatorPB implements
         .addAllNewNodes(Arrays.asList(PBHelperClient.convert(newNodes)))
         .addAllStorageIDs(storageIDs == null ? null : Arrays.asList(storageIDs))
         .build();
-    ipc(() -> rpcProxy.updatePipeline(null, req));
+
+    asyncIpcClient(() -> rpcProxy.updatePipeline(null, req),
+        res -> null, Void.class);
   }
 
   @Override
-  public Token<DelegationTokenIdentifier> getDelegationToken(Text renewer)
-      throws IOException {
+  public Token<DelegationTokenIdentifier> getDelegationToken(
+      Text renewer) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.getDelegationToken(renewer);
+    }
     GetDelegationTokenRequestProto req = GetDelegationTokenRequestProto
         .newBuilder()
         .setRenewer(renewer == null ? "" : renewer.toString())
         .build();
-    GetDelegationTokenResponseProto resp =
-        ipc(() -> rpcProxy.getDelegationToken(null, req));
-    return resp.hasToken() ?
-        PBHelperClient.convertDelegationToken(resp.getToken()) : null;
+
+    return asyncIpcClient(() -> rpcProxy.getDelegationToken(null, req),
+        res -> res.hasToken() ?
+            PBHelperClient.convertDelegationToken(res.getToken()) : null, Token.class);
   }
 
   @Override
-  public long renewDelegationToken(Token<DelegationTokenIdentifier> token)
-      throws IOException {
+  public long renewDelegationToken(
+      Token<DelegationTokenIdentifier> token) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.renewDelegationToken(token);
+    }
     RenewDelegationTokenRequestProto req =
         RenewDelegationTokenRequestProto.newBuilder().
             setToken(PBHelperClient.convert(token)).
             build();
-    return ipc(() -> rpcProxy.renewDelegationToken(null, req)).getNewExpiryTime();
+
+    return asyncIpcClient(() -> rpcProxy.renewDelegationToken(null, req),
+        res -> res.getNewExpiryTime(), Long.class);
   }
 
   @Override
-  public void cancelDelegationToken(Token<DelegationTokenIdentifier> token)
-      throws IOException {
+  public void cancelDelegationToken(
+      Token<DelegationTokenIdentifier> token) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      super.cancelDelegationToken(token);
+      return;
+    }
     CancelDelegationTokenRequestProto req = CancelDelegationTokenRequestProto
         .newBuilder()
         .setToken(PBHelperClient.convert(token))
         .build();
-    ipc(() -> rpcProxy.cancelDelegationToken(null, req));
+
+    asyncIpcClient(() -> rpcProxy.cancelDelegationToken(null, req),
+        res -> null, Void.class);
   }
 
   @Override
   public void setBalancerBandwidth(long bandwidth) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      super.setBalancerBandwidth(bandwidth);
+      return;
+    }
     SetBalancerBandwidthRequestProto req =
         SetBalancerBandwidthRequestProto.newBuilder()
             .setBandwidth(bandwidth)
             .build();
-    ipc(() -> rpcProxy.setBalancerBandwidth(null, req));
-  }
 
-  @Override
-  public boolean isMethodSupported(String methodName) throws IOException {
-    return RpcClientUtil.isMethodSupported(rpcProxy,
-        ClientNamenodeProtocolPB.class, RPC.RpcKind.RPC_PROTOCOL_BUFFER,
-        RPC.getProtocolVersion(ClientNamenodeProtocolPB.class), methodName);
+    asyncIpcClient(() -> rpcProxy.setBalancerBandwidth(null, req),
+        res -> null, Void.class);
   }
 
   @Override
   public DataEncryptionKey getDataEncryptionKey() throws IOException {
-    GetDataEncryptionKeyResponseProto rsp = ipc(() -> rpcProxy.getDataEncryptionKey(
-        null, VOID_GET_DATA_ENCRYPTIONKEY_REQUEST));
-    return rsp.hasDataEncryptionKey() ?
-        PBHelperClient.convert(rsp.getDataEncryptionKey()) : null;
+    if (!Client.isAsynchronousMode()) {
+      return super.getDataEncryptionKey();
+    }
+    return asyncIpcClient(() -> rpcProxy.getDataEncryptionKey(null,
+        VOID_GET_DATA_ENCRYPTIONKEY_REQUEST),
+        res -> res.hasDataEncryptionKey() ?
+            PBHelperClient.convert(res.getDataEncryptionKey()) : null,
+        DataEncryptionKey.class);
   }
 
 
   @Override
   public boolean isFileClosed(String src) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.isFileClosed(src);
+    }
     IsFileClosedRequestProto req = IsFileClosedRequestProto.newBuilder()
         .setSrc(src).build();
-    return ipc(() -> rpcProxy.isFileClosed(null, req)).getResult();
+
+    return asyncIpcClient(() -> rpcProxy.isFileClosed(null, req),
+        res -> res.getResult(), Boolean.class);
   }
 
   @Override
-  public Object getUnderlyingProxyObject() {
-    return rpcProxy;
-  }
-
-  @Override
-  public String createSnapshot(String snapshotRoot, String snapshotName)
-      throws IOException {
+  public String createSnapshot(
+      String snapshotRoot, String snapshotName) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.createSnapshot(snapshotRoot, snapshotName);
+    }
     final CreateSnapshotRequestProto.Builder builder
         = CreateSnapshotRequestProto.newBuilder().setSnapshotRoot(snapshotRoot);
     if (snapshotName != null) {
       builder.setSnapshotName(snapshotName);
     }
     final CreateSnapshotRequestProto req = builder.build();
-    return ipc(() -> rpcProxy.createSnapshot(null, req)).getSnapshotPath();
+
+    return asyncIpcClient(() -> rpcProxy.createSnapshot(null, req),
+        res -> res.getSnapshotPath(), String.class);
   }
 
   @Override
   public void deleteSnapshot(String snapshotRoot, String snapshotName)
       throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      super.deleteSnapshot(snapshotRoot, snapshotName);
+      return;
+    }
     DeleteSnapshotRequestProto req = DeleteSnapshotRequestProto.newBuilder()
         .setSnapshotRoot(snapshotRoot).setSnapshotName(snapshotName).build();
-    ipc(() -> rpcProxy.deleteSnapshot(null, req));
+
+    asyncIpcClient(() -> rpcProxy.deleteSnapshot(null, req),
+        res -> null, Void.class);
   }
 
   @Override
   public void allowSnapshot(String snapshotRoot) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      super.allowSnapshot(snapshotRoot);
+      return;
+    }
     AllowSnapshotRequestProto req = AllowSnapshotRequestProto.newBuilder()
         .setSnapshotRoot(snapshotRoot).build();
-    ipc(() -> rpcProxy.allowSnapshot(null, req));
+
+    asyncIpcClient(() -> rpcProxy.allowSnapshot(null, req),
+        res -> null, Void.class);
   }
 
   @Override
   public void disallowSnapshot(String snapshotRoot) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      super.disallowSnapshot(snapshotRoot);
+      return;
+    }
     DisallowSnapshotRequestProto req = DisallowSnapshotRequestProto
         .newBuilder().setSnapshotRoot(snapshotRoot).build();
-    ipc(() -> rpcProxy.disallowSnapshot(null, req));
+
+    asyncIpcClient(() -> rpcProxy.disallowSnapshot(null, req),
+        res -> null, Void.class);
   }
 
   @Override
-  public void renameSnapshot(String snapshotRoot, String snapshotOldName,
+  public void renameSnapshot(
+      String snapshotRoot, String snapshotOldName,
       String snapshotNewName) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      super.renameSnapshot(snapshotRoot, snapshotOldName, snapshotNewName);
+      return;
+    }
     RenameSnapshotRequestProto req = RenameSnapshotRequestProto.newBuilder()
         .setSnapshotRoot(snapshotRoot).setSnapshotOldName(snapshotOldName)
         .setSnapshotNewName(snapshotNewName).build();
-    ipc(() -> rpcProxy.renameSnapshot(null, req));
+
+    asyncIpcClient(() -> rpcProxy.renameSnapshot(null, req),
+        res -> null, Void.class);
   }
 
   @Override
-  public SnapshottableDirectoryStatus[] getSnapshottableDirListing()
-      throws IOException {
+  public SnapshottableDirectoryStatus[] getSnapshottableDirListing() throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.getSnapshottableDirListing();
+    }
     GetSnapshottableDirListingRequestProto req =
         GetSnapshottableDirListingRequestProto.newBuilder().build();
-    GetSnapshottableDirListingResponseProto result = ipc(() -> rpcProxy
-        .getSnapshottableDirListing(null, req));
 
-    if (result.hasSnapshottableDirList()) {
-      return PBHelperClient.convert(result.getSnapshottableDirList());
-    }
-    return null;
+    return asyncIpcClient(() -> rpcProxy.getSnapshottableDirListing(null, req),
+        res -> {
+          if (res.hasSnapshottableDirList()) {
+            return PBHelperClient.convert(res.getSnapshottableDirList());
+          }
+          return null;
+        }, SnapshottableDirectoryStatus[].class);
   }
 
   @Override
-  public SnapshotStatus[] getSnapshotListing(String path)
-      throws IOException {
+  public SnapshotStatus[] getSnapshotListing(String path) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.getSnapshotListing(path);
+    }
     GetSnapshotListingRequestProto req =
         GetSnapshotListingRequestProto.newBuilder()
             .setSnapshotRoot(path).build();
-    GetSnapshotListingResponseProto result = ipc(() -> rpcProxy
-        .getSnapshotListing(null, req));
 
-    if (result.hasSnapshotList()) {
-      return PBHelperClient.convert(result.getSnapshotList());
-    }
-    return null;
+    return asyncIpcClient(() -> rpcProxy.getSnapshotListing(null, req),
+        res -> {
+          if (res.hasSnapshotList()) {
+            return PBHelperClient.convert(res.getSnapshotList());
+          }
+          return null;
+        }, SnapshotStatus[].class);
   }
 
   @Override
-  public SnapshotDiffReport getSnapshotDiffReport(String snapshotRoot,
-      String fromSnapshot, String toSnapshot) throws IOException {
+  public SnapshotDiffReport getSnapshotDiffReport(
+      String snapshotRoot, String fromSnapshot, String toSnapshot) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.getSnapshotDiffReport(snapshotRoot, fromSnapshot, toSnapshot);
+    }
     GetSnapshotDiffReportRequestProto req = GetSnapshotDiffReportRequestProto
         .newBuilder().setSnapshotRoot(snapshotRoot)
         .setFromSnapshot(fromSnapshot).setToSnapshot(toSnapshot).build();
-    GetSnapshotDiffReportResponseProto result =
-        ipc(() -> rpcProxy.getSnapshotDiffReport(null, req));
 
-    return PBHelperClient.convert(result.getDiffReport());
+    return asyncIpcClient(() -> rpcProxy.getSnapshotDiffReport(null, req),
+        res -> PBHelperClient.convert(res.getDiffReport()), SnapshotDiffReport.class);
   }
 
   @Override
   public SnapshotDiffReportListing getSnapshotDiffReportListing(
       String snapshotRoot, String fromSnapshot, String toSnapshot,
       byte[] startPath, int index) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.getSnapshotDiffReportListing(snapshotRoot, fromSnapshot,
+          toSnapshot, startPath, index);
+    }
     GetSnapshotDiffReportListingRequestProto req =
         GetSnapshotDiffReportListingRequestProto.newBuilder()
             .setSnapshotRoot(snapshotRoot).setFromSnapshot(fromSnapshot)
             .setToSnapshot(toSnapshot).setCursor(
-            HdfsProtos.SnapshotDiffReportCursorProto.newBuilder()
-                .setStartPath(PBHelperClient.getByteString(startPath))
-                .setIndex(index).build()).build();
-    GetSnapshotDiffReportListingResponseProto result =
-        ipc(() -> rpcProxy.getSnapshotDiffReportListing(null, req));
+                HdfsProtos.SnapshotDiffReportCursorProto.newBuilder()
+                    .setStartPath(PBHelperClient.getByteString(startPath))
+                    .setIndex(index).build()).build();
 
-    return PBHelperClient.convert(result.getDiffReport());
+    return asyncIpcClient(() -> rpcProxy.getSnapshotDiffReportListing(null, req),
+        res -> PBHelperClient.convert(res.getDiffReport()),
+        SnapshotDiffReportListing.class);
   }
 
   @Override
-  public long addCacheDirective(CacheDirectiveInfo directive,
-      EnumSet<CacheFlag> flags) throws IOException {
+  public long addCacheDirective(
+      CacheDirectiveInfo directive, EnumSet<CacheFlag> flags) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.addCacheDirective(directive, flags);
+    }
     AddCacheDirectiveRequestProto.Builder builder =
         AddCacheDirectiveRequestProto.newBuilder().
             setInfo(PBHelperClient.convert(directive));
     if (!flags.isEmpty()) {
       builder.setCacheFlags(PBHelperClient.convertCacheFlags(flags));
     }
-    return ipc(() -> rpcProxy.addCacheDirective(null, builder.build())).getId();
+
+    return asyncIpcClient(() -> rpcProxy.addCacheDirective(null, builder.build()),
+        res -> res.getId(), Long.class);
   }
 
   @Override
-  public void modifyCacheDirective(CacheDirectiveInfo directive,
-      EnumSet<CacheFlag> flags) throws IOException {
+  public void modifyCacheDirective(
+      CacheDirectiveInfo directive, EnumSet<CacheFlag> flags) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      super.modifyCacheDirective(directive, flags);
+      return;
+    }
     ModifyCacheDirectiveRequestProto.Builder builder =
         ModifyCacheDirectiveRequestProto.newBuilder().
             setInfo(PBHelperClient.convert(directive));
     if (!flags.isEmpty()) {
       builder.setCacheFlags(PBHelperClient.convertCacheFlags(flags));
     }
-    ipc(() -> rpcProxy.modifyCacheDirective(null, builder.build()));
+
+    asyncIpcClient(() -> rpcProxy.modifyCacheDirective(null, builder.build()),
+        res -> null, Void.class);
   }
 
   @Override
-  public void removeCacheDirective(long id)
-      throws IOException {
-    ipc(() -> rpcProxy.removeCacheDirective(null,
+  public void removeCacheDirective(long id) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      super.removeCacheDirective(id);
+      return;
+    }
+
+    asyncIpcClient(() -> rpcProxy.removeCacheDirective(null,
         RemoveCacheDirectiveRequestProto.newBuilder().
-            setId(id).build()));
-  }
-
-  protected static class BatchedCacheEntries
-      implements BatchedEntries<CacheDirectiveEntry> {
-    private final ListCacheDirectivesResponseProto response;
-
-    BatchedCacheEntries(
-        ListCacheDirectivesResponseProto response) {
-      this.response = response;
-    }
-
-    @Override
-    public CacheDirectiveEntry get(int i) {
-      return PBHelperClient.convert(response.getElements(i));
-    }
-
-    @Override
-    public int size() {
-      return response.getElementsCount();
-    }
-
-    @Override
-    public boolean hasMore() {
-      return response.getHasMore();
-    }
+            setId(id).build()),
+        res -> null, Void.class);
   }
 
   @Override
-  public BatchedEntries<CacheDirectiveEntry> listCacheDirectives(long prevId,
-      CacheDirectiveInfo filter) throws IOException {
+  public BatchedEntries<CacheDirectiveEntry> listCacheDirectives(
+      long prevId, CacheDirectiveInfo filter) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.listCacheDirectives(prevId, filter);
+    }
     if (filter == null) {
       filter = new CacheDirectiveInfo.Builder().build();
     }
     CacheDirectiveInfo f = filter;
-    return new BatchedCacheEntries(
-        ipc(() -> rpcProxy.listCacheDirectives(null,
-            ListCacheDirectivesRequestProto.newBuilder().
-                setPrevId(prevId).
-                setFilter(PBHelperClient.convert(f)).
-                build())));
+
+    return asyncIpcClient(() -> rpcProxy.listCacheDirectives(null,
+        ListCacheDirectivesRequestProto.newBuilder().
+            setPrevId(prevId).
+            setFilter(PBHelperClient.convert(f)).
+            build()),
+        res -> new BatchedCacheEntries(res), BatchedEntries.class);
   }
 
   @Override
   public void addCachePool(CachePoolInfo info) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      super.addCachePool(info);
+      return;
+    }
     AddCachePoolRequestProto.Builder builder =
         AddCachePoolRequestProto.newBuilder();
     builder.setInfo(PBHelperClient.convert(info));
-    ipc(() -> rpcProxy.addCachePool(null, builder.build()));
+
+    asyncIpcClient(() -> rpcProxy.addCachePool(null, builder.build()),
+        res -> null, Void.class);
   }
 
   @Override
   public void modifyCachePool(CachePoolInfo req) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      super.modifyCachePool(req);
+      return;
+    }
     ModifyCachePoolRequestProto.Builder builder =
         ModifyCachePoolRequestProto.newBuilder();
     builder.setInfo(PBHelperClient.convert(req));
-    ipc(() -> rpcProxy.modifyCachePool(null, builder.build()));
+
+    asyncIpcClient(() -> rpcProxy.modifyCachePool(null, builder.build()),
+        res -> null, Void.class);
   }
 
   @Override
   public void removeCachePool(String cachePoolName) throws IOException {
-    ipc(() -> rpcProxy.removeCachePool(null,
-        RemoveCachePoolRequestProto.newBuilder().
-            setPoolName(cachePoolName).build()));
-  }
-
-  protected static class BatchedCachePoolEntries
-      implements BatchedEntries<CachePoolEntry> {
-    private final ListCachePoolsResponseProto proto;
-
-    public BatchedCachePoolEntries(ListCachePoolsResponseProto proto) {
-      this.proto = proto;
+    if (!Client.isAsynchronousMode()) {
+      super.removeCachePool(cachePoolName);
+      return;
     }
 
-    @Override
-    public CachePoolEntry get(int i) {
-      CachePoolEntryProto elem = proto.getEntries(i);
-      return PBHelperClient.convert(elem);
-    }
-
-    @Override
-    public int size() {
-      return proto.getEntriesCount();
-    }
-
-    @Override
-    public boolean hasMore() {
-      return proto.getHasMore();
-    }
+    asyncIpcClient(() -> rpcProxy.removeCachePool(null,
+            RemoveCachePoolRequestProto.newBuilder().
+                setPoolName(cachePoolName).build()),
+        res -> null, Void.class);
   }
 
   @Override
   public BatchedEntries<CachePoolEntry> listCachePools(String prevKey)
       throws IOException {
-    return new BatchedCachePoolEntries(
-        ipc(() -> rpcProxy.listCachePools(null,
-            ListCachePoolsRequestProto.newBuilder().
-                setPrevPoolName(prevKey).build())));
+    if (!Client.isAsynchronousMode()) {
+      return super.listCachePools(prevKey);
+    }
+
+    return asyncIpcClient(() -> rpcProxy.listCachePools(null,
+            ListCachePoolsRequestProto.newBuilder().setPrevPoolName(prevKey).build()),
+        res -> new BatchedCachePoolEntries(res), BatchedEntries.class);
   }
 
   @Override
   public void modifyAclEntries(String src, List<AclEntry> aclSpec)
       throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      super.modifyAclEntries(src, aclSpec);
+      return;
+    }
     ModifyAclEntriesRequestProto req = ModifyAclEntriesRequestProto
         .newBuilder().setSrc(src)
         .addAllAclSpec(PBHelperClient.convertAclEntryProto(aclSpec)).build();
-    ipc(() -> rpcProxy.modifyAclEntries(null, req));
+
+    asyncIpcClient(() -> rpcProxy.modifyAclEntries(null, req),
+        res -> null, Void.class);
   }
 
   @Override
   public void removeAclEntries(String src, List<AclEntry> aclSpec)
       throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      super.removeAclEntries(src, aclSpec);
+      return;
+    }
     RemoveAclEntriesRequestProto req = RemoveAclEntriesRequestProto
         .newBuilder().setSrc(src)
         .addAllAclSpec(PBHelperClient.convertAclEntryProto(aclSpec)).build();
-    ipc(() -> rpcProxy.removeAclEntries(null, req));
+
+    asyncIpcClient(() -> rpcProxy.removeAclEntries(null, req),
+        res -> null, Void.class);
   }
 
   @Override
   public void removeDefaultAcl(String src) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      super.removeDefaultAcl(src);
+      return;
+    }
     RemoveDefaultAclRequestProto req = RemoveDefaultAclRequestProto
         .newBuilder().setSrc(src).build();
-    ipc(() -> rpcProxy.removeDefaultAcl(null, req));
+
+    asyncIpcClient(() -> rpcProxy.removeDefaultAcl(null, req),
+        res -> null, Void.class);
   }
 
   @Override
   public void removeAcl(String src) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      super.removeAcl(src);
+      return;
+    }
     RemoveAclRequestProto req = RemoveAclRequestProto.newBuilder()
         .setSrc(src).build();
-    ipc(() -> rpcProxy.removeAcl(null, req));
+
+    asyncIpcClient(() -> rpcProxy.removeAcl(null, req),
+        res -> null, Void.class);
   }
 
   @Override
   public void setAcl(String src, List<AclEntry> aclSpec) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      super.setAcl(src, aclSpec);
+      return;
+    }
     SetAclRequestProto req = SetAclRequestProto.newBuilder()
         .setSrc(src)
         .addAllAclSpec(PBHelperClient.convertAclEntryProto(aclSpec))
         .build();
-    if (Client.isAsynchronousMode()) {
-      ipc(() -> rpcProxy.setAcl(null, req));
-      setAsyncReturnValue();
-    } else {
-      ipc(() -> rpcProxy.setAcl(null, req));
-    }
+
+    asyncIpcClient(() -> rpcProxy.setAcl(null, req),
+        res -> null, Void.class);
   }
 
   @Override
   public AclStatus getAclStatus(String src) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.getAclStatus(src);
+    }
     GetAclStatusRequestProto req = GetAclStatusRequestProto.newBuilder()
         .setSrc(src).build();
-    try {
-      if (Client.isAsynchronousMode()) {
-        rpcProxy.getAclStatus(null, req);
-        final AsyncGet<Message, Exception> asyncReturnMessage
-            = ProtobufRpcEngine2.getAsyncReturnMessage();
-        final AsyncGet<AclStatus, Exception> asyncGet
-            = new AsyncGet<AclStatus, Exception>() {
-          @Override
-          public AclStatus get(long timeout, TimeUnit unit) throws Exception {
-            return PBHelperClient.convert((GetAclStatusResponseProto)
-                asyncReturnMessage.get(timeout, unit));
-          }
 
-          @Override
-          public boolean isDone() {
-            return asyncReturnMessage.isDone();
-          }
-        };
-        AsyncCallHandler.setLowerLayerAsyncReturn(asyncGet);
-        return null;
-      } else {
-        return PBHelperClient.convert(rpcProxy.getAclStatus(null, req));
-      }
-    } catch (ServiceException e) {
-      throw getRemoteException(e);
-    }
+    return asyncIpcClient(() -> rpcProxy.getAclStatus(null, req),
+        res -> PBHelperClient.convert(res), AclStatus.class);
   }
 
   @Override
   public void createEncryptionZone(String src, String keyName)
       throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      super.createEncryptionZone(src, keyName);
+      return;
+    }
     final CreateEncryptionZoneRequestProto.Builder builder =
         CreateEncryptionZoneRequestProto.newBuilder();
     builder.setSrc(src);
@@ -1322,44 +1500,60 @@ public class ClientNamenodeProtocolTranslatorPB implements
       builder.setKeyName(keyName);
     }
     CreateEncryptionZoneRequestProto req = builder.build();
-    ipc(() -> rpcProxy.createEncryptionZone(null, req));
+
+    asyncIpcClient(() -> rpcProxy.createEncryptionZone(null, req),
+        res -> null, Void.class);
   }
 
   @Override
   public EncryptionZone getEZForPath(String src) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.getEZForPath(src);
+    }
     final GetEZForPathRequestProto.Builder builder =
         GetEZForPathRequestProto.newBuilder();
     builder.setSrc(src);
     final GetEZForPathRequestProto req = builder.build();
-    final EncryptionZonesProtos.GetEZForPathResponseProto response =
-        ipc(() -> rpcProxy.getEZForPath(null, req));
-    if (response.hasZone()) {
-      return PBHelperClient.convert(response.getZone());
-    } else {
-      return null;
-    }
+
+    return asyncIpcClient(() -> rpcProxy.getEZForPath(null, req),
+        res -> {
+          if (res.hasZone()) {
+            return PBHelperClient.convert(res.getZone());
+          } else {
+            return null;
+          }
+        }, EncryptionZone.class);
   }
 
   @Override
   public BatchedEntries<EncryptionZone> listEncryptionZones(long id)
       throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.listEncryptionZones(id);
+    }
     final ListEncryptionZonesRequestProto req =
         ListEncryptionZonesRequestProto.newBuilder()
             .setId(id)
             .build();
-    EncryptionZonesProtos.ListEncryptionZonesResponseProto response =
-        ipc(() -> rpcProxy.listEncryptionZones(null, req));
-    List<EncryptionZone> elements =
-        Lists.newArrayListWithCapacity(response.getZonesCount());
-    for (EncryptionZoneProto p : response.getZonesList()) {
-      elements.add(PBHelperClient.convert(p));
-    }
-    return new BatchedListEntries<>(elements, response.getHasMore());
+
+    return asyncIpcClient(() -> rpcProxy.listEncryptionZones(null, req),
+        res -> {
+          List<EncryptionZone> elements =
+              Lists.newArrayListWithCapacity(res.getZonesCount());
+          for (EncryptionZoneProto p : res.getZonesList()) {
+            elements.add(PBHelperClient.convert(p));
+          }
+          return new BatchedListEntries<>(elements, res.getHasMore());
+        }, BatchedEntries.class);
   }
 
   @Override
   public void setErasureCodingPolicy(String src, String ecPolicyName)
       throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      super.setErasureCodingPolicy(src, ecPolicyName);
+      return;
+    }
     final SetErasureCodingPolicyRequestProto.Builder builder =
         SetErasureCodingPolicyRequestProto.newBuilder();
     builder.setSrc(src);
@@ -1367,253 +1561,372 @@ public class ClientNamenodeProtocolTranslatorPB implements
       builder.setEcPolicyName(ecPolicyName);
     }
     SetErasureCodingPolicyRequestProto req = builder.build();
-    ipc(() -> rpcProxy.setErasureCodingPolicy(null, req));
+
+    asyncIpcClient(() -> rpcProxy.setErasureCodingPolicy(null, req),
+        res -> null, Void.class);
   }
 
   @Override
   public void unsetErasureCodingPolicy(String src) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      super.unsetErasureCodingPolicy(src);
+      return;
+    }
     final UnsetErasureCodingPolicyRequestProto.Builder builder =
         UnsetErasureCodingPolicyRequestProto.newBuilder();
     builder.setSrc(src);
     UnsetErasureCodingPolicyRequestProto req = builder.build();
-    ipc(() -> rpcProxy.unsetErasureCodingPolicy(null, req));
+
+    asyncIpcClient(() -> rpcProxy.unsetErasureCodingPolicy(null, req),
+        res -> null, Void.class);
   }
 
   @Override
   public ECTopologyVerifierResult getECTopologyResultForPolicies(
       final String... policyNames) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.getECTopologyResultForPolicies(policyNames);
+    }
     final GetECTopologyResultForPoliciesRequestProto.Builder builder =
         GetECTopologyResultForPoliciesRequestProto.newBuilder();
     builder.addAllPolicies(Arrays.asList(policyNames));
     GetECTopologyResultForPoliciesRequestProto req = builder.build();
-    GetECTopologyResultForPoliciesResponseProto response =
-        ipc(() -> rpcProxy.getECTopologyResultForPolicies(null, req));
-    return PBHelperClient
-        .convertECTopologyVerifierResultProto(response.getResponse());
+
+    return asyncIpcClient(() -> rpcProxy.getECTopologyResultForPolicies(null, req),
+        res -> PBHelperClient.convertECTopologyVerifierResultProto(res.getResponse()),
+        ECTopologyVerifierResult.class);
   }
 
   @Override
   public void reencryptEncryptionZone(String zone, ReencryptAction action)
       throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      super.reencryptEncryptionZone(zone, action);
+      return;
+    }
     final ReencryptEncryptionZoneRequestProto.Builder builder =
         ReencryptEncryptionZoneRequestProto.newBuilder();
     builder.setZone(zone).setAction(PBHelperClient.convert(action));
     ReencryptEncryptionZoneRequestProto req = builder.build();
-    ipc(() -> rpcProxy.reencryptEncryptionZone(null, req));
+
+    asyncIpcClient(() -> rpcProxy.reencryptEncryptionZone(null, req),
+        res -> null, Void.class);
   }
 
   @Override
   public BatchedEntries<ZoneReencryptionStatus> listReencryptionStatus(long id)
       throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.listReencryptionStatus(id);
+    }
     final ListReencryptionStatusRequestProto req =
         ListReencryptionStatusRequestProto.newBuilder().setId(id).build();
-    ListReencryptionStatusResponseProto response =
-        ipc(() -> rpcProxy.listReencryptionStatus(null, req));
-    List<ZoneReencryptionStatus> elements =
-        Lists.newArrayListWithCapacity(response.getStatusesCount());
-    for (ZoneReencryptionStatusProto p : response.getStatusesList()) {
-      elements.add(PBHelperClient.convert(p));
-    }
-    return new BatchedListEntries<>(elements, response.getHasMore());
+
+    return asyncIpcClient(() -> rpcProxy.listReencryptionStatus(null, req),
+        res -> {
+          List<ZoneReencryptionStatus> elements =
+              Lists.newArrayListWithCapacity(res.getStatusesCount());
+          for (ZoneReencryptionStatusProto p : res.getStatusesList()) {
+            elements.add(PBHelperClient.convert(p));
+          }
+          return new BatchedListEntries<>(elements, res.getHasMore());
+        }, BatchedEntries.class);
   }
 
   @Override
   public void setXAttr(String src, XAttr xAttr, EnumSet<XAttrSetFlag> flag)
       throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      super.setXAttr(src, xAttr, flag);
+      return;
+    }
     SetXAttrRequestProto req = SetXAttrRequestProto.newBuilder()
         .setSrc(src)
         .setXAttr(PBHelperClient.convertXAttrProto(xAttr))
         .setFlag(PBHelperClient.convert(flag))
         .build();
-    ipc(() -> rpcProxy.setXAttr(null, req));
+
+    asyncIpcClient(() -> rpcProxy.setXAttr(null, req),
+        res -> null, Void.class);
   }
 
   @Override
   public List<XAttr> getXAttrs(String src, List<XAttr> xAttrs)
       throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.getXAttrs(src, xAttrs);
+    }
     GetXAttrsRequestProto.Builder builder = GetXAttrsRequestProto.newBuilder();
     builder.setSrc(src);
     if (xAttrs != null) {
       builder.addAllXAttrs(PBHelperClient.convertXAttrProto(xAttrs));
     }
     GetXAttrsRequestProto req = builder.build();
-    return PBHelperClient.convert(ipc(() -> rpcProxy.getXAttrs(null, req)));
+
+    return asyncIpcClient(() -> rpcProxy.getXAttrs(null, req),
+        res -> PBHelperClient.convert(res), List.class);
   }
 
   @Override
   public List<XAttr> listXAttrs(String src) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.listXAttrs(src);
+    }
     ListXAttrsRequestProto.Builder builder =
         ListXAttrsRequestProto.newBuilder();
     builder.setSrc(src);
     ListXAttrsRequestProto req = builder.build();
-    return PBHelperClient.convert(ipc(() -> rpcProxy.listXAttrs(null, req)));
+
+    return asyncIpcClient(() -> rpcProxy.listXAttrs(null, req),
+        res -> PBHelperClient.convert(res), List.class);
   }
 
   @Override
   public void removeXAttr(String src, XAttr xAttr) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      super.removeXAttr(src, xAttr);
+      return;
+    }
     RemoveXAttrRequestProto req = RemoveXAttrRequestProto
         .newBuilder().setSrc(src)
         .setXAttr(PBHelperClient.convertXAttrProto(xAttr)).build();
-    ipc(() -> rpcProxy.removeXAttr(null, req));
+
+    asyncIpcClient(() -> rpcProxy.removeXAttr(null, req),
+        res -> null, Void.class);
   }
 
   @Override
   public void checkAccess(String path, FsAction mode) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      super.checkAccess(path, mode);
+      return;
+    }
     CheckAccessRequestProto req = CheckAccessRequestProto.newBuilder()
         .setPath(path).setMode(PBHelperClient.convert(mode)).build();
-    ipc(() -> rpcProxy.checkAccess(null, req));
+
+    asyncIpcClient(() -> rpcProxy.checkAccess(null, req),
+        res -> null, Void.class);
   }
 
   @Override
   public void setStoragePolicy(String src, String policyName)
       throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      super.setStoragePolicy(src, policyName);
+      return;
+    }
     SetStoragePolicyRequestProto req = SetStoragePolicyRequestProto
         .newBuilder().setSrc(src).setPolicyName(policyName).build();
-    ipc(() -> rpcProxy.setStoragePolicy(null, req));
+
+    asyncIpcClient(() -> rpcProxy.setStoragePolicy(null, req),
+        res -> null, Void.class);
   }
 
   @Override
   public void unsetStoragePolicy(String src) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      super.unsetStoragePolicy(src);
+      return;
+    }
     UnsetStoragePolicyRequestProto req = UnsetStoragePolicyRequestProto
         .newBuilder().setSrc(src).build();
-    ipc(() -> rpcProxy.unsetStoragePolicy(null, req));
+
+    asyncIpcClient(() -> rpcProxy.unsetStoragePolicy(null, req),
+        res -> null, Void.class);
   }
 
   @Override
   public BlockStoragePolicy getStoragePolicy(String path) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.getStoragePolicy(path);
+    }
     GetStoragePolicyRequestProto request = GetStoragePolicyRequestProto
         .newBuilder().setPath(path).build();
-    return PBHelperClient.convert(ipc(() -> rpcProxy.getStoragePolicy(null, request))
-        .getStoragePolicy());
+
+    return asyncIpcClient(() -> rpcProxy.getStoragePolicy(null, request),
+        res -> PBHelperClient.convert(res.getStoragePolicy()),
+        BlockStoragePolicy.class);
   }
 
   @Override
   public BlockStoragePolicy[] getStoragePolicies() throws IOException {
-    GetStoragePoliciesResponseProto response = ipc(() -> rpcProxy
-        .getStoragePolicies(null, VOID_GET_STORAGE_POLICIES_REQUEST));
-    return PBHelperClient.convertStoragePolicies(response.getPoliciesList());
+    if (!Client.isAsynchronousMode()) {
+      return super.getStoragePolicies();
+    }
+
+    return asyncIpcClient(() -> rpcProxy.getStoragePolicies(null,
+            VOID_GET_STORAGE_POLICIES_REQUEST),
+        res -> PBHelperClient.convertStoragePolicies(res.getPoliciesList()),
+        BlockStoragePolicy[].class);
   }
 
   public long getCurrentEditLogTxid() throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.getCurrentEditLogTxid();
+    }
     GetCurrentEditLogTxidRequestProto req = GetCurrentEditLogTxidRequestProto
         .getDefaultInstance();
-    return ipc(() -> rpcProxy.getCurrentEditLogTxid(null, req)).getTxid();
+
+    return asyncIpcClient(() -> rpcProxy.getCurrentEditLogTxid(null, req),
+        res -> res.getTxid(), Long.class);
   }
 
   @Override
   public EventBatchList getEditsFromTxid(long txid) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.getEditsFromTxid(txid);
+    }
     GetEditsFromTxidRequestProto req = GetEditsFromTxidRequestProto.newBuilder()
         .setTxid(txid).build();
-    return PBHelperClient.convert(ipc(() -> rpcProxy.getEditsFromTxid(null, req)));
+
+    return asyncIpcClient(() -> rpcProxy.getEditsFromTxid(null, req),
+        res -> PBHelperClient.convert(res), EventBatchList.class);
   }
 
   @Override
   public AddErasureCodingPolicyResponse[] addErasureCodingPolicies(
       ErasureCodingPolicy[] policies) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.addErasureCodingPolicies(policies);
+    }
     List<ErasureCodingPolicyProto> protos = Arrays.stream(policies)
         .map(PBHelperClient::convertErasureCodingPolicy)
         .collect(Collectors.toList());
     AddErasureCodingPoliciesRequestProto req =
         AddErasureCodingPoliciesRequestProto.newBuilder()
-        .addAllEcPolicies(protos).build();
-    AddErasureCodingPoliciesResponseProto rep = ipc(() -> rpcProxy
-        .addErasureCodingPolicies(null, req));
-    AddErasureCodingPolicyResponse[] responses =
-        rep.getResponsesList().stream()
+            .addAllEcPolicies(protos).build();
+
+    return asyncIpcClient(() -> rpcProxy.addErasureCodingPolicies(null, req),
+        res -> res.getResponsesList().stream()
             .map(PBHelperClient::convertAddErasureCodingPolicyResponse)
-            .toArray(AddErasureCodingPolicyResponse[]::new);
-    return responses;
+            .toArray(AddErasureCodingPolicyResponse[]::new),
+        AddErasureCodingPolicyResponse[].class);
   }
 
   @Override
   public void removeErasureCodingPolicy(String ecPolicyName)
       throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      super.removeErasureCodingPolicy(ecPolicyName);
+      return;
+    }
     RemoveErasureCodingPolicyRequestProto.Builder builder =
         RemoveErasureCodingPolicyRequestProto.newBuilder();
     builder.setEcPolicyName(ecPolicyName);
     RemoveErasureCodingPolicyRequestProto req = builder.build();
-    ipc(() -> rpcProxy.removeErasureCodingPolicy(null, req));
+
+    asyncIpcClient(() -> rpcProxy.removeErasureCodingPolicy(null, req),
+        res -> null, Void.class);
   }
 
   @Override
   public void enableErasureCodingPolicy(String ecPolicyName)
       throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      super.enableErasureCodingPolicy(ecPolicyName);
+      return;
+    }
     EnableErasureCodingPolicyRequestProto.Builder builder =
         EnableErasureCodingPolicyRequestProto.newBuilder();
     builder.setEcPolicyName(ecPolicyName);
     EnableErasureCodingPolicyRequestProto req = builder.build();
-    ipc(() -> rpcProxy.enableErasureCodingPolicy(null, req));
+
+    asyncIpcClient(() -> rpcProxy.enableErasureCodingPolicy(null, req),
+        res -> null, Void.class);
   }
 
   @Override
   public void disableErasureCodingPolicy(String ecPolicyName)
       throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      super.disableErasureCodingPolicy(ecPolicyName);
+      return;
+    }
     DisableErasureCodingPolicyRequestProto.Builder builder =
         DisableErasureCodingPolicyRequestProto.newBuilder();
     builder.setEcPolicyName(ecPolicyName);
     DisableErasureCodingPolicyRequestProto req = builder.build();
-    ipc(() -> rpcProxy.disableErasureCodingPolicy(null, req));
+
+    asyncIpcClient(() -> rpcProxy.disableErasureCodingPolicy(null, req),
+        res -> null, Void.class);
   }
 
   @Override
   public ErasureCodingPolicyInfo[] getErasureCodingPolicies()
       throws IOException {
-    GetErasureCodingPoliciesResponseProto response = ipc(() -> rpcProxy
-        .getErasureCodingPolicies(null, VOID_GET_EC_POLICIES_REQUEST));
-    ErasureCodingPolicyInfo[] ecPolicies =
-        new ErasureCodingPolicyInfo[response.getEcPoliciesCount()];
-    int i = 0;
-    for (ErasureCodingPolicyProto proto : response.getEcPoliciesList()) {
-      ecPolicies[i++] =
-          PBHelperClient.convertErasureCodingPolicyInfo(proto);
+    if (!Client.isAsynchronousMode()) {
+      return super.getErasureCodingPolicies();
     }
-    return ecPolicies;
+
+    return asyncIpcClient(() -> rpcProxy.getErasureCodingPolicies(
+        null, VOID_GET_EC_POLICIES_REQUEST),
+        res -> {
+          ErasureCodingPolicyInfo[] ecPolicies =
+              new ErasureCodingPolicyInfo[res.getEcPoliciesCount()];
+          int i = 0;
+          for (ErasureCodingPolicyProto proto : res.getEcPoliciesList()) {
+            ecPolicies[i++] =
+                PBHelperClient.convertErasureCodingPolicyInfo(proto);
+          }
+          return ecPolicies;
+        }, ErasureCodingPolicyInfo[].class);
   }
 
   @Override
   public Map<String, String> getErasureCodingCodecs() throws IOException {
-    GetErasureCodingCodecsResponseProto response = ipc(() -> rpcProxy
-        .getErasureCodingCodecs(null, VOID_GET_EC_CODEC_REQUEST));
-    Map<String, String> ecCodecs = new HashMap<>();
-    for (CodecProto codec : response.getCodecList()) {
-      ecCodecs.put(codec.getCodec(), codec.getCoders());
+    if (!Client.isAsynchronousMode()) {
+      return super.getErasureCodingCodecs();
     }
-    return ecCodecs;
+
+    return asyncIpcClient(() -> rpcProxy
+            .getErasureCodingCodecs(null, VOID_GET_EC_CODEC_REQUEST),
+        res -> {
+          Map<String, String> ecCodecs = new HashMap<>();
+          for (CodecProto codec : res.getCodecList()) {
+            ecCodecs.put(codec.getCodec(), codec.getCoders());
+          }
+          return ecCodecs;
+        }, Map.class);
   }
 
   @Override
   public ErasureCodingPolicy getErasureCodingPolicy(String src)
       throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.getErasureCodingPolicy(src);
+    }
     GetErasureCodingPolicyRequestProto req =
         GetErasureCodingPolicyRequestProto.newBuilder().setSrc(src).build();
-    GetErasureCodingPolicyResponseProto response =
-        ipc(() -> rpcProxy.getErasureCodingPolicy(null, req));
-    if (response.hasEcPolicy()) {
-      return PBHelperClient.convertErasureCodingPolicy(
-          response.getEcPolicy());
-    }
-    return null;
+
+    return asyncIpcClient(() -> rpcProxy.getErasureCodingPolicy(null, req),
+        res -> {
+          if (res.hasEcPolicy()) {
+            return PBHelperClient.convertErasureCodingPolicy(
+                res.getEcPolicy());
+          }
+          return null;
+        }, ErasureCodingPolicy.class);
   }
 
   @Override
   public QuotaUsage getQuotaUsage(String path) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.getQuotaUsage(path);
+    }
     GetQuotaUsageRequestProto req =
         GetQuotaUsageRequestProto.newBuilder().setPath(path).build();
-    return PBHelperClient.convert(ipc(() -> rpcProxy.getQuotaUsage(null, req))
-        .getUsage());
-  }
 
-  @Deprecated
-  @Override
-  public BatchedEntries<OpenFileEntry> listOpenFiles(long prevId)
-      throws IOException {
-    return listOpenFiles(prevId, EnumSet.of(OpenFilesType.ALL_OPEN_FILES),
-        OpenFilesIterator.FILTER_PATH_DEFAULT);
+    return asyncIpcClient(() -> rpcProxy.getQuotaUsage(null, req),
+        res -> PBHelperClient.convert(res.getUsage()), QuotaUsage.class);
   }
 
   @Override
-  public BatchedEntries<OpenFileEntry> listOpenFiles(long prevId,
-      EnumSet<OpenFilesType> openFilesTypes, String path) throws IOException {
+  public BatchedEntries<OpenFileEntry> listOpenFiles(
+      long prevId, EnumSet<OpenFilesType> openFilesTypes,
+      String path) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.listOpenFiles(prevId, openFilesTypes, path);
+    }
     ListOpenFilesRequestProto.Builder req =
         ListOpenFilesRequestProto.newBuilder().setId(prevId);
     if (openFilesTypes != null) {
@@ -1621,70 +1934,92 @@ public class ClientNamenodeProtocolTranslatorPB implements
     }
     req.setPath(path);
 
-    ListOpenFilesResponseProto response =
-        ipc(() -> rpcProxy.listOpenFiles(null, req.build()));
-    List<OpenFileEntry> openFileEntries =
-        Lists.newArrayListWithCapacity(response.getEntriesCount());
-    for (OpenFilesBatchResponseProto p : response.getEntriesList()) {
-      openFileEntries.add(PBHelperClient.convert(p));
-    }
-    return new BatchedListEntries<>(openFileEntries, response.getHasMore());
+    return asyncIpcClient(() -> rpcProxy.listOpenFiles(null, req.build()),
+        res -> {
+          List<OpenFileEntry> openFileEntries =
+              Lists.newArrayListWithCapacity(res.getEntriesCount());
+          for (OpenFilesBatchResponseProto p : res.getEntriesList()) {
+            openFileEntries.add(PBHelperClient.convert(p));
+          }
+          return new BatchedListEntries<>(openFileEntries, res.getHasMore());
+        }, BatchedEntries.class);
   }
 
   @Override
   public void msync() throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      super.msync();
+      return;
+    }
     MsyncRequestProto.Builder req = MsyncRequestProto.newBuilder();
-    ipc(() -> rpcProxy.msync(null, req.build()));
+
+    asyncIpcClient(() -> rpcProxy.msync(null, req.build()),
+        res -> null, Void.class);
   }
 
   @Override
   public void satisfyStoragePolicy(String src) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      super.satisfyStoragePolicy(src);
+      return;
+    }
     SatisfyStoragePolicyRequestProto req =
         SatisfyStoragePolicyRequestProto.newBuilder().setSrc(src).build();
-    ipc(() -> rpcProxy.satisfyStoragePolicy(null, req));
+
+    asyncIpcClient(() -> rpcProxy.satisfyStoragePolicy(null, req),
+        res -> null, Void.class);
   }
 
   @Override
   public DatanodeInfo[] getSlowDatanodeReport() throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.getSlowDatanodeReport();
+    }
     GetSlowDatanodeReportRequestProto req =
         GetSlowDatanodeReportRequestProto.newBuilder().build();
-    return PBHelperClient.convert(
-        ipc(() -> rpcProxy.getSlowDatanodeReport(null, req)).getDatanodeInfoProtoList());
+
+    return asyncIpcClient(() -> rpcProxy.getSlowDatanodeReport(null, req),
+        res -> PBHelperClient.convert(res.getDatanodeInfoProtoList()),
+        DatanodeInfo[].class);
   }
 
   @Override
   public HAServiceProtocol.HAServiceState getHAServiceState()
       throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.getHAServiceState();
+    }
     HAServiceStateRequestProto req =
         HAServiceStateRequestProto.newBuilder().build();
-    HAServiceStateProto res =
-        ipc(() -> rpcProxy.getHAServiceState(null, req)).getState();
-    switch(res) {
-    case ACTIVE:
-      return HAServiceProtocol.HAServiceState.ACTIVE;
-    case STANDBY:
-      return HAServiceProtocol.HAServiceState.STANDBY;
-    case OBSERVER:
-      return HAServiceProtocol.HAServiceState.OBSERVER;
-    case INITIALIZING:
-    default:
-      return HAServiceProtocol.HAServiceState.INITIALIZING;
-    }
+
+    return asyncIpcClient(() -> rpcProxy.getHAServiceState(null, req),
+        res -> {
+          switch(res.getState()) {
+            case ACTIVE:
+              return HAServiceProtocol.HAServiceState.ACTIVE;
+            case STANDBY:
+              return HAServiceProtocol.HAServiceState.STANDBY;
+            case OBSERVER:
+              return HAServiceProtocol.HAServiceState.OBSERVER;
+            case INITIALIZING:
+            default:
+              return HAServiceProtocol.HAServiceState.INITIALIZING;
+          }
+        }, HAServiceProtocol.HAServiceState.class);
   }
 
   @Override
   public Path getEnclosingRoot(String filename) throws IOException {
+    if (!Client.isAsynchronousMode()) {
+      return super.getEnclosingRoot(filename);
+    }
     final GetEnclosingRootRequestProto.Builder builder =
         GetEnclosingRootRequestProto.newBuilder();
     builder.setFilename(filename);
     final GetEnclosingRootRequestProto req = builder.build();
-    try {
-      final GetEnclosingRootResponseProto response =
-          rpcProxy.getEnclosingRoot(null, req);
-      return new Path(response.getEnclosingRootPath());
-    } catch (ServiceException e) {
-      throw getRemoteException(e);
-    }
-  }
 
+    return asyncIpcClient(() -> rpcProxy.getEnclosingRoot(null, req),
+        res -> new Path(res.getEnclosingRootPath()),
+        Path.class);
+  }
 }
