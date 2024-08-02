@@ -22,7 +22,10 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
 
+import org.assertj.core.api.Assertions;
 import org.assertj.core.api.Assumptions;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -30,9 +33,6 @@ import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import software.amazon.awssdk.core.interceptor.Context;
-import software.amazon.awssdk.http.SdkHttpMethod;
-import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
-import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -54,10 +54,13 @@ import static org.apache.hadoop.fs.s3a.Constants.FAST_UPLOAD_BUFFER_ARRAY;
 import static org.apache.hadoop.fs.s3a.Constants.FAST_UPLOAD_BUFFER_DISK;
 import static org.apache.hadoop.fs.s3a.Constants.FAST_UPLOAD_BYTEBUFFER;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
+import static org.apache.hadoop.fs.s3a.Constants.MAX_ERROR_RETRIES;
+import static org.apache.hadoop.fs.s3a.Constants.RETRY_HTTP_5XX_ERRORS;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_EXECUTION_INTERCEPTORS;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.BASE;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC_PATH_PREFIX;
+import static org.apache.hadoop.fs.s3a.test.SdkFaultInjector.setRequestFailureConditions;
 
 /**
  * Test upload recovery by injecting failures into the response chain.
@@ -116,16 +119,17 @@ public class ITestUploadRecovery extends AbstractS3ACostTest {
     this.buffer = buffer;
   }
 
-
   @Override
   public Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
-    SdkFaultInjector.addFaultInjection(conf);
 
     removeBaseAndBucketOverrides(conf,
+        AUDIT_EXECUTION_INTERCEPTORS,
         DIRECTORY_OPERATIONS_PURGE_UPLOADS,
         FAST_UPLOAD_BUFFER,
-        FS_S3A_CREATE_PERFORMANCE);
+        FS_S3A_CREATE_PERFORMANCE,
+        MAX_ERROR_RETRIES,
+        RETRY_HTTP_5XX_ERRORS);
 
     // select buffer location
     conf.set(FAST_UPLOAD_BUFFER, buffer);
@@ -136,7 +140,7 @@ public class ITestUploadRecovery extends AbstractS3ACostTest {
     // guarantees teardown will abort pending uploads.
     conf.setBoolean(DIRECTORY_OPERATIONS_PURGE_UPLOADS, true);
     // use the fault injector
-    conf.set(AUDIT_EXECUTION_INTERCEPTORS, SdkFaultInjector.class.getName());
+    SdkFaultInjector.addFaultInjection(conf);
     return conf;
   }
 
@@ -145,9 +149,17 @@ public class ITestUploadRecovery extends AbstractS3ACostTest {
    */
   @Override
   public void setup() throws Exception {
-    SdkFaultInjector.setRequestFailureCount(2);
     SdkFaultInjector.resetEvaluator();
     super.setup();
+  }
+
+  @Override
+  public void teardown() throws Exception {
+    // safety check in case the evaluation is failing any
+    // request needed in cleanup.
+    SdkFaultInjector.resetEvaluator();
+
+    super.teardown();
   }
 
   /**
@@ -158,8 +170,10 @@ public class ITestUploadRecovery extends AbstractS3ACostTest {
     describe("test put recovery");
     final S3AFileSystem fs = getFileSystem();
     final Path path = methodPath();
-    SdkFaultInjector.setEvaluator(ITestUploadRecovery::isPutRequest);
-    SdkFaultInjector.setRequestFailureCount(2);
+    final int attempts = 2;
+    final Function<Context.ModifyHttpResponse, Boolean> evaluator =
+        SdkFaultInjector::isPutRequest;
+    setRequestFailureConditions(attempts, evaluator);
     final FSDataOutputStream out = fs.create(path);
     out.writeUTF("utfstring");
     out.close();
@@ -180,7 +194,7 @@ public class ITestUploadRecovery extends AbstractS3ACostTest {
     final Path path = new Path(methodPath(),
         MAGIC_PATH_PREFIX + buffer + "/" + BASE + "/file.txt");
 
-    SdkFaultInjector.setEvaluator(ITestUploadRecovery::isPartUpload);
+    SdkFaultInjector.setEvaluator(SdkFaultInjector::isPartUpload);
     final FSDataOutputStream out = fs.create(path);
 
     // set the failure count again
@@ -200,25 +214,30 @@ public class ITestUploadRecovery extends AbstractS3ACostTest {
         .isTrue();
     describe("test staging upload");
     final S3AFileSystem fs = getFileSystem();
+
+    // write a file to the local fS, to simulate a staged upload
     final byte[] dataset = ContractTestUtils.dataset(COMMIT_FILE_UPLOAD_SIZE, '0', 36);
     File tempFile = File.createTempFile("commit", ".txt");
     FileUtils.writeByteArrayToFile(tempFile, dataset);
     CommitOperations actions = new CommitOperations(fs);
     Path dest = methodPath();
-    SdkFaultInjector.setRequestFailureCount(2);
-    SdkFaultInjector.setEvaluator(ITestUploadRecovery::isPartUpload);
+    setRequestFailureConditions(2, SdkFaultInjector::isPartUpload);
 
-    // upload from the local FS to the S3 store
+    // upload from the local FS to the S3 store.
+    // making sure that progress callbacks occur
+    AtomicLong progress = new AtomicLong(0);
     SinglePendingCommit commit =
         actions.uploadFileToPendingCommit(tempFile,
             dest,
             null,
             DEFAULT_MULTIPART_SIZE,
-            () -> {});
+            progress::incrementAndGet);
 
-    // commit
-    SdkFaultInjector.setRequestFailureCount(2);
-    SdkFaultInjector.setEvaluator(ITestUploadRecovery::isCommitCompletion);
+    // at this point the upload must have succeeded, despite the failures.
+
+    // commit will fail twice on the complete call.
+    setRequestFailureConditions(2,
+        SdkFaultInjector::isCompleteMultipartUploadRequest);
 
     try (CommitContext commitContext
              = actions.createCommitContextForTesting(dest, JOB_ID, 0)) {
@@ -226,43 +245,11 @@ public class ITestUploadRecovery extends AbstractS3ACostTest {
     }
     // make sure the saved data is as expected
     verifyFileContents(fs, dest, dataset);
-  }
 
-  /**
-   * Is the response being processed from a PUT request?
-   * @param context request context.
-   * @return true if the request is of the right type.
-   */
-  private static boolean isPutRequest(final Context.ModifyHttpResponse context) {
-    return context.httpRequest().method().equals(SdkHttpMethod.PUT);
+    // and that we got some progress callbacks during upload
+    Assertions.assertThat(progress.get())
+        .describedAs("progress count")
+        .isGreaterThan(0);
   }
-
-  /**
-   * Is the response being processed from any POST request?
-   * @param context request context.
-   * @return true if the request is of the right type.
-   */
-  private static boolean isPostRequest(final Context.ModifyHttpResponse context) {
-    return context.httpRequest().method().equals(SdkHttpMethod.POST);
-  }
-
-  /**
-   * Is the request a commit completion request?
-   * @param context response
-   * @return true if the predicate matches
-   */
-  private static boolean isCommitCompletion(final Context.ModifyHttpResponse context) {
-    return context.request() instanceof CompleteMultipartUploadRequest;
-  }
-
-  /**
-   * Is the request a part upload?
-   * @param context response
-   * @return true if the predicate matches
-   */
-  private static boolean isPartUpload(final Context.ModifyHttpResponse context) {
-    return context.request() instanceof UploadPartRequest;
-  }
-
 
 }

@@ -146,6 +146,7 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
   /**
    * Abort a multipart commit operation.
    * @param upload upload to abort.
+   * @throws FileNotFoundException if the upload is unknown
    * @throws IOException on problems.
    */
   @Retries.RetryTranslated

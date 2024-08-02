@@ -402,11 +402,12 @@ public class WriteOperationHelper implements WriteOperations {
   /**
    * Abort a multipart commit operation.
    * @param upload upload to abort.
+   * @throws FileNotFoundException if the upload is unknown
    * @throws IOException on problems.
    */
   @Retries.RetryTranslated
   public void abortMultipartUpload(MultipartUpload upload)
-      throws IOException {
+      throws FileNotFoundException, IOException {
     invoker.retry("Aborting multipart commit", upload.key(), true,
         withinAuditSpan(getAuditSpan(),
             () -> owner.abortMultipartUpload(upload)));

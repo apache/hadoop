@@ -27,7 +27,11 @@ import software.amazon.awssdk.core.SdkRequest;
 import software.amazon.awssdk.core.interceptor.Context;
 import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
 import software.amazon.awssdk.core.interceptor.ExecutionInterceptor;
+import software.amazon.awssdk.http.SdkHttpMethod;
 import software.amazon.awssdk.http.SdkHttpResponse;
+import software.amazon.awssdk.services.s3.model.AbortMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 
 import org.apache.hadoop.conf.Configuration;
 
@@ -41,12 +45,14 @@ import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_500_INTERNAL_SE
  * trigger recovery in the SDK.
  * It is wired up through the auditor mechanism.
  * <p>
- * This uses the evaluator
- * function {@link #evaluator} to determine if the request type is that for which
- * failures are targeted; for when there is a match then the failure count
+ * This uses the evaluator function {@link #evaluator} to determine if
+ * the request type is that for which failures are targeted;
+ * When there is a match then the failure count
  * is decremented and, if the count is still positive, an error is raised with the
  * error code defined in {@link #FAILURE_STATUS_CODE}.
- * This happens <i>after</i> the request has already succeeded against the S3 store. */
+ * This happens <i>after</i> the request has already succeeded against the S3 store:
+ * whatever was requested has actually already happened.
+ */
 public final class SdkFaultInjector implements ExecutionInterceptor {
 
   private static final Logger LOG =
@@ -69,7 +75,7 @@ public final class SdkFaultInjector implements ExecutionInterceptor {
   /**
    * Evaluator for responses.
    */
-  private static Function<Context.ModifyHttpResponse, Boolean> evaluator;
+  private static Function<Context.ModifyHttpResponse, Boolean> evaluator = ALWAYS_ALLOW;
 
   /**
    * Update the value of {@link #FAILURE_STATUS_CODE}.
@@ -89,26 +95,6 @@ public final class SdkFaultInjector implements ExecutionInterceptor {
     evaluator = value;
   }
 
-  /**
-   * Review response from S3 and optionall modify its status code.
-   * @return the original response or a copy with a different status code.
-   */
-  @Override
-  public SdkHttpResponse modifyHttpResponse(final Context.ModifyHttpResponse context,
-      final ExecutionAttributes executionAttributes) {
-    SdkRequest request = context.request();
-    SdkHttpResponse httpResponse = context.httpResponse();
-    if (evaluator.apply(context) && shouldFail()) {
-      LOG.info("reporting 500 error code for request {}", request);
-
-      return httpResponse.copy(b -> {
-        b.statusCode(FAILURE_STATUS_CODE.get());
-      });
-
-    } else {
-      return httpResponse;
-    }
-  }
 
   /**
    * Reset the evaluator to enable everything.
@@ -127,6 +113,88 @@ public final class SdkFaultInjector implements ExecutionInterceptor {
   }
 
   /**
+   * Set up the request failure conditions.
+   * @param attempts how many times to fail before succeeding
+   * @param evaluator event evaluator
+   */
+  public static void setRequestFailureConditions(final int attempts,
+      final Function<Context.ModifyHttpResponse, Boolean> evaluator) {
+    setRequestFailureCount(attempts);
+    setEvaluator(evaluator);
+  }
+
+  /**
+   * Is the response being processed from a PUT request?
+   * @param context request context.
+   * @return true if the request is of the right type.
+   */
+  public static boolean isPutRequest(final Context.ModifyHttpResponse context) {
+    return context.httpRequest().method().equals(SdkHttpMethod.PUT);
+  }
+
+  /**
+   * Is the response being processed from any POST request?
+   * @param context request context.
+   * @return true if the request is of the right type.
+   */
+  public static boolean isPostRequest(final Context.ModifyHttpResponse context) {
+    return context.httpRequest().method().equals(SdkHttpMethod.POST);
+  }
+
+  /**
+   * Is the request a commit completion request?
+   * @param context response
+   * @return true if the predicate matches
+   */
+  public static boolean isCompleteMultipartUploadRequest(
+      final Context.ModifyHttpResponse context) {
+    return context.request() instanceof CompleteMultipartUploadRequest;
+  }
+
+  /**
+   * Is the request a part upload?
+   * @param context response
+   * @return true if the predicate matches
+   */
+  public static boolean isPartUpload(final Context.ModifyHttpResponse context) {
+    return context.request() instanceof UploadPartRequest;
+  }
+  /**
+   * Is the request a multipart upload abort?
+   * @param context response
+   * @return true if the predicate matches
+   */
+  public static boolean isMultipartAbort(final Context.ModifyHttpResponse context) {
+    return context.request() instanceof AbortMultipartUploadRequest;
+  }
+
+  /**
+   * Review response from S3 and optionall modify its status code.
+   * @return the original response or a copy with a different status code.
+   */
+  @Override
+  public SdkHttpResponse modifyHttpResponse(final Context.ModifyHttpResponse context,
+      final ExecutionAttributes executionAttributes) {
+    SdkRequest request = context.request();
+    SdkHttpResponse httpResponse = context.httpResponse();
+    if (evaluator.apply(context) && shouldFail()) {
+
+      // fail the request
+      final int code = FAILURE_STATUS_CODE.get();
+      LOG.info("Fault Injector returning {} error code for request {}",
+          code, request);
+
+      return httpResponse.copy(b -> {
+        b.statusCode(code);
+      });
+
+    } else {
+      // pass unchanged
+      return httpResponse;
+    }
+  }
+
+  /**
    * Should the request fail based on the failure count?
    * @return true if the request count means a request must fail
    */
@@ -140,7 +208,6 @@ public final class SdkFaultInjector implements ExecutionInterceptor {
    * @param conf configuration to patch
    * @return patched configuration
    */
-
   public static Configuration addFaultInjection(Configuration conf) {
     resetAuditOptions(conf);
     enableLoggingAuditor(conf);

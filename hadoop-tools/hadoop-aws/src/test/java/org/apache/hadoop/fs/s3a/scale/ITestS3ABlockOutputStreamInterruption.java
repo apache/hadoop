@@ -37,21 +37,27 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSDataOutputStreamBuilder;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.impl.ProgressListenerEvent;
+import org.apache.hadoop.fs.s3a.test.SdkFaultInjector;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.fs.statistics.StoreStatisticNames;
 import org.apache.hadoop.util.functional.InvocationRaisingIOE;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
+import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_OPERATIONS_PURGE_UPLOADS;
 import static org.apache.hadoop.fs.s3a.Constants.FAST_UPLOAD_ACTIVE_BLOCKS;
 import static org.apache.hadoop.fs.s3a.Constants.FAST_UPLOAD_BUFFER;
 import static org.apache.hadoop.fs.s3a.Constants.FAST_UPLOAD_BUFFER_ARRAY;
 import static org.apache.hadoop.fs.s3a.Constants.FAST_UPLOAD_BUFFER_DISK;
 import static org.apache.hadoop.fs.s3a.Constants.FAST_UPLOAD_BYTEBUFFER;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
+import static org.apache.hadoop.fs.s3a.Constants.MAX_ERROR_RETRIES;
 import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_SIZE;
+import static org.apache.hadoop.fs.s3a.Constants.RETRY_HTTP_5XX_ERRORS;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestPropertyInt;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
+import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_MULTIPART_UPLOAD_ABORTED;
+import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_EXECUTION_INTERCEPTORS;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.MAGIC_PATH_PREFIX;
 import static org.apache.hadoop.fs.s3a.impl.ProgressListenerEvent.PUT_INTERRUPTED_EVENT;
 import static org.apache.hadoop.fs.s3a.impl.ProgressListenerEvent.PUT_STARTED_EVENT;
@@ -59,8 +65,10 @@ import static org.apache.hadoop.fs.s3a.impl.ProgressListenerEvent.TRANSFER_MULTI
 import static org.apache.hadoop.fs.s3a.impl.ProgressListenerEvent.TRANSFER_MULTIPART_INITIATED_EVENT;
 import static org.apache.hadoop.fs.s3a.impl.ProgressListenerEvent.TRANSFER_PART_FAILED_EVENT;
 import static org.apache.hadoop.fs.s3a.impl.ProgressListenerEvent.TRANSFER_PART_STARTED_EVENT;
+import static org.apache.hadoop.fs.s3a.test.SdkFaultInjector.setRequestFailureConditions;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatisticCounterValue;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.SUFFIX_FAILURES;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
@@ -77,6 +85,8 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  */
 @RunWith(Parameterized.class)
 public class ITestS3ABlockOutputStreamInterruption extends S3AScaleTestBase {
+
+  public static final int MAX_RETRIES_IN_SDK = 2;
 
   /**
    * Parameterized on (buffer type, active blocks).
@@ -127,17 +137,46 @@ public class ITestS3ABlockOutputStreamInterruption extends S3AScaleTestBase {
   @Override
   protected Configuration createScaleConfiguration() {
     Configuration conf = super.createScaleConfiguration();
+
     removeBaseAndBucketOverrides(conf,
-        MULTIPART_SIZE,
+        AUDIT_EXECUTION_INTERCEPTORS,
+        DIRECTORY_OPERATIONS_PURGE_UPLOADS,
         FAST_UPLOAD_BUFFER,
-        FAST_UPLOAD_ACTIVE_BLOCKS);
+        MAX_ERROR_RETRIES,
+        MULTIPART_SIZE,
+        RETRY_HTTP_5XX_ERRORS);
     conf.set(FAST_UPLOAD_BUFFER, bufferType);
     conf.setLong(MULTIPART_SIZE, MPU_SIZE);
     // limiting block size allows for stricter ordering of block uploads:
     // only 1 should be active at a time, so when a write is cancelled
     // it should be the only one to be aborted.
     conf.setLong(FAST_UPLOAD_ACTIVE_BLOCKS, activeBlocks);
+
+    // guarantees teardown will abort pending uploads.
+    conf.setBoolean(DIRECTORY_OPERATIONS_PURGE_UPLOADS, true);
+    // don't retry much
+    conf.setInt(MAX_ERROR_RETRIES, MAX_RETRIES_IN_SDK);
+    // use the fault injector
+    SdkFaultInjector.addFaultInjection(conf);
     return conf;
+  }
+
+  /**
+   * Setup MUST set up the evaluator before the FS is created.
+   */
+  @Override
+  public void setup() throws Exception {
+    SdkFaultInjector.resetEvaluator();
+    super.setup();
+  }
+
+  @Override
+  public void teardown() throws Exception {
+    // safety check in case the evaluation is failing any
+    // request needed in cleanup.
+    SdkFaultInjector.resetEvaluator();
+
+    super.teardown();
   }
 
   @Test
@@ -180,6 +219,11 @@ public class ITestS3ABlockOutputStreamInterruption extends S3AScaleTestBase {
     assertBytesTransferred(listener, 1, len * 2);
   }
 
+  /**
+   * Invoke Abortable.abort() during the upload,
+   * then go on to simulate an NPE in the part upload and verify
+   * that this does not get escalated.
+   */
   @Test
   public void testAbortDuringUpload() throws Throwable {
     describe("Abort during multipart upload");
@@ -282,6 +326,9 @@ public class ITestS3ABlockOutputStreamInterruption extends S3AScaleTestBase {
         .isBetween(min, max);
   }
 
+  /**
+   * Write a small dataset and interrupt the close() operation.
+   */
   @Test
   public void testInterruptMagicWrite() throws Throwable {
     describe("Interrupt a thread performing close() on a magic upload");
@@ -289,6 +336,27 @@ public class ITestS3ABlockOutputStreamInterruption extends S3AScaleTestBase {
     // write a smaller file to a magic path and assert multipart outcome
     Path path = new Path(methodPath(), MAGIC_PATH_PREFIX + "1/__base/file");
     interruptMultipartUpload(path, _1MB);
+  }
+
+  /**
+   * Write a small dataset and interrupt the close() operation.
+   */
+  @Test
+  public void testInterruptWhenAbortingAnUpload() throws Throwable {
+    describe("Interrupt a thread performing close() on a magic upload");
+
+    // fail more than the SDK will retry
+    setRequestFailureConditions(MAX_RETRIES_IN_SDK * 2, SdkFaultInjector::isMultipartAbort);
+
+    // write a smaller file to a magic path and assert multipart outcome
+    Path path = new Path(methodPath(), MAGIC_PATH_PREFIX + "1/__base/file");
+    interruptMultipartUpload(path, _1MB);
+
+    // an abort is double counted; the outer one also includes time to cancel
+    // all pending aborts so is important to measure.
+    verifyStatisticCounterValue(getFileSystem().getIOStatistics(),
+        OBJECT_MULTIPART_UPLOAD_ABORTED.getSymbol() + SUFFIX_FAILURES,
+        2);
   }
 
   /**
@@ -326,7 +394,9 @@ public class ITestS3ABlockOutputStreamInterruption extends S3AScaleTestBase {
    * the second time it is invoked, it should succeed.
    * @param out output stream
    */
-  private static void expectCloseInterrupted(final FSDataOutputStream out) throws Exception {
+  private static void expectCloseInterrupted(final FSDataOutputStream out)
+      throws Exception {
+
     // first call will be interrupted
     intercept(InterruptedIOException.class, out::close);
     // second call must be safe

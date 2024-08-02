@@ -1169,6 +1169,8 @@ class S3ABlockOutputStream extends OutputStream implements
         if (!uploadAborted.getAndSet(true)) {
           LOG.debug("Aborting upload");
           progressListener.progressChanged(TRANSFER_MULTIPART_ABORTED_EVENT, 0);
+          // an abort is double counted; the outer one also includes time to cancel
+          // all pending aborts so is important to measure.
           trackDurationOfInvocation(statistics,
               OBJECT_MULTIPART_UPLOAD_ABORTED.getSymbol(), () -> {
                 cancelAllActiveUploads();
