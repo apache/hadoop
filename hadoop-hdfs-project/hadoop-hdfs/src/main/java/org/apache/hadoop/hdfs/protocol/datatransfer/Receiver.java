@@ -34,6 +34,7 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.CachingStrategyP
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ClientOperationHeaderProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpBlockChecksumProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpBlockGroupChecksumProto;
+import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpCopyBlockCrossNamespaceProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpCopyBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpReadBlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpReplaceBlockProto;
@@ -132,6 +133,9 @@ public abstract class Receiver implements DataTransferProtocol {
       break;
     case REQUEST_SHORT_CIRCUIT_SHM:
       opRequestShortCircuitShm(in);
+      break;
+    case COPY_BLOCK_CROSSNAMESPACE:
+      opCopyBlockCrossNamespace(in);
       break;
     default:
       throw new IOException("Unknown op " + op + " in data stream");
@@ -333,6 +337,23 @@ public abstract class Receiver implements DataTransferProtocol {
           PBHelperClient.convert(proto.getHeader().getToken()),
           proto.getRequestedNumBytes(),
           PBHelperClient.convert(proto.getBlockChecksumOptions()));
+    } finally {
+      if (traceScope != null) {
+        traceScope.close();
+      }
+    }
+  }
+
+  private void opCopyBlockCrossNamespace(DataInputStream dis) throws IOException {
+    OpCopyBlockCrossNamespaceProto proto =
+        OpCopyBlockCrossNamespaceProto.parseFrom(vintPrefixed(dis));
+    TraceScope traceScope = continueTraceSpan(proto.getHeader(), proto.getClass().getSimpleName());
+    try {
+      copyBlockCrossNamespace(PBHelperClient.convert(proto.getHeader().getBlock()),
+          PBHelperClient.convert(proto.getHeader().getToken()),
+          PBHelperClient.convert(proto.getTargetBlock()),
+          PBHelperClient.convert(proto.getTargetToken()),
+          PBHelperClient.convert(proto.getTargetDatanode()));
     } finally {
       if (traceScope != null) {
         traceScope.close();

@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -31,9 +33,22 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
+import org.apache.hadoop.fs.CreateFlag;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfoWithStorage;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
+import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsVolumeImpl;
 import org.slf4j.Logger;
@@ -645,6 +660,138 @@ public class TestDataTransferProtocol {
 
       int afterCnt = volume.getReferenceCount();
       assertEquals(beforeCnt, afterCnt);
+
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  @Test(timeout = 90000)
+  public void testCopyBlockCrossNamespace()
+      throws IOException, InterruptedException, TimeoutException {
+    Configuration conf = new HdfsConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, 1024 * 1024);
+
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3)
+        .nnTopology(MiniDFSNNTopology.simpleFederatedTopology(2)).build();
+    try {
+      cluster.waitActive();
+      ArrayList<DataNode> dataNodes = cluster.getDataNodes();
+
+      // Create one file with one block with one replica in Namespace0.
+      Path ns0Path = new Path("/testCopyBlockCrossNamespace_0.txt");
+      DistributedFileSystem ns0FS = cluster.getFileSystem(0);
+      DFSTestUtil.createFile(ns0FS, ns0Path, 1024, (short) 2, 0);
+      DFSTestUtil.waitReplication(ns0FS, ns0Path, (short) 2);
+      HdfsFileStatus ns0FileStatus = (HdfsFileStatus) ns0FS.getFileStatus(ns0Path);
+      LocatedBlocks locatedBlocks =
+          ns0FS.getClient().getLocatedBlocks(ns0Path.toUri().getPath(), 0, Long.MAX_VALUE);
+      assertEquals(1, locatedBlocks.getLocatedBlocks().size());
+      assertTrue(locatedBlocks.isLastBlockComplete());
+      LocatedBlock locatedBlockNS0 = locatedBlocks.get(0);
+
+      DatanodeInfoWithStorage[] datanodeInfoWithStoragesNS0 = locatedBlockNS0.getLocations();
+      assertEquals(2, datanodeInfoWithStoragesNS0.length);
+
+      String ns0BlockLocation1 = datanodeInfoWithStoragesNS0[0].getHostName() + ":"
+          + datanodeInfoWithStoragesNS0[0].getXferPort();
+      String ns0BlockLocation2 = datanodeInfoWithStoragesNS0[1].getHostName() + ":"
+          + datanodeInfoWithStoragesNS0[1].getXferPort();
+
+      String[] favoredNodes = new String[2];
+
+      favoredNodes[0] = ns0BlockLocation1;
+      for (DataNode dn : dataNodes) {
+        String dnInfo = dn.getDatanodeHostname() + ":" + dn.getXferPort();
+        if (!dnInfo.equals(ns0BlockLocation1) && !dnInfo.equals(ns0BlockLocation2)) {
+          favoredNodes[1] = dnInfo;
+        }
+      }
+
+      // Create one similar file with two replicas in Namespace1.
+      Path ns1Path = new Path("/testCopyBlockCrossNamespace_1.txt");
+      DistributedFileSystem ns1FS = cluster.getFileSystem(1);
+      FSDataOutputStream stream =
+          ns1FS.create(ns1Path, ns0FileStatus.getPermission(), EnumSet.of(CreateFlag.CREATE),
+              ns1FS.getClient().getConf().getIoBufferSize(), ns0FileStatus.getReplication(),
+              ns0FileStatus.getBlockSize(), null, null, null, null, null);
+      DFSOutputStream outputStream = (DFSOutputStream) stream.getWrappedStream();
+
+      LocatedBlock locatedBlockNS1 =
+          DFSOutputStream.addBlock(null, outputStream.getDfsClient(), ns1Path.getName(), null,
+              outputStream.getFileId(), favoredNodes, null);
+      assertEquals(2, locatedBlockNS1.getLocations().length);
+
+      // Align the datanode.
+      DatanodeInfoWithStorage[] datanodeInfoWithStoragesNS1 = locatedBlockNS1.getLocations();
+      DatanodeInfoWithStorage sameDN = datanodeInfoWithStoragesNS0[0].getXferPort()
+          == datanodeInfoWithStoragesNS1[0].getXferPort() ?
+          datanodeInfoWithStoragesNS1[0] :
+          datanodeInfoWithStoragesNS1[1];
+      DatanodeInfoWithStorage differentDN = datanodeInfoWithStoragesNS0[0].getXferPort()
+          == datanodeInfoWithStoragesNS1[0].getXferPort() ?
+          datanodeInfoWithStoragesNS1[1] :
+          datanodeInfoWithStoragesNS1[0];
+
+      // HardLink locatedBlockNS0 to locatedBlockNS1 on same datanode.
+      outputStream.copyBlockCrossNamespace(locatedBlockNS0.getBlock(),
+          locatedBlockNS0.getBlockToken(), datanodeInfoWithStoragesNS0[0],
+          locatedBlockNS1.getBlock(), locatedBlockNS1.getBlockToken(), sameDN);
+
+      // Test when transfer throw exception client can know it.
+      DataNodeFaultInjector.set(new DataNodeFaultInjector() {
+        public void transferThrowException() throws IOException {
+          throw new IOException("Transfer failed for fastcopy.");
+        }
+      });
+      boolean transferError = false;
+      try {
+        outputStream.copyBlockCrossNamespace(locatedBlockNS0.getBlock(),
+            locatedBlockNS0.getBlockToken(), datanodeInfoWithStoragesNS0[1],
+            locatedBlockNS1.getBlock(), locatedBlockNS1.getBlockToken(), differentDN);
+      } catch (IOException e) {
+        transferError = true;
+      }
+      assertTrue(transferError);
+
+      DataNodeFaultInjector.set(new DataNodeFaultInjector());
+      // Transfer locatedBlockNS0 to locatedBlockNS1 on different datanode.
+      outputStream.copyBlockCrossNamespace(locatedBlockNS0.getBlock(),
+          locatedBlockNS0.getBlockToken(), datanodeInfoWithStoragesNS0[1],
+          locatedBlockNS1.getBlock(), locatedBlockNS1.getBlockToken(), differentDN);
+
+      // Check Lease Holder.
+      RemoteIterator<OpenFileEntry> iterator = ns1FS.listOpenFiles();
+      OpenFileEntry fileEntry = iterator.next();
+      assertEquals(ns1Path.toUri().toString(), fileEntry.getFilePath());
+      assertEquals(outputStream.getDfsClient().getClientName(), fileEntry.getClientName());
+
+      outputStream.setUserAssignmentLastBlock(locatedBlockNS1.getBlock());
+      stream.close();
+
+      // Check Lease release.
+      iterator = ns1FS.listOpenFiles();
+      assertFalse(iterator.hasNext());
+
+      long heartbeatInterval =
+          conf.getTimeDuration(DFS_HEARTBEAT_INTERVAL_KEY, DFS_HEARTBEAT_INTERVAL_DEFAULT,
+              TimeUnit.SECONDS, TimeUnit.MILLISECONDS);
+      Thread.sleep(heartbeatInterval * 2);
+
+      // Do verification that the file in namespace1 should contain one block with two replicas.
+      LocatedBlocks locatedBlocksNS1 = ns1FS.getClient().getNamenode()
+          .getBlockLocations(ns1Path.toUri().getPath(), 0, Long.MAX_VALUE);
+      assertEquals(1, locatedBlocksNS1.getLocatedBlocks().size());
+      assertEquals(2, locatedBlocksNS1.getLocatedBlocks().get(0).getLocations().length);
+      assertTrue(locatedBlocksNS1.isLastBlockComplete());
+
+      for (DataNode dataNode : dataNodes) {
+        if (dataNode.getXferPort() == datanodeInfoWithStoragesNS0[0].getXferPort()) {
+          assertEquals(1L, dataNode.getMetrics().getBlocksReplicatedViaHardlink());
+        } else if (dataNode.getXferPort() == datanodeInfoWithStoragesNS0[1].getXferPort()) {
+          assertEquals(1L, dataNode.getMetrics().getBlocksReplicated());
+        }
+      }
 
     } finally {
       cluster.shutdown();

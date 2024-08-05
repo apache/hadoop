@@ -493,4 +493,11 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
   public long getPendingAsyncDeletions() {
     return 0;
   }
+
+  @Override
+  public void hardLinkOneBlock(ExtendedBlock srcBlock, ExtendedBlock dstBlock)
+      throws IOException {
+    throw new UnsupportedOperationException();
+  }
+
 }
