@@ -58,8 +58,8 @@
     </dependency>
     <dependency>
       <groupId>org.mockito</groupId>
-      <artifactId>mockito-core</artifactId>
-      <version>2.8.9</version>
+      <artifactId>mockito-inline</artifactId>
+      <version>4.11.0</version>
       <scope>test</scope>
       <exclusions>
         <exclusion>
@@ -86,6 +86,10 @@
       <version>1.7.1</version>
       <scope>test</scope>
       <exclusions>
+        <exclusion>
+          <groupId>org.mockito</groupId>
+          <artifactId>mockito-inline</artifactId>
+        </exclusion>
         <exclusion>
           <groupId>org.mockito</groupId>
           <artifactId>mockito-core</artifactId>

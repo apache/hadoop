@@ -1283,6 +1283,8 @@ public class TestDockerContainerRuntime {
     String expectedPath = "/" + hierarchy + "/" + containerIdStr;
     Mockito.verify(command).setCGroupParent(expectedPath);
 
+    Mockito.reset(command);
+
     //create a runtime with a 'null' cgroups handler - i.e no
     // cgroup-based resource handlers are in use.
 
@@ -1297,6 +1299,9 @@ public class TestDockerContainerRuntime {
 
     //no --cgroup-parent should be added in either case
     Mockito.verifyNoInteractions(command);
+
+    //Ensure no further interaction
+    Mockito.verifyNoMoreInteractions(command);
   }
 
   @Test
