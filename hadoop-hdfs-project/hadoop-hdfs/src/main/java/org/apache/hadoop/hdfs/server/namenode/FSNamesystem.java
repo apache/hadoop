@@ -97,6 +97,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_DIFF_LI
 import static org.apache.hadoop.hdfs.DFSUtil.isParentEntry;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.text.CaseUtils;
@@ -579,6 +580,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   private ExecutorService edekCacheLoader = null;
   private final int edekCacheLoaderDelay;
   private final int edekCacheLoaderInterval;
+  private final int edekCacheLoaderMaxRetries;
 
   /**
    * When an active namenode will roll its own edit log, in # edits
@@ -1012,6 +1014,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       this.edekCacheLoaderInterval = conf.getInt(
           DFSConfigKeys.DFS_NAMENODE_EDEKCACHELOADER_INTERVAL_MS_KEY,
           DFSConfigKeys.DFS_NAMENODE_EDEKCACHELOADER_INTERVAL_MS_DEFAULT);
+      this.edekCacheLoaderMaxRetries = conf.getInt(
+          DFSConfigKeys.DFS_NAMENODE_EDEKCACHELOADER_MAX_RETRIES_KEY,
+          DFSConfigKeys.DFS_NAMENODE_EDEKCACHELOADER_MAX_RETRIES_DEFAULT);
 
       this.leaseRecheckIntervalMs = conf.getLong(
           DFS_NAMENODE_LEASE_RECHECK_INTERVAL_MS_KEY,
@@ -1470,8 +1475,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
             new ThreadFactoryBuilder().setDaemon(true)
                 .setNameFormat("Warm Up EDEK Cache Thread #%d")
                 .build());
-        FSDirEncryptionZoneOp.warmUpEdekCache(edekCacheLoader, dir,
-            edekCacheLoaderDelay, edekCacheLoaderInterval);
+        FSDirEncryptionZoneOp
+            .warmUpEdekCache(edekCacheLoader, dir, edekCacheLoaderDelay, edekCacheLoaderInterval,
+                edekCacheLoaderMaxRetries);
       }
       if (blockManager.getSPSManager() != null) {
         blockManager.getSPSManager().start();
@@ -6669,7 +6675,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           .put("infoSecureAddr", node.getInfoSecureAddr())
           .put("xferaddr", node.getXferAddr())
           .put("location", node.getNetworkLocation())
-          .put("uuid", node.getDatanodeUuid())
+          .put("uuid", Optional.ofNullable(node.getDatanodeUuid()).orElse(""))
           .put("lastContact", getLastContact(node))
           .put("usedSpace", getDfsUsed(node))
           .put("adminState", node.getAdminState().toString())
@@ -6723,7 +6729,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           .put("adminState", node.getAdminState().toString())
           .put("xferaddr", node.getXferAddr())
           .put("location", node.getNetworkLocation())
-          .put("uuid", node.getDatanodeUuid())
+          .put("uuid", Optional.ofNullable(node.getDatanodeUuid()).orElse(""))
           .build();
       info.put(node.getXferAddrWithHostname(), innerinfo);
     }
@@ -6746,7 +6752,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           .<String, Object> builder()
           .put("xferaddr", node.getXferAddr())
           .put("location", node.getNetworkLocation())
-          .put("uuid", node.getDatanodeUuid())
+          .put("uuid", Optional.ofNullable(node.getDatanodeUuid()).orElse(""))
           .put("underReplicatedBlocks",
           node.getLeavingServiceStatus().getUnderReplicatedBlocks())
           .put("decommissionOnlyReplicas",
@@ -6777,7 +6783,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           .<String, Object> builder()
           .put("xferaddr", node.getXferAddr())
           .put("location", node.getNetworkLocation())
-          .put("uuid", node.getDatanodeUuid())
+          .put("uuid", Optional.ofNullable(node.getDatanodeUuid()).orElse(""))
           .put("underReplicatedBlocks",
               node.getLeavingServiceStatus().getUnderReplicatedBlocks())
           .put("maintenanceOnlyReplicas",

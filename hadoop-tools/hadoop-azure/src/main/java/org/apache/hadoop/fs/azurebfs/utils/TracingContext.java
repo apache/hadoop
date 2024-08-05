@@ -192,6 +192,7 @@ public class TracingContext {
               + getPrimaryRequestIdForHeader(retryCount > 0) + ":" + streamID
               + ":" + opType + ":" + retryCount;
       header = addFailureReasons(header, previousFailure, retryPolicyAbbreviation);
+      header += (":" + httpOperation.getTracingContextSuffix());
       metricHeader += !(metricResults.trim().isEmpty()) ? metricResults  : "";
       break;
     case TWO_ID_FORMAT:

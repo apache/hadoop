@@ -176,6 +176,11 @@ public final class StoreStatisticNames {
   public static final String DELEGATION_TOKENS_ISSUED
       = "delegation_tokens_issued";
 
+  /**
+   * How long did any store client creation take?
+   */
+  public static final String STORE_CLIENT_CREATION = "store_client_creation";
+
   /** Probe for store existing: {@value}. */
   public static final String STORE_EXISTS_PROBE
       = "store_exists_probe";
@@ -199,6 +204,7 @@ public final class StoreStatisticNames {
 
   public static final String STORE_IO_RATE_LIMITED_DURATION
       = "store_io_rate_limited_duration";
+
 
   /**
    * A store's equivalent of a paged LIST request was initiated: {@value}.

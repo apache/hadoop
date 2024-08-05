@@ -24,8 +24,8 @@ import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
 import org.junit.Test;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_DELETE;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_FORMAT;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsRestOperationType.DeletePath;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_FORMAT;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import java.util.ArrayList;
@@ -58,8 +58,9 @@ public class TestAbfsRestOperation extends
     // Get an instance of AbfsClient and AbfsRestOperation.
     AbfsClient testClient = super.getAbfsClient(super.getAbfsStore(fs));
     AbfsRestOperation op = ITestAbfsClient.getRestOp(
-            DeletePath, testClient, HTTP_METHOD_DELETE,
-            ITestAbfsClient.getTestUrl(testClient, "/NonExistingPath"), ITestAbfsClient.getTestRequestHeaders(testClient));
+        DeletePath, testClient, HTTP_METHOD_DELETE,
+        ITestAbfsClient.getTestUrl(testClient, "/NonExistingPath"),
+        ITestAbfsClient.getTestRequestHeaders(testClient), getConfiguration());
 
     // Mock retry counts and status code.
     ArrayList<String> retryCounts = new ArrayList<>(Arrays.asList("35", "28", "31", "45", "10", "2", "9"));

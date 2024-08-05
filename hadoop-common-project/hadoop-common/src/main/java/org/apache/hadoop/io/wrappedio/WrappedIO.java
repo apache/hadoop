@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.io.wrappedio;
 
-import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -29,17 +29,19 @@ import org.apache.hadoop.fs.BulkDelete;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
+import static org.apache.hadoop.util.functional.FunctionalIO.uncheckIOExceptions;
+
 /**
  * Reflection-friendly access to APIs which are not available in
  * some of the older Hadoop versions which libraries still
  * compile against.
  * <p>
  * The intent is to avoid the need for complex reflection operations
- * including wrapping of parameter classes, direct instatiation of
+ * including wrapping of parameter classes, direct instantiation of
  * new classes etc.
  */
 @InterfaceAudience.Public
-@InterfaceStability.Evolving
+@InterfaceStability.Unstable
 public final class WrappedIO {
 
   private WrappedIO() {
@@ -52,12 +54,15 @@ public final class WrappedIO {
    * @return a number greater than or equal to zero.
    * @throws UnsupportedOperationException bulk delete under that path is not supported.
    * @throws IllegalArgumentException path not valid.
-   * @throws IOException problems resolving paths
+   * @throws UncheckedIOException if an IOE was raised.
    */
-  public static int bulkDelete_pageSize(FileSystem fs, Path path) throws IOException {
-    try (BulkDelete bulk = fs.createBulkDelete(path)) {
-      return bulk.pageSize();
-    }
+  public static int bulkDelete_pageSize(FileSystem fs, Path path) {
+
+    return uncheckIOExceptions(() -> {
+      try (BulkDelete bulk = fs.createBulkDelete(path)) {
+        return bulk.pageSize();
+      }
+    });
   }
 
   /**
@@ -79,15 +84,17 @@ public final class WrappedIO {
    * @param paths list of paths which must be absolute and under the base path.
    * @return a list of all the paths which couldn't be deleted for a reason other than "not found" and any associated error message.
    * @throws UnsupportedOperationException bulk delete under that path is not supported.
-   * @throws IOException IO problems including networking, authentication and more.
+   * @throws UncheckedIOException if an IOE was raised.
    * @throws IllegalArgumentException if a path argument is invalid.
    */
   public static List<Map.Entry<Path, String>> bulkDelete_delete(FileSystem fs,
-                                                                Path base,
-                                                                Collection<Path> paths)
-        throws IOException {
-    try (BulkDelete bulk = fs.createBulkDelete(base)) {
-      return bulk.bulkDelete(paths);
-    }
+      Path base,
+      Collection<Path> paths) {
+
+    return uncheckIOExceptions(() -> {
+      try (BulkDelete bulk = fs.createBulkDelete(base)) {
+        return bulk.bulkDelete(paths);
+      }
+    });
   }
 }

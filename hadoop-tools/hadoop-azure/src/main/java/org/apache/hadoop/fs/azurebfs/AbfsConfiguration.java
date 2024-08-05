@@ -23,6 +23,7 @@ import java.lang.reflect.Field;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.azurebfs.services.FixedSASTokenProvider;
+import org.apache.hadoop.fs.azurebfs.constants.HttpOperationType;
 import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
 import org.apache.hadoop.util.Preconditions;
 
@@ -59,6 +60,7 @@ import org.apache.hadoop.fs.azurebfs.oauth2.CustomTokenProviderAdapter;
 import org.apache.hadoop.fs.azurebfs.oauth2.MsiTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.RefreshTokenBasedTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.UserPasswordTokenProvider;
+import org.apache.hadoop.fs.azurebfs.oauth2.WorkloadIdentityTokenProvider;
 import org.apache.hadoop.fs.azurebfs.security.AbfsDelegationTokenManager;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azurebfs.services.ExponentialRetryPolicy;
@@ -389,6 +391,20 @@ public class AbfsConfiguration{
       FS_AZURE_ENABLE_PAGINATED_DELETE, DefaultValue = DEFAULT_ENABLE_PAGINATED_DELETE)
   private boolean isPaginatedDeleteEnabled;
 
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES, DefaultValue = DEFAULT_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES)
+  private int maxApacheHttpClientIoExceptionsRetries;
+
+  /**
+   * Max idle TTL configuration for connection given in
+   * {@value org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys#FS_AZURE_APACHE_HTTP_CLIENT_IDLE_CONNECTION_TTL}
+   * with default of
+   * {@value org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations#DEFAULT_HTTP_CLIENT_CONN_MAX_IDLE_TIME}
+   */
+  @LongConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_APACHE_HTTP_CLIENT_IDLE_CONNECTION_TTL,
+      DefaultValue = DEFAULT_HTTP_CLIENT_CONN_MAX_IDLE_TIME)
+  private long maxApacheHttpClientConnectionIdleTime;
+
   private String clientProvidedEncryptionKey;
   private String clientProvidedEncryptionKeySHA;
 
@@ -488,6 +504,17 @@ public class AbfsConfiguration{
    */
   public long getLong(String key, long defaultValue) {
     return rawConfig.getLong(accountConf(key), rawConfig.getLong(key, defaultValue));
+  }
+
+  /**
+   * Returns the account-specific value if it exists, then looks for an
+   * account-agnostic value, and finally tries the default value.
+   * @param key Account-agnostic configuration key
+   * @param defaultValue Value returned if none is configured
+   * @return value if one exists, else the default value
+   */
+  public int getInt(String key, int defaultValue) {
+    return rawConfig.getInt(accountConf(key), rawConfig.getInt(key, defaultValue));
   }
 
   /**
@@ -889,6 +916,24 @@ public class AbfsConfiguration{
   }
 
   /**
+   * @return Config to select netlib for server communication.
+   */
+  public HttpOperationType getPreferredHttpOperationType() {
+    return getEnum(FS_AZURE_NETWORKING_LIBRARY, DEFAULT_NETWORKING_LIBRARY);
+  }
+
+  public int getMaxApacheHttpClientIoExceptionsRetries() {
+    return maxApacheHttpClientIoExceptionsRetries;
+  }
+
+  /**
+   * @return {@link #maxApacheHttpClientConnectionIdleTime}.
+   */
+  public long getMaxApacheHttpClientConnectionIdleTime() {
+    return maxApacheHttpClientConnectionIdleTime;
+  }
+
+  /**
    * Enum config to allow user to pick format of x-ms-client-request-id header
    * @return tracingContextFormat config if valid, else default ALL_ID_FORMAT
    */
@@ -983,6 +1028,20 @@ public class AbfsConfiguration{
           tokenProvider = new RefreshTokenBasedTokenProvider(authEndpoint,
               clientId, refreshToken);
           LOG.trace("RefreshTokenBasedTokenProvider initialized");
+        } else if (tokenProviderClass == WorkloadIdentityTokenProvider.class) {
+          String authority = appendSlashIfNeeded(
+              getTrimmedPasswordString(FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY,
+              AuthConfigurations.DEFAULT_FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY));
+          String tenantGuid =
+              getMandatoryPasswordString(FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT);
+          String clientId =
+              getMandatoryPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID);
+          String tokenFile =
+              getTrimmedPasswordString(FS_AZURE_ACCOUNT_OAUTH_TOKEN_FILE,
+              AuthConfigurations.DEFAULT_FS_AZURE_ACCOUNT_OAUTH_TOKEN_FILE);
+          tokenProvider = new WorkloadIdentityTokenProvider(
+              authority, tenantGuid, clientId, tokenFile);
+          LOG.trace("WorkloadIdentityTokenProvider initialized");
         } else {
           throw new IllegalArgumentException("Failed to initialize " + tokenProviderClass);
         }

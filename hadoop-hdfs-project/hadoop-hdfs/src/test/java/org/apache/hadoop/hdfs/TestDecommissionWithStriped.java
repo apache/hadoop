@@ -462,6 +462,60 @@ public class TestDecommissionWithStriped {
         fileChecksum1.equals(fileChecksum2));
   }
 
+  /**
+   * Test decommission when DN marked as busy.
+   * @throwsException
+   */
+  @Test(timeout = 120000)
+  public void testBusyAfterDecommissionNode() throws Exception {
+    int busyDNIndex = 0;
+    //1. create EC file.
+    final Path ecFile = new Path(ecDir, "testBusyAfterDecommissionNode");
+    int writeBytes = cellSize * dataBlocks;
+    writeStripedFile(dfs, ecFile, writeBytes);
+    Assert.assertEquals(0, bm.numOfUnderReplicatedBlocks());
+    FileChecksum fileChecksum1 = dfs.getFileChecksum(ecFile, writeBytes);
+
+    //2. make once DN busy.
+    final INodeFile fileNode = cluster.getNamesystem().getFSDirectory()
+        .getINode4Write(ecFile.toString()).asFile();
+    BlockInfo firstBlock = fileNode.getBlocks()[0];
+    DatanodeStorageInfo[] dnStorageInfos = bm.getStorages(firstBlock);
+    DatanodeDescriptor busyNode =
+        dnStorageInfos[busyDNIndex].getDatanodeDescriptor();
+    for (int j = 0; j < replicationStreamsHardLimit; j++) {
+      busyNode.incrementPendingReplicationWithoutTargets();
+    }
+
+    //3. decomission one node.
+    List<DatanodeInfo> decommisionNodes = new ArrayList<>();
+    decommisionNodes.add(busyNode);
+    decommissionNode(0, decommisionNodes, AdminStates.DECOMMISSION_INPROGRESS);
+
+    final List<DatanodeDescriptor> live = new ArrayList<DatanodeDescriptor>();
+    bm.getDatanodeManager().fetchDatanodes(live, null, false);
+    int liveDecommissioning = 0;
+    for (DatanodeDescriptor node : live) {
+      liveDecommissioning += node.isDecommissionInProgress() ? 1 : 0;
+    }
+    assertEquals(decommisionNodes.size(), liveDecommissioning);
+
+    //4. wait for decommission block to replicate.
+    GenericTestUtils.waitFor(() -> bm.getLowRedundancyBlocksCount() == 1,
+        100, 3000);
+
+    int blocksScheduled = 0;
+    final List<DatanodeDescriptor> dnList = new ArrayList<>();
+    fsn.getBlockManager().getDatanodeManager().fetchDatanodes(dnList, null,
+        false);
+    for (DatanodeDescriptor dn : dnList) {
+      blocksScheduled += dn.getBlocksScheduled();
+    }
+    assertEquals(0, blocksScheduled);
+    assertEquals(0, bm.getPendingReconstructionBlocksCount());
+    assertEquals(1, bm.getLowRedundancyBlocksCount());
+  }
+
   private void testDecommission(int writeBytes, int storageCount,
       int decomNodeCount, String filename) throws IOException, Exception {
     Path ecFile = new Path(ecDir, filename);

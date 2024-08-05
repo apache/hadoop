@@ -33,6 +33,11 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.Callable;
+import java.util.concurrent.TimeoutException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -119,5 +124,38 @@ public final class CombinedHostsFileReader {
       allDNs = all.toArray(new DatanodeAdminProperties[all.size()]);
     }
     return allDNs;
+  }
+
+  /**
+   * Wrapper to call readFile with timeout via Future Tasks.
+   * If timeout is reached, it will throw IOException
+   * @param hostsFile the input json file to read from
+   * @param readTimeout timeout for FutureTask execution in milliseconds
+   * @return the set of DatanodeAdminProperties
+   * @throws IOException
+   */
+  public static DatanodeAdminProperties[]
+      readFileWithTimeout(final String hostsFile, final int readTimeout) throws IOException {
+    FutureTask<DatanodeAdminProperties[]> futureTask = new FutureTask<>(
+        new Callable<DatanodeAdminProperties[]>() {
+          @Override
+          public DatanodeAdminProperties[] call() throws Exception {
+            return readFile(hostsFile);
+        }
+      });
+
+    Thread thread = new Thread(futureTask);
+    thread.start();
+
+    try {
+      return futureTask.get(readTimeout, TimeUnit.MILLISECONDS);
+    } catch (TimeoutException e) {
+      futureTask.cancel(true);
+      LOG.error("refresh File read operation timed out");
+      throw new IOException("host file read operation timed out");
+    } catch (InterruptedException | ExecutionException e) {
+      LOG.error("File read operation interrupted : " + e.getMessage());
+      throw new IOException("host file read operation timed out");
+    }
   }
 }
