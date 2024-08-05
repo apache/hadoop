@@ -519,25 +519,25 @@ public class SaslDataTransferClient {
       // In which case there will be no encrypted secret sent from NN.
       BlockTokenIdentifier blockTokenIdentifier =
           accessToken.decodeIdentifier();
+      final byte[] first = sasl.createFirstMessage();
       if (blockTokenIdentifier != null) {
         byte[] handshakeSecret =
             accessToken.decodeIdentifier().getHandshakeMsg();
         if (handshakeSecret == null || handshakeSecret.length == 0) {
           LOG.debug("Handshake secret is null, "
               + "sending without handshake secret.");
-          sendSaslMessage(out, new byte[0]);
+          sendSaslMessage(out, first);
         } else {
           LOG.debug("Sending handshake secret.");
           BlockTokenIdentifier identifier = new BlockTokenIdentifier();
           identifier.readFields(new DataInputStream(
               new ByteArrayInputStream(accessToken.getIdentifier())));
           String bpid = identifier.getBlockPoolId();
-          sendSaslMessageHandshakeSecret(out, new byte[0],
-              handshakeSecret, bpid);
+          sendSaslMessageHandshakeSecret(out, first, handshakeSecret, bpid);
         }
       } else {
         LOG.debug("Block token id is null, sending without handshake secret.");
-        sendSaslMessage(out, new byte[0]);
+        sendSaslMessage(out, first);
       }
 
       // step 1
@@ -565,6 +565,7 @@ public class SaslDataTransferClient {
           cipherOptions.add(option);
         }
       }
+      LOG.debug("{}: cipherOptions={}", sasl, cipherOptions);
       sendSaslMessageAndNegotiationCipherOptions(out, localResponse,
           cipherOptions);
 
