@@ -1061,7 +1061,7 @@ public class TestMover {
       final String fooFile = "/bar/foo";
       long fileLen = 6 * defaultBlockSize;
       DFSTestUtil.createFile(cluster.getFileSystem(), new Path(fooFile),
-          fileLen,(short) 3, 0);
+          fileLen, (short) 3, 0);
 
       // Verify storage types and locations
       LocatedBlocks locatedBlocks =
@@ -1103,7 +1103,9 @@ public class TestMover {
       // Move blocks to DISK
       client.setStoragePolicy(barDir, "HOT");
       int rc = ToolRunner.run(conf, new Mover.Cli(),
-          new String[] { "-p", barDir });
+          new String[]{"-p", barDir});
+      // Verify the number of DISK storage types
+      waitForLocatedBlockWithDiskStorageType(cluster.getFileSystem(), fooFile, 5);
 
       // Maintain a datanode that simulates that one node in the location list
       // is in ENTERING_MAINTENANCE status.
@@ -1116,7 +1118,7 @@ public class TestMover {
       // and mover will fail to run.
       client.setStoragePolicy(barDir, "ALL_SSD");
       rc = ToolRunner.run(conf, new Mover.Cli(),
-          new String[] { "-p", barDir });
+          new String[]{"-p", barDir});
 
       Assert.assertEquals("Movement to HOT should be successful", 0, rc);
     } finally {

@@ -224,12 +224,6 @@ public class Mover {
     } else {
       db = new DBlock(blk);
     }
-    for(MLocation ml : locations) {
-      StorageGroup source = storages.getSource(ml);
-      if (source != null) {
-        db.addLocation(source);
-      }
-    }
 
     List<Integer> adjustList = new ArrayList<>();
     for (int i = 0; i < locations.size(); i++) {
