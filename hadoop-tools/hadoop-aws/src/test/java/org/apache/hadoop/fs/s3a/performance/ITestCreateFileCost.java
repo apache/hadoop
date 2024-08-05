@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a.performance;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
@@ -213,8 +214,11 @@ public class ITestCreateFileCost extends AbstractS3ACostTest {
     S3AFileSystem fs = getFileSystem();
 
     Path path = methodPath();
+    // increment progress events
+    AtomicLong progressEvents = new AtomicLong(0);
     FSDataOutputStreamBuilder builder = fs.createFile(path)
         .overwrite(false)
+        .progress(progressEvents::incrementAndGet)
         .recursive();
 
     // this has a broken return type; something to do with the return value of
@@ -225,6 +229,10 @@ public class ITestCreateFileCost extends AbstractS3ACostTest {
         always(NO_HEAD_OR_LIST),
         with(OBJECT_BULK_DELETE_REQUEST, 0),
         with(OBJECT_DELETE_REQUEST, 0));
+
+    Assertions.assertThat(progressEvents.get())
+        .describedAs("progress events")
+        .isGreaterThanOrEqualTo(1);
   }
 
   @Test

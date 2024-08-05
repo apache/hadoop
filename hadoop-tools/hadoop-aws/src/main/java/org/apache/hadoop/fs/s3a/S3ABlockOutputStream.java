@@ -1100,7 +1100,8 @@ class S3ABlockOutputStream extends OutputStream implements
       this.progress = progress;
     }
 
-    public void progressChanged(ProgressListenerEvent eventType, int bytesTransferred) {
+    @Override
+    public void progressChanged(ProgressListenerEvent eventType, long bytesTransferred) {
       if (progress != null) {
         progress.progress();
       }
