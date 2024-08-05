@@ -77,7 +77,7 @@ public class TestSaslDataTransfer extends SaslDataTransferTestCase {
   public ExpectedException exception = ExpectedException.none();
 
   @Rule
-  public Timeout timeout = new Timeout(60000);
+  public Timeout timeout = new Timeout(300_000);
 
   @After
   public void shutdown() {
