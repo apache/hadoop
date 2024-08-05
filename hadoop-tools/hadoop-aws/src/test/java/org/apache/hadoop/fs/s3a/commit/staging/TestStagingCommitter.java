@@ -31,6 +31,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.assertj.core.api.ObjectAssert;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.AbortMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
@@ -200,6 +201,15 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
 
   private Configuration newConfig() {
     return new Configuration(false);
+  }
+
+  @Test
+  public void testMockFSclientWiredUp() throws Throwable {
+    final S3Client client = mockFS.getS3AInternals().getAmazonS3Client("test");
+    Assertions.assertThat(client)
+        .describedAs("S3Client from FS")
+        .isNotNull()
+        .isSameAs(mockClient);
   }
 
   @Test

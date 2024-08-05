@@ -115,12 +115,12 @@ public final class SdkFaultInjector implements ExecutionInterceptor {
   /**
    * Set up the request failure conditions.
    * @param attempts how many times to fail before succeeding
-   * @param evaluator event evaluator
+   * @param condition condition to trigger the failure
    */
   public static void setRequestFailureConditions(final int attempts,
-      final Function<Context.ModifyHttpResponse, Boolean> evaluator) {
+      final Function<Context.ModifyHttpResponse, Boolean> condition) {
     setRequestFailureCount(attempts);
-    setEvaluator(evaluator);
+    setEvaluator(condition);
   }
 
   /**

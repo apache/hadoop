@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a.impl;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 
 import software.amazon.awssdk.services.s3.S3AsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -41,7 +42,26 @@ public interface ClientManager extends Closeable {
 
   S3Client getOrCreateS3Client() throws IOException;
 
+  /**
+   * Get the S3Client, raising a failure to create as an UncheckedIOException.
+   * @return the S3 client
+   * @throws UncheckedIOException failure to create the client.
+   */
+  S3Client getOrCreateS3ClientUnchecked() throws UncheckedIOException;
+
+  /**
+   * Get the Async S3Client, raising a failure to create as an UncheckedIOException.
+   * @return the Async S3 client
+   * @throws UncheckedIOException failure to create the client.
+   */
   S3AsyncClient getOrCreateAsyncClient() throws IOException;
+
+  /**
+   * Get the AsyncS3Client, raising a failure to create as an UncheckedIOException.
+   * @return the S3 client
+   * @throws UncheckedIOException failure to create the client.
+   */
+  S3Client getOrCreateAsyncS3ClientUnchecked() throws UncheckedIOException;
 
   /**
    * Close operation is required to not raise exceptions.

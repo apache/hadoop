@@ -575,8 +575,9 @@ public class CommitOperations extends AbstractStoreOperation
                 numParts, length));
       }
 
+      final int partCount = (int) numParts;
       LOG.debug("File size is {}, number of parts to upload = {}",
-          length, numParts);
+          length, partCount);
 
       // Open the file to upload.
       List<CompletedPart> parts = uploadFileData(
@@ -585,7 +586,7 @@ public class CommitOperations extends AbstractStoreOperation
           destKey,
           progress,
           length,
-          numParts,
+          partCount,
           uploadPartSize);
 
       commitData.bindCommitData(parts);
@@ -624,15 +625,15 @@ public class CommitOperations extends AbstractStoreOperation
    * @return the ordered list of parts
    * @throws IOException IO failure
    */
-  private  List<CompletedPart> uploadFileData(
+  private List<CompletedPart> uploadFileData(
       final String uploadId,
       final File localFile,
       final String destKey,
       final Progressable progress,
       final long length,
-      final long numParts,
+      final int numParts,
       final long uploadPartSize) throws IOException {
-    List<CompletedPart> parts = new ArrayList<>((int) numParts);
+    List<CompletedPart> parts = new ArrayList<>(numParts);
     long offset = 0;
     for (int partNumber = 1; partNumber <= numParts; partNumber++) {
       progress.progress();

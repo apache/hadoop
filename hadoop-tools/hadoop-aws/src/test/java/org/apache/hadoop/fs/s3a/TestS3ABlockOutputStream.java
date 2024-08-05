@@ -103,7 +103,7 @@ public class TestS3ABlockOutputStream extends AbstractS3AMockTest {
         new EmptyS3AStatisticsContext(),
         noopAuditor(conf),
         AuditTestSupport.NOOP_SPAN,
-        new MinimalWriteOperationHelperCallbacks());
+        new MinimalWriteOperationHelperCallbacks(null)); // raises NPE if S3 client used
     // first one works
     String key = "destKey";
     woh.newUploadPartRequestBuilder(key,

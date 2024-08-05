@@ -24,6 +24,7 @@ import software.amazon.awssdk.core.exception.ApiCallAttemptTimeoutException;
 import software.amazon.awssdk.core.exception.ApiCallTimeoutException;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.core.retry.RetryUtils;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.model.S3Object;
 
@@ -1175,6 +1176,19 @@ public final class S3AUtils {
     S3AFileStatus[] statuses = RemoteIterators
         .toArray(iterator, new S3AFileStatus[0]);
     return statuses;
+  }
+
+  /**
+   * Get the length of the PUT, verifying that the length is known.
+   * @param putObjectRequest a request bound to a file or a stream.
+   * @return the request length
+   * @throws IllegalArgumentException if the length is negative
+   */
+  public static long getPutRequestLength(PutObjectRequest putObjectRequest) {
+    long len = putObjectRequest.contentLength();
+
+    Preconditions.checkState(len >= 0, "Cannot PUT object of unknown length");
+    return len;
   }
 
   /**
