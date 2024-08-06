@@ -68,7 +68,6 @@ public class JQueryUI extends HtmlBlock {
         .link(root_url("static/dt-1.11.5/css/jquery.dataTables.css"))
         .link(root_url("static/dt-1.11.5/css/jui-dt.css"))
         .link(root_url("static/dt-1.11.5/css/custom_datatable.css"))
-        .link("https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.30.1/moment.min.js")
         .script(root_url("static/yarn.dt.plugins.js"))
         .script(root_url("static/customjs/Accordion.js"))
         .script(root_url("static/customjs/DataTable.js"))
@@ -85,12 +84,11 @@ public class JQueryUI extends HtmlBlock {
             .__(initDataTables()).__();
   }
 
-
   public static void jsnotice(HTML html) {
     html.
       div("#jsnotice.ui-state-error").
         __("This page will not function without javascript enabled."
-                    + " Please enable javascript on your browser.").__();
+                   + " Please enable javascript on your browser.").__();
     html.
       script().$type("text/javascript").
         __("document.getElementById('jsnotice').style.display = 'none'").__();
@@ -151,7 +149,6 @@ public class JQueryUI extends HtmlBlock {
               ", true);");
 
     }
-
     return dtJS;
   }
 

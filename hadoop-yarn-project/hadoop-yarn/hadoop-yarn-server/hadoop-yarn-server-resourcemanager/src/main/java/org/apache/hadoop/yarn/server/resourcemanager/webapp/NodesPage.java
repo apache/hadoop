@@ -270,8 +270,8 @@ class NodesPage extends RmView {
       }
       nodeTableData.append("]");
       html.script().$type("text/javascript")
-              .__("nodeTableData=" + nodeTableData + "\nopts.data = {data: nodeTableData}" +
-                      "\nnodeDataTable = DataTableHelper(elId, opts, false)").__();
+          .__("nodeTableData=" + nodeTableData + "\nopts.data = {data: nodeTableData}" +
+                  "\nnodeDataTable = DataTableHelper(elId, opts, false)").__();
       tbody.__().__();
     }
   }

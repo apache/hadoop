@@ -39,7 +39,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.webapp.AppsBlock;
 import org.apache.hadoop.yarn.server.webapp.dao.AppInfo;
 import org.apache.hadoop.yarn.util.Apps;
-import org.apache.hadoop.yarn.util.Times;
 import org.apache.hadoop.yarn.webapp.View;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet;
 import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.TABLE;
@@ -222,8 +221,8 @@ public class RMAppsBlock extends AppsBlock {
     }
     appsTableData.append("]");
     html.script().$type("text/javascript")
-            .__("appsTableData=" + appsTableData + "\nopts.data = {data: appsTableData}" +
-                    "\nappsDataTable = DataTableHelper(elId, opts, true)").__();
+        .__("appsTableData=" + appsTableData + "\nopts.data = {data: appsTableData}" +
+                "\nappsDataTable = DataTableHelper(elId, opts, true)").__();
 
     tbody.__().__();
   }

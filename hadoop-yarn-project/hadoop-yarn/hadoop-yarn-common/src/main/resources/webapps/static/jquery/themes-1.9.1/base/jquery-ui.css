@@ -30,14 +30,6 @@
 ----------------------------------*/
 /* Sets the width for the accordion. Sets the margin to 90px on the top and bottom and auto to the left and right */
 
-.accordion-parent {
- /* width: 800px;
-  margin: 90px auto;
-  color: black;
-  background-color: white;
-  padding: 45px 45px;*/
-}
-
 .accordion-parent + .container {
   display: none;
 }
@@ -45,7 +37,6 @@
 .accordion-parent.active + .container {
   display: block;
 }
-
 
 /* Overlays */
 .ui-widget-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }

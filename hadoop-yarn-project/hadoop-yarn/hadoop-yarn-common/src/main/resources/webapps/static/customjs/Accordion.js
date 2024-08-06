@@ -1,3 +1,21 @@
+/**
+* Licensed to the Apache Software Foundation (ASF) under one
+* or more contributor license agreements.  See the NOTICE file
+* distributed with this work for additional information
+* regarding copyright ownership.  The ASF licenses this file
+* to you under the Apache License, Version 2.0 (the
+* "License"); you may not use this file except in compliance
+* with the License.  You may obtain a copy of the License at
+*
+*     http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+*/
+
 /*
  * Implementation of Accordion in Vanilla JS
  * Based on the implementation of Jquery-UI Accordion
@@ -37,7 +55,7 @@ var Accordion = function (element, options, selector) {
                 item.addEventListener('mouseout', onMouseOut);
             })
 
-        //start with all closed tabs
+        // start with all closed tabs
         closeAll();
         if (openTab) {
             open(openTab);
@@ -45,23 +63,27 @@ var Accordion = function (element, options, selector) {
     }
 
     function onClick(e) {
-        //do nothing if not clickable element
-        if (e.target.className.indexOf(titleClasses[0]) === -1) {
+        // do nothing if not clickable element
+        let currElement = e.target;
+        if (e.target.className.split(' ').indexOf(titleClasses[0]+'-icon') !== -1) {
+            currElement = e.target.parentNode;
+        }
+        if (currElement.className.indexOf(titleClasses[0]) === -1) {
             return;
         }
 
-        if (e.target.className.indexOf("ui-state-active") !== -1) {
+        if (currElement.className.indexOf("ui-state-active") !== -1) {
             return;
         }
 
-        let nextContent = e.target.nextElementSibling;
-        e.target.classList.toggle('ui-state-active');
-        e.target.children[0].classList.toggle("ui-icon-triangle-1-e");
-        e.target.children[0].classList.toggle("ui-icon-triangle-1-s");
+        let nextContent = currElement.nextElementSibling;
+        currElement.classList.toggle('ui-state-active');
+        currElement.children[0].classList.toggle("ui-icon-triangle-1-e");
+        currElement.children[0].classList.toggle("ui-icon-triangle-1-s");
 
         if (nextContent.style.display !== 'none') {
             // toggle current element if open
-            e.target.nextElementSibling.style.display = "none";
+            currElement.nextElementSibling.style.display = "none";
         }
 
         if (oneOpen) {
@@ -72,7 +94,9 @@ var Accordion = function (element, options, selector) {
 
     function onMouseOver(e) {
         if (e.target.classList &&
-            e.target.className.indexOf('ui-state-hover') === -1){
+            e.target.className.indexOf('ui-state-hover') === -1 &&
+            e.target.children.length !== 0){
+            // add hover state to the parent and not the icon
                 e.target.classList.add('ui-state-hover');
         }
     }
