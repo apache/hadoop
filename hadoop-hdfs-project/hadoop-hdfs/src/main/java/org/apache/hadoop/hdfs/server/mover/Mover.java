@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.server.mover;
 
 import org.apache.commons.cli.*;
-import org.apache.commons.cli.Options;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
