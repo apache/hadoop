@@ -119,7 +119,7 @@ import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceError
 /**
  * AbfsClient interacting with the DFS Endpoint.
  */
-public class AbfsDfsClient extends AbfsClient implements Closeable {
+public class AbfsDfsClient extends AbfsClient {
 
   public AbfsDfsClient(final URL baseUrl,
       final SharedKeyCredentials sharedKeyCredentials,
@@ -141,11 +141,6 @@ public class AbfsDfsClient extends AbfsClient implements Closeable {
         encryptionContextProvider, abfsClientContext);
   }
 
-  @Override
-  public void close() throws IOException {
-    super.close();
-  }
-
   /**
    * Create request headers for Rest Operation using the default API version.
    * @return default request headers.
@@ -163,7 +158,7 @@ public class AbfsDfsClient extends AbfsClient implements Closeable {
    */
   @Override
   public List<AbfsHttpHeader> createDefaultHeaders(ApiVersion xMsVersion) {
-    List<AbfsHttpHeader> requestHeaders = super.createCommonHeaders(xMsVersion);
+    List<AbfsHttpHeader> requestHeaders = createCommonHeaders(xMsVersion);
     requestHeaders.add(new AbfsHttpHeader(ACCEPT, APPLICATION_JSON
         + COMMA + SINGLE_WHITE_SPACE + APPLICATION_OCTET_STREAM));
     return requestHeaders;

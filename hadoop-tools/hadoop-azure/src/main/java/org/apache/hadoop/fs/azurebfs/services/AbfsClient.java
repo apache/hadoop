@@ -442,6 +442,10 @@ public abstract class AbfsClient implements Closeable {
         SERVER_SIDE_ENCRYPTION_ALGORITHM));
   }
 
+  /**
+   * Creates a AbfsUriQueryBuilder with default query parameter timeout.
+   * @return default AbfsUriQueryBuilder.
+   */
   protected AbfsUriQueryBuilder createDefaultUriQueryBuilder() {
     final AbfsUriQueryBuilder abfsUriQueryBuilder = new AbfsUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_TIMEOUT, DEFAULT_TIMEOUT);
@@ -617,6 +621,12 @@ public abstract class AbfsClient implements Closeable {
    */
   protected abstract boolean checkIsDir(AbfsHttpOperation result);
 
+  /**
+   * Creates a rest operation for rename.
+   * @param url to be used for the operation.
+   * @param requestHeaders list of headers to be added to the request.
+   * @return un-executed rest operation.
+   */
   @VisibleForTesting
   AbfsRestOperation createRenameRestOperation(URL url, List<AbfsHttpHeader> requestHeaders) {
     AbfsRestOperation op = getAbfsRestOperation(
@@ -627,6 +637,10 @@ public abstract class AbfsClient implements Closeable {
     return op;
   }
 
+  /**
+   * Increments AbfsCounters for rename path attempts by 1.
+   * Will be called each time a rename path operation is attempted.
+   */
   protected void incrementAbfsRenamePath() {
     abfsCounters.incrementCounter(RENAME_PATH_ATTEMPTS, 1);
   }
@@ -729,7 +743,7 @@ public abstract class AbfsClient implements Closeable {
   // However a retry would fail with an InvalidQueryParameterValue
   // (as the current offset would be unacceptable).
   // Hence, we pass/succeed the appendblob append call
-  // in case we are doing a retry after checking the length of the file
+  // in case we are doing a retry after checking the length of the file.
   public boolean appendSuccessCheckOp(AbfsRestOperation op, final String path,
                                        final long length, TracingContext tracingContext)
       throws AzureBlobFileSystemException {
@@ -815,7 +829,7 @@ public abstract class AbfsClient implements Closeable {
       throws AzureBlobFileSystemException;
 
   /**
-   * Read the contents of the file at specified path
+   * Read the contents of the file at specified path.
    * @param path of the file to be read.
    * @param position in the file from where data has to be read.
    * @param buffer to store the data read.
@@ -866,8 +880,8 @@ public abstract class AbfsClient implements Closeable {
    * delete issued from this filesystem instance.
    * These are few corner cases and usually returning a success at this stage
    * should help the job to continue.
-   * @param op Delete request REST operation response with non-null HTTP response
-   * @return REST operation response post idempotency check
+   * @param op Delete request REST operation response with non-null HTTP response.
+   * @return REST operation response post idempotency check.
    */
   public AbfsRestOperation deleteIdempotencyCheckOp(final AbfsRestOperation op) {
     Preconditions.checkArgument(op.hasResult(), "Operations has null HTTP response");
@@ -915,7 +929,7 @@ public abstract class AbfsClient implements Closeable {
       throws AzureBlobFileSystemException;
 
   /**
-   * Sets the ACL
+   * Sets the ACL.
    * @param path on which ACL has to be set.
    * @param aclSpecString to be set.
    * @param tracingContext for tracing the server calls.
@@ -1052,17 +1066,38 @@ public abstract class AbfsClient implements Closeable {
     return sasToken;
   }
 
+  /**
+   * Creates REST operation URL with empty path for the given query.
+   * @param query to be added to the URL.
+   * @return URL for the REST operation.
+   * @throws AzureBlobFileSystemException if URL creation fails.
+   */
   @VisibleForTesting
   protected URL createRequestUrl(final String query) throws AzureBlobFileSystemException {
     return createRequestUrl(EMPTY_STRING, query);
   }
 
+  /**
+   * Creates REST operation URL with given path and query.
+   * @param path for which URL has to be created.
+   * @param query to be added to the URL.
+   * @return URL for the REST operation.
+   * @throws AzureBlobFileSystemException if URL creation fails.
+   */
   @VisibleForTesting
   protected URL createRequestUrl(final String path, final String query)
           throws AzureBlobFileSystemException {
     return createRequestUrl(baseUrl, path, query);
   }
 
+  /**
+   * Creates REST operation URL with given baseUrl, path and query.
+   * @param baseUrl to be used for the operation.
+   * @param path for which URL has to be created.
+   * @param query to be added to the URL.
+   * @return URL for the REST operation.
+   * @throws AzureBlobFileSystemException if URL creation fails.
+   */
   @VisibleForTesting
   protected URL createRequestUrl(final URL baseUrl, final String path, final String query)
           throws AzureBlobFileSystemException {
@@ -1091,6 +1126,12 @@ public abstract class AbfsClient implements Closeable {
     return url;
   }
 
+  /**
+   * returns the url encoded string for a given value.
+   * @param value to be encoded.
+   * @return url encoded string.
+   * @throws AzureBlobFileSystemException if encoding fails.
+   */
   public static String urlEncode(final String value) throws AzureBlobFileSystemException {
     String encodedString;
     try {

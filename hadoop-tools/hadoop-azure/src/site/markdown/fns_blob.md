@@ -12,12 +12,12 @@
   limitations under the License. See accompanying LICENSE file.
 -->
 
-# ABFS Driver for FNS Accounts
+# ABFS Driver for Namespace Disabled Accounts (FNS: Flat Namespace)
 
 ### Note: FNS-BLOB Support is being built and not yet ready for usage.
 
 ## Background
-ABFS driver is recommended to be used only with HNS Enabled ADLS Gen-2 accounts
+The ABFS driver is recommended to be used only with HNS Enabled ADLS Gen-2 accounts
 for big data analytics because of being more performant and scalable.
 
 However, to enable users of legacy WASB Driver to migrate to ABFS driver without
@@ -30,11 +30,11 @@ Azure Services offers two set of endpoints for interacting with storage accounts
 1. [Azure Blob Storage](https://learn.microsoft.com/en-us/rest/api/storageservices/blob-service-rest-api) referred as Blob Endpoint
 2. [Azure Data Lake Storage](https://learn.microsoft.com/en-us/rest/api/storageservices/datalakestoragegen2/operation-groups) referred as DFS Endpoint
 
-ABFS Driver by default is designed to work with DFS Endpoint only which primarily
-supports HNS Enabled Accounts only. However, azure services does not recommended
-to interact with FNS accounts using DFS Endpoint.
+The ABFS Driver by default is designed to work with DFS Endpoint only which primarily
+supports HNS Enabled Accounts only.
 
 To enable ABFS Driver to work with FNS Accounts, Support for Blob Endpoint is being added.
+This is because Azure services do not recommend using DFS Endpoint for FNS Accounts.
 ABFS Driver will only allow FNS Accounts to be accessed using Blob Endpoint.
 HNS Enabled accounts will still use DFS Endpoint which continues to be the
 recommended stack based on performance and feature capabilities.
@@ -70,7 +70,9 @@ to blob for HNS Enabled Accounts, FS init will fail with InvalidConfiguration er
     ```
 
 4. Service Type for Ingress Operations: This will allow an override to choose service
-type only for Ingress Related Operations. All other operations will still use the
+type only for Ingress Related Operations like [Create](https://learn.microsoft.com/en-us/rest/api/storageservices/put-blob?tabs=microsoft-entra-id),
+[Append](https://learn.microsoft.com/en-us/rest/api/storageservices/put-block?tabs=microsoft-entra-id)
+and [Flush](https://learn.microsoft.com/en-us/rest/api/storageservices/put-block-list?tabs=microsoft-entra-id). All other operations will still use the
 configured service type.
     ```xml
    <property>

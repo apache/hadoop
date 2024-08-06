@@ -170,6 +170,12 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   private static final Logger LOG = LoggerFactory.getLogger(AzureBlobFileSystemStore.class);
 
   private AbfsClient client;
+
+  /**
+   * Variable to hold the client handler which will determine the operative
+   * client based on the service type configured.
+   * Initialized in the @link{initializeClient} method.
+   */
   private AbfsClientHandler clientHandler;
   private URI uri;
   private String userName;

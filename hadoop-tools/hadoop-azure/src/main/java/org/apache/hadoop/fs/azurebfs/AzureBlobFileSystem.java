@@ -1418,6 +1418,13 @@ public class AzureBlobFileSystem extends FileSystem
     }
   }
 
+  /**
+   * Utility function to check if the namespace is enabled on the storage account.
+   * If request fails with 4xx other than 400, it will be inferred as HNS.
+   * @param tracingContext tracing context
+   * @return true if namespace is enabled, false otherwise.
+   * @throws AzureBlobFileSystemException if any other error occurs.
+   */
   private boolean tryGetIsNamespaceEnabled(TracingContext tracingContext)
       throws AzureBlobFileSystemException{
     try {

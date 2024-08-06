@@ -119,11 +119,9 @@ public class ITestAzureBlobFileSystemInitAndCreate extends
     Configuration configuration = getRawConfiguration();
     String defaultUri = configuration.get(FS_DEFAULT_NAME_KEY);
     String blobUri = defaultUri.replace(ABFS_DFS_DOMAIN_NAME, ABFS_BLOB_DOMAIN_NAME);
-    AzureBlobFileSystemException ex =
-        intercept(AzureBlobFileSystemException.class, () ->
+    intercept(InvalidConfigurationValueException.class,
+        "Blob Endpoint Support not yet available", () ->
             FileSystem.newInstance(new Path(blobUri).toUri(), configuration));
-    Assertions.assertThat(ex).isInstanceOf(InvalidConfigurationValueException.class);
-    Assertions.assertThat(ex.getMessage()).contains("Blob Endpoint Support not yet available");
   }
 
   @Test
@@ -133,10 +131,7 @@ public class ITestAzureBlobFileSystemInitAndCreate extends
     AzureBlobFileSystem mockedFs = Mockito.spy(fs);
     Mockito.doThrow(new AbfsRestOperationException(HTTP_UNAVAILABLE, "Throttled",
         "Throttled", null)).when(mockedFs).getIsNamespaceEnabled(any());
-    AzureBlobFileSystemException ex =
-        intercept(AzureBlobFileSystemException.class, () ->
-            mockedFs.initialize(fs.getUri(), getRawConfiguration()));
-    Assertions.assertThat(ex).isInstanceOf(InvalidConfigurationValueException.class);
-    Assertions.assertThat(ex.getMessage()).contains(FS_AZURE_ACCOUNT_IS_HNS_ENABLED);
-  }
+
+    intercept(AzureBlobFileSystemException.class, FS_AZURE_ACCOUNT_IS_HNS_ENABLED, () ->
+        mockedFs.initialize(fs.getUri(), getRawConfiguration()));
 }

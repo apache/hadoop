@@ -20,7 +20,7 @@ See also:
 
 * [WASB](./wasb.html)
 * [ABFS](./abfs.html)
-* [FNS-Blob on ABFS](./fnsBlob.html)
+* [Namespace Disabled Accounts on ABFS](./fns_blob.html)
 * [Testing](./testing_azure.html)
 
 ## Introduction

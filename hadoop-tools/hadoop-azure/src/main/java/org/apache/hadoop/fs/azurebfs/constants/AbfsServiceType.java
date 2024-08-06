@@ -26,6 +26,12 @@ package org.apache.hadoop.fs.azurebfs.constants;
  * </ol>
  */
 public enum AbfsServiceType {
+  /**
+   * Service type to set operative endpoint as Data Lake Rest API.
+   */
   DFS,
+  /**
+   * Service type to set operative endpoint as Blob Rest API.
+   */
   BLOB
 }
