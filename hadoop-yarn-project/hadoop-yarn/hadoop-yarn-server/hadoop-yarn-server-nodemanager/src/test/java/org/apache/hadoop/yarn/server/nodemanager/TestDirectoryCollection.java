@@ -528,6 +528,7 @@ public class TestDirectoryCollection {
     Files.setPosixFilePermissions(testFile.toPath(),
         PosixFilePermissions.fromString("-w--w--w-"));
     DirectoryCollection dc = new DirectoryCollection(new String[]{testDir.toString()});
+    dc.setSubAccessibilityValidationEnabled(true);
     Map<String, DirectoryCollection.DiskErrorInformation> diskErrorInformationMap =
         dc.testDirs(Collections.singletonList(testDir.toString()), Collections.emptySet());
     Assert.assertEquals(1, diskErrorInformationMap.size());

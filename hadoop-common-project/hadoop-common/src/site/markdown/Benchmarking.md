@@ -88,6 +88,7 @@ When running benchmarks with the above operation(s), please provide operation-sp
 |`-totalBlocks` | Number of total blocks to operate. |
 |`-replication` | Replication factor. Will be adjusted to number of data-nodes if it is larger than that. |
 |`-baseDirName` | The base dir name for benchmarks, to support multiple clients submitting benchmark tests at the same time. |
+|`-blockSize` | The block size for new files. |
 
 ### Reports
 

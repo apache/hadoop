@@ -71,13 +71,14 @@ class ErasureCodingWork extends BlockReconstructionWork {
   }
 
   @Override
-  void addTaskToDatanode(NumberReplicas numberReplicas) {
+  boolean addTaskToDatanode(NumberReplicas numberReplicas) {
     final DatanodeStorageInfo[] targets = getTargets();
     assert targets.length > 0;
     BlockInfoStriped stripedBlk = (BlockInfoStriped) getBlock();
     targets[0].getDatanodeDescriptor().addBlockToBeErasureCoded(
         new ExtendedBlock(blockPoolId, stripedBlk), getSrcNodes(), targets,
         liveBlockIndices, excludeReconstructedIndices, stripedBlk.getErasureCodingPolicy());
+    return true;
   }
 
   @VisibleForTesting

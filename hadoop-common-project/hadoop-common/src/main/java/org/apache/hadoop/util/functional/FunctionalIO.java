@@ -51,33 +51,12 @@ public final class FunctionalIO {
 
   /**
    * Wrap a {@link CallableRaisingIOE} as a {@link Supplier}.
-   * This is similar to {@link CommonCallableSupplier}, except that
-   * only IOExceptions are caught and wrapped; all other exceptions are
-   * propagated unchanged.
-   * @param <T> type of result
-   */
-  private static final class UncheckedIOExceptionSupplier<T> implements Supplier<T> {
-
-    private final CallableRaisingIOE<T> call;
-
-    private UncheckedIOExceptionSupplier(CallableRaisingIOE<T> call) {
-      this.call = call;
-    }
-
-    @Override
-    public T get() {
-      return uncheckIOExceptions(call);
-    }
-  }
-
-  /**
-   * Wrap a {@link CallableRaisingIOE} as a {@link Supplier}.
    * @param call call to wrap
    * @param <T> type of result
    * @return a supplier which invokes the call.
    */
   public static <T> Supplier<T> toUncheckedIOExceptionSupplier(CallableRaisingIOE<T> call) {
-    return new UncheckedIOExceptionSupplier<>(call);
+    return () -> uncheckIOExceptions(call);
   }
 
   /**

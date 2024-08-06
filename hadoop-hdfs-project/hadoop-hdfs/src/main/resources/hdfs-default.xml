@@ -2642,6 +2642,15 @@
 </property>
 
 <property>
+  <name>dfs.data.transfer.sasl.CustomizedCallbackHandler.class</name>
+  <value></value>
+  <description>
+    Some security provider may define a new javax.security.auth.callback.Callback.
+    This property allows users to configure a customized callback handler.
+  </description>
+</property>
+
+<property>
   <name>dfs.journalnode.rpc-address</name>
   <value>0.0.0.0:8485</value>
   <description>
@@ -5059,6 +5068,16 @@
     Time interval, in milliseconds, between two Journal Node syncs.
     This configuration takes effect only if the journalnode sync is enabled
     by setting the configuration parameter dfs.journalnode.enable.sync to true.
+  </description>
+</property>
+
+<property>
+  <name>dfs.journalnode.enable.sync.format</name>
+  <value>false</value>
+  <description>
+    If true, the journal node syncer daemon that tries to sync edit
+    logs between journal nodes will try to format its journal if it is not.
+    It will query the other journal nodes for the storage info required to format.
   </description>
 </property>
 
