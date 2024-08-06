@@ -129,9 +129,12 @@ public class ITestAzureBlobFileSystemInitAndCreate extends
     AzureBlobFileSystem fs = ((AzureBlobFileSystem) FileSystem.newInstance(
         getRawConfiguration()));
     AzureBlobFileSystem mockedFs = Mockito.spy(fs);
-    Mockito.doThrow(new AbfsRestOperationException(HTTP_UNAVAILABLE, "Throttled",
-        "Throttled", null)).when(mockedFs).getIsNamespaceEnabled(any());
+    Mockito.doThrow(
+        new AbfsRestOperationException(HTTP_UNAVAILABLE, "Throttled",
+            "Throttled", null)).when(mockedFs).getIsNamespaceEnabled(any());
 
-    intercept(AzureBlobFileSystemException.class, FS_AZURE_ACCOUNT_IS_HNS_ENABLED, () ->
-        mockedFs.initialize(fs.getUri(), getRawConfiguration()));
+    intercept(AzureBlobFileSystemException.class,
+        FS_AZURE_ACCOUNT_IS_HNS_ENABLED, () ->
+            mockedFs.initialize(fs.getUri(), getRawConfiguration()));
+  }
 }
