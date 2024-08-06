@@ -8456,11 +8456,6 @@ public class Hamlet extends HamletImpl implements HamletSpec._Html {
       return li_(this, false);
     }
 
-//    public UL<LI<UL<DIV<Hamlet>>>> selectorLi(String selector) {
-//      closeAttrs();
-//      return setSelector(li_(this, false), selector);
-//    }
-
     @Override
     public UL<T> li(String cdata) {
       return li().__(cdata).__();

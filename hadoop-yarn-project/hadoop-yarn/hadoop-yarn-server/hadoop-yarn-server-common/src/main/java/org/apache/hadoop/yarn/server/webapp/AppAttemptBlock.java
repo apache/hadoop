@@ -188,12 +188,10 @@ public class AppAttemptBlock extends HtmlBlock {
         containersTableData.length() - 1);
     }
     containersTableData.append("]");
-//    html.script().$type("text/javascript")
-//      .__("var containersTableData=" + containersTableData).__();
     String containersTableScript = "var containersTableData= " + containersTableData +
             ";\nconst containersDataTable = DataTableHelper('#containers', { data: { data: containersTableData } }, false)";
     html.script().$type("text/javascript")
-            .__(containersTableScript).__();
+      .__(containersTableScript).__();
 
     tbody.__().__();
   }
