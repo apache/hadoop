@@ -51,8 +51,9 @@ import java.net.InetAddress;
 import java.security.KeyFactory;
 import java.security.PrivateKey;
 import java.security.spec.RSAPrivateKeySpec;
-import java.util.Calendar;
-import java.util.Date;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.registry.client.api.RegistryConstants.*;
@@ -194,34 +195,37 @@ public class TestRegistryDNS extends Assert {
         "/registry/users/root/services/org-apache-slider/test1/", record);
 
     // start assessing whether correct records are available
-    Record[] recs = assertDNSQuery("test1.root.dev.test.");
+    List<Record> recs = assertDNSQuery("test1.root.dev.test.");
     assertEquals("wrong result", "192.168.1.5",
-        ((ARecord) recs[0]).getAddress().getHostAddress());
+        ((ARecord) recs.get(0)).getAddress().getHostAddress());
 
     recs = assertDNSQuery("management-api.test1.root.dev.test.", 2);
     assertEquals("wrong target name", "test1.root.dev.test.",
-        ((CNAMERecord) recs[0]).getTarget().toString());
-    assertTrue("not an ARecord", recs[isSecure() ? 2 : 1] instanceof ARecord);
+        ((CNAMERecord) recs.get(0)).getTarget().toString());
+    assertTrue("not an ARecord",
+        recs.get(isSecure() ? 2 : 1) instanceof ARecord);
 
     recs = assertDNSQuery("appmaster-ipc-api.test1.root.dev.test.",
         Type.SRV, 1);
-    assertTrue("not an SRV record", recs[0] instanceof SRVRecord);
-    assertEquals("wrong port", 1026, ((SRVRecord) recs[0]).getPort());
+    assertTrue("not an SRV record", recs.get(0) instanceof SRVRecord);
+    assertEquals("wrong port", 1026, ((SRVRecord) recs.get(0)).getPort());
 
     recs = assertDNSQuery("appmaster-ipc-api.test1.root.dev.test.", 2);
     assertEquals("wrong target name", "test1.root.dev.test.",
-        ((CNAMERecord) recs[0]).getTarget().toString());
-    assertTrue("not an ARecord", recs[isSecure() ? 2 : 1] instanceof ARecord);
+        ((CNAMERecord) recs.get(0)).getTarget().toString());
+    assertTrue("not an ARecord",
+        recs.get(isSecure() ? 2 : 1) instanceof ARecord);
 
     recs = assertDNSQuery("http-api.test1.root.dev.test.", 2);
     assertEquals("wrong target name", "test1.root.dev.test.",
-        ((CNAMERecord) recs[0]).getTarget().toString());
-    assertTrue("not an ARecord", recs[isSecure() ? 2 : 1] instanceof ARecord);
+        ((CNAMERecord) recs.get(0)).getTarget().toString());
+    assertTrue("not an ARecord",
+        recs.get(isSecure() ? 2 : 1) instanceof ARecord);
 
     recs = assertDNSQuery("http-api.test1.root.dev.test.", Type.SRV,
         1);
-    assertTrue("not an SRV record", recs[0] instanceof SRVRecord);
-    assertEquals("wrong port", 1027, ((SRVRecord) recs[0]).getPort());
+    assertTrue("not an SRV record", recs.get(0) instanceof SRVRecord);
+    assertEquals("wrong port", 1027, ((SRVRecord) recs.get(0)).getPort());
 
     assertDNSQuery("test1.root.dev.test.", Type.TXT, 3);
     assertDNSQuery("appmaster-ipc-api.test1.root.dev.test.", Type.TXT, 1);
@@ -239,13 +243,13 @@ public class TestRegistryDNS extends Assert {
         record);
 
     // start assessing whether correct records are available
-    Record[] recs =
+    List<Record> recs =
         assertDNSQuery("ctr-e50-1451931954322-0016-01-000002.dev.test.");
     assertEquals("wrong result", "172.17.0.19",
-        ((ARecord) recs[0]).getAddress().getHostAddress());
+        ((ARecord) recs.get(0)).getAddress().getHostAddress());
 
     recs = assertDNSQuery("httpd-1.test1.root.dev.test.", 1);
-    assertTrue("not an ARecord", recs[0] instanceof ARecord);
+    assertTrue("not an ARecord", recs.get(0) instanceof ARecord);
   }
 
   @Test
@@ -277,16 +281,16 @@ public class TestRegistryDNS extends Assert {
         record);
 
     // start assessing whether correct records are available
-    Record[] recs = assertDNSQuery(
+    List<Record> recs = assertDNSQuery(
         "ctr-e50-1451931954322-0016-01-000002.dev.test.");
     assertEquals("wrong result", "172.17.0.19",
-        ((ARecord) recs[0]).getAddress().getHostAddress());
-    assertEquals("wrong ttl", 30L, recs[0].getTTL());
+        ((ARecord) recs.get(0)).getAddress().getHostAddress());
+    assertEquals("wrong ttl", 30L, recs.get(0).getTTL());
 
     recs = assertDNSQuery("httpd-1.test1.root.dev.test.", 1);
-    assertTrue("not an ARecord", recs[0] instanceof ARecord);
+    assertTrue("not an ARecord", recs.get(0) instanceof ARecord);
 
-    assertEquals("wrong ttl", 30L, recs[0].getTTL());
+    assertEquals("wrong ttl", 30L, recs.get(0).getTTL());
   }
 
   @Test
@@ -299,10 +303,11 @@ public class TestRegistryDNS extends Assert {
         record);
 
     // start assessing whether correct records are available
-    Record[] recs = assertDNSQuery("19.0.17.172.in-addr.arpa.", Type.PTR, 1);
+    List<Record> recs = assertDNSQuery(
+        "19.0.17.172.in-addr.arpa.", Type.PTR, 1);
     assertEquals("wrong result",
         "httpd-1.test1.root.dev.test.",
-        ((PTRRecord) recs[0]).getTarget().toString());
+        ((PTRRecord) recs.get(0)).getTarget().toString());
   }
 
   @Test
@@ -325,10 +330,11 @@ public class TestRegistryDNS extends Assert {
         record);
 
     // start assessing whether correct records are available
-    Record[] recs = assertDNSQuery("19.0.17.172.in-addr.arpa.", Type.PTR, 1);
+    List<Record> recs = assertDNSQuery(
+        "19.0.17.172.in-addr.arpa.", Type.PTR, 1);
     assertEquals("wrong result",
         "httpd-1.test1.root.dev.test.",
-        ((PTRRecord) recs[0]).getTarget().toString());
+        ((PTRRecord) recs.get(0)).getTarget().toString());
   }
 
   @Test
@@ -372,16 +378,16 @@ public class TestRegistryDNS extends Assert {
     assertEquals("wrong status", Rcode.NXDOMAIN, response.getRcode());
   }
 
-  private Record[] assertDNSQuery(String lookup) throws IOException {
+  private List<Record> assertDNSQuery(String lookup) throws IOException {
     return assertDNSQuery(lookup, Type.A, 1);
   }
 
-  private Record[] assertDNSQuery(String lookup, int numRecs)
+  private List<Record> assertDNSQuery(String lookup, int numRecs)
       throws IOException {
     return assertDNSQuery(lookup, Type.A, numRecs);
   }
 
-  Record[] assertDNSQuery(String lookup, int type, int numRecs)
+  private List<Record> assertDNSQuery(String lookup, int type, int numRecs)
       throws IOException {
     Name name = Name.fromString(lookup);
     Record question = Record.newRecord(name, type, DClass.IN);
@@ -394,9 +400,9 @@ public class TestRegistryDNS extends Assert {
     assertNotNull("Null response", response);
     assertEquals("Questions do not match", query.getQuestion(),
         response.getQuestion());
-    Record[] recs = response.getSectionArray(Section.ANSWER);
+    List<Record> recs = response.getSection(Section.ANSWER);
     assertEquals("wrong number of answer records",
-        isSecure() ? numRecs * 2 : numRecs, recs.length);
+        isSecure() ? numRecs * 2 : numRecs, recs.size());
     if (isSecure()) {
       boolean signed = false;
       for (Record record : recs) {
@@ -410,8 +416,8 @@ public class TestRegistryDNS extends Assert {
     return recs;
   }
 
-  Record[] assertDNSQueryNotNull(String lookup, int type, int answerCount)
-      throws IOException {
+  private List<Record> assertDNSQueryNotNull(
+      String lookup, int type, int answerCount) throws IOException {
     Name name = Name.fromString(lookup);
     Record question = Record.newRecord(name, type, DClass.IN);
     Message query = Message.newQuery(question);
@@ -423,9 +429,9 @@ public class TestRegistryDNS extends Assert {
     assertNotNull("Null response", response);
     assertEquals("Questions do not match", query.getQuestion(),
         response.getQuestion());
-    Record[] recs = response.getSectionArray(Section.ANSWER);
-    assertEquals(answerCount, recs.length);
-    assertEquals(recs[0].getType(), type);
+    List<Record> recs = response.getSection(Section.ANSWER);
+    assertEquals(answerCount, recs.size());
+    assertEquals(type, recs.get(0).getType());
     return recs;
   }
 
@@ -461,10 +467,8 @@ public class TestRegistryDNS extends Assert {
 
     ARecord aRecord = new ARecord(Name.fromString("some.test."), DClass.IN, 0,
         InetAddress.getByName("192.168.0.1"));
-    Calendar cal = Calendar.getInstance();
-    Date inception = cal.getTime();
-    cal.add(Calendar.YEAR, 1);
-    Date expiration = cal.getTime();
+    Instant inception = Instant.now();
+    Instant expiration = inception.plus(365, ChronoUnit.DAYS);
     RRset rrset = new RRset(aRecord);
     RRSIGRecord rrsigRecord = DNSSEC.sign(rrset,
         dnskeyRecord,
@@ -495,13 +499,13 @@ public class TestRegistryDNS extends Assert {
         record);
 
     // start assessing whether correct records are available
-    Record[] recs = assertDNSQuery(
+    List<Record> recs = assertDNSQuery(
         "ctr-e50-1451931954322-0016-01-000002.dev.test.", Type.AAAA, 1);
     assertEquals("wrong result", "172.17.0.19",
-        ((AAAARecord) recs[0]).getAddress().getHostAddress());
+        ((AAAARecord) recs.get(0)).getAddress().getHostAddress());
 
     recs = assertDNSQuery("httpd-1.test1.root.dev.test.", Type.AAAA, 1);
-    assertTrue("not an ARecord", recs[0] instanceof AAAARecord);
+    assertTrue("not an ARecord", recs.get(0) instanceof AAAARecord);
   }
 
   @Test
@@ -524,9 +528,9 @@ public class TestRegistryDNS extends Assert {
     assertNotNull("Null response", response);
     assertEquals("Questions do not match", query.getQuestion(),
         response.getQuestion());
-    Record[] sectionArray = response.getSectionArray(Section.AUTHORITY);
+    List<Record> sectionArray = response.getSection(Section.AUTHORITY);
     assertEquals("Wrong number of recs in AUTHORITY", isSecure() ? 2 : 1,
-        sectionArray.length);
+        sectionArray.size());
     boolean soaFound = false;
     for (Record rec : sectionArray) {
       soaFound = rec.getType() == Type.SOA;
@@ -570,19 +574,19 @@ public class TestRegistryDNS extends Assert {
         record);
 
     // start assessing whether correct records are available
-    Record[] recs =
+    List<Record> recs =
         assertDNSQuery("ctr-e50-1451931954322-0016-01-000002.dev.test.");
     assertEquals("wrong result", "172.17.0.19",
-        ((ARecord) recs[0]).getAddress().getHostAddress());
+        ((ARecord) recs.get(0)).getAddress().getHostAddress());
 
     recs = assertDNSQuery("httpd-1.test1.root.dev.test.", 1);
-    assertTrue("not an ARecord", recs[0] instanceof ARecord);
+    assertTrue("not an ARecord", recs.get(0) instanceof ARecord);
 
     // lookup dyanmic reverse records
     recs = assertDNSQuery("19.0.17.172.in-addr.arpa.", Type.PTR, 1);
     assertEquals("wrong result",
         "httpd-1.test1.root.dev.test.",
-        ((PTRRecord) recs[0]).getTarget().toString());
+        ((PTRRecord) recs.get(0)).getTarget().toString());
 
     // now lookup static reverse records
     Name name = Name.fromString("5.0.17.172.in-addr.arpa.");
@@ -592,9 +596,9 @@ public class TestRegistryDNS extends Assert {
     query.addRecord(optRecord, Section.ADDITIONAL);
     byte[] responseBytes = getRegistryDNS().generateReply(query, null);
     Message response = new Message(responseBytes);
-    recs = response.getSectionArray(Section.ANSWER);
+    recs = response.getSection(Section.ANSWER);
     assertEquals("wrong result", "cn005.dev.test.",
-        ((PTRRecord) recs[0]).getTarget().toString());
+        ((PTRRecord) recs.get(0)).getTarget().toString());
   }
 
   @Test
@@ -655,8 +659,7 @@ public class TestRegistryDNS extends Assert {
     getRegistryDNS().initializeZones(conf);
 
     // start assessing whether correct records are available
-    Record[] recs =
-        assertDNSQueryNotNull("mail.yahoo.com.", Type.CNAME, 1);
+    assertDNSQueryNotNull("mail.yahoo.com.", Type.CNAME, 1);
   }
 
   @Test
@@ -672,8 +675,7 @@ public class TestRegistryDNS extends Assert {
     getRegistryDNS().initializeZones(conf);
 
     // start assessing whether correct records are available
-    Record[] recs =
-        assertDNSQueryNotNull(".", Type.NS, 13);
+    assertDNSQueryNotNull(".", Type.NS, 13);
   }
 
   @Test
@@ -692,10 +694,10 @@ public class TestRegistryDNS extends Assert {
         record2);
 
     // start assessing whether correct records are available
-    Record[] recs =
+    List<Record> recs =
         assertDNSQuery("httpd.test1.root.dev.test.", 2);
-    assertTrue("not an ARecord", recs[0] instanceof ARecord);
-    assertTrue("not an ARecord", recs[1] instanceof ARecord);
+    assertTrue("not an ARecord", recs.get(0) instanceof ARecord);
+    assertTrue("not an ARecord", recs.get(1) instanceof ARecord);
   }
 
   @Test(timeout=5000)

@@ -138,8 +138,7 @@ public class SecureableZone extends Zone {
     SetResponse sr = zone.findRecords(base.getName(), Type.ANY);
     BitSet bitMap = new BitSet();
     bitMap.set(Type.NXT);
-    RRset[] rRsets = sr.answers();
-    for (RRset rRset : rRsets) {
+    for (RRset rRset : sr.answers()) {
       int typeCode = rRset.getType();
       if (typeCode > 0 && typeCode < 128) {
         bitMap.set(typeCode);
