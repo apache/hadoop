@@ -61,12 +61,11 @@ public class AsyncErasureCoding extends ErasureCoding{
     RemoteMethod method = new RemoteMethod("getErasureCodingPolicies");
     Set<FederationNamespaceInfo> nss = namenodeResolver.getNamespaces();
 
-    // Map<FederationNamespaceInfo, ErasureCodingPolicyInfo[]> ret =
     rpcClient.invokeConcurrent(
         nss, method, true, false, ErasureCodingPolicyInfo[].class);
-    asyncApply((ApplyFunction<Map<FederationNamespaceInfo, ErasureCodingPolicyInfo[]>, ErasureCodingPolicyInfo[]>) ret -> {
-      return merge(ret, ErasureCodingPolicyInfo.class);
-    });
+    asyncApply(
+        (ApplyFunction<Map<FederationNamespaceInfo, ErasureCodingPolicyInfo[]>, ErasureCodingPolicyInfo[]>)
+            ret -> merge(ret, ErasureCodingPolicyInfo.class));
 
     return asyncReturn(ErasureCodingPolicyInfo[].class);
   }
@@ -110,9 +109,8 @@ public class AsyncErasureCoding extends ErasureCoding{
         nss, method, true, false, AddErasureCodingPolicyResponse[].class);
 
     asyncApply(
-        (ApplyFunction
-            <Map<FederationNamespaceInfo, AddErasureCodingPolicyResponse[]>,
-                AddErasureCodingPolicyResponse[]>) ret -> {
+        (ApplyFunction<Map<FederationNamespaceInfo, AddErasureCodingPolicyResponse[]>,
+            AddErasureCodingPolicyResponse[]>) ret -> {
           return merge(ret, AddErasureCodingPolicyResponse.class);
         });
     return asyncReturn(AddErasureCodingPolicyResponse[].class);
@@ -148,7 +146,6 @@ public class AsyncErasureCoding extends ErasureCoding{
       throw new IOException("No namespace availaible.");
     }
 
-    // Map<FederationNamespaceInfo, ECTopologyVerifierResult> ret
     rpcClient.invokeConcurrent(nss, method, true, false,
         ECTopologyVerifierResult.class);
     asyncApply((ApplyFunction<Map<FederationNamespaceInfo, ECTopologyVerifierResult>, ECTopologyVerifierResult>) ret -> {
