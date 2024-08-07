@@ -18,11 +18,8 @@
 
 package org.apache.hadoop.fs.s3a.audit;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.io.PrintWriter;
-import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
 
@@ -30,15 +27,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.conf.Configured;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.audit.mapreduce.S3AAuditLogMergerAndParser;
 import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool;
 import org.apache.hadoop.util.ExitUtil;
-import org.apache.hadoop.util.Tool;
-import org.apache.hadoop.util.ToolRunner;
 
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_COMMAND_ARGUMENT_ERROR;
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_FAIL;
@@ -78,7 +71,9 @@ public class AuditTool extends S3GuardTool {
 
   // Exit codes
   private static final int SUCCESS = EXIT_SUCCESS;
+
   private static final int FAILURE = EXIT_FAIL;
+
   private static final int INVALID_ARGUMENT = EXIT_COMMAND_ARGUMENT_ERROR;
 
   private static final String USAGE =
@@ -87,7 +82,7 @@ public class AuditTool extends S3GuardTool {
           " <path of output file>"
           + "\n";
 
-  private PrintWriter out;
+  private PrintStream out;
 
   public AuditTool(final Configuration conf) {
     super(conf);
@@ -95,7 +90,6 @@ public class AuditTool extends S3GuardTool {
 
   /**
    * Tells us the usage of the AuditTool by commands.
-   *
    * @return the string USAGE
    */
   public String getUsage() {
@@ -110,16 +104,16 @@ public class AuditTool extends S3GuardTool {
    * This run method in AuditTool takes source and destination path of bucket,
    * and checks if there are directories and pass these paths to merge and
    * parse audit log files.
-   *
    * @param args argument list
+   * @param stream output stream
    * @return SUCCESS i.e, '0', which is an exit code
    * @throws Exception on any failure.
    */
   @Override
   public int run(final String[] args, final PrintStream stream)
-      throws Exception, ExitUtil.ExitException {
+      throws ExitUtil.ExitException, Exception {
 
-    this.out = new PrintWriter(stream);
+    this.out = stream;
 
     preConditionArgsSizeCheck(args);
     List<String> paths = Arrays.asList(args);
