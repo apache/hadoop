@@ -99,9 +99,13 @@ public class TestFunctionalIO extends AbstractHadoopTestBase {
 
   @Test
   public void testUncheckedFunction() throws Throwable {
+    // java function which should raise a FileNotFoundException
+    // wrapped into an unchecked exeption
     final Function<String, Object> fn =
-        toUncheckedFunction((String a) -> {throw new FileNotFoundException(a);});
-    intercept(UncheckedIOException.class, "404", () ->
+        toUncheckedFunction((String a) -> {
+          throw new FileNotFoundException(a);
+        });
+    intercept(UncheckedIOException.class, "missing", () ->
         fn.apply("missing"));
   }
 }

@@ -30,6 +30,7 @@ import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_RE
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_COLUMNAR;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_CSV;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_DEFAULT;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_HBASE;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_JSON;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_ORC;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_PARQUET;
@@ -87,7 +88,8 @@ public enum S3AInputPolicy {
    * Choose an access policy.
    * @param name strategy name from a configuration option, etc.
    * @param defaultPolicy default policy to fall back to.
-   * @return the chosen strategy
+   * @return the chosen strategy or null if there was no match and
+   * the value of {@code defaultPolicy} was "null".
    */
   public static S3AInputPolicy getPolicy(
       String name,
@@ -100,6 +102,7 @@ public enum S3AInputPolicy {
       return Normal;
 
       // all these options currently map to random IO.
+    case FS_OPTION_OPENFILE_READ_POLICY_HBASE:
     case FS_OPTION_OPENFILE_READ_POLICY_RANDOM:
     case FS_OPTION_OPENFILE_READ_POLICY_VECTOR:
       return Random;
@@ -111,7 +114,7 @@ public enum S3AInputPolicy {
     case FS_OPTION_OPENFILE_READ_POLICY_PARQUET:
       return Random;
 
-      // hadle the sequential formats.
+      // handle the sequential formats.
     case FS_OPTION_OPENFILE_READ_POLICY_AVRO:
     case FS_OPTION_OPENFILE_READ_POLICY_CSV:
     case FS_OPTION_OPENFILE_READ_POLICY_JSON:

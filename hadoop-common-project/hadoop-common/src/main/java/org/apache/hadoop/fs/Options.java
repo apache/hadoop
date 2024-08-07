@@ -632,6 +632,13 @@ public final class Options {
         "default";
 
     /**
+     * This is a table file for Apache HBase.
+     * Do whatever is needed to optimize for it: {@value}.
+     */
+    public static final String FS_OPTION_OPENFILE_READ_POLICY_HBASE =
+        "hbase";
+
+    /**
      * This is a JSON file of UTF-8 text, including a
      * JSON line file where each line is a JSON entity.
      * Do whatever is needed to optimize for it: {@value}.

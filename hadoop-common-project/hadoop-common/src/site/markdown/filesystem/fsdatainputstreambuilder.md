@@ -382,9 +382,10 @@ performance -and vice versa.
 | `adaptive`   | Any adaptive policy implemented by the store.                          |
 | `avro`       | This is an avro format which will be read sequentially                 |
 | `csv`        | This is CSV data which will be read sequentially                       |
-| `json`       | This is a UTF-8 JSON/JSON lines format which will be read sequentially |
 | `default`    | The default policy for this store. Generally "adaptive".               |
 | `columnar`   | This is any columnar format other than ORC/parquet.                    |
+| `hbase`      | This is an HBase Table                                                 |
+| `json`       | This is a UTF-8 JSON/JSON lines format which will be read sequentially |
 | `orc`        | This is an ORC file. Optimize for it.                                  |
 | `parquet`    | This is a Parquet file. Optimize for it.                               |
 | `random`     | Optimize for random access.                                            |
@@ -392,12 +393,15 @@ performance -and vice versa.
 | `vector`     | The Vectored IO API is intended to be used.                            |
 | `whole-file` | The whole file will be read.                                           |
 
-Choosing the wrong read policy for an input source may be inefficient.
+Choosing the wrong read policy for an input source may be inefficient but never fatal.
 
 A list of read policies MAY be supplied; the first one recognized/supported by
-the filesystem SHALL be the one used. This allows for custom policies to be
-supported, for example an `hbase-hfile` policy optimized for HBase HFiles.
-
+the filesystem SHALL be the one used. This allows for configurations which are compatible
+across versions. A policy `parquet, columnar, vector, random, adaptive` will use the parquet policy for
+any filesystem aware of it, falling back to `columnar`, `vector`, `random` and finally `adaptive`.
+The S3A connector will recognize the `random` since Hadoop 3.3.5 (i.e. since the `openFile()` API
+was added), and `vector` from Hadoop 3.4.0.
+ 
 The S3A and ABFS input streams both implement
 the [IOStatisticsSource](iostatistics.html) API, and can be queried for their IO
 Performance.
@@ -479,7 +483,6 @@ Strategies can include:
 Applications which know that the entire file is to be read from an opened stream SHOULD declare this
 read policy.
 
-
 #### <a name="read.policy.columnar"></a> Read Policy `columnar`
 
 Declare that the data is some (unspecific) columnar format and that read sequencies
@@ -509,6 +512,13 @@ and that the input stream MAY be optimized for reading from these.
 These read policies are a Hadoop 3.4.x addition, so applications and
 libraries targeting multiple versions, SHOULD list their fallback
 policies if these are not recognized, e.g. request a policy such as `avro, sequential`.
+
+
+#### <a name="read.policy.fileformat.hbase"></a> File Format Read Policy `hbase`
+
+The file is an HBase table.
+Use whatever policy is appropriate for these files, where `random` is
+what should be used unless there are specific optimizations related to HBase.
 
 
 ### <a name="openfile.length"></a> Option: `fs.option.openfile.length`: `Long`
