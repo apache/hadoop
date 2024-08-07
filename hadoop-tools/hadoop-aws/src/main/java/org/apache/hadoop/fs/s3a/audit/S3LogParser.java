@@ -29,7 +29,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 /**
  * Class to help parse AWS S3 Logs.
  * see https://docs.aws.amazon.com/AmazonS3/latest/userguide/LogFormat.html
- *
+ * <p>
  * Getting the regexp right is surprisingly hard; this class does it
  * explicitly and names each group in the process.
  * All group names are included in {@link #AWS_LOG_REGEXP_GROUPS} in the order

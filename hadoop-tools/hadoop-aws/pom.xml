@@ -473,6 +473,8 @@
           </execution>
         </executions>
       </plugin>
+
+      <!-- create the avro records for the audit log parser -->
       <plugin>
         <groupId>org.apache.avro</groupId>
         <artifactId>avro-maven-plugin</artifactId>
@@ -486,7 +488,7 @@
           </execution>
         </executions>
         <configuration>
-          <sourceDirectory>src/main/java/org/apache/hadoop/fs/s3a/audit/avro</sourceDirectory>
+          <sourceDirectory>src/main/avro</sourceDirectory>
           <outputDirectory>${project.build.directory}/generated-sources/avro</outputDirectory>
         </configuration>
       </plugin>

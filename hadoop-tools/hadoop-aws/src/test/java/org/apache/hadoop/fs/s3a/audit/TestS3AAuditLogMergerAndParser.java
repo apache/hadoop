@@ -152,7 +152,7 @@ public class TestS3AAuditLogMergerAndParser extends HadoopTestBase {
   private File sampleDestDir;
 
   private final S3AAuditLogMergerAndParser s3AAuditLogMergerAndParser =
-      new S3AAuditLogMergerAndParser();
+      new S3AAuditLogMergerAndParser(1);
 
   /**
    * Testing parseAuditLog method in parser class by passing sample audit log
@@ -162,11 +162,14 @@ public class TestS3AAuditLogMergerAndParser extends HadoopTestBase {
   public void testParseAuditLog() {
     Map<String, String> parseAuditLogResult =
         s3AAuditLogMergerAndParser.parseAuditLog(SAMPLE_LOG_ENTRY);
-    assertNotNull("the result of parseAuditLogResult should be not null",
-        parseAuditLogResult);
+    Assertions.assertThat(parseAuditLogResult)
+        .describedAs("the result of parseAuditLogResult of %s", SAMPLE_LOG_ENTRY)
+        .isNotNull();
+
     //verifying the bucket from parsed audit log
-    assertEquals("Mismatch in the bucket parsed from the audit",
-        "bucket-london", parseAuditLogResult.get("bucket"));
+    Assertions.assertThat(parseAuditLogResult.get("bucket"))
+            .describedAs("The bucket parsed from the audit")
+        .isEqualTo("bucket-london");
     //verifying the remoteip from parsed audit log
     assertEquals("Mismatch in the Remote I.P parsed from the audit",
         "109.157.171.174", parseAuditLogResult.get("remoteip"));

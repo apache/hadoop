@@ -51,8 +51,6 @@ public class AuditTool extends S3GuardTool {
    */
   public static final String AUDIT = "audit";
 
-  private final S3AAuditLogMergerAndParser s3AAuditLogMergerAndParser =
-      new S3AAuditLogMergerAndParser();
 
   /**
    * Name of this tool: {@value}.
@@ -75,6 +73,8 @@ public class AuditTool extends S3GuardTool {
   private static final int FAILURE = EXIT_FAIL;
 
   private static final int INVALID_ARGUMENT = EXIT_COMMAND_ARGUMENT_ERROR;
+
+  private static final int SAMPLE = 500;
 
   private static final String USAGE =
       "hadoop " + AUDIT_TOOL +
@@ -126,6 +126,9 @@ public class AuditTool extends S3GuardTool {
 
     // Setting the file system
     FileSystem fileSystem = logsPath.getFileSystem(getConf());
+
+    final S3AAuditLogMergerAndParser s3AAuditLogMergerAndParser =
+        new S3AAuditLogMergerAndParser(SAMPLE);
 
     // Calls S3AAuditLogMergerAndParser for implementing merging, passing of
     // audit log files and converting into avro file

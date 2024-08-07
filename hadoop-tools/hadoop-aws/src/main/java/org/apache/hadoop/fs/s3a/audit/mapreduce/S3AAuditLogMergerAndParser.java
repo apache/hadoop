@@ -34,6 +34,7 @@ import org.apache.avro.specific.SpecificDatumWriter;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FSDataOutputStreamBuilder;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
@@ -47,6 +48,7 @@ import org.apache.hadoop.util.DurationInfo;
 
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_WHOLE_FILE;
+import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
 import static org.apache.hadoop.fs.s3a.audit.S3LogParser.AWS_LOG_REGEXP_GROUPS;
 import static org.apache.hadoop.fs.s3a.audit.S3LogParser.BYTESSENT_GROUP;
 import static org.apache.hadoop.fs.s3a.audit.S3LogParser.LOG_ENTRY_PATTERN;
@@ -62,10 +64,13 @@ import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
 public class S3AAuditLogMergerAndParser {
 
   public static final int MAX_LINE_LENGTH = 32000;
+
   private static final Logger LOG =
       LoggerFactory.getLogger(S3AAuditLogMergerAndParser.class);
 
   private static final String REFERRER_HEADER_KEY = "referrer";
+
+  private final int sample;
 
   // Basic parsing counters.
 
@@ -79,9 +84,6 @@ public class S3AAuditLogMergerAndParser {
    */
   private long auditLogsParsed = 0;
 
-
-
-
   /**
    * How many referrer headers were parsed.
    */
@@ -92,10 +94,14 @@ public class S3AAuditLogMergerAndParser {
    */
   private long recordsSkipped = 0;
 
+  public S3AAuditLogMergerAndParser(final int sample) {
+
+    this.sample = sample;
+  }
+
   /**
    * parseAuditLog method helps in parsing the audit log
    * into key-value pairs using regular expressions.
-   *
    * @param singleAuditLog this is single audit log from merged audit log file
    * @return it returns a map i.e, auditLogMap which contains key-value pairs of a single audit log
    */
@@ -126,9 +132,8 @@ public class S3AAuditLogMergerAndParser {
   /**
    * parseReferrerHeader method helps in parsing the http referrer header.
    * which is one of the key-value pair of audit log.
-   *
    * @param referrerHeader this is the http referrer header of a particular
-   *                       audit log.
+   * audit log.
    * @return returns a map which contains key-value pairs of referrer headers
    */
   public static HashMap<String, String> parseReferrerHeader(String referrerHeader) {
@@ -175,10 +180,9 @@ public class S3AAuditLogMergerAndParser {
 
   /**
    * Merge and parse all the audit log files and convert data into avro file.
-   *
    * @param fileSystem filesystem
-   * @param logsPath   source path of logs
-   * @param destPath   destination path of merged log file
+   * @param logsPath source path of logs
+   * @param destPath destination path of merged log file
    * @return true
    * @throws IOException on any failure
    */
@@ -202,11 +206,11 @@ public class S3AAuditLogMergerAndParser {
         byte[] byteBuffer = new byte[fileLength];
 
         try (DurationInfo duration = new DurationInfo(LOG, "Processing %s", fileStatus.getPath());
-            FSDataInputStream fsDataInputStream =
-            awaitFuture(fileSystem.openFile(fileStatus.getPath())
-                .withFileStatus(fileStatus)
-                .opt(FS_OPTION_OPENFILE_READ_POLICY, FS_OPTION_OPENFILE_READ_POLICY_WHOLE_FILE)
-                .build())) {
+             FSDataInputStream fsDataInputStream =
+                 awaitFuture(fileSystem.openFile(fileStatus.getPath())
+                     .withFileStatus(fileStatus)
+                     .opt(FS_OPTION_OPENFILE_READ_POLICY, FS_OPTION_OPENFILE_READ_POLICY_WHOLE_FILE)
+                     .build())) {
 
           // Instantiating generated AvroDataRecord class
           AvroS3LogEntryRecord avroDataRecord = new AvroS3LogEntryRecord();
@@ -232,8 +236,14 @@ public class S3AAuditLogMergerAndParser {
           LongWritable longWritable = new LongWritable();
           Text singleAuditLog = new Text();
 
-          try (FSDataOutputStream fsDataOutputStreamAvro = fileSystem.create(
-              avroFile)) {
+          final FSDataOutputStreamBuilder builder = fileSystem.createFile(avroFile)
+              .recursive()
+              .overwrite(true);
+
+          // this has a broken return type; a java typesystem quirk.
+          builder.opt(FS_S3A_CREATE_PERFORMANCE, true);
+
+          try (FSDataOutputStream fsDataOutputStreamAvro = builder.build()) {
             // adding schema, output stream to DataFileWriter
             dataFileWriter.create(AvroS3LogEntryRecord.getClassSchema(),
                 fsDataOutputStreamAvro);
