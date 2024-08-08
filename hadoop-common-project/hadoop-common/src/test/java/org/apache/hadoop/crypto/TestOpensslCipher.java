@@ -110,8 +110,11 @@ public class TestOpensslCipher {
 
   @Test(timeout=120000)
   public void testIsSupportedSuite() throws Exception {
-    Assume.assumeTrue(OpensslCipher.getLoadingFailureReason() == null);
-    Assert.assertFalse(OpensslCipher.isSupported(CipherSuite.UNKNOWN));
-    Assert.assertTrue(OpensslCipher.isSupported(CipherSuite.AES_CTR_NOPADDING));
+    Assume.assumeTrue("Skipping due to falilure of loading OpensslCipher.",
+        OpensslCipher.getLoadingFailureReason() == null);
+    Assert.assertFalse("Unknown suite must not be supported.",
+        OpensslCipher.isSupported(CipherSuite.UNKNOWN));
+    Assert.assertTrue("AES/CTR/NoPadding is not an optional suite.",
+        OpensslCipher.isSupported(CipherSuite.AES_CTR_NOPADDING));
   }
 }

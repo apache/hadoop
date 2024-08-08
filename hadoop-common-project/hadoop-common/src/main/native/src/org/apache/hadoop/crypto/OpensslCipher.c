@@ -248,7 +248,7 @@ JNIEXPORT void JNICALL Java_org_apache_hadoop_crypto_OpensslCipher_initIDs
   if (jthr) {
     (*env)->DeleteLocalRef(env, jthr);
     THROW(env, "java/lang/UnsatisfiedLinkError",  \
-        "Cannot find AES-CTR support, is your version of Openssl new enough?");
+        "Cannot find AES-CTR support, is your version of OpenSSL new enough?");
     return;
   }
 }
