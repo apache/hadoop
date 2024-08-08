@@ -24,30 +24,51 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.Map;
 
+import org.assertj.core.api.AbstractStringAssert;
 import org.assertj.core.api.Assertions;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.audit.mapreduce.S3AAuditLogMergerAndParser;
-import org.apache.hadoop.test.HadoopTestBase;
+import org.apache.hadoop.test.AbstractHadoopTestBase;
 import org.apache.hadoop.util.Preconditions;
 
 import static org.apache.hadoop.fs.audit.AuditConstants.PARAM_PATH;
 import static org.apache.hadoop.fs.audit.AuditConstants.PARAM_PRINCIPAL;
-import static org.apache.hadoop.fs.s3a.audit.mapreduce.S3AAuditLogMergerAndParser.parseReferrerHeader;
+import static org.apache.hadoop.fs.s3a.audit.mapreduce.S3AAuditLogMergerAndParser.parseAudit;
 
 /**
- * Unit tests on S3AAuditLogMergerAndParser class.
+ * Unit tests on {@link S3AAuditLogMergerAndParser} class.
  */
-public class TestS3AAuditLogMergerAndParser extends HadoopTestBase {
+public class TestS3AAuditLogMergerAndParser extends AbstractHadoopTestBase {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TestS3AAuditLogMergerAndParser.class);
+
+  @Rule
+  public TestName methodName = new TestName();
+
+  @BeforeClass
+  public static void nameTestThread() {
+    Thread.currentThread().setName("JUnit");
+  }
+
+  @Before
+  public void nameThread() {
+    Thread.currentThread().setName("JUnit-" + getMethodName());
+  }
+
+  protected String getMethodName() {
+    return methodName.getMethodName();
+  }
 
   /**
    * A real log entry.
@@ -142,17 +163,11 @@ public class TestS3AAuditLogMergerAndParser extends HadoopTestBase {
           + "&fs=e8ede3c7-8506-4a43-8268-fe8fcbb510a4&t1=156"
           + "&ts=1620905165700\"";
 
-  private final Configuration conf = new Configuration();
-
-  /**
-   * Sample directories and files to test.
-   */
-  private File sampleFile;
   private File sampleDir;
-  private File sampleDestDir;
 
-  private final S3AAuditLogMergerAndParser s3AAuditLogMergerAndParser =
-      new S3AAuditLogMergerAndParser(1);
+  private S3AAuditLogMergerAndParser s3AAuditLogMergerAndParser =
+      new S3AAuditLogMergerAndParser(new Configuration(), 1);
+
 
   /**
    * Testing parseAuditLog method in parser class by passing sample audit log
@@ -167,12 +182,25 @@ public class TestS3AAuditLogMergerAndParser extends HadoopTestBase {
         .isNotNull();
 
     //verifying the bucket from parsed audit log
-    Assertions.assertThat(parseAuditLogResult.get("bucket"))
-            .describedAs("The bucket parsed from the audit")
-        .isEqualTo("bucket-london");
+    assertFieldValue(parseAuditLogResult, "bucket", "bucket-london");
+
     //verifying the remoteip from parsed audit log
-    assertEquals("Mismatch in the Remote I.P parsed from the audit",
-        "109.157.171.174", parseAuditLogResult.get("remoteip"));
+    assertFieldValue(parseAuditLogResult, "remoteip", "109.157.171.174");
+  }
+
+  /**
+   * Assert that a field in the parsed audit log matches the expected value.
+   * @param parseAuditLogResult parsed audit log
+   * @param field field name
+   * @param expected expected value
+   * @return the ongoing assert
+   */
+  private static AbstractStringAssert<?> assertFieldValue(final Map<String, String> parseAuditLogResult,
+      final String field,
+      final String expected) {
+    return Assertions.assertThat(parseAuditLogResult.get(field))
+        .describedAs("Mismatch in the field %s parsed from the audit", field)
+        .isEqualTo(expected);
   }
 
   /**
@@ -188,8 +216,8 @@ public class TestS3AAuditLogMergerAndParser extends HadoopTestBase {
         .isEmpty();
     Map<String, String> parseAuditLogResultNull =
         s3AAuditLogMergerAndParser.parseAuditLog(null);
-    Assertions.assertThat(parseAuditLogResultEmpty)
-        .describedAs("Audit log map should be empty")
+    Assertions.assertThat(parseAuditLogResultNull)
+        .describedAs("Audit log map of null record should be empty")
         .isEmpty();
   }
 
@@ -199,9 +227,9 @@ public class TestS3AAuditLogMergerAndParser extends HadoopTestBase {
    * referrer header is parsed correctly.
    */
   @Test
-  public void testParseReferrerHeader() {
+  public void testParseAudit() {
     Map<String, String> parseReferrerHeaderResult =
-        parseReferrerHeader(sampleReferrerHeader);
+        parseAudit(sampleReferrerHeader);
     //verifying the path 'p1' from parsed referrer header
     Assertions.assertThat(parseReferrerHeaderResult)
         .describedAs("Mismatch in the path parsed from the referrer")
@@ -217,10 +245,10 @@ public class TestS3AAuditLogMergerAndParser extends HadoopTestBase {
    * string and null string and checks if the result is empty.
    */
   @Test
-  public void testParseReferrerHeaderEmptyAndNull() {
-    Assertions.assertThat(parseReferrerHeader(""))
+  public void testParseAuditEmptyAndNull() {
+    Assertions.assertThat(parseAudit(""))
         .isEmpty();
-    Assertions.assertThat(parseReferrerHeader(null))
+    Assertions.assertThat(parseAudit(null))
         .isEmpty();
   }
 
@@ -237,24 +265,30 @@ public class TestS3AAuditLogMergerAndParser extends HadoopTestBase {
         "TestAuditLogs/sampleLog1").toString();
     Preconditions.checkArgument(!StringUtils.isAnyBlank(auditLogDir,
         auditSingleFile), String.format("Audit path should not be empty. Check "
-        + "test/resources. auditLogDir : %s, auditLogSingleFile :%s",
+            + "test/resources. auditLogDir : %s, auditLogSingleFile :%s",
         auditLogDir, auditSingleFile));
     Path auditDirPath = new Path(auditLogDir);
     Path auditFilePath = new Path(auditSingleFile);
 
-    sampleDestDir = Files.createTempDirectory("sampleDestDir").toFile();
-    Path destPath = new Path(sampleDestDir.toURI());
-    FileSystem fileSystem = auditFilePath.getFileSystem(conf);
+    final Path destPath = tempAvroPath();
     boolean mergeAndParseResult =
-        s3AAuditLogMergerAndParser.mergeAndParseAuditLogFiles(fileSystem,
+        s3AAuditLogMergerAndParser.mergeAndParseAuditLogFiles(
             auditDirPath, destPath);
-    assertTrue("The merge and parse failed for the audit log",
-        mergeAndParseResult);
+    Assertions.assertThat(mergeAndParseResult)
+        .describedAs("The merge and parse failed for the audit log")
+        .isTrue();
     // 36 audit logs with referrer in each of the 2 sample files.
-    assertEquals("Count of audit logs parsed is not correct",
-        s3AAuditLogMergerAndParser.getAuditLogsParsed(), 36 + 36);
-    assertEquals("Count of referrer headers parsed is not correct",
-        s3AAuditLogMergerAndParser.getReferrerHeaderLogParsed(), 36 + 36);
+    Assertions.assertThat(s3AAuditLogMergerAndParser.getAuditLogsParsed())
+        .describedAs("Mismatch in the number of audit logs parsed")
+        .isEqualTo(36 + 36);
+    Assertions.assertThat(s3AAuditLogMergerAndParser.getReferrerHeaderLogParsed())
+        .describedAs("Mismatch in the number of referrer headers parsed")
+        .isEqualTo(36 + 36);
+  }
+
+  private Path tempAvroPath() throws IOException {
+    File destFile = Files.createTempFile(getMethodName(), ".avro").toFile();
+    return new Path(destFile.toURI());
   }
 
   /**
@@ -271,24 +305,22 @@ public class TestS3AAuditLogMergerAndParser extends HadoopTestBase {
     File thirdSampleFile =
         File.createTempFile("sampleFile3", ".txt", sampleDir);
     try (FileWriter fw = new FileWriter(firstSampleFile);
-        FileWriter fw1 = new FileWriter(secondSampleFile);
-        FileWriter fw2 = new FileWriter(thirdSampleFile)) {
+         FileWriter fw1 = new FileWriter(secondSampleFile);
+         FileWriter fw2 = new FileWriter(thirdSampleFile)) {
       fw.write(SAMPLE_LOG_ENTRY);
       fw1.write(SAMPLE_LOG_ENTRY);
       fw2.write(SAMPLE_LOG_ENTRY_1);
     }
-    sampleDestDir = Files.createTempDirectory("sampleDestDir").toFile();
     Path logsPath = new Path(sampleDir.toURI());
-    Path destPath = new Path(sampleDestDir.toURI());
-    FileSystem fileSystem = logsPath.getFileSystem(conf);
+    Path destPath = tempAvroPath();
     boolean mergeAndParseResult =
-        s3AAuditLogMergerAndParser.mergeAndParseAuditLogFiles(fileSystem,
+        s3AAuditLogMergerAndParser.mergeAndParseAuditLogFiles(
             logsPath, destPath);
-    assertTrue("Merge and parsing of the audit logs files was unsuccessful",
-        mergeAndParseResult);
-
-    long noOfAuditLogsParsed = s3AAuditLogMergerAndParser.getAuditLogsParsed();
-    assertEquals("Mismatch in the number of audit logs parsed",
-        3, noOfAuditLogsParsed);
+    Assertions.assertThat(mergeAndParseResult)
+        .describedAs("Merge and parsing of the audit logs files was unsuccessful")
+        .isTrue();
+    Assertions.assertThat(s3AAuditLogMergerAndParser.getAuditLogsParsed())
+        .describedAs("Mismatch in the number of audit logs parsed")
+        .isEqualTo(3);
   }
 }

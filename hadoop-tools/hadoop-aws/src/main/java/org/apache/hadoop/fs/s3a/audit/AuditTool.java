@@ -124,17 +124,14 @@ public class AuditTool extends S3GuardTool {
     // Path of destination file
     Path destPath = new Path(paths.get(1));
 
-    // Setting the file system
-    FileSystem fileSystem = logsPath.getFileSystem(getConf());
-
-    final S3AAuditLogMergerAndParser s3AAuditLogMergerAndParser =
-        new S3AAuditLogMergerAndParser(SAMPLE);
+    final S3AAuditLogMergerAndParser auditLogMergerAndParser =
+        new S3AAuditLogMergerAndParser(getConf(), SAMPLE);
 
     // Calls S3AAuditLogMergerAndParser for implementing merging, passing of
     // audit log files and converting into avro file
     boolean mergeAndParseResult =
-        s3AAuditLogMergerAndParser.mergeAndParseAuditLogFiles(
-            fileSystem, logsPath, destPath);
+        auditLogMergerAndParser.mergeAndParseAuditLogFiles(
+            logsPath, destPath);
     if (!mergeAndParseResult) {
       return FAILURE;
     }

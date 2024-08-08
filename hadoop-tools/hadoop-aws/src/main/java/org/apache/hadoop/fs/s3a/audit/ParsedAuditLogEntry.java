@@ -99,6 +99,15 @@ public final class ParsedAuditLogEntry implements Serializable, Writable {
   public ParsedAuditLogEntry() {
   }
 
+  /**
+   * Build from an avro record.
+   * @param record record
+   */
+  public ParsedAuditLogEntry(AvroS3LogEntryRecord record) {
+    fromAvro(record);
+  }
+
+
   public String getOwner() {
     return owner;
   }
@@ -567,5 +576,33 @@ public final class ParsedAuditLogEntry implements Serializable, Writable {
   @Override
   public int hashCode() {
     return Objects.hashCode(requestid);
+  }
+
+  @Override
+  public String toString() {
+    return "ParsedAuditLogEntry{" +
+        "auth='" + auth + '\'' +
+        ", awserrorcode='" + awserrorcode + '\'' +
+        ", bucket='" + bucket + '\'' +
+        ", bytessent=" + bytessent +
+        ", endpoint='" + endpoint + '\'' +
+        ", hostid='" + hostid + '\'' +
+        ", http='" + http + '\'' +
+        ", key='" + key + '\'' +
+        ", objectsize=" + objectsize +
+        ", owner='" + owner + '\'' +
+        ", referrer='" + referrer + '\'' +
+        ", referrerMap=" + referrerMap +
+        ", remoteip='" + remoteip + '\'' +
+        ", requester='" + requester + '\'' +
+        ", requestid='" + requestid + '\'' +
+        ", requesturi='" + requesturi + '\'' +
+        ", tail='" + tail + '\'' +
+        ", timestamp='" + timestamp + '\'' +
+        ", totaltime=" + totaltime +
+        ", turnaroundtime=" + turnaroundtime +
+        ", useragent='" + useragent + '\'' +
+        ", verb='" + verb + '\'' +
+        '}';
   }
 }
