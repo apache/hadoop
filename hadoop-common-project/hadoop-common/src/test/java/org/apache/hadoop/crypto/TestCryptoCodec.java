@@ -106,31 +106,21 @@ public class TestCryptoCodec {
 
   @Test(timeout=120000)
   public void testJceSm4CtrCryptoCodec() throws Exception {
-    GenericTestUtils.assumeInNativeProfile();
-    if (!NativeCodeLoader.buildSupportsOpenssl()) {
-      LOG.warn("Skipping test since openSSL library not loaded");
-      Assume.assumeTrue(false);
-    }
     conf.set(HADOOP_SECURITY_CRYPTO_CIPHER_SUITE_KEY, "SM4/CTR/NoPadding");
     conf.set(HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_SM4_CTR_NOPADDING_KEY,
         JceSm4CtrCryptoCodec.class.getName());
     conf.set(HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_KEY,
             BouncyCastleProvider.PROVIDER_NAME);
-    Assert.assertEquals(null, OpensslCipher.getLoadingFailureReason());
     cryptoCodecTest(conf, seed, 0,
         jceSm4CodecClass, jceSm4CodecClass, iv);
     cryptoCodecTest(conf, seed, count,
         jceSm4CodecClass, jceSm4CodecClass, iv);
-    cryptoCodecTest(conf, seed, count,
-        jceSm4CodecClass, opensslSm4CodecClass, iv);
     // Overflow test, IV: xx xx xx xx xx xx xx xx ff ff ff ff ff ff ff ff
     for(int i = 0; i < 8; i++) {
       iv[8 + i] = (byte) 0xff;
     }
     cryptoCodecTest(conf, seed, count,
         jceSm4CodecClass, jceSm4CodecClass, iv);
-    cryptoCodecTest(conf, seed, count,
-        jceSm4CodecClass, opensslSm4CodecClass, iv);
   }
   
   @Test(timeout=120000)
@@ -164,6 +154,7 @@ public class TestCryptoCodec {
       LOG.warn("Skipping test since openSSL library not loaded");
       Assume.assumeTrue(false);
     }
+    Assume.assumeTrue(OpensslCipher.isSupported(CipherSuite.SM4_CTR_NOPADDING));
     conf.set(HADOOP_SECURITY_CRYPTO_JCE_PROVIDER_KEY,
             BouncyCastleProvider.PROVIDER_NAME);
     Assert.assertEquals(null, OpensslCipher.getLoadingFailureReason());
@@ -181,6 +172,8 @@ public class TestCryptoCodec {
         opensslSm4CodecClass, opensslSm4CodecClass, iv);
     cryptoCodecTest(conf, seed, count,
         opensslSm4CodecClass, jceSm4CodecClass, iv);
+    cryptoCodecTest(conf, seed, count,
+        jceSm4CodecClass, opensslSm4CodecClass, iv);
   }
   
   private void cryptoCodecTest(Configuration conf, int seed, int count, 

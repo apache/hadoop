@@ -177,6 +177,20 @@ public final class OpensslCipher {
     }
     return new Transform(parts[0], parts[1], parts[2]);
   }
+
+  public static boolean isSupported(CipherSuite suite) {
+    Transform transform;
+    int algMode;
+    int padding;
+    try {
+      transform = tokenizeTransformation(suite.getName());
+      algMode = AlgMode.get(transform.alg, transform.mode);
+      padding = Padding.get(transform.padding);
+    } catch (NoSuchAlgorithmException|NoSuchPaddingException e) {
+      return false;
+    }
+    return isSupportedSuite(algMode, padding);
+  }
   
   /**
    * Initialize this cipher with a key and IV.
@@ -297,6 +311,8 @@ public final class OpensslCipher {
       int maxOutputLength);
   
   private native void clean(long ctx, long engineNum);
+
+  private native static boolean isSupportedSuite(int alg, int padding);
 
   public native static String getLibraryName();
 }
