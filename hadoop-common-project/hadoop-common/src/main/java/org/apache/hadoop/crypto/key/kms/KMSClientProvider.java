@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.crypto.key.kms;
 
+import io.netty.util.internal.StringUtil;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -561,17 +562,19 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
       }
       throw ex;
     }
+
     if ((conn.getResponseCode() == HttpURLConnection.HTTP_FORBIDDEN
-        && (conn.getResponseMessage().equals(ANONYMOUS_REQUESTS_DISALLOWED) ||
-            conn.getResponseMessage().contains(INVALID_SIGNATURE)))
+        && (!StringUtil.isNullOrEmpty(conn.getResponseMessage())
+            && (conn.getResponseMessage().equals(ANONYMOUS_REQUESTS_DISALLOWED)
+            || conn.getResponseMessage().contains(INVALID_SIGNATURE))))
         || conn.getResponseCode() == HttpURLConnection.HTTP_UNAUTHORIZED) {
       // Ideally, this should happen only when there is an Authentication
       // failure. Unfortunately, the AuthenticationFilter returns 403 when it
       // cannot authenticate (Since a 401 requires Server to send
       // WWW-Authenticate header as well)..
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Response={}({}), resetting authToken",
-            conn.getResponseCode(), conn.getResponseMessage());
+        LOG.debug("Response={}, resetting authToken",
+            conn.getResponseCode());
       }
       KMSClientProvider.this.authToken =
           new DelegationTokenAuthenticatedURL.Token();
@@ -798,6 +801,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
   @SuppressWarnings("rawtypes")
   @Override
   public KeyVersion decryptEncryptedKey(
+
       EncryptedKeyVersion encryptedKeyVersion) throws IOException,
                                                       GeneralSecurityException {
     checkNotNull(encryptedKeyVersion.getEncryptionKeyVersionName(),
