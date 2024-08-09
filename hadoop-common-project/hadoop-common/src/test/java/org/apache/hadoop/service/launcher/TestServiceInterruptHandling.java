@@ -20,6 +20,7 @@ package org.apache.hadoop.service.launcher;
 
 import org.apache.hadoop.service.BreakableService;
 import org.apache.hadoop.service.launcher.testservices.FailureTestService;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ExitUtil;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -43,10 +44,8 @@ public class TestServiceInterruptHandling
     assertEquals(0, irqHandler.getSignalCount());
     irqHandler.raise();
     // allow for an async event
-    Thread.sleep(500);
-    IrqHandler.InterruptData data = catcher.interruptData;
-    assertNotNull("interrupt data", data);
-    assertEquals(name, data.getName());
+    GenericTestUtils.waitFor(() -> catcher.interruptData != null, 100, 10000);
+    assertEquals(name, catcher.interruptData.getName());
     assertEquals(1, irqHandler.getSignalCount());
   }
 
