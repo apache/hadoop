@@ -49,7 +49,6 @@ import org.apache.hadoop.hdfs.server.protocol.BlockECReconstructionCommand.Block
 
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.jline.utils.Log;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
