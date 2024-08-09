@@ -34,9 +34,9 @@ public class ITestS3AContractMkdir extends AbstractContractMkdirTest {
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
-    removeBaseAndBucketOverrides(conf,
-        FS_S3A_CREATE_PERFORMANCE);
-    removeBaseAndBucketOverrides(conf,
+    removeBaseAndBucketOverrides(
+        conf,
+        FS_S3A_CREATE_PERFORMANCE,
         FS_S3A_PERFORMANCE_FLAGS);
     conf.set(FS_S3A_PERFORMANCE_FLAGS, "");
     return conf;
