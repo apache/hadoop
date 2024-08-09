@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.crypto.key.kms;
 
-import io.netty.util.internal.StringUtil;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -564,7 +564,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
     }
 
     if ((conn.getResponseCode() == HttpURLConnection.HTTP_FORBIDDEN
-        && (!StringUtil.isNullOrEmpty(conn.getResponseMessage())
+        && (!StringUtils.isEmpty(conn.getResponseMessage())
             && (conn.getResponseMessage().equals(ANONYMOUS_REQUESTS_DISALLOWED)
             || conn.getResponseMessage().contains(INVALID_SIGNATURE))))
         || conn.getResponseCode() == HttpURLConnection.HTTP_UNAUTHORIZED) {
