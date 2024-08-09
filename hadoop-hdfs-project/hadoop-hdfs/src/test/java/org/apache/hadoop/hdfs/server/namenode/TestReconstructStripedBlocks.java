@@ -49,6 +49,7 @@ import org.apache.hadoop.hdfs.server.protocol.BlockECReconstructionCommand.Block
 
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.jline.utils.Log;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -622,17 +623,16 @@ public class TestReconstructStripedBlocks {
 
       // Bring the dn back: 10 internal blocks now
       cluster.restartDataNode(dnProp);
-      cluster.waitActive();
       DFSTestUtil.verifyClientStats(conf, cluster);
 
       // Currently namenode is able to track the missing block. And restart NN
-      cluster.restartNameNode(true);
-
       for (DataNode dn : cluster.getDataNodes()) {
         DataNodeTestUtils.triggerBlockReport(dn);
       }
-
-      Thread.sleep(3000); // Wait 3 running cycles of redundancy monitor
+      BlockManager bm = cluster.getNamesystem().getBlockManager();
+      GenericTestUtils.waitFor(()
+                      -> bm.getPendingDeletionBlocksCount() == 0,
+              10, 2000);
       for (DataNode dn : cluster.getDataNodes()) {
         DataNodeTestUtils.triggerHeartbeat(dn);
       }
