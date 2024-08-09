@@ -37,6 +37,13 @@ import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DN_R
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FEDERATION_RENAME_OPTION;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FEDERATION_RENAME_OPTION_DEFAULT;
 import static org.apache.hadoop.hdfs.server.federation.router.RouterFederationRename.RouterRenameOption;
+import static org.apache.hadoop.hdfs.server.federation.router.RouterRpcClient.isExpectedClass;
+import static org.apache.hadoop.hdfs.server.federation.router.async.AsyncUtil.asyncApply;
+import static org.apache.hadoop.hdfs.server.federation.router.async.AsyncUtil.asyncCatch;
+import static org.apache.hadoop.hdfs.server.federation.router.async.AsyncUtil.asyncComplete;
+import static org.apache.hadoop.hdfs.server.federation.router.async.AsyncUtil.asyncForEach;
+import static org.apache.hadoop.hdfs.server.federation.router.async.AsyncUtil.asyncReturn;
+import static org.apache.hadoop.hdfs.server.federation.router.async.AsyncUtil.asyncTry;
 import static org.apache.hadoop.tools.fedbalance.FedBalanceConfigs.SCHEDULER_JOURNAL_URI;
 
 import java.io.FileNotFoundException;
@@ -49,6 +56,7 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -68,6 +76,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.protocolPB.AsyncRpcProtocolPBUtil;
+import org.apache.hadoop.hdfs.server.federation.router.async.AsyncCatchFunction;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheLoader;
 import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
@@ -791,6 +800,36 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     return invokeOnNs(method, clazz, io, nss);
   }
 
+  <T> T invokeAtAvailableNsAsync(RemoteMethod method, Class<T> clazz)
+      throws IOException {
+    String nsId = subclusterResolver.getDefaultNamespace();
+    // If default Ns is not present return result from first namespace.
+    Set<FederationNamespaceInfo> nss = namenodeResolver.getNamespaces();
+    // If no namespace is available, throw IOException.
+    IOException io = new IOException("No namespace available.");
+
+    asyncComplete(null);
+    if (!nsId.isEmpty()) {
+      asyncTry(() -> {
+        rpcClient.invokeSingle(nsId, method, clazz);
+      });
+
+      asyncCatch((AsyncCatchFunction<T, IOException>)(res, ioe) -> {
+        if (!clientProto.isUnavailableSubclusterException(ioe)) {
+          LOG.debug("{} exception cannot be retried",
+              ioe.getClass().getSimpleName());
+          throw ioe;
+        }
+        nss.removeIf(n -> n.getNameserviceId().equals(nsId));
+        invokeOnNs(method, clazz, io, nss);
+      }, IOException.class);
+    } else {
+      // If not have default NS.
+      invokeOnNsAsync(method, clazz, io, nss);
+    }
+    return asyncReturn(clazz);
+  }
+
   /**
    * Invoke the method sequentially on available namespaces,
    * throw no namespace available exception, if no namespaces are available.
@@ -822,6 +861,49 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     }
     // Couldn't get a response from any of the namespace, throw ioe.
     throw ioe;
+  }
+
+  <T> T invokeOnNsAsync(RemoteMethod method, Class<T> clazz, IOException ioe,
+                        Set<FederationNamespaceInfo> nss) throws IOException {
+    if (nss.isEmpty()) {
+      throw ioe;
+    }
+
+    asyncComplete(null);
+    Iterator<FederationNamespaceInfo> nsIterator = nss.iterator();
+    asyncForEach(nsIterator, (foreach, fnInfo) -> {
+      String nsId = fnInfo.getNameserviceId();
+      LOG.debug("Invoking {} on namespace {}", method, nsId);
+      asyncTry(() -> {
+        rpcClient.invokeSingle(nsId, method, clazz);
+        asyncApply(result -> {
+          if (result != null && isExpectedClass(clazz, result)) {
+            foreach.breakNow();
+            return result;
+          }
+          return null;
+        });
+      });
+
+      asyncCatch((AsyncCatchFunction<T, IOException>)(ret, ex) -> {
+        LOG.debug("Failed to invoke {} on namespace {}", method, nsId, ex);
+        // Ignore the exception and try on other namespace, if the tried
+        // namespace is unavailable, else throw the received exception.
+        if (!clientProto.isUnavailableSubclusterException(ex)) {
+          throw ex;
+        }
+      }, IOException.class);
+    });
+
+    asyncApply(obj -> {
+      if (obj == null) {
+        // Couldn't get a response from any of the namespace, throw ioe.
+        throw ioe;
+      }
+      return obj;
+    });
+
+    return asyncReturn(clazz);
   }
 
   @Override // ClientProtocol
