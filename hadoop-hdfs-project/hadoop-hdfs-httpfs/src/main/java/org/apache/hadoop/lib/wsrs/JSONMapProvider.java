@@ -55,13 +55,8 @@ public class JSONMapProvider implements MessageBodyWriter<Map> {
 
   @Override
   public void writeTo(Map map, Class<?> aClass, Type type, Annotation[] annotations,
-                      MediaType mediaType, MultivaluedMap<String, Object> stringObjectMultivaluedMap,
-                      OutputStream outputStream) throws IOException, WebApplicationException {
-    Writer writer =
-        new OutputStreamWriter(outputStream, StandardCharsets.UTF_8);
-    JSONObject.writeJSONString(map, writer);
-    writer.write(ENTER);
-    writer.flush();
+      MediaType mediaType, MultivaluedMap<String, Object> stringObjectMultivaluedMap,
+      OutputStream outputStream) throws IOException, WebApplicationException {
+    outputStream.write((JSONObject.toJSONString(map) + ENTER).getBytes());
   }
-
 }

@@ -21,8 +21,6 @@ package org.apache.hadoop.yarn.service;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheLoader;
 import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource.Builder;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -1126,19 +1124,19 @@ public class ServiceScheduler extends CompositeService {
                 .append(UserGroupInformation.getCurrentUser()
                     .getShortUserName());
           }
-          Builder builder = HttpUtil.connect(requestPath.toString());
+          /*Builder builder = HttpUtil.connect(requestPath.toString());
           ClientResponse response = builder.put(ClientResponse.class, spec);
           if (response.getStatus()!=ClientResponse.Status.OK.getStatusCode()) {
             LOG.warn("Error synchronize YARN sysfs: " +
                 response.getEntity(String.class));
             success = false;
-          }
+          }*/
         }
       }
       if (printSyncResult && success) {
         LOG.info("YARN sysfs synchronized.");
       }
-    } catch (IOException | URISyntaxException | InterruptedException e) {
+    } catch (IOException e) {
       LOG.error("Fail to sync service spec.", e);
     }
   }

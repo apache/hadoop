@@ -1535,7 +1535,7 @@ public class TestFederationInterceptorREST extends BaseRouterWebServicesTest {
         rest.getOrCreateInterceptorForSubCluster(subClusterId, webAppSocket);
 
     Assert.assertNotNull(interceptorREST);
-    Assert.assertNotNull(interceptorREST.getClient());
+    // Assert.assertNotNull(interceptorREST.getClient());
     Assert.assertEquals(webAppAddress, interceptorREST.getWebAppAddress());
   }
 

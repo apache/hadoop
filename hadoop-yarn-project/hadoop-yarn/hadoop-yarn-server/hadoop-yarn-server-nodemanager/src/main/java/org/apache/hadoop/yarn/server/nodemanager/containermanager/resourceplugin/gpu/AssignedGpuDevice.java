@@ -34,6 +34,9 @@ public class AssignedGpuDevice extends GpuDevice {
     this.containerId = containerId.toString();
   }
 
+  public AssignedGpuDevice() {
+  }
+
   public String getContainerId() {
     return containerId;
   }

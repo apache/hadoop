@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.yarn.client.cli;
 
+import com.google.inject.Scopes;
+import com.google.inject.servlet.GuiceFilter;
+import org.glassfish.jersey.test.JerseyTest;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -34,8 +37,6 @@ import java.util.Map;
 import com.google.inject.Guice;
 import com.google.inject.Singleton;
 import com.google.inject.servlet.ServletModule;
-import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
-import com.sun.jersey.test.framework.WebAppDescriptor;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.server.AuthenticationFilter;
@@ -53,7 +54,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.JAXBContextResolver;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebServices;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
-import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.apache.hadoop.yarn.webapp.dao.QueueConfigInfo;
 import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
 
@@ -74,7 +74,7 @@ import static org.junit.Assert.assertTrue;
 /**
  * Class for testing {@link SchedConfCLI}.
  */
-public class TestSchedConfCLI extends JerseyTestBase {
+public class TestSchedConfCLI extends JerseyTest {
 
   private SchedConfCLI cli;
 
@@ -87,11 +87,6 @@ public class TestSchedConfCLI extends JerseyTestBase {
       "test-classes"), YarnConfiguration.CS_CONFIGURATION_FILE + ".tmp");
 
   public TestSchedConfCLI() {
-    super(new WebAppDescriptor.Builder(
-        "org.apache.hadoop.yarn.server.resourcemanager.webapp")
-        .contextListenerClass(GuiceServletConfig.class)
-        .filterClass(com.google.inject.servlet.GuiceFilter.class)
-        .contextPath("jersey-guice-filter").servletPath("/").build());
   }
 
   @Before
@@ -137,7 +132,7 @@ public class TestSchedConfCLI extends JerseyTestBase {
 
       rm = new MockRM(conf);
       bind(ResourceManager.class).toInstance(rm);
-      serve("/*").with(GuiceContainer.class);
+      bind(GuiceFilter.class).in(Scopes.SINGLETON);
       filter("/*").through(TestRMCustomAuthFilter.class);
     }
   }
@@ -214,7 +209,7 @@ public class TestSchedConfCLI extends JerseyTestBase {
       super.setUp();
       GuiceServletConfig.setInjector(
           Guice.createInjector(new WebServletModule()));
-      int exitCode = cli.getSchedulerConf("", resource());
+      int exitCode = cli.getSchedulerConf("", target());
       assertEquals("SchedConfCLI failed to run", 0, exitCode);
       assertTrue("Failed to get scheduler configuration",
           sysOutStream.toString().contains("testqueue"));
@@ -246,7 +241,7 @@ public class TestSchedConfCLI extends JerseyTestBase {
       Configuration schedulerConf = provider.getConfiguration();
       assertEquals("schedVal1", schedulerConf.get("schedKey1"));
 
-      int exitCode = cli.formatSchedulerConf("", resource());
+      int exitCode = cli.formatSchedulerConf("", target());
       assertEquals(0, exitCode);
 
       schedulerConf = provider.getConfiguration();

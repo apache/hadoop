@@ -37,8 +37,6 @@ import org.ietf.jgss.GSSName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.WebResource.Builder;
 
 /**
  * Http connection utilities.
@@ -101,7 +99,7 @@ public class HttpUtil {
     return challenge;
   }
 
-  public static Builder connect(String url) throws URISyntaxException,
+  /*public static Builder connect(String url) throws URISyntaxException,
       IOException, InterruptedException {
     boolean useKerberos = UserGroupInformation.isSecurityEnabled();
     URI resource = new URI(url);
@@ -115,5 +113,5 @@ public class HttpUtil {
       LOG.debug("Authorization: Negotiate {}", challenge);
     }
     return builder;
-  }
+  }*/
 }

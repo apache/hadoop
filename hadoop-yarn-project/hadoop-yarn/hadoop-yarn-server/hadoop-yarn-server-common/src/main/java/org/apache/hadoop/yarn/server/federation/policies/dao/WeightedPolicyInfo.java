@@ -38,11 +38,6 @@ import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.sun.jersey.api.json.JSONConfiguration;
-import com.sun.jersey.api.json.JSONJAXBContext;
-import com.sun.jersey.api.json.JSONMarshaller;
-import com.sun.jersey.api.json.JSONUnmarshaller;
-
 /**
  * This is a DAO class for the configuration of parameters for federation
  * policies. This generalizes several possible configurations as two lists of
@@ -58,7 +53,7 @@ public class WeightedPolicyInfo {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(WeightedPolicyInfo.class);
-  private static JSONJAXBContext jsonjaxbContext = initContext();
+  // private static JSONJAXBContext jsonjaxbContext = initContext();
   private Map<SubClusterIdInfo, Float> routerPolicyWeights = new HashMap<>();
   private Map<SubClusterIdInfo, Float> amrmPolicyWeights = new HashMap<>();
   private float headroomAlpha;
@@ -67,7 +62,7 @@ public class WeightedPolicyInfo {
     // JAXB needs this
   }
 
-  private static JSONJAXBContext initContext() {
+  /*private static JSONJAXBContext initContext() {
     try {
       return new JSONJAXBContext(JSONConfiguration.DEFAULT,
           WeightedPolicyInfo.class);
@@ -75,7 +70,7 @@ public class WeightedPolicyInfo {
       LOG.error("Error parsing the policy.", e);
     }
     return null;
-  }
+  }*/
 
   /**
    * Deserializes a {@link WeightedPolicyInfo} from a byte UTF-8 JSON
@@ -91,7 +86,7 @@ public class WeightedPolicyInfo {
   public static WeightedPolicyInfo fromByteBuffer(ByteBuffer bb)
       throws FederationPolicyInitializationException {
 
-    if (jsonjaxbContext == null) {
+    /*if (jsonjaxbContext == null) {
       throw new FederationPolicyInitializationException(
           "JSONJAXBContext should" + " not be null.");
     }
@@ -107,7 +102,9 @@ public class WeightedPolicyInfo {
       return weightedPolicyInfo;
     } catch (JAXBException j) {
       throw new FederationPolicyInitializationException(j);
-    }
+    }*/
+
+    return null;
   }
 
   /**
@@ -158,7 +155,7 @@ public class WeightedPolicyInfo {
    */
   public ByteBuffer toByteBuffer()
       throws FederationPolicyInitializationException {
-    if (jsonjaxbContext == null) {
+    /*if (jsonjaxbContext == null) {
       throw new FederationPolicyInitializationException(
           "JSONJAXBContext should" + " not be null.");
     }
@@ -167,15 +164,17 @@ public class WeightedPolicyInfo {
       return ByteBuffer.wrap(s.getBytes(StandardCharsets.UTF_8));
     } catch (JAXBException j) {
       throw new FederationPolicyInitializationException(j);
-    }
+    }*/
+    return null;
   }
 
   private String toJSONString() throws JAXBException {
-    JSONMarshaller marshaller = jsonjaxbContext.createJSONMarshaller();
+    /*JSONMarshaller marshaller = jsonjaxbContext.createJSONMarshaller();
     marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
     StringWriter sw = new StringWriter(256);
     marshaller.marshallToJSON(this, sw);
-    return sw.toString();
+    return sw.toString();*/
+    return null;
   }
 
   @Override

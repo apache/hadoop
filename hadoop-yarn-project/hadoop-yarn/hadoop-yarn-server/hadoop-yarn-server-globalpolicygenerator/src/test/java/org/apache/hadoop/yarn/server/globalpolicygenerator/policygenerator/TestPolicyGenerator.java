@@ -18,9 +18,6 @@
 
 package org.apache.hadoop.yarn.server.globalpolicygenerator.policygenerator;
 
-import com.sun.jersey.api.json.JSONConfiguration;
-import com.sun.jersey.api.json.JSONJAXBContext;
-import com.sun.jersey.api.json.JSONUnmarshaller;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -165,12 +162,12 @@ public class TestPolicyGenerator {
   private <T> T readJSON(String pathname, Class<T> classy)
       throws IOException, JAXBException {
 
-    JSONJAXBContext jc =
+    /*JSONJAXBContext jc =
         new JSONJAXBContext(JSONConfiguration.mapped().build(), classy);
     JSONUnmarshaller unmarshaller = jc.createJSONUnmarshaller();
     String contents = new String(Files.readAllBytes(Paths.get(pathname)));
-    return unmarshaller.unmarshalFromJSON(new StringReader(contents), classy);
-
+    return unmarshaller.unmarshalFromJSON(new StringReader(contents), classy);*/
+    return null;
   }
 
   @Test

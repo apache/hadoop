@@ -22,7 +22,6 @@ import org.apache.hadoop.util.Preconditions;
 import com.obs.services.ObsClient;
 import com.obs.services.exception.ObsException;
 import com.obs.services.model.GetObjectRequest;
-import com.sun.istack.NotNull;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -660,7 +659,7 @@ class OBSInputStream extends FSInputStream
    * @throws IOException if there are other problems
    */
   @Override
-  public synchronized int read(@NotNull final byte[] buf, final int off,
+  public synchronized int read(final byte[] buf, final int off,
       final int len) throws IOException {
     long startTime = System.currentTimeMillis();
     long threadId = Thread.currentThread().getId();

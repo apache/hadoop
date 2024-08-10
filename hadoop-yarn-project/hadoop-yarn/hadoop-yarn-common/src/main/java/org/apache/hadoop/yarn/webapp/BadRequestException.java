@@ -21,9 +21,9 @@ package org.apache.hadoop.yarn.webapp;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response.Status;
 
-import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceAudience.LimitedPrivate;
 
-@InterfaceAudience.LimitedPrivate({"YARN", "MapReduce"})
+@LimitedPrivate({"YARN", "MapReduce"})
 public class BadRequestException extends WebApplicationException {
 
   private static final long serialVersionUID = 1L;

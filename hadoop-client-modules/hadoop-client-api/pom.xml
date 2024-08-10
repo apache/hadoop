@@ -52,6 +52,10 @@
           <groupId>xml-apis</groupId>
           <artifactId>xml-apis</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>jakarta.annotation</groupId>
+          <artifactId>jakarta.annotation-api</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
     <!-- This comes from our parent pom. If we don't expressly change it here to get included,

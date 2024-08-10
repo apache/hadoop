@@ -28,13 +28,16 @@ import java.net.URISyntaxException;
 import java.util.Random;
 import java.util.Set;
 
-import javax.inject.Inject;
-import javax.inject.Singleton;
-import javax.servlet.FilterChain;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
 import javax.servlet.ServletException;
+import javax.servlet.Filter;
+import javax.servlet.FilterChain;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.HtmlQuoting;
 import org.apache.hadoop.http.IsActiveServlet;
@@ -53,10 +56,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.inject.Injector;
-import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 
 @Singleton
-public class RMWebAppFilter extends GuiceContainer {
+public class RMWebAppFilter implements Filter {
   private static final Logger LOG =
       LoggerFactory.getLogger(RMWebAppFilter.class);
 
@@ -79,8 +81,7 @@ public class RMWebAppFilter extends GuiceContainer {
 
   @Inject
   public RMWebAppFilter(Injector injector, Configuration conf) {
-    super(injector);
-    this.injector=injector;
+    this.injector = injector;
     InetSocketAddress sock = YarnConfiguration.useHttps(conf)
         ? conf.getSocketAddr(YarnConfiguration.RM_WEBAPP_HTTPS_ADDRESS,
             YarnConfiguration.DEFAULT_RM_WEBAPP_HTTPS_ADDRESS,
@@ -89,7 +90,7 @@ public class RMWebAppFilter extends GuiceContainer {
             YarnConfiguration.DEFAULT_RM_WEBAPP_ADDRESS,
             YarnConfiguration.DEFAULT_RM_WEBAPP_PORT);
 
-    path = sock.getHostName() + ":" + Integer.toString(sock.getPort());
+    path = sock.getHostName() + ":" + sock.getPort();
     path = YarnConfiguration.useHttps(conf)
         ? "https://" + path
         : "http://" + path;
@@ -103,9 +104,12 @@ public class RMWebAppFilter extends GuiceContainer {
   }
 
   @Override
-  public void doFilter(HttpServletRequest request,
-      HttpServletResponse response, FilterChain chain) throws IOException,
+  public void doFilter(ServletRequest servletRequest,
+      ServletResponse servletResponse, FilterChain chain) throws IOException,
       ServletException {
+    HttpServletRequest request = (HttpServletRequest) servletRequest;
+    HttpServletResponse response = (HttpServletResponse) servletResponse;
+
     response.setCharacterEncoding("UTF-8");
     String htmlEscapedUri = HtmlQuoting.quoteHtmlChars(request.getRequestURI());
 
@@ -176,7 +180,7 @@ public class RMWebAppFilter extends GuiceContainer {
       }
     }
 
-    super.doFilter(request, response, chain);
+    chain.doFilter(request, response);
   }
 
   private String ahsRedirectPath(String uri, RMWebApp rmWebApp) {

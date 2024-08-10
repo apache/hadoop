@@ -27,7 +27,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.Response;
 
-import com.sun.jersey.api.client.Client;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -83,7 +82,7 @@ public class DefaultRequestInterceptorREST
 
   // It is very expensive to create the client
   // Jersey will spawn a thread for every client request
-  private Client client = null;
+  // private Client client = null;
 
   public void setWebAppAddress(String webAppAddress) {
     this.webAppAddress = webAppAddress;
@@ -105,7 +104,7 @@ public class DefaultRequestInterceptorREST
   public void init(String user) {
     super.init(user);
     webAppAddress = WebAppUtils.getRMWebAppURLWithScheme(getConf());
-    client = RouterWebServiceUtil.createJerseyClient(getConf());
+    // client = RouterWebServiceUtil.createJerseyClient(getConf());
   }
 
   @Override
@@ -115,76 +114,74 @@ public class DefaultRequestInterceptorREST
 
   @Override
   public ClusterInfo getClusterInfo() {
-    return RouterWebServiceUtil.genericForward(webAppAddress, null,
+    /*return RouterWebServiceUtil.genericForward(webAppAddress, null,
         ClusterInfo.class, HTTPMethods.GET,
         RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.INFO, null, null,
-        getConf(), client);
+        getConf(), client);*/
+    return null;
   }
 
   @Override
   public ClusterUserInfo getClusterUserInfo(HttpServletRequest hsr) {
-    return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
+    /*return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
         ClusterUserInfo.class, HTTPMethods.GET,
         RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.CLUSTER_USER_INFO, null,
-        null, getConf(), client);
+        null, getConf(), client);*/
+    return null;
   }
 
   @Override
   public ClusterMetricsInfo getClusterMetricsInfo() {
-    return RouterWebServiceUtil.genericForward(webAppAddress, null,
+    /*return RouterWebServiceUtil.genericForward(webAppAddress, null,
         ClusterMetricsInfo.class, HTTPMethods.GET,
         RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.METRICS, null, null,
-        getConf(), client);
+        getConf(), client);*/
+    return null;
   }
 
   @Override
   public SchedulerTypeInfo getSchedulerInfo() {
-    return RouterWebServiceUtil.genericForward(webAppAddress, null,
+    /*return RouterWebServiceUtil.genericForward(webAppAddress, null,
         SchedulerTypeInfo.class, HTTPMethods.GET,
         RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.SCHEDULER, null, null,
-        getConf(), client);
+        getConf(), client);*/
+    return null;
   }
 
   @Override
   public String dumpSchedulerLogs(String time, HttpServletRequest hsr)
       throws IOException {
     // time is specified inside hsr
-    return RouterWebServiceUtil.genericForward(webAppAddress, null,
+    /*return RouterWebServiceUtil.genericForward(webAppAddress, null,
         String.class, HTTPMethods.GET,
         RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.SCHEDULER_LOGS, null, null,
-        getConf(), client);
+        getConf(), client);*/
+    return null;
   }
 
   @Override
   public NodesInfo getNodes(String states) {
     // states will be part of additionalParam
-    Map<String, String[]> additionalParam = new HashMap<String, String[]>();
+    /*Map<String, String[]> additionalParam = new HashMap<String, String[]>();
     if (states != null && !states.isEmpty()) {
       additionalParam.put(RMWSConsts.STATES, new String[] {states});
     }
     return RouterWebServiceUtil.genericForward(webAppAddress, null,
         NodesInfo.class, HTTPMethods.GET,
         RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.NODES, null,
-        additionalParam, getConf(), client);
+        additionalParam, getConf(), client);*/
+    return null;
   }
 
   @Override
   public NodeInfo getNode(String nodeId) {
-    return RouterWebServiceUtil.genericForward(webAppAddress, null,
-        NodeInfo.class, HTTPMethods.GET,
-        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.NODES + "/" + nodeId, null,
-        null, getConf(), client);
+    return null;
   }
 
   @Override
   public ResourceInfo updateNodeResource(HttpServletRequest hsr,
       String nodeId, ResourceOptionInfo resourceOption) {
-    final String nodePath =
-        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.NODES + "/" + nodeId;
-    return RouterWebServiceUtil
-        .genericForward(webAppAddress, hsr, ResourceInfo.class,
-            HTTPMethods.POST, nodePath + "/resource", resourceOption, null,
-            getConf(), client);
+    return null;
   }
 
   @Override
@@ -194,29 +191,20 @@ public class DefaultRequestInterceptorREST
       String finishBegin, String finishEnd, Set<String> applicationTypes,
       Set<String> applicationTags, String name, Set<String> unselectedFields) {
     // all the params are specified inside hsr
-    return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
-        AppsInfo.class, HTTPMethods.GET,
-        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.APPS, null, null,
-        getConf(), client);
+    return null;
   }
 
   @Override
   public ActivitiesInfo getActivities(HttpServletRequest hsr, String nodeId,
       String groupBy) {
     // nodeId is specified inside hsr
-    return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
-        ActivitiesInfo.class, HTTPMethods.GET,
-        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.SCHEDULER_ACTIVITIES, null,
-        null, getConf(), client);
+    return null;
   }
 
   @Override
   public BulkActivitiesInfo getBulkActivities(HttpServletRequest hsr,
       String groupBy, int activitiesCount) {
-    return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
-        BulkActivitiesInfo.class, HTTPMethods.GET,
-        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.SCHEDULER_BULK_ACTIVITIES,
-        null, null, getConf(), client);
+    return null;
   }
 
   @Override
@@ -225,58 +213,40 @@ public class DefaultRequestInterceptorREST
       Set<String> allocationRequestIds, String groupBy, String limit,
       Set<String> actions, boolean summarize) {
     // time and appId are specified inside hsr
-    return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
-        AppActivitiesInfo.class, HTTPMethods.GET,
-        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.SCHEDULER_APP_ACTIVITIES,
-        null, null, getConf(), client);
+    return null;
   }
 
   @Override
   public ApplicationStatisticsInfo getAppStatistics(HttpServletRequest hsr,
       Set<String> stateQueries, Set<String> typeQueries) {
     // stateQueries and typeQueries are specified inside hsr
-    return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
-        ApplicationStatisticsInfo.class, HTTPMethods.GET,
-        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.APP_STATISTICS, null, null,
-        getConf(), client);
+    return null;
   }
 
   @Override
   public AppInfo getApp(HttpServletRequest hsr, String appId,
       Set<String> unselectedFields) {
     // unselectedFields is specified inside hsr
-    return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
-        AppInfo.class, HTTPMethods.GET,
-        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.APPS + "/" + appId, null,
-        null, getConf(), client);
+    return null;
   }
 
   @Override
   public AppState getAppState(HttpServletRequest hsr, String appId)
       throws AuthorizationException {
-    return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
-        AppState.class, HTTPMethods.GET, RMWSConsts.RM_WEB_SERVICE_PATH
-            + RMWSConsts.APPS + "/" + appId + "/" + RMWSConsts.STATE,
-        null, null, getConf(), client);
+    return null;
   }
 
   @Override
   public Response updateAppState(AppState targetState, HttpServletRequest hsr,
       String appId) throws AuthorizationException, YarnException,
       InterruptedException, IOException {
-    return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
-        Response.class, HTTPMethods.PUT, RMWSConsts.RM_WEB_SERVICE_PATH
-            + RMWSConsts.APPS + "/" + appId + "/" + RMWSConsts.STATE,
-        targetState, null, getConf(), client);
+    return null;
   }
 
   @Override
   public NodeToLabelsInfo getNodeToLabels(HttpServletRequest hsr)
       throws IOException {
-    return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
-        NodeToLabelsInfo.class, HTTPMethods.GET,
-        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.GET_NODE_TO_LABELS, null,
-        null, getConf(), client);
+    return null;
   }
 
   @Override
@@ -288,193 +258,132 @@ public class DefaultRequestInterceptorREST
       additionalParam.put(RMWSConsts.LABELS,
           labels.toArray(new String[labels.size()]));
     }
-    return RouterWebServiceUtil.genericForward(webAppAddress, null,
-        LabelsToNodesInfo.class, HTTPMethods.GET,
-        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.LABEL_MAPPINGS, null,
-        additionalParam, getConf(), client);
+    return null;
   }
 
   @Override
   public Response replaceLabelsOnNodes(NodeToLabelsEntryList newNodeToLabels,
       HttpServletRequest hsr) throws IOException {
-    return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
-        Response.class, HTTPMethods.POST,
-        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.REPLACE_NODE_TO_LABELS,
-        newNodeToLabels, null, getConf(), client);
+    return null;
   }
 
   @Override
   public Response replaceLabelsOnNode(Set<String> newNodeLabelsName,
       HttpServletRequest hsr, String nodeId) throws Exception {
     // newNodeLabelsName is specified inside hsr
-    return RouterWebServiceUtil
-        .genericForward(webAppAddress, hsr,
-            Response.class, HTTPMethods.POST, RMWSConsts.RM_WEB_SERVICE_PATH
-                + RMWSConsts.NODES + "/" + nodeId + "/replace-labels",
-            null, null, getConf(), client);
+    return null;
   }
 
   @Override
   public NodeLabelsInfo getClusterNodeLabels(HttpServletRequest hsr)
       throws IOException {
-    return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
-        NodeLabelsInfo.class, HTTPMethods.GET,
-        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.GET_NODE_LABELS, null,
-        null, getConf(), client);
+    return null;
   }
 
   @Override
   public Response addToClusterNodeLabels(NodeLabelsInfo newNodeLabels,
       HttpServletRequest hsr) throws Exception {
-    return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
-        Response.class, HTTPMethods.POST,
-        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.ADD_NODE_LABELS,
-        newNodeLabels, null, getConf(), client);
+    return null;
   }
 
   @Override
   public Response removeFromClusterNodeLabels(Set<String> oldNodeLabels,
       HttpServletRequest hsr) throws Exception {
     // oldNodeLabels is specified inside hsr
-    return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
-        Response.class, HTTPMethods.POST,
-        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.REMOVE_NODE_LABELS, null,
-        null, getConf(), client);
+    return null;
   }
 
   @Override
   public NodeLabelsInfo getLabelsOnNode(HttpServletRequest hsr, String nodeId)
       throws IOException {
-    return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
-        NodeLabelsInfo.class, HTTPMethods.GET, RMWSConsts.RM_WEB_SERVICE_PATH
-            + RMWSConsts.NODES + "/" + nodeId + "/get-labels",
-        null, null, getConf(), client);
+    return null;
   }
 
   @Override
   public AppPriority getAppPriority(HttpServletRequest hsr, String appId)
       throws AuthorizationException {
-    return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
-        AppPriority.class, HTTPMethods.GET, RMWSConsts.RM_WEB_SERVICE_PATH
-            + RMWSConsts.APPS + "/" + appId + "/" + RMWSConsts.PRIORITY,
-        null, null, getConf(), client);
+    return null;
   }
 
   @Override
   public Response updateApplicationPriority(AppPriority targetPriority,
       HttpServletRequest hsr, String appId) throws AuthorizationException,
       YarnException, InterruptedException, IOException {
-    return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
-        Response.class, HTTPMethods.PUT, RMWSConsts.RM_WEB_SERVICE_PATH
-            + RMWSConsts.APPS + "/" + appId + "/" + RMWSConsts.PRIORITY,
-        targetPriority, null, getConf(), client);
+    return null;
   }
 
   @Override
   public AppQueue getAppQueue(HttpServletRequest hsr, String appId)
       throws AuthorizationException {
-    return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
-        AppQueue.class, HTTPMethods.GET, RMWSConsts.RM_WEB_SERVICE_PATH
-            + RMWSConsts.APPS + "/" + appId + "/" + RMWSConsts.QUEUE,
-        null, null, getConf(), client);
+    return null;
   }
 
   @Override
   public Response updateAppQueue(AppQueue targetQueue, HttpServletRequest hsr,
       String appId) throws AuthorizationException, YarnException,
       InterruptedException, IOException {
-    return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
-        Response.class, HTTPMethods.PUT, RMWSConsts.RM_WEB_SERVICE_PATH
-            + RMWSConsts.APPS + "/" + appId + "/" + RMWSConsts.QUEUE,
-        targetQueue, null, getConf(), client);
+    return null;
   }
 
   @Override
   public Response createNewApplication(HttpServletRequest hsr)
       throws AuthorizationException, IOException, InterruptedException {
-    return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
-        Response.class, HTTPMethods.POST,
-        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.APPS_NEW_APPLICATION, null,
-        null, getConf(), client);
+    return null;
   }
 
   @Override
   public Response submitApplication(ApplicationSubmissionContextInfo newApp,
       HttpServletRequest hsr)
       throws AuthorizationException, IOException, InterruptedException {
-    return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
-        Response.class, HTTPMethods.POST,
-        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.APPS, newApp, null,
-        getConf(), client);
+    return null;
   }
 
   @Override
   public Response postDelegationToken(DelegationToken tokenData,
       HttpServletRequest hsr) throws AuthorizationException, IOException,
       InterruptedException, Exception {
-    return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
-        Response.class, HTTPMethods.POST,
-        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.DELEGATION_TOKEN, tokenData,
-        null, getConf(), client);
+    return null;
   }
 
   @Override
   public Response postDelegationTokenExpiration(HttpServletRequest hsr)
       throws AuthorizationException, IOException, InterruptedException,
       Exception {
-    return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
-        Response.class, HTTPMethods.POST,
-        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.DELEGATION_TOKEN_EXPIRATION,
-        null, null, getConf(), client);
+    return null;
   }
 
   @Override
   public Response cancelDelegationToken(HttpServletRequest hsr)
       throws AuthorizationException, IOException, InterruptedException,
       Exception {
-    return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
-        Response.class, HTTPMethods.DELETE,
-        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.DELEGATION_TOKEN, null,
-        null, getConf(), client);
+    return null;
   }
 
   @Override
   public Response createNewReservation(HttpServletRequest hsr)
       throws AuthorizationException, IOException, InterruptedException {
-    return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
-        Response.class, HTTPMethods.POST,
-        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.RESERVATION_NEW, null,
-        null, getConf(), client);
+    return null;
   }
 
   @Override
   public Response submitReservation(ReservationSubmissionRequestInfo resContext,
       HttpServletRequest hsr)
       throws AuthorizationException, IOException, InterruptedException {
-    return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
-        Response.class, HTTPMethods.POST,
-        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.RESERVATION_SUBMIT,
-        resContext, null, getConf(), client);
+    return null;
   }
 
   @Override
   public Response updateReservation(ReservationUpdateRequestInfo resContext,
       HttpServletRequest hsr)
       throws AuthorizationException, IOException, InterruptedException {
-    return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
-        Response.class, HTTPMethods.POST,
-        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.RESERVATION_UPDATE,
-        resContext, null, getConf(), client);
+    return null;
   }
 
   @Override
   public Response deleteReservation(ReservationDeleteRequestInfo resContext,
       HttpServletRequest hsr)
       throws AuthorizationException, IOException, InterruptedException {
-    return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
-        Response.class, HTTPMethods.POST,
-        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.RESERVATION_DELETE,
-        resContext, null, getConf(), client);
+    return null;
   }
 
   @Override
@@ -483,108 +392,69 @@ public class DefaultRequestInterceptorREST
       HttpServletRequest hsr) throws Exception {
     // queue, reservationId, startTime, endTime, includeResourceAllocations are
     // specified inside hsr
-    return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
-        Response.class, HTTPMethods.GET,
-        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.RESERVATION_LIST, null,
-        null, getConf(), client);
+    return null;
   }
 
   @Override
   public AppTimeoutInfo getAppTimeout(HttpServletRequest hsr, String appId,
       String type) throws AuthorizationException {
-    return RouterWebServiceUtil
-        .genericForward(webAppAddress, hsr, AppTimeoutInfo.class,
-            HTTPMethods.GET, RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.APPS
-                + "/" + appId + "/" + RMWSConsts.TIMEOUTS + "/" + type,
-            null, null, getConf(), client);
+    return null;
   }
 
   @Override
   public AppTimeoutsInfo getAppTimeouts(HttpServletRequest hsr, String appId)
       throws AuthorizationException {
-    return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
-        AppTimeoutsInfo.class, HTTPMethods.GET, RMWSConsts.RM_WEB_SERVICE_PATH
-            + RMWSConsts.APPS + "/" + appId + "/" + RMWSConsts.TIMEOUTS,
-        null, null, getConf(), client);
+    return null;
   }
 
   @Override
   public Response updateApplicationTimeout(AppTimeoutInfo appTimeout,
       HttpServletRequest hsr, String appId) throws AuthorizationException,
       YarnException, InterruptedException, IOException {
-    return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
-        Response.class, HTTPMethods.PUT, RMWSConsts.RM_WEB_SERVICE_PATH
-            + RMWSConsts.APPS + "/" + appId + "/" + RMWSConsts.TIMEOUT,
-        appTimeout, null, getConf(), client);
+    return null;
   }
 
   @Override
   public AppAttemptsInfo getAppAttempts(HttpServletRequest hsr, String appId) {
-    return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
-        AppAttemptsInfo.class, HTTPMethods.GET, RMWSConsts.RM_WEB_SERVICE_PATH
-            + RMWSConsts.APPS + "/" + appId + "/" + RMWSConsts.APPATTEMPTS,
-        null, null, getConf(), client);
+    return null;
   }
 
   @Override
   public RMQueueAclInfo checkUserAccessToQueue(String queue, String username,
       String queueAclType, HttpServletRequest hsr) throws AuthorizationException {
-    return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
-        RMQueueAclInfo.class, HTTPMethods.GET,
-        RMWSConsts.RM_WEB_SERVICE_PATH +  "/" + RMWSConsts.QUEUES + "/" + queue
-            + "/access", null, null, getConf(), client);
+    return null;
   }
 
   @Override
   public AppAttemptInfo getAppAttempt(HttpServletRequest req,
       HttpServletResponse res, String appId, String appAttemptId) {
-    return RouterWebServiceUtil.genericForward(webAppAddress, req,
-        AppAttemptInfo.class,
-        HTTPMethods.GET, RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.APPS + "/"
-            + appId + "/" + RMWSConsts.APPATTEMPTS + "/" + appAttemptId,
-        null, null, getConf(), client);
+    return null;
   }
 
   @Override
   public ContainersInfo getContainers(HttpServletRequest req,
       HttpServletResponse res, String appId, String appAttemptId) {
-    return RouterWebServiceUtil.genericForward(webAppAddress, req,
-        ContainersInfo.class, HTTPMethods.GET,
-        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.APPS + "/" + appId + "/"
-            + RMWSConsts.APPATTEMPTS + "/" + appAttemptId + "/"
-            + RMWSConsts.CONTAINERS,
-        null, null, getConf(), client);
+    return null;
   }
 
   @Override
   public ContainerInfo getContainer(HttpServletRequest req,
       HttpServletResponse res, String appId, String appAttemptId,
       String containerId) {
-    return RouterWebServiceUtil.genericForward(webAppAddress, req,
-        ContainerInfo.class, HTTPMethods.GET,
-        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.APPS + "/" + appId + "/"
-            + RMWSConsts.APPATTEMPTS + "/" + appAttemptId + "/"
-            + RMWSConsts.CONTAINERS + "/" + containerId,
-        null, null, getConf(), client);
+    return null;
   }
 
   @Override
   public Response updateSchedulerConfiguration(SchedConfUpdateInfo mutationInfo,
       HttpServletRequest req)
       throws AuthorizationException, InterruptedException {
-    return RouterWebServiceUtil.genericForward(webAppAddress, req,
-        Response.class, HTTPMethods.PUT,
-        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.SCHEDULER_CONF,
-        mutationInfo, null, getConf(), client);
+    return null;
   }
 
   @Override
   public Response getSchedulerConfiguration(HttpServletRequest req)
       throws AuthorizationException {
-    return RouterWebServiceUtil.genericForward(webAppAddress, req,
-        Response.class, HTTPMethods.GET,
-        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.SCHEDULER_CONF,
-        null, null, getConf(), client);
+    return null;
   }
 
   @Override
@@ -598,16 +468,7 @@ public class DefaultRequestInterceptorREST
   @Override
   public Response signalToContainer(String containerId, String command,
       HttpServletRequest req) throws AuthorizationException {
-    return RouterWebServiceUtil
-        .genericForward(webAppAddress, req, Response.class, HTTPMethods.POST,
-            RMWSConsts.RM_WEB_SERVICE_PATH + "/" + RMWSConsts.CONTAINERS + "/"
-                + containerId + "/" + RMWSConsts.SIGNAL + "/" + command, null,
-            null, getConf(), client);
-  }
-
-  @VisibleForTesting
-  public Client getClient() {
-    return client;
+    return null;
   }
 
   @Override
@@ -615,6 +476,6 @@ public class DefaultRequestInterceptorREST
     return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
         NodeLabelsInfo.class, HTTPMethods.GET,
         RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.GET_RM_NODE_LABELS,
-        null, null, getConf(), client);
+        null, null, getConf(), null);
   }
 }

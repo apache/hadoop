@@ -58,14 +58,10 @@ import org.apache.hadoop.yarn.service.conf.RestApiConstants;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.apache.hadoop.yarn.util.RMHAUtils;
 import org.eclipse.jetty.util.UrlEncoded;
+import org.glassfish.jersey.client.ClientConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource.Builder;
-import com.sun.jersey.api.client.config.ClientConfig;
-import com.sun.jersey.api.client.config.DefaultClientConfig;
 
 import static org.apache.hadoop.yarn.service.exceptions.LauncherExitCodes.*;
 
@@ -106,14 +102,14 @@ public class ApiServiceClient extends AppAdminClient {
           .get("yarn.resourcemanager.webapp.https.address");
     }
 
-    if (HAUtil.isHAEnabled(conf)) {
+    /*if (HAUtil.isHAEnabled(conf)) {
       boolean useKerberos = UserGroupInformation.isSecurityEnabled();
       List<String> rmServers = getRMHAWebAddresses(conf);
       StringBuilder diagnosticsMsg = new StringBuilder();
       for (String host : rmServers) {
         try {
-          Client client = Client.create();
-          client.setFollowRedirects(false);
+          // Client client = Client.create();
+          // client.setFollowRedirects(false);
           StringBuilder sb = new StringBuilder();
           sb.append(scheme)
               .append(host)
@@ -149,7 +145,7 @@ public class ApiServiceClient extends AppAdminClient {
         }
       }
       throw new IOException(diagnosticsMsg.toString());
-    }
+    }*/
     return scheme+rmAddress;
   }
 
@@ -229,9 +225,9 @@ public class ApiServiceClient extends AppAdminClient {
     }
   }
 
-  public Builder getApiClient() throws IOException {
+ /* public Builder getApiClient() throws IOException {
     return getApiClient(getServicePath(null));
-  }
+  }*/
 
   /**
    * Setup API service web request.
@@ -240,9 +236,9 @@ public class ApiServiceClient extends AppAdminClient {
    * @return
    * @throws IOException
    */
-  public Builder getApiClient(String requestPath)
+  public void getApiClient(String requestPath)
       throws IOException {
-    Client client = Client.create(getClientConfig());
+    /*Client client = Client.create(getClientConfig());
     client.setChunkedEncodingSize(null);
     Builder builder = client
         .resource(requestPath).type(MediaType.APPLICATION_JSON);
@@ -256,20 +252,20 @@ public class ApiServiceClient extends AppAdminClient {
       }
     }
     return builder
-        .accept("application/json;charset=utf-8");
+        .accept("application/json;charset=utf-8");*/
   }
 
-  private ClientConfig getClientConfig() {
+  /*private ClientConfig getClientConfig() {
     ClientConfig config = new DefaultClientConfig();
     config.getProperties().put(
         ClientConfig.PROPERTY_CHUNKED_ENCODING_SIZE, 0);
     config.getProperties().put(
         ClientConfig.PROPERTY_BUFFER_RESPONSE_ENTITY_ON_EXCEPTION, true);
     return config;
-  }
+  }*/
 
-  private int processResponse(ClientResponse response) {
-    response.bufferEntity();
+  private int processResponse() {
+    /*response.bufferEntity();
     String output;
     if (response.getStatus() == 401) {
       LOG.error("Authentication required");
@@ -294,7 +290,8 @@ public class ApiServiceClient extends AppAdminClient {
     } else {
       LOG.error(output);
       return EXIT_EXCEPTION_THROWN;
-    }
+    }*/
+    return 0;
   }
 
   /**
@@ -370,7 +367,7 @@ public class ApiServiceClient extends AppAdminClient {
   @Override
   public int actionLaunch(String fileName, String appName, Long lifetime,
       String queue) throws IOException, YarnException {
-    int result = EXIT_SUCCESS;
+    /*int result = EXIT_SUCCESS;
     try {
       Service service =
           loadAppJsonFromLocalFS(fileName, appName, lifetime, queue);
@@ -382,7 +379,8 @@ public class ApiServiceClient extends AppAdminClient {
       LOG.error("Fail to launch application: ", e);
       result = EXIT_EXCEPTION_THROWN;
     }
-    return result;
+    return result;*/
+    return 0;
   }
 
   /**
@@ -392,7 +390,7 @@ public class ApiServiceClient extends AppAdminClient {
    */
   @Override
   public int actionStop(String appName) throws IOException, YarnException {
-    int result = EXIT_SUCCESS;
+    /*int result = EXIT_SUCCESS;
     try {
       Service service = new Service();
       service.setName(appName);
@@ -405,7 +403,8 @@ public class ApiServiceClient extends AppAdminClient {
       LOG.error("Fail to stop application: ", e);
       result = EXIT_EXCEPTION_THROWN;
     }
-    return result;
+    return result;*/
+    return 0;
   }
 
   /**
@@ -415,7 +414,7 @@ public class ApiServiceClient extends AppAdminClient {
    */
   @Override
   public int actionStart(String appName) throws IOException, YarnException {
-    int result = EXIT_SUCCESS;
+    /*int result = EXIT_SUCCESS;
     try {
       Service service = new Service();
       service.setName(appName);
@@ -428,7 +427,8 @@ public class ApiServiceClient extends AppAdminClient {
       LOG.error("Fail to start application: ", e);
       result = EXIT_EXCEPTION_THROWN;
     }
-    return result;
+    return result;*/
+    return 0;
   }
 
   /**
@@ -442,7 +442,7 @@ public class ApiServiceClient extends AppAdminClient {
   @Override
   public int actionSave(String fileName, String appName, Long lifetime,
       String queue) throws IOException, YarnException {
-    int result = EXIT_SUCCESS;
+    /*int result = EXIT_SUCCESS;
     try {
       Service service =
           loadAppJsonFromLocalFS(fileName, appName, lifetime, queue);
@@ -455,7 +455,8 @@ public class ApiServiceClient extends AppAdminClient {
       LOG.error("Fail to save application: ", e);
       result = EXIT_EXCEPTION_THROWN;
     }
-    return result;
+    return result;*/
+    return 0;
   }
 
   /**
@@ -465,7 +466,7 @@ public class ApiServiceClient extends AppAdminClient {
    */
   @Override
   public int actionDestroy(String appName) throws IOException, YarnException {
-    int result = EXIT_SUCCESS;
+    /*int result = EXIT_SUCCESS;
     try {
       ClientResponse response = getApiClient(getServicePath(appName))
           .delete(ClientResponse.class);
@@ -474,7 +475,8 @@ public class ApiServiceClient extends AppAdminClient {
       LOG.error("Fail to destroy application: ", e);
       result = EXIT_EXCEPTION_THROWN;
     }
-    return result;
+    return result;*/
+    return 0;
   }
 
   /**
@@ -486,7 +488,7 @@ public class ApiServiceClient extends AppAdminClient {
   @Override
   public int actionFlex(String appName, Map<String, String> componentCounts)
       throws IOException, YarnException {
-    int result = EXIT_SUCCESS;
+    /*int result = EXIT_SUCCESS;
     try {
       Service service = new Service();
       service.setName(appName);
@@ -506,7 +508,8 @@ public class ApiServiceClient extends AppAdminClient {
       LOG.error("Fail to flex application: ", e);
       result = EXIT_EXCEPTION_THROWN;
     }
-    return result;
+    return result;*/
+    return 0;
   }
 
   @Override
@@ -539,7 +542,7 @@ public class ApiServiceClient extends AppAdminClient {
       appName = appIdOrName;
       ServiceApiUtil.validateNameFormat(appName, getConfig());
     }
-    try {
+    /*try {
       ClientResponse response = getApiClient(getServicePath(appName))
           .get(ClientResponse.class);
       if (response.getStatus() == 404) {
@@ -559,14 +562,14 @@ public class ApiServiceClient extends AppAdminClient {
       output = response.getEntity(String.class);
     } catch (Exception e) {
       LOG.error("Fail to check application status: ", e);
-    }
+    }*/
     return output;
   }
 
   @Override
   public int actionUpgradeExpress(String appName, File path)
       throws IOException, YarnException {
-    int result;
+    /*int result;
     try {
       Service service =
           loadAppJsonFromLocalFS(path.getAbsolutePath(), appName, null, null);
@@ -580,13 +583,14 @@ public class ApiServiceClient extends AppAdminClient {
       LOG.error("Failed to upgrade application: ", e);
       result = EXIT_EXCEPTION_THROWN;
     }
-    return result;
+    return result;*/
+    return 0;
   }
 
   @Override
   public int initiateUpgrade(String appName,
       String fileName, boolean autoFinalize) throws IOException, YarnException {
-    int result;
+    /*int result;
     try {
       Service service =
           loadAppJsonFromLocalFS(fileName, appName, null, null);
@@ -603,13 +607,14 @@ public class ApiServiceClient extends AppAdminClient {
       LOG.error("Failed to upgrade application: ", e);
       result = EXIT_EXCEPTION_THROWN;
     }
-    return result;
+    return result;*/
+    return 0;
   }
 
   @Override
   public int actionUpgradeInstances(String appName, List<String> compInstances)
       throws IOException, YarnException {
-    int result;
+    /*int result;
     Container[] toUpgrade = new Container[compInstances.size()];
     try {
       int idx = 0;
@@ -627,13 +632,14 @@ public class ApiServiceClient extends AppAdminClient {
       LOG.error("Failed to upgrade component instance: ", e);
       result = EXIT_EXCEPTION_THROWN;
     }
-    return result;
+    return result;*/
+    return 0;
   }
 
   @Override
   public int actionUpgradeComponents(String appName, List<String> components)
       throws IOException, YarnException {
-    int result;
+    /*int result;
     Component[] toUpgrade = new Component[components.size()];
     try {
       int idx = 0;
@@ -651,7 +657,8 @@ public class ApiServiceClient extends AppAdminClient {
       LOG.error("Failed to upgrade components: ", e);
       result = EXIT_EXCEPTION_THROWN;
     }
-    return result;
+    return result;*/
+    return 0;
   }
 
   @Override
@@ -682,7 +689,7 @@ public class ApiServiceClient extends AppAdminClient {
   public String getInstances(String appName, List<String> components,
       String version, List<String> containerStates) throws IOException,
       YarnException {
-    try {
+    /*try {
       String uri = getInstancePath(appName, components, version,
           containerStates);
       ClientResponse response = getApiClient(uri).get(ClientResponse.class);
@@ -696,14 +703,14 @@ public class ApiServiceClient extends AppAdminClient {
       return response.getEntity(String.class);
     } catch (Exception e) {
       LOG.error("Fail to get containers {}", e);
-    }
+    }*/
     return null;
   }
 
   @Override
   public int actionCancelUpgrade(
       String appName) throws IOException, YarnException {
-    int result;
+    /*int result;
     try {
       Service service = new Service();
       service.setName(appName);
@@ -717,13 +724,14 @@ public class ApiServiceClient extends AppAdminClient {
       LOG.error("Failed to cancel upgrade: ", e);
       result = EXIT_EXCEPTION_THROWN;
     }
-    return result;
+    return result;*/
+    return 0;
   }
 
   @Override
   public int actionDecommissionInstances(String appName, List<String>
       componentInstances) throws IOException, YarnException {
-    int result = EXIT_SUCCESS;
+    /*int result = EXIT_SUCCESS;
     try {
       Service service = new Service();
       service.setName(appName);
@@ -745,6 +753,7 @@ public class ApiServiceClient extends AppAdminClient {
       LOG.error("Fail to decommission instance: ", e);
       result = EXIT_EXCEPTION_THROWN;
     }
-    return result;
+    return result;*/
+    return 0;
   }
 }

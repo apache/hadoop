@@ -61,6 +61,7 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -82,13 +83,12 @@ public class TestHttpServer extends HttpServerFunctionalTest {
   public static class EchoMapServlet extends HttpServlet {
     @SuppressWarnings("unchecked")
     @Override
-    public void doGet(HttpServletRequest request, 
-                      HttpServletResponse response
-                      ) throws ServletException, IOException {
+    public void doGet(HttpServletRequest request, HttpServletResponse response)
+        throws ServletException, IOException {
       response.setContentType(MediaType.TEXT_PLAIN + "; " + JettyUtils.UTF_8);
       PrintWriter out = response.getWriter();
       Map<String, String[]> params = request.getParameterMap();
-      SortedSet<String> keys = new TreeSet<String>(params.keySet());
+      SortedSet<String> keys = new TreeSet<>(params.keySet());
       for(String key: keys) {
         out.print(key);
         out.print(':');
@@ -110,12 +110,11 @@ public class TestHttpServer extends HttpServerFunctionalTest {
   public static class EchoServlet extends HttpServlet {
     @SuppressWarnings("unchecked")
     @Override
-    public void doGet(HttpServletRequest request, 
-                      HttpServletResponse response
-                      ) throws ServletException, IOException {
+    public void doGet(HttpServletRequest request, HttpServletResponse response)
+        throws ServletException, IOException {
       response.setContentType(MediaType.TEXT_PLAIN + "; " + JettyUtils.UTF_8);
       PrintWriter out = response.getWriter();
-      SortedSet<String> sortedKeys = new TreeSet<String>();
+      SortedSet<String> sortedKeys = new TreeSet<>();
       Enumeration<String> keys = request.getParameterNames();
       while(keys.hasMoreElements()) {
         sortedKeys.add(keys.nextElement());

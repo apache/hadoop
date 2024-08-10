@@ -41,8 +41,6 @@ public class TestHttpServerLogs extends HttpServerFunctionalTest {
 
   private void startServer(Configuration conf) throws Exception {
     server = createTestServer(conf);
-    server.addJerseyResourcePackage(
-        JerseyResource.class.getPackage().getName(), "/jersey/*");
     server.start();
     baseUrl = getServerURL(server);
     LOG.info("HTTP server started: "+ baseUrl);

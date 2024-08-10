@@ -26,7 +26,6 @@ import static org.apache.hadoop.yarn.webapp.YarnWebParams.APP_STATE;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.C_PROGRESSBAR;
 import static org.apache.hadoop.yarn.webapp.view.JQueryUI.C_PROGRESSBAR_VALUE;
 
-import com.sun.jersey.api.client.Client;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -125,7 +124,7 @@ public class AppsBlock extends RouterBlock {
   }
 
   private AppsInfo getSubClusterAppsInfoByWebAddress(String webAddress, String states) {
-    Client client = RouterWebServiceUtil.createJerseyClient(conf);
+    /*Client client = RouterWebServiceUtil.createJerseyClient(conf);
     Map<String, String[]> queryParams = new HashMap<>();
     if (StringUtils.isNotBlank(states)) {
       queryParams.put("states", new String[]{states});
@@ -135,7 +134,8 @@ public class AppsBlock extends RouterBlock {
         RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.APPS, null, queryParams, conf,
         client);
     client.destroy();
-    return apps;
+    return apps;*/
+    return null;
   }
 
   private void initYarnFederationAppsOfCluster(AppsInfo appsInfo, Block html) {

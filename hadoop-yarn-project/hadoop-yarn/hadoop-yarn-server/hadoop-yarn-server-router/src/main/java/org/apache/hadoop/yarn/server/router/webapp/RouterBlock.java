@@ -17,10 +17,6 @@
  */
 package org.apache.hadoop.yarn.server.router.webapp;
 
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.json.JSONConfiguration;
-import com.sun.jersey.api.json.JSONJAXBContext;
-import com.sun.jersey.api.json.JSONMarshaller;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -94,13 +90,13 @@ public abstract class RouterBlock extends HtmlBlock {
     }
 
     // We will get ClusterMetricsInfo By webAppAddress.
-    Client client = RouterWebServiceUtil.createJerseyClient(conf);
-    ClusterMetricsInfo metrics = RouterWebServiceUtil
-        .genericForward(webAppAddress, null, ClusterMetricsInfo.class, HTTPMethods.GET,
-        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.METRICS, null, null,
-        conf, client);
-    client.destroy();
-    return metrics;
+    // Client client = RouterWebServiceUtil.createJerseyClient(conf);
+    // ClusterMetricsInfo metrics = RouterWebServiceUtil
+    //     .genericForward(webAppAddress, null, ClusterMetricsInfo.class, HTTPMethods.GET,
+    //    RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.METRICS, null, null,
+    //    conf, client);
+    // client.destroy();
+    return null;
   }
 
   /**
@@ -178,15 +174,12 @@ public abstract class RouterBlock extends HtmlBlock {
       SubClusterId subClusterId = SubClusterId.newInstance(subclusterId);
       SubClusterInfo subClusterInfo = facade.getSubCluster(subClusterId);
       if (subClusterInfo != null) {
-        Client client = RouterWebServiceUtil.createJerseyClient(this.conf);
+        // Client client = RouterWebServiceUtil.createJerseyClient(this.conf);
         // Call the RM interface to obtain schedule information
         String webAppAddress =  WebAppUtils.getHttpSchemePrefix(this.conf) +
             subClusterInfo.getRMWebServiceAddress();
-        ClusterMetricsInfo metrics = RouterWebServiceUtil
-            .genericForward(webAppAddress, null, ClusterMetricsInfo.class, HTTPMethods.GET,
-            RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.METRICS, null, null,
-            conf, client);
-        client.destroy();
+        ClusterMetricsInfo metrics = null;
+        // client.destroy();
         return metrics;
       }
     } catch (Exception e) {
@@ -304,53 +297,51 @@ public abstract class RouterBlock extends HtmlBlock {
    */
   protected SubClusterInfo getSubClusterInfoByLocalCluster(Configuration config) {
 
-    Client client = null;
+    // Client client = null;
     try {
 
       // Step1. Retrieve the name of the local cluster and ClusterMetricsInfo.
       String localClusterName = config.get(YarnConfiguration.RM_CLUSTER_ID, UNAVAILABLE);
       String webAppAddress = WebAppUtils.getRMWebAppURLWithScheme(config);
       String rmWebAppURLWithoutScheme = WebAppUtils.getRMWebAppURLWithoutScheme(config);
-      client = RouterWebServiceUtil.createJerseyClient(config);
-      ClusterMetricsInfo clusterMetricsInfos = RouterWebServiceUtil
+      // client = RouterWebServiceUtil.createJerseyClient(config);
+      ClusterMetricsInfo clusterMetricsInfos = null;/*RouterWebServiceUtil
           .genericForward(webAppAddress, null, ClusterMetricsInfo.class, HTTPMethods.GET,
           RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.METRICS, null, null,
-           config, client);
+           config, client);*/
 
       if (clusterMetricsInfos == null) {
         return null;
       }
 
       // Step2. Retrieve cluster information for the local cluster to obtain its startup time.
-      ClusterInfo clusterInfo = RouterWebServiceUtil.genericForward(webAppAddress, null,
-          ClusterInfo.class, HTTPMethods.GET, RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.INFO,
-          null, null, config, client);
+      ClusterInfo clusterInfo = null;
 
       if (clusterInfo == null) {
         return null;
       }
 
       // Step3. Get Local-Cluster Capability
-      JSONJAXBContext jc = new JSONJAXBContext(
+      /*SONJAXBContext jc = new JSONJAXBContext(
           JSONConfiguration.mapped().rootUnwrapping(false).build(), ClusterMetricsInfo.class);
       JSONMarshaller marshaller = jc.createJSONMarshaller();
       StringWriter writer = new StringWriter();
       marshaller.marshallToJSON(clusterMetricsInfos, writer);
-      String capability = writer.toString();
+      String capability = writer.toString();*/
 
       // Step4. Generate SubClusterInfo.
       SubClusterId subClusterId = SubClusterId.newInstance(localClusterName);
-      SubClusterInfo subClusterInfo = SubClusterInfo.newInstance(subClusterId,
-          rmWebAppURLWithoutScheme, SubClusterState.SC_RUNNING, clusterInfo.getStartedOn(),
-          Time.now(), capability);
+      SubClusterInfo subClusterInfo = null;
 
       return subClusterInfo;
     } catch (Exception e) {
       LOG.error("An error occurred while parsing the local YARN cluster.", e);
     } finally {
-      if (client != null) {
+      /*if (client != null) {
         client.destroy();
-      }
+      }*//*if (client != null) {
+        client.destroy();
+      }*/
     }
     return null;
   }

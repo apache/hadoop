@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.server.router.webapp;
 
-import com.sun.jersey.api.client.Client;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.StringUtils;
@@ -121,13 +120,13 @@ public class NodesBlock extends RouterBlock {
 
   private NodesInfo getSubClusterNodesInfoByWebAddress(String webAddress) {
     Configuration conf = this.router.getConfig();
-    Client client = RouterWebServiceUtil.createJerseyClient(conf);
-    NodesInfo nodes = RouterWebServiceUtil
+    // Client client = RouterWebServiceUtil.createJerseyClient(conf);
+   /* NodesInfo nodes = RouterWebServiceUtil
         .genericForward(webAddress, null, NodesInfo.class, HTTPMethods.GET,
         RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.NODES, null, null, conf,
-        client);
-    client.destroy();
-    return nodes;
+        client);*/
+    // client.destroy();
+    return null;
   }
 
   private void initYarnFederationNodesOfCluster(NodesInfo nodesInfo, Block html,

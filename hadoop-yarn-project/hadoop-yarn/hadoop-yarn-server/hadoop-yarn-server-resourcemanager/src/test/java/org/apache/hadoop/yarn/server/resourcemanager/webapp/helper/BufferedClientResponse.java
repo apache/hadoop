@@ -18,42 +18,37 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp.helper;
 
-
-import com.sun.jersey.api.client.ClientHandlerException;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.UniformInterfaceException;
-
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
+import java.io.InputStream;
 
 /**
- * This class is merely a wrapper for {@link ClientResponse}. Given that the
- * entity input stream of {@link ClientResponse} can be read only once by
+ * This class is merely a wrapper for {@link Response}. Given that the
+ * entity input stream of {@link Response} can be read only once by
  * default and for some tests it is convenient to read the input stream many
  * times, this class hides the details of how to do that and prevents
  * unnecessary code duplication in tests.
  */
 public class BufferedClientResponse {
-  private ClientResponse response;
+  private final Response response;
 
-  public BufferedClientResponse(ClientResponse response) {
+  public BufferedClientResponse(Response response) {
     response.bufferEntity();
     this.response = response;
   }
 
-  public <T> T getEntity(Class<T> clazz)
-          throws ClientHandlerException, UniformInterfaceException {
+  public <T> T getEntity(Class<T> clazz) {
     try {
-      response.getEntityInputStream().reset();
+      response.readEntity(InputStream.class).reset();
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
-    return response.getEntity(clazz);
+    return response.readEntity(clazz);
   }
 
   public MediaType getType() {
-    return response.getType();
+    return response.getMediaType();
   }
 
   public int getStatus() {

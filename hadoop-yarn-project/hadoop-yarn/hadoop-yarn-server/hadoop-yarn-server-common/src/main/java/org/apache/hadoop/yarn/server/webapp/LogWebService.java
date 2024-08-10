@@ -21,13 +21,6 @@ package org.apache.hadoop.yarn.server.webapp;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import com.google.inject.Singleton;
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.config.ClientConfig;
-import com.sun.jersey.api.client.config.DefaultClientConfig;
-import com.sun.jersey.client.urlconnection.HttpURLConnectionFactory;
-import com.sun.jersey.client.urlconnection.URLConnectionClientHandler;
-import com.sun.jersey.core.util.MultivaluedMapImpl;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -44,6 +37,7 @@ import org.apache.hadoop.yarn.server.metrics.ApplicationMetricsConstants;
 import org.apache.hadoop.yarn.server.metrics.ContainerMetricsConstants;
 import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
+import org.glassfish.jersey.client.ClientConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,10 +49,8 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.MultivaluedMap;
-import javax.ws.rs.core.Response;
+import javax.ws.rs.client.Client;
+import javax.ws.rs.core.*;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -95,8 +87,8 @@ public class LogWebService implements AppInfoProvider {
         RESOURCE_URI_STR_V2);
     defaultClusterid = yarnConf.get(YarnConfiguration.RM_CLUSTER_ID,
         YarnConfiguration.DEFAULT_RM_CLUSTER_ID);
-    LOG.info("Initialized LogWeService with clusterid " + defaultClusterid
-        + " for URI: " + base);
+    LOG.info("Initialized LogWeService with clusterid {} for URI: {}.",
+        defaultClusterid, base);
   }
 
   public LogWebService() {
@@ -104,9 +96,9 @@ public class LogWebService implements AppInfoProvider {
   }
 
   private Client createTimelineWebClient() {
-    ClientConfig cfg = new DefaultClientConfig();
+    ClientConfig cfg = new ClientConfig();
     cfg.getClasses().add(YarnJacksonJaxbJsonProvider.class);
-    Client client = new Client(
+    /*Client client = new Client(
         new URLConnectionClientHandler(new HttpURLConnectionFactory() {
           @Override public HttpURLConnection getHttpURLConnection(URL url)
               throws IOException {
@@ -120,9 +112,9 @@ public class LogWebService implements AppInfoProvider {
             }
             return conn;
           }
-        }), cfg);
+        }), cfg);*/
 
-    return client;
+    return null;
   }
 
   private void initForReadableEndpoints(HttpServletResponse response) {
@@ -169,7 +161,7 @@ public class LogWebService implements AppInfoProvider {
       String appAttemptId, String containerId, String clusterId) {
     UserGroupInformation callerUGI = LogWebServiceUtils.getUser(req);
     String cId = clusterId != null ? clusterId : defaultClusterid;
-    MultivaluedMap<String, String> params = new MultivaluedMapImpl();
+    MultivaluedMap<String, String> params = new MultivaluedHashMap();
     params.add("fields", "INFO");
     String path = JOINER.join("clusters/", cId, "/apps/", appId, "/entities/",
         TimelineEntityType.YARN_CONTAINER.toString(), "/", containerId);
@@ -202,7 +194,7 @@ public class LogWebService implements AppInfoProvider {
     UserGroupInformation callerUGI = LogWebServiceUtils.getUser(req);
 
     String cId = clusterId != null ? clusterId : defaultClusterid;
-    MultivaluedMap<String, String> params = new MultivaluedMapImpl();
+    MultivaluedMap<String, String> params = new MultivaluedHashMap();
     params.add("fields", "INFO");
     String path = JOINER.join("clusters/", cId, "/apps/", appId);
     TimelineEntity appEntity = null;
@@ -298,22 +290,22 @@ public class LogWebService implements AppInfoProvider {
 
   @VisibleForTesting protected TimelineEntity getEntity(String path,
       MultivaluedMap<String, String> params) throws IOException {
-    ClientResponse resp =
-        getClient().resource(base).path(path).queryParams(params)
-            .accept(MediaType.APPLICATION_JSON).type(MediaType.APPLICATION_JSON)
-            .get(ClientResponse.class);
+    Response resp =
+        getClient().target(base).path(path)
+            .request(MediaType.APPLICATION_JSON)
+            .get(Response.class);
     if (resp == null
-        || resp.getStatusInfo().getStatusCode() != ClientResponse.Status.OK
+        || resp.getStatusInfo().getStatusCode() != Response.Status.OK
         .getStatusCode()) {
       String msg =
           "Response from the timeline reader server is " + ((resp == null) ?
               "null" :
               "not successful," + " HTTP error code: " + resp.getStatus()
-                  + ", Server response:\n" + resp.getEntity(String.class));
+                  + ", Server response:\n" + resp.readEntity(String.class));
       LOG.error(msg);
       throw new IOException(msg);
     }
-    TimelineEntity entity = resp.getEntity(TimelineEntity.class);
+    TimelineEntity entity = resp.readEntity(TimelineEntity.class);
     return entity;
   }
 

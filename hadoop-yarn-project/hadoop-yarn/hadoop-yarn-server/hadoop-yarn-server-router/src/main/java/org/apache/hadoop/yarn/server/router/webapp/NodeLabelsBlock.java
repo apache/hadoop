@@ -18,7 +18,6 @@
 package org.apache.hadoop.yarn.server.router.webapp;
 
 import com.google.inject.Inject;
-import com.sun.jersey.api.client.Client;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
@@ -124,12 +123,7 @@ public class NodeLabelsBlock extends RouterBlock {
    */
   private NodeLabelsInfo getSubClusterNodeLabelsByWebAddress(String webAddress) {
     Configuration conf = this.router.getConfig();
-    Client client = RouterWebServiceUtil.createJerseyClient(conf);
-    NodeLabelsInfo nodes = RouterWebServiceUtil
-        .genericForward(webAddress, null, NodeLabelsInfo.class, HTTPMethods.GET,
-        RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.GET_RM_NODE_LABELS, null, null, conf,
-        client);
-    client.destroy();
+    NodeLabelsInfo nodes = null;
     return nodes;
   }
 

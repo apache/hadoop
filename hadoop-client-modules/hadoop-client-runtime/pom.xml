@@ -52,6 +52,10 @@
           <groupId>xml-apis</groupId>
           <artifactId>xml-apis</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>jakarta.annotation</groupId>
+          <artifactId>jakarta.annotation-api</artifactId>
+        </exclusion>
       </exclusions>
     </dependency>
     <!-- At runtime anyone using us must have the api present -->
@@ -59,6 +63,12 @@
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-client-api</artifactId>
       <scope>runtime</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>jakarta.annotation</groupId>
+          <artifactId>jakarta.annotation-api</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <!-- This is the api's compile dependency, but we don't want it to be compile dependency here too. -->
     <dependency>
@@ -76,6 +86,10 @@
         <exclusion>
           <groupId>jdk.tools</groupId>
           <artifactId>jdk.tools</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>jakarta.annotation</groupId>
+          <artifactId>jakarta.annotation-api</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
@@ -99,6 +113,7 @@
       <artifactId>jsr305</artifactId>
       <scope>runtime</scope>
     </dependency>
+
     <!-- Move log4j to optional, since it is needed for some pieces folks might not use:
          * one of the three custom log4j appenders we have
       -->
@@ -182,13 +197,6 @@
                       <artifact>tomcat:jasper-compiler</artifact>
                       <excludes>
                         <exclude>org/apache/jasper/compiler/Localizer.class</exclude>
-                      </excludes>
-                    </filter>
-                    <!-- We rely on jersey for our web interfaces. We want to use its java services stuff only internal to jersey -->
-                    <filter>
-                      <artifact>com.sun.jersey:*</artifact>
-                      <excludes>
-                        <exclude>META-INF/services/javax.*</exclude>
                       </excludes>
                     </filter>
                     <filter>

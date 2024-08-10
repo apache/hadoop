@@ -37,6 +37,7 @@ import java.util.HashSet;
 import java.util.concurrent.TimeUnit;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.client.Client;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
@@ -75,13 +76,6 @@ import org.apache.hadoop.yarn.webapp.ForbiddenException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.sun.jersey.api.ConflictException;
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.api.client.WebResource.Builder;
-import com.sun.jersey.core.util.MultivaluedMapImpl;
 
 /**
  * The Router webservice util class.
@@ -151,18 +145,18 @@ public final class RouterWebServiceUtil {
             paramMap = additionalParam;
           }
 
-          ClientResponse response = RouterWebServiceUtil
+          /*ClientResponse response = RouterWebServiceUtil
               .invokeRMWebService(webApp, targetPath, method,
                   (hsr == null) ? null : hsr.getPathInfo(), paramMap, formParam,
                   getMediaTypeFromHttpServletRequest(hsr, returnType), conf,
-                  client);
+                  client);*/
           if (Response.class.equals(returnType)) {
-            return (T) RouterWebServiceUtil.clientResponseToResponse(response);
+            // return (T) RouterWebServiceUtil.clientResponseToResponse(response);
           }
 
           try {
             // YARN RM can answer with Status.OK or it throws an exception
-            if (response.getStatus() == SC_OK) {
+            /*if (response.getStatus() == SC_OK) {
               return response.getEntity(returnType);
             }
             if (response.getStatus() == SC_NO_CONTENT) {
@@ -171,13 +165,13 @@ public final class RouterWebServiceUtil {
               } catch (RuntimeException | ReflectiveOperationException e) {
                 LOG.error("Cannot create empty entity for {}", returnType, e);
               }
-            }
-            RouterWebServiceUtil.retrieveException(response);
+            }*/
+            // RouterWebServiceUtil.retrieveException(response);
             return null;
           } finally {
-            if (response != null) {
+            /*if (response != null) {
               response.close();
-            }
+            }*/
           }
         }
       });
@@ -201,7 +195,7 @@ public final class RouterWebServiceUtil {
    * @param client same client used to reduce number of clients created
    * @return Client response to REST call
    */
-  private static ClientResponse invokeRMWebService(String webApp, String path,
+  private static Response invokeRMWebService(String webApp, String path,
       HTTPMethods method, String additionalPath,
       Map<String, String[]> queryParams, Object formParam, String mediaType,
       Configuration conf, Client client) {
@@ -210,13 +204,13 @@ public final class RouterWebServiceUtil {
     String scheme = YarnConfiguration.useHttps(conf) ? "https://" : "http://";
     String webAddress = scheme + socketAddress.getHostName() + ":"
         + socketAddress.getPort();
-    WebResource webResource = client.resource(webAddress).path(path);
+    // WebResource webResource = client.resource(webAddress).path(path);
 
     if (additionalPath != null && !additionalPath.isEmpty()) {
-      webResource = webResource.path(additionalPath);
+      // webResource = webResource.path(additionalPath);
     }
 
-    if (queryParams != null && !queryParams.isEmpty()) {
+    /*if (queryParams != null && !queryParams.isEmpty()) {
       MultivaluedMap<String, String> paramMap = new MultivaluedMapImpl();
 
       for (Entry<String, String[]> param : queryParams.entrySet()) {
@@ -257,12 +251,12 @@ public final class RouterWebServiceUtil {
       }
     } finally {
       client.destroy();
-    }
+    }*/
 
-    return response;
+    return null;
   }
 
-  public static Response clientResponseToResponse(ClientResponse r) {
+  /*public static Response clientResponseToResponse(ClientResponse r) {
     if (r == null) {
       return null;
     }
@@ -278,9 +272,9 @@ public final class RouterWebServiceUtil {
     rb.entity(r.getEntityInputStream());
     // return the response
     return rb.build();
-  }
+  }*/
 
-  public static void retrieveException(ClientResponse response) {
+  /*public static void retrieveException(ClientResponse response) {
     String serverErrorMsg = response.getEntity(String.class);
     int status = response.getStatus();
     if (status == 400) {
@@ -296,7 +290,7 @@ public final class RouterWebServiceUtil {
       throw new ConflictException(serverErrorMsg);
     }
 
-  }
+  }*/
 
   /**
    * Merges a list of AppInfo grouping by ApplicationId. Our current policy is
@@ -362,7 +356,7 @@ public final class RouterWebServiceUtil {
    * @return a jersey client
    */
   protected static Client createJerseyClient(Configuration conf) {
-    Client client = Client.create();
+    Client client = null;
 
     long checkConnectTimeOut = conf.getLong(YarnConfiguration.ROUTER_WEBAPP_CONNECT_TIMEOUT, 0);
     int connectTimeOut = (int) conf.getTimeDuration(YarnConfiguration.ROUTER_WEBAPP_CONNECT_TIMEOUT,
@@ -374,7 +368,7 @@ public final class RouterWebServiceUtil {
       connectTimeOut = (int) TimeUnit.MILLISECONDS.convert(
           YarnConfiguration.DEFAULT_ROUTER_WEBAPP_CONNECT_TIMEOUT, TimeUnit.MILLISECONDS);
     }
-    client.setConnectTimeout(connectTimeOut);
+    // client.setConnectTimeout(connectTimeOut);
 
     long checkReadTimeout = conf.getLong(YarnConfiguration.ROUTER_WEBAPP_READ_TIMEOUT, 0);
     int readTimeout = (int) conf.getTimeDuration(YarnConfiguration.ROUTER_WEBAPP_READ_TIMEOUT,
@@ -387,7 +381,7 @@ public final class RouterWebServiceUtil {
       readTimeout = (int) TimeUnit.MILLISECONDS.convert(
           YarnConfiguration.DEFAULT_ROUTER_WEBAPP_CONNECT_TIMEOUT, TimeUnit.MILLISECONDS);
     }
-    client.setReadTimeout(readTimeout);
+    // client.setReadTimeout(readTimeout);
 
     return client;
   }

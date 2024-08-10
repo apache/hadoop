@@ -32,11 +32,6 @@ import org.apache.hadoop.yarn.service.client.ApiServiceClient;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sun.jersey.api.client.ClientHandlerException;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.UniformInterfaceException;
-import com.sun.jersey.api.client.config.ClientConfig;
-import com.sun.jersey.api.client.config.DefaultClientConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,13 +42,13 @@ public class YarnServiceClient {
 
   private static final Logger LOG = LoggerFactory.getLogger(YarnServiceClient.class);
   private static Configuration conf = new Configuration();
-  private static ClientConfig getClientConfig() {
+  /*private static ClientConfig getClientConfig() {
     ClientConfig config = new DefaultClientConfig();
     config.getProperties().put(ClientConfig.PROPERTY_CHUNKED_ENCODING_SIZE, 0);
     config.getProperties()
         .put(ClientConfig.PROPERTY_BUFFER_RESPONSE_ENTITY_ON_EXCEPTION, true);
     return config;
-  }
+  }*/
 
   private ApiServiceClient asc;
 
@@ -66,7 +61,7 @@ public class YarnServiceClient {
   }
 
   public void createApp(Service app) {
-    ObjectMapper mapper = new ObjectMapper();
+    /*ObjectMapper mapper = new ObjectMapper();
     mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     ClientResponse response;
     try {
@@ -99,11 +94,11 @@ public class YarnServiceClient {
     } catch (UniformInterfaceException | ClientHandlerException
         | IOException e) {
       LOG.error("Error in deploying application: ", e);
-    }
+    }*/
   }
 
   public void deleteApp(String appInstanceId) {
-    ClientResponse response;
+    /*ClientResponse response;
     try {
       response = asc.getApiClient(asc.getServicePath(appInstanceId))
           .delete(ClientResponse.class);
@@ -115,11 +110,11 @@ public class YarnServiceClient {
     } catch (UniformInterfaceException | ClientHandlerException
         | IOException e) {
       LOG.error("Error in deleting application: ", e);
-    }
+    }*/
   }
 
   public void restartApp(Service app) throws JsonProcessingException {
-    ObjectMapper mapper = new ObjectMapper();
+    /*ObjectMapper mapper = new ObjectMapper();
     mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     String appInstanceId = app.getName();
     String yarnFile = mapper.writeValueAsString(app);
@@ -135,11 +130,11 @@ public class YarnServiceClient {
     } catch (UniformInterfaceException | ClientHandlerException
         | IOException e) {
       LOG.error("Error in restarting application: ", e);
-    }
+    }*/
   }
 
   public void stopApp(Service app) throws JsonProcessingException {
-    ObjectMapper mapper = new ObjectMapper();
+    /*ObjectMapper mapper = new ObjectMapper();
     mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     String appInstanceId = app.getName();
     String yarnFile = mapper.writeValueAsString(app);
@@ -155,11 +150,11 @@ public class YarnServiceClient {
     } catch (UniformInterfaceException | ClientHandlerException
         | IOException e) {
       LOG.error("Error in stopping application: ", e);
-    }
+    }*/
   }
 
   public void getStatus(AppEntry entry) {
-    ObjectMapper mapper = new ObjectMapper();
+    /*ObjectMapper mapper = new ObjectMapper();
     mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     String appInstanceId = entry.getName();
     Service app = null;
@@ -170,11 +165,11 @@ public class YarnServiceClient {
       entry.setYarnfile(app);
     } catch (UniformInterfaceException | IOException e) {
       LOG.error("Error in fetching application status: ", e);
-    }
+    }*/
   }
 
   public void upgradeApp(Service app) throws JsonProcessingException {
-    ObjectMapper mapper = new ObjectMapper();
+    /*ObjectMapper mapper = new ObjectMapper();
     mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     String appInstanceId = app.getName();
     app.setState(ServiceState.EXPRESS_UPGRADING);
@@ -191,6 +186,6 @@ public class YarnServiceClient {
     } catch (UniformInterfaceException | ClientHandlerException
         | IOException e) {
       LOG.error("Error in stopping application: ", e);
-    }
+    }*/
   }
 }

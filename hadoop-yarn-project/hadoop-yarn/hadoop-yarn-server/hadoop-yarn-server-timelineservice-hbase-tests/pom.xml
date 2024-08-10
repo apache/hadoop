@@ -55,6 +55,10 @@
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-common</artifactId>
         </exclusion>
+        <exclusion>
+          <artifactId>jersey-client</artifactId>
+          <groupId>org.glassfish.jersey.core</groupId>
+        </exclusion>
       </exclusions>
     </dependency>
 
@@ -155,6 +159,14 @@
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-hdfs-client</artifactId>
         </exclusion>
+        <exclusion>
+          <artifactId>jersey-common</artifactId>
+          <groupId>org.glassfish.jersey.core</groupId>
+        </exclusion>
+        <exclusion>
+          <artifactId>jersey-server</artifactId>
+          <groupId>org.glassfish.jersey.core</groupId>
+        </exclusion>
       </exclusions>
     </dependency>
 
@@ -168,6 +180,30 @@
         <exclusion>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-common</artifactId>
+        </exclusion>
+        <exclusion>
+          <artifactId>jersey-common</artifactId>
+          <groupId>org.glassfish.jersey.core</groupId>
+        </exclusion>
+        <exclusion>
+          <artifactId>jersey-client</artifactId>
+          <groupId>org.glassfish.jersey.core</groupId>
+        </exclusion>
+        <exclusion>
+          <artifactId>jersey-hk2</artifactId>
+          <groupId>org.glassfish.jersey.inject</groupId>
+        </exclusion>
+        <exclusion>
+          <artifactId>jersey-media-json-jettison</artifactId>
+          <groupId>org.glassfish.jersey.media</groupId>
+        </exclusion>
+        <exclusion>
+          <artifactId>jersey-test-framework-provider-grizzly2</artifactId>
+          <groupId>org.glassfish.jersey.test-framework.providers</groupId>
+        </exclusion>
+        <exclusion>
+          <artifactId>jersey-test-framework-core</artifactId>
+          <groupId>org.glassfish.jersey.test-framework</groupId>
         </exclusion>
       </exclusions>
     </dependency>
@@ -188,6 +224,7 @@
     <dependency>
       <groupId>com.sun.jersey</groupId>
       <artifactId>jersey-client</artifactId>
+      <version>1.19.4</version>
       <scope>test</scope>
     </dependency>
 

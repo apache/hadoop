@@ -411,71 +411,19 @@
     <!-- Skip commons-logging:commons-logging-api because it looks like nothing actually included it -->
     <!-- Skip jetty-util because it's in client -->
     <dependency>
-      <groupId>com.sun.jersey</groupId>
-      <artifactId>jersey-core</artifactId>
-      <optional>true</optional>
-      <exclusions>
-        <exclusion>
-          <groupId>javax.ws.rs</groupId>
-          <artifactId>jsr311-api</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-          <groupId>com.sun.jersey</groupId>
-          <artifactId>jersey-client</artifactId>
+      <groupId>org.glassfish.jersey.core</groupId>
+      <artifactId>jersey-common</artifactId>
       <optional>true</optional>
     </dependency>
     <dependency>
-      <groupId>com.github.pjfanning</groupId>
-      <artifactId>jersey-json</artifactId>
+       <groupId>org.glassfish.jersey.core</groupId>
+       <artifactId>jersey-client</artifactId>
       <optional>true</optional>
-      <exclusions>
-        <exclusion>
-          <groupId>com.fasterxml.jackson.core</groupId>
-          <artifactId>jackson-core</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>com.fasterxml.jackson.core</groupId>
-          <artifactId>jackson-databind</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>com.fasterxml.jackson.jaxrs</groupId>
-          <artifactId>jackson-jaxrs-json-provider</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>javax.xml.bind</groupId>
-          <artifactId>jaxb-api</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.codehaus.jettison</groupId>
-          <artifactId>jettison</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
     <dependency>
-      <groupId>com.sun.jersey</groupId>
+      <groupId>org.glassfish.jersey.core</groupId>
       <artifactId>jersey-server</artifactId>
       <optional>true</optional>
-    </dependency>
-    <dependency>
-      <groupId>com.sun.jersey</groupId>
-      <artifactId>jersey-servlet</artifactId>
-      <optional>true</optional>
-      <exclusions>
-        <exclusion>
-          <groupId>javax.servlet</groupId>
-          <artifactId>servlet-api</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>javax.enterprise</groupId>
-          <artifactId>cdi-api</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>ch.qos.cal10n</groupId>
-          <artifactId>cal10n-api</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
     <!-- skip org.apache.avro:avro-ipc because it doesn't look like hadoop-common actually uses it -->
     <dependency>
@@ -620,23 +568,16 @@
       </exclusions>
     </dependency>
     <dependency>
-      <groupId>com.sun.jersey.jersey-test-framework</groupId>
-      <artifactId>jersey-test-framework-grizzly2</artifactId>
+      <groupId>org.glassfish.jersey.test-framework</groupId>
+      <artifactId>jersey-test-framework-core</artifactId>
       <optional>true</optional>
-      <exclusions>
-        <!-- excluding because client already has the tomcat version -->
-        <exclusion>
-          <groupId>org.glassfish</groupId>
-          <artifactId>javax.servlet</artifactId>
-        </exclusion>
-      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.glassfish.jersey.test-framework.providers</groupId>
+      <artifactId>jersey-test-framework-provider-grizzly2</artifactId>
+      <optional>true</optional>
     </dependency>
     <!-- skipping jersey-server because it's above -->
-    <dependency>
-      <groupId>com.sun.jersey.contribs</groupId>
-      <artifactId>jersey-guice</artifactId>
-      <optional>true</optional>
-    </dependency>
     <!-- skipping guice-servlet because it's above -->
     <!-- skipping avro because it is in client via hadoop-common -->
     <!-- skipping jersey-core because it's above -->
@@ -725,24 +666,6 @@
                     <!-- Since runtime has classes for these jars, we exclude them.
                          We still want the java services api files, since those were excluded in runtime
                       -->
-                    <filter>
-                      <artifact>com.sun.jersey:jersey-client</artifact>
-                      <excludes>
-                        <exclude>**/*.class</exclude>
-                      </excludes>
-                    </filter>
-                    <filter>
-                      <artifact>com.sun.jersey:jersey-core</artifact>
-                      <excludes>
-                        <exclude>**/*.class</exclude>
-                      </excludes>
-                    </filter>
-                    <filter>
-                      <artifact>com.sun.jersey:jersey-servlet</artifact>
-                      <excludes>
-                        <exclude>**/*.class</exclude>
-                      </excludes>
-                    </filter>
                     <filter>
                       <artifact>org.apache.hadoop:hadoop-mapreduce-client-jobclient:*</artifact>
                       <excludes>

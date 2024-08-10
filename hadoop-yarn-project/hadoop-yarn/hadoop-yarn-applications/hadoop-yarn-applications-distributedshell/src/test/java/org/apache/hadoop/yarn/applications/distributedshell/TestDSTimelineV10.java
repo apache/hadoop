@@ -518,17 +518,7 @@ public class TestDSTimelineV10 extends DistributedShellBaseTest {
     ApplicationMaster am = new ApplicationMaster();
     final AtomicReference<TimelineWriter> spyTimelineWriterRef =
         new AtomicReference<>(null);
-    TimelineClientImpl client = new TimelineClientImpl() {
-      @Override
-      protected TimelineWriter createTimelineWriter(Configuration conf,
-          UserGroupInformation authUgi, com.sun.jersey.api.client.Client client,
-          URI resURI) throws IOException {
-        TimelineWriter timelineWriter =
-            new DirectTimelineWriter(authUgi, client, resURI);
-        spyTimelineWriterRef.set(spy(timelineWriter));
-        return spyTimelineWriterRef.get();
-      }
-    };
+    TimelineClientImpl client = new TimelineClientImpl();
     client.init(getConfiguration());
     client.start();
     TestTimelineClient.mockEntityClientResponse(spyTimelineWriterRef.get(),

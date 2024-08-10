@@ -22,7 +22,10 @@ import static org.junit.Assert.assertEquals;
 import java.io.File;
 import java.io.IOException;
 
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.JettyUtils;
@@ -36,10 +39,6 @@ import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource.Builder;
 
 /**
  * Unit test for hosting web terminal servlet in node manager.
@@ -110,11 +109,11 @@ public class TestNMWebTerminal {
 
   @Test
   public void testWebTerminal() {
-    Client client = Client.create();
-    Builder builder = client.resource("http://127.0.0.1:" + port +
-        "/terminal/terminal.template").accept("text/html");
-    ClientResponse response = builder.get(ClientResponse.class);
-    assertEquals(MediaType.TEXT_HTML + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
+    Client client = ClientBuilder.newClient();
+    Response response = client.target("http://127.0.0.1:" + port +
+                    "/terminal/terminal.template").request("text/html")
+            .get(Response.class);
+    assertEquals(MediaType.TEXT_HTML + ";" + JettyUtils.UTF_8,
+            response.getMediaType().toString());
   }
 }

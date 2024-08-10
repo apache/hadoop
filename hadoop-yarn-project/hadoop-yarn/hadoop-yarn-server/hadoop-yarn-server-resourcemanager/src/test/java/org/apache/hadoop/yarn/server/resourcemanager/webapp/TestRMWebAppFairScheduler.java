@@ -19,9 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
-import com.google.inject.Binder;
 import com.google.inject.Injector;
-import com.google.inject.Module;
 
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -67,19 +65,14 @@ public class TestRMWebAppFairScheduler {
     final RMContext rmContext = mockRMContext(appStates);
     Injector injector = WebAppTests.createMockInjector(RMContext.class,
         rmContext,
-        new Module() {
-          @Override
-          public void configure(Binder binder) {
-            try {
-              ResourceManager mockRmWithFairScheduler =
-                  mockRm(rmContext);
-              binder.bind(ResourceManager.class).toInstance
-                  (mockRmWithFairScheduler);
-            } catch (IOException e) {
-              throw new IllegalStateException(e);
-            }
-          }
-        });
+            binder -> {
+              try {
+                ResourceManager mockRmWithFairScheduler = mockRm(rmContext);
+                binder.bind(ResourceManager.class).toInstance(mockRmWithFairScheduler);
+              } catch (IOException e) {
+                throw new IllegalStateException(e);
+              }
+            });
     FairSchedulerPage fsViewInstance = injector.getInstance(FairSchedulerPage
         .class);
     fsViewInstance.render();
@@ -105,19 +98,14 @@ public class TestRMWebAppFairScheduler {
     final RMContext rmContext = mockRMContext(appStates);
     Injector injector = WebAppTests.createMockInjector(RMContext.class,
         rmContext,
-        new Module() {
-          @Override
-          public void configure(Binder binder) {
-            try {
-              ResourceManager mockRmWithFairScheduler =
-                  mockRmWithApps(rmContext);
-              binder.bind(ResourceManager.class).toInstance
-                  (mockRmWithFairScheduler);
-            } catch (IOException e) {
-              throw new IllegalStateException(e);
-            }
-          }
-        });
+            binder -> {
+              try {
+                ResourceManager mockRmWithFairScheduler = mockRmWithApps(rmContext);
+                binder.bind(ResourceManager.class).toInstance(mockRmWithFairScheduler);
+              } catch (IOException e) {
+                throw new IllegalStateException(e);
+              }
+            });
     FairSchedulerPage fsViewInstance =
         injector.getInstance(FairSchedulerPage.class);
     try {
@@ -176,7 +164,7 @@ public class TestRMWebAppFairScheduler {
     return rm;
   }
 
-  private static FairScheduler mockFairScheduler() throws IOException {
+  private static FairScheduler mockFairScheduler() {
     FairScheduler fs = new FairScheduler();
     FairSchedulerConfiguration conf = new FairSchedulerConfiguration();
     fs.setRMContext(new RMContextImpl(null, null, null, null, null,
@@ -198,8 +186,7 @@ public class TestRMWebAppFairScheduler {
     return rm;
   }
 
-  private static FairScheduler mockFairSchedulerWithoutApps(RMContext rmContext)
-      throws IOException {
+  private static FairScheduler mockFairSchedulerWithoutApps(RMContext rmContext) {
     FairScheduler fs = new FairScheduler() {
       @Override
       public FSAppAttempt getSchedulerApp(ApplicationAttemptId

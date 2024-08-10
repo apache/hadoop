@@ -22,6 +22,9 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.GpuDevice;
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.NMResourceInfo;
 
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlRootElement;
 import java.util.List;
 
 /**
@@ -29,6 +32,8 @@ import java.util.List;
  * {@link org.apache.hadoop.yarn.server.nodemanager.webapp.NMWebServices#getNMResourceInfo(String)}
  * is invoked.
  */
+@XmlRootElement
+@XmlAccessorType(XmlAccessType.FIELD)
 public class NMGpuResourceInfo extends NMResourceInfo {
   GpuDeviceInformation gpuDeviceInformation;
 
@@ -41,6 +46,9 @@ public class NMGpuResourceInfo extends NMResourceInfo {
     this.gpuDeviceInformation = gpuDeviceInformation;
     this.totalGpuDevices = totalGpuDevices;
     this.assignedGpuDevices = assignedGpuDevices;
+  }
+
+  public NMGpuResourceInfo() {
   }
 
   public GpuDeviceInformation getGpuDeviceInformation() {

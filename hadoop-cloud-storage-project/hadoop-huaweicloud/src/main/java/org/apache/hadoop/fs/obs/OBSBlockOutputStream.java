@@ -31,7 +31,6 @@ import com.obs.services.model.PutObjectRequest;
 import com.obs.services.model.UploadPartRequest;
 import com.obs.services.model.UploadPartResult;
 import com.obs.services.model.fs.WriteFileRequest;
-import com.sun.istack.NotNull;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -297,7 +296,7 @@ class OBSBlockOutputStream extends OutputStream implements Syncable {
    * @throws IOException on any problem
    */
   @Override
-  public synchronized void write(@NotNull final byte[] source,
+  public synchronized void write(final byte[] source,
       final int offset, final int len)
       throws IOException {
     if (hasException.get()) {

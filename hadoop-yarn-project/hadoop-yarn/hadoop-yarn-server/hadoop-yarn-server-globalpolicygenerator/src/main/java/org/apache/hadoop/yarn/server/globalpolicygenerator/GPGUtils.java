@@ -38,9 +38,6 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterIdInfo;
 
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 
 /**
@@ -66,7 +63,7 @@ public final class GPGUtils {
    */
   public static <T> T invokeRMWebService(String webAddr, String path, final Class<T> returnType,
       Configuration conf, String selectParam) {
-    Client client = createJerseyClient(conf);
+    /*Client client = createJerseyClient(conf);
     T obj;
 
     // webAddr stores the form of host:port in subClusterInfo
@@ -97,7 +94,8 @@ public final class GPGUtils {
         response = null;
       }
       client.destroy();
-    }
+    }*/
+    return null;
   }
 
   /**
@@ -135,16 +133,14 @@ public final class GPGUtils {
    * We will set the timeout when creating JerseyClient.
    *
    * @param conf Configuration.
-   * @return JerseyClient.
    */
-  public static Client createJerseyClient(Configuration conf) {
-    Client client = Client.create();
+  public static void createJerseyClient(Configuration conf) {
+    /*Client client = Client.create();
     int connectTimeOut = (int) conf.getTimeDuration(YarnConfiguration.GPG_WEBAPP_CONNECT_TIMEOUT,
         YarnConfiguration.DEFAULT_GPG_WEBAPP_CONNECT_TIMEOUT, TimeUnit.MILLISECONDS);
     client.setConnectTimeout(connectTimeOut);
     int readTimeout = (int) conf.getTimeDuration(YarnConfiguration.GPG_WEBAPP_READ_TIMEOUT,
         YarnConfiguration.DEFAULT_GPG_WEBAPP_READ_TIMEOUT, TimeUnit.MILLISECONDS);
-    client.setReadTimeout(readTimeout);
-    return client;
+    client.setReadTimeout(readTimeout);*/
   }
 }

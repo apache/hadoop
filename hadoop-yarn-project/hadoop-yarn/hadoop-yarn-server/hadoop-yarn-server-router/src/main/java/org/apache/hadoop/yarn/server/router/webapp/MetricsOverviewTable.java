@@ -18,7 +18,6 @@
 package org.apache.hadoop.yarn.server.router.webapp;
 
 import com.google.inject.Inject;
-import com.sun.jersey.api.client.Client;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -234,13 +233,12 @@ public class MetricsOverviewTable extends RouterBlock {
       Hamlet.TBODY<Hamlet.TABLE<Hamlet.DIV<Hamlet>>> fsMetricsScheduleTr) {
     // configuration
     Configuration config = this.router.getConfig();
-    Client client = RouterWebServiceUtil.createJerseyClient(config);
+    // Client client = RouterWebServiceUtil.createJerseyClient(config);
     String webAppAddress = WebAppUtils.getRMWebAppURLWithScheme(config);
 
     // Get the name of the local cluster.
     String localClusterName = config.get(YarnConfiguration.RM_CLUSTER_ID, UNAVAILABLE);
-    SchedulerOverviewInfo schedulerOverviewInfo =
-        getSchedulerOverviewInfo(webAppAddress, config, client);
+    SchedulerOverviewInfo schedulerOverviewInfo = null;
     if (schedulerOverviewInfo != null) {
       RouterSchedulerMetrics rsMetrics =
           new RouterSchedulerMetrics(localClusterName, schedulerOverviewInfo);
@@ -265,7 +263,7 @@ public class MetricsOverviewTable extends RouterBlock {
     // configuration
     Configuration config = this.router.getConfig();
 
-    Client client = RouterWebServiceUtil.createJerseyClient(config);
+    // Client client = RouterWebServiceUtil.createJerseyClient(config);
 
     // Traverse all SubClusters to get cluster information.
     for (SubClusterInfo subcluster : subClusters) {
@@ -275,7 +273,7 @@ public class MetricsOverviewTable extends RouterBlock {
         String webAppAddress =  WebAppUtils.getHttpSchemePrefix(config) +
             subcluster.getRMWebServiceAddress();
         SchedulerOverviewInfo schedulerOverviewInfo =
-            getSchedulerOverviewInfo(webAppAddress, config, client);
+            getSchedulerOverviewInfo(webAppAddress, config);
 
         // If schedulerOverviewInfo is not null,
         // We will display information from rsMetrics, otherwise we will not display information.
@@ -288,7 +286,7 @@ public class MetricsOverviewTable extends RouterBlock {
       }
     }
 
-    client.destroy();
+    // client.destroy();
   }
 
   /**
@@ -296,17 +294,16 @@ public class MetricsOverviewTable extends RouterBlock {
    *
    * @param webAppAddress webAppAddress.
    * @param config configuration.
-   * @param client jersey Client.
    * @return SchedulerOverviewInfo.
    */
   private SchedulerOverviewInfo getSchedulerOverviewInfo(String webAppAddress,
-      Configuration config, Client client) {
+      Configuration config) {
     try {
-      SchedulerOverviewInfo schedulerOverviewInfo = RouterWebServiceUtil
+      /*SchedulerOverviewInfo schedulerOverviewInfo = RouterWebServiceUtil
           .genericForward(webAppAddress, null, SchedulerOverviewInfo.class, HTTPMethods.GET,
           RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.SCHEDULER_OVERVIEW, null, null,
-           config, client);
-      return schedulerOverviewInfo;
+           config, client);*/
+      return null;
     } catch (Exception e) {
       LOG.error("get SchedulerOverviewInfo from webAppAddress = {} error.",
           webAppAddress, e);

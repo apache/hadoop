@@ -17,9 +17,6 @@
  */
 package org.apache.hadoop.yarn.server.router.subcluster;
 
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
@@ -206,7 +203,7 @@ public class TestFederationSubCluster {
        final Class<T> returnType, final String queryName,
        final String queryValue) throws IOException, InterruptedException {
 
-    Client clientToRouter = Client.create();
+    /*Client clientToRouter = Client.create();
     clientToRouter.setReadTimeout(5000);
     clientToRouter.setConnectTimeout(5000);
     WebResource toRouter = clientToRouter.resource(routerAddress).path(path);
@@ -224,10 +221,11 @@ public class TestFederationSubCluster {
           ClientResponse response = toRouterBuilder.get(ClientResponse.class);
           assertEquals(SC_OK, response.getStatus());
           return response.getEntity(returnType);
-        });
+        });*/
+    return null;
   }
 
-  public static ClientResponse performCall(final String routerAddress, final String webAddress,
+  /*public static ClientResponse performCall(final String routerAddress, final String webAddress,
       final String queryKey, final String queryValue, final Object context,
       final HTTPMethods method) throws IOException, InterruptedException {
 
@@ -267,10 +265,10 @@ public class TestFederationSubCluster {
 
           return response;
       });
-  }
+  }*/
 
   public String getNodeId(String rmAddress) {
-    Client clientToRM = Client.create();
+    /*Client clientToRM = Client.create();
     clientToRM.setConnectTimeout(3000);
     clientToRM.setReadTimeout(3000);
     WebResource toRM = clientToRM.resource(rmAddress).path(RM_WEB_SERVICE_PATH + NODES);
@@ -282,22 +280,24 @@ public class TestFederationSubCluster {
       return null;
     }
     clientToRM.destroy();
-    return nodes.get(0).getNodeId();
+    return nodes.get(0).getNodeId();*/
+    return null;
   }
 
   public NewApplication getNewApplicationId(String routerAddress) {
-    Client clientToRM = Client.create();
+    /*Client clientToRM = Client.create();
     clientToRM.setConnectTimeout(3000);
     clientToRM.setReadTimeout(3000);
     WebResource toRM = clientToRM.resource(routerAddress).path(
         RM_WEB_SERVICE_PATH + APPS_NEW_APPLICATION);
     ClientResponse response = toRM.accept(APPLICATION_XML).post(ClientResponse.class);
     clientToRM.destroy();
-    return response.getEntity(NewApplication.class);
+    return response.getEntity(NewApplication.class);*/
+    return null;
   }
 
   public String submitApplication(String routerAddress) {
-    ApplicationSubmissionContextInfo context = new ApplicationSubmissionContextInfo();
+    /*ApplicationSubmissionContextInfo context = new ApplicationSubmissionContextInfo();
     String appId = getNewApplicationId(routerAddress).getApplicationId();
     context.setApplicationId(appId);
     Client clientToRouter = Client.create();
@@ -307,21 +307,23 @@ public class TestFederationSubCluster {
         RM_WEB_SERVICE_PATH + APPS);
     toRM.entity(context, APPLICATION_XML).accept(APPLICATION_XML).post(ClientResponse.class);
     clientToRouter.destroy();
-    return appId;
+    return appId;*/
+    return null;
   }
 
   public NewReservation getNewReservationId(String routerAddress) {
-    Client clientToRM = Client.create();
+    /*Client clientToRM = Client.create();
     clientToRM.setConnectTimeout(3000);
     clientToRM.setReadTimeout(3000);
     WebResource toRM = clientToRM.resource(routerAddress).
         path(RM_WEB_SERVICE_PATH + RESERVATION_NEW);
     ClientResponse response = toRM.accept(APPLICATION_XML).post(ClientResponse.class);
-    return response.getEntity(NewReservation.class);
+    return response.getEntity(NewReservation.class);*/
+    return null;
   }
 
   public String addNodeLabel(String routerAddress) {
-    Client clientToRM = Client.create();
+    /*Client clientToRM = Client.create();
     clientToRM.setConnectTimeout(3000);
     clientToRM.setReadTimeout(3000);
     WebResource toRM = clientToRM.resource(routerAddress)
@@ -333,7 +335,8 @@ public class TestFederationSubCluster {
         .entity(context, APPLICATION_XML)
         .accept(APPLICATION_XML)
         .post(ClientResponse.class);
-    return response.getEntity(String.class);
+    return response.getEntity(String.class);*/
+    return null;
   }
 
   public static String format(String format, Object... args) {
