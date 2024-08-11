@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.MockNM.createMockNodeStatus;
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestUtils.createResourceRequest;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -65,17 +66,24 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceTrackerService;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.ApplicationPlacementContext;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemoryRMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.MockRMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
@@ -83,6 +91,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEv
 import org.apache.hadoop.yarn.server.resourcemanager.security.NMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
+import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
 import org.junit.Assert;
@@ -266,6 +275,300 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
 
     scheduler.handle(new NodeRemovedSchedulerEvent(node2));
     Assert.assertEquals(0, scheduler.getNumClusterNodes());
+  }
+
+  private void mockContainers(Container container,
+      int containerId,
+      NodeId nodeId,
+      ApplicationAttemptId appAttemptId,
+      long allocationId,
+      int memory,
+      int vcore,
+      Priority priority,
+      ExecutionType executionType) {
+    when(container.getResource()).thenReturn(Resource.newInstance(memory, vcore));
+    when(container.getPriority()).thenReturn(priority);
+    when(container.getId()).thenReturn(ContainerId.newContainerId(appAttemptId, containerId));
+    when(container.getNodeId()).thenReturn(nodeId);
+    when(container.getAllocationRequestId()).thenReturn(allocationId);
+    when(container.getExecutionType()).thenReturn(executionType);
+    when(container.getContainerToken()).thenReturn(Token.newInstance(new byte[0], "kind",
+        new byte[0], "service"));
+  }
+
+  /**
+   * Test for tesing auto correct container allocation feature.
+   */
+  @Test
+  public void testAutoCorrectContainerAllocation() {
+    Configuration conf = new Configuration(getConf());
+    conf.setBoolean(YarnConfiguration.RM_SCHEDULER_AUTOCORRECT_CONTAINER_ALLOCATION, true);
+    conf.setBoolean("yarn.scheduler.capacity.root.auto-create-child-queue.enabled",
+        true);
+    MockRM rm = new MockRM(conf);
+    rm.start();
+    AbstractYarnScheduler scheduler = (AbstractYarnScheduler) rm.getResourceScheduler();
+
+    String host = "127.0.0.1";
+    RMNode node =
+        MockNodes.newNodeInfo(0, MockNodes.newResource(4 * 1024), 1, host);
+    scheduler.handle(new NodeAddedSchedulerEvent(node));
+
+    //add app begin
+    ApplicationId appId1 = BuilderUtils.newApplicationId(100, 1);
+    ApplicationAttemptId appAttemptId = BuilderUtils.newApplicationAttemptId(
+        appId1, 1);
+
+    RMAppAttemptMetrics attemptMetric1 =
+        new RMAppAttemptMetrics(appAttemptId, rm.getRMContext());
+    RMAppImpl app1 = mock(RMAppImpl.class);
+    when(app1.getApplicationId()).thenReturn(appId1);
+    RMAppAttemptImpl attempt1 = mock(RMAppAttemptImpl.class);
+    Container container = mock(Container.class);
+    when(attempt1.getMasterContainer()).thenReturn(container);
+    ApplicationSubmissionContext submissionContext = mock(
+        ApplicationSubmissionContext.class);
+    when(attempt1.getSubmissionContext()).thenReturn(submissionContext);
+    when(attempt1.getAppAttemptId()).thenReturn(appAttemptId);
+    when(attempt1.getRMAppAttemptMetrics()).thenReturn(attemptMetric1);
+    when(app1.getCurrentAppAttempt()).thenReturn(attempt1);
+
+    rm.getRMContext().getRMApps().put(appId1, app1);
+
+    ApplicationPlacementContext apc = new ApplicationPlacementContext("user",
+        "root");
+    SchedulerEvent addAppEvent1 =
+        new AppAddedSchedulerEvent(appId1, "user", "user", apc);
+    scheduler.handle(addAppEvent1);
+    SchedulerEvent addAttemptEvent1 =
+        new AppAttemptAddedSchedulerEvent(appAttemptId, false);
+    scheduler.handle(addAttemptEvent1);
+
+    SchedulerApplicationAttempt application = scheduler.getApplicationAttempt(appAttemptId);
+    SchedulerNode schedulerNode = scheduler.getSchedulerNode(node.getNodeID());
+    Priority priority = Priority.newInstance(0);
+    NodeId nodeId = NodeId.newInstance("foo.bar.org", 1234);
+
+    // Test containerAsk=1 and newlyAllocatedContainer=0
+    // The expectation here is that the request remains unchanged.
+
+    ResourceRequest rr1 = createResourceRequest(1024, 1, 1,
+        priority, 0,
+        ExecutionTypeRequest.newInstance(ExecutionType.GUARANTEED), ResourceRequest.ANY);
+    List<ResourceRequest> ask1 = new ArrayList<>();
+    ask1.add(rr1);
+
+    scheduler.autoCorrectContainerAllocation(ask1, application);
+    assertEquals(1, ask1.get(0).getNumContainers());
+    assertEquals(0, application.pullNewlyAllocatedContainers().size());
+
+    // Test containerAsk=1 and newlyAllocatedContainer=1.
+    // The expectation here is that the containerAsk gets updated
+    // to 0 and newlyAllocatedContainer=1.
+
+    ResourceRequest rr2 = createResourceRequest(1024, 1, 1, priority,
+        0L,
+        ExecutionTypeRequest.newInstance(ExecutionType.GUARANTEED), ResourceRequest.ANY);
+    List<ResourceRequest> ask2 = new ArrayList<>();
+    ask2.add(rr2);
+
+    Container container1 = mock(Container.class);
+    mockContainers(container1, 1, nodeId, appAttemptId, 0L, 1024,
+        1, priority, ExecutionType.GUARANTEED);
+    RMContainer rmContainer1 = mock(RMContainerImpl.class);
+    when(rmContainer1.getContainer()).thenReturn(container1);
+    when(rmContainer1.getContainerId()).thenReturn(
+        ContainerId.newContainerId(appAttemptId, 1));
+
+    application.addToNewlyAllocatedContainers(schedulerNode, rmContainer1);
+
+    scheduler.autoCorrectContainerAllocation(ask2, application);
+    assertEquals(0, ask2.get(0).getNumContainers());
+    assertEquals(1, application.pullNewlyAllocatedContainers().size());
+
+    // Test containerAsk=0 and newlyAllocatedContainer=1.
+    // The expectation here is that the containerAsk gets updated to 0
+    // and newlyAllocatedContainer is also 0.
+
+    ResourceRequest rr3 = createResourceRequest(1024, 1, 0,
+        priority, 0L,
+        ExecutionTypeRequest.newInstance(ExecutionType.GUARANTEED), ResourceRequest.ANY);
+    List<ResourceRequest> ask3 = new ArrayList<>();
+    ask3.add(rr3);
+    application.addToNewlyAllocatedContainers(schedulerNode, rmContainer1);
+
+    scheduler.autoCorrectContainerAllocation(ask3, application);
+    assertEquals(0, rr3.getNumContainers());
+    assertEquals(0, application.pullNewlyAllocatedContainers().size());
+
+    // Test containerAsk=4 (each unique request) and
+    // newlyAllocatedContainer=8 (there are 4 types and each having 2)
+    // The expectation here is that container ask gets updated to 0 and newlyAllocatedContainer=4
+
+    ResourceRequest rr4 = createResourceRequest(1024, 1, 1,
+        priority, 0L,
+        ExecutionTypeRequest.newInstance(ExecutionType.GUARANTEED), ResourceRequest.ANY);
+    ResourceRequest rr5 = createResourceRequest(2048, 1, 1,
+        priority, 0L,
+        ExecutionTypeRequest.newInstance(ExecutionType.GUARANTEED), ResourceRequest.ANY);
+    ResourceRequest rr6 = createResourceRequest(1024, 1, 1,
+        priority, 1L,
+        ExecutionTypeRequest.newInstance(ExecutionType.GUARANTEED), ResourceRequest.ANY);
+    ResourceRequest rr7 = createResourceRequest(1024, 1, 1,
+        priority, 0L,
+        ExecutionTypeRequest.newInstance(ExecutionType.OPPORTUNISTIC), ResourceRequest.ANY);
+    List<ResourceRequest> ask4 = new ArrayList<>();
+    ask4.add(rr4);
+    ask4.add(rr5);
+    ask4.add(rr6);
+    ask4.add(rr7);
+
+    Container container2 = mock(Container.class);
+    mockContainers(container2, 2, nodeId, appAttemptId, 0L, 1024,
+        1, priority, ExecutionType.GUARANTEED);
+    RMContainer rmContainer2 = mock(RMContainerImpl.class);
+    when(rmContainer2.getContainer()).thenReturn(container2);
+    when(rmContainer2.getContainerId()).thenReturn(
+        ContainerId.newContainerId(appAttemptId, 2));
+
+    Container container3 = mock(Container.class);
+    mockContainers(container3, 3, nodeId, appAttemptId, 0L, 2048,
+        1, priority, ExecutionType.GUARANTEED);
+    RMContainer rmContainer3 = mock(RMContainerImpl.class);
+    when(rmContainer3.getContainer()).thenReturn(container3);
+    when(rmContainer3.getContainerId()).thenReturn(
+        ContainerId.newContainerId(appAttemptId, 3));
+
+    Container container4 = mock(Container.class);
+    mockContainers(container4, 4, nodeId, appAttemptId, 0L, 2048,
+        1, priority, ExecutionType.GUARANTEED);
+    RMContainer rmContainer4 = mock(RMContainerImpl.class);
+    when(rmContainer4.getContainer()).thenReturn(container4);
+    when(rmContainer4.getContainerId()).thenReturn(
+        ContainerId.newContainerId(appAttemptId, 4));
+
+    Container container5 = mock(Container.class);
+    mockContainers(container5, 5, nodeId, appAttemptId, 1L, 1024,
+        1, priority, ExecutionType.GUARANTEED);
+    RMContainer rmContainer5 = mock(RMContainerImpl.class);
+    when(rmContainer5.getContainer()).thenReturn(container5);
+    when(rmContainer5.getContainerId()).thenReturn(
+        ContainerId.newContainerId(appAttemptId, 5));
+
+    Container container6 = mock(Container.class);
+    mockContainers(container6, 6, nodeId, appAttemptId, 1L, 1024,
+        1, priority, ExecutionType.GUARANTEED);
+    RMContainer rmContainer6 = mock(RMContainerImpl.class);
+    when(rmContainer6.getContainer()).thenReturn(container6);
+    when(rmContainer6.getContainerId()).thenReturn(
+        ContainerId.newContainerId(appAttemptId, 6));
+
+    Container container7 = mock(Container.class);
+    mockContainers(container7, 7, nodeId, appAttemptId, 0L, 1024,
+        1, priority, ExecutionType.OPPORTUNISTIC);
+    RMContainer rmContainer7 = mock(RMContainerImpl.class);
+    when(rmContainer7.getContainer()).thenReturn(container7);
+    when(rmContainer7.getContainerId()).thenReturn(
+        ContainerId.newContainerId(appAttemptId, 7));
+
+    Container container8 = mock(Container.class);
+    mockContainers(container8, 8, nodeId, appAttemptId, 0L, 1024,
+        1, priority, ExecutionType.OPPORTUNISTIC);
+    RMContainer rmContainer8 = mock(RMContainerImpl.class);
+    when(rmContainer8.getContainer()).thenReturn(container8);
+    when(rmContainer8.getContainerId()).thenReturn(
+        ContainerId.newContainerId(appAttemptId, 8));
+
+    application.addToNewlyAllocatedContainers(schedulerNode, rmContainer1);
+    application.addToNewlyAllocatedContainers(schedulerNode, rmContainer2);
+    application.addToNewlyAllocatedContainers(schedulerNode, rmContainer3);
+    application.addToNewlyAllocatedContainers(schedulerNode, rmContainer4);
+    application.addToNewlyAllocatedContainers(schedulerNode, rmContainer5);
+    application.addToNewlyAllocatedContainers(schedulerNode, rmContainer6);
+    application.addToNewlyAllocatedContainers(schedulerNode, rmContainer7);
+    application.addToNewlyAllocatedContainers(schedulerNode, rmContainer8);
+
+    scheduler.autoCorrectContainerAllocation(ask4, application);
+    for (ResourceRequest resourceRequest : ask4) {
+      assertEquals(0, resourceRequest.getNumContainers());
+    }
+    assertEquals(4, application.pullNewlyAllocatedContainers().size());
+
+    // Test ContainerAsk=4 for 2 different resources and newlyAllocatedContainer=6;
+    // This test mimics the way AMRMClient splits the resourceRequest when locality is set.
+    // The expectation here is that container ask gets updated to 0 and newlyAllocatedContainer=4
+
+    ResourceRequest rr8 = createResourceRequest(1024, 1, 4, priority,
+        0L,
+        ExecutionTypeRequest.newInstance(ExecutionType.GUARANTEED), ResourceRequest.ANY);
+    ResourceRequest rr9 = createResourceRequest(1024, 1, 4,
+        priority, 0L,
+        ExecutionTypeRequest.newInstance(ExecutionType.GUARANTEED), nodeId.getHost());
+    List<ResourceRequest> ask5 = new ArrayList<>();
+    ask5.add(rr8);
+    ask5.add(rr9);
+
+
+    Container container9 = mock(Container.class);
+    mockContainers(container9, 9, nodeId, appAttemptId, 0L, 1024,
+        1, priority, ExecutionType.GUARANTEED);
+    RMContainer rmContainer9 = mock(RMContainerImpl.class);
+    when(rmContainer9.getContainer()).thenReturn(container9);
+    when(rmContainer9.getContainerId()).thenReturn(
+        ContainerId.newContainerId(appAttemptId, 9));
+
+    Container container10 = mock(Container.class);
+    mockContainers(container10, 10, nodeId, appAttemptId, 0L, 1024,
+        1, priority, ExecutionType.GUARANTEED);
+    RMContainer rmContainer10 = mock(RMContainerImpl.class);
+    when(rmContainer10.getContainer()).thenReturn(container10);
+    when(rmContainer10.getContainerId()).thenReturn(
+        ContainerId.newContainerId(appAttemptId, 10));
+
+    Container container11 = mock(Container.class);
+    mockContainers(container11, 11, nodeId, appAttemptId, 0L, 1024,
+        1, priority, ExecutionType.GUARANTEED);
+    RMContainer rmContainer11 = mock(RMContainerImpl.class);
+    when(rmContainer11.getContainer()).thenReturn(container11);
+    when(rmContainer11.getContainerId()).thenReturn(
+        ContainerId.newContainerId(appAttemptId, 11));
+
+    Container container12 = mock(Container.class);
+    mockContainers(container12, 12, nodeId, appAttemptId, 0L, 1024,
+        1, priority, ExecutionType.GUARANTEED);
+    RMContainer rmContainer12 = mock(RMContainerImpl.class);
+    when(rmContainer12.getContainer()).thenReturn(container12);
+    when(rmContainer12.getContainerId()).thenReturn(
+        ContainerId.newContainerId(appAttemptId, 12));
+
+    Container container13 = mock(Container.class);
+    mockContainers(container13, 13, nodeId, appAttemptId, 0L, 1024,
+        1, priority, ExecutionType.GUARANTEED);
+    RMContainer rmContainer13 = mock(RMContainerImpl.class);
+    when(rmContainer13.getContainer()).thenReturn(container13);
+    when(rmContainer13.getContainerId()).thenReturn(
+        ContainerId.newContainerId(appAttemptId, 13));
+
+    Container container14 = mock(Container.class);
+    mockContainers(container14, 14, nodeId, appAttemptId, 0L, 1024,
+        1, priority, ExecutionType.GUARANTEED);
+    RMContainer rmContainer14 = mock(RMContainerImpl.class);
+    when(rmContainer14.getContainer()).thenReturn(container14);
+    when(rmContainer14.getContainerId()).thenReturn(
+        ContainerId.newContainerId(appAttemptId, 14));
+
+    application.addToNewlyAllocatedContainers(schedulerNode, rmContainer9);
+    application.addToNewlyAllocatedContainers(schedulerNode, rmContainer10);
+    application.addToNewlyAllocatedContainers(schedulerNode, rmContainer11);
+    application.addToNewlyAllocatedContainers(schedulerNode, rmContainer12);
+    application.addToNewlyAllocatedContainers(schedulerNode, rmContainer13);
+    application.addToNewlyAllocatedContainers(schedulerNode, rmContainer14);
+
+    scheduler.autoCorrectContainerAllocation(ask5, application);
+    for (ResourceRequest resourceRequest : ask5) {
+      assertEquals(0, resourceRequest.getNumContainers());
+    }
+    assertEquals(4, application.pullNewlyAllocatedContainers().size());
   }
 
   @Test

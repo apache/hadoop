@@ -1363,6 +1363,10 @@ public class CapacityScheduler extends
           application.showRequests();
         }
 
+        // update the current container ask by considering the already allocated
+        // containers from previous allocation request and return updatedNewlyAllocatedContainers.
+        autoCorrectContainerAllocation(ask, application);
+
         // Update application requests
         if (application.updateResourceRequests(ask) || application
             .updateSchedulingRequests(schedulingRequests)) {
