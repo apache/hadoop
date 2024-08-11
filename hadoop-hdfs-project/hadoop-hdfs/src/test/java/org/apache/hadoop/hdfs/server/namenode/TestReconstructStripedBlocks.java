@@ -629,9 +629,9 @@ public class TestReconstructStripedBlocks {
         DataNodeTestUtils.triggerBlockReport(dn);
       }
       BlockManager bm = cluster.getNamesystem().getBlockManager();
-      GenericTestUtils.waitFor(()
-                      -> bm.getPendingDeletionBlocksCount() == 0,
-              10, 2000);
+      Thread.sleep(3000);
+      GenericTestUtils.waitFor(() ->
+          bm.getPendingDeletionBlocksCount() == 0, 10, 2000);
       for (DataNode dn : cluster.getDataNodes()) {
         DataNodeTestUtils.triggerHeartbeat(dn);
       }
