@@ -27,6 +27,10 @@ import org.apache.hadoop.fs.FileContextTestHelper;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 
+import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
+import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_PERFORMANCE_FLAGS;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
+
 /**
  * S3A implementation of FileContextMainOperationsBaseTest.
  */
@@ -37,6 +41,12 @@ public class ITestS3AFileContextMainOperations
   @Before
   public void setUp() throws IOException, Exception {
     Configuration conf = new Configuration();
+    removeBaseAndBucketOverrides(
+        conf,
+        FS_S3A_CREATE_PERFORMANCE,
+        FS_S3A_PERFORMANCE_FLAGS);
+    conf.set(FS_S3A_PERFORMANCE_FLAGS, "");
+
     fc = S3ATestUtils.createTestFileContext(conf);
     super.setUp();
   }

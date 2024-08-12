@@ -21,6 +21,10 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
+import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_PERFORMANCE_FLAGS;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
+
 /**
  * S3a implementation of FileContextURIBase.
  */
@@ -31,6 +35,12 @@ public class ITestS3AFileContextURI extends FileContextURIBase {
   @Before
   public void setUp() throws IOException, Exception {
     conf = new Configuration();
+
+    removeBaseAndBucketOverrides(
+        conf,
+        FS_S3A_CREATE_PERFORMANCE,
+        FS_S3A_PERFORMANCE_FLAGS);
+    conf.set(FS_S3A_PERFORMANCE_FLAGS, "");
 
     fc1 = S3ATestUtils.createTestFileContext(conf);
     fc2 = S3ATestUtils.createTestFileContext(conf); //different object, same FS
