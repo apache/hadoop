@@ -401,7 +401,7 @@ across versions. A policy `parquet, columnar, vector, random, adaptive` will use
 any filesystem aware of it, falling back to `columnar`, `vector`, `random` and finally `adaptive`.
 The S3A connector will recognize the `random` since Hadoop 3.3.5 (i.e. since the `openFile()` API
 was added), and `vector` from Hadoop 3.4.0.
- 
+
 The S3A and ABFS input streams both implement
 the [IOStatisticsSource](iostatistics.html) API, and can be queried for their IO
 Performance.
