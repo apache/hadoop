@@ -29,11 +29,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.s3a.S3AContract;
 
-import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
-import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_PERFORMANCE_FLAGS;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.createTestPath;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.isCreatePerformanceEnabled;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 
 /**
  * S3A Test suite for the FSMainOperationsBaseTest tests.
@@ -49,12 +46,9 @@ public class ITestS3AFSMainOperations extends FSMainOperationsBaseTest {
 
   @Override
   protected FileSystem createFileSystem() throws Exception {
-    Configuration conf = new Configuration();
-    removeBaseAndBucketOverrides(
-        conf,
-        FS_S3A_CREATE_PERFORMANCE,
-        FS_S3A_PERFORMANCE_FLAGS);
-    conf.set(FS_S3A_PERFORMANCE_FLAGS, "");
+    Configuration conf = S3ATestUtils.setPerformanceFlags(
+        new Configuration(),
+        "");
     contract = new S3AContract(conf);
     contract.init();
     return contract.getTestFileSystem();
