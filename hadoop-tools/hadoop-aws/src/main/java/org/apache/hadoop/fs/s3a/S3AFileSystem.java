@@ -1977,7 +1977,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         final RequestBody body,
         final DurationTrackerFactory durationTrackerFactory)
         throws AwsServiceException, UncheckedIOException {
-        return store.uploadPart(request, body, durationTrackerFactory);
+      return store.uploadPart(request, body, durationTrackerFactory);
     }
 
     /**

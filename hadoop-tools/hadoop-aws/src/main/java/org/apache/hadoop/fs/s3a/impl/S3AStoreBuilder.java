@@ -56,7 +56,7 @@ public class S3AStoreBuilder {
    * collected so it is important to pick up.
    * This may be null.
    */
-  protected FileSystem.Statistics fsStatistics;
+  private FileSystem.Statistics fsStatistics;
 
   public S3AStoreBuilder withStoreContextFactory(
           final StoreContextFactory storeContextFactoryValue) {
@@ -112,8 +112,8 @@ public class S3AStoreBuilder {
     return this;
   }
 
-  public S3AStoreBuilder withFsStatistics(final FileSystem.Statistics fsStatistics) {
-    this.fsStatistics = fsStatistics;
+  public S3AStoreBuilder withFsStatistics(final FileSystem.Statistics value) {
+    this.fsStatistics = value;
     return this;
   }
 

@@ -43,7 +43,7 @@ public class MinimalWriteOperationHelperCallbacks
     implements WriteOperationHelper.WriteOperationHelperCallbacks {
 
   /**
-   * Supplier of the s3 client
+   * Supplier of the s3 client.
    */
   private final Supplier<S3Client> s3clientSupplier;
 

@@ -153,7 +153,7 @@ public class S3AStoreImpl implements S3AStore {
    * collected so it is important to pick up.
    * This may be null.
    */
-  protected final FileSystem.Statistics fsStatistics;
+  private final FileSystem.Statistics fsStatistics;
 
   /** Constructor to create S3A store. */
   S3AStoreImpl(StoreContextFactory storeContextFactory,
@@ -587,7 +587,7 @@ public class S3AStoreImpl implements S3AStore {
    * <i>Important: this call does not close any input stream in the body.</i>
    * <p>
    * Retry Policy: none.
-   * @param durationTrackerFactory duration tracker factory for operation
+   * @param trackerFactory duration tracker factory for operation
    * @param request the upload part request.
    * @param body the request body.
    * @return the result of the operation.
@@ -599,13 +599,13 @@ public class S3AStoreImpl implements S3AStore {
   public UploadPartResponse uploadPart(
       final UploadPartRequest request,
       final RequestBody body,
-      final DurationTrackerFactory durationTrackerFactory)
+      @Nullable final DurationTrackerFactory trackerFactory)
       throws AwsServiceException, UncheckedIOException {
     long len = request.contentLength();
     incrementPutStartStatistics(len);
     try {
       UploadPartResponse uploadPartResponse = trackDurationOfSupplier(
-          nonNullDurationTrackerFactory(durationTrackerFactory),
+          nonNullDurationTrackerFactory(trackerFactory),
           MULTIPART_UPLOAD_PART_PUT.getSymbol(), () ->
               getS3Client().uploadPart(request, body));
       incrementPutCompletedStatistics(true, len);
