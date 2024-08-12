@@ -636,16 +636,19 @@ public abstract class AbstractYarnScheduler
    * Autocorrect container resourceRequests by decrementing the number of newly allocated containers
    * from the current container request. This also updates the newlyAllocatedContainers to be within
    * the limits of the current container resourceRequests.
-   * ResourceRequests locality/resourceName is not considered while autocorrecting the container request, hence
-   * when there are two types of resourceRequest which is same except for the locality/resourceName, it is counted as
-   * same {@link ContainerObjectType} and the container ask and number of newly allocated container is decremented
-   * accordingly. For example when a client requests for 4 containers with locality/resourceName as "node1", AMRMClient
-   * augments the resourceRequest into two where R1(numContainer=4,locality=*) and R2(numContainer=4,locality=node1),
-   * if Yarn allocated 6 containers previously, it will release 2 containers as well as update the container ask to 0.
+   * ResourceRequests locality/resourceName is not considered while autocorrecting the container
+   * request, hence when there are two types of resourceRequest which is same except for the
+   * locality/resourceName, it is counted as same {@link ContainerObjectType} and the container
+   * ask and number of newly allocated container is decremented accordingly.
+   * For example when a client requests for 4 containers with locality/resourceName
+   * as "node1", AMRMClientaugments the resourceRequest into two
+   * where R1(numContainer=4,locality=*) and R2(numContainer=4,locality=node1),
+   * if Yarn allocated 6 containers previously, it will release 2 containers as well as
+   * update the container ask to 0.
    *
-   * If there is a client which directly calls Yarn (without AMRMClient) with  two where R1(numContainer=4,locality=*)
-   * and R2(numContainer=4,locality=node1) the autocorrection may not work as expected. The use case of such client is
-   * very rare.
+   * If there is a client which directly calls Yarn (without AMRMClient) with
+   * two where R1(numContainer=4,locality=*) and R2(numContainer=4,locality=node1)
+   * the autocorrection may not work as expected. The use case of such client is very rare.
    *
    * <p>
    * This method is called from {@link AbstractYarnScheduler#allocate} method. It is package private
@@ -1801,7 +1804,8 @@ public abstract class AbstractYarnScheduler
     private final ExecutionType executionType;
     private final Resource resource;
 
-    public ContainerObjectType(long allocationId, Priority priority, ExecutionType executionType, Resource resource) {
+    public ContainerObjectType(long allocationId, Priority priority,
+        ExecutionType executionType, Resource resource) {
       this.allocationId = allocationId;
       this.priority = priority;
       this.executionType = executionType;

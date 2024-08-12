@@ -1531,14 +1531,13 @@ public class YarnConfiguration extends Configuration {
       10;
 
   /**
-   * The configuration key for enabling or disabling the auto-correction of
-   * container allocations by the ResourceManager scheduler.
+   * The configuration key for enabling or disabling the auto-correction of container allocation.
    */
   public static final String RM_SCHEDULER_AUTOCORRECT_CONTAINER_ALLOCATION = RM_PREFIX
       + "scheduler.autocorrect.container.allocation";
 
   /**
-   * Default value: {@value}
+   * Default value: {@value}.
    */
   public static final boolean DEFAULT_RM_SCHEDULER_AUTOCORRECT_CONTAINER_ALLOCATION = false;
 
