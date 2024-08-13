@@ -27,6 +27,8 @@ import org.apache.hadoop.fs.FileContextTestHelper;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.setPerformanceFlags;
+
 /**
  * S3A implementation of FileContextMainOperationsBaseTest.
  */
@@ -36,7 +38,7 @@ public class ITestS3AFileContextMainOperations
 
   @Before
   public void setUp() throws IOException, Exception {
-    Configuration conf = S3ATestUtils.setPerformanceFlags(
+    Configuration conf = setPerformanceFlags(
         new Configuration(),
         "");
 
