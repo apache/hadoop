@@ -29,9 +29,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azure.security.Constants;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryUtils;
+import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 
-import org.apache.hadoop.util.JacksonUtil;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.utils.URIBuilder;

@@ -40,8 +40,8 @@ import java.util.concurrent.TimeoutException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.protocol.DatanodeAdminProperties;
-
 import org.apache.hadoop.util.JacksonUtil;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

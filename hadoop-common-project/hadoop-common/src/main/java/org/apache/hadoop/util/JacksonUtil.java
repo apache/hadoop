@@ -22,12 +22,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.databind.json.JsonMapper;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 
 /**
  * Utility for sharing code related to Jackson usage in Hadoop.
- *
- * @since 3.5.0
  */
+@Private
 public final class JacksonUtil {
 
   private static final ObjectMapper SHARED_BASIC_OBJECT_MAPPER = createBasicObjectMapper();

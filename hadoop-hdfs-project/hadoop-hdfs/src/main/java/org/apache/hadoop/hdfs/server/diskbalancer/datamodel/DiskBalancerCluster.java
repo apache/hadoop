@@ -20,8 +20,6 @@ package org.apache.hadoop.hdfs.server.diskbalancer.datamodel;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.ObjectReader;
-import org.apache.hadoop.util.JacksonUtil;
-import org.apache.hadoop.util.Preconditions;
 
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
@@ -31,6 +29,8 @@ import org.apache.hadoop.hdfs.server.diskbalancer.planner.NodePlan;
 import org.apache.hadoop.hdfs.server.diskbalancer.planner.Planner;
 import org.apache.hadoop.hdfs.server.diskbalancer.planner.PlannerFactory;
 import org.apache.hadoop.hdfs.web.JsonUtil;
+import org.apache.hadoop.util.JacksonUtil;
+import org.apache.hadoop.util.Preconditions;
 
 import java.io.File;
 import java.io.IOException;

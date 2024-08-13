@@ -21,9 +21,9 @@ package org.apache.hadoop.metrics2;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.util.JacksonUtil;
 
 import com.fasterxml.jackson.databind.ObjectWriter;
-import org.apache.hadoop.util.JacksonUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

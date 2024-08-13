@@ -28,9 +28,9 @@ import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgressVie
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.Step;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StepType;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.util.JacksonUtil;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.util.JacksonUtil;
 
 /**
  * Servlet that provides a JSON representation of the namenode's current startup

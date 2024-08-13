@@ -44,12 +44,12 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import com.fasterxml.jackson.core.JsonGenerator;
-import org.apache.hadoop.util.JacksonUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.http.HttpServer2;
+import org.apache.hadoop.util.JacksonUtil;
 
 /*
  * This servlet is based off of the JMXProxyServlet from Tomcat 7.0.14. It has
