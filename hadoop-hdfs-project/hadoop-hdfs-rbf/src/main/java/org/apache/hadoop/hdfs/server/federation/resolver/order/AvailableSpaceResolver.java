@@ -121,6 +121,7 @@ public class AvailableSpaceResolver
         getSubclusterMapping();
     List<SubclusterAvailableSpace> subclusterList = new LinkedList<>(
         subclusterInfo.values());
+
     if (loc != null && loc.getDestinations() != null) {
         Set<String> locSet = new HashSet<String>();
         for (RemoteLocation dest : loc.getDestinations()) {
