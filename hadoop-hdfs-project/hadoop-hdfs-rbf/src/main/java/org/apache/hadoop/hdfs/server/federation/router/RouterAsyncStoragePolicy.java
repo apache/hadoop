@@ -26,30 +26,16 @@ import java.util.List;
 
 import static org.apache.hadoop.hdfs.server.federation.router.async.AsyncUtil.asyncReturn;
 
-public class AsyncRouterStoragePolicy extends RouterStoragePolicy {
+public class RouterAsyncStoragePolicy extends RouterStoragePolicy {
   /** RPC server to receive client calls. */
   private final RouterRpcServer rpcServer;
   /** RPC clients to connect to the Namenodes. */
   private final RouterRpcClient rpcClient;
 
-  public AsyncRouterStoragePolicy(RouterRpcServer server) {
+  public RouterAsyncStoragePolicy(RouterRpcServer server) {
     super(server);
     this.rpcServer = server;
     this.rpcClient = this.rpcServer.getRPCClient();
-  }
-
-  @Override
-  public BlockStoragePolicy getStoragePolicy(String path)
-      throws IOException {
-    rpcServer.checkOperation(NameNode.OperationCategory.READ, true);
-
-    List<RemoteLocation> locations =
-        rpcServer.getLocationsForPath(path, false, false);
-    RemoteMethod method = new RemoteMethod("getStoragePolicy",
-        new Class<?>[] {String.class},
-        new RemoteParam());
-    rpcClient.invokeSequential(locations, method);
-    return asyncReturn(BlockStoragePolicy.class);
   }
 
   @Override
