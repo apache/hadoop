@@ -750,7 +750,8 @@ public class AzureBlobFileSystem extends FileSystem
               IOSTATISTICS_LOGGING_LEVEL_DEFAULT);
       logIOStatisticsAtLevel(LOG, iostatisticsLoggingLevel, getIOStatistics());
     }
-    IOUtils.cleanupWithLogger(LOG, abfsStore, delegationTokenManager);
+    IOUtils.cleanupWithLogger(LOG, abfsStore, delegationTokenManager,
+        getAbfsClient());
     this.isClosed = true;
     if (LOG.isDebugEnabled()) {
       LOG.debug("Closing Abfs: {}", toString());
@@ -1691,7 +1692,8 @@ public class AzureBlobFileSystem extends FileSystem
     switch (validatePathCapabilityArgs(p, capability)) {
     case CommonPathCapabilities.FS_PERMISSIONS:
     case CommonPathCapabilities.FS_APPEND:
-    case CommonPathCapabilities.ETAGS_AVAILABLE:
+      // block locations are generated locally
+    case CommonPathCapabilities.VIRTUAL_BLOCK_LOCATIONS:
       return true;
 
     case CommonPathCapabilities.ETAGS_PRESERVED_IN_RENAME:

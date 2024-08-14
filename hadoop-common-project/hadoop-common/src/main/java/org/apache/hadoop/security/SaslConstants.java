@@ -32,7 +32,7 @@ public class SaslConstants {
 
   private static final String SASL_MECHANISM_ENV = "HADOOP_SASL_MECHANISM";
   public static final String SASL_MECHANISM;
-  private static final String SASL_MECHANISM_DEFAULT = "DIGEST-MD5";
+  public static final String SASL_MECHANISM_DEFAULT = "DIGEST-MD5";
 
   static {
     final String mechanism = System.getenv(SASL_MECHANISM_ENV);
