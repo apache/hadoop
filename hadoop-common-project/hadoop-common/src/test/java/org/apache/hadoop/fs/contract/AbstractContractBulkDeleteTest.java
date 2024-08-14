@@ -25,7 +25,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,6 +34,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.wrappedio.WrappedIO;
+import org.apache.hadoop.io.wrappedio.impl.DynamicWrappedIO;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
@@ -43,6 +43,9 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Contract tests for bulk delete operation.
+ * Many of these tests use {@link WrappedIO} wrappers through reflection,
+ * to validate the codepath we expect libraries designed to work with
+ * multiple versions to use.
  */
 public abstract class AbstractContractBulkDeleteTest extends AbstractFSContractTestBase {
 
@@ -66,11 +69,18 @@ public abstract class AbstractContractBulkDeleteTest extends AbstractFSContractT
    */
   protected FileSystem fs;
 
-  @Before
-  public void setUp() throws Exception {
+  /**
+   * Reflection support.
+   */
+  private DynamicWrappedIO dynamicWrappedIO;
+
+  @Override
+  public void setup() throws Exception {
+    super.setup();
     fs = getFileSystem();
     basePath = path(getClass().getName());
-    pageSize = WrappedIO.bulkDelete_pageSize(getFileSystem(), basePath);
+    dynamicWrappedIO = new DynamicWrappedIO();
+    pageSize = dynamicWrappedIO.bulkDelete_pageSize(fs, basePath);
     fs.mkdirs(basePath);
   }
 
@@ -103,15 +113,15 @@ public abstract class AbstractContractBulkDeleteTest extends AbstractFSContractT
   @Test
   public void testPathsSizeGreaterThanPageSizePrecondition() throws Exception {
     List<Path> listOfPaths = createListOfPaths(pageSize + 1, basePath);
-    intercept(IllegalArgumentException.class,
-            () -> bulkDelete_delete(getFileSystem(), basePath, listOfPaths));
+    intercept(IllegalArgumentException.class, () ->
+        dynamicWrappedIO.bulkDelete_delete(getFileSystem(), basePath, listOfPaths));
   }
 
   @Test
   public void testPathsSizeLessThanPageSizePrecondition() throws Exception {
     List<Path> listOfPaths = createListOfPaths(pageSize - 1, basePath);
     // Bulk delete call should pass with no exception.
-    bulkDelete_delete(getFileSystem(), basePath, listOfPaths);
+    dynamicWrappedIO.bulkDelete_delete(getFileSystem(), basePath, listOfPaths);
   }
 
   @Test
@@ -285,7 +295,9 @@ public abstract class AbstractContractBulkDeleteTest extends AbstractFSContractT
    */
   protected void pageSizePreconditionForTest(int size) {
     if (size > pageSize) {
-      skip("Test requires paths size less than or equal to page size: " + pageSize);
+      skip("Test requires paths size less than or equal to page size: "
+          + pageSize
+          + "; actual size is " + size);
     }
   }
 

@@ -16,38 +16,16 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.util.functional;
-
-import java.io.IOException;
-import java.io.UncheckedIOException;
-
 /**
- * Function of arity 1 which may raise an IOException.
- * @param <T> type of arg1
- * @param <R> type of return value.
+ * Dynamic class loading and instantiation.
+ * Taken from {@code org.apache.parquet};
+ * there is also a fork of this in Apache Iceberg,
+ * so code using these classes should be relatively
+ * easily portable between the projects.
  */
-@FunctionalInterface
-public interface FunctionRaisingIOE<T, R> {
+@InterfaceAudience.LimitedPrivate("testing")
+@InterfaceStability.Unstable
+package org.apache.hadoop.util.dynamic;
 
-  /**
-   * Apply the function.
-   * @param t argument 1
-   * @return result
-   * @throws IOException Any IO failure
-   */
-  R apply(T t) throws IOException;
-
-  /**
-   * Apply unchecked.
-   * @param t argument
-   * @return the evaluated function
-   * @throws UncheckedIOException IOE raised.
-   */
-  default R unchecked(T t) {
-    try {
-      return apply(t);
-    } catch (IOException e) {
-      throw new UncheckedIOException(e);
-    }
-  }
-}
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
