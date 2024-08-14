@@ -415,7 +415,7 @@ public final class AWSClientConfig {
   }
 
   /**
-   *
+   * Initialize custom request headers for AWS clients.
    * @param conf hadoop configuration
    * @param clientConfig client configuration to update
    * @param awsServiceIdentifier service name
@@ -431,13 +431,13 @@ public final class AWSClientConfig {
       configKey = CUSTOM_HEADERS_STS;
       break;
     default:
-      // Nothing to do. The original signer override is already setup
+      // No known service.
     }
     if (configKey != null) {
       Map<String, String> awsClientCustomHeadersMap =
               S3AUtils.getTrimmedStringCollectionSplitByEquals(conf, configKey);
       awsClientCustomHeadersMap.forEach((header, valueString) -> {
-        List<String> headerValues = Arrays.asList(valueString.split(":"));
+        List<String> headerValues = Arrays.asList(valueString.split(";"));
         clientConfig.putHeader(header, headerValues);
       });
       LOG.debug("headers for {} client = {}", awsServiceIdentifier, clientConfig.headers());

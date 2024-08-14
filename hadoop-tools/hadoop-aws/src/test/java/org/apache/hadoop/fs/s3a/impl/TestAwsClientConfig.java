@@ -216,7 +216,7 @@ public class TestAwsClientConfig extends AbstractHadoopTestBase {
   @Test
   public void testInitRequestHeadersForSTS() throws IOException {
     final Configuration conf = new Configuration();
-    conf.set(CUSTOM_HEADERS_STS, "foo=bar:baz,qux=quux");
+    conf.set(CUSTOM_HEADERS_STS, "foo=bar;baz,qux=quux");
     Assertions.assertThat(conf.get(CUSTOM_HEADERS_S3))
             .describedAs("Custom client headers for s3 %s", CUSTOM_HEADERS_S3)
             .isNull();
@@ -246,7 +246,7 @@ public class TestAwsClientConfig extends AbstractHadoopTestBase {
   @Test
   public void testInitRequestHeadersForS3() throws IOException {
     final Configuration conf = new Configuration();
-    conf.set(CUSTOM_HEADERS_S3, "foo=bar:baz,qux=quux");
+    conf.set(CUSTOM_HEADERS_S3, "foo=bar;baz,qux=quux");
     Assertions.assertThat(conf.get(CUSTOM_HEADERS_STS))
             .describedAs("Custom client headers for STS %s", CUSTOM_HEADERS_STS)
             .isNull();
