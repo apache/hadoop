@@ -16,38 +16,20 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.util.functional;
-
-import java.io.IOException;
-import java.io.UncheckedIOException;
-
 /**
- * Function of arity 1 which may raise an IOException.
- * @param <T> type of arg1
- * @param <R> type of return value.
+ * Support for dynamic access to filesystem operations which are not available
+ * in older hadoop releases.
+ * <p>
+ * Classes in this package tagged as {@code @InterfaceAudience#Public} export
+ * methods to be loaded by reflection by other applications/libraries.
+ * Tests against these SHOULD use reflection themselves so as to guarantee
+ * stability of reflection-based access.
+ * <p>
+ * Classes tagged as private/limited private are for support and testing.
  */
-@FunctionalInterface
-public interface FunctionRaisingIOE<T, R> {
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
+package org.apache.hadoop.io.wrappedio;
 
-  /**
-   * Apply the function.
-   * @param t argument 1
-   * @return result
-   * @throws IOException Any IO failure
-   */
-  R apply(T t) throws IOException;
-
-  /**
-   * Apply unchecked.
-   * @param t argument
-   * @return the evaluated function
-   * @throws UncheckedIOException IOE raised.
-   */
-  default R unchecked(T t) {
-    try {
-      return apply(t);
-    } catch (IOException e) {
-      throw new UncheckedIOException(e);
-    }
-  }
-}
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
