@@ -42,9 +42,8 @@ import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.toChar;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_HEADER;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
-import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_PERFORMANCE_FLAGS;
 import static org.apache.hadoop.fs.s3a.Constants.XA_HEADER_PREFIX;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.setPerformanceFlags;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_BULK_DELETE_REQUEST;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_DELETE_REQUEST;
 import static org.apache.hadoop.fs.s3a.performance.OperationCost.CREATE_FILE_NO_OVERWRITE;
@@ -105,11 +104,9 @@ public class ITestCreateFileCost extends AbstractS3ACostTest {
 
   @Override
   public Configuration createConfiguration() {
-    final Configuration conf = super.createConfiguration();
-    removeBaseAndBucketOverrides(conf,
-        FS_S3A_CREATE_PERFORMANCE,
-        FS_S3A_PERFORMANCE_FLAGS);
-    conf.setBoolean(FS_S3A_CREATE_PERFORMANCE, createPerformance);
+    final Configuration conf = setPerformanceFlags(
+        super.createConfiguration(),
+        createPerformance ? "create" : "");
     S3ATestUtils.disableFilesystemCaching(conf);
     return conf;
   }
