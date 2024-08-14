@@ -22,14 +22,22 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.junit.internal.AssumptionViolatedException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
+
+import static org.apache.hadoop.fs.aliyun.oss.TestAliyunOSSFileSystemContract.TEST_FS_OSS_NAME;
+import static org.apache.hadoop.util.Preconditions.checkNotNull;
 
 /**
  * Utility class for Aliyun OSS Tests.
  */
 public final class AliyunOSSTestUtils {
+
+  private static final Logger LOG = LoggerFactory.getLogger(
+      AliyunOSSTestUtils.class);
 
   private AliyunOSSTestUtils() {
   }
@@ -58,7 +66,7 @@ public final class AliyunOSSTestUtils {
 
   private static URI getURI(Configuration conf) {
     String fsname = conf.getTrimmed(
-        TestAliyunOSSFileSystemContract.TEST_FS_OSS_NAME, "");
+        TEST_FS_OSS_NAME, "");
 
     boolean liveTest = !StringUtils.isEmpty(fsname);
     URI testURI = null;
@@ -69,7 +77,7 @@ public final class AliyunOSSTestUtils {
 
     if (!liveTest) {
       throw new AssumptionViolatedException("No test filesystem in "
-          + TestAliyunOSSFileSystemContract.TEST_FS_OSS_NAME);
+          + TEST_FS_OSS_NAME);
     }
     return testURI;
   }
@@ -92,5 +100,30 @@ public final class AliyunOSSTestUtils {
   public static void disableFilesystemCaching(Configuration conf) {
     conf.setBoolean(TestAliyunOSSFileSystemContract.FS_OSS_IMPL_DISABLE_CACHE,
         true);
+  }
+
+  /**
+   * Get the name of the test bucket.
+   * @param conf configuration to scan.
+   * @return the bucket name from the config.
+   * @throws NullPointerException: no test bucket
+   */
+  public static String getTestBucketName(final Configuration conf) {
+    String bucket = checkNotNull(conf.get(TEST_FS_OSS_NAME),
+        "No test bucket");
+    return URI.create(bucket).getHost();
+  }
+
+  /**
+   * Remove any values from the test bucket and the base values too.
+   * @param conf config
+   * @param options list of fs.oss options to remove
+   */
+  public static void removeBaseAndBucketOverrides(
+      final Configuration conf,
+      final String... options) {
+    for (String option : options) {
+      conf.unset(option);
+    }
   }
 }

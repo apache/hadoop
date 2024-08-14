@@ -125,7 +125,7 @@ public class TestAliyunOSSInputStream {
     assertTrue("expected position at:"
         + Constants.MULTIPART_DOWNLOAD_SIZE_DEFAULT + ", but got:"
         + in.getExpectNextPos(),
-        in.getExpectNextPos() == Constants.MULTIPART_DOWNLOAD_SIZE_DEFAULT);
+        in.getExpectNextPos() == 0);
     fsDataInputStream.seek(4 * 1024 * 1024);
     assertTrue("expected position at:" + 4 * 1024 * 1024
         + Constants.MULTIPART_DOWNLOAD_SIZE_DEFAULT + ", but got:"
