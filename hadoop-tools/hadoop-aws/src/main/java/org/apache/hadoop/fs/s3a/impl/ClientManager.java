@@ -40,6 +40,11 @@ public interface ClientManager extends Closeable {
   S3TransferManager getOrCreateTransferManager()
       throws IOException;
 
+  /**
+   * Get the S3Client, raising a failure to create as an IOException.
+   * @return the S3 client
+   * @throws IOException failure to create the client.
+   */
   S3Client getOrCreateS3Client() throws IOException;
 
   /**
@@ -50,9 +55,9 @@ public interface ClientManager extends Closeable {
   S3Client getOrCreateS3ClientUnchecked() throws UncheckedIOException;
 
   /**
-   * Get the Async S3Client, raising a failure to create as an UncheckedIOException.
+   * Get the Async S3Client,raising a failure to create as an IOException.
    * @return the Async S3 client
-   * @throws UncheckedIOException failure to create the client.
+   * @throws IOException failure to create the client.
    */
   S3AsyncClient getOrCreateAsyncClient() throws IOException;
 
