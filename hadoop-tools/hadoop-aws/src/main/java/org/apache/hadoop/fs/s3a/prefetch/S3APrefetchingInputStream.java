@@ -29,6 +29,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CanSetReadahead;
+import org.apache.hadoop.fs.CanUnbuffer;
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.LocalDirAllocator;
@@ -49,7 +50,7 @@ import org.apache.hadoop.fs.statistics.IOStatisticsSource;
  */
 public class S3APrefetchingInputStream
     extends FSInputStream
-    implements CanSetReadahead, StreamCapabilities, IOStatisticsSource {
+    implements CanSetReadahead, StreamCapabilities, IOStatisticsSource, CanUnbuffer {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       S3APrefetchingInputStream.class);
@@ -114,7 +115,7 @@ public class S3APrefetchingInputStream
           client,
           streamStatistics);
     } else {
-      LOG.debug("Creating in caching input stream for {}", context.getPath());
+      LOG.debug("Creating caching input stream for {}", context.getPath());
       this.inputStream = new S3ACachingInputStream(
           context,
           s3Attributes,
@@ -155,6 +156,19 @@ public class S3APrefetchingInputStream
   }
 
   /**
+   * Ensure the stream is active by initializing the inner input stream if
+   * neeeded.
+   * @throws IOException failure
+   */
+  protected synchronized void ensureStreamActive() throws IOException {
+    throwIfClosed();
+
+    if (inputStream.underlyingResourcesClosed()) {
+      inputStream.initializeUnderlyingResources();
+    }
+  }
+
+  /**
    * Reads and returns one byte from this stream.
    *
    * @return the next byte from this stream.
@@ -162,7 +176,7 @@ public class S3APrefetchingInputStream
    */
   @Override
   public synchronized int read() throws IOException {
-    throwIfClosed();
+    ensureStreamActive();
     return inputStream.read();
   }
 
@@ -180,8 +194,15 @@ public class S3APrefetchingInputStream
   @Override
   public synchronized int read(byte[] buffer, int offset, int len)
       throws IOException {
-    throwIfClosed();
+    ensureStreamActive();
     return inputStream.read(buffer, offset, len);
+  }
+
+  @Override
+  public synchronized void unbuffer() {
+    if (inputStream != null) {
+      inputStream.unbuffer();
+    }
   }
 
   /**
@@ -285,5 +306,14 @@ public class S3APrefetchingInputStream
   @Override
   public boolean markSupported() {
     return false;
+  }
+
+  @Override
+  public void readFully(final long position,
+      final byte[] buffer,
+      final int offset,
+      final int length) throws IOException {
+    ensureStreamActive();
+    inputStream.readFully(position, buffer, offset, length);
   }
 }

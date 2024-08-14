@@ -24,12 +24,19 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import org.assertj.core.api.Assertions;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.LocalDirAllocator;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.impl.prefetch.BlockData;
 import org.apache.hadoop.fs.impl.prefetch.BlockManagerParameters;
+import org.apache.hadoop.fs.impl.prefetch.BlockManager;
 import org.apache.hadoop.fs.impl.prefetch.BufferData;
 import org.apache.hadoop.fs.impl.prefetch.ExecutorServiceFuturePool;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
@@ -49,21 +56,41 @@ import static org.junit.Assert.assertEquals;
  */
 public class TestS3ACachingBlockManager extends AbstractHadoopTestBase {
 
+  private static final Logger LOG = LoggerFactory.getLogger(TestS3ACachingBlockManager.class);
+
   static final int FILE_SIZE = 15;
 
   static final int BLOCK_SIZE = 2;
 
   static final int POOL_SIZE = 3;
 
-  private final ExecutorService threadPool = Executors.newFixedThreadPool(4);
+  private ExecutorService threadPool;
 
-  private final ExecutorServiceFuturePool futurePool =
-      new ExecutorServiceFuturePool(threadPool);
+  private ExecutorServiceFuturePool futurePool;
+
+  /**
+   * only used for logging.
+   */
+  private Path testPath;
 
   private final S3AInputStreamStatistics streamStatistics =
       new EmptyS3AStatisticsContext().newInputStreamStatistics();
 
   private final BlockData blockData = new BlockData(FILE_SIZE, BLOCK_SIZE);
+
+  @Before
+  public void setup() {
+    threadPool = Executors.newFixedThreadPool(4);
+    futurePool = new ExecutorServiceFuturePool(threadPool);
+    testPath = new Path("/");
+  }
+
+  @After
+  public void teardown() {
+    if (threadPool != null) {
+      threadPool.shutdown();
+    }
+  }
 
   private static final Configuration CONF =
       S3ATestUtils.prepareTestConfiguration(new Configuration());
@@ -72,13 +99,14 @@ public class TestS3ACachingBlockManager extends AbstractHadoopTestBase {
   public void testFuturePoolNull() throws Exception {
     MockS3ARemoteObject s3File = new MockS3ARemoteObject(FILE_SIZE, false);
     Configuration conf = new Configuration();
+    BlockManagerParameters blockManagerParams =
+        new BlockManagerParameters()
+            .withBlockData(blockData)
+            .withBufferPoolSize(POOL_SIZE)
+            .withConf(conf)
+            .withPath(testPath)
+            .withPrefetchingStatistics(streamStatistics);
     try (S3ARemoteObjectReader reader = new S3ARemoteObjectReader(s3File)) {
-      BlockManagerParameters blockManagerParams =
-          new BlockManagerParameters()
-              .withBlockData(blockData)
-              .withBufferPoolSize(POOL_SIZE)
-              .withPrefetchingStatistics(streamStatistics)
-              .withConf(conf);
 
       intercept(NullPointerException.class,
           () -> new S3ACachingBlockManager(blockManagerParams, reader));
@@ -90,13 +118,15 @@ public class TestS3ACachingBlockManager extends AbstractHadoopTestBase {
     Configuration conf = new Configuration();
     BlockManagerParameters blockManagerParams =
         new BlockManagerParameters()
-            .withFuturePool(futurePool)
             .withBlockData(blockData)
             .withBufferPoolSize(POOL_SIZE)
-            .withPrefetchingStatistics(streamStatistics)
             .withConf(conf)
+            .withFuturePool(futurePool)
             .withMaxBlocksCount(
-                conf.getInt(PREFETCH_MAX_BLOCKS_COUNT, DEFAULT_PREFETCH_MAX_BLOCKS_COUNT));
+                conf.getInt(PREFETCH_MAX_BLOCKS_COUNT, DEFAULT_PREFETCH_MAX_BLOCKS_COUNT))
+            .withPath(testPath)
+            .withPrefetchingStatistics(streamStatistics);
+
 
     intercept(IllegalArgumentException.class, "'reader' must not be null",
         () -> new S3ACachingBlockManager(blockManagerParams, null));
@@ -174,13 +204,15 @@ public class TestS3ACachingBlockManager extends AbstractHadoopTestBase {
     Configuration conf = new Configuration();
     BlockManagerParameters blockManagerParams =
         new BlockManagerParameters()
-            .withFuturePool(futurePool)
             .withBlockData(blockData)
             .withBufferPoolSize(POOL_SIZE)
-            .withPrefetchingStatistics(streamStatistics)
             .withConf(conf)
+            .withFuturePool(futurePool)
             .withMaxBlocksCount(
-                conf.getInt(PREFETCH_MAX_BLOCKS_COUNT, DEFAULT_PREFETCH_MAX_BLOCKS_COUNT));
+                conf.getInt(PREFETCH_MAX_BLOCKS_COUNT, DEFAULT_PREFETCH_MAX_BLOCKS_COUNT))
+            .withPath(testPath)
+            .withPrefetchingStatistics(streamStatistics);
+
 
     // Should not throw.
     S3ACachingBlockManager blockManager =
@@ -241,6 +273,7 @@ public class TestS3ACachingBlockManager extends AbstractHadoopTestBase {
     protected void cachePut(int blockNumber,
         ByteBuffer buffer) throws IOException {
       if (forceNextCachePutToFail) {
+        LOG.debug("Forcing put {} to fail", blockNumber);
         forceNextCachePutToFail = false;
         throw new RuntimeException("bar");
       } else {
@@ -336,24 +369,28 @@ public class TestS3ACachingBlockManager extends AbstractHadoopTestBase {
       blockManager.requestPrefetch(b);
     }
 
-    assertEquals(0, blockManager.numCached());
+    assertNumCached(blockManager, 0);
 
-    blockManager.cancelPrefetches();
+    // random IO prefetches will still complete; close/unbuffer will not
+    // add the result to the cache.
+    blockManager.cancelPrefetches(BlockManager.CancelReason.RandomIO);
     waitForCaching(blockManager, expectedNumSuccesses);
-    assertEquals(expectedNumErrors, this.totalErrors(blockManager));
-    assertEquals(expectedNumSuccesses, blockManager.numCached());
+    assertErrorCount(blockManager, expectedNumErrors);
+    assertNumCached(blockManager, expectedNumSuccesses);
+
   }
 
   private BlockManagerParameters getBlockManagerParameters() {
     return new BlockManagerParameters()
-        .withFuturePool(futurePool)
         .withBlockData(blockData)
         .withBufferPoolSize(POOL_SIZE)
-        .withPrefetchingStatistics(streamStatistics)
-        .withLocalDirAllocator(new LocalDirAllocator(HADOOP_TMP_DIR))
         .withConf(CONF)
+        .withFuturePool(futurePool)
+        .withLocalDirAllocator(new LocalDirAllocator(HADOOP_TMP_DIR))
         .withMaxBlocksCount(
-            CONF.getInt(PREFETCH_MAX_BLOCKS_COUNT, DEFAULT_PREFETCH_MAX_BLOCKS_COUNT));
+            CONF.getInt(PREFETCH_MAX_BLOCKS_COUNT, DEFAULT_PREFETCH_MAX_BLOCKS_COUNT))
+        .withPath(testPath)
+        .withPrefetchingStatistics(streamStatistics);
   }
 
   // @Ignore
@@ -365,15 +402,17 @@ public class TestS3ACachingBlockManager extends AbstractHadoopTestBase {
     Configuration conf = new Configuration();
     BlockManagerParameters blockManagerParamsBuilder =
         new BlockManagerParameters()
-            .withFuturePool(futurePool)
             .withBlockData(blockData)
             .withBufferPoolSize(POOL_SIZE)
-            .withPrefetchingStatistics(streamStatistics)
+            .withConf(conf)
+            .withFuturePool(futurePool)
             .withLocalDirAllocator(
                 new LocalDirAllocator(conf.get(BUFFER_DIR) != null ? BUFFER_DIR : HADOOP_TMP_DIR))
-            .withConf(conf)
             .withMaxBlocksCount(
-                conf.getInt(PREFETCH_MAX_BLOCKS_COUNT, DEFAULT_PREFETCH_MAX_BLOCKS_COUNT));
+                conf.getInt(PREFETCH_MAX_BLOCKS_COUNT, DEFAULT_PREFETCH_MAX_BLOCKS_COUNT))
+            .withPath(testPath)
+            .withPrefetchingStatistics(streamStatistics);
+
     S3ACachingBlockManager blockManager =
         new S3ACachingBlockManager(blockManagerParamsBuilder, reader);
     assertInitialState(blockManager);
@@ -384,12 +423,18 @@ public class TestS3ACachingBlockManager extends AbstractHadoopTestBase {
       blockManager.requestCaching(data);
     }
 
-    waitForCaching(blockManager, Math.min(blockData.getNumBlocks(),
-        conf.getInt(PREFETCH_MAX_BLOCKS_COUNT, DEFAULT_PREFETCH_MAX_BLOCKS_COUNT)));
-    assertEquals(Math.min(blockData.getNumBlocks(),
-            conf.getInt(PREFETCH_MAX_BLOCKS_COUNT, DEFAULT_PREFETCH_MAX_BLOCKS_COUNT)),
-        blockManager.numCached());
-    assertEquals(0, this.totalErrors(blockManager));
+    final int expected = Math.min(blockData.getNumBlocks(),
+        conf.getInt(PREFETCH_MAX_BLOCKS_COUNT, DEFAULT_PREFETCH_MAX_BLOCKS_COUNT));
+    waitForCaching(blockManager, expected);
+    assertNumCached(blockManager, expected);
+    assertErrorCount(blockManager, 0);
+  }
+
+  private static void assertNumCached(final S3ACachingBlockManager blockManager,
+      final int expected) {
+    Assertions.assertThat(blockManager.numCached())
+        .describedAs("blockManager.numCached() in %s", blockManager)
+        .isEqualTo(expected);
   }
 
   // @Ignore
@@ -439,11 +484,17 @@ public class TestS3ACachingBlockManager extends AbstractHadoopTestBase {
           blockManager.numCached());
 
       if (forceCachingFailure) {
-        assertEquals(expectedNumErrors, this.totalErrors(blockManager));
+        assertErrorCount(blockManager, expectedNumErrors);
       } else {
-        assertEquals(0, this.totalErrors(blockManager));
+        assertErrorCount(blockManager, 0);
       }
     }
+  }
+
+  private void assertErrorCount(final S3ACachingBlockManager blockManager, final int expected) {
+    Assertions.assertThat(totalErrors(blockManager))
+        .describedAs("Total errors of %s", blockManager)
+        .isEqualTo(expected);
   }
 
   private void waitForCaching(
@@ -459,9 +510,10 @@ public class TestS3ACachingBlockManager extends AbstractHadoopTestBase {
       numTrys++;
       if (numTrys > 600) {
         String message = String.format(
-            "waitForCaching: expected: %d, actual: %d, read errors: %d, caching errors: %d",
+            "waitForCaching: expected: %d, actual: %d, read errors: %d, caching errors: %d in %s",
             expectedCount, count, blockManager.numReadErrors(),
-            blockManager.numCachingErrors());
+            blockManager.numCachingErrors(),
+            blockManager);
         throw new IllegalStateException(message);
       }
     }
@@ -473,6 +525,6 @@ public class TestS3ACachingBlockManager extends AbstractHadoopTestBase {
   }
 
   private void assertInitialState(S3ACachingBlockManager blockManager) {
-    assertEquals(0, blockManager.numCached());
+    assertNumCached(blockManager, 0);
   }
 }

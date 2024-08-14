@@ -89,6 +89,13 @@ public final class BlockData {
                 ? 1
                 : 0);
     this.state = new State[this.numBlocks];
+    markBlocksAsNotReady();
+  }
+
+  /**
+   * Mark all the blocks as not ready.
+   */
+  public void markBlocksAsNotReady() {
     for (int b = 0; b < this.numBlocks; b++) {
       setState(b, State.NOT_READY);
     }

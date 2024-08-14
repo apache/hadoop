@@ -51,7 +51,7 @@ public final class BufferData {
     /**
      * Buffer has been acquired but has no data.
      */
-    BLANK,
+    EMPTY,
 
     /**
      * This block is being prefetched.
@@ -114,7 +114,7 @@ public final class BufferData {
 
     this.blockNumber = blockNumber;
     this.buffer = buffer;
-    this.state = State.BLANK;
+    this.state = State.EMPTY;
   }
 
   /**
@@ -181,7 +181,7 @@ public final class BufferData {
   public synchronized void setPrefetch(Future<Void> actionFuture) {
     Validate.checkNotNull(actionFuture, "actionFuture");
 
-    this.updateState(State.PREFETCHING, State.BLANK);
+    this.updateState(State.PREFETCHING, State.EMPTY);
     this.action = actionFuture;
   }
 
@@ -289,7 +289,7 @@ public final class BufferData {
   public String toString() {
 
     return String.format(
-        "[%03d] id: %03d, %s: buf: %s, checksum: %d, future: %s",
+        "[%03d] id: %03d, State: %s: buffer: %s, checksum: %d, future: %s",
         this.blockNumber,
         System.identityHashCode(this),
         this.state,
@@ -300,7 +300,7 @@ public final class BufferData {
 
   private String getFutureStr(Future<Void> f) {
     if (f == null) {
-      return "--";
+      return "(none)";
     } else {
       return this.action.isDone() ? "done" : "not done";
     }

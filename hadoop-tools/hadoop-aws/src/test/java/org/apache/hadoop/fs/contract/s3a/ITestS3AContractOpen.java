@@ -19,8 +19,11 @@
 package org.apache.hadoop.fs.contract.s3a;
 
 import java.io.FileNotFoundException;
+import java.util.Collection;
 
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -32,16 +35,49 @@ import org.apache.hadoop.fs.contract.AbstractFSContract;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.PREFETCH_OPTIONS;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.setPrefetchOption;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.prepareTestConfiguration;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * S3A contract tests opening files.
  */
+@RunWith(Parameterized.class)
 public class ITestS3AContractOpen extends AbstractContractOpenTest {
+
+  public ITestS3AContractOpen(final boolean prefetch) {
+    this.prefetch = prefetch;
+  }
+
+  /**
+   * Parameterization.
+   */
+  @Parameterized.Parameters(name = "prefetch={0}")
+  public static Collection<Object[]> params() {
+    return PREFETCH_OPTIONS;
+  }
+
+  /**
+   * Prefetch flag.
+   */
+  private final boolean prefetch;
 
   @Override
   protected AbstractFSContract createContract(Configuration conf) {
     return new S3AContract(conf);
+  }
+
+  /**
+   * Create a configuration.
+   * @return a configuration
+   */
+  @Override
+  protected Configuration createConfiguration() {
+    final Configuration conf = prepareTestConfiguration(super.createConfiguration());
+    disableFilesystemCaching(conf);
+    return setPrefetchOption(conf, prefetch);
   }
 
   /**

@@ -537,6 +537,12 @@ The S3A Connector supports custom options for readahead and seek policy.
 | `fs.s3a.readahead.range`             | `long`   | readahead range in bytes                                                  |
 | `fs.s3a.experimental.input.fadvise`  | `String` | seek policy. Superceded by `fs.option.openfile.read.policy`               |
 | `fs.s3a.input.async.drain.threshold` | `long`   | threshold to switch to asynchronous draining of the stream. (Since 3.3.5) |
+| `fs.s3a.prefetch.block.size`         | `int`    | Block size in bytes for prefetching.                                      |
+| `fs.s3a.prefetch.block.count`         | `int`    | Number of blocks for prefetching.                                         |
+
+Irrespective of the value of `fs.s3a.prefetch.block.count`, the maximum number of active
+prefetches in a single filesystem instance is limited to the value of the same option
+in the configuration used to create the filesystem instance; callers can only choose smaller values.
 
 If the option set contains a SQL statement in the `fs.s3a.select.sql` statement,
 then the file is opened as an S3 Select query.

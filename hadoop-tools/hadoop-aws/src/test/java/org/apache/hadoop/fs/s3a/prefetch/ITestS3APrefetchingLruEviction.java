@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a;
+package org.apache.hadoop.fs.s3a.prefetch;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -38,6 +38,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.performance.AbstractS3ACostTest;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.test.LambdaTestUtils;
@@ -51,6 +52,7 @@ import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.verifyStatis
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_EVICT_BLOCKS_FROM_FILE_CACHE;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_FILE_CACHE_EVICTION;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_BLOCKS_IN_FILE_CACHE;
+import static org.apache.hadoop.test.Sizes.S_1K;
 
 /**
  * Test the prefetching input stream with LRU cache eviction on S3ACachingInputStream.
@@ -76,7 +78,6 @@ public class ITestS3APrefetchingLruEviction extends AbstractS3ACostTest {
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestS3APrefetchingLruEviction.class);
 
-  private static final int S_1K = 1024;
   private static final int S_500 = 512;
   private static final int SMALL_FILE_SIZE = S_1K * 56;
 

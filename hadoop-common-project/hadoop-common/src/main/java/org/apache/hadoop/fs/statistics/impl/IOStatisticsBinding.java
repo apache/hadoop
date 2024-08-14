@@ -31,6 +31,9 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.classification.VisibleForTesting;
 
 import org.apache.hadoop.fs.StorageStatistics;
@@ -51,6 +54,12 @@ import static org.apache.hadoop.fs.statistics.impl.StubDurationTracker.STUB_DURA
  * Support for implementing IOStatistics interfaces.
  */
 public final class IOStatisticsBinding {
+  /**
+   * Log changes at debug.
+   * Noisy, but occasionally useful.
+   */
+  private static final Logger LOG =
+      LoggerFactory.getLogger(IOStatisticsBinding.class);
 
   /** Pattern used for each entry. */
   public static final String ENTRY_PATTERN = "(%s=%s)";
@@ -548,6 +557,7 @@ public final class IOStatisticsBinding {
     } catch (IOException | RuntimeException e) {
       // input function failed: note it
       tracker.failed();
+      LOG.debug("Operation failure with duration {}", tracker);
       // and rethrow
       throw e;
     } finally {
@@ -555,6 +565,7 @@ public final class IOStatisticsBinding {
       // this is called after the catch() call would have
       // set the failed flag.
       tracker.close();
+      LOG.debug("Operation success with duration {}", tracker);
     }
   }
 

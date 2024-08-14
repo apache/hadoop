@@ -29,6 +29,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.impl.prefetch.Validate;
 import org.apache.hadoop.fs.s3a.Invoker;
+import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.S3AInputStream;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.S3AUtils;
@@ -36,7 +37,8 @@ import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
 import org.apache.hadoop.fs.s3a.impl.ChangeTracker;
 import org.apache.hadoop.fs.s3a.impl.SDKStreamDrainer;
 import org.apache.hadoop.fs.s3a.statistics.S3AInputStreamStatistics;
-import org.apache.hadoop.fs.statistics.DurationTracker;
+
+import static org.apache.hadoop.fs.s3a.Invoker.onceTrackingDuration;
 
 
 /**
@@ -82,6 +84,8 @@ public class S3ARemoteObject {
    */
   private static final int DRAIN_BUFFER_SIZE = 16384;
 
+  public static final String OPERATION_GET = "GET";
+
   /**
    * Initializes a new instance of the {@code S3ARemoteObject} class.
    *
@@ -115,7 +119,7 @@ public class S3ARemoteObject {
     this.client = client;
     this.streamStatistics = streamStatistics;
     this.changeTracker = changeTracker;
-    this.uri = this.getPath();
+    this.uri = context.getPath().toUri().toString();
   }
 
   /**
@@ -142,18 +146,7 @@ public class S3ARemoteObject {
    * @return the path of this file.
    */
   public String getPath() {
-    return getPath(s3Attributes);
-  }
-
-  /**
-   * Gets the path corresponding to the given s3Attributes.
-   *
-   * @param s3Attributes attributes of an S3 object.
-   * @return the path corresponding to the given s3Attributes.
-   */
-  public static String getPath(S3ObjectAttributes s3Attributes) {
-    return String.format("s3a://%s/%s", s3Attributes.getBucket(),
-        s3Attributes.getKey());
+    return uri;
   }
 
   /**
@@ -178,6 +171,7 @@ public class S3ARemoteObject {
    * @throws IllegalArgumentException if offset is greater than or equal to file size.
    * @throws IllegalArgumentException if size is greater than the remaining bytes.
    */
+  @Retries.OnceTranslated
   public ResponseInputStream<GetObjectResponse> openForRead(long offset, int size)
       throws IOException {
     Validate.checkNotNegative(offset, "offset");
@@ -192,23 +186,26 @@ public class S3ARemoteObject {
         .build();
 
     String operation = String.format(
-        "%s %s at %d", S3AInputStream.OPERATION_OPEN, uri, offset);
-    DurationTracker tracker = streamStatistics.initiateGetRequest();
-    ResponseInputStream<GetObjectResponse> object = null;
+        "%s %s at %d size %d", S3AInputStream.OPERATION_OPEN, uri, offset, size);
+    ResponseInputStream<GetObjectResponse> object;
 
-    try {
-      object = Invoker.once(operation, uri, () -> client.getObject(request));
-    } catch (IOException e) {
-      tracker.failed();
-      throw e;
-    } finally {
-      tracker.close();
-    }
+    // initiate the GET. This completes once the request returns the response headers;
+    // the data is read later.
+    object = onceTrackingDuration(operation, uri, streamStatistics.initiateGetRequest(),
+        () -> client.getObject(request));
 
     changeTracker.processResponse(object.response(), operation, offset);
     return object;
   }
 
+  /**
+   * Close the input stream, draining it first.
+   * If the number of bytes is above a configured threshold,
+   * the stream is drained asynchronously
+   * @param inputStream stream to close
+   * @param numRemainingBytes number of bytes left in the stream.
+   * @throws IllegalArgumentException unknown stream.
+   */
   void close(ResponseInputStream<GetObjectResponse> inputStream, int numRemainingBytes) {
     SDKStreamDrainer drainer = new SDKStreamDrainer(
         uri,
