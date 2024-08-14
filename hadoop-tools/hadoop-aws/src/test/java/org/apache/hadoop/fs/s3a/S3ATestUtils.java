@@ -1128,6 +1128,25 @@ public final class S3ATestUtils {
   }
 
   /**
+   * Modify the config by setting the performance flags and return the modified config.
+   *
+   * @param conf The configuration object.
+   * @param flagStr The performance flag string.
+   * @return The modified configuration object.
+   */
+  public static Configuration setPerformanceFlags(final Configuration conf,
+      final String flagStr) {
+    removeBaseAndBucketOverrides(
+        conf,
+        FS_S3A_CREATE_PERFORMANCE,
+        FS_S3A_PERFORMANCE_FLAGS);
+    if (flagStr != null) {
+      conf.set(FS_S3A_PERFORMANCE_FLAGS, flagStr);
+    }
+    return conf;
+  }
+
+  /**
    * Helper class to do diffs of metrics.
    */
   public static final class MetricDiff {
