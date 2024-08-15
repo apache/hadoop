@@ -17,15 +17,14 @@
 
 package org.apache.hadoop.hdfs.server.diskbalancer.connectors;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
+import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.util.Preconditions;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerCluster;
-import org.apache.hadoop.hdfs.server.diskbalancer.datamodel
-    .DiskBalancerDataNode;
+import org.apache.hadoop.hdfs.server.diskbalancer.datamodel.DiskBalancerDataNode;
 
 import java.io.File;
 import java.net.URL;
@@ -38,7 +37,7 @@ public class JsonNodeConnector implements ClusterConnector {
   private static final Logger LOG =
       LoggerFactory.getLogger(JsonNodeConnector.class);
   private static final ObjectReader READER =
-      new ObjectMapper().readerFor(DiskBalancerCluster.class);
+      JacksonUtil.createBasicReaderFor(DiskBalancerCluster.class);
   private final URL clusterURI;
 
   /**

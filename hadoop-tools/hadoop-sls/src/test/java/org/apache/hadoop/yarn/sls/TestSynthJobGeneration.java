@@ -18,6 +18,7 @@
 package org.apache.hadoop.yarn.sls;
 
 import org.apache.commons.math3.random.JDKRandomGenerator;
+import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.sls.synthetic.SynthJob;
@@ -60,7 +61,7 @@ public class TestSynthJobGeneration {
 
     JsonFactoryBuilder jsonFactoryBuilder = new JsonFactoryBuilder();
     jsonFactoryBuilder.configure(JsonFactory.Feature.INTERN_FIELD_NAMES, true);
-    ObjectMapper mapper = new ObjectMapper(jsonFactoryBuilder.build());
+    ObjectMapper mapper = JacksonUtil.createObjectMapper(jsonFactoryBuilder.build());
     mapper.configure(FAIL_ON_UNKNOWN_PROPERTIES, false);
     SynthTraceJobProducer.Workload wl =
         mapper.readValue(workloadJson, SynthTraceJobProducer.Workload.class);
@@ -181,7 +182,7 @@ public class TestSynthJobGeneration {
 
     JsonFactoryBuilder jsonFactoryBuilder = new JsonFactoryBuilder();
     jsonFactoryBuilder.configure(JsonFactory.Feature.INTERN_FIELD_NAMES, true);
-    ObjectMapper mapper = new ObjectMapper(jsonFactoryBuilder.build());
+    ObjectMapper mapper = JacksonUtil.createObjectMapper(jsonFactoryBuilder.build());
     mapper.configure(FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     JDKRandomGenerator rand = new JDKRandomGenerator();

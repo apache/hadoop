@@ -19,11 +19,11 @@ package org.apache.hadoop.yarn.server.timeline;
 
 import java.io.IOException;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.util.JacksonUtil;
 
 /**
  * A utility class providing methods for serializing and deserializing
@@ -38,14 +38,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 public class GenericObjectMapper {
   private static final byte[] EMPTY_BYTES = new byte[0];
 
-  public static final ObjectReader OBJECT_READER;
-  public static final ObjectWriter OBJECT_WRITER;
-
-  static {
-    ObjectMapper mapper = new ObjectMapper();
-    OBJECT_READER = mapper.reader(Object.class);
-    OBJECT_WRITER = mapper.writer();
-  }
+  public static final ObjectReader OBJECT_READER = JacksonUtil.createBasicReaderFor(Object.class);
+  public static final ObjectWriter OBJECT_WRITER = JacksonUtil.getSharedWriter();
 
   /**
    * Serializes an Object into a byte array. Along with {@link #read(byte[])},

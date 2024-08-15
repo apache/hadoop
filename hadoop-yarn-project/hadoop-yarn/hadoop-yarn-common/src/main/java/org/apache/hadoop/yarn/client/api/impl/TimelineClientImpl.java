@@ -30,6 +30,7 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
 import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
+import org.apache.hadoop.util.JacksonUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -62,7 +63,7 @@ public class TimelineClientImpl extends TimelineClient {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TimelineClientImpl.class);
-  private static final ObjectMapper MAPPER = new ObjectMapper();
+  private static final ObjectMapper MAPPER = JacksonUtil.createBasicObjectMapper();
   private static final String RESOURCE_URI_STR_V1 = "/ws/v1/timeline/";
 
   private static Options opts;

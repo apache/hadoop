@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 import com.fasterxml.jackson.core.JsonEncoding;
-import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -36,6 +35,7 @@ import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionCodecFactory;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.mapreduce.ID;
+import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.hadoop.tools.rumen.datatypes.*;
@@ -55,8 +55,7 @@ public class Anonymizer extends Configured implements Tool {
   private StatePool statePool;
   
   private ObjectMapper outMapper = null;
-  private JsonFactory outFactory = null;
-  
+
   private void initialize(String[] args) throws Exception {
     try {
       for (int i = 0; i < args.length; ++i) {
@@ -85,7 +84,7 @@ public class Anonymizer extends Configured implements Tool {
     // initialize the state manager after the anonymizers are registered
     statePool.initialize(getConf());
      
-    outMapper = new ObjectMapper();
+    outMapper = JacksonUtil.createBasicObjectMapper();
     // define a module
     SimpleModule module = new SimpleModule(
         "Anonymization Serializer", new Version(0, 1, 1, "FINAL", "", ""));
@@ -104,8 +103,6 @@ public class Anonymizer extends Configured implements Tool {
     
     // register the module with the object-mapper
     outMapper.registerModule(module);
-    
-    outFactory = outMapper.getFactory();
   }
   
   // anonymize the job trace file
@@ -191,7 +188,7 @@ public class Anonymizer extends Configured implements Tool {
     }
 
     JsonGenerator outGen =
-        outFactory.createGenerator(output, JsonEncoding.UTF8);
+        outMapper.createGenerator(output, JsonEncoding.UTF8);
     outGen.useDefaultPrettyPrinter();
     
     return outGen;

@@ -51,6 +51,7 @@ import org.apache.hadoop.hdfs.protocol.ClientDatanodeProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.api.ApplicationConstants.Environment;
@@ -484,7 +485,7 @@ public final class DynoInfraUtils {
       final int blockThreshold, final Logger log) throws IOException {
     final Set<String> dataNodesToReport = new HashSet<>();
 
-    JsonFactory fac = new JsonFactory();
+    JsonFactory fac = JacksonUtil.createBasicJsonFactory();
     JsonParser parser = fac.createParser(IOUtils
         .toInputStream(liveNodeJsonString, StandardCharsets.UTF_8.name()));
 
@@ -554,7 +555,7 @@ public final class DynoInfraUtils {
           "Unable to retrieve JMX: " + conn.getResponseMessage());
     }
     InputStream in = conn.getInputStream();
-    JsonFactory fac = new JsonFactory();
+    JsonFactory fac = JacksonUtil.createBasicJsonFactory();
     JsonParser parser = fac.createParser(in);
     if (parser.nextToken() != JsonToken.START_OBJECT
         || parser.nextToken() != JsonToken.FIELD_NAME
