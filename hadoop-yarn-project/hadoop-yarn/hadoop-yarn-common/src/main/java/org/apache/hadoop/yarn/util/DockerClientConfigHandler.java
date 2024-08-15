@@ -27,9 +27,9 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.yarn.security.DockerCredentialTokenIdentifier;
 
-import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -96,9 +96,8 @@ public final class DockerClientConfigHandler {
     }
 
     // Parse the JSON and create the Tokens/Credentials.
-    ObjectMapper mapper = new ObjectMapper();
-    JsonFactory factory = mapper.getFactory();
-    JsonParser parser = factory.createParser(contents);
+    ObjectMapper mapper = JacksonUtil.createBasicObjectMapper();
+    JsonParser parser = mapper.createParser(contents);
     JsonNode rootNode = mapper.readTree(parser);
 
     Credentials credentials = new Credentials();
@@ -161,7 +160,7 @@ public final class DockerClientConfigHandler {
       Credentials credentials) throws IOException {
     boolean foundDockerCred = false;
     if (credentials.numberOfTokens() > 0) {
-      ObjectMapper mapper = new ObjectMapper();
+      ObjectMapper mapper = JacksonUtil.createBasicObjectMapper();
       ObjectNode rootNode = mapper.createObjectNode();
       ObjectNode registryUrlNode = mapper.createObjectNode();
       for (Token<? extends TokenIdentifier> tk : credentials.getAllTokens()) {

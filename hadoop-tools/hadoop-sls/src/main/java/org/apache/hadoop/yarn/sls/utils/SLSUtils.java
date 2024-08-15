@@ -34,7 +34,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -45,6 +44,7 @@ import org.apache.hadoop.tools.rumen.JobTraceReader;
 import org.apache.hadoop.tools.rumen.LoggedJob;
 import org.apache.hadoop.tools.rumen.LoggedTask;
 import org.apache.hadoop.tools.rumen.LoggedTaskAttempt;
+import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.yarn.api.records.NodeLabel;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
@@ -120,12 +120,11 @@ public class SLSUtils {
   public static Set<NodeDetails> parseNodesFromSLSTrace(
       String jobTrace) throws IOException {
     Set<NodeDetails> nodeSet = new HashSet<>();
-    JsonFactory jsonF = new JsonFactory();
-    ObjectMapper mapper = new ObjectMapper();
+    ObjectMapper mapper = JacksonUtil.createBasicObjectMapper();
     Reader input =
         new InputStreamReader(new FileInputStream(jobTrace), StandardCharsets.UTF_8);
     try {
-      Iterator<Map> i = mapper.readValues(jsonF.createParser(input), Map.class);
+      Iterator<Map> i = mapper.readValues(mapper.createParser(input), Map.class);
       while (i.hasNext()) {
         addNodes(nodeSet, i.next());
       }
@@ -167,12 +166,11 @@ public class SLSUtils {
   public static Set<NodeDetails> parseNodesFromNodeFile(
       String nodeFile, Resource nmDefaultResource) throws IOException {
     Set<NodeDetails> nodeSet = new HashSet<>();
-    JsonFactory jsonF = new JsonFactory();
-    ObjectMapper mapper = new ObjectMapper();
+    ObjectMapper mapper = JacksonUtil.createBasicObjectMapper();
     Reader input =
         new InputStreamReader(new FileInputStream(nodeFile), StandardCharsets.UTF_8);
     try {
-      Iterator<Map> i = mapper.readValues(jsonF.createParser(input), Map.class);
+      Iterator<Map> i = mapper.readValues(mapper.createParser(input), Map.class);
       while (i.hasNext()) {
         Map jsonE = i.next();
         String rack = "/" + jsonE.get("rack");

@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.util.JacksonUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -61,9 +62,10 @@ public class JsonSerDeser<T> {
   @SuppressWarnings("deprecation")
   public JsonSerDeser(Class<T> classType) {
     this.classType = classType;
-    this.mapper = new ObjectMapper();
+    this.mapper = JacksonUtil.createBasicObjectMapper();
     mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     mapper.configure(SerializationFeature.WRITE_NULL_MAP_VALUES, false);
+    mapper.configure(SerializationFeature.INDENT_OUTPUT, true);
   }
 
   public JsonSerDeser(Class<T> classType, PropertyNamingStrategy namingStrategy) {
@@ -231,7 +233,6 @@ public class JsonSerDeser<T> {
    * @throws JsonProcessingException parse problems
    */
   public String toJson(T instance) throws JsonProcessingException {
-    mapper.configure(SerializationFeature.INDENT_OUTPUT, true);
     return mapper.writeValueAsString(instance);
   }
 

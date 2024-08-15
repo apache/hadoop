@@ -30,6 +30,7 @@ import org.apache.hadoop.mapreduce.ID;
 import org.apache.hadoop.tools.rumen.datatypes.DataType;
 import org.apache.hadoop.tools.rumen.serializers.DefaultRumenSerializer;
 import org.apache.hadoop.tools.rumen.serializers.ObjectStringSerializer;
+import org.apache.hadoop.util.JacksonUtil;
 
 /**
  * Simple wrapper around {@link JsonGenerator} to write objects in JSON format.
@@ -39,7 +40,7 @@ public class JsonObjectMapperWriter<T> implements Closeable {
   private JsonGenerator writer;
   
   public JsonObjectMapperWriter(OutputStream output, boolean prettyPrint) throws IOException {
-    ObjectMapper mapper = new ObjectMapper();
+    ObjectMapper mapper = JacksonUtil.createBasicObjectMapper();
 
     // define a module
     SimpleModule module = new SimpleModule(
@@ -53,7 +54,7 @@ public class JsonObjectMapperWriter<T> implements Closeable {
     // register the module with the object-mapper
     mapper.registerModule(module);
 
-    writer = mapper.getFactory().createGenerator(output, JsonEncoding.UTF8);
+    writer = mapper.createGenerator(output, JsonEncoding.UTF8);
     if (prettyPrint) {
       writer.useDefaultPrettyPrinter();
     }

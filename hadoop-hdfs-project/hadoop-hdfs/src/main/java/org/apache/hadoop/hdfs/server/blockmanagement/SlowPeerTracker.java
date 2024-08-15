@@ -19,7 +19,6 @@
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
@@ -30,6 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.server.protocol.OutlierMetrics;
 import org.apache.hadoop.hdfs.server.protocol.SlowPeerReports;
+import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.util.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -75,7 +75,8 @@ public class SlowPeerTracker {
   /**
    * ObjectWriter to convert JSON reports to String.
    */
-  private static final ObjectWriter WRITER = new ObjectMapper().writer();
+  private static final ObjectWriter WRITER = JacksonUtil.getSharedWriter();
+
   /**
    * Number of nodes to include in JSON report. We will return nodes with
    * the highest number of votes from peers.

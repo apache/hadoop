@@ -17,12 +17,12 @@
  */
 package org.apache.hadoop.hdfs.web;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.collect.Maps;
 import org.apache.hadoop.fs.ContentSummary;
@@ -654,7 +654,7 @@ public class JsonUtilClient {
     }
 
     final String namesInJson = (String) json.get("XAttrNames");
-    ObjectReader reader = new ObjectMapper().readerFor(List.class);
+    ObjectReader reader = JacksonUtil.createBasicReaderFor(List.class);
     final List<Object> xattrs = reader.readValue(namesInJson);
     final List<String> names =
         Lists.newArrayListWithCapacity(json.keySet().size());

@@ -31,6 +31,7 @@ import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineAbout;
@@ -53,11 +54,10 @@ public class TimelineUtils {
       "TIMELINE_FLOW_RUN_ID_TAG";
   public final static String DEFAULT_FLOW_VERSION = "1";
 
-  private static ObjectMapper mapper;
+  private static final ObjectMapper OBJECT_MAPPER = JacksonUtil.createBasicObjectMapper();
 
   static {
-    mapper = new ObjectMapper();
-    YarnJacksonJaxbJsonProvider.configObjectMapper(mapper);
+    YarnJacksonJaxbJsonProvider.configObjectMapper(OBJECT_MAPPER);
   }
 
   /**
@@ -90,9 +90,9 @@ public class TimelineUtils {
   public static String dumpTimelineRecordtoJSON(Object o, boolean pretty)
       throws JsonGenerationException, JsonMappingException, IOException {
     if (pretty) {
-      return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(o);
+      return OBJECT_MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(o);
     } else {
-      return mapper.writeValueAsString(o);
+      return OBJECT_MAPPER.writeValueAsString(o);
     }
   }
 

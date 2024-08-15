@@ -120,6 +120,7 @@ import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.ExitUtil;
+import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.util.ProtoUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
@@ -129,7 +130,6 @@ import org.apache.hadoop.tracing.SpanContext;
 import org.apache.hadoop.tracing.TraceScope;
 import org.apache.hadoop.tracing.Tracer;
 import org.apache.hadoop.tracing.TraceUtils;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.classification.VisibleForTesting;
 
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -3842,9 +3842,8 @@ public abstract class Server {
    * @return Get the NumOpenConnections/User.
    */
   public String getNumOpenConnectionsPerUser() {
-    ObjectMapper mapper = new ObjectMapper();
     try {
-      return mapper
+      return JacksonUtil.getSharedWriter()
           .writeValueAsString(connectionManager.getUserToConnectionsMap());
     } catch (IOException ignored) {
     }

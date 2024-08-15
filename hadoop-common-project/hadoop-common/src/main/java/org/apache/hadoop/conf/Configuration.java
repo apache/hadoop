@@ -22,7 +22,6 @@ import com.ctc.wstx.api.ReaderConfig;
 import com.ctc.wstx.io.StreamBootstrapper;
 import com.ctc.wstx.io.SystemId;
 import com.ctc.wstx.stax.WstxInputFactory;
-import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 
 import java.io.BufferedInputStream;
@@ -101,6 +100,7 @@ import org.apache.hadoop.security.alias.CredentialProvider.CredentialEntry;
 import org.apache.hadoop.security.alias.CredentialProviderFactory;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
 import org.apache.hadoop.util.ConfigurationHelper;
+import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringInterner;
@@ -3792,8 +3792,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       throw new IllegalArgumentException("Property " +
           propertyName + " not found");
     } else {
-      JsonFactory dumpFactory = new JsonFactory();
-      JsonGenerator dumpGenerator = dumpFactory.createGenerator(out);
+      JsonGenerator dumpGenerator = JacksonUtil.getSharedWriter().createGenerator(out);
       dumpGenerator.writeStartObject();
       dumpGenerator.writeFieldName("property");
       appendJSONProperty(dumpGenerator, config, propertyName,
@@ -3831,8 +3830,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   public static void dumpConfiguration(Configuration config,
       Writer out) throws IOException {
-    JsonFactory dumpFactory = new JsonFactory();
-    JsonGenerator dumpGenerator = dumpFactory.createGenerator(out);
+    JsonGenerator dumpGenerator = JacksonUtil.getSharedWriter().createGenerator(out);
     dumpGenerator.writeStartObject();
     dumpGenerator.writeFieldName("properties");
     dumpGenerator.writeStartArray();

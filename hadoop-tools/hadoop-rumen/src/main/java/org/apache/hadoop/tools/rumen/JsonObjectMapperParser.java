@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.util.JacksonUtil;
 
 /**
  * A simple wrapper for parsing JSON-encoded data using ObjectMapper.
@@ -48,10 +49,10 @@ class JsonObjectMapperParser<T> implements Closeable {
    */
   public JsonObjectMapperParser(Path path, Class<? extends T> clazz,
       Configuration conf) throws IOException {
-    mapper = new ObjectMapper();
+    mapper = JacksonUtil.createBasicObjectMapper();
     this.clazz = clazz;
     InputStream input = new PossiblyDecompressedInputStream(path, conf);
-    jsonParser = mapper.getFactory().createParser(input);
+    jsonParser = mapper.createParser(input);
   }
 
   /**
@@ -62,9 +63,9 @@ class JsonObjectMapperParser<T> implements Closeable {
    */
   public JsonObjectMapperParser(InputStream input, Class<? extends T> clazz)
       throws IOException {
-    mapper = new ObjectMapper();
+    mapper = JacksonUtil.createBasicObjectMapper();
     this.clazz = clazz;
-    jsonParser = mapper.getFactory().createParser(input);
+    jsonParser = mapper.createParser(input);
   }
 
   /**

@@ -42,6 +42,7 @@ import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.service.ServiceOperations;
 import org.apache.hadoop.ipc.CallerContext;
 import org.apache.hadoop.util.ApplicationClassLoader;
+import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -320,7 +321,7 @@ public class EntityGroupFSTimelineStore extends CompositeService
       }
     }
 
-    objMapper = new ObjectMapper();
+    objMapper = JacksonUtil.createBasicObjectMapper();
     objMapper.setAnnotationIntrospector(
         new JaxbAnnotationIntrospector(TypeFactory.defaultInstance()));
     jsonFactory = new MappingJsonFactory(objMapper);
