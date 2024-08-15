@@ -114,6 +114,16 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
   }
 
   /**
+   * Test dir deletion is removed from test case teardown so the
+   * subsequent tests see the output.
+   * @throws IOException failure
+   */
+  @Override
+  protected void deleteTestDirInTeardown() throws IOException {
+    /* no-op */
+  }
+
+  /**
    * Get the name of this test suite, which is used in path generation.
    * Base implementation uses {@link #getBlockOutputBufferName()} for this.
    * @return the name of the suite.
@@ -830,5 +840,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     getFileSystem().delete(path, recursive);
     timer.end("time to delete %s", path);
   }
+
+
 
 }

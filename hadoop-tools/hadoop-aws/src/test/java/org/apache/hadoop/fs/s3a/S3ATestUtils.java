@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.s3a.api.PerformanceFlagEnum;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentialBinding;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
@@ -102,6 +103,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
+import static org.apache.hadoop.fs.impl.FlagSet.createFlagSet;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletion;
 import static org.apache.hadoop.fs.s3a.impl.S3ExpressStorage.STORE_CAPABILITY_S3_EXPRESS_STORAGE;
@@ -601,12 +603,13 @@ public final class S3ATestUtils {
   /**
    * Create a test path, using the value of
    * {@link S3ATestConstants#TEST_UNIQUE_FORK_ID} if it is set.
+   * This path is *not* qualified.
    * @param defVal default value
    * @return a path
    */
   public static Path createTestPath(Path defVal) {
     String testUniqueForkId =
-        System.getProperty(S3ATestConstants.TEST_UNIQUE_FORK_ID);
+        System.getProperty(TEST_UNIQUE_FORK_ID);
     return testUniqueForkId == null ? defVal :
         new Path("/" + testUniqueForkId, "test");
   }
@@ -991,6 +994,9 @@ public final class S3ATestUtils {
         .setMultiObjectDeleteEnabled(multiDelete)
         .setUseListV1(false)
         .setContextAccessors(accessors)
+        .setPerformanceFlags(createFlagSet(
+            PerformanceFlagEnum.class,
+            FS_S3A_PERFORMANCE_FLAGS))
         .build();
   }
 
@@ -1119,6 +1125,25 @@ public final class S3ATestUtils {
     assume("store is not AWS S3",
         !NetworkBinding.isAwsEndpoint(fs.getConf()
             .getTrimmed(ENDPOINT, DEFAULT_ENDPOINT)));
+  }
+
+  /**
+   * Modify the config by setting the performance flags and return the modified config.
+   *
+   * @param conf The configuration object.
+   * @param flagStr The performance flag string.
+   * @return The modified configuration object.
+   */
+  public static Configuration setPerformanceFlags(final Configuration conf,
+      final String flagStr) {
+    removeBaseAndBucketOverrides(
+        conf,
+        FS_S3A_CREATE_PERFORMANCE,
+        FS_S3A_PERFORMANCE_FLAGS);
+    if (flagStr != null) {
+      conf.set(FS_S3A_PERFORMANCE_FLAGS, flagStr);
+    }
+    return conf;
   }
 
   /**
@@ -1736,6 +1761,15 @@ public final class S3ATestUtils {
    */
   public static void disablePrefetching(Configuration conf) {
     removeBaseAndBucketOverrides(conf, PREFETCH_ENABLED_KEY);
+  }
+
+  /**
+   * Skip root tests if the system properties/config says so.
+   * @param conf configuration to check
+   */
+  public static void maybeSkipRootTests(Configuration conf) {
+    assume("Root tests disabled",
+        getTestPropertyBool(conf, ROOT_TESTS_ENABLED, DEFAULT_ROOT_TESTS_ENABLED));
   }
 
   /**

@@ -59,7 +59,7 @@ To make most efficient use of S3, care is needed.
 The S3A FileSystem supports implementation of vectored read api using which
 a client can provide a list of file ranges to read returning a future read
 object associated with each range. For full api specification please see
-[FSDataInputStream](../../hadoop-common-project/hadoop-common/filesystem/fsdatainputstream.html).
+[FSDataInputStream](../../../../../../hadoop-common-project/hadoop-common/target/site/filesystem/fsdatainputstream.html).
 
 The following properties can be configured to optimise vectored reads based
 on the client requirements.
@@ -94,13 +94,97 @@ on the client requirements.
 </property>
 ```
 
+## <a name="bulkdelete"></a> Improving delete performance through bulkdelete API.
+
+For bulk delete API spec refer to File System specification. [BulkDelete](../../../../../../hadoop-common-project/hadoop-common/target/site/filesystem/bulkdelete.html)
+
+The S3A client exports this API.
+
+### S3A Implementation of Bulk Delete.
+If multi-object delete is enabled (`fs.s3a.multiobjectdelete.enable` = true), as
+it is by default, then the page size is limited to that defined in
+`fs.s3a.bulk.delete.page.size`, which MUST be less than or equal to 1000.
+* The entire list of paths to delete is aggregated into a single bulk delete request,
+  issued to the store.
+* Provided the caller has the correct permissions, every entry in the list
+  will, if the path references an object, cause that object to be deleted.
+* If the path does not reference an object: the path will not be deleted
+  "This is for deleting objects, not directories"
+* No probes for the existence of parent directories will take place; no
+  parent directory markers will be created.
+  "If you need parent directories, call mkdir() yourself"
+* The list of failed keys listed in the `DeleteObjectsResponse` response
+  are converted into paths and returned along with their error messages.
+* Network and other IO errors are raised as exceptions.
+
+If multi-object delete is disabled (or the list of size 1)
+* A single `DELETE` call is issued
+* Any `AccessDeniedException` raised is converted to a result in the error list.
+* Any 404 response from a (non-AWS) store will be ignored.
+* Network and other IO errors are raised as exceptions.
+
+Because there are no probes to ensure the call does not overwrite a directory,
+or to see if a parentDirectory marker needs to be created,
+this API is still faster than issuing a normal `FileSystem.delete(path)` call.
+
+That is: all the overhead normally undertaken to preserve the Posix System model are omitted.
+
+
+### S3 Scalability and Performance
+
+Every entry in a bulk delete request counts as one write operation
+against AWS S3 storage.
+With the default write rate under a prefix on AWS S3 Standard storage
+restricted to 3,500 writes/second, it is very easy to overload
+the store by issuing a few bulk delete requests simultaneously.
+
+* If throttling is triggered then all clients interacting with
+  the store may observe performance issues.
+* The write quota applies even for paths which do not exist.
+* The S3A client *may* perform rate throttling as well as page size limiting.
+
+What does that mean? it means that attempting to issue multiple
+bulk delete calls in parallel can be counterproductive.
+
+When overloaded, the S3 store returns a 403 throttle response.
+This will trigger it back off and retry of posting the request.
+However, the repeated request will still include the same number of objects and
+*so generate the same load*.
+
+This can lead to a pathological situation where the repeated requests will
+never be satisfied because the request itself is sufficient to overload the store.
+See [HADOOP-16823.Large DeleteObject requests are their own Thundering Herd]
+(https://issues.apache.org/jira/browse/HADOOP-16823)
+for an example of where this did actually surface in production.
+
+This is why the default page size of S3A clients is 250 paths, not the store limit of 1000 entries.
+It is also why the S3A delete/rename operations do not attempt to do massive parallel deletions,
+Instead bulk delete requests are queued for a single blocking thread to issue.
+Consider a similar design.
+
+
+When working with versioned S3 buckets, every path deleted will add a tombstone marker
+to the store at that location, even if there was no object at that path.
+While this has no negative performance impact on the bulk delete call,
+it will slow down list requests subsequently made against that path.
+That is: bulk delete requests of paths which do not exist will hurt future queries.
+
+Avoid this. Note also that TPC-DS Benchmark do not create the right load to make the
+performance problems observable -but they can surface in production.
+* Configure buckets to have a limited number of days for tombstones to be preserved.
+* Do not delete paths which you know reference nonexistent files or directories.
+
 ## <a name="fadvise"></a> Improving data input performance through fadvise
 
 The S3A Filesystem client supports the notion of input policies, similar
 to that of the Posix `fadvise()` API call. This tunes the behavior of the S3A
 client to optimise HTTP GET requests for the different use cases.
 
-### fadvise `sequential`
+The list of supported options is found in
+[FSDataInputStream](../../../../../../hadoop-common-project/hadoop-common/target/site/filesystem/fsdatainputstreambuilder.html).
+
+
+### fadvise `sequential`, `whole-file`
 
 Read through the file, possibly with some short forward seeks.
 
@@ -115,6 +199,9 @@ Applications reading a file in bulk (DistCP, any copy operations) should use
 sequential access, as should those reading data from gzipped `.gz` files.
 Because the "normal" fadvise policy starts off in sequential IO mode,
 there is rarely any need to explicit request this policy.
+
+Distcp will automatically request `whole-file` access, even on deployments
+where the cluster configuration is for `random` IO.
 
 ### fadvise `random`
 
@@ -163,7 +250,7 @@ basis.
 to set fadvise policies on input streams. Once implemented,
 this will become the supported mechanism used for configuring the input IO policy.
 
-### fadvise `normal` (default)
+### fadvise `normal` or `adaptive` (default)
 
 The `normal` policy starts off reading a file  in `sequential` mode,
 but if the caller seeks backwards in the stream, it switches from
@@ -196,7 +283,64 @@ Fix: Use one of the dedicated [S3A Committers](committers.md).
 
 ## <a name="tuning"></a> Options to Tune
 
-### <a name="pooling"></a> Thread and connection pool settings.
+### <a name="flags"></a> Performance Flags: `fs.s3a.performance.flag`
+
+This option takes a comma separated list of performance flags.
+View it as the equivalent of the `-O` compiler optimization list C/C++ compilers offer.
+That is a complicated list of options which deliver speed if the person setting them
+understands the risks.
+
+* The list of flags MAY change across releases
+* The semantics of specific flags SHOULD NOT change across releases.
+* If an option is to be tuned which may relax semantics, a new option MUST be defined.
+* Unknown flags are ignored; this is to avoid compatibility.
+* The option `*` means "turn everything on". This is implicitly unstable across releases.
+
+| *Option* | *Meaning*          | Since |
+|----------|--------------------|:------|
+| `create` | Create Performance | 3.4.1 |
+| `mkdir`  | Mkdir Performance  | 3.4.1 |
+
+
+* The `create` flag has the same semantics as [`fs.s3a.create.performance`](#create-performance)
+* The `mkdir` flag semantics are explained in [Mkdir Performance](#mkdir-performance)
+
+
+### <a name="create-performance"></a> Create Performance `fs.s3a.create.performance`
+
+
+The configuration option `fs.s3a.create.performance` has the same behavior as
+the `fs.s3a.performance.flag` flag option `create`:
+
+* No overwrite checks are made when creating a file, even if overwrite is set to `false` in the application/library code
+* No checks are made for an object being written above a path containing other objects (i.e. a "directory")
+* No checks are made for a parent path containing an object which is not a directory marker (i.e. a "file")
+
+This saves multiple probes per operation, especially a `LIST` call.
+
+It may however result in
+* Unintentional overwriting of data
+* Creation of directory structures which can no longer be navigated through filesystem APIs.
+
+Use with care, and, ideally, enable versioning on the S3 store.
+
+
+### <a name="mkdir-performance"></a> Mkdir Performance
+
+`fs.s3a.performance.flag` flag option `mkdir`:
+
+* Mkdir does not check whether the parent is directory or file.
+
+This avoids the verification of the file status of the parent file
+or the closest ancestor. Unlike the default mkdir operation, if the
+parent is not a directory, the mkdir operation does not throw any
+error.
+
+This option can help with mkdir performance improvement but must be used
+only if the person setting them understands the above-mentioned risk.
+
+
+### <a name="threads"></a> Thread and connection pool settings.
 
 Each S3A client interacting with a single bucket, as a single user, has its
 own dedicated pool of open HTTP connections alongside a pool of threads used
@@ -361,15 +505,15 @@ killer.
 1. As discussed [earlier](#pooling), use large values for
 `fs.s3a.threads.max` and `fs.s3a.connection.maximum`.
 
-1. Make sure that the bucket is using `sequential` or `normal` fadvise seek policies,
-that is, `fs.s3a.experimental.input.fadvise` is not set to `random`
-
 1. Perform listings in parallel by setting `-numListstatusThreads`
 to a higher number. Make sure that `fs.s3a.connection.maximum`
 is equal to or greater than the value used.
 
 1. If using `-delete`, set `fs.trash.interval` to 0 to avoid the deleted
 objects from being copied to a trash directory.
+
+1. If using distcp to upload to a new path where no existing data exists,
+   consider adding the option `create` to the flags in `fs.s3a.performance.flag`.
 
 *DO NOT* switch `fs.s3a.fast.upload.buffer` to buffer in memory.
 If one distcp mapper runs out of memory it will fail,
@@ -381,12 +525,6 @@ efficient in terms of HTTP connection use, and reduce the IOP rate against
 the S3 bucket/shard.
 
 ```xml
-
-<property>
-  <name>fs.s3a.experimental.input.fadvise</name>
-  <value>normal</value>
-</property>
-
 <property>
   <name>fs.s3a.block.size</name>
   <value>128M</value>
@@ -400,6 +538,12 @@ the S3 bucket/shard.
 <property>
   <name>fs.trash.interval</name>
   <value>0</value>
+</property>
+
+<!-- maybe -->
+<property>
+  <name>fs.s3a.create.performance</name>
+  <value>create</value>
 </property>
 ```
 
@@ -562,7 +706,7 @@ expects an immediate response. For example, a thread may block so long
 that other liveness checks start to fail.
 Consider spawning off an executor thread to do these background cleanup operations.
 
-## <a name="coding"></a> Tuning SSL Performance
+## <a name="ssl"></a> Tuning SSL Performance
 
 By default, S3A uses HTTPS to communicate with AWS Services. This means that all
 communication with S3 is encrypted using SSL. The overhead of this encryption
@@ -585,8 +729,6 @@ includes GCM in the list of cipher suites on Java 8, so it is equivalent to
 running with the vanilla JSSE.
 
 ### <a name="openssl"></a> OpenSSL Acceleration
-
-**Experimental Feature**
 
 As of HADOOP-16050 and HADOOP-16346, `fs.s3a.ssl.channel.mode` can be set to
 either `default` or `openssl` to enable native OpenSSL acceleration of HTTPS
@@ -641,12 +783,12 @@ exception and S3A initialization will fail.
 
 Supported values for `fs.s3a.ssl.channel.mode`:
 
-| `fs.s3a.ssl.channel.mode` Value | Description |
-|-------------------------------|-------------|
-| `default_jsse` | Uses Java JSSE without GCM on Java 8 |
-| `default_jsse_with_gcm` | Uses Java JSSE |
-| `default` | Uses OpenSSL, falls back to `default_jsse` if OpenSSL cannot be loaded |
-| `openssl` | Uses OpenSSL, fails if OpenSSL cannot be loaded |
+| `fs.s3a.ssl.channel.mode` Value | Description                                                            |
+|---------------------------------|------------------------------------------------------------------------|
+| `default_jsse`                  | Uses Java JSSE without GCM on Java 8                                   |
+| `default_jsse_with_gcm`         | Uses Java JSSE                                                         |
+| `default`                       | Uses OpenSSL, falls back to `default_jsse` if OpenSSL cannot be loaded |
+| `openssl`                       | Uses OpenSSL, fails if OpenSSL cannot be loaded                        |
 
 The naming convention is setup in order to preserve backwards compatibility
 with the ABFS support of [HADOOP-15669](https://issues.apache.org/jira/browse/HADOOP-15669).
@@ -654,7 +796,7 @@ with the ABFS support of [HADOOP-15669](https://issues.apache.org/jira/browse/HA
 Other options may be added to `fs.s3a.ssl.channel.mode` in the future as
 further SSL optimizations are made.
 
-### WildFly classpath requirements
+### WildFly classpath and SSL library requirements
 
 For OpenSSL acceleration to work, a compatible version of the
 wildfly JAR must be on the classpath. This is not explicitly declared
@@ -664,21 +806,28 @@ optional.
 If the wildfly JAR is not found, the network acceleration will fall back
 to the JVM, always.
 
-Note: there have been compatibility problems with wildfly JARs and openSSL
+Similarly, the `libssl` library must be compatibile with wildfly.
+
+Wildfly requires this native library to be part of an `openssl` installation.
+Third party implementations may not work correctly.
+This can be an isse in FIPS-compliant deployments, where the `libssl` library
+is a third-party implementation built with restricted TLS protocols.
+
+
+There have been compatibility problems with wildfly JARs and openSSL
 releases in the past: version 1.0.4.Final is not compatible with openssl 1.1.1.
 An extra complication was older versions of the `azure-data-lake-store-sdk`
 JAR used in `hadoop-azure-datalake` contained an unshaded copy of the 1.0.4.Final
 classes, causing binding problems even when a later version was explicitly
 being placed on the classpath.
 
+## <a name="initilization"></a> Tuning FileSystem Initialization.
 
-## Tuning FileSystem Initialization.
-
-### Disabling bucket existence checks
+### Bucket existence checks
 
 When an S3A Filesystem instance is created and initialized, the client
-checks if the bucket provided is valid. This can be slow.
-You can ignore bucket validation by configuring `fs.s3a.bucket.probe` as follows:
+can be checks if the bucket provided is valid. This can be slow, which is why
+it is disabled by default.
 
 ```xml
 <property>
@@ -687,8 +836,10 @@ You can ignore bucket validation by configuring `fs.s3a.bucket.probe` as follows
 </property>
 ```
 
-Note: if the bucket does not exist, this issue will surface when operations are performed
+If the bucket does not exist, this issue will surface when operations are performed
 on the filesystem; you will see `UnknownStoreException` stack traces.
+
+Re-enabling the probe will force an early check but but is generally not needed.
 
 ### Rate limiting parallel FileSystem creation operations
 

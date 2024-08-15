@@ -216,7 +216,6 @@ com.aliyun:aliyun-java-sdk-kms:2.11.0
 com.aliyun:aliyun-java-sdk-ram:3.1.0
 com.aliyun:aliyun-java-sdk-sts:3.0.0
 com.aliyun.oss:aliyun-sdk-oss:3.13.2
-com.amazonaws:aws-java-sdk-bundle:1.12.599
 com.cedarsoftware:java-util:1.9.0
 com.cedarsoftware:json-io:2.5.1
 com.fasterxml.jackson.core:jackson-annotations:2.12.7
@@ -227,10 +226,11 @@ com.fasterxml.jackson.jaxrs:jackson-jaxrs-json-provider:2.12.7
 com.fasterxml.jackson.module:jackson-module-jaxb-annotations:2.12.7
 com.fasterxml.uuid:java-uuid-generator:3.1.4
 com.fasterxml.woodstox:woodstox-core:5.4.0
+com.github.ben-manes.caffeine:caffeine:2.9.3
 com.github.davidmoten:rxjava-extras:0.8.0.17
 com.github.stephenc.jcip:jcip-annotations:1.0-1
-com.google:guice:4.0
-com.google:guice-servlet:4.0
+com.google:guice:5.1.0
+com.google:guice-servlet:5.1.0
 com.google.api.grpc:proto-google-common-protos:1.0.0
 com.google.code.gson:2.9.0
 com.google.errorprone:error_prone_annotations:2.2.0
@@ -318,7 +318,7 @@ org.apache.htrace:htrace-core:3.1.0-incubating
 org.apache.htrace:htrace-core4:4.1.0-incubating
 org.apache.httpcomponents:httpclient:4.5.13
 org.apache.httpcomponents:httpcore:4.4.13
-org.apache.kafka:kafka-clients:2.8.2
+org.apache.kafka:kafka-clients:3.4.0
 org.apache.kerby:kerb-admin:2.0.3
 org.apache.kerby:kerb-client:2.0.3
 org.apache.kerby:kerb-common:2.0.3
@@ -362,7 +362,7 @@ org.objenesis:objenesis:2.6
 org.xerial.snappy:snappy-java:1.1.10.4
 org.yaml:snakeyaml:2.0
 org.wildfly.openssl:wildfly-openssl:1.1.3.Final
-software.amazon.awssdk:bundle:jar:2.24.6
+software.amazon.awssdk:bundle:jar:2.25.53
 
 
 --------------------------------------------------------------------------------
@@ -378,8 +378,8 @@ hadoop-common-project/hadoop-common/src/main/native/src/org/apache/hadoop/io/com
 hadoop-hdfs-project/hadoop-hdfs-native-client/src/main/native/fuse-dfs/util/tree.h
 hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/src/main/native/container-executor/impl/compat/{fstatat|openat|unlinkat}.h
 
-com.github.luben:zstd-jni:1.4.9-1
-dnsjava:dnsjava:2.1.7
+com.github.luben:zstd-jni:1.5.2-1
+dnsjava:dnsjava:3.6.1
 org.codehaus.woodstox:stax2-api:4.2.1
 
 
@@ -482,9 +482,9 @@ com.microsoft.azure:azure-cosmosdb-gateway:2.4.5
 com.microsoft.azure:azure-data-lake-store-sdk:2.3.3
 com.microsoft.azure:azure-keyvault-core:1.0.0
 com.microsoft.sqlserver:mssql-jdbc:6.2.1.jre7
-org.bouncycastle:bcpkix-jdk18on:1.77
-org.bouncycastle:bcprov-jdk18on:1.77
-org.bouncycastle:bcutil-jdk18on:1.77
+org.bouncycastle:bcpkix-jdk18on:1.78.1
+org.bouncycastle:bcprov-jdk18on:1.78.1
+org.bouncycastle:bcutil-jdk18on:1.78.1
 org.checkerframework:checker-qual:2.5.2
 org.codehaus.mojo:animal-sniffer-annotations:1.21
 org.jruby.jcodings:jcodings:1.0.13

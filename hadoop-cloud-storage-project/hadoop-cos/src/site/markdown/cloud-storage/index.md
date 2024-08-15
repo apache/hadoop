@@ -86,7 +86,7 @@ Linux kernel 2.6+
 - joda-time (version 2.9.9 recommended)
 - httpClient (version 4.5.1 or later recommended)
 - Jackson: jackson-core, jackson-databind, jackson-annotations (version 2.9.8 or later)
-- bcprov-jdk18on (version 1.77 recommended)
+- bcprov-jdk18on (version 1.78.1 recommended)
 
 
 #### Configure Properties

@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
@@ -104,6 +105,15 @@ public class TestMultipleDestinationResolver {
     MountTable readOnlyEntry = MountTable.newInstance("/readonly", mapReadOnly);
     readOnlyEntry.setReadOnly(true);
     resolver.addEntry(readOnlyEntry);
+
+    // leader follower mode
+    Map<String, String> leaderFollowerMap = new LinkedHashMap<>();
+    leaderFollowerMap.put("subcluster1", "/leaderfollower");
+    leaderFollowerMap.put("subcluster0", "/leaderfollower");
+    leaderFollowerMap.put("subcluster2", "/leaderfollower");
+    MountTable leaderFollowerEntry = MountTable.newInstance("/leaderfollower", leaderFollowerMap);
+    leaderFollowerEntry.setDestOrder(DestinationOrder.LEADER_FOLLOWER);
+    resolver.addEntry(leaderFollowerEntry);
   }
 
   @Test
@@ -338,6 +348,13 @@ public class TestMultipleDestinationResolver {
     PathLocation dest12 = resolver.getDestinationForPath(
         "/readonly/folder2/file1.txt");
     assertDest("subcluster1", dest12);
+  }
+
+  @Test
+  public void testLeaderFollower() throws IOException {
+    PathLocation dest0 =
+        resolver.getDestinationForPath("/leaderfollower/folder0/file0.txt");
+    assertDest("subcluster1", dest0);
   }
 
   @Test

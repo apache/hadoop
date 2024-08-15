@@ -49,7 +49,8 @@ public class TestFederationCache {
 
   @Parameterized.Parameters
   public static Collection<Class[]> getParameters() {
-    return Arrays.asList(new Class[][] {{FederationGuavaCache.class}, {FederationJCache.class}});
+    return Arrays.asList(new Class[][]{{FederationGuavaCache.class}, {FederationJCache.class},
+        {FederationCaffeineCache.class}});
   }
 
   private final long clusterTs = System.currentTimeMillis();
