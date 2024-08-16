@@ -179,8 +179,10 @@ public class RMAppBlock extends AppBlock{
           attemptsTableData.length() - 1);
     }
     attemptsTableData.append("]");
+    String attemptsTableScript = "var attemptsTableData= " + attemptsTableData +
+            ";\nconst attemptsDataTable = DataTableHelper('#attempts', { data: { data: attemptsTableData } }, false)";
     html.script().$type("text/javascript")
-        .__("var attemptsTableData=" + attemptsTableData).__();
+        .__(attemptsTableScript).__();
 
     tbody.__().__();
   }

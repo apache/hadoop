@@ -68,34 +68,30 @@ public class JQueryUI extends HtmlBlock {
         .link(root_url("static/dt-1.11.5/css/jquery.dataTables.css"))
         .link(root_url("static/dt-1.11.5/css/jui-dt.css"))
         .link(root_url("static/dt-1.11.5/css/custom_datatable.css"))
-        .script(root_url("static/jquery/jquery-3.6.0.min.js"))
-        .script(root_url("static/jquery/jquery-ui-1.13.2.custom.min.js"))
-        .script(root_url("static/dt-1.11.5/js/jquery.dataTables.min.js"))
         .script(root_url("static/yarn.dt.plugins.js"))
-        .script(root_url("static/dt-sorting/natural.js"))
+        .script(root_url("static/customjs/Accordion.js"))
+        .script(root_url("static/customjs/DataTable.js"))
+        .script(root_url("static/customjs/UtilsUI.js"))
         .style("#jsnotice { padding: 0.2em; text-align: center; }",
             ".ui-progressbar { height: 1em; min-width: 5em }"); // required
 
     List<String> list = Lists.newArrayList();
     initAccordions(list);
-    initDataTables(list);
-    initDialogs(list);
-    initProgressBars(list);
-
-    if (!list.isEmpty()) {
-      html.script().$type("text/javascript").__("$(function() {")
-          .__(list.toArray()).__("});").__();
-    }
+    html.script().$type("text/javascript")
+            .__(list.toArray()).__();
+    html.div().__("").__();
+    html.script().$type("text/javascript")
+            .__(initDataTables()).__();
   }
 
   public static void jsnotice(HTML html) {
     html.
       div("#jsnotice.ui-state-error").
         __("This page will not function without javascript enabled."
-            + " Please enable javascript on your browser.").__();
+                   + " Please enable javascript on your browser.").__();
     html.
       script().$type("text/javascript").
-        __("$('#jsnotice').hide();").__();
+        __("document.getElementById('jsnotice').style.display = 'none'").__();
   }
 
   protected void initAccordions(List<String> list) {
@@ -105,13 +101,14 @@ public class JQueryUI extends HtmlBlock {
         if (init.isEmpty()) {
           init = "{autoHeight: false}";
         }
-        list.add(join("  $('#", id, "').accordion(", init, ");"));
+        String acc = "accordionJS('" + id + "', 'accordion-parent');";
+        list.add(acc);
       }
     }
   }
 
-  protected void initDataTables(List<String> list) {
-    String defaultInit = "{bJQueryUI: true, sPaginationType: 'full_numbers'}";
+  protected String initDataTables() {
+    String defaultInit = "{sPaginationType: 'full_numbers'}";
     String stateSaveInit = "bStateSave : true, " +
         "\"fnStateSave\": function (oSettings, oData) { " +
               " data = oData.aoSearchCols;"
@@ -120,22 +117,23 @@ public class JQueryUI extends HtmlBlock {
               + "}"
         + " sessionStorage.setItem( oSettings.sTableId, JSON.stringify(oData) ); }, " +
           "\"fnStateLoad\": function (oSettings) { " +
-              "return JSON.parse( sessionStorage.getItem(oSettings.sTableId) );}, ";
-      
+            "return JSON.parse( sessionStorage.getItem(oSettings.sTableId) );}, ";
+
+    String dtJS = "";
     for (String id : split($(DATATABLES_ID))) {
       if (Html.isValidId(id)) {
         String init = $(initID(DATATABLES, id));
         if (init.isEmpty()) {
           init = defaultInit;
         }
+        dtJS = id + "TableData = [];";
         // for inserting stateSaveInit
-        int pos = init.indexOf('{') + 1;  
-        init = new StringBuffer(init).insert(pos, stateSaveInit).toString(); 
-        list.add(join(id, "DataTable =  $('#", id, "').dataTable(", init,
-                      ").fnSetFilteringDelay(188);"));
+        int pos = init.indexOf('{') + 1;
+        init = new StringBuffer(init).insert(pos, stateSaveInit).toString();
+        dtJS = dtJS + "\n" + join("opts = ", init, ";\nelId = \"#", id, "\";");
         String postInit = $(postInitID(DATATABLES, id));
         if(!postInit.isEmpty()) {
-          list.add(postInit);
+          dtJS = dtJS + "\n" + postInit;
         }
       }
     }
@@ -144,56 +142,20 @@ public class JQueryUI extends HtmlBlock {
       String init = $(initSelector(DATATABLES));
       if (init.isEmpty()) {
         init = defaultInit;
-      }      
-      int pos = init.indexOf('{') + 1;  
-      init = new StringBuffer(init).insert(pos, stateSaveInit).toString();  
-      list.add(join("  $('", escapeEcmaScript(selector), "').dataTable(", init,
-               ").fnSetFilteringDelay(288);"));      
-      
-    }
-  }
+      }
+      int pos = init.indexOf('{') + 1;
+      init = new StringBuffer(init).insert(pos, stateSaveInit).toString();
+      dtJS = dtJS + "\n" + join("  DataTableHelper('", escapeEcmaScript(selector), "', ", init,
+              ", true);");
 
-  protected void initDialogs(List<String> list) {
-    String defaultInit = "{autoOpen: false, show: transfer, hide: explode}";
-    for (String id : split($(DIALOG_ID))) {
-      if (Html.isValidId(id)) {
-        String init = $(initID(DIALOG, id));
-        if (init.isEmpty()) {
-          init = defaultInit;
-        }
-        String opener = $(djoin(DIALOG, id, "opener"));
-        list.add(join("  $('#", id, "').dialog(", init, ");"));
-        if (!opener.isEmpty() && Html.isValidId(opener)) {
-          list.add(join("  $('#", opener, "').click(function() { ",
-                   "$('#", id, "').dialog('open'); return false; });"));
-        }
-      }
     }
-    String selector = $(DIALOG_SELECTOR);
-    if (!selector.isEmpty()) {
-      String init = $(initSelector(DIALOG));
-      if (init.isEmpty()) {
-        init = defaultInit;
-      }
-      list.add(join("  $('", escapeEcmaScript(selector),
-               "').click(function() { $(this).children('.dialog').dialog(",
-               init, "); return false; });"));
-    }
-  }
-
-  protected void initProgressBars(List<String> list) {
-    for (String id : split($(PROGRESSBAR_ID))) {
-      if (Html.isValidId(id)) {
-        String init = $(initID(PROGRESSBAR, id));
-        list.add(join("  $('#", id, "').progressbar(", init, ");"));
-      }
-    }
+    return dtJS;
   }
 
   public static String initID(String name, String id) {
     return djoin(name, id, "init");
   }
-  
+
   public static String postInitID(String name, String id) {
     return djoin(name, id, "postinit");
   }
@@ -203,7 +165,7 @@ public class JQueryUI extends HtmlBlock {
   }
 
   public static StringBuilder tableInit() {
-    return new StringBuilder("{bJQueryUI:true, ").
+    return new StringBuilder("{ ").
         append("sPaginationType: 'full_numbers', iDisplayLength:20, ").
         append("aLengthMenu:[20, 40, 60, 80, 100]");
   }

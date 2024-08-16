@@ -104,10 +104,10 @@ public class TestWebApp {
     public void render(Page.HTML<__> html) {
       set(DATATABLES_ID, "t1 t2 t3 t4");
       set(initID(DATATABLES, "t1"), tableInit().append("}").toString());
-      set(initID(DATATABLES, "t2"), join("{bJQueryUI:true, sDom:'t',",
+      set(initID(DATATABLES, "t2"), join("{sDom:'t',",
           "aoColumns:[null, {bSortable:false, bSearchable:false}]}"));
-      set(initID(DATATABLES, "t3"), "{bJQueryUI:true, sDom:'t'}");
-      set(initID(DATATABLES, "t4"), "{bJQueryUI:true, sDom:'t'}");
+      set(initID(DATATABLES, "t3"), "{sDom:'t'}");
+      set(initID(DATATABLES, "t4"), "{sDom:'t'}");
       html.
         title("Test DataTables").
         link("/static/yarn.css").

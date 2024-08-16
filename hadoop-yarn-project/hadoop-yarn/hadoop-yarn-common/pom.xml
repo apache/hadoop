@@ -278,10 +278,7 @@
             <exclude>src/main/resources/webapps/static/dt-1.11.5/css/jui-dt.css</exclude>
             <exclude>src/main/resources/webapps/static/dt-1.11.5/css/demo_table.css</exclude>
             <exclude>src/main/resources/webapps/static/dt-1.11.5/images/Sorting icons.psd</exclude>
-            <exclude>src/main/resources/webapps/static/dt-1.11.5/js/jquery.dataTables.min.js</exclude>
             <exclude>src/main/resources/webapps/static/jt/jquery.jstree.js</exclude>
-            <exclude>src/main/resources/webapps/static/jquery/jquery-ui-1.13.2.custom.min.js</exclude>
-            <exclude>src/main/resources/webapps/static/jquery/jquery-3.6.0.min.js</exclude>
             <exclude>src/main/resources/webapps/static/jquery/themes-1.9.1/base/jquery-ui.css</exclude>
             <exclude>src/test/resources/application_1440536969523_0001.har/_index</exclude>
             <exclude>src/test/resources/application_1440536969523_0001.har/part-0</exclude>

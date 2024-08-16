@@ -50,11 +50,11 @@ public class NavBlock extends HtmlBlock {
     }
     UL<DIV<Hamlet>> mainList = html.
       div("#nav").
-        h3("Cluster").
-        ul().
-          li().a(url("cluster"), "About").__().
-          li().a(url("nodes"), "Nodes").__().
-          li().a(url("nodelabels"), "Node Labels").__();
+        h3("accordion-parent", "Cluster").
+        ul("container").
+          li().a("content",url("cluster"), "About").__().
+          li().a("content",url("nodes"), "Nodes").__().
+          li().a("content",url("nodelabels"), "Node Labels").__();
     UL<LI<UL<DIV<Hamlet>>>> subAppsList = mainList.
           li().a(url("apps"), "Applications").
             ul();

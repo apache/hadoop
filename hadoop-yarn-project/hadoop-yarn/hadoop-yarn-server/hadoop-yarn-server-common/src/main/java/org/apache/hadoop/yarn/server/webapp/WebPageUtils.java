@@ -42,7 +42,7 @@ public class WebPageUtils {
     // FairSchedulerPage's table is a bit different
     // This is define in RMAppsBlock.COLUMNS for the RM
     return tableInit()
-      .append(", 'aaData': appsTableData")
+      .append(", 'data': appsTableData")
       .append(", bDeferRender: true")
       .append(", bProcessing: true")
       .append("\n, aoColumnDefs: ")
@@ -132,7 +132,7 @@ public class WebPageUtils {
     Hamlet.UL<Hamlet.DIV<Hamlet>> enabledTools = null;
 
     if (isToolsEnabled) {
-      tools = section.h3("Tools");
+      tools = section.h3("accordion-parent","Tools");
       enabledTools = tools.ul().li().a("/conf", "Configuration").__().
           li().a("/logs", "Local logs").__().
           li().a("/stacks", "Server stacks").__().
