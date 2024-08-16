@@ -416,10 +416,10 @@ public interface SSLHostnameVerifier extends javax.net.ssl.HostnameVerifier {
             for (Iterator<String> it = names.iterator(); it.hasNext();) {
                 // Don't trim the CN, though!
                 final String cn = StringUtils.toLowerCase(it.next());
-                // Store CN in StringBuffer in case we need to report an error.
-            buf.append(" <")
-            .append(cn)
-            .append('>');
+                // Store CN in StringBuilder in case we need to report an error.
+                buf.append(" <")
+                    .append(cn)
+                    .append('>');
                 if (it.hasNext()) {
                     buf.append(" OR");
                 }
