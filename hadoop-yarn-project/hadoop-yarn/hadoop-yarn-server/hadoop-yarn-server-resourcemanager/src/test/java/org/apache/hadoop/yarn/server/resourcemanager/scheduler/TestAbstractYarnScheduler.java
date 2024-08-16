@@ -277,25 +277,6 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
     Assert.assertEquals(0, scheduler.getNumClusterNodes());
   }
 
-  private void mockContainers(Container container,
-      int containerId,
-      NodeId nodeId,
-      ApplicationAttemptId appAttemptId,
-      long allocationId,
-      int memory,
-      int vcore,
-      Priority priority,
-      ExecutionType executionType) {
-    when(container.getResource()).thenReturn(Resource.newInstance(memory, vcore));
-    when(container.getPriority()).thenReturn(priority);
-    when(container.getId()).thenReturn(ContainerId.newContainerId(appAttemptId, containerId));
-    when(container.getNodeId()).thenReturn(nodeId);
-    when(container.getAllocationRequestId()).thenReturn(allocationId);
-    when(container.getExecutionType()).thenReturn(executionType);
-    when(container.getContainerToken()).thenReturn(Token.newInstance(new byte[0], "kind",
-        new byte[0], "service"));
-  }
-
   /**
    * Test for testing autocorrect container allocation feature.
    */
@@ -369,20 +350,25 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
    * @param appAttemptId    The ApplicationAttemptId of the application attempt
    * @param allocationId    The allocation ID of the container
    * @param memory          The amount of memory (in MB) requested for the container
-   * @param vCores          The number of virtual cores requested for the container
    * @param priority        The priority of the container request
    * @param executionType   The execution type of the container request
    * @return A mock instance of RMContainer with the specified parameters
    */
   private RMContainer createMockRMContainer(int containerId, NodeId nodeId,
-      ApplicationAttemptId appAttemptId, long allocationId, int memory, int vCores,
+      ApplicationAttemptId appAttemptId, long allocationId, int memory,
       Priority priority, ExecutionType executionType) {
     // Create a mock instance of Container
     Container container = mock(Container.class);
 
     // Mock the Container instance with the specified parameters
-    mockContainers(container, containerId, nodeId, appAttemptId, allocationId, memory, vCores,
-        priority, executionType);
+    when(container.getResource()).thenReturn(Resource.newInstance(memory, 1));
+    when(container.getPriority()).thenReturn(priority);
+    when(container.getId()).thenReturn(ContainerId.newContainerId(appAttemptId, containerId));
+    when(container.getNodeId()).thenReturn(nodeId);
+    when(container.getAllocationRequestId()).thenReturn(allocationId);
+    when(container.getExecutionType()).thenReturn(executionType);
+    when(container.getContainerToken()).thenReturn(Token.newInstance(new byte[0], "kind",
+        new byte[0], "service"));
 
     // Create a mock instance of RMContainerImpl
     RMContainer rmContainer = mock(RMContainerImpl.class);
@@ -446,7 +432,7 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
 
     // Create an RMContainer with the specified parameters
     RMContainer rmContainer = createMockRMContainer(1, nodeId, appAttemptId,
-        0L, 1024, 1, priority, ExecutionType.GUARANTEED);
+        0L, 1024, priority, ExecutionType.GUARANTEED);
 
     // Add the RMContainer to the newly allocated containers of the application
     application.addToNewlyAllocatedContainers(schedulerNode, rmContainer);
@@ -483,7 +469,7 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
 
     // Create an RMContainer with the specified parameters
     RMContainer rmContainer1 = createMockRMContainer(1, nodeId, appAttemptId,
-        0L, 1024, 1, priority, ExecutionType.GUARANTEED);
+        0L, 1024, priority, ExecutionType.GUARANTEED);
 
     // Add the RMContainer to the newly allocated containers of the application
     application.addToNewlyAllocatedContainers(schedulerNode, rmContainer1);
@@ -535,21 +521,21 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
 
     // Create eight RMContainers (two for each resource request type)
     RMContainer rmContainer1 = createMockRMContainer(1, nodeId, appAttemptId,
-        0L, 1024, 1, priority, ExecutionType.GUARANTEED);
+        0L, 1024, priority, ExecutionType.GUARANTEED);
     RMContainer rmContainer2 = createMockRMContainer(2, nodeId, appAttemptId,
-        0L, 1024, 1, priority, ExecutionType.GUARANTEED);
+        0L, 1024, priority, ExecutionType.GUARANTEED);
     RMContainer rmContainer3 = createMockRMContainer(3, nodeId, appAttemptId,
-        0L, 2048, 1, priority, ExecutionType.GUARANTEED);
+        0L, 2048, priority, ExecutionType.GUARANTEED);
     RMContainer rmContainer4 = createMockRMContainer(4, nodeId, appAttemptId,
-        0L, 2048, 1, priority, ExecutionType.GUARANTEED);
+        0L, 2048, priority, ExecutionType.GUARANTEED);
     RMContainer rmContainer5 = createMockRMContainer(5, nodeId, appAttemptId,
-        1L, 1024, 1, priority, ExecutionType.GUARANTEED);
+        1L, 1024, priority, ExecutionType.GUARANTEED);
     RMContainer rmContainer6 = createMockRMContainer(6, nodeId, appAttemptId,
-        1L, 1024, 1, priority, ExecutionType.GUARANTEED);
+        1L, 1024, priority, ExecutionType.GUARANTEED);
     RMContainer rmContainer7 = createMockRMContainer(7, nodeId, appAttemptId,
-        0L, 1024, 1, priority, ExecutionType.OPPORTUNISTIC);
+        0L, 1024, priority, ExecutionType.OPPORTUNISTIC);
     RMContainer rmContainer8 = createMockRMContainer(8, nodeId, appAttemptId,
-        0L, 1024, 1, priority, ExecutionType.OPPORTUNISTIC);
+        0L, 1024, priority, ExecutionType.OPPORTUNISTIC);
 
     // Add the RMContainers to the newly allocated containers of the application
     application.addToNewlyAllocatedContainers(schedulerNode, rmContainer1);
@@ -605,17 +591,17 @@ public class TestAbstractYarnScheduler extends ParameterizedSchedulerTestBase {
 
     // Create six RMContainers with the specified parameters
     RMContainer rmContainer1 = createMockRMContainer(1, nodeId, appAttemptId,
-        0L, 1024, 1, priority, ExecutionType.GUARANTEED);
+        0L, 1024, priority, ExecutionType.GUARANTEED);
     RMContainer rmContainer2 = createMockRMContainer(2, nodeId, appAttemptId,
-        0L, 1024, 1, priority, ExecutionType.GUARANTEED);
+        0L, 1024, priority, ExecutionType.GUARANTEED);
     RMContainer rmContainer3 = createMockRMContainer(3, nodeId, appAttemptId,
-        0L, 1024, 1, priority, ExecutionType.GUARANTEED);
-    RMContainer rmContainer4 = createMockRMContainer(4, nodeId, appAttemptId, 
-        0L, 1024, 1, priority, ExecutionType.GUARANTEED);
+        0L, 1024, priority, ExecutionType.GUARANTEED);
+    RMContainer rmContainer4 = createMockRMContainer(4, nodeId, appAttemptId,
+        0L, 1024, priority, ExecutionType.GUARANTEED);
     RMContainer rmContainer5 = createMockRMContainer(5, nodeId, appAttemptId,
-        0L, 1024, 1, priority, ExecutionType.GUARANTEED);
+        0L, 1024, priority, ExecutionType.GUARANTEED);
     RMContainer rmContainer6 = createMockRMContainer(6, nodeId, appAttemptId,
-        0L, 1024, 1, priority, ExecutionType.GUARANTEED);
+        0L, 1024, priority, ExecutionType.GUARANTEED);
 
     // Add the RMContainers to the newly allocated containers of the application
     application.addToNewlyAllocatedContainers(schedulerNode, rmContainer1);

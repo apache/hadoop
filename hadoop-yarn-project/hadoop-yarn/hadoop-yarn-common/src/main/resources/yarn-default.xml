@@ -191,11 +191,6 @@
   </property>
 
   <property>
-    <description>The Kerberos principal for the resource manager.</description>
-    <name>yarn.resourcemanager.principal</name>
-  </property>
-
-  <property>
     <description>The address of the scheduler interface.</description>
     <name>yarn.resourcemanager.scheduler.address</name>
     <value>${yarn.resourcemanager.hostname}:8030</value>

@@ -1796,7 +1796,8 @@ public abstract class AbstractYarnScheduler
   }
 
   /**
-   * ContainerObjectType is a container object with allocationId, priority, executionType and resource.
+   * ContainerObjectType is a container object with the following properties.
+   * Namely allocationId, priority, executionType and resourceType.
    */
   protected class ContainerObjectType extends Object {
     private final long allocationId;
