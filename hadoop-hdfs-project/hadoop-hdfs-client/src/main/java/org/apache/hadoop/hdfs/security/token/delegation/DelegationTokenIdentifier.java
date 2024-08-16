@@ -42,8 +42,9 @@ import org.apache.hadoop.classification.VisibleForTesting;
 @InterfaceAudience.Private
 public class DelegationTokenIdentifier
     extends AbstractDelegationTokenIdentifier {
+
   /**
-   * The value is referenced from {@link HdfsCommonConstants.HDFS_DELEGATION_KIND}.
+   * The value is referenced from {@link HdfsCommonConstants#HDFS_DELEGATION_KIND}.
    */
   @Deprecated
   public static final Text HDFS_DELEGATION_KIND = HdfsCommonConstants.HDFS_DELEGATION_KIND;

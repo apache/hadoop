@@ -30,7 +30,8 @@ import org.apache.hadoop.io.Text;
 public final class HdfsCommonConstants {
 
   /**
-   * HDFS DELEGATION KIND value.
+   * Represents the kind of delegation token used for HDFS.
+   * This is a constant string value "HDFS_DELEGATION_TOKEN".
    */
   public static final Text HDFS_DELEGATION_KIND =
       new Text("HDFS_DELEGATION_TOKEN");
