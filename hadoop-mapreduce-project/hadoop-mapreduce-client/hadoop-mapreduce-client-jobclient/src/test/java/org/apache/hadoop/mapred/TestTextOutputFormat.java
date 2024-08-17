@@ -123,9 +123,9 @@ public class TestTextOutputFormat {
     // A reporter that does nothing
     Reporter reporter = Reporter.NULL;
 
-    TextOutputFormat<Object,Object> theOutputFormat = new TextOutputFormat<Object,Object>();
-    RecordWriter<Object,Object> theRecordWriter =
-      theOutputFormat.getRecordWriter(localFs, job, file, reporter);
+    TextOutputFormat<Object, Object> theOutputFormat = new TextOutputFormat<>();
+    RecordWriter<Object, Object> theRecordWriter =
+        theOutputFormat.getRecordWriter(localFs, job, file, reporter);
 
     Text key1 = new Text("key1");
     Text key2 = new Text("key2");
@@ -167,7 +167,7 @@ public class TestTextOutputFormat {
   public void testCompress() throws IOException {
     JobConf job = new JobConf();
     job.set(JobContext.TASK_ATTEMPT_ID, attempt);
-    job.set(org.apache.hadoop.mapreduce.lib.output.FileOutputFormat.COMPRESS,"true");
+    job.set(org.apache.hadoop.mapreduce.lib.output.FileOutputFormat.COMPRESS, "true");
 
     FileOutputFormat.setOutputPath(job, workDir.getParent().getParent());
     FileOutputFormat.setWorkOutputPath(job, workDir);
@@ -180,9 +180,9 @@ public class TestTextOutputFormat {
     // A reporter that does nothing
     Reporter reporter = Reporter.NULL;
 
-    TextOutputFormat<Object,Object> theOutputFormat = new TextOutputFormat<Object,Object>();
-    RecordWriter<Object,Object> theRecordWriter =
-      theOutputFormat.getRecordWriter(localFs, job, file, reporter);
+    TextOutputFormat<Object, Object> theOutputFormat = new TextOutputFormat<>();
+    RecordWriter<Object, Object> theRecordWriter =
+        theOutputFormat.getRecordWriter(localFs, job, file, reporter);
     Text key1 = new Text("key1");
     Text key2 = new Text("key2");
     Text val1 = new Text("val1");
