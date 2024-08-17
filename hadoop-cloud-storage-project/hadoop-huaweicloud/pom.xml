@@ -29,7 +29,7 @@
   <properties>
     <file.encoding>UTF-8</file.encoding>
     <downloadSources>true</downloadSources>
-    <esdk.version>3.20.4.2</esdk.version>
+    <esdk.version>3.24.3</esdk.version>
   </properties>
 
   <profiles>
