@@ -60,4 +60,30 @@ public class TestCustomizedCallbackHandler {
         MyCallbackHandler.class, CustomizedCallbackHandler.class);
     new SaslServerCallbackHandler(conf, String::toCharArray).handle(callbacks);
   }
+
+  static class MyCallbackMethod {
+    public void handleCallback(List<Callback> callbacks, String name, char[] password)
+        throws UnsupportedCallbackException {
+      LOG.info("{}: handling {} for {}", getClass().getSimpleName(), callbacks, name);
+    }
+  }
+
+  @Test
+  public void testCustomizedCallbackMethod() throws Exception {
+    final Configuration conf = new Configuration();
+    final Callback[] callbacks = {new MyCallback()};
+
+    // without setting conf, expect UnsupportedCallbackException
+    try {
+      new SaslServerCallbackHandler(conf, String::toCharArray).handle(callbacks);
+      Assert.fail("Expected UnsupportedCallbackException for " + Arrays.asList(callbacks));
+    } catch (UnsupportedCallbackException e) {
+      LOG.info("The failure is expected", e);
+    }
+
+    // set conf and expect success
+    conf.setClass(HdfsClientConfigKeys.DFS_DATA_TRANSFER_SASL_CUSTOMIZEDCALLBACKHANDLER_CLASS_KEY,
+        MyCallbackMethod.class, Object.class);
+    new SaslServerCallbackHandler(conf, String::toCharArray).handle(callbacks);
+  }
 }

@@ -225,13 +225,19 @@ public class SaslDataTransferServer {
     SaslServerCallbackHandler(Configuration conf, PasswordFunction passwordFunction) {
       this.passwordFunction = passwordFunction;
 
-      final Class<? extends CustomizedCallbackHandler> clazz = conf.getClass(
+      final Class<?> clazz = conf.getClass(
           HdfsClientConfigKeys.DFS_DATA_TRANSFER_SASL_CUSTOMIZEDCALLBACKHANDLER_CLASS_KEY,
-          CustomizedCallbackHandler.DefaultHandler.class, CustomizedCallbackHandler.class);
+          CustomizedCallbackHandler.DefaultHandler.class);
+      final Object callbackHandler;
       try {
-        this.customizedCallbackHandler = clazz.newInstance();
+        callbackHandler = clazz.newInstance();
       } catch (Exception e) {
         throw new IllegalStateException("Failed to create a new instance of " + clazz, e);
+      }
+      if (callbackHandler instanceof CustomizedCallbackHandler) {
+        customizedCallbackHandler = (CustomizedCallbackHandler) callbackHandler;
+      } else {
+        customizedCallbackHandler = CustomizedCallbackHandler.delegate(callbackHandler);
       }
     }
 

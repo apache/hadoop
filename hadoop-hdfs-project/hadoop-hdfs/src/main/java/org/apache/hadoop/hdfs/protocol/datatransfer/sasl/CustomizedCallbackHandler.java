@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.protocol.datatransfer.sasl;
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.UnsupportedCallbackException;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.List;
 
 /** For handling customized {@link Callback}. */
@@ -32,6 +34,24 @@ public interface CustomizedCallbackHandler {
         throw new UnsupportedCallbackException(callbacks.get(0));
       }
     }
+  }
+
+  static CustomizedCallbackHandler delegate(Object delegated) {
+    return (callbacks, name, password) -> {
+      final String methodName = "handleCallback";
+      final Class<?> clazz = delegated.getClass();
+      final Method method;
+      try {
+        method = clazz.getMethod("handleCallback", List.class, String.class, char[].class);
+      } catch (NoSuchMethodException e) {
+        throw new IllegalStateException("Failed to get method " + methodName + " from " + clazz, e);
+      }
+      try {
+        method.invoke(delegated, callbacks, name, password);
+      } catch (IllegalAccessException | InvocationTargetException e) {
+        throw new IOException("Failed to invoke " + method, e);
+      }
+    };
   }
 
   void handleCallback(List<Callback> callbacks, String name, char[] password)
