@@ -83,7 +83,7 @@ public class ConfBlock extends HtmlBlock {
               __().
       tbody();
       for (ConfEntryInfo entry : info.getProperties()) {
-        StringBuffer buffer = new StringBuffer();
+        StringBuilder buffer = new StringBuilder();
         String[] sources = entry.getSource();
         //Skip the last entry, because it is always the same HDFS file, and
         // output them in reverse order so most recent is output first
