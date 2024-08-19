@@ -62,6 +62,7 @@ typedef struct _IsalDecoder {
   unsigned char erasureFlags[MMAX];
   int erasedIndexes[MMAX];
   int numErased;
+  int numErasedDataUnits;
   unsigned char* realInputs[MMAX];
 } IsalDecoder;
 

@@ -132,6 +132,9 @@ static int processErasures(IsalDecoder* pCoder, unsigned char** inputs,
     index = erasedIndexes[i];
     pCoder->erasedIndexes[i] = index;
     pCoder->erasureFlags[index] = 1;
+    if (index < numDataUnits) {
+      pCoder->numErasedDataUnits++;
+    }
   }
 
   pCoder->numErased = numErased;
@@ -172,6 +175,7 @@ int decode(IsalDecoder* pCoder, unsigned char** inputs,
 
 // Clear variables used per decode call
 void clearDecoder(IsalDecoder* decoder) {
+  decoder->numErasedDataUnits = 0;
   decoder->numErased = 0;
   memset(decoder->gftbls, 0, sizeof(decoder->gftbls));
   memset(decoder->decodeMatrix, 0, sizeof(decoder->decodeMatrix));
@@ -201,24 +205,24 @@ int generateDecodeMatrix(IsalDecoder* pCoder) {
   h_gf_invert_matrix(pCoder->tmpMatrix,
                                 pCoder->invertMatrix, numDataUnits);
 
-  for (p = 0; p < pCoder->numErased; p++) {
+  for (i = 0; i < pCoder->numErasedDataUnits; i++) {
     for (j = 0; j < numDataUnits; j++) {
-      int erasedIndex = pCoder->erasedIndexes[p];
-      if (erasedIndex < numDataUnits) {
-        pCoder->decodeMatrix[numDataUnits * p + j] =
-            pCoder->invertMatrix[numDataUnits *
-                                     pCoder->erasedIndexes[p] + j];
-      } else {
-        for (i = 0; i < numDataUnits; i++) {
-          s = 0;
-          for (j = 0; j < numDataUnits; j++) {
-            s ^= h_gf_mul(pCoder->invertMatrix[j * numDataUnits + i],
-                          pCoder->encodeMatrix[numDataUnits *
-                            pCoder->erasedIndexes[p] + j]);
-          }
-          pCoder->decodeMatrix[numDataUnits * p + i] = s;
-        }
+      pCoder->decodeMatrix[numDataUnits * i + j] =
+                      pCoder->invertMatrix[numDataUnits *
+                      pCoder->erasedIndexes[i] + j];
+    }
+  }
+
+  for (p = pCoder->numErasedDataUnits; p < pCoder->numErased; p++) {
+    for (i = 0; i < numDataUnits; i++) {
+      s = 0;
+      for (j = 0; j < numDataUnits; j++) {
+        s ^= h_gf_mul(pCoder->invertMatrix[j * numDataUnits + i],
+          pCoder->encodeMatrix[numDataUnits *
+                                        pCoder->erasedIndexes[p] + j]);
       }
+
+      pCoder->decodeMatrix[numDataUnits * p + i] = s;
     }
   }
 
