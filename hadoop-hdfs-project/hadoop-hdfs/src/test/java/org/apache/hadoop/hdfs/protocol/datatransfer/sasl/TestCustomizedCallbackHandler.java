@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.protocol.datatransfer.sasl;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.SaslDataTransferServer.SaslServerCallbackHandler;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -27,18 +28,35 @@ import org.slf4j.LoggerFactory;
 
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.UnsupportedCallbackException;
-import java.util.Arrays;
+import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class TestCustomizedCallbackHandler {
   public static final Logger LOG = LoggerFactory.getLogger(TestCustomizedCallbackHandler.class);
+
+  static final AtomicReference<List<Callback>> LAST_CALLBACKS = new AtomicReference<>();
+
+  static void runHandleCallbacks(Object caller, List<Callback> callbacks, String name) {
+    LOG.info("{}: handling {} for {}", caller.getClass().getSimpleName(), callbacks, name);
+    LAST_CALLBACKS.set(callbacks);
+  }
+
+  static void assertCallbacks(Callback[] expected) {
+    final List<Callback> computed = LAST_CALLBACKS.getAndSet(null);
+    Assert.assertNotNull(computed);
+    Assert.assertEquals(expected.length, computed.size());
+    for (int i = 0; i < expected.length; i++) {
+      Assert.assertSame(expected[i], computed.get(i));
+    }
+  }
 
   static class MyCallback implements Callback { }
 
   static class MyCallbackHandler implements CustomizedCallbackHandler {
     @Override
-    public void handleCallback(List<Callback> callbacks, String name, char[] password) {
-      LOG.info("{}: handling {} for {}", getClass().getSimpleName(), callbacks, name);
+    public void handleCallbacks(List<Callback> callbacks, String name, char[] password) {
+      runHandleCallbacks(this, callbacks, name);
     }
   }
 
@@ -48,23 +66,27 @@ public class TestCustomizedCallbackHandler {
     final Callback[] callbacks = {new MyCallback()};
 
     // without setting conf, expect UnsupportedCallbackException
-    try {
-      new SaslServerCallbackHandler(conf, String::toCharArray).handle(callbacks);
-      Assert.fail("Expected UnsupportedCallbackException for " + Arrays.asList(callbacks));
-    } catch (UnsupportedCallbackException e) {
-      LOG.info("The failure is expected", e);
-    }
+    LambdaTestUtils.intercept(UnsupportedCallbackException.class, () -> runTest(conf, callbacks));
 
     // set conf and expect success
     conf.setClass(HdfsClientConfigKeys.DFS_DATA_TRANSFER_SASL_CUSTOMIZEDCALLBACKHANDLER_CLASS_KEY,
         MyCallbackHandler.class, CustomizedCallbackHandler.class);
     new SaslServerCallbackHandler(conf, String::toCharArray).handle(callbacks);
+    assertCallbacks(callbacks);
   }
 
   static class MyCallbackMethod {
-    public void handleCallback(List<Callback> callbacks, String name, char[] password)
+    public void handleCallbacks(List<Callback> callbacks, String name, char[] password)
         throws UnsupportedCallbackException {
-      LOG.info("{}: handling {} for {}", getClass().getSimpleName(), callbacks, name);
+      runHandleCallbacks(this, callbacks, name);
+    }
+  }
+
+  static class MyExceptionMethod {
+    public void handleCallbacks(List<Callback> callbacks, String name, char[] password)
+        throws UnsupportedCallbackException {
+      runHandleCallbacks(this, callbacks, name);
+      throw new UnsupportedCallbackException(callbacks.get(0));
     }
   }
 
@@ -74,16 +96,21 @@ public class TestCustomizedCallbackHandler {
     final Callback[] callbacks = {new MyCallback()};
 
     // without setting conf, expect UnsupportedCallbackException
-    try {
-      new SaslServerCallbackHandler(conf, String::toCharArray).handle(callbacks);
-      Assert.fail("Expected UnsupportedCallbackException for " + Arrays.asList(callbacks));
-    } catch (UnsupportedCallbackException e) {
-      LOG.info("The failure is expected", e);
-    }
+    LambdaTestUtils.intercept(UnsupportedCallbackException.class, () -> runTest(conf, callbacks));
 
     // set conf and expect success
     conf.setClass(HdfsClientConfigKeys.DFS_DATA_TRANSFER_SASL_CUSTOMIZEDCALLBACKHANDLER_CLASS_KEY,
         MyCallbackMethod.class, Object.class);
+    new SaslServerCallbackHandler(conf, String::toCharArray).handle(callbacks);
+    assertCallbacks(callbacks);
+
+    // set conf and expect exception
+    conf.setClass(HdfsClientConfigKeys.DFS_DATA_TRANSFER_SASL_CUSTOMIZEDCALLBACKHANDLER_CLASS_KEY,
+        MyExceptionMethod.class, Object.class);
+    LambdaTestUtils.intercept(IOException.class, () -> runTest(conf, callbacks));
+  }
+
+  static void runTest(Configuration conf, Callback... callbacks) throws IOException, UnsupportedCallbackException {
     new SaslServerCallbackHandler(conf, String::toCharArray).handle(callbacks);
   }
 }

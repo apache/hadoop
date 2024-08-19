@@ -277,7 +277,7 @@ public class SaslDataTransferServer {
       if (unknownCallbacks != null) {
         final String name = nc != null ? nc.getDefaultName() : null;
         final char[] password = name != null ? passwordFunction.apply(name) : null;
-        customizedCallbackHandler.handleCallback(unknownCallbacks, name, password);
+        customizedCallbackHandler.handleCallbacks(unknownCallbacks, name, password);
       }
     }
   }

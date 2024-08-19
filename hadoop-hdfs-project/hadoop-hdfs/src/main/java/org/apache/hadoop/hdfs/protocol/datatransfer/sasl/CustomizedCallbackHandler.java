@@ -28,7 +28,7 @@ import java.util.List;
 public interface CustomizedCallbackHandler {
   class DefaultHandler implements CustomizedCallbackHandler{
     @Override
-    public void handleCallback(List<Callback> callbacks, String username, char[] password)
+    public void handleCallbacks(List<Callback> callbacks, String username, char[] password)
         throws UnsupportedCallbackException {
       if (!callbacks.isEmpty()) {
         throw new UnsupportedCallbackException(callbacks.get(0));
@@ -37,15 +37,16 @@ public interface CustomizedCallbackHandler {
   }
 
   static CustomizedCallbackHandler delegate(Object delegated) {
+    final String methodName = "handleCallbacks";
+    final Class<?> clazz = delegated.getClass();
+    final Method method;
+    try {
+      method = clazz.getMethod(methodName, List.class, String.class, char[].class);
+    } catch (NoSuchMethodException e) {
+      throw new IllegalStateException("Failed to get method " + methodName + " from " + clazz, e);
+    }
+
     return (callbacks, name, password) -> {
-      final String methodName = "handleCallback";
-      final Class<?> clazz = delegated.getClass();
-      final Method method;
-      try {
-        method = clazz.getMethod("handleCallback", List.class, String.class, char[].class);
-      } catch (NoSuchMethodException e) {
-        throw new IllegalStateException("Failed to get method " + methodName + " from " + clazz, e);
-      }
       try {
         method.invoke(delegated, callbacks, name, password);
       } catch (IllegalAccessException | InvocationTargetException e) {
@@ -54,6 +55,6 @@ public interface CustomizedCallbackHandler {
     };
   }
 
-  void handleCallback(List<Callback> callbacks, String name, char[] password)
+  void handleCallbacks(List<Callback> callbacks, String name, char[] password)
       throws UnsupportedCallbackException, IOException;
 }
