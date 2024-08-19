@@ -113,5 +113,4 @@ public class TestServiceInterruptHandling
       this.interruptData = data;
     }
   }
-
 }

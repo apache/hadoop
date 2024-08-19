@@ -221,5 +221,6 @@ int generateDecodeMatrix(IsalDecoder* pCoder) {
       }
     }
   }
+
   return 0;
 }
