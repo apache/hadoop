@@ -32,8 +32,9 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
+/** For testing {@link CustomizedCallbackHandler}. */
 public class TestCustomizedCallbackHandler {
-  public static final Logger LOG = LoggerFactory.getLogger(TestCustomizedCallbackHandler.class);
+  static final Logger LOG = LoggerFactory.getLogger(TestCustomizedCallbackHandler.class);
 
   static final AtomicReference<List<Callback>> LAST_CALLBACKS = new AtomicReference<>();
 
@@ -42,6 +43,7 @@ public class TestCustomizedCallbackHandler {
     LAST_CALLBACKS.set(callbacks);
   }
 
+  /** Assert if the callbacks in {@link #LAST_CALLBACKS} are the same as the expected callbacks. */
   static void assertCallbacks(Callback[] expected) {
     final List<Callback> computed = LAST_CALLBACKS.getAndSet(null);
     Assert.assertNotNull(computed);
