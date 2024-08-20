@@ -110,7 +110,8 @@ public class TestCustomizedCallbackHandler {
     LambdaTestUtils.intercept(IOException.class, () -> runTest(conf, callbacks));
   }
 
-  static void runTest(Configuration conf, Callback... callbacks) throws IOException, UnsupportedCallbackException {
+  static void runTest(Configuration conf, Callback... callbacks)
+      throws IOException, UnsupportedCallbackException {
     new SaslServerCallbackHandler(conf, String::toCharArray).handle(callbacks);
   }
 }
