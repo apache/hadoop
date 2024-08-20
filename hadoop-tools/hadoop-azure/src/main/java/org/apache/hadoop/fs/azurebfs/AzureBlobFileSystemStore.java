@@ -1770,12 +1770,13 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
     if (authType == AuthType.SharedKey) {
       LOG.trace("Fetching SharedKey credentials");
-      int dotIndex = accountName.indexOf(AbfsHttpConstants.DOT);
+      final String primaryAccountName = abfsConfiguration.getPrimaryAccountName();
+      int dotIndex = primaryAccountName.indexOf(AbfsHttpConstants.DOT);
       if (dotIndex <= 0) {
         throw new InvalidUriException(
                 uri.toString() + " - account name is not fully qualified.");
       }
-      creds = new SharedKeyCredentials(accountName.substring(0, dotIndex),
+      creds = new SharedKeyCredentials(primaryAccountName.substring(0, dotIndex),
             abfsConfiguration.getStorageAccountKey());
     } else if (authType == AuthType.SAS) {
       LOG.trace("Fetching SAS Token Provider");

@@ -42,6 +42,7 @@ public class ITestAzureBlobFileSystemBackCompat extends
   @Test
   public void testBlobBackCompat() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
+    Assume.assumeFalse("Secondary account does not support this test,", getIsSecondaryAccount());
     Assume.assumeFalse("This test does not support namespace enabled account",
         getIsNamespaceEnabled(getFileSystem()));
     String storageConnectionString = getBlobConnectionString();
