@@ -46,6 +46,7 @@ import javax.annotation.Nullable;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
 import org.apache.hadoop.fs.impl.BackReference;
 import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.util.Preconditions;
@@ -111,13 +112,16 @@ import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.LambdaUtils;
 import org.apache.hadoop.util.Progressable;
 
+import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static java.net.HttpURLConnection.HTTP_CONFLICT;
+import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL_DEFAULT;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_STANDARD_OPTIONS;
 import static org.apache.hadoop.fs.azurebfs.AbfsStatistic.*;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CPK_IN_NON_HNS_ACCOUNT_ERROR_MESSAGE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.DATA_BLOCKS_BUFFER;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_IS_HNS_ENABLED;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_BLOCK_UPLOAD_ACTIVE_BLOCKS;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_BLOCK_UPLOAD_BUFFER_DIR;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.BLOCK_UPLOAD_ACTIVE_BLOCKS_DEFAULT;
@@ -215,6 +219,23 @@ public class AzureBlobFileSystem extends FileSystem
 
     TracingContext tracingContext = new TracingContext(clientCorrelationId,
             fileSystemId, FSOperationType.CREATE_FILESYSTEM, tracingHeaderFormat, listener);
+
+    /*
+     * Validate the service type configured in the URI is valid for account type used.
+     * HNS Account Cannot have Blob Endpoint URI.
+     */
+    try {
+      abfsConfiguration.validateConfiguredServiceType(
+          tryGetIsNamespaceEnabled(new TracingContext(tracingContext)));
+    } catch (InvalidConfigurationValueException ex) {
+      LOG.debug("File system configured with Invalid Service Type", ex);
+      throw ex;
+    } catch (AzureBlobFileSystemException ex) {
+      LOG.debug("Failed to determine account type for service type validation", ex);
+      throw new InvalidConfigurationValueException(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, ex);
+    }
+
+    // Create the file system if it does not exist.
     if (abfsConfiguration.getCreateRemoteFileSystemDuringInitialization()) {
       if (this.tryGetFileStatus(new Path(AbfsHttpConstants.ROOT_PATH), tracingContext) == null) {
         try {
@@ -232,10 +253,7 @@ public class AzureBlobFileSystem extends FileSystem
      */
     if ((isEncryptionContextCPK(abfsConfiguration) || isGlobalKeyCPK(
         abfsConfiguration))
-        && !getIsNamespaceEnabled(
-        new TracingContext(clientCorrelationId, fileSystemId,
-            FSOperationType.CREATE_FILESYSTEM, tracingHeaderFormat,
-            listener))) {
+        && !getIsNamespaceEnabled(new TracingContext(tracingContext))) {
       /*
        * Close the filesystem gracefully before throwing exception. Graceful close
        * will ensure that all resources are released properly.
@@ -1390,6 +1408,34 @@ public class AzureBlobFileSystem extends FileSystem
     }
   }
 
+  /**
+   * Utility function to check if the namespace is enabled on the storage account.
+   * If request fails with 4xx other than 400, it will be inferred as HNS.
+   * @param tracingContext tracing context
+   * @return true if namespace is enabled, false otherwise.
+   * @throws AzureBlobFileSystemException if any other error occurs.
+   */
+  private boolean tryGetIsNamespaceEnabled(TracingContext tracingContext)
+      throws AzureBlobFileSystemException{
+    try {
+      return getIsNamespaceEnabled(tracingContext);
+    } catch (AbfsRestOperationException ex) {
+      /*
+       * Exception will be thrown for any non 400 error code.
+       * If status code is in 4xx range, it means it's an HNS account.
+       * If status code is in 5xx range, it means nothing can be inferred.
+       * In case of network errors status code will be -1.
+       */
+      int statusCode = ex.getStatusCode();
+      if (statusCode > HTTP_BAD_REQUEST && statusCode < HTTP_INTERNAL_ERROR) {
+        LOG.debug("getNamespace failed with non 400 user error", ex);
+        statIncrement(ERROR_IGNORED);
+        return true;
+      }
+      throw ex;
+    }
+  }
+
   private boolean fileSystemExists() throws IOException {
     LOG.debug(
         "AzureBlobFileSystem.fileSystemExists uri: {}", uri);
@@ -1650,7 +1696,7 @@ public class AzureBlobFileSystem extends FileSystem
   @VisibleForTesting
   boolean getIsNamespaceEnabled(TracingContext tracingContext)
       throws AzureBlobFileSystemException {
-    return abfsStore.getIsNamespaceEnabled(tracingContext);
+    return getAbfsStore().getIsNamespaceEnabled(tracingContext);
   }
 
   /**

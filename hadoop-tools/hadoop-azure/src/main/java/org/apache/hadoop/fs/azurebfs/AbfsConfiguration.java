@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
 import org.apache.hadoop.fs.azurebfs.services.FixedSASTokenProvider;
 import org.apache.hadoop.fs.azurebfs.constants.HttpOperationType;
 import org.apache.hadoop.util.Preconditions;
@@ -73,6 +74,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.fs.FileSystem.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.*;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.*;
@@ -86,12 +88,18 @@ public class AbfsConfiguration{
 
   private final Configuration rawConfig;
   private final String accountName;
+  // Service type identified from URL used to initialize FileSystem.
+  private final AbfsServiceType fsConfiguredServiceType;
   private final boolean isSecure;
   private static final Logger LOG = LoggerFactory.getLogger(AbfsConfiguration.class);
 
   @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ACCOUNT_IS_HNS_ENABLED,
       DefaultValue = DEFAULT_FS_AZURE_ACCOUNT_IS_HNS_ENABLED)
   private String isNamespaceEnabledAccount;
+
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_DFSTOBLOB_FALLBACK,
+      DefaultValue = DEFAULT_FS_AZURE_ENABLE_DFSTOBLOB_FALLBACK)
+  private boolean isDfsToBlobFallbackEnabled;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_WRITE_MAX_CONCURRENT_REQUESTS,
       DefaultValue = -1)
@@ -387,11 +395,14 @@ public class AbfsConfiguration{
   private String clientProvidedEncryptionKey;
   private String clientProvidedEncryptionKeySHA;
 
-  public AbfsConfiguration(final Configuration rawConfig, String accountName)
-      throws IllegalAccessException, InvalidConfigurationValueException, IOException {
+  public AbfsConfiguration(final Configuration rawConfig,
+      String accountName,
+      AbfsServiceType fsConfiguredServiceType)
+      throws IllegalAccessException, IOException {
     this.rawConfig = ProviderUtils.excludeIncompatibleCredentialProviders(
         rawConfig, AzureBlobFileSystem.class);
     this.accountName = accountName;
+    this.fsConfiguredServiceType = fsConfiguredServiceType;
     this.isSecure = getBoolean(FS_AZURE_SECURE_MODE, false);
 
     Field[] fields = this.getClass().getDeclaredFields();
@@ -413,9 +424,74 @@ public class AbfsConfiguration{
     }
   }
 
+  public AbfsConfiguration(final Configuration rawConfig, String accountName)
+      throws IllegalAccessException, IOException {
+    this(rawConfig, accountName, AbfsServiceType.DFS);
+  }
+
   public Trilean getIsNamespaceEnabledAccount() {
     return Trilean.getTrilean(
         getString(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, isNamespaceEnabledAccount));
+  }
+
+  /**
+   * Returns the service type to be used based on the filesystem configuration.
+   * Precedence is given to service type configured for FNS Accounts using
+   * "fs.azure.fns.account.service.type". If not configured, then the service
+   * type identified from url used to initialize filesystem will be used.
+   * @return the service type.
+   */
+  public AbfsServiceType getFsConfiguredServiceType() {
+    return getEnum(FS_AZURE_FNS_ACCOUNT_SERVICE_TYPE, fsConfiguredServiceType);
+  }
+
+  /**
+   * Returns the service type configured for FNS Accounts to override the
+   * service type identified by URL used to initialize the filesystem.
+   * @return the service type.
+   */
+  public AbfsServiceType getConfiguredServiceTypeForFNSAccounts() {
+    return getEnum(FS_AZURE_FNS_ACCOUNT_SERVICE_TYPE, null);
+  }
+
+  /**
+   * Returns the service type to be used for Ingress Operations irrespective of account type.
+   * Default value is the same as the service type configured for the file system.
+   * @return the service type.
+   */
+  public AbfsServiceType getIngressServiceType() {
+    return getEnum(FS_AZURE_INGRESS_SERVICE_TYPE, getFsConfiguredServiceType());
+  }
+
+  /**
+   * Returns whether there is a need to move traffic from DFS to Blob.
+   * Needed when the service type is DFS and operations are experiencing compatibility issues.
+   * @return true if fallback enabled.
+   */
+  public boolean isDfsToBlobFallbackEnabled() {
+    return isDfsToBlobFallbackEnabled;
+  }
+
+  /**
+   * Checks if the service type configured is valid for account type used.
+   * HNS Enabled accounts cannot have service type as BLOB.
+   * @param isHNSEnabled Flag to indicate if HNS is enabled for the account.
+   * @throws InvalidConfigurationValueException if the service type is invalid.
+   */
+  public void validateConfiguredServiceType(boolean isHNSEnabled)
+      throws InvalidConfigurationValueException {
+    // Todo: [FnsOverBlob] - Remove this check, Failing FS Init with Blob Endpoint Until FNS over Blob is ready.
+    if (getFsConfiguredServiceType() == AbfsServiceType.BLOB) {
+      throw new InvalidConfigurationValueException(FS_DEFAULT_NAME_KEY,
+          "Blob Endpoint Support not yet available");
+    }
+    if (isHNSEnabled && getConfiguredServiceTypeForFNSAccounts() == AbfsServiceType.BLOB) {
+      throw new InvalidConfigurationValueException(
+          FS_AZURE_FNS_ACCOUNT_SERVICE_TYPE, "Cannot be BLOB for HNS Account");
+    } else if (isHNSEnabled && fsConfiguredServiceType == AbfsServiceType.BLOB) {
+      throw new InvalidConfigurationValueException(FS_DEFAULT_NAME_KEY,
+          "Blob Endpoint Url Cannot be used to initialize filesystem for HNS Account");
+    }
   }
 
   /**
@@ -458,6 +534,7 @@ public class AbfsConfiguration{
    * Returns the account-specific value if it exists, then looks for an
    * account-agnostic value.
    * @param key Account-agnostic configuration key
+   * @param defaultValue Value returned if none is configured
    * @return value if one exists, else the default value
    */
   public String getString(String key, String defaultValue) {
@@ -502,7 +579,7 @@ public class AbfsConfiguration{
    * looks for an account-agnostic value.
    * @param key Account-agnostic configuration key
    * @return value in String form if one exists, else null
-   * @throws IOException
+   * @throws IOException if parsing fails.
    */
   public String getPasswordString(String key) throws IOException {
     char[] passchars = rawConfig.getPassword(accountConf(key));

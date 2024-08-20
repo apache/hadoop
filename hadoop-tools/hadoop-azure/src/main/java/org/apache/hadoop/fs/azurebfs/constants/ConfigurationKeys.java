@@ -32,9 +32,35 @@ public final class ConfigurationKeys {
   /**
    * Config to specify if the configured account is HNS enabled or not. If
    * this config is not set, getacl call is made on account filesystem root
-   * path to determine HNS status.
+   * path on DFS Endpoint to determine HNS status.
    */
   public static final String FS_AZURE_ACCOUNT_IS_HNS_ENABLED = "fs.azure.account.hns.enabled";
+
+  /**
+   * Config to specify which {@link  AbfsServiceType} to use with HNS-Disabled Account type.
+   * Default value will be identified from URL used to initialize filesystem.
+   * This will allow an override to choose service endpoint in cases where any
+   * local DNS resolution is set for account and driver is unable to detect
+   * intended endpoint from the url used to initialize filesystem.
+   * If configured Blob for HNS-Enabled account, FS init will fail.
+   * Value {@value} case-insensitive "DFS" or "BLOB"
+   */
+  public static final String FS_AZURE_FNS_ACCOUNT_SERVICE_TYPE = "fs.azure.fns.account.service.type";
+
+  /**
+   * Config to specify which {@link AbfsServiceType} to use only for Ingress Operations.
+   * Other operations will continue to move to the FS configured service endpoint.
+   * Value {@value} case-insensitive "DFS" or "BLOB"
+   */
+  public static final String FS_AZURE_INGRESS_SERVICE_TYPE = "fs.azure.ingress.service.type";
+
+  /**
+   * Config to be set only for cases where traffic over dfs endpoint is
+   * experiencing compatibility issues and need to move to blob for mitigation.
+   * Value {@value} case-insensitive "True" or "False"
+   */
+  public static final String FS_AZURE_ENABLE_DFSTOBLOB_FALLBACK = "fs.azure.enable.dfstoblob.fallback";
+
   /**
    * Enable or disable expect hundred continue header.
    * Value: {@value}.

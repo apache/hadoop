@@ -339,8 +339,7 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
       case SET_ATTR:
         Hashtable<String, String> properties = new Hashtable<>();
         properties.put("key", "{ value: valueTest }");
-        return client.setPathProperties(path, fs.getAbfsStore()
-                .convertXmsPropertiesToCommaSeparatedString(properties),
+        return client.setPathProperties(path, properties,
             getTestTracingContext(fs, false),
             createEncryptionAdapterFromServerStoreContext(path,
                 getTestTracingContext(fs, false), client));

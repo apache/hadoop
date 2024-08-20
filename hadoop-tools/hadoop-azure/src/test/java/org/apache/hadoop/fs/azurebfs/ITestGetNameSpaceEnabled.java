@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
+import org.apache.hadoop.fs.azurebfs.services.AbfsDfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -145,12 +146,15 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
 
   @Test
   public void testFailedRequestWhenFSNotExist() throws Exception {
+    assumeValidTestConfigPresent(getRawConfiguration(), FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT);
     AbfsConfiguration config = this.getConfiguration();
     config.setBoolean(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION, false);
     String testUri = this.getTestUrl();
     String nonExistingFsUrl = getAbfsScheme() + "://" + UUID.randomUUID()
             + testUri.substring(testUri.indexOf("@"));
+    config.setBoolean(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, isUsingXNSAccount);
     AzureBlobFileSystem fs = this.getFileSystem(nonExistingFsUrl);
+    fs.getAbfsStore().setNamespaceEnabled(Trilean.UNKNOWN);
 
     intercept(FileNotFoundException.class,
             "\"The specified filesystem does not exist.\", 404",
@@ -219,12 +223,14 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
 
   private AbfsClient callAbfsGetIsNamespaceEnabledAndReturnMockAbfsClient()
       throws IOException {
-    final AzureBlobFileSystem abfs = this.getFileSystem();
-    final AzureBlobFileSystemStore abfsStore = abfs.getAbfsStore();
-    final AbfsClient mockClient = mock(AbfsClient.class);
+    final AzureBlobFileSystem abfs = Mockito.spy(this.getFileSystem());
+    final AzureBlobFileSystemStore abfsStore = Mockito.spy(abfs.getAbfsStore());
+    final AbfsClient mockClient = mock(AbfsDfsClient.class);
+    doReturn(abfsStore).when(abfs).getAbfsStore();
+    doReturn(mockClient).when(abfsStore).getClient();
+    doReturn(mockClient).when(abfsStore).getClient(any());
     doReturn(mock(AbfsRestOperation.class)).when(mockClient)
         .getAclStatus(anyString(), any(TracingContext.class));
-    abfsStore.setClient(mockClient);
     getIsNamespaceEnabled(abfs);
     return mockClient;
   }
