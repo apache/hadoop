@@ -46,7 +46,7 @@ public class TestServiceInterruptHandling
     assertTrue("Native must be loaded", SignalUtils.nativeCodeLoaded);
     InterruptCatcher catcher = new InterruptCatcher();
     // we should use "USR2". If USR2 is ignored, we still override new signal hanlder. But SIGINT can not.
-    // See: https://github.com/openjdk/jdk/blob/48ad07fd2cacdfcde606b33a369b1bf8df592088/hotspot/src/os/linux/vm/jvm_linux.cpp#L100
+    // See: https://github.com/openjdk/jdk/blob/48ad07fd2cacdfcde606b33a369b1bf8df592088/hotspot/src/os/linux/vm/jvm_linux.cpp#L76
     String name = IrqHandler.CONTROL_C;
     assertFalse("SIGINT have been ignored, so can not set signal handler.", SignalUtils.isSigIgnored(2));   // SIGINT is 2
     IrqHandler irqHandler = new IrqHandler(name, catcher);
