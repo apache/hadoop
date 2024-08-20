@@ -42,6 +42,7 @@ public class TestServiceInterruptHandling
     IrqHandler irqHandler = new IrqHandler(name, catcher);
     irqHandler.bind();
     assertEquals(0, irqHandler.getSignalCount());
+    Thread.sleep(3000);
     irqHandler.raise();
     // allow for an async event
     GenericTestUtils.waitFor(() -> catcher.interruptData != null, 100, 100000);
