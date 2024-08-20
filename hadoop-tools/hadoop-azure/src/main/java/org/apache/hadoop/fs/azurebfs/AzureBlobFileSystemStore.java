@@ -174,7 +174,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   /**
    * Variable to hold the client handler which will determine the operative
    * client based on the service type configured.
-   * Initialized in the @link{initializeClient} method.
+   * Initialized in the {@link #initializeClient(URI, String, String, boolean)}.
    */
   private AbfsClientHandler clientHandler;
   private URI uri;
