@@ -256,6 +256,7 @@ hadoop_add_dual_library(hadoop
     ${SRC}/util/NativeCodeLoader.c
     ${SRC}/util/NativeCrc32.c
     ${SRC}/util/bulk_crc32.c
+    ${SRC}/util/SignalUtils.c
     ${BULK_CRC_ARCH_SOURCE_FIlE}
 )
 if(NEED_LINK_DL)

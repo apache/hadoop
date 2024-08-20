@@ -22,9 +22,15 @@ import org.apache.hadoop.service.BreakableService;
 import org.apache.hadoop.service.launcher.testservices.FailureTestService;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ExitUtil;
+import org.apache.hadoop.util.NativeCodeLoader;
+import org.apache.hadoop.util.SignalUtils;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import sun.misc.Signal;
+import sun.misc.SignalHandler;
+
+import static org.junit.Assume.assumeTrue;
 
 /**
  * Test service launcher interrupt handling.
@@ -37,12 +43,15 @@ public class TestServiceInterruptHandling
 
   @Test
   public void testRegisterAndRaise() throws Throwable {
+    assertTrue("Native must be loaded", SignalUtils.nativeCodeLoaded);
     InterruptCatcher catcher = new InterruptCatcher();
+    // we should use "USR2". If USR2 is ignored, we still override new signal hanlder. But SIGINT can not.
+    // See: https://github.com/openjdk/jdk/blob/48ad07fd2cacdfcde606b33a369b1bf8df592088/hotspot/src/os/linux/vm/jvm_linux.cpp#L100
     String name = IrqHandler.CONTROL_C;
+    assertFalse("SIGINT have been ignored, so can not set signal handler.", SignalUtils.isSigIgnored(2));   // SIGINT is 2
     IrqHandler irqHandler = new IrqHandler(name, catcher);
     irqHandler.bind();
     assertEquals(0, irqHandler.getSignalCount());
-    Thread.sleep(3000);
     irqHandler.raise();
     // allow for an async event
     GenericTestUtils.waitFor(() -> catcher.interruptData != null, 100, 100000);
