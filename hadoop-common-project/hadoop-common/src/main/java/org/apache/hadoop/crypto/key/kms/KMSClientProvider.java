@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.crypto.key.kms;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider;
