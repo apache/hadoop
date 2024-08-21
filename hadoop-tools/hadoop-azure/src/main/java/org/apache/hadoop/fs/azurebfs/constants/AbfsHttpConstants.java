@@ -52,7 +52,7 @@ public final class AbfsHttpConstants {
   public static final String APPEND_BLOB_TYPE = "appendblob";
   public static final String TOKEN_VERSION = "2";
 
-  //Abfs Client Constants for Blob Endpoint.
+  //Abfs Http Client Constants for Blob Endpoint APIs.
   public static final String CONTAINER = "container";
   public static final String METADATA = "metadata";
   public static final String LIST = "list";

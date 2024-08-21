@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
@@ -106,7 +105,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARA
 /**
  * AbfsClient interacting with Blob endpoint.
  */
-public class AbfsBlobClient extends AbfsClient implements Closeable {
+public class AbfsBlobClient extends AbfsClient {
 
   public AbfsBlobClient(final URL baseUrl,
       final SharedKeyCredentials sharedKeyCredentials,
@@ -126,11 +125,6 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
       final AbfsClientContext abfsClientContext) throws IOException {
     super(baseUrl, sharedKeyCredentials, abfsConfiguration, sasTokenProvider,
         encryptionContextProvider, abfsClientContext);
-  }
-
-  @Override
-  public void close() throws IOException {
-    super.close();
   }
 
   /**
@@ -161,7 +155,6 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
    * Get Rest Operation for API
    * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/create-container">
    *   Create Container</a>.
-   * Creates a storage container as filesystem root.
    * @param tracingContext for tracing the service call.
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation fails.
@@ -186,7 +179,6 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
    * Get Rest Operation for API
    * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/set-container-metadata">
    *   Set Container Metadata</a>.
-   * Sets user-defined properties of the filesystem.
    * @param properties comma separated list of metadata key-value pairs.
    * @param tracingContext for tracing the service call.
    * @return executed rest operation containing response from server.
@@ -271,6 +263,28 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
 
   /**
    * Get Rest Operation for API
+   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/list-blobs">
+   *   List Blobs</a>.
+   * @param relativePath to return only blobs with names that begin with the specified prefix.
+   * @param recursive to return all blobs in the path, including those in subdirectories.
+   * @param listMaxResults maximum number of blobs to return.
+   * @param continuation marker to specify the continuation token.
+   * @param tracingContext for tracing the service call.
+   * @return executed rest operation containing response from server.
+   * @throws AzureBlobFileSystemException if rest operation or response parsing fails.
+   */
+  @Override
+  public AbfsRestOperation listPath(final String relativePath,
+      final boolean recursive,
+      final int listMaxResults,
+      final String continuation,
+      TracingContext tracingContext) throws AzureBlobFileSystemException {
+    // Todo: [FnsOverBlob] To be implemented as part of response handling of blob endpoint APIs.
+    throw new NotImplementedException("Blob Endpoint Support is not yet implemented");
+  }
+
+  /**
+   * Get Rest Operation for API
    * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/put-blob">
    *   Put Blob</a>.
    * Creates a file or directory(marker file) at specified path.
@@ -329,25 +343,9 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/list-blobs"></a>.
-   * @param relativePath to return only blobs with names that begin with the specified prefix.
-   * @param recursive to return all blobs in the path, including those in subdirectories.
-   * @param listMaxResults maximum number of blobs to return.
-   * @param continuation marker to specify the continuation token.
-   * @param tracingContext for tracing the service call.
-   * @return executed rest operation containing response from server.
-   * @throws AzureBlobFileSystemException if rest operation or response parsing fails.
-   */
-  @Override
-  public AbfsRestOperation listPath(final String relativePath, final boolean recursive,
-      final int listMaxResults, final String continuation, TracingContext tracingContext)
-      throws AzureBlobFileSystemException {
-    // Todo: [FnsOverBlob] To be implemented as part of response handling of blob endpoint APIs.
-    throw new NotImplementedException("Blob Endpoint Support is not yet implemented");
-  }
-
-  /**
-   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/lease-blob">Lease Blob</a>.
+   * Get Rest Operation for API
+   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/lease-blob">
+   *   Lease Blob</a>.
    * @param path on which lease has to be acquired.
    * @param duration for which lease has to be acquired.
    * @param tracingContext for tracing the service call.
@@ -355,7 +353,8 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
    * @throws AzureBlobFileSystemException if rest operation fails.
    */
   @Override
-  public AbfsRestOperation acquireLease(final String path, final int duration,
+  public AbfsRestOperation acquireLease(final String path,
+      final int duration,
       TracingContext tracingContext) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_ACTION, ACQUIRE_LEASE_ACTION));
@@ -374,7 +373,9 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/lease-blob">Lease Blob</a>.
+   * Get Rest Operation for API
+   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/lease-blob">
+   *   Lease Blob</a>.
    * @param path on which lease has to be renewed.
    * @param leaseId of the lease to be renewed.
    * @param tracingContext for tracing the service call.
@@ -382,7 +383,8 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
    * @throws AzureBlobFileSystemException if rest operation fails.
    */
   @Override
-  public AbfsRestOperation renewLease(final String path, final String leaseId,
+  public AbfsRestOperation renewLease(final String path,
+      final String leaseId,
       TracingContext tracingContext) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_ACTION, RENEW_LEASE_ACTION));
@@ -400,7 +402,9 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/lease-blob">Lease Blob</a>.
+   * Get Rest Operation for API
+   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/lease-blob">
+   *   Lease Blob</a>.
    * @param path on which lease has to be released.
    * @param leaseId of the lease to be released.
    * @param tracingContext for tracing the service call.
@@ -408,7 +412,8 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
    * @throws AzureBlobFileSystemException if rest operation fails.
    */
   @Override
-  public AbfsRestOperation releaseLease(final String path, final String leaseId,
+  public AbfsRestOperation releaseLease(final String path,
+      final String leaseId,
       TracingContext tracingContext) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     requestHeaders.add(new AbfsHttpHeader(X_MS_LEASE_ACTION, RELEASE_LEASE_ACTION));
@@ -426,7 +431,9 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/lease-blob">Lease Blob</a>.
+   * Get Rest Operation for API
+   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/lease-blob">
+   *   Lease Blob</a>.
    * @param path on which lease has to be broken.
    * @param tracingContext for tracing the service call.
    * @return executed rest operation containing response from server.
@@ -459,11 +466,13 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
       final boolean isMetadataIncompleteState,
       final boolean isNamespaceEnabled) throws IOException {
     // Todo: [FnsOverBlob] To be implemented as part of rename-delete over blob endpoint work.
-    throw new NotImplementedException("Rename operation on Blob endpoint will be implemented in future.");
+    throw new NotImplementedException("Rename operation on Blob endpoint yet to be implemented.");
   }
 
   /**
-   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/get-blob">Get Blob</a>.
+   * Get Rest Operation for API
+   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/get-blob">
+   *   Get Blob</a>.
    * Read the contents of the file at specified path
    * @param path of the file to be read.
    * @param position in the file from where data has to be read.
@@ -509,7 +518,9 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/put-block">Put Block</a>.
+   * Get Rest Operation for API
+   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/put-block">
+   *   Put Block</a>.
    * Uploads data to be appended to a file.
    * @param path to which data has to be appended.
    * @param buffer containing data to be appended.
@@ -586,7 +597,18 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Redirect to flush specific to blob endpoint
+   * Blob Endpoint needs blockIds to flush the data.
+   * This method is not supported on Blob Endpoint.
+   * @param path on which data has to be flushed.
+   * @param position to which data has to be flushed.
+   * @param retainUncommittedData whether to retain uncommitted data after flush.
+   * @param isClose specify if this is the last flush to the file.
+   * @param cachedSasToken to be used for the authenticating operation.
+   * @param leaseId if there is an active lease on the path.
+   * @param contextEncryptionAdapter to provide encryption context.
+   * @param tracingContext for tracing the server calls.
+   * @return exception as this operation is not supported on Blob Endpoint.
+   * @throws UnsupportedOperationException
    */
   @Override
   public AbfsRestOperation flush(final String path,
@@ -597,8 +619,8 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
       final String leaseId,
       final ContextEncryptionAdapter contextEncryptionAdapter,
       final TracingContext tracingContext) throws AzureBlobFileSystemException {
-    return this.flush(new byte[0], path, isClose, cachedSasToken, leaseId, "",
-        tracingContext);
+    throw new UnsupportedOperationException(
+        "Flush without blockIds not supported on Blob Endpoint");
   }
 
   /**
@@ -739,6 +761,16 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
     return op;
   }
 
+  /**
+   * Orchestration for delete operation to be implemented.
+   * @param path to be deleted.
+   * @param recursive if the path is a directory, delete recursively.
+   * @param continuation to specify continuation token.
+   * @param tracingContext for tracing the server calls.
+   * @param isNamespaceEnabled specify if the namespace is enabled.
+   * @return executed rest operation containing response from server.
+   * @throws AzureBlobFileSystemException
+   */
   @Override
   public AbfsRestOperation deletePath(final String path,
       final boolean recursive,
@@ -749,6 +781,16 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
     throw new NotImplementedException("Delete operation on Blob endpoint will be implemented in future.");
   }
 
+  /**
+   * Set the owner of the file or directory.
+   * Not supported for HNS-Disabled Accounts.
+   * @param path on which owner has to be set.
+   * @param owner to be set.
+   * @param group to be set.
+   * @param tracingContext for tracing the server calls.
+   * @return exception as this operation is not supported on Blob Endpoint.
+   * @throws UnsupportedOperationException
+   */
   @Override
   public AbfsRestOperation setOwner(final String path,
       final String owner,
@@ -758,6 +800,15 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
         "SetOwner operation is only supported on HNS enabled Accounts.");
   }
 
+  /**
+   * Set the permission of the file or directory.
+   * Not supported for HNS-Disabled Accounts.
+   * @param path on which permission has to be set.
+   * @param permission to be set.
+   * @param tracingContext for tracing the server calls.
+   * @return exception as this operation is not supported on Blob Endpoint.
+   * @throws UnsupportedOperationException
+   */
   @Override
   public AbfsRestOperation setPermission(final String path,
       final String permission,
@@ -766,6 +817,16 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
         "SetPermission operation is only supported on HNS enabled Accounts.");
   }
 
+  /**
+   * Set the ACL of the file or directory.
+   * Not supported for HNS-Disabled Accounts.
+   * @param path on which ACL has to be set.
+   * @param aclSpecString to be set.
+   * @param eTag to specify conditional headers. Set only if etag matches.
+   * @param tracingContext for tracing the server calls.
+   * @return exception as this operation is not supported on Blob Endpoint.
+   * @throws UnsupportedOperationException
+   */
   @Override
   public AbfsRestOperation setAcl(final String path,
       final String aclSpecString,
@@ -775,20 +836,45 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
         "SetAcl operation is only supported on HNS enabled Accounts.");
   }
 
+  /**
+   * Get the ACL of the file or directory.
+   * Not supported for HNS-Disabled Accounts.
+   * @param path of which properties have to be fetched.
+   * @param useUPN whether to use UPN with rest operation.
+   * @param tracingContext for tracing the server calls.
+   * @return exception as this operation is not supported on Blob Endpoint.
+   * @throws UnsupportedOperationException
+   */
   @Override
-  public AbfsRestOperation getAclStatus(final String path, final boolean useUPN,
+  public AbfsRestOperation getAclStatus(final String path,
+      final boolean useUPN,
       TracingContext tracingContext) throws AzureBlobFileSystemException {
     throw new UnsupportedOperationException(
         "GetAclStatus operation is only supported on HNS enabled Accounts.");
   }
 
+  /**
+   * Check the access of the file or directory.
+   * Not supported for HNS-Disabled Accounts.
+   * @param path  Path for which access check needs to be performed
+   * @param rwx   The permission to be checked on the path
+   * @param tracingContext Tracks identifiers for request header
+   * @return exception as this operation is not supported on Blob Endpoint.
+   * @throws UnsupportedOperationException
+   */
   @Override
-  public AbfsRestOperation checkAccess(String path, String rwx, TracingContext tracingContext)
-      throws AzureBlobFileSystemException {
+  public AbfsRestOperation checkAccess(String path,
+      String rwx,
+      TracingContext tracingContext) throws AzureBlobFileSystemException {
     throw new UnsupportedOperationException(
         "CheckAccess operation is only supported on HNS enabled Accounts.");
   }
 
+  /**
+   * Checks if the rest operation results indicate if the path is a directory.
+   * @param result executed rest operation containing response from server.
+   * @return True if the path is a directory, False otherwise.
+   */
   @Override
   public boolean checkIsDir(AbfsHttpOperation result) {
     boolean isDirectory = (result.getResponseHeader(X_MS_META_HDI_ISFOLDER) != null);
@@ -813,14 +899,17 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/get-block-list">Get Block List</a>.
+   * Get Rest Operation for API
+   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/get-block-list">
+   *   Get Block List</a>.
    * Get the list of committed block ids of the blob.
    * @param path The path to get the list of blockId's.
    * @param tracingContext for tracing the service call.
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation fails.
    */
-  public AbfsRestOperation getBlockList(final String path, TracingContext tracingContext) throws AzureBlobFileSystemException {
+  public AbfsRestOperation getBlockList(final String path,
+      TracingContext tracingContext) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
@@ -839,7 +928,9 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/copy-blob">Copy Blob</a>.
+   * Get Rest Operation for API
+   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/copy-blob">
+   *   Copy Blob</a>.
    * This is an asynchronous API, it returns copyId and expects client
    * to poll the server on the destination and check the copy-progress.
    * @param sourceBlobPath path of source to be copied.
@@ -854,7 +945,8 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
    */
   public AbfsRestOperation copyBlob(Path sourceBlobPath,
       Path destinationBlobPath,
-      final String srcLeaseId, TracingContext tracingContext) throws AzureBlobFileSystemException {
+      final String srcLeaseId,
+      TracingContext tracingContext) throws AzureBlobFileSystemException {
     AbfsUriQueryBuilder abfsUriQueryBuilderDst = createDefaultUriQueryBuilder();
     AbfsUriQueryBuilder abfsUriQueryBuilderSrc = new AbfsUriQueryBuilder();
     String dstBlobRelativePath = destinationBlobPath.toUri().getPath();
@@ -881,7 +973,9 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
   }
 
   /**
-   * Get Rest Operation for API <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/delete-blob">Delete Blob</a>.
+   * Get Rest Operation for API
+   * <a href="https://learn.microsoft.com/en-us/rest/api/storageservices/delete-blob">
+   *   Delete Blob</a>.
    * Deletes the blob at the given path.
    * @param blobPath path of the blob to be deleted.
    * @param leaseId if path has an active lease.
@@ -890,7 +984,8 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
    * @throws AzureBlobFileSystemException if rest operation fails.
    */
   public AbfsRestOperation deleteBlobPath(final Path blobPath,
-      final String leaseId, final TracingContext tracingContext) throws AzureBlobFileSystemException {
+      final String leaseId,
+      final TracingContext tracingContext) throws AzureBlobFileSystemException {
     AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     String blobRelativePath = blobPath.toUri().getPath();
     appendSASTokenToQuery(blobRelativePath,
@@ -935,8 +1030,8 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
     return true;
   }
 
-  private List<AbfsHttpHeader> getMetadataHeadersList(final Hashtable<String, String> properties) throws AbfsRestOperationException,
-      CharacterCodingException {
+  private List<AbfsHttpHeader> getMetadataHeadersList(final Hashtable<String, String> properties)
+      throws AbfsRestOperationException, CharacterCodingException {
     List<AbfsHttpHeader> metadataRequestHeaders = new ArrayList<>();
     for (Map.Entry<String, String> entry : properties.entrySet()) {
       String key = X_MS_METADATA_PREFIX + entry.getKey();
@@ -953,4 +1048,4 @@ public class AbfsBlobClient extends AbfsClient implements Closeable {
     }
     return metadataRequestHeaders;
   }
-} 
+}

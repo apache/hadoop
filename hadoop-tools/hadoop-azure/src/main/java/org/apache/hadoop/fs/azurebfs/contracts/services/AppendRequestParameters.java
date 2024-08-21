@@ -37,7 +37,10 @@ public class AppendRequestParameters {
   private boolean isExpectHeaderEnabled;
   private boolean isRetryDueToExpect;
 
-  // Following parameters are used by AbfsBlobClient only.
+  /*
+   * Following parameters are used by AbfsBlobClient only.
+   * Blob Endpoint Append API requires blockId and eTag to be passed in the request.
+   */
   private String blockId;
   private String eTag;
 
