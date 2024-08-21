@@ -173,7 +173,7 @@ public class TestDockerContainerRuntime {
   private String[] testCapabilities;
   private final String signalPid = "1234";
   private final String tmpPath =
-      new StringBuffer(System.getProperty("test.build.data"))
+      new StringBuilder(System.getProperty("test.build.data"))
       .append('/').append("hadoop.tmp.dir").toString();
 
   private static final String RUNTIME_TYPE = "DOCKER";

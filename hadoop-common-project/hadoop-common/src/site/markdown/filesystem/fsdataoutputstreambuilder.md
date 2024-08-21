@@ -200,8 +200,8 @@ Prioritize file creation performance over safety checks for filesystem consisten
 This:
 1. Skips the `LIST` call which makes sure a file is being created over a directory.
    Risk: a file is created over a directory.
-1. Ignores the overwrite flag.
-1. Never issues a `DELETE` call to delete parent directory markers.
+2. Ignores the overwrite flag.
+3. Never issues a `DELETE` call to delete parent directory markers.
 
 It is possible to probe an S3A Filesystem instance for this capability through
 the `hasPathCapability(path, "fs.s3a.create.performance")` check.

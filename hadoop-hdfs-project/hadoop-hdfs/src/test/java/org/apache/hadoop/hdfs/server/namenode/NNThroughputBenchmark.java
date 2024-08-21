@@ -168,7 +168,7 @@ public class NNThroughputBenchmark implements Tool {
 
     private String baseDir;
     protected short replication;
-    protected int blockSize;
+    protected long blockSize;
     protected int  numThreads = 0;        // number of threads
     protected int  numOpsRequired = 0;    // number of operations requested
     protected int  numOpsExecuted = 0;    // number of operations executed
@@ -231,7 +231,7 @@ public class NNThroughputBenchmark implements Tool {
     OperationStatsBase() {
       baseDir = baseDirName + "/" + getOpName();
       replication = (short) config.getInt(DFSConfigKeys.DFS_REPLICATION_KEY, 3);
-      blockSize = config.getInt(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
+      blockSize = config.getLongBytes(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, BLOCK_SIZE);
       numOpsRequired = 10;
       numThreads = 3;
       logLevel = Level.ERROR;
@@ -587,7 +587,7 @@ public class NNThroughputBenchmark implements Tool {
           numOpsRequired = Integer.parseInt(args.get(++i));
         } else if (args.get(i).equals("-blockSize")) {
           if(i+1 == args.size())  printUsage();
-          blockSize = Integer.parseInt(args.get(++i));
+          blockSize = StringUtils.TraditionalBinaryPrefix.string2long(args.get(++i));
         } else if(args.get(i).equals("-threads")) {
           if(i+1 == args.size())  printUsage();
           numThreads = Integer.parseInt(args.get(++i));
@@ -1260,7 +1260,7 @@ public class NNThroughputBenchmark implements Tool {
           blocksPerFile = Integer.parseInt(args.get(++i));
         } else if (args.get(i).equals("-blockSize")) {
           if(i+1 == args.size())  printUsage();
-          blockSize = Integer.parseInt(args.get(++i));
+          blockSize = StringUtils.TraditionalBinaryPrefix.string2long(args.get(++i));
         } else if(args.get(i).equals("-baseDirName")) {
           if (i + 1 == args.size()) {
             printUsage();
@@ -1498,7 +1498,7 @@ public class NNThroughputBenchmark implements Tool {
           replication = Short.parseShort(args.get(++i));
         } else if (args.get(i).equals("-blockSize")) {
           if(i+1 == args.size())  printUsage();
-          blockSize = Integer.parseInt(args.get(++i));
+          blockSize = StringUtils.TraditionalBinaryPrefix.string2long(args.get(++i));
         } else if(args.get(i).equals("-baseDirName")) {
           if (i + 1 == args.size()) {
             printUsage();

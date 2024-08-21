@@ -113,6 +113,8 @@ public final class AbfsHttpConstants {
   public static final String APPLICATION_JSON = "application/json";
   public static final String APPLICATION_OCTET_STREAM = "application/octet-stream";
   public static final String APPLICATION_XML = "application/xml";
+  public static final String XMS_PROPERTIES_ENCODING_ASCII = "ISO-8859-1";
+  public static final String XMS_PROPERTIES_ENCODING_UNICODE = "UTF-8";
 
   public static final String ROOT_PATH = "/";
   public static final String ACCESS_MASK = "mask:";
@@ -210,6 +212,17 @@ public final class AbfsHttpConstants {
           + "Customer Provided Keys. Following configs can not be given with "
           + "non-hierarchical-namespace account:"
           + CPK_CONFIG_LIST;
+
+  /**
+   * System property that define maximum number of cached-connection per fileSystem for
+   * ApacheHttpClient. JDK network library uses the same property to define maximum
+   * number of cached-connections at JVM level.
+   */
+  public static final String HTTP_MAX_CONN_SYS_PROP = "http.maxConnections";
+  public static final String JDK_IMPL = "JDK";
+  public static final String APACHE_IMPL = "Apache";
+  public static final String JDK_FALLBACK = "JDK_fallback";
+  public static final String KEEP_ALIVE_CACHE_CLOSED = "KeepAliveCache is closed";
 
   private AbfsHttpConstants() {}
 }

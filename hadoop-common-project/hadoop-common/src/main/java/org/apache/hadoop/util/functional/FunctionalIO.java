@@ -20,6 +20,7 @@ package org.apache.hadoop.util.functional;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -42,32 +43,7 @@ public final class FunctionalIO {
    * @throws UncheckedIOException if an IOE was raised.
    */
   public static <T> T uncheckIOExceptions(CallableRaisingIOE<T> call) {
-    try {
-      return call.apply();
-    } catch (IOException e) {
-      throw new UncheckedIOException(e);
-    }
-  }
-
-  /**
-   * Wrap a {@link CallableRaisingIOE} as a {@link Supplier}.
-   * This is similar to {@link CommonCallableSupplier}, except that
-   * only IOExceptions are caught and wrapped; all other exceptions are
-   * propagated unchanged.
-   * @param <T> type of result
-   */
-  private static final class UncheckedIOExceptionSupplier<T> implements Supplier<T> {
-
-    private final CallableRaisingIOE<T> call;
-
-    private UncheckedIOExceptionSupplier(CallableRaisingIOE<T> call) {
-      this.call = call;
-    }
-
-    @Override
-    public T get() {
-      return uncheckIOExceptions(call);
-    }
+    return call.unchecked();
   }
 
   /**
@@ -77,7 +53,7 @@ public final class FunctionalIO {
    * @return a supplier which invokes the call.
    */
   public static <T> Supplier<T> toUncheckedIOExceptionSupplier(CallableRaisingIOE<T> call) {
-    return new UncheckedIOExceptionSupplier<>(call);
+    return call::unchecked;
   }
 
   /**
@@ -95,5 +71,19 @@ public final class FunctionalIO {
       throw e.getCause();
     }
   }
+
+
+  /**
+   * Convert a {@link FunctionRaisingIOE} as a {@link Supplier}.
+   * @param fun function to wrap
+   * @param <T> type of input
+   * @param <R> type of return value.
+   * @return a new function which invokes the inner function and wraps
+   * exceptions.
+   */
+  public static <T, R> Function<T, R> toUncheckedFunction(FunctionRaisingIOE<T, R> fun) {
+    return fun::unchecked;
+  }
+
 
 }

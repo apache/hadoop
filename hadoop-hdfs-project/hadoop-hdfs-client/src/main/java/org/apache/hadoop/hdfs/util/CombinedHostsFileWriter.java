@@ -26,11 +26,11 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Set;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 import org.apache.hadoop.hdfs.protocol.DatanodeAdminProperties;
+import org.apache.hadoop.util.JacksonUtil;
 
 /**
  * Writer support for JSON-based datanode configuration, an alternative format
@@ -59,12 +59,10 @@ public final class CombinedHostsFileWriter {
    */
   public static void writeFile(final String hostsFile,
       final Set<DatanodeAdminProperties> allDNs) throws IOException {
-    final ObjectMapper objectMapper = new ObjectMapper();
-
     try (Writer output =
         new OutputStreamWriter(Files.newOutputStream(Paths.get(hostsFile)),
             StandardCharsets.UTF_8)) {
-      objectMapper.writeValue(output, allDNs);
+      JacksonUtil.getSharedWriter().writeValue(output, allDNs);
     }
   }
 }

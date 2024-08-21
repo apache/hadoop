@@ -22,7 +22,6 @@ import com.ctc.wstx.api.ReaderConfig;
 import com.ctc.wstx.io.StreamBootstrapper;
 import com.ctc.wstx.io.SystemId;
 import com.ctc.wstx.stax.WstxInputFactory;
-import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 
 import java.io.BufferedInputStream;
@@ -49,6 +48,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -99,6 +99,8 @@ import org.apache.hadoop.security.alias.CredentialProvider;
 import org.apache.hadoop.security.alias.CredentialProvider.CredentialEntry;
 import org.apache.hadoop.security.alias.CredentialProviderFactory;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
+import org.apache.hadoop.util.ConfigurationHelper;
+import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringInterner;
@@ -1784,6 +1786,26 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     return null == val
       ? defaultValue
       : Enum.valueOf(defaultValue.getDeclaringClass(), val);
+  }
+
+  /**
+   * Build an enumset from a comma separated list of values.
+   * Case independent.
+   * Special handling of "*" meaning: all values.
+   * @param key key to look for
+   * @param enumClass class of enum
+   * @param ignoreUnknown should unknown values raise an exception?
+   * @return a mutable set of the identified enum values declared in the configuration
+   * @param <E> enumeration type
+   * @throws IllegalArgumentException if one of the entries was unknown and ignoreUnknown is false,
+   *           or there are two entries in the enum which differ only by case.
+   */
+  public <E extends Enum<E>> EnumSet<E> getEnumSet(
+      final String key,
+      final Class<E> enumClass,
+      final boolean ignoreUnknown) throws IllegalArgumentException {
+    final String value = get(key, "");
+    return ConfigurationHelper.parseEnumSet(key, value, enumClass, ignoreUnknown);
   }
 
   enum ParsedTimeDuration {
@@ -3770,8 +3792,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       throw new IllegalArgumentException("Property " +
           propertyName + " not found");
     } else {
-      JsonFactory dumpFactory = new JsonFactory();
-      JsonGenerator dumpGenerator = dumpFactory.createGenerator(out);
+      JsonGenerator dumpGenerator = JacksonUtil.getSharedWriter().createGenerator(out);
       dumpGenerator.writeStartObject();
       dumpGenerator.writeFieldName("property");
       appendJSONProperty(dumpGenerator, config, propertyName,
@@ -3809,8 +3830,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   public static void dumpConfiguration(Configuration config,
       Writer out) throws IOException {
-    JsonFactory dumpFactory = new JsonFactory();
-    JsonGenerator dumpGenerator = dumpFactory.createGenerator(out);
+    JsonGenerator dumpGenerator = JacksonUtil.getSharedWriter().createGenerator(out);
     dumpGenerator.writeStartObject();
     dumpGenerator.writeFieldName("properties");
     dumpGenerator.writeStartArray();

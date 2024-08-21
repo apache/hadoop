@@ -1052,7 +1052,7 @@ public class FileUtil {
 
   private static void unTarUsingTar(File inFile, File untarDir,
       boolean gzipped) throws IOException {
-    StringBuffer untarCommand = new StringBuffer();
+    StringBuilder untarCommand = new StringBuilder();
     // not using canonical path here; this postpones relative path
     // resolution until bash is executed.
     final String source = "'" + FileUtil.makeSecureShellPath(inFile) + "'";

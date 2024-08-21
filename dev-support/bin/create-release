@@ -205,7 +205,7 @@ function set_defaults
   DOCKERRAN=false
 
   CPU_ARCH=$(echo "$MACHTYPE" | cut -d- -f1)
-  if [ "$CPU_ARCH" = "aarch64" ]; then
+  if [[ "$CPU_ARCH" = "aarch64" || "$CPU_ARCH" = "arm64" ]]; then
     DOCKERFILE="${BASEDIR}/dev-support/docker/Dockerfile_aarch64"
   fi
 
@@ -514,7 +514,7 @@ function dockermode
 
     # we always force build with the OpenJDK JDK
     # but with the correct version
-    if [ "$CPU_ARCH" = "aarch64" ]; then
+    if [[ "$CPU_ARCH" = "aarch64" || "$CPU_ARCH" = "arm64" ]]; then
       echo "ENV JAVA_HOME /usr/lib/jvm/java-${JVM_VERSION}-openjdk-arm64"
     else
       echo "ENV JAVA_HOME /usr/lib/jvm/java-${JVM_VERSION}-openjdk-amd64"

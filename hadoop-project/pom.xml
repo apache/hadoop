@@ -106,10 +106,10 @@
     <zookeeper.version>3.8.4</zookeeper.version>
     <curator.version>5.2.0</curator.version>
     <findbugs.version>3.0.5</findbugs.version>
-    <dnsjava.version>3.4.0</dnsjava.version>
+    <dnsjava.version>3.6.1</dnsjava.version>
 
     <guava.version>27.0-jre</guava.version>
-    <guice.version>4.2.3</guice.version>
+    <guice.version>5.1.0</guice.version>
 
     <bouncycastle.version>1.78.1</bouncycastle.version>
 
@@ -124,7 +124,7 @@
     <commons-collections.version>3.2.2</commons-collections.version>
     <commons-compress.version>1.26.1</commons-compress.version>
     <commons-csv.version>1.9.0</commons-csv.version>
-    <commons-io.version>2.14.0</commons-io.version>
+    <commons-io.version>2.16.1</commons-io.version>
     <commons-lang3.version>3.12.0</commons-lang3.version>
     <commons-logging.version>1.2</commons-logging.version>
     <commons-math3.version>3.6.1</commons-math3.version>
@@ -188,7 +188,7 @@
     <make-maven-plugin.version>1.0-beta-1</make-maven-plugin.version>
     <surefire.fork.timeout>900</surefire.fork.timeout>
     <aws-java-sdk.version>1.12.720</aws-java-sdk.version>
-    <aws-java-sdk-v2.version>2.24.6</aws-java-sdk-v2.version>
+    <aws-java-sdk-v2.version>2.25.53</aws-java-sdk-v2.version>
     <aws.eventstream.version>1.0.1</aws.eventstream.version>
     <hsqldb.version>2.7.1</hsqldb.version>
     <frontend-maven-plugin.version>1.11.2</frontend-maven-plugin.version>
@@ -1484,11 +1484,7 @@
           </exclusion>
           <exclusion>
             <groupId>ch.qos.logback</groupId>
-            <artifactId>logback-core</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>ch.qos.logback</groupId>
-            <artifactId>logback-classic</artifactId>
+            <artifactId>*</artifactId>
           </exclusion>
         </exclusions>
       </dependency>
@@ -2512,7 +2508,7 @@
                   <includes>
                     <!-- for JDK 8 support -->
                     <include>cglib:cglib:3.2.0</include>
-                    <include>com.google.inject:guice:4.0</include>
+                    <include>com.google.inject:guice:5.1.0</include>
                     <include>com.sun.jersey:jersey-core:1.19.4</include>
                     <include>com.sun.jersey:jersey-servlet:1.19.4</include>
                     <include>com.github.pjfanning:jersey-json:1.22.0</include>

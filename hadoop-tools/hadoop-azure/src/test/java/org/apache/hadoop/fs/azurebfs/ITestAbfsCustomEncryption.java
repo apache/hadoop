@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.security.EncodingHelper;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientUtils;
+import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.assertj.core.api.Assertions;
 import org.assertj.core.api.Assumptions;
@@ -51,7 +52,6 @@ import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
 import org.apache.hadoop.fs.azurebfs.extensions.MockEncryptionContextProvider;
 import org.apache.hadoop.fs.azurebfs.security.ContextProviderEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
-import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.utils.EncryptionType;
 import org.apache.hadoop.fs.impl.OpenFileParameters;
@@ -339,8 +339,7 @@ public class ITestAbfsCustomEncryption extends AbstractAbfsIntegrationTest {
       case SET_ATTR:
         Hashtable<String, String> properties = new Hashtable<>();
         properties.put("key", "{ value: valueTest }");
-        return client.setPathProperties(path, fs.getAbfsStore()
-                .convertXmsPropertiesToCommaSeparatedString(properties),
+        return client.setPathProperties(path, properties,
             getTestTracingContext(fs, false),
             createEncryptionAdapterFromServerStoreContext(path,
                 getTestTracingContext(fs, false), client));

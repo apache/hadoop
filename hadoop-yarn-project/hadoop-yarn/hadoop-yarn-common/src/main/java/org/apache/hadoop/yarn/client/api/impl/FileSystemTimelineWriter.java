@@ -49,6 +49,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -60,7 +61,6 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.util.MinimalPrettyPrinter;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -274,7 +274,7 @@ public class FileSystemTimelineWriter extends TimelineWriter{
   }
 
   private ObjectMapper createObjectMapper() {
-    ObjectMapper mapper = new ObjectMapper();
+    ObjectMapper mapper = JacksonUtil.createBasicObjectMapper();
     mapper.setAnnotationIntrospector(
         new JaxbAnnotationIntrospector(TypeFactory.defaultInstance()));
     mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
@@ -365,8 +365,8 @@ public class FileSystemTimelineWriter extends TimelineWriter{
 
     protected void prepareForWrite() throws IOException{
       this.stream = createLogFileStream(fs, logPath);
-      this.jsonGenerator = new JsonFactory().createGenerator(
-          (OutputStream)stream);
+      this.jsonGenerator = JacksonUtil.getSharedWriter()
+          .createGenerator((OutputStream)stream);
       this.jsonGenerator.setPrettyPrinter(new MinimalPrettyPrinter("\n"));
       this.lastModifiedTime = Time.monotonicNow();
     }

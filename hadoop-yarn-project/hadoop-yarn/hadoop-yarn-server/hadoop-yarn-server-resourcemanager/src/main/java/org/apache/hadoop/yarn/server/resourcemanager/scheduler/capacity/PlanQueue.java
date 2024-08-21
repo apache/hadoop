@@ -72,7 +72,7 @@ public class PlanQueue extends AbstractManagedParentQueue {
     updateQuotas(configuredUserLimit, configuredUserLimitFactor,
         maxAppsForReservation, configuredMaxAppsPerUserForReservation);
 
-    StringBuffer queueInfo = new StringBuffer();
+    StringBuilder queueInfo = new StringBuilder();
     queueInfo.append("Created Plan Queue: ").append(queueName)
         .append("\nwith capacity: [").append(super.getCapacity())
         .append("]\nwith max capacity: [").append(super.getMaximumCapacity())
