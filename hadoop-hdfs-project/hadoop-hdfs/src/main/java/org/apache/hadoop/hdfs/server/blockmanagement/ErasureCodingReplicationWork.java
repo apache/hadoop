@@ -68,7 +68,7 @@ public class ErasureCodingReplicationWork extends BlockReconstructionWork {
   }
 
   @Override
-  void addTaskToDatanode(NumberReplicas numberReplicas) {
+  boolean addTaskToDatanode(NumberReplicas numberReplicas) {
     for (int i = 0; i < getSrcNodes().length && i < getTargets().length; i++) {
       BlockInfoStriped stripedBlk = (BlockInfoStriped) getBlock();
       final byte blockIndex = srcIndices[i];
@@ -83,6 +83,7 @@ public class ErasureCodingReplicationWork extends BlockReconstructionWork {
       LOG.debug("Add replication task from source {} to "
           + "target {} for EC block {}", source, target, targetBlk);
     }
+    return true;
   }
 
   @VisibleForTesting
