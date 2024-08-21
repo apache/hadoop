@@ -1084,9 +1084,9 @@ public class AbfsConfiguration{
               FS_AZURE_ACCOUNT_OAUTH_MSI_ENDPOINT,
               AuthConfigurations.DEFAULT_FS_AZURE_ACCOUNT_OAUTH_MSI_ENDPOINT);
           String tenantGuid =
-              getMandatoryPasswordString(FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT);
+              getPasswordString(FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT);
           String clientId =
-              getMandatoryPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID);
+              getPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID);
           String authority = getTrimmedPasswordString(
               FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY,
               AuthConfigurations.DEFAULT_FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY);
