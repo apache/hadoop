@@ -184,7 +184,14 @@
 
   <property>
     <description>
-      The configuration key for enabling or disabling the auto-correction of container allocation.
+      This configuration key enables or disables the auto-correction of container allocation in
+      YARN. Due to the asynchronous nature of container request and allocation, YARN may sometimes
+      over-allocate more containers than requested. The auto-correction feature addresses this by
+      automatically adjusting the number of requested containers based on those already allocated,
+      preventing extra containers from being allocated.
+      While the extra allocated containers will be released by the client within a few seconds,
+      this may not be a concern in normal circumstances. However, if the user is worried about
+      resource contention due to over-allocation, enabling this feature can help avoid such cases.
     </description>
     <name>yarn.resourcemanager.scheduler.autocorrect.container.allocation</name>
     <value>false</value>
