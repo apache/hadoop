@@ -383,7 +383,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String  DFS_NAMENODE_XATTRS_ENABLED_KEY = "dfs.namenode.xattrs.enabled";
   public static final boolean DFS_NAMENODE_XATTRS_ENABLED_DEFAULT = true;
   /**
-   * The value is referenced from {@link HdfsCommonConstants.DFS_ADMIN}.
+   * The value is referenced from {@link HdfsCommonConstants#DFS_ADMIN}.
    */
   @Deprecated
   public static final String  DFS_ADMIN = HdfsCommonConstants.DFS_ADMIN;
