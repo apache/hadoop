@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
@@ -302,44 +303,8 @@ public class AbfsBlobClient extends AbfsClient {
       final String eTag,
       final ContextEncryptionAdapter contextEncryptionAdapter,
       final TracingContext tracingContext) throws AzureBlobFileSystemException {
-    final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
-    requestHeaders.add(new AbfsHttpHeader(CONTENT_LENGTH, ZERO));
-    requestHeaders.add(new AbfsHttpHeader(X_MS_BLOB_TYPE, BLOCK_BLOB_TYPE));
-    if (!overwrite) {
-      requestHeaders.add(new AbfsHttpHeader(IF_NONE_MATCH, STAR));
-    }
-    if (eTag != null && !eTag.isEmpty()) {
-      requestHeaders.add(new AbfsHttpHeader(HttpHeaderConfigurations.IF_MATCH, eTag));
-    }
-    if (!isFile) {
-      requestHeaders.add(new AbfsHttpHeader(X_MS_META_HDI_ISFOLDER, TRUE));
-    }
-
-    final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
-    appendSASTokenToQuery(path, SASTokenProvider.CREATE_FILE_OPERATION, abfsUriQueryBuilder);
-
-    final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
-    final AbfsRestOperation op = getAbfsRestOperation(
-        AbfsRestOperationType.PutBlob,
-        HTTP_METHOD_PUT, url, requestHeaders);
-    try {
-      op.execute(tracingContext);
-    } catch (AzureBlobFileSystemException ex) {
-      // If we have no HTTP response, throw the original exception.
-      if (!op.hasResult()) {
-        throw ex;
-      }
-      if (!isFile && op.getResult().getStatusCode() == HTTP_CONFLICT) {
-        // This ensures that we don't throw ex only for existing directory but if a blob exists we throw exception.
-        final AbfsHttpOperation opResult = this.getPathStatus(
-            path, true, tracingContext, null).getResult();
-        if (checkIsDir(opResult)) {
-          return op;
-        }
-      }
-      throw ex;
-    }
-    return op;
+    // Todo: [FnsOverBlob] To be implemented as part of ingress work over blob endpoint.
+    throw new NotImplementedException("Create Path operation on Blob endpoint yet to be implemented.");
   }
 
   /**
@@ -608,7 +573,7 @@ public class AbfsBlobClient extends AbfsClient {
    * @param contextEncryptionAdapter to provide encryption context.
    * @param tracingContext for tracing the server calls.
    * @return exception as this operation is not supported on Blob Endpoint.
-   * @throws UnsupportedOperationException
+   * @throws UnsupportedOperationException always.
    */
   @Override
   public AbfsRestOperation flush(final String path,
@@ -769,7 +734,7 @@ public class AbfsBlobClient extends AbfsClient {
    * @param tracingContext for tracing the server calls.
    * @param isNamespaceEnabled specify if the namespace is enabled.
    * @return executed rest operation containing response from server.
-   * @throws AzureBlobFileSystemException
+   * @throws AzureBlobFileSystemException if rest operation fails.
    */
   @Override
   public AbfsRestOperation deletePath(final String path,
@@ -789,7 +754,7 @@ public class AbfsBlobClient extends AbfsClient {
    * @param group to be set.
    * @param tracingContext for tracing the server calls.
    * @return exception as this operation is not supported on Blob Endpoint.
-   * @throws UnsupportedOperationException
+   * @throws UnsupportedOperationException always.
    */
   @Override
   public AbfsRestOperation setOwner(final String path,
@@ -807,7 +772,7 @@ public class AbfsBlobClient extends AbfsClient {
    * @param permission to be set.
    * @param tracingContext for tracing the server calls.
    * @return exception as this operation is not supported on Blob Endpoint.
-   * @throws UnsupportedOperationException
+   * @throws UnsupportedOperationException always.
    */
   @Override
   public AbfsRestOperation setPermission(final String path,
@@ -825,7 +790,7 @@ public class AbfsBlobClient extends AbfsClient {
    * @param eTag to specify conditional headers. Set only if etag matches.
    * @param tracingContext for tracing the server calls.
    * @return exception as this operation is not supported on Blob Endpoint.
-   * @throws UnsupportedOperationException
+   * @throws UnsupportedOperationException always.
    */
   @Override
   public AbfsRestOperation setAcl(final String path,
@@ -843,7 +808,7 @@ public class AbfsBlobClient extends AbfsClient {
    * @param useUPN whether to use UPN with rest operation.
    * @param tracingContext for tracing the server calls.
    * @return exception as this operation is not supported on Blob Endpoint.
-   * @throws UnsupportedOperationException
+   * @throws UnsupportedOperationException always.
    */
   @Override
   public AbfsRestOperation getAclStatus(final String path,
@@ -860,7 +825,7 @@ public class AbfsBlobClient extends AbfsClient {
    * @param rwx   The permission to be checked on the path
    * @param tracingContext Tracks identifiers for request header
    * @return exception as this operation is not supported on Blob Endpoint.
-   * @throws UnsupportedOperationException
+   * @throws UnsupportedOperationException always.
    */
   @Override
   public AbfsRestOperation checkAccess(String path,
@@ -1011,7 +976,7 @@ public class AbfsBlobClient extends AbfsClient {
   private static String decodeMetadataAttribute(String encoded)
       throws UnsupportedEncodingException {
     return encoded == null ? null
-        : java.net.URLDecoder.decode(encoded, XMS_PROPERTIES_ENCODING_UNICODE);
+        : URLDecoder.decode(encoded, XMS_PROPERTIES_ENCODING_UNICODE);
   }
 
   /**
