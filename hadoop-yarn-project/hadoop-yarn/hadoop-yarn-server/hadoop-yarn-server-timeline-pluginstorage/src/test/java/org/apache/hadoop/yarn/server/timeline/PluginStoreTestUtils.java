@@ -30,13 +30,13 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvent;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineACLsManager;
+import org.apache.hadoop.yarn.util.YarnJacksonUtil;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -108,7 +108,7 @@ public class PluginStoreTestUtils {
   }
 
   static ObjectMapper createObjectMapper() {
-    ObjectMapper mapper = JacksonUtil.createBasicObjectMapper();
+    ObjectMapper mapper = YarnJacksonUtil.createBasicObjectMapper();
     mapper.setAnnotationIntrospector(
         new JaxbAnnotationIntrospector(TypeFactory.defaultInstance()));
     mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);

@@ -21,9 +21,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
+import org.apache.hadoop.yarn.util.YarnJacksonUtil;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -57,7 +57,7 @@ public class LegacyMappingRuleToJson {
    * private makes it harder for someone to reconfigure it which might have unwanted
    * side effects.
    */
-  private static final ObjectMapper OBJECT_MAPPER = JacksonUtil.createBasicObjectMapper();
+  private static final ObjectMapper OBJECT_MAPPER = YarnJacksonUtil.createBasicObjectMapper();
 
   /**
    * Collection to store the legacy group mapping rule strings.

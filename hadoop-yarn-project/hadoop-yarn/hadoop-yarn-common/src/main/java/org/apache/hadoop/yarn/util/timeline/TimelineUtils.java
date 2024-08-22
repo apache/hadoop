@@ -31,13 +31,13 @@ import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.SecurityUtil;
-import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.util.VersionInfo;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineAbout;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
+import org.apache.hadoop.yarn.util.YarnJacksonUtil;
 
 /**
  * The helper class for the timeline module.
@@ -54,7 +54,7 @@ public class TimelineUtils {
       "TIMELINE_FLOW_RUN_ID_TAG";
   public final static String DEFAULT_FLOW_VERSION = "1";
 
-  private static final ObjectMapper OBJECT_MAPPER = JacksonUtil.createBasicObjectMapper();
+  private static final ObjectMapper OBJECT_MAPPER = YarnJacksonUtil.createBasicObjectMapper();
 
   static {
     YarnJacksonJaxbJsonProvider.configObjectMapper(OBJECT_MAPPER);

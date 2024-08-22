@@ -20,15 +20,14 @@ package org.apache.hadoop.yarn.appcatalog.application;
 
 import java.io.IOException;
 
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.yarn.appcatalog.model.AppEntry;
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.api.records.ServiceState;
 import org.apache.hadoop.yarn.service.api.records.KerberosPrincipal;
 import org.apache.hadoop.yarn.service.client.ApiServiceClient;
+import org.apache.hadoop.yarn.util.YarnJacksonUtil;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -56,7 +55,7 @@ public class YarnServiceClient {
   private static final ObjectMapper OBJECT_MAPPER;
 
   static {
-    OBJECT_MAPPER = JacksonUtil.createBasicObjectMapper();
+    OBJECT_MAPPER = YarnJacksonUtil.createBasicObjectMapper();
     OBJECT_MAPPER.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
   }
 

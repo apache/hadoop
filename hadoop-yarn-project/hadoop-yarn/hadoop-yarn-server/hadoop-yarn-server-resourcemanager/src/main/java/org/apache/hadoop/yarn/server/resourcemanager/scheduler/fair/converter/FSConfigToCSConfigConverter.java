@@ -29,10 +29,10 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.authorize.AccessControlList;
-import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.yarn.api.records.QueueACL;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -53,12 +53,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.DominantResourceFairnessPolicy;
+import org.apache.hadoop.yarn.util.YarnJacksonUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
-import org.apache.hadoop.classification.VisibleForTesting;
 import com.fasterxml.jackson.core.JsonGenerator;
 
 /**
@@ -327,7 +327,7 @@ public class FSConfigToCSConfigConverter {
           placementConverter.convertPlacementPolicy(placementManager,
               ruleHandler, capacitySchedulerConfig, usePercentages);
 
-      final ObjectMapper mapper = JacksonUtil.createBasicObjectMapper();
+      final ObjectMapper mapper = YarnJacksonUtil.createBasicObjectMapper();
       // close output stream if we write to a file, leave it open otherwise
       if (!consoleMode && rulesToFile) {
         mapper.configure(JsonGenerator.Feature.AUTO_CLOSE_TARGET, true);

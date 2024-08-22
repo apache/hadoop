@@ -26,7 +26,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.registry.client.binding.RegistryPathUtils;
 import org.apache.hadoop.registry.client.types.ServiceRecord;
 import org.apache.hadoop.registry.client.types.yarn.PersistencePolicies;
-import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
@@ -64,6 +63,7 @@ import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
 import org.apache.hadoop.yarn.util.BoundedAppender;
+import org.apache.hadoop.yarn.util.YarnJacksonUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -876,7 +876,7 @@ public class ComponentInstance implements EventHandler<ComponentInstanceEvent>,
         doRegistryUpdate = false;
       }
     }
-    final ObjectMapper mapper = JacksonUtil.createBasicObjectMapper();
+    final ObjectMapper mapper = YarnJacksonUtil.createBasicObjectMapper();
     try {
       Map<String, List<Map<String, String>>> ports = null;
       ports = mapper.readValue(status.getExposedPorts(),

@@ -23,12 +23,12 @@ import org.apache.hadoop.classification.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YARNFeatureNotEnabledException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.util.YarnJacksonUtil;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
@@ -105,7 +105,8 @@ public class ResourceProfilesManagerImpl implements ResourceProfilesManager {
         resourcesFile = tmp.getPath();
       }
     }
-    Map data = JacksonUtil.getSharedReader().readValue(new File(resourcesFile), Map.class);
+    Map data = YarnJacksonUtil.getSharedReader()
+        .readValue(new File(resourcesFile), Map.class);
     Iterator iterator = data.entrySet().iterator();
     while (iterator.hasNext()) {
       Map.Entry entry = (Map.Entry) iterator.next();

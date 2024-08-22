@@ -23,8 +23,8 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.yarn.service.exceptions.BadConfigException;
+import org.apache.hadoop.yarn.util.YarnJacksonUtil;
 
 import java.io.IOException;
 import java.util.Date;
@@ -50,7 +50,7 @@ public class PublishedConfiguration {
   private static final ObjectMapper OBJECT_MAPPER;
 
   static {
-    OBJECT_MAPPER = JacksonUtil.createBasicObjectMapper();
+    OBJECT_MAPPER = YarnJacksonUtil.createBasicObjectMapper();
     OBJECT_MAPPER.configure(SerializationFeature.INDENT_OUTPUT, true);
   }
 

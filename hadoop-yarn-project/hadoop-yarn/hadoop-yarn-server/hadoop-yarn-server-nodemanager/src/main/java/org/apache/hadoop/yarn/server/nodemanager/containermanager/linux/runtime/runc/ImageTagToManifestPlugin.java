@@ -26,7 +26,6 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.service.AbstractService;
-import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
 import java.io.BufferedReader;
@@ -43,6 +42,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.apache.hadoop.yarn.util.YarnJacksonUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -106,7 +106,7 @@ public class ImageTagToManifestPlugin extends AbstractService
     }
 
     byte[] bytes = IOUtils.toByteArray(input);
-    manifest = JacksonUtil.getSharedReader().readValue(bytes, ImageManifest.class);
+    manifest = YarnJacksonUtil.getSharedReader().readValue(bytes, ImageManifest.class);
 
     manifestCache.put(hash, manifest);
     return manifest;

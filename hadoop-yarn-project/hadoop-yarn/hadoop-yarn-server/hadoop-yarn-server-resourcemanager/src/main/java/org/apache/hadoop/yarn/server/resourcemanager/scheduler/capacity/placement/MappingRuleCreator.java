@@ -27,12 +27,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule.MappingRule;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule.MappingRuleAction;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule.MappingRuleActions;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule.MappingRuleMatcher;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule.MappingRuleMatchers;
+import org.apache.hadoop.yarn.util.YarnJacksonUtil;
 
 // These are generated classes - use GeneratePojos class to create them
 // if they are missing
@@ -58,12 +58,12 @@ public class MappingRuleCreator {
 
   MappingRulesDescription getMappingRulesFromJson(byte[] contents)
       throws IOException {
-    return JacksonUtil.getSharedReader().readValue(contents, MappingRulesDescription.class);
+    return YarnJacksonUtil.getSharedReader().readValue(contents, MappingRulesDescription.class);
   }
 
   MappingRulesDescription getMappingRulesFromJson(String contents)
       throws IOException {
-    return JacksonUtil.getSharedReader().readValue(contents, MappingRulesDescription.class);
+    return YarnJacksonUtil.getSharedReader().readValue(contents, MappingRulesDescription.class);
   }
 
   public List<MappingRule> getMappingRulesFromFile(String jsonPath)

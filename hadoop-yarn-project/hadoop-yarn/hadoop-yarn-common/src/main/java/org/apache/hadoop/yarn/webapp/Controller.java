@@ -29,8 +29,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.yarn.webapp.view.DefaultPage;
+import org.apache.hadoop.yarn.util.YarnJacksonUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -224,7 +224,7 @@ public abstract class Controller implements Params {
     context().rendered = true;
     context().response.setContentType(MimeType.JSON);
     try {
-      JacksonUtil.getSharedWriter().writeValue(writer(), object);
+      YarnJacksonUtil.getSharedWriter().writeValue(writer(), object);
     } catch (Exception e) {
       throw new WebAppException(e);
     }

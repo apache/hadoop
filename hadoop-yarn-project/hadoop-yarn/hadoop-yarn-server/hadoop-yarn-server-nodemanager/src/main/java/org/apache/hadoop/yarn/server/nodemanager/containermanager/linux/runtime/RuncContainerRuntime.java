@@ -27,7 +27,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
 import org.apache.hadoop.security.authorize.AccessControlList;
-import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -61,6 +60,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.Contai
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerRuntimeContext;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.volume.csi.ContainerVolumePublisher;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerExecContext;
+import org.apache.hadoop.yarn.util.YarnJacksonUtil;
 
 import java.io.File;
 import java.io.IOException;
@@ -208,7 +208,7 @@ public class RuncContainerRuntime extends OCIContainerRuntime {
     imageTagToManifestPlugin.init(conf);
     manifestToResourcesPlugin = chooseManifestToResourcesPlugin();
     manifestToResourcesPlugin.init(conf);
-    mapper = JacksonUtil.createBasicObjectMapper();
+    mapper = YarnJacksonUtil.createBasicObjectMapper();
     defaultRuncImage = conf.get(YarnConfiguration.NM_RUNC_IMAGE_NAME);
 
     allowedNetworks.clear();

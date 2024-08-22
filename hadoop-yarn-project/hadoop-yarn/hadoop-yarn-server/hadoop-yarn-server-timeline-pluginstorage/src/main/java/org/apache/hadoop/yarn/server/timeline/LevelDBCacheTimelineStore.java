@@ -24,10 +24,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.timeline.util.LeveldbUtils;
+import org.apache.hadoop.yarn.util.YarnJacksonUtil;
 import org.fusesource.leveldbjni.JniDBFactory;
 import org.iq80.leveldb.DB;
 import org.iq80.leveldb.DBIterator;
@@ -305,7 +305,7 @@ public class LevelDBCacheTimelineStore extends KeyValueBasedTimelineStore {
       if (resultRaw == null) {
         return null;
       }
-      return (V) JacksonUtil.getSharedReader().readValue(resultRaw, TimelineEntity.class);
+      return (V) YarnJacksonUtil.getSharedReader().readValue(resultRaw, TimelineEntity.class);
     }
 
     private byte[] getStartTimeKey(K entityId) {

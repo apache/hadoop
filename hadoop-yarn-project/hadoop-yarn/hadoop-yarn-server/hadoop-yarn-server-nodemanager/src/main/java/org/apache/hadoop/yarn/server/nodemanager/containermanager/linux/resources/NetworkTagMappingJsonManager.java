@@ -32,10 +32,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
+import org.apache.hadoop.yarn.util.YarnJacksonUtil;
 
 /**
  * The NetworkTagMapping JsonManager implementation.
@@ -59,7 +59,7 @@ public class NetworkTagMappingJsonManager implements NetworkTagMappingManager {
           YarnConfiguration.NM_NETWORK_TAG_MAPPING_FILE_PATH);
     }
     try {
-      networkTagMapping = JacksonUtil.getSharedReader().readValue(new File(mappingJsonFile),
+      networkTagMapping = YarnJacksonUtil.getSharedReader().readValue(new File(mappingJsonFile),
           NetworkTagMapping.class);
     } catch (Exception e) {
       throw new YarnRuntimeException(e);

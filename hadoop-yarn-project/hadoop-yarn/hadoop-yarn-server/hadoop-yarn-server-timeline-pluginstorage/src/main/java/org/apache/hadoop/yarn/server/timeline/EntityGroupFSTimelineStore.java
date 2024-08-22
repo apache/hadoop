@@ -42,7 +42,6 @@ import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.service.ServiceOperations;
 import org.apache.hadoop.ipc.CallerContext;
 import org.apache.hadoop.util.ApplicationClassLoader;
-import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -62,6 +61,7 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.timeline.TimelineDataManager.CheckAcl;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineACLsManager;
 import org.apache.hadoop.yarn.util.Apps;
+import org.apache.hadoop.yarn.util.YarnJacksonUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -321,7 +321,7 @@ public class EntityGroupFSTimelineStore extends CompositeService
       }
     }
 
-    objMapper = JacksonUtil.createBasicObjectMapper();
+    objMapper = YarnJacksonUtil.createBasicObjectMapper();
     objMapper.setAnnotationIntrospector(
         new JaxbAnnotationIntrospector(TypeFactory.defaultInstance()));
     jsonFactory = new MappingJsonFactory(objMapper);

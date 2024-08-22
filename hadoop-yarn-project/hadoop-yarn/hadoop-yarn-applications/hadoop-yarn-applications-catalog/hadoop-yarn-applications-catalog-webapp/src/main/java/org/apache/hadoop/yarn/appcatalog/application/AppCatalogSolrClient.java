@@ -28,13 +28,13 @@ import java.util.List;
 import java.util.Properties;
 import java.util.Random;
 
-import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.yarn.appcatalog.model.AppEntry;
 import org.apache.hadoop.yarn.appcatalog.model.AppStoreEntry;
 import org.apache.hadoop.yarn.appcatalog.model.Application;
 import org.apache.hadoop.yarn.appcatalog.utils.RandomWord;
 import org.apache.hadoop.yarn.appcatalog.utils.WordLengthException;
 import org.apache.hadoop.yarn.service.api.records.Service;
+import org.apache.hadoop.yarn.util.YarnJacksonUtil;
 import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.SolrQuery.ORDER;
@@ -66,7 +66,7 @@ public class AppCatalogSolrClient {
   private static final ObjectMapper OBJECT_MAPPER;
 
   static {
-    OBJECT_MAPPER = JacksonUtil.createBasicObjectMapper();
+    OBJECT_MAPPER = YarnJacksonUtil.createBasicObjectMapper();
     OBJECT_MAPPER.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
   }
 

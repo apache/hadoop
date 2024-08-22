@@ -30,7 +30,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.util.JacksonUtil;
+import org.apache.hadoop.yarn.util.YarnJacksonUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,7 +62,7 @@ public class JsonSerDeser<T> {
   @SuppressWarnings("deprecation")
   public JsonSerDeser(Class<T> classType) {
     this.classType = classType;
-    this.mapper = JacksonUtil.createBasicObjectMapper();
+    this.mapper = YarnJacksonUtil.createBasicObjectMapper();
     mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     mapper.configure(SerializationFeature.WRITE_NULL_MAP_VALUES, false);
     mapper.configure(SerializationFeature.INDENT_OUTPUT, true);
@@ -77,7 +77,8 @@ public class JsonSerDeser<T> {
    * Convert from JSON
    * @param json input
    * @return the parsed JSON
-   * @throws IOException IO
+   * @throws IOException IO problems
+   * @throws JsonParseException if the JSON is invalid
    * @throws JsonMappingException failure to map from the JSON to this class
    */
   public T fromJson(String json)
@@ -95,6 +96,7 @@ public class JsonSerDeser<T> {
    * @param jsonFile input file
    * @return the parsed JSON
    * @throws IOException IO problems
+   * @throws JsonParseException if the JSON is invalid
    * @throws JsonMappingException failure to map from the JSON to this class
    */
   public T fromFile(File jsonFile)
@@ -113,6 +115,8 @@ public class JsonSerDeser<T> {
    * @param resource input file
    * @return the parsed JSON
    * @throws IOException IO problems
+   * @throws JsonParseException if the JSON is invalid
+
    * @throws JsonMappingException failure to map from the JSON to this class
    */
  public T fromResource(String resource)
@@ -150,7 +154,7 @@ public class JsonSerDeser<T> {
    * This is much less efficient than any Java clone process.
    * @param instance instance to duplicate
    * @return a new instance
-   * @throws IOException problems.
+   * @throws IOException IO problems.
    */
   public T fromInstance(T instance) throws IOException {
     return fromJson(toJson(instance));
@@ -201,7 +205,7 @@ public class JsonSerDeser<T> {
    * Save an instance to a file
    * @param instance instance to save
    * @param file file
-   * @throws IOException
+   * @throws IOException IO exception
    */
   public void save(T instance, File file) throws
       IOException {
@@ -210,7 +214,7 @@ public class JsonSerDeser<T> {
 
   /**
    * Write the json as bytes -then close the file
-   * @param dataOutputStream an outout stream that will always be closed
+   * @param dataOutputStream an output stream that will always be closed
    * @throws IOException on any failure
    */
   private void writeJsonAsBytes(T instance,

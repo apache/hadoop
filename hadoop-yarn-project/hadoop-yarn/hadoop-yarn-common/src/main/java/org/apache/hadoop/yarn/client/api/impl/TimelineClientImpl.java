@@ -28,16 +28,14 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
-import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
-import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
-import org.apache.hadoop.util.JacksonUtil;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.server.KerberosAuthenticationHandler;
+import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticatedURL;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -51,10 +49,13 @@ import org.apache.hadoop.yarn.client.api.TimelineClient;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.security.client.TimelineDelegationTokenIdentifier;
+import org.apache.hadoop.yarn.util.YarnJacksonUtil;
 import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.hadoop.classification.VisibleForTesting;
 import com.sun.jersey.api.client.Client;
 
 @Private
@@ -63,7 +64,7 @@ public class TimelineClientImpl extends TimelineClient {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(TimelineClientImpl.class);
-  private static final ObjectMapper MAPPER = JacksonUtil.createBasicObjectMapper();
+  private static final ObjectMapper MAPPER = YarnJacksonUtil.createBasicObjectMapper();
   private static final String RESOURCE_URI_STR_V1 = "/ws/v1/timeline/";
 
   private static Options opts;

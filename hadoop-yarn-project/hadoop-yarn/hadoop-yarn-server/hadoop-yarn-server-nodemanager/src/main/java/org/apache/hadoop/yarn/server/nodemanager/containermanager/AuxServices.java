@@ -43,11 +43,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.security.authorize.AccessControlList;
-import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.records.AuxServiceConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.records.AuxServiceFile;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.records.AuxServiceRecord;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.records.AuxServiceRecords;
+import org.apache.hadoop.yarn.util.YarnJacksonUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -136,7 +136,7 @@ public class AuxServices extends AbstractService
     this.dirsHandler = nmContext.getLocalDirsHandler();
     this.delService = deletionService;
     this.userUGI = getRemoteUgi();
-    this.mapper = JacksonUtil.createBasicObjectMapper();
+    this.mapper = YarnJacksonUtil.createBasicObjectMapper();
     mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     // Obtain services from configuration in init()
   }
