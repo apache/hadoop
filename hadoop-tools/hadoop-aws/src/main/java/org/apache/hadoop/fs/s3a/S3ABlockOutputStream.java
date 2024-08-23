@@ -25,6 +25,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.StringJoiner;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -98,6 +99,8 @@ class S3ABlockOutputStream extends OutputStream implements
 
   private static final String E_NOT_SYNCABLE =
       "S3A streams are not Syncable. See HADOOP-17597.";
+
+  public static final String IF_NONE_MATCH_HEADER = "If-None-Match";
 
   /** Object being uploaded. */
   private final String key;
@@ -596,7 +599,7 @@ class S3ABlockOutputStream extends OutputStream implements
     final S3ADataBlocks.DataBlock block = getActiveBlock();
     long size = block.dataSize();
     final S3ADataBlocks.BlockUploadData uploadData = block.startUpload();
-    final PutObjectRequest putObjectRequest = uploadData.hasFile() ?
+    PutObjectRequest putObjectRequest = uploadData.hasFile() ?
         writeOperationHelper.createPutObjectRequest(
             key,
             uploadData.getFile().length(),
@@ -608,6 +611,16 @@ class S3ABlockOutputStream extends OutputStream implements
             builder.putOptions,
         false);
 
+    PutObjectRequest.Builder maybeModifiedPutIfAbsentRequest = putObjectRequest.toBuilder();
+    Map<String, String> optionHeaders = builder.putOptions.getHeaders();
+
+    if (optionHeaders != null && optionHeaders.containsKey(IF_NONE_MATCH_HEADER)) {
+        maybeModifiedPutIfAbsentRequest.overrideConfiguration(
+            override -> override.putHeader(IF_NONE_MATCH_HEADER, optionHeaders.get(IF_NONE_MATCH_HEADER)));
+    }
+
+    final PutObjectRequest finalizedRequest = maybeModifiedPutIfAbsentRequest.build();
+
     BlockUploadProgress progressCallback =
         new BlockUploadProgress(block, progressListener, now());
     statistics.blockUploadQueued(size);
@@ -617,7 +630,7 @@ class S3ABlockOutputStream extends OutputStream implements
             // the putObject call automatically closes the input
             // stream afterwards.
             PutObjectResponse response =
-                writeOperationHelper.putObject(putObjectRequest, builder.putOptions, uploadData,
+                writeOperationHelper.putObject(finalizedRequest, builder.putOptions, uploadData,
                     uploadData.hasFile(), statistics);
             progressCallback.progressChanged(REQUEST_BYTE_TRANSFER_EVENT);
             return response;
