@@ -40,6 +40,7 @@ import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_ACCESS_GRANTS_ENABLED;
 import static org.apache.hadoop.fs.s3a.Constants.DIRECTORY_OPERATIONS_PURGE_UPLOADS;
 import static org.apache.hadoop.fs.s3a.Constants.ENABLE_MULTI_DELETE;
 import static org.apache.hadoop.fs.s3a.Constants.FIPS_ENDPOINT;
+import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_IF_NONE_MATCH;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE;
 import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_PERFORMANCE_ENABLED;
 import static org.apache.hadoop.fs.s3a.Constants.STORE_CAPABILITY_AWS_V2;
@@ -260,7 +261,7 @@ public final class InternalConstants {
    */
   public static final Set<String> CREATE_FILE_KEYS =
       Collections.unmodifiableSet(
-          new HashSet<>(Arrays.asList(FS_S3A_CREATE_PERFORMANCE)));
+          new HashSet<>(Arrays.asList(FS_S3A_CREATE_PERFORMANCE, FS_S3A_CREATE_IF_NONE_MATCH)));
 
   /**
    * Dynamic Path capabilities to be evaluated

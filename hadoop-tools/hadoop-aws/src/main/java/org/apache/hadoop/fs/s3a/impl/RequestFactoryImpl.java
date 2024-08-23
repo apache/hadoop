@@ -533,12 +533,22 @@ public class RequestFactoryImpl implements RequestFactory {
   public CompleteMultipartUploadRequest.Builder newCompleteMultipartUploadRequestBuilder(
       String destKey,
       String uploadId,
-      List<CompletedPart> partETags) {
+      List<CompletedPart> partETags,
+      PutObjectOptions putOptions) {
+
     // a copy of the list is required, so that the AWS SDK doesn't
     // attempt to sort an unmodifiable list.
-    CompleteMultipartUploadRequest.Builder requestBuilder =
-        CompleteMultipartUploadRequest.builder().bucket(bucket).key(destKey).uploadId(uploadId)
+    CompleteMultipartUploadRequest.Builder requestBuilder;
+    Map<String, String> optionHeaders = putOptions.getHeaders();
+
+    if (optionHeaders != null && optionHeaders.containsKey("If-None-Match")) {
+        requestBuilder = CompleteMultipartUploadRequest.builder().bucket(bucket).key(destKey).uploadId(uploadId)
+            .overrideConfiguration(override ->override.putHeader("If-None-Match", optionHeaders.get("If-None-Match")))
             .multipartUpload(CompletedMultipartUpload.builder().parts(partETags).build());
+    } else {
+        requestBuilder = CompleteMultipartUploadRequest.builder().bucket(bucket).key(destKey).uploadId(uploadId)
+            .multipartUpload(CompletedMultipartUpload.builder().parts(partETags).build());
+    }
 
     return prepareRequest(requestBuilder);
   }
