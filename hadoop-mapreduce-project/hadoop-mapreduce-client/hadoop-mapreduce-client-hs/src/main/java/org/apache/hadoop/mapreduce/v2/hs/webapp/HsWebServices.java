@@ -19,6 +19,9 @@
 package org.apache.hadoop.mapreduce.v2.hs.webapp;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 
 import javax.annotation.Nullable;
@@ -37,12 +40,19 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.UriInfo;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.mapreduce.JobACL;
+import org.apache.hadoop.mapreduce.task.TaskAttemptDescription;
+import org.apache.hadoop.mapreduce.task.TaskDescription;
+import org.apache.hadoop.mapreduce.task.TaskDescriptionComparator;
+import org.apache.hadoop.mapreduce.task.TaskDescriptions;
 import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
+import org.apache.hadoop.mapreduce.v2.api.records.JobId;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
@@ -84,12 +94,17 @@ import com.google.inject.Inject;
 
 @Path("/ws/v1/history")
 public class HsWebServices extends WebServices {
+  private static final Log LOG = LogFactory.getLog(HsWebServices.class);
   private final HistoryContext ctx;
   private WebApp webapp;
   private LogServlet logServlet;
 
   private @Context HttpServletResponse response;
   @Context UriInfo uriInfo;
+
+  private TaskDescriptionsFetcher taskDescriptionsFetcher;
+
+  private TaskDescriptionComparator taskDescriptionComparator;
 
   @Inject
   public HsWebServices(final HistoryContext ctx,
@@ -100,6 +115,9 @@ public class HsWebServices extends WebServices {
     this.ctx = ctx;
     this.webapp = webapp;
     this.logServlet = new LogServlet(conf, this);
+    JerseyClient jerseyClient = new JerseyClient();
+    this.taskDescriptionsFetcher = new TaskDescriptionsFetcher(ctx, jerseyClient);
+    this.taskDescriptionComparator = new TaskDescriptionComparator();
   }
 
   private boolean hasAccess(Job job, HttpServletRequest request) {
@@ -466,6 +484,119 @@ public class HsWebServices extends WebServices {
     logsRequest.setModificationTime(modificationTime);
     logsRequest.setNodeId(nmId);
     return logServlet.getContainerLogsInfo(hsr, logsRequest);
+  }
+
+  @GET
+  @Path("/mapreduce/jobs/{jobid}/describeTasks")
+  @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
+  public TaskDescriptions getTaskAttempts(@Context HttpServletRequest hsr,
+      @PathParam("jobid") String jid) {
+
+    init();
+    TaskDescriptions taskDescriptions = null;
+    Job job = null;
+
+    try {
+      job = AMWebServices.getJobFromJobIdString(jid, ctx);
+      checkAccess(job, hsr);
+    } catch (Exception e) {
+      // Cannot find the job from local, which is normal if a job is still running.
+      // Ignore the exception
+    }
+
+    try {
+      if (job != null) {
+        // Found the job from local, i.e., JHS
+        taskDescriptions = getTaskDescriptionsFromJHS(job, jid);
+      } else {
+        JobId jobId = MRApps.toJobID(jid);
+        if (jobId != null) {
+          // Fetch the job from remote AM
+          taskDescriptions = taskDescriptionsFetcher.fetch(jobId);
+        }
+      }
+
+      if (taskDescriptions == null) {
+        taskDescriptions = new TaskDescriptions();
+        taskDescriptions.setFound(false);
+      } else {
+        List<TaskDescription> records = taskDescriptions.getTaskDescriptionList();
+        if (records != null && !records.isEmpty()) {
+          // sort output task attempts, map tasks first
+          Collections.sort(records, this.taskDescriptionComparator);
+          taskDescriptions.setTaskDescriptionList(records);
+        }
+      }
+
+      taskDescriptions.setSuccessful(true);
+    } catch (Exception e) {
+      LOG.error(e.getMessage(), e);
+      if (taskDescriptions == null){
+        taskDescriptions = new TaskDescriptions();
+      }
+      taskDescriptions.setSuccessful(false);
+      taskDescriptions.setErrorMsg(e.getMessage());
+    }
+
+    return taskDescriptions;
+  }
+
+  private TaskDescriptions getTaskDescriptionsFromJHS(Job job, String jid) {
+    TaskDescriptions taskDescriptions = null;
+    taskDescriptions = new TaskDescriptions();
+    taskDescriptions.setFound(true);
+    long startTime, finishTime;
+    if (job.getTasks() != null && !job.getTasks().isEmpty()) {
+      List<TaskDescription> taskDescriptionList = new ArrayList<TaskDescription>();
+      for (Task task : job.getTasks().values()) {
+        TaskDescription taskDescription = new TaskDescription();
+        taskDescription.setJobId(jid);
+        taskDescription.setTaskId(task.getID().toString());
+        taskDescription.setProgress(Float.toString(task.getProgress() * 100));
+        taskDescription.setTaskType(task.getType().name());
+
+        startTime = Long.MAX_VALUE;
+        finishTime = 0;
+
+        if (task.getAttempts() != null && !task.getAttempts().isEmpty()) {
+          List<TaskAttemptDescription> taskAttemptDescriptionList =
+              new ArrayList<TaskAttemptDescription>();
+
+          for (TaskAttempt ta : task.getAttempts().values()) {
+            if (ta != null) {
+              TaskAttemptDescription taskAttemptDescription = new TaskAttemptDescription();
+              taskAttemptDescription.setTaskAttemptId(
+                  ta.getID().toString() + ":" + ta.getAssignedContainerID().toString());
+              taskAttemptDescription.setTaskAttemptState(ta.getState().name());
+              taskAttemptDescription.setStartTime(ta.getLaunchTime());
+              if (ta.getLaunchTime() < startTime) {
+                startTime = ta.getLaunchTime();
+              }
+              if (task.isFinished() && ta.isFinished() && ta.getFinishTime() > finishTime) {
+                finishTime = ta.getFinishTime();
+              }
+              taskAttemptDescription.setFinishTime(ta.getFinishTime());
+              taskAttemptDescription.setPhase(ta.getPhase().name());
+              taskAttemptDescription.setProgress(ta.getProgress() * 100);
+              taskAttemptDescription.setTaskAttemptState(ta.getState().name());
+              if (task.getType() == TaskType.REDUCE) {
+                taskAttemptDescription.setShuffleFinishTime(ta.getShuffleFinishTime());
+                taskAttemptDescription.setSortFinishTime(ta.getSortFinishTime());
+              }
+              taskAttemptDescriptionList.add(taskAttemptDescription);
+            }
+          }
+
+          taskDescription.setTaskAttempts(taskAttemptDescriptionList);
+          taskDescription.setStartTime(startTime);
+          taskDescription.setFinishTime(finishTime);
+        }
+        taskDescriptionList.add(taskDescription);
+      }
+      taskDescriptions.setTaskDescriptionList(taskDescriptionList);
+    }
+
+    return taskDescriptions;
   }
 
   @GET

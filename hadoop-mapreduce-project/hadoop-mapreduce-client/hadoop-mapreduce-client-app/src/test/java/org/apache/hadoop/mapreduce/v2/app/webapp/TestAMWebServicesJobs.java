@@ -423,6 +423,24 @@ public class TestAMWebServicesJobs extends JerseyTestBase {
 
   }
 
+  @Test
+  public void testTaskDescriptions() throws Exception {
+    WebResource r = resource();
+    Map<JobId, Job> jobsMap = appContext.getAllJobs();
+    for (JobId id : jobsMap.keySet()) {
+      String jobId = MRApps.toString(id);
+      ClientResponse response = r.path("ws").path("v1").path("mapreduce")
+          .path("jobs").path(jobId).path("taskDescriptions").accept(MediaType.APPLICATION_JSON)
+          .get(ClientResponse.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+      JSONObject json = response.getEntity(JSONObject.class);
+      assertEquals("incorrect number of elements", 1, json.length());
+      JSONObject jobs = json.getJSONObject("TaskDescriptions");
+      JSONArray arr = jobs.getJSONArray("taskDescriptionList");
+      assertNotNull(arr);
+    }
+  }
+
   public void verifyAMJob(JSONObject info, Job job) throws JSONException {
 
     assertEquals("incorrect number of elements", 31, info.length());
