@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.mapreduce.v2.hs.webapp;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -61,8 +61,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.webapp.WebApp;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class TestHsWebServicesAcls {
   private static String FRIENDLY_USER = "friendly";
@@ -75,7 +75,7 @@ public class TestHsWebServicesAcls {
   private String taskAttemptIdStr;
   private HsWebServices hsWebServices;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     this.conf = new JobConf();
     this.conf.set(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
@@ -97,7 +97,7 @@ public class TestHsWebServicesAcls {
   }
 
   @Test
-  public void testGetJobAcls() {
+  void testGetJobAcls() {
     HttpServletRequest hsr = mock(HttpServletRequest.class);
     when(hsr.getRemoteUser()).thenReturn(ENEMY_USER);
 
@@ -114,7 +114,7 @@ public class TestHsWebServicesAcls {
   }
 
   @Test
-  public void testGetJobCountersAcls() {
+  void testGetJobCountersAcls() {
     HttpServletRequest hsr = mock(HttpServletRequest.class);
     when(hsr.getRemoteUser()).thenReturn(ENEMY_USER);
 
@@ -131,7 +131,7 @@ public class TestHsWebServicesAcls {
   }
 
   @Test
-  public void testGetJobConfAcls() {
+  void testGetJobConfAcls() {
     HttpServletRequest hsr = mock(HttpServletRequest.class);
     when(hsr.getRemoteUser()).thenReturn(ENEMY_USER);
 
@@ -148,7 +148,7 @@ public class TestHsWebServicesAcls {
   }
 
   @Test
-  public void testGetJobTasksAcls() {
+  void testGetJobTasksAcls() {
     HttpServletRequest hsr = mock(HttpServletRequest.class);
     when(hsr.getRemoteUser()).thenReturn(ENEMY_USER);
 
@@ -165,7 +165,7 @@ public class TestHsWebServicesAcls {
   }
 
   @Test
-  public void testGetJobTaskAcls() {
+  void testGetJobTaskAcls() {
     HttpServletRequest hsr = mock(HttpServletRequest.class);
     when(hsr.getRemoteUser()).thenReturn(ENEMY_USER);
 
@@ -182,7 +182,7 @@ public class TestHsWebServicesAcls {
   }
 
   @Test
-  public void testGetSingleTaskCountersAcls() {
+  void testGetSingleTaskCountersAcls() {
     HttpServletRequest hsr = mock(HttpServletRequest.class);
     when(hsr.getRemoteUser()).thenReturn(ENEMY_USER);
 
@@ -199,7 +199,7 @@ public class TestHsWebServicesAcls {
   }
 
   @Test
-  public void testGetJobTaskAttemptsAcls() {
+  void testGetJobTaskAttemptsAcls() {
     HttpServletRequest hsr = mock(HttpServletRequest.class);
     when(hsr.getRemoteUser()).thenReturn(ENEMY_USER);
 
@@ -216,7 +216,7 @@ public class TestHsWebServicesAcls {
   }
 
   @Test
-  public void testGetJobTaskAttemptIdAcls() {
+  void testGetJobTaskAttemptIdAcls() {
     HttpServletRequest hsr = mock(HttpServletRequest.class);
     when(hsr.getRemoteUser()).thenReturn(ENEMY_USER);
 
@@ -235,7 +235,7 @@ public class TestHsWebServicesAcls {
   }
 
   @Test
-  public void testGetJobTaskAttemptIdCountersAcls() {
+  void testGetJobTaskAttemptIdCountersAcls() {
     HttpServletRequest hsr = mock(HttpServletRequest.class);
     when(hsr.getRemoteUser()).thenReturn(ENEMY_USER);
 

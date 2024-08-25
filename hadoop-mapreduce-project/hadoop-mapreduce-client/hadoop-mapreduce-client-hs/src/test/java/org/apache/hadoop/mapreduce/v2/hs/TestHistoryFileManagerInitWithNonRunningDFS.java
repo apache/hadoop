@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.mapreduce.v2.hs;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.SafeModeAction;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -25,7 +28,7 @@ import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 
 import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 
 /**
@@ -46,7 +49,7 @@ public class TestHistoryFileManagerInitWithNonRunningDFS {
    * a YarnRuntimeException with a time out message.
    */
   @Test
-  public void testKeepRetryingWhileNameNodeInSafeMode() throws Exception {
+  void testKeepRetryingWhileNameNodeInSafeMode() throws Exception {
     Configuration conf = new Configuration();
     // set maximum wait time for JHS to wait for HDFS NameNode to start running
     final long maxJhsWaitTime = 500;
@@ -62,12 +65,12 @@ public class TestHistoryFileManagerInitWithNonRunningDFS {
 
       HistoryFileManager hfm = new HistoryFileManager();
       hfm.serviceInit(conf);
-      Assert.fail("History File Manager did not retry to connect to name node");
+      fail("History File Manager did not retry to connect to name node");
     } catch (YarnRuntimeException yex) {
       String expectedExceptionMsg = "Timed out '" + maxJhsWaitTime +
           "ms' waiting for FileSystem to become available";
-      Assert.assertEquals("Unexpected reconnect timeout exception message",
-          expectedExceptionMsg, yex.getMessage());
+      assertEquals(expectedExceptionMsg, yex.getMessage(),
+          "Unexpected reconnect timeout exception message");
     } finally {
       dfsCluster.shutdown(true);
     }

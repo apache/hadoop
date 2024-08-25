@@ -41,18 +41,19 @@ import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.service.Service;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class TestJobHistoryEvents {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestJobHistoryEvents.class);
 
   @Test
-  public void testHistoryEvents() throws Exception {
+  void testHistoryEvents() throws Exception {
     Configuration conf = new Configuration();
     MRApp app = new MRAppWithHistory(2, 1, true, this.getClass().getName(), true);
     app.submit(conf);
@@ -60,7 +61,7 @@ public class TestJobHistoryEvents {
     JobId jobId = job.getID();
     LOG.info("JOBID is " + TypeConverter.fromYarn(jobId).toString());
     app.waitForState(job, JobState.SUCCEEDED);
-    
+
     //make sure all events are flushed 
     app.waitForState(Service.STATE.STOPPED);
     /*
@@ -69,41 +70,44 @@ public class TestJobHistoryEvents {
     */
     HistoryContext context = new JobHistory();
     // test start and stop states
-    ((JobHistory)context).init(conf);
-    ((JobHistory)context).start();
-    Assert.assertTrue( context.getStartTime()>0);
-    Assert.assertEquals(((JobHistory)context).getServiceState(),Service.STATE.STARTED);
+    ((JobHistory) context).init(conf);
+    ((JobHistory) context).start();
+    assertTrue(context.getStartTime() > 0);
+    assertEquals(((JobHistory) context).getServiceState(), Service.STATE.STARTED);
 
     // get job before stopping JobHistory
     Job parsedJob = context.getJob(jobId);
 
     // stop JobHistory
-    ((JobHistory)context).stop();
-    Assert.assertEquals(((JobHistory)context).getServiceState(),Service.STATE.STOPPED);
+    ((JobHistory) context).stop();
+    assertEquals(((JobHistory) context).getServiceState(), Service.STATE.STOPPED);
 
 
-    Assert.assertEquals("CompletedMaps not correct", 2,
-        parsedJob.getCompletedMaps());
-    Assert.assertEquals(System.getProperty("user.name"), parsedJob.getUserName());
-    
+    assertEquals(2,
+        parsedJob.getCompletedMaps(),
+        "CompletedMaps not correct");
+    assertEquals(System.getProperty("user.name"), parsedJob.getUserName());
+
     Map<TaskId, Task> tasks = parsedJob.getTasks();
-    Assert.assertEquals("No of tasks not correct", 3, tasks.size());
+    assertEquals(3, tasks.size(), "No of tasks not correct");
     for (Task task : tasks.values()) {
       verifyTask(task);
     }
-    
+
     Map<TaskId, Task> maps = parsedJob.getTasks(TaskType.MAP);
-    Assert.assertEquals("No of maps not correct", 2, maps.size());
-    
+    assertEquals(2, maps.size(), "No of maps not correct");
+
     Map<TaskId, Task> reduces = parsedJob.getTasks(TaskType.REDUCE);
-    Assert.assertEquals("No of reduces not correct", 1, reduces.size());
-    
-    
-    Assert.assertEquals("CompletedReduce not correct", 1,
-        parsedJob.getCompletedReduces());
-    
-    Assert.assertEquals("Job state not currect", JobState.SUCCEEDED,
-        parsedJob.getState());
+    assertEquals(1, reduces.size(), "No of reduces not correct");
+
+
+    assertEquals(1,
+        parsedJob.getCompletedReduces(),
+        "CompletedReduce not correct");
+
+    assertEquals(JobState.SUCCEEDED,
+        parsedJob.getState(),
+        "Job state not currect");
   }
 
   /**
@@ -111,7 +115,7 @@ public class TestJobHistoryEvents {
    * @throws Exception
    */
   @Test
-  public void testEventsFlushOnStop() throws Exception {
+  void testEventsFlushOnStop() throws Exception {
 
     Configuration conf = new Configuration();
     MRApp app = new MRAppWithSpecialHistoryHandler(1, 0, true, this
@@ -131,22 +135,23 @@ public class TestJobHistoryEvents {
     HistoryContext context = new JobHistory();
     ((JobHistory) context).init(conf);
     Job parsedJob = context.getJob(jobId);
-    Assert.assertEquals("CompletedMaps not correct", 1, parsedJob
-        .getCompletedMaps());
+    assertEquals(1, parsedJob
+        .getCompletedMaps(), "CompletedMaps not correct");
 
     Map<TaskId, Task> tasks = parsedJob.getTasks();
-    Assert.assertEquals("No of tasks not correct", 1, tasks.size());
+    assertEquals(1, tasks.size(), "No of tasks not correct");
     verifyTask(tasks.values().iterator().next());
 
     Map<TaskId, Task> maps = parsedJob.getTasks(TaskType.MAP);
-    Assert.assertEquals("No of maps not correct", 1, maps.size());
+    assertEquals(1, maps.size(), "No of maps not correct");
 
-    Assert.assertEquals("Job state not currect", JobState.SUCCEEDED,
-        parsedJob.getState());
+    assertEquals(JobState.SUCCEEDED,
+        parsedJob.getState(),
+        "Job state not currect");
   }
 
   @Test
-  public void testJobHistoryEventHandlerIsFirstServiceToStop() {
+  void testJobHistoryEventHandlerIsFirstServiceToStop() {
     MRApp app = new MRAppWithSpecialHistoryHandler(1, 0, true, this
         .getClass().getName(), true);
     Configuration conf = new Configuration();
@@ -155,12 +160,12 @@ public class TestJobHistoryEvents {
     // Verifying that it is the last to be added is same as verifying that it is
     // the first to be stopped. CompositeService related tests already validate
     // this.
-    Assert.assertEquals("JobHistoryEventHandler",
+    assertEquals("JobHistoryEventHandler",
         services[services.length - 1].getName());
   }
-  
+
   @Test
-  public void testAssignedQueue() throws Exception {
+  void testAssignedQueue() throws Exception {
     Configuration conf = new Configuration();
     MRApp app = new MRAppWithHistory(2, 1, true, this.getClass().getName(),
         true, "assignedQueue");
@@ -169,7 +174,7 @@ public class TestJobHistoryEvents {
     JobId jobId = job.getID();
     LOG.info("JOBID is " + TypeConverter.fromYarn(jobId).toString());
     app.waitForState(job, JobState.SUCCEEDED);
-    
+
     //make sure all events are flushed 
     app.waitForState(Service.STATE.STOPPED);
     /*
@@ -178,41 +183,42 @@ public class TestJobHistoryEvents {
     */
     HistoryContext context = new JobHistory();
     // test start and stop states
-    ((JobHistory)context).init(conf);
-    ((JobHistory)context).start();
-    Assert.assertTrue( context.getStartTime()>0);
-    assertThat(((JobHistory)context).getServiceState())
+    ((JobHistory) context).init(conf);
+    ((JobHistory) context).start();
+    assertTrue(context.getStartTime() > 0);
+    assertThat(((JobHistory) context).getServiceState())
         .isEqualTo(Service.STATE.STARTED);
 
     // get job before stopping JobHistory
     Job parsedJob = context.getJob(jobId);
 
     // stop JobHistory
-    ((JobHistory)context).stop();
-    assertThat(((JobHistory)context).getServiceState())
+    ((JobHistory) context).stop();
+    assertThat(((JobHistory) context).getServiceState())
         .isEqualTo(Service.STATE.STOPPED);
 
-    Assert.assertEquals("QueueName not correct", "assignedQueue",
-        parsedJob.getQueueName());
+    assertEquals("assignedQueue",
+        parsedJob.getQueueName(),
+        "QueueName not correct");
   }
 
   private void verifyTask(Task task) {
-    Assert.assertEquals("Task state not currect", TaskState.SUCCEEDED,
-        task.getState());
+    assertEquals(TaskState.SUCCEEDED,
+        task.getState(),
+        "Task state not currect");
     Map<TaskAttemptId, TaskAttempt> attempts = task.getAttempts();
-    Assert.assertEquals("No of attempts not correct", 1, attempts.size());
+    assertEquals(1, attempts.size(), "No of attempts not correct");
     for (TaskAttempt attempt : attempts.values()) {
       verifyAttempt(attempt);
     }
   }
 
   private void verifyAttempt(TaskAttempt attempt) {
-    Assert.assertEquals("TaskAttempt state not currect", 
-        TaskAttemptState.SUCCEEDED, attempt.getState());
-    Assert.assertNotNull(attempt.getAssignedContainerID());
+    assertEquals(TaskAttemptState.SUCCEEDED, attempt.getState(), "TaskAttempt state not currect");
+    assertNotNull(attempt.getAssignedContainerID());
   //Verify the wrong ctor is not being used. Remove after mrv1 is removed.
     ContainerId fakeCid = MRApp.newContainerId(-1, -1, -1, -1);
-    Assert.assertFalse(attempt.getAssignedContainerID().equals(fakeCid));
+    assertNotEquals(attempt.getAssignedContainerID(), fakeCid);
     //Verify complete contianerManagerAddress
     Assert.assertEquals(MRApp.NM_HOST + ":" + MRApp.NM_PORT,
         attempt.getAssignedContainerMgrAddress());

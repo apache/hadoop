@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.mapreduce.v2.hs.server;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.io.IOException;
 import java.security.PrivilegedAction;
@@ -42,12 +42,10 @@ import org.apache.hadoop.security.GroupMappingServiceProvider;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.ProxyUsers;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.reset;
@@ -60,7 +58,6 @@ import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogDeletionService;
 import org.mockito.internal.util.collections.Sets;
 
-@RunWith(Parameterized.class)
 public class TestHSAdminServer {
   private boolean securityEnabled = true;
   private HSAdminServer hsAdminServer = null;
@@ -99,22 +96,21 @@ public class TestHSAdminServer {
     public Set<String> getGroupsSet(String user) throws IOException {
       Set<String> result = new LinkedHashSet<>();
       result.add(user + (10 * i + 1));
-      result.add(user + (10 * i +2));
+      result.add(user + (10 * i + 2));
       i++;
       return result;
     }
   }
 
-  @Parameters
   public static Collection<Object[]> testParameters() {
-    return Arrays.asList(new Object[][] { { false }, { true } });
+    return Arrays.asList(new Object[][]{{false}, {true}});
   }
 
-  public TestHSAdminServer(boolean enableSecurity) {
+  public void initTestHSAdminServer(boolean enableSecurity) {
     securityEnabled = enableSecurity;
   }
 
-  @Before
+  @BeforeEach
   public void init() throws HadoopIllegalArgumentException, IOException {
     conf = new JobConf();
     conf.set(JHAdminConfig.JHS_ADMIN_ADDRESS, "0.0.0.0:0");
@@ -122,8 +118,8 @@ public class TestHSAdminServer {
         GroupMappingServiceProvider.class);
     conf.setLong("hadoop.security.groups.cache.secs", groupRefreshTimeoutSec);
     conf.setBoolean(
-          CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION,
-          securityEnabled);
+        CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION,
+        securityEnabled);
     Groups.getUserToGroupsMappingService(conf);
     jobHistoryService = mock(JobHistory.class);
     alds = mock(AggregatedLogDeletionService.class);
@@ -142,8 +138,10 @@ public class TestHSAdminServer {
     hsAdminClient = new HSAdmin(conf);
   }
 
-  @Test
-  public void testGetGroups() throws Exception {
+  @MethodSource("testParameters")
+  @ParameterizedTest
+  void testGetGroups(boolean enableSecurity) throws Exception {
+    initTestHSAdminServer(enableSecurity);
     // Get the current user
     String user = UserGroupInformation.getCurrentUser().getUserName();
     String[] args = new String[2];
@@ -151,13 +149,16 @@ public class TestHSAdminServer {
     args[1] = user;
     // Run the getGroups command
     int exitCode = hsAdminClient.run(args);
-    assertEquals("Exit code should be 0 but was: " + exitCode, 0, exitCode);
+    assertEquals(0, exitCode, "Exit code should be 0 but was: " + exitCode);
   }
 
-  @Test
-  public void testRefreshUserToGroupsMappings() throws Exception {
+  @MethodSource("testParameters")
+  @ParameterizedTest
+  void testRefreshUserToGroupsMappings(boolean enableSecurity) throws Exception {
 
-    String[] args = new String[] { "-refreshUserToGroupsMappings" };
+    initTestHSAdminServer(enableSecurity);
+
+    String[] args = new String[]{"-refreshUserToGroupsMappings"};
     Groups groups = Groups.getUserToGroupsMappingService(conf);
     String user = UserGroupInformation.getCurrentUser().getUserName();
     System.out.println("first attempt:");
@@ -173,7 +174,7 @@ public class TestHSAdminServer {
     g2.toArray(str_groups);
     System.out.println(Arrays.toString(str_groups));
     for (int i = 0; i < g2.size(); i++) {
-      assertEquals("Should be same group ", g1.get(i), g2.get(i));
+      assertEquals(g1.get(i), g2.get(i), "Should be same group ");
     }
     // run the command,which clears the cache
     hsAdminClient.run(args);
@@ -184,14 +185,16 @@ public class TestHSAdminServer {
     g3.toArray(str_groups);
     System.out.println(Arrays.toString(str_groups));
     for (int i = 0; i < g3.size(); i++) {
-      assertFalse(
-          "Should be different group: " + g1.get(i) + " and " + g3.get(i), g1
-              .get(i).equals(g3.get(i)));
+      assertNotEquals(g1
+          .get(i), g3.get(i));
     }
   }
 
-  @Test
-  public void testRefreshSuperUserGroups() throws Exception {
+  @MethodSource("testParameters")
+  @ParameterizedTest
+  void testRefreshSuperUserGroups(boolean enableSecurity) throws Exception {
+
+    initTestHSAdminServer(enableSecurity);
 
     UserGroupInformation ugi = mock(UserGroupInformation.class);
     UserGroupInformation superUser = mock(UserGroupInformation.class);
@@ -200,7 +203,7 @@ public class TestHSAdminServer {
     when(superUser.getShortUserName()).thenReturn("superuser");
     when(superUser.getUserName()).thenReturn("superuser");
     when(ugi.getGroups())
-        .thenReturn(Arrays.asList(new String[] { "group3" }));
+        .thenReturn(Arrays.asList(new String[]{"group3"}));
     when(ugi.getGroupsSet())
         .thenReturn(Sets.newSet("group3"));
 
@@ -249,12 +252,14 @@ public class TestHSAdminServer {
       th = e;
     }
     // No exception thrown since regularUser can be impersonated.
-    assertNull("Unexpected exception thrown: " + th, th);
+    assertNull(th, "Unexpected exception thrown: " + th);
 
   }
 
-  @Test
-  public void testRefreshAdminAcls() throws Exception {
+  @MethodSource("testParameters")
+  @ParameterizedTest
+  void testRefreshAdminAcls(boolean enableSecurity) throws Exception {
+    initTestHSAdminServer(enableSecurity);
     // Setting current user to admin acl
     conf.set(JHAdminConfig.JHS_ADMIN_ACL, UserGroupInformation.getCurrentUser()
         .getUserName());
@@ -283,35 +288,43 @@ public class TestHSAdminServer {
     assertTrue(th instanceof RemoteException);
   }
 
-  @Test
-  public void testRefreshLoadedJobCache() throws Exception {
+  @MethodSource("testParameters")
+  @ParameterizedTest
+  void testRefreshLoadedJobCache(boolean enableSecurity) throws Exception {
+    initTestHSAdminServer(enableSecurity);
     String[] args = new String[1];
     args[0] = "-refreshLoadedJobCache";
     hsAdminClient.run(args);
     verify(jobHistoryService).refreshLoadedJobCache();
   }
-  
-  @Test
-  public void testRefreshLogRetentionSettings() throws Exception {
+
+  @MethodSource("testParameters")
+  @ParameterizedTest
+  void testRefreshLogRetentionSettings(boolean enableSecurity) throws Exception {
+    initTestHSAdminServer(enableSecurity);
     String[] args = new String[1];
     args[0] = "-refreshLogRetentionSettings";
     hsAdminClient.run(args);
     verify(alds).refreshLogRetentionSettings();
   }
 
-  @Test
-  public void testRefreshJobRetentionSettings() throws Exception {
+  @MethodSource("testParameters")
+  @ParameterizedTest
+  void testRefreshJobRetentionSettings(boolean enableSecurity) throws Exception {
+    initTestHSAdminServer(enableSecurity);
     String[] args = new String[1];
     args[0] = "-refreshJobRetentionSettings";
     hsAdminClient.run(args);
     verify(jobHistoryService).refreshJobRetentionSettings();
   }
 
+  @MethodSource("testParameters")
   @SuppressWarnings("unchecked")
-  @Test
-  public void testUGIForLogAndJobRefresh() throws Exception {
+  @ParameterizedTest
+  void testUGIForLogAndJobRefresh(boolean enableSecurity) throws Exception {
+    initTestHSAdminServer(enableSecurity);
     UserGroupInformation ugi =
-        UserGroupInformation.createUserForTesting("test", new String[] {"grp"});
+        UserGroupInformation.createUserForTesting("test", new String[]{"grp"});
     UserGroupInformation loginUGI = spy(hsAdminServer.getLoginUGI());
     hsAdminServer.setLoginUGI(loginUGI);
 
@@ -357,7 +370,7 @@ public class TestHSAdminServer {
     verify(jobHistoryService).refreshJobRetentionSettings();
   }
 
-  @After
+  @AfterEach
   public void cleanUp() {
     if (hsAdminServer != null)
       hsAdminServer.stop();

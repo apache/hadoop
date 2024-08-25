@@ -27,7 +27,8 @@ import static org.apache.hadoop.yarn.webapp.YarnWebParams.CONTAINER_ID;
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.CONTAINER_LOG_TYPE;
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.ENTITY_STRING;
 import static org.apache.hadoop.yarn.webapp.YarnWebParams.NM_NODENAME;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
@@ -47,9 +48,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.webapp.View;
 import org.apache.hadoop.yarn.webapp.log.AggregatedLogsPage;
 import org.apache.hadoop.yarn.webapp.test.WebAppTests;
-import org.junit.Assert;
-import org.junit.Test;
-
+import org.junit.jupiter.api.Test;
 import com.google.inject.AbstractModule;
 import com.google.inject.Injector;
 import org.slf4j.Logger;
@@ -58,15 +57,17 @@ import org.slf4j.LoggerFactory;
 public class TestHSWebApp {
   private static final Logger LOG = LoggerFactory.getLogger(TestHSWebApp.class);
 
-  @Test public void testAppControllerIndex() {
+  @Test
+  void testAppControllerIndex() {
     MockAppContext ctx = new MockAppContext(0, 1, 1, 1);
     Injector injector = WebAppTests.createMockInjector(AppContext.class, ctx);
     HsController controller = injector.getInstance(HsController.class);
     controller.index();
-    assertEquals(ctx.getApplicationID().toString(), controller.get(APP_ID,""));
+    assertEquals(ctx.getApplicationID().toString(), controller.get(APP_ID, ""));
   }
 
-  @Test public void testJobView() {
+  @Test
+  void testJobView() {
     LOG.info("HsJobPage");
     AppContext appContext = new MockAppContext(0, 1, 1, 1);
     Map<String, String> params = TestAMWebApp.getJobParams(appContext);
@@ -74,7 +75,7 @@ public class TestHSWebApp {
   }
 
   @Test
-  public void testTasksView() {
+  void testTasksView() {
     LOG.info("HsTasksPage");
     AppContext appContext = new MockAppContext(0, 1, 1, 1);
     Map<String, String> params = TestAMWebApp.getTaskParams(appContext);
@@ -83,7 +84,7 @@ public class TestHSWebApp {
   }
 
   @Test
-  public void testTasksViewNaturalSortType() {
+  void testTasksViewNaturalSortType() {
     LOG.info("HsTasksPage");
     AppContext appContext = new MockAppContext(0, 1, 1, 1);
     Map<String, String> params = TestAMWebApp.getTaskParams(appContext);
@@ -91,11 +92,11 @@ public class TestHSWebApp {
     View viewInstance = testPage.getInstance(HsTasksPage.class);
     Map<String, String> moreParams = viewInstance.context().requestContext().moreParams();
     String appTableColumnsMeta = moreParams.get("ui.dataTables.selector.init");
-    Assert.assertTrue(appTableColumnsMeta.indexOf("natural") != -1);
+    assertTrue(appTableColumnsMeta.indexOf("natural") != -1);
   }
 
   @Test
-  public void testTaskView() {
+  void testTaskView() {
     LOG.info("HsTaskPage");
     AppContext appContext = new MockAppContext(0, 1, 1, 1);
     Map<String, String> params = TestAMWebApp.getTaskParams(appContext);
@@ -104,7 +105,7 @@ public class TestHSWebApp {
   }
 
   @Test
-  public void testTaskViewNaturalSortType() {
+  void testTaskViewNaturalSortType() {
     LOG.info("HsTaskPage");
     AppContext appContext = new MockAppContext(0, 1, 1, 1);
     Map<String, String> params = TestAMWebApp.getTaskParams(appContext);
@@ -112,65 +113,72 @@ public class TestHSWebApp {
     View viewInstance = testPage.getInstance(HsTaskPage.class);
     Map<String, String> moreParams = viewInstance.context().requestContext().moreParams();
     String appTableColumnsMeta = moreParams.get("ui.dataTables.attempts.init");
-    Assert.assertTrue(appTableColumnsMeta.indexOf("natural") != -1);
+    assertTrue(appTableColumnsMeta.indexOf("natural") != -1);
   }
 
-  @Test public void testAttemptsWithJobView() {
+  @Test
+  void testAttemptsWithJobView() {
     LOG.info("HsAttemptsPage with data");
     MockAppContext ctx = new MockAppContext(0, 1, 1, 1);
     JobId id = ctx.getAllJobs().keySet().iterator().next();
-    Map<String, String> params = new HashMap<String,String>();
+    Map<String, String> params = new HashMap<String, String>();
     params.put(JOB_ID, id.toString());
     params.put(TASK_TYPE, "m");
     params.put(ATTEMPT_STATE, "SUCCESSFUL");
     WebAppTests.testPage(HsAttemptsPage.class, AppContext.class,
         ctx, params);
   }
-  
-  @Test public void testAttemptsView() {
+
+  @Test
+  void testAttemptsView() {
     LOG.info("HsAttemptsPage");
     AppContext appContext = new MockAppContext(0, 1, 1, 1);
     Map<String, String> params = TestAMWebApp.getTaskParams(appContext);
     WebAppTests.testPage(HsAttemptsPage.class, AppContext.class,
-                         appContext, params);
+        appContext, params);
   }
-  
-  @Test public void testConfView() {
+
+  @Test
+  void testConfView() {
     LOG.info("HsConfPage");
     WebAppTests.testPage(HsConfPage.class, AppContext.class,
-                         new MockAppContext(0, 1, 1, 1));
+        new MockAppContext(0, 1, 1, 1));
   }
-  
-  @Test public void testAboutView() {
+
+  @Test
+  void testAboutView() {
     LOG.info("HsAboutPage");
     WebAppTests.testPage(HsAboutPage.class, AppContext.class,
-                         new MockAppContext(0, 1, 1, 1));
+        new MockAppContext(0, 1, 1, 1));
   }
-  
-  @Test public void testJobCounterView() {
+
+  @Test
+  void testJobCounterView() {
     LOG.info("JobCounterView");
     AppContext appContext = new MockAppContext(0, 1, 1, 1);
     Map<String, String> params = TestAMWebApp.getJobParams(appContext);
     WebAppTests.testPage(HsCountersPage.class, AppContext.class,
-                         appContext, params);
+        appContext, params);
   }
-  
-  @Test public void testJobCounterViewForKilledJob() {
+
+  @Test
+  void testJobCounterViewForKilledJob() {
     LOG.info("JobCounterViewForKilledJob");
     AppContext appContext = new MockAppContext(0, 1, 1, 1, true);
     Map<String, String> params = TestAMWebApp.getJobParams(appContext);
     WebAppTests.testPage(HsCountersPage.class, AppContext.class,
         appContext, params);
   }
-  
-  @Test public void testSingleCounterView() {
+
+  @Test
+  void testSingleCounterView() {
     LOG.info("HsSingleCounterPage");
     WebAppTests.testPage(HsSingleCounterPage.class, AppContext.class,
-                         new MockAppContext(0, 1, 1, 1));
+        new MockAppContext(0, 1, 1, 1));
   }
-  
+
   @Test
-  public void testLogsView1() throws IOException {
+  void testLogsView1() throws IOException {
     LOG.info("HsLogsPage");
     Injector injector =
         WebAppTests.testPage(AggregatedLogsPage.class, AppContext.class,
@@ -182,14 +190,14 @@ public class TestHSWebApp {
   }
 
   @Test
-  public void testLogsView2() throws IOException {
+  void testLogsView2() throws IOException {
     LOG.info("HsLogsPage with data");
     MockAppContext ctx = new MockAppContext(0, 1, 1, 1);
     Map<String, String> params = new HashMap<String, String>();
 
     params.put(CONTAINER_ID, MRApp.newContainerId(1, 1, 333, 1)
         .toString());
-    params.put(NM_NODENAME, 
+    params.put(NM_NODENAME,
         NodeId.newInstance(MockJobs.NM_HOST, MockJobs.NM_PORT).toString());
     params.put(ENTITY_STRING, "container_10_0001_01_000001");
     params.put(APP_OWNER, "owner");
@@ -204,7 +212,7 @@ public class TestHSWebApp {
   }
 
   @Test
-  public void testLogsViewSingle() throws IOException {
+  void testLogsViewSingle() throws IOException {
     LOG.info("HsLogsPage with params for single log and data limits");
     MockAppContext ctx = new MockAppContext(0, 1, 1, 1);
     Map<String, String> params = new HashMap<String, String>();
@@ -225,11 +233,11 @@ public class TestHSWebApp {
     Injector injector =
         WebAppTests.testPage(AggregatedLogsPage.class, AppContext.class, ctx,
             params, new AbstractModule() {
-          @Override
-          protected void configure() {
-            bind(Configuration.class).toInstance(conf);
-          }
-        });
+              @Override
+              protected void configure() {
+                bind(Configuration.class).toInstance(conf);
+              }
+            });
     PrintWriter spyPw = WebAppTests.getPrintWriter(injector);
     verify(spyPw).write(
         "Logs not available for container_10_0001_01_000001."
@@ -239,7 +247,7 @@ public class TestHSWebApp {
   }
 
   @Test
-  public void testLogsViewBadStartEnd() throws IOException {
+  void testLogsViewBadStartEnd() throws IOException {
     LOG.info("HsLogsPage with bad start/end params");
     MockAppContext ctx = new MockAppContext(0, 1, 1, 1);
     Map<String, String> params = new HashMap<String, String>();

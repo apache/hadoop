@@ -43,63 +43,63 @@ import org.apache.hadoop.mapreduce.v2.app.job.Task;
 import org.apache.hadoop.mapreduce.v2.app.job.TaskAttempt;
 import org.apache.hadoop.mapreduce.v2.hs.HistoryFileManager.HistoryFileInfo;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.apache.hadoop.mapred.TaskCompletionEvent;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-@RunWith(value = Parameterized.class)
 public class TestJobHistoryEntities {
 
   private final String historyFileName =
-      "job_1329348432655_0001-1329348443227-user-Sleep+job-1329348468601-10-1-SUCCEEDED-default.jhist";
+      "job_1329348432655_0001-1329348443227-user-Sleep+job-1329348468601-10-1-"
+          + "SUCCEEDED-default.jhist";
   private final String historyFileNameZeroReduceTasks =
-    "job_1416424547277_0002-1416424775281-root-TeraGen-1416424785433-2-0-SUCCEEDED-default-1416424779349.jhist";
+      "job_1416424547277_0002-1416424775281-root-TeraGen-1416424785433-2-0-"
+          + "SUCCEEDED-default-1416424779349.jhist";
   private final String confFileName = "job_1329348432655_0001_conf.xml";
   private final Configuration conf = new Configuration();
   private final JobACLsManager jobAclsManager = new JobACLsManager(conf);
   private boolean loadTasks;
   private JobId jobId = MRBuilderUtils.newJobId(1329348432655l, 1, 1);
   Path fullHistoryPath =
-    new Path(this.getClass().getClassLoader().getResource(historyFileName)
-        .getFile());
+      new Path(this.getClass().getClassLoader().getResource(historyFileName)
+          .getFile());
   Path fullHistoryPathZeroReduces =
-    new Path(this.getClass().getClassLoader().getResource(historyFileNameZeroReduceTasks)
-        .getFile());
+      new Path(this.getClass().getClassLoader().getResource(historyFileNameZeroReduceTasks)
+          .getFile());
   Path fullConfPath =
-    new Path(this.getClass().getClassLoader().getResource(confFileName)
-        .getFile());
+      new Path(this.getClass().getClassLoader().getResource(confFileName)
+          .getFile());
   private CompletedJob completedJob;
 
-  public TestJobHistoryEntities(boolean loadTasks) throws Exception {
-    this.loadTasks = loadTasks;
+  public void initTestJobHistoryEntities(boolean tasks) throws Exception {
+    this.loadTasks = tasks;
   }
 
-  @Parameters
   public static Collection<Object[]> data() {
     List<Object[]> list = new ArrayList<Object[]>(2);
-    list.add(new Object[] { true });
-    list.add(new Object[] { false });
+    list.add(new Object[]{true});
+    list.add(new Object[]{false});
     return list;
   }
 
   /* Verify some expected values based on the history file */
-  @Test (timeout=100000)
-  public void testCompletedJob() throws Exception {
+  @MethodSource("data")
+  @ParameterizedTest
+  @Timeout(100000)
+  void testCompletedJob(boolean tasks) throws Exception {
+    initTestJobHistoryEntities(tasks);
     HistoryFileInfo info = mock(HistoryFileInfo.class);
     when(info.getConfFile()).thenReturn(fullConfPath);
     when(info.getHistoryFile()).thenReturn(fullHistoryPath);
     //Re-initialize to verify the delayed load.
     completedJob =
-      new CompletedJob(conf, jobId, fullHistoryPath, loadTasks, "user",
-          info, jobAclsManager);
+        new CompletedJob(conf, jobId, fullHistoryPath, loadTasks, "user",
+            info, jobAclsManager);
     //Verify tasks loaded based on loadTask parameter.
     assertEquals(loadTasks, completedJob.tasksLoaded.get());
     assertEquals(1, completedJob.getAMInfos().size());
@@ -117,15 +117,18 @@ public class TestJobHistoryEntities {
     assertEquals(JobState.SUCCEEDED, jobReport.getJobState());
     assertEquals(fullHistoryPath.toString(), jobReport.getHistoryFile());
   }
-  
-  @Test (timeout=100000)
-  public void testCopmletedJobReportWithZeroTasks() throws Exception {
+
+  @MethodSource("data")
+  @ParameterizedTest
+  @Timeout(100000)
+  void testCopmletedJobReportWithZeroTasks(boolean tasks) throws Exception {
+    initTestJobHistoryEntities(tasks);
     HistoryFileInfo info = mock(HistoryFileInfo.class);
     when(info.getConfFile()).thenReturn(fullConfPath);
     when(info.getHistoryFile()).thenReturn(fullHistoryPathZeroReduces);
     completedJob =
-      new CompletedJob(conf, jobId, fullHistoryPathZeroReduces, loadTasks, "user",
-          info, jobAclsManager);
+        new CompletedJob(conf, jobId, fullHistoryPathZeroReduces, loadTasks, "user",
+            info, jobAclsManager);
     JobReport jobReport = completedJob.getReport();
     // Make sure that the number reduces (completed and total) are equal to zero.
     assertEquals(0, completedJob.getTotalReduces());
@@ -136,21 +139,24 @@ public class TestJobHistoryEntities {
         jobReport.getHistoryFile());
   }
 
-  @Test (timeout=10000)
-  public void testCompletedTask() throws Exception {
+  @MethodSource("data")
+  @ParameterizedTest
+  @Timeout(10000)
+  void testCompletedTask(boolean tasks) throws Exception {
+    initTestJobHistoryEntities(tasks);
     HistoryFileInfo info = mock(HistoryFileInfo.class);
     when(info.getConfFile()).thenReturn(fullConfPath);
     completedJob =
-      new CompletedJob(conf, jobId, fullHistoryPath, loadTasks, "user",
-          info, jobAclsManager);
+        new CompletedJob(conf, jobId, fullHistoryPath, loadTasks, "user",
+            info, jobAclsManager);
     TaskId mt1Id = MRBuilderUtils.newTaskId(jobId, 0, TaskType.MAP);
     TaskId rt1Id = MRBuilderUtils.newTaskId(jobId, 0, TaskType.REDUCE);
-    
+
     Map<TaskId, Task> mapTasks = completedJob.getTasks(TaskType.MAP);
     Map<TaskId, Task> reduceTasks = completedJob.getTasks(TaskType.REDUCE);
     assertEquals(10, mapTasks.size());
     assertEquals(2, reduceTasks.size());
-    
+
     Task mt1 = mapTasks.get(mt1Id);
     assertEquals(1, mt1.getAttempts().size());
     assertEquals(TaskState.SUCCEEDED, mt1.getState());
@@ -165,21 +171,24 @@ public class TestJobHistoryEntities {
     assertEquals(rt1Id, rt1Report.getTaskId());
   }
 
-  @Test (timeout=10000)
-  public void testCompletedTaskAttempt() throws Exception {
+  @MethodSource("data")
+  @ParameterizedTest
+  @Timeout(10000)
+  void testCompletedTaskAttempt(boolean tasks) throws Exception {
+    initTestJobHistoryEntities(tasks);
     HistoryFileInfo info = mock(HistoryFileInfo.class);
     when(info.getConfFile()).thenReturn(fullConfPath);
     completedJob =
-      new CompletedJob(conf, jobId, fullHistoryPath, loadTasks, "user",
-          info, jobAclsManager);
+        new CompletedJob(conf, jobId, fullHistoryPath, loadTasks, "user",
+            info, jobAclsManager);
     TaskId mt1Id = MRBuilderUtils.newTaskId(jobId, 0, TaskType.MAP);
     TaskId rt1Id = MRBuilderUtils.newTaskId(jobId, 0, TaskType.REDUCE);
     TaskAttemptId mta1Id = MRBuilderUtils.newTaskAttemptId(mt1Id, 0);
     TaskAttemptId rta1Id = MRBuilderUtils.newTaskAttemptId(rt1Id, 0);
-    
+
     Task mt1 = completedJob.getTask(mt1Id);
     Task rt1 = completedJob.getTask(rt1Id);
-    
+
     TaskAttempt mta1 = mt1.getAttempt(mta1Id);
     assertEquals(TaskAttemptState.SUCCEEDED, mta1.getState());
     assertEquals("localhost:45454", mta1.getAssignedContainerMgrAddress());
@@ -189,7 +198,7 @@ public class TestJobHistoryEntities {
     assertEquals("localhost", mta1Report.getNodeManagerHost());
     assertEquals(45454, mta1Report.getNodeManagerPort());
     assertEquals(9999, mta1Report.getNodeManagerHttpPort());
-    
+
     TaskAttempt rta1 = rt1.getAttempt(rta1Id);
     assertEquals(TaskAttemptState.SUCCEEDED, rta1.getState());
     assertEquals("localhost:45454", rta1.getAssignedContainerMgrAddress());
@@ -200,49 +209,56 @@ public class TestJobHistoryEntities {
     assertEquals(45454, rta1Report.getNodeManagerPort());
     assertEquals(9999, rta1Report.getNodeManagerHttpPort());
   }
+
   /**
    * Simple test of some methods of CompletedJob
    * @throws Exception
    */
-  @Test (timeout=30000)
-  public void testGetTaskAttemptCompletionEvent() throws Exception{
+  @MethodSource("data")
+  @ParameterizedTest
+  @Timeout(30000)
+  void testGetTaskAttemptCompletionEvent(boolean tasks) throws Exception {
+    initTestJobHistoryEntities(tasks);
     HistoryFileInfo info = mock(HistoryFileInfo.class);
     when(info.getConfFile()).thenReturn(fullConfPath);
     completedJob =
-      new CompletedJob(conf, jobId, fullHistoryPath, loadTasks, "user",
-          info, jobAclsManager);
-    TaskCompletionEvent[] events= completedJob.getMapAttemptCompletionEvents(0,1000);
-    assertEquals(10, completedJob.getMapAttemptCompletionEvents(0,10).length);
-    int currentEventId=0;
+        new CompletedJob(conf, jobId, fullHistoryPath, loadTasks, "user",
+            info, jobAclsManager);
+    TaskCompletionEvent[] events = completedJob.getMapAttemptCompletionEvents(0, 1000);
+    assertEquals(10, completedJob.getMapAttemptCompletionEvents(0, 10).length);
+    int currentEventId = 0;
     for (TaskCompletionEvent taskAttemptCompletionEvent : events) {
-      int eventId= taskAttemptCompletionEvent.getEventId();
-      assertTrue(eventId>=currentEventId);
-      currentEventId=eventId;
+      int eventId = taskAttemptCompletionEvent.getEventId();
+      assertTrue(eventId >= currentEventId);
+      currentEventId = eventId;
     }
-    assertNull(completedJob.loadConfFile() );
+    assertNull(completedJob.loadConfFile());
     // job name
-    assertEquals("Sleep job",completedJob.getName());
+    assertEquals("Sleep job", completedJob.getName());
     // queue name
-    assertEquals("default",completedJob.getQueueName());
+    assertEquals("default", completedJob.getQueueName());
     // progress
-    assertEquals(1.0, completedJob.getProgress(),0.001);
+    assertEquals(1.0, completedJob.getProgress(), 0.001);
     // 12 rows in answer
-    assertEquals(12,completedJob.getTaskAttemptCompletionEvents(0,1000).length);
+    assertEquals(12, completedJob.getTaskAttemptCompletionEvents(0, 1000).length);
     // select first 10 rows
-    assertEquals(10,completedJob.getTaskAttemptCompletionEvents(0,10).length);
+    assertEquals(10, completedJob.getTaskAttemptCompletionEvents(0, 10).length);
     // select 5-10 rows include 5th
-    assertEquals(7,completedJob.getTaskAttemptCompletionEvents(5,10).length);
+    assertEquals(7, completedJob.getTaskAttemptCompletionEvents(5, 10).length);
 
     // without errors
-    assertEquals(1,completedJob.getDiagnostics().size());
-    assertEquals("",completedJob.getDiagnostics().get(0));
+    assertEquals(1, completedJob.getDiagnostics().size());
+    assertEquals("", completedJob.getDiagnostics().get(0));
 
     assertEquals(0, completedJob.getJobACLs().size());
 
   }
 
-  @Test (timeout=30000)
-  public void testCompletedJobWithDiagnostics() throws Exception {
+  @MethodSource("data")
+  @ParameterizedTest
+  @Timeout(30000)
+  void testCompletedJobWithDiagnostics(boolean tasks) throws Exception {
+    initTestJobHistoryEntities(tasks);
     final String jobError = "Job Diagnostics";
     JobInfo jobInfo = spy(new JobInfo());
     when(jobInfo.getErrorInfo()).thenReturn(jobError);
@@ -254,14 +270,14 @@ public class TestJobHistoryEntities {
     when(info.getConfFile()).thenReturn(fullConfPath);
     when(info.getHistoryFile()).thenReturn(fullHistoryPath);
     CompletedJob job =
-      new CompletedJob(conf, jobId, fullHistoryPath, loadTasks, "user",
-          info, jobAclsManager) {
-            @Override
-            protected JobHistoryParser createJobHistoryParser(
-                Path historyFileAbsolute) throws IOException {
-               return mockParser;
-            }
-    };
+        new CompletedJob(conf, jobId, fullHistoryPath, loadTasks, "user",
+            info, jobAclsManager) {
+          @Override
+          protected JobHistoryParser createJobHistoryParser(
+              Path historyFileAbsolute) throws IOException {
+            return mockParser;
+          }
+        };
     assertEquals(jobError, job.getReport().getDiagnostics());
   }
 }

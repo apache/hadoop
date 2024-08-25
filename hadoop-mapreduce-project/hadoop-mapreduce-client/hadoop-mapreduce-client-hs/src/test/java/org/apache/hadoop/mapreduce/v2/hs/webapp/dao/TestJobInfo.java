@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.v2.hs.webapp.dao;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -26,8 +27,6 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
-
-import org.junit.Assert;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -46,15 +45,18 @@ import org.apache.hadoop.mapreduce.v2.hs.HistoryFileManager.HistoryFileInfo;
 import org.apache.hadoop.mapreduce.v2.hs.CompletedJob;
 import org.apache.hadoop.mapreduce.v2.hs.TestJobHistoryEntities;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 
 public class TestJobInfo {
 
-  @Test(timeout = 10000)
-  public void testAverageMergeTime() throws IOException {
+  @Test
+  @Timeout(10000)
+  void testAverageMergeTime() throws IOException {
     String historyFileName =
-        "job_1329348432655_0001-1329348443227-user-Sleep+job-1329348468601-10-1-SUCCEEDED-default.jhist";
+        "job_1329348432655_0001-1329348443227-user-Sleep+job-1329348468601-10-1"
+            + "-SUCCEEDED-default.jhist";
     String confFileName =
         "job_1329348432655_0001_conf.xml";
     Configuration conf = new Configuration();
@@ -79,70 +81,77 @@ public class TestJobInfo {
     JobInfo jobInfo = new JobInfo(completedJob);
     // There are 2 tasks with merge time of 45 and 55 respectively. So average
     // merge time should be 50.
-    Assert.assertEquals(50L, jobInfo.getAvgMergeTime().longValue());
+    assertEquals(50L, jobInfo.getAvgMergeTime().longValue());
   }
-  
+
   @Test
-  public void testAverageReduceTime() {
-	  
+  void testAverageReduceTime() {
+
     Job job = mock(CompletedJob.class);
     final Task task1 = mock(Task.class);
     final Task task2 = mock(Task.class);
-  
+
     JobId  jobId = MRBuilderUtils.newJobId(1L, 1, 1);
-  
+
     final TaskId taskId1 = MRBuilderUtils.newTaskId(jobId, 1, TaskType.REDUCE);
     final TaskId taskId2 = MRBuilderUtils.newTaskId(jobId, 2, TaskType.REDUCE);
-  
+
     final TaskAttemptId taskAttemptId1  = MRBuilderUtils.
-    		newTaskAttemptId(taskId1, 1);
+        newTaskAttemptId(taskId1, 1);
     final TaskAttemptId taskAttemptId2  = MRBuilderUtils.
-    		newTaskAttemptId(taskId2, 2);
-  
+        newTaskAttemptId(taskId2, 2);
+
     final TaskAttempt taskAttempt1 = mock(TaskAttempt.class);
     final TaskAttempt taskAttempt2 = mock(TaskAttempt.class);
-  
+
     JobReport jobReport = mock(JobReport.class);
-  
+
     when(taskAttempt1.getState()).thenReturn(TaskAttemptState.SUCCEEDED);
     when(taskAttempt1.getLaunchTime()).thenReturn(0L);
     when(taskAttempt1.getShuffleFinishTime()).thenReturn(4L);
     when(taskAttempt1.getSortFinishTime()).thenReturn(6L);
     when(taskAttempt1.getFinishTime()).thenReturn(8L);
-  
+
     when(taskAttempt2.getState()).thenReturn(TaskAttemptState.SUCCEEDED);
     when(taskAttempt2.getLaunchTime()).thenReturn(5L);
     when(taskAttempt2.getShuffleFinishTime()).thenReturn(10L);
     when(taskAttempt2.getSortFinishTime()).thenReturn(22L);
     when(taskAttempt2.getFinishTime()).thenReturn(42L);
-  
-  
+
+
     when(task1.getType()).thenReturn(TaskType.REDUCE);
     when(task2.getType()).thenReturn(TaskType.REDUCE);
-    when(task1.getAttempts()).thenReturn
-      (new HashMap<TaskAttemptId, TaskAttempt>() 
-    		{{put(taskAttemptId1,taskAttempt1); }});
-    when(task2.getAttempts()).thenReturn
-      (new HashMap<TaskAttemptId, TaskAttempt>() 
-    		  {{put(taskAttemptId2,taskAttempt2); }});
-  
-    when(job.getTasks()).thenReturn
-      (new HashMap<TaskId, Task>() 
-    		{{ put(taskId1,task1); put(taskId2, task2);  }});
+    when(task1.getAttempts()).thenReturn(new HashMap<TaskAttemptId, TaskAttempt>() {
+      {
+        put(taskAttemptId1, taskAttempt1);
+      }
+    });
+    when(task2.getAttempts()).thenReturn(new HashMap<TaskAttemptId, TaskAttempt>() {
+      {
+        put(taskAttemptId2, taskAttempt2);
+      }
+    });
+
+    when(job.getTasks()).thenReturn(new HashMap<TaskId, Task>() {
+      {
+        put(taskId1, task1);
+        put(taskId2, task2);
+      }
+    });
     when(job.getID()).thenReturn(jobId);
-  
+
     when(job.getReport()).thenReturn(jobReport);
-  
-    when(job.getName()).thenReturn("TestJobInfo");	  
-    when(job.getState()).thenReturn(JobState.SUCCEEDED);	  
-  
+
+    when(job.getName()).thenReturn("TestJobInfo");
+    when(job.getState()).thenReturn(JobState.SUCCEEDED);
+
     JobInfo jobInfo = new JobInfo(job);
-  
-    Assert.assertEquals(11L, jobInfo.getAvgReduceTime().longValue());
+
+    assertEquals(11L, jobInfo.getAvgReduceTime().longValue());
   }
 
   @Test
-  public void testGetStartTimeStr() {
+  void testGetStartTimeStr() {
     JobReport jobReport = mock(JobReport.class);
     when(jobReport.getStartTime()).thenReturn(-1L);
 
@@ -155,17 +164,17 @@ public class TestJobInfo {
     when(job.getID()).thenReturn(jobId);
 
     JobInfo jobInfo = new JobInfo(job);
-    Assert.assertEquals(JobInfo.NA, jobInfo.getStartTimeStr());
+    assertEquals(JobInfo.NA, jobInfo.getStartTimeStr());
 
     Date date = new Date();
     when(jobReport.getStartTime()).thenReturn(date.getTime());
 
     jobInfo = new JobInfo(job);
-    Assert.assertEquals(date.toString(), jobInfo.getStartTimeStr());
+    assertEquals(date.toString(), jobInfo.getStartTimeStr());
   }
 
   @Test
-  public void testGetFormattedStartTimeStr() {
+  void testGetFormattedStartTimeStr() {
     JobReport jobReport = mock(JobReport.class);
     when(jobReport.getStartTime()).thenReturn(-1L);
 
@@ -179,13 +188,13 @@ public class TestJobInfo {
     DateFormat dateFormat = new SimpleDateFormat();
 
     JobInfo jobInfo = new JobInfo(job);
-    Assert.assertEquals(
+    assertEquals(
         JobInfo.NA, jobInfo.getFormattedStartTimeStr(dateFormat));
 
     Date date = new Date();
     when(jobReport.getStartTime()).thenReturn(date.getTime());
     jobInfo = new JobInfo(job);
-    Assert.assertEquals(
+    assertEquals(
         dateFormat.format(date), jobInfo.getFormattedStartTimeStr(dateFormat));
   }
 }
