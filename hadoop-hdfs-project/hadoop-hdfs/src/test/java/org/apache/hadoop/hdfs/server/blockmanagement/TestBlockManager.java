@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.hdfs.AdminStatesBaseTest;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableList;
@@ -2355,29 +2354,24 @@ public class TestBlockManager {
     conf.setLong(DFSConfigKeys.DFS_DATANODE_BALANCE_BANDWIDTHPERSEC_KEY, 1);
 
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
-    cluster.waitActive();
-    cluster.getNamesystem().getBlockManager().getDatanodeManager().setHeartbeatExpireInterval(3000);
     try {
-      DistributedFileSystem fs = cluster.getFileSystem();
+      cluster.waitActive();
       BlockManager blockManager = cluster.getNamesystem().getBlockManager();
       DatanodeManager dm = cluster.getNamesystem().getBlockManager().getDatanodeManager();
-      cluster.waitActive();
+      dm.setHeartbeatExpireInterval(3000);
+      DistributedFileSystem fs = cluster.getFileSystem();
 
-      DistributedFileSystem dfs = cluster.getFileSystem();
       // create a file
       Path filePath = new Path("/tmp.txt");
-      DFSTestUtil.createFile(dfs, filePath, 1024, (short) 1, 0L);
-      FSDataOutputStream st1 =
-          AdminStatesBaseTest.writeIncompleteFile(fs, filePath, (short) 1, (short) (1));
-      st1.close();
+      DFSTestUtil.createFile(fs, filePath, 1024, (short) 1, 0L);
 
       LocatedBlocks blocks =
           NameNodeAdapter.getBlockLocations(cluster.getNameNode(), filePath.toString(), 0, 1);
+      LocatedBlock locatedBlock = blocks.get(0);
+      BlockInfo bi = blockManager.getStoredBlock(locatedBlock.getBlock().getLocalBlock());
+      String dnName = locatedBlock.getLocations()[0].getXferAddr();
 
-      BlockInfo bi = blockManager.getStoredBlock(blocks.get(0).getBlock().getLocalBlock());
-      String dnName = blocks.get(0).getLocations()[0].getXferAddr();
-
-      ArrayList<String> dns = new ArrayList<String>(2);
+      ArrayList<String> dns = new ArrayList<String>(1);
       dns.add(dnName);
       hostsFileWriter.initExcludeHosts(dns);
       dm.refreshNodes(conf);
