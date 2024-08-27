@@ -48,7 +48,6 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
-import java.util.function.Function;
 
 import static org.apache.hadoop.hdfs.server.federation.fairness.RouterRpcFairnessConstants.CONCURRENT_NS;
 import static org.apache.hadoop.hdfs.server.federation.router.async.Async.warpCompletionException;
@@ -56,12 +55,13 @@ import static org.apache.hadoop.hdfs.server.federation.router.async.AsyncUtil.as
 import static org.apache.hadoop.hdfs.server.federation.router.async.AsyncUtil.asyncApplyUseExecutor;
 import static org.apache.hadoop.hdfs.server.federation.router.async.AsyncUtil.asyncCatch;
 import static org.apache.hadoop.hdfs.server.federation.router.async.AsyncUtil.asyncComplete;
-import static org.apache.hadoop.hdfs.server.federation.router.async.AsyncUtil.asyncCurrent;
+import static org.apache.hadoop.hdfs.server.federation.router.async.AsyncUtil.asyncCompleteWith;
 import static org.apache.hadoop.hdfs.server.federation.router.async.AsyncUtil.asyncFinally;
 import static org.apache.hadoop.hdfs.server.federation.router.async.AsyncUtil.asyncForEach;
 import static org.apache.hadoop.hdfs.server.federation.router.async.AsyncUtil.asyncReturn;
 import static org.apache.hadoop.hdfs.server.federation.router.async.AsyncUtil.asyncThrowException;
 import static org.apache.hadoop.hdfs.server.federation.router.async.AsyncUtil.asyncTry;
+import static org.apache.hadoop.hdfs.server.federation.router.async.AsyncUtil.getCompletableFuture;
 
 /**
  * The {@code RouterAsyncRpcClient} class extends the functionality of the base
@@ -243,8 +243,7 @@ public class RouterAsyncRpcClient extends RouterRpcClient{
       if (status.isComplete()) {
         return res;
       }
-      handlerAllNamenodeFail(namenodes, method, ioes, params);
-      return null;
+      return handlerAllNamenodeFail(namenodes, method, ioes, params);
     });
   }
 
@@ -471,25 +470,71 @@ public class RouterAsyncRpcClient extends RouterRpcClient{
     return asyncReturn(Map.class);
   }
 
+  /**
+   * Invokes multiple concurrent proxy calls to different clients. Returns an
+   * array of results.
+   *
+   * @param <T> The type of the remote location.
+   * @param <R> The type of the remote method return.
+   * @param method The remote method and parameters to invoke.
+   * @param timeOutMs Timeout for each individual call.
+   * @param controller Fairness manager to control handlers assigned per NS.
+   * @param orderedLocations List of remote locations to call concurrently.
+   * @param callables Invoke method for each NameNode.
+   * @return Result of invoking the method per subcluster (list of results),
+   *         This includes the exception for each remote location.
+   * @throws IOException If there are errors invoking the method.
+   */
   @Override
   protected <T extends RemoteLocationContext, R> List<RemoteResult<T, R>> getRemoteResults(
-      RemoteMethod method, long timeOutMs, UserGroupInformation ugi, Method m,
-      RouterRpcFairnessPolicyController controller, List<T> orderedLocations,
-      List<Callable<Object>> callables) {
-    asyncCurrent(callables, futures -> {
+      RemoteMethod method, long timeOutMs, RouterRpcFairnessPolicyController controller,
+      List<T> orderedLocations, List<Callable<Object>> callables) throws IOException {
+    final UserGroupInformation ugi = RouterRpcServer.getRemoteUser();
+    final Method m = method.getMethod();
+    final CompletableFuture<Object>[] futures =
+        new CompletableFuture[callables.size()];
+    int i = 0;
+    for (Callable<Object> callable : callables) {
+      CompletableFuture<Object> future = null;
       try {
-        return processFutures(method, m, orderedLocations, Arrays.asList(futures));
-      } catch (InterruptedException e) {
-        LOG.error("Unexpected error while invoking API: {}", e.getMessage());
-        throw warpCompletionException(new IOException(
-            "Unexpected error while invoking API " + e.getMessage(), e));
-      } finally {
-        releasePermit(CONCURRENT_NS, ugi, method, controller);
+        callable.call();
+        future = getCompletableFuture();
+      } catch (Exception e) {
+        future = new CompletableFuture<>();
+        future.completeExceptionally(warpCompletionException(e));
       }
-    });
+      futures[i++] = future;
+    }
+
+    asyncCompleteWith(CompletableFuture.allOf(futures)
+        .handle((unused, throwable) -> {
+          try {
+            return processFutures(method, m, orderedLocations, Arrays.asList(futures));
+          } catch (InterruptedException e) {
+            LOG.error("Unexpected error while invoking API: {}", e.getMessage());
+            throw warpCompletionException(new IOException(
+                "Unexpected error while invoking API " + e.getMessage(), e));
+          } finally {
+            releasePermit(CONCURRENT_NS, ugi, method, controller);
+          }
+        }));
     return asyncReturn(List.class);
   }
 
+  /**
+   * Invokes a ClientProtocol method against the specified namespace.
+   * <p>
+   * Re-throws exceptions generated by the remote RPC call as either
+   * RemoteException or IOException.
+   *
+   * @param <T> The type of the remote location.
+   * @param <R> The type of the remote method return.
+   * @param location RemoteLocation to invoke.
+   * @param method The remote method and parameters to invoke.
+   * @return Result of invoking the method per subcluster (list of results),
+   *         This includes the exception for each remote location.
+   * @throws IOException If there are errors invoking the method.
+   */
   @Override
   public <T extends RemoteLocationContext, R> List<RemoteResult<T, R>> invokeSingle(
       T location, RemoteMethod method) throws IOException {

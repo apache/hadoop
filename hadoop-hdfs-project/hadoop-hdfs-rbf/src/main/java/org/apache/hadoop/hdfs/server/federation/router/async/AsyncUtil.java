@@ -20,8 +20,6 @@ package org.apache.hadoop.hdfs.server.federation.router.async;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Iterator;
-import java.util.List;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
@@ -397,25 +395,12 @@ public final class AsyncUtil {
     CUR_COMPLETABLE_FUTURE.set((CompletableFuture<Object>) result);
   }
 
-  public static <R, P> void asyncCurrent(
-      List<Callable<Object>> callables,
-      Function<CompletableFuture<R>[], P> then) {
-    CompletableFuture<R>[] completableFutures =
-        new CompletableFuture[callables.size()];
-    int i = 0;
-    for (Callable<Object> callable : callables) {
-      CompletableFuture<R> future = null;
-      try {
-        callable.call();
-        future = (CompletableFuture<R>) CUR_COMPLETABLE_FUTURE.get();
-      } catch (Exception e) {
-        future = new CompletableFuture<>();
-        future.completeExceptionally(warpCompletionException(e));
-      }
-      completableFutures[i++] = future;
-    }
-    CompletableFuture<P> result = CompletableFuture.allOf(completableFutures)
-        .handle((unused, throwable) -> then.apply(completableFutures));
-    CUR_COMPLETABLE_FUTURE.set((CompletableFuture<Object>) result);
+  /**
+   * Get the CompletableFuture object stored in the current thread's local variable.
+   *
+   * @return The completableFuture object.
+   */
+  public static CompletableFuture<Object> getCompletableFuture() {
+    return CUR_COMPLETABLE_FUTURE.get();
   }
 }

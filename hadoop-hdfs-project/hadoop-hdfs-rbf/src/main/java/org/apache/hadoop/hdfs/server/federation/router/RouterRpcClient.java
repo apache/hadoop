@@ -558,11 +558,22 @@ public class RouterRpcClient {
       this.rpcMonitor.proxyOpComplete(false, null, null);
     }
 
-    handlerAllNamenodeFail(namenodes, method, ioes, params);
-    return null;
+    return handlerAllNamenodeFail(namenodes, method, ioes, params);
   }
 
-  protected void handlerAllNamenodeFail(
+  /**
+   * All namenodes cannot successfully process the RPC request,
+   * throw corresponding exceptions according to the exception type of each namenode.
+   *
+   * @param namenodes A prioritized list of namenodes within the same nameservice.
+   * @param method Remote ClientProtocol method to invoke.
+   * @param ioes The exception type of each namenode.
+   * @param params Variable list of parameters matching the method.
+   * @return null
+   * @throws IOException Corresponding IOException according to the
+   *                     exception type of each namenode.
+   */
+  protected Object handlerAllNamenodeFail(
       List<? extends FederationNamenodeContext> namenodes, Method method,
       Map<FederationNamenodeContext, IOException> ioes, Object[] params) throws IOException {
     // All namenodes were unavailable or in standby
@@ -595,6 +606,17 @@ public class RouterRpcClient {
     }
   }
 
+  /**
+   * The RPC request is successfully processed by the NameNode, the NameNode status
+   * in the router cache is updated according to the ExecutionStatus.
+   *
+   * @param method Remote method to invoke.
+   * @param status Current execution status.
+   * @param namenode The namenode that successfully processed this RPC request.
+   * @param nsId Nameservice ID.
+   * @param client Connection client.
+   * @throws IOException If the state store cannot be accessed.
+   */
   protected void postProcessResult(Method method, ExecutionStatus status,
       FederationNamenodeContext namenode, String nsId, ProxyAndInfo<?> client) throws IOException {
     if (status.isFailOver() &&
@@ -611,6 +633,16 @@ public class RouterRpcClient {
     }
   }
 
+  /**
+   * The RPC request to the NameNode throws an exception,
+   * handle it according to the type of exception.
+   *
+   * @param namenode The namenode that processed this RPC request.
+   * @param ioe The exception thrown by this RPC request.
+   * @param status The current execution status.
+   * @param useObserver Whether to use observer namenodes.
+   * @throws IOException If it cannot invoke the method.
+   */
   protected void handleInvokeMethodIOException(final FederationNamenodeContext namenode,
       IOException ioe, final ExecutionStatus status, boolean useObserver) throws IOException {
     String nsId = namenode.getNameserviceId();
@@ -753,6 +785,19 @@ public class RouterRpcClient {
     }
   }
 
+  /**
+   * Handle the exception when an RPC request to the NameNode throws an exception.
+   *
+   * @param namenode namenode context.
+   * @param listObserverFirst Observer read case, observer NN will be ranked first.
+   * @param retryCount Current retry times
+   * @param method Method to invoke
+   * @param obj Target object for the method
+   * @param e The exception thrown by the current invocation.
+   * @param params Variable parameters
+   * @return Response from the remote server
+   * @throws IOException If error occurs.
+   */
   protected Object handlerInvokeException(FederationNamenodeContext namenode,
       Boolean listObserverFirst, int retryCount, Method method, Object obj,
       Throwable e, Object[] params) throws IOException {
@@ -1449,6 +1494,19 @@ public class RouterRpcClient {
     return postProcessResult(requireResponse, results);
   }
 
+  /**
+   * Post-process the results returned by
+   * {@link RouterRpcClient#invokeConcurrent(Collection, RemoteMethod, boolean, long, Class)}.
+   *
+   * @param requireResponse
+   * @param results Result of invoking the method per subcluster (list of results),
+   *                This includes the exception for each remote location.
+   * @return Result of invoking the method per subcluster: nsId to result.
+   * @param <T> The type of the remote location.
+   * @param <R> The type of the remote method return.
+   * @throws IOException If requiredResponse=true and any of the calls throw an
+   *                     exception.
+   */
   protected static <T extends RemoteLocationContext, R> Map<T, R> postProcessResult(
       boolean requireResponse, List<RemoteResult<T, R>> results) throws IOException {
     // Go over the results and exceptions
@@ -1570,13 +1628,29 @@ public class RouterRpcClient {
       this.router.getRouterClientMetrics().incInvokedConcurrent(m);
     }
 
-    return getRemoteResults(method, timeOutMs, ugi, m, controller, orderedLocations, callables);
+    return getRemoteResults(method, timeOutMs, controller, orderedLocations, callables);
   }
 
+  /**
+   * Invokes multiple concurrent proxy calls to different clients. Returns an
+   * array of results.
+   *
+   * @param <T> The type of the remote location.
+   * @param <R> The type of the remote method return.
+   * @param method The remote method and parameters to invoke.
+   * @param timeOutMs Timeout for each individual call.
+   * @param controller Fairness manager to control handlers assigned per NS.
+   * @param orderedLocations List of remote locations to call concurrently.
+   * @param callables Invoke method for each NameNode.
+   * @return Result of invoking the method per subcluster (list of results),
+   *         This includes the exception for each remote location.
+   * @throws IOException If there are errors invoking the method.
+   */
   protected  <T extends RemoteLocationContext, R> List<RemoteResult<T, R>> getRemoteResults(
-      RemoteMethod method, long timeOutMs, UserGroupInformation ugi, Method m,
-      RouterRpcFairnessPolicyController controller, List<T> orderedLocations,
-      List<Callable<Object>> callables) throws IOException {
+      RemoteMethod method, long timeOutMs, RouterRpcFairnessPolicyController controller,
+      List<T> orderedLocations, List<Callable<Object>> callables) throws IOException {
+    final UserGroupInformation ugi = RouterRpcServer.getRemoteUser();
+    final Method m = method.getMethod();
     try {
       List<Future<Object>> futures = null;
       if (timeOutMs > 0) {
@@ -1605,6 +1679,19 @@ public class RouterRpcClient {
     }
   }
 
+  /**
+   * Handle all futures during the invokeConcurrent call process.
+   *
+   * @param <T> The type of the remote location.
+   * @param <R> The type of the remote method return.
+   * @param method The remote method and parameters to invoke.
+   * @param m The method to invoke.
+   * @param orderedLocations List of remote locations to call concurrently.
+   * @param futures all futures during the invokeConcurrent call process.
+   * @return Result of invoking the method per subcluster (list of results),
+   *         This includes the exception for each remote location.
+   * @throws InterruptedException if the current thread was interrupted while waiting.
+   */
   protected <T extends RemoteLocationContext, R> List<RemoteResult<T, R>> processFutures(
       RemoteMethod method, Method m, final List<T> orderedLocations,
       final List<Future<Object>> futures) throws InterruptedException{
@@ -1646,6 +1733,20 @@ public class RouterRpcClient {
     return results;
   }
 
+  /**
+   * Invokes a ClientProtocol method against the specified namespace.
+   * <p>
+   * Re-throws exceptions generated by the remote RPC call as either
+   * RemoteException or IOException.
+   *
+   * @param <T> The type of the remote location.
+   * @param <R> The type of the remote method return.
+   * @param location RemoteLocation to invoke.
+   * @param method The remote method and parameters to invoke.
+   * @return Result of invoking the method per subcluster (list of results),
+   *         This includes the exception for each remote location.
+   * @throws IOException If there are errors invoking the method.
+   */
   public <T extends RemoteLocationContext, R> List<RemoteResult<T, R>> invokeSingle(
       T location, RemoteMethod method) throws IOException {
     final UserGroupInformation ugi = RouterRpcServer.getRemoteUser();
@@ -1670,7 +1771,6 @@ public class RouterRpcClient {
       releasePermit(ns, ugi, method, controller);
     }
   }
-
 
   /**
    * Transfer origin thread local context which is necessary to current
