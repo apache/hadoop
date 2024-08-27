@@ -1498,7 +1498,9 @@ public class RouterRpcClient {
    * Post-process the results returned by
    * {@link RouterRpcClient#invokeConcurrent(Collection, RemoteMethod, boolean, long, Class)}.
    *
-   * @param requireResponse
+   * @param requireResponse If true an exception will be thrown if all calls do
+   *          not complete. If false exceptions are ignored and all data results
+   *          successfully received are returned.
    * @param results Result of invoking the method per subcluster (list of results),
    *                This includes the exception for each remote location.
    * @return Result of invoking the method per subcluster: nsId to result.
