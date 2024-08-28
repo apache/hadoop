@@ -674,7 +674,7 @@
 </property>
   <property>
     <name>fs.azure.user.agent.prefix</name>
-    <value>unknown</value>
+    <value>384ec13b-9b38-497f-a601-274bf7b41b4b</value>
     <description>
       WASB passes User-Agent header to the Azure back-end. The default value
       contains WASB version, Java Runtime version, Azure Client library version,
