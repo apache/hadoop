@@ -165,6 +165,10 @@ public class TracingContext {
     return retryCount;
   }
 
+  public FSOperationType getOpType() {
+    return opType;
+  }
+
   public void setRetryCount(int retryCount) {
     this.retryCount = retryCount;
   }

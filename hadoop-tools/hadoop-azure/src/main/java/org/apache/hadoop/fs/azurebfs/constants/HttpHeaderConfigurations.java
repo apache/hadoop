@@ -79,6 +79,7 @@ public final class HttpHeaderConfigurations {
   public static final String X_MS_META_HDI_ISFOLDER = "x-ms-meta-hdi_isfolder";
   public static final String X_MS_METADATA_PREFIX = "x-ms-meta-";
   public static final String X_MS_COPY_SOURCE = "x-ms-copy-source";
+  public static final String X_MS_BLOB_CONTENT_MD5 = "x-ms-blob-content-md5";
 
   private HttpHeaderConfigurations() {}
 }

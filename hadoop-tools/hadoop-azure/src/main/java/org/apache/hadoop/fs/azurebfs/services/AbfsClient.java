@@ -799,6 +799,7 @@ public abstract class AbfsClient implements Closeable {
       String cachedSasToken,
       String leaseId,
       String eTag,
+      ContextEncryptionAdapter contextEncryptionAdapter,
       TracingContext tracingContext) throws AzureBlobFileSystemException;
 
   /**
