@@ -789,6 +789,7 @@ public abstract class AbfsClient implements Closeable {
    * @param cachedSasToken to be used for the authenticating operation.
    * @param leaseId if there is an active lease on the path.
    * @param eTag to specify conditional headers.
+   * @param contextEncryptionAdapter to provide encryption context.
    * @param tracingContext for tracing the server calls.
    * @return executed rest operation containing response from server.
    * @throws AzureBlobFileSystemException if rest operation fails.
