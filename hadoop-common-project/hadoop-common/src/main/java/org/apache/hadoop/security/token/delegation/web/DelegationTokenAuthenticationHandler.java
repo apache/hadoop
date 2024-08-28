@@ -46,7 +46,6 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
 import org.apache.hadoop.util.HttpExceptionUtils;
-import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -166,7 +165,7 @@ public abstract class DelegationTokenAuthenticationHandler
   @VisibleForTesting
   public void initJsonFactory(Properties config) {
     boolean hasFeature = false;
-    JsonFactory tmpJsonFactory = JacksonUtil.createBasicJsonFactory();
+    JsonFactory tmpJsonFactory = new JsonFactory();
 
     for (Map.Entry entry : config.entrySet()) {
       String key = (String)entry.getKey();
@@ -336,7 +335,7 @@ public abstract class DelegationTokenAuthenticationHandler
             if (map != null) {
               response.setContentType(MediaType.APPLICATION_JSON);
               Writer writer = response.getWriter();
-              ObjectMapper jsonMapper = JacksonUtil.createObjectMapper(jsonFactory);
+              ObjectMapper jsonMapper = new ObjectMapper(jsonFactory);
               jsonMapper.writeValue(writer, map);
               writer.write(ENTER);
               writer.flush();

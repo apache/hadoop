@@ -21,7 +21,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 
@@ -53,11 +52,9 @@ public class LegacyMappingRuleToJson {
   public static final String JSON_NODE_MATCHES = "matches";
 
   /**
-   * It is more performant to reuse ObjectMapper instances but keeping the instance
-   * private makes it harder for someone to reconfigure it which might have unwanted
-   * side effects.
+   * Our internal object mapper, used to create JSON nodes.
    */
-  private static final ObjectMapper OBJECT_MAPPER = JacksonUtil.createBasicObjectMapper();
+  private ObjectMapper objectMapper = new ObjectMapper();
 
   /**
    * Collection to store the legacy group mapping rule strings.
@@ -141,8 +138,8 @@ public class LegacyMappingRuleToJson {
    */
   public String convert() {
     //creating the basic JSON config structure
-    ObjectNode rootNode = OBJECT_MAPPER.createObjectNode();
-    ArrayNode rulesNode = OBJECT_MAPPER.createArrayNode();
+    ObjectNode rootNode = objectMapper.createObjectNode();
+    ArrayNode rulesNode = objectMapper.createArrayNode();
     rootNode.set("rules", rulesNode);
 
     //Processing and adding all the user group mapping rules
@@ -161,7 +158,7 @@ public class LegacyMappingRuleToJson {
     }
 
     try {
-      return OBJECT_MAPPER
+      return objectMapper
           .writerWithDefaultPrettyPrinter()
           .writeValueAsString(rootNode);
     } catch (JsonProcessingException e) {
@@ -249,7 +246,7 @@ public class LegacyMappingRuleToJson {
    * @return The object node with the preset fields
    */
   private ObjectNode createDefaultRuleNode(String type) {
-    return OBJECT_MAPPER
+    return objectMapper
         .createObjectNode()
         .put("type", type)
         //All legacy rule fallback to place to default

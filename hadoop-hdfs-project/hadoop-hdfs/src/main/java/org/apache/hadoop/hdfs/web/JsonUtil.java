@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs.web;
 
-import com.fasterxml.jackson.databind.ObjectWriter;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.ContentSummary;
@@ -39,11 +38,12 @@ import org.apache.hadoop.hdfs.protocol.*;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.StringUtils;
 
 import org.apache.hadoop.thirdparty.com.google.common.collect.ImmutableMap;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
 import java.util.*;
@@ -52,11 +52,11 @@ import java.util.*;
 public class JsonUtil {
   private static final Object[] EMPTY_OBJECT_ARRAY = {};
 
-  // Reuse ObjectWriter instance for improving performance.
-  // ObjectWriter is thread safe as long as we always configure instance
+  // Reuse ObjectMapper instance for improving performance.
+  // ObjectMapper is thread safe as long as we always configure instance
   // before use. We don't have a re-entrant call pattern in WebHDFS,
   // so we just need to worry about thread-safety.
-  private static final ObjectWriter SHARED_WRITER = JacksonUtil.getSharedWriter();
+  private static final ObjectMapper MAPPER = new ObjectMapper();
 
   /** Convert a token object to a Json string. */
   public static String toJsonString(final Token<? extends TokenIdentifier> token
@@ -93,7 +93,7 @@ public class JsonUtil {
     final Map<String, Object> m = new TreeMap<String, Object>();
     m.put(key, value);
     try {
-      return SHARED_WRITER.writeValueAsString(m);
+      return MAPPER.writeValueAsString(m);
     } catch (IOException ignored) {
     }
     return null;
@@ -113,7 +113,7 @@ public class JsonUtil {
     final Map<String, Object> m = toJsonMap(status);
     try {
       return includeType ?
-          toJsonString(FileStatus.class, m) : SHARED_WRITER.writeValueAsString(m);
+          toJsonString(FileStatus.class, m) : MAPPER.writeValueAsString(m);
     } catch (IOException ignored) {
     }
     return null;
@@ -453,7 +453,7 @@ public class JsonUtil {
     finalMap.put(AclStatus.class.getSimpleName(), m);
 
     try {
-      return SHARED_WRITER.writeValueAsString(finalMap);
+      return MAPPER.writeValueAsString(finalMap);
     } catch (IOException ignored) {
     }
     return null;
@@ -491,7 +491,7 @@ public class JsonUtil {
       final XAttrCodec encoding) throws IOException {
     final Map<String, Object> finalMap = new TreeMap<String, Object>();
     finalMap.put("XAttrs", toJsonArray(xAttrs, encoding));
-    return SHARED_WRITER.writeValueAsString(finalMap);
+    return MAPPER.writeValueAsString(finalMap);
   }
   
   public static String toJsonString(final List<XAttr> xAttrs)
@@ -500,14 +500,14 @@ public class JsonUtil {
     for (XAttr xAttr : xAttrs) {
       names.add(XAttrHelper.getPrefixedName(xAttr));
     }
-    String ret = SHARED_WRITER.writeValueAsString(names);
+    String ret = MAPPER.writeValueAsString(names);
     final Map<String, Object> finalMap = new TreeMap<String, Object>();
     finalMap.put("XAttrNames", ret);
-    return SHARED_WRITER.writeValueAsString(finalMap);
+    return MAPPER.writeValueAsString(finalMap);
   }
 
   public static String toJsonString(Object obj) throws IOException {
-    return SHARED_WRITER.writeValueAsString(obj);
+    return MAPPER.writeValueAsString(obj);
   }
 
   public static String toJsonString(BlockStoragePolicy[] storagePolicies) {

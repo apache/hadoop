@@ -23,7 +23,6 @@ import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.yarn.appcatalog.model.AppEntry;
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.api.records.ServiceState;
@@ -47,19 +46,6 @@ import org.slf4j.LoggerFactory;
 public class YarnServiceClient {
 
   private static final Logger LOG = LoggerFactory.getLogger(YarnServiceClient.class);
-
-  /**
-   * It is more performant to reuse ObjectMapper instances but keeping the instance
-   * private makes it harder for someone to reconfigure it which might have unwanted
-   * side effects.
-   */
-  private static final ObjectMapper OBJECT_MAPPER;
-
-  static {
-    OBJECT_MAPPER = JacksonUtil.createBasicObjectMapper();
-    OBJECT_MAPPER.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-  }
-
   private static Configuration conf = new Configuration();
   private static ClientConfig getClientConfig() {
     ClientConfig config = new DefaultClientConfig();
@@ -80,6 +66,8 @@ public class YarnServiceClient {
   }
 
   public void createApp(Service app) {
+    ObjectMapper mapper = new ObjectMapper();
+    mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     ClientResponse response;
     try {
       boolean useKerberos = UserGroupInformation.isSecurityEnabled();
@@ -102,7 +90,7 @@ public class YarnServiceClient {
         app.setKerberosPrincipal(kerberos);
       }
       response = asc.getApiClient().post(ClientResponse.class,
-          OBJECT_MAPPER.writeValueAsString(app));
+          mapper.writeValueAsString(app));
       if (response.getStatus() >= 299) {
         String message = response.getEntity(String.class);
         throw new RuntimeException("Failed : HTTP error code : "
@@ -131,8 +119,10 @@ public class YarnServiceClient {
   }
 
   public void restartApp(Service app) throws JsonProcessingException {
+    ObjectMapper mapper = new ObjectMapper();
+    mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     String appInstanceId = app.getName();
-    String yarnFile = OBJECT_MAPPER.writeValueAsString(app);
+    String yarnFile = mapper.writeValueAsString(app);
     ClientResponse response;
     try {
       response = asc.getApiClient(asc.getServicePath(appInstanceId))
@@ -149,8 +139,10 @@ public class YarnServiceClient {
   }
 
   public void stopApp(Service app) throws JsonProcessingException {
+    ObjectMapper mapper = new ObjectMapper();
+    mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     String appInstanceId = app.getName();
-    String yarnFile = OBJECT_MAPPER.writeValueAsString(app);
+    String yarnFile = mapper.writeValueAsString(app);
     ClientResponse response;
     try {
       response = asc.getApiClient(asc.getServicePath(appInstanceId))
@@ -167,12 +159,14 @@ public class YarnServiceClient {
   }
 
   public void getStatus(AppEntry entry) {
+    ObjectMapper mapper = new ObjectMapper();
+    mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     String appInstanceId = entry.getName();
     Service app = null;
     try {
       String yarnFile = asc.getApiClient(asc.getServicePath(appInstanceId))
           .get(String.class);
-      app = OBJECT_MAPPER.readValue(yarnFile, Service.class);
+      app = mapper.readValue(yarnFile, Service.class);
       entry.setYarnfile(app);
     } catch (UniformInterfaceException | IOException e) {
       LOG.error("Error in fetching application status: ", e);
@@ -180,9 +174,11 @@ public class YarnServiceClient {
   }
 
   public void upgradeApp(Service app) throws JsonProcessingException {
+    ObjectMapper mapper = new ObjectMapper();
+    mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     String appInstanceId = app.getName();
     app.setState(ServiceState.EXPRESS_UPGRADING);
-    String yarnFile = OBJECT_MAPPER.writeValueAsString(app);
+    String yarnFile = mapper.writeValueAsString(app);
     ClientResponse response;
     try {
       response = asc.getApiClient(asc.getServicePath(appInstanceId))

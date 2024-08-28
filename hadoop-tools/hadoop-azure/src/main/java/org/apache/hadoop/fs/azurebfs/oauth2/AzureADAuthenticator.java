@@ -29,6 +29,9 @@ import java.util.Date;
 import java.util.Hashtable;
 import java.util.Map;
 
+import org.apache.hadoop.util.Preconditions;
+
+import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import org.slf4j.Logger;
@@ -39,8 +42,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.azurebfs.services.AbfsIoUtils;
 import org.apache.hadoop.fs.azurebfs.services.ExponentialRetryPolicy;
-import org.apache.hadoop.util.JacksonUtil;
-import org.apache.hadoop.util.Preconditions;
 
 /**
  * This class provides convenience methods to obtain AAD tokens.
@@ -492,7 +493,8 @@ public final class AzureADAuthenticator {
       int expiryPeriodInSecs = 0;
       long expiresOnInSecs = -1;
 
-      JsonParser jp = JacksonUtil.createBasicJsonFactory().createParser(httpResponseStream);
+      JsonFactory jf = new JsonFactory();
+      JsonParser jp = jf.createParser(httpResponseStream);
       String fieldName, fieldValue;
       jp.nextToken();
       while (jp.hasCurrentToken()) {

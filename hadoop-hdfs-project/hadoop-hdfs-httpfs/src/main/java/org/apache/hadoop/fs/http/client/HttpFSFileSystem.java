@@ -71,7 +71,6 @@ import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthentica
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticator;
 import org.apache.hadoop.security.token.delegation.web.KerberosDelegationTokenAuthenticator;
 import org.apache.hadoop.util.HttpExceptionUtils;
-import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -1819,7 +1818,7 @@ public class HttpFSFileSystem extends FileSystem
 
   @VisibleForTesting
   static BlockLocation[] toBlockLocations(JSONObject json) throws IOException {
-    ObjectMapper mapper = JacksonUtil.createBasicObjectMapper();
+    ObjectMapper mapper = new ObjectMapper();
     MapType subType = mapper.getTypeFactory().constructMapType(Map.class,
         String.class, BlockLocation[].class);
     MapType rootType = mapper.getTypeFactory().constructMapType(Map.class,

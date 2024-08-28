@@ -23,7 +23,6 @@ package org.apache.hadoop.hdfs.server.datanode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -40,13 +39,14 @@ import static com.fasterxml.jackson.databind.type.TypeFactory.defaultInstance;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class DiskBalancerWorkStatus {
-  private static final ObjectMapper MAPPER = JacksonUtil.createBasicObjectMapper();
+  private static final ObjectMapper MAPPER = new ObjectMapper();
   private static final ObjectMapper MAPPER_WITH_INDENT_OUTPUT =
-      JacksonUtil.createBasicObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
+      new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
   private static final ObjectReader READER_WORKSTATUS =
-      MAPPER.readerFor(DiskBalancerWorkStatus.class);
-  private static final ObjectReader READER_WORKENTRY = MAPPER.readerFor(
-      defaultInstance().constructCollectionType(List.class, DiskBalancerWorkEntry.class));
+      new ObjectMapper().readerFor(DiskBalancerWorkStatus.class);
+  private static final ObjectReader READER_WORKENTRY = new ObjectMapper()
+      .readerFor(defaultInstance().constructCollectionType(List.class,
+          DiskBalancerWorkEntry.class));
 
   private final List<DiskBalancerWorkEntry> currentState;
   private Result result;

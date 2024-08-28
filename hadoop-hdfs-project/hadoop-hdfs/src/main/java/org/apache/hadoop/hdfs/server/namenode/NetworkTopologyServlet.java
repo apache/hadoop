@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
@@ -25,7 +26,6 @@ import org.apache.hadoop.net.Node;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.net.HttpHeaders;
-import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.util.StringUtils;
 
 import javax.servlet.ServletContext;
@@ -123,7 +123,8 @@ public class NetworkTopologyServlet extends DfsServlet {
 
   protected void printJsonFormat(PrintStream stream, Map<String,
       TreeSet<String>> tree, ArrayList<String> racks) throws IOException {
-    JsonGenerator dumpGenerator = JacksonUtil.getSharedWriter().createGenerator(stream);
+    JsonFactory dumpFactory = new JsonFactory();
+    JsonGenerator dumpGenerator = dumpFactory.createGenerator(stream);
     dumpGenerator.writeStartArray();
 
     for(String r : racks) {

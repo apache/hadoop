@@ -27,7 +27,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule.MappingRule;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule.MappingRuleAction;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.csmappingrule.MappingRuleActions;
@@ -44,6 +43,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placemen
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.classification.VisibleForTesting;
 
 public class MappingRuleCreator {
@@ -58,12 +58,14 @@ public class MappingRuleCreator {
 
   MappingRulesDescription getMappingRulesFromJson(byte[] contents)
       throws IOException {
-    return JacksonUtil.getSharedReader().readValue(contents, MappingRulesDescription.class);
+    ObjectMapper objectMapper = new ObjectMapper();
+    return objectMapper.readValue(contents, MappingRulesDescription.class);
   }
 
   MappingRulesDescription getMappingRulesFromJson(String contents)
       throws IOException {
-    return JacksonUtil.getSharedReader().readValue(contents, MappingRulesDescription.class);
+    ObjectMapper objectMapper = new ObjectMapper();
+    return objectMapper.readValue(contents, MappingRulesDescription.class);
   }
 
   public List<MappingRule> getMappingRulesFromFile(String jsonPath)

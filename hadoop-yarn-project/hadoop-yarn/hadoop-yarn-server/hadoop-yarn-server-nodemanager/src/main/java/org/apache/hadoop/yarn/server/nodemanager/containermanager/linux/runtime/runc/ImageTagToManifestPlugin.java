@@ -26,7 +26,6 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.service.AbstractService;
-import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 
 import java.io.BufferedReader;
@@ -43,6 +42,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -65,6 +65,7 @@ public class ImageTagToManifestPlugin extends AbstractService
     implements RuncImageTagToManifestPlugin {
 
   private Map<String, ImageManifest> manifestCache;
+  private ObjectMapper objMapper;
   private AtomicReference<Map<String, String>> localImageToHashCache =
       new AtomicReference<>(new HashMap<>());
   private AtomicReference<Map<String, String>> hdfsImageToHashCache =
@@ -106,7 +107,7 @@ public class ImageTagToManifestPlugin extends AbstractService
     }
 
     byte[] bytes = IOUtils.toByteArray(input);
-    manifest = JacksonUtil.getSharedReader().readValue(bytes, ImageManifest.class);
+    manifest = objMapper.readValue(bytes, ImageManifest.class);
 
     manifestCache.put(hash, manifest);
     return manifest;
@@ -278,6 +279,7 @@ public class ImageTagToManifestPlugin extends AbstractService
         DEFAULT_NM_RUNC_IMAGE_TOPLEVEL_DIR) + "/manifests/";
     int numManifestsToCache = conf.getInt(NM_RUNC_NUM_MANIFESTS_TO_CACHE,
         DEFAULT_NUM_MANIFESTS_TO_CACHE);
+    this.objMapper = new ObjectMapper();
     this.manifestCache = Collections.synchronizedMap(
         new LRUCache(numManifestsToCache, 0.75f));
 
@@ -313,7 +315,7 @@ public class ImageTagToManifestPlugin extends AbstractService
   }
 
   private static class LRUCache extends LinkedHashMap<String, ImageManifest> {
-    private final int cacheSize;
+    private int cacheSize;
 
     LRUCache(int initialCapacity, float loadFactor) {
       super(initialCapacity, loadFactor, true);
