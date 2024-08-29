@@ -362,8 +362,9 @@ org.objenesis:objenesis:2.6
 org.xerial.snappy:snappy-java:1.1.10.4
 org.yaml:snakeyaml:2.0
 org.wildfly.openssl:wildfly-openssl:2.1.4.Final
-software.amazon.awssdk:bundle:2.25.53
 net.jodah:failsafe:2.4.4
+software.amazon.awssdk:bundle:jar:2.27.14
+
 
 --------------------------------------------------------------------------------
 This product bundles various third-party components under other open source
