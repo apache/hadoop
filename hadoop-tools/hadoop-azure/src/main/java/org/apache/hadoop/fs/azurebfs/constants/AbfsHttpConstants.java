@@ -50,7 +50,6 @@ public final class AbfsHttpConstants {
   public static final String DEFAULT_LEASE_BREAK_PERIOD = "0";
   public static final String DEFAULT_TIMEOUT = "90";
   public static final String APPEND_BLOB_TYPE = "appendblob";
-  public static final String TOKEN_VERSION = "2";
 
   //Abfs Http Client Constants for Blob Endpoint APIs.
   public static final String CONTAINER = "container";
@@ -70,6 +69,7 @@ public final class AbfsHttpConstants {
 
   public static final String APN_VERSION = "APN/1.0";
   public static final String CLIENT_VERSION = "Azure Blob FS/" + VersionInfo.getVersion();
+  public static final String TOKEN_VERSION = "2";
 
   // Abfs Http Verb
   public static final String HTTP_METHOD_DELETE = "DELETE";
