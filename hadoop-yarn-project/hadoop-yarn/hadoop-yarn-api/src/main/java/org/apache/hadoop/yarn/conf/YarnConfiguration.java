@@ -618,6 +618,20 @@ public class YarnConfiguration extends Configuration {
   public static final int
       DEFAULT_RM_SYSTEM_METRICS_PUBLISHER_DISPATCHER_POOL_SIZE = 10;
 
+  public static final String RM_TIMELINE_SERVER_V1_PUBLISHER_DISPATCHER_BATCH_SIZE =
+          RM_PREFIX + "system-metrics-publisher.timeline-server-v1.batch-size";
+  public static final int
+          DEFAULT_RM_TIMELINE_SERVER_V1_PUBLISHER_DISPATCHER_BATCH_SIZE =
+          1000;
+  public static final String RM_TIMELINE_SERVER_V1_PUBLISHER_INTERVAL =
+          RM_PREFIX + "system-metrics-publisher.timeline-server-v1.interval-seconds";
+  public static final int DEFAULT_RM_TIMELINE_SERVER_V1_PUBLISHER_INTERVAL =
+          60;
+  public static final String RM_TIMELINE_SERVER_V1_PUBLISHER_BATCH_ENABLED =
+          RM_PREFIX + "system-metrics-publisher.timeline-server-v1.enable-batch";
+  public static final boolean DEFAULT_RM_TIMELINE_SERVER_V1_PUBLISHER_BATCH_ENABLED =
+          false;
+
   //RM delegation token related keys
   public static final String RM_DELEGATION_KEY_UPDATE_INTERVAL_KEY =
     RM_PREFIX + "delegation.key.update-interval";

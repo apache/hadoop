@@ -860,6 +860,32 @@
     <name>yarn.resourcemanager.system-metrics-publisher.dispatcher.pool-size</name>
     <value>10</value>
   </property>
+  <property>
+    <description>
+      This setting enables/disables timeline server v1 publisher to publish timeline events in batch.
+    </description>
+    <name>yarn.resourcemanager.system-metrics-publisher.timeline-server-v1.enable-batch</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
+      The size of timeline server v1 publisher sending events in one request.
+    </description>
+    <name>yarn.resourcemanager.system-metrics-publisher.timeline-server-v1.batch-size</name>
+    <value>1000</value>
+  </property>
+
+  <property>
+    <description>
+      When enable batch publishing in timeline server v1, we must avoid that the
+      publisher waits for a batch to be filled up and hold events in buffer for long
+      time. So we add another thread which send event's in the buffer periodically.
+      This config sets the interval of the cyclical sending thread.
+    </description>
+    <name>yarn.resourcemanager.system-metrics-publisher.timeline-server-v1.interval-seconds</name>
+    <value>60</value>
+  </property>
 
   <property>
     <description>Number of diagnostics/failure messages can be saved in RM for
