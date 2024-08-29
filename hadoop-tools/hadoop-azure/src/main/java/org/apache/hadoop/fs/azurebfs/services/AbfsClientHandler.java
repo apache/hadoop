@@ -96,7 +96,7 @@ public class AbfsClientHandler {
    * @return AbfsClient
    */
   public AbfsClient getClient(AbfsServiceType serviceType) {
-    return serviceType == AbfsServiceType.DFS ? dfsAbfsClient : null;
+    return serviceType == AbfsServiceType.DFS ? dfsAbfsClient : blobAbfsClient;
   }
 
   /**
