@@ -3885,6 +3885,11 @@ public class DistributedFileSystem extends FileSystem
      */
     @Override
     public FSDataOutputStream build() throws IOException {
+      if (getOptionalKeys().contains(
+          Options.OpenFileOptions.FS_OPTION_OPENFILE_EC_POLICY)) {
+        ecPolicyName(getOptions().get(
+            Options.OpenFileOptions.FS_OPTION_OPENFILE_EC_POLICY));
+      }
       if (getFlags().contains(CreateFlag.CREATE) ||
           getFlags().contains(CreateFlag.OVERWRITE)) {
         if (isRecursive()) {

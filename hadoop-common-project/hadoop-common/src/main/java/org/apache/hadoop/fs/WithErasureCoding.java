@@ -18,9 +18,6 @@
 
 package org.apache.hadoop.fs;
 
-import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.util.Progressable;
-
 import java.io.IOException;
 
 /**
@@ -42,12 +39,4 @@ public interface WithErasureCoding {
    */
   void setErasureCodingPolicy(Path path, String ecPolicyName) throws
       IOException;
-
-  /**
-   * A create file API but for EC files.
-   */
-  FSDataOutputStreamBuilder<FSDataOutputStream, ?> createECFile(Path path,
-      FsPermission permission, boolean overwrite, int bufferSize,
-      short replication, long blockSize, Progressable prog,
-      Options.ChecksumOpt checksumOpt, String ecPolicy);
 }

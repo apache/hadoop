@@ -72,8 +72,8 @@ public class RetriableDirectoryCreateCommand extends RetriableCommand {
       ErasureCodingPolicy ecPolicy = SystemErasureCodingPolicies.getByName(
           ((WithErasureCoding) sourceFs).getErasureCodingPolicyName(
               sourceStatus));
-      WithErasureCoding ecFs = (DistributedFileSystem) targetFS;
-      ecFs.setErasureCodingPolicy(target,ecPolicy.getName());
+      WithErasureCoding ecFs =  (WithErasureCoding) targetFS;
+      ecFs.setErasureCodingPolicy(target, ecPolicy.getName());
     }
     return true;
   }

@@ -55,6 +55,7 @@ import org.apache.hadoop.classification.VisibleForTesting;
 
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL;
+import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_EC_POLICY;
 import static org.apache.hadoop.tools.mapred.CopyMapper.getFileAttributeSettings;
 import static org.apache.hadoop.util.functional.FutureIO.awaitFuture;
 
@@ -232,10 +233,17 @@ public class RetriableFileCopyCommand extends RetriableCommand {
             EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE), copyBufferSize,
             repl, blockSize, context, checksumOpt);
       } else {
-          FSDataOutputStreamBuilder<FSDataOutputStream, ?> builder =
-              ((WithErasureCoding) targetFS).createECFile(targetPath, permission,
-                  true, copyBufferSize, repl, blockSize, context, checksumOpt,
-                  ecPolicy.getName());
+        String ecPolicyName =
+            ((WithErasureCoding) sourceFS).getErasureCodingPolicyName(sourceStatus);
+        FSDataOutputStreamBuilder builder = targetFS.createFile(targetPath)
+            .permission(permission)
+            .overwrite(true)
+            .bufferSize(copyBufferSize)
+            .replication(repl)
+            .blockSize(blockSize)
+            .progress(context)
+            .recursive();
+          builder.opt(FS_OPTION_OPENFILE_EC_POLICY, ecPolicyName);
           out = builder.build();
       }
       outStream = new BufferedOutputStream(out);
