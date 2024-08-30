@@ -383,22 +383,6 @@ public class DistributedFileSystem extends FileSystem
     return ((HdfsFileStatus) fileStatus).getErasureCodingPolicy().getName();
   }
 
-  @Override
-  public FSDataOutputStreamBuilder<FSDataOutputStream, ?> createECFile(
-      Path path, FsPermission permission, boolean overwrite, int bufferSize,
-      short replication, long blockSize, Progressable prog,
-      ChecksumOpt checksumOpt, String ecPolicy) {
-    HdfsDataOutputStreamBuilder builder =
-        createFile(path).permission(permission).create().overwrite(true)
-            .bufferSize(bufferSize).replication(replication)
-            .blockSize(blockSize).progress(prog).recursive()
-            .ecPolicyName(ecPolicy);
-    if (checksumOpt != null) {
-      builder.checksumOpt(checksumOpt);
-    }
-    return builder;
-  }
-
   /**
    * Create a handle to an HDFS file.
    * @param st HdfsFileStatus instance from NameNode
