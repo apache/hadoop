@@ -62,8 +62,8 @@
     <hadoop.common.build.dir>${basedir}/../../hadoop-common-project/hadoop-common/target</hadoop.common.build.dir>
     <java.security.egd>file:///dev/urandom</java.security.egd>
 
-    <!-- avro version -->
-    <avro.version>1.9.2</avro.version>
+    <!-- avro version: avro.version needs to match avro version used in hadoop-shaded-avro -->
+    <avro.version>1.11.3</avro.version>
 
     <!-- jersey version -->
     <jersey.version>1.19.4</jersey.version>
@@ -96,7 +96,9 @@
     <hadoop.protobuf.version>3.23.4</hadoop.protobuf.version>
     <protoc.path>${env.HADOOP_PROTOC_PATH}</protoc.path>
 
+
     <hadoop-thirdparty.version>1.2.0</hadoop-thirdparty.version>
+    <hadoop-thirdparty.avro.version>${hadoop-thirdparty.version}</hadoop-thirdparty.avro.version>
     <hadoop-thirdparty-protobuf.version>1.3.0-SNAPSHOT</hadoop-thirdparty-protobuf.version>
     <hadoop-thirdparty-guava.version>${hadoop-thirdparty.version}</hadoop-thirdparty-guava.version>
     <hadoop-thirdparty-shaded-prefix>org.apache.hadoop.thirdparty</hadoop-thirdparty-shaded-prefix>
@@ -1363,9 +1365,9 @@
         </exclusions>
       </dependency>
       <dependency>
-        <groupId>org.apache.avro</groupId>
-        <artifactId>avro</artifactId>
-        <version>${avro.version}</version>
+        <groupId>org.apache.hadoop.thirdparty</groupId>
+        <artifactId>hadoop-shaded-avro_1_11</artifactId>
+        <version>${hadoop-thirdparty.avro.version}</version>
       </dependency>
       <dependency>
         <groupId>net.sf.kosmosfs</groupId>

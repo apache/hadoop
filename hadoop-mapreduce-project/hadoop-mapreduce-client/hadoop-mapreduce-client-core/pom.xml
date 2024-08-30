@@ -131,6 +131,19 @@
         <artifactId>maven-antrun-plugin</artifactId>
         <executions>
           <execution>
+            <id>generate-sources-ant-replace</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <tasks>
+                <replace dir="${project.build.directory}/generated-sources/avro" token="org.apache.avro" value="org.apache.hadoop.thirdparty.avro"/>
+              </tasks>
+            </configuration>
+          </execution>
+          <execution>
+            <id>pre-site-ant-copy</id>
             <phase>pre-site</phase>
             <goals>
               <goal>run</goal>

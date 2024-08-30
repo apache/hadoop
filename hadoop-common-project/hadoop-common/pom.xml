@@ -249,8 +249,8 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.apache.avro</groupId>
-      <artifactId>avro</artifactId>
+      <groupId>org.apache.hadoop.thirdparty</groupId>
+      <artifactId>hadoop-shaded-avro_1_11</artifactId>
       <scope>compile</scope>
     </dependency>
     <dependency>
@@ -598,6 +598,8 @@
                 <copy toDir="${project.build.directory}/test-classes">
                   <fileset dir="${basedir}/src/main/conf"/>
                 </copy>
+
+                <replace dir="${project.build.directory}/generated-test-sources/java" token="org.apache.avro" value="org.apache.hadoop.thirdparty.avro"/>
               </target>
             </configuration>
           </execution>

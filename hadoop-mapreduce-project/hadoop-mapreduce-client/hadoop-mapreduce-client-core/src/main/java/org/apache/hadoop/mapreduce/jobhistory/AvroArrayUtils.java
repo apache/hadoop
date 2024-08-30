@@ -22,8 +22,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import org.apache.avro.Schema;
-import org.apache.avro.generic.GenericData;
+import org.apache.hadoop.thirdparty.avro.Schema;
+import org.apache.hadoop.thirdparty.avro.generic.GenericData;
 
 public class AvroArrayUtils {
 
