@@ -283,6 +283,7 @@ function usage
 {
   echo "--artifactsdir=[path]   Path to use to store release bits"
   echo "--asfrelease            Make an ASF release"
+  echo "--aws-sdk               Include the AWS SDK bundle.jar in the release"
   echo "--deploy                Deploy Maven artifacts using ~/.m2/settings.xml"
   echo "--docker                Use Hadoop's Dockerfile for guaranteed environment"
   echo "--dockercache           Use a Docker-private maven cache"
@@ -310,6 +311,9 @@ function option_parse
       ;;
       --artifactsdir=*)
         ARTIFACTS_DIR=${i#*=}
+      ;;
+      --aws-sdk)
+        AWSSDK=true
       ;;
       --deploy)
         DEPLOY=true
@@ -580,11 +584,18 @@ function makearelease
     target="deploy"
   fi
 
+  # create profiles for the main build
+  PROFILES=dist,src,yarn-ui
+  if [[ "${AWSSDK}" = true ]]; then
+    # Add (large) AWS SDK to the build
+    PROFILES="${PROFILES},awssdk"
+  fi
+
   # Create SRC and BIN tarballs for release,
   # shellcheck disable=SC2046,SC2086
   run_and_redirect "${LOGDIR}/mvn_${target}.log" \
     "${MVN}" ${MVN_ARGS[*]} ${target} \
-      -Pdist,src,yarn-ui \
+      -P${PROFILES} \
       "${signflags[@]}" \
       -DskipTests -Dtar $(hadoop_native_flags)
 

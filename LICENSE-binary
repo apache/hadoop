@@ -362,6 +362,8 @@ org.objenesis:objenesis:2.6
 org.xerial.snappy:snappy-java:1.1.10.4
 org.yaml:snakeyaml:2.0
 org.wildfly.openssl:wildfly-openssl:1.1.3.Final
+
+In distributions which include the aws V2 SDK:
 software.amazon.awssdk:bundle:jar:2.25.53
 
 

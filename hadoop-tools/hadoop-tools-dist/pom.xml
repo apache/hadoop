@@ -97,6 +97,12 @@
       <artifactId>hadoop-aws</artifactId>
       <scope>compile</scope>
       <version>${project.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>software.amazon.awssdk</groupId>
+          <artifactId>bundle</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -196,6 +202,19 @@
           </plugin>
         </plugins>
       </build>
+    </profile>
+
+    <!-- if this profile is set, the full AWS SDK is included in the tools/lib
+         directory -->
+    <profile>
+      <id>awssdk</id>
+      <dependencies>
+        <dependency>
+          <groupId>software.amazon.awssdk</groupId>
+          <artifactId>bundle</artifactId>
+          <scope>compile</scope>
+        </dependency>
+      </dependencies>
     </profile>
   </profiles>
 </project>
