@@ -154,6 +154,14 @@ Here are the full set of configuration options.
 </property>
 
 <property>
+  <name>fs.s3a.assumed.role.external.id</name>
+  <value />
+  <description>
+    External id for assumed role, it's an optional configuration.
+  </description>
+</property>
+
+<property>
   <name>fs.s3a.assumed.role.policy</name>
   <value/>
   <description>
