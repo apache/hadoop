@@ -157,7 +157,7 @@ Here are the full set of configuration options.
   <name>fs.s3a.assumed.role.external.id</name>
   <value />
   <description>
-    External id for assumed role, it's an optional configuration. <a href="https://aws.amazon.com/cn/blogs/security/how-to-use-external-id-when-granting-access-to-your-aws-resources/">How to Use External ID When Granting Access to Your AWS Resources</a>
+    External id for assumed role, it's an optional configuration. "https://aws.amazon.com/cn/blogs/security/how-to-use-external-id-when-granting-access-to-your-aws-resources/"
   </description>
 </property>
 
