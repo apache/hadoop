@@ -124,12 +124,6 @@
 
   <profiles>
     <profile>
-      <id>yarn-ui</id>
-      <properties>
-        <yarn.ui.packaging>war</yarn.ui.packaging>
-      </properties>
-    </profile>
-    <profile>
       <id>dist</id>
       <activation>
         <activeByDefault>false</activeByDefault>
