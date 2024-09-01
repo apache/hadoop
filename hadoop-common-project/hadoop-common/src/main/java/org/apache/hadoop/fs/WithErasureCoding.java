@@ -38,10 +38,11 @@ public interface WithErasureCoding {
 
   /**
    * Set the given ecPolicy on the path.
-   * The path & ecPolicyName should be valid (not null/empty, the
+   * The path and ecPolicyName should be valid (not null/empty, the
    * implementing FS should support the supplied ecPolicy).
    * implementations can throw IOException if these conditions are not met.
    * @param path on which the EC policy needs to be set.
+   * @param ecPolicyName the EC policy.
    * @throws IOException if there is an error during the set op.
    */
   void setErasureCodingPolicy(Path path, String ecPolicyName) throws

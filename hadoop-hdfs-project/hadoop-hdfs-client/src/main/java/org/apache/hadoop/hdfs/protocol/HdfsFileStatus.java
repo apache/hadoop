@@ -27,6 +27,7 @@ import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileStatus.AttrFlags;
@@ -493,6 +494,14 @@ public interface HdfsFileStatus
   void setNamespace(String namespace);
 
   String getNamespace();
+
+  /**
+   * See {@link FileStatus#setAttr(Set)}.
+   */
+  @VisibleForTesting
+  default void setAttr(Set<AttrFlags> attr){
+    // do nothing (this is used only for testing)
+  }
 
   /**
    * Set redundant flags for compatibility with existing applications.
