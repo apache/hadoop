@@ -68,9 +68,12 @@
     <!-- jersey version -->
     <jersey2.version>2.46</jersey2.version>
 
+    <!-- jaxb version -->
+    <jaxb.version>2.3.1</jaxb.version>
+
     <!-- jackson versions -->
-    <jackson2.version>2.12.7</jackson2.version>
-    <jackson2.databind.version>2.12.7.1</jackson2.databind.version>
+    <jackson2.version>2.14.3</jackson2.version>
+    <jackson2.databind.version>2.14.3</jackson2.databind.version>
 
     <!-- httpcomponents versions -->
     <httpclient.version>4.5.13</httpclient.version>
@@ -1281,6 +1284,12 @@
         <groupId>com.fasterxml.jackson.module</groupId>
         <artifactId>jackson-module-jaxb-annotations</artifactId>
         <version>${jackson2.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>javax.xml.bind</groupId>
+            <artifactId>jaxb-api</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>com.fasterxml.jackson.dataformat</groupId>
@@ -2135,6 +2144,11 @@
         <groupId>org.glassfish.jersey.media</groupId>
         <artifactId>jersey-media-json-jettison</artifactId>
         <version>${jersey2.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>javax.xml.bind</groupId>
+        <artifactId>jaxb-api</artifactId>
+        <version>${jaxb.version}</version>
       </dependency>
       <dependency>
         <groupId>net.jodah</groupId>

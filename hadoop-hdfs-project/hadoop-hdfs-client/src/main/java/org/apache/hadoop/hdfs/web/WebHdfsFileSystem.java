@@ -31,7 +31,6 @@ import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.reflect.InvocationTargetException;
 import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
@@ -133,6 +132,7 @@ import org.apache.hadoop.util.KMSUtil;
 import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.dynamic.DynConstructors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -846,14 +846,36 @@ public class WebHdfsFileSystem extends FileSystem
             node = url.getAuthority();
           }
           try {
-            IOException newIoe = ioe.getClass().getConstructor(String.class)
-                .newInstance(node + ": " + ioe.getMessage());
-            newIoe.initCause(ioe.getCause());
+            final Throwable cause = ioe.getCause();
+            IOException newIoe = null;
+            if (cause != null) {
+              try {
+                DynConstructors.Ctor<? extends IOException> ctor =
+                    new DynConstructors.Builder()
+                        .impl(ioe.getClass(), String.class, Throwable.class)
+                        .buildChecked();
+                newIoe = ctor.newInstance(node + ": " + ioe.getMessage(), cause);
+              } catch (NoSuchMethodException e) {
+                // no matching constructor - try next approach below
+              }
+            }
+            if (newIoe == null) {
+              DynConstructors.Ctor<? extends IOException> ctor =
+                  new DynConstructors.Builder()
+                      .impl(ioe.getClass(), String.class)
+                      .buildChecked();
+              newIoe = ctor.newInstance(node + ": " + ioe.getMessage());
+              if (cause != null) {
+                try {
+                  newIoe.initCause(cause);
+                } catch (Exception e) {
+                  // Unable to initCause. Ignore the exception.
+                }
+              }
+            }
             newIoe.setStackTrace(ioe.getStackTrace());
             ioe = newIoe;
-          } catch (NoSuchMethodException | SecurityException 
-                   | InstantiationException | IllegalAccessException
-                   | IllegalArgumentException | InvocationTargetException e) {
+          } catch (NoSuchMethodException | SecurityException | IllegalArgumentException e) {
           }
           shouldRetry(ioe, retry);
         }
