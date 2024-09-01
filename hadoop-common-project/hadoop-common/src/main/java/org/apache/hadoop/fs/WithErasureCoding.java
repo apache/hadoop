@@ -26,16 +26,23 @@ import java.io.IOException;
 public interface WithErasureCoding {
 
   /**
-   * Get the EC Policy name of the given file
-   * @param fileStatus object of the file whose ecPolicy needs to be obtained
+   * Get the EC Policy name of the given file's fileStatus.
+   * If the file is not erasure coded, this should return null.
+   * Callers will make sure to check if the FS schema of the fileStatus
+   * is that of an FS that implements this interface.
+   * If the call fails due to some error, return null.
+   * @param fileStatus object of the file whose ecPolicy needs to be obtained.
    * @return the ec Policy name
    */
   String getErasureCodingPolicyName(FileStatus fileStatus);
 
   /**
-   * Set the given ecPolicy on the path
-   * @param path on which the EC policy needs to be set
-   * @throws IOException if the set is not successful
+   * Set the given ecPolicy on the path.
+   * The path & ecPolicyName should be valid (not null/empty, the
+   * implementing FS should support the supplied ecPolicy).
+   * implementations can throw IOException if these conditions are not met.
+   * @param path on which the EC policy needs to be set.
+   * @throws IOException if there is an error during the set op.
    */
   void setErasureCodingPolicy(Path path, String ecPolicyName) throws
       IOException;

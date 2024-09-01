@@ -24,22 +24,21 @@ import java.io.OutputStream;
 import java.util.EnumSet;
 
 import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
-import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.tools.DistCpOptions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
-import org.apache.hadoop.fs.WithErasureCoding;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataOutputStreamBuilder;
+import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.WithErasureCoding;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.tools.CopyListingFileStatus;
@@ -207,15 +206,11 @@ public class RetriableFileCopyCommand extends RetriableCommand {
     boolean preserveEC = getFileAttributeSettings(context)
         .contains(DistCpOptions.FileAttribute.ERASURECODINGPOLICY);
 
-    ErasureCodingPolicy ecPolicy = null;
+    String ecPolicyName = null;
     if (preserveEC && sourceStatus.isErasureCoded()
-        && sourceFS instanceof WithErasureCoding
-        && targetFS instanceof WithErasureCoding) {
-      String ecPolicyName =
-          ((WithErasureCoding) sourceFS).getErasureCodingPolicyName(sourceStatus);
-      if (ecPolicyName != null) {
-        ecPolicy = SystemErasureCodingPolicies.getByName(ecPolicyName);
-      }
+        && checkFSSupportsEC(sourceStatus.getPath(), sourceFS)
+        && checkFSSupportsEC(targetPath, targetFS)) {
+      ecPolicyName = ((WithErasureCoding) sourceFS).getErasureCodingPolicyName(sourceStatus);
     }
     final OutputStream outStream;
     if (action == FileAction.OVERWRITE) {
@@ -228,13 +223,11 @@ public class RetriableFileCopyCommand extends RetriableCommand {
           targetFS, targetPath);
       FSDataOutputStream out;
       ChecksumOpt checksumOpt = getChecksumOpt(fileAttributes, sourceChecksum);
-      if (!preserveEC || ecPolicy == null) {
+      if (!preserveEC || ecPolicyName == null) {
         out = targetFS.create(targetPath, permission,
             EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE), copyBufferSize,
             repl, blockSize, context, checksumOpt);
       } else {
-        String ecPolicyName =
-            ((WithErasureCoding) sourceFS).getErasureCodingPolicyName(sourceStatus);
         FSDataOutputStreamBuilder builder = targetFS.createFile(targetPath)
             .permission(permission)
             .overwrite(true)
@@ -408,6 +401,19 @@ public class RetriableFileCopyCommand extends RetriableCommand {
         || fileAttributes.contains(FileAttribute.CHECKSUMTYPE);
     return preserve ? source.getBlockSize() : targetFS
         .getDefaultBlockSize(tmpTargetPath);
+  }
+
+  /**
+   * Return true if the FS implements {@link WithErasureCoding} and
+   * supports EC_POLICY option in {@link Options.OpenFileOptions}
+   */
+  boolean checkFSSupportsEC(Path path, FileSystem fs) throws IOException {
+    if (fs instanceof WithErasureCoding && fs.hasPathCapability(path,
+        Options.OpenFileOptions.FS_OPTION_OPENFILE_EC_POLICY)) {
+      return true;
+    }
+    LOG.warn("FS with scheme " + fs.getScheme() + " does not support EC");
+    return false;
   }
 
   /**
