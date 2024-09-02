@@ -451,8 +451,10 @@ public class LinuxContainerExecutor extends ContainerExecutor {
 
     } catch (PrivilegedOperationException e) {
       int exitCode = e.getExitCode();
-      LOG.warn("Exit code from container {} startLocalizer is : {}",
-          locId, exitCode, e);
+      LOG.error("Unrecoverable issue occurred. Marking the node as unhealthy to prevent "
+          + "further containers to get scheduled on the node and cause application failures. " +
+          "Exit code from the container " + locId + "startLocalizer is : " + exitCode, e);
+      nmContext.getNodeStatusUpdater().reportException(e);
 
       throw new IOException("Application " + appId + " initialization failed" +
           " (exitCode=" + exitCode + ") with output: " + e.getOutput(), e);

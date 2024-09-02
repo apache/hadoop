@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.azurebfs.utils;
 
 import java.io.UnsupportedEncodingException;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -30,11 +31,14 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.AND_MARK;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EQUAL;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_BLOB_DOMAIN_NAME;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_DFS_DOMAIN_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_SAOID;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_SIGNATURE;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.QUERY_PARAM_SKOID;
@@ -167,6 +171,38 @@ public final class UriUtils {
     String maskedQueryString = maskUrlQueryParameters(queryKeyValueList,
         FULL_MASK_PARAM_KEYS, PARTIAL_MASK_PARAM_KEYS, queryString.length());
     return url.toString().replace(queryString, maskedQueryString);
+  }
+
+  /**
+   * Changes Blob Endpoint URL to DFS Endpoint URL.
+   * If original url is not Blob Endpoint URL, it will return the original URL.
+   * @param url to be converted.
+   * @return updated URL
+   * @throws InvalidUriException in case of MalformedURLException.
+   */
+  public static URL changeUrlFromBlobToDfs(URL url) throws InvalidUriException {
+    try {
+      url = new URL(url.toString().replace(ABFS_BLOB_DOMAIN_NAME, ABFS_DFS_DOMAIN_NAME));
+    } catch (MalformedURLException ex) {
+      throw new InvalidUriException(url.toString());
+    }
+    return url;
+  }
+
+  /**
+   * Changes DFS Endpoint URL to Blob Endpoint URL.
+   * If original url is not DFS Endpoint URL, it will return the original URL.
+   * @param url to be converted.
+   * @return updated URL
+   * @throws InvalidUriException in case of MalformedURLException.
+   */
+  public static URL changeUrlFromDfsToBlob(URL url) throws InvalidUriException {
+    try {
+      url = new URL(url.toString().replace(ABFS_DFS_DOMAIN_NAME, ABFS_BLOB_DOMAIN_NAME));
+    } catch (MalformedURLException ex) {
+      throw new InvalidUriException(url.toString());
+    }
+    return url;
   }
 
   private UriUtils() {
