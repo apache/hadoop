@@ -846,9 +846,27 @@ public class WebHdfsFileSystem extends FileSystem
             node = url.getAuthority();
           }
           try {
-            IOException newIoe = ioe.getClass().getConstructor(String.class)
-                .newInstance(node + ": " + ioe.getMessage());
-            newIoe.initCause(ioe.getCause());
+            final Throwable cause = ioe.getCause();
+            IOException newIoe = null;
+            if (cause != null) {
+              try {
+                ioe.getClass().getConstructor(String.class, Throwable.class)
+                    .newInstance(node + ": " + ioe.getMessage(), cause);
+              } catch (NoSuchMethodException e) {
+                // no matching constructor - try next approach below
+              }
+            }
+            if (newIoe == null) {
+              newIoe = ioe.getClass().getConstructor(String.class)
+                  .newInstance(node + ": " + ioe.getMessage());
+              if (cause != null) {
+                try {
+                  newIoe.initCause(cause);
+                } catch (Exception e) {
+                  // Unable to initCause. Ignore the exception.
+                }
+              }
+            }
             newIoe.setStackTrace(ioe.getStackTrace());
             ioe = newIoe;
           } catch (NoSuchMethodException | SecurityException 
