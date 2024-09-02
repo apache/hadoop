@@ -46,7 +46,6 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.service.AbstractService;
-import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineHealth;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
@@ -105,10 +104,11 @@ public class FileSystemTimelineReaderImpl extends AbstractService
     return rootPath.toString();
   }
 
-  private static final ObjectMapper OBJECT_MAPPER = JacksonUtil.createBasicObjectMapper();
+  private static ObjectMapper mapper;
 
   static {
-    YarnJacksonJaxbJsonProvider.configObjectMapper(OBJECT_MAPPER);
+    mapper = new ObjectMapper();
+    YarnJacksonJaxbJsonProvider.configObjectMapper(mapper);
   }
 
   /**
@@ -127,7 +127,7 @@ public class FileSystemTimelineReaderImpl extends AbstractService
   public static <T> T getTimelineRecordFromJSON(
       String jsonString, Class<T> clazz)
       throws JsonGenerationException, JsonMappingException, IOException {
-    return OBJECT_MAPPER.readValue(jsonString, clazz);
+    return mapper.readValue(jsonString, clazz);
   }
 
   private static void fillFields(TimelineEntity finalEntity,

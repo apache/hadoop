@@ -27,7 +27,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
 import org.apache.hadoop.security.authorize.AccessControlList;
-import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -92,7 +91,6 @@ import static org.apache.hadoop.yarn.conf.YarnConfiguration.NM_RUNC_LAYER_MOUNTS
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.NM_RUNC_MANIFEST_TO_RESOURCES_PLUGIN;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.NM_REAP_RUNC_LAYER_MOUNTS_INTERVAL;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntimeConstants.*;
-
 /**
  * <p>This class is an extension of {@link OCIContainerRuntime} that uses the
  * native {@code container-executor} binary via a
@@ -208,7 +206,7 @@ public class RuncContainerRuntime extends OCIContainerRuntime {
     imageTagToManifestPlugin.init(conf);
     manifestToResourcesPlugin = chooseManifestToResourcesPlugin();
     manifestToResourcesPlugin.init(conf);
-    mapper = JacksonUtil.createBasicObjectMapper();
+    mapper = new ObjectMapper();
     defaultRuncImage = conf.get(YarnConfiguration.NM_RUNC_IMAGE_NAME);
 
     allowedNetworks.clear();

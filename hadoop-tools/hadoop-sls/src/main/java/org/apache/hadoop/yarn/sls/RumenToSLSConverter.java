@@ -35,6 +35,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import org.apache.commons.cli.CommandLine;
@@ -43,7 +44,6 @@ import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.Options;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.yarn.sls.utils.SLSUtils;
 
 @Private
@@ -126,10 +126,10 @@ public class RumenToSLSConverter {
             StandardCharsets.UTF_8)) {
       try (Writer output =
           new OutputStreamWriter(new FileOutputStream(outputFile), StandardCharsets.UTF_8)) {
-        ObjectMapper mapper = JacksonUtil.createBasicObjectMapper();
+        ObjectMapper mapper = new ObjectMapper();
         ObjectWriter writer = mapper.writerWithDefaultPrettyPrinter();
         Iterator<Map> i = mapper.readValues(
-            mapper.createParser(input), Map.class);
+            new JsonFactory().createParser(input), Map.class);
         while (i.hasNext()) {
           Map m = i.next();
           output.write(writer.writeValueAsString(createSLSJob(m)) + EOL);
@@ -143,7 +143,7 @@ public class RumenToSLSConverter {
           throws IOException {
     try (Writer output =
         new OutputStreamWriter(new FileOutputStream(outputFile), StandardCharsets.UTF_8)) {
-      ObjectMapper mapper = JacksonUtil.createBasicObjectMapper();
+      ObjectMapper mapper = new ObjectMapper();
       ObjectWriter writer = mapper.writerWithDefaultPrettyPrinter();
       for (Map.Entry<String, Set<String>> entry : rackNodeMap.entrySet()) {
         Map rack = new LinkedHashMap();

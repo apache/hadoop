@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.Properties;
 import java.util.Random;
 
-import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.yarn.appcatalog.model.AppEntry;
 import org.apache.hadoop.yarn.appcatalog.model.AppStoreEntry;
 import org.apache.hadoop.yarn.appcatalog.model.Application;
@@ -57,18 +56,6 @@ public class AppCatalogSolrClient {
 
   private static final Logger LOG = LoggerFactory.getLogger(AppCatalogSolrClient.class);
   private static String urlString;
-
-  /**
-   * It is more performant to reuse ObjectMapper instances but keeping the instance
-   * private makes it harder for someone to reconfigure it which might have unwanted
-   * side effects.
-   */
-  private static final ObjectMapper OBJECT_MAPPER;
-
-  static {
-    OBJECT_MAPPER = JacksonUtil.createBasicObjectMapper();
-    OBJECT_MAPPER.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-  }
 
   public AppCatalogSolrClient() {
     // Locate Solr URL
@@ -159,6 +146,8 @@ public class AppCatalogSolrClient {
 
   public List<AppEntry> listAppEntries() {
     List<AppEntry> list = new ArrayList<AppEntry>();
+    ObjectMapper mapper = new ObjectMapper();
+    mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     SolrClient solr = getSolrClient();
     SolrQuery query = new SolrQuery();
@@ -175,7 +164,7 @@ public class AppCatalogSolrClient {
         entry.setId(d.get("id").toString());
         entry.setName(d.get("name_s").toString());
         entry.setApp(d.get("app_s").toString());
-        entry.setYarnfile(OBJECT_MAPPER.readValue(d.get("yarnfile_s").toString(),
+        entry.setYarnfile(mapper.readValue(d.get("yarnfile_s").toString(),
             Service.class));
         list.add(entry);
       }
@@ -187,6 +176,8 @@ public class AppCatalogSolrClient {
 
   public AppStoreEntry findAppStoreEntry(String id) {
     AppStoreEntry entry = new AppStoreEntry();
+    ObjectMapper mapper = new ObjectMapper();
+    mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     SolrClient solr = getSolrClient();
     SolrQuery query = new SolrQuery();
@@ -206,7 +197,7 @@ public class AppCatalogSolrClient {
         entry.setDesc(d.get("desc_s").toString());
         entry.setLike(Integer.parseInt(d.get("like_i").toString()));
         entry.setDownload(Integer.parseInt(d.get("download_i").toString()));
-        Service yarnApp = OBJECT_MAPPER.readValue(d.get("yarnfile_s").toString(),
+        Service yarnApp = mapper.readValue(d.get("yarnfile_s").toString(),
             Service.class);
         String name;
         try {
@@ -231,6 +222,9 @@ public class AppCatalogSolrClient {
 
   public AppEntry findAppEntry(String id) {
     AppEntry entry = new AppEntry();
+    ObjectMapper mapper = new ObjectMapper();
+    mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+
     SolrClient solr = getSolrClient();
     SolrQuery query = new SolrQuery();
     query.setQuery("id:" + id);
@@ -246,7 +240,7 @@ public class AppCatalogSolrClient {
         entry.setId(d.get("id").toString());
         entry.setApp(d.get("app_s").toString());
         entry.setName(d.get("name_s").toString());
-        entry.setYarnfile(OBJECT_MAPPER.readValue(d.get("yarnfile_s").toString(),
+        entry.setYarnfile(mapper.readValue(d.get("yarnfile_s").toString(),
             Service.class));
       }
     } catch (SolrServerException | IOException e) {
@@ -258,6 +252,8 @@ public class AppCatalogSolrClient {
   public void deployApp(String id, Service service) throws SolrServerException,
       IOException {
     long download = 0;
+    ObjectMapper mapper = new ObjectMapper();
+    mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     Collection<SolrInputDocument> docs = new HashSet<SolrInputDocument>();
     SolrClient solr = getSolrClient();
     // Find application information from AppStore
@@ -291,7 +287,7 @@ public class AppCatalogSolrClient {
       request.addField("id", name);
       request.addField("name_s", name);
       request.addField("app_s", entry.getOrg()+"/"+entry.getName());
-      request.addField("yarnfile_s", OBJECT_MAPPER.writeValueAsString(service));
+      request.addField("yarnfile_s", mapper.writeValueAsString(service));
       docs.add(request);
     }
 
@@ -330,6 +326,8 @@ public class AppCatalogSolrClient {
   public void register(Application app) throws IOException {
     Collection<SolrInputDocument> docs = new HashSet<SolrInputDocument>();
     SolrClient solr = getSolrClient();
+    ObjectMapper mapper = new ObjectMapper();
+    mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     try {
       SolrInputDocument buffer = new SolrInputDocument();
       buffer.setField("id", java.util.UUID.randomUUID().toString()
@@ -345,10 +343,10 @@ public class AppCatalogSolrClient {
       buffer.setField("download_i", 0);
 
       // Keep only YARN data model for yarnfile field
-      String yarnFile = OBJECT_MAPPER.writeValueAsString(app);
-      LOG.info("app:{}", yarnFile);
-      Service yarnApp = OBJECT_MAPPER.readValue(yarnFile, Service.class);
-      buffer.setField("yarnfile_s", OBJECT_MAPPER.writeValueAsString(yarnApp));
+      String yarnFile = mapper.writeValueAsString(app);
+      LOG.info("app:"+yarnFile);
+      Service yarnApp = mapper.readValue(yarnFile, Service.class);
+      buffer.setField("yarnfile_s", mapper.writeValueAsString(yarnApp));
 
       docs.add(buffer);
       commitSolrChanges(solr, docs);
@@ -361,6 +359,8 @@ public class AppCatalogSolrClient {
   protected void register(AppStoreEntry app) throws IOException {
     Collection<SolrInputDocument> docs = new HashSet<SolrInputDocument>();
     SolrClient solr = getSolrClient();
+    ObjectMapper mapper = new ObjectMapper();
+    mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     try {
       SolrInputDocument buffer = new SolrInputDocument();
       buffer.setField("id", java.util.UUID.randomUUID().toString()
@@ -376,10 +376,10 @@ public class AppCatalogSolrClient {
       buffer.setField("download_i", app.getDownload());
 
       // Keep only YARN data model for yarnfile field
-      String yarnFile = OBJECT_MAPPER.writeValueAsString(app);
-      LOG.info("app:{}", yarnFile);
-      Service yarnApp = OBJECT_MAPPER.readValue(yarnFile, Service.class);
-      buffer.setField("yarnfile_s", OBJECT_MAPPER.writeValueAsString(yarnApp));
+      String yarnFile = mapper.writeValueAsString(app);
+      LOG.info("app:"+yarnFile);
+      Service yarnApp = mapper.readValue(yarnFile, Service.class);
+      buffer.setField("yarnfile_s", mapper.writeValueAsString(yarnApp));
 
       docs.add(buffer);
       commitSolrChanges(solr, docs);
@@ -391,6 +391,8 @@ public class AppCatalogSolrClient {
 
   public void upgradeApp(Service service) throws IOException,
       SolrServerException {
+    ObjectMapper mapper = new ObjectMapper();
+    mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     Collection<SolrInputDocument> docs = new HashSet<SolrInputDocument>();
     SolrClient solr = getSolrClient();
     if (service!=null) {
@@ -418,7 +420,7 @@ public class AppCatalogSolrClient {
       request.addField("id", name);
       request.addField("name_s", name);
       request.addField("app_s", app);
-      request.addField("yarnfile_s", OBJECT_MAPPER.writeValueAsString(service));
+      request.addField("yarnfile_s", mapper.writeValueAsString(service));
       docs.add(request);
     }
     try {

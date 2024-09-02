@@ -20,8 +20,8 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
-import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -35,8 +35,9 @@ import java.io.IOException;
 @InterfaceStability.Unstable
 @JsonInclude(JsonInclude.Include.NON_DEFAULT)
 public class DiskBalancerWorkItem {
+  private static final ObjectMapper MAPPER = new ObjectMapper();
   private static final ObjectReader READER =
-      JacksonUtil.createBasicReaderFor(DiskBalancerWorkItem.class);
+      new ObjectMapper().readerFor(DiskBalancerWorkItem.class);
 
   private  long startTime;
   private long secondsElapsed;
@@ -172,7 +173,7 @@ public class DiskBalancerWorkItem {
    * @throws IOException
    */
   public String toJson() throws IOException {
-    return JacksonUtil.getSharedWriter().writeValueAsString(this);
+    return MAPPER.writeValueAsString(this);
   }
 
   /**

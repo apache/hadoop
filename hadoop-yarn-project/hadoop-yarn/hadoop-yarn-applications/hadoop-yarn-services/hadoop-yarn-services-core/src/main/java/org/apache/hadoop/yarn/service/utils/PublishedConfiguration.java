@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.yarn.service.exceptions.BadConfigException;
 
 import java.io.IOException;
@@ -41,18 +40,6 @@ import java.util.Properties;
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(value = JsonInclude.Include.NON_NULL)
 public class PublishedConfiguration {
-
-  /**
-   * It is more performant to reuse ObjectMapper instances but keeping the instance
-   * private makes it harder for someone to reconfigure it which might have unwanted
-   * side effects.
-   */
-  private static final ObjectMapper OBJECT_MAPPER;
-
-  static {
-    OBJECT_MAPPER = JacksonUtil.createBasicObjectMapper();
-    OBJECT_MAPPER.configure(SerializationFeature.INDENT_OUTPUT, true);
-  }
 
   public String description;
   public long updated;
@@ -167,7 +154,9 @@ public class PublishedConfiguration {
    * @throws IOException marshalling failure
    */
   public String asJson() throws IOException {
-    String json = OBJECT_MAPPER.writeValueAsString(entries);
+    ObjectMapper mapper = new ObjectMapper();
+    mapper.configure(SerializationFeature.INDENT_OUTPUT, true);
+    String json = mapper.writeValueAsString(entries);
     return json;
   }
 

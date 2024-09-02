@@ -16,13 +16,13 @@
 
 package org.apache.hadoop.yarn.sls;
 
+import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.tools.rumen.JobTraceReader;
 import org.apache.hadoop.tools.rumen.LoggedJob;
-import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ReservationId;
@@ -44,8 +44,11 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -119,14 +122,15 @@ public class AMRunner {
    * Parse workload from a SLS trace file.
    */
   private void startAMFromSLSTrace(String inputTrace) throws IOException {
-    ObjectMapper mapper = JacksonUtil.createBasicObjectMapper();
+    JsonFactory jsonF = new JsonFactory();
+    ObjectMapper mapper = new ObjectMapper();
 
     try (Reader input = new InputStreamReader(
         new FileInputStream(inputTrace), StandardCharsets.UTF_8)) {
       JavaType type = mapper.getTypeFactory().
           constructMapType(Map.class, String.class, String.class);
       Iterator<Map<String, String>> jobIter = mapper.readValues(
-          mapper.createParser(input), type);
+          jsonF.createParser(input), type);
 
       while (jobIter.hasNext()) {
         try {

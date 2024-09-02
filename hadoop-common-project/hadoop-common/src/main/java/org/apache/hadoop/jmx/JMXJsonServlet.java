@@ -43,13 +43,13 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.http.HttpServer2;
-import org.apache.hadoop.util.JacksonUtil;
 
 /*
  * This servlet is based off of the JMXProxyServlet from Tomcat 7.0.14. It has
@@ -135,12 +135,18 @@ public class JMXJsonServlet extends HttpServlet {
   protected transient MBeanServer mBeanServer;
 
   /**
+   * Json Factory to create Json generators for write objects in json format
+   */
+  protected transient JsonFactory jsonFactory;
+
+  /**
    * Initialize this servlet.
    */
   @Override
   public void init() throws ServletException {
     // Retrieve the MBean server
     mBeanServer = ManagementFactory.getPlatformMBeanServer();
+    jsonFactory = new JsonFactory();
   }
 
   protected boolean isInstrumentationAccessAllowed(HttpServletRequest request, 
@@ -181,7 +187,7 @@ public class JMXJsonServlet extends HttpServlet {
         response.setHeader(ACCESS_CONTROL_ALLOW_METHODS, "GET");
         response.setHeader(ACCESS_CONTROL_ALLOW_ORIGIN, "*");
 
-        jg = JacksonUtil.getSharedWriter().createGenerator(writer);
+        jg = jsonFactory.createGenerator(writer);
         jg.disable(JsonGenerator.Feature.AUTO_CLOSE_TARGET);
         jg.useDefaultPrettyPrinter();
         jg.writeStartObject();

@@ -18,6 +18,7 @@
 package org.apache.hadoop.crypto.key.kms;
 
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider;
@@ -41,7 +42,6 @@ import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdenti
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSelector;
 import org.apache.hadoop.security.token.delegation.web.DelegationTokenAuthenticatedURL;
 import org.apache.hadoop.util.HttpExceptionUtils;
-import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.util.JsonSerialization;
 import org.apache.hadoop.util.KMSUtil;
 import org.apache.http.client.utils.URIBuilder;
@@ -79,6 +79,7 @@ import java.util.concurrent.ExecutionException;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.CryptoExtension;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
@@ -561,17 +562,19 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
       }
       throw ex;
     }
+
     if ((conn.getResponseCode() == HttpURLConnection.HTTP_FORBIDDEN
-        && (conn.getResponseMessage().equals(ANONYMOUS_REQUESTS_DISALLOWED) ||
-            conn.getResponseMessage().contains(INVALID_SIGNATURE)))
+        && (!StringUtils.isEmpty(conn.getResponseMessage())
+            && (conn.getResponseMessage().equals(ANONYMOUS_REQUESTS_DISALLOWED)
+            || conn.getResponseMessage().contains(INVALID_SIGNATURE))))
         || conn.getResponseCode() == HttpURLConnection.HTTP_UNAUTHORIZED) {
       // Ideally, this should happen only when there is an Authentication
       // failure. Unfortunately, the AuthenticationFilter returns 403 when it
       // cannot authenticate (Since a 401 requires Server to send
       // WWW-Authenticate header as well)..
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Response={}({}), resetting authToken",
-            conn.getResponseCode(), conn.getResponseMessage());
+        LOG.debug("Response={}, resetting authToken",
+            conn.getResponseCode());
       }
       KMSClientProvider.this.authToken =
           new DelegationTokenAuthenticatedURL.Token();
@@ -592,10 +595,11 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
         && conn.getContentType().trim().toLowerCase()
             .startsWith(APPLICATION_JSON_MIME)
         && klass != null) {
+      ObjectMapper mapper = new ObjectMapper();
       InputStream is = null;
       try {
         is = conn.getInputStream();
-        ret = JacksonUtil.getSharedReader().readValue(is, klass);
+        ret = mapper.readValue(is, klass);
       } finally {
         IOUtils.closeStream(is);
       }
@@ -797,6 +801,7 @@ public class KMSClientProvider extends KeyProvider implements CryptoExtension,
   @SuppressWarnings("rawtypes")
   @Override
   public KeyVersion decryptEncryptedKey(
+
       EncryptedKeyVersion encryptedKeyVersion) throws IOException,
                                                       GeneralSecurityException {
     checkNotNull(encryptedKeyVersion.getEncryptionKeyVersionName(),
