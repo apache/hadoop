@@ -4332,8 +4332,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * This override bypasses checking for existence.
    *
    * @param f the path to delete; this may be unqualified.
-   * @return true, always.   * @param f the path to delete.
-   * @return  true if deleteOnExit is successful, otherwise false.
+   * @return true, always.
    * @throws IOException IO failure
    */
   @Override

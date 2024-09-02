@@ -577,7 +577,6 @@ public class WriteOperationHelper implements WriteOperations {
 
   /**
    * Upload part of a multi-partition file.
-   * @param request request
    * @param durationTrackerFactory duration tracker factory for operation
    * @param request the upload part request.
    * @param body the request body.

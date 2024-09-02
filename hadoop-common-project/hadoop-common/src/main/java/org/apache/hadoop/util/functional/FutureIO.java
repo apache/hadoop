@@ -68,7 +68,7 @@ import org.apache.hadoop.util.Time;
 public final class FutureIO {
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(TaskPool.class);
+      LoggerFactory.getLogger(FutureIO.class);
 
   private FutureIO() {
   }
@@ -201,7 +201,7 @@ public final class FutureIO {
    * <p>
    * This method blocks until all futures in the collection have completed or
    * the timeout expires, whichever happens first.
-   * All exceptions thrown by the futures are ignored.
+   * All exceptions thrown by the futures are ignored. as is any TimeoutException.
    * @param collection collection of futures to be evaluated
    * @param interruptIfRunning should the cancel interrupt any active futures?
    * @param duration total timeout duration
@@ -212,6 +212,7 @@ public final class FutureIO {
       final Collection<Future<T>> collection,
       final boolean interruptIfRunning,
       final Duration duration) {
+
     for (Future<T> future : collection) {
       future.cancel(interruptIfRunning);
     }

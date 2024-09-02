@@ -448,12 +448,13 @@ class S3ABlockOutputStream extends OutputStream implements
 
   /**
    * Close the stream.
-   *
+   * <p>
    * This will not return until the upload is complete
-   * or the attempt to perform the upload has failed.
+   * or the attempt to perform the upload has failed or been interrupted.
    * Exceptions raised in this method are indicative that the write has
    * failed and data is at risk of being lost.
    * @throws IOException on any failure.
+   * @throws InterruptedIOException if the wait for uploads to complete was interrupted.
    */
   @Override
   public void close() throws IOException {
@@ -490,6 +491,7 @@ class S3ABlockOutputStream extends OutputStream implements
           uploadCurrentBlock(true);
         }
         // wait for the part uploads to finish
+        // this may raise CancellationException as well as any IOE.
         final List<CompletedPart> partETags =
             multiPartUpload.waitForAllPartUploads();
         bytes = bytesSubmitted;
@@ -512,7 +514,7 @@ class S3ABlockOutputStream extends OutputStream implements
         statistics.commitUploaded(bytes);
       }
       LOG.debug("Upload complete to {} by {}", key, writeOperationHelper);
-    } catch (CancellationException | IOException ioe) {
+    } catch (IOException ioe) {
       // the operation failed.
       // if this happened during a multipart upload, abort the
       // operation, so as to not leave (billable) data
@@ -520,6 +522,14 @@ class S3ABlockOutputStream extends OutputStream implements
       maybeAbortMultipart();
       writeOperationHelper.writeFailed(ioe);
       throw ioe;
+    } catch (CancellationException e) {
+      // waiting for the upload was cancelled.
+      // abort uploads
+      maybeAbortMultipart();
+      writeOperationHelper.writeFailed(e);
+      // and raise an InterruptedIOException
+      throw (IOException)(new InterruptedIOException(e.getMessage())
+          .initCause(e));
     } finally {
       cleanupOnClose();
     }
@@ -650,13 +660,10 @@ class S3ABlockOutputStream extends OutputStream implements
    * Upload the current block as a single PUT request; if the buffer is empty a
    * 0-byte PUT will be invoked, as it is needed to create an entry at the far
    * end.
-   * @return number of bytes uploaded. If thread was interrupted while waiting
-   * for upload to complete, returns zero with interrupted flag set on this
-   * thread. This is also done if the put operation is cancelled.
-   * @throws InterruptedIOException if the upload was interrupted.
+   * @return number of bytes uploaded.
    * @throws IOException any problem.
    */
-  private long putObject() throws InterruptedIOException, IOException {
+  private long putObject() throws IOException {
     LOG.debug("Executing regular upload for {}", writeOperationHelper);
 
     final S3ADataBlocks.DataBlock block = getActiveBlock();
@@ -667,54 +674,27 @@ class S3ABlockOutputStream extends OutputStream implements
             key,
             uploadData.getSize(),
             builder.putOptions);
+    clearActiveBlock();
 
     BlockUploadProgress progressCallback =
         new BlockUploadProgress(block, progressListener, now());
     statistics.blockUploadQueued(size);
-    ListenableFuture<PutObjectResponse> putObjectResult =
-        executorService.submit(() -> {
-          try {
-            progressCallback.progressChanged(PUT_STARTED_EVENT);
-            // the putObject call automatically closes the input
-            // stream afterwards.
-            PutObjectResponse response =
-                writeOperationHelper.putObject(putObjectRequest, builder.putOptions, uploadData,
-                    statistics);
-            progressCallback.progressChanged(REQUEST_BYTE_TRANSFER_EVENT);
-            progressCallback.progressChanged(PUT_COMPLETED_EVENT);
-            return response;
-          } finally {
-            cleanupWithLogger(LOG, uploadData, block);
-          }
-        });
-    clearActiveBlock();
-    //wait for completion
     try {
-      putObjectResult.get();
-      return size;
-    } catch (InterruptedException e) {
-      LOG.warn("Interrupted/Cancelled object upload", e);
-      progressCallback.progressChanged(PUT_INTERRUPTED_EVENT);
-      // cancel the upload, interrupting if needed, briefly await completion
-      cancelAllFuturesAndAwaitCompletion(newArrayList(putObjectResult),
-          true,
-          TIME_TO_AWAIT_CANCEL_COMPLETION);
-      throw (InterruptedIOException) new InterruptedIOException(e.toString())
-          .initCause(e);
-    } catch (CancellationException e) {
-      LOG.warn("Cancelled object upload", e);
-      progressCallback.progressChanged(PUT_INTERRUPTED_EVENT);
-      throw (InterruptedIOException) new InterruptedIOException(e.toString())
-          .initCause(e);
-    } catch (ExecutionException ee) {
+      progressCallback.progressChanged(PUT_STARTED_EVENT);
+      // the putObject call automatically closes the upload data
+      writeOperationHelper.putObject(putObjectRequest,
+          builder.putOptions,
+          uploadData,
+          statistics);
+      progressCallback.progressChanged(REQUEST_BYTE_TRANSFER_EVENT);
+      progressCallback.progressChanged(PUT_COMPLETED_EVENT);
+    } catch (IOException ioe){
       progressCallback.progressChanged(PUT_FAILED_EVENT);
-      throw extractException("regular upload", key, ee);
+      throw ioe;
     } finally {
-      // and close the upload data if the upload is still in progress
-      // no-op if already performed especially when the upload completes
-      // successfully
       cleanupWithLogger(LOG, uploadData, block);
     }
+    return size;
   }
 
   @Override
@@ -1082,9 +1062,11 @@ class S3ABlockOutputStream extends OutputStream implements
      * Any interruption of this thread or a failure in an upload will
      * trigger cancellation of pending uploads and an abort of the MPU.
      * @return list of results or null if interrupted.
+     * @throws CancellationException waiting for the uploads to complete was cancelled
      * @throws IOException IO Problems
      */
-    private List<CompletedPart> waitForAllPartUploads() throws IOException {
+    private List<CompletedPart> waitForAllPartUploads()
+        throws CancellationException, IOException {
       LOG.debug("Waiting for {} uploads to complete", partETagsFutures.size());
       try {
         // wait for the uploads to finish in order.
@@ -1093,15 +1075,15 @@ class S3ABlockOutputStream extends OutputStream implements
           if (StringUtils.isEmpty(part.eTag())) {
             // this was somehow cancelled/aborted
             // explicitly fail.
-            throw new CancellationException("Upload of part " + part.partNumber()
-                + " was aborted");
+            throw new CancellationException("Upload of part "
+                + part.partNumber() + " was aborted");
           }
         }
         return completedParts;
-      } catch (CancellationException ie) {
+      } catch (CancellationException e) {
         // One or more of the futures has been cancelled.
-        LOG.warn("Cancelled while waiting for uploads to {} to complete", key, ie);
-        throw ie;
+        LOG.warn("Cancelled while waiting for uploads to {} to complete", key, e);
+        throw e;
       } catch (RuntimeException | IOException ie) {
         // IO failure or low level problem.
         LOG.debug("Failure while waiting for uploads to {} to complete;"
@@ -1114,13 +1096,16 @@ class S3ABlockOutputStream extends OutputStream implements
 
     /**
      * Cancel all active uploads and close all blocks.
+     * All exceptions thrown by the futures are ignored. as is any TimeoutException.
      */
     private void cancelAllActiveUploads() {
 
       // interrupt futures if not already attempted
 
       LOG.debug("Cancelling futures");
-      cancelAllFuturesAndAwaitCompletion(partETagsFutures, true, TIME_TO_AWAIT_CANCEL_COMPLETION);
+      cancelAllFuturesAndAwaitCompletion(partETagsFutures,
+          true,
+          TIME_TO_AWAIT_CANCEL_COMPLETION);
 
       // now close all the blocks.
       LOG.debug("Closing blocks");
