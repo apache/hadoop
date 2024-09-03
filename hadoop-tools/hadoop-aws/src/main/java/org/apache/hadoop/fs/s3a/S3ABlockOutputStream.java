@@ -32,7 +32,6 @@ import java.util.Map;
 import java.util.StringJoiner;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -41,7 +40,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.model.CompletedPart;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 
@@ -74,7 +72,6 @@ import org.apache.hadoop.fs.store.LogExactlyOnce;
 import org.apache.hadoop.util.Progressable;
 
 import static java.util.Objects.requireNonNull;
-import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.CONTENT_TYPE_OCTET_STREAM;
 import static org.apache.hadoop.fs.s3a.impl.ProgressListenerEvent.*;
@@ -82,7 +79,6 @@ import static org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDuration;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfInvocation;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
-import static org.apache.hadoop.util.Lists.newArrayList;
 import static org.apache.hadoop.util.functional.FutureIO.awaitAllFutures;
 import static org.apache.hadoop.util.functional.FutureIO.cancelAllFuturesAndAwaitCompletion;
 
@@ -336,7 +332,7 @@ class S3ABlockOutputStream extends OutputStream implements
     try {
       checkOpen();
     } catch (IOException e) {
-      LOG.warn("Stream closed: " + e.getMessage());
+      LOG.warn("Stream closed: {}", e.getMessage());
       return;
     }
     S3ADataBlocks.DataBlock dataBlock = getActiveBlock();
@@ -688,6 +684,9 @@ class S3ABlockOutputStream extends OutputStream implements
           statistics);
       progressCallback.progressChanged(REQUEST_BYTE_TRANSFER_EVENT);
       progressCallback.progressChanged(PUT_COMPLETED_EVENT);
+    } catch (InterruptedIOException ioe){
+      progressCallback.progressChanged(PUT_INTERRUPTED_EVENT);
+      throw ioe;
     } catch (IOException ioe){
       progressCallback.progressChanged(PUT_FAILED_EVENT);
       throw ioe;
@@ -920,9 +919,10 @@ class S3ABlockOutputStream extends OutputStream implements
     }
 
     /**
-     * Upload a block of data. TODO: describe
-     * This will take the block
+     * Upload a block of data.
+     * This will take the block and queue it for upload.
      * @param block block to upload
+     * @param isLast this the last block?
      * @throws IOException upload failure
      * @throws PathIOException if too many blocks were written
      */
@@ -931,6 +931,8 @@ class S3ABlockOutputStream extends OutputStream implements
         throws IOException {
       LOG.debug("Queueing upload of {} for upload {}", block, uploadId);
       Preconditions.checkNotNull(uploadId, "Null uploadId");
+      // if another upload has failed, throw it rather than try to submit
+      // a new upload
       maybeRethrowUploadFailure();
       partsSubmitted++;
       final long size = block.dataSize();
@@ -943,6 +945,9 @@ class S3ABlockOutputStream extends OutputStream implements
       final RequestBody requestBody;
       try {
         uploadData = block.startUpload();
+        // get the content provider from the upload data; this allows
+        // different buffering mechanisms to provide their own
+        // implementations of efficient and recoverable content streams.
         requestBody = RequestBody.fromContentProvider(
             uploadData.getContentProvider(),
             uploadData.getSize(),
@@ -954,7 +959,7 @@ class S3ABlockOutputStream extends OutputStream implements
             currentPartNumber,
             size).build();
       } catch (IOException e) {
-        // failure to start the upload.
+        // failure to prepare the upload.
         noteUploadFailure(e);
         throw e;
       }
@@ -1096,22 +1101,23 @@ class S3ABlockOutputStream extends OutputStream implements
 
     /**
      * Cancel all active uploads and close all blocks.
+     * This waits for {@link #TIME_TO_AWAIT_CANCEL_COMPLETION}
+     * for the cancellations to be processed.
      * All exceptions thrown by the futures are ignored. as is any TimeoutException.
      */
     private void cancelAllActiveUploads() {
 
       // interrupt futures if not already attempted
 
-      LOG.debug("Cancelling futures");
+      LOG.debug("Cancelling {} futures", partETagsFutures.size());
       cancelAllFuturesAndAwaitCompletion(partETagsFutures,
           true,
           TIME_TO_AWAIT_CANCEL_COMPLETION);
 
       // now close all the blocks.
       LOG.debug("Closing blocks");
-      blocksToClose.entrySet().forEach(entry -> {
-        cleanupWithLogger(LOG, entry.getValue());
-      });
+      blocksToClose.forEach((key1, value) ->
+          cleanupWithLogger(LOG, value));
     }
 
     /**
@@ -1119,8 +1125,9 @@ class S3ABlockOutputStream extends OutputStream implements
      * Sometimes it fails; here retries are handled to avoid losing all data
      * on a transient failure.
      * @param partETags list of partial uploads
-     * @throws IOException on any problem
+     * @throws IOException on any problem which did not recover after retries.
      */
+    @Retries.RetryTranslated
     private void complete(List<CompletedPart> partETags)
         throws IOException {
       maybeRethrowUploadFailure();
@@ -1148,6 +1155,7 @@ class S3ABlockOutputStream extends OutputStream implements
      * IOExceptions are caught; this is expected to be run as a cleanup process.
      * @return any caught exception.
      */
+    @Retries.RetryTranslated
     private IOException abort() {
       try {
         // set the cancel flag so any newly scheduled uploads exit fast.

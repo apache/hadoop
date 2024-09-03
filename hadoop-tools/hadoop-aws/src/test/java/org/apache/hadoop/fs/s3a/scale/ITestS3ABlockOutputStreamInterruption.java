@@ -201,6 +201,7 @@ public class ITestS3ABlockOutputStreamInterruption extends S3AScaleTestBase {
         Thread.currentThread(),
         TRANSFER_PART_STARTED_EVENT);
     final FSDataOutputStream out = createFile(path, listener);
+    // write it twice to force a multipart upload
     out.write(dataset);
     out.write(dataset);
     expectCloseInterrupted(out);
@@ -362,7 +363,11 @@ public class ITestS3ABlockOutputStreamInterruption extends S3AScaleTestBase {
   /**
    * Interrupt a thread performing close() on a simple PUT.
    * This is less complex than the multipart upload case
-   * because the progress callback should be the current thread.
+   * because the progress callback should be on the current thread.
+   * <p>
+   * We do expect exception translation to map the interruption to
+   * a {@code InterruptedIOException} and the count of interrupted events
+   * to increase.
    */
   @Test
   public void testInterruptSimplePut() throws Throwable {
@@ -471,7 +476,6 @@ public class ITestS3ABlockOutputStreamInterruption extends S3AScaleTestBase {
           action.apply();
         } catch (IOException e) {
           LOG.warn("action failed", e);
-
         }
       }
     }
