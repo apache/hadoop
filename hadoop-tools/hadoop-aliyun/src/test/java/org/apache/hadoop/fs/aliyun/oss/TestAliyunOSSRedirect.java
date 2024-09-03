@@ -18,56 +18,50 @@
 
 package org.apache.hadoop.fs.aliyun.oss;
 
+// Standard Java imports
+import java.io.IOException;
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
+
+// SLF4J imports
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+// Apache imports
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.math3.analysis.function.Log;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
+import com.aliyun.oss.common.auth.CredentialsProvider;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.contract.ContractTestUtils;
-import org.apache.hadoop.fs.impl.prefetch.ExceptionAsserts;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.VersionInfo;
-import org.apache.hadoop.fs.FileStatus;
+
+// Aliyun OSS imports
+import com.aliyun.oss.ClientConfiguration;
+import com.aliyun.oss.OSSClient;
+import com.aliyun.oss.OSSException;
+import com.aliyun.oss.common.comm.Protocol;
+import com.aliyun.oss.model.RoutingRule;
+import com.aliyun.oss.model.SetBucketWebsiteRequest;
+import com.aliyun.oss.ClientException;
+
+// JUnit imports
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.internal.AssumptionViolatedException;
 import org.junit.rules.Timeout;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.xbill.DNS.tools.primary;
-
-import com.aliyun.oss.ClientConfiguration;
-import com.aliyun.oss.OSSClient;
-import com.aliyun.oss.OSSException;
-import com.aliyun.oss.common.auth.CredentialsProvider;
-import com.aliyun.oss.common.comm.Protocol;
-import com.aliyun.oss.model.BucketWebsiteResult;
-import com.aliyun.oss.model.CannedAccessControlList;
-import com.aliyun.oss.model.RoutingRule;
-import com.aliyun.oss.model.SetBucketWebsiteRequest;
-
-import java.io.IOException;
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Random;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.apache.hadoop.fs.aliyun.oss.Constants.*;
-import static org.hamcrest.CoreMatchers.nullValue;
-
-import com.aliyun.oss.ClientException;
 
 /**
- * Tests basic functionality for AliyunOSSInputStream, including seeking and
- * reading files.
+ * This test checks the redirection behavior of Aliyun OSS. 
+ * When the redirection feature is available, it will access the 
+ * redirected target file
  */
 public class TestAliyunOSSRedirect {
 
@@ -103,15 +97,6 @@ public class TestAliyunOSSRedirect {
     cleanRedirectRule(ossClient);
     if (ossClient != null) {
       ossClient.shutdown();
-    }
-
-  }
-
-  private Path setPath(String path) {
-    if (path.startsWith("/")) {
-      return new Path(testRootPath + path);
-    } else {
-      return new Path(testRootPath + "/" + path);
     }
   }
 
@@ -259,7 +244,7 @@ public class TestAliyunOSSRedirect {
     conf.setBoolean(REDIRECT_ENABLE_KEY, false);
     fs = AliyunOSSTestUtils.createTestFileSystem(conf);
 
-    Path srcFilePath = setPath("redirect_test_src.txt");
+    Path srcFilePath = new Path(testRootPath,"redirect_test_src.txt");
     assertThrows(IOException.class, () -> this.fs.open(srcFilePath));
   }
 
@@ -269,7 +254,7 @@ public class TestAliyunOSSRedirect {
     conf.setBoolean(REDIRECT_ENABLE_KEY, true);
     fs = AliyunOSSTestUtils.createTestFileSystem(conf);
 
-    Path srcFilePath = setPath("redirect_test_src.txt");
+    Path srcFilePath = new Path(testRootPath, "redirect_test_src.txt");
     FSDataInputStream instream = this.fs.open(srcFilePath);
     byte[] content = IOUtils.readFullyToByteArray(instream);
     IOUtils.closeStream(instream);

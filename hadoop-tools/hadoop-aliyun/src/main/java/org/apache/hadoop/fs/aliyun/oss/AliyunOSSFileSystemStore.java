@@ -149,10 +149,8 @@ public class AliyunOSSFileSystemStore {
 
     boolean redirectEnable = conf.getBoolean(REDIRECT_ENABLE_KEY,
     REDIRECT_ENABLE_DEFAULT);
-    if (!redirectEnable) {
-      clientConf.setRedirectEnable(false);
-      LOG.info("oss redirectEnable closed");
-    }
+    clientConf.setRedirectEnable(redirectEnable);
+    LOG.debug("oss redirectEnable " + redirectEnable);
 
     String endPoint = conf.getTrimmed(ENDPOINT_KEY, "");
     if (StringUtils.isEmpty(endPoint)) {

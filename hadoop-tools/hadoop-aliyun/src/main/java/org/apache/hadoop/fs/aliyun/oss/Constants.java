@@ -212,7 +212,17 @@ public final class Constants {
 
   public static final int DEFAULT_LIST_VERSION = 2;
 
-  // oss redirect
+  /**
+   * This flag is used to configure whether to enable the redirection 
+   * feature for the OSS client. The default value is 
+   * Value: {@value #REDIRECT_ENABLE_DEFAULT}
+   * For some security reasons, you may need to disable this feature,
+   * You can do so by setting {@link #REDIRECT_ENABLE_DEFAULT} to false.
+   */
   public static final String REDIRECT_ENABLE_KEY = "fs.oss.redirect.enable";
+
+  /**
+   * This value of {@link #REDIRECT_ENABLE_KEY}: {@value}
+   */
   public static final boolean REDIRECT_ENABLE_DEFAULT = true;
 }
