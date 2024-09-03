@@ -59,8 +59,8 @@ import static org.junit.Assert.assertTrue;
 import static org.apache.hadoop.fs.aliyun.oss.Constants.*;
 
 /**
- * This test checks the redirection behavior of Aliyun OSS. 
- * When the redirection feature is available, it will access the 
+ * This test checks the redirection behavior of Aliyun OSS.
+ * When the redirection feature is available, it will access the
  * redirected target file
  */
 public class TestAliyunOSSRedirect {
