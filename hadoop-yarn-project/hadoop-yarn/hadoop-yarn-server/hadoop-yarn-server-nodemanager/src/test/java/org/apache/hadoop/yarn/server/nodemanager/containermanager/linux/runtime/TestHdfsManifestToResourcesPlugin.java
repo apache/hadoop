@@ -54,7 +54,7 @@ public class TestHdfsManifestToResourcesPlugin {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestHdfsManifestToResourcesPlugin.class);
   private Configuration conf;
-  private String tmpPath = new StringBuffer(
+  private String tmpPath = new StringBuilder(
       System.getProperty("test.build.data"))
       .append('/').append("hadoop.tmp.dir").toString();
   private static final String LAYER_MEDIA_TYPE =

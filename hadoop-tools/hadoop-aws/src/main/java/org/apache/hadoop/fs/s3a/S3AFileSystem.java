@@ -3828,7 +3828,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             createStoreContext(),
             path,
             createMkdirOperationCallbacks(),
-            isMagicCommitPath(path)));
+            isMagicCommitPath(path),
+            performanceFlags.enabled(PerformanceFlagEnum.Mkdir)));
   }
 
   /**
@@ -4281,7 +4282,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           new MkdirOperation(
               storeContext,
               path,
-              createMkdirOperationCallbacks(), false));
+              createMkdirOperationCallbacks(),
+              false,
+              performanceFlags.enabled(PerformanceFlagEnum.Mkdir)));
     }
   }
 
@@ -5557,10 +5560,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     case DIRECTORY_LISTING_INCONSISTENT:
       return s3ExpressStore;
 
-    // etags are avaialable in listings, but they
+    // etags are available in listings, but they
     // are not consistent across renames.
     // therefore, only availability is declared
     case CommonPathCapabilities.ETAGS_AVAILABLE:
+      // block locations are generated locally
+    case CommonPathCapabilities.VIRTUAL_BLOCK_LOCATIONS:
       return true;
 
        /*

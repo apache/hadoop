@@ -101,6 +101,8 @@ public final class AbfsHttpConstants {
   public static final String GMT_TIMEZONE = "GMT";
   public static final String APPLICATION_JSON = "application/json";
   public static final String APPLICATION_OCTET_STREAM = "application/octet-stream";
+  public static final String XMS_PROPERTIES_ENCODING_ASCII = "ISO-8859-1";
+  public static final String XMS_PROPERTIES_ENCODING_UNICODE = "UTF-8";
 
   public static final String ROOT_PATH = "/";
   public static final String ACCESS_MASK = "mask:";

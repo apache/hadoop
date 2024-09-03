@@ -117,7 +117,7 @@ public class JobInfo {
       this.diagnostics = "";
       List<String> diagnostics = job.getDiagnostics();
       if (diagnostics != null && !diagnostics.isEmpty()) {
-        StringBuffer b = new StringBuffer();
+        StringBuilder b = new StringBuilder();
         for (String diag : diagnostics) {
           b.append(diag);
         }

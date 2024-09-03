@@ -168,7 +168,7 @@ public class TestRuncContainerRuntime {
     mockExecutor = Mockito
         .mock(PrivilegedOperationExecutor.class);
     mockCGroupsHandler = Mockito.mock(CGroupsHandler.class);
-    tmpPath = new StringBuffer(System.getProperty("test.build.data"))
+    tmpPath = new StringBuilder(System.getProperty("test.build.data"))
       .append('/').append("hadoop.tmp.dir").toString();
     containerId = "container_e11_1518975676334_14532816_01_000001";
     container = mock(Container.class);
