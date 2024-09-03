@@ -69,6 +69,7 @@ public final class S3ADataBlocks {
    * @param len number of bytes to be written
    * @throws NullPointerException for a null buffer
    * @throws IndexOutOfBoundsException if indices are out of range
+   * @throws IOException never but in signature of methods called.
    */
   static void validateWriteArgs(byte[] b, int off, int len)
       throws IOException {
@@ -187,6 +188,9 @@ public final class S3ADataBlocks {
    */
   public static abstract class BlockFactory implements Closeable {
 
+    /**
+     * Store context; left as "owner" for historical reasons.
+     */
     private final StoreContext owner;
 
     protected BlockFactory(StoreContext owner) {
@@ -201,6 +205,8 @@ public final class S3ADataBlocks {
      * @param limit limit of the block.
      * @param statistics stats to work with
      * @return a new block.
+     * @throws IOException any failure to create a block in the local FS.
+     * @throws OutOfMemoryError lack of space to create any memory buffer
      */
     abstract DataBlock create(long index, long limit,
         BlockOutputStreamStatistics statistics)
@@ -218,7 +224,7 @@ public final class S3ADataBlocks {
 
     /**
      * Owner.
-     * @return the owner of the factory.
+     * @return the store context of the factory.
      */
     protected StoreContext getOwner() {
       return owner;
@@ -390,7 +396,7 @@ public final class S3ADataBlocks {
     /**
      * A block has been allocated.
      */
-    protected void blockAllocated() {
+    protected final void blockAllocated() {
       if (statistics != null) {
         statistics.blockAllocated();
       }
@@ -399,7 +405,7 @@ public final class S3ADataBlocks {
     /**
      * A block has been released.
      */
-    protected void blockReleased() {
+    protected final void blockReleased() {
       if (statistics != null) {
         statistics.blockReleased();
       }
@@ -748,6 +754,14 @@ public final class S3ADataBlocks {
     private BufferedOutputStream out;
     private final AtomicBoolean closed = new AtomicBoolean(false);
 
+    /**
+     * A disk block.
+     * @param bufferFile file to write to
+     * @param limit block size limit
+     * @param index index in output stream
+     * @param statistics statistics to upaste
+     * @throws FileNotFoundException if the file cannot be created.
+     */
     DiskBlock(File bufferFile,
         long limit,
         long index,

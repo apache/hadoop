@@ -342,14 +342,14 @@ S3 region as `ca-central-1`.
 ### <a name="request_timeout"></a> 400 + RequestTimeout "Your socket connection to the server was not read from or written to within the timeout period"
 
 ```
-org.apache.hadoop.fs.s3a.AWSBadRequestException: upload part #1 upload ID KylDNXbmiZlZE5JI2aKVcVeA66ly:
+org.apache.hadoop.fs.s3a.AWSBadRequestException: upload part #1 upload ID 1122334455:
   software.amazon.awssdk.services.s3.model.S3Exception:
   Your socket connection to the server was not read from or written to within the timeout period.
   Idle connections will be closed.
-  (Service: S3, Status Code: 400, Request ID: TT17CRYF6HJH2G0Y, Extended Request ID: ...):
+  (Service: S3, Status Code: 400, Request ID: 1122334455, Extended Request ID: ...):
   RequestTimeout:
    Your socket connection to the server was not read from or written to within the timeout period.
-   Idle connections will be closed. (Service: S3, Status Code: 400, Request ID: TT17CRYF6HJH2G0Y, Extended Request ID: ...
+   Idle connections will be closed. (Service: S3, Status Code: 400, Request ID: 1122334455, Extended Request ID: ...
 ```
 
 This is an obscure failure which was encountered as part of
@@ -579,13 +579,23 @@ Retrying _should_ make it go away.
 The 500 error is considered retryable by the AWS SDK, which will have already
 tried it `fs.s3a.attempts.maximum` times before reaching the S3A client -which
 will also retry.
+ 
+The S3A client will attempt to retry on a 500 (or other 5xx error other than 501/503)
+if the option `fs.s3a.retry.http.5xx.errors` is set to `true`.
+This is the default.
+```xml
+<property>
+  <name>fs.s3a.retry.http.5xx.errors</name>
+  <value>true</value>
+</property>
+```
 
 If encountered against a third party store (the lack of an extended request ID always implies this),
-then it may be a permanent server-side failure. Fix that.
+then it may be a permanent server-side failure.
 
 * All HTTP status codes other than 503 (service unavailable) and 501 (unsupported) are
 treated as 500 exceptions.
-* The S3A Filesystem IOStatistics count the number of 500 errors received.
+* The S3A Filesystem IOStatistics counts the number of 500 errors received.
 
 ## <a name="503 Throttling"></a> HTTP 503 status code "slow down" or 429 "Too Many Requests"
 

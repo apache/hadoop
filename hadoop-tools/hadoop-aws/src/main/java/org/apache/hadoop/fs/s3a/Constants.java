@@ -1138,7 +1138,7 @@ public final class Constants {
   /**
    * Default value for {@link #RETRY_HTTP_5XX_ERRORS}: {@value}.
    */
-  public static final boolean DEFAULT_RETRY_HTTP_5XX_ERRORS = false;
+  public static final boolean DEFAULT_RETRY_HTTP_5XX_ERRORS = true;
 
   /**
    * Should etags be exposed as checksums?

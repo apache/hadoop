@@ -139,6 +139,10 @@ public class ITestUploadRecovery extends AbstractS3ACostTest {
 
     // guarantees teardown will abort pending uploads.
     conf.setBoolean(DIRECTORY_OPERATIONS_PURGE_UPLOADS, true);
+
+    // fail fast on 500 errors
+    conf.setBoolean(DIRECTORY_OPERATIONS_PURGE_UPLOADS, false);
+
     // use the fault injector
     SdkFaultInjector.addFaultInjection(conf);
     return conf;

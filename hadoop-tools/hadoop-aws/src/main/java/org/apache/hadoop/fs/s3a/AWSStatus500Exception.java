@@ -30,8 +30,11 @@ import software.amazon.awssdk.awscore.exception.AwsServiceException;
  * These are rare, but can occur; they are considered retryable.
  * Note that HADOOP-19221 shows a failure condition where the
  * SDK itself did not recover on retry from the error.
- * In S3A code, retries only happen if the retry policy configuration
- * enables it.
+ * In S3A code, retries happen if the retry policy configuration
+ * {@code fs.s3a.retry.http.5xx.errors} is {@code true}.
+ * <p>
+ * In third party stores it may have a similar meaning -though it
+ * can often just mean "misconfigured server".
  */
 public class AWSStatus500Exception extends AWSServiceIOException {
   public AWSStatus500Exception(String operation,

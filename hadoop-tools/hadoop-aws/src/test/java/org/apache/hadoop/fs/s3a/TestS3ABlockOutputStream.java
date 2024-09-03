@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.ClosedIOException;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.audit.AuditTestSupport;
 import org.apache.hadoop.fs.s3a.commit.PutTracker;
@@ -122,7 +123,7 @@ public class TestS3ABlockOutputStream extends AbstractS3AMockTest {
 
     // This verification replaces testing various operations after calling
     // abort: after calling abort, stream is closed like calling close().
-    intercept(IOException.class, () -> stream.checkOpen());
+    intercept(ClosedIOException.class, () -> stream.checkOpen());
 
     // check that calling write() will call checkOpen() and throws exception
     doThrow(new StreamClosedException()).when(stream).checkOpen();

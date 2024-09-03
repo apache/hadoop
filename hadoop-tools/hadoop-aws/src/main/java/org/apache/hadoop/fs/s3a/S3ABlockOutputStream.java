@@ -37,6 +37,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import javax.annotation.Nonnull;
+
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.model.CompletedPart;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
@@ -44,6 +46,8 @@ import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.ClosedIOException;
 import org.apache.hadoop.fs.s3a.impl.ProgressListener;
 import org.apache.hadoop.fs.s3a.impl.ProgressListenerEvent;
 import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
@@ -222,8 +226,16 @@ class S3ABlockOutputStream extends OutputStream implements
    * An S3A output stream which uploads partitions in a separate pool of
    * threads; different {@link S3ADataBlocks.BlockFactory}
    * instances can control where data is buffered.
-   * @throws IOException on any problem
+   * If the passed in put tracker returns true on
+   * {@link PutTracker#initialize()} then a multipart upload is
+   * initiated; this triggers a remote call to the store.
+   * On a normal upload no such operation takes place; the only
+   * failures which surface will be related to buffer creation.
+   * @throws IOException on any problem initiating a multipart upload or creating
+   *                     a disk storage buffer.
+   * @throws OutOfMemoryError lack of space to create any memory buffer
    */
+  @Retries.RetryTranslated
   S3ABlockOutputStream(BlockOutputStreamBuilder builder)
       throws IOException {
     builder.validate();
@@ -268,7 +280,8 @@ class S3ABlockOutputStream extends OutputStream implements
   /**
    * Demand create a destination block.
    * @return the active block; null if there isn't one.
-   * @throws IOException on any failure to create
+   * @throws IOException any failure to create a block in the local FS.
+   * @throws OutOfMemoryError lack of space to create any memory buffer
    */
   private synchronized S3ADataBlocks.DataBlock createBlockIfNeeded()
       throws IOException {
@@ -312,12 +325,13 @@ class S3ABlockOutputStream extends OutputStream implements
   }
 
   /**
-   * Check for the filesystem being open.
-   * @throws IOException if the filesystem is closed.
+   * Check for the stream being open.
+   * @throws ClosedIOException if the stream is closed.
    */
-  void checkOpen() throws IOException {
+  @VisibleForTesting
+  void checkOpen() throws ClosedIOException {
     if (closed.get()) {
-      throw new IOException("Filesystem " + writeOperationHelper + " closed");
+      throw new ClosedIOException(key, "Stream is closed:  " + this);
     }
   }
 
@@ -325,13 +339,16 @@ class S3ABlockOutputStream extends OutputStream implements
    * The flush operation does not trigger an upload; that awaits
    * the next block being full. What it does do is call {@code flush() }
    * on the current block, leaving it to choose how to react.
-   * @throws IOException Any IO problem.
+   * <p>
+   * If the stream is closed, a warning is logged but the exception
+   * is swallowed.
+   * @throws IOException Any IO problem flushing the active data block.
    */
   @Override
   public synchronized void flush() throws IOException {
     try {
       checkOpen();
-    } catch (IOException e) {
+    } catch (ClosedIOException e) {
       LOG.warn("Stream closed: {}", e.getMessage());
       return;
     }
@@ -358,13 +375,17 @@ class S3ABlockOutputStream extends OutputStream implements
    * buffer to reach its limit, the actual upload is submitted to the
    * threadpool and the remainder of the array is written to memory
    * (recursively).
+   * In such a case, if not already initiated, a multipart upload is
+   * started.
    * @param source byte array containing
    * @param offset offset in array where to start
    * @param len number of bytes to be written
    * @throws IOException on any problem
+   * @throws ClosedIOException if the stream is closed.
    */
   @Override
-  public synchronized void write(byte[] source, int offset, int len)
+  @Retries.RetryTranslated
+  public synchronized void write(@Nonnull byte[] source, int offset, int len)
       throws IOException {
 
     S3ADataBlocks.validateWriteArgs(source, offset, len);
@@ -453,6 +474,7 @@ class S3ABlockOutputStream extends OutputStream implements
    * @throws InterruptedIOException if the wait for uploads to complete was interrupted.
    */
   @Override
+  @Retries.RetryTranslated
   public void close() throws IOException {
     if (closed.getAndSet(true)) {
       // already closed
@@ -565,6 +587,7 @@ class S3ABlockOutputStream extends OutputStream implements
    * @return any exception caught during the operation. If FileNotFoundException
    * it means the upload was not found.
    */
+  @Retries.RetryTranslated
   private synchronized IOException maybeAbortMultipart() {
     if (multiPartUpload != null) {
       try {
@@ -582,6 +605,7 @@ class S3ABlockOutputStream extends OutputStream implements
    * @return the outcome
    */
   @Override
+  @Retries.RetryTranslated
   public AbortableResult abort() {
     if (closed.getAndSet(true)) {
       // already closed
@@ -659,6 +683,7 @@ class S3ABlockOutputStream extends OutputStream implements
    * @return number of bytes uploaded.
    * @throws IOException any problem.
    */
+  @Retries.RetryTranslated
   private long putObject() throws IOException {
     LOG.debug("Executing regular upload for {}", writeOperationHelper);
 
@@ -788,6 +813,7 @@ class S3ABlockOutputStream extends OutputStream implements
 
   /**
    * Shared processing of Syncable operation reporting/downgrade.
+   * @throws UnsupportedOperationException if required.
    */
   private void handleSyncableInvocation() {
     final UnsupportedOperationException ex
@@ -820,14 +846,35 @@ class S3ABlockOutputStream extends OutputStream implements
    * Multiple partition upload.
    */
   private class MultiPartUpload {
+
+    /**
+     * ID of this upload.
+     */
     private final String uploadId;
 
+    /**
+     * List of completed uploads, in order of blocks written.
+     */
     private final List<Future<CompletedPart>> partETagsFutures =
         Collections.synchronizedList(new ArrayList<>());
+
     /** blocks which need to be closed when aborting a stream. */
-    private final Map<Integer, S3ADataBlocks.DataBlock> blocksToClose = new ConcurrentHashMap<>();
+    private final Map<Integer, S3ADataBlocks.DataBlock> blocksToClose =
+        new ConcurrentHashMap<>();
+
+    /**
+     * Count of parts submitted, including those queued.
+     */
     private int partsSubmitted;
+
+    /**
+     * Count of parts which have actually been uploaded.
+     */
     private int partsUploaded;
+
+    /**
+     * Count of bytes submitted.
+     */
     private long bytesSubmitted;
 
     /**
@@ -850,7 +897,6 @@ class S3ABlockOutputStream extends OutputStream implements
      * @param key upload destination
      * @throws IOException failure
      */
-
     @Retries.RetryTranslated
     MultiPartUpload(String key) throws IOException {
       this.uploadId = trackDuration(statistics,
@@ -921,9 +967,12 @@ class S3ABlockOutputStream extends OutputStream implements
     /**
      * Upload a block of data.
      * This will take the block and queue it for upload.
+     * There is no communication with S3 in this operation;
+     * it is all done in the asynchronous threads.
      * @param block block to upload
      * @param isLast this the last block?
-     * @throws IOException upload failure
+     * @throws IOException failure to initiate upload or a previous exception
+     *                     has been raised -which is then rethrown.
      * @throws PathIOException if too many blocks were written
      */
     private void uploadBlockAsync(final S3ADataBlocks.DataBlock block,
@@ -1278,7 +1327,7 @@ class S3ABlockOutputStream extends OutputStream implements
 
   /**
    * Create a builder.
-   * @return
+   * @return a new builder.
    */
   public static BlockOutputStreamBuilder builder() {
     return new BlockOutputStreamBuilder();
@@ -1491,6 +1540,11 @@ class S3ABlockOutputStream extends OutputStream implements
       return this;
     }
 
+    /**
+     * Is multipart upload enabled?
+     * @param value the new value
+     * @return the builder
+     */
     public BlockOutputStreamBuilder withMultipartEnabled(
         final boolean value) {
       isMultipartUploadEnabled = value;
