@@ -579,7 +579,7 @@ Retrying _should_ make it go away.
 The 500 error is considered retryable by the AWS SDK, which will have already
 tried it `fs.s3a.attempts.maximum` times before reaching the S3A client -which
 will also retry.
- 
+
 The S3A client will attempt to retry on a 500 (or other 5xx error other than 501/503)
 if the option `fs.s3a.retry.http.5xx.errors` is set to `true`.
 This is the default.

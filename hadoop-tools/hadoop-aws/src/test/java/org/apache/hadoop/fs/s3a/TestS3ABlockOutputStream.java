@@ -87,7 +87,7 @@ public class TestS3ABlockOutputStream extends AbstractS3AMockTest {
 
   @Test
   public void testFlushNoOpWhenStreamClosed() throws Exception {
-    doThrow(new IOException()).when(stream).checkOpen();
+    doThrow(new StreamClosedException()).when(stream).checkOpen();
 
     stream.flush();
   }
@@ -115,7 +115,12 @@ public class TestS3ABlockOutputStream extends AbstractS3AMockTest {
             "uploadId", 50000, 1024));
   }
 
-  static class StreamClosedException extends IOException {}
+  static class StreamClosedException extends ClosedIOException {
+
+    StreamClosedException() {
+      super("path", "message");
+    }
+  }
 
   @Test
   public void testStreamClosedAfterAbort() throws Exception {
