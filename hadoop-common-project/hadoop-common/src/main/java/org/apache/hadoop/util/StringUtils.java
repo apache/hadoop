@@ -245,7 +245,7 @@ public class StringUtils {
   /**
    * @param str
    *          The string array to be parsed into an URI array.
-   * @return <tt>null</tt> if str is <tt>null</tt>, else the URI array
+   * @return <code>null</code> if str is <code>null</code>, else the URI array
    *         equivalent to str.
    * @throws IllegalArgumentException
    *           If any string in str violates RFC&nbsp;2396.

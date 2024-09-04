@@ -53,18 +53,18 @@ import org.slf4j.event.Level;
  * The benchmark supports three authentication methods:
  * <ol>
  * <li>simple - no authentication. In order to enter this mode 
- * the configuration file <tt>core-site.xml</tt> should specify
- * <tt>hadoop.security.authentication = simple</tt>.
+ * the configuration file <code>core-site.xml</code> should specify
+ * <code>hadoop.security.authentication = simple</code>.
  * This is the default mode.</li>
  * <li>kerberos - kerberos authentication. In order to enter this mode 
- * the configuration file <tt>core-site.xml</tt> should specify
- * <tt>hadoop.security.authentication = kerberos</tt> and 
+ * the configuration file <code>core-site.xml</code> should specify
+ * <code>hadoop.security.authentication = kerberos</code> and
  * the argument string should provide qualifying
- * <tt>keytabFile</tt> and <tt>userName</tt> parameters.
+ * <code>keytabFile</code> and <code>userName</code> parameters.
  * <li>delegation token - authentication using delegation token.
  * In order to enter this mode the benchmark should provide all the
  * mentioned parameters for kerberos authentication plus the
- * <tt>useToken</tt> argument option.
+ * <code>useToken</code> argument option.
  * </ol>
  * Input arguments:
  * <ul>

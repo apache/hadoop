@@ -110,7 +110,7 @@ public class TestSafeMode {
    * Name-node should stay in automatic safe-mode.</li>
    * <li>Enter safe mode manually.</li>
    * <li>Start the data-node.</li>
-   * <li>Wait longer than <tt>dfs.namenode.safemode.extension</tt> and 
+   * <li>Wait longer than <code>dfs.namenode.safemode.extension</code> and
    * verify that the name-node is still in safe mode.</li>
    * </ol>
    *  
