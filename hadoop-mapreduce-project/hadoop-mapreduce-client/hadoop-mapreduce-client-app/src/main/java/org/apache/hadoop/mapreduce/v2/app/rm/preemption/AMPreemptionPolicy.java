@@ -109,7 +109,7 @@ public interface AMPreemptionPolicy {
    * TaskId}. Assigning a null is akin to remove all previous checkpoints for
    * this task.
    * @param taskId TaskID
-   * @param cid Checkpoint to assign or <tt>null</tt> to remove it.
+   * @param cid Checkpoint to assign or <code>null</code> to remove it.
    */
   public void setCheckpointID(TaskId taskId, TaskCheckpointID cid);
 

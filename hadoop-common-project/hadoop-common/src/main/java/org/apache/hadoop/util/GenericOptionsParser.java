@@ -54,7 +54,7 @@ import org.slf4j.LoggerFactory;
  * line arguments, enabling applications to easily specify a namenode, a 
  * ResourceManager, additional configuration resources etc.
  * 
- * <h3 id="GenericOptions">Generic Options</h3>
+ * <h2 id="GenericOptions">Generic Options</h2>
  * 
  * <p>The supported generic options are:</p>
  * <blockquote>
