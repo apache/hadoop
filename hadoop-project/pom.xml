@@ -158,7 +158,6 @@
 
     <!-- define the Java language version used by the compiler -->
     <javac.version>1.8</javac.version>
-    <javadoc.skip.jdk11>false</javadoc.skip.jdk11>
 
     <!-- The java version enforced by the maven enforcer -->
     <!-- more complex patterns can be used here, such as
@@ -2718,28 +2717,6 @@
 
         </dependencies>
       </dependencyManagement>
-    </profile>
-    <profile>
-      <id>jdk11</id>
-      <activation>
-        <jdk>[11,)</jdk>
-      </activation>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-javadoc-plugin</artifactId>
-            <configuration>
-              <skip>${javadoc.skip.jdk11}</skip>
-              <detectJavaApiLink>false</detectJavaApiLink>
-              <additionalOptions>
-                <!-- TODO: remove -html4 option to generate html5 docs when we stop supporting JDK8 -->
-                <additionalOption>-html4</additionalOption>
-              </additionalOptions>
-            </configuration>
-          </plugin>
-        </plugins>
-      </build>
     </profile>
   </profiles>
 

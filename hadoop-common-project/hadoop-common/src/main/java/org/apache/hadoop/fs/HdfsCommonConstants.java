@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -15,28 +15,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.hadoop.fs;
 
-import java.io.IOException;
-import java.util.NoSuchElementException;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.io.Text;
+
 /**
- * An iterator over a collection whose elements need to be fetched remotely
+ * This class contains constants for configuration keys and default values.
  */
-public interface RemoteIterator<E> {
-  /**
-   * Returns <code>true</code> if the iteration has more elements.
-   *
-   * @return <code>true</code> if the iterator has more elements.
-   * @throws IOException if any IO error occurs
-   */
-  boolean hasNext() throws IOException;
+@InterfaceAudience.LimitedPrivate({"YARN", "HDFS"})
+@InterfaceStability.Evolving
+public final class HdfsCommonConstants {
 
   /**
-   * Returns the next element in the iteration.
-   *
-   * @return the next element in the iteration.
-   * @throws NoSuchElementException iteration has no more elements.
-   * @throws IOException if any IO error occurs
+   * Represents the kind of delegation token used for HDFS.
+   * This is a constant string value "HDFS_DELEGATION_TOKEN".
    */
-  E next() throws IOException;
+  public static final Text HDFS_DELEGATION_KIND =
+      new Text("HDFS_DELEGATION_TOKEN");
+
+  /**
+   * DFS_ADMIN configuration: {@value}.
+   */
+  public static final String DFS_ADMIN = "dfs.cluster.administrators";
+
+  private HdfsCommonConstants() {
+  }
+
 }
