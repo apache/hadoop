@@ -139,9 +139,9 @@ public class DistCp extends Configured implements Tool {
     }
     
     try {
-      DistCpContext context = new DistCpContext(OptionsParser.parse(argv));
-      LOG.info("Input Options: " + context);
-      setContext(context);
+      DistCpContext ctx = new DistCpContext(OptionsParser.parse(argv));
+      LOG.info("Input Options: " + ctx);
+      setContext(ctx);
     } catch (Throwable e) {
       LOG.error("Invalid arguments: ", e);
       System.err.println("Invalid arguments: " + e.getMessage());
@@ -151,7 +151,7 @@ public class DistCp extends Configured implements Tool {
 
     Job job = null;
     try {
-      job = execute();
+      job = execute(true);
     } catch (InvalidInputException e) {
       LOG.error("Invalid input: ", e);
       return DistCpConstants.INVALID_ARGUMENT;
@@ -180,17 +180,23 @@ public class DistCp extends Configured implements Tool {
     return DistCpConstants.SUCCESS;
   }
 
+  public Job execute() throws Exception {
+    return execute(false);
+  }
+
   /**
    * Implements the core-execution. Creates the file-list for copy,
    * and launches the Hadoop-job, to do the copy.
    * @return Job handle
    * @throws Exception
    */
-  public Job execute() throws Exception {
+  public Job execute(boolean extraContextChecks) throws Exception {
     Preconditions.checkState(context != null,
         "The DistCpContext should have been created before running DistCp!");
-    checkSplitLargeFile();
-    setTargetPathExists();
+    if (extraContextChecks) {
+      checkSplitLargeFile();
+      setTargetPathExists();
+    }
 
     Job job = createAndSubmitJob();
 
