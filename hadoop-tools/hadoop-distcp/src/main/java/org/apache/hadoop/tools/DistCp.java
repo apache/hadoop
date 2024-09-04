@@ -139,9 +139,8 @@ public class DistCp extends Configured implements Tool {
     }
     
     try {
-      DistCpContext ctx = new DistCpContext(OptionsParser.parse(argv));
-      LOG.info("Input Options: " + ctx);
-      setContext(ctx);
+      context = new DistCpContext(OptionsParser.parse(argv));
+      LOG.info("Input Options: {}", context);
     } catch (Throwable e) {
       LOG.error("Invalid arguments: ", e);
       System.err.println("Invalid arguments: " + e.getMessage());
@@ -180,6 +179,10 @@ public class DistCp extends Configured implements Tool {
     return DistCpConstants.SUCCESS;
   }
 
+  /**
+   * Original entrypoint of a distcp job. Calls {@link DistCp#execute(boolean))
+   * without doing extra context checks and setting some configs.
+   */
   public Job execute() throws Exception {
     return execute(false);
   }
@@ -187,6 +190,7 @@ public class DistCp extends Configured implements Tool {
   /**
    * Implements the core-execution. Creates the file-list for copy,
    * and launches the Hadoop-job, to do the copy.
+   * @param extraContextChecks if true, does extra context checks and sets some configs.
    * @return Job handle
    * @throws Exception
    */
@@ -444,15 +448,6 @@ public class DistCp extends Configured implements Tool {
    */
   protected DistCpContext getContext() {
     return context;
-  }
-
-  /**
-   * Sets the current context.
-   *
-   * @param context context to be set to.
-   */
-  public void setContext(DistCpContext context) {
-    this.context = context;
   }
 
   /**
