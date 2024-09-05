@@ -52,7 +52,6 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.ClusterStorageCapacityExceededException;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -61,6 +60,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.SecureIOUtils;
 import org.apache.hadoop.io.Writable;
@@ -547,7 +547,7 @@ public class AggregatedLogFormat {
     }
 
     @Override
-    public void close() throws ClusterStorageCapacityExceededException {
+    public void close() throws DSQuotaExceededException {
       try {
         if (writer != null) {
           writer.close();
@@ -557,7 +557,7 @@ public class AggregatedLogFormat {
       } finally {
         try {
           this.fsDataOStream.close();
-        } catch (ClusterStorageCapacityExceededException e) {
+        } catch (DSQuotaExceededException e) {
           LOG.error("Exception in closing {}",
               this.fsDataOStream.getClass(), e);
           throw e;
