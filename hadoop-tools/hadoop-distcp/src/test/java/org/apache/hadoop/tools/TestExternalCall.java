@@ -155,7 +155,6 @@ public class TestExternalCall {
 
     DistCp distcp = mock(DistCp.class);
     Job job = spy(Job.class);
-    Mockito.doCallRealMethod().when(distcp).setContext(Mockito.any());
     Mockito.when(distcp.getConf()).thenReturn(conf);
     Mockito.when(distcp.createAndSubmitJob()).thenReturn(job);
     Mockito.when(distcp.execute()).thenCallRealMethod();
