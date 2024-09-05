@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
+import org.mockito.ArgumentMatchers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -28,9 +29,11 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import java.io.FileNotFoundException;
+import java.util.Random;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
 
 /**
@@ -55,7 +58,8 @@ public class TestFSDirAttrOp {
     when(fsd.getAccessTimePrecision()).thenReturn(precision);
     when(fsd.hasWriteLock()).thenReturn(Boolean.TRUE);
     when(iip.getLastINode()).thenReturn(inode);
-    when(iip.getLatestSnapshotId()).thenReturn(Mockito.anyInt());
+    when(iip.getLatestSnapshotId()).thenReturn(new Random().nextInt());
+    when(inode.setModificationTime(anyLong(),anyInt())).thenReturn(inode);
     when(inode.getAccessTime()).thenReturn(atime0);
 
     return FSDirAttrOp.unprotectedSetTimes(fsd, iip, mtime, atime, force);
