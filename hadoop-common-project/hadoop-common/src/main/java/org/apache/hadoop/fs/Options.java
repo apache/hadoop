@@ -243,6 +243,53 @@ public final class Options {
   }
 
   /**
+   * Explicit declaration of file type;
+   * Implementations of {@link RenameOperation} may use this.
+   * <p>
+   * If a wrong file type is passed in, the call SHOULD fail;
+   * the failure mode is undefined.
+   * <p>
+   */
+  public enum RenameSourceType {
+
+    /** Source is known to be a file. */
+    File("file"),
+
+    /** Source is known to be a directory. */
+    Directory("directory"),
+
+    /** any type. */
+    Any("any");
+
+    private final String type;
+
+    RenameSourceType(final String type) {
+      this.type = type;
+    }
+
+    /**
+     * Find the matching type, falling back to {@link #Any}
+     * if no other match is found, the string is empty etc.
+     * @param type type to resolve.
+     * @return a valid source type.
+     */
+    public static RenameSourceType resolve(String type) {
+
+      for (RenameSourceType v: values()) {
+        if (v.type.equalsIgnoreCase(type)) {
+          return v;
+        }
+      }
+      return Any;
+    }
+
+    public String value() {
+      return type;
+    }
+
+  }
+
+  /**
    * This is used in FileSystem and FileContext to specify checksum options.
    */
   public static class ChecksumOpt {
