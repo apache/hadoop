@@ -23,11 +23,13 @@ import org.apache.hadoop.hdfs.util.StripedBlockUtil;
 import org.apache.hadoop.net.Node;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 class ErasureCodingWork extends BlockReconstructionWork {
   private final byte[] liveBlockIndices;
@@ -145,7 +147,17 @@ class ErasureCodingWork extends BlockReconstructionWork {
       // if we already have all the internal blocks, but not enough racks,
       // we only need to replicate one internal block to a new rack
       int sourceIndex = chooseSource4SimpleReplication();
-      createReplicationWork(sourceIndex, targets[0]);
+
+      // Try to find a target on a new rack
+      Set<String> racks = Arrays.stream(getSrcNodes())
+          .map(DatanodeDescriptor::getNetworkLocation)
+          .collect(Collectors.toSet());
+      DatanodeStorageInfo targetOnNewRack = Arrays.stream(targets).filter(target ->
+          target.getDatanodeDescriptor() != null &&
+              !racks.contains(target.getDatanodeDescriptor().getNetworkLocation())
+      ).findFirst().orElse(targets[0]);
+
+      createReplicationWork(sourceIndex, targetOnNewRack);
     } else if ((numberReplicas.decommissioning() > 0 ||
         numberReplicas.liveEnteringMaintenanceReplicas() > 0) &&
         hasAllInternalBlocks()) {
