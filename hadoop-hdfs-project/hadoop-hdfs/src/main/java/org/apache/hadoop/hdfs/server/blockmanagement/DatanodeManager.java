@@ -702,6 +702,7 @@ public class DatanodeManager {
 
   /** @return the datanode descriptors for all nodes. */
   public Set<DatanodeDescriptor> getDatanodes() {
+    assert namesystem.hasReadLock(FSNamesystemLockMode.BM);
     final Set<DatanodeDescriptor> datanodes;
     synchronized (this) {
       datanodes = new HashSet<>(datanodeMap.values());

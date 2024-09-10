@@ -2047,7 +2047,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     BatchedListEntries<OpenFileEntry> batchedListEntries;
     String normalizedPath = new Path(path).toString(); // normalize path.
     try {
-      readLock(FSNamesystemLockMode.FS);
+      readLock(FSNamesystemLockMode.GLOBAL);
       try {
         checkOperation(OperationCategory.READ);
         if (openFilesTypes.contains(OpenFilesType.ALL_OPEN_FILES)) {
@@ -2062,7 +2062,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
           }
         }
       } finally {
-        readUnlock(FSNamesystemLockMode.FS, operationName, getLockReportInfoSupplier(null));
+        readUnlock(FSNamesystemLockMode.GLOBAL, operationName, getLockReportInfoSupplier(null));
       }
     } catch (AccessControlException e) {
       logAuditEvent(false, operationName, null);
@@ -2074,7 +2074,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
   public BatchedListEntries<OpenFileEntry> getFilesBlockingDecom(long prevId,
       String path) {
-    assert hasReadLock(FSNamesystemLockMode.FS);
+    assert hasReadLock(FSNamesystemLockMode.GLOBAL);
     final List<OpenFileEntry> openFileEntries = Lists.newArrayList();
     LightWeightHashSet<Long> openFileIds = new LightWeightHashSet<>();
     for (DatanodeDescriptor dataNode :
@@ -3588,12 +3588,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     final FSPermissionChecker pc = getPermissionChecker();
     FSPermissionChecker.setOperationType(operationName);
     try {
-      readLock(FSNamesystemLockMode.FS);
+      readLock(FSNamesystemLockMode.GLOBAL);
       try {
         checkOperation(OperationCategory.READ);
         cs = FSDirStatAndListingOp.getContentSummary(dir, pc, src);
       } finally {
-        readUnlock(FSNamesystemLockMode.FS, operationName, getLockReportInfoSupplier(src));
+        readUnlock(FSNamesystemLockMode.GLOBAL, operationName, getLockReportInfoSupplier(src));
       }
     } catch (AccessControlException ace) {
       logAuditEvent(false, operationName, src);

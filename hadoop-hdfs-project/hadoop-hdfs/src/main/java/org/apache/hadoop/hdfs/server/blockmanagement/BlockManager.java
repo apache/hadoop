@@ -4975,6 +4975,7 @@ public class BlockManager implements BlockStatsMXBean {
   }
 
   public BlockInfo getStoredBlock(Block block) {
+    assert namesystem.hasReadLock(FSNamesystemLockMode.BM);
     if (!BlockIdManager.isStripedBlockID(block.getBlockId())) {
       return blocksMap.getStoredBlock(block);
     }
