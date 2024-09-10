@@ -353,11 +353,6 @@ public class FileStatus implements Writable, Comparable<Object>,
     return path;
   }
 
-  @VisibleForTesting
-  public void setAttr(Set<AttrFlags> attr) {
-    this.attr = attr;
-  }
-
   public void setPath(final Path p) {
     path = p;
   }

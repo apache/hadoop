@@ -34,7 +34,6 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FSDataOutputStreamBuilder;
-import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -52,6 +51,7 @@ import org.apache.hadoop.tools.util.ThrottledInputStream;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 
+import static org.apache.hadoop.fs.FileUtil.checkFSSupportsEC;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_EC_POLICY;
@@ -208,8 +208,8 @@ public class RetriableFileCopyCommand extends RetriableCommand {
 
     String ecPolicyName = null;
     if (preserveEC && sourceStatus.isErasureCoded()
-        && checkFSSupportsEC(sourceStatus.getPath(), sourceFS)
-        && checkFSSupportsEC(targetPath, targetFS)) {
+        && checkFSSupportsEC(sourceFS,sourceStatus.getPath())
+        && checkFSSupportsEC(targetFS, targetPath)) {
       ecPolicyName = ((WithErasureCoding) sourceFS).getErasureCodingPolicyName(sourceStatus);
     }
     final OutputStream outStream;
@@ -401,19 +401,6 @@ public class RetriableFileCopyCommand extends RetriableCommand {
         || fileAttributes.contains(FileAttribute.CHECKSUMTYPE);
     return preserve ? source.getBlockSize() : targetFS
         .getDefaultBlockSize(tmpTargetPath);
-  }
-
-  /**
-   * Return true if the FS implements {@link WithErasureCoding} and
-   * supports EC_POLICY option in {@link Options.OpenFileOptions}
-   */
-  boolean checkFSSupportsEC(Path path, FileSystem fs) throws IOException {
-    if (fs instanceof WithErasureCoding && fs.hasPathCapability(path,
-        Options.OpenFileOptions.FS_OPTION_OPENFILE_EC_POLICY)) {
-      return true;
-    }
-    LOG.warn("FS with scheme " + fs.getScheme() + " does not support EC");
-    return false;
   }
 
   /**

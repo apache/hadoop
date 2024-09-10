@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
@@ -268,7 +269,7 @@ public class TestDistCpWithRawXAttrs {
     dfs.setErasureCodingPolicy(dir1, "XOR-2-1-1024k");
     fs.create(file1).close();
     int res = ToolRunner.run(conf, new ECAdmin(conf), args);
-    assertEquals("Unable to set EC policy on " + subDir1.toString(), res, 0);
+    assertEquals("Unable to set EC policy on " + subDir1.toString(), 0, res);
     String src = "/src/*";
     Path dest = new Path(TEST_ROOT_DIR, "dest");
     final Path dest2Dir1 = new Path(dest, "dir1");
@@ -283,11 +284,13 @@ public class TestDistCpWithRawXAttrs {
       try {
         FileStatus destDir1Status = dummyEcFs.getFileStatus(dest2Dir1);
         FileStatus destSubDir1Status = dummyEcFs.getFileStatus(dest2SubDir1);
-        assertNotNull(destDir1Status);
-        assertNotNull(destSubDir1Status);
+        assertNotNull("FileStatus for path: " + dest2Dir1 + " is null", destDir1Status);
+        assertNotNull("FileStatus for path: " + dest2SubDir1 + " is null", destSubDir1Status);
         // check if target paths are erasure coded.
-        assertTrue(dummyEcFs.isPathErasureCoded(destDir1Status.getPath()));
-        assertTrue(dummyEcFs.isPathErasureCoded(destSubDir1Status.getPath()));
+        assertTrue("Path is not erasure coded : " + dest2Dir1,
+            dummyEcFs.isPathErasureCoded(destDir1Status.getPath()));
+        assertTrue("Path is not erasure coded : " + dest2SubDir1,
+            dummyEcFs.isPathErasureCoded(destSubDir1Status.getPath()));
 
         // copy source(DummyECFS) to target (HDFS)
         String dfsTarget = "/dest";
@@ -295,9 +298,13 @@ public class TestDistCpWithRawXAttrs {
             target.toString(), dfsTarget, "-pe", conf);
         Path dfsTargetPath = new Path(dfsTarget);
         Path dfsTargetDir1 = new Path(dfsTarget, "dir1");
-        assertTrue(fs.exists(dfsTargetPath));
-        assertTrue(fs.exists(dfsTargetDir1));
-        assertTrue(fs.getFileStatus(dfsTargetDir1).isErasureCoded());
+        ContractTestUtils.assertPathExists(fs,
+            "Path  doesn't exist:" + dfsTargetPath, dfsTargetPath);
+        ContractTestUtils.assertPathExists(fs,
+            "Path  doesn't exist:" + dfsTargetDir1, dfsTargetDir1);
+        FileStatus targetDir1Status = fs.getFileStatus(dfsTargetDir1);
+        assertTrue("Path is not erasure coded : " + targetDir1Status,
+            targetDir1Status.isErasureCoded());
         fs.delete(dfsTargetPath, true);
       } finally {
         dummyEcFs.delete(new Path(base.getAbsolutePath()),true);
@@ -311,7 +318,7 @@ public class TestDistCpWithRawXAttrs {
    */
   public static class DummyEcFs extends LocalFileSystem implements WithErasureCoding {
 
-    private  Set<Path> erasureCodedPaths;
+    private Set<Path> erasureCodedPaths;
     public DummyEcFs() {
       super();
       this.erasureCodedPaths = new HashSet<>();
@@ -336,12 +343,19 @@ public class TestDistCpWithRawXAttrs {
     @Override
     public FileStatus getFileStatus(Path f) throws IOException {
       FileStatus fileStatus = super.getFileStatus(f);
-      if (erasureCodedPaths.contains(f)) {
-        Set<FileStatus.AttrFlags> attrSet = new HashSet<>();
-        attrSet.add(FileStatus.AttrFlags.HAS_EC);
-        fileStatus.setAttr(attrSet);
+      if (!erasureCodedPaths.contains(f)) {
+        return fileStatus;
       }
-      return fileStatus;
+      Set<FileStatus.AttrFlags> attrSet = new HashSet<>();
+      attrSet.add(FileStatus.AttrFlags.HAS_EC);
+      return new FileStatus(fileStatus.getLen(), fileStatus.isDirectory(),
+          fileStatus.getReplication(), fileStatus.getBlockSize(),
+          fileStatus.getModificationTime(), fileStatus.getAccessTime(),
+          fileStatus.getPermission(), fileStatus.getOwner(),
+          fileStatus.getGroup(),
+          fileStatus.isSymlink() ? fileStatus.getSymlink() : null,
+          fileStatus.getPath(),
+          attrSet);
     }
 
     @Override

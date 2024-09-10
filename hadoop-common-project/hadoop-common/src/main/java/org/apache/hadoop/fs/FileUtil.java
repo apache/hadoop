@@ -2108,4 +2108,17 @@ public class FileUtil {
     LOG.info("Ignoring missing directory {}", path);
     LOG.debug("Directory missing", e);
   }
+
+  /**
+   * Return true if the FS implements {@link WithErasureCoding} and
+   * supports EC_POLICY option in {@link Options.OpenFileOptions}
+   */
+  public static boolean checkFSSupportsEC(FileSystem fs, Path path) throws IOException {
+    if (fs instanceof WithErasureCoding &&
+        fs.hasPathCapability(path, Options.OpenFileOptions.FS_OPTION_OPENFILE_EC_POLICY)) {
+      return true;
+    }
+    LOG.warn("FS with scheme {} does not support EC", fs.getScheme());
+    return false;
+  }
 }

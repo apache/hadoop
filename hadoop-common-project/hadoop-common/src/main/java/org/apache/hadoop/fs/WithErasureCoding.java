@@ -27,10 +27,10 @@ public interface WithErasureCoding {
 
   /**
    * Get the EC Policy name of the given file's fileStatus.
-   * If the file is not erasure coded, this should return null.
-   * Callers will make sure to check if the FS schema of the fileStatus
-   * is that of an FS that implements this interface.
-   * If the call fails due to some error, return null.
+   * If the file is not erasure coded, this shall return null.
+   * Callers will make sure to check if fileStatus isInstance of
+   * an FS that implements this interface.
+   * If the call fails due to some error, this shall return null.
    * @param fileStatus object of the file whose ecPolicy needs to be obtained.
    * @return the ec Policy name
    */

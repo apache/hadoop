@@ -496,14 +496,6 @@ public interface HdfsFileStatus
   String getNamespace();
 
   /**
-   * See {@link FileStatus#setAttr(Set)}.
-   */
-  @VisibleForTesting
-  default void setAttr(Set<AttrFlags> attr){
-    // do nothing (this is used only for testing)
-  }
-
-  /**
    * Set redundant flags for compatibility with existing applications.
    */
   static FsPermission convert(boolean isdir, boolean symlink,

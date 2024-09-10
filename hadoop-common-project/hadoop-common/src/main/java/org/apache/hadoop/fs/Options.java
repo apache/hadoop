@@ -642,7 +642,7 @@ public final class Options {
             .collect(Collectors.toSet()));
 
     /**
-     * EC policy to be set on the file that needs to be created.
+     * EC policy to be set on the file that needs to be created : {@value}.
      */
     public static final String FS_OPTION_OPENFILE_EC_POLICY =
         FS_OPTION_OPENFILE + "ec.policy";

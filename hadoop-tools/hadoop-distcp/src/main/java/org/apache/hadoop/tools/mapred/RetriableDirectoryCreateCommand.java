@@ -20,7 +20,6 @@ package org.apache.hadoop.tools.mapred;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.WithErasureCoding;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
@@ -28,11 +27,11 @@ import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.tools.DistCpOptions;
 import org.apache.hadoop.tools.util.RetriableCommand;
 import org.apache.hadoop.mapreduce.Mapper;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-
+import static org.apache.hadoop.fs.FileUtil.checkFSSupportsEC;
 import static org.apache.hadoop.tools.mapred.CopyMapper.getFileAttributeSettings;
 
 /**
@@ -75,32 +74,17 @@ public class RetriableDirectoryCreateCommand extends RetriableCommand {
     boolean preserveEC = getFileAttributeSettings(context)
         .contains(DistCpOptions.FileAttribute.ERASURECODINGPOLICY);
     if (preserveEC && sourceStatus.isErasureCoded()
-        && checkFSSupportsEC(sourceStatus.getPath(), sourceFs)
-        && checkFSSupportsEC(target, targetFS)) {
+        && checkFSSupportsEC(sourceFs, sourceStatus.getPath())
+        && checkFSSupportsEC(targetFS, target)) {
       ErasureCodingPolicy ecPolicy = SystemErasureCodingPolicies.getByName(
           ((WithErasureCoding) sourceFs).getErasureCodingPolicyName(
               sourceStatus));
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("EC Policy for source path is {}", ecPolicy);
-      }
+      LOG.debug("EC Policy for source path is {}", ecPolicy);
       WithErasureCoding ecFs =  (WithErasureCoding) targetFS;
       if (ecPolicy != null) {
         ecFs.setErasureCodingPolicy(target, ecPolicy.getName());
       }
     }
     return true;
-  }
-
-  /**
-   * Return true if the FS implements {@link WithErasureCoding} and
-   * supports EC_POLICY option in {@link Options.OpenFileOptions}
-   */
-  boolean checkFSSupportsEC(Path path, FileSystem fs) throws IOException {
-    if (fs instanceof WithErasureCoding && fs.hasPathCapability(path,
-        Options.OpenFileOptions.FS_OPTION_OPENFILE_EC_POLICY)) {
-      return true;
-    }
-    LOG.warn("FS with scheme " + fs.getScheme() + " does not support EC");
-    return false;
   }
 }
