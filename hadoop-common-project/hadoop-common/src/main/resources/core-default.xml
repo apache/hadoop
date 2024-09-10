@@ -1868,7 +1868,7 @@
 
 <property>
   <name>fs.s3a.user.agent.prefix</name>
-  <value></value>
+  <value>APN/1.0 cloudera/1.0 cdp/1.0</value>
   <description>
     Sets a custom value that will be prepended to the User-Agent header sent in
     HTTP requests to the S3 back-end by S3AFileSystem.  The User-Agent header
