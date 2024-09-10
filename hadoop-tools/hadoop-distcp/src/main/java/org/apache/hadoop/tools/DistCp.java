@@ -180,7 +180,7 @@ public class DistCp extends Configured implements Tool {
   }
 
   /**
-   * Original entrypoint of a distcp job. Calls {@link DistCp#execute(boolean))
+   * Original entrypoint of a distcp job. Calls {@link DistCp#execute(boolean)}
    * without doing extra context checks and setting some configs.
    */
   public Job execute() throws Exception {
