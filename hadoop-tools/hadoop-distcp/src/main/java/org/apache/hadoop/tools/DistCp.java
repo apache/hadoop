@@ -183,7 +183,7 @@ public class DistCp extends Configured implements Tool {
    * Original entrypoint of a distcp job. Calls {@link DistCp#execute(boolean)}
    * without doing extra context checks and setting some configs.
    * @return Job handle
-   * @throws Exception
+   * @throws Exception when fails to submit distcp job or distcp job fails
    */
   public Job execute() throws Exception {
     return execute(false);
@@ -194,7 +194,7 @@ public class DistCp extends Configured implements Tool {
    * and launches the Hadoop-job, to do the copy.
    * @param extraContextChecks if true, does extra context checks and sets some configs.
    * @return Job handle
-   * @throws Exception
+   * @throws Exception when fails to submit distcp job or distcp job fails, or context checks fail
    */
   public Job execute(boolean extraContextChecks) throws Exception {
     Preconditions.checkState(context != null,
