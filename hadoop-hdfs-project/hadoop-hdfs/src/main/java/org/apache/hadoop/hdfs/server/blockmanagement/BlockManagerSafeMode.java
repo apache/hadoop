@@ -374,7 +374,8 @@ class BlockManagerSafeMode {
    * @return true if it leaves safe mode successfully else false
    */
   boolean leaveSafeMode(boolean force) {
-    assert namesystem.hasWriteLock(FSNamesystemLockMode.BM) : "Leaving safe mode needs write lock!";
+    assert namesystem.hasWriteLock(FSNamesystemLockMode.GLOBAL) :
+        "Leaving safe mode needs write lock!";
 
     final long bytesInFuture = getBytesInFuture();
     if (bytesInFuture > 0) {
