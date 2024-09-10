@@ -2112,6 +2112,10 @@ public class FileUtil {
   /**
    * Return true if the FS implements {@link WithErasureCoding} and
    * supports EC_POLICY option in {@link Options.OpenFileOptions}
+   * @param fs filesystem
+   * @param path path
+   * @return true if the Filesystem supports EC
+   * @throws IOException if there is a failure in hasPathCapability call
    */
   public static boolean checkFSSupportsEC(FileSystem fs, Path path) throws IOException {
     if (fs instanceof WithErasureCoding &&
