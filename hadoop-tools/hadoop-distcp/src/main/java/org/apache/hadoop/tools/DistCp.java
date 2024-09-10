@@ -182,6 +182,8 @@ public class DistCp extends Configured implements Tool {
   /**
    * Original entrypoint of a distcp job. Calls {@link DistCp#execute(boolean)}
    * without doing extra context checks and setting some configs.
+   * @return Job handle
+   * @throws Exception
    */
   public Job execute() throws Exception {
     return execute(false);
