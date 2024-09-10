@@ -27,7 +27,6 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Set;
 
-import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.FSProtos.FileStatusProto;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -352,7 +351,7 @@ public class FileStatus implements Writable, Comparable<Object>,
   public Path getPath() {
     return path;
   }
-
+  
   public void setPath(final Path p) {
     path = p;
   }
