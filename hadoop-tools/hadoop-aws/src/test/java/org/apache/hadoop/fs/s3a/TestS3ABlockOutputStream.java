@@ -31,7 +31,6 @@ import org.apache.hadoop.util.Progressable;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 
 import static org.apache.hadoop.fs.s3a.audit.AuditTestSupport.noopAuditor;
