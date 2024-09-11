@@ -23,8 +23,8 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.Options;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.HdfsCommonConstants;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
@@ -230,7 +230,7 @@ public class ServiceMaster extends CompositeService {
     while (iter.hasNext()) {
       Token<? extends TokenIdentifier> token = iter.next();
       if (token.getKind().equals(
-          HdfsCommonConstants.HDFS_DELEGATION_KIND)) {
+          DelegationTokenIdentifier.HDFS_DELEGATION_KIND)) {
         LOG.info("Remove HDFS delegation token {}.", token);
         iter.remove();
       }

@@ -38,12 +38,12 @@ import org.apache.commons.math3.util.Pair;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.ClusterStorageCapacityExceededException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.HarFs;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.logaggregation.AggregatedLogFormat.LogKey;
@@ -99,7 +99,7 @@ public class LogAggregationTFileController
     if (this.writer != null) {
       try {
         this.writer.close();
-      } catch (ClusterStorageCapacityExceededException e) {
+      } catch (DSQuotaExceededException e) {
         throw new LogAggregationDFSException(e);
       } finally {
         this.writer = null;

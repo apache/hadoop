@@ -95,6 +95,11 @@ public final class Constants {
       "fs.s3a.assumed.role.arn";
 
   /**
+   * external id for assume role request: {@value}.
+   */
+  public static final String ASSUMED_ROLE_EXTERNAL_ID = "fs.s3a.assumed.role.external.id";
+
+  /**
    * Session name for the assumed role, must be valid characters according
    * to the AWS APIs: {@value}.
    * If not set, one is generated from the current Hadoop/Kerberos username.

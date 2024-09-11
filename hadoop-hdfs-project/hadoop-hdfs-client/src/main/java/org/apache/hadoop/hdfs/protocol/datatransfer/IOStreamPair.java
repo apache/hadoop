@@ -22,13 +22,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.IOUtils;
 
 /**
- * This class wraps an InputStream and an OutputStream.
- * Both the InputStream and OutputStream are closed on close call.
- * This class is moved from HDFS module to COMMON module for removing HDFS dependencies from YARN.
+ * A little struct class to wrap an InputStream and an OutputStream.
  */
+@InterfaceAudience.Private
 public class IOStreamPair implements Closeable {
   public final InputStream in;
   public final OutputStream out;
