@@ -33,13 +33,11 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentMatchers;
 import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mockStatic;
-import static org.mockito.Mockito.when;
 /**
  * Test case for {@link DocumentStoreTimelineWriterImpl}.
  */
@@ -50,6 +48,7 @@ public class TestDocumentStoreTimelineWriterImpl {
   private final DocumentStoreWriter<TimelineDocument> documentStoreWriter = new
       DummyDocumentStoreWriter<>();
   private final Configuration conf = new Configuration();
+  private MockedStatic<DocumentStoreFactory> mockedFactory;
 
   @Before
   public void setUp() throws YarnException {
@@ -59,9 +58,17 @@ public class TestDocumentStoreTimelineWriterImpl {
         "https://localhost:443");
     conf.set(DocumentStoreUtils.TIMELINE_SERVICE_COSMOSDB_MASTER_KEY,
         "1234567");
-    try (MockedStatic<DocumentStoreFactory> mocked = mockStatic(DocumentStoreFactory.class)) {
-      when(DocumentStoreFactory.createDocumentStoreWriter(ArgumentMatchers.any(Configuration.class)))
-              .thenReturn(documentStoreWriter);    }
+    mockedFactory = Mockito.mockStatic(DocumentStoreFactory.class);
+    mockedFactory.when(() -> DocumentStoreFactory.createDocumentStoreWriter(
+                    ArgumentMatchers.any(Configuration.class)))
+            .thenReturn(documentStoreWriter);
+  }
+
+  @After
+  public void tearDown() {
+    if(mockedFactory != null) {
+      mockedFactory.close();
+    }
   }
 
   @Test(expected = YarnException.class)

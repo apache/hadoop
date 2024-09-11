@@ -28,13 +28,15 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import static org.mockito.Mockito.mockStatic;
 import org.mockito.Mockito;
-import static org.mockito.Mockito.when;
+
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
 import java.io.IOException;
+
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.mockStatic;
 
 /**
  * Test case for {@link CosmosDBDocumentStoreWriter}.
@@ -49,8 +51,10 @@ public class TestCosmosDBDocumentStoreWriter {
         Mockito.mock(AsyncDocumentClient.class);
     Configuration conf = Mockito.mock(Configuration.class);
     mockStatic(DocumentStoreUtils.class);
-    when(DocumentStoreUtils.getCosmosDBDatabaseName(conf)).thenReturn("FooBar");
-    when(DocumentStoreUtils.createCosmosDBAsyncClient(conf)).thenReturn(asyncDocumentClient);
+    when(DocumentStoreUtils.getCosmosDBDatabaseName(conf)).
+        thenReturn("FooBar");
+    when(DocumentStoreUtils.createCosmosDBAsyncClient(conf)).
+        thenReturn(asyncDocumentClient);
   }
 
   @SuppressWarnings("unchecked")

@@ -25,7 +25,7 @@ import org.apache.solr.client.solrj.SolrClient;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.powermock.api.mockito.PowerMockito;
+import org.mockito.Mockito;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.powermock.api.support.membermodification.MemberMatcher.method;
 
@@ -51,7 +51,7 @@ public class TestAppCatalogSolrClient {
     String solrHome = targetLocation.split("/test-classes")[0] + "/solr";
     solrClient = EmbeddedSolrServerFactory.create(solrHome, CONFIGSET_DIR,
         "exampleCollection");
-    spy = PowerMockito.spy(new AppCatalogSolrClient());
+    spy = Mockito.spy(new AppCatalogSolrClient());
     when(spy, method(AppCatalogSolrClient.class, "getSolrClient"))
         .withNoArguments().thenReturn(solrClient);
   }
