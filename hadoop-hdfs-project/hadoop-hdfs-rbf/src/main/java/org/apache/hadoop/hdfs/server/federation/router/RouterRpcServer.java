@@ -449,6 +449,9 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     initRouterFedRename();
   }
 
+  /**
+   * Init router async handlers and router async responders.
+   */
   protected void initAsyncThreadPool() {
     int asyncHandlerCount = conf.getInt(DFS_ROUTER_RPC_ASYNC_HANDLER_COUNT,
         DFS_ROUTER_RPC_ASYNC_HANDLER_COUNT_DEFAULT);
