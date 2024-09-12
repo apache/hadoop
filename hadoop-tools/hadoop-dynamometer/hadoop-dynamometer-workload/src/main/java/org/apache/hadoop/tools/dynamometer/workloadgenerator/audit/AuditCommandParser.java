@@ -32,7 +32,7 @@ public interface AuditCommandParser {
 
   /**
    * Initialize this parser with the given configuration. Guaranteed to be
-   * called prior to any calls to {@link #parse(Text, Function)}.
+   * called prior to any calls to {@link #parse(Long, Text, Function)}.
    *
    * @param conf The Configuration to be used to set up this parser.
    * @throws IOException if error on initializing a parser.
@@ -46,6 +46,7 @@ public interface AuditCommandParser {
    * between the start of the audit log and this command) into absolute
    * timestamps.
    *
+   * @param sequence Sequence order of input line.
    * @param inputLine Single input line to convert.
    * @param relativeToAbsolute Function converting relative timestamps
    *                           (in milliseconds) to absolute timestamps
@@ -53,7 +54,7 @@ public interface AuditCommandParser {
    * @return A command representing the input line.
    * @throws IOException if error on parsing.
    */
-  AuditReplayCommand parse(Text inputLine,
+  AuditReplayCommand parse(Long sequence, Text inputLine,
       Function<Long, Long> relativeToAbsolute) throws IOException;
 
 }

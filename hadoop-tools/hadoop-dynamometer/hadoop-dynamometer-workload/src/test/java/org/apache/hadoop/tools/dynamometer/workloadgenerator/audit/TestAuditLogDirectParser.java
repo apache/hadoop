@@ -30,6 +30,7 @@ public class TestAuditLogDirectParser {
 
   private static final long START_TIMESTAMP = 10000;
   private AuditLogDirectParser parser;
+  private Long sequence = 1L;
 
   @Before
   public void setup() throws Exception {
@@ -53,55 +54,55 @@ public class TestAuditLogDirectParser {
   public void testSimpleInput() throws Exception {
     Text in = getAuditString("1970-01-01 00:00:11,000", "fakeUser",
         "listStatus", "sourcePath", "null");
-    AuditReplayCommand expected = new AuditReplayCommand(1000, "fakeUser",
+    AuditReplayCommand expected = new AuditReplayCommand(sequence, 1000, "fakeUser",
         "listStatus", "sourcePath", "null", "0.0.0.0");
-    assertEquals(expected, parser.parse(in, Function.identity()));
+    assertEquals(expected, parser.parse(sequence, in, Function.identity()));
   }
 
   @Test
   public void testInputWithEquals() throws Exception {
     Text in = getAuditString("1970-01-01 00:00:11,000", "fakeUser",
             "listStatus", "day=1970", "null");
-    AuditReplayCommand expected = new AuditReplayCommand(1000, "fakeUser",
+    AuditReplayCommand expected = new AuditReplayCommand(sequence, 1000, "fakeUser",
             "listStatus", "day=1970", "null", "0.0.0.0");
-    assertEquals(expected, parser.parse(in, Function.identity()));
+    assertEquals(expected, parser.parse(sequence, in, Function.identity()));
   }
 
   @Test
   public void testInputWithRenameOptions() throws Exception {
     Text in = getAuditString("1970-01-01 00:00:11,000", "fakeUser",
         "rename (options=[TO_TRASH])", "sourcePath", "destPath");
-    AuditReplayCommand expected = new AuditReplayCommand(1000, "fakeUser",
+    AuditReplayCommand expected = new AuditReplayCommand(sequence, 1000, "fakeUser",
         "rename (options=[TO_TRASH])", "sourcePath", "destPath", "0.0.0.0");
-    assertEquals(expected, parser.parse(in, Function.identity()));
+    assertEquals(expected, parser.parse(sequence, in, Function.identity()));
   }
 
   @Test
   public void testInputWithTokenAuth() throws Exception {
     Text in = getAuditString("1970-01-01 00:00:11,000", "fakeUser (auth:TOKEN)",
         "create", "sourcePath", "null");
-    AuditReplayCommand expected = new AuditReplayCommand(1000, "fakeUser",
+    AuditReplayCommand expected = new AuditReplayCommand(sequence, 1000, "fakeUser",
         "create", "sourcePath", "null", "0.0.0.0");
-    assertEquals(expected, parser.parse(in, Function.identity()));
+    assertEquals(expected, parser.parse(sequence, in, Function.identity()));
   }
 
   @Test
   public void testInputWithProxyUser() throws Exception {
     Text in = getAuditString("1970-01-01 00:00:11,000",
         "proxyUser (auth:TOKEN) via fakeUser", "create", "sourcePath", "null");
-    AuditReplayCommand expected = new AuditReplayCommand(1000, "proxyUser",
-        "create", "sourcePath", "null", "0.0.0.0");
-    assertEquals(expected, parser.parse(in, Function.identity()));
+    AuditReplayCommand expected = new AuditReplayCommand(sequence, 1000,
+            "proxyUser", "create", "sourcePath", "null", "0.0.0.0");
+    assertEquals(expected, parser.parse(sequence, in, Function.identity()));
   }
 
   @Test
   public void testParseDefaultDateFormat() throws Exception {
     Text in = getAuditString("1970-01-01 13:00:00,000",
         "ignored", "ignored", "ignored", "ignored");
-    AuditReplayCommand expected = new AuditReplayCommand(
+    AuditReplayCommand expected = new AuditReplayCommand(sequence,
         13 * 60 * 60 * 1000 - START_TIMESTAMP,
         "ignored", "ignored", "ignored", "ignored", "0.0.0.0");
-    assertEquals(expected, parser.parse(in, Function.identity()));
+    assertEquals(expected, parser.parse(sequence, in, Function.identity()));
   }
 
   @Test
@@ -114,9 +115,9 @@ public class TestAuditLogDirectParser {
     parser.initialize(conf);
     Text in = getAuditString("1970-01-01 01:00:00,000 PM",
         "ignored", "ignored", "ignored", "ignored");
-    AuditReplayCommand expected = new AuditReplayCommand(13 * 60 * 60 * 1000,
+    AuditReplayCommand expected = new AuditReplayCommand(sequence, 13 * 60 * 60 * 1000,
         "ignored", "ignored", "ignored", "ignored", "0.0.0.0");
-    assertEquals(expected, parser.parse(in, Function.identity()));
+    assertEquals(expected, parser.parse(sequence, in, Function.identity()));
   }
 
   @Test
@@ -128,9 +129,9 @@ public class TestAuditLogDirectParser {
     parser.initialize(conf);
     Text in = getAuditString("1970-01-01 01:00:00,000",
         "ignored", "ignored", "ignored", "ignored");
-    AuditReplayCommand expected = new AuditReplayCommand(0,
+    AuditReplayCommand expected = new AuditReplayCommand(sequence, 0,
         "ignored", "ignored", "ignored", "ignored", "0.0.0.0");
-    assertEquals(expected, parser.parse(in, Function.identity()));
+    assertEquals(expected, parser.parse(sequence, in, Function.identity()));
   }
 
   @Test
@@ -144,9 +145,9 @@ public class TestAuditLogDirectParser {
     conf.set(AuditLogDirectParser.AUDIT_LOG_PARSE_REGEX_KEY,
         "CUSTOM FORMAT \\((?<timestamp>.+?)\\) (?<message>.+)");
     parser.initialize(conf);
-    AuditReplayCommand expected = new AuditReplayCommand(0,
+    AuditReplayCommand expected = new AuditReplayCommand(sequence, 0,
         "fakeUser", "fakeCommand", "src", "null", "0.0.0.0");
-    assertEquals(expected, parser.parse(auditLine, Function.identity()));
+    assertEquals(expected, parser.parse(sequence, auditLine, Function.identity()));
   }
 
 }
