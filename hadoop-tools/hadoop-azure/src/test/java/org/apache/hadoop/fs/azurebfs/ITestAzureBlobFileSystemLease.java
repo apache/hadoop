@@ -18,6 +18,7 @@
 package org.apache.hadoop.fs.azurebfs;
 
 import java.io.IOException;
+import java.util.concurrent.Callable;
 import java.util.concurrent.RejectedExecutionException;
 
 import org.junit.Assert;
@@ -28,6 +29,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.FSOperationType;
+import org.apache.hadoop.fs.azurebfs.constants.HttpOperationType;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsDriverException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsLease;
@@ -302,11 +305,29 @@ public class ITestAzureBlobFileSystemLease extends AbstractAbfsIntegrationTest {
     fs.close();
     Assert.assertTrue("Store leases were not freed", fs.getAbfsStore().areLeasesFreed());
 
-    LambdaTestUtils.intercept(RejectedExecutionException.class, () -> {
+    Callable<String> exceptionRaisingCallable = () -> {
       try (FSDataOutputStream out2 = fs.append(testFilePath)) {
       }
       return "Expected exception on new append after closed FS";
-    });
+    };
+    /*
+     * For ApacheHttpClient, the failure would happen when trying to get a connection
+     * from KeepAliveCache, which is not possible after the FS is closed, as that
+     * also closes the cache.
+     *
+     * For JDK_Client, the failure happens when trying to submit a task to the
+     * executor service, which is not possible after the FS is closed, as that
+     * also shuts down the executor service.
+     */
+
+    if (getConfiguration().getPreferredHttpOperationType()
+        == HttpOperationType.APACHE_HTTP_CLIENT) {
+      LambdaTestUtils.intercept(AbfsDriverException.class,
+          exceptionRaisingCallable);
+    } else {
+      LambdaTestUtils.intercept(RejectedExecutionException.class,
+          exceptionRaisingCallable);
+    }
   }
 
   @Test(timeout = TEST_EXECUTION_TIMEOUT)

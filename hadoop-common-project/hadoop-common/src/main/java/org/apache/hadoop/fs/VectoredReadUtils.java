@@ -294,14 +294,21 @@ public final class VectoredReadUtils {
       final Optional<Long> fileLength) throws EOFException {
 
     requireNonNull(input, "Null input list");
-    checkArgument(!input.isEmpty(), "Empty input list");
+
+    if (input.isEmpty()) {
+      // this may seem a pathological case, but it was valid
+      // before and somehow Spark can call it through parquet.
+      LOG.debug("Empty input list");
+      return input;
+    }
+
     final List<? extends FileRange> sortedRanges;
 
     if (input.size() == 1) {
       validateRangeRequest(input.get(0));
       sortedRanges = input;
     } else {
-      sortedRanges = sortRanges(input);
+      sortedRanges = sortRangeList(input);
       FileRange prev = null;
       for (final FileRange current : sortedRanges) {
         validateRangeRequest(current);
@@ -334,10 +341,23 @@ public final class VectoredReadUtils {
    * @param input input ranges.
    * @return a new list of the ranges, sorted by offset.
    */
-  public static List<? extends FileRange> sortRanges(List<? extends FileRange> input) {
+  public static List<? extends FileRange> sortRangeList(List<? extends FileRange> input) {
     final List<? extends FileRange> l = new ArrayList<>(input);
     l.sort(Comparator.comparingLong(FileRange::getOffset));
     return l;
+  }
+
+  /**
+   * Sort the input ranges by offset; no validation is done.
+   * <p>
+   * This method is used externally and must be retained with
+   * the signature unchanged.
+   * @param input input ranges.
+   * @return a new list of the ranges, sorted by offset.
+   */
+  @InterfaceStability.Stable
+  public static FileRange[] sortRanges(List<? extends FileRange> input) {
+    return sortRangeList(input).toArray(new FileRange[0]);
   }
 
   /**

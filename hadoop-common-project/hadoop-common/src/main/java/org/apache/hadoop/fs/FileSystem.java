@@ -2178,34 +2178,34 @@ public abstract class FileSystem extends Configured
    * <dl>
    *  <dd>
    *   <dl>
-   *    <dt> <tt> ? </tt>
+   *    <dt> <code> ? </code>
    *    <dd> Matches any single character.
    *
-   *    <dt> <tt> * </tt>
+   *    <dt> <code> * </code>
    *    <dd> Matches zero or more characters.
    *
-   *    <dt> <tt> [<i>abc</i>] </tt>
+   *    <dt> <code> [<i>abc</i>] </code>
    *    <dd> Matches a single character from character set
-   *     <tt>{<i>a,b,c</i>}</tt>.
+   *     <code>{<i>a,b,c</i>}</code>.
    *
-   *    <dt> <tt> [<i>a</i>-<i>b</i>] </tt>
+   *    <dt> <code> [<i>a</i>-<i>b</i>] </code>
    *    <dd> Matches a single character from the character range
-   *     <tt>{<i>a...b</i>}</tt>.  Note that character <tt><i>a</i></tt> must be
-   *     lexicographically less than or equal to character <tt><i>b</i></tt>.
+   *     <code>{<i>a...b</i>}</code>.  Note that character <code><i>a</i></code> must be
+   *     lexicographically less than or equal to character <code><i>b</i></code>.
    *
-   *    <dt> <tt> [^<i>a</i>] </tt>
+   *    <dt> <code> [^<i>a</i>] </code>
    *    <dd> Matches a single character that is not from character set or range
-   *     <tt>{<i>a</i>}</tt>.  Note that the <tt>^</tt> character must occur
+   *     <code>{<i>a</i>}</code>.  Note that the <code>^</code> character must occur
    *     immediately to the right of the opening bracket.
    *
-   *    <dt> <tt> \<i>c</i> </tt>
+   *    <dt> <code> \<i>c</i> </code>
    *    <dd> Removes (escapes) any special meaning of character <i>c</i>.
    *
-   *    <dt> <tt> {ab,cd} </tt>
-   *    <dd> Matches a string from the string set <tt>{<i>ab, cd</i>} </tt>
+   *    <dt> <code> {ab,cd} </code>
+   *    <dd> Matches a string from the string set <code>{<i>ab, cd</i>} </code>
    *
-   *    <dt> <tt> {ab,c{de,fh}} </tt>
-   *    <dd> Matches a string from the string set <tt>{<i>ab, cde, cfh</i>}</tt>
+   *    <dt> <code> {ab,c{de,fh}} </code>
+   *    <dd> Matches a string from the string set <code>{<i>ab, cde, cfh</i>}</code>
    *
    *   </dl>
    *  </dd>
@@ -3581,7 +3581,15 @@ public abstract class FileSystem extends Configured
       throw new UnsupportedFileSystemException("No FileSystem for scheme "
           + "\"" + scheme + "\"");
     }
-    LOGGER.debug("FS for {} is {}", scheme, clazz);
+    if (LOGGER.isDebugEnabled()) {
+      LOGGER.debug("FS for {} is {}", scheme, clazz);
+      final String jarLocation = ClassUtil.findContainingJar(clazz);
+      if (jarLocation != null) {
+        LOGGER.debug("Jar location for {} : {}", clazz, jarLocation);
+      } else {
+        LOGGER.debug("Class location for {} : {}", clazz, ClassUtil.findClassLocation(clazz));
+      }
+    }
     return clazz;
   }
 

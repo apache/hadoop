@@ -70,7 +70,7 @@ public class TestRequestFactory extends AbstractHadoopTestBase {
         .withBucket("bucket")
         .withEncryptionSecrets(
             new EncryptionSecrets(S3AEncryptionMethods.SSE_KMS,
-                "kms:key"))
+                "kms:key", ""))
         .build();
     createFactoryObjects(factory);
   }

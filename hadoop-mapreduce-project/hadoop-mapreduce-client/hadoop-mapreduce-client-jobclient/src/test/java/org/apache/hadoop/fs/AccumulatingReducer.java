@@ -31,13 +31,13 @@ import org.slf4j.LoggerFactory;
  * The type is specified in the key part of the key-value pair 
  * as a prefix to the key in the following way
  * <p>
- * <tt>type:key</tt>
+ * <code>type:key</code>
  * <p>
  * The values are accumulated according to the types:
  * <ul>
- * <li><tt>s:</tt> - string, concatenate</li>
- * <li><tt>f:</tt> - float, summ</li>
- * <li><tt>l:</tt> - long, summ</li>
+ * <li><code>s:</code> - string, concatenate</li>
+ * <li><code>f:</code> - float, summ</li>
+ * <li><code>l:</code> - long, summ</li>
  * </ul>
  * 
  */
@@ -73,7 +73,7 @@ public class AccumulatingReducer extends MapReduceBase
 
     // concatenate strings
     if (field.startsWith(VALUE_TYPE_STRING)) {
-      StringBuffer sSum = new StringBuffer();
+      StringBuilder sSum = new StringBuilder();
       while (values.hasNext())
         sSum.append(values.next().toString()).append(";");
       output.collect(key, new Text(sSum.toString()));

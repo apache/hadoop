@@ -164,23 +164,25 @@ public class RouterAdmin extends Configured implements Tool {
     if (cmd.equals("-add")) {
       return "\t[-add <source> <nameservice1, nameservice2, ...> <destination> "
           + "[-readonly] [-faulttolerant] "
-          + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
+          + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE|LEADER_FOLLOWER] "
           + "-owner <owner> -group <group> -mode <mode>]";
     } else if (cmd.equals(ADD_ALL_COMMAND)) {
       return "\t[" + ADD_ALL_COMMAND + " "
           + "<source1> <nameservice1,nameservice2,...> <destination1> "
-          + "[-readonly] [-faulttolerant] " + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
+          + "[-readonly] [-faulttolerant] " + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE"
+          + "|LEADER_FOLLOWER] "
           + "-owner <owner1> -group <group1> -mode <mode1>"
           + " , "
           + "<source2> <nameservice1,nameservice2,...> <destination2> "
-          + "[-readonly] [-faulttolerant] " + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
+          + "[-readonly] [-faulttolerant] " + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE"
+          + "|LEADER_FOLLOWER] "
           + "-owner <owner2> -group <group2> -mode <mode2>"
           + " , ...]";
     } else if (cmd.equals("-update")) {
       return "\t[-update <source>"
           + " [<nameservice1, nameservice2, ...> <destination>] "
           + "[-readonly true|false] [-faulttolerant true|false] "
-          + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
+          + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE|LEADER_FOLLOWER] "
           + "-owner <owner> -group <group> -mode <mode>]";
     } else if (cmd.equals("-rm")) {
       return "\t[-rm <source>]";

@@ -29,11 +29,9 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.ByteBuffer;
-import java.nio.CharBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
-import java.nio.charset.CharsetEncoder;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
@@ -55,12 +53,14 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
+import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.extensions.EncryptionContextProvider;
 import org.apache.hadoop.fs.azurebfs.security.ContextProviderEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.security.ContextEncryptionAdapter;
 import org.apache.hadoop.fs.azurebfs.security.NoContextEncryptionAdapter;
+import org.apache.hadoop.fs.azurebfs.services.AbfsClientHandler;
 import org.apache.hadoop.fs.azurebfs.utils.EncryptionType;
-import org.apache.hadoop.fs.azurebfs.utils.NamespaceUtil;
 import org.apache.hadoop.fs.impl.BackReference;
 import org.apache.hadoop.fs.PathIOException;
 
@@ -107,7 +107,6 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsClientContext;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientContextBuilder;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClientRenameResult;
 import org.apache.hadoop.fs.azurebfs.services.AbfsCounters;
-import org.apache.hadoop.fs.azurebfs.services.AbfsHttpOperation;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStream;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStreamContext;
 import org.apache.hadoop.fs.azurebfs.services.AbfsInputStreamStatisticsImpl;
@@ -159,6 +158,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_AB
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_FOOTER_READ_BUFFER_SIZE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_BUFFERED_PREAD_DISABLE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_IDENTITY_TRANSFORM_CLASS;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_BLOB_DOMAIN_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations.X_MS_ENCRYPTION_CONTEXT;
 
 /**
@@ -170,6 +170,13 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   private static final Logger LOG = LoggerFactory.getLogger(AzureBlobFileSystemStore.class);
 
   private AbfsClient client;
+
+  /**
+   * Variable to hold the client handler which will determine the operative
+   * client based on the service type configured.
+   * Initialized in the {@link #initializeClient(URI, String, String, boolean)}.
+   */
+  private AbfsClientHandler clientHandler;
   private URI uri;
   private String userName;
   private String primaryUserGroup;
@@ -182,7 +189,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   private final AbfsConfiguration abfsConfiguration;
   private final Set<String> azureAtomicRenameDirSet;
   private Set<String> azureInfiniteLeaseDirSet;
-  private Trilean isNamespaceEnabled;
+  private volatile Trilean isNamespaceEnabled;
   private final AuthType authType;
   private final UserGroupInformation userGroupInformation;
   private final IdentityTransformerInterface identityTransformer;
@@ -222,7 +229,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     leaseRefs = Collections.synchronizedMap(new WeakHashMap<>());
 
     try {
-      this.abfsConfiguration = new AbfsConfiguration(abfsStoreBuilder.configuration, accountName);
+      this.abfsConfiguration = new AbfsConfiguration(abfsStoreBuilder.configuration,
+          accountName, getAbfsServiceTypeFromUrl());
     } catch (IllegalAccessException exception) {
       throw new FileSystemOperationUnhandledException(exception);
     }
@@ -287,6 +295,8 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   /**
    * Checks if the given key in Azure Storage should be stored as a page
    * blob instead of block blob.
+   * @param key The key to check.
+   * @return True if the key should be stored as a page blob, false otherwise.
    */
   public boolean isAppendBlobKey(String key) {
     return isKeyForDirectorySet(key, appendBlobDirSet);
@@ -364,17 +374,67 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     return authorityParts;
   }
 
+  /**
+   * Resolves namespace information of the filesystem from the state of {@link #isNamespaceEnabled}.
+   * if the state is UNKNOWN, it will be determined by making a GET_ACL request
+   * to the root of the filesystem. GET_ACL call is synchronized to ensure a single
+   * call is made to determine the namespace information in case multiple threads are
+   * calling this method at the same time. The resolution of namespace information
+   * would be stored back as state of {@link #isNamespaceEnabled}.
+   *
+   * @param tracingContext tracing context
+   * @return true if namespace is enabled, false otherwise.
+   * @throws AzureBlobFileSystemException server errors.
+   */
   public boolean getIsNamespaceEnabled(TracingContext tracingContext)
       throws AzureBlobFileSystemException {
     try {
-      return this.isNamespaceEnabled.toBoolean();
+      return isNamespaceEnabled();
     } catch (TrileanConversionException e) {
       LOG.debug("isNamespaceEnabled is UNKNOWN; fall back and determine through"
           + " getAcl server call", e);
     }
 
-    isNamespaceEnabled = Trilean.getTrilean(NamespaceUtil.isNamespaceEnabled(client, tracingContext));
+    return getNamespaceEnabledInformationFromServer(tracingContext);
+  }
+
+  private synchronized boolean getNamespaceEnabledInformationFromServer(
+      final TracingContext tracingContext) throws AzureBlobFileSystemException {
+    if (isNamespaceEnabled != Trilean.UNKNOWN) {
+      return isNamespaceEnabled.toBoolean();
+    }
+    try {
+      LOG.debug("Get root ACL status");
+      getClient().getAclStatus(AbfsHttpConstants.ROOT_PATH, tracingContext);
+      // If getAcl succeeds, namespace is enabled.
+      isNamespaceEnabled = Trilean.getTrilean(true);
+    } catch (AbfsRestOperationException ex) {
+      // Get ACL status is a HEAD request, its response doesn't contain errorCode
+      // So can only rely on its status code to determine account type.
+      if (HttpURLConnection.HTTP_BAD_REQUEST != ex.getStatusCode()) {
+        // If getAcl fails with anything other than 400, namespace is enabled.
+        isNamespaceEnabled = Trilean.getTrilean(true);
+        // Continue to throw exception as earlier.
+        LOG.debug("Failed to get ACL status with non 400. Inferring namespace enabled", ex);
+        throw ex;
+      }
+      // If getAcl fails with 400, namespace is disabled.
+      LOG.debug("Failed to get ACL status with 400. "
+          + "Inferring namespace disabled and ignoring error", ex);
+      isNamespaceEnabled = Trilean.getTrilean(false);
+    } catch (AzureBlobFileSystemException ex) {
+      throw ex;
+    }
     return isNamespaceEnabled.toBoolean();
+  }
+
+  /**
+   * @return true if namespace is enabled, false otherwise.
+   * @throws TrileanConversionException if namespaceEnabled information is UNKNOWN
+   */
+  @VisibleForTesting
+  boolean isNamespaceEnabled() throws TrileanConversionException {
+    return this.isNamespaceEnabled.toBoolean();
   }
 
   @VisibleForTesting
@@ -448,15 +508,9 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
     try (AbfsPerfInfo perfInfo = startTracking("setFilesystemProperties",
             "setFilesystemProperties")) {
-      final String commaSeparatedProperties;
-      try {
-        commaSeparatedProperties = convertXmsPropertiesToCommaSeparatedString(properties);
-      } catch (CharacterCodingException ex) {
-        throw new InvalidAbfsRestOperationException(ex);
-      }
 
-      final AbfsRestOperation op = client
-          .setFilesystemProperties(commaSeparatedProperties, tracingContext);
+      final AbfsRestOperation op = getClient()
+          .setFilesystemProperties(properties, tracingContext);
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
     }
   }
@@ -541,18 +595,13 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
               path,
               properties);
 
-      final String commaSeparatedProperties;
-      try {
-        commaSeparatedProperties = convertXmsPropertiesToCommaSeparatedString(properties);
-      } catch (CharacterCodingException ex) {
-        throw new InvalidAbfsRestOperationException(ex);
-      }
+
       final String relativePath = getRelativePath(path);
       final ContextEncryptionAdapter contextEncryptionAdapter
           = createEncryptionAdapterFromServerStoreContext(relativePath,
           tracingContext);
       final AbfsRestOperation op = client
-          .setPathProperties(getRelativePath(path), commaSeparatedProperties,
+          .setPathProperties(getRelativePath(path), properties,
               tracingContext, contextEncryptionAdapter);
       contextEncryptionAdapter.destroy();
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
@@ -645,7 +694,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           populateAbfsOutputStreamContext(
               isAppendBlob,
               lease,
-              client,
+              getClient(),
               statistics,
               relativePath,
               0,
@@ -884,7 +933,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       perfInfo.registerSuccess(true);
 
       // Add statistics for InputStream
-      return new AbfsInputStream(client, statistics, relativePath,
+      return new AbfsInputStream(getClient(), statistics, relativePath,
           contentLength, populateAbfsInputStreamContext(
           parameters.map(OpenFileParameters::getOptions),
           contextEncryptionAdapter),
@@ -1041,7 +1090,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
         final AbfsClientRenameResult abfsClientRenameResult =
             client.renamePath(sourceRelativePath, destinationRelativePath,
                 continuation, tracingContext, sourceEtag, false,
-                    isNamespaceEnabled);
+                  isNamespaceEnabled);
 
         AbfsRestOperation op = abfsClientRenameResult.getOp();
         perfInfo.registerResult(op.getResult());
@@ -1320,7 +1369,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
     SimpleDateFormat simpleDateFormat = new SimpleDateFormat(TOKEN_DATE_PATTERN, Locale.US);
     String date = simpleDateFormat.format(new Date());
     String token = String.format("%06d!%s!%06d!%s!%06d!%s!",
-            path.length(), path, startFrom.length(), startFrom, date.length(), date);
+          path.length(), path, startFrom.length(), startFrom, date.length(), date);
     String base64EncodedToken = Base64.encode(token.getBytes(StandardCharsets.UTF_8));
 
     StringBuilder encodedTokenBuilder = new StringBuilder(base64EncodedToken.length() + 5);
@@ -1761,16 +1810,27 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
     LOG.trace("Initializing AbfsClient for {}", baseUrl);
     if (tokenProvider != null) {
-      this.client = new AbfsClient(baseUrl, creds, abfsConfiguration,
+      this.clientHandler = new AbfsClientHandler(baseUrl, creds, abfsConfiguration,
           tokenProvider, encryptionContextProvider,
           populateAbfsClientContext());
     } else {
-      this.client = new AbfsClient(baseUrl, creds, abfsConfiguration,
+      this.clientHandler = new AbfsClientHandler(baseUrl, creds, abfsConfiguration,
           sasTokenProvider, encryptionContextProvider,
           populateAbfsClientContext());
     }
 
+    this.client = getClientHandler().getClient();
     LOG.trace("AbfsClient init complete");
+  }
+
+  private AbfsServiceType getAbfsServiceTypeFromUrl() {
+    if (uri.toString().contains(ABFS_BLOB_DOMAIN_NAME)) {
+      return AbfsServiceType.BLOB;
+    }
+    // In case of DFS Domain name or any other custom endpoint, the service
+    // type is to be identified as default DFS.
+    LOG.debug("Falling back to default service type DFS");
+    return AbfsServiceType.DFS;
   }
 
   /**
@@ -1810,43 +1870,6 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   private boolean parseIsDirectory(final String resourceType) {
     return resourceType != null
         && resourceType.equalsIgnoreCase(AbfsHttpConstants.DIRECTORY);
-  }
-
-  /**
-   * Convert properties stored in a Map into a comma separated string. For map
-   * <key1:value1; key2:value2: keyN:valueN>, method would convert to:
-   * key1=value1,key2=value,...,keyN=valueN
-   * */
-   @VisibleForTesting
-   String convertXmsPropertiesToCommaSeparatedString(final Map<String,
-      String> properties) throws
-          CharacterCodingException {
-    StringBuilder commaSeparatedProperties = new StringBuilder();
-
-    final CharsetEncoder encoder = Charset.forName(XMS_PROPERTIES_ENCODING).newEncoder();
-
-    for (Map.Entry<String, String> propertyEntry : properties.entrySet()) {
-      String key = propertyEntry.getKey();
-      String value = propertyEntry.getValue();
-
-      Boolean canEncodeValue = encoder.canEncode(value);
-      if (!canEncodeValue) {
-        throw new CharacterCodingException();
-      }
-
-      String encodedPropertyValue = Base64.encode(encoder.encode(CharBuffer.wrap(value)).array());
-      commaSeparatedProperties.append(key)
-              .append(AbfsHttpConstants.EQUAL)
-              .append(encodedPropertyValue);
-
-      commaSeparatedProperties.append(AbfsHttpConstants.COMMA);
-    }
-
-    if (commaSeparatedProperties.length() != 0) {
-      commaSeparatedProperties.deleteCharAt(commaSeparatedProperties.length() - 1);
-    }
-
-    return commaSeparatedProperties.toString();
   }
 
   private Hashtable<String, String> parseCommaSeparatedXmsProperties(String xMsProperties) throws
@@ -2125,6 +2148,16 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
   @VisibleForTesting
   public AbfsClient getClient() {
     return this.client;
+  }
+
+  @VisibleForTesting
+  public AbfsClient getClient(AbfsServiceType serviceType) {
+    return getClientHandler().getClient(serviceType);
+  }
+
+  @VisibleForTesting
+  public AbfsClientHandler getClientHandler() {
+    return this.clientHandler;
   }
 
   @VisibleForTesting

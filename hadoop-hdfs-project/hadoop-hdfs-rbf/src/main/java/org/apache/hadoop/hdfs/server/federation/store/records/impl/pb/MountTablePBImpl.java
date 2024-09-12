@@ -343,6 +343,8 @@ public class MountTablePBImpl extends MountTable implements PBRecord {
       return DestinationOrder.HASH_ALL;
     case SPACE:
       return DestinationOrder.SPACE;
+    case LEADER_FOLLOWER:
+      return DestinationOrder.LEADER_FOLLOWER;
     default:
       return DestinationOrder.HASH;
     }
@@ -358,6 +360,8 @@ public class MountTablePBImpl extends MountTable implements PBRecord {
       return DestOrder.HASH_ALL;
     case SPACE:
       return DestOrder.SPACE;
+    case LEADER_FOLLOWER:
+      return DestOrder.LEADER_FOLLOWER;
     default:
       return DestOrder.HASH;
     }

@@ -74,7 +74,8 @@ public class AbstractMarkerToolTest extends AbstractS3ATestBase {
         S3A_BUCKET_PROBE,
         DIRECTORY_MARKER_POLICY,
         AUTHORITATIVE_PATH,
-        FS_S3A_CREATE_PERFORMANCE);
+        FS_S3A_CREATE_PERFORMANCE,
+        FS_S3A_PERFORMANCE_FLAGS);
     // base FS is legacy
     conf.set(DIRECTORY_MARKER_POLICY, DIRECTORY_MARKER_POLICY_DELETE);
     conf.setBoolean(FS_S3A_CREATE_PERFORMANCE, false);

@@ -26,6 +26,7 @@ import org.junit.runners.MethodSorters;
 
 import org.apache.hadoop.fs.Path;
 
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.maybeSkipRootTests;
 import static org.apache.hadoop.fs.s3a.tools.MarkerTool.AUDIT;
 import static org.apache.hadoop.fs.s3a.tools.MarkerTool.CLEAN;
 import static org.apache.hadoop.fs.s3a.tools.MarkerTool.MARKERS;
@@ -42,6 +43,7 @@ public class ITestMarkerToolRootOperations extends AbstractMarkerToolTest {
   @Override
   public void setup() throws Exception {
     super.setup();
+    maybeSkipRootTests(getConfiguration());
     rootPath = getFileSystem().makeQualified(new Path("/"));
   }
 

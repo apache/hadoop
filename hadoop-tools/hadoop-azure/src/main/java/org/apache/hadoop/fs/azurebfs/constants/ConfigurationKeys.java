@@ -32,9 +32,35 @@ public final class ConfigurationKeys {
   /**
    * Config to specify if the configured account is HNS enabled or not. If
    * this config is not set, getacl call is made on account filesystem root
-   * path to determine HNS status.
+   * path on DFS Endpoint to determine HNS status.
    */
   public static final String FS_AZURE_ACCOUNT_IS_HNS_ENABLED = "fs.azure.account.hns.enabled";
+
+  /**
+   * Config to specify which {@link  AbfsServiceType} to use with HNS-Disabled Account type.
+   * Default value will be identified from URL used to initialize filesystem.
+   * This will allow an override to choose service endpoint in cases where any
+   * local DNS resolution is set for account and driver is unable to detect
+   * intended endpoint from the url used to initialize filesystem.
+   * If configured Blob for HNS-Enabled account, FS init will fail.
+   * Value {@value} case-insensitive "DFS" or "BLOB"
+   */
+  public static final String FS_AZURE_FNS_ACCOUNT_SERVICE_TYPE = "fs.azure.fns.account.service.type";
+
+  /**
+   * Config to specify which {@link AbfsServiceType} to use only for Ingress Operations.
+   * Other operations will continue to move to the FS configured service endpoint.
+   * Value {@value} case-insensitive "DFS" or "BLOB"
+   */
+  public static final String FS_AZURE_INGRESS_SERVICE_TYPE = "fs.azure.ingress.service.type";
+
+  /**
+   * Config to be set only for cases where traffic over dfs endpoint is
+   * experiencing compatibility issues and need to move to blob for mitigation.
+   * Value {@value} case-insensitive "True" or "False"
+   */
+  public static final String FS_AZURE_ENABLE_DFSTOBLOB_FALLBACK = "fs.azure.enable.dfstoblob.fallback";
+
   /**
    * Enable or disable expect hundred continue header.
    * Value: {@value}.
@@ -273,6 +299,8 @@ public final class ConfigurationKeys {
   public static final String FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN = "fs.azure.account.oauth2.refresh.token";
   /** Key for oauth AAD refresh token endpoint: {@value}. */
   public static final String FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN_ENDPOINT = "fs.azure.account.oauth2.refresh.token.endpoint";
+  /** Key for oauth AAD workload identity token file path: {@value}. */
+  public static final String FS_AZURE_ACCOUNT_OAUTH_TOKEN_FILE = "fs.azure.account.oauth2.token.file";
   /** Key for enabling the tracking of ABFS API latency and sending the latency numbers to the ABFS API service */
   public static final String FS_AZURE_ABFS_LATENCY_TRACK = "fs.azure.abfs.latency.track";
 
@@ -319,5 +347,17 @@ public final class ConfigurationKeys {
    * @see FileSystem#openFile(org.apache.hadoop.fs.Path)
    */
   public static final String FS_AZURE_BUFFERED_PREAD_DISABLE = "fs.azure.buffered.pread.disable";
+  /**Defines what network library to use for server IO calls: {@value}*/
+  public static final String FS_AZURE_NETWORKING_LIBRARY = "fs.azure.networking.library";
+  /**
+   * Maximum number of IOExceptions retries for a single server call on ApacheHttpClient.
+   * Breach of this count would turn off future uses of the ApacheHttpClient library
+   * in the JVM lifecycle: {@value}
+   */
+  public static final String FS_AZURE_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES = "fs.azure.apache.http.client.max.io.exception.retries";
+  /**Maximum ApacheHttpClient-connection cache size at filesystem level: {@value}*/
+  public static final String FS_AZURE_APACHE_HTTP_CLIENT_MAX_CACHE_CONNECTION_SIZE = "fs.azure.apache.http.client.max.cache.connection.size";
+  /**Maximum idle time for a ApacheHttpClient-connection: {@value}*/
+  public static final String FS_AZURE_APACHE_HTTP_CLIENT_IDLE_CONNECTION_TTL = "fs.azure.apache.http.client.idle.connection.ttl";
   private ConfigurationKeys() {}
 }

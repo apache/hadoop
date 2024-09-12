@@ -42,6 +42,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.mapreduce.JobACL;
+import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.v2.api.records.AMInfo;
 import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.api.records.TaskId;
@@ -87,6 +88,7 @@ public class HsWebServices extends WebServices {
   private final HistoryContext ctx;
   private WebApp webapp;
   private LogServlet logServlet;
+  private boolean mrAclsEnabled;
 
   private @Context HttpServletResponse response;
   @Context UriInfo uriInfo;
@@ -100,6 +102,7 @@ public class HsWebServices extends WebServices {
     this.ctx = ctx;
     this.webapp = webapp;
     this.logServlet = new LogServlet(conf, this);
+    this.mrAclsEnabled = conf.getBoolean(MRConfig.MR_ACLS_ENABLED, false);
   }
 
   private boolean hasAccess(Job job, HttpServletRequest request) {
@@ -114,6 +117,11 @@ public class HsWebServices extends WebServices {
   private void checkAccess(Job job, HttpServletRequest request) {
     if (!hasAccess(job, request)) {
       throw new WebApplicationException(Status.UNAUTHORIZED);
+    }
+  }
+  private void checkAccess(String containerIdStr, HttpServletRequest hsr) {
+    if (mrAclsEnabled) {
+      checkAccess(AMWebServices.getJobFromContainerIdString(containerIdStr, ctx), hsr);
     }
   }
 
@@ -500,7 +508,7 @@ public class HsWebServices extends WebServices {
       @QueryParam(YarnWebServiceParams.MANUAL_REDIRECTION)
       @DefaultValue("false") boolean manualRedirection) {
     init();
-
+    checkAccess(containerIdStr, hsr);
     WrappedLogMetaRequest.Builder logMetaRequestBuilder =
         LogServlet.createRequestFromContainerId(containerIdStr);
 
@@ -527,6 +535,7 @@ public class HsWebServices extends WebServices {
       @QueryParam(YarnWebServiceParams.MANUAL_REDIRECTION)
       @DefaultValue("false") boolean manualRedirection) {
     init();
+    checkAccess(containerIdStr, req);
     return logServlet.getLogFile(req, containerIdStr, filename, format, size,
         nmId, redirectedFromNode, null, manualRedirection);
   }

@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.s3a.impl.S3AEncryption;
 import org.apache.hadoop.util.functional.RemoteIterators;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteException;
@@ -1312,7 +1313,7 @@ public final class S3AUtils {
    * @throws IOException on any IO problem
    * @throws IllegalArgumentException bad arguments
    */
-  private static String lookupBucketSecret(
+  public static String lookupBucketSecret(
       String bucket,
       Configuration conf,
       String baseKey)
@@ -1458,6 +1459,8 @@ public final class S3AUtils {
     int encryptionKeyLen =
         StringUtils.isBlank(encryptionKey) ? 0 : encryptionKey.length();
     String diagnostics = passwordDiagnostics(encryptionKey, "key");
+    String encryptionContext = S3AEncryption.getS3EncryptionContextBase64Encoded(bucket, conf,
+        encryptionMethod.requiresSecret());
     switch (encryptionMethod) {
     case SSE_C:
       LOG.debug("Using SSE-C with {}", diagnostics);
@@ -1493,7 +1496,7 @@ public final class S3AUtils {
       LOG.debug("Data is unencrypted");
       break;
     }
-    return new EncryptionSecrets(encryptionMethod, encryptionKey);
+    return new EncryptionSecrets(encryptionMethod, encryptionKey, encryptionContext);
   }
 
   /**
@@ -1686,6 +1689,21 @@ public final class S3AUtils {
       final Configuration configuration,
       final String name) {
     String valueString = configuration.get(name);
+    return getTrimmedStringCollectionSplitByEquals(valueString);
+  }
+
+  /**
+   * Get the equal op (=) delimited key-value pairs of the <code>name</code> property as
+   * a collection of pair of <code>String</code>s, trimmed of the leading and trailing whitespace
+   * after delimiting the <code>name</code> by comma and new line separator.
+   * If no such property is specified then empty <code>Map</code> is returned.
+   *
+   * @param valueString the string containing the key-value pairs.
+   * @return property value as a <code>Map</code> of <code>String</code>s, or empty
+   * <code>Map</code>.
+   */
+  public static Map<String, String> getTrimmedStringCollectionSplitByEquals(
+      final String valueString) {
     if (null == valueString) {
       return new HashMap<>();
     }

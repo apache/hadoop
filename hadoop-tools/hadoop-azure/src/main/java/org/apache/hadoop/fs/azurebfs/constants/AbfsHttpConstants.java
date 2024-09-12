@@ -22,6 +22,10 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.util.VersionInfo;
 
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENCRYPTION_CONTEXT_PROVIDER_TYPE;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY_SHA;
+
 /**
  * Responsible to keep all constant keys used in abfs rest client here.
  */
@@ -97,6 +101,8 @@ public final class AbfsHttpConstants {
   public static final String GMT_TIMEZONE = "GMT";
   public static final String APPLICATION_JSON = "application/json";
   public static final String APPLICATION_OCTET_STREAM = "application/octet-stream";
+  public static final String XMS_PROPERTIES_ENCODING_ASCII = "ISO-8859-1";
+  public static final String XMS_PROPERTIES_ENCODING_UNICODE = "UTF-8";
 
   public static final String ROOT_PATH = "/";
   public static final String ACCESS_MASK = "mask:";
@@ -164,6 +170,47 @@ public final class AbfsHttpConstants {
    * </pre>
    */
   public static final Integer HTTP_STATUS_CATEGORY_QUOTIENT = 100;
+
+  /**
+   * List of configurations that are related to Customer-Provided-Keys.
+   * <ol>
+   *   <li>
+   *     {@value ConfigurationKeys#FS_AZURE_ENCRYPTION_CONTEXT_PROVIDER_TYPE}
+   *     for ENCRYPTION_CONTEXT cpk-type.
+   *   </li>
+   *   <li>
+   *     {@value ConfigurationKeys#FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY} and
+   *     {@value ConfigurationKeys#FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY_SHA}
+   *     for GLOBAL_KEY cpk-type.
+   *   </li>
+   * </ol>
+   * List: {@value}
+   */
+  private static final String CPK_CONFIG_LIST =
+      FS_AZURE_ENCRYPTION_CONTEXT_PROVIDER_TYPE + ", "
+          + FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY + ", "
+          + FS_AZURE_ENCRYPTION_ENCODED_CLIENT_PROVIDED_KEY_SHA;
+
+  /**
+   * Exception message on filesystem init if customer-provided-keys configs are provided
+   * for a non-hierarchical-namespace account: {@value}
+   */
+  public static final String CPK_IN_NON_HNS_ACCOUNT_ERROR_MESSAGE =
+      "Non hierarchical-namespace account can not have configs enabled for "
+          + "Customer Provided Keys. Following configs can not be given with "
+          + "non-hierarchical-namespace account:"
+          + CPK_CONFIG_LIST;
+
+  /**
+   * System property that define maximum number of cached-connection per fileSystem for
+   * ApacheHttpClient. JDK network library uses the same property to define maximum
+   * number of cached-connections at JVM level.
+   */
+  public static final String HTTP_MAX_CONN_SYS_PROP = "http.maxConnections";
+  public static final String JDK_IMPL = "JDK";
+  public static final String APACHE_IMPL = "Apache";
+  public static final String JDK_FALLBACK = "JDK_fallback";
+  public static final String KEEP_ALIVE_CACHE_CLOSED = "KeepAliveCache is closed";
 
   private AbfsHttpConstants() {}
 }

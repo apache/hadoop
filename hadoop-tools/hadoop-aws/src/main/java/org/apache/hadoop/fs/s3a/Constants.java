@@ -95,6 +95,11 @@ public final class Constants {
       "fs.s3a.assumed.role.arn";
 
   /**
+   * external id for assume role request: {@value}.
+   */
+  public static final String ASSUMED_ROLE_EXTERNAL_ID = "fs.s3a.assumed.role.external.id";
+
+  /**
    * Session name for the assumed role, must be valid characters according
    * to the AWS APIs: {@value}.
    * If not set, one is generated from the current Hadoop/Kerberos username.
@@ -735,6 +740,16 @@ public final class Constants {
    */
   public static final String S3_ENCRYPTION_KEY =
       "fs.s3a.encryption.key";
+
+  /**
+   * Set S3-SSE encryption context.
+   * The value of this property is a set of non-secret comma-separated key-value pairs
+   * of additional contextual information about the data that are separated by equal
+   * operator (=).
+   * value:{@value}
+   */
+  public static final String S3_ENCRYPTION_CONTEXT =
+      "fs.s3a.encryption.context";
 
   /**
    * List of custom Signers. The signer class will be loaded, and the signer
@@ -1394,6 +1409,11 @@ public final class Constants {
   public static final String FS_S3A_CREATE_PERFORMANCE_ENABLED =
       FS_S3A_CREATE_PERFORMANCE + ".enabled";
 
+  /**
+   * Comma separated list of performance flags.
+   */
+  public static final String FS_S3A_PERFORMANCE_FLAGS =
+      "fs.s3a.performance.flags";
   /**
    * Prefix for adding a header to the object when created.
    * The actual value must have a "." suffix and then the actual header.
