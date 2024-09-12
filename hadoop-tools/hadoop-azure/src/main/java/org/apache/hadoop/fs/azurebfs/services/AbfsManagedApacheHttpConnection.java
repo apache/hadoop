@@ -52,7 +52,7 @@ class AbfsManagedApacheHttpConnection
    */
   private AbfsManagedHttpClientContext managedHttpContext;
 
-  final HttpHost targetHost;
+  private final HttpHost targetHost;
 
   private final int hashCode;
 
