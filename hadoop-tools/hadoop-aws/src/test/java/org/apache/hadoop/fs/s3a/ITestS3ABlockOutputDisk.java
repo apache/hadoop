@@ -36,7 +36,7 @@ public class ITestS3ABlockOutputDisk extends ITestS3ABlockOutputArray {
    * @return null
    */
   protected S3ADataBlocks.BlockFactory createFactory(S3AFileSystem fileSystem) {
-    Assume.assumeTrue("mark/reset nopt supoprted", false);
+    Assume.assumeTrue("mark/reset not supported", false);
     return null;
   }
 }

@@ -1505,6 +1505,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource,
               INVOCATION_HFLUSH.getSymbol(),
               INVOCATION_HSYNC.getSymbol())
           .withGauges(
+              STREAM_WRITE_BLOCK_UPLOADS_ACTIVE.getSymbol(),
               STREAM_WRITE_BLOCK_UPLOADS_PENDING.getSymbol(),
               STREAM_WRITE_BLOCK_UPLOADS_BYTES_PENDING.getSymbol())
           .withDurationTracking(

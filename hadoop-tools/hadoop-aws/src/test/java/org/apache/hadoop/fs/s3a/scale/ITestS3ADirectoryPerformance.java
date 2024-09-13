@@ -44,7 +44,6 @@ import org.slf4j.LoggerFactory;
 
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -262,7 +261,7 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
         futures.add(submit(executorService,
             () -> writeOperationHelper.putObject(putObjectRequestBuilder.build(),
                 PutObjectOptions.keepingDirs(),
-                new S3ADataBlocks.BlockUploadData(new FailingInputStream()), false, null)));
+                new S3ADataBlocks.BlockUploadData(new byte[0], null), null)));
       }
       LOG.info("Waiting for PUTs to complete");
       waitForCompletion(futures);
@@ -360,16 +359,6 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
       LOG.info("FS statistics {}",
           ioStatisticsToPrettyString(fs.getIOStatistics()));
       fs.close();
-    }
-  }
-
-  /**
-   * Input stream which always returns -1.
-   */
-  private static final class FailingInputStream  extends InputStream {
-    @Override
-    public int read() throws IOException {
-      return -1;
     }
   }
 
