@@ -173,7 +173,7 @@ public abstract class ContainerExecutor implements Configurable {
    * @throws InterruptedException if application init thread is halted by NM
    */
   public abstract void startLocalizer(LocalizerStartContext ctx)
-    throws IOException, InterruptedException;
+    throws IOException, InterruptedException, ConfigurationException;
 
   /**
    * Prepare the container prior to the launch environment being written.
