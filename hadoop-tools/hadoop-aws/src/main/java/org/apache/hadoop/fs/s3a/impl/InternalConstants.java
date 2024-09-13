@@ -294,4 +294,11 @@ public final class InternalConstants {
    */
   public static final String AUTH_SCHEME_AWS_SIGV_4 = "aws.auth#sigv4";
 
+
+  /**
+   * Progress logge name; fairly noisy.
+   */
+  public static final String UPLOAD_PROGRESS_LOG_NAME =
+      "org.apache.hadoop.fs.s3a.S3AFileSystem.Progress";
+
 }
