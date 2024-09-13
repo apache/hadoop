@@ -3367,22 +3367,25 @@ public class CapacityScheduler extends
    @Override
   public long checkAndGetApplicationLifetime(String queueName,
       long lifetimeRequestedByApp) {
-    CSQueue queue = getQueue(queueName);
+    CSQueue queue;
 
-    // This handles the case where the queue does not exist,
-    // addressing the issue related to YARN-11708.
-    if (queue == null) {
-      QueuePath queuePath = new QueuePath(queueName);
+    writeLock.lock();
+    try {
+      queue = getQueue(queueName);
 
-      writeLock.lock();
-      try {
-        queue = queueManager.createQueue(queuePath);
-      } catch (YarnException | IOException e) {
-        LOG.error("Failed to create queue '{}': ", queueName, e);
-        throw new YarnRuntimeException("Queue creation failed", e);
-      } finally {
-        writeLock.unlock();
+      // This handles the case where the queue does not exist,
+      // addressing the issue related to YARN-11708.
+      if (queue == null) {
+        QueuePath queuePath = new QueuePath(queueName);
+        try {
+          queue = queueManager.createQueue(queuePath);
+        } catch (YarnException | IOException e) {
+          LOG.error("Failed to create queue " + queueName, e);
+          throw new YarnRuntimeException("Queue creation failed", e);
+        }
       }
+    } finally {
+      writeLock.unlock();
     }
 
     readLock.lock();
