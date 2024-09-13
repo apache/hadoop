@@ -219,7 +219,7 @@ public class DFSNetworkTopology extends NetworkTopology {
     }
     if (excludedNodes != null) {
       for (Node excludedNode : excludedNodes) {
-        if (excludeRoot != null && isNodeInScope(excludedNode, excludedScope) &&
+        if ((excludeRoot != null && isNodeInScope(excludedNode, excludedScope)) ||
             !isNodeInScope(excludedNode, scope)) {
           continue;
         }
