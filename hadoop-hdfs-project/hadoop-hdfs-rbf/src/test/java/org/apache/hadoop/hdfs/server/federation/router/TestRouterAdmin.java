@@ -118,12 +118,15 @@ public class TestRouterAdmin {
    * @throws IOException
    * @throws NoSuchFieldException
    */
-  public static void setField(Object target, String fieldName, Object value) throws NoSuchFieldException, IllegalAccessException {
+  public static void setField(Object target, String fieldName, Object value)
+      throws NoSuchFieldException, IllegalAccessException {
     Field field = target.getClass().getDeclaredField(fieldName);
     field.setAccessible(true);
     field.set(target, value);
   }
-  private static void setUpMocks() throws IOException, NoSuchFieldException, IllegalAccessException {
+
+  private static void setUpMocks()
+      throws IOException, NoSuchFieldException, IllegalAccessException {
     RouterRpcServer spyRpcServer =
         Mockito.spy(routerContext.getRouter().createRpcServer());
     //Used reflection to set the 'rpcServer field'

@@ -59,7 +59,7 @@ public class TestFSDirAttrOp {
     when(fsd.hasWriteLock()).thenReturn(Boolean.TRUE);
     when(iip.getLastINode()).thenReturn(inode);
     when(iip.getLatestSnapshotId()).thenReturn(new Random().nextInt());
-    when(inode.setModificationTime(anyLong(),anyInt())).thenReturn(inode);
+    when(inode.setModificationTime(anyLong(), anyInt())).thenReturn(inode);
     when(inode.getAccessTime()).thenReturn(atime0);
 
     return FSDirAttrOp.unprotectedSetTimes(fsd, iip, mtime, atime, force);
