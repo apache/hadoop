@@ -54,6 +54,8 @@ public class KerberosName {
    */
   public static final String MECHANISM_MIT = "mit";
 
+  public static final String DEFAULT_RULES = "DEFAULT";
+
   /** Constant that defines the default behavior of the rule mechanism */
   public static final String DEFAULT_MECHANISM = MECHANISM_HADOOP;
 
@@ -414,11 +416,19 @@ public class KerberosName {
       params = new String[]{realm, serviceName, hostName};
     }
     String ruleMechanism = this.ruleMechanism;
+    List<Rule> rules = this.rules;
+
+    if (rules == null) {
+      LOG.warn("auth_to_local rules not set."
+        + "Using default of " + DEFAULT_RULES);
+      rules = parseRules(DEFAULT_RULES);
+    }
     if (ruleMechanism == null && rules != null) {
       LOG.warn("auth_to_local rule mechanism not set."
       + "Using default of " + DEFAULT_MECHANISM);
       ruleMechanism = DEFAULT_MECHANISM;
     }
+
     for(Rule r: rules) {
       String result = r.apply(params, ruleMechanism);
       if (result != null) {

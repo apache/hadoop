@@ -46,7 +46,6 @@ class User implements Principal {
   
   public User(String name, AuthenticationMethod authMethod, LoginContext login) {
     try {
-      HadoopKerberosName.setConfiguration(new Configuration());
       shortName = new HadoopKerberosName(name).getShortName();
     } catch (IOException ioe) {
       throw new IllegalArgumentException("Illegal principal name " + name
