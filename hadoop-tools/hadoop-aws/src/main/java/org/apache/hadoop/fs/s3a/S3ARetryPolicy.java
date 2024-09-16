@@ -126,6 +126,11 @@ public class S3ARetryPolicy implements RetryPolicy {
   protected final RetryPolicy retryAwsClientExceptions;
 
   /**
+   * Retry policy for all http 5xx errors not handled explicitly.
+   */
+  protected final RetryPolicy http5xxRetryPolicy;
+
+  /**
    * Instantiate.
    * @param conf configuration to read.
    */
@@ -163,6 +168,13 @@ public class S3ARetryPolicy implements RetryPolicy {
 
     // client connectivity: fixed retries without care for idempotency
     connectivityFailure = baseExponentialRetry;
+
+    boolean retry5xxHttpErrors =
+        conf.getBoolean(RETRY_HTTP_5XX_ERRORS, DEFAULT_RETRY_HTTP_5XX_ERRORS);
+
+    http5xxRetryPolicy = retry5xxHttpErrors
+        ? retryAwsClientExceptions
+        : fail;
 
     Map<Class<? extends Exception>, RetryPolicy> policyMap =
         createExceptionMap();
@@ -228,15 +240,13 @@ public class S3ARetryPolicy implements RetryPolicy {
     // throttled requests are can be retried, always
     policyMap.put(AWSServiceThrottledException.class, throttlePolicy);
 
-    // Status 5xx error code is an immediate failure
+    // Status 5xx error code has historically been treated as an immediate failure
     // this is sign of a server-side problem, and while
     // rare in AWS S3, it does happen on third party stores.
     // (out of disk space, etc).
     // by the time we get here, the aws sdk will have
     // already retried.
-    // there is specific handling for some 5XX codes (501, 503);
-    // this is for everything else
-    policyMap.put(AWSStatus500Exception.class, fail);
+    policyMap.put(AWSStatus500Exception.class, http5xxRetryPolicy);
 
     // subclass of AWSServiceIOException whose cause is always S3Exception
     policyMap.put(AWSS3IOException.class, retryIdempotentCalls);

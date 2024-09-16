@@ -21,7 +21,6 @@ package org.apache.hadoop.fs.s3a.scale;
 import java.io.IOException;
 
 import java.net.URI;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -29,21 +28,24 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.IntStream;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.contract.ContractTestUtils.NanoTimer;
-import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 
+import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 
 /**
  * Tests concurrent operations on a single S3AFileSystem instance.
@@ -62,8 +64,20 @@ public class ITestS3AConcurrentOps extends S3AScaleTestBase {
   }
 
   @Override
+  protected Configuration createScaleConfiguration() {
+    final Configuration conf = super.createScaleConfiguration();
+    removeBaseAndBucketOverrides(conf, MULTIPART_SIZE);
+    conf.setInt(MULTIPART_SIZE, MULTIPART_MIN_SIZE);
+    return conf;
+  }
+
+  @Override
   public void setup() throws Exception {
     super.setup();
+    final S3AFileSystem fs = getFileSystem();
+    final Configuration conf = fs.getConf();
+    assume("multipart upload/copy disabled",
+        conf.getBoolean(MULTIPART_UPLOADS_ENABLED, true));
     auxFs = getNormalFileSystem();
 
     // this is set to the method path, even in test setup.
@@ -124,20 +138,16 @@ public class ITestS3AConcurrentOps extends S3AScaleTestBase {
     try {
       ((ThreadPoolExecutor)executor).prestartAllCoreThreads();
       Future<Boolean>[] futures = new Future[concurrentRenames];
-      for (int i = 0; i < concurrentRenames; i++) {
-        final int index = i;
-        futures[i] = executor.submit(new Callable<Boolean>() {
-          @Override
-          public Boolean call() throws Exception {
-            NanoTimer timer = new NanoTimer();
-            boolean result = fs.rename(source[index], target[index]);
-            timer.end("parallel rename %d", index);
-            LOG.info("Rename {} ran from {} to {}", index,
-                timer.getStartTime(), timer.getEndTime());
-            return result;
-          }
+      IntStream.range(0, concurrentRenames).forEachOrdered(i -> {
+        futures[i] = executor.submit(() -> {
+          NanoTimer timer = new NanoTimer();
+          boolean result = fs.rename(source[i], target[i]);
+          timer.end("parallel rename %d", i);
+          LOG.info("Rename {} ran from {} to {}", i,
+              timer.getStartTime(), timer.getEndTime());
+          return result;
         });
-      }
+      });
       LOG.info("Waiting for tasks to complete...");
       LOG.info("Deadlock may have occurred if nothing else is logged" +
           " or the test times out");
@@ -159,16 +169,15 @@ public class ITestS3AConcurrentOps extends S3AScaleTestBase {
    * that now can't enter the resource pool to get completed.
    */
   @Test
-  @SuppressWarnings("unchecked")
   public void testParallelRename() throws InterruptedException,
       ExecutionException, IOException {
 
-    Configuration conf = getConfiguration();
+    // clone the fs with all its per-bucket settings
+    Configuration conf = new Configuration(getFileSystem().getConf());
+
+    // shrink the thread pool
     conf.setInt(MAX_THREADS, 2);
     conf.setInt(MAX_TOTAL_TASKS, 1);
-
-    conf.set(MIN_MULTIPART_THRESHOLD, "10K");
-    conf.set(MULTIPART_SIZE, "5K");
 
     try (S3AFileSystem tinyThreadPoolFs = new S3AFileSystem()) {
       tinyThreadPoolFs.initialize(auxFs.getUri(), conf);
@@ -178,35 +187,42 @@ public class ITestS3AConcurrentOps extends S3AScaleTestBase {
     }
   }
 
+  /**
+   * Verify that after a parallel rename batch there are multiple
+   * transfer threads active -and that after the timeout duration
+   * that thread count has dropped to zero.
+   */
   @Test
   public void testThreadPoolCoolDown() throws InterruptedException,
       ExecutionException, IOException {
 
-    int hotThreads = 0;
-    int coldThreads = 0;
 
     parallelRenames(concurrentRenames, auxFs,
         "testThreadPoolCoolDown-source", "testThreadPoolCoolDown-target");
 
-    for (Thread t : Thread.getAllStackTraces().keySet()) {
-      if (t.getName().startsWith("s3a-transfer")) {
-        hotThreads++;
-      }
-    }
+    int hotThreads = (int) Thread.getAllStackTraces()
+        .keySet()
+        .stream()
+        .filter(t -> t.getName().startsWith("s3a-transfer"))
+        .count();
 
-    int timeoutMs = Constants.DEFAULT_KEEPALIVE_TIME * 1000;
+    Assertions.assertThat(hotThreads)
+        .describedAs("Failed to find threads in active FS - test is flawed")
+        .isNotEqualTo(0);
+
+    long timeoutMs = DEFAULT_KEEPALIVE_TIME_DURATION.toMillis();
     Thread.sleep((int)(1.1 * timeoutMs));
 
-    for (Thread t : Thread.getAllStackTraces().keySet()) {
-      if (t.getName().startsWith("s3a-transfer")) {
-        coldThreads++;
-      }
-    }
+    int coldThreads = (int) Thread.getAllStackTraces()
+        .keySet()
+        .stream()
+        .filter(t -> t.getName().startsWith("s3a-transfer"))
+        .count();
 
-    assertNotEquals("Failed to find threads in active FS - test is flawed",
-        hotThreads, 0);
-    assertTrue("s3a-transfer threads went from " + hotThreads + " to " +
-        coldThreads + ", should have gone to 0", 0 == coldThreads);
-
+    Assertions.assertThat(coldThreads)
+        .describedAs(("s3a-transfer threads went from %s to %s;"
+            + " should have gone to 0"),
+            hotThreads, coldThreads)
+        .isEqualTo(0);
   }
 }

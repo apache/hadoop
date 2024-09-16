@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a.impl;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
@@ -147,10 +148,32 @@ public class ClientManagerImpl implements ClientManager {
     return s3Client.eval();
   }
 
+  /**
+   * Get the S3Client, raising a failure to create as an UncheckedIOException.
+   * @return the S3 client
+   * @throws UncheckedIOException failure to create the client.
+   */
+  @Override
+  public synchronized S3Client getOrCreateS3ClientUnchecked() throws UncheckedIOException {
+    checkNotClosed();
+    return s3Client.get();
+  }
+
   @Override
   public synchronized S3AsyncClient getOrCreateAsyncClient() throws IOException {
     checkNotClosed();
     return s3AsyncClient.eval();
+  }
+
+  /**
+   * Get the AsyncS3Client, raising a failure to create as an UncheckedIOException.
+   * @return the S3 client
+   * @throws UncheckedIOException failure to create the client.
+   */
+  @Override
+  public synchronized S3Client getOrCreateAsyncS3ClientUnchecked() throws UncheckedIOException {
+    checkNotClosed();
+    return s3Client.get();
   }
 
   @Override

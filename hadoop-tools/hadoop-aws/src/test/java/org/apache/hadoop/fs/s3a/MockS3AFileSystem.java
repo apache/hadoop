@@ -50,6 +50,7 @@ import org.apache.hadoop.fs.s3a.statistics.CommitterStatistics;
 import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
 import org.apache.hadoop.fs.s3a.test.MinimalWriteOperationHelperCallbacks;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
+import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.util.Progressable;
 
 
@@ -184,7 +185,7 @@ public class MockS3AFileSystem extends S3AFileSystem {
         new EmptyS3AStatisticsContext(),
         noopAuditor(conf),
         AuditTestSupport.NOOP_SPAN,
-        new MinimalWriteOperationHelperCallbacks());
+        new MinimalWriteOperationHelperCallbacks(this::getS3Client));
   }
 
   @Override
@@ -193,6 +194,11 @@ public class MockS3AFileSystem extends S3AFileSystem {
 
   @Override
   public WriteOperationHelper getWriteOperationHelper() {
+    return writeHelper;
+  }
+
+  @Override
+  public WriteOperationHelper createWriteOperationHelper(final AuditSpan auditSpan) {
     return writeHelper;
   }
 
@@ -230,8 +236,6 @@ public class MockS3AFileSystem extends S3AFileSystem {
   @Override
   void finishedWrite(String key,
       long length,
-      String eTag,
-      String versionId,
       final PutObjectOptions putOptions) {
 
   }
