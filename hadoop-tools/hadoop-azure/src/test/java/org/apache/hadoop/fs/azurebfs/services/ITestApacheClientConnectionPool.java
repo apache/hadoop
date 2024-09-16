@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import java.io.IOException;
+
+import com.sun.tools.javac.util.Pair;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
@@ -76,19 +79,22 @@ public class ITestApacheClientConnectionPool extends
   }
 
   @Test
-  public void testConnectionLogging() throws Exception {
-    HttpHost host = new HttpHost(getFileSystem().getUri().getHost(),
-        getFileSystem().getUri().getPort(),
-        HTTPS_SCHEME);
-    HttpRoute httpRoute = new HttpRoute(host);
-
-    AbfsManagedApacheHttpConnection conn
-        = (AbfsManagedApacheHttpConnection) new AbfsHttpClientConnectionFactory().create(
-        httpRoute, null);
+  public void testNonConnectedConnectionLogging() throws Exception {
+    Pair<HttpRoute, AbfsManagedApacheHttpConnection> testConnPair
+        = getTestConnection();
+    AbfsManagedApacheHttpConnection conn = testConnPair.snd;
     String log = conn.toString();
     Assertions.assertThat(log.split(COLON).length)
-        .describedAs("Log to have three field: https://host:port:hashCode")
+        .describedAs("Log to have three fields: https://host:port:hashCode")
         .isEqualTo(4);
+  }
+
+  @Test
+  public void testConnectedConnectionLogging() throws Exception {
+    Pair<HttpRoute, AbfsManagedApacheHttpConnection> testConnPair
+        = getTestConnection();
+    AbfsManagedApacheHttpConnection conn = testConnPair.snd;
+    HttpRoute httpRoute = testConnPair.fst;
 
     Registry<ConnectionSocketFactory> socketFactoryRegistry
         = RegistryBuilder.<ConnectionSocketFactory>create()
@@ -101,9 +107,24 @@ public class ITestApacheClientConnectionPool extends
         httpRoute.getTargetHost(), httpRoute.getLocalSocketAddress(),
         getConfiguration().getHttpConnectionTimeout(), SocketConfig.DEFAULT,
         new HttpClientContext());
-    log = conn.toString();
+
+    String log = conn.toString();
     Assertions.assertThat(log.split(COLON).length)
-        .describedAs("Log to have three field: https://host:port:hashCode")
+        .describedAs("Log to have three fields: https://host:port:hashCode")
         .isEqualTo(4);
+  }
+
+  private Pair<HttpRoute, AbfsManagedApacheHttpConnection> getTestConnection()
+      throws IOException {
+    HttpHost host = new HttpHost(getFileSystem().getUri().getHost(),
+        getFileSystem().getUri().getPort(),
+        HTTPS_SCHEME);
+    HttpRoute httpRoute = new HttpRoute(host);
+
+    AbfsManagedApacheHttpConnection conn
+        = (AbfsManagedApacheHttpConnection) new AbfsHttpClientConnectionFactory().create(
+        httpRoute, null);
+
+    return Pair.of(httpRoute, conn);
   }
 }
