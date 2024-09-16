@@ -19,8 +19,8 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
+import java.util.Map;
 
-import com.sun.tools.javac.util.Pair;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.AzureBlobFileSystem;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsDriverException;
 import org.apache.hadoop.security.ssl.DelegatingSSLSocketFactory;
+import org.apache.hadoop.util.functional.Tuples;
 import org.apache.http.HttpHost;
 import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.config.Registry;
@@ -80,9 +81,9 @@ public class ITestApacheClientConnectionPool extends
 
   @Test
   public void testNonConnectedConnectionLogging() throws Exception {
-    Pair<HttpRoute, AbfsManagedApacheHttpConnection> testConnPair
+    Map.Entry<HttpRoute, AbfsManagedApacheHttpConnection> testConnPair
         = getTestConnection();
-    AbfsManagedApacheHttpConnection conn = testConnPair.snd;
+    AbfsManagedApacheHttpConnection conn = testConnPair.getValue();
     String log = conn.toString();
     Assertions.assertThat(log.split(COLON).length)
         .describedAs("Log to have three fields: https://host:port:hashCode")
@@ -91,10 +92,10 @@ public class ITestApacheClientConnectionPool extends
 
   @Test
   public void testConnectedConnectionLogging() throws Exception {
-    Pair<HttpRoute, AbfsManagedApacheHttpConnection> testConnPair
+    Map.Entry<HttpRoute, AbfsManagedApacheHttpConnection> testConnPair
         = getTestConnection();
-    AbfsManagedApacheHttpConnection conn = testConnPair.snd;
-    HttpRoute httpRoute = testConnPair.fst;
+    AbfsManagedApacheHttpConnection conn = testConnPair.getValue();
+    HttpRoute httpRoute = testConnPair.getKey();
 
     Registry<ConnectionSocketFactory> socketFactoryRegistry
         = RegistryBuilder.<ConnectionSocketFactory>create()
@@ -114,7 +115,7 @@ public class ITestApacheClientConnectionPool extends
         .isEqualTo(4);
   }
 
-  private Pair<HttpRoute, AbfsManagedApacheHttpConnection> getTestConnection()
+  private Map.Entry<HttpRoute, AbfsManagedApacheHttpConnection> getTestConnection()
       throws IOException {
     HttpHost host = new HttpHost(getFileSystem().getUri().getHost(),
         getFileSystem().getUri().getPort(),
@@ -125,6 +126,6 @@ public class ITestApacheClientConnectionPool extends
         = (AbfsManagedApacheHttpConnection) new AbfsHttpClientConnectionFactory().create(
         httpRoute, null);
 
-    return Pair.of(httpRoute, conn);
+    return Tuples.pair(httpRoute, conn);
   }
 }
