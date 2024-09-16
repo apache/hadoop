@@ -671,7 +671,8 @@ public class TestLinuxContainerExecutorWithMocks {
       }
     }
 
-    doThrow(new PrivilegedOperationException("IO error", new IOException("No such file or directory")))
+    doThrow(new PrivilegedOperationException("IO error",
+        new IOException("No such file or directory")))
         .when(spyPrivilegedExecutor).executePrivilegedOperation(
             any(), any(PrivilegedOperation.class),
             any(), any(), anyBoolean(), anyBoolean());
