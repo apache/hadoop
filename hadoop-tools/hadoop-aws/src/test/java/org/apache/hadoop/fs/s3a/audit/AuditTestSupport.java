@@ -36,6 +36,11 @@ import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.LOGGING_AUDIT_SER
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.NOOP_AUDIT_SERVICE;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.REFERRER_HEADER_ENABLED;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.REJECT_OUT_OF_SPAN_OPERATIONS;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.HTTP_RESPONSE_400;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.HTTP_RESPONSE_4XX;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.HTTP_RESPONSE_500;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.HTTP_RESPONSE_503;
+import static org.apache.hadoop.fs.statistics.StoreStatisticNames.HTTP_RESPONSE_5XX;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.iostatisticsStore;
 
 /**
@@ -105,7 +110,12 @@ public final class AuditTestSupport {
             AUDIT_ACCESS_CHECK_FAILURE.getSymbol(),
             AUDIT_FAILURE.getSymbol(),
             AUDIT_REQUEST_EXECUTION.getSymbol(),
-            AUDIT_SPAN_CREATION.getSymbol())
+            AUDIT_SPAN_CREATION.getSymbol(),
+            HTTP_RESPONSE_400,
+            HTTP_RESPONSE_4XX,
+            HTTP_RESPONSE_500,
+            HTTP_RESPONSE_503,
+            HTTP_RESPONSE_5XX)
         .build();
   }
 
