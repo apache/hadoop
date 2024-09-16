@@ -101,6 +101,8 @@ public class AbfsCountersImpl implements AbfsCounters {
 
   private AbfsBackoffMetrics abfsBackoffMetrics = null;
 
+  private InputStreamStatistics inputStreamStatistics = null;
+
   private AbfsReadFooterMetrics abfsReadFooterMetrics = null;
 
   private AtomicLong lastExecutionTime = null;
@@ -170,6 +172,10 @@ public class AbfsCountersImpl implements AbfsCounters {
     switch (metricFormat) {
       case INTERNAL_BACKOFF_METRIC_FORMAT:
         abfsBackoffMetrics = new AbfsBackoffMetrics();
+        inputStreamStatistics = new InputStreamStatistics();
+        inputStreamStatistics.increment("TEST1");
+        inputStreamStatistics.increment("RETRY_ONE", "TEST3", 2);
+        System.out.println(inputStreamStatistics.toString());
         break;
       case INTERNAL_FOOTER_METRIC_FORMAT:
         abfsReadFooterMetrics = new AbfsReadFooterMetrics();
@@ -251,6 +257,10 @@ public class AbfsCountersImpl implements AbfsCounters {
   @Override
   public AbfsBackoffMetrics getAbfsBackoffMetrics() {
     return abfsBackoffMetrics != null ? abfsBackoffMetrics : null;
+  }
+
+  public InputStreamStatistics getInputStreamStatistics() {
+    return inputStreamStatistics;
   }
 
   @Override

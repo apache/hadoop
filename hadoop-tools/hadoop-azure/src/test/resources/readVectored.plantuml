@@ -1,0 +1,28 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+
+autonumber
+Developer -> AbfsInputStream: readVectored(List<Ranges> ranges, IntFunction<ByteBuffer> allocate)
+AbfsInputStream -> VectoredReadUtils: getFinalRanges(ranges)
+VectoredReadUtils -> AbfsInputStream : List<Range> getFinalRanges
+loop range in finalRanges:
+AbfsInputStream -> VectoredReadThreadUtils : getThread()
+VectoredReadThreadUtils -> AbfsInputStream : thread
+AbfsInputStream -> thread : invoke(range)
+thread -> AbfsInputStream : control back to main thread
+par threadExec:
+loop buffer:multipleBuffersInRange
+thread -> BufferManager : checkIfAlreadyQueued()
+alt bufferIsNotQueued:
+thread -> AbfsInputStream : read(bufferRange)
+AbfsInputStream -> AbfsClient : execute()
+AbfsClient -> AbfsInputStream : result
+end
+end
+end
+end
+AbfsInputStream -> VectoredReadUtils : convertToDevUnderstandableData()
+VectoredReadUtils -> AbfsInputStream : List<Buffer<>> result
+AbfsInputStream -> Developer : result
+
+@enduml
