@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ARG JAVA_VERSION=11
+ARG JAVA_VERSION=17
 
 # Ubuntu 22.04 LTS
 FROM eclipse-temurin:${JAVA_VERSION}-jammy
