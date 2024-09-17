@@ -426,7 +426,7 @@ public class NodesListManager extends CompositeService implements
 
     for (String includedNode : includes) {
       if (!registeredHostNames.contains(includedNode) && !excludes.contains(includedNode)) {
-        LOG.info("Lost node: " + includedNode);
+        LOG.info("Lost node: {}", includedNode);
         nodesToMarkLost.add(includedNode);
       }
     }
@@ -488,12 +488,12 @@ public class NodesListManager extends CompositeService implements
       this.rmContext.getRMNodes().put(nodeId, rmNode);
       this.rmContext.getInactiveRMNodes().put(nodeId, rmNode);
 
-      LOG.info("Successfully dispatched LOST event and deactivated node: "
-          + lostNode + ", Node ID: " + nodeId);
+      LOG.info("Successfully dispatched LOST event and deactivated node: {}, Node ID: {}",
+          lostNode, nodeId);
     } catch (Exception e) {
       // Log any exception encountered during event dispatch
-      LOG.error("Error dispatching LOST event for node: " + lostNode +
-          ", Node ID: " + nodeId + " - " + e.getMessage());
+      LOG.error("Error dispatching LOST event for node: {}, Node ID: {} - {}",
+          lostNode, nodeId, e.getMessage());
     }
   }
 
