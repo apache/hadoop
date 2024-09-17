@@ -1603,21 +1603,23 @@ public class ResourceManager extends CompositeService
       int port = webApp.port();
       WebAppUtils.setRMWebAppPort(conf, port);
     }
+
+    // Refresh node state before the service startup to reflect the unregistered
+    // nodemanagers as LOST if the tracking for unregistered nodes flag is enabled.
+    // For HA setup, refreshNodes is already being called before the active
+    // transition.
+    Configuration yarnConf = getConfig();
+    if (yarnConf.getBoolean(
+        YarnConfiguration.ENABLE_TRACKING_FOR_UNREGISTERED_NODES,
+        YarnConfiguration.DEFAULT_ENABLE_TRACKING_FOR_UNREGISTERED_NODES)) {
+      this.rmContext.getNodesListManager().refreshNodes(yarnConf);
+    }
+
     super.serviceStart();
 
     // Non HA case, start after RM services are started.
     if (!this.rmContext.isHAEnabled()) {
       transitionToActive();
-
-      // Refresh node state at the service startup to reflect the unregistered
-      // nodemanagers as LOST if the tracking for unregistered nodes flag is enabled.
-      // For HA setup, refreshNodes is already being called during the transition.
-      Configuration yarnConf = getConfig();
-      if (yarnConf.getBoolean(
-          YarnConfiguration.ENABLE_TRACKING_FOR_UNREGISTERED_NODES,
-          YarnConfiguration.DEFAULT_ENABLE_TRACKING_FOR_UNREGISTERED_NODES)) {
-        this.rmContext.getNodesListManager().refreshNodes(yarnConf);
-      }
     }
   }
 
