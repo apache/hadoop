@@ -3364,7 +3364,7 @@ public class CapacityScheduler extends
     }
   }
 
-   @Override
+  @Override
   public long checkAndGetApplicationLifetime(String queueName,
       long lifetimeRequestedByApp) {
     CSQueue queue;
@@ -3372,17 +3372,20 @@ public class CapacityScheduler extends
     writeLock.lock();
     try {
       queue = getQueue(queueName);
+      QueuePath queuePath = new QueuePath(queueName);
+      CSQueue parentQueue = getQueue(queuePath.getParent());
 
       // This handles the case where the queue does not exist,
       // addressing the issue related to YARN-11708.
-      if (queue == null) {
-        QueuePath queuePath = new QueuePath(queueName);
+      if (queue == null && parentQueue != null) {
         try {
           queue = queueManager.createQueue(queuePath);
         } catch (YarnException | IOException e) {
           LOG.error("Failed to create queue " + queueName, e);
           throw new YarnRuntimeException("Queue creation failed", e);
         }
+      } else if (!(queue instanceof AbstractLeafQueue)) {
+        return lifetimeRequestedByApp;
       }
     } finally {
       writeLock.unlock();
@@ -3390,10 +3393,6 @@ public class CapacityScheduler extends
 
     readLock.lock();
     try {
-      if (!(queue instanceof AbstractLeafQueue)) {
-        return lifetimeRequestedByApp;
-      }
-
       long defaultApplicationLifetime =
           queue.getDefaultApplicationLifetime();
       long maximumApplicationLifetime =
