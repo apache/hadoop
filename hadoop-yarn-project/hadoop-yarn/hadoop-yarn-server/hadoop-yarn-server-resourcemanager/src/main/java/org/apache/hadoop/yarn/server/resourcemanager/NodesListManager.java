@@ -407,7 +407,8 @@ public class NodesListManager extends CompositeService implements
     // Check if tracking unregistered nodes is enabled in the configuration
     if (!yarnConf.getBoolean(YarnConfiguration.ENABLE_TRACKING_FOR_UNREGISTERED_NODES,
         YarnConfiguration.DEFAULT_ENABLE_TRACKING_FOR_UNREGISTERED_NODES)) {
-      LOG.debug("Unregistered node tracking is disabled. Skipping marking unregistered nodes as LOST.");
+      LOG.debug("Unregistered node tracking is disabled. " +
+          "Skipping marking unregistered nodes as LOST.");
       return;
     }
 
@@ -475,29 +476,24 @@ public class NodesListManager extends CompositeService implements
     RMNodeImpl rmNode = new RMNodeImpl(nodeId, this.rmContext, lostNode, -2, -2,
         new UnknownNode(lostNode), Resource.newInstance(0, 0), "unknown");
 
-    // If the LOST event is valid, dispatch it
-    if (lostEvent != null) {
-      try {
-        // Dispatch the LOST event to signal the node is no longer active
-        eventHandler.handle(lostEvent);
+    try {
+      // Dispatch the LOST event to signal the node is no longer active
+      eventHandler.handle(lostEvent);
 
-        // After successful dispatch, update the node status in RMContext
-        // Set the node's timestamp for when it became untracked
-        rmNode.setUntrackedTimeStamp(Time.monotonicNow());
+      // After successful dispatch, update the node status in RMContext
+      // Set the node's timestamp for when it became untracked
+      rmNode.setUntrackedTimeStamp(Time.monotonicNow());
 
-        // Add the node to the active and inactive node maps in RMContext
-        this.rmContext.getRMNodes().put(nodeId, rmNode);
-        this.rmContext.getInactiveRMNodes().put(nodeId, rmNode);
+      // Add the node to the active and inactive node maps in RMContext
+      this.rmContext.getRMNodes().put(nodeId, rmNode);
+      this.rmContext.getInactiveRMNodes().put(nodeId, rmNode);
 
-        LOG.info("Successfully dispatched LOST event and deactivated node: "
-            + lostNode + ", Node ID: " + nodeId);
-      } catch (Exception e) {
-        // Log any exception encountered during event dispatch
-        LOG.error(
-            "Error dispatching LOST event for node: " + lostNode + ", Node ID: " + nodeId + " - " + e.getMessage());
-      }
-    } else {
-      LOG.error("LOST event creation failed. Event is null for node: " + lostNode + ", Node ID: " + nodeId);
+      LOG.info("Successfully dispatched LOST event and deactivated node: "
+          + lostNode + ", Node ID: " + nodeId);
+    } catch (Exception e) {
+      // Log any exception encountered during event dispatch
+      LOG.error("Error dispatching LOST event for node: " + lostNode +
+          ", Node ID: " + nodeId + " - " + e.getMessage());
     }
   }
 

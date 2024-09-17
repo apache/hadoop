@@ -3352,7 +3352,8 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     // One node is active
     assertEquals("There should be 1 Active NM!", 1, clusterMetrics.getNumActiveNMs());
     // One node is decommissioned
-    assertEquals("There should be 1 Decommissioned NM!", 1, clusterMetrics.getNumDecommisionedNMs());
+    assertEquals("There should be 1 Decommissioned NM!", 1,
+        clusterMetrics.getNumDecommisionedNMs());
 
     // Step 7: Register and simulate node activity for "test_host3"
     MockNM nm3 = rm.registerNode("test_host3:5678", 10240); // Register test_host3 with 10240MB
@@ -3360,7 +3361,9 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
     TimeUnit.MILLISECONDS.sleep(50); // Allow some time for event dispatch and processing
 
     // Step 8: Validate updated node metrics after registering test_host3
-    assertEquals("There should be 1 Lost NM!", 1, clusterMetrics.getNumLostNMs()); // Only one node is lost now
-    assertEquals("There should be 2 Active NM!", 2, clusterMetrics.getNumActiveNMs()); // Two nodes are now active
+    assertEquals("There should be 1 Lost NM!", 1,
+        clusterMetrics.getNumLostNMs()); // Only one node is lost now
+    assertEquals("There should be 2 Active NM!", 2,
+        clusterMetrics.getNumActiveNMs()); // Two nodes are now active
   }
 }
