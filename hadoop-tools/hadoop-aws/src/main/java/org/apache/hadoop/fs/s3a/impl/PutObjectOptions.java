@@ -63,25 +63,18 @@ public final class PutObjectOptions {
         '}';
   }
 
-  private static final PutObjectOptions KEEP_DIRS = new PutObjectOptions(
-      null, null);
-  private static final PutObjectOptions DELETE_DIRS = new PutObjectOptions(
+  /**
+   * Empty options.
+   */
+  private static final PutObjectOptions EMPTY_OPTIONS = new PutObjectOptions(
       null, null);
 
   /**
-   * Get the options to keep directories.
-   * @return an instance which keeps dirs
+   * Get the default options.
+   * @return an instance with no storage class or headers.
    */
-  public static PutObjectOptions keepingDirs() {
-    return KEEP_DIRS;
-  }
-
-  /**
-   * Get the options to delete directory markers.
-   * @return an instance which deletes dirs
-   */
-  public static PutObjectOptions deletingDirs() {
-    return DELETE_DIRS;
+  public static PutObjectOptions defaultOptions() {
+    return EMPTY_OPTIONS;
   }
 
 }

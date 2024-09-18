@@ -565,7 +565,7 @@ public class WriteOperationHelper implements WriteOperations {
         uploadId,
         partETags,
         length,
-        PutObjectOptions.keepingDirs(),
+        PutObjectOptions.defaultOptions(),
         Invoker.NO_OP);
   }
 

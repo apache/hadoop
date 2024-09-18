@@ -2148,8 +2148,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         committerIntegration.createTracker(path, key, outputStreamStatistics);
     String destKey = putTracker.getDestKey();
 
-    // put options are derived from the path and the
-    // option builder.
+    // put options are derived from the option builder.
     final PutObjectOptions putOptions =
         new PutObjectOptions(null, options.getHeaders());
 
@@ -3586,7 +3585,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     // is mostly harmless to create a new one.
     if (!key.isEmpty() && !s3Exists(f, StatusProbeEnum.DIRECTORIES)) {
       LOG.debug("Creating new fake directory at {}", f);
-      createFakeDirectory(key, putOptionsForPath(f));
+      createFakeDirectory(key, PutObjectOptions.defaultOptions());
     }
   }
 
@@ -3814,7 +3813,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         throws IOException {
       S3AFileSystem.this.createFakeDirectory(
           pathToKey(dir),
-          PutObjectOptions.keepingDirs());
+          PutObjectOptions.defaultOptions());
     }
   }
 
@@ -4218,7 +4217,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             newPutObjectRequestBuilder(key, file.length(), false);
         final String dest = to.toString();
         S3AFileSystem.this.invoker.retry("putObject(" + dest + ")", dest, true, () ->
-            executePut(putObjectRequestBuilder.build(), null, putOptionsForPath(to), file));
+            executePut(putObjectRequestBuilder.build(), null,
+                PutObjectOptions.defaultOptions(), file));
         return null;
       });
     }

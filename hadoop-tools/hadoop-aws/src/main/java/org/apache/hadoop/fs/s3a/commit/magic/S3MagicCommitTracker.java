@@ -117,7 +117,7 @@ public class S3MagicCommitTracker extends MagicCommitTracker {
   @Retries.RetryTranslated
   private void upload(PutObjectRequest request, byte[] bytes) throws IOException {
     trackDurationOfInvocation(getTrackerStatistics(), COMMITTER_MAGIC_MARKER_PUT.getSymbol(),
-        () -> getWriter().putObject(request, PutObjectOptions.keepingDirs(),
+        () -> getWriter().putObject(request, PutObjectOptions.defaultOptions(),
             new S3ADataBlocks.BlockUploadData(bytes, null), null));
   }
 }

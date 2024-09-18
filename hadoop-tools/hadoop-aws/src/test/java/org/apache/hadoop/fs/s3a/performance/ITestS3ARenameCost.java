@@ -124,9 +124,9 @@ public class ITestS3ARenameCost extends AbstractS3ACostTest {
     Path dest = new Path("/dest-" + uuid);
     try {
       verifyMetrics(() -> {
-            fs.rename(src, dest);
-            return "after fs.rename(/src,/dest) " + getMetricSummary();
-          },
+        fs.rename(src, dest);
+        return "after fs.rename(/src,/dest) " + getMetricSummary();
+        },
           always(FILE_STATUS_FILE_PROBE
               .plus(GET_FILE_STATUS_FNFE)
               .plus(COPY_OP)),
@@ -158,9 +158,9 @@ public class ITestS3ARenameCost extends AbstractS3ACostTest {
     try {
       // delete that destination file, assert only the file delete was issued
       verifyMetrics(() -> {
-            fs.delete(src, false);
-            return "after fs.delete(/dest) " + getMetricSummary();
-          },
+        fs.delete(src, false);
+        return "after fs.delete(/dest) " + getMetricSummary();
+        },
           with(DIRECTORIES_CREATED, 0),
           with(DIRECTORIES_DELETED, 0),
           with(FAKE_DIRECTORIES_DELETED, 0),

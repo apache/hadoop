@@ -128,7 +128,7 @@ class S3AMultipartUploader extends AbstractMultipartUploader {
     return context.submit(new CompletableFuture<>(),
         trackDurationOfCallable(statistics, OBJECT_MULTIPART_UPLOAD_INITIATED.getSymbol(), () -> {
           String uploadId = writeOperations.initiateMultiPartUpload(key,
-              PutObjectOptions.keepingDirs());
+              PutObjectOptions.defaultOptions());
           statistics.uploadStarted();
           return BBUploadHandle.from(ByteBuffer.wrap(
               uploadId.getBytes(StandardCharsets.UTF_8)));

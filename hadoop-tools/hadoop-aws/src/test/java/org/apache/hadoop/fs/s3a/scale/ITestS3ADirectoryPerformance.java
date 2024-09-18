@@ -253,7 +253,7 @@ public class ITestS3ADirectoryPerformance extends S3AScaleTestBase {
                 null, 0, false);
         futures.add(submit(executorService,
             () -> writeOperationHelper.putObject(putObjectRequestBuilder.build(),
-                PutObjectOptions.keepingDirs(),
+                PutObjectOptions.defaultOptions(),
                 new S3ADataBlocks.BlockUploadData(new byte[0], null), null)));
       }
       LOG.info("Waiting for PUTs to complete");
