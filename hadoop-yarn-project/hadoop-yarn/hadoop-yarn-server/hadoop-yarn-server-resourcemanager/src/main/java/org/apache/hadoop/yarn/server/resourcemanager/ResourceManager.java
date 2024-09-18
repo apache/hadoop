@@ -1609,7 +1609,7 @@ public class ResourceManager extends CompositeService
     // For HA setup, refreshNodes is already being called before the active
     // transition.
     Configuration yarnConf = getConfig();
-    if (yarnConf.getBoolean(
+    if (!this.rmContext.isHAEnabled() && yarnConf.getBoolean(
         YarnConfiguration.ENABLE_TRACKING_FOR_UNREGISTERED_NODES,
         YarnConfiguration.DEFAULT_ENABLE_TRACKING_FOR_UNREGISTERED_NODES)) {
       this.rmContext.getNodesListManager().refreshNodes(yarnConf);
