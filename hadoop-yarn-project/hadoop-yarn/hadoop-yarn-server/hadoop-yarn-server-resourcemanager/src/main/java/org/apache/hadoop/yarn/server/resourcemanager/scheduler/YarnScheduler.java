@@ -44,6 +44,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.event.EventHandler;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.QueueEntitlement;
@@ -422,12 +423,14 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
    * Verify whether a submitted application lifetime is valid as per configured
    * Queue lifetime.
    * @param queueName Name of the Queue
-   * @param lifetime configured application lifetime
+   * @param lifetime  configured application lifetime
+   * @param app
    * @return valid lifetime as per queue
    */
   @Public
   @Evolving
-  long checkAndGetApplicationLifetime(String queueName, long lifetime);
+  long checkAndGetApplicationLifetime(String queueName, long lifetime,
+                                      RMAppImpl app);
 
   /**
    * Get maximum lifetime for a queue.

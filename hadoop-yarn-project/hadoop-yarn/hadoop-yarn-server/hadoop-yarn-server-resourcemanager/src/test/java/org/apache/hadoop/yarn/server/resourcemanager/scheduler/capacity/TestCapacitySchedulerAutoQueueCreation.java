@@ -90,7 +90,6 @@ import static org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager
     .NO_LABEL;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueueUtils.EPSILON;
 
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.ROOT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -647,18 +646,17 @@ public class TestCapacitySchedulerAutoQueueCreation
 
     CapacityScheduler newCS =
         (CapacityScheduler) newMockRM.getResourceScheduler();
-    newCS.checkAndGetApplicationLifetime("root.test.user", -1);
+
+    Priority appPriority = Priority.newInstance(0);
+    MockRMAppSubmissionData app = MockRMAppSubmissionData.Builder.createWithMemory(1024, newMockRM)
+              .withAppPriority(appPriority)
+              .withQueue("root.test.user")
+              .build();
+    RMApp app1 = MockRMAppSubmitter.submit(newMockRM, app);
 
     Assert.assertEquals(newCS.getMaximumApplicationLifetime("root.test.user"), 20L);
 
     try {
-      Priority appPriority = Priority.newInstance(0);
-      RMApp app1 = MockRMAppSubmitter.submit(newMockRM,
-          MockRMAppSubmissionData.Builder.createWithMemory(1024, newMockRM)
-              .withAppPriority(appPriority)
-              .withQueue("root.test.user")
-              .build());
-
       newMockRM.waitForState(app1.getApplicationId(), RMAppState.KILLED);
       long totalTimeRun = app1.getFinishTime() - app1.getSubmitTime();
 
