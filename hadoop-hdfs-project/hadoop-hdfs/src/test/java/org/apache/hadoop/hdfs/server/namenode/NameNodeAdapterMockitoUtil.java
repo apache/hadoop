@@ -37,7 +37,7 @@ import static org.mockito.Mockito.spy;
 /**
  * This is a Mockito based utility class to expose NameNode functionality for unit tests.
  */
-public class NameNodeAdapterMockitoUtil {
+public final class NameNodeAdapterMockitoUtil {
 
   private NameNodeAdapterMockitoUtil() {
   }
