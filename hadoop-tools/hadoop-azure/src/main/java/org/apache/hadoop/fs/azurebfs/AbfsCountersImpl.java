@@ -24,6 +24,7 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.azurebfs.enums.AbfsBackoffMetricsEnum;
 import org.apache.hadoop.fs.azurebfs.services.AbfsCounters;
 import org.apache.hadoop.fs.azurebfs.services.AbfsReadFooterMetrics;
 import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
@@ -101,7 +102,7 @@ public class AbfsCountersImpl implements AbfsCounters {
 
   private AbfsBackoffMetrics abfsBackoffMetrics = null;
 
-  private InputStreamStatistics inputStreamStatistics = null;
+  private AbfsBackoffMetricsUsingIOStatistics abfsBackoffMetricsUsingIOStatistics = null;
 
   private AbfsReadFooterMetrics abfsReadFooterMetrics = null;
 
@@ -172,10 +173,9 @@ public class AbfsCountersImpl implements AbfsCounters {
     switch (metricFormat) {
       case INTERNAL_BACKOFF_METRIC_FORMAT:
         abfsBackoffMetrics = new AbfsBackoffMetrics();
-        inputStreamStatistics = new InputStreamStatistics();
-        inputStreamStatistics.increment("TEST1");
-        inputStreamStatistics.increment("RETRY_ONE", "TEST3", 2);
-        System.out.println(inputStreamStatistics.toString());
+        abfsBackoffMetricsUsingIOStatistics = new AbfsBackoffMetricsUsingIOStatistics();
+        abfsBackoffMetricsUsingIOStatistics.incrementCounter(AbfsBackoffMetricsEnum.NUMBER_OF_REQUESTS_SUCCEEDED, "1");
+        System.out.println(abfsBackoffMetricsUsingIOStatistics.toString());
         break;
       case INTERNAL_FOOTER_METRIC_FORMAT:
         abfsReadFooterMetrics = new AbfsReadFooterMetrics();
@@ -259,8 +259,9 @@ public class AbfsCountersImpl implements AbfsCounters {
     return abfsBackoffMetrics != null ? abfsBackoffMetrics : null;
   }
 
-  public InputStreamStatistics getInputStreamStatistics() {
-    return inputStreamStatistics;
+  @Override
+  public AbfsBackoffMetricsUsingIOStatistics getAbfsBackoffMetricsUsingIOStatistics() {
+    return abfsBackoffMetricsUsingIOStatistics;
   }
 
   @Override
