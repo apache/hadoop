@@ -39,7 +39,10 @@ import static org.mockito.Mockito.spy;
  */
 public class NameNodeAdapterMockitoUtil {
 
-    public static BlockManager spyOnBlockManager(NameNode nn) {
+  private NameNodeAdapterMockitoUtil() {
+  }
+
+  public static BlockManager spyOnBlockManager(NameNode nn) {
     BlockManager bmSpy = spy(nn.getNamesystem().getBlockManager());
     nn.getNamesystem().setBlockManagerForTesting(bmSpy);
     return bmSpy;
@@ -65,7 +68,7 @@ public class NameNodeAdapterMockitoUtil {
     return js;
   }
 
-    public static FSNamesystem spyOnNamesystem(NameNode nn) {
+  public static FSNamesystem spyOnNamesystem(NameNode nn) {
     FSNamesystem fsnSpy = spy(nn.getNamesystem());
     FSNamesystem fsnOld = nn.namesystem;
     fsnOld.writeLock();

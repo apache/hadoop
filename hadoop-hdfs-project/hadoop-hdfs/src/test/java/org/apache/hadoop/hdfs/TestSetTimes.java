@@ -297,7 +297,8 @@ public class TestSetTimes {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
       .numDataNodes(0)
       .build();
-    ReentrantReadWriteLock spyLock = NameNodeAdapterMockitoUtil.spyOnFsLock(cluster.getNamesystem());
+    ReentrantReadWriteLock spyLock =
+        NameNodeAdapterMockitoUtil.spyOnFsLock(cluster.getNamesystem());
     try {
       // Create empty file in the FSN.
       Path p = new Path("/empty-file");
