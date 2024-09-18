@@ -33,7 +33,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
-import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.StringUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
@@ -61,23 +60,15 @@ public class AbstractMarkerToolTest extends AbstractS3ATestBase {
   /** FS which keeps markers. */
   private S3AFileSystem keepingFS;
 
-  /** FS which deletes markers. */
-  private S3AFileSystem deletingFS;
-
-  /** FS which mixes markers; only created in some tests. */
-  private S3AFileSystem mixedFS;
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
     String bucketName = getTestBucketName(conf);
     removeBaseAndBucketOverrides(bucketName, conf,
         S3A_BUCKET_PROBE,
-        DIRECTORY_MARKER_POLICY,
         AUTHORITATIVE_PATH,
         FS_S3A_CREATE_PERFORMANCE,
         FS_S3A_PERFORMANCE_FLAGS);
-    // base FS is legacy
-    conf.set(DIRECTORY_MARKER_POLICY, DIRECTORY_MARKER_POLICY_DELETE);
     conf.setBoolean(FS_S3A_CREATE_PERFORMANCE, false);
 
     // turn off bucket probes for a bit of speedup in the connectors we create.
@@ -87,53 +78,13 @@ public class AbstractMarkerToolTest extends AbstractS3ATestBase {
   }
 
   @Override
-  public void setup() throws Exception {
-    super.setup();
-    setKeepingFS(createFS(DIRECTORY_MARKER_POLICY_KEEP, null));
-    setDeletingFS(createFS(DIRECTORY_MARKER_POLICY_DELETE, null));
-  }
-
-  @Override
   public void teardown() throws Exception {
     // do this ourselves to avoid audits teardown failing
     // when surplus markers are found
     deleteTestDirInTeardown();
     super.teardown();
-    IOUtils.cleanupWithLogger(LOG, getKeepingFS(),
-        getMixedFS(), getDeletingFS());
-
   }
 
-  /**
-   * FS which deletes markers.
-   */
-  public S3AFileSystem getDeletingFS() {
-    return deletingFS;
-  }
-
-  public void setDeletingFS(final S3AFileSystem deletingFS) {
-    this.deletingFS = deletingFS;
-  }
-
-  /**
-   * FS which keeps markers.
-   */
-  protected S3AFileSystem getKeepingFS() {
-    return keepingFS;
-  }
-
-  private void setKeepingFS(S3AFileSystem keepingFS) {
-    this.keepingFS = keepingFS;
-  }
-
-  /** only created on demand. */
-  private S3AFileSystem getMixedFS() {
-    return mixedFS;
-  }
-
-  protected void setMixedFS(S3AFileSystem mixedFS) {
-    this.mixedFS = mixedFS;
-  }
 
   /**
    * Get a filename for a temp file.
@@ -192,16 +143,10 @@ public class AbstractMarkerToolTest extends AbstractS3ATestBase {
     URI testFSUri = testFS.getUri();
     String bucketName = getTestBucketName(conf);
     removeBucketOverrides(bucketName, conf,
-        DIRECTORY_MARKER_POLICY,
-        BULK_DELETE_PAGE_SIZE,
-        AUTHORITATIVE_PATH);
-    if (authPath != null) {
-      conf.set(AUTHORITATIVE_PATH, authPath);
-    }
+        BULK_DELETE_PAGE_SIZE);
     // Use a very small page size to force the paging
     // code to be tested.
     conf.setInt(BULK_DELETE_PAGE_SIZE, 2);
-    conf.set(DIRECTORY_MARKER_POLICY, markerPolicy);
     S3AFileSystem fs2 = new S3AFileSystem();
     fs2.initialize(testFSUri, conf);
     LOG.info("created new filesystem with policy {} and auth path {}",
@@ -315,7 +260,6 @@ public class AbstractMarkerToolTest extends AbstractS3ATestBase {
             .withMinMarkerCount(expectedMarkers)
             .withMaxMarkerCount(expectedMarkers)
             .withLimit(limit)
-            .withNonAuth(nonAuth)
             .build());
     Assertions.assertThat(result.getExitCode())
         .describedAs("Exit code of marker(%s, %s, %d) -> %s",

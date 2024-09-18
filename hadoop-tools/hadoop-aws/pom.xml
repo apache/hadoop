@@ -48,10 +48,6 @@
     <!-- Set a longer timeout for integration test (in milliseconds) -->
     <test.integration.timeout>200000</test.integration.timeout>
 
-    <!--   should directory marker retention be audited? -->
-    <fs.s3a.directory.marker.audit>false</fs.s3a.directory.marker.audit>
-    <!--    marker retention policy -->
-    <fs.s3a.directory.marker.retention></fs.s3a.directory.marker.retention>
 
     <!-- Is prefetch enabled? -->
     <fs.s3a.prefetch.enabled>unset</fs.s3a.prefetch.enabled>
@@ -126,9 +122,6 @@
                 <fs.s3a.scale.test.huge.filesize>${fs.s3a.scale.test.huge.filesize}</fs.s3a.scale.test.huge.filesize>
                 <fs.s3a.scale.test.huge.huge.partitionsize>${fs.s3a.scale.test.huge.partitionsize}</fs.s3a.scale.test.huge.huge.partitionsize>
                 <fs.s3a.scale.test.timeout>${fs.s3a.scale.test.timeout}</fs.s3a.scale.test.timeout>
-                <!-- Markers-->
-                <fs.s3a.directory.marker.retention>${fs.s3a.directory.marker.retention}</fs.s3a.directory.marker.retention>
-                <fs.s3a.directory.marker.audit>${fs.s3a.directory.marker.audit}</fs.s3a.directory.marker.audit>
                 <!-- Prefetch -->
                 <fs.s3a.prefetch.enabled>${fs.s3a.prefetch.enabled}</fs.s3a.prefetch.enabled>
               </systemPropertyVariables>
@@ -167,8 +160,6 @@
                     <fs.s3a.scale.test.huge.filesize>${fs.s3a.scale.test.huge.filesize}</fs.s3a.scale.test.huge.filesize>
                     <fs.s3a.scale.test.huge.huge.partitionsize>${fs.s3a.scale.test.huge.partitionsize}</fs.s3a.scale.test.huge.huge.partitionsize>
                     <fs.s3a.scale.test.timeout>${fs.s3a.scale.test.timeout}</fs.s3a.scale.test.timeout>
-                    <fs.s3a.directory.marker.retention>${fs.s3a.directory.marker.retention}</fs.s3a.directory.marker.retention>
-
                     <test.default.timeout>${test.integration.timeout}</test.default.timeout>
                     <!-- Prefetch -->
                     <fs.s3a.prefetch.enabled>${fs.s3a.prefetch.enabled}</fs.s3a.prefetch.enabled>
@@ -221,9 +212,6 @@
                     <fs.s3a.scale.test.huge.filesize>${fs.s3a.scale.test.huge.filesize}</fs.s3a.scale.test.huge.filesize>
                     <fs.s3a.scale.test.huge.huge.partitionsize>${fs.s3a.scale.test.huge.partitionsize}</fs.s3a.scale.test.huge.huge.partitionsize>
                     <fs.s3a.scale.test.timeout>${fs.s3a.scale.test.timeout}</fs.s3a.scale.test.timeout>
-                    <!-- Markers-->
-                    <fs.s3a.directory.marker.retention>${fs.s3a.directory.marker.retention}</fs.s3a.directory.marker.retention>
-                    <fs.s3a.directory.marker.audit>${fs.s3a.directory.marker.audit}</fs.s3a.directory.marker.audit>
                     <!-- Prefetch -->
                     <fs.s3a.prefetch.enabled>${fs.s3a.prefetch.enabled}</fs.s3a.prefetch.enabled>
                     <!-- are root tests enabled. Set to false when running parallel jobs on same bucket -->
@@ -285,9 +273,6 @@
                     <fs.s3a.scale.test.enabled>${fs.s3a.scale.test.enabled}</fs.s3a.scale.test.enabled>
                     <fs.s3a.scale.test.huge.filesize>${fs.s3a.scale.test.huge.filesize}</fs.s3a.scale.test.huge.filesize>
                     <fs.s3a.scale.test.timeout>${fs.s3a.scale.test.timeout}</fs.s3a.scale.test.timeout>
-                    <!-- Markers-->
-                    <fs.s3a.directory.marker.retention>${fs.s3a.directory.marker.retention}</fs.s3a.directory.marker.retention>
-                    <fs.s3a.directory.marker.audit>${fs.s3a.directory.marker.audit}</fs.s3a.directory.marker.audit>
                     <!-- Prefetch -->
                     <fs.s3a.prefetch.enabled>${fs.s3a.prefetch.enabled}</fs.s3a.prefetch.enabled>
                     <test.unique.fork.id>job-${job.id}</test.unique.fork.id>
@@ -311,44 +296,6 @@
       </activation>
       <properties >
         <fs.s3a.scale.test.enabled>true</fs.s3a.scale.test.enabled>
-      </properties>
-    </profile>
-
-    <!-- Directory marker retention options, all from the -Dmarkers value-->
-    <profile>
-      <id>keep-markers</id>
-      <activation>
-        <property>
-          <name>markers</name>
-          <value>keep</value>
-        </property>
-      </activation>
-      <properties >
-        <fs.s3a.directory.marker.retention>keep</fs.s3a.directory.marker.retention>
-      </properties>
-    </profile>
-    <profile>
-      <id>delete-markers</id>
-      <activation>
-        <property>
-          <name>markers</name>
-          <value>delete</value>
-        </property>
-      </activation>
-      <properties >
-        <fs.s3a.directory.marker.retention>delete</fs.s3a.directory.marker.retention>
-      </properties>
-    </profile>
-    <profile>
-      <id>auth-markers</id>
-      <activation>
-        <property>
-          <name>markers</name>
-          <value>authoritative</value>
-        </property>
-      </activation>
-      <properties >
-        <fs.s3a.directory.marker.retention>authoritative</fs.s3a.directory.marker.retention>
       </properties>
     </profile>
 

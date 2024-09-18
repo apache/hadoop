@@ -27,11 +27,6 @@ import javax.annotation.Nullable;
 public final class PutObjectOptions {
 
   /**
-   * Can the PUT operation skip marker deletion?
-   */
-  private final boolean keepMarkers;
-
-  /**
    * Storage class, if not null.
    */
   private final String storageClass;
@@ -43,25 +38,14 @@ public final class PutObjectOptions {
 
   /**
    * Constructor.
-   * @param keepMarkers Can the PUT operation skip marker deletion?
    * @param storageClass Storage class, if not null.
    * @param headers Headers; may be null.
    */
   public PutObjectOptions(
-      final boolean keepMarkers,
       @Nullable final String storageClass,
       @Nullable final Map<String, String> headers) {
-    this.keepMarkers = keepMarkers;
     this.storageClass = storageClass;
     this.headers = headers;
-  }
-
-  /**
-   * Get the marker retention flag.
-   * @return true if markers are to be retained.
-   */
-  public boolean isKeepMarkers() {
-    return keepMarkers;
   }
 
   /**
@@ -75,14 +59,13 @@ public final class PutObjectOptions {
   @Override
   public String toString() {
     return "PutObjectOptions{" +
-        "keepMarkers=" + keepMarkers +
         ", storageClass='" + storageClass + '\'' +
         '}';
   }
 
-  private static final PutObjectOptions KEEP_DIRS = new PutObjectOptions(true,
+  private static final PutObjectOptions KEEP_DIRS = new PutObjectOptions(
       null, null);
-  private static final PutObjectOptions DELETE_DIRS = new PutObjectOptions(false,
+  private static final PutObjectOptions DELETE_DIRS = new PutObjectOptions(
       null, null);
 
   /**

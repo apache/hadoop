@@ -25,15 +25,13 @@ import java.io.PrintStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 import software.amazon.awssdk.services.s3.model.MultipartUpload;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,8 +53,6 @@ import org.apache.hadoop.fs.s3a.auth.RolePolicies;
 import org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants;
-import org.apache.hadoop.fs.s3a.impl.DirectoryPolicy;
-import org.apache.hadoop.fs.s3a.impl.DirectoryPolicyImpl;
 import org.apache.hadoop.fs.s3a.select.SelectConstants;
 import org.apache.hadoop.fs.s3a.tools.BucketTool;
 import org.apache.hadoop.fs.s3a.tools.MarkerTool;
@@ -446,16 +442,6 @@ public abstract class S3GuardTool extends Configured implements Tool,
         fs.listXAttrs(new Path("/"));
       }
 
-      // print any auth paths for directory marker info
-      final Collection<String> authoritativePaths
-          = S3Guard.getAuthoritativePaths(fs);
-      if (!authoritativePaths.isEmpty()) {
-        println(out, "Qualified Authoritative Paths:");
-        for (String path : authoritativePaths) {
-          println(out, "\t%s", path);
-        }
-        println(out, "");
-      }
       println(out, "%nS3A Client");
       printOption(out, "\tSigning Algorithm", SIGNING_ALGORITHM, "(unset)");
       String endpoint = conf.getTrimmed(ENDPOINT, "");
@@ -589,37 +575,16 @@ public abstract class S3GuardTool extends Configured implements Tool,
     private void processMarkerOption(final PrintStream out,
         final S3AFileSystem fs,
         final String marker) {
-      println(out, "%nDirectory Markers");
-      DirectoryPolicy markerPolicy = fs.getDirectoryMarkerPolicy();
-      String desc = markerPolicy.describe();
-      println(out, "\tThe directory marker policy is \"%s\"", desc);
+      println(out, "%nThis version of Hadoop always retains directory markers");
 
-      String pols = DirectoryPolicyImpl.availablePolicies()
-          .stream()
-          .map(DirectoryPolicy.MarkerPolicy::getOptionName)
-          .collect(Collectors.joining(", "));
-      println(out, "\tAvailable Policies: %s", pols);
-      printOption(out, "\tAuthoritative paths",
-          AUTHORITATIVE_PATH, "");
-      DirectoryPolicy.MarkerPolicy mp = markerPolicy.getMarkerPolicy();
-
-      String desiredMarker = marker == null
-          ? ""
-          : marker.trim();
-      final String optionName = mp.getOptionName();
-      if (!desiredMarker.isEmpty()) {
-        if (MARKERS_AWARE.equalsIgnoreCase(desiredMarker)) {
-          // simple awareness test -provides a way to validate compatibility
-          // on the command line
-          println(out, IS_MARKER_AWARE);
-        } else {
-          // compare with current policy
-          if (!optionName.equalsIgnoreCase(desiredMarker)) {
-            throw badState("Bucket %s: required marker policy is \"%s\""
-                    + " but actual policy is \"%s\"",
-                fs.getUri(), desiredMarker, optionName);
-          }
-        }
+      final String optionName = marker.toLowerCase(Locale.ROOT);
+      switch(optionName) {
+      case DIRECTORY_MARKER_POLICY_KEEP:
+      case MARKERS_AWARE:
+        println(out, optionName);
+        break;
+      default:
+        throw badState("Unsupported Marker Policy \"%s\"", optionName);
       }
     }
 

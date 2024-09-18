@@ -83,12 +83,10 @@ public class ITestCreateFileCost extends AbstractS3ACostTest {
   private final boolean createPerformance;
 
   /**
-   * Create with markers kept, always.
+   * Create.
+   * @param createPerformance use the performance flag
    */
   public ITestCreateFileCost(final boolean createPerformance) {
-    // keep markers to permit assertions that create performance
-    // always skips marker deletion.
-    super(false);
     this.createPerformance = createPerformance;
   }
 

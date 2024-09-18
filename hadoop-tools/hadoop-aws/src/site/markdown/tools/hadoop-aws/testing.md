@@ -337,53 +337,6 @@ then delete.
 Once a bucket is converted to being versioned, it cannot be converted back
 to being unversioned.
 
-
-## <a name="marker"></a> Testing Different Marker Retention Policy
-
-Hadoop supports [different policies for directory marker retention](directory_markers.html)
--essentially the classic "delete" and the higher-performance "keep" options; "authoritative"
-is just "keep" restricted to a part of the bucket.
-
-
-Example: test with `markers=keep`
-
-```
-mvn verify -Dparallel-tests -DtestsThreadCount=4 -Dmarkers=keep
-```
-
-This is the default and does not need to be explicitly set.
-
-Example: test with `markers=delete`
-
-```
-mvn verify -Dparallel-tests -DtestsThreadCount=4 -Dmarkers=delete
-```
-
-Example: test with `markers=authoritative`
-
-```
-mvn verify -Dparallel-tests -DtestsThreadCount=4 -Dmarkers=authoritative
-```
-
-This final option is of limited use unless paths in the bucket have actually been configured to be
-of mixed status; unless anything is set up then the outcome should equal that of "delete"
-
-### Enabling auditing of markers
-
-To enable an audit of the output directory of every test suite,
-enable the option `fs.s3a.directory.marker.audit`
-
-```
--Dfs.s3a.directory.marker.audit=true
-```
-
-When set, if the marker policy is to delete markers under the test output directory, then
-the marker tool audit command will be run. This will fail if a marker was found.
-
-This adds extra overhead to every operation, but helps verify that the connector is
-not keeping markers where it needs to be deleting them -and hence backwards compatibility
-is maintained.
-
 ## <a name="enabling-prefetch"></a> Enabling prefetch for all tests
 
 The tests are run with prefetch if the `prefetch` property is set in the

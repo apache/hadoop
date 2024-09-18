@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.api.PerformanceFlagEnum;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.performance.AbstractS3ACostTest;
 
@@ -53,34 +54,16 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  * behave differently...its value is that of the marker keep flag,
  * so deletion costs are the same.
  */
-@RunWith(Parameterized.class)
 public class ITestS3AFileOperationCost extends AbstractS3ACostTest {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestS3AFileOperationCost.class);
 
-  /**
-   * Parameterization.
-   */
-  @Parameterized.Parameters(name = "{0}")
-  public static Collection<Object[]> params() {
-    return Arrays.asList(new Object[][]{
-        {"keep-markers", true},
-        {"delete-markers", false},
-    });
-  }
-
-  public ITestS3AFileOperationCost(
-      final String name,
-      final boolean keepMarkers) {
-    super(keepMarkers);
-  }
-
   @Override
   public Configuration createConfiguration() {
     return setPerformanceFlags(
         super.createConfiguration(),
-        isKeepingMarkers() ? "create" : "");
+        PerformanceFlagEnum.Create.toString());
   }
 
   /**

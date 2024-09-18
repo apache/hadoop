@@ -18,12 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.performance;
 
-import java.util.Arrays;
-import java.util.Collection;
-
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,29 +35,11 @@ import static org.apache.hadoop.fs.s3a.performance.OperationCost.FILESTATUS_FILE
 
 /**
  * Use metrics to assert about the cost of mkdirs.
- * Parameterized directory marker keep vs delete
  */
-@RunWith(Parameterized.class)
 public class ITestS3AMkdirCost extends AbstractS3ACostTest {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestS3AMkdirCost.class);
-
-  /**
-   * Parameterization.
-   */
-  @Parameterized.Parameters(name = "{0}")
-  public static Collection<Object[]> params() {
-    return Arrays.asList(new Object[][]{
-        {"keep-markers", true},
-        {"delete-markers", false}
-    });
-  }
-
-  public ITestS3AMkdirCost(final String name,
-      final boolean keepMarkers) {
-    super(keepMarkers);
-  }
 
   /**
    * Common operation which should be low cost as possible.

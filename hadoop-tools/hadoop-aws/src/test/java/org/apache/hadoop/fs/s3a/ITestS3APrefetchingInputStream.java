@@ -53,10 +53,6 @@ import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_P
  */
 public class ITestS3APrefetchingInputStream extends AbstractS3ACostTest {
 
-  public ITestS3APrefetchingInputStream() {
-    super(true);
-  }
-
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestS3APrefetchingInputStream.class);
 

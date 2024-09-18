@@ -44,7 +44,6 @@ import static org.apache.hadoop.fs.s3a.Statistic.ACTION_HTTP_GET_REQUEST;
 import static org.apache.hadoop.fs.s3a.Statistic.COMMITTER_MAGIC_FILES_CREATED;
 import static org.apache.hadoop.fs.s3a.Statistic.COMMITTER_MAGIC_MARKER_PUT;
 import static org.apache.hadoop.fs.s3a.Statistic.DIRECTORIES_CREATED;
-import static org.apache.hadoop.fs.s3a.Statistic.FAKE_DIRECTORIES_DELETED;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_BULK_DELETE_REQUEST;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_DELETE_REQUEST;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_LIST_REQUEST;
@@ -64,8 +63,6 @@ import static org.apache.hadoop.util.functional.RemoteIterators.toList;
 /**
  * Assert cost of commit operations;
  * <ol>
- *   <li>Even on marker deleting filesystems,
- *       operations under magic dirs do not trigger marker deletion.</li>
  *   <li>Loading pending files from FileStatus entries skips HEAD checks.</li>
  *   <li>Mkdir under magic dirs doesn't check ancestor or dest type</li>
  * </ol>
@@ -79,13 +76,6 @@ public class ITestCommitOperationCost extends AbstractS3ACostTest {
    * Helper for the tests.
    */
   private CommitterTestHelper testHelper;
-
-  /**
-   * Create with markers kept, always.
-   */
-  public ITestCommitOperationCost() {
-    super(false);
-  }
 
   @Override
   public void setup() throws Exception {
@@ -266,7 +256,6 @@ public class ITestCommitOperationCost extends AbstractS3ACostTest {
           commitOperations.getIOStatistics());
     },
         always(NO_HEAD_OR_LIST),  // no probes for the dest path
-        with(FAKE_DIRECTORIES_DELETED, 0),  // no fake dirs
         with(OBJECT_DELETE_REQUEST, 0)); // no deletes
 
     LOG.info("Final Statistics {}",
