@@ -68,10 +68,6 @@ public class ITestS3APrefetchingCacheFiles extends AbstractS3ACostTest {
 
   private String bufferDir;
 
-  public ITestS3APrefetchingCacheFiles() {
-    super(true);
-  }
-
   @Before
   public void setUp() throws Exception {
     super.setup();

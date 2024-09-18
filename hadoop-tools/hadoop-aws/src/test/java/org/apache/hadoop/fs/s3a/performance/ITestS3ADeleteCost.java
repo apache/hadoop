@@ -21,12 +21,9 @@ package org.apache.hadoop.fs.s3a.performance;
 
 import java.io.FileNotFoundException;
 import java.util.Arrays;
-import java.util.Collection;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,6 +33,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 
@@ -47,34 +45,16 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Use metrics to assert about the cost of file API calls.
- * <p></p>
- * Parameterized on directory marker keep vs delete.
+ * <p>
  * There's extra complexity related to bulk/non-bulk delete calls.
  * If bulk deletes are disabled, many more requests are made to delete
  * parent directories. The counters of objects deleted are constant
  * irrespective of the delete mode.
  */
-@RunWith(Parameterized.class)
 public class ITestS3ADeleteCost extends AbstractS3ACostTest {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestS3ADeleteCost.class);
-
-  /**
-   * Parameterization.
-   */
-  @Parameterized.Parameters(name = "{0}")
-  public static Collection<Object[]> params() {
-    return Arrays.asList(new Object[][]{
-        {"keep-markers", true},
-        {"delete-markers", false},
-    });
-  }
-
-  public ITestS3ADeleteCost(final String name,
-      final boolean keepMarkers) {
-    super(keepMarkers);
-  }
 
   @Override
   public Configuration createConfiguration() {
@@ -85,11 +65,9 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
 
   @Override
   public void teardown() throws Exception {
-    if (isKeepingMarkers()) {
-      // do this ourselves to avoid audits teardown failing
-      // when surplus markers are found
-      deleteTestDirInTeardown();
-    }
+    // do this ourselves to avoid audits teardown failing
+    // when surplus markers are found
+    deleteTestDirInTeardown();
     super.teardown();
   }
 
@@ -104,22 +82,15 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
     S3AFileSystem fs = getFileSystem();
     // creates the marker
     Path dir = dir(methodPath());
-    // file creation may have deleted that marker, but it may
-    // still be there
     Path simpleFile = file(new Path(dir, "simple.txt"));
 
-    boolean keeping = !isDeleting();
-    boolean deleting = isDeleting();
     boolean bulkDelete = isBulkDelete();
     verifyMetrics(() -> {
           fs.delete(simpleFile, false);
           return "after fs.delete(simpleFile) " + getMetricSummary();
         },
-        probe(keeping, OBJECT_METADATA_REQUESTS,
+        probe(OBJECT_METADATA_REQUESTS,
             FILESTATUS_FILE_PROBE_H),
-        // if deleting markers, look for the parent too
-        probe(deleting, OBJECT_METADATA_REQUESTS,
-            FILESTATUS_FILE_PROBE_H + FILESTATUS_DIR_PROBE_H),
         with(OBJECT_LIST_REQUEST,
             FILESTATUS_FILE_PROBE_L + FILESTATUS_DIR_PROBE_L),
         with(DIRECTORIES_DELETED, 0),
@@ -131,16 +102,8 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
             DELETE_OBJECT_REQUEST + DELETE_MARKER_REQUEST),
 
         // keeping: create no parent dirs or delete parents
-        withWhenKeeping(DIRECTORIES_CREATED, 0),
-        withWhenKeeping(OBJECT_BULK_DELETE_REQUEST, 0),
-
-        // deleting: create a parent and delete any of its parents
-        withWhenDeleting(DIRECTORIES_CREATED, 1),
-        // a bulk delete for all parents is issued.
-        // the number of objects in it depends on the depth of the tree;
-        // don't worry about that
-        probe(deleting && bulkDelete, OBJECT_BULK_DELETE_REQUEST,
-            DELETE_MARKER_REQUEST)
+        with(DIRECTORIES_CREATED, 0),
+        with(OBJECT_BULK_DELETE_REQUEST, 0)
     );
 
     // there is an empty dir for a parent
@@ -164,18 +127,13 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
     Path file1 = file(new Path(dir, "file1.txt"));
     Path file2 = file(new Path(dir, "file2.txt"));
 
-    boolean rawAndKeeping = !isDeleting();
-    boolean rawAndDeleting = isDeleting();
     verifyMetrics(() -> {
       fs.delete(file1, false);
       return "after fs.delete(file1) " + getMetricSummary();
     },
-        // delete file. For keeping: that's it
-        probe(rawAndKeeping, OBJECT_METADATA_REQUESTS,
+        // delete file.
+        probe(OBJECT_METADATA_REQUESTS,
             FILESTATUS_FILE_PROBE_H),
-        // if deleting markers, look for the parent too
-        probe(rawAndDeleting, OBJECT_METADATA_REQUESTS,
-            FILESTATUS_FILE_PROBE_H + FILESTATUS_DIR_PROBE_H),
         with(OBJECT_LIST_REQUEST,
             FILESTATUS_FILE_PROBE_L + FILESTATUS_DIR_PROBE_L),
         with(DIRECTORIES_DELETED, 0),
@@ -185,11 +143,7 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
         with(DIRECTORIES_CREATED, 0),
 
         // keeping: create no parent dirs or delete parents
-        withWhenKeeping(OBJECT_DELETE_REQUEST, DELETE_OBJECT_REQUEST),
-
-        // deleting: create a parent and delete any of its parents
-        withWhenDeleting(OBJECT_DELETE_REQUEST,
-            DELETE_OBJECT_REQUEST));
+        with(OBJECT_DELETE_REQUEST, DELETE_OBJECT_REQUEST));
   }
 
   @Test
@@ -216,19 +170,15 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
     LOG.info("creating sub directory {}", subDir);
     // one dir created, possibly a parent removed
     final int fakeDirectoriesToDelete = directoriesInPath(subDir) - 1;
+    final Statistic stat = getDeleteMarkerStatistic();
     verifyMetrics(() -> {
       mkdirs(subDir);
       return "after mkdir(subDir) " + getMetricSummary();
     },
         with(DIRECTORIES_CREATED, 1),
         with(DIRECTORIES_DELETED, 0),
-        withWhenKeeping(getDeleteMarkerStatistic(), 0),
-        withWhenKeeping(FAKE_DIRECTORIES_DELETED, 0),
-        withWhenDeleting(getDeleteMarkerStatistic(),
-            isBulkDelete() ? DELETE_MARKER_REQUEST : fakeDirectoriesToDelete),
-        // delete all possible fake dirs above the subdirectory
-        withWhenDeleting(FAKE_DIRECTORIES_DELETED,
-            fakeDirectoriesToDelete));
+        with(stat, 0),
+        with(FAKE_DIRECTORIES_DELETED, 0));
 
     LOG.info("About to delete {}", parent);
     // now delete the deep tree.
@@ -237,12 +187,9 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
       return "deleting parent dir " + parent + " " + getMetricSummary();
     },
 
-        // keeping: the parent dir marker needs deletion alongside
+        // the parent dir marker needs deletion alongside
         // the subdir one.
-        withWhenKeeping(OBJECT_DELETE_OBJECTS, dirsCreated),
-
-        // deleting: only the marker at the bottom needs deleting
-        withWhenDeleting(OBJECT_DELETE_OBJECTS, 1));
+        with(OBJECT_DELETE_OBJECTS, dirsCreated));
 
     // followup with list calls to make sure all is clear.
     verifyNoListing(parent);
@@ -274,10 +221,7 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
 
     Path srcDir = dir(new Path(srcBaseDir, "1/2/3/4/5/6"));
 
-    // creating a file should trigger demise of the src dir marker
-    // unless markers are being kept
-
-    final int directories = directoriesInPath(srcDir);
+    final Statistic stat = getDeleteMarkerStatistic();
     verifyMetrics(() -> {
       final Path srcPath = new Path(srcDir, "source.txt");
       file(srcPath);
@@ -286,14 +230,9 @@ public class ITestS3ADeleteCost extends AbstractS3ACostTest {
     },
         with(DIRECTORIES_CREATED, 0),
         with(DIRECTORIES_DELETED, 0),
-        // keeping: no delete operations.
-        withWhenKeeping(getDeleteMarkerStatistic(), 0),
-        withWhenKeeping(FAKE_DIRECTORIES_DELETED, 0),
-        // delete all possible fake dirs above the file
-        withWhenDeleting(FAKE_DIRECTORIES_DELETED,
-            directories),
-        withWhenDeleting(getDeleteMarkerStatistic(),
-            isBulkDelete() ? 1: directories));
+        // no delete operations.
+        with(stat, 0),
+        with(FAKE_DIRECTORIES_DELETED, 0));
   }
 
 }

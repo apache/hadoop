@@ -236,13 +236,6 @@ public class MockS3AFileSystem extends S3AFileSystem {
   }
 
   @Override
-  void finishedWrite(String key,
-      long length,
-      final PutObjectOptions putOptions) {
-
-  }
-
-  @Override
   public FSDataInputStream open(Path f, int bufferSize) throws IOException {
     event("open(%s)", f);
     return mock.open(f, bufferSize);

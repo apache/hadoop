@@ -288,9 +288,7 @@ public class WriteOperationHelper implements WriteOperations {
 
   /**
    * Finalize a multipart PUT operation.
-   * This completes the upload, and, if that works, calls
-   * {@link WriteOperationHelperCallbacks#finishedWrite(String, long, PutObjectOptions)}
-   * to update the filesystem.
+   * This completes the upload.
    * Retry policy: retrying, translated.
    * @param destKey destination of the commit
    * @param uploadId multipart operation Id
@@ -324,8 +322,6 @@ public class WriteOperationHelper implements WriteOperations {
                     destKey, uploadId, partETags);
             return writeOperationHelperCallbacks.completeMultipartUpload(requestBuilder.build());
           });
-      writeOperationHelperCallbacks.finishedWrite(destKey, length,
-          putOptions);
       return uploadResult;
     }
   }
@@ -544,8 +540,6 @@ public class WriteOperationHelper implements WriteOperations {
   /**
    * This completes a multipart upload to the destination key via
    * {@code finalizeMultipartUpload()}.
-   * Markers are never deleted on commit; this avoids having to
-   * issue many duplicate deletions.
    * Retry policy: retrying, translated.
    * Retries increment the {@code errorCount} counter.
    * @param destKey destination
@@ -667,21 +661,6 @@ public class WriteOperationHelper implements WriteOperations {
         RequestBody body,
         DurationTrackerFactory durationTrackerFactory)
         throws AwsServiceException, UncheckedIOException;
-
-    /**
-     * Perform post-write actions.
-     * <p>
-     * This operation MUST be called after any PUT/multipart PUT completes
-     * successfully.
-     * @param key key written to
-     * @param length total length of file written
-     * @param putOptions put object options
-     */
-    @Retries.RetryExceptionsSwallowed
-    void finishedWrite(
-        String key,
-        long length,
-        PutObjectOptions putOptions);
   }
 
 }

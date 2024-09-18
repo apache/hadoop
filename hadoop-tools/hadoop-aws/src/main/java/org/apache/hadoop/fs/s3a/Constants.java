@@ -1296,37 +1296,44 @@ public final class Constants {
 
   /**
    * Policy for directory markers.
-   * This is a new feature of HADOOP-13230 which addresses
-   * some scale, performance and permissions issues -but
-   * at the risk of backwards compatibility.
+   * No longer supported as "keep" is the sole policy.
    */
+  @Deprecated
   public static final String DIRECTORY_MARKER_POLICY =
       "fs.s3a.directory.marker.retention";
 
   /**
-   * Delete directory markers. This is the backwards compatible option.
+   * Delete directory markers.
+   * No longer supported as "keep" is the sole policy.
    * Value: {@value}.
    */
+  @Deprecated
   public static final String DIRECTORY_MARKER_POLICY_DELETE =
       "delete";
 
   /**
    * Retain directory markers.
+   * No longer needed, so marked as deprecated to flag usages.
    * Value: {@value}.
    */
+  @Deprecated
   public static final String DIRECTORY_MARKER_POLICY_KEEP =
       "keep";
 
   /**
    * Retain directory markers in authoritative directory trees only.
+   * No longer required as "keep" is the sole policy.
    * Value: {@value}.
    */
+  @Deprecated
   public static final String DIRECTORY_MARKER_POLICY_AUTHORITATIVE =
       "authoritative";
 
   /**
    * Default retention policy: {@value}.
+   * No longer required as "keep" is the sole policy.
    */
+  @Deprecated
   public static final String DEFAULT_DIRECTORY_MARKER_POLICY =
       DIRECTORY_MARKER_POLICY_KEEP;
 
@@ -1334,7 +1341,7 @@ public final class Constants {
   /**
    * {@code PathCapabilities} probe to verify that an S3A Filesystem
    * has the changes needed to safely work with buckets where
-   * directoy markers have not been deleted.
+   * directory markers have not been deleted.
    * Value: {@value}.
    */
   public static final String STORE_CAPABILITY_DIRECTORY_MARKER_AWARE
@@ -1351,6 +1358,7 @@ public final class Constants {
   /**
    * {@code PathCapabilities} probe to indicate that the filesystem
    * deletes directory markers.
+   * Always false.
    * Value: {@value}.
    */
   public static final String STORE_CAPABILITY_DIRECTORY_MARKER_POLICY_DELETE
@@ -1359,6 +1367,7 @@ public final class Constants {
   /**
    * {@code PathCapabilities} probe to indicate that the filesystem
    * keeps directory markers in authoritative paths only.
+   * This probe always returns false.
    * Value: {@value}.
    */
   public static final String
@@ -1368,6 +1377,7 @@ public final class Constants {
   /**
    * {@code PathCapabilities} probe to indicate that a path
    * keeps directory markers.
+   * This probe always returns true.
    * Value: {@value}.
    */
   public static final String STORE_CAPABILITY_DIRECTORY_MARKER_ACTION_KEEP
@@ -1376,6 +1386,7 @@ public final class Constants {
   /**
    * {@code PathCapabilities} probe to indicate that a path
    * deletes directory markers.
+   * This probe always returns false.
    * Value: {@value}.
    */
   public static final String STORE_CAPABILITY_DIRECTORY_MARKER_ACTION_DELETE
