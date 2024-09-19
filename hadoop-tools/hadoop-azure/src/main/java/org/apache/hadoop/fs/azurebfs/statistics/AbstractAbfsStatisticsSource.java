@@ -26,8 +26,12 @@ public abstract class AbstractAbfsStatisticsSource implements IOStatisticsSource
         return ioStatistics.incrementCounter(name, value);
     }
 
-    public Long lookupCounterValue(final String name) {
+    public Long lookupCounterValue(String name) {
         return ioStatistics.counters().get(name);
+    }
+
+    public void setCounterValue(String name, long value) {
+        ioStatistics.setCounter(name, value);
     }
 
     @Override

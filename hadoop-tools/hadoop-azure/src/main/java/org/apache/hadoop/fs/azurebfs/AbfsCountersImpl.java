@@ -102,8 +102,6 @@ public class AbfsCountersImpl implements AbfsCounters {
 
   private AbfsBackoffMetrics abfsBackoffMetrics = null;
 
-  private AbfsBackoffMetricsUsingIOStatistics abfsBackoffMetricsUsingIOStatistics = null;
-
   private AbfsReadFooterMetrics abfsReadFooterMetrics = null;
 
   private AtomicLong lastExecutionTime = null;
@@ -173,9 +171,6 @@ public class AbfsCountersImpl implements AbfsCounters {
     switch (metricFormat) {
       case INTERNAL_BACKOFF_METRIC_FORMAT:
         abfsBackoffMetrics = new AbfsBackoffMetrics();
-        abfsBackoffMetricsUsingIOStatistics = new AbfsBackoffMetricsUsingIOStatistics();
-        abfsBackoffMetricsUsingIOStatistics.incrementCounter(AbfsBackoffMetricsEnum.NUMBER_OF_REQUESTS_SUCCEEDED, "1");
-        System.out.println(abfsBackoffMetricsUsingIOStatistics.toString());
         break;
       case INTERNAL_FOOTER_METRIC_FORMAT:
         abfsReadFooterMetrics = new AbfsReadFooterMetrics();
@@ -260,11 +255,6 @@ public class AbfsCountersImpl implements AbfsCounters {
   }
 
   @Override
-  public AbfsBackoffMetricsUsingIOStatistics getAbfsBackoffMetricsUsingIOStatistics() {
-    return abfsBackoffMetricsUsingIOStatistics;
-  }
-
-  @Override
   public AtomicLong getLastExecutionTime() {
     return lastExecutionTime;
   }
@@ -335,7 +325,7 @@ public class AbfsCountersImpl implements AbfsCounters {
   public String toString() {
     String metric = "";
     if (abfsBackoffMetrics != null) {
-      long totalNoRequests = getAbfsBackoffMetrics().getTotalNumberOfRequests();
+      long totalNoRequests = getAbfsBackoffMetrics().getCounter(AbfsBackoffMetricsEnum.TOTAL_NUMBER_OF_REQUESTS);
       if (totalNoRequests > 0) {
         metric += "#BO:" + getAbfsBackoffMetrics().toString();
       }
