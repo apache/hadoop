@@ -45,7 +45,6 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.ApplicationPlacementContext;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
@@ -437,6 +436,7 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
    * Otherwise, check and create the auto-created queue.
    * @param applicationId The ID of the submitted application.
    * @param user The user who submitted the application.
+   * @param queueName name of the queue
    * @param placementContext The configured application placement context.
    * @param isRecovery Indicates if the application is starting during recovery.
    * @return The corresponding queue.

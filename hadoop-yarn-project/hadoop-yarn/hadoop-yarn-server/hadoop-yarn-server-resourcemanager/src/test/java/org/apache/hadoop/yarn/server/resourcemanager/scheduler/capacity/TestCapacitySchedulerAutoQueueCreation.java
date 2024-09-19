@@ -627,13 +627,13 @@ public class TestCapacitySchedulerAutoQueueCreation
     long maxRootLifetime = 20L;
     long defaultRootLifetime = 10L;
 
-    QueuePath TEST_QUEUE = new QueuePath("root.test");
+    QueuePath testQueue = new QueuePath("root.test");
 
     CapacitySchedulerConfiguration conf = setupSchedulerConfiguration();
     conf.setQueues(ROOT, new String[] {"test"});
-    conf.setAutoQueueCreationV2Enabled(TEST_QUEUE, true);
+    conf.setAutoQueueCreationV2Enabled(testQueue, true);
     conf.setCapacity(DEFAULT, "1w");
-    conf.setCapacity(TEST_QUEUE, "2w");
+    conf.setCapacity(testQueue, "2w");
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
         ResourceScheduler.class);
 
@@ -662,10 +662,10 @@ public class TestCapacitySchedulerAutoQueueCreation
 
       Assert.assertEquals(RMAppState.KILLED, app1.getState());
       Assert.assertTrue("Application killed before default lifetime value",
-            totalTimeRun > (defaultRootLifetime * 1000));
-        Assert.assertTrue(
-            "Application killed after max lifetime value " + totalTimeRun,
-            totalTimeRun < (maxRootLifetime * 1000));
+          totalTimeRun > (defaultRootLifetime * 1000));
+      Assert.assertTrue(
+          "Application killed after max lifetime value " + totalTimeRun,
+          totalTimeRun < (maxRootLifetime * 1000));
     } finally {
       ((CapacityScheduler) newMockRM.getResourceScheduler()).stop();
       newMockRM.stop();
