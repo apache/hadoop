@@ -53,6 +53,7 @@ class AuditReplayCommand implements Delayed {
 
   AuditReplayCommand(Long sequence, long absoluteTimestamp, String ugi, String command,
       String src, String dest, String sourceIP) {
+    this.sequence = sequence;
     this.absoluteTimestamp = absoluteTimestamp;
     this.ugi = ugi;
     this.command = command;
