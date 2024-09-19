@@ -90,7 +90,10 @@ public class ClientManagerImpl implements ClientManager {
 
   /**
    * Constructor.
+   * <p>
    * This does not create any clients.
+   * <p>
+   * It does disable noisy logging from the S3 Transfer Manager.
    * @param clientFactory client factory to invoke
    * @param clientCreationParameters creation parameters.
    * @param durationTrackerFactory duration tracker.
@@ -105,6 +108,9 @@ public class ClientManagerImpl implements ClientManager {
     this.s3Client = new LazyAutoCloseableReference<>(createS3Client());
     this.s3AsyncClient = new LazyAutoCloseableReference<>(createAyncClient());
     this.transferManager = new LazyAutoCloseableReference<>(createTransferManager());
+
+    // fix up SDK logging.
+    AwsSdkWorkarounds.prepareLogging();
   }
 
   /**
