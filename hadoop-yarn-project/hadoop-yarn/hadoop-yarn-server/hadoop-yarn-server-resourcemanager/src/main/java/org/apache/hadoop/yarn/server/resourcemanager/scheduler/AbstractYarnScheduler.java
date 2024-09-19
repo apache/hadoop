@@ -34,7 +34,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.ApplicationPlacementContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1562,10 +1562,17 @@ public abstract class AbstractYarnScheduler
   }
 
   @Override
-  public long checkAndGetApplicationLifetime(String queueName, long lifetime,
-                                             RMAppImpl app) {
+  public long checkAndGetApplicationLifetime(String queueName, long lifetime) {
     // Lifetime is the application lifetime by default.
     return lifetime;
+  }
+
+  @Override
+  public CSQueue getOrCreateQueueFromPlacementContext(ApplicationId
+      applicationId, String user, String queueName,
+                                             ApplicationPlacementContext placementContext,
+                                             boolean isRecovery) {
+    return null;
   }
 
   @Override

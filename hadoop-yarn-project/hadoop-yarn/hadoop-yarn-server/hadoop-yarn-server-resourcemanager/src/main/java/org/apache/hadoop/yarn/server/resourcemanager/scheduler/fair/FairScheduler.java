@@ -59,7 +59,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.reservation.ReservationCons
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEventType;
-import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
@@ -2038,8 +2037,7 @@ public class FairScheduler extends
   }
 
   @Override
-  public long checkAndGetApplicationLifetime(String queueName, long lifetime,
-                                             RMAppImpl app) {
+  public long checkAndGetApplicationLifetime(String queueName, long lifetime) {
     // Lifetime is the application lifetime by default.
     return lifetime;
   }

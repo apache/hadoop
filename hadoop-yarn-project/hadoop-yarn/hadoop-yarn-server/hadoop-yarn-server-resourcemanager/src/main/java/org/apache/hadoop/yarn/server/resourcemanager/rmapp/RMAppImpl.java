@@ -1268,8 +1268,12 @@ public class RMAppImpl implements RMApp, Recoverable {
 
       long applicationLifetime =
           app.getApplicationLifetime(ApplicationTimeoutType.LIFETIME);
+
+      app.scheduler.getOrCreateQueueFromPlacementContext(app.getApplicationId(),
+          app.getUser(), app.queue, app.placementContext, false);
+
       applicationLifetime = app.scheduler
-          .checkAndGetApplicationLifetime(app.queue, applicationLifetime, app);
+          .checkAndGetApplicationLifetime(app.queue, applicationLifetime);
       if (applicationLifetime > 0) {
         // calculate next timeout value
         Long newTimeout =
