@@ -31,6 +31,7 @@ import java.util.Random;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.fs.azurebfs.AbfsCountersImpl;
+import org.apache.hadoop.fs.azurebfs.utils.Base64;
 import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
@@ -105,6 +106,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST
 public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 
   private static final String ACCOUNT_NAME = "bogusAccountName.dfs.core.windows.net";
+  private static final String ACCOUNT_KEY = "testAccountKey";
   private static final String FS_AZURE_USER_AGENT_PREFIX = "Partner Service";
   private static final String HUNDRED_CONTINUE_USER_AGENT = SINGLE_WHITE_SPACE + HUNDRED_CONTINUE + SEMICOLON;
   private static final String TEST_PATH = "/testfile";
@@ -716,7 +718,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     final Configuration configuration = getRawConfiguration();
     configuration.set(FS_AZURE_METRIC_FORMAT, String.valueOf(MetricFormat.INTERNAL_BACKOFF_METRIC_FORMAT));
     configuration.set(FS_AZURE_METRIC_ACCOUNT_NAME, ACCOUNT_NAME);
-    configuration.set(FS_AZURE_METRIC_ACCOUNT_KEY, "vvE5oEbtg19iy5SSPXmuCNeglr3DsvpPe5JIE7eTrDmK6K2vzmoVs5VnY9Q7bI/DiviU+a3YbHx3+AStzRmEJQ==");
+    configuration.set(FS_AZURE_METRIC_ACCOUNT_KEY, Base64.encode(ACCOUNT_KEY.getBytes()));
     AbfsConfiguration abfsConfiguration = new AbfsConfiguration(configuration, ACCOUNT_NAME);
 
     AbfsCounters abfsCounters = Mockito.spy(new AbfsCountersImpl(new URI("abcd")));
