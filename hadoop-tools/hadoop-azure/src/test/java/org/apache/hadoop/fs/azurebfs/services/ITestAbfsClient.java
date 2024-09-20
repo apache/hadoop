@@ -26,10 +26,12 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.fs.azurebfs.AbfsCountersImpl;
+import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
@@ -90,6 +92,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SEMICOLO
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SINGLE_WHITE_SPACE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLUSTER_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLUSTER_TYPE;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_FORMAT;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_CONFIGURATION_FILE_NAME;
 
 /**
@@ -681,5 +684,53 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     Assertions.assertThat(appendRequestParameters.isExpectHeaderEnabled())
             .describedAs("The expect header is not false")
             .isFalse();
+  }
+
+  @Test
+  public void testTimerNotInitialize() throws Exception {
+    // Create an AzureBlobFileSystem instance.
+    final Configuration configuration = getRawConfiguration();
+    configuration.set(FS_AZURE_METRIC_FORMAT, String.valueOf(MetricFormat.EMPTY));
+    final AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(configuration);
+
+    // Get an instance of AbfsClient.
+    AbfsClient testClient = super.getAbfsClient(super.getAbfsStore(fs));
+    assertNull(testClient.getTimer());
+
+    boolean isTimerThreadPresent = isThreadRunning("abfs-timer-client");
+    assertFalse("Expected thread 'abfs-timer-client' not found", isTimerThreadPresent);
+    // Close the AzureBlobFileSystem.
+    fs.close();
+  }
+
+  @Test
+  public void testTimerInitialize() throws Exception {
+    // Create an AzureBlobFileSystem instance.
+    final Configuration configuration = getRawConfiguration();
+    configuration.set(FS_AZURE_METRIC_FORMAT, String.valueOf(MetricFormat.INTERNAL_BACKOFF_METRIC_FORMAT));
+    final AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(configuration);
+
+    // Get an instance of AbfsClient.
+    AbfsClient testClient = super.getAbfsClient(super.getAbfsStore(fs));
+    assertNotNull(testClient.getTimer());
+    // Check if a thread with the name "abfs-timer-client" exists
+    boolean isTimerThreadPresent = isThreadRunning("abfs-timer-client");
+    assertTrue("Expected thread 'abfs-timer-client' found", isTimerThreadPresent);
+
+    // Close the AzureBlobFileSystem.
+    fs.close();
+  }
+
+  private boolean isThreadRunning(String threadName) {
+    // Get all threads and their stack traces
+    Map<Thread, StackTraceElement[]> allThreads = Thread.getAllStackTraces();
+
+    // Check if any thread has the specified name
+    for (Thread thread : allThreads.keySet()) {
+      if (thread.getName().equals(threadName)) {
+        return true;
+      }
+    }
+    return false;
   }
 }

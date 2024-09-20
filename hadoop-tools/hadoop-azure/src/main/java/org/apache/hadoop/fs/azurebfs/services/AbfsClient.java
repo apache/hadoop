@@ -122,7 +122,7 @@ public class AbfsClient implements Closeable {
   private AccessTokenProvider tokenProvider;
   private SASTokenProvider sasTokenProvider;
   private final AbfsCounters abfsCounters;
-  private final Timer timer;
+  private Timer timer;
   private final String abfsMetricUrl;
   private boolean isMetricCollectionEnabled = false;
   private final MetricFormat metricFormat;
@@ -231,9 +231,9 @@ public class AbfsClient implements Closeable {
         throw new IOException("Exception while initializing metric credentials " + e);
       }
     }
-    this.timer = new Timer(
-        "abfs-timer-client", true);
     if (isMetricCollectionEnabled) {
+      this.timer = new Timer(
+              "abfs-timer-client", true);
       timer.schedule(new TimerTaskImpl(),
           metricIdlePeriod,
           metricIdlePeriod);
@@ -265,7 +265,7 @@ public class AbfsClient implements Closeable {
 
   @Override
   public void close() throws IOException {
-    if (runningTimerTask != null) {
+    if (runningTimerTask != null && isMetricCollectionEnabled) {
       runningTimerTask.cancel();
       timer.purge();
     }
@@ -1833,7 +1833,7 @@ public class AbfsClient implements Closeable {
   boolean timerOrchestrator(TimerFunctionality timerFunctionality, TimerTask timerTask) {
     switch (timerFunctionality) {
       case RESUME:
-        if (isMetricCollectionStopped.get()) {
+        if (isMetricCollectionEnabled) {
           synchronized (this) {
             if (isMetricCollectionStopped.get()) {
               resumeTimer();
@@ -2011,4 +2011,7 @@ public class AbfsClient implements Closeable {
   KeepAliveCache getKeepAliveCache() {
     return keepAliveCache;
   }
+
+  @VisibleForTesting
+  Timer getTimer() {return timer;}
 }
