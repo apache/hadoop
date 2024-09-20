@@ -44,10 +44,9 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.event.EventHandler;
-import org.apache.hadoop.yarn.server.resourcemanager.placement.ApplicationPlacementContext;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.QueueEntitlement;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.SchedulerResourceTypes;
@@ -425,28 +424,13 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
    * Queue lifetime.
    * @param queueName Name of the Queue
    * @param lifetime configured application lifetime
+   * @param app details of app
    * @return valid lifetime as per queue
    */
   @Public
   @Evolving
-  long checkAndGetApplicationLifetime(String queueName, long lifetime);
-
-  /**
-   * Retrieve the auto-created queue if it exists.
-   * Otherwise, check and create the auto-created queue.
-   * @param applicationId The ID of the submitted application.
-   * @param user The user who submitted the application.
-   * @param queueName name of the queue
-   * @param placementContext The configured application placement context.
-   * @param isRecovery Indicates if the application is starting during recovery.
-   * @return The corresponding queue.
-   */
-  @Public
-  @Evolving
-  CSQueue getOrCreateQueueFromPlacementContext(ApplicationId
-      applicationId, String user, String queueName,
-      ApplicationPlacementContext placementContext,
-      boolean isRecovery);
+  long checkAndGetApplicationLifetime(String queueName, long lifetime,
+                                      RMAppImpl app);
 
   /**
    * Get maximum lifetime for a queue.
