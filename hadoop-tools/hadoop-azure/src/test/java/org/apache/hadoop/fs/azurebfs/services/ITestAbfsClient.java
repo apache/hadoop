@@ -106,7 +106,7 @@ import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST
 public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 
   private static final String ACCOUNT_NAME = "bogusAccountName.dfs.core.windows.net";
-  private static final String ACCOUNT_KEY = "testAccountKey";
+  private static final String ACCOUNT_KEY = "testKey";
   private static final String FS_AZURE_USER_AGENT_PREFIX = "Partner Service";
   private static final String HUNDRED_CONTINUE_USER_AGENT = SINGLE_WHITE_SPACE + HUNDRED_CONTINUE + SEMICOLON;
   private static final String TEST_PATH = "/testfile";
