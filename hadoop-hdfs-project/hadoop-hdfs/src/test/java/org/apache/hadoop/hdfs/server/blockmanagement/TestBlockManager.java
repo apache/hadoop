@@ -2169,7 +2169,7 @@ public class TestBlockManager {
       cluster.setDataNodeDead(datanode.getDatanodeId());
       assertFalse(blockManager.containsInvalidateBlock(loc[0], lb.getBlock().getLocalBlock()));
 
-      // Wait for re-registration and heartbeat.
+      // Wait for re, -registration and heartbeat.
       datanode.setHeartbeatsDisabledForTests(false);
       final DatanodeDescriptor dn1Desc = cluster.getNamesystem(0)
           .getBlockManager().getDatanodeManager()
