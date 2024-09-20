@@ -93,6 +93,8 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SINGLE_W
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLUSTER_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLUSTER_TYPE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_FORMAT;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_ACCOUNT_NAME;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_ACCOUNT_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_CONFIGURATION_FILE_NAME;
 
 /**
@@ -690,17 +692,22 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
   public void testTimerNotInitialize() throws Exception {
     // Create an AzureBlobFileSystem instance.
     final Configuration configuration = getRawConfiguration();
-    configuration.set(FS_AZURE_METRIC_FORMAT, String.valueOf(MetricFormat.EMPTY));
-    final AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(configuration);
+    AbfsConfiguration abfsConfiguration = new AbfsConfiguration(configuration, ACCOUNT_NAME);
+
+    AbfsCounters abfsCounters = Mockito.spy(new AbfsCountersImpl(new URI("abcd")));
+    AbfsClientContext abfsClientContext = new AbfsClientContextBuilder().withAbfsCounters(abfsCounters).build();
 
     // Get an instance of AbfsClient.
-    AbfsClient testClient = super.getAbfsClient(super.getAbfsStore(fs));
-    assertNull(testClient.getTimer());
+    AbfsClient client = new AbfsClient(new URL("https://azure.com"),
+            null,
+            abfsConfiguration,
+            (AccessTokenProvider) null,
+            null,
+            abfsClientContext);
 
+    assertNull(client.getTimer());
     boolean isTimerThreadPresent = isThreadRunning("abfs-timer-client");
     assertFalse("Expected thread 'abfs-timer-client' not found", isTimerThreadPresent);
-    // Close the AzureBlobFileSystem.
-    fs.close();
   }
 
   @Test
@@ -708,17 +715,25 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     // Create an AzureBlobFileSystem instance.
     final Configuration configuration = getRawConfiguration();
     configuration.set(FS_AZURE_METRIC_FORMAT, String.valueOf(MetricFormat.INTERNAL_BACKOFF_METRIC_FORMAT));
-    final AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(configuration);
+    configuration.set(FS_AZURE_METRIC_ACCOUNT_NAME, ACCOUNT_NAME);
+    configuration.set(FS_AZURE_METRIC_ACCOUNT_KEY, "vvE5oEbtg19iy5SSPXmuCNeglr3DsvpPe5JIE7eTrDmK6K2vzmoVs5VnY9Q7bI/DiviU+a3YbHx3+AStzRmEJQ==");
+    AbfsConfiguration abfsConfiguration = new AbfsConfiguration(configuration, ACCOUNT_NAME);
+
+    AbfsCounters abfsCounters = Mockito.spy(new AbfsCountersImpl(new URI("abcd")));
+    AbfsClientContext abfsClientContext = new AbfsClientContextBuilder().withAbfsCounters(abfsCounters).build();
 
     // Get an instance of AbfsClient.
-    AbfsClient testClient = super.getAbfsClient(super.getAbfsStore(fs));
-    assertNotNull(testClient.getTimer());
+    AbfsClient client = new AbfsClient(new URL("https://azure.com"),
+            null,
+            abfsConfiguration,
+            (AccessTokenProvider) null,
+            null,
+            abfsClientContext);
+
+    assertNotNull(client.getTimer());
     // Check if a thread with the name "abfs-timer-client" exists
     boolean isTimerThreadPresent = isThreadRunning("abfs-timer-client");
     assertTrue("Expected thread 'abfs-timer-client' found", isTimerThreadPresent);
-
-    // Close the AzureBlobFileSystem.
-    fs.close();
   }
 
   private boolean isThreadRunning(String threadName) {
