@@ -35,8 +35,7 @@ public class TemporarySocketDirectory implements Closeable {
 
   public TemporarySocketDirectory() {
     String tmp = System.getProperty("java.io.tmpdir", "/tmp");
-    dir = new File(tmp, "socks." + (System.currentTimeMillis() +
-        "." + (new Random().nextInt())));
+    dir = new File(tmp, "socks." + System.nanoTime());
     dir.mkdirs();
     FileUtil.setWritable(dir, true);
   }
