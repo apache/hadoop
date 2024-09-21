@@ -105,7 +105,7 @@ public final class NameNodeAdapterMockitoUtil {
     return spyEditLog;
   }
 
-    /**
+  /**
    * Spy on EditLog to delay execution of doEditTransaction() for MkdirOp.
    */
   public static FSEditLog spyDelayMkDirTransaction(
