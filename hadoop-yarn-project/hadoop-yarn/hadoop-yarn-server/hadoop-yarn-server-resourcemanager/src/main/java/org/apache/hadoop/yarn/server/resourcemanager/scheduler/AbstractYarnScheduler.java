@@ -37,6 +37,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
 import org.slf4j.Logger;
@@ -1831,13 +1833,12 @@ public abstract class AbstractYarnScheduler
 
     @Override
     public int hashCode() {
-      final int prime = 31;
-      int result = 1;
-      result = (int) (prime * result +  allocationId);
-      result = prime * result + (priority == null ? 0 : priority.hashCode());
-      result = prime * result + (executionType == null ? 0 : executionType.hashCode());
-      result = prime * result + (resource == null ? 0 : resource.hashCode());
-      return result;
+      return new HashCodeBuilder(17, 37)
+          .append(allocationId)
+          .append(priority)
+          .append(executionType)
+          .append(resource)
+          .toHashCode();
     }
 
     @Override
@@ -1848,14 +1849,14 @@ public abstract class AbstractYarnScheduler
       if (obj.getClass() != this.getClass()) {
         return false;
       }
-      ContainerObjectType containerObjectType = (ContainerObjectType) obj;
-      if (allocationId == containerObjectType.getAllocationId() &&
-          priority.equals(containerObjectType.getPriority()) &&
-          executionType.equals(containerObjectType.getExecutionType()) &&
-          resource.equals(containerObjectType.getResource())) {
-        return true;
-      }
-      return false;
+
+      ContainerObjectType other = (ContainerObjectType) obj;
+      return new EqualsBuilder()
+          .append(allocationId, other.getAllocationId())
+          .append(priority, other.getPriority())
+          .append(executionType, other.getExecutionType())
+          .append(resource, other.getResource())
+          .isEquals();
     }
 
     @Override
