@@ -58,7 +58,7 @@ public class RpcDeniedReply extends RpcReply {
 
   @Override
   public String toString() {
-    return new StringBuffer().append("xid:").append(xid)
+    return new StringBuilder().append("xid:").append(xid)
         .append(",messageType:").append(messageType).append("verifier_flavor:")
         .append(verifier.getFlavor()).append("rejectState:")
         .append(rejectState).toString();

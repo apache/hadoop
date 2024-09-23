@@ -1278,6 +1278,13 @@ public class YarnConfiguration extends Configuration {
   public static final int DEFAULT_RM_NODE_GRACEFUL_DECOMMISSION_TIMEOUT = 3600;
 
   /**
+   * Enable/disable tracking of unregistered nodes.
+   **/
+  public static final String ENABLE_TRACKING_FOR_UNREGISTERED_NODES =
+      RM_PREFIX + "enable-tracking-for-unregistered-nodes";
+  public static final boolean DEFAULT_ENABLE_TRACKING_FOR_UNREGISTERED_NODES = false;
+
+  /**
    * Period in seconds of the poll timer task inside DecommissioningNodesWatcher
    * to identify and take care of DECOMMISSIONING nodes missing regular heart beat.
    */

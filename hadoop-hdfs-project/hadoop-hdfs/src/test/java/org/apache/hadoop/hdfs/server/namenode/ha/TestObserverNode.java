@@ -65,7 +65,7 @@ import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLog;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
-import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapterMockitoUtil;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeRpcServer;
 import org.apache.hadoop.hdfs.server.namenode.TestFsck;
 import org.apache.hadoop.hdfs.tools.GetGroups;
@@ -422,7 +422,7 @@ public class TestObserverNode {
     // Mock block manager for observer to generate some fake blocks which
     // will trigger the (retriable) safe mode exception.
     BlockManager bmSpy =
-        NameNodeAdapter.spyOnBlockManager(dfsCluster.getNameNode(2));
+        NameNodeAdapterMockitoUtil.spyOnBlockManager(dfsCluster.getNameNode(2));
     doAnswer((invocation) -> {
       ExtendedBlock b = new ExtendedBlock("fake-pool", new Block(12345L));
       LocatedBlock fakeBlock = new LocatedBlock(b, DatanodeInfo.EMPTY_ARRAY);
@@ -457,7 +457,7 @@ public class TestObserverNode {
     // Mock block manager for observer to generate some fake blocks which
     // will trigger the block missing exception.
 
-    BlockManager bmSpy = NameNodeAdapter
+    BlockManager bmSpy = NameNodeAdapterMockitoUtil
         .spyOnBlockManager(dfsCluster.getNameNode(2));
     doAnswer((invocation) -> {
       List<LocatedBlock> fakeBlocks = new ArrayList<>();
@@ -626,7 +626,7 @@ public class TestObserverNode {
     assertSentTo(2);
 
     // Create a spy on FSEditLog, which delays MkdirOp transaction by 100 mec
-    FSEditLog spyEditLog = NameNodeAdapter.spyDelayMkDirTransaction(
+    FSEditLog spyEditLog = NameNodeAdapterMockitoUtil.spyDelayMkDirTransaction(
         dfsCluster.getNameNode(0), 100);
 
     final int numThreads = 4;

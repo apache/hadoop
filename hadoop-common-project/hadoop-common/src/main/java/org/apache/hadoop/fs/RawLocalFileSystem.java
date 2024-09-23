@@ -1320,6 +1320,8 @@ public class RawLocalFileSystem extends FileSystem {
     case CommonPathCapabilities.FS_PATHHANDLES:
     case CommonPathCapabilities.FS_PERMISSIONS:
     case CommonPathCapabilities.FS_TRUNCATE:
+      // block locations are generated locally
+    case CommonPathCapabilities.VIRTUAL_BLOCK_LOCATIONS:
       return true;
     case CommonPathCapabilities.FS_SYMLINKS:
       return FileSystem.areSymlinksEnabled();

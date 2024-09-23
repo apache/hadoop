@@ -109,8 +109,8 @@ public abstract class IOMapperBase<T> extends Configured
    * Map file name and offset into statistical data.
    * <p>
    * The map task is to get the 
-   * <tt>key</tt>, which contains the file name, and the 
-   * <tt>value</tt>, which is the offset within the file.
+   * <code>key</code>, which contains the file name, and the
+   * <code>value</code>, which is the offset within the file.
    * 
    * The parameters are passed to the abstract method 
    * {@link #doIO(Reporter,String,long)}, which performs the io operation, 
