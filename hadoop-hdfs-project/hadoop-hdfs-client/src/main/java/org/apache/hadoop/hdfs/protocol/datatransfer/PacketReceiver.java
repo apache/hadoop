@@ -48,7 +48,7 @@ public class PacketReceiver implements Closeable {
    * The max size of any single packet. This prevents OOMEs when
    * invalid data is sent.
    */
-  public static final int MAX_PACKET_SIZE;
+  public static int MAX_PACKET_SIZE = HdfsClientConfigKeys.DFS_DATA_TRANSFER_MAX_PACKET_SIZE_DEFAULT;
 
   static final Logger LOG = LoggerFactory.getLogger(PacketReceiver.class);
 
