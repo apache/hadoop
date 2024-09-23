@@ -5810,4 +5810,13 @@
     <value>30s</value>
   </property>
 
+  <property>
+    <description>
+      The setting that controls whether the ResourceManager should track the nodes as
+      lost when they are unregistered and not reported to the RM.
+      It doesn't account for decommissioned nodes. Default is false.
+    </description>
+    <name>yarn.resourcemanager.enable-tracking-for-unregistered-nodes</name>
+    <value>false</value>
+  </property>
 </configuration>
