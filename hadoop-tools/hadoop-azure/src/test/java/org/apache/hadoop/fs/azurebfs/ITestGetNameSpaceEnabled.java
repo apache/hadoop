@@ -41,6 +41,7 @@ import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.accountProperty;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
@@ -126,6 +127,8 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
     Configuration rawConfig = new Configuration();
     rawConfig.addResource(TEST_CONFIGURATION_FILE_NAME);
     rawConfig.set(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, isNamespaceEnabledAccount);
+    rawConfig.set(accountProperty(FS_AZURE_ACCOUNT_IS_HNS_ENABLED,
+        this.getAccountName()), isNamespaceEnabledAccount);
     rawConfig
         .setBoolean(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION, true);
     rawConfig.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY,
@@ -270,5 +273,45 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
     // GetAcl() should be called only once to determine the HNS status.
     Mockito.verify(mockClient, times(1))
         .getAclStatus(anyString(), any(TracingContext.class));
+  }
+
+  @Test
+  public void testAccountSpecificConfig() throws Exception {
+    Configuration rawConfig = new Configuration();
+    rawConfig.addResource(TEST_CONFIGURATION_FILE_NAME);
+    rawConfig.unset(FS_AZURE_ACCOUNT_IS_HNS_ENABLED);
+    rawConfig.unset(accountProperty(FS_AZURE_ACCOUNT_IS_HNS_ENABLED,
+        this.getAccountName()));
+    String accountName1 = "account1.dfs.core.windows.net";
+    String accountName2 = "account2.dfs.core.windows.net";
+    String accountName3 = "account3.dfs.core.windows.net";
+    String defaultUri1 = this.getTestUrl().replace(this.getAccountName(), accountName1);
+    String defaultUri2 = this.getTestUrl().replace(this.getAccountName(), accountName2);
+    String defaultUri3 = this.getTestUrl().replace(this.getAccountName(), accountName3);
+
+    // Set account specific config for account 1
+    rawConfig.set(accountProperty(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, accountName1), TRUE_STR);
+    rawConfig.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, defaultUri1);
+    AzureBlobFileSystem fs1 = (AzureBlobFileSystem) FileSystem.newInstance(rawConfig);
+
+    // Set account specific config for account 2
+    rawConfig.set(accountProperty(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, accountName2), FALSE_STR);
+    rawConfig.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, defaultUri2);
+    AzureBlobFileSystem fs2 = (AzureBlobFileSystem) FileSystem.newInstance(rawConfig);
+
+    // Set account agnostic config for account 3
+    rawConfig.set(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, FALSE_STR);
+    rawConfig.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, defaultUri3);
+    AzureBlobFileSystem fs3 = (AzureBlobFileSystem) FileSystem.newInstance(rawConfig);
+
+    Assertions.assertThat(getIsNamespaceEnabled(fs1)).describedAs(
+        "getIsNamespaceEnabled should return true when the "
+            + "account specific config is set as true").isTrue();
+    Assertions.assertThat(getIsNamespaceEnabled(fs2)).describedAs(
+        "getIsNamespaceEnabled should return true when the "
+            + "account specific config is set as true").isFalse();
+    Assertions.assertThat(getIsNamespaceEnabled(fs3)).describedAs(
+        "getIsNamespaceEnabled should return true when the "
+            + "account specific config is not set").isFalse();
   }
 }

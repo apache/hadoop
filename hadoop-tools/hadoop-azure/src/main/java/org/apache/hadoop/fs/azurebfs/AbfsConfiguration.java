@@ -451,7 +451,9 @@ public class AbfsConfiguration{
   }
 
   public Trilean getIsNamespaceEnabledAccount() {
-    return Trilean.getTrilean(isNamespaceEnabledAccount);
+    String isNamespaceEnabledAccountString
+        = getString(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, isNamespaceEnabledAccount);
+    return Trilean.getTrilean(isNamespaceEnabledAccountString);
   }
 
   /**
