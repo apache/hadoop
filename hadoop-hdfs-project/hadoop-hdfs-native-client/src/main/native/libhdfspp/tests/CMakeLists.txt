@@ -74,6 +74,10 @@ add_executable(uri_test uri_test.cc)
 target_link_libraries(uri_test common gmock_main ${CMAKE_THREAD_LIBS_INIT})
 add_memcheck_test(uri uri_test)
 
+add_executable(get_jni_test libhdfs_getjni_test.cc)
+target_link_libraries(get_jni_test gmock_main hdfs_static ${CMAKE_THREAD_LIBS_INIT})
+add_memcheck_test(get_jni get_jni_test)
+
 add_executable(remote_block_reader_test remote_block_reader_test.cc)
 target_link_libraries(remote_block_reader_test test_common reader proto common connection ${PROTOBUF_LIBRARIES} ${OPENSSL_LIBRARIES} gmock_main ${CMAKE_THREAD_LIBS_INIT})
 add_memcheck_test(remote_block_reader remote_block_reader_test)

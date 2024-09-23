@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.List;
 
+import org.apache.hadoop.fs.azurebfs.enums.Trilean;
 import org.apache.hadoop.util.Lists;
 import org.junit.Assume;
 import org.junit.Test;
@@ -97,8 +98,12 @@ public class ITestAzureBlobFileSystemCheckAccess
         + getAccountName(), ClientCredsTokenProvider.class.getName());
     conf.setBoolean(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION,
         false);
-    conf.unset(FS_AZURE_ACCOUNT_IS_HNS_ENABLED);
+    // Since FS init now needs to know account type setting it before init to avoid that.
+    conf.setBoolean(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, isHNSEnabled);
     this.testUserFs = FileSystem.newInstance(conf);
+    // Resetting the namespace enabled flag to unknown after file system init.
+    ((AzureBlobFileSystem) testUserFs).getAbfsStore().setNamespaceEnabled(
+        Trilean.UNKNOWN);
   }
 
   private void setTestFsConf(final String fsConfKey,
@@ -306,11 +311,11 @@ public class ITestAzureBlobFileSystemCheckAccess
   }
 
   private void checkPrerequisites() throws Exception {
-    setTestUserFs();
     Assume.assumeTrue(FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT + " is false",
         isHNSEnabled);
     Assume.assumeTrue(FS_AZURE_ENABLE_CHECK_ACCESS + " is false",
         isCheckAccessEnabled);
+    setTestUserFs();
     checkIfConfigIsSet(FS_AZURE_BLOB_FS_CHECKACCESS_TEST_CLIENT_ID);
     checkIfConfigIsSet(FS_AZURE_BLOB_FS_CHECKACCESS_TEST_CLIENT_SECRET);
     checkIfConfigIsSet(FS_AZURE_BLOB_FS_CHECKACCESS_TEST_USER_GUID);

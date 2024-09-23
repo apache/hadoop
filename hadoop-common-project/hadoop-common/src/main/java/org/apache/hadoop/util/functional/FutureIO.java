@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
@@ -33,10 +34,14 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSBuilder;
+import org.apache.hadoop.util.Time;
 
 /**
  * Future IO Helper methods.
@@ -53,11 +58,17 @@ import org.apache.hadoop.fs.FSBuilder;
  * {@code UncheckedIOException} raised in the future.
  * This makes it somewhat easier to execute IOException-raising
  * code inside futures.
- * </p>
+ * <p>
+ * Important: any  {@code CancellationException} raised by the future
+ * is rethrown unchanged. This has been the implicit behavior since
+ * this code was first written, and is now explicitly documented.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
 public final class FutureIO {
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(FutureIO.class);
 
   private FutureIO() {
   }
@@ -68,17 +79,28 @@ public final class FutureIO {
    * Any exception generated in the future is
    * extracted and rethrown.
    * </p>
+   * If this thread is interrupted while waiting for the future to complete,
+   * an {@code InterruptedIOException} is raised.
+   * However, if the future is cancelled, a {@code CancellationException}
+   * is raised in the {code Future.get()} call. This is
+   * passed up as is -so allowing the caller to distinguish between
+   * thread interruption (such as when speculative task execution is aborted)
+   * and future cancellation.
    * @param future future to evaluate
    * @param <T> type of the result.
    * @return the result, if all went well.
-   * @throws InterruptedIOException future was interrupted
+   * @throws InterruptedIOException waiting for future completion was interrupted
+   * @throws CancellationException if the future itself was cancelled
    * @throws IOException if something went wrong
    * @throws RuntimeException any nested RTE thrown
    */
   public static <T> T awaitFuture(final Future<T> future)
-      throws InterruptedIOException, IOException, RuntimeException {
+      throws InterruptedIOException, IOException, CancellationException, RuntimeException {
     try {
       return future.get();
+    } catch (CancellationException e) {
+      LOG.debug("Future {} was cancelled", future, e);
+      throw e;
     } catch (InterruptedException e) {
       throw (InterruptedIOException) new InterruptedIOException(e.toString())
           .initCause(e);
@@ -94,11 +116,12 @@ public final class FutureIO {
    * extracted and rethrown.
    * </p>
    * @param future future to evaluate
-   * @param timeout timeout to wait
+   * @param timeout timeout to wait.
    * @param unit time unit.
    * @param <T> type of the result.
    * @return the result, if all went well.
-   * @throws InterruptedIOException future was interrupted
+   * @throws InterruptedIOException waiting for future completion was interrupted
+   * @throws CancellationException if the future itself was cancelled
    * @throws IOException if something went wrong
    * @throws RuntimeException any nested RTE thrown
    * @throws TimeoutException the future timed out.
@@ -106,10 +129,13 @@ public final class FutureIO {
   public static <T> T awaitFuture(final Future<T> future,
       final long timeout,
       final TimeUnit unit)
-      throws InterruptedIOException, IOException, RuntimeException,
+      throws InterruptedIOException, IOException, CancellationException, RuntimeException,
              TimeoutException {
     try {
       return future.get(timeout, unit);
+    } catch (CancellationException e) {
+      LOG.debug("Future {} was cancelled", future, e);
+      throw e;
     } catch (InterruptedException e) {
       throw (InterruptedIOException) new InterruptedIOException(e.toString())
           .initCause(e);
@@ -128,12 +154,13 @@ public final class FutureIO {
    * @param collection collection of futures to be evaluated
    * @param <T> type of the result.
    * @return the list of future's result, if all went well.
-   * @throws InterruptedIOException future was interrupted
+   * @throws InterruptedIOException waiting for future completion was interrupted
+   * @throws CancellationException if the future itself was cancelled
    * @throws IOException if something went wrong
    * @throws RuntimeException any nested RTE thrown
    */
   public static <T> List<T> awaitAllFutures(final Collection<Future<T>> collection)
-      throws InterruptedIOException, IOException, RuntimeException {
+      throws InterruptedIOException, IOException, CancellationException, RuntimeException {
     List<T> results = new ArrayList<>();
     for (Future<T> future : collection) {
       results.add(awaitFuture(future));
@@ -148,23 +175,65 @@ public final class FutureIO {
    * This method blocks until all futures in the collection have completed or
    * the timeout expires, whichever happens first. If any future throws an
    * exception during its execution, this method extracts and rethrows that exception.
-   * </p>
    * @param collection collection of futures to be evaluated
    * @param duration timeout duration
    * @param <T> type of the result.
    * @return the list of future's result, if all went well.
-   * @throws InterruptedIOException future was interrupted
+   * @throws InterruptedIOException waiting for future completion was interrupted
+   * @throws CancellationException if the future itself was cancelled
    * @throws IOException if something went wrong
    * @throws RuntimeException any nested RTE thrown
    * @throws TimeoutException the future timed out.
    */
   public static <T> List<T> awaitAllFutures(final Collection<Future<T>> collection,
       final Duration duration)
-      throws InterruptedIOException, IOException, RuntimeException,
+      throws InterruptedIOException, IOException, CancellationException, RuntimeException,
              TimeoutException {
     List<T> results = new ArrayList<>();
     for (Future<T> future : collection) {
       results.add(awaitFuture(future, duration.toMillis(), TimeUnit.MILLISECONDS));
+    }
+    return results;
+  }
+
+  /**
+   * Cancels a collection of futures and awaits the specified duration for their completion.
+   * <p>
+   * This method blocks until all futures in the collection have completed or
+   * the timeout expires, whichever happens first.
+   * All exceptions thrown by the futures are ignored. as is any TimeoutException.
+   * @param collection collection of futures to be evaluated
+   * @param interruptIfRunning should the cancel interrupt any active futures?
+   * @param duration total timeout duration
+   * @param <T> type of the result.
+   * @return all futures which completed successfully.
+   */
+  public static <T> List<T> cancelAllFuturesAndAwaitCompletion(
+      final Collection<Future<T>> collection,
+      final boolean interruptIfRunning,
+      final Duration duration) {
+
+    for (Future<T> future : collection) {
+      future.cancel(interruptIfRunning);
+    }
+    // timeout is relative to the start of the operation
+    long timeout = duration.toMillis();
+    List<T> results = new ArrayList<>();
+    for (Future<T> future : collection) {
+      long start = Time.now();
+      try {
+        results.add(awaitFuture(future, timeout, TimeUnit.MILLISECONDS));
+      } catch (CancellationException | IOException | TimeoutException e) {
+        // swallow
+        LOG.debug("Ignoring exception of cancelled future", e);
+      }
+      // measure wait time and reduce timeout accordingly
+      long waited = Time.now() - start;
+      timeout -= waited;
+      if (timeout < 0) {
+        // very brief timeout always
+        timeout = 0;
+      }
     }
     return results;
   }

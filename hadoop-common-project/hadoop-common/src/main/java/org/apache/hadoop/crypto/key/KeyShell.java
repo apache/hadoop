@@ -169,7 +169,7 @@ public class KeyShell extends CommandShell {
 
   @Override
   public String getCommandUsage() {
-    StringBuffer sbuf = new StringBuffer(USAGE_PREFIX + COMMANDS);
+    StringBuilder sbuf = new StringBuilder(USAGE_PREFIX + COMMANDS);
     String banner = StringUtils.repeat("=", 66);
     sbuf.append(banner + "\n");
     sbuf.append(CreateCommand.USAGE + ":\n\n" + CreateCommand.DESC + "\n");

@@ -580,7 +580,7 @@ public class TestCount {
     public String toString(boolean hOption,
         boolean tOption, List<StorageType> types) {
       if (tOption) {
-        StringBuffer result = new StringBuffer();
+        StringBuilder result = new StringBuilder();
         result.append(hOption ? HUMAN : BYTES);
 
         for (StorageType type : types) {

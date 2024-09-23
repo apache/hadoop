@@ -111,7 +111,7 @@ import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
-import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapterMockitoUtil;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.io.IOUtils;
@@ -1877,7 +1877,7 @@ public class TestBalancer {
   }
 
   private void spyFSNamesystem(NameNode nn) throws IOException {
-    FSNamesystem fsnSpy = NameNodeAdapter.spyOnNamesystem(nn);
+    FSNamesystem fsnSpy = NameNodeAdapterMockitoUtil.spyOnNamesystem(nn);
     doAnswer(new Answer<BlocksWithLocations>() {
       @Override
       public BlocksWithLocations answer(InvocationOnMock invocation)

@@ -21,7 +21,6 @@ package org.apache.hadoop.fs.s3a;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InterruptedIOException;
 import java.io.UncheckedIOException;
 import java.net.URI;
@@ -43,6 +42,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.Objects;
 import java.util.TreeSet;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
@@ -85,11 +85,8 @@ import software.amazon.awssdk.services.s3.model.StorageClass;
 import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 import software.amazon.awssdk.transfer.s3.model.CompletedCopy;
-import software.amazon.awssdk.transfer.s3.model.CompletedFileUpload;
 import software.amazon.awssdk.transfer.s3.model.Copy;
 import software.amazon.awssdk.transfer.s3.model.CopyRequest;
-import software.amazon.awssdk.transfer.s3.model.FileUpload;
-import software.amazon.awssdk.transfer.s3.model.UploadFileRequest;
 
 import org.apache.hadoop.fs.impl.prefetch.ExecutorServiceFuturePool;
 import org.slf4j.Logger;
@@ -149,6 +146,7 @@ import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.impl.StoreContextBuilder;
 import org.apache.hadoop.fs.s3a.impl.StoreContextFactory;
+import org.apache.hadoop.fs.s3a.impl.UploadContentProviders;
 import org.apache.hadoop.fs.s3a.prefetch.S3APrefetchingInputStream;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperations;
 import org.apache.hadoop.fs.s3a.tools.MarkerToolOperationsImpl;
@@ -248,6 +246,7 @@ import static org.apache.hadoop.fs.s3a.impl.CreateFileBuilder.OPTIONS_CREATE_FIL
 import static org.apache.hadoop.fs.s3a.impl.CreateFileBuilder.OPTIONS_CREATE_FILE_PERFORMANCE;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isObjectNotFound;
 import static org.apache.hadoop.fs.s3a.impl.ErrorTranslation.isUnknownBucket;
+import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.CONTENT_TYPE_OCTET_STREAM;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.AP_REQUIRED_EXCEPTION;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.ARN_BUCKET_OPTION;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.CSE_PADDING_LENGTH;
@@ -356,8 +355,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   /** Log to warn of storage class configuration problems. */
   private static final LogExactlyOnce STORAGE_CLASS_WARNING = new LogExactlyOnce(LOG);
 
-  private static final Logger PROGRESS =
-      LoggerFactory.getLogger("org.apache.hadoop.fs.s3a.S3AFileSystem.Progress");
   private LocalDirAllocator directoryAllocator;
   private String cannedACL;
 
@@ -734,7 +731,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       }
       blockOutputBuffer = conf.getTrimmed(FAST_UPLOAD_BUFFER,
           DEFAULT_FAST_UPLOAD_BUFFER);
-      blockFactory = S3ADataBlocks.createFactory(this, blockOutputBuffer);
+      blockFactory = S3ADataBlocks.createFactory(createStoreContext(), blockOutputBuffer);
       blockOutputActiveBlocks = intOption(conf,
           FAST_UPLOAD_ACTIVE_BLOCKS, DEFAULT_FAST_UPLOAD_ACTIVE_BLOCKS, 1);
       // If CSE is enabled, do multipart uploads serially.
@@ -835,12 +832,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   protected S3AStore createS3AStore(final ClientManager clientManager,
       final int rateLimitCapacity) {
     return new S3AStoreBuilder()
+        .withAuditSpanSource(getAuditManager())
         .withClientManager(clientManager)
         .withDurationTrackerFactory(getDurationTrackerFactory())
-        .withStoreContextFactory(this)
-        .withAuditSpanSource(getAuditManager())
+        .withFsStatistics(getFsStatistics())
         .withInstrumentation(getInstrumentation())
         .withStatisticsContext(statisticsContext)
+        .withStoreContextFactory(this)
         .withStorageStatistics(getStorageStatistics())
         .withReadRateLimiter(unlimitedRate())
         .withWriteRateLimiter(RateLimitingFactory.create(rateLimitCapacity))
@@ -1966,9 +1964,48 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       implements WriteOperationHelper.WriteOperationHelperCallbacks {
 
     @Override
+    @Retries.OnceRaw
     public CompleteMultipartUploadResponse completeMultipartUpload(
         CompleteMultipartUploadRequest request) {
-      return getS3Client().completeMultipartUpload(request);
+      return store.completeMultipartUpload(request);
+    }
+
+    @Override
+    @Retries.OnceRaw
+    public UploadPartResponse uploadPart(
+        final UploadPartRequest request,
+        final RequestBody body,
+        final DurationTrackerFactory durationTrackerFactory)
+        throws AwsServiceException, UncheckedIOException {
+      return store.uploadPart(request, body, durationTrackerFactory);
+    }
+
+    /**
+     * Perform post-write actions.
+     * <p>
+     * This operation MUST be called after any PUT/multipart PUT completes
+     * successfully.
+     * <p>
+     * The actions include calling
+     * {@link #deleteUnnecessaryFakeDirectories(Path)}
+     * if directory markers are not being retained.
+     * @param eTag eTag of the written object
+     * @param versionId S3 object versionId of the written object
+     * @param key key written to
+     * @param length total length of file written
+     * @param putOptions put object options
+     */
+    @Override
+    @Retries.RetryExceptionsSwallowed
+    public void finishedWrite(
+        String key,
+        long length,
+        PutObjectOptions putOptions) {
+      S3AFileSystem.this.finishedWrite(
+          key,
+          length,
+          putOptions);
+
     }
   }
 
@@ -2927,7 +2964,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   /**
    * Get the instrumentation's IOStatistics.
-   * @return statistics
+   * @return statistics or null if instrumentation has not yet been instantiated.
    */
   @Override
   public IOStatistics getIOStatistics() {
@@ -2956,9 +2993,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   protected DurationTrackerFactory nonNullDurationTrackerFactory(
       DurationTrackerFactory factory) {
-    return factory != null
-        ? factory
-        : getDurationTrackerFactory();
+    return store.nonNullDurationTrackerFactory(factory);
   }
 
   /**
@@ -3273,18 +3308,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @Retries.OnceRaw
   public UploadInfo putObject(PutObjectRequest putObjectRequest, File file,
       ProgressableProgressListener listener) throws IOException {
-    long len = getPutRequestLength(putObjectRequest);
-    LOG.debug("PUT {} bytes to {} via transfer manager ", len, putObjectRequest.key());
-    incrementPutStartStatistics(len);
-
-    FileUpload upload = store.getOrCreateTransferManager().uploadFile(
-            UploadFileRequest.builder()
-                .putObjectRequest(putObjectRequest)
-                .source(file)
-                .addTransferListener(listener)
-                .build());
-
-    return new UploadInfo(upload, len);
+    return store.putObject(putObjectRequest, file, listener);
   }
 
   /**
@@ -3297,9 +3321,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * <i>Important: this call will close any input stream in the request.</i>
    * @param putObjectRequest the request
    * @param putOptions put object options
-   * @param durationTrackerFactory factory for duration tracking
    * @param uploadData data to be uploaded
-   * @param isFile represents if data to be uploaded is a file
+   * @param durationTrackerFactory factory for duration tracking
    * @return the upload initiated
    * @throws SdkException on problems
    */
@@ -3307,27 +3330,27 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @Retries.OnceRaw("For PUT; post-PUT actions are RetryExceptionsSwallowed")
   PutObjectResponse putObjectDirect(PutObjectRequest putObjectRequest,
       PutObjectOptions putOptions,
-      S3ADataBlocks.BlockUploadData uploadData, boolean isFile,
+      S3ADataBlocks.BlockUploadData uploadData,
       DurationTrackerFactory durationTrackerFactory)
       throws SdkException {
+
     long len = getPutRequestLength(putObjectRequest);
     LOG.debug("PUT {} bytes to {}", len, putObjectRequest.key());
     incrementPutStartStatistics(len);
+    final UploadContentProviders.BaseContentProvider provider =
+        uploadData.getContentProvider();
     try {
       PutObjectResponse response =
           trackDurationOfSupplier(nonNullDurationTrackerFactory(durationTrackerFactory),
               OBJECT_PUT_REQUESTS.getSymbol(),
-              () -> isFile
-                  ? getS3Client().putObject(putObjectRequest,
-                      RequestBody.fromFile(uploadData.getFile()))
-                  : getS3Client().putObject(putObjectRequest,
-                      RequestBody.fromInputStream(uploadData.getUploadStream(),
-                          putObjectRequest.contentLength())));
+              () -> getS3Client().putObject(putObjectRequest,
+                  RequestBody.fromContentProvider(
+                      provider,
+                      provider.getSize(),
+                      CONTENT_TYPE_OCTET_STREAM)));
       incrementPutCompletedStatistics(true, len);
       // apply any post-write actions.
-      finishedWrite(putObjectRequest.key(), len,
-          response.eTag(), response.versionId(),
-          putOptions);
+      finishedWrite(putObjectRequest.key(), len, putOptions);
       return response;
     } catch (SdkException e) {
       incrementPutCompletedStatistics(false, len);
@@ -3385,13 +3408,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    *
    * @param bytes bytes in the request.
    */
-  public void incrementPutStartStatistics(long bytes) {
-    LOG.debug("PUT start {} bytes", bytes);
-    incrementWriteOperations();
-    incrementGauge(OBJECT_PUT_REQUESTS_ACTIVE, 1);
-    if (bytes > 0) {
-      incrementGauge(OBJECT_PUT_BYTES_PENDING, bytes);
-    }
+  protected void incrementPutStartStatistics(long bytes) {
+    store.incrementPutStartStatistics(bytes);
   }
 
   /**
@@ -3401,14 +3419,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @param success did the operation succeed?
    * @param bytes bytes in the request.
    */
-  public void incrementPutCompletedStatistics(boolean success, long bytes) {
-    LOG.debug("PUT completed success={}; {} bytes", success, bytes);
-    if (bytes > 0) {
-      incrementStatistic(OBJECT_PUT_BYTES, bytes);
-      decrementGauge(OBJECT_PUT_BYTES_PENDING, bytes);
-    }
-    incrementStatistic(OBJECT_PUT_REQUESTS_COMPLETED);
-    decrementGauge(OBJECT_PUT_REQUESTS_ACTIVE, 1);
+  protected void incrementPutCompletedStatistics(boolean success, long bytes) {
+    store.incrementPutCompletedStatistics(success, bytes);
   }
 
   /**
@@ -3418,12 +3430,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @param key key to file that is being written (for logging)
    * @param bytes bytes successfully uploaded.
    */
-  public void incrementPutProgressStatistics(String key, long bytes) {
-    PROGRESS.debug("PUT {}: {} bytes", key, bytes);
-    incrementWriteOperations();
-    if (bytes > 0) {
-      statistics.incrementBytesWritten(bytes);
-    }
+  protected void incrementPutProgressStatistics(String key, long bytes) {
+    store.incrementPutProgressStatistics(key, bytes);
   }
 
   /**
@@ -3828,7 +3836,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             createStoreContext(),
             path,
             createMkdirOperationCallbacks(),
-            isMagicCommitPath(path)));
+            isMagicCommitPath(path),
+            performanceFlags.enabled(PerformanceFlagEnum.Mkdir)));
   }
 
   /**
@@ -4253,6 +4262,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     }
 
     @Override
+    @Retries.RetryTranslated
     public void copyLocalFileFromTo(File file, Path from, Path to) throws IOException {
       // the duration of the put is measured, but the active span is the
       // constructor-supplied one -this ensures all audit log events are grouped correctly
@@ -4269,11 +4279,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     }
 
     @Override
+    @Retries.RetryTranslated
     public FileStatus getFileStatus(Path f) throws IOException {
       return S3AFileSystem.this.getFileStatus(f);
     }
 
     @Override
+    @Retries.RetryTranslated
     public boolean createEmptyDir(Path path, StoreContext storeContext)
         throws IOException {
       return trackDuration(getDurationTrackerFactory(),
@@ -4281,7 +4293,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           new MkdirOperation(
               storeContext,
               path,
-              createMkdirOperationCallbacks(), false));
+              createMkdirOperationCallbacks(),
+              false,
+              performanceFlags.enabled(PerformanceFlagEnum.Mkdir)));
     }
   }
 
@@ -4292,8 +4306,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @param putOptions put object options
    * @return the upload result
    * @throws IOException IO failure
+   * @throws CancellationException if the wait() was cancelled
    */
-  @Retries.OnceRaw("For PUT; post-PUT actions are RetrySwallowed")
+  @Retries.OnceTranslated("For PUT; post-PUT actions are RetrySwallowed")
   PutObjectResponse executePut(
       final PutObjectRequest putObjectRequest,
       final Progressable progress,
@@ -4303,49 +4318,21 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     String key = putObjectRequest.key();
     long len = getPutRequestLength(putObjectRequest);
     ProgressableProgressListener listener =
-        new ProgressableProgressListener(this, putObjectRequest.key(), progress);
+        new ProgressableProgressListener(store, putObjectRequest.key(), progress);
     UploadInfo info = putObject(putObjectRequest, file, listener);
-    PutObjectResponse result = waitForUploadCompletion(key, info).response();
+    PutObjectResponse result = store.waitForUploadCompletion(key, info).response();
     listener.uploadCompleted(info.getFileUpload());
 
     // post-write actions
-    finishedWrite(key, len,
-        result.eTag(), result.versionId(), putOptions);
+    finishedWrite(key, len, putOptions);
     return result;
-  }
-
-  /**
-   * Wait for an upload to complete.
-   * If the upload (or its result collection) failed, this is where
-   * the failure is raised as an AWS exception.
-   * Calls {@link #incrementPutCompletedStatistics(boolean, long)}
-   * to update the statistics.
-   * @param key destination key
-   * @param uploadInfo upload to wait for
-   * @return the upload result
-   * @throws IOException IO failure
-   */
-  @Retries.OnceRaw
-  CompletedFileUpload waitForUploadCompletion(String key, UploadInfo uploadInfo)
-      throws IOException {
-    FileUpload upload = uploadInfo.getFileUpload();
-    try {
-      CompletedFileUpload result = upload.completionFuture().join();
-      incrementPutCompletedStatistics(true, uploadInfo.getLength());
-      return result;
-    } catch (CompletionException e) {
-      LOG.info("Interrupted: aborting upload");
-      incrementPutCompletedStatistics(false, uploadInfo.getLength());
-      throw extractException("upload", key, e);
-    }
   }
 
   /**
    * This override bypasses checking for existence.
    *
    * @param f the path to delete; this may be unqualified.
-   * @return true, always.   * @param f the path to delete.
-   * @return  true if deleteOnExit is successful, otherwise false.
+   * @return true, always.
    * @throws IOException IO failure
    */
   @Override
@@ -4726,9 +4713,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * {@link #deleteUnnecessaryFakeDirectories(Path)}
    * if directory markers are not being retained.
    * @param key key written to
-   * @param length  total length of file written
-   * @param eTag eTag of the written object
-   * @param versionId S3 object versionId of the written object
+   * @param length total length of file written
    * @param putOptions put object options
    */
   @InterfaceAudience.Private
@@ -4736,11 +4721,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   void finishedWrite(
       String key,
       long length,
-      String eTag,
-      String versionId,
       PutObjectOptions putOptions) {
-    LOG.debug("Finished write to {}, len {}. etag {}, version {}",
-        key, length, eTag, versionId);
+    LOG.debug("Finished write to {}, len {}.",
+        key, length);
     Preconditions.checkArgument(length >= 0, "content length is negative");
     if (!putOptions.isKeepMarkers()) {
       Path p = keyToQualifiedPath(key);
@@ -4834,18 +4817,16 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @Retries.RetryTranslated
   private void createEmptyObject(final String objectName, PutObjectOptions putOptions)
       throws IOException {
-    final InputStream im = new InputStream() {
-      @Override
-      public int read() throws IOException {
-        return -1;
-      }
-    };
 
-    S3ADataBlocks.BlockUploadData uploadData = new S3ADataBlocks.BlockUploadData(im);
+    S3ADataBlocks.BlockUploadData uploadData = new S3ADataBlocks.BlockUploadData(
+        new byte[0], 0, 0, null);
 
     invoker.retry("PUT 0-byte object ", objectName, true,
-        () -> putObjectDirect(getRequestFactory().newDirectoryMarkerRequest(objectName).build(),
-            putOptions, uploadData, false, getDurationTrackerFactory()));
+        () -> putObjectDirect(
+            getRequestFactory().newDirectoryMarkerRequest(objectName).build(),
+            putOptions,
+            uploadData,
+            getDurationTrackerFactory()));
     incrementPutProgressStatistics(objectName, 0);
     instrumentation.directoryCreated();
   }
@@ -5557,10 +5538,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     case DIRECTORY_LISTING_INCONSISTENT:
       return s3ExpressStore;
 
-    // etags are avaialable in listings, but they
+    // etags are available in listings, but they
     // are not consistent across renames.
     // therefore, only availability is declared
     case CommonPathCapabilities.ETAGS_AVAILABLE:
+      // block locations are generated locally
+    case CommonPathCapabilities.VIRTUAL_BLOCK_LOCATIONS:
       return true;
 
        /*

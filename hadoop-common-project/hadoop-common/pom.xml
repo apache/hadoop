@@ -330,25 +330,6 @@
     <dependency>
       <groupId>org.apache.zookeeper</groupId>
       <artifactId>zookeeper</artifactId>
-      <exclusions>
-        <exclusion>
-          <groupId>org.jboss.netty</groupId>
-          <artifactId>netty</artifactId>
-        </exclusion>
-        <exclusion>
-          <!-- otherwise seems to drag in junit 3.8.1 via jline -->
-          <groupId>junit</groupId>
-          <artifactId>junit</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>com.sun.jdmk</groupId>
-          <artifactId>jmxtools</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>com.sun.jmx</groupId>
-          <artifactId>jmxri</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
@@ -706,6 +687,17 @@
               <followSymlinks>false</followSymlinks>
             </fileset>
           </filesets>
+        </configuration>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <configuration>
+          <sourceFileExcludes>
+            <sourceFileExclude>**/FSProtos.java</sourceFileExclude>
+          </sourceFileExcludes>
+          <excludePackageNames>*.proto:*.tracing:*.protobuf</excludePackageNames>
         </configuration>
       </plugin>
     </plugins>
@@ -1278,16 +1270,6 @@
                 </configuration>
               </execution>
              </executions>
-          </plugin>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-javadoc-plugin</artifactId>
-            <configuration>
-              <sourceFileExcludes>
-                <sourceFileExclude>**/FSProtos.java</sourceFileExclude>
-              </sourceFileExcludes>
-              <excludePackageNames>*.proto:*.tracing:*.protobuf</excludePackageNames>
-            </configuration>
           </plugin>
         </plugins>
       </build>

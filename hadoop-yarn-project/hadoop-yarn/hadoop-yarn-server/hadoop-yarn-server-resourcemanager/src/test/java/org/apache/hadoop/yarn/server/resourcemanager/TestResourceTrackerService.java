@@ -3303,4 +3303,67 @@ public class TestResourceTrackerService extends NodeLabelTestBase {
 
     rm.close();
   }
+
+  /**
+   * Test case to verify the behavior of ResourceManager when unregistered nodes
+   * are marked as 'LOST' and node metrics are correctly updated in the system.
+   *
+   * @throws Exception if any unexpected behavior occurs
+   */
+  @Test
+  public void testMarkUnregisteredNodesAsLost() throws Exception {
+    // Step 1: Create a Configuration object to hold the settings.
+    Configuration conf = new Configuration();
+
+    // Step 2: Setup the host files.
+    // Include the following hosts: test_host1, test_host2, test_host3, test_host4
+    writeToHostsFile(hostFile, "test_host1", "test_host2", "test_host3", "test_host4");
+    conf.set(YarnConfiguration.RM_NODES_INCLUDE_FILE_PATH, hostFile.getAbsolutePath());
+
+    // Exclude the following host: test_host4
+    writeToHostsFile(excludeHostFile, "test_host4");
+    conf.set(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH, excludeHostFile.getAbsolutePath());
+
+    // Enable tracking for unregistered nodes in the ResourceManager configuration
+    conf.setBoolean(YarnConfiguration.ENABLE_TRACKING_FOR_UNREGISTERED_NODES, true);
+
+    // Step 3: Create a MockRM (ResourceManager) instance to simulate RM behavior
+    rm = new MockRM(conf);
+    RMContext rmContext = rm.getRMContext(); // Retrieve the ResourceManager context
+    ClusterMetrics clusterMetrics = ClusterMetrics.getMetrics(); // Get cluster metrics for nodes
+    rm.start(); // Start the ResourceManager instance
+
+    // Step 4: Register and simulate node activity for "test_host1"
+    TimeUnit.MILLISECONDS.sleep(50); // Allow some time for event dispatch
+    MockNM nm1 = rm.registerNode("test_host1:1234", 5120); // Register test_host1 with 5120MB
+    nm1.nodeHeartbeat(true); // Send heartbeat to simulate the node being alive
+    TimeUnit.MILLISECONDS.sleep(50); // Allow some time for event processing
+
+    // Step 5: Validate that test_host3 is marked as a LOST node
+    Assert.assertNotNull(clusterMetrics); // Ensure metrics are not null
+    assertEquals("test_host3 should be a lost NM!",
+        NodeState.LOST,
+        rmContext.getInactiveRMNodes().get(
+            rm.getNodesListManager().createLostNodeId("test_host3")).getState());
+
+    // Step 6: Validate node metrics for lost, active, and decommissioned nodes
+    // Two nodes are lost
+    assertEquals("There should be 2 Lost NM!", 2, clusterMetrics.getNumLostNMs());
+    // One node is active
+    assertEquals("There should be 1 Active NM!", 1, clusterMetrics.getNumActiveNMs());
+    // One node is decommissioned
+    assertEquals("There should be 1 Decommissioned NM!", 1,
+        clusterMetrics.getNumDecommisionedNMs());
+
+    // Step 7: Register and simulate node activity for "test_host3"
+    MockNM nm3 = rm.registerNode("test_host3:5678", 10240); // Register test_host3 with 10240MB
+    nm3.nodeHeartbeat(true); // Send heartbeat to simulate the node being alive
+    TimeUnit.MILLISECONDS.sleep(50); // Allow some time for event dispatch and processing
+
+    // Step 8: Validate updated node metrics after registering test_host3
+    assertEquals("There should be 1 Lost NM!", 1,
+        clusterMetrics.getNumLostNMs()); // Only one node is lost now
+    assertEquals("There should be 2 Active NM!", 2,
+        clusterMetrics.getNumActiveNMs()); // Two nodes are now active
+  }
 }

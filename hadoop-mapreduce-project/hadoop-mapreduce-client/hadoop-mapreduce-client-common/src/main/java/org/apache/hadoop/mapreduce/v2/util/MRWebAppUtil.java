@@ -145,7 +145,7 @@ public class MRWebAppUtil {
     InetSocketAddress address = NetUtils.createSocketAddr(
       hsAddress, getDefaultJHSWebappPort(),
       getDefaultJHSWebappURLWithoutScheme());
-    StringBuffer sb = new StringBuffer();
+    StringBuilder sb = new StringBuilder();
     if (address.getAddress() != null &&
         (address.getAddress().isAnyLocalAddress() ||
          address.getAddress().isLoopbackAddress())) {

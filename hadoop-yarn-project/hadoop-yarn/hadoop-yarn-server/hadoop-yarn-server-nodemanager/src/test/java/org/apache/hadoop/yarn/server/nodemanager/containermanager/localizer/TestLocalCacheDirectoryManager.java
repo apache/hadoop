@@ -47,7 +47,7 @@ public class TestLocalCacheDirectoryManager {
 
     // Testing path generation from "0" to "0/0/z/z"
     for (int i = 1; i <= 37 * 36 * 36; i++) {
-      StringBuffer sb = new StringBuffer();
+      StringBuilder sb = new StringBuilder();
       String num = Integer.toString(i - 1, 36);
       if (num.length() == 1) {
         sb.append(num.charAt(0));

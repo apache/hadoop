@@ -2080,7 +2080,7 @@ public class TestRecovery {
 
   private void validateOutput() throws IOException {
     File expectedFile = new File(new Path(outputDir, partFile).toString());
-    StringBuffer expectedOutput = new StringBuffer();
+    StringBuilder expectedOutput = new StringBuilder();
     expectedOutput.append(key1).append('\t').append(val1).append("\n");
     expectedOutput.append(val1).append("\n");
     expectedOutput.append(val2).append("\n");
