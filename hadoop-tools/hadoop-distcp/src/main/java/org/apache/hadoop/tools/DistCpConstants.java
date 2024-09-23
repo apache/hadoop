@@ -116,6 +116,11 @@ public final class DistCpConstants {
    */
   public static final String CONF_LABEL_DISTCP_JOB_ID = "distcp.job.id";
 
+  /**
+   * DistCp Counter for consumers of the Distcp.
+   */
+  public static final String CONF_LABEL_DISTCP_TOTAL_BYTES_COPIED = "distcp.total.bytes.copied";
+
   /* Meta folder where the job's intermediate data is kept */
   public static final String CONF_LABEL_META_FOLDER = "distcp.meta.folder";
 

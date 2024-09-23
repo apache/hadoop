@@ -19,6 +19,7 @@
 package org.apache.hadoop.tools;
 
 import static org.apache.hadoop.test.GenericTestUtils.getMethodName;
+import static org.apache.hadoop.tools.DistCpConstants.CONF_LABEL_DISTCP_TOTAL_BYTES_COPIED;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
@@ -32,6 +33,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import org.apache.commons.lang3.math.NumberUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -452,7 +454,12 @@ public class TestDistCpSystem {
     };
 
     LOG.info("_____ running distcp: " + args[0] + " " + args[1]);
-    ToolRunner.run(conf, new DistCp(), args);
+    DistCp distcpTool = new DistCp();
+    ToolRunner.run(conf, distcpTool, args);
+    final long bytesCopied = NumberUtils.toLong(distcpTool.getConf().
+            get(CONF_LABEL_DISTCP_TOTAL_BYTES_COPIED), 0);
+    assertEquals("Bytes copied by distcp tool does not match source file length",
+        srcLen, bytesCopied);
 
     String realTgtPath = testDst;
     FileStatus[] dststat = getFileStatus(fs, realTgtPath, srcfiles);
