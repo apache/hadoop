@@ -267,7 +267,7 @@ public class AbfsClient implements Closeable {
   public void close() throws IOException {
     if (runningTimerTask != null && isMetricCollectionEnabled) {
       runningTimerTask.cancel();
-      timer.purge();
+      timer.cancel();
     }
     if (keepAliveCache != null) {
       keepAliveCache.close();
