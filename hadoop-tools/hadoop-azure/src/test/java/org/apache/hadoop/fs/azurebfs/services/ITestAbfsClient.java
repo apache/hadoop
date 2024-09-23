@@ -703,7 +703,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     AbfsClientContext abfsClientContext = new AbfsClientContextBuilder().withAbfsCounters(abfsCounters).build();
 
     // Get an instance of AbfsClient.
-    AbfsClient client = new AbfsClient(new URL("https://azure.com"),
+    AbfsClient client = new AbfsDfsClient(new URL("https://azure.com"),
             null,
             abfsConfiguration,
             (AccessTokenProvider) null,
@@ -712,7 +712,10 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 
     assertNull(client.getTimer());
     boolean isTimerThreadPresent = isThreadRunning("abfs-timer-client");
-    assertFalse("Expected thread 'abfs-timer-client' not found", isTimerThreadPresent);
+
+    // Check if a thread with the name "abfs-timer-client" exists
+    assertFalse("Unexpected thread 'abfs-timer-client' found", isTimerThreadPresent);
+    client.close();
   }
 
   @Test
@@ -728,7 +731,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     AbfsClientContext abfsClientContext = new AbfsClientContextBuilder().withAbfsCounters(abfsCounters).build();
 
     // Get an instance of AbfsClient.
-    AbfsClient client = new AbfsClient(new URL("https://azure.com"),
+    AbfsClient client = new AbfsDfsClient(new URL("https://azure.com"),
             null,
             abfsConfiguration,
             (AccessTokenProvider) null,
@@ -738,7 +741,8 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     assertNotNull(client.getTimer());
     // Check if a thread with the name "abfs-timer-client" exists
     boolean isTimerThreadPresent = isThreadRunning("abfs-timer-client");
-    assertTrue("Expected thread 'abfs-timer-client' found", isTimerThreadPresent);
+    assertTrue("Expected thread 'abfs-timer-client' not found", isTimerThreadPresent);
+    client.close();
   }
 
   private boolean isThreadRunning(String threadName) {
