@@ -290,27 +290,32 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
     String defaultUri2 = this.getTestUrl().replace(this.getAccountName(), accountName2);
     String defaultUri3 = this.getTestUrl().replace(this.getAccountName(), accountName3);
 
-    // Set account specific config for account 1
-    rawConfig.set(accountProperty(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, accountName1), TRUE_STR);
+    // Set both account specific and account agnostic config for account 1
+    rawConfig.set(accountProperty(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, accountName1), FALSE_STR);
+    rawConfig.set(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, TRUE_STR);
     rawConfig.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, defaultUri1);
     AzureBlobFileSystem fs1 = (AzureBlobFileSystem) FileSystem.newInstance(rawConfig);
-
-    // Set account specific config for account 2
-    rawConfig.set(accountProperty(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, accountName2), FALSE_STR);
-    rawConfig.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, defaultUri2);
-    AzureBlobFileSystem fs2 = (AzureBlobFileSystem) FileSystem.newInstance(rawConfig);
-
-    // Set account agnostic config for account 3
-    rawConfig.set(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, FALSE_STR);
-    rawConfig.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, defaultUri3);
-    AzureBlobFileSystem fs3 = (AzureBlobFileSystem) FileSystem.newInstance(rawConfig);
-
+    // Assert that account specific config takes precedence
     Assertions.assertThat(getIsNamespaceEnabled(fs1)).describedAs(
         "getIsNamespaceEnabled should return true when the "
-            + "account specific config is set as true").isTrue();
+            + "account specific config is set as true").isFalse();
+
+    // Set only the account specific config for account 2
+    rawConfig.set(accountProperty(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, accountName2), FALSE_STR);
+    rawConfig.unset(FS_AZURE_ACCOUNT_IS_HNS_ENABLED);
+    rawConfig.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, defaultUri2);
+    AzureBlobFileSystem fs2 = (AzureBlobFileSystem) FileSystem.newInstance(rawConfig);
+    // Assert that account specific config is enough.
     Assertions.assertThat(getIsNamespaceEnabled(fs2)).describedAs(
         "getIsNamespaceEnabled should return true when the "
             + "account specific config is set as true").isFalse();
+
+    // Set only account agnostic config for account 3
+    rawConfig.set(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, FALSE_STR);
+    rawConfig.unset(accountProperty(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, accountName3));
+    rawConfig.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, defaultUri3);
+    AzureBlobFileSystem fs3 = (AzureBlobFileSystem) FileSystem.newInstance(rawConfig);
+    // Assert that account agnostic config is enough.
     Assertions.assertThat(getIsNamespaceEnabled(fs3)).describedAs(
         "getIsNamespaceEnabled should return true when the "
             + "account specific config is not set").isFalse();
