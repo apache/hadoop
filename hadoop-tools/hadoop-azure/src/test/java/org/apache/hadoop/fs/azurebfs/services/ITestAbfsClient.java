@@ -710,11 +710,14 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
             null,
             abfsClientContext);
 
-    assertNull(client.getTimer());
-    boolean isTimerThreadPresent = isThreadRunning("abfs-timer-client");
+    Assertions.assertThat(client.getTimer())
+        .describedAs("Timer should not be initialized")
+        .isNull();
 
     // Check if a thread with the name "abfs-timer-client" exists
-    assertFalse("Unexpected thread 'abfs-timer-client' found", isTimerThreadPresent);
+    Assertions.assertThat(isThreadRunning("abfs-timer-client"))
+            .describedAs("Expected thread 'abfs-timer-client' not found")
+            .isEqualTo(false);
     client.close();
   }
 
@@ -738,11 +741,20 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
             null,
             abfsClientContext);
 
-    assertNotNull(client.getTimer());
+    Assertions.assertThat(client.getTimer())
+        .describedAs("Timer should be initialized")
+        .isNotNull();
+
     // Check if a thread with the name "abfs-timer-client" exists
-    boolean isTimerThreadPresent = isThreadRunning("abfs-timer-client");
-    assertTrue("Expected thread 'abfs-timer-client' not found", isTimerThreadPresent);
+    Assertions.assertThat(isThreadRunning("abfs-timer-client"))
+            .describedAs("Expected thread 'abfs-timer-client' not found")
+            .isEqualTo(true);
     client.close();
+
+    // Check if the thread is removed after closing the client
+    Assertions.assertThat(isThreadRunning("abfs-timer-client"))
+        .describedAs("Unexpected thread 'abfs-timer-client' found")
+        .isEqualTo(false);
   }
 
   private boolean isThreadRunning(String threadName) {

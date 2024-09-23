@@ -1598,7 +1598,9 @@ public abstract class AbfsClient implements Closeable {
   }
 
   @VisibleForTesting
-  Timer getTimer() {return timer;}
+  Timer getTimer() {
+    return timer;
+  }
 
   protected String getUserAgent() {
     return userAgent;
