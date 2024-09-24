@@ -1856,6 +1856,10 @@
             <groupId>org.osgi</groupId>
             <artifactId>org.osgi.core</artifactId>
           </exclusion>
+          <exclusion>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java</artifactId>
+          </exclusion>
         </exclusions>
       </dependency>
       <dependency>
@@ -1888,6 +1892,10 @@
           <exclusion>
             <groupId>org.apache.yetus</groupId>
             <artifactId>audience-annotations</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java</artifactId>
           </exclusion>
         </exclusions>
       </dependency>
