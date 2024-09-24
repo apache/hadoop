@@ -131,6 +131,7 @@ import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNEC
 public abstract class AbfsClient implements Closeable {
   public static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
   public static final String HUNDRED_CONTINUE_USER_AGENT = SINGLE_WHITE_SPACE + HUNDRED_CONTINUE + SEMICOLON;
+  public static final String ABFS_CLIENT_TIMER_THREAD_NAME = "abfs-timer-client";
 
   private final URL baseUrl;
   private final SharedKeyCredentials sharedKeyCredentials;
@@ -260,7 +261,7 @@ public abstract class AbfsClient implements Closeable {
     }
     if (isMetricCollectionEnabled) {
       this.timer = new Timer(
-              "abfs-timer-client", true);
+              ABFS_CLIENT_TIMER_THREAD_NAME, true);
       timer.schedule(new TimerTaskImpl(),
           metricIdlePeriod,
           metricIdlePeriod);
@@ -1598,7 +1599,7 @@ public abstract class AbfsClient implements Closeable {
   }
 
   @VisibleForTesting
-  Timer getTimer() {
+  protected Timer getTimer() {
     return timer;
   }
 

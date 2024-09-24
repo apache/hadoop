@@ -35,6 +35,7 @@ import java.util.Map;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_ACCOUNT_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_ACCOUNT_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_FORMAT;
+import static org.apache.hadoop.fs.azurebfs.services.AbfsClient.ABFS_CLIENT_TIMER_THREAD_NAME;
 
 public class TestAbfsClient {
     private static final String ACCOUNT_NAME = "bogusAccountName.dfs.core.windows.net";
@@ -61,7 +62,7 @@ public class TestAbfsClient {
                 .isNull();
 
         // Check if a thread with the name "abfs-timer-client" exists
-        Assertions.assertThat(isThreadRunning("abfs-timer-client"))
+        Assertions.assertThat(isThreadRunning(ABFS_CLIENT_TIMER_THREAD_NAME))
                 .describedAs("Expected thread 'abfs-timer-client' not found")
                 .isEqualTo(false);
         client.close();
@@ -91,7 +92,7 @@ public class TestAbfsClient {
                 .isNotNull();
 
         // Check if a thread with the name "abfs-timer-client" exists
-        Assertions.assertThat(isThreadRunning("abfs-timer-client"))
+        Assertions.assertThat(isThreadRunning(ABFS_CLIENT_TIMER_THREAD_NAME))
                 .describedAs("Expected thread 'abfs-timer-client' not found")
                 .isEqualTo(true);
         client.close();
