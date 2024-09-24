@@ -46,6 +46,7 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
+import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
@@ -974,7 +975,13 @@ public class FifoScheduler extends
       LOG.debug("Node heartbeat " + nm.getNodeID() +
           " available resource = " + node.getUnallocatedResource());
 
-      assignContainers(node);
+      NodeStatus nodeStatus = nm.getNodeStatus();
+      if (nodeLoadBasedAssignEnable && nodeStatus != null
+          && isNodeOverload(nodeStatus, true)) {
+        // not schedule this node
+      } else {
+        assignContainers(node);
+      }
 
       LOG.debug("Node after allocation " + nm.getNodeID() + " resource = "
           + node.getUnallocatedResource());

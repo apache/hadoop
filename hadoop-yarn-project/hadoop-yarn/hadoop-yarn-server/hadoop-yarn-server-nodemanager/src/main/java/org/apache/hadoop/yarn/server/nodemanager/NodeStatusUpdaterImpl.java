@@ -42,6 +42,7 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.util.NodeResource;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.VersionUtil;
 import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerRequest;
@@ -93,6 +94,7 @@ import org.apache.hadoop.yarn.server.nodemanager.nodelabels.NodeLabelsProvider;
 import org.apache.hadoop.yarn.server.nodemanager.timelineservice.NMTimelinePublisher;
 import org.apache.hadoop.yarn.server.nodemanager.util.NodeManagerHardwareUtils;
 import org.apache.hadoop.yarn.server.utils.YarnServerBuilderUtils;
+import org.apache.hadoop.yarn.util.LinuxResourceCalculatorPlugin;
 import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
 import org.apache.hadoop.yarn.util.YarnVersionInfo;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -149,12 +151,17 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   private final NodeHealthCheckerService healthChecker;
   private final NodeManagerMetrics metrics;
 
+  private Resource lastCapability;
+
   private Runnable statusUpdaterRunnable;
   private Thread  statusUpdater;
   private boolean failedToConnect = false;
   private long rmIdentifier = ResourceManagerConstants.RM_INVALID_IDENTIFIER;
   private boolean registeredWithRM = false;
   Set<ContainerId> pendingContainersToRemove = new HashSet<ContainerId>();
+
+  private final ResourceCalculatorPlugin resourceCalculatorPlugin =
+      ResourceCalculatorPlugin.getResourceCalculatorPlugin(null, null);
 
   private NMNodeLabelsHandler nodeLabelsHandler;
   private NMNodeAttributesHandler nodeAttributesHandler;
@@ -510,6 +517,27 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
   @VisibleForTesting
   protected NodeStatus getNodeStatus(int responseId) throws IOException {
 
+    float cpuUsage = 0, ioUsage = 0, memUsage = 0;
+    Configuration conf = getConfig();
+    long millis = conf.getLong(
+        YarnConfiguration.NM_RESOURCE_SAMPLE_PERIOD_MS,
+        YarnConfiguration.DEFAULT_NM_RESOURCE_SAMPLE_PERIOD_MS);
+
+    if (resourceCalculatorPlugin != null) {
+      NodeResource nodeResource = resourceCalculatorPlugin.getNodeResourceLastPeriod(
+          conf.getTrimmedStrings(YarnConfiguration.NM_LOCAL_DIRS), millis);
+      if (nodeResource != null) {
+        cpuUsage = nodeResource.getCpuUsage() / 100F;
+        ioUsage = nodeResource.getIoUsage();
+        memUsage = nodeResource.getMemoryUsage();
+      }
+    }
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Node " + nodeId + ", cpu usage is " + cpuUsage
+          + ", disk io usage is " + ioUsage + ", memory usage is " + memUsage);
+    }
+
     NodeHealthStatus nodeHealthStatus = this.context.getNodeHealthStatus();
     nodeHealthStatus.setHealthReport(healthChecker.getHealthReport());
     nodeHealthStatus.setIsNodeHealthy(healthChecker.isHealthy());
@@ -526,7 +554,8 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
     NodeStatus nodeStatus =
         NodeStatus.newInstance(nodeId, responseId, containersStatuses,
           createKeepAliveApplicationList(), nodeHealthStatus,
-          containersUtilization, nodeUtilization, increasedContainers);
+          containersUtilization, nodeUtilization, increasedContainers,
+          cpuUsage, ioUsage, memUsage);
 
     nodeStatus.setOpportunisticContainersStatus(
         getOpportunisticContainersStatus());

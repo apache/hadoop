@@ -131,6 +131,8 @@ public class YarnConfiguration extends Configuration {
 
   public static final String YARN_PREFIX = "yarn.";
 
+  public static final String SCHEDULER_PREFIX = "yarn.scheduler.";
+
   /////////////////////////////
   // Resource types configs
   ////////////////////////////
@@ -433,6 +435,22 @@ public class YarnConfiguration extends Configuration {
       RM_PREFIX + "opportunistic-container-allocation.enabled";
   public static final boolean
       DEFAULT_OPPORTUNISTIC_CONTAINER_ALLOCATION_ENABLED = false;
+
+  /** Whether to assign containers on an overload node. */
+  public static final String  NODE_LOAD_BASED_ASSIGN_ENABLE = SCHEDULER_PREFIX + "node-load-based-assign-enabled";
+  public static final boolean DEFAULT_NODE_LOAD_BASED_ASSIGN_ENABLE = false;
+
+  /** The max ratio limit of (used memory / total memory). */
+  public static final String NODE_LOAD_MEMORY_LIMIT = SCHEDULER_PREFIX + "node-load-memory-limit";
+  public static final float  DEFAULT_NODE_LOAD_MEMORY_LIMIT = -1.0f;
+
+  /** The max ratio limit of (used cpu / total cpu). */
+  public static final String NODE_LOAD_CPU_LIMIT = SCHEDULER_PREFIX + "node-load-cpu-limit";
+  public static final float  DEFAULT_NODE_LOAD_CPU_LIMIT = -1.0f;
+
+  /** The max ratio limit of disk io load. */
+  public static final String NODE_LOAD_DISK_IO_LIMIT = SCHEDULER_PREFIX + "node-load-disk-io-limit";
+  public static final float  DEFAULT_NODE_LOAD_DISK_IO_LIMIT = -1.0f;
 
   /**
    * Maximum number of opportunistic containers to be allocated in
@@ -2021,6 +2039,11 @@ public class YarnConfiguration extends Configuration {
     NM_PREFIX + "container-monitor.interval-ms";
   @Deprecated
   public final static int DEFAULT_NM_CONTAINER_MON_INTERVAL_MS = 3000;
+
+  /** How long is the NM resource sample period.*/
+  public final static String NM_RESOURCE_SAMPLE_PERIOD_MS =
+      NM_PREFIX + "resource.sample.period-ms";
+  public final static long DEFAULT_NM_RESOURCE_SAMPLE_PERIOD_MS = 10000;
 
   /** Class that calculates current resource utilization.*/
   public static final String NM_MON_RESOURCE_CALCULATOR =

@@ -47,6 +47,10 @@ public class RMNodeStatusEvent extends RMNodeEvent {
     this.logAggregationReportsForApps = logAggregationReportsForApps;
   }
 
+  public NodeStatus getNodeStatus() {
+    return this.nodeStatus;
+  }
+
   public NodeHealthStatus getNodeHealthStatus() {
     return this.nodeStatus.getNodeHealthStatus();
   }

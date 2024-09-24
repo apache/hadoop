@@ -487,4 +487,38 @@ public class NodeStatusPBImpl extends NodeStatus {
       Container c) {
     return ((ContainerPBImpl)c).getProto();
   }
+
+  @Override
+  public synchronized float getCpuUsage() {
+    NodeStatusProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getCpuUsage();
+  }
+  @Override
+  public synchronized void setCpuUsage(float cpuUsage) {
+    maybeInitBuilder();
+    builder.setCpuUsage(cpuUsage);
+  }
+
+  @Override
+  public synchronized float getIoUsage() {
+    NodeStatusProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getIoUsage();
+  }
+  @Override
+  public synchronized void setIoUsage(float ioUsage) {
+    maybeInitBuilder();
+    builder.setIoUsage(ioUsage);
+  }
+
+  @Override
+  public synchronized float getMemUsage() {
+    NodeStatusProtoOrBuilder p = viaProto ? proto : builder;
+    return p.getMemUsage();
+  }
+
+  @Override
+  public synchronized void setMemUsage(float memUsage) {
+    maybeInitBuilder();
+    builder.setMemUsage(memUsage);
+  }
 }

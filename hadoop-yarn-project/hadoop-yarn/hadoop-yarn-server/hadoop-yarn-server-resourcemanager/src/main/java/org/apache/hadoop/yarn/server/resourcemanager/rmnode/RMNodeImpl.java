@@ -150,6 +150,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   /** Physical resources in the node. */
   private volatile Resource physicalResource;
 
+  private NodeStatus nodeStatus;
+
   /* Container Queue Information for the node.. Used by Distributed Scheduler */
   private OpportunisticContainersStatus opportunisticContainersStatus;
 
@@ -510,6 +512,27 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
     try {
       this.healthReport = healthReport;
+    } finally {
+      this.writeLock.unlock();
+    }
+  }
+
+  @Override
+  public NodeStatus getNodeStatus() {
+    this.readLock.lock();
+
+    try {
+      return this.nodeStatus;
+    } finally {
+      this.readLock.unlock();
+    }
+  }
+
+  public void setNodeStatus(NodeStatus nodeStatus) {
+    this.writeLock.lock();
+
+    try {
+      this.nodeStatus = nodeStatus;
     } finally {
       this.writeLock.unlock();
     }
@@ -947,6 +970,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       // Inform the scheduler
       RMNodeStartedEvent startEvent = (RMNodeStartedEvent) event;
       List<NMContainerStatus> containers = null;
+
+      rmNode.setNodeStatus(startEvent.getNodeStatus());
 
       NodeId nodeId = rmNode.nodeId;
       RMNode previousRMNode =

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.yarn.util;
 
+import org.apache.hadoop.util.NodeResource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -130,6 +131,24 @@ public class ResourceCalculatorPlugin extends Configured {
   }
 
   /**
+   * Obtain the IO usage % of the machine. Return -1 if it is unavailable
+   *
+   * @return IO usage in %
+   */
+  public float getIoUsagePercentage(String[] paths) {
+    return sys.getIoUsagePercentage(paths);
+  }
+
+  /**
+   * Obtain the node resource of the machine. Return null if it is unavailable
+   *
+   * @return cpu & io & memory usage in %
+   */
+  public NodeResource getNodeResourceLastPeriod(String[] localDirs, long millis) {
+    return sys.getNodeResourceLastPeriod(localDirs, millis);
+  }
+
+  /**
    * Obtain the number of VCores used. Return -1 if it is unavailable.
    *
    * @return Number of VCores used a percentage (from 0 to #VCores)
@@ -159,8 +178,8 @@ public class ResourceCalculatorPlugin extends Configured {
    *
    * @return total number of bytes read.
    */
-  public long getStorageBytesRead() {
-    return sys.getStorageBytesRead();
+  public long getStorageBytesRead(String[] paths) {
+    return sys.getStorageBytesRead(paths);
   }
 
   /**
@@ -168,8 +187,8 @@ public class ResourceCalculatorPlugin extends Configured {
    *
    * @return total number of bytes written.
    */
-  public long getStorageBytesWritten() {
-    return sys.getStorageBytesWritten();
+  public long getStorageBytesWritten(String[] paths) {
+    return sys.getStorageBytesWritten(paths);
   }
 
   /**

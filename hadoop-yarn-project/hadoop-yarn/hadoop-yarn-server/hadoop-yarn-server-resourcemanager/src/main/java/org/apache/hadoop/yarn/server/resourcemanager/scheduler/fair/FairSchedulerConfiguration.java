@@ -210,6 +210,22 @@ public class FairSchedulerConfiguration extends Configuration {
   public static final long
       DEFAULT_WAIT_TIME_BEFORE_NEXT_STARVATION_CHECK_MS = 10000;
 
+  /** Whether to assign containers on an overload node. */
+  public static final String  NODE_LOAD_BASED_ASSIGN_ENABLE = CONF_PREFIX + "node-load-based-assign-enabled";
+  protected static final boolean DEFAULT_NODE_LOAD_BASED_ASSIGN_ENABLE = false;
+
+  /** The max ratio limit of (used memory / total memory). */
+  protected static final String NODE_LOAD_MEMORY_LIMIT = CONF_PREFIX + "node-load-memory-limit";
+  protected static final float  DEFAULT_NODE_LOAD_MEMORY_LIMIT = -1.0f;
+
+  /** The max ratio limit of (used cpu / total cpu). */
+  protected static final String NODE_LOAD_CPU_LIMIT = CONF_PREFIX + "node-load-cpu-limit";
+  protected static final float  DEFAULT_NODE_LOAD_CPU_LIMIT = -1.0f;
+
+  /** The max ratio limit of disk io load. */
+  protected static final String NODE_LOAD_DISK_IO_LIMIT = CONF_PREFIX + "node-load-disk-io-limit";
+  protected static final float  DEFAULT_NODE_LOAD_DISK_IO_LIMIT = -1.0f;
+
   /** Whether to assign multiple containers in one check-in. */
   public static final String  ASSIGN_MULTIPLE = CONF_PREFIX + "assignmultiple";
   public static final boolean DEFAULT_ASSIGN_MULTIPLE = false;

@@ -51,6 +51,7 @@ import org.apache.hadoop.yarn.security.PrivilegedEntity;
 import org.apache.hadoop.yarn.security.PrivilegedEntity.EntityType;
 import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
 import org.apache.hadoop.yarn.server.api.protocolrecords.NMContainerStatus;
+import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMCriticalThreadUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.ApplicationPlacementContext;
@@ -1023,8 +1024,15 @@ public class FairScheduler extends
       long start = getClock().getTime();
       super.nodeUpdate(nm);
 
+      NodeStatus nodeStatus = nm.getNodeStatus();
+
       FSSchedulerNode fsNode = getFSSchedulerNode(nm.getNodeID());
-      attemptScheduling(fsNode);
+      if (nodeLoadBasedAssignEnable && nodeStatus != null
+          && isNodeOverload(nodeStatus, true)) {
+        // not schedule this node
+      } else {
+        attemptScheduling(fsNode);
+      }
 
       long duration = getClock().getTime() - start;
       fsOpDurations.addNodeUpdateDuration(duration);
