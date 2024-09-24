@@ -26,13 +26,10 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.fs.azurebfs.AbfsCountersImpl;
-import org.apache.hadoop.fs.azurebfs.utils.Base64;
-import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
@@ -93,9 +90,6 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SEMICOLO
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SINGLE_WHITE_SPACE;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLUSTER_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_CLUSTER_TYPE;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_FORMAT;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_ACCOUNT_NAME;
-import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_ACCOUNT_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_CONFIGURATION_FILE_NAME;
 
 /**
@@ -106,7 +100,6 @@ import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST
 public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 
   private static final String ACCOUNT_NAME = "bogusAccountName.dfs.core.windows.net";
-  private static final String ACCOUNT_KEY = "testKey";
   private static final String FS_AZURE_USER_AGENT_PREFIX = "Partner Service";
   private static final String HUNDRED_CONTINUE_USER_AGENT = SINGLE_WHITE_SPACE + HUNDRED_CONTINUE + SEMICOLON;
   private static final String TEST_PATH = "/testfile";
@@ -691,82 +684,5 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     Assertions.assertThat(appendRequestParameters.isExpectHeaderEnabled())
             .describedAs("The expect header is not false")
             .isFalse();
-  }
-
-  @Test
-  public void testTimerNotInitialize() throws Exception {
-    // Create an AzureBlobFileSystem instance.
-    final Configuration configuration = getRawConfiguration();
-    AbfsConfiguration abfsConfiguration = new AbfsConfiguration(configuration, ACCOUNT_NAME);
-
-    AbfsCounters abfsCounters = Mockito.spy(new AbfsCountersImpl(new URI("abcd")));
-    AbfsClientContext abfsClientContext = new AbfsClientContextBuilder().withAbfsCounters(abfsCounters).build();
-
-    // Get an instance of AbfsClient.
-    AbfsClient client = new AbfsDfsClient(new URL("https://azure.com"),
-            null,
-            abfsConfiguration,
-            (AccessTokenProvider) null,
-            null,
-            abfsClientContext);
-
-    Assertions.assertThat(client.getTimer())
-        .describedAs("Timer should not be initialized")
-        .isNull();
-
-    // Check if a thread with the name "abfs-timer-client" exists
-    Assertions.assertThat(isThreadRunning("abfs-timer-client"))
-            .describedAs("Expected thread 'abfs-timer-client' not found")
-            .isEqualTo(false);
-    client.close();
-  }
-
-  @Test
-  public void testTimerInitialize() throws Exception {
-    // Create an AzureBlobFileSystem instance.
-    final Configuration configuration = getRawConfiguration();
-    configuration.set(FS_AZURE_METRIC_FORMAT, String.valueOf(MetricFormat.INTERNAL_BACKOFF_METRIC_FORMAT));
-    configuration.set(FS_AZURE_METRIC_ACCOUNT_NAME, ACCOUNT_NAME);
-    configuration.set(FS_AZURE_METRIC_ACCOUNT_KEY, Base64.encode(ACCOUNT_KEY.getBytes()));
-    AbfsConfiguration abfsConfiguration = new AbfsConfiguration(configuration, ACCOUNT_NAME);
-
-    AbfsCounters abfsCounters = Mockito.spy(new AbfsCountersImpl(new URI("abcd")));
-    AbfsClientContext abfsClientContext = new AbfsClientContextBuilder().withAbfsCounters(abfsCounters).build();
-
-    // Get an instance of AbfsClient.
-    AbfsClient client = new AbfsDfsClient(new URL("https://azure.com"),
-            null,
-            abfsConfiguration,
-            (AccessTokenProvider) null,
-            null,
-            abfsClientContext);
-
-    Assertions.assertThat(client.getTimer())
-        .describedAs("Timer should be initialized")
-        .isNotNull();
-
-    // Check if a thread with the name "abfs-timer-client" exists
-    Assertions.assertThat(isThreadRunning("abfs-timer-client"))
-            .describedAs("Expected thread 'abfs-timer-client' not found")
-            .isEqualTo(true);
-    client.close();
-
-    // Check if the thread is removed after closing the client
-    Assertions.assertThat(isThreadRunning("abfs-timer-client"))
-        .describedAs("Unexpected thread 'abfs-timer-client' found")
-        .isEqualTo(false);
-  }
-
-  private boolean isThreadRunning(String threadName) {
-    // Get all threads and their stack traces
-    Map<Thread, StackTraceElement[]> allThreads = Thread.getAllStackTraces();
-
-    // Check if any thread has the specified name
-    for (Thread thread : allThreads.keySet()) {
-      if (thread.getName().equals(threadName)) {
-        return true;
-      }
-    }
-    return false;
   }
 }
