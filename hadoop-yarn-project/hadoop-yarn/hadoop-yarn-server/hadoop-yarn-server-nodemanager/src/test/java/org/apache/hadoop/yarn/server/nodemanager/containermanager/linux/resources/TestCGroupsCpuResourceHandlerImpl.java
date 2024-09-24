@@ -224,11 +224,11 @@ public class TestCGroupsCpuResourceHandlerImpl {
     conf.setInt(YarnConfiguration.NM_RESOURCE_PERCENTAGE_PHYSICAL_CPU_LIMIT,
         cpuPerc);
     cGroupsCpuResourceHandler.bootstrap(plugin, conf);
-    InOrder rootCpuLimitOrder = inOrder(mockCGroupsHandler);
-    rootCpuLimitOrder.verify(mockCGroupsHandler, times(1))
+    InOrder cpuLimitOrder = inOrder(mockCGroupsHandler);
+    cpuLimitOrder.verify(mockCGroupsHandler, times(1))
         .updateCGroupParam(CGroupsHandler.CGroupController.CPU, "",
             CGroupsHandler.CGROUP_CPU_PERIOD_US, String.valueOf("333333"));
-    rootCpuLimitOrder.verify(mockCGroupsHandler, times(1))
+    cpuLimitOrder.verify(mockCGroupsHandler, times(1))
         .updateCGroupParam(CGroupsHandler.CGroupController.CPU, "",
             CGroupsHandler.CGROUP_CPU_QUOTA_US,
             String.valueOf(CGroupsCpuResourceHandlerImpl.MAX_QUOTA_US));
@@ -265,7 +265,6 @@ public class TestCGroupsCpuResourceHandlerImpl {
               CGroupsHandler.CGROUP_CPU_SHARES, String.valueOf(
               CGroupsCpuResourceHandlerImpl.CPU_DEFAULT_WEIGHT * cVcores));
       // set quota and period
-      InOrder cpuLimitOrder = inOrder(mockCGroupsHandler);
       cpuLimitOrder.verify(mockCGroupsHandler, times(1))
           .updateCGroupParam(CGroupsHandler.CGroupController.CPU, id,
               CGroupsHandler.CGROUP_CPU_PERIOD_US, String.valueOf(periodUS));
