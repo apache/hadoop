@@ -46,6 +46,7 @@ import org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.ALLOW_REQUESTER_PAYS;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_CROSS_REGION_ACCESS_ENABLED;
 import static org.apache.hadoop.fs.s3a.Constants.CENTRAL_ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.FIPS_ENDPOINT;
@@ -344,6 +345,37 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
     newConf.setBoolean(ALLOW_REQUESTER_PAYS, true);
 
     assertRequesterPaysFileExistence(newConf);
+  }
+
+  @Test
+  public void testWithOutCrossRegionAccess() throws Exception {
+    describe("Verify cross region access fails when disabled");
+    final Configuration newConf = new Configuration(getConfiguration());
+    // skip the test if the region is eu-west-2
+    String region = getFileSystem().getS3AInternals().getBucketMetadata().bucketRegion();
+    if (EU_WEST_2.equals(region)) {
+      return;
+    }
+    // disable cross region access
+    newConf.setBoolean(AWS_S3_CROSS_REGION_ACCESS_ENABLED, false);
+    newConf.set(AWS_REGION, EU_WEST_2);
+    S3AFileSystem fs = new S3AFileSystem();
+    fs.initialize(getFileSystem().getUri(), newConf);
+    intercept(AWSRedirectException.class,
+        "does not match the AWS region containing the bucket",
+        () -> fs.exists(getFileSystem().getWorkingDirectory()));
+  }
+
+  @Test
+  public void testWithCrossRegionAccess() throws Exception {
+    describe("Verify cross region access succeed when enabled");
+    final Configuration newConf = new Configuration(getConfiguration());
+    // enable cross region access
+    newConf.setBoolean(AWS_S3_CROSS_REGION_ACCESS_ENABLED, true);
+    newConf.set(AWS_REGION, EU_WEST_2);
+    S3AFileSystem fs = new S3AFileSystem();
+    fs.initialize(getFileSystem().getUri(), newConf);
+    fs.exists(getFileSystem().getWorkingDirectory());
   }
 
   @Test
