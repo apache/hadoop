@@ -82,7 +82,111 @@ public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
   }
 
   public void setCounter(AbfsBackoffMetricsEnum metric, long value) {
-    setCounterValue(metric.getName(), 1);
+    setCounterValue(metric.getName(), value);
+  }
+
+  public long getNumberOfIOPSThrottledRequests() {
+    return getCounter(AbfsBackoffMetricsEnum.NUMBER_OF_IOPS_THROTTLED_REQUESTS);
+  }
+
+  public void incrementNumberOfIOPSThrottledRequests() {
+    incrementCounter(AbfsBackoffMetricsEnum.NUMBER_OF_IOPS_THROTTLED_REQUESTS);
+  }
+
+  public long getNumberOfBandwidthThrottledRequests() {
+    return getCounter(AbfsBackoffMetricsEnum.NUMBER_OF_BANDWIDTH_THROTTLED_REQUESTS);
+  }
+
+  public void incrementNumberOfBandwidthThrottledRequests() {
+    incrementCounter(AbfsBackoffMetricsEnum.NUMBER_OF_BANDWIDTH_THROTTLED_REQUESTS);
+  }
+
+  public long getNumberOfOtherThrottledRequests() {
+    return getCounter(AbfsBackoffMetricsEnum.NUMBER_OF_OTHER_THROTTLED_REQUESTS);
+  }
+
+  public void incrementNumberOfOtherThrottledRequests() {
+    incrementCounter(AbfsBackoffMetricsEnum.NUMBER_OF_OTHER_THROTTLED_REQUESTS);
+  }
+
+  public long getNumberOfNetworkFailedRequests() {
+    return getCounter(AbfsBackoffMetricsEnum.NUMBER_OF_NETWORK_FAILED_REQUESTS);
+  }
+
+  public void incrementNumberOfNetworkFailedRequests() {
+    incrementCounter(AbfsBackoffMetricsEnum.NUMBER_OF_NETWORK_FAILED_REQUESTS);
+  }
+
+  public long getMaxRetryCount() {
+    return getCounter(AbfsBackoffMetricsEnum.MAX_RETRY_COUNT);
+  }
+
+  public void setMaxRetryCount(long value) {
+    setCounter(AbfsBackoffMetricsEnum.MAX_RETRY_COUNT, value);
+  }
+
+  public long getTotalNumberOfRequests() {
+    return getCounter(AbfsBackoffMetricsEnum.TOTAL_NUMBER_OF_REQUESTS);
+  }
+
+  public void incrementTotalNumberOfRequests() {
+    incrementCounter(AbfsBackoffMetricsEnum.TOTAL_NUMBER_OF_REQUESTS);
+  }
+
+  public long getNumberOfRequestsSucceededWithoutRetrying() {
+    return getCounter(AbfsBackoffMetricsEnum.NUMBER_OF_REQUESTS_SUCCEEDED_WITHOUT_RETRYING);
+  }
+
+  public void incrementNumberOfRequestsSucceededWithoutRetrying() {
+    incrementCounter(AbfsBackoffMetricsEnum.NUMBER_OF_REQUESTS_SUCCEEDED_WITHOUT_RETRYING);
+  }
+
+  public long getNumberOfRequestsFailed() {
+    return getCounter(AbfsBackoffMetricsEnum.NUMBER_OF_REQUESTS_FAILED);
+  }
+
+  public void incrementNumberOfRequestsFailed() {
+    incrementCounter(AbfsBackoffMetricsEnum.NUMBER_OF_REQUESTS_FAILED);
+  }
+
+  public long getNumberOfRequestsSucceeded(String retryCount) {
+    return getCounter(AbfsBackoffMetricsEnum.NUMBER_OF_REQUESTS_SUCCEEDED, retryCount);
+  }
+
+  public void incrementNumberOfRequestsSucceeded(String retryCount) {
+    incrementCounter(AbfsBackoffMetricsEnum.NUMBER_OF_REQUESTS_SUCCEEDED, retryCount);
+  }
+
+  public long getMinBackoff(String retryCount) {
+    return getCounter(AbfsBackoffMetricsEnum.MIN_BACK_OFF, retryCount);
+  }
+
+  public void setMinBackoff(String retryCount, long value) {
+    setCounter(AbfsBackoffMetricsEnum.MIN_BACK_OFF, retryCount, value);
+  }
+
+  public long getMaxBackoff(String retryCount) {
+    return getCounter(AbfsBackoffMetricsEnum.MAX_BACK_OFF, retryCount);
+  }
+
+  public void setMaxBackoff(String retryCount, long value) {
+    setCounter(AbfsBackoffMetricsEnum.MAX_BACK_OFF, retryCount, value);
+  }
+
+  public long getTotalBackoff(String retryCount) {
+    return getCounter(AbfsBackoffMetricsEnum.TOTAL_BACK_OFF, retryCount);
+  }
+
+  public void setTotalBackoff(String retryCount, long value) {
+    setCounter(AbfsBackoffMetricsEnum.TOTAL_BACK_OFF, retryCount, value);
+  }
+
+  public long getTotalRequests(String retryCount) {
+    return getCounter(AbfsBackoffMetricsEnum.TOTAL_REQUESTS, retryCount);
+  }
+
+  public void incrementTotalRequests(String retryCount) {
+    incrementCounter(AbfsBackoffMetricsEnum.TOTAL_REQUESTS, retryCount);
   }
 
   /*
@@ -103,27 +207,27 @@ public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
   @Override
   public String toString() {
     StringBuilder metricString = new StringBuilder();
-    long totalRequestsThrottled = getCounter(AbfsBackoffMetricsEnum.NUMBER_OF_BANDWIDTH_THROTTLED_REQUESTS)
-        + getCounter(AbfsBackoffMetricsEnum.NUMBER_OF_IOPS_THROTTLED_REQUESTS)
-        + getCounter(AbfsBackoffMetricsEnum.NUMBER_OF_OTHER_THROTTLED_REQUESTS);
+    long totalRequestsThrottled = getNumberOfBandwidthThrottledRequests()
+            + getNumberOfIOPSThrottledRequests()
+            + getNumberOfOtherThrottledRequests();
     double percentageOfRequestsThrottled =
-        ((double) totalRequestsThrottled / getCounter(AbfsBackoffMetricsEnum.TOTAL_NUMBER_OF_REQUESTS)) * HUNDRED;
+        ((double) totalRequestsThrottled / getTotalNumberOfRequests()) * HUNDRED;
     for (String retryCount: RETRY_LIST) {
       metricString.append("$RCTSI$_").append(retryCount)
           .append("R_").append("=")
-          .append(getCounter(AbfsBackoffMetricsEnum.NUMBER_OF_REQUESTS_SUCCEEDED, retryCount));
-      long totalRequests = getCounter(AbfsBackoffMetricsEnum.TOTAL_REQUESTS, retryCount);
+          .append(getNumberOfRequestsSucceeded(retryCount));
+      long totalRequests = getTotalRequests(retryCount);
       if (totalRequests > 0) {
         metricString.append("$MMA$_").append(retryCount)
             .append("R_").append("=")
             .append(String.format("%.3f",
-                (double) getCounter(AbfsBackoffMetricsEnum.MIN_BACK_OFF, retryCount) / THOUSAND))
+                (double) getMinBackoff(retryCount) / THOUSAND))
             .append("s")
             .append(String.format("%.3f",
-                (double) getCounter(AbfsBackoffMetricsEnum.MAX_BACK_OFF, retryCount) / THOUSAND))
+                (double) getMaxBackoff(retryCount) / THOUSAND))
             .append("s")
             .append(String.format("%.3f",
-                ((double) getCounter(AbfsBackoffMetricsEnum.TOTAL_BACK_OFF, retryCount) / totalRequests)
+                ((double) getTotalBackoff(retryCount) / totalRequests)
                     / THOUSAND))
             .append("s");
       } else {
@@ -132,23 +236,23 @@ public class AbfsBackoffMetrics extends AbstractAbfsStatisticsSource {
       }
     }
     metricString.append("$BWT=")
-        .append(getCounter(AbfsBackoffMetricsEnum.NUMBER_OF_BANDWIDTH_THROTTLED_REQUESTS))
+        .append(getNumberOfBandwidthThrottledRequests())
         .append("$IT=")
-        .append(getCounter(AbfsBackoffMetricsEnum.NUMBER_OF_IOPS_THROTTLED_REQUESTS))
+        .append(getNumberOfIOPSThrottledRequests())
         .append("$OT=")
-        .append(getCounter(AbfsBackoffMetricsEnum.NUMBER_OF_OTHER_THROTTLED_REQUESTS))
+        .append(getNumberOfOtherThrottledRequests())
         .append("$RT=")
         .append(String.format("%.3f", percentageOfRequestsThrottled))
         .append("$NFR=")
-        .append(getCounter(AbfsBackoffMetricsEnum.NUMBER_OF_NETWORK_FAILED_REQUESTS))
+        .append(getNumberOfNetworkFailedRequests())
         .append("$TRNR=")
-        .append(getCounter(AbfsBackoffMetricsEnum.NUMBER_OF_REQUESTS_SUCCEEDED_WITHOUT_RETRYING))
+        .append(getNumberOfRequestsSucceededWithoutRetrying())
         .append("$TRF=")
-        .append(getCounter(AbfsBackoffMetricsEnum.NUMBER_OF_REQUESTS_FAILED))
+        .append(getNumberOfRequestsFailed())
         .append("$TR=")
-        .append(getCounter(AbfsBackoffMetricsEnum.TOTAL_NUMBER_OF_REQUESTS))
+        .append(getTotalNumberOfRequests())
         .append("$MRC=")
-        .append(getCounter(AbfsBackoffMetricsEnum.MAX_RETRY_COUNT));
+        .append(getMaxRetryCount());
 
     return metricString + "";
   }

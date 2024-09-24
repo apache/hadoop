@@ -24,7 +24,6 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import org.apache.hadoop.fs.azurebfs.enums.AbfsBackoffMetricsEnum;
 import org.apache.hadoop.fs.azurebfs.services.AbfsCounters;
 import org.apache.hadoop.fs.azurebfs.services.AbfsReadFooterMetrics;
 import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
@@ -325,7 +324,7 @@ public class AbfsCountersImpl implements AbfsCounters {
   public String toString() {
     String metric = "";
     if (abfsBackoffMetrics != null) {
-      long totalNoRequests = getAbfsBackoffMetrics().getCounter(AbfsBackoffMetricsEnum.TOTAL_NUMBER_OF_REQUESTS);
+      long totalNoRequests = getAbfsBackoffMetrics().getTotalNumberOfRequests();
       if (totalNoRequests > 0) {
         metric += "#BO:" + getAbfsBackoffMetrics().toString();
       }
