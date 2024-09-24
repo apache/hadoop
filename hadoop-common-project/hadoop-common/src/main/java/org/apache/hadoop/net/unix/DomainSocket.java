@@ -342,6 +342,8 @@ public class DomainSocket implements Closeable {
    * Close the Server Socket without check refCount.
    * When Server Socket is blocked on accept(), its refCount is 1.
    * close() call on Server Socket will be stuck in the while loop count check.
+   * @param force         if true, will not check refCount before close socket.
+   * @throws IOException  raised on errors performing I/O.
    */
   public void close(boolean force) throws IOException {
     // Set the closed bit on this DomainSocket
@@ -405,7 +407,7 @@ public class DomainSocket implements Closeable {
    */
   @Override
   public void close() throws IOException {
-   close(false);
+    close(false);
   }
   
   /**
