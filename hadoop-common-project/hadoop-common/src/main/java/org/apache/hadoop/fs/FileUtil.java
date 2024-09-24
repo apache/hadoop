@@ -2111,7 +2111,8 @@ public class FileUtil {
 
   /**
    * Return true if the FS implements {@link WithErasureCoding} and
-   * supports EC_POLICY option in {@link Options.OpenFileOptions}
+   * supports EC_POLICY option in {@link Options.OpenFileOptions}.
+   * A message is logged when the filesystem does not support Erasure coding.
    * @param fs filesystem
    * @param path path
    * @return true if the Filesystem supports EC
@@ -2122,7 +2123,8 @@ public class FileUtil {
         fs.hasPathCapability(path, Options.OpenFileOptions.FS_OPTION_OPENFILE_EC_POLICY)) {
       return true;
     }
-    LOG.warn("FS with scheme {} does not support EC", fs.getScheme());
+    LOG.warn("Filesystem with scheme {}  does not support Erasure Coding" +
+        " at path {}", fs.getScheme(), path);
     return false;
   }
 }

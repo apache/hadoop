@@ -380,8 +380,9 @@ public class DistributedFileSystem extends FileSystem
 
   @Override
   public String getErasureCodingPolicyName(FileStatus fileStatus) {
-    if (!(fileStatus instanceof HdfsFileStatus))
+    if (!(fileStatus instanceof HdfsFileStatus)) {
       return null;
+    }
     return ((HdfsFileStatus) fileStatus).getErasureCodingPolicy().getName();
   }
 

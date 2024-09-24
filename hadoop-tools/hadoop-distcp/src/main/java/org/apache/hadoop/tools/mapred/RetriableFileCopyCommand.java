@@ -208,7 +208,7 @@ public class RetriableFileCopyCommand extends RetriableCommand {
 
     String ecPolicyName = null;
     if (preserveEC && sourceStatus.isErasureCoded()
-        && checkFSSupportsEC(sourceFS,sourceStatus.getPath())
+        && checkFSSupportsEC(sourceFS, sourceStatus.getPath())
         && checkFSSupportsEC(targetFS, targetPath)) {
       ecPolicyName = ((WithErasureCoding) sourceFS).getErasureCodingPolicyName(sourceStatus);
     }
