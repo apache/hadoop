@@ -66,7 +66,7 @@ public class TestDocumentStoreTimelineWriterImpl {
 
   @After
   public void tearDown() {
-    if(mockedFactory != null) {
+    if (mockedFactory != null) {
       mockedFactory.close();
     }
   }
