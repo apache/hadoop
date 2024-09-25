@@ -74,6 +74,7 @@ import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.WithErasureCoding;
 import org.apache.hadoop.hdfs.DFSOpsCountStatistics.OpType;
 import org.apache.hadoop.hdfs.client.DfsPathCapabilities;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
@@ -146,7 +147,8 @@ import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapa
 @InterfaceAudience.LimitedPrivate({ "MapReduce", "HBase" })
 @InterfaceStability.Unstable
 public class DistributedFileSystem extends FileSystem
-    implements KeyProviderTokenIssuer, BatchListingOperations, LeaseRecoverable, SafeMode {
+    implements KeyProviderTokenIssuer, BatchListingOperations, LeaseRecoverable, SafeMode,
+    WithErasureCoding {
   private Path workingDir;
   private URI uri;
 
@@ -374,6 +376,14 @@ public class DistributedFileSystem extends FileSystem
     HdfsPathHandle id = (HdfsPathHandle) fd;
     final DFSInputStream dfsis = dfs.open(id, bufferSize, verifyChecksum);
     return dfs.createWrappedInputStream(dfsis);
+  }
+
+  @Override
+  public String getErasureCodingPolicyName(FileStatus fileStatus) {
+    if (!(fileStatus instanceof HdfsFileStatus)) {
+      return null;
+    }
+    return ((HdfsFileStatus) fileStatus).getErasureCodingPolicy().getName();
   }
 
   /**
@@ -3862,6 +3872,10 @@ public class DistributedFileSystem extends FileSystem
      */
     @Override
     public FSDataOutputStream build() throws IOException {
+      String ecPolicy = getOptions().get(Options.OpenFileOptions.FS_OPTION_OPENFILE_EC_POLICY, "");
+      if (!ecPolicy.isEmpty()) {
+        ecPolicyName(ecPolicy);
+      }
       if (getFlags().contains(CreateFlag.CREATE) ||
           getFlags().contains(CreateFlag.OVERWRITE)) {
         if (isRecursive()) {
