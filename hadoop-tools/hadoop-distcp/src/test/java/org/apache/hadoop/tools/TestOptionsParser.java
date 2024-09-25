@@ -19,10 +19,12 @@
 package org.apache.hadoop.tools;
 
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.within;
 import static org.junit.Assert.fail;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Assert;
 import org.junit.Test;
 import org.apache.hadoop.fs.Path;
@@ -817,5 +819,48 @@ public class TestOptionsParser {
         "hdfs://localhost:8020/source/first",
         "hdfs://localhost:8020/target/"});
     Assert.assertTrue(options.shouldUpdateRoot());
+  }
+
+  @Test
+  public void testParseFavoredNodes() {
+    DistCpOptions options = OptionsParser.parse(new String[]{
+        "-favoredNodes",
+        "localhost:50010",
+        "hdfs://localhost:8020/source/first",
+        "hdfs://localhost:8020/target/"});
+    assertThat(options.getFavoredNodes()).isNotNull();
+    assertThat(options.getFavoredNodes()).isEqualTo("localhost:50010");
+
+    options = OptionsParser.parse(new String[]{
+        "-favoredNodes",
+        "localhost:50010,localhost:50011",
+        "hdfs://localhost:8020/source/first",
+        "hdfs://localhost:8020/target/"});
+    assertThat(options.getFavoredNodes()).isNotNull();
+    assertThat(options.getFavoredNodes()).isEqualTo("localhost:50010,localhost:50011");
+
+    assertThatThrownBy(() -> OptionsParser.parse(new String[] {
+        "-favoredNodes",
+        "",
+        "hdfs://localhost:8020/source/first",
+        "hdfs://localhost:8020/target/"}))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("empty favoredNodes parameter");
+
+    assertThatThrownBy(() -> OptionsParser.parse(new String[] {
+        "-favoredNodes",
+        "localhost:50010,",
+        "hdfs://localhost:8020/source/first",
+        "hdfs://localhost:8020/target/"}))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("illegal favoredNodes parameter");
+
+    assertThatThrownBy(() -> OptionsParser.parse(new String[] {
+        "-favoredNodes",
+        "localhost:50010,localhost",
+        "hdfs://localhost:8020/source/first",
+        "hdfs://localhost:8020/target/"}))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("favoredNodes is invalid");
   }
 }

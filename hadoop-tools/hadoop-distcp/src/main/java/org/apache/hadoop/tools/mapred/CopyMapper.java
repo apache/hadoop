@@ -140,6 +140,11 @@ public class CopyMapper extends Mapper<Text, CopyListingFileStatus, Text, Text> 
     } catch (FileNotFoundException ignored) {
     }
 
+    String favoredNodes = conf.get(DistCpOptionSwitch.FAVORED_NODES.getConfigLabel());
+    if (favoredNodes != null) {
+      LOG.info("The value of favoredNodes parameter is [" + favoredNodes + "].");
+    }
+
     startEpoch = System.currentTimeMillis();
   }
 

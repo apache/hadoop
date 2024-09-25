@@ -210,6 +210,9 @@ public final class DistCpConstants {
   /** Filename of sorted target listing. */
   public static final String TARGET_SORTED_FILE = "target_sorted.seq";
 
+  /** Favored nodes in target hdfs filesystem. */
+  public static final String CONF_LABEL_FAVORED_NODES = "distcp.favored.nodes";
+
   public static final String LENGTH_MISMATCH_ERROR_MSG =
           "Mismatch in length of source:";
 

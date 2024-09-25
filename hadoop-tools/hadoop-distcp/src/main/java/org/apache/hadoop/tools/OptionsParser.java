@@ -33,7 +33,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.Path;
 
-import org.apache.hadoop.util.Preconditions;
+import static org.apache.hadoop.util.Preconditions.checkArgument;
 
 /**
  * The OptionsParser parses out the command-line options passed to DistCp,
@@ -67,7 +67,7 @@ public class OptionsParser {
   }
 
   private static void checkSnapshotsArgs(final String[] snapshots) {
-    Preconditions.checkArgument(snapshots != null && snapshots.length == 2
+    checkArgument(snapshots != null && snapshots.length == 2
         && !StringUtils.isBlank(snapshots[0])
         && !StringUtils.isBlank(snapshots[1]),
         "Must provide both the starting and ending snapshot names");
@@ -237,6 +237,21 @@ public class OptionsParser {
         throw new IllegalArgumentException("copyBufferSize is invalid: "
             + copyBufferSizeStr, e);
       }
+    }
+
+    if (command.hasOption(DistCpOptionSwitch.FAVORED_NODES.getSwitch())) {
+      String favoredNodesStr = getVal(command, DistCpOptionSwitch.FAVORED_NODES.getSwitch().trim());
+      checkArgument(StringUtils.isNotEmpty(favoredNodesStr),
+          "empty favoredNodes parameter: %s", favoredNodesStr);
+      checkArgument(!favoredNodesStr.endsWith(","),
+          "illegal favoredNodes parameter: %s", favoredNodesStr);
+      for (String hostAndPort : favoredNodesStr.split(",")) {
+        checkArgument(hostAndPort.split(":").length == 2,
+            "favoredNodes is invalid: %s, " +
+                "desired option input format: host1:port1,host2:port2,...", hostAndPort);
+      }
+      LOG.info("The value of favoredNodes parameter is [" + favoredNodesStr + "].");
+      builder.withFavoredNodes(favoredNodesStr);
     }
 
     return builder.build();
