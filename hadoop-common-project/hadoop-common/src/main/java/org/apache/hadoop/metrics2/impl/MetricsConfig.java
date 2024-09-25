@@ -135,7 +135,7 @@ class MetricsConfig extends SubsetConfiguration {
         throw new MetricsConfigException(e);
       }
     }
-    LOG.warn("Cannot locate configuration: tried " +
+    LOG.debug("Cannot locate configuration: tried " +
              Joiner.on(",").join(fileNames));
     // default to an empty configuration
     return new MetricsConfig(new PropertiesConfiguration(), prefix);

@@ -188,7 +188,7 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
     configure(prefix);
     startTimer();
     monitoring = true;
-    LOG.info(prefix +" metrics system started");
+    LOG.debug(prefix +" metrics system started");
     for (Callback cb : callbacks) cb.postStart();
     for (Callback cb : namedCallbacks.values()) cb.postStart();
   }
@@ -207,13 +207,13 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
     }
     for (Callback cb : callbacks) cb.preStop();
     for (Callback cb : namedCallbacks.values()) cb.preStop();
-    LOG.info("Stopping "+ prefix +" metrics system...");
+    LOG.debug("Stopping "+ prefix +" metrics system...");
     stopTimer();
     stopSources();
     stopSinks();
     clearConfigs();
     monitoring = false;
-    LOG.info(prefix +" metrics system stopped.");
+    LOG.debug(prefix +" metrics system stopped.");
     for (Callback cb : callbacks) cb.postStop();
     for (Callback cb : namedCallbacks.values()) cb.postStop();
   }
@@ -375,7 +375,7 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
             }
           }
         }, millis, millis);
-    LOG.info("Scheduled Metric snapshot period at " + (period / 1000)
+    LOG.debug("Scheduled Metric snapshot period at " + (period / 1000)
         + " second(s).");
   }
 
@@ -609,7 +609,7 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
       MBeans.unregister(mbeanName);
       mbeanName = null;
     }
-    LOG.info(prefix +" metrics system shutdown complete.");
+    LOG.debug(prefix +" metrics system shutdown complete.");
     return true;
   }
 
