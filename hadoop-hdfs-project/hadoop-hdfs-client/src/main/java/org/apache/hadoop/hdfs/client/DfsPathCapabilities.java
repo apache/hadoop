@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.hdfs.client;
 
-import java.util.Optional;
-
 import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -38,7 +36,7 @@ public final class DfsPathCapabilities {
    * @return either a value to return or, if empty, a cue for the FS to
    * pass up to its superclass.
    */
-  public static Optional<Boolean> hasPathCapability(final Path path,
+  public static boolean hasPathCapability(final Path path,
       final String capability) {
     switch (validatePathCapabilityArgs(path, capability)) {
 
@@ -54,11 +52,11 @@ public final class DfsPathCapabilities {
     case CommonPathCapabilities.FS_STORAGEPOLICY:
     case CommonPathCapabilities.FS_XATTRS:
     case CommonPathCapabilities.FS_TRUNCATE:
-      return Optional.of(true);
+      return true;
     case CommonPathCapabilities.FS_SYMLINKS:
-      return Optional.of(FileSystem.areSymlinksEnabled());
+      return FileSystem.areSymlinksEnabled();
     default:
-      return Optional.empty();
+      return false;
     }
   }
 }

@@ -132,7 +132,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Optional;
 import java.util.Set;
 
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
@@ -405,17 +404,15 @@ public class DistributedFileSystem extends FileSystem
 
     HdfsFileStatus hst = (HdfsFileStatus) st;
     final Path p;
-    final Optional<Long> inodeId;
+    final Long inodeId;
     if (loc.allowChange()) {
       p = DFSUtilClient.makePathFromFileId(hst.getFileId());
-      inodeId = Optional.empty();
+      inodeId = null;
     } else {
       p = hst.getPath();
-      inodeId = Optional.of(hst.getFileId());
+      inodeId = hst.getFileId();
     }
-    final Optional<Long> mtime = !data.allowChange()
-        ? Optional.of(hst.getModificationTime())
-        : Optional.empty();
+    final Long mtime = !data.allowChange()? hst.getModificationTime(): null;
     return new HdfsPathHandle(getPathName(p), inodeId, mtime);
   }
 
@@ -3945,10 +3942,9 @@ public class DistributedFileSystem extends FileSystem
       throws IOException {
     // qualify the path to make sure that it refers to the current FS.
     final Path p = makeQualified(path);
-    Optional<Boolean> cap = DfsPathCapabilities.hasPathCapability(p,
-        capability);
-    if (cap.isPresent()) {
-      return cap.get();
+    if (DfsPathCapabilities.hasPathCapability(p, capability)
+        && supportsSymlinks()) {
+      return true;
     }
     // this switch is for features which are in the DFS client but not
     // (yet/ever) in the WebHDFS API.

@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.protocol;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Optional;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -42,11 +41,10 @@ public final class HdfsPathHandle implements PathHandle {
   private final Long mtime;
   private final Long inodeId;
 
-  public HdfsPathHandle(String path,
-      Optional<Long> inodeId, Optional<Long> mtime) {
+  public HdfsPathHandle(String path, Long inodeId, Long mtime) {
     this.path = path;
-    this.mtime = mtime.orElse(null);
-    this.inodeId = inodeId.orElse(null);
+    this.mtime = mtime;
+    this.inodeId = inodeId;
   }
 
   public HdfsPathHandle(ByteBuffer bytes) throws IOException {
