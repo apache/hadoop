@@ -1537,6 +1537,17 @@ public class YarnConfiguration extends Configuration {
   public static final int DEFAULT_RM_MAX_LOG_AGGREGATION_DIAGNOSTICS_IN_MEMORY =
       10;
 
+  /**
+   * The configuration key for enabling or disabling the auto-correction of container allocation.
+   */
+  public static final String RM_SCHEDULER_AUTOCORRECT_CONTAINER_ALLOCATION = RM_PREFIX
+      + "scheduler.autocorrect.container.allocation";
+
+  /**
+   * Default value: {@value}.
+   */
+  public static final boolean DEFAULT_RM_SCHEDULER_AUTOCORRECT_CONTAINER_ALLOCATION = false;
+
   /** Whether to enable log aggregation */
   public static final String LOG_AGGREGATION_ENABLED = YARN_PREFIX
       + "log-aggregation-enable";

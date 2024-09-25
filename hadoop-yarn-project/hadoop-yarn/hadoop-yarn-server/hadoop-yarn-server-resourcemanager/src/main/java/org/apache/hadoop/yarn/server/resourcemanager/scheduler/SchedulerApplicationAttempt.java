@@ -862,7 +862,8 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
     updateContainerErrors.add(error);
   }
 
-  protected synchronized void addToNewlyAllocatedContainers(
+  @VisibleForTesting
+  public synchronized void addToNewlyAllocatedContainers(
       SchedulerNode node, RMContainer rmContainer) {
     ContainerId matchedContainerId =
         getUpdateContext().matchContainerToOutstandingIncreaseReq(
