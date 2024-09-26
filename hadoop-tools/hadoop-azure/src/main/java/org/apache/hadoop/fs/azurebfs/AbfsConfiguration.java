@@ -451,7 +451,7 @@ public class AbfsConfiguration{
   }
 
   /**
-   * Returns the account type as per the user configuration. Gets the account 
+   * Returns the account type as per the user configuration. Gets the account
    * specific value if it exists, then looks for an account agnostic value.
    * If not configured driver makes additional getAcl call to determine
    * the account type during file system initialization.
