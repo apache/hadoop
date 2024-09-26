@@ -98,7 +98,8 @@ public class TestAbfsClient {
         client.close();
 
         // Check if the thread is removed after closing the client
-        Assertions.assertThat(isThreadRunning("abfs-timer-client"))
+        Thread.sleep(500);
+        Assertions.assertThat(isThreadRunning(ABFS_CLIENT_TIMER_THREAD_NAME))
                 .describedAs("Unexpected thread 'abfs-timer-client' found")
                 .isEqualTo(false);
     }
