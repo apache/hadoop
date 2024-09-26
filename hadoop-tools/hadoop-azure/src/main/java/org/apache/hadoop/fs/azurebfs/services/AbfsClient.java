@@ -293,7 +293,7 @@ public abstract class AbfsClient implements Closeable {
 
   @Override
   public void close() throws IOException {
-    if (runningTimerTask != null && isMetricCollectionEnabled) {
+    if (isMetricCollectionEnabled && runningTimerTask != null) {
       runningTimerTask.cancel();
       timer.cancel();
     }
@@ -1419,7 +1419,7 @@ public abstract class AbfsClient implements Closeable {
   boolean timerOrchestrator(TimerFunctionality timerFunctionality, TimerTask timerTask) {
     switch (timerFunctionality) {
       case RESUME:
-        if (isMetricCollectionEnabled) {
+        if (isMetricCollectionEnabled && isMetricCollectionStopped.get()) {
           synchronized (this) {
             if (isMetricCollectionStopped.get()) {
               resumeTimer();
