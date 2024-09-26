@@ -450,6 +450,13 @@ public class AbfsConfiguration{
     this(rawConfig, accountName, AbfsServiceType.DFS);
   }
 
+  /**
+   * Returns the account type as per the user configuration. Gets the account
+   * specific value if it exists, then looks for an account agnostic value.
+   * If not configured driver makes additional getAcl call to determine
+   * the account type during file system initialization.
+   * @return TRUE/FALSE value if configured, UNKNOWN if not configured.
+   */
   public Trilean getIsNamespaceEnabledAccount() {
     String isNamespaceEnabledAccountString
         = getString(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, isNamespaceEnabledAccount);

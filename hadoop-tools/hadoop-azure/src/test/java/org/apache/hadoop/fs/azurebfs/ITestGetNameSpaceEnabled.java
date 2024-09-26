@@ -319,5 +319,8 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
     Assertions.assertThat(getIsNamespaceEnabled(fs3)).describedAs(
         "getIsNamespaceEnabled should return true when the "
             + "account specific config is not set").isFalse();
+    fs1.close();
+    fs2.close();
+    fs3.close();
   }
 }
