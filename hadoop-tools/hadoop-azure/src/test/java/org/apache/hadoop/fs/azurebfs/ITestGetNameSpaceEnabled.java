@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsDfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
@@ -42,6 +43,7 @@ import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
 import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
 import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_MAX_IO_RETRIES;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.accountProperty;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -283,44 +285,57 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
     rawConfig.unset(FS_AZURE_ACCOUNT_IS_HNS_ENABLED);
     rawConfig.unset(accountProperty(FS_AZURE_ACCOUNT_IS_HNS_ENABLED,
         this.getAccountName()));
-    String accountName1 = "account1.dfs.core.windows.net";
-    String accountName2 = "account2.dfs.core.windows.net";
-    String accountName3 = "account3.dfs.core.windows.net";
-    String defaultUri1 = this.getTestUrl().replace(this.getAccountName(), accountName1);
-    String defaultUri2 = this.getTestUrl().replace(this.getAccountName(), accountName2);
-    String defaultUri3 = this.getTestUrl().replace(this.getAccountName(), accountName3);
+    String testAccountName = "testAccount.dfs.core.windows.net";
+    String otherAccountName = "otherAccount.dfs.core.windows.net";
+    String defaultUri = this.getTestUrl().replace(this.getAccountName(), testAccountName);
+    String otherUri = this.getTestUrl().replace(this.getAccountName(), otherAccountName);
 
-    // Set both account specific and account agnostic config for account 1
-    rawConfig.set(accountProperty(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, accountName1), FALSE_STR);
+    // Set both account specific and account agnostic config for test account
+    rawConfig.set(accountProperty(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, testAccountName), FALSE_STR);
     rawConfig.set(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, TRUE_STR);
-    rawConfig.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, defaultUri1);
-    AzureBlobFileSystem fs1 = (AzureBlobFileSystem) FileSystem.newInstance(rawConfig);
     // Assert that account specific config takes precedence
-    Assertions.assertThat(getIsNamespaceEnabled(fs1)).describedAs(
-        "getIsNamespaceEnabled should return true when the "
-            + "account specific config is set as true").isFalse();
+    rawConfig.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, defaultUri);
+    assertFileSystemInitWithExpectedHNSSettings(rawConfig, false);
+    // Assert that other account still uses account agnostic config
+    rawConfig.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, otherUri);
+    assertFileSystemInitWithExpectedHNSSettings(rawConfig, true);
 
-    // Set only the account specific config for account 2
-    rawConfig.set(accountProperty(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, accountName2), FALSE_STR);
+    // Set only the account specific config for test account
+    rawConfig.set(accountProperty(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, testAccountName), FALSE_STR);
     rawConfig.unset(FS_AZURE_ACCOUNT_IS_HNS_ENABLED);
-    rawConfig.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, defaultUri2);
-    AzureBlobFileSystem fs2 = (AzureBlobFileSystem) FileSystem.newInstance(rawConfig);
-    // Assert that account specific config is enough.
-    Assertions.assertThat(getIsNamespaceEnabled(fs2)).describedAs(
-        "getIsNamespaceEnabled should return true when the "
-            + "account specific config is set as true").isFalse();
+    // Assert that only account specific config is enough for test account
+    rawConfig.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, defaultUri);
+    assertFileSystemInitWithExpectedHNSSettings(rawConfig, false);
 
-    // Set only account agnostic config for account 3
+    // Set only account agnostic config
     rawConfig.set(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, FALSE_STR);
-    rawConfig.unset(accountProperty(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, accountName3));
-    rawConfig.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, defaultUri3);
-    AzureBlobFileSystem fs3 = (AzureBlobFileSystem) FileSystem.newInstance(rawConfig);
-    // Assert that account agnostic config is enough.
-    Assertions.assertThat(getIsNamespaceEnabled(fs3)).describedAs(
-        "getIsNamespaceEnabled should return true when the "
-            + "account specific config is not set").isFalse();
-    fs1.close();
-    fs2.close();
-    fs3.close();
+    rawConfig.unset(accountProperty(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, testAccountName));
+    rawConfig.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, defaultUri);
+    assertFileSystemInitWithExpectedHNSSettings(rawConfig, false);
+
+    // Unset both account specific and account agnostic config
+    rawConfig.unset(FS_AZURE_ACCOUNT_IS_HNS_ENABLED);
+    rawConfig.unset(accountProperty(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, testAccountName));
+    rawConfig.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY, defaultUri);
+    rawConfig.set(AZURE_MAX_IO_RETRIES, "0");
+    // Assert that file system init fails with UnknownHost exception as getAcl() is needed.
+    try {
+      assertFileSystemInitWithExpectedHNSSettings(rawConfig, false);
+    } catch (Exception e) {
+      Assertions.assertThat(e.getCause().getMessage())
+          .describedAs("getAcl() to determine HNS Nature of account should"
+              + "fail with Unknown Host Exception").contains("UnknownHostException");
+    }
+  }
+
+  private void assertFileSystemInitWithExpectedHNSSettings(
+      Configuration configuration, boolean expectedIsHnsEnabledValue) throws IOException {
+    try (AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem.newInstance(configuration)) {
+      Assertions.assertThat(getIsNamespaceEnabled(fs)).describedAs(
+          "getIsNamespaceEnabled should return true when the "
+              + "account specific config is not set").isEqualTo(expectedIsHnsEnabledValue);
+    } catch (Exception e) {
+      throw e;
+    }
   }
 }
