@@ -40,6 +40,7 @@ import static org.apache.hadoop.fs.azurebfs.services.AbfsClient.ABFS_CLIENT_TIME
 public class TestAbfsClient {
     private static final String ACCOUNT_NAME = "bogusAccountName.dfs.core.windows.net";
     private static final String ACCOUNT_KEY = "testKey";
+    private static final long SLEEP_DURATION_MS = 500;
 
     @Test
     public void testTimerNotInitialize() throws Exception {
@@ -98,7 +99,7 @@ public class TestAbfsClient {
         client.close();
 
         // Check if the thread is removed after closing the client
-        Thread.sleep(500);
+        Thread.sleep(SLEEP_DURATION_MS);
         Assertions.assertThat(isThreadRunning(ABFS_CLIENT_TIMER_THREAD_NAME))
                 .describedAs("Unexpected thread 'abfs-timer-client' found")
                 .isEqualTo(false);
