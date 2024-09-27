@@ -1,3 +1,21 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.hadoop.fs.s3a.impl;
 
 import org.apache.hadoop.conf.Configuration;
@@ -5,11 +23,12 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSDataOutputStreamBuilder;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
+import org.apache.hadoop.fs.s3a.performance.AbstractS3ACostTest;
 import org.apache.hadoop.fs.s3a.RemoteFileChangedException;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.io.IOUtils;
 
+import org.assertj.core.api.Assertions;
 import org.junit.Assert;
 import org.junit.Test;
 import software.amazon.awssdk.services.s3.model.S3Exception;
@@ -18,20 +37,23 @@ import java.io.IOException;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.s3a.Constants.FAST_UPLOAD_BUFFER;
 import static org.apache.hadoop.fs.s3a.Constants.FAST_UPLOAD_BUFFER_ARRAY;
-import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CREATE_IF_NONE_MATCH;
+import static org.apache.hadoop.fs.s3a.Constants.FS_S3A_CONDITIONAL_FILE_CREATE;
 import static org.apache.hadoop.fs.s3a.Constants.MIN_MULTIPART_THRESHOLD;
 import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_MIN_SIZE;
 import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_SIZE;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfNotEnabled;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.UPLOAD_PART_COUNT_LIMIT;
 import static org.apache.hadoop.fs.s3a.scale.ITestS3AMultipartUploadSizeLimits.MPU_SIZE;
 import static org.apache.hadoop.fs.s3a.scale.S3AScaleTestBase._1MB;
 
 
-public class ITestS3APutIfMatch extends AbstractS3ATestBase {
+public class ITestS3APutIfMatch extends AbstractS3ACostTest {
+
+    private Configuration conf;
 
     @Override
-    protected Configuration createConfiguration() {
+    public Configuration createConfiguration() {
         Configuration conf = super.createConfiguration();
         S3ATestUtils.disableFilesystemCaching(conf);
         removeBaseAndBucketOverrides(conf,
@@ -43,6 +65,14 @@ public class ITestS3APutIfMatch extends AbstractS3ATestBase {
         conf.setInt(MULTIPART_SIZE, MULTIPART_MIN_SIZE);
         conf.set(FAST_UPLOAD_BUFFER, getBlockOutputBufferName());
         return conf;
+    }
+
+    @Override
+    public void setup() throws Exception {
+        super.setup();
+        conf = createConfiguration();
+        skipIfNotEnabled(conf, FS_S3A_CONDITIONAL_FILE_CREATE,
+                "Skipping IfNoneMatch tests");
     }
 
     protected String getBlockOutputBufferName() {
@@ -61,7 +91,7 @@ public class ITestS3APutIfMatch extends AbstractS3ATestBase {
                                                       byte[] data,
                                                       String ifMatchTag) throws Exception {
           FSDataOutputStreamBuilder builder = fs.createFile(path);
-          builder.must(FS_S3A_CREATE_IF_NONE_MATCH, ifMatchTag);
+          builder.must(FS_S3A_CONDITIONAL_FILE_CREATE, ifMatchTag);
           FSDataOutputStream stream = builder.create().build();
           if (data != null && data.length > 0) {
               stream.write(data);
@@ -85,7 +115,7 @@ public class ITestS3APutIfMatch extends AbstractS3ATestBase {
           Assert.assertEquals(RemoteFileChangedException.class, e.getClass());
 
           S3Exception s3Exception = (S3Exception) e.getCause();
-          Assert.assertEquals(s3Exception.statusCode(), 412);
+          Assertions.assertThat(s3Exception.statusCode()).isEqualTo(412);
         }
     }
 
@@ -95,7 +125,6 @@ public class ITestS3APutIfMatch extends AbstractS3ATestBase {
         FileSystem fs = getFileSystem();
         Path testFile = methodPath();
 
-        fs.mkdirs(testFile.getParent());
         // enough bytes for Multipart Upload
         byte[] fileBytes = dataset(6 * _1MB, 'a', 'z' - 'a');
 
@@ -107,7 +136,7 @@ public class ITestS3APutIfMatch extends AbstractS3ATestBase {
 
           // Error gets caught here:
           S3Exception s3Exception = (S3Exception) e.getCause();
-          Assert.assertEquals(s3Exception.statusCode(), 412);
+          Assertions.assertThat(s3Exception.statusCode()).isEqualTo(412);
         }
     }
 }

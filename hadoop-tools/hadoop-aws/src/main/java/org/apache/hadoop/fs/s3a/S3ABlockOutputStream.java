@@ -81,6 +81,7 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.translateException;
 import static org.apache.hadoop.fs.s3a.Statistic.*;
 import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.CONTENT_TYPE_OCTET_STREAM;
 import static org.apache.hadoop.fs.s3a.impl.ProgressListenerEvent.*;
+import static org.apache.hadoop.fs.s3a.impl.AWSHeaders.IF_NONE_MATCH;
 import static org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext.EMPTY_BLOCK_OUTPUT_STREAM_STATISTICS;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDuration;
 import static org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding.trackDurationOfInvocation;
@@ -703,9 +704,9 @@ class S3ABlockOutputStream extends OutputStream implements
     PutObjectRequest.Builder maybeModifiedPutIfAbsentRequest = putObjectRequest.toBuilder();
     Map<String, String> optionHeaders = builder.putOptions.getHeaders();
 
-    if (optionHeaders != null && optionHeaders.containsKey(IF_NONE_MATCH_HEADER)) {
+    if (optionHeaders != null && optionHeaders.containsKey(IF_NONE_MATCH)) {
         maybeModifiedPutIfAbsentRequest.overrideConfiguration(
-            override -> override.putHeader(IF_NONE_MATCH_HEADER, optionHeaders.get(IF_NONE_MATCH_HEADER)));
+            override -> override.putHeader(IF_NONE_MATCH, optionHeaders.get(IF_NONE_MATCH)));
     }
 
     final PutObjectRequest finalizedRequest = maybeModifiedPutIfAbsentRequest.build();
@@ -1410,6 +1411,11 @@ class S3ABlockOutputStream extends OutputStream implements
      */
     private boolean isMultipartUploadEnabled;
 
+    /**
+     * Is conditional create enables.
+     */
+    private boolean isConditionalEnabled;
+
     private BlockOutputStreamBuilder() {
     }
 
@@ -1569,6 +1575,12 @@ class S3ABlockOutputStream extends OutputStream implements
     public BlockOutputStreamBuilder withMultipartEnabled(
         final boolean value) {
       isMultipartUploadEnabled = value;
+      return this;
+    }
+
+    public BlockOutputStreamBuilder withConditionalEnabled(
+            final boolean value){
+      isConditionalEnabled = value;
       return this;
     }
   }

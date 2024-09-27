@@ -62,6 +62,7 @@ import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_PART_UPLOAD_TIMEOUT;
+import static org.apache.hadoop.fs.s3a.impl.AWSHeaders.IF_NONE_MATCH;
 import static org.apache.hadoop.fs.s3a.S3AEncryptionMethods.UNKNOWN_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.impl.AWSClientConfig.setRequestTimeout;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.DEFAULT_UPLOAD_PART_COUNT_LIMIT;
@@ -541,13 +542,11 @@ public class RequestFactoryImpl implements RequestFactory {
     CompleteMultipartUploadRequest.Builder requestBuilder;
     Map<String, String> optionHeaders = putOptions.getHeaders();
 
-    if (optionHeaders != null && optionHeaders.containsKey("If-None-Match")) {
-        requestBuilder = CompleteMultipartUploadRequest.builder().bucket(bucket).key(destKey).uploadId(uploadId)
-            .overrideConfiguration(override ->override.putHeader("If-None-Match", optionHeaders.get("If-None-Match")))
+    requestBuilder = CompleteMultipartUploadRequest.builder().bucket(bucket).key(destKey).uploadId(uploadId)
             .multipartUpload(CompletedMultipartUpload.builder().parts(partETags).build());
-    } else {
-        requestBuilder = CompleteMultipartUploadRequest.builder().bucket(bucket).key(destKey).uploadId(uploadId)
-            .multipartUpload(CompletedMultipartUpload.builder().parts(partETags).build());
+    if (optionHeaders != null && optionHeaders.containsKey(IF_NONE_MATCH)) {
+      requestBuilder = CompleteMultipartUploadRequest.builder().overrideConfiguration(
+              override ->override.putHeader(IF_NONE_MATCH, optionHeaders.get(IF_NONE_MATCH)));
     }
 
     return prepareRequest(requestBuilder);
