@@ -1395,7 +1395,7 @@ public final class Constants {
    * This can be set in the {code createFile()} builder.
    * Value {@value}.
    */
-  public static final String FS_S3A_CREATE_IF_NONE_MATCH = "fs.s3a.create.header.If-None-Match";
+  public static final String FS_S3A_CONDITIONAL_FILE_CREATE = "fs.s3a.conditional.file.create";
 
   /**
    * Default value for create performance in an S3A FS.

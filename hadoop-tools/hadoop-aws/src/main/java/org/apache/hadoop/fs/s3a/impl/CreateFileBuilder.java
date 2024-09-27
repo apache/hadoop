@@ -63,19 +63,19 @@ public class CreateFileBuilder extends
    * Classic create file option set: overwriting.
    */
   public static final CreateFileOptions OPTIONS_CREATE_FILE_OVERWRITE =
-      new CreateFileOptions(CREATE_OVERWRITE_FLAGS, true, false, null);
+      new CreateFileOptions(CREATE_OVERWRITE_FLAGS, true, false, false, null);
 
   /**
    * Classic create file option set: no overwrite.
    */
   public static final CreateFileOptions OPTIONS_CREATE_FILE_NO_OVERWRITE =
-      new CreateFileOptions(CREATE_NO_OVERWRITE_FLAGS, true, false, null);
+      new CreateFileOptions(CREATE_NO_OVERWRITE_FLAGS, true, false, false, null);
 
   /**
    * Performance create options.
    */
   public static final CreateFileOptions OPTIONS_CREATE_FILE_PERFORMANCE =
-      new CreateFileOptions(CREATE_OVERWRITE_FLAGS, true, true, null);
+      new CreateFileOptions(CREATE_OVERWRITE_FLAGS, true, true, false, null);
 
   /**
    * Callback interface.
@@ -144,10 +144,12 @@ public class CreateFileBuilder extends
 
     final boolean performance =
         options.getBoolean(Constants.FS_S3A_CREATE_PERFORMANCE, false);
+    final boolean conditionalCreate =
+            options.getBoolean(Constants.FS_S3A_CONDITIONAL_FILE_CREATE, false);
     return callbacks.createFileFromBuilder(
         path,
         getProgress(),
-        new CreateFileOptions(flags, isRecursive(), performance, headers));
+        new CreateFileOptions(flags, isRecursive(), performance, conditionalCreate, headers));
 
   }
 
@@ -219,25 +221,32 @@ public class CreateFileBuilder extends
     private final boolean performance;
 
     /**
+     * conditional flag.
+     */
+    private final boolean conditionalCreate;
+
+    /**
      * Headers; may be null.
      */
     private final Map<String, String> headers;
 
     /**
-     * @param flags       creation flags
-     * @param recursive   create parent dirs?
+     * @param flags creation flags
+     * @param recursive create parent dirs?
      * @param performance performance flag
-     * @param
-     * @param headers     nullable header map.
+     * @param conditionalCreate conditional flag
+     * @param headers nullable header map.
      */
     public CreateFileOptions(
         final EnumSet<CreateFlag> flags,
         final boolean recursive,
         final boolean performance,
+        final boolean conditionalCreate,
         final Map<String, String> headers) {
       this.flags = flags;
       this.recursive = recursive;
       this.performance = performance;
+      this.conditionalCreate = conditionalCreate;
       this.headers = headers;
     }
 
@@ -247,6 +256,7 @@ public class CreateFileBuilder extends
           "flags=" + flags +
           ", recursive=" + recursive +
           ", performance=" + performance +
+          ", conditionalCreate=" + conditionalCreate +
           ", headers=" + headers +
           '}';
     }
@@ -261,6 +271,10 @@ public class CreateFileBuilder extends
 
     public boolean isPerformance() {
       return performance;
+    }
+
+    public boolean isConditionalCreate() {
+      return conditionalCreate;
     }
 
     public Map<String, String> getHeaders() {
