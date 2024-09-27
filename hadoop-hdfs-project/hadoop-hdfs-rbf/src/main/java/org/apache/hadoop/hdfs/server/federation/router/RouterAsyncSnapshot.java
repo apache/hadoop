@@ -27,7 +27,6 @@ import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamespaceInfo;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
 import org.apache.hadoop.hdfs.server.federation.router.async.ApplyFunction;
-import org.apache.hadoop.hdfs.server.federation.router.async.AsyncUtil;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 
 import java.io.IOException;
@@ -87,7 +86,7 @@ public class RouterAsyncSnapshot extends RouterSnapshot {
           return invokedResult.replaceFirst(loc.getDest(), loc.getSrc());
         });
     }
-    return AsyncUtil.asyncReturn(String.class);
+    return asyncReturn(String.class);
   }
 
   @Override
@@ -101,7 +100,7 @@ public class RouterAsyncSnapshot extends RouterSnapshot {
     asyncApply((ApplyFunction<Map<FederationNamespaceInfo, SnapshottableDirectoryStatus[]>,
         SnapshottableDirectoryStatus[]>)
         ret -> RouterRpcServer.merge(ret, SnapshottableDirectoryStatus.class));
-    return AsyncUtil.asyncReturn(SnapshottableDirectoryStatus[].class);
+    return asyncReturn(SnapshottableDirectoryStatus[].class);
   }
 
   @Override
