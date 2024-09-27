@@ -73,6 +73,7 @@ public final class AsyncUtil {
    *         <ul>
    *           <li>{@code false} if {@code clazz} is {@link Boolean},
    *           <li>-1 if {@code clazz} is {@link Long},
+   *           <li>-1 if {@code clazz} is {@link Integer},
    *           <li>{@code null} for any other type.
    *         </ul>
    */
@@ -80,11 +81,14 @@ public final class AsyncUtil {
     if (clazz == null) {
       return null;
     }
-    if (clazz.equals(Boolean.class)) {
+    if (clazz.equals(Boolean.class)
+        || clazz.equals(boolean.class)) {
       return (R) BOOLEAN_RESULT;
-    } else if (clazz.equals(Long.class)) {
+    } else if (clazz.equals(Long.class)
+        || clazz.equals(long.class)) {
       return (R) LONG_RESULT;
-    } else if (clazz.equals(Integer.class)) {
+    } else if (clazz.equals(Integer.class)
+        || clazz.equals(int.class)) {
       return (R) INT_RESULT;
     }
     return (R) NULL_RESULT;
@@ -140,6 +144,12 @@ public final class AsyncUtil {
         CompletableFuture.completedFuture(value));
   }
 
+  /**
+   * Completes the current asynchronous operation with the specified completableFuture.
+   *
+   * @param completableFuture The completableFuture to complete the future with.
+   * @param <R>    The type of the value to be completed.
+   */
   public static <R> void asyncCompleteWith(CompletableFuture<R> completableFuture) {
     CUR_COMPLETABLE_FUTURE.set((CompletableFuture<Object>) completableFuture);
   }
@@ -383,5 +393,14 @@ public final class AsyncUtil {
     CompletableFuture<P> result = CompletableFuture.allOf(completableFutures)
         .handle((unused, throwable) -> then.apply(completableFutures));
     CUR_COMPLETABLE_FUTURE.set((CompletableFuture<Object>) result);
+  }
+
+  /**
+   * Get the CompletableFuture object stored in the current thread's local variable.
+   *
+   * @return The completableFuture object.
+   */
+  public static CompletableFuture<Object> getCompletableFuture() {
+    return CUR_COMPLETABLE_FUTURE.get();
   }
 }
