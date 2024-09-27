@@ -26,6 +26,12 @@ import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_READER_COUNT_KEY;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_READER_QUEUE_SIZE_DEFAULT;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_READER_QUEUE_SIZE_KEY;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_RPC_ASYNC_HANDLER_COUNT;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_RPC_ASYNC_HANDLER_COUNT_DEFAULT;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_RPC_ASYNC_RESPONDER_COUNT;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_RPC_ASYNC_RESPONDER_COUNT_DEFAULT;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_RPC_ENABLE_ASYNC;
+import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_RPC_ENABLE_ASYNC_DEFAULT;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DN_REPORT_CACHE_EXPIRE;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DN_REPORT_CACHE_EXPIRE_MS_DEFAULT;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_FEDERATION_RENAME_OPTION;
@@ -50,15 +56,19 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
+import org.apache.hadoop.hdfs.protocolPB.AsyncRpcProtocolPBUtil;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheLoader;
 import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
@@ -199,7 +209,8 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
 
   private static final Logger LOG =
       LoggerFactory.getLogger(RouterRpcServer.class);
-
+  private ExecutorService asyncRouterHandler;
+  private ExecutorService asyncRouterResponder;
 
   /** Configuration for the RPC server. */
   private Configuration conf;
@@ -256,6 +267,8 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   private RouterRenameOption routerRenameOption;
   /** Schedule the router federation rename jobs. */
   private BalanceProcedureScheduler fedRenameScheduler;
+  private boolean enableAsync;
+
   /**
    * Construct a router RPC server.
    *
@@ -285,6 +298,12 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     int handlerQueueSize = this.conf.getInt(DFS_ROUTER_HANDLER_QUEUE_SIZE_KEY,
         DFS_ROUTER_HANDLER_QUEUE_SIZE_DEFAULT);
 
+    this.enableAsync = conf.getBoolean(DFS_ROUTER_RPC_ENABLE_ASYNC,
+        DFS_ROUTER_RPC_ENABLE_ASYNC_DEFAULT);
+    LOG.info("Router enable async {}", this.enableAsync);
+    if (this.enableAsync) {
+      initAsyncThreadPool();
+    }
     // Override Hadoop Common IPC setting
     int readerQueueSize = this.conf.getInt(DFS_ROUTER_READER_QUEUE_SIZE_KEY,
         DFS_ROUTER_READER_QUEUE_SIZE_DEFAULT);
@@ -393,15 +412,17 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     }
 
     // Create the client
-    this.rpcClient = new RouterRpcClient(this.conf, this.router,
-        this.namenodeResolver, this.rpcMonitor, routerStateIdContext);
-
-    // Initialize modules
-    this.quotaCall = new Quota(this.router, this);
+    if (this.enableAsync) {
+      this.rpcClient = new RouterAsyncRpcClient(this.conf, this.router,
+          this.namenodeResolver, this.rpcMonitor, routerStateIdContext);
+    } else {
+      this.rpcClient = new RouterRpcClient(this.conf, this.router,
+          this.namenodeResolver, this.rpcMonitor, routerStateIdContext);
+    }
     this.nnProto = new RouterNamenodeProtocol(this);
+    this.quotaCall = new Quota(this.router, this);
     this.clientProto = new RouterClientProtocol(conf, this);
     this.routerProto = new RouterUserProtocol(this);
-
     long dnCacheExpire = conf.getTimeDuration(
         DN_REPORT_CACHE_EXPIRE,
         DN_REPORT_CACHE_EXPIRE_MS_DEFAULT, TimeUnit.MILLISECONDS);
@@ -428,6 +449,27 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
             TimeUnit.MILLISECONDS);
 
     initRouterFedRename();
+  }
+
+  /**
+   * Init router async handlers and router async responders.
+   */
+  protected void initAsyncThreadPool() {
+    int asyncHandlerCount = conf.getInt(DFS_ROUTER_RPC_ASYNC_HANDLER_COUNT,
+        DFS_ROUTER_RPC_ASYNC_HANDLER_COUNT_DEFAULT);
+    int asyncResponderCount = conf.getInt(DFS_ROUTER_RPC_ASYNC_RESPONDER_COUNT,
+        DFS_ROUTER_RPC_ASYNC_RESPONDER_COUNT_DEFAULT);
+    if (asyncRouterHandler == null) {
+      LOG.info("init router async handler count: {}", asyncHandlerCount);
+      asyncRouterHandler = Executors.newFixedThreadPool(
+          asyncHandlerCount, new AsyncThreadFactory("router async handler "));
+    }
+    if (asyncRouterResponder == null) {
+      LOG.info("init router async responder count: {}", asyncResponderCount);
+      asyncRouterResponder = Executors.newFixedThreadPool(
+          asyncResponderCount, new AsyncThreadFactory("router async responder "));
+    }
+    AsyncRpcProtocolPBUtil.setWorker(asyncRouterResponder);
   }
 
   /**
@@ -2066,6 +2108,28 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
         final DatanodeReportType type, DatanodeInfo[] oldValue)
         throws Exception {
       return executorService.submit(() -> load(type));
+    }
+  }
+
+  public boolean isAsync() {
+    return this.enableAsync;
+  }
+
+  public Executor getAsyncRouterHandler() {
+    return asyncRouterHandler;
+  }
+
+  private static class AsyncThreadFactory implements ThreadFactory {
+    private final String namePrefix;
+    private final AtomicInteger threadNumber = new AtomicInteger(1);
+
+    AsyncThreadFactory(String namePrefix) {
+      this.namePrefix = namePrefix;
+    }
+
+    @Override
+    public Thread newThread(Runnable r) {
+      return new Thread(r, namePrefix + threadNumber.getAndIncrement());
     }
   }
 }
