@@ -49,6 +49,14 @@
   </property>
 
   <property>
+    <name>dfs.federation.router.rpc.async.enable</name>
+    <value>false</value>
+    <description>
+      If true, router will process the RPC request asynchronously.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.federation.router.rpc-address</name>
     <value>0.0.0.0:8888</value>
     <description>
@@ -98,6 +106,22 @@
     <value>100</value>
     <description>
       The size of the queue for the number of readers for the router to handle RPC client requests.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.rpc.async.handler.count</name>
+    <value>2</value>
+    <description>
+      The number of async handler for the router to handle RPC client requests.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.rpc.async.responder.count</name>
+    <value>10</value>
+    <description>
+      The number of async responder for the router to handle responses.
     </description>
   </property>
 
