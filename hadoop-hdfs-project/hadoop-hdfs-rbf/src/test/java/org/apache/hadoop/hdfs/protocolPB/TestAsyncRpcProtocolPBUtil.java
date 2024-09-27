@@ -40,6 +40,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.concurrent.ForkJoinPool;
 
 import static org.apache.hadoop.hdfs.server.federation.router.async.AsyncUtil.syncReturn;
 import static org.junit.Assert.assertEquals;
@@ -53,6 +54,7 @@ public class TestAsyncRpcProtocolPBUtil {
 
   @Before
   public void setUp() throws IOException {
+    AsyncRpcProtocolPBUtil.setWorker(ForkJoinPool.commonPool());
     Configuration conf = new Configuration();
     RPC.setProtocolEngine(conf, TestRpcBase.TestRpcService.class,
         ProtobufRpcEngine2.class);
