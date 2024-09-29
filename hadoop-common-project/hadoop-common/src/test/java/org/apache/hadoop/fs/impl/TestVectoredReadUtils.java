@@ -254,6 +254,20 @@ public class TestVectoredReadUtils extends HadoopTestBase {
     assertOrderedDisjoint(list4, 16, 700);
   }
 
+  @Test
+  public void testMergeSortedRanges() {
+    List<FileRange> input = asList(
+        createFileRange(13816220, 24, null),
+        createFileRange(13816244, 7423960, null)
+    );
+    assertIsNotOrderedDisjoint(input, 100, 800);
+    final List<CombinedFileRange> outputList = mergeSortedRanges(
+        sortRangeList(input), 100, 1001, 2500);
+
+    assertRangeListSize(outputList, 1);
+    assertFileRange(outputList.get(0), 13816200, 7424100);
+  }
+
   /**
    * Assert that a file range has the specified start position and length.
    * @param range range to validate

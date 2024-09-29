@@ -81,7 +81,11 @@ public class CombinedFileRange extends FileRangeImpl {
     long end = this.getOffset() + this.getLength();
     long newEnd = Math.max(end, otherEnd);
     if (otherOffset - end >= minSeek || newEnd - this.getOffset() > maxSize) {
-      return false;
+      // Guarantee that the ranges are not overlapped in order to avoid HADOOP-19098 violation later.
+      // The case `maxSize==0` is excluded due to the explicit test case, testMaxSizeZeroDisablesMerging.
+      if (otherOffset >= end || maxSize == 0) {
+        return false;
+      }
     }
     this.setLength((int) (newEnd - this.getOffset()));
     append(other);
