@@ -100,22 +100,6 @@ public class AbfsClientHandler {
   }
 
   /**
-   * Get the AbfsDfsClient.
-   * @return AbfsDfsClient.
-   */
-  public AbfsDfsClient getDfsClient() {
-    return dfsAbfsClient;
-  }
-
-  /**
-   * Get the AbfsBlobClient.
-   * @return AbfsBlobClient.
-   */
-  public AbfsBlobClient getBlobClient() {
-    return blobAbfsClient;
-  }
-
-  /**
    * Create the AbfsDfsClient using the url used to configure file system.
    * If URL is for Blob endpoint, it will be converted to DFS endpoint.
    * @param baseUrl URL.

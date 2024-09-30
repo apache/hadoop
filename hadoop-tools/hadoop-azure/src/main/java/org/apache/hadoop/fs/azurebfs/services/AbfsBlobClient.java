@@ -421,6 +421,19 @@ public class AbfsBlobClient extends AbfsClient {
     return op;
   }
 
+  /**
+   * Get results for the rename operation.
+   * @param source                    path to source file
+   * @param destination               destination of rename.
+   * @param continuation              continuation.
+   * @param tracingContext            trace context
+   * @param sourceEtag                etag of source file. may be null or empty
+   * @param isMetadataIncompleteState was there a rename failure due to
+   *                                  incomplete metadata state?
+   * @param isNamespaceEnabled        whether namespace enabled account or not
+   * @return
+   * @throws IOException
+   */
   @Override
   public AbfsClientRenameResult renamePath(final String source,
       final String destination,
@@ -608,8 +621,11 @@ public class AbfsBlobClient extends AbfsClient {
     try {
       op.execute(tracingContext);
     } catch (AbfsRestOperationException ex) {
-      // If 412 Condition Not Met error is seen on retry verify using MD5 hash that the previous request by the same client might be
-      // successful and the data is already flushed but connection reset or timeout led it to retry.
+      // If 412 Condition Not Met error is seen on retry it means it's either a
+      // parallel write case or the previous request has failed due to network
+      // issue and flush has actually succeeded in the backend. If MD5 hash of
+      // blockIds matches with what was set by previous request, it means the
+      // previous request itself was successful, else request will fail with 412 itself.
       if (op.getRetryCount() >= 1 && ex.getStatusCode() == HTTP_PRECON_FAILED) {
         AbfsRestOperation op1 = getPathStatus(path, true, tracingContext,
             contextEncryptionAdapter);

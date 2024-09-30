@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.azurebfs.contracts.services;
 
+import java.sql.Blob;
+
 /**
  * Saves the different request parameters for append
  */
@@ -26,6 +28,32 @@ public class AppendRequestParameters {
     APPEND_MODE,
     FLUSH_MODE,
     FLUSH_CLOSE_MODE
+  }
+
+  public class BlobEndpointParameters {
+    private String blockId;
+    private String eTag;
+
+    public BlobEndpointParameters(String blockId, String eTag) {
+      this.blockId = blockId;
+      this.eTag = eTag;
+    }
+
+    public String getBlockId() {
+      return blockId;
+    }
+
+    public String getETag() {
+      return eTag;
+    }
+
+    public void setBlockId(String blockId) {
+      this.blockId = blockId;
+    }
+
+    public void setETag(String eTag) {
+      this.eTag = eTag;
+    }
   }
 
   private final long position;
@@ -41,8 +69,7 @@ public class AppendRequestParameters {
    * Following parameters are used by AbfsBlobClient only.
    * Blob Endpoint Append API requires blockId and eTag to be passed in the request.
    */
-  private String blockId;
-  private String eTag;
+  private BlobEndpointParameters blobParams;
 
   // Constructor to be used for interacting with AbfsDfsClient
   public AppendRequestParameters(final long position,
@@ -60,8 +87,7 @@ public class AppendRequestParameters {
     this.leaseId = leaseId;
     this.isExpectHeaderEnabled = isExpectHeaderEnabled;
     this.isRetryDueToExpect = false;
-    this.blockId = null;
-    this.eTag = null;
+    this.blobParams = new BlobEndpointParameters(null, null);
   }
 
   // Constructor to be used for interacting with AbfsBlobClient
@@ -82,8 +108,7 @@ public class AppendRequestParameters {
     this.leaseId = leaseId;
     this.isExpectHeaderEnabled = isExpectHeaderEnabled;
     this.isRetryDueToExpect = false;
-    this.blockId = blockId;
-    this.eTag = eTag;
+    this.blobParams = new BlobEndpointParameters(blockId, eTag);
   }
 
   public long getPosition() {
@@ -118,12 +143,20 @@ public class AppendRequestParameters {
     return isRetryDueToExpect;
   }
 
+  /**
+   * Returns BlockId of the block blob to be appended.
+   * @return blockId
+   */
   public String getBlockId() {
-    return blockId;
+    return blobParams.getBlockId();
   }
 
+  /**
+   * Returns ETag of the block blob.
+   * @return eTag
+   */
   public String getETag() {
-    return eTag;
+    return blobParams.getETag();
   }
 
   public void setRetryDueToExpect(boolean retryDueToExpect) {
