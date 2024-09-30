@@ -20,7 +20,6 @@ package org.apache.hadoop.net.unix;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
-import java.util.Random;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.fs.FileUtil;
@@ -35,8 +34,7 @@ public class TemporarySocketDirectory implements Closeable {
 
   public TemporarySocketDirectory() {
     String tmp = System.getProperty("java.io.tmpdir", "/tmp");
-    dir = new File(tmp, "socks." + (System.currentTimeMillis() +
-        "." + (new Random().nextInt())));
+    dir = new File(tmp, "socks." + System.nanoTime());
     dir.mkdirs();
     FileUtil.setWritable(dir, true);
   }
