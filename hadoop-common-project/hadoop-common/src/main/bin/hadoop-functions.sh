@@ -1569,6 +1569,19 @@ function hadoop_finalize_hadoop_opts
   hadoop_add_param HADOOP_OPTS hadoop.security.logger "-Dhadoop.security.logger=${HADOOP_SECURITY_LOGGER}"
 }
 
+## @description  Finish configuring JPMS that enforced for JDK 17 and higher
+## @description  prior to executing Java
+## @audience     private
+## @stability    evolving
+## @replaceable  yes
+function hadoop_finalize_jpms_opts
+{
+    hadoop_add_param HADOOP_OPTS IgnoreUnrecognizedVMOptions "-XX:+IgnoreUnrecognizedVMOptions"
+    hadoop_add_param HADOOP_OPTS open.sun.security.x509 "--add-opens=java.base/java.util.zip=ALL-UNNAMED"
+    hadoop_add_param HADOOP_OPTS open.sun.security.util "--add-opens=java.base/sun.security.util=ALL-UNNAMED"
+    hadoop_add_param HADOOP_OPTS open.sun.security.x509 "--add-opens=java.base/sun.security.x509=ALL-UNNAMED"
+}
+
 ## @description  Finish Java classpath prior to execution
 ## @audience     private
 ## @stability    evolving
@@ -1597,6 +1610,7 @@ function hadoop_finalize
   hadoop_finalize_libpaths
   hadoop_finalize_hadoop_heap
   hadoop_finalize_hadoop_opts
+  hadoop_finalize_jpms_opts
 
   hadoop_translate_cygwin_path HADOOP_HOME
   hadoop_translate_cygwin_path HADOOP_CONF_DIR
