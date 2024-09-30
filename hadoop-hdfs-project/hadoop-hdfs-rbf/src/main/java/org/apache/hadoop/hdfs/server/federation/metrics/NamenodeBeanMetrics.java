@@ -492,6 +492,7 @@ public class NamenodeBeanMetrics
         innerinfo.put("volfails", -1); // node.getVolumeFailures()
         innerinfo.put("blockPoolUsedPercentStdDev",
             Util.getBlockPoolUsedPercentStdDev(storageReports));
+        innerinfo.put("lastBlockReport", getLastBlockReport(node));
         info.put(node.getXferAddrWithHostname(),
             Collections.unmodifiableMap(innerinfo));
       }
@@ -793,6 +794,10 @@ public class NamenodeBeanMetrics
 
   private long getLastContact(DatanodeInfo node) {
     return (now() - node.getLastUpdate()) / 1000;
+  }
+
+  private long getLastBlockReport(DatanodeInfo node) {
+    return (now() - node.getLastBlockReportTime()) / 60000;
   }
 
   /////////////////////////////////////////////////////////
