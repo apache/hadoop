@@ -18,32 +18,41 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import java.net.URI;
+import java.net.URL;
+import java.util.Map;
+
+import org.assertj.core.api.Assertions;
+import org.junit.Test;
+import org.mockito.Mockito;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbfsCountersImpl;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 import org.apache.hadoop.fs.azurebfs.utils.Base64;
 import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
-import org.assertj.core.api.Assertions;
-import org.junit.Test;
-import org.mockito.Mockito;
-
-import java.net.URI;
-import java.net.URL;
-import java.util.Map;
 
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_ACCOUNT_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_ACCOUNT_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_METRIC_FORMAT;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsClient.ABFS_CLIENT_TIMER_THREAD_NAME;
 
+/**
+ * Unit test cases for the AbfsClient class.
+ */
 public class TestAbfsClient {
     private static final String ACCOUNT_NAME = "bogusAccountName.dfs.core.windows.net";
     private static final String ACCOUNT_KEY = "testKey";
     private static final long SLEEP_DURATION_MS = 500;
 
+    /**
+     * Test the initialization of the AbfsClient timer when metric collection is disabled.
+     * In case of metric collection being disabled, the timer should not be initialized.
+     * Asserting that the timer is null and the abfs-timer-client thread is not running.
+     */
     @Test
-    public void testTimerNotInitialize() throws Exception {
+    public void testTimerInitializationWithoutMetricCollection() throws Exception {
         final Configuration configuration = new Configuration();
         AbfsConfiguration abfsConfiguration = new AbfsConfiguration(configuration, ACCOUNT_NAME);
 
@@ -69,8 +78,14 @@ public class TestAbfsClient {
         client.close();
     }
 
+    /**
+     * Test the initialization of the AbfsClient timer when metric collection is enabled.
+     * In case of metric collection being enabled, the timer should be initialized.
+     * Asserting that the timer is not null and the abfs-timer-client thread is running.
+     * Also, asserting that the thread is removed after closing the client.
+     */
     @Test
-    public void testTimerInitialize() throws Exception {
+    public void testTimerInitializationWithMetricCollection() throws Exception {
         final Configuration configuration = new Configuration();
         configuration.set(FS_AZURE_METRIC_FORMAT, String.valueOf(MetricFormat.INTERNAL_BACKOFF_METRIC_FORMAT));
         configuration.set(FS_AZURE_METRIC_ACCOUNT_NAME, ACCOUNT_NAME);
@@ -105,6 +120,12 @@ public class TestAbfsClient {
                 .isEqualTo(false);
     }
 
+    /**
+     * Check if a thread with the specified name is running.
+     *
+     * @param threadName Name of the thread to check
+     * @return true if the thread is running, false otherwise
+     */
     private boolean isThreadRunning(String threadName) {
         // Get all threads and their stack traces
         Map<Thread, StackTraceElement[]> allThreads = Thread.getAllStackTraces();
