@@ -1922,10 +1922,10 @@ public class ContractTestUtils extends Assert {
      */
     private String dump() {
       StringBuilder sb = new StringBuilder(toString());
-      sb.append("\nFiles:");
+      sb.append("\nDirectories:");
       directories.forEach(p ->
           sb.append("\n  \"").append(p.toString()));
-      sb.append("\nDirectories:");
+      sb.append("\nFiles:");
       files.forEach(p ->
           sb.append("\n  \"").append(p.toString()));
       return sb.toString();

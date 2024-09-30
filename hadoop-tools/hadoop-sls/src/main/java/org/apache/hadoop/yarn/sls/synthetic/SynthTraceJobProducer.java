@@ -34,7 +34,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.tools.rumen.JobStory;
 import org.apache.hadoop.tools.rumen.JobStoryProducer;
-import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.sls.appmaster.MRAMSimulator;
@@ -89,8 +88,7 @@ public class SynthTraceJobProducer implements JobStoryProducer {
 
     JsonFactoryBuilder jsonFactoryBuilder = new JsonFactoryBuilder();
     jsonFactoryBuilder.configure(JsonFactory.Feature.INTERN_FIELD_NAMES, true);
-
-    ObjectMapper mapper = JacksonUtil.createObjectMapper(jsonFactoryBuilder.build());
+    ObjectMapper mapper = new ObjectMapper(jsonFactoryBuilder.build());
     mapper.configure(FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     FileSystem ifs = path.getFileSystem(conf);

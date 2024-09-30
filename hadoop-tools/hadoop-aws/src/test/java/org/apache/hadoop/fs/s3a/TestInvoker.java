@@ -26,36 +26,42 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.assertj.core.api.Assertions;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.services.s3.model.S3Exception;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.net.ConnectTimeoutException;
-
+import org.apache.hadoop.test.HadoopTestBase;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.Invoker.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.verifyExceptionClass;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_400_BAD_REQUEST;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_500_INTERNAL_SERVER_ERROR;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_501_NOT_IMPLEMENTED;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_503_SERVICE_UNAVAILABLE;
+import static org.apache.hadoop.fs.s3a.impl.InternalConstants.SC_504_GATEWAY_TIMEOUT;
 import static org.apache.hadoop.test.LambdaTestUtils.*;
 
 /**
  * Test the {@link Invoker} code and the associated {@link S3ARetryPolicy}.
- *
+ * <p>
  * Some of the tests look at how Connection Timeout Exceptions are processed.
  * Because of how the AWS libraries shade the classes, there have been some
  * regressions here during development. These tests are intended to verify that
  * the current match process based on classname works.
+ * <p>
+ * 500 errors may or may not be considered retriable; these tests validate
+ * both configurations with different retry policies for each.
  */
-@SuppressWarnings("ThrowableNotThrown")
-public class TestInvoker extends Assert {
+public class TestInvoker extends HadoopTestBase {
 
   /** Configuration to use for short retry intervals. */
   private static final Configuration FAST_RETRY_CONF;
@@ -85,6 +91,15 @@ public class TestInvoker extends Assert {
    */
   public static final int SAFE_RETRY_COUNT = 5;
 
+  public static final String INTERNAL_ERROR_PLEASE_TRY_AGAIN =
+      "We encountered an internal error. Please try again";
+
+  /**
+   * Retry configuration derived from {@link #FAST_RETRY_CONF} with 500 errors
+   * never retried.
+   */
+  public static final Configuration RETRY_EXCEPT_500_ERRORS;
+
   static {
     FAST_RETRY_CONF = new Configuration();
     String interval = "10ms";
@@ -92,18 +107,48 @@ public class TestInvoker extends Assert {
     FAST_RETRY_CONF.set(RETRY_THROTTLE_INTERVAL, interval);
     FAST_RETRY_CONF.setInt(RETRY_LIMIT, ACTIVE_RETRY_LIMIT);
     FAST_RETRY_CONF.setInt(RETRY_THROTTLE_LIMIT, ACTIVE_RETRY_LIMIT);
+    FAST_RETRY_CONF.setBoolean(RETRY_HTTP_5XX_ERRORS, DEFAULT_RETRY_HTTP_5XX_ERRORS);
+    RETRY_EXCEPT_500_ERRORS = new Configuration(FAST_RETRY_CONF);
+    RETRY_EXCEPT_500_ERRORS.setBoolean(RETRY_HTTP_5XX_ERRORS, false);
   }
 
+  /**
+   * Retry policy with 500 error retry the default.
+   */
   private static final S3ARetryPolicy RETRY_POLICY =
       new S3ARetryPolicy(FAST_RETRY_CONF);
 
+  /**
+   * Retry policyd with 500 errors never retried.
+   */
+  private static final S3ARetryPolicy RETRY_POLICY_NO_500_ERRORS =
+      new S3ARetryPolicy(RETRY_EXCEPT_500_ERRORS);
+
+
+  /**
+   * Count of retries performed when invoking an operation which
+   * failed.
+   */
   private int retryCount;
-  private Invoker invoker = new Invoker(RETRY_POLICY,
-      (text, e, retries, idempotent) -> retryCount++);
+
+  /**
+   * Retry handler which increments {@link #retryCount}.
+   */
+  private final Retried retryHandler = (text, e, retries, idempotent) -> retryCount++;
+
+  private final Invoker invoker = new Invoker(RETRY_POLICY, retryHandler);
+
+  /**
+   * AWS SDK exception wrapping a ConnectTimeoutException.
+   */
   private static final SdkException CLIENT_TIMEOUT_EXCEPTION =
       SdkException.builder()
           .cause(new Local.ConnectTimeoutException("timeout"))
           .build();
+
+  /**
+   * AWS SDK 400 Bad Request exception.
+   */
   private static final AwsServiceException BAD_REQUEST = serviceException(
       SC_400_BAD_REQUEST,
       "bad request");
@@ -147,28 +192,145 @@ public class TestInvoker extends Assert {
         translateException("test", "/", exception));
   }
 
+  /**
+   * jReset the retry count.
+   */
   private void resetCounters() {
     retryCount = 0;
   }
 
   @Test
   public void test503isThrottled() throws Exception {
-    verifyTranslated(503, AWSServiceThrottledException.class);
+    verifyTranslated(SC_503_SERVICE_UNAVAILABLE, AWSServiceThrottledException.class);
   }
 
   @Test
   public void testS3500isStatus500Exception() throws Exception {
-    verifyTranslated(500, AWSStatus500Exception.class);
+    verifyTranslated(SC_500_INTERNAL_SERVER_ERROR, AWSStatus500Exception.class);
   }
 
+  /**
+   * 500 error handling with the default options: the responses
+   * trigger retry.
+   */
   @Test
-  public void test500isStatus500Exception() throws Exception {
-    AwsServiceException ex = AwsServiceException.builder()
-        .message("")
-        .statusCode(500)
+  public void test500ResponseHandling() throws Exception {
+
+    // create a 500 SDK Exception;
+    AwsServiceException ex = awsException(SC_500_INTERNAL_SERVER_ERROR,
+        INTERNAL_ERROR_PLEASE_TRY_AGAIN);
+
+    // translate this to a Hadoop IOE.
+    AWSStatus500Exception ex500 =
+        verifyTranslated(AWSStatus500Exception.class, ex);
+
+    // the status code is preserved
+    Assertions.assertThat(ex500.statusCode())
+        .describedAs("status code of %s", ex)
+        .isEqualTo(SC_500_INTERNAL_SERVER_ERROR);
+
+    // the default retry policies reject this and fail
+    assertRetryAction("Expected retry on 500 error",
+        RETRY_POLICY, RetryPolicy.RetryAction.RETRY,
+        ex, 0, true);
+
+    Assertions.assertThat(invoker.getRetryPolicy()
+        .shouldRetry(ex500, 1, 0, false).action)
+        .describedAs("should retry %s", ex500)
+        .isEqualTo(RetryPolicy.RetryAction.RETRY.action);
+  }
+
+  /**
+   * Validate behavior on 500 errors when retry is disabled.
+   */
+  @Test
+  public void test500ResponseHandlingRetryDisabled() throws Exception {
+    // create a 500 SDK Exception;
+    AwsServiceException ex = awsException(SC_500_INTERNAL_SERVER_ERROR,
+        INTERNAL_ERROR_PLEASE_TRY_AGAIN);
+
+    // translate this to a Hadoop IOE.
+    AWSStatus500Exception ex500 =
+        verifyTranslated(AWSStatus500Exception.class, ex);
+
+    // the no 500 retry policies reject this and fail
+    final Invoker failingInvoker = new Invoker(RETRY_POLICY_NO_500_ERRORS, retryHandler);
+    assertRetryAction("Expected failure first throttle",
+        RETRY_POLICY_NO_500_ERRORS, RetryPolicy.RetryAction.FAIL,
+        ex, 0, true);
+    Assertions.assertThat(failingInvoker.getRetryPolicy()
+        .shouldRetry(ex500, 1, 0, false).action)
+        .describedAs("should retry %s", ex500)
+        .isEqualTo(RetryPolicy.RetryAction.FAIL.action);
+  }
+  /**
+   * A 501 error is never retried.
+   */
+  @Test
+  public void test501UnsupportedFeatureNoRetry() throws Throwable {
+
+    AwsServiceException ex = awsException(501,
+        "501 We encountered an internal error. Please try again");
+    final AWSUnsupportedFeatureException ex501 =
+        intercept(AWSUnsupportedFeatureException.class, "501", () ->
+            invoker.retry("ex", null, true, () -> {
+              throw ex;
+            }));
+    Assertions.assertThat(ex501.statusCode())
+        .describedAs("status code of %s", ex)
+        .isEqualTo(501);
+    Assertions.assertThat(retryCount)
+        .describedAs("retry count")
+        .isEqualTo(0);
+  }
+
+  /**
+   * Construct an S3Exception.
+   * @param statusCode status code
+   * @param message message
+   * @return the exception
+   */
+  private static AwsServiceException awsException(final int statusCode, final String message) {
+    return S3Exception.builder()
+        .statusCode(statusCode)
+        .message(message)
+        .requestId("reqID")
+        .extendedRequestId("extreqID")
         .build();
-    verifyTranslated(AWSStatus500Exception.class,
-        ex);
+  }
+
+  /**
+   * Assert expected retry actions on 5xx responses when 5xx errors are disabled.
+   */
+  @Test
+  public void test5xxRetriesDisabled() throws Throwable {
+    final S3ARetryPolicy policy = RETRY_POLICY_NO_500_ERRORS;
+    assertRetryAction("500", policy, RetryPolicy.RetryAction.FAIL,
+        awsException(SC_500_INTERNAL_SERVER_ERROR, INTERNAL_ERROR_PLEASE_TRY_AGAIN), 1, true);
+    assertRetryAction("501", policy, RetryPolicy.RetryAction.FAIL,
+        awsException(SC_501_NOT_IMPLEMENTED, INTERNAL_ERROR_PLEASE_TRY_AGAIN), 1, true);
+    assertRetryAction("510", policy, RetryPolicy.RetryAction.FAIL,
+        awsException(510, INTERNAL_ERROR_PLEASE_TRY_AGAIN), 1, true);
+    assertRetryAction("gateway", policy, RetryPolicy.RetryAction.RETRY,
+        awsException(SC_504_GATEWAY_TIMEOUT, "gateway"), 1, true);
+  }
+
+  /**
+   * Various 5xx exceptions when 5xx errors are enabled.
+   */
+  @Test
+  public void test5xxRetriesEnabled() throws Throwable {
+    final Configuration conf = new Configuration(FAST_RETRY_CONF);
+    conf.setBoolean(RETRY_HTTP_5XX_ERRORS, true);
+    final S3ARetryPolicy policy = new S3ARetryPolicy(conf);
+    assertRetryAction("500", policy, RetryPolicy.RetryAction.RETRY,
+        awsException(SC_500_INTERNAL_SERVER_ERROR, INTERNAL_ERROR_PLEASE_TRY_AGAIN), 1, true);
+    assertRetryAction("501", policy, RetryPolicy.RetryAction.FAIL,
+        awsException(SC_501_NOT_IMPLEMENTED, INTERNAL_ERROR_PLEASE_TRY_AGAIN), 1, true);
+    assertRetryAction("510", policy, RetryPolicy.RetryAction.RETRY,
+        awsException(510, INTERNAL_ERROR_PLEASE_TRY_AGAIN), 1, true);
+    assertRetryAction("gateway", policy, RetryPolicy.RetryAction.RETRY,
+        awsException(SC_504_GATEWAY_TIMEOUT, "gateway"), 1, true);
   }
 
   @Test
@@ -261,23 +423,17 @@ public class TestInvoker extends Assert {
    * @throws AssertionError if the returned action was not that expected.
    */
   private void assertRetryAction(String text,
-      S3ARetryPolicy policy,
+      RetryPolicy policy,
       RetryPolicy.RetryAction expected,
       Exception ex,
       int retries,
       boolean idempotent) throws Exception {
     RetryPolicy.RetryAction outcome = policy.shouldRetry(ex, retries, 0,
         idempotent);
-    if (!expected.action.equals(outcome.action)) {
-      throw new AssertionError(
-          String.format(
-              "%s Expected action %s from shouldRetry(%s, %s, %s), but got"
-                  + " %s",
-              text,
-              expected, ex.toString(), retries, idempotent,
-              outcome.action),
-          ex);
-    }
+    Assertions.assertThat(outcome.action)
+        .describedAs("%s Expected action %s from shouldRetry(%s, %s, %s)",
+                      text, expected, ex.toString(), retries, idempotent)
+        .isEqualTo(expected.action);
   }
 
   @Test

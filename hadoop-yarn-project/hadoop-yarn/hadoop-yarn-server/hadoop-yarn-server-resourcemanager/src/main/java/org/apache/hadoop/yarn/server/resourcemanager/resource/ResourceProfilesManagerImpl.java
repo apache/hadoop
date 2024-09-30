@@ -20,10 +20,10 @@ package org.apache.hadoop.yarn.server.resourcemanager.resource;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -105,7 +105,8 @@ public class ResourceProfilesManagerImpl implements ResourceProfilesManager {
         resourcesFile = tmp.getPath();
       }
     }
-    Map data = JacksonUtil.getSharedReader().readValue(new File(resourcesFile), Map.class);
+    ObjectMapper mapper = new ObjectMapper();
+    Map data = mapper.readValue(new File(resourcesFile), Map.class);
     Iterator iterator = data.entrySet().iterator();
     while (iterator.hasNext()) {
       Map.Entry entry = (Map.Entry) iterator.next();

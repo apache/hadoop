@@ -22,7 +22,6 @@ import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
-import java.io.EOFException;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -40,7 +39,6 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.DirectBufferPool;
@@ -777,158 +775,8 @@ public final class DataBlocks {
             '}';
       }
 
-      /**
-       * Provide an input stream from a byte buffer; supporting
-       * {@link #mark(int)}, which is required to enable replay of failed
-       * PUT attempts.
-       */
-      class ByteBufferInputStream extends InputStream {
-
-        private final int size;
-        private ByteBuffer byteBuffer;
-
-        ByteBufferInputStream(int size,
-            ByteBuffer byteBuffer) {
-          LOG.debug("Creating ByteBufferInputStream of size {}", size);
-          this.size = size;
-          this.byteBuffer = byteBuffer;
-        }
-
-        /**
-         * After the stream is closed, set the local reference to the byte
-         * buffer to null; this guarantees that future attempts to use
-         * stream methods will fail.
-         */
-        @Override
-        public synchronized void close() {
-          LOG.debug("ByteBufferInputStream.close() for {}",
-              ByteBufferBlock.super.toString());
-          byteBuffer = null;
-        }
-
-        /**
-         * Verify that the stream is open.
-         *
-         * @throws IOException if the stream is closed
-         */
-        private void verifyOpen() throws IOException {
-          if (byteBuffer == null) {
-            throw new IOException(FSExceptionMessages.STREAM_IS_CLOSED);
-          }
-        }
-
-        public synchronized int read() throws IOException {
-          if (available() > 0) {
-            return byteBuffer.get() & 0xFF;
-          } else {
-            return -1;
-          }
-        }
-
-        @Override
-        public synchronized long skip(long offset) throws IOException {
-          verifyOpen();
-          long newPos = position() + offset;
-          if (newPos < 0) {
-            throw new EOFException(FSExceptionMessages.NEGATIVE_SEEK);
-          }
-          if (newPos > size) {
-            throw new EOFException(FSExceptionMessages.CANNOT_SEEK_PAST_EOF);
-          }
-          byteBuffer.position((int) newPos);
-          return newPos;
-        }
-
-        @Override
-        public synchronized int available() {
-          Preconditions.checkState(byteBuffer != null,
-              FSExceptionMessages.STREAM_IS_CLOSED);
-          return byteBuffer.remaining();
-        }
-
-        /**
-         * Get the current buffer position.
-         *
-         * @return the buffer position
-         */
-        public synchronized int position() {
-          return byteBuffer.position();
-        }
-
-        /**
-         * Check if there is data left.
-         *
-         * @return true if there is data remaining in the buffer.
-         */
-        public synchronized boolean hasRemaining() {
-          return byteBuffer.hasRemaining();
-        }
-
-        @Override
-        public synchronized void mark(int readlimit) {
-          LOG.debug("mark at {}", position());
-          byteBuffer.mark();
-        }
-
-        @Override
-        public synchronized void reset() throws IOException {
-          LOG.debug("reset");
-          byteBuffer.reset();
-        }
-
-        @Override
-        public boolean markSupported() {
-          return true;
-        }
-
-        /**
-         * Read in data.
-         *
-         * @param b      destination buffer.
-         * @param offset offset within the buffer.
-         * @param length length of bytes to read.
-         * @throws EOFException              if the position is negative
-         * @throws IndexOutOfBoundsException if there isn't space for the
-         *                                   amount of data requested.
-         * @throws IllegalArgumentException  other arguments are invalid.
-         */
-        @SuppressWarnings("NullableProblems")
-        public synchronized int read(byte[] b, int offset, int length)
-            throws IOException {
-          Preconditions.checkArgument(length >= 0, "length is negative");
-          Preconditions.checkArgument(b != null, "Null buffer");
-          if (b.length - offset < length) {
-            throw new IndexOutOfBoundsException(
-                FSExceptionMessages.TOO_MANY_BYTES_FOR_DEST_BUFFER
-                    + ": request length =" + length
-                    + ", with offset =" + offset
-                    + "; buffer capacity =" + (b.length - offset));
-          }
-          verifyOpen();
-          if (!hasRemaining()) {
-            return -1;
-          }
-
-          int toRead = Math.min(length, available());
-          byteBuffer.get(b, offset, toRead);
-          return toRead;
-        }
-
-        @Override
-        public String toString() {
-          final StringBuilder sb = new StringBuilder(
-              "ByteBufferInputStream{");
-          sb.append("size=").append(size);
-          ByteBuffer buf = this.byteBuffer;
-          if (buf != null) {
-            sb.append(", available=").append(buf.remaining());
-          }
-          sb.append(", ").append(ByteBufferBlock.super.toString());
-          sb.append('}');
-          return sb.toString();
-        }
-      }
     }
+
   }
 
   // ====================================================================
@@ -1124,4 +972,5 @@ public final class DataBlocks {
       }
     }
   }
+
 }

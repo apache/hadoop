@@ -31,6 +31,7 @@ import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.InOrder;
 import org.mockito.Mockito;
 
 import java.io.File;
@@ -190,11 +191,12 @@ public class TestCGroupsCpuResourceHandlerImpl {
             CGroupsHandler.CGROUP_CPU_SHARES,
             String.valueOf(CGroupsCpuResourceHandlerImpl.CPU_DEFAULT_WEIGHT));
     // set quota and period
-    verify(mockCGroupsHandler, times(1))
+    InOrder cpuLimitOrder = inOrder(mockCGroupsHandler);
+    cpuLimitOrder.verify(mockCGroupsHandler, times(1))
         .updateCGroupParam(CGroupsHandler.CGroupController.CPU, id,
             CGroupsHandler.CGROUP_CPU_PERIOD_US,
             String.valueOf(CGroupsCpuResourceHandlerImpl.MAX_QUOTA_US));
-    verify(mockCGroupsHandler, times(1))
+    cpuLimitOrder.verify(mockCGroupsHandler, times(1))
         .updateCGroupParam(CGroupsHandler.CGroupController.CPU, id,
             CGroupsHandler.CGROUP_CPU_QUOTA_US, String.valueOf(
                 (int) (CGroupsCpuResourceHandlerImpl.MAX_QUOTA_US * share)));
@@ -222,10 +224,11 @@ public class TestCGroupsCpuResourceHandlerImpl {
     conf.setInt(YarnConfiguration.NM_RESOURCE_PERCENTAGE_PHYSICAL_CPU_LIMIT,
         cpuPerc);
     cGroupsCpuResourceHandler.bootstrap(plugin, conf);
-    verify(mockCGroupsHandler, times(1))
+    InOrder cpuLimitOrder = inOrder(mockCGroupsHandler);
+    cpuLimitOrder.verify(mockCGroupsHandler, times(1))
         .updateCGroupParam(CGroupsHandler.CGroupController.CPU, "",
             CGroupsHandler.CGROUP_CPU_PERIOD_US, String.valueOf("333333"));
-    verify(mockCGroupsHandler, times(1))
+    cpuLimitOrder.verify(mockCGroupsHandler, times(1))
         .updateCGroupParam(CGroupsHandler.CGroupController.CPU, "",
             CGroupsHandler.CGROUP_CPU_QUOTA_US,
             String.valueOf(CGroupsCpuResourceHandlerImpl.MAX_QUOTA_US));
@@ -262,10 +265,10 @@ public class TestCGroupsCpuResourceHandlerImpl {
               CGroupsHandler.CGROUP_CPU_SHARES, String.valueOf(
               CGroupsCpuResourceHandlerImpl.CPU_DEFAULT_WEIGHT * cVcores));
       // set quota and period
-      verify(mockCGroupsHandler, times(1))
+      cpuLimitOrder.verify(mockCGroupsHandler, times(1))
           .updateCGroupParam(CGroupsHandler.CGroupController.CPU, id,
               CGroupsHandler.CGROUP_CPU_PERIOD_US, String.valueOf(periodUS));
-      verify(mockCGroupsHandler, times(1))
+      cpuLimitOrder.verify(mockCGroupsHandler, times(1))
           .updateCGroupParam(CGroupsHandler.CGroupController.CPU, id,
               CGroupsHandler.CGROUP_CPU_QUOTA_US, String.valueOf(quotaUS));
     }

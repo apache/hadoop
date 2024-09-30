@@ -301,7 +301,7 @@ public class AbstractS3ACostTest extends AbstractS3ATestBase {
   /**
    * Reset all the metrics being tracked.
    */
-  private void resetStatistics() {
+  protected void resetStatistics() {
     costValidator.resetMetricDiffs();
   }
 

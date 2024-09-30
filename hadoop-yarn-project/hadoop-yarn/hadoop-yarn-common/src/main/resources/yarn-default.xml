@@ -183,6 +183,21 @@
   </property>
 
   <property>
+    <description>
+      This configuration key enables or disables the auto-correction of container allocation in
+      YARN. Due to the asynchronous nature of container request and allocation, YARN may sometimes
+      over-allocate more containers than requested. The auto-correction feature addresses this by
+      automatically adjusting the number of requested containers based on those already allocated,
+      preventing extra containers from being allocated.
+      While the extra allocated containers will be released by the client within a few seconds,
+      this may not be a concern in normal circumstances. However, if the user is worried about
+      resource contention due to over-allocation, enabling this feature can help avoid such cases.
+    </description>
+    <name>yarn.resourcemanager.scheduler.autocorrect.container.allocation</name>
+    <value>false</value>
+  </property>
+
+  <property>
     <description>The address of the scheduler interface.</description>
     <name>yarn.resourcemanager.scheduler.address</name>
     <value>${yarn.resourcemanager.hostname}:8030</value>
@@ -5810,4 +5825,13 @@
     <value>30s</value>
   </property>
 
+  <property>
+    <description>
+      The setting that controls whether the ResourceManager should track the nodes as
+      lost when they are unregistered and not reported to the RM.
+      It doesn't account for decommissioned nodes. Default is false.
+    </description>
+    <name>yarn.resourcemanager.enable-tracking-for-unregistered-nodes</name>
+    <value>false</value>
+  </property>
 </configuration>

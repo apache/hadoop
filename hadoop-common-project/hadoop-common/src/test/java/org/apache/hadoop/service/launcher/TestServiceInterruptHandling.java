@@ -38,7 +38,7 @@ public class TestServiceInterruptHandling
   @Test
   public void testRegisterAndRaise() throws Throwable {
     InterruptCatcher catcher = new InterruptCatcher();
-    String name = IrqHandler.CONTROL_C;
+    String name = "USR2";
     IrqHandler irqHandler = new IrqHandler(name, catcher);
     irqHandler.bind();
     assertEquals(0, irqHandler.getSignalCount());

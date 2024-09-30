@@ -23,12 +23,14 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 import software.amazon.awssdk.awscore.AwsExecutionAttribute;
 import software.amazon.awssdk.core.SdkRequest;
 import software.amazon.awssdk.core.interceptor.Context;
 import software.amazon.awssdk.core.interceptor.ExecutionAttributes;
 import software.amazon.awssdk.http.SdkHttpRequest;
+import software.amazon.awssdk.http.SdkHttpResponse;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
 
@@ -66,6 +68,7 @@ import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.REJECT_OUT_OF_SPA
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.UNAUDITED_OPERATION;
 import static org.apache.hadoop.fs.s3a.commit.CommitUtils.extractJobID;
 import static org.apache.hadoop.fs.s3a.impl.HeaderProcessing.HEADER_REFERRER;
+import static org.apache.hadoop.fs.s3a.statistics.impl.StatisticsFromAwsSdkImpl.mapErrorStatusCodeToStatisticName;
 
 /**
  * The LoggingAuditor logs operations at DEBUG (in SDK Request) and
@@ -444,6 +447,22 @@ public class LoggingAuditor
     HttpReferrerAuditHeader getReferrer() {
       return referrer;
     }
+
+    /**
+     * Execution failure: extract an error code and if this maps to
+     * a statistic name, update that counter.
+     */
+    @Override
+    public void onExecutionFailure(final Context.FailedExecution context,
+        final ExecutionAttributes executionAttributes) {
+      final Optional<SdkHttpResponse> response = context.httpResponse();
+      int sc = response.map(SdkHttpResponse::statusCode).orElse(0);
+      String stat = mapErrorStatusCodeToStatisticName(sc);
+      if (stat != null) {
+        LOG.debug("Incrementing error statistic {}", stat);
+        getIOStatistics().incrementCounter(stat);
+      }
+    }
   }
 
   /**
@@ -522,4 +541,5 @@ public class LoggingAuditor
       super.beforeExecution(context, executionAttributes);
     }
   }
+
 }
