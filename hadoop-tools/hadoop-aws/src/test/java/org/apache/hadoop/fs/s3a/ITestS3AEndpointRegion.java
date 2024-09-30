@@ -373,6 +373,9 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
     // skip the test if the region is sa-east-1
     skipCrossRegionTest();
     final Configuration newConf = new Configuration(getConfiguration());
+    removeBaseAndBucketOverrides(newConf,
+        AWS_S3_CROSS_REGION_ACCESS_ENABLED,
+        AWS_REGION);
     // enable cross region access
     newConf.setBoolean(AWS_S3_CROSS_REGION_ACCESS_ENABLED, true);
     newConf.set(AWS_REGION, SA_EAST_1);
@@ -519,8 +522,8 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
    */
   private void skipCrossRegionTest() throws IOException {
     String region = getFileSystem().getS3AInternals().getBucketMetadata().bucketRegion();
-    if (SA_EAST_1.equals(region)) {
-      skip("Skipping test as sa-east-1 is in use");
+    if (SA_EAST_1.equals(region) || NON_AWS_REGION.equals(region)) {
+      skip("Skipping test since sa-east-1 or non-aws region is in use");
     }
   }
 
