@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.fs.azurebfs.contracts.services;
 
-import java.sql.Blob;
-
 /**
  * Saves the different request parameters for append
  */
@@ -45,14 +43,6 @@ public class AppendRequestParameters {
 
     public String getETag() {
       return eTag;
-    }
-
-    public void setBlockId(String blockId) {
-      this.blockId = blockId;
-    }
-
-    public void setETag(String eTag) {
-      this.eTag = eTag;
     }
   }
 

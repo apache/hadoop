@@ -431,8 +431,8 @@ public class AbfsBlobClient extends AbfsClient {
    * @param isMetadataIncompleteState was there a rename failure due to
    *                                  incomplete metadata state?
    * @param isNamespaceEnabled        whether namespace enabled account or not
-   * @return
-   * @throws IOException
+   * @return result of rename operation
+   * @throws IOException if rename operation fails.
    */
   @Override
   public AbfsClientRenameResult renamePath(final String source,
