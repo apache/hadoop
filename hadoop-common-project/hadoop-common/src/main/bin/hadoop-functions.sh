@@ -1577,7 +1577,7 @@ function hadoop_finalize_hadoop_opts
 function hadoop_finalize_jpms_opts
 {
     hadoop_add_param HADOOP_OPTS IgnoreUnrecognizedVMOptions "-XX:+IgnoreUnrecognizedVMOptions"
-    hadoop_add_param HADOOP_OPTS open.sun.security.x509 "--add-opens=java.base/java.util.zip=ALL-UNNAMED"
+    hadoop_add_param HADOOP_OPTS open.java.util.zip "--add-opens=java.base/java.util.zip=ALL-UNNAMED"
     hadoop_add_param HADOOP_OPTS open.sun.security.util "--add-opens=java.base/sun.security.util=ALL-UNNAMED"
     hadoop_add_param HADOOP_OPTS open.sun.security.x509 "--add-opens=java.base/sun.security.x509=ALL-UNNAMED"
 }
