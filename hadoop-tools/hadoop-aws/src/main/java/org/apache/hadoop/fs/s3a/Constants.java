@@ -357,6 +357,12 @@ public final class Constants {
    * This makes it different from {@link #REQUEST_TIMEOUT}, which is for total
    * HTTP request.
    * <p>
+   * In V1 SDK, this value was not used in POST/PUT operations; a low value
+   * (default 15s) allowed for a fast failure of all other operations.
+   * In V2 SDK this now applies to all operations, including uploads.
+   * A large timeout is now needed, even though it means that some service/network
+   * failures may now take a long time to surface.
+   * <p>
    * Default unit is milliseconds.
    * <p>
    * There is a minimum duration set in {@link #MINIMUM_NETWORK_OPERATION_DURATION};
@@ -373,9 +379,9 @@ public final class Constants {
       "fs.s3a.connection.request.timeout";
 
   /**
-   * Default duration of a request before it is timed out: 60s.
+   * Default duration of a request before it is timed out: 16m.
    */
-  public static final Duration DEFAULT_REQUEST_TIMEOUT_DURATION = Duration.ofSeconds(60);
+  public static final Duration DEFAULT_REQUEST_TIMEOUT_DURATION = Duration.ofMinutes(15);
 
   /**
    * Default duration of a request before it is timed out: Zero.

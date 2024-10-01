@@ -26,11 +26,6 @@
 
 <!--- global properties -->
 
-<property>
-  <name>hadoop.common.configuration.version</name>
-  <value>3.0.0</value>
-  <description>version of this configuration file</description>
-</property>
 
 <property>
   <name>hadoop.tmp.dir</name>

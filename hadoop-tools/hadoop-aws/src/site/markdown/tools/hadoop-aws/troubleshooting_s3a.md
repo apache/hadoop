@@ -1618,7 +1618,7 @@ It is possible to configure a global timeout for AWS service calls using followi
 ```xml
 <property>
   <name>fs.s3a.connection.request.timeout</name>
-  <value>5m</value>
+  <value>15m</value>
   <description>
     Time out on HTTP requests to the AWS service; 0 means no timeout.
     Measured in seconds; the usual time suffixes are all supported
@@ -1634,22 +1634,43 @@ It is possible to configure a global timeout for AWS service calls using followi
 </property>
 ```
 
-If this value is configured too low, user may encounter `SdkClientException`s due to many requests
-timing-out.
+If this value is configured too low, user may encounter an `AWSApiCallTimeoutException` due to
+requests timing-out.
 
 ```
-software.amazon.awssdk.core.exception.SdkClientException: Unable to execute HTTP request:
-  Request did not complete before the request timeout configuration.:
-  Unable to execute HTTP request: Request did not complete before the request timeout configuration.
-  at org.apache.hadoop.fs.s3a.S3AUtils.translateException(S3AUtils.java:205)
-  at org.apache.hadoop.fs.s3a.Invoker.once(Invoker.java:112)
-  at org.apache.hadoop.fs.s3a.Invoker.lambda$retry$4(Invoker.java:315)
-  at org.apache.hadoop.fs.s3a.Invoker.retryUntranslated(Invoker.java:407)
-  at org.apache.hadoop.fs.s3a.Invoker.retry(Invoker.java:311)
+2024-09-30 19:11:42,485 [s3a-transfer-bucket-bounded-pool1-t2] INFO  s3a.WriteOperationHelper
+(WriteOperationHelper.java:operationRetried(182))
+- upload part #2 upload ID URs6yPM33nCd6epcixIrEO2_BUTBBIoESd4wkLh1KShNeZe.
+on hadoop-3.4.1.tar.gz._COPYING_: Retried 0:
+org.apache.hadoop.fs.s3a.AWSApiCallTimeoutException: upload part #2
+upload ID URs6yPM33nCd6epcixIrEO2_BUTBBIoESd4wkLh1KShNeZe.
+on hadoop-3.4.1.tar.gz._COPYING_:
+software.amazon.awssdk.core.exception.ApiCallTimeoutException: Client execution did not complete before the specified timeout configuration: 60000 millis
 ```
 
 When this happens, try to set `fs.s3a.connection.request.timeout` to a larger value or disable it
 completely by setting it to `0`.
+
+Because this property also controls the maximum time for uploading a block when writing files
+to an S3 store, the timeout can surface when there is significant contention for the network
+from the host to S3.
+This is most likely to surface on file writes when
+1. The S3 store is remote.
+2. Multiple threads are writing simultaneously.
+3. A large number of blocks are queued for writing.
+
+The failure condition can actually surface when a single task is writing data,
+because multiple threads write blocks in parallel.
+The value `fs.s3a.fast.upload.active.blocks` can be reduced from its default (4)
+to a lower value to reduce the generated load.
+On a very slow connection, reducing this value will reduce the bandwidth demand
+from a single worker task.
+
+Note: retries may recover from these failures, however execution time will
+be significantly slower.
+
+However, increasing the value of `fs.s3a.connection.request.timeout` should be the
+first configure option to change.
 
 ### <a name="debug-switches"></a> Debugging Switches
 
