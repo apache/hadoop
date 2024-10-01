@@ -16,14 +16,14 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azurebfs;
+package org.apache.hadoop.fs.azurebfs.services;
+
+import java.util.Arrays;
+import java.util.stream.Stream;
 
 import org.apache.hadoop.fs.azurebfs.enums.AbfsBackoffMetricsEnum;
 import org.apache.hadoop.fs.azurebfs.statistics.AbstractAbfsStatisticsSource;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsStore;
-
-import java.util.Arrays;
-import java.util.stream.Stream;
 
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.HUNDRED;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.THOUSAND;

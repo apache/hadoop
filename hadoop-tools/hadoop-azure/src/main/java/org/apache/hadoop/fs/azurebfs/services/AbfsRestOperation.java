@@ -43,8 +43,6 @@ import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.statistics.impl.IOStatisticsBinding;
 import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
-import java.util.Map;
-import org.apache.hadoop.fs.azurebfs.AbfsBackoffMetrics;
 import org.apache.http.impl.execchain.RequestAbortedException;
 
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.ZERO;
