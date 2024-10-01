@@ -122,12 +122,10 @@ function run_ci() {
     YETUS_ARGS+=("--docker")
     YETUS_ARGS+=("--dockerfile=${DOCKERFILE}")
     YETUS_ARGS+=("--mvn-custom-repos")
-    YETUS_ARGS+=("--dockermemlimit=22g")
+    YETUS_ARGS+=("--dockermemlimit=32g")
 
-    # test with Java 8 and 11
-    YETUS_ARGS+=("--java-home=/usr/lib/jvm/java-8-openjdk-amd64")
-    YETUS_ARGS+=("--multijdkdirs=/usr/lib/jvm/java-11-openjdk-amd64")
-    YETUS_ARGS+=("--multijdktests=compile")
+    # test with Java 17
+    YETUS_ARGS+=("--java-home=/usr/lib/jvm/java-17-openjdk-amd64")
   fi
 
   if [[ "$IS_NIGHTLY_BUILD" && "$IS_NIGHTLY_BUILD" == 1 ]]; then
