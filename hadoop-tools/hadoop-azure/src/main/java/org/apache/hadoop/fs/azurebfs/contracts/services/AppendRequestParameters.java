@@ -28,24 +28,6 @@ public class AppendRequestParameters {
     FLUSH_CLOSE_MODE
   }
 
-  public class BlobEndpointParameters {
-    private String blockId;
-    private String eTag;
-
-    public BlobEndpointParameters(String blockId, String eTag) {
-      this.blockId = blockId;
-      this.eTag = eTag;
-    }
-
-    public String getBlockId() {
-      return blockId;
-    }
-
-    public String getETag() {
-      return eTag;
-    }
-  }
-
   private final long position;
   private final int offset;
   private final int length;
@@ -54,12 +36,7 @@ public class AppendRequestParameters {
   private final String leaseId;
   private boolean isExpectHeaderEnabled;
   private boolean isRetryDueToExpect;
-
-  /*
-   * Following parameters are used by AbfsBlobClient only.
-   * Blob Endpoint Append API requires blockId and eTag to be passed in the request.
-   */
-  private BlobEndpointParameters blobParams;
+  private BlobAppendRequestParameters blobParams;
 
   // Constructor to be used for interacting with AbfsDfsClient
   public AppendRequestParameters(final long position,
@@ -77,7 +54,7 @@ public class AppendRequestParameters {
     this.leaseId = leaseId;
     this.isExpectHeaderEnabled = isExpectHeaderEnabled;
     this.isRetryDueToExpect = false;
-    this.blobParams = new BlobEndpointParameters(null, null);
+    this.blobParams = null;
   }
 
   // Constructor to be used for interacting with AbfsBlobClient
@@ -88,8 +65,7 @@ public class AppendRequestParameters {
       final boolean isAppendBlob,
       final String leaseId,
       final boolean isExpectHeaderEnabled,
-      final String blockId,
-      final String eTag) {
+      final BlobAppendRequestParameters blobParams) {
     this.position = position;
     this.offset = offset;
     this.length = length;
@@ -98,7 +74,7 @@ public class AppendRequestParameters {
     this.leaseId = leaseId;
     this.isExpectHeaderEnabled = isExpectHeaderEnabled;
     this.isRetryDueToExpect = false;
-    this.blobParams = new BlobEndpointParameters(blockId, eTag);
+    this.blobParams = blobParams;
   }
 
   public long getPosition() {
