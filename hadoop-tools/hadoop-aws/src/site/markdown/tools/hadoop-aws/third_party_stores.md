@@ -82,7 +82,7 @@ then these must be set, either in XML or (preferred) in a JCEKS file.
 
   <property>
     <name>fs.s3a.endpoint.region</name>
-    <value>non-aws</value>
+    <value>anything</value>
   </property>
 
   <property>

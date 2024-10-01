@@ -277,11 +277,6 @@ public interface S3ATestConstants {
   String EU_WEST_1 = "eu-west-1";
 
   /**
-   * Region name for testing S3A third party stores: {@value}.
-   */
-  String NON_AWS_REGION = "non-aws";
-
-  /**
    * System property for root tests being enabled: {@value}.
    */
   String ROOT_TESTS_ENABLED = "fs.s3a.root.tests.enabled";
