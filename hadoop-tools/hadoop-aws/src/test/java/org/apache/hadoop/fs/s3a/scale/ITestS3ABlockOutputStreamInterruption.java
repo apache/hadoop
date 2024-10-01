@@ -166,7 +166,7 @@ public class ITestS3ABlockOutputStreamInterruption extends S3AScaleTestBase {
    */
   @Override
   public void setup() throws Exception {
-    SdkFaultInjector.resetEvaluator();
+    SdkFaultInjector.resetFaultInjector();
     super.setup();
   }
 
@@ -174,7 +174,7 @@ public class ITestS3ABlockOutputStreamInterruption extends S3AScaleTestBase {
   public void teardown() throws Exception {
     // safety check in case the evaluation is failing any
     // request needed in cleanup.
-    SdkFaultInjector.resetEvaluator();
+    SdkFaultInjector.resetFaultInjector();
 
     super.teardown();
   }

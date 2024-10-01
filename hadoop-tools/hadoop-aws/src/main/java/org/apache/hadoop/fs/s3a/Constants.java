@@ -373,9 +373,9 @@ public final class Constants {
       "fs.s3a.connection.request.timeout";
 
   /**
-   * Default duration of a request before it is timed out: 60s.
+   * Default duration of a request before it is timed out.
    */
-  public static final Duration DEFAULT_REQUEST_TIMEOUT_DURATION = Duration.ofSeconds(60);
+  public static final Duration DEFAULT_REQUEST_TIMEOUT_DURATION = Duration.ofSeconds(90);
 
   /**
    * Default duration of a request before it is timed out: Zero.
@@ -393,10 +393,25 @@ public final class Constants {
       "fs.s3a.connection.acquisition.timeout";
 
   /**
-   * Default acquisition timeout: 60 seconds.
+   * Default acquisition timeout.
    */
   public static final Duration DEFAULT_CONNECTION_ACQUISITION_TIMEOUT_DURATION =
-      Duration.ofSeconds(60);
+      Duration.ofSeconds(70);
+
+  /**
+   * Timeout for uploading all of a small object or a single part
+   * of a larger one.
+   * {@value}.
+   * Default unit is milliseconds for consistency with other options.
+   */
+  public static final String PART_UPLOAD_TIMEOUT =
+      "fs.s3a.connection.part.upload.timeout";
+
+  /**
+   * Default part upload timeout: 15 minutes.
+   */
+  public static final Duration DEFAULT_PART_UPLOAD_TIMEOUT =
+      Duration.ofMinutes(15);
 
   /**
    * Should TCP Keepalive be enabled on the socket?

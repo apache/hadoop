@@ -275,7 +275,7 @@ public final class UploadContentProviders {
       checkOpen();
       streamCreationCount++;
       if (streamCreationCount > 1) {
-        LOG.info("Stream created more than once: {}", this);
+        LOG.info("Stream recreated: {}", this);
       }
       return setCurrentStream(createNewStream());
     }
