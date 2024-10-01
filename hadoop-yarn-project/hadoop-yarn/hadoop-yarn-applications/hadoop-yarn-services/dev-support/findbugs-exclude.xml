@@ -56,4 +56,9 @@
       </Or>
       <Bug pattern="SE_BAD_FIELD" />
   </Match>
+  <Match>
+      <Class name="org.apache.hadoop.yarn.service.ServiceScheduler$1"/>
+      <Method name="load"/>
+      <Bug code="NP" pattern="NP_NONNULL_RETURN_VIOLATION"/>
+  </Match>
 </FindBugsFilter>
