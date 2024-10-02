@@ -21,6 +21,8 @@ package org.apache.hadoop.fs.s3a;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.fs.s3a.impl.AWSClientConfig;
@@ -56,6 +58,8 @@ import org.apache.hadoop.fs.store.LogExactlyOnce;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_ACCESS_GRANTS_ENABLED;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_ACCESS_GRANTS_FALLBACK_TO_IAM_ENABLED;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_CROSS_REGION_ACCESS_ENABLED;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_CROSS_REGION_ACCESS_ENABLED_DEFAULT;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_DEFAULT_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.CENTRAL_ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.FIPS_ENDPOINT;
@@ -84,6 +88,9 @@ public class DefaultS3ClientFactory extends Configured
   private static final String REQUESTER_PAYS_HEADER_VALUE = "requester";
 
   private static final String S3_SERVICE_NAME = "s3";
+
+  private static final Pattern VPC_ENDPOINT_PATTERN =
+          Pattern.compile("^(?:.+\\.)?([a-z0-9-]+)\\.vpce\\.amazonaws\\.(?:com|com\\.cn)$");
 
   /**
    * Subclasses refer to this.
@@ -325,7 +332,6 @@ public class DefaultS3ClientFactory extends Configured
         builder.endpointOverride(endpoint);
         LOG.debug("Setting endpoint to {}", endpoint);
       } else {
-        builder.crossRegionAccessEnabled(true);
         origin = "central endpoint with cross region access";
         LOG.debug("Enabling cross region access for endpoint {}",
             endpointStr);
@@ -338,7 +344,6 @@ public class DefaultS3ClientFactory extends Configured
       // no region is configured, and none could be determined from the endpoint.
       // Use US_EAST_2 as default.
       region = Region.of(AWS_S3_DEFAULT_REGION);
-      builder.crossRegionAccessEnabled(true);
       builder.region(region);
       origin = "cross region access fallback";
     } else if (configuredRegion.isEmpty()) {
@@ -349,8 +354,14 @@ public class DefaultS3ClientFactory extends Configured
       LOG.debug(SDK_REGION_CHAIN_IN_USE);
       origin = "SDK region chain";
     }
-
-    LOG.debug("Setting region to {} from {}", region, origin);
+    boolean isCrossRegionAccessEnabled = conf.getBoolean(AWS_S3_CROSS_REGION_ACCESS_ENABLED,
+        AWS_S3_CROSS_REGION_ACCESS_ENABLED_DEFAULT);
+    // s3 cross region access
+    if (isCrossRegionAccessEnabled) {
+      builder.crossRegionAccessEnabled(true);
+    }
+    LOG.debug("Setting region to {} from {} with cross region access {}",
+        region, origin, isCrossRegionAccessEnabled);
   }
 
   /**
@@ -390,10 +401,19 @@ public class DefaultS3ClientFactory extends Configured
    * @param endpointEndsWithCentral true if the endpoint is configured as central.
    * @return the S3 region, null if unable to resolve from endpoint.
    */
-  private static Region getS3RegionFromEndpoint(final String endpoint,
+  @VisibleForTesting
+  static Region getS3RegionFromEndpoint(final String endpoint,
       final boolean endpointEndsWithCentral) {
 
     if (!endpointEndsWithCentral) {
+      // S3 VPC endpoint parsing
+      Matcher matcher = VPC_ENDPOINT_PATTERN.matcher(endpoint);
+      if (matcher.find()) {
+        LOG.debug("Mapping to VPCE");
+        LOG.debug("Endpoint {} is vpc endpoint; parsing region as {}", endpoint, matcher.group(1));
+        return Region.of(matcher.group(1));
+      }
+
       LOG.debug("Endpoint {} is not the default; parsing", endpoint);
       return AwsHostNameUtils.parseSigningRegion(endpoint, S3_SERVICE_NAME).orElse(null);
     }

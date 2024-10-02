@@ -24,8 +24,6 @@ import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.IntFunction;
 
 import org.assertj.core.api.Assertions;
@@ -47,14 +45,11 @@ import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Statistic;
-import org.apache.hadoop.fs.s3a.impl.ProgressListener;
-import org.apache.hadoop.fs.s3a.impl.ProgressListenerEvent;
 import org.apache.hadoop.fs.s3a.statistics.BlockOutputStreamStatistics;
 import org.apache.hadoop.fs.statistics.IOStatistics;
 import org.apache.hadoop.io.ElasticByteBufferPool;
 import org.apache.hadoop.io.WeakReferencedElasticByteBufferPool;
 import org.apache.hadoop.util.DurationInfo;
-import org.apache.hadoop.util.Progressable;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_BUFFER_SIZE;
@@ -223,7 +218,7 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
     ContractTestUtils.NanoTimer timer = new ContractTestUtils.NanoTimer();
     BlockOutputStreamStatistics streamStatistics;
     long blocksPer10MB = blocksPerMB * 10;
-    ProgressCallback progress = new ProgressCallback(timer);
+    CountingProgressListener progress = new CountingProgressListener(timer);
     try (FSDataOutputStream out = fs.create(fileToCreate,
         true,
         uploadBlockSize,
@@ -386,84 +381,6 @@ public abstract class AbstractSTestS3AHugeFiles extends S3AScaleTestBase {
 
   protected int getPartitionSize() {
     return partitionSize;
-  }
-
-  /**
-   * Progress callback.
-   */
-  private final class ProgressCallback implements Progressable, ProgressListener {
-    private AtomicLong bytesTransferred = new AtomicLong(0);
-    private AtomicLong uploadEvents = new AtomicLong(0);
-    private AtomicInteger failures = new AtomicInteger(0);
-    private final ContractTestUtils.NanoTimer timer;
-
-    private ProgressCallback(NanoTimer timer) {
-      this.timer = timer;
-    }
-
-    @Override
-    public void progress() {
-    }
-
-    @Override
-    public void progressChanged(ProgressListenerEvent eventType, long transferredBytes) {
-
-      switch (eventType) {
-      case TRANSFER_PART_FAILED_EVENT:
-        // failure
-        failures.incrementAndGet();
-        LOG.warn("Transfer failure");
-        break;
-      case TRANSFER_PART_COMPLETED_EVENT:
-        // completion
-        bytesTransferred.addAndGet(transferredBytes);
-        long elapsedTime = timer.elapsedTime();
-        double elapsedTimeS = elapsedTime / 1.0e9;
-        long written = bytesTransferred.get();
-        long writtenMB = written / _1MB;
-        LOG.info(String.format(
-            "Event %s; total uploaded=%d MB in %.1fs;" +
-                " effective upload bandwidth = %.2f MB/s",
-            eventType,
-            writtenMB, elapsedTimeS, writtenMB / elapsedTimeS));
-        break;
-      case REQUEST_BYTE_TRANSFER_EVENT:
-        uploadEvents.incrementAndGet();
-        break;
-      default:
-        // nothing
-        break;
-      }
-    }
-
-    public String toString() {
-      String sb = "ProgressCallback{"
-          + "bytesTransferred=" + bytesTransferred.get() +
-          ", uploadEvents=" + uploadEvents.get() +
-          ", failures=" + failures.get() +
-          '}';
-      return sb;
-    }
-
-    /**
-     * Get the number of bytes transferred.
-     * @return byte count
-     */
-    private long getBytesTransferred() {
-      return bytesTransferred.get();
-    }
-
-    /**
-     * Get the number of event callbacks.
-     * @return count of byte transferred events.
-     */
-    private long getUploadEvents() {
-      return uploadEvents.get();
-    }
-
-    private void verifyNoFailures(String operation) {
-      assertEquals("Failures in " + operation + ": " + this, 0, failures.get());
-    }
   }
 
   /**

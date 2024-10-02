@@ -21,9 +21,11 @@ package org.apache.hadoop.fs.s3a;
 import javax.annotation.Nullable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadResponse;
@@ -233,14 +235,12 @@ public class WriteOperationHelper implements WriteOperations {
    * @param destKey destination key
    * @param length size, if known. Use -1 for not known
    * @param options options for the request
-   * @param isFile is data to be uploaded a file
    * @return the request
    */
   @Retries.OnceRaw
   public PutObjectRequest createPutObjectRequest(String destKey,
       long length,
-      final PutObjectOptions options,
-      boolean isFile) {
+      final PutObjectOptions options) {
 
     activateAuditSpan();
 
@@ -289,7 +289,7 @@ public class WriteOperationHelper implements WriteOperations {
   /**
    * Finalize a multipart PUT operation.
    * This completes the upload, and, if that works, calls
-   * {@link S3AFileSystem#finishedWrite(String, long, String, String, org.apache.hadoop.fs.s3a.impl.PutObjectOptions)}
+   * {@link WriteOperationHelperCallbacks#finishedWrite(String, long, PutObjectOptions)}
    * to update the filesystem.
    * Retry policy: retrying, translated.
    * @param destKey destination of the commit
@@ -323,8 +323,7 @@ public class WriteOperationHelper implements WriteOperations {
                 getRequestFactory().newCompleteMultipartUploadRequestBuilder(destKey, uploadId, partETags, putOptions);
             return writeOperationHelperCallbacks.completeMultipartUpload(requestBuilder.build());
           });
-      owner.finishedWrite(destKey, length, uploadResult.eTag(),
-          uploadResult.versionId(),
+      writeOperationHelperCallbacks.finishedWrite(destKey, length,
           putOptions);
       return uploadResult;
     }
@@ -403,11 +402,12 @@ public class WriteOperationHelper implements WriteOperations {
   /**
    * Abort a multipart commit operation.
    * @param upload upload to abort.
+   * @throws FileNotFoundException if the upload is unknown
    * @throws IOException on problems.
    */
   @Retries.RetryTranslated
   public void abortMultipartUpload(MultipartUpload upload)
-      throws IOException {
+      throws FileNotFoundException, IOException {
     invoker.retry("Aborting multipart commit", upload.key(), true,
         withinAuditSpan(getAuditSpan(),
             () -> owner.abortMultipartUpload(upload)));
@@ -507,20 +507,19 @@ public class WriteOperationHelper implements WriteOperations {
    * file, from the content length of the header.
    * @param putObjectRequest the request
    * @param putOptions put object options
-   * @param durationTrackerFactory factory for duration tracking
    * @param uploadData data to be uploaded
-   * @param isFile is data to be uploaded a file
-   *
+   * @param durationTrackerFactory factory for duration tracking
    * @return the upload initiated
    * @throws IOException on problems
    */
   @Retries.RetryTranslated
   public PutObjectResponse putObject(PutObjectRequest putObjectRequest,
-      PutObjectOptions putOptions, S3ADataBlocks.BlockUploadData uploadData, boolean isFile,
+      PutObjectOptions putOptions,
+      S3ADataBlocks.BlockUploadData uploadData,
       DurationTrackerFactory durationTrackerFactory)
       throws IOException {
     return retry("Writing Object", putObjectRequest.key(), true, withinAuditSpan(getAuditSpan(),
-        () -> owner.putObjectDirect(putObjectRequest, putOptions, uploadData, isFile,
+        () -> owner.putObjectDirect(putObjectRequest, putOptions, uploadData,
             durationTrackerFactory)));
   }
 
@@ -577,7 +576,6 @@ public class WriteOperationHelper implements WriteOperations {
 
   /**
    * Upload part of a multi-partition file.
-   * @param request request
    * @param durationTrackerFactory duration tracker factory for operation
    * @param request the upload part request.
    * @param body the request body.
@@ -593,7 +591,9 @@ public class WriteOperationHelper implements WriteOperations {
         request.key(),
         true,
         withinAuditSpan(getAuditSpan(),
-            () -> owner.uploadPart(request, body, durationTrackerFactory)));
+            () -> writeOperationHelperCallbacks.uploadPart(request,
+                body,
+                durationTrackerFactory)));
   }
 
   /**
@@ -643,8 +643,44 @@ public class WriteOperationHelper implements WriteOperations {
      * @param request Complete multi-part upload request
      * @return completeMultipartUploadResult
      */
-    CompleteMultipartUploadResponse completeMultipartUpload(CompleteMultipartUploadRequest request);
+    @Retries.OnceRaw
+    CompleteMultipartUploadResponse completeMultipartUpload(
+        CompleteMultipartUploadRequest request);
 
+    /**
+     * Upload part of a multi-partition file.
+     * Increments the write and put counters.
+     * <i>Important: this call does not close any input stream in the body.</i>
+     * <p>
+     * Retry Policy: none.
+     * @param durationTrackerFactory duration tracker factory for operation
+     * @param request the upload part request.
+     * @param body the request body.
+     * @return the result of the operation.
+     * @throws AwsServiceException on problems
+     * @throws UncheckedIOException failure to instantiate the s3 client
+     */
+    @Retries.OnceRaw
+    UploadPartResponse uploadPart(
+        UploadPartRequest request,
+        RequestBody body,
+        DurationTrackerFactory durationTrackerFactory)
+        throws AwsServiceException, UncheckedIOException;
+
+    /**
+     * Perform post-write actions.
+     * <p>
+     * This operation MUST be called after any PUT/multipart PUT completes
+     * successfully.
+     * @param key key written to
+     * @param length total length of file written
+     * @param putOptions put object options
+     */
+    @Retries.RetryExceptionsSwallowed
+    void finishedWrite(
+        String key,
+        long length,
+        PutObjectOptions putOptions);
   }
 
 }

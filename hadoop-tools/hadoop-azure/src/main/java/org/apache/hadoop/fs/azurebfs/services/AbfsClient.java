@@ -131,6 +131,7 @@ import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNEC
 public abstract class AbfsClient implements Closeable {
   public static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
   public static final String HUNDRED_CONTINUE_USER_AGENT = SINGLE_WHITE_SPACE + HUNDRED_CONTINUE + SEMICOLON;
+  public static final String ABFS_CLIENT_TIMER_THREAD_NAME = "abfs-timer-client";
 
   private final URL baseUrl;
   private final SharedKeyCredentials sharedKeyCredentials;
@@ -149,7 +150,7 @@ public abstract class AbfsClient implements Closeable {
   private AccessTokenProvider tokenProvider;
   private SASTokenProvider sasTokenProvider;
   private final AbfsCounters abfsCounters;
-  private final Timer timer;
+  private Timer timer;
   private final String abfsMetricUrl;
   private boolean isMetricCollectionEnabled = false;
   private final MetricFormat metricFormat;
@@ -258,9 +259,9 @@ public abstract class AbfsClient implements Closeable {
         throw new IOException("Exception while initializing metric credentials " + e);
       }
     }
-    this.timer = new Timer(
-        "abfs-timer-client", true);
     if (isMetricCollectionEnabled) {
+      this.timer = new Timer(
+              ABFS_CLIENT_TIMER_THREAD_NAME, true);
       timer.schedule(new TimerTaskImpl(),
           metricIdlePeriod,
           metricIdlePeriod);
@@ -292,9 +293,9 @@ public abstract class AbfsClient implements Closeable {
 
   @Override
   public void close() throws IOException {
-    if (runningTimerTask != null) {
+    if (isMetricCollectionEnabled && runningTimerTask != null) {
       runningTimerTask.cancel();
-      timer.purge();
+      timer.cancel();
     }
     if (keepAliveCache != null) {
       keepAliveCache.close();
@@ -1418,7 +1419,7 @@ public abstract class AbfsClient implements Closeable {
   boolean timerOrchestrator(TimerFunctionality timerFunctionality, TimerTask timerTask) {
     switch (timerFunctionality) {
       case RESUME:
-        if (isMetricCollectionStopped.get()) {
+        if (isMetricCollectionEnabled && isMetricCollectionStopped.get()) {
           synchronized (this) {
             if (isMetricCollectionStopped.get()) {
               resumeTimer();
@@ -1595,6 +1596,11 @@ public abstract class AbfsClient implements Closeable {
   @VisibleForTesting
   KeepAliveCache getKeepAliveCache() {
     return keepAliveCache;
+  }
+
+  @VisibleForTesting
+  protected Timer getTimer() {
+    return timer;
   }
 
   protected String getUserAgent() {

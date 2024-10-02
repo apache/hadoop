@@ -79,18 +79,18 @@ import org.apache.hadoop.util.CloseableReferenceCount;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
-import org.apache.hadoop.util.Preconditions;
-import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
@@ -103,9 +103,10 @@ import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ThreadFact
 public class FsVolumeImpl implements FsVolumeSpi {
   public static final Logger LOG =
       LoggerFactory.getLogger(FsVolumeImpl.class);
-  private static final ObjectWriter WRITER = JacksonUtil.getSharedWriterWithPrettyPrint();
+  private static final ObjectWriter WRITER =
+      new ObjectMapper().writerWithDefaultPrettyPrinter();
   private static final ObjectReader READER =
-      JacksonUtil.createBasicReaderFor(BlockIteratorState.class);
+      new ObjectMapper().readerFor(BlockIteratorState.class);
 
   private final FsDatasetImpl dataset;
   private final String storageID;

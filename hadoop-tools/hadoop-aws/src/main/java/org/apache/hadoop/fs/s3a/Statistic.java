@@ -65,6 +65,38 @@ public enum Statistic {
       "GET request.",
       TYPE_DURATION),
 
+  /* Http error responses */
+  HTTP_RESPONSE_400(
+      StoreStatisticNames.HTTP_RESPONSE_400,
+      "400 response.",
+      TYPE_COUNTER),
+
+  HTTP_RESPONSE_429(
+      StoreStatisticNames.HTTP_RESPONSE_429,
+      "429 response.",
+      TYPE_COUNTER),
+
+  HTTP_RESPONSE_4XX(
+      StoreStatisticNames.HTTP_RESPONSE_4XX,
+      "4XX response.",
+      TYPE_COUNTER),
+
+  HTTP_RESPONSE_500(
+      StoreStatisticNames.HTTP_RESPONSE_500,
+      "500 response.",
+      TYPE_COUNTER),
+
+  HTTP_RESPONSE_503(
+      StoreStatisticNames.HTTP_RESPONSE_503,
+      "503 response.",
+      TYPE_COUNTER),
+
+  HTTP_RESPONSE_5XX(
+      StoreStatisticNames.HTTP_RESPONSE_5XX,
+      "5XX response.",
+      TYPE_COUNTER),
+
+
   /* FileSystem Level statistics */
 
   FILESYSTEM_INITIALIZATION(

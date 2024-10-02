@@ -49,6 +49,7 @@ import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Lists;
+import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Tool;
@@ -222,11 +223,26 @@ public class Mover {
     } else {
       db = new DBlock(blk);
     }
-    for(MLocation ml : locations) {
+
+    List<Integer> adjustList = new ArrayList<>();
+    for (int i = 0; i < locations.size(); i++) {
+      MLocation ml = locations.get(i);
       StorageGroup source = storages.getSource(ml);
       if (source != null) {
         db.addLocation(source);
+      } else if (lb.isStriped()) {
+        // some datanode may not in storages due to decommission or maintenance operation
+        // or balancer cli with "-exclude" parameter
+        adjustList.add(i);
       }
+    }
+
+    if (!adjustList.isEmpty()) {
+      // block.locations mismatch with block.indices
+      // adjust indices to get correct internalBlock
+      ((DBlockStriped) db).adjustIndices(adjustList);
+      Preconditions.checkArgument(((DBlockStriped) db).getIndices().length
+          == db.getLocations().size());
     }
     return db;
   }

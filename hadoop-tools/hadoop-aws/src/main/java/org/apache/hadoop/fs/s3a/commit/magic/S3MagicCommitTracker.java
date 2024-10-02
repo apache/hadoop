@@ -18,9 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.commit.magic;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -81,8 +79,8 @@ public class S3MagicCommitTracker extends MagicCommitTracker {
     PutObjectRequest originalDestPut = getWriter().createPutObjectRequest(
         getOriginalDestKey(),
         0,
-        new PutObjectOptions(true, null, headers), false);
-    upload(originalDestPut, new ByteArrayInputStream(EMPTY));
+        new PutObjectOptions(true, null, headers));
+    upload(originalDestPut, EMPTY);
 
     // build the commit summary
     SinglePendingCommit commitData = new SinglePendingCommit();
@@ -105,8 +103,8 @@ public class S3MagicCommitTracker extends MagicCommitTracker {
         getPath(), getPendingPartKey(), commitData);
     PutObjectRequest put = getWriter().createPutObjectRequest(
         getPendingPartKey(),
-        bytes.length, null, false);
-    upload(put, new ByteArrayInputStream(bytes));
+        bytes.length, null);
+    upload(put, bytes);
     return false;
   }
 
@@ -117,9 +115,9 @@ public class S3MagicCommitTracker extends MagicCommitTracker {
    * @throws IOException on problems
    */
   @Retries.RetryTranslated
-  private void upload(PutObjectRequest request, InputStream inputStream) throws IOException {
+  private void upload(PutObjectRequest request, byte[] bytes) throws IOException {
     trackDurationOfInvocation(getTrackerStatistics(), COMMITTER_MAGIC_MARKER_PUT.getSymbol(),
         () -> getWriter().putObject(request, PutObjectOptions.keepingDirs(),
-            new S3ADataBlocks.BlockUploadData(inputStream), false, null));
+            new S3ADataBlocks.BlockUploadData(bytes, null), null));
   }
 }

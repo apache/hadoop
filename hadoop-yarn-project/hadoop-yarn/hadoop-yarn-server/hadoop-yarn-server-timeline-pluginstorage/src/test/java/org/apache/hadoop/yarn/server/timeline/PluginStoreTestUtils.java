@@ -18,6 +18,7 @@
 package org.apache.hadoop.yarn.server.timeline;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.util.MinimalPrettyPrinter;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -30,7 +31,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineEvent;
@@ -108,7 +108,7 @@ public class PluginStoreTestUtils {
   }
 
   static ObjectMapper createObjectMapper() {
-    ObjectMapper mapper = JacksonUtil.createBasicObjectMapper();
+    ObjectMapper mapper = new ObjectMapper();
     mapper.setAnnotationIntrospector(
         new JaxbAnnotationIntrospector(TypeFactory.defaultInstance()));
     mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
@@ -230,9 +230,10 @@ public class PluginStoreTestUtils {
   static void writeEntities(TimelineEntities entities, Path logPath,
       FileSystem fs) throws IOException {
     FSDataOutputStream outStream = createLogFile(logPath, fs);
-    ObjectMapper objMapper = createObjectMapper();
-    JsonGenerator jsonGenerator = objMapper.createGenerator((OutputStream)outStream);
+    JsonGenerator jsonGenerator
+        = new JsonFactory().createGenerator((OutputStream)outStream);
     jsonGenerator.setPrettyPrinter(new MinimalPrettyPrinter("\n"));
+    ObjectMapper objMapper = createObjectMapper();
     for (TimelineEntity entity : entities.getEntities()) {
       objMapper.writeValue(jsonGenerator, entity);
     }

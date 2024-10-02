@@ -28,11 +28,11 @@ import java.util.regex.Pattern;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.JacksonUtil;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
@@ -58,8 +58,9 @@ public class NetworkTagMappingJsonManager implements NetworkTagMappingManager {
           + " we have to set the configuration:" +
           YarnConfiguration.NM_NETWORK_TAG_MAPPING_FILE_PATH);
     }
+    ObjectMapper mapper = new ObjectMapper();
     try {
-      networkTagMapping = JacksonUtil.getSharedReader().readValue(new File(mappingJsonFile),
+      networkTagMapping = mapper.readValue(new File(mappingJsonFile),
           NetworkTagMapping.class);
     } catch (Exception e) {
       throw new YarnRuntimeException(e);

@@ -27,6 +27,7 @@ import java.util.UUID;
 import org.apache.http.HttpConnectionMetrics;
 import org.apache.http.HttpEntityEnclosingRequest;
 import org.apache.http.HttpException;
+import org.apache.http.HttpHost;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpResponse;
 import org.apache.http.conn.ManagedHttpClientConnection;
@@ -51,10 +52,17 @@ class AbfsManagedApacheHttpConnection
    */
   private AbfsManagedHttpClientContext managedHttpContext;
 
+  private final HttpHost targetHost;
+
   private final int hashCode;
 
   AbfsManagedApacheHttpConnection(ManagedHttpClientConnection conn,
       final HttpRoute route) {
+    if (route != null) {
+      targetHost = route.getTargetHost();
+    } else {
+      targetHost = null;
+    }
     this.httpClientConnection = conn;
     this.hashCode = (UUID.randomUUID().toString()
         + httpClientConnection.getId()).hashCode();
@@ -228,11 +236,9 @@ class AbfsManagedApacheHttpConnection
 
   @Override
   public String toString() {
-    StringBuilder stringBuilder = new StringBuilder();
-    stringBuilder.append(
-            httpClientConnection.getRemoteAddress().getHostName())
-        .append(COLON)
-        .append(httpClientConnection.getRemotePort())
+    StringBuilder stringBuilder = targetHost != null ? new StringBuilder(
+        targetHost.toString()) : new StringBuilder();
+    stringBuilder
         .append(COLON)
         .append(hashCode());
     return stringBuilder.toString();

@@ -1363,6 +1363,10 @@ public class CapacityScheduler extends
           application.showRequests();
         }
 
+        // update the current container ask by considering the already allocated
+        // containers from previous allocation request and return updatedNewlyAllocatedContainers.
+        autoCorrectContainerAllocation(ask, application);
+
         // Update application requests
         if (application.updateResourceRequests(ask) || application
             .updateSchedulingRequests(schedulingRequests)) {
@@ -1737,6 +1741,10 @@ public class CapacityScheduler extends
 
   private void allocateFromReservedContainer(FiCaSchedulerNode node,
       boolean withNodeHeartbeat, RMContainer reservedContainer) {
+    if(reservedContainer == null){
+      LOG.warn("reservedContainer is null, that may be unreserved by the proposal judgment thread");
+      return;
+    }
     FiCaSchedulerApp reservedApplication = getCurrentAttemptForContainer(
         reservedContainer.getContainerId());
     if (reservedApplication == null) {
