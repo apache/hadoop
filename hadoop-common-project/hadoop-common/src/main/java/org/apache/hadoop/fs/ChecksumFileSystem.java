@@ -770,7 +770,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
   abstract class FsOperation {
     boolean run(Path p) throws IOException {
       boolean status = apply(p);
-      if (status) {
+      if (status && !p.isRoot()) {
         Path checkFile = getChecksumFile(p);
         if (fs.exists(checkFile)) {
           apply(checkFile);

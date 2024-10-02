@@ -121,7 +121,7 @@
     <commons-beanutils.version>1.9.4</commons-beanutils.version>
     <commons-cli.version>1.5.0</commons-cli.version>
     <commons-codec.version>1.15</commons-codec.version>
-    <commons-collections.version>3.2.2</commons-collections.version>
+    <commons-collections4.version>4.4</commons-collections4.version>
     <commons-compress.version>1.26.1</commons-compress.version>
     <commons-csv.version>1.9.0</commons-csv.version>
     <commons-io.version>2.16.1</commons-io.version>
@@ -167,8 +167,14 @@
     <enforced.java.version>[${javac.version},)</enforced.java.version>
     <enforced.maven.version>[3.3.0,)</enforced.maven.version>
 
+    <extraJavaTestArgs>
+      -XX:+IgnoreUnrecognizedVMOptions
+      --add-opens=java.base/java.util.zip=ALL-UNNAMED
+      --add-opens=java.base/sun.security.util=ALL-UNNAMED
+      --add-opens=java.base/sun.security.x509=ALL-UNNAMED
+    </extraJavaTestArgs>
     <!-- Plugin versions and config -->
-    <maven-surefire-plugin.argLine>-Xmx2048m -XX:+HeapDumpOnOutOfMemoryError</maven-surefire-plugin.argLine>
+    <maven-surefire-plugin.argLine>-Xmx2048m -XX:+HeapDumpOnOutOfMemoryError ${extraJavaTestArgs}</maven-surefire-plugin.argLine>
     <maven-surefire-plugin.version>3.0.0-M1</maven-surefire-plugin.version>
     <maven-surefire-report-plugin.version>${maven-surefire-plugin.version}</maven-surefire-report-plugin.version>
     <maven-failsafe-plugin.version>${maven-surefire-plugin.version}</maven-failsafe-plugin.version>
@@ -329,6 +335,10 @@
           <exclusion>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-log4j12</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>commons-collections</groupId>
+            <artifactId>commons-collections</artifactId>
           </exclusion>
         </exclusions>
       </dependency>
@@ -806,6 +816,12 @@
         <groupId>org.apache.httpcomponents</groupId>
         <artifactId>httpclient</artifactId>
         <version>${httpclient.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>commons-collections</groupId>
+            <artifactId>commons-collections</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.apache.httpcomponents</groupId>
@@ -1236,9 +1252,9 @@
         </exclusions>
       </dependency>
       <dependency>
-        <groupId>commons-collections</groupId>
-        <artifactId>commons-collections</artifactId>
-        <version>${commons-collections.version}</version>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-collections4</artifactId>
+        <version>${commons-collections4.version}</version>
       </dependency>
       <dependency>
         <groupId>commons-beanutils</groupId>
@@ -1815,6 +1831,10 @@
             <groupId>org.osgi</groupId>
             <artifactId>org.osgi.core</artifactId>
           </exclusion>
+          <exclusion>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java</artifactId>
+          </exclusion>
         </exclusions>
       </dependency>
       <dependency>
@@ -1847,6 +1867,10 @@
           <exclusion>
             <groupId>org.apache.yetus</groupId>
             <artifactId>audience-annotations</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java</artifactId>
           </exclusion>
         </exclusions>
       </dependency>
@@ -2503,6 +2527,7 @@
 
                     <exclude>org.slf4j:slf4j-log4j12</exclude>
                     <exclude>log4j:log4j</exclude>
+                    <exclude>commons-collections:commons-collections</exclude>
                   </excludes>
                   <includes>
                     <!-- for JDK 8 support -->

@@ -155,7 +155,7 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
     ++refCount;
     if (monitoring) {
       // in mini cluster mode
-      LOG.info(this.prefix +" metrics system started (again)");
+      LOG.debug("{} metrics system started (again)", prefix);
       return this;
     }
     switch (initMode()) {
@@ -169,7 +169,7 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
         }
         break;
       case STANDBY:
-        LOG.info(prefix +" metrics system started in standby mode");
+        LOG.debug("{} metrics system started in standby mode", prefix);
     }
     initSystemMBean();
     return this;
@@ -188,7 +188,7 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
     configure(prefix);
     startTimer();
     monitoring = true;
-    LOG.info(prefix +" metrics system started");
+    LOG.debug("{} metrics system started", prefix);
     for (Callback cb : callbacks) cb.postStart();
     for (Callback cb : namedCallbacks.values()) cb.postStart();
   }
@@ -202,18 +202,18 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
     }
     if (!monitoring) {
       // in mini cluster mode
-      LOG.info(prefix +" metrics system stopped (again)");
+      LOG.debug("{} metrics system stopped (again)", prefix);
       return;
     }
     for (Callback cb : callbacks) cb.preStop();
     for (Callback cb : namedCallbacks.values()) cb.preStop();
-    LOG.info("Stopping "+ prefix +" metrics system...");
+    LOG.debug("Stopping {} metrics system...", prefix);
     stopTimer();
     stopSources();
     stopSinks();
     clearConfigs();
     monitoring = false;
-    LOG.info(prefix +" metrics system stopped.");
+    LOG.debug("{} metrics system stopped.", prefix);
     for (Callback cb : callbacks) cb.postStop();
     for (Callback cb : namedCallbacks.values()) cb.postStop();
   }
@@ -302,7 +302,7 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
     sinks.put(name, sa);
     allSinks.put(name, sink);
     sa.start();
-    LOG.info("Registered sink "+ name);
+    LOG.debug("Registered sink {}", name);
   }
 
   @Override
@@ -375,8 +375,7 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
             }
           }
         }, millis, millis);
-    LOG.info("Scheduled Metric snapshot period at " + (period / 1000)
-        + " second(s).");
+    LOG.debug("Scheduled Metric snapshot period at {} second(s).", period / 1000);
   }
 
   synchronized void onTimerEvent() {
@@ -609,7 +608,7 @@ public class MetricsSystemImpl extends MetricsSystem implements MetricsSource {
       MBeans.unregister(mbeanName);
       mbeanName = null;
     }
-    LOG.info(prefix +" metrics system shutdown complete.");
+    LOG.debug("{} metrics system shutdown complete.", prefix);
     return true;
   }
 

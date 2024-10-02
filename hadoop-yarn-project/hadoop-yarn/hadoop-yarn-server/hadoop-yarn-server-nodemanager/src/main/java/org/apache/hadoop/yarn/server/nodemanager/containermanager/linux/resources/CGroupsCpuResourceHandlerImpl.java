@@ -59,13 +59,13 @@ public class CGroupsCpuResourceHandlerImpl extends AbstractCGroupsCpuResourceHan
 
   @Override
   protected void updateCgroupMaxCpuLimit(String cgroupId, String quota, String period) throws ResourceHandlerException {
-    if (quota != null) {
-      cGroupsHandler
-          .updateCGroupParam(CPU, cgroupId, CGroupsHandler.CGROUP_CPU_QUOTA_US, quota);
-    }
     if (period != null) {
       cGroupsHandler
           .updateCGroupParam(CPU, cgroupId, CGroupsHandler.CGROUP_CPU_PERIOD_US, period);
+    }
+    if (quota != null) {
+      cGroupsHandler
+          .updateCGroupParam(CPU, cgroupId, CGroupsHandler.CGROUP_CPU_QUOTA_US, quota);
     }
   }
 

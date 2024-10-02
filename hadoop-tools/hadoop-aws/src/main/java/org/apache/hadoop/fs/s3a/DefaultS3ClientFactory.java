@@ -58,6 +58,8 @@ import org.apache.hadoop.fs.store.LogExactlyOnce;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_ACCESS_GRANTS_ENABLED;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_ACCESS_GRANTS_FALLBACK_TO_IAM_ENABLED;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_CROSS_REGION_ACCESS_ENABLED;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_CROSS_REGION_ACCESS_ENABLED_DEFAULT;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_DEFAULT_REGION;
 import static org.apache.hadoop.fs.s3a.Constants.CENTRAL_ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.FIPS_ENDPOINT;
@@ -330,7 +332,6 @@ public class DefaultS3ClientFactory extends Configured
         builder.endpointOverride(endpoint);
         LOG.debug("Setting endpoint to {}", endpoint);
       } else {
-        builder.crossRegionAccessEnabled(true);
         origin = "central endpoint with cross region access";
         LOG.debug("Enabling cross region access for endpoint {}",
             endpointStr);
@@ -343,7 +344,6 @@ public class DefaultS3ClientFactory extends Configured
       // no region is configured, and none could be determined from the endpoint.
       // Use US_EAST_2 as default.
       region = Region.of(AWS_S3_DEFAULT_REGION);
-      builder.crossRegionAccessEnabled(true);
       builder.region(region);
       origin = "cross region access fallback";
     } else if (configuredRegion.isEmpty()) {
@@ -354,8 +354,14 @@ public class DefaultS3ClientFactory extends Configured
       LOG.debug(SDK_REGION_CHAIN_IN_USE);
       origin = "SDK region chain";
     }
-
-    LOG.debug("Setting region to {} from {}", region, origin);
+    boolean isCrossRegionAccessEnabled = conf.getBoolean(AWS_S3_CROSS_REGION_ACCESS_ENABLED,
+        AWS_S3_CROSS_REGION_ACCESS_ENABLED_DEFAULT);
+    // s3 cross region access
+    if (isCrossRegionAccessEnabled) {
+      builder.crossRegionAccessEnabled(true);
+    }
+    LOG.debug("Setting region to {} from {} with cross region access {}",
+        region, origin, isCrossRegionAccessEnabled);
   }
 
   /**

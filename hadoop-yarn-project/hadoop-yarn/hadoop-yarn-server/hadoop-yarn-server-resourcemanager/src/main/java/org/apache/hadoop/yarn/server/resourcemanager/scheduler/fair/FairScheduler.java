@@ -944,6 +944,11 @@ public class FairScheduler extends
         }
         application.showRequests();
 
+        // update the current container ask by considering the already allocated containers
+        // from previous allocation request as well as populate the updatedNewlyAllocatedContainers
+        // list according the to the current ask.
+        autoCorrectContainerAllocation(ask, application);
+
         // Update application requests
         application.updateResourceRequests(ask);
 
