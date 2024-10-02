@@ -691,7 +691,7 @@ class S3ABlockOutputStream extends OutputStream implements
     final S3ADataBlocks.DataBlock block = getActiveBlock();
     final long size = block.dataSize();
     final S3ADataBlocks.BlockUploadData uploadData = block.startUpload();
-    final PutObjectRequest putObjectRequest =
+    PutObjectRequest putObjectRequest =
         writeOperationHelper.createPutObjectRequest(
             key,
             uploadData.getSize(),
