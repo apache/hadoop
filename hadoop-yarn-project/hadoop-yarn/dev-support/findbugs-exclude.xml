@@ -726,12 +726,4 @@
     <Package name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.placement.schema" />
   </Match>
 
-  <!-- The ServiceScheduler#createConfigFileCache method uses the `load` method,
-       which is not allowed to return null; we can ignore it here. -->
-  <Match>
-    <Class name="org.apache.hadoop.yarn.service.ServiceScheduler"/>
-    <Method name="$1.load(ConfigFile)" />
-    <Bug pattern="NP_NONNULL_RETURN_VIOLATION"/>
-  </Match>
-
 </FindBugsFilter>
