@@ -38,6 +38,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.audit.AuditConstants;
 import org.apache.hadoop.fs.audit.CommonAuditContext;
@@ -253,6 +254,17 @@ public class LoggingAuditor
   }
 
   /**
+   * Get the referrer provided the span is an instance or
+   * subclass of LoggingAuditSpan.
+   * @param span span
+   * @return the referrer
+   * @throws ClassCastException if a different span type was passed in
+   */
+  @VisibleForTesting
+  HttpReferrerAuditHeader getReferrer(AuditSpanS3A span) {
+    return ((LoggingAuditSpan) span).getReferrer();
+  }
+  /**
    * Span which logs at debug and sets the HTTP referrer on
    * invocations.
    * Note: checkstyle complains that this should be final because
@@ -441,10 +453,10 @@ public class LoggingAuditor
     }
 
     /**
-     * Get the referrer; visible for tests.
+     * Get the referrer.
      * @return the referrer.
      */
-    HttpReferrerAuditHeader getReferrer() {
+    private HttpReferrerAuditHeader getReferrer() {
       return referrer;
     }
 
