@@ -641,6 +641,7 @@ public final class AWSClientConfig {
       builder.overrideConfiguration(
           AwsRequestOverrideConfiguration.builder()
               .apiCallTimeout(timeout)
+              .apiCallAttemptTimeout(timeout)
               .build());
     }
   }
