@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer;
 import static org.apache.hadoop.fs.CreateFlag.CREATE;
 import static org.apache.hadoop.fs.CreateFlag.OVERWRITE;
 
+import org.apache.hadoop.yarn.exceptions.ConfigurationException;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.RecoveryIterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1255,7 +1256,7 @@ public class ResourceLocalizationService extends CompositeService
       try {
         // Get nmPrivateDir
         nmPrivateCTokensPath = dirsHandler.getLocalPathForWrite(
-                NM_PRIVATE_DIR + Path.SEPARATOR + tokenFileName);
+            NM_PRIVATE_DIR + Path.SEPARATOR + tokenFileName);
 
         // 0) init queue, etc.
         // 1) write credentials to private dir
@@ -1275,10 +1276,13 @@ public class ResourceLocalizationService extends CompositeService
           throw new IOException("All disks failed. "
               + dirsHandler.getDisksHealthReport(false));
         }
-      // TODO handle ExitCodeException separately?
-      } catch (FSError fe) {
-        exception = fe;
-      } catch (Exception e) {
+        // TODO handle ExitCodeException separately?
+      } catch (ConfigurationException e) {
+        exception = e;
+        LOG.error("Failed to launch localizer for {}, due to configuration error. " +
+            "Marking the node unhealthy.", localizerId, e);
+        nmContext.getNodeStatusUpdater().reportException(e);
+      } catch (Exception | FSError e) {
         exception = e;
       } finally {
         if (exception != null) {

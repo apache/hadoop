@@ -224,6 +224,9 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       .addTransition(NodeState.NEW, NodeState.DECOMMISSIONED,
           RMNodeEventType.DECOMMISSION,
           new DeactivateNodeTransition(NodeState.DECOMMISSIONED))
+      .addTransition(NodeState.NEW, NodeState.LOST,
+          RMNodeEventType.EXPIRE,
+          new DeactivateNodeTransition(NodeState.LOST))
       .addTransition(NodeState.NEW, NodeState.NEW,
           RMNodeEventType.FINISHED_CONTAINERS_PULLED_BY_AM,
           new AddContainersToBeRemovedFromNMTransition())
@@ -958,6 +961,16 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
         if (previousRMNode != null) {
           ClusterMetrics.getMetrics().decrDecommisionedNMs();
         }
+
+        // Check if the node was lost before
+        NodeId lostNodeId = NodesListManager.createLostNodeId(nodeId.getHost());
+        RMNode previousRMLostNode = rmNode.context.getInactiveRMNodes().remove(lostNodeId);
+        if (previousRMLostNode != null) {
+          // Remove the record of the lost node and update the metrics
+          rmNode.context.getRMNodes().remove(lostNodeId);
+          ClusterMetrics.getMetrics().decrNumLostNMs();
+        }
+
         containers = startEvent.getNMContainerStatuses();
         final Resource allocatedResource = Resource.newInstance(
             Resources.none());
