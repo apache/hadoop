@@ -27,7 +27,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
+import static org.apache.hadoop.test.MockitoUtil.verifyZeroInteractions;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
@@ -210,7 +210,7 @@ public class TestGpuResourceAllocator {
   private void assertNoAllocation(GpuAllocation allocation) {
     assertEquals(1, allocation.getDeniedGPUs().size());
     assertEquals(0, allocation.getAllowedGPUs().size());
-    verifyNoInteractions(nmStateStore);
+    verifyZeroInteractions(nmStateStore);
   }
 
   private void assertAssignmentInStateStore(GpuDevice expectedGpu,

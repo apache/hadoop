@@ -94,6 +94,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 
+import static org.apache.hadoop.test.MockitoUtil.verifyZeroInteractions;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.NM_DOCKER_DEFAULT_RO_MOUNTS;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.NM_DOCKER_DEFAULT_RW_MOUNTS;
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.NM_DOCKER_DEFAULT_TMPFS_MOUNTS;
@@ -1272,7 +1273,7 @@ public class TestDockerContainerRuntime {
         command);
 
     //no --cgroup-parent should be added here
-    Mockito.verifyNoInteractions(command);
+    verifyZeroInteractions(command);
 
     String resourceOptionsCpu = "/sys/fs/cgroup/cpu/" + hierarchy +
         containerIdStr;
@@ -1298,7 +1299,7 @@ public class TestDockerContainerRuntime {
         command);
 
     //no --cgroup-parent should be added in either case
-    Mockito.verifyNoInteractions(command);
+    verifyZeroInteractions(command);
 
     //Ensure no further interaction
     Mockito.verifyNoMoreInteractions(command);

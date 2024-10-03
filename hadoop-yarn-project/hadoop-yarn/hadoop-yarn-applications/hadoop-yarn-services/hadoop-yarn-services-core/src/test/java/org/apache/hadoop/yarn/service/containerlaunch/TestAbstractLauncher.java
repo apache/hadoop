@@ -34,6 +34,7 @@ import org.junit.Test;
 import java.io.IOException;
 
 import static org.apache.hadoop.fi.FiConfig.getConfig;
+import static org.apache.hadoop.test.MockitoUtil.verifyZeroInteractions;
 import static org.apache.hadoop.yarn.service.conf.YarnServiceConf
     .DEFAULT_CONTAINER_FAILURES_VALIDITY_INTERVAL;
 import static org.apache.hadoop.yarn.service.conf.YarnServiceConf
@@ -43,7 +44,6 @@ import static org.apache.hadoop.yarn.service.conf.YarnServiceConf
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -90,7 +90,7 @@ public class TestAbstractLauncher {
 
     providerService.buildContainerRetry(mockLauncher, getConfig(),
         componentLaunchContext, componentInstance);
-    verifyNoInteractions(mockLauncher);
+    verifyZeroInteractions(mockLauncher);
 
 
     //OnFailure restart policy

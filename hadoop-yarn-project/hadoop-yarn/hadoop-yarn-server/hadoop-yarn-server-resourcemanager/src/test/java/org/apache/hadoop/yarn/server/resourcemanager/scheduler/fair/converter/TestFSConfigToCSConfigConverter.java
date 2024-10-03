@@ -36,7 +36,7 @@ import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
+import static org.apache.hadoop.test.MockitoUtil.verifyZeroInteractions;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -682,7 +682,7 @@ public class TestFSConfigToCSConfigConverter {
     converter.setPlacementConverter(placementConverter);
     converter.convert(params);
 
-    verifyNoInteractions(placementConverter);
+    verifyZeroInteractions(placementConverter);
   }
 
   @Test

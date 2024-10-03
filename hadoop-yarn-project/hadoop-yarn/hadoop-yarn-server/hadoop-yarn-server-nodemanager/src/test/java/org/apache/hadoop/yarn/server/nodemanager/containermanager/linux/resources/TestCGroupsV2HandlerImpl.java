@@ -38,7 +38,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.verifyNoInteractions;
+import static org.apache.hadoop.test.MockitoUtil.verifyZeroInteractions;
 
 /**
  * Tests for the CGroups handler implementation.
@@ -95,7 +95,7 @@ public class TestCGroupsV2HandlerImpl extends TestCGroupsHandlerBase {
 
   @Test
   public void testCGroupPaths() throws IOException, ResourceHandlerException {
-    verifyNoInteractions(privilegedOperationExecutorMock);
+    verifyZeroInteractions(privilegedOperationExecutorMock);
     File parentDir = new File(tmpPath);
     File mtab = createPremountedCgroups(parentDir);
     assertTrue("Sample subsystem should be created",
@@ -127,7 +127,7 @@ public class TestCGroupsV2HandlerImpl extends TestCGroupsHandlerBase {
   public void testUnsupportedMountConfiguration() throws Exception {
     //As per junit behavior, we expect a new mock object to be available
     //in this test.
-    verifyNoInteractions(privilegedOperationExecutorMock);
+    verifyZeroInteractions(privilegedOperationExecutorMock);
     CGroupsHandler cGroupsHandler;
     File mtab = createEmptyMtabFile();
 
@@ -141,7 +141,7 @@ public class TestCGroupsV2HandlerImpl extends TestCGroupsHandlerBase {
 
   @Test
   public void testCGroupOperations() throws IOException, ResourceHandlerException {
-    verifyNoInteractions(privilegedOperationExecutorMock);
+    verifyZeroInteractions(privilegedOperationExecutorMock);
     File parentDir = new File(tmpPath);
     File mtab = createPremountedCgroups(parentDir);
     assertTrue("Sample subsystem should be created",

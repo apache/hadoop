@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.apache.hadoop.test.MockitoUtil.verifyZeroInteractions;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -447,6 +448,6 @@ public class TestSnapshotPathINodes {
     INodesInPath iip = Mockito.mock(INodesInPath.class);
     List<INodeDirectory> snapDirs = new ArrayList<>();
     FSDirSnapshotOp.checkSnapshot(fsn.getFSDirectory(), iip, snapDirs);
-    Mockito.verifyNoInteractions(iip);
+    verifyZeroInteractions(iip);
   }
 }

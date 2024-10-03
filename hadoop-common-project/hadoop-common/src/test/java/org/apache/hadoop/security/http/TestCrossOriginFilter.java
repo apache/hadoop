@@ -35,6 +35,7 @@ import org.apache.hadoop.security.http.CrossOriginFilter;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
+import static org.apache.hadoop.test.MockitoUtil.verifyZeroInteractions;
 
 public class TestCrossOriginFilter {
 
@@ -59,7 +60,7 @@ public class TestCrossOriginFilter {
     filter.init(filterConfig);
     filter.doFilter(mockReq, mockRes, mockChain);
 
-    Mockito.verifyNoInteractions(mockRes);
+    verifyZeroInteractions(mockRes);
     Mockito.verify(mockChain).doFilter(mockReq, mockRes);
   }
 
@@ -224,7 +225,7 @@ public class TestCrossOriginFilter {
     filter.init(filterConfig);
     filter.doFilter(mockReq, mockRes, mockChain);
 
-    Mockito.verifyNoInteractions(mockRes);
+    verifyZeroInteractions(mockRes);
     Mockito.verify(mockChain).doFilter(mockReq, mockRes);
   }
 
@@ -252,7 +253,7 @@ public class TestCrossOriginFilter {
     filter.init(filterConfig);
     filter.doFilter(mockReq, mockRes, mockChain);
 
-    Mockito.verifyNoInteractions(mockRes);
+    verifyZeroInteractions(mockRes);
     Mockito.verify(mockChain).doFilter(mockReq, mockRes);
   }
 
@@ -283,7 +284,7 @@ public class TestCrossOriginFilter {
     filter.init(filterConfig);
     filter.doFilter(mockReq, mockRes, mockChain);
 
-    Mockito.verifyNoInteractions(mockRes);
+    verifyZeroInteractions(mockRes);
     Mockito.verify(mockChain).doFilter(mockReq, mockRes);
   }
 

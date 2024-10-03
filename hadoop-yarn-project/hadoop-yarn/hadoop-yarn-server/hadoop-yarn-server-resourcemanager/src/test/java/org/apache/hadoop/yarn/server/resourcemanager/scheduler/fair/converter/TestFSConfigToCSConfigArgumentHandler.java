@@ -23,7 +23,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
+import static org.apache.hadoop.test.MockitoUtil.verifyZeroInteractions;
 
 import java.io.File;
 import java.io.IOException;
@@ -666,7 +666,7 @@ public class TestFSConfigToCSConfigArgumentHandler {
         FSConfigConverterTestCommons.FS_ALLOC_FILE, "-s");
     argumentHandler.parseAndConvert(args);
 
-    verifyNoInteractions(mockValidator);
+    verifyZeroInteractions(mockValidator);
   }
 
   @Test
@@ -681,7 +681,7 @@ public class TestFSConfigToCSConfigArgumentHandler {
         FSConfigConverterTestCommons.FS_ALLOC_FILE, "-s", "-p");
     argumentHandler.parseAndConvert(args);
 
-    verifyNoInteractions(mockValidator);
+    verifyZeroInteractions(mockValidator);
   }
 
   @Test

@@ -25,7 +25,7 @@ import static org.junit.Assert.assertFalse;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
+import static org.apache.hadoop.test.MockitoUtil.verifyZeroInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -394,7 +394,7 @@ public class TestNECVEPlugin {
     assertEquals("No. of devices", 1, devices.size());
     Device device = devices.iterator().next();
     assertSame("Device", device, testDevice);
-    verifyNoInteractions(mockCommandExecutor);
+    verifyZeroInteractions(mockCommandExecutor);
     verify(mockEnvProvider).apply(eq("NEC_USE_UDEV"));
     verifyNoMoreInteractions(mockEnvProvider);
   }
@@ -442,6 +442,6 @@ public class TestNECVEPlugin {
   private void verifyBinaryPathSet(Path expectedPath) {
     assertEquals("Binary path", expectedPath.toString(),
         plugin.getBinaryPath());
-    verifyNoInteractions(udevUtil);
+    verifyZeroInteractions(udevUtil);
   }
 }
