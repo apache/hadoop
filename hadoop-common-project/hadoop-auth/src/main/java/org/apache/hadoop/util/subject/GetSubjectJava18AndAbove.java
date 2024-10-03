@@ -25,10 +25,10 @@ import java.lang.reflect.Method;
 /**
  * Indirectly calls Subject.current(), which exists in Java 18 and above only
  */
-class GetSubjectNg implements HiddenGetSubject {
+class GetSubjectJava18AndAbove implements HiddenGetSubject {
     private final Method currentMethod;
 
-    GetSubjectNg() {
+    GetSubjectJava18AndAbove() {
         try {
             currentMethod = Subject.class.getMethod("current");
         } catch (NoSuchMethodException e) {
