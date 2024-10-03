@@ -63,6 +63,9 @@ import static org.apache.hadoop.fs.audit.AuditConstants.REFERRER_ORIGIN_HOST;
  * This header may be shared across multiple threads at the same time.
  * so some methods are marked as synchronized, specifically those reading
  * or writing the attribute map.
+ * <p>
+ * For the same reason, maps and lists passed down during construction are
+ * copied into thread safe structures.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -203,7 +206,7 @@ public final class HttpReferrerAuditHeader {
     } catch (RuntimeException e) {
       // do not let failure to build the header stop the request being
       // issued.
-      LOG.warn("Failed to construct referred header " + e , e);
+      LOG.warn("Failed to construct referred header {}", e.toString(), e);
       LOG.debug("Full stack", e);
       header = "";
     }

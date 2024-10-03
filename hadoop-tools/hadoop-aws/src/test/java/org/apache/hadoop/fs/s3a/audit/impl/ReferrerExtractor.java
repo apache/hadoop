@@ -27,6 +27,9 @@ import org.apache.hadoop.fs.store.audit.HttpReferrerAuditHeader;
  */
 public final class ReferrerExtractor {
 
+  private ReferrerExtractor() {
+  }
+
   /**
    * Get the referrer provided the span is an instance or
    * subclass of LoggingAuditSpan.
