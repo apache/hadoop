@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -107,9 +106,11 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
           factory.newPutObjectRequestBuilder(path.toUri().getPath(), null, -1, false);
       putObjectRequestBuilder.contentLength(-1L);
       LambdaTestUtils.intercept(IllegalStateException.class,
-          () -> fs.putObjectDirect(putObjectRequestBuilder.build(), PutObjectOptions.keepingDirs(),
-              new S3ADataBlocks.BlockUploadData(new ByteArrayInputStream("PUT".getBytes())),
-              false, null));
+          () -> fs.putObjectDirect(
+              putObjectRequestBuilder.build(),
+              PutObjectOptions.keepingDirs(),
+              new S3ADataBlocks.BlockUploadData("PUT".getBytes(), null),
+              null));
       assertPathDoesNotExist("put object was created", path);
     }
   }

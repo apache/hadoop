@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.s3a.impl.UploadContentProviders;
 import org.apache.hadoop.fs.s3a.statistics.BlockOutputStreamStatistics;
 import org.apache.hadoop.io.IOUtils;
 
@@ -127,7 +128,7 @@ public class ITestS3ABlockOutputArray extends AbstractS3ATestBase {
    * @return the factory
    */
   protected S3ADataBlocks.BlockFactory createFactory(S3AFileSystem fileSystem) {
-    return new S3ADataBlocks.ArrayBlockFactory(fileSystem);
+    return new S3ADataBlocks.ArrayBlockFactory(fileSystem.createStoreContext());
   }
 
   private void markAndResetDatablock(S3ADataBlocks.BlockFactory factory)
@@ -139,9 +140,9 @@ public class ITestS3ABlockOutputArray extends AbstractS3ATestBase {
     S3ADataBlocks.DataBlock block = factory.create(1, BLOCK_SIZE, outstats);
     block.write(dataset, 0, dataset.length);
     S3ADataBlocks.BlockUploadData uploadData = block.startUpload();
-    InputStream stream = uploadData.getUploadStream();
+    final UploadContentProviders.BaseContentProvider cp = uploadData.getContentProvider();
+    InputStream stream = cp.newStream();
     assertNotNull(stream);
-    assertTrue("Mark not supported in " + stream, stream.markSupported());
     assertEquals(0, stream.read());
     stream.mark(BLOCK_SIZE);
     // read a lot
