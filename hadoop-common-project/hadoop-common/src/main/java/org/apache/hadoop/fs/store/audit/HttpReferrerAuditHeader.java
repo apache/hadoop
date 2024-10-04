@@ -206,7 +206,7 @@ public final class HttpReferrerAuditHeader {
     } catch (RuntimeException e) {
       // do not let failure to build the header stop the request being
       // issued.
-      LOG.warn("Failed to construct referred header {}", e.toString(), e);
+      LOG.warn("Failed to construct referred header {}", e.toString());
       LOG.debug("Full stack", e);
       header = "";
     }
