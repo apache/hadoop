@@ -90,6 +90,14 @@ public final class HttpReferrerAuditHeader {
   private static final LogExactlyOnce WARN_OF_URL_CREATION =
       new LogExactlyOnce(LOG);
 
+  /**
+   * Log for warning of an exception raised when building
+   * the referrer header, including building the evaluated
+   * attributes.
+   */
+  private static final LogExactlyOnce ERROR_BUILDING_REFERRER_HEADER =
+      new LogExactlyOnce(LOG);
+
   /** Context ID. */
   private final String contextId;
 
@@ -206,7 +214,7 @@ public final class HttpReferrerAuditHeader {
     } catch (RuntimeException e) {
       // do not let failure to build the header stop the request being
       // issued.
-      LOG.warn("Failed to construct referred header {}", e.toString());
+      ERROR_BUILDING_REFERRER_HEADER.warn("Failed to construct referred header {}", e.toString());
       LOG.debug("Full stack", e);
       header = "";
     }

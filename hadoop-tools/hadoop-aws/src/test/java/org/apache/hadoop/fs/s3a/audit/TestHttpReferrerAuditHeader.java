@@ -420,6 +420,10 @@ public class TestHttpReferrerAuditHeader extends AbstractAuditingTest {
         .isEqualTo(ex);
   }
 
+  /**
+   * Verify that exceptions raised when building referrer headers
+   * do not result in failures, just an empty header.
+   */
   @Test
   public void testSpanResilience() throws Throwable {
     final CommonAuditContext auditContext = CommonAuditContext.currentAuditContext();
@@ -429,10 +433,15 @@ public class TestHttpReferrerAuditHeader extends AbstractAuditingTest {
     });
     try {
       final HttpReferrerAuditHeader referrer = ReferrerExtractor.getReferrer(auditor, span());
-      final String header = referrer.buildHttpReferrer();
-      Assertions.assertThat(header)
+      Assertions.assertThat(referrer.buildHttpReferrer())
           .describedAs("referrer header")
           .isBlank();
+      // repeat
+      LOG.info("second attempt: there should be no second warning below");
+      Assertions.assertThat(referrer.buildHttpReferrer())
+          .describedAs("referrer header 2")
+          .isBlank();
+      referrer.buildHttpReferrer();
     } finally {
       // critical to remove this so it doesn't interfere with any other
       // tests
