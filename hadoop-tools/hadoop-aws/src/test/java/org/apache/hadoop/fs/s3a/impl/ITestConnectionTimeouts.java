@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
-import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -73,7 +72,7 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  * The likely cause is actually -Dprefetch test runs as these return connections to
  * the pool.
  * However, it is also important to have a non-brittle FS for creating the test file
- * and teardow, again, this makes for a flaky test..
+ * and teardown, again, this makes for a flaky test.
  */
 public class ITestConnectionTimeouts extends AbstractS3ATestBase {
 
@@ -248,7 +247,8 @@ public class ITestConnectionTimeouts extends AbstractS3ATestBase {
       // the exact IOE depends on what failed; if it is in the http read it will be a
       // software.amazon.awssdk.thirdparty.org.apache.http.ConnectionClosedException
       // which is too low level to safely assert about.
-      intercept(IOException.class, () ->
+      // it can also surface as an UncheckedIOException wrapping the inner cause.
+      intercept(Exception.class, () ->
           ContractTestUtils.readUTF8(brittleFS, file, DATASET.length));
       Assertions.assertThat(totalSleepTime.get())
           .describedAs("total sleep time of read")

@@ -282,11 +282,11 @@ public final class UploadContentProviders {
       close();
       checkOpen();
       streamCreationCount++;
-      if (streamCreationCount > 1) {
+      if (streamCreationCount == 2) {
+        // the stream has been recreated for the first time.
+        // notify only once for this stream, so as not to flood
+        // the logs.
         LOG.info("Stream recreated: {}", this);
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Stream creation stack", new Exception("here"));
-        }
       }
       return setCurrentStream(createNewStream());
     }

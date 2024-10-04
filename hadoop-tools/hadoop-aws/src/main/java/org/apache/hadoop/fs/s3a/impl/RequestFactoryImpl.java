@@ -60,6 +60,7 @@ import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecretOperations;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_PART_UPLOAD_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.S3AEncryptionMethods.UNKNOWN_ALGORITHM;
 import static org.apache.hadoop.fs.s3a.impl.AWSClientConfig.setRequestTimeout;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.DEFAULT_UPLOAD_PART_COUNT_LIMIT;
@@ -724,7 +725,7 @@ public class RequestFactoryImpl implements RequestFactory {
      * This will be set on data put/post operations only.
      * A zero value means "no custom timeout"
      */
-    private Duration partUploadTimeout = Duration.ZERO;
+    private Duration partUploadTimeout = DEFAULT_PART_UPLOAD_TIMEOUT;
 
     private RequestFactoryBuilder() {
     }
