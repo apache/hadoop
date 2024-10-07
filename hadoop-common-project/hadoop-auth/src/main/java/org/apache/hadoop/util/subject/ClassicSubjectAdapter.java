@@ -23,11 +23,11 @@ import java.security.AccessControlContext;
 import java.security.AccessController;
 
 /**
- * Calls Subject.getSubject() directly, as this class should not be classloaded on Java 18 and above
+ * Calls Subject methods directly, as this class should not be classloaded on Java 18 and above
  */
-class ClassicGetSubject implements HiddenGetSubject {
+class ClassicSubjectAdapter implements HiddenSubjectAdapter {
 
-    ClassicGetSubject() {}
+    ClassicSubjectAdapter() {}
 
     @Override
     public Subject getSubject() {

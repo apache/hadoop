@@ -20,6 +20,6 @@ package org.apache.hadoop.util.subject;
 
 import javax.security.auth.Subject;
 
-public interface HiddenGetSubject {
+public interface HiddenSubjectAdapter {
     Subject getSubject();
 }

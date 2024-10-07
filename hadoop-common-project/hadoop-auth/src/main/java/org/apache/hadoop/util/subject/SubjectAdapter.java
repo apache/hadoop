@@ -30,16 +30,16 @@ import javax.security.auth.Subject;
  */
 public class SubjectAdapter {
     private static Logger log = LoggerFactory.getLogger(SubjectAdapter.class);
-    private static final HiddenGetSubject instance;
+    private static final HiddenSubjectAdapter instance;
     static {
         int version = 0;
         try {
             version = Integer.parseInt(System.getProperty("java.specification.version"));
         } catch (Throwable ignored) {}
         if (version >= 18) {
-            instance = new GetSubjectJava18AndAbove();
+            instance = new SubjectAdapterJava18AndAbove();
         } else {
-            instance = new ClassicGetSubject();
+            instance = new ClassicSubjectAdapter();
         }
     }
 
