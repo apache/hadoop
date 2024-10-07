@@ -42,7 +42,6 @@ import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.C
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.assertJsonResponse;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.backupSchedulerConfigFileInTarget;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.createMutableRM;
-import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.createWebAppDescriptor;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.getExpectedResourceFile;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.reinitialize;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.restoreSchedulerConfigFileInTarget;
@@ -73,7 +72,6 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends JerseyTestBase 
   private static final String EXPECTED_FILE_TMPL = "webapp/dynamic-%s-%s.json";
 
   public TestRMWebServicesCapacitySchedDynamicConfig(boolean legacyQueueMode) {
-    super(createWebAppDescriptor());
     this.legacyQueueMode = legacyQueueMode;
     backupSchedulerConfigFileInTarget();
   }
@@ -96,7 +94,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends JerseyTestBase 
     conf.put("yarn.scheduler.capacity.root.test1.test1_2.capacity", "12.5");
     conf.put("yarn.scheduler.capacity.root.test1.test1_3.capacity", "75");
     try (MockRM rm = createMutableRM(createConfiguration(conf), false)) {
-      runTest(EXPECTED_FILE_TMPL, "testPercentageMode", rm, resource());
+      runTest(EXPECTED_FILE_TMPL, "testPercentageMode", rm, target());
     }
   }
   @Test
@@ -112,7 +110,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends JerseyTestBase 
     conf.put("yarn.scheduler.capacity.root.test1.test1_2.capacity", "[memory=2048,vcores=2]");
     conf.put("yarn.scheduler.capacity.root.test1.test1_3.capacity", "[memory=12288,vcores=12]");
     try (MockRM rm = createMutableRM(createConfiguration(conf), false)) {
-      runTest(EXPECTED_FILE_TMPL, "testAbsoluteMode", rm, resource());
+      runTest(EXPECTED_FILE_TMPL, "testAbsoluteMode", rm, target());
     }
   }
 
@@ -130,7 +128,7 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends JerseyTestBase 
     conf.put("yarn.scheduler.capacity.root.test1.test1_3.capacity", "12w");
     try (MockRM rm = createMutableRM(createConfiguration(conf), false)) {
       // capacity and normalizedWeight are set differently between legacy/non-legacy queue mode
-      runTest(EXPECTED_FILE_TMPL, "testWeightMode", rm, resource());
+      runTest(EXPECTED_FILE_TMPL, "testWeightMode", rm, target());
     }
   }
 
@@ -152,12 +150,12 @@ public class TestRMWebServicesCapacitySchedDynamicConfig extends JerseyTestBase 
     try (MockRM rm = createMutableRM(config, false)) {
       // capacity and normalizedWeight are set differently between legacy/non-legacy queue mode
       rm.registerNode("h1:1234", 32 * GB, 32);
-      assertJsonResponse(sendRequest(resource()),
+      assertJsonResponse(sendRequest(target()),
           getExpectedResourceFile(EXPECTED_FILE_TMPL, "testWeightMode",
               "before-aqc", legacyQueueMode));
       createDynamicQueues(rm, "test2");
       reinitialize(rm, config);
-      assertJsonResponse(sendRequest(resource()),
+      assertJsonResponse(sendRequest(target()),
           getExpectedResourceFile(EXPECTED_FILE_TMPL, "testWeightMode",
               "after-aqc", legacyQueueMode));
     }

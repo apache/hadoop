@@ -20,11 +20,6 @@ package org.apache.hadoop.yarn.webapp;
 
 import com.google.inject.Guice;
 import com.google.inject.servlet.ServletModule;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.ClientResponse.Status;
-import com.sun.jersey.api.client.WebResource;
-import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
-import com.sun.jersey.test.framework.WebAppDescriptor;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.security.http.RestCsrfPreventionFilter;
@@ -46,7 +41,9 @@ import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
+import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.StringReader;
@@ -75,7 +72,7 @@ public class TestRMWithCSRFFilter extends JerseyTestBase {
           ResourceScheduler.class);
       rm = new MockRM(conf);
       bind(ResourceManager.class).toInstance(rm);
-      serve("/*").with(GuiceContainer.class);
+      // serve("/*").with(GuiceContainer.class);
       RestCsrfPreventionFilter csrfFilter = new RestCsrfPreventionFilter();
       Map<String,String> initParams = new HashMap<>();
       // adding GET as protected method to make things a little easier...
@@ -94,62 +91,57 @@ public class TestRMWithCSRFFilter extends JerseyTestBase {
   }
 
   public TestRMWithCSRFFilter() {
-    super(new WebAppDescriptor.Builder(
-        "org.apache.hadoop.yarn.server.resourcemanager.webapp")
-              .contextListenerClass(GuiceServletConfig.class)
-              .filterClass(com.google.inject.servlet.GuiceFilter.class)
-              .contextPath("jersey-guice-filter").servletPath("/").build());
   }
 
   @Test
   public void testNoCustomHeaderFromBrowser() throws Exception {
-    WebResource r = resource();
-    ClientResponse response = r.path("ws").path("v1").path("cluster")
-        .path("info").accept("application/xml")
+    WebTarget r = target();
+    Response response = r.path("ws").path("v1").path("cluster")
+        .path("info").request("application/xml")
         .header(RestCsrfPreventionFilter.HEADER_USER_AGENT,"Mozilla/5.0")
-        .get(ClientResponse.class);
+        .get(Response.class);
     assertTrue("Should have been rejected", response.getStatus() ==
-                                            Status.BAD_REQUEST.getStatusCode());
+        Response.Status.BAD_REQUEST.getStatusCode());
   }
 
   @Test
   public void testIncludeCustomHeaderFromBrowser() throws Exception {
-    WebResource r = resource();
-    ClientResponse response = r.path("ws").path("v1").path("cluster")
-        .path("info").accept("application/xml")
+    WebTarget r = target();
+    Response response = r.path("ws").path("v1").path("cluster")
+        .path("info").request("application/xml")
         .header(RestCsrfPreventionFilter.HEADER_USER_AGENT,"Mozilla/5.0")
         .header("X-XSRF-HEADER", "")
-        .get(ClientResponse.class);
+        .get(Response.class);
     assertTrue("Should have been accepted", response.getStatus() ==
-                                            Status.OK.getStatusCode());
+        Response.Status.OK.getStatusCode());
     assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    String xml = response.getEntity(String.class);
+        response.getMediaType().toString());
+    String xml = response.readEntity(String.class);
     verifyClusterInfoXML(xml);
   }
 
   @Test
   public void testAllowedMethod() throws Exception {
-    WebResource r = resource();
-    ClientResponse response = r.path("ws").path("v1").path("cluster")
-        .path("info").accept("application/xml")
+    WebTarget r = target();
+    Response response = r.path("ws").path("v1").path("cluster")
+        .path("info").request("application/xml")
         .header(RestCsrfPreventionFilter.HEADER_USER_AGENT,"Mozilla/5.0")
         .head();
     assertTrue("Should have been allowed", response.getStatus() ==
-                                           Status.OK.getStatusCode());
+        Response.Status.OK.getStatusCode());
   }
 
   @Test
   public void testAllowNonBrowserInteractionWithoutHeader() throws Exception {
-    WebResource r = resource();
-    ClientResponse response = r.path("ws").path("v1").path("cluster")
-        .path("info").accept("application/xml")
-        .get(ClientResponse.class);
+    WebTarget r = target();
+    Response response = r.path("ws").path("v1").path("cluster")
+        .path("info").request("application/xml")
+        .get(Response.class);
     assertTrue("Should have been accepted", response.getStatus() ==
-                                            Status.OK.getStatusCode());
+        Response.Status.OK.getStatusCode());
     assertEquals(MediaType.APPLICATION_XML_TYPE + "; " + JettyUtils.UTF_8,
-        response.getType().toString());
-    String xml = response.getEntity(String.class);
+        response.getMediaType().toString());
+    String xml = response.readEntity(String.class);
     verifyClusterInfoXML(xml);
   }
 

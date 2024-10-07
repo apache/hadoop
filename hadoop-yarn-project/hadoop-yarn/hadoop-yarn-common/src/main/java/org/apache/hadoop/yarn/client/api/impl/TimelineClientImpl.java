@@ -24,6 +24,7 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
 
+import net.jodah.failsafe.RetryPolicy;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
@@ -54,7 +55,7 @@ import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.hadoop.classification.VisibleForTesting;
-import com.sun.jersey.api.client.Client;
+import javax.ws.rs.client.Client;
 
 @Private
 @Evolving
@@ -152,17 +153,16 @@ public class TimelineClientImpl extends TimelineClient {
   protected void serviceStart() throws Exception {
     timelineWriter = createTimelineWriter(getConfig(), authUgi,
         connector.getClient(), TimelineConnector.constructResURI(getConfig(),
-            timelineServiceAddress, RESOURCE_URI_STR_V1));
+            timelineServiceAddress, RESOURCE_URI_STR_V1), connector.getRetryPolicy());
   }
 
   protected TimelineWriter createTimelineWriter(Configuration conf,
-      UserGroupInformation ugi, Client webClient, URI uri)
+      UserGroupInformation ugi, Client webClient, URI uri, RetryPolicy<Object> retryPolicy)
       throws IOException {
     if (timelineServiceV15Enabled) {
-      return new FileSystemTimelineWriter(
-          conf, ugi, webClient, uri);
+      return new FileSystemTimelineWriter(conf, ugi, webClient, uri, retryPolicy);
     } else {
-      return new DirectTimelineWriter(ugi, webClient, uri);
+      return new DirectTimelineWriter(ugi, webClient, uri, retryPolicy);
     }
   }
 

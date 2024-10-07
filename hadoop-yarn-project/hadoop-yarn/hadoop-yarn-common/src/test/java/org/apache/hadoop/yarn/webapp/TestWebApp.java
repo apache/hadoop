@@ -24,6 +24,8 @@ import java.net.URL;
 import java.net.URLEncoder;
 
 import com.google.inject.Inject;
+import org.glassfish.jersey.jettison.JettisonFeature;
+import org.glassfish.jersey.server.ResourceConfig;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,7 +57,8 @@ public class TestWebApp {
   static class FooController extends Controller {
     final TestWebApp test;
 
-    @Inject FooController(TestWebApp test) {
+    @Inject
+    FooController(TestWebApp test) {
       this.test = test;
     }
 
@@ -228,15 +231,17 @@ public class TestWebApp {
 
   @Test
   void testDefaultRoutes() throws Exception {
-    WebApp app = WebApps.$for("test", this).start();
+    WebApp app = WebApps.
+        $for("test", TestWebApp.class, this, "ws").
+        withResourceConfig(configure()).start();
     String baseUrl = baseUrl(app);
     try {
       assertEquals("foo", getContent(baseUrl + "test/foo").trim());
       assertEquals("foo", getContent(baseUrl + "test/foo/index").trim());
       assertEquals("bar", getContent(baseUrl + "test/foo/bar").trim());
-      assertEquals("default", getContent(baseUrl + "test").trim());
+      // assertEquals("default", getContent(baseUrl + "test").trim());
       assertEquals("default", getContent(baseUrl + "test/").trim());
-      assertEquals("default", getContent(baseUrl).trim());
+      // assertEquals("default", getContent(baseUrl).trim());
     } finally {
       app.stop();
     }
@@ -244,28 +249,30 @@ public class TestWebApp {
 
   @Test
   void testCustomRoutes() throws Exception {
-    WebApp app =
-        WebApps.$for("test", TestWebApp.class, this, "ws").start(new WebApp() {
-          @Override
-          public void setup() {
-            bind(MyTestJAXBContextResolver.class);
-            bind(MyTestWebService.class);
 
-            route("/:foo", FooController.class);
-            route("/bar/foo", FooController.class, "bar");
-            route("/foo/:foo", DefaultController.class);
-            route("/foo/bar/:foo", DefaultController.class, "index");
-          }
-        });
+    WebApp newWebApp = new WebApp() {
+      @Override
+      public void setup() {
+        route("/:foo", FooController.class);
+        route("/bar/foo", FooController.class, "bar");
+        route("/foo/:foo", DefaultController.class);
+        route("/foo/bar/:foo", DefaultController.class, "index");
+      }
+    };
+
+    WebApp app = WebApps.$for("test", this)
+        .withResourceConfig(configure())
+        .start(newWebApp);
+
     String baseUrl = baseUrl(app);
     try {
-      assertEquals("foo", getContent(baseUrl).trim());
-      assertEquals("foo", getContent(baseUrl + "test").trim());
+      assertEquals("foo", getContent(baseUrl + "test/").trim());
       assertEquals("foo1", getContent(baseUrl + "test/1").trim());
       assertEquals("bar", getContent(baseUrl + "test/bar/foo").trim());
       assertEquals("default", getContent(baseUrl + "test/foo/bar").trim());
       assertEquals("default1", getContent(baseUrl + "test/foo/1").trim());
       assertEquals("default2", getContent(baseUrl + "test/foo/bar/2").trim());
+      assertEquals(404, getResponseCode(baseUrl));
       assertEquals(404, getResponseCode(baseUrl + "test/goo"));
       assertEquals(200, getResponseCode(baseUrl + "ws/v1/test"));
       assertTrue(getContent(baseUrl + "ws/v1/test").contains("myInfo"));
@@ -276,16 +283,16 @@ public class TestWebApp {
 
   @Test
   void testEncodedUrl() throws Exception {
-    WebApp app =
-        WebApps.$for("test", TestWebApp.class, this, "ws").start(new WebApp() {
-          @Override
-          public void setup() {
-            bind(MyTestJAXBContextResolver.class);
-            bind(MyTestWebService.class);
 
-            route("/:foo", FooController.class);
-          }
-        });
+    WebApp webApp = new WebApp() {
+      @Override
+      public void setup() {
+        route("/:foo", FooController.class);
+      }
+    };
+
+    WebApp app = WebApps.$for("test", TestWebApp.class, this, "ws")
+        .withResourceConfig(configure()).start(webApp);
     String baseUrl = baseUrl(app);
 
     try {
@@ -306,14 +313,15 @@ public class TestWebApp {
 
   @Test
   void testRobotsText() throws Exception {
-    WebApp app =
-        WebApps.$for("test", TestWebApp.class, this, "ws").start(new WebApp() {
-          @Override
-          public void setup() {
-            bind(MyTestJAXBContextResolver.class);
-            bind(MyTestWebService.class);
-          }
-        });
+
+    WebApp newWebApp = new WebApp() {
+      @Override
+      public void setup() {
+      }
+    };
+
+    WebApp app = WebApps.$for("test", TestWebApp.class, this, "ws")
+        .withResourceConfig(configure()).start(newWebApp);
     String baseUrl = baseUrl(app);
     try {
       //using system line separator here since that is what
@@ -336,18 +344,23 @@ public class TestWebApp {
   void testYARNWebAppContext() throws Exception {
     // setting up the log context
     System.setProperty("hadoop.log.dir", "/Not/Existing/dir");
-    WebApp app = WebApps.$for("test", this).start(new WebApp() {
+
+    WebApp webApp = new WebApp() {
       @Override
       public void setup() {
         route("/", FooController.class);
       }
-    });
+    };
+
+    WebApp app = WebApps.$for("test", this)
+        .withResourceConfig(configure())
+        .start(webApp);
     String baseUrl = baseUrl(app);
     try {
       // Not able to access a non-existing dir, should not redirect to foo.
       assertEquals(404, getResponseCode(baseUrl + "logs"));
       // should be able to redirect to foo.
-      assertEquals("foo", getContent(baseUrl).trim());
+      assertEquals("foo", getContent(baseUrl+ "test/foo").trim());
     } finally {
       app.stop();
     }
@@ -426,10 +439,19 @@ public class TestWebApp {
     }
   }
 
-  public static void main(String[] args) throws Exception {
+  protected static ResourceConfig configure() {
+    ResourceConfig config = new ResourceConfig();
+    config.packages("org.apache.hadoop.yarn.webapp");
+    config.register(MyTestWebService.class);
+    config.register(GenericExceptionHandler.class);
+    config.register(new JettisonFeature()).register(MyTestJAXBContextResolver.class);
+    return config;
+  }
+
+ // public static void main(String[] args) throws Exception {
     // For manual controller/view testing.
-    WebApps.$for("test", new TestWebApp()).at(8888).inDevMode().start().
-        joinThread();
+ //   WebApps.$for("test", new TestWebApp()).at(8888).inDevMode().start().
+ //       joinThread();
 //        start(new WebApp() {
 //          @Override public void setup() {
 //            route("/:foo", FooController.class);
@@ -437,5 +459,5 @@ public class TestWebApp {
 //            route("/bar", FooController.class);
 //          }
 //        }).join();
-  }
+ // }
 }

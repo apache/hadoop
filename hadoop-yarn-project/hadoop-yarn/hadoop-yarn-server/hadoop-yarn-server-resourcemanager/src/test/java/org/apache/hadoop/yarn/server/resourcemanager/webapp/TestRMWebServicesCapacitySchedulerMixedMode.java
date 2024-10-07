@@ -29,7 +29,6 @@ import org.junit.Test;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfigGeneratorForTest.createConfiguration;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.backupSchedulerConfigFileInTarget;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.createRM;
-import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.createWebAppDescriptor;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.restoreSchedulerConfigFileInTarget;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.runTest;
 
@@ -49,7 +48,6 @@ public class TestRMWebServicesCapacitySchedulerMixedMode extends JerseyTestBase 
   private static final String EXPECTED_FILE_TMPL = "webapp/mixed-%s-%s.json";
 
   public TestRMWebServicesCapacitySchedulerMixedMode() {
-    super(createWebAppDescriptor());
     backupSchedulerConfigFileInTarget();
   }
 
@@ -58,6 +56,10 @@ public class TestRMWebServicesCapacitySchedulerMixedMode extends JerseyTestBase 
     restoreSchedulerConfigFileInTarget();
   }
 
+  @Override
+  public void setUp() throws Exception {
+    super.setUp();
+  }
 
   @Test
   public void testSchedulerAbsoluteAndPercentage()
@@ -73,7 +75,7 @@ public class TestRMWebServicesCapacitySchedulerMixedMode extends JerseyTestBase 
     conf.put("yarn.scheduler.capacity.root.test_1.test_1_2.capacity", "[memory=2048, vcores=2]");
     conf.put("yarn.scheduler.capacity.root.test_1.test_1_3.capacity", "100");
     try (MockRM rm = createRM(createConfiguration(conf))) {
-      runTest(EXPECTED_FILE_TMPL, "testSchedulerAbsoluteAndPercentage", rm, resource());
+      runTest(EXPECTED_FILE_TMPL, "testSchedulerAbsoluteAndPercentage", rm, target());
     }
   }
 
@@ -91,7 +93,7 @@ public class TestRMWebServicesCapacitySchedulerMixedMode extends JerseyTestBase 
     conf.put("yarn.scheduler.capacity.root.test_1.test_1_2.capacity", "[memory=2048, vcores=2]");
     conf.put("yarn.scheduler.capacity.root.test_1.test_1_3.capacity", "[memory=100%, vcores=100%]");
     try (MockRM rm = createRM(createConfiguration(conf))) {
-      runTest(EXPECTED_FILE_TMPL, "testSchedulerAbsoluteAndPercentage", rm, resource());
+      runTest(EXPECTED_FILE_TMPL, "testSchedulerAbsoluteAndPercentage", rm, target());
     }
   }
 
@@ -109,7 +111,7 @@ public class TestRMWebServicesCapacitySchedulerMixedMode extends JerseyTestBase 
     conf.put("yarn.scheduler.capacity.root.test_1.test_1_2.capacity", "[memory=2048, vcores=2]");
     conf.put("yarn.scheduler.capacity.root.test_1.test_1_3.capacity", "1w");
     try (MockRM rm = createRM(createConfiguration(conf))) {
-      runTest(EXPECTED_FILE_TMPL, "testSchedulerAbsoluteAndWeight", rm, resource());
+      runTest(EXPECTED_FILE_TMPL, "testSchedulerAbsoluteAndWeight", rm, target());
     }
   }
 
@@ -127,7 +129,7 @@ public class TestRMWebServicesCapacitySchedulerMixedMode extends JerseyTestBase 
     conf.put("yarn.scheduler.capacity.root.test_1.test_1_2.capacity", "[memory=2048, vcores=2]");
     conf.put("yarn.scheduler.capacity.root.test_1.test_1_3.capacity", "[memory=1w, vcores=1w]");
     try (MockRM rm = createRM(createConfiguration(conf))) {
-      runTest(EXPECTED_FILE_TMPL, "testSchedulerAbsoluteAndWeight", rm, resource());
+      runTest(EXPECTED_FILE_TMPL, "testSchedulerAbsoluteAndWeight", rm, target());
     }
   }
 
@@ -145,7 +147,7 @@ public class TestRMWebServicesCapacitySchedulerMixedMode extends JerseyTestBase 
     conf.put("yarn.scheduler.capacity.root.test_1.test_1_2.capacity", "12.5");
     conf.put("yarn.scheduler.capacity.root.test_1.test_1_3.capacity", "1w");
     try (MockRM rm = createRM(createConfiguration(conf))) {
-      runTest(EXPECTED_FILE_TMPL, "testSchedulerPercentageAndWeight", rm, resource());
+      runTest(EXPECTED_FILE_TMPL, "testSchedulerPercentageAndWeight", rm, target());
     }
   }
 
@@ -165,7 +167,7 @@ public class TestRMWebServicesCapacitySchedulerMixedMode extends JerseyTestBase 
         "[memory=12.5%, vcores=12.5%]");
     conf.put("yarn.scheduler.capacity.root.test_1.test_1_3.capacity", "[memory=1w, vcores=1w]");
     try (MockRM rm = createRM(createConfiguration(conf))) {
-      runTest(EXPECTED_FILE_TMPL, "testSchedulerPercentageAndWeight", rm, resource());
+      runTest(EXPECTED_FILE_TMPL, "testSchedulerPercentageAndWeight", rm, target());
     }
   }
 
@@ -183,7 +185,7 @@ public class TestRMWebServicesCapacitySchedulerMixedMode extends JerseyTestBase 
     conf.put("yarn.scheduler.capacity.root.test_1.test_1_2.capacity", "1w");
     conf.put("yarn.scheduler.capacity.root.test_1.test_1_3.capacity", "[memory=12288, vcores=12]");
     try (MockRM rm = createRM(createConfiguration(conf))) {
-      runTest(EXPECTED_FILE_TMPL, "testSchedulerAbsoluteAndPercentageAndWeight", rm, resource());
+      runTest(EXPECTED_FILE_TMPL, "testSchedulerAbsoluteAndPercentageAndWeight", rm, target());
     }
   }
 
@@ -201,7 +203,7 @@ public class TestRMWebServicesCapacitySchedulerMixedMode extends JerseyTestBase 
     conf.put("yarn.scheduler.capacity.root.test_1.test_1_2.capacity", "[memory=1w, vcores=1w]");
     conf.put("yarn.scheduler.capacity.root.test_1.test_1_3.capacity", "[memory=12288, vcores=12]");
     try (MockRM rm = createRM(createConfiguration(conf))) {
-      runTest(EXPECTED_FILE_TMPL, "testSchedulerAbsoluteAndPercentageAndWeight", rm, resource());
+      runTest(EXPECTED_FILE_TMPL, "testSchedulerAbsoluteAndPercentageAndWeight", rm, target());
     }
   }
 
@@ -220,7 +222,7 @@ public class TestRMWebServicesCapacitySchedulerMixedMode extends JerseyTestBase 
     conf.put("yarn.scheduler.capacity.root.test_1.test_1_3.capacity", "[memory=12288, vcores=86%]");
     try (MockRM rm = createRM(createConfiguration(conf))) {
       runTest(EXPECTED_FILE_TMPL, "testSchedulerAbsoluteAndPercentageAndWeightMixed",
-          rm, resource());
+          rm, target());
     }
   }
 }

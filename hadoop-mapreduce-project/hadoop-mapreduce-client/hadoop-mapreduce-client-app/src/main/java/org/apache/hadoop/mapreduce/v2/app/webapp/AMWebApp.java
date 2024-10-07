@@ -20,19 +20,28 @@ package org.apache.hadoop.mapreduce.v2.app.webapp;
 
 import static org.apache.hadoop.yarn.util.StringHelper.pajoin;
 
+import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.WebApp;
+
+import javax.servlet.Filter;
 
 /**
  * Application master webapp
  */
 public class AMWebApp extends WebApp implements AMParams {
 
+  private AppContext appContext;
+
+  public AMWebApp(AppContext appContext) {
+    this.appContext = appContext;
+  }
+
   @Override
   public void setup() {
     bind(JAXBContextResolver.class);
     bind(GenericExceptionHandler.class);
-    bind(AMWebServices.class);
+    bind(AppContext.class).toInstance(appContext);
     route("/", AppController.class);
     route("/app", AppController.class);
     route(pajoin("/job", JOB_ID), AppController.class, "job");
@@ -47,5 +56,10 @@ public class AMWebApp extends WebApp implements AMParams {
     route(pajoin("/taskcounters", TASK_ID), AppController.class, "taskCounters");
     route(pajoin("/singletaskcounter",TASK_ID, COUNTER_GROUP, COUNTER_NAME),
         AppController.class, "singleTaskCounter");
+  }
+
+  @Override
+  protected Class<? extends Filter> getWebAppFilterClass() {
+    return null;
   }
 }

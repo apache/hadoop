@@ -20,23 +20,11 @@
 
   <servlet>
     <servlet-name>webservices-driver</servlet-name>
-    <servlet-class>com.sun.jersey.spi.container.servlet.ServletContainer</servlet-class>
+    <servlet-class>org.glassfish.jersey.servlet.ServletContainer</servlet-class>
     <init-param>
-      <param-name>com.sun.jersey.config.property.packages</param-name>
-      <param-value>org.apache.hadoop.fs.http.server,org.apache.hadoop.lib.wsrs</param-value>
+      <param-name>jersey.config.server.provider.packages</param-name>
+      <param-value>org.apache.hadoop.fs.http.server, org.apache.hadoop.lib.wsrs</param-value>
     </init-param>
-
-    <!-- Enables detailed Jersey request/response logging -->
-    <!--
-            <init-param>
-                <param-name>com.sun.jersey.spi.container.ContainerRequestFilters</param-name>
-                <param-value>com.sun.jersey.api.container.filter.LoggingFilter</param-value>
-            </init-param>
-            <init-param>
-                <param-name>com.sun.jersey.spi.container.ContainerResponseFilters</param-name>
-                <param-value>com.sun.jersey.api.container.filter.LoggingFilter</param-value>
-            </init-param>
-    -->
     <load-on-startup>1</load-on-startup>
   </servlet>
 

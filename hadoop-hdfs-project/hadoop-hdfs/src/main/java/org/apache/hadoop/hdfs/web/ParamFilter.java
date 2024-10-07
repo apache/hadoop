@@ -17,70 +17,80 @@
  */
 package org.apache.hadoop.hdfs.web;
 
-import java.net.URI;
-import java.util.List;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import javax.servlet.Filter;
+import javax.servlet.FilterConfig;
+import javax.servlet.FilterChain;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletRequestWrapper;
+import java.io.IOException;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.Map;
-
-import javax.ws.rs.core.MultivaluedMap;
-import javax.ws.rs.core.UriBuilder;
-
-import com.sun.jersey.spi.container.ContainerRequest;
-import com.sun.jersey.spi.container.ContainerRequestFilter;
-import com.sun.jersey.spi.container.ContainerResponseFilter;
-import com.sun.jersey.spi.container.ResourceFilter;
-import org.apache.hadoop.util.StringUtils;
 
 /**
  * A filter to change parameter names to lower cases
  * so that parameter names are considered as case insensitive.
  */
-public class ParamFilter implements ResourceFilter {
-  private static final ContainerRequestFilter LOWER_CASE
-      = new ContainerRequestFilter() {
+public class ParamFilter implements Filter {
+
+  @Override
+  public void init(FilterConfig filterConfig) throws ServletException {
+  }
+
+  @Override
+  public void doFilter(ServletRequest request, ServletResponse response,
+      FilterChain chain) throws IOException, ServletException {
+    if (request instanceof HttpServletRequest) {
+      HttpServletRequest httpServletRequest = (HttpServletRequest) request;
+      chain.doFilter(new CustomHttpServletRequestWrapper(httpServletRequest), response);
+    } else {
+      chain.doFilter(request, response);
+    }
+  }
+
+  @Override
+  public void destroy() {
+  }
+
+  private static final class CustomHttpServletRequestWrapper
+      extends HttpServletRequestWrapper {
+
+    private Map<String, String[]> lowerCaseParams = new HashMap<>();
+
+    private CustomHttpServletRequestWrapper(HttpServletRequest request) {
+      super(request);
+      Map<String, String[]> originalParams = request.getParameterMap();
+      for (Map.Entry<String, String[]> entry : originalParams.entrySet()) {
+        lowerCaseParams.put(entry.getKey().toLowerCase(), entry.getValue());
+      }
+    }
+
+    public String getParameter(String name) {
+      String[] values = getParameterValues(name);
+      if (values != null && values.length > 0) {
+        return values[0];
+      } else {
+        return null;
+      }
+    }
+
     @Override
-    public ContainerRequest filter(final ContainerRequest request) {
-      final MultivaluedMap<String, String> parameters = request.getQueryParameters();
-      if (containsUpperCase(parameters.keySet())) {
-        //rebuild URI
-        final URI lower = rebuildQuery(request.getRequestUri(), parameters);
-        request.setUris(request.getBaseUri(), lower);
-      }
-      return request;
+    public Map<String, String[]> getParameterMap() {
+      return Collections.unmodifiableMap(lowerCaseParams);
     }
-  };
 
-  @Override
-  public ContainerRequestFilter getRequestFilter() {
-    return LOWER_CASE;
-  }
-
-  @Override
-  public ContainerResponseFilter getResponseFilter() {
-    return null;
-  }
-
-  /** Do the strings contain upper case letters? */
-  static boolean containsUpperCase(final Iterable<String> strings) {
-    for(String s : strings) {
-      for(int i = 0; i < s.length(); i++) {
-        if (Character.isUpperCase(s.charAt(i))) {
-          return true;
-        }
-      }
+    @Override
+    public Enumeration<String> getParameterNames() {
+      return Collections.enumeration(lowerCaseParams.keySet());
     }
-    return false;
-  }
 
-  /** Rebuild the URI query with lower case parameter names. */
-  private static URI rebuildQuery(final URI uri,
-      final MultivaluedMap<String, String> parameters) {
-    UriBuilder b = UriBuilder.fromUri(uri).replaceQuery("");
-    for(Map.Entry<String, List<String>> e : parameters.entrySet()) {
-      final String key = StringUtils.toLowerCase(e.getKey());
-      for(String v : e.getValue()) {
-        b = b.queryParam(key, v);
-      }
+    @Override
+    public String[] getParameterValues(String name) {
+      return lowerCaseParams.get(name.toLowerCase());
     }
-    return b.build();
   }
 }

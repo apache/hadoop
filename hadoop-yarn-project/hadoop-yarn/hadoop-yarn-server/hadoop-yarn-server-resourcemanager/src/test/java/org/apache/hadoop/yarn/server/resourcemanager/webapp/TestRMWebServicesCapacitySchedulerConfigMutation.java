@@ -18,10 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
+import javax.ws.rs.client.Entity;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-
-import com.sun.jersey.api.client.ClientResponse;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -48,7 +47,6 @@ import org.junit.runners.Parameterized;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerTestUtilities.GB;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.assertJsonResponse;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.createMutableRM;
-import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.createWebAppDescriptor;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.backupSchedulerConfigFileInTarget;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.getCapacitySchedulerConfigFileInTarget;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.TestWebServiceUtil.getExpectedResourceFile;
@@ -79,7 +77,6 @@ public class TestRMWebServicesCapacitySchedulerConfigMutation extends JerseyTest
 
   public TestRMWebServicesCapacitySchedulerConfigMutation(boolean legacyQueueMode)
       throws IOException {
-    super(createWebAppDescriptor());
     this.legacyQueueMode = legacyQueueMode;
     userName = UserGroupInformation.getCurrentUser().getShortUserName();
   }
@@ -94,9 +91,9 @@ public class TestRMWebServicesCapacitySchedulerConfigMutation extends JerseyTest
     try (MockRM rm = createMutableRM(absoluteConfig, true)){
       rm.registerNode("h1:1234", 32 * GB, 32);
 
-      assertJsonResponse(resource().path("ws/v1/cluster/scheduler")
+      assertJsonResponse(target().path("ws/v1/cluster/scheduler")
               .queryParam("user.name", userName)
-              .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class),
+              .request(MediaType.APPLICATION_JSON).get(Response.class),
           getExpectedResourceFile(EXPECTED_FILE_TMPL, "absolute-hierarchy", "before-update",
               legacyQueueMode));
 
@@ -109,18 +106,18 @@ public class TestRMWebServicesCapacitySchedulerConfigMutation extends JerseyTest
       QueueConfigInfo b = new QueueConfigInfo("root.a", capacityChange);
       updateInfo.getUpdateQueueInfo().add(b);
 
-      ClientResponse response = resource().path("ws/v1/cluster/scheduler-conf")
+      Response response = target().path("ws/v1/cluster/scheduler-conf")
           .queryParam("user.name", userName)
-          .accept(MediaType.APPLICATION_JSON)
-          .entity(toJson(updateInfo, SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
-          .put(ClientResponse.class);
+          .request(MediaType.APPLICATION_JSON)
+          .put(Entity.entity(toJson(updateInfo, SchedConfUpdateInfo.class),
+          MediaType.APPLICATION_JSON), Response.class);
 
       // HTTP 400 - Bad Request is encountered, check the logs for the failure
       assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
 
-      assertJsonResponse(resource().path("ws/v1/cluster/scheduler")
+      assertJsonResponse(target().path("ws/v1/cluster/scheduler")
               .queryParam("user.name", userName)
-              .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class),
+              .request(MediaType.APPLICATION_JSON).get(Response.class),
           getExpectedResourceFile(EXPECTED_FILE_TMPL, "absolute-hierarchy", "after-update",
               legacyQueueMode));
     }

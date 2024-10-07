@@ -197,6 +197,11 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
       <artifactId>junit-platform-launcher</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.codehaus.jettison</groupId>
+      <artifactId>jettison</artifactId>
+      <scope>compile</scope>
+    </dependency>
   </dependencies>
 
   <build>

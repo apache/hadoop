@@ -24,12 +24,17 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.UncheckedIOException;
+import java.net.ConnectException;
+import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.net.URI;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
+import net.jodah.failsafe.RetryPolicy;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -58,6 +63,8 @@ import org.apache.hadoop.yarn.exceptions.ResourceNotFoundException;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 
+import javax.ws.rs.ProcessingException;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -79,7 +86,6 @@ public class TestDSTimelineV10 extends DistributedShellBaseTest {
 
   @Override
   protected void cleanUpDFSClient() {
-
   }
 
   @Test
@@ -151,7 +157,7 @@ public class TestDSTimelineV10 extends DistributedShellBaseTest {
     LOG.info("Running DS Client");
     boolean result = getDSClient().run();
 
-    LOG.info("Client run completed. Result=" + result);
+    LOG.info("Client run completed. Result = {}.", result);
     // application should succeed
     Assert.assertTrue(result);
   }
@@ -521,10 +527,21 @@ public class TestDSTimelineV10 extends DistributedShellBaseTest {
     TimelineClientImpl client = new TimelineClientImpl() {
       @Override
       protected TimelineWriter createTimelineWriter(Configuration conf,
-          UserGroupInformation authUgi, com.sun.jersey.api.client.Client client,
-          URI resURI) throws IOException {
+           UserGroupInformation ugi, javax.ws.rs.client.Client webClient, URI uri,
+           RetryPolicy<Object> retryPolicy) {
+        long retryInterval =
+            YarnConfiguration.DEFAULT_TIMELINE_SERVICE_CLIENT_RETRY_INTERVAL_MS;
+        int maxRetries = YarnConfiguration.DEFAULT_TIMELINE_SERVICE_CLIENT_MAX_RETRIES;
+        RetryPolicy<Object> testRetryPolicy = new RetryPolicy<>()
+            .handle(IOException.class, RuntimeException.class)
+            .handleIf(e -> e instanceof ProcessingException
+            && (e.getCause() instanceof ConnectException
+            || e.getCause() instanceof SocketTimeoutException
+            || e.getCause() instanceof SocketException))
+            .withDelay(Duration.ofMillis(retryInterval))
+            .withMaxRetries(maxRetries);
         TimelineWriter timelineWriter =
-            new DirectTimelineWriter(authUgi, client, resURI);
+            new DirectTimelineWriter(authUgi, webClient, uri, testRetryPolicy);
         spyTimelineWriterRef.set(spy(timelineWriter));
         return spyTimelineWriterRef.get();
       }
@@ -536,7 +553,7 @@ public class TestDSTimelineV10 extends DistributedShellBaseTest {
     try {
       UserGroupInformation ugi = mock(UserGroupInformation.class);
       when(ugi.getShortUserName()).thenReturn("user1");
-      // verify no ClientHandlerException get thrown out.
+      // verify no ProcessingException get thrown out.
       am.publishContainerEndEvent(client, ContainerStatus.newInstance(
           BuilderUtils.newContainerId(1, 1, 1, 1), ContainerState.COMPLETE, "",
           1), "domainId", ugi);
@@ -622,7 +639,7 @@ public class TestDSTimelineV10 extends DistributedShellBaseTest {
           try (BufferedReader br = new BufferedReader(new FileReader(output))) {
             String sCurrentLine;
 
-            int numOfline = 0;
+            int numOffline = 0;
             while ((sCurrentLine = br.readLine()) != null) {
               if (count) {
                 if (sCurrentLine.contains(expectedWord)) {
@@ -631,8 +648,8 @@ public class TestDSTimelineV10 extends DistributedShellBaseTest {
               } else if (output.getName().trim().equals("stdout")) {
                 if (!Shell.WINDOWS) {
                   Assert.assertEquals("The current is" + sCurrentLine,
-                      expectedContent.get(numOfline), sCurrentLine.trim());
-                  numOfline++;
+                      expectedContent.get(numOffline), sCurrentLine.trim());
+                  numOffline++;
                 } else {
                   stdOutContent.add(sCurrentLine.trim());
                 }
@@ -831,8 +848,7 @@ public class TestDSTimelineV10 extends DistributedShellBaseTest {
   }
 
   @Override
-  protected void customizeConfiguration(
-      YarnConfiguration config) throws Exception {
+  protected void customizeConfiguration(YarnConfiguration config) {
     config.set(CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY,
         CommonConfigurationKeysPublic.FS_DEFAULT_NAME_DEFAULT);
   }

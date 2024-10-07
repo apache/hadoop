@@ -47,7 +47,8 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.sun.jersey.api.client.ClientResponse.Status;
+import javax.ws.rs.core.Response;
+
 
 public class TestRMWebServicesHttpStaticUserPermissions {
 
@@ -144,7 +145,7 @@ public class TestRMWebServicesHttpStaticUserPermissions {
       "");
     try {
       conn.getInputStream();
-      assertEquals(Status.OK.getStatusCode(), conn.getResponseCode());
+      assertEquals(Response.Status.OK.getStatusCode(), conn.getResponseCode());
     } catch (IOException e) {
       fail("Got " + conn.getResponseCode() + " instead of 200 accessing "
           + url.toString());
@@ -178,7 +179,7 @@ public class TestRMWebServicesHttpStaticUserPermissions {
         conn.getInputStream();
         fail("Request " + entry.getKey() + "succeeded but should have failed");
       } catch (IOException e) {
-        assertEquals(Status.FORBIDDEN.getStatusCode(), conn.getResponseCode());
+        assertEquals(Response.Status.FORBIDDEN.getStatusCode(), conn.getResponseCode());
         InputStream errorStream = conn.getErrorStream();
         String error = "";
         BufferedReader reader = new BufferedReader(

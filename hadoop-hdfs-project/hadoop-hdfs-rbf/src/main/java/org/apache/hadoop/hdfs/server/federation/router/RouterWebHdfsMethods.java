@@ -37,9 +37,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-import com.sun.jersey.spi.container.ResourceFilters;
 import org.apache.hadoop.hdfs.web.JsonUtil;
-import org.apache.hadoop.hdfs.web.ParamFilter;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.resources.AccessTimeParam;
 import org.apache.hadoop.hdfs.web.resources.AclPermissionParam;
@@ -118,7 +116,6 @@ import java.util.regex.Pattern;
  * {@link NamenodeWebHdfsMethods}, and tries to reuse as much as possible.
  */
 @Path("")
-@ResourceFilters(ParamFilter.class)
 public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
   private static final Logger LOG =
       LoggerFactory.getLogger(RouterWebHdfsMethods.class);

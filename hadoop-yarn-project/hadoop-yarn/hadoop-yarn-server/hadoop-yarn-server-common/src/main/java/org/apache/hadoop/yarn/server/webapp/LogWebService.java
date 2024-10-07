@@ -19,22 +19,14 @@
 package org.apache.hadoop.yarn.server.webapp;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
+import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.thirdparty.com.google.common.base.Joiner;
-import com.google.inject.Singleton;
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.config.ClientConfig;
-import com.sun.jersey.api.client.config.DefaultClientConfig;
-import com.sun.jersey.client.urlconnection.HttpURLConnectionFactory;
-import com.sun.jersey.client.urlconnection.URLConnectionClientHandler;
-import com.sun.jersey.core.util.MultivaluedMapImpl;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
-import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
@@ -44,9 +36,12 @@ import org.apache.hadoop.yarn.server.metrics.ApplicationMetricsConstants;
 import org.apache.hadoop.yarn.server.metrics.ContainerMetricsConstants;
 import org.apache.hadoop.yarn.webapp.YarnJacksonJaxbJsonProvider;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
+import org.glassfish.jersey.client.ClientConfig;
+import org.glassfish.jersey.client.HttpUrlConnectorProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.inject.Singleton;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.DefaultValue;
@@ -55,13 +50,15 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
+import javax.ws.rs.core.MultivaluedHashMap;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.net.HttpURLConnection;
-import java.net.URL;
 import java.security.PrivilegedExceptionAction;
 
 /**
@@ -95,8 +92,8 @@ public class LogWebService implements AppInfoProvider {
         RESOURCE_URI_STR_V2);
     defaultClusterid = yarnConf.get(YarnConfiguration.RM_CLUSTER_ID,
         YarnConfiguration.DEFAULT_RM_CLUSTER_ID);
-    LOG.info("Initialized LogWeService with clusterid " + defaultClusterid
-        + " for URI: " + base);
+    LOG.info("Initialized LogWeService with clusterid {} for URI: {}.",
+        defaultClusterid, base);
   }
 
   public LogWebService() {
@@ -104,26 +101,26 @@ public class LogWebService implements AppInfoProvider {
   }
 
   private Client createTimelineWebClient() {
-    ClientConfig cfg = new DefaultClientConfig();
-    cfg.getClasses().add(YarnJacksonJaxbJsonProvider.class);
-    Client client = new Client(
-        new URLConnectionClientHandler(new HttpURLConnectionFactory() {
-          @Override public HttpURLConnection getHttpURLConnection(URL url)
-              throws IOException {
-            AuthenticatedURL.Token token = new AuthenticatedURL.Token();
-            HttpURLConnection conn = null;
-            try {
-              conn = new AuthenticatedURL().openConnection(url, token);
-              LOG.info("LogWeService:Connecetion created.");
-            } catch (AuthenticationException e) {
-              throw new IOException(e);
-            }
-            return conn;
-          }
-        }), cfg);
+    ClientConfig cfg = new ClientConfig();
+    cfg.register(YarnJacksonJaxbJsonProvider.class);
 
-    return client;
+    HttpUrlConnectorProvider httpUrlConnectorProvider =
+        new HttpUrlConnectorProvider().connectionFactory(url -> {
+          AuthenticatedURL.Token token = new AuthenticatedURL.Token();
+          HttpURLConnection conn;
+          try {
+            conn = new AuthenticatedURL().openConnection(url, token);
+            LOG.info("LogWeService:Connecetion created.");
+          } catch (AuthenticationException e) {
+            throw new IOException(e);
+          }
+          return conn;
+        });
+    cfg.connectorProvider(httpUrlConnectorProvider);
+
+    return ClientBuilder.newBuilder().withConfig(cfg).build();
   }
+
 
   private void initForReadableEndpoints(HttpServletResponse response) {
     // clear content type
@@ -169,7 +166,7 @@ public class LogWebService implements AppInfoProvider {
       String appAttemptId, String containerId, String clusterId) {
     UserGroupInformation callerUGI = LogWebServiceUtils.getUser(req);
     String cId = clusterId != null ? clusterId : defaultClusterid;
-    MultivaluedMap<String, String> params = new MultivaluedMapImpl();
+    MultivaluedMap<String, String> params = new MultivaluedHashMap();
     params.add("fields", "INFO");
     String path = JOINER.join("clusters/", cId, "/apps/", appId, "/entities/",
         TimelineEntityType.YARN_CONTAINER.toString(), "/", containerId);
@@ -202,7 +199,7 @@ public class LogWebService implements AppInfoProvider {
     UserGroupInformation callerUGI = LogWebServiceUtils.getUser(req);
 
     String cId = clusterId != null ? clusterId : defaultClusterid;
-    MultivaluedMap<String, String> params = new MultivaluedMapImpl();
+    MultivaluedMap<String, String> params = new MultivaluedHashMap();
     params.add("fields", "INFO");
     String path = JOINER.join("clusters/", cId, "/apps/", appId);
     TimelineEntity appEntity = null;
@@ -298,22 +295,22 @@ public class LogWebService implements AppInfoProvider {
 
   @VisibleForTesting protected TimelineEntity getEntity(String path,
       MultivaluedMap<String, String> params) throws IOException {
-    ClientResponse resp =
-        getClient().resource(base).path(path).queryParams(params)
-            .accept(MediaType.APPLICATION_JSON).type(MediaType.APPLICATION_JSON)
-            .get(ClientResponse.class);
+    Response resp =
+        getClient().target(base).path(path)
+            .request(MediaType.APPLICATION_JSON)
+            .get(Response.class);
     if (resp == null
-        || resp.getStatusInfo().getStatusCode() != ClientResponse.Status.OK
+        || resp.getStatusInfo().getStatusCode() != Response.Status.OK
         .getStatusCode()) {
       String msg =
           "Response from the timeline reader server is " + ((resp == null) ?
               "null" :
               "not successful," + " HTTP error code: " + resp.getStatus()
-                  + ", Server response:\n" + resp.getEntity(String.class));
+                  + ", Server response:\n" + resp.readEntity(String.class));
       LOG.error(msg);
       throw new IOException(msg);
     }
-    TimelineEntity entity = resp.getEntity(TimelineEntity.class);
+    TimelineEntity entity = resp.readEntity(TimelineEntity.class);
     return entity;
   }
 

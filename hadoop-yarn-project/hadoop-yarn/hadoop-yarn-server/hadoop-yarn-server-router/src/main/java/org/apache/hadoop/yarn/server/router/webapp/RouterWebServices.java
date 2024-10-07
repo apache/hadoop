@@ -23,6 +23,9 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 
+import javax.inject.Inject;
+import javax.inject.Named;
+import javax.inject.Singleton;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.Consumes;
@@ -90,8 +93,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.VisibleForTesting;
-import com.google.inject.Inject;
-import com.google.inject.Singleton;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebServices.DEFAULT_ACTIVITIES_COUNT;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWebServices.DEFAULT_SUMMARIZE;
@@ -126,7 +127,8 @@ public class RouterWebServices implements RMWebServiceProtocol {
   public static final String DEFAULT_INCLUDE_RESOURCE = "false";
 
   @Inject
-  public RouterWebServices(final Router router, Configuration conf) {
+  public RouterWebServices(final @Named("router") Router router,
+      @Named("conf")  Configuration conf) {
     this.router = router;
     this.conf = conf;
     int maxCacheSize =
@@ -907,7 +909,7 @@ public class RouterWebServices implements RMWebServiceProtocol {
   @Consumes({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   @Override
   public Response updateSchedulerConfiguration(SchedConfUpdateInfo mutationInfo,
-      HttpServletRequest hsr)
+      @Context HttpServletRequest hsr)
       throws AuthorizationException, InterruptedException {
     init();
     RequestInterceptorChainWrapper pipeline = getInterceptorChain(hsr);

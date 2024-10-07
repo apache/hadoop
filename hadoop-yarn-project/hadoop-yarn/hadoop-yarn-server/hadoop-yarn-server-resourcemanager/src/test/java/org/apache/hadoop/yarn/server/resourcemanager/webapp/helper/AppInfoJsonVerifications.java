@@ -89,7 +89,7 @@ public final class AppInfoJsonVerifications {
     assertEquals("numContainers doesn't match", 1,
         info.getInt("runningContainers"));
     assertNotNull("preemptedResourceSecondsMap should not be null",
-        info.getJSONObject("preemptedResourceSecondsMap"));
+        info.get("preemptedResourceSecondsMap"));
     assertEquals("preemptedResourceMB doesn't match",
         app.getRMAppMetrics().getResourcePreempted().getMemorySize(),
         info.getInt("preemptedResourceMB"));

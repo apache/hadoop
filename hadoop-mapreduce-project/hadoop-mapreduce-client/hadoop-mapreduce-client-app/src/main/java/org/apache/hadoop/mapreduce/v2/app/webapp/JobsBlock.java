@@ -35,11 +35,13 @@ import com.google.inject.Inject;
 public class JobsBlock extends HtmlBlock {
   final AppContext appContext;
 
-  @Inject JobsBlock(AppContext appCtx) {
+  @Inject
+  public JobsBlock(AppContext appCtx) {
     appContext = appCtx;
   }
 
-  @Override protected void render(Block html) {
+  @Override
+  protected void render(Block html) {
     TBODY<TABLE<Hamlet>> tbody = html.
       h2("Active Jobs").
       table("#jobs").
