@@ -1363,6 +1363,19 @@ public final class Constants {
   public static final String XA_HEADER_PREFIX = "header.";
 
   /**
+   * S3 cross region access enabled ?
+   * Value: {@value}.
+   */
+
+  public static final String AWS_S3_CROSS_REGION_ACCESS_ENABLED =
+      "fs.s3a.cross.region.access.enabled";
+  /**
+   * Default value for S3 cross region access enabled: {@value}.
+   */
+  public static final boolean AWS_S3_CROSS_REGION_ACCESS_ENABLED_DEFAULT = true;
+
+
+  /**
    * AWS S3 region for the bucket. When set bypasses the construction of
    * region through endpoint url.
    */

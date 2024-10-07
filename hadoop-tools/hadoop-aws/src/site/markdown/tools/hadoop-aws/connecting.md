@@ -48,6 +48,16 @@ There are multiple ways to connect to an S3 bucket
 
 The S3A connector supports all these; S3 Endpoints are the primary mechanism used -either explicitly declared or automatically determined from the declared region of the bucket.
 
+The S3A connector supports S3 cross region access via AWS SDK which is enabled by default. This allows users to access S3 buckets in a different region than the one defined in the S3 endpoint/region configuration, as long as they are within the same AWS partition. However, S3 cross-region access can be disabled by:
+```xml
+<property>
+  <name>fs.s3a.cross.region.access.enabled</name>
+  <value>false</value>
+  <description>S3 cross region access</description>
+</property>
+```
+
+
 Not supported:
 * AWS [Snowball](https://aws.amazon.com/snowball/).
 
