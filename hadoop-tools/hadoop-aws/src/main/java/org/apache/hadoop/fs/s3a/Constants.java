@@ -399,6 +399,21 @@ public final class Constants {
       Duration.ofSeconds(60);
 
   /**
+   * Timeout for uploading all of a small object or a single part
+   * of a larger one.
+   * {@value}.
+   * Default unit is milliseconds for consistency with other options.
+   */
+  public static final String PART_UPLOAD_TIMEOUT =
+      "fs.s3a.connection.part.upload.timeout";
+
+  /**
+   * Default part upload timeout: 15 minutes.
+   */
+  public static final Duration DEFAULT_PART_UPLOAD_TIMEOUT =
+      Duration.ofMinutes(15);
+
+  /**
    * Should TCP Keepalive be enabled on the socket?
    * This adds some network IO, but finds failures faster.
    * {@value}.
