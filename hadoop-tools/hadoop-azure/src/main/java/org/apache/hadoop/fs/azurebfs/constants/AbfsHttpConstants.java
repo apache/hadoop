@@ -52,13 +52,41 @@ public final class AbfsHttpConstants {
   public static final String APPEND_BLOB_TYPE = "appendblob";
 
   //Abfs Http Client Constants for Blob Endpoint APIs.
+
+  /**
+   * HTTP Header Value to denote resource type as container.
+   * {@value}.
+   */
   public static final String CONTAINER = "container";
+
+  /**
+   * HTTP Header Value to denote component as metadata.
+   * {@value}.
+   */
   public static final String METADATA = "metadata";
-  public static final String LIST = "list";
+
+  /**
+   * HTTP Header Value to denote component as block.
+   * {@value}.
+   */
   public static final String BLOCK = "block";
+
+  /**
+   * HTTP Header Value to denote component as blocklist.
+   * {@value}.
+   */
   public static final String BLOCKLIST = "blocklist";
+
+  /**
+   * HTTP Header Value to denote component as lease.
+   * {@value}.
+   */
   public static final String LEASE = "lease";
-  public static final String BLOCK_BLOB_TYPE = "BlockBlob";
+
+  /**
+   * HTTP Header Value to denote bock list type as committed.
+   * {@value}.
+   */
   public static final String BLOCK_TYPE_COMMITTED = "committed";
 
   public static final String JAVA_VENDOR = "java.vendor";

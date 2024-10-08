@@ -36,9 +36,19 @@ public class AppendRequestParameters {
   private final String leaseId;
   private boolean isExpectHeaderEnabled;
   private boolean isRetryDueToExpect;
-  private BlobAppendRequestParameters blobParams;
+  private final BlobAppendRequestParameters blobParams;
 
-  // Constructor to be used for interacting with AbfsDfsClient
+
+  /**
+   * Constructor to be used for interacting with AbfsDfsClient.
+   * @param position position in remote blob at which append should happen
+   * @param offset position in the buffer to be appended
+   * @param length length of the data to be appended
+   * @param mode mode of the append operation
+   * @param isAppendBlob true if the blob is append-blob
+   * @param leaseId leaseId of the blob to be appended
+   * @param isExpectHeaderEnabled true if the expect header is enabled
+   */
   public AppendRequestParameters(final long position,
       final int offset,
       final int length,
@@ -57,7 +67,17 @@ public class AppendRequestParameters {
     this.blobParams = null;
   }
 
-  // Constructor to be used for interacting with AbfsBlobClient
+  /**
+   * Constructor to be used for interacting with AbfsBlobClient.
+   * @param position position in remote blob at which append should happen
+   * @param offset position in the buffer to be appended
+   * @param length length of the data to be appended
+   * @param mode mode of the append operation
+   * @param isAppendBlob true if the blob is append-blob
+   * @param leaseId leaseId of the blob to be appended
+   * @param isExpectHeaderEnabled true if the expect header is enabled
+   * @param blobParams parameters specific to append operation on Blob Endpoint.
+   */
   public AppendRequestParameters(final long position,
       final int offset,
       final int length,

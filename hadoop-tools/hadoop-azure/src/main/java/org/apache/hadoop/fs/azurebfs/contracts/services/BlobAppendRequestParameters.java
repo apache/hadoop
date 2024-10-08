@@ -26,6 +26,11 @@ public class BlobAppendRequestParameters {
   private String blockId;
   private String eTag;
 
+  /**
+   * Constructor to be used for interacting with AbfsBlobClient.
+   * @param blockId blockId of the block to be appended
+   * @param eTag eTag of the blob being appended
+   */
   public BlobAppendRequestParameters(String blockId, String eTag) {
     this.blockId = blockId;
     this.eTag = eTag;
