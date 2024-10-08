@@ -44,8 +44,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.statistics.impl.EmptyS3AStatisticsContext;
 import org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils;
 
+import static org.apache.hadoop.fs.contract.ContractTestUtils.skip;
 import static org.apache.hadoop.fs.s3a.Constants.ALLOW_REQUESTER_PAYS;
 import static org.apache.hadoop.fs.s3a.Constants.AWS_REGION;
+import static org.apache.hadoop.fs.s3a.Constants.AWS_S3_CROSS_REGION_ACCESS_ENABLED;
 import static org.apache.hadoop.fs.s3a.Constants.CENTRAL_ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.ENDPOINT;
 import static org.apache.hadoop.fs.s3a.Constants.FIPS_ENDPOINT;
@@ -70,6 +72,8 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
   private static final String US_EAST_2 = "us-east-2";
 
   private static final String US_WEST_2 = "us-west-2";
+
+  private static final String SA_EAST_1 = "sa-east-1";
 
   private static final String EU_WEST_2 = "eu-west-2";
 
@@ -347,6 +351,46 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
   }
 
   @Test
+  public void testWithOutCrossRegionAccess() throws Exception {
+    describe("Verify cross region access fails when disabled");
+    // skip the test if the region is sa-east-1
+    skipCrossRegionTest();
+    final Configuration newConf = new Configuration(getConfiguration());
+    removeBaseAndBucketOverrides(newConf,
+        ENDPOINT,
+        AWS_S3_CROSS_REGION_ACCESS_ENABLED,
+        AWS_REGION);
+    // disable cross region access
+    newConf.setBoolean(AWS_S3_CROSS_REGION_ACCESS_ENABLED, false);
+    newConf.set(AWS_REGION, SA_EAST_1);
+    try (S3AFileSystem fs = new S3AFileSystem()) {
+      fs.initialize(getFileSystem().getUri(), newConf);
+      intercept(AWSRedirectException.class,
+          "does not match the AWS region containing the bucket",
+          () -> fs.exists(getFileSystem().getWorkingDirectory()));
+    }
+  }
+
+  @Test
+  public void testWithCrossRegionAccess() throws Exception {
+    describe("Verify cross region access succeed when enabled");
+    // skip the test if the region is sa-east-1
+    skipCrossRegionTest();
+    final Configuration newConf = new Configuration(getConfiguration());
+    removeBaseAndBucketOverrides(newConf,
+        ENDPOINT,
+        AWS_S3_CROSS_REGION_ACCESS_ENABLED,
+        AWS_REGION);
+    // enable cross region access
+    newConf.setBoolean(AWS_S3_CROSS_REGION_ACCESS_ENABLED, true);
+    newConf.set(AWS_REGION, SA_EAST_1);
+    try (S3AFileSystem fs = new S3AFileSystem()) {
+      fs.initialize(getFileSystem().getUri(), newConf);
+      fs.exists(getFileSystem().getWorkingDirectory());
+    }
+  }
+
+  @Test
   public void testCentralEndpointAndSameRegionAsBucket() throws Throwable {
     describe("Access public bucket using central endpoint and region "
         + "same as that of the public bucket");
@@ -476,6 +520,16 @@ public class ITestS3AEndpointRegion extends AbstractS3ATestBase {
     newFS.initialize(getFileSystem().getUri(), newConf);
 
     assertOpsUsingNewFs();
+  }
+
+  /**
+   * Skip the test if the region is null or sa-east-1.
+   */
+  private void skipCrossRegionTest() throws IOException {
+    String region = getFileSystem().getS3AInternals().getBucketMetadata().bucketRegion();
+    if (region == null || SA_EAST_1.equals(region)) {
+      skip("Skipping test since region is null or it is set to sa-east-1");
+    }
   }
 
   private void assertOpsUsingNewFs() throws IOException {
