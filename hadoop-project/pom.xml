@@ -167,8 +167,19 @@
     <enforced.java.version>[${javac.version},)</enforced.java.version>
     <enforced.maven.version>[3.3.0,)</enforced.maven.version>
 
+    <!-- keep this list sync with
+         hadoop-common-project/hadoop-common/src/main/bin/hadoop-functions.sh#hadoop_finalize_jpms_opts
+    -->
     <extraJavaTestArgs>
       -XX:+IgnoreUnrecognizedVMOptions
+      --add-opens=java.base/java.io=ALL-UNNAMED
+      --add-opens=java.base/java.lang=ALL-UNNAMED
+      --add-opens=java.base/java.lang.reflect=ALL-UNNAMED
+      --add-opens=java.base/java.math=ALL-UNNAMED
+      --add-opens=java.base/java.net=ALL-UNNAMED
+      --add-opens=java.base/java.text=ALL-UNNAMED
+      --add-opens=java.base/java.util=ALL-UNNAMED
+      --add-opens=java.base/java.util.concurrent=ALL-UNNAMED
       --add-opens=java.base/java.util.zip=ALL-UNNAMED
       --add-opens=java.base/sun.security.util=ALL-UNNAMED
       --add-opens=java.base/sun.security.x509=ALL-UNNAMED
