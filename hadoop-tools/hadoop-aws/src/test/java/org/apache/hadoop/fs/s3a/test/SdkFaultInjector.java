@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a.test;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import org.slf4j.Logger;
@@ -35,6 +36,7 @@ import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 
 import org.apache.hadoop.conf.Configuration;
 
+import static java.util.Objects.requireNonNull;
 import static org.apache.hadoop.fs.s3a.audit.AuditTestSupport.enableLoggingAuditor;
 import static org.apache.hadoop.fs.s3a.audit.AuditTestSupport.resetAuditOptions;
 import static org.apache.hadoop.fs.s3a.audit.S3AAuditConstants.AUDIT_EXECUTION_INTERCEPTORS;
@@ -77,6 +79,13 @@ public final class SdkFaultInjector implements ExecutionInterceptor {
    */
   private static Function<Context.ModifyHttpResponse, Boolean> evaluator = ALWAYS_ALLOW;
 
+
+  /**
+   * Action to take on failure.
+   */
+  private static BiFunction<SdkRequest, SdkHttpResponse, SdkHttpResponse>
+      action = SdkFaultInjector::patchStatusCode;
+
   /**
    * Update the value of {@link #FAILURE_STATUS_CODE}.
    * @param value new value
@@ -97,10 +106,14 @@ public final class SdkFaultInjector implements ExecutionInterceptor {
 
 
   /**
-   * Reset the evaluator to enable everything.
+   * Reset fault injection.
+   * The evaluator will enable everything;
+   * the failure action is set to
+   * {@link #patchStatusCode(SdkRequest, SdkHttpResponse)}.
    */
-  public static void resetEvaluator() {
+  public static void resetFaultInjector() {
     setEvaluator(ALWAYS_ALLOW);
+    setAction(SdkFaultInjector::patchStatusCode);
   }
 
   /**
@@ -121,6 +134,23 @@ public final class SdkFaultInjector implements ExecutionInterceptor {
       final Function<Context.ModifyHttpResponse, Boolean> condition) {
     setRequestFailureCount(attempts);
     setEvaluator(condition);
+  }
+
+  /**
+   * Set the action to invoke.
+   * @param action new action.
+   */
+  public static void setAction(BiFunction<SdkRequest, SdkHttpResponse, SdkHttpResponse> action) {
+    SdkFaultInjector.action = requireNonNull(action);
+  }
+
+  /**
+   * Is the response being processed from a GET request?
+   * @param context request context.
+   * @return true if the request is of the right type.
+   */
+  public static boolean isGetRequest(final Context.ModifyHttpResponse context) {
+    return context.httpRequest().method().equals(SdkHttpMethod.GET);
   }
 
   /**
@@ -168,6 +198,8 @@ public final class SdkFaultInjector implements ExecutionInterceptor {
     return context.request() instanceof AbortMultipartUploadRequest;
   }
 
+
+
   /**
    * Review response from S3 and optionall modify its status code.
    * @return the original response or a copy with a different status code.
@@ -179,19 +211,31 @@ public final class SdkFaultInjector implements ExecutionInterceptor {
     SdkHttpResponse httpResponse = context.httpResponse();
     if (evaluator.apply(context) && shouldFail()) {
 
-      // fail the request
-      final int code = FAILURE_STATUS_CODE.get();
-      LOG.info("Fault Injector returning {} error code for request {}",
-          code, request);
-
-      return httpResponse.copy(b -> {
-        b.statusCode(code);
-      });
+      return action.apply(request, httpResponse);
 
     } else {
       // pass unchanged
       return httpResponse;
     }
+  }
+
+  /**
+   * The default fault injector: patch the status code with the value in
+   * {@link #FAILURE_STATUS_CODE}.
+   * @param request original request
+   * @param httpResponse ongoing response
+   * @return modified response.
+   */
+  public static SdkHttpResponse patchStatusCode(final SdkRequest request,
+      final SdkHttpResponse httpResponse) {
+    // fail the request
+    final int code = FAILURE_STATUS_CODE.get();
+    LOG.info("Fault Injector returning {} error code for request {}",
+        code, request);
+
+    return httpResponse.copy(b -> {
+      b.statusCode(code);
+    });
   }
 
   /**

@@ -1280,6 +1280,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           STORAGE_CLASS);
     }
 
+    // optional custom timeout for bulk uploads
+    Duration partUploadTimeout = ConfigurationHelper.getDuration(getConf(),
+        PART_UPLOAD_TIMEOUT,
+        DEFAULT_PART_UPLOAD_TIMEOUT,
+        TimeUnit.MILLISECONDS,
+        Duration.ZERO);
+
     return RequestFactoryImpl.builder()
         .withBucket(requireNonNull(bucket))
         .withCannedACL(getCannedACL())
@@ -1289,6 +1296,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .withContentEncoding(contentEncoding)
         .withStorageClass(storageClass)
         .withMultipartUploadEnabled(isMultipartUploadEnabled)
+        .withPartUploadTimeout(partUploadTimeout)
         .build();
   }
 

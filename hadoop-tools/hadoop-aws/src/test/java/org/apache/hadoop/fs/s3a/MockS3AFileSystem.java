@@ -54,6 +54,7 @@ import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.util.Progressable;
 
 
+import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_PART_UPLOAD_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.audit.AuditTestSupport.noopAuditor;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.stubDurationTrackerFactory;
 import static org.apache.hadoop.util.Preconditions.checkNotNull;
@@ -99,6 +100,7 @@ public class MockS3AFileSystem extends S3AFileSystem {
       .withRequestPreparer(MockS3AFileSystem::prepareRequest)
       .withBucket(BUCKET)
       .withEncryptionSecrets(new EncryptionSecrets())
+      .withPartUploadTimeout(DEFAULT_PART_UPLOAD_TIMEOUT)
       .build();
 
   /**

@@ -26,6 +26,8 @@ import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.awscore.AwsRequest;
+import software.amazon.awssdk.awscore.AwsRequestOverrideConfiguration;
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.core.client.config.SdkAdvancedClientOption;
 import software.amazon.awssdk.core.retry.RetryMode;
@@ -623,4 +625,24 @@ public final class AWSClientConfig {
         socketTimeout);
   }
 
+  /**
+   * Set a custom ApiCallTimeout for a single request.
+   * This allows for a longer timeout to be used in data upload
+   * requests than that for all other S3 interactions;
+   * This does not happen by default in the V2 SDK
+   * (see HADOOP-19295).
+   * <p>
+   * If the timeout is zero, the request is not patched.
+   * @param builder builder to patch.
+   * @param timeout timeout
+   */
+  public static void setRequestTimeout(AwsRequest.Builder builder, Duration timeout) {
+    if (!timeout.isZero()) {
+      builder.overrideConfiguration(
+          AwsRequestOverrideConfiguration.builder()
+              .apiCallTimeout(timeout)
+              .apiCallAttemptTimeout(timeout)
+              .build());
+    }
+  }
 }
