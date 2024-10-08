@@ -1283,6 +1283,7 @@ public class AbfsDfsClient extends AbfsClient {
 
       Boolean canEncodeValue = encoder.canEncode(value);
       if (!canEncodeValue) {
+        LOG.error("Property value {} cannot be encoded using ASCII encoding", value);
         throw new CharacterCodingException();
       }
 
