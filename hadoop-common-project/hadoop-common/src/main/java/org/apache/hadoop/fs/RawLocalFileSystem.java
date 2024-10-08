@@ -68,7 +68,8 @@ import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 
-import static org.apache.hadoop.fs.VectoredReadUtils.validateAndSortRanges;
+import static org.apache.hadoop.fs.VectoredReadUtils.sortRangeList;
+import static org.apache.hadoop.fs.VectoredReadUtils.validateRangeRequest;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_BYTES;
 import static org.apache.hadoop.fs.statistics.StreamStatisticNames.STREAM_READ_EXCEPTIONS;
@@ -320,10 +321,10 @@ public class RawLocalFileSystem extends FileSystem {
                              IntFunction<ByteBuffer> allocate) throws IOException {
 
       // Validate, but do not pass in a file length as it may change.
-      List<? extends FileRange> sortedRanges = validateAndSortRanges(ranges,
-          Optional.empty());
+      List<? extends FileRange> sortedRanges = sortRangeList(ranges);
       // Set up all of the futures, so that we can use them if things fail
       for(FileRange range: sortedRanges) {
+        validateRangeRequest(range);
         range.setData(new CompletableFuture<>());
       }
       try {
