@@ -39,7 +39,7 @@ import static org.apache.hadoop.hdfs.server.federation.router.RouterRpcServer.me
 import static org.apache.hadoop.hdfs.server.federation.router.async.AsyncUtil.asyncApply;
 import static org.apache.hadoop.hdfs.server.federation.router.async.AsyncUtil.asyncReturn;
 
-public class AsyncErasureCoding extends ErasureCoding{
+public class AsyncErasureCoding extends ErasureCoding {
   /** RPC server to receive client calls. */
   private final RouterRpcServer rpcServer;
   /** RPC clients to connect to the Namenodes. */
