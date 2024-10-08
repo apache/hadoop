@@ -26,6 +26,7 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
+import java.time.LocalDateTime;
 import java.util.function.Supplier;
 import javax.annotation.Nullable;
 
@@ -225,6 +226,12 @@ public final class UploadContentProviders {
     private T currentStream;
 
     /**
+     * When did this upload start?
+     * Use in error messages.
+     */
+    private final LocalDateTime startTime;
+
+    /**
      * Constructor.
      * @param size size of the data. Must be non-negative.
      */
@@ -241,6 +248,7 @@ public final class UploadContentProviders {
       checkArgument(size >= 0, "size is negative: %s", size);
       this.size = size;
       this.isOpen = isOpen;
+      this.startTime = LocalDateTime.now();
     }
 
     /**
@@ -274,8 +282,11 @@ public final class UploadContentProviders {
       close();
       checkOpen();
       streamCreationCount++;
-      if (streamCreationCount > 1) {
-        LOG.info("Stream created more than once: {}", this);
+      if (streamCreationCount == 2) {
+        // the stream has been recreated for the first time.
+        // notify only once for this stream, so as not to flood
+        // the logs.
+        LOG.info("Stream recreated: {}", this);
       }
       return setCurrentStream(createNewStream());
     }
@@ -300,6 +311,14 @@ public final class UploadContentProviders {
      */
     public int getSize() {
       return size;
+    }
+
+    /**
+     * When did this upload start?
+     * @return start time
+     */
+    public LocalDateTime getStartTime() {
+      return startTime;
     }
 
     /**
@@ -330,6 +349,7 @@ public final class UploadContentProviders {
     public String toString() {
       return "BaseContentProvider{" +
           "size=" + size +
+          ", initiated at " + startTime +
           ", streamCreationCount=" + streamCreationCount +
           ", currentStream=" + currentStream +
           '}';
