@@ -101,7 +101,7 @@ public abstract class AbstractMultipartUploader implements MultipartUploader {
 
   /**
    * Check all the arguments to the
-   * {@link MultipartUploader#putPart(UploadHandle, int, Path, InputStream, long)}
+   * {@link MultipartUploader#putPart(UploadHandle, int, boolean, Path, InputStream, long)}
    * operation.
    * @param filePath Target path for upload (as {@link #startUpload(Path)}).
    * @param inputStream Data for this part. Implementations MUST close this

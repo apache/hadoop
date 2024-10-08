@@ -57,6 +57,7 @@ public interface MultipartUploader extends Closeable,
    * It is possible to have parts uploaded in any order (or in parallel).
    * @param uploadId Identifier from {@link #startUpload(Path)}.
    * @param partNumber Index of the part relative to others.
+   * @param isLastPart  is the part the last part of the upload?
    * @param filePath Target path for upload (as {@link #startUpload(Path)}).
    * @param inputStream Data for this part. Implementations MUST close this
    * stream after reading in the data.
@@ -67,6 +68,7 @@ public interface MultipartUploader extends Closeable,
   CompletableFuture<PartHandle> putPart(
       UploadHandle uploadId,
       int partNumber,
+      boolean isLastPart,
       Path filePath,
       InputStream inputStream,
       long lengthInBytes)
@@ -77,7 +79,7 @@ public interface MultipartUploader extends Closeable,
    * @param uploadId Identifier from {@link #startUpload(Path)}.
    * @param filePath Target path for upload (as {@link #startUpload(Path)}.
    * @param handles non-empty map of part number to part handle.
-   *          from {@link #putPart(UploadHandle, int, Path, InputStream, long)}.
+   *          from {@link #putPart(UploadHandle, int, boolean, Path, InputStream, long)}.
    * @return unique PathHandle identifier for the uploaded file.
    * @throws IOException IO failure
    */

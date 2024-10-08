@@ -248,6 +248,11 @@ public class S3AStoreImpl implements S3AStore {
   }
 
   @Override
+  public S3Client getOrCreateUnencryptedS3Client() throws IOException {
+    return clientManager.getOrCreateUnencryptedS3Client();
+  }
+
+  @Override
   public DurationTrackerFactory getDurationTrackerFactory() {
     return durationTrackerFactory;
   }

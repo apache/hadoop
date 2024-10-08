@@ -13,7 +13,6 @@
  */
 package org.apache.hadoop.fs.s3a.fileContext;
 
-import java.io.IOException;
 import java.net.URI;
 
 import org.slf4j.Logger;
@@ -24,19 +23,12 @@ import org.apache.hadoop.fs.FCStatisticsBaseTest;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.auth.STSClientFactory;
 
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
-
-import static org.apache.hadoop.fs.s3a.S3ATestConstants.KMS_KEY_GENERATION_REQUEST_PARAMS_BYTES_WRITTEN;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
-import static org.apache.hadoop.fs.s3a.S3AUtils.getEncryptionAlgorithm;
-import static org.apache.hadoop.fs.s3a.S3AUtils.getS3EncryptionKey;
-import static org.apache.hadoop.fs.s3a.impl.InternalConstants.CSE_PADDING_LENGTH;
 
 /**
  * S3a implementation of FCStatisticsBaseTest.
@@ -73,30 +65,12 @@ public class ITestS3AFileContextStatistics extends FCStatisticsBaseTest {
 
   /**
    * A method to verify the bytes written.
-   * <br>
-   * NOTE: if Client side encryption is enabled, expected bytes written
-   * should increase by 16(padding of data) + bytes for the key ID set + 94(KMS
-   * key generation) in case of storage type CryptoStorageMode as
-   * ObjectMetadata(Default). If Crypto Storage mode is instruction file then
-   * add additional bytes as that file is stored separately and would account
-   * for bytes written.
-   *
    * @param stats Filesystem statistics.
    */
   @Override
-  protected void verifyWrittenBytes(FileSystem.Statistics stats)
-      throws IOException {
+  protected void verifyWrittenBytes(FileSystem.Statistics stats) {
     //No extra bytes are written
-    long expectedBlockSize = blockSize;
-    if (S3AEncryptionMethods.CSE_KMS.getMethod()
-        .equals(getEncryptionAlgorithm(getTestBucketName(conf), conf)
-            .getMethod())) {
-      String keyId = getS3EncryptionKey(getTestBucketName(conf), conf);
-      // Adding padding length and KMS key generation bytes written.
-      expectedBlockSize += CSE_PADDING_LENGTH + keyId.getBytes().length +
-          KMS_KEY_GENERATION_REQUEST_PARAMS_BYTES_WRITTEN;
-    }
-    Assert.assertEquals("Mismatch in bytes written", expectedBlockSize,
+    Assert.assertEquals("Mismatch in bytes written", blockSize,
         stats.getBytesWritten());
   }
 

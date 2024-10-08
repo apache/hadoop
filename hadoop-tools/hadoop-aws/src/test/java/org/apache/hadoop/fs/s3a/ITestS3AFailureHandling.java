@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteException;
+import org.apache.hadoop.fs.s3a.impl.CSEUtils;
 import org.apache.hadoop.fs.statistics.StoreStatisticNames;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 
@@ -41,8 +42,10 @@ import java.util.stream.Collectors;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.createFiles;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.isBulkDeleteEnabled;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
+import static org.apache.hadoop.fs.s3a.S3AUtils.getEncryptionAlgorithm;
 import static org.apache.hadoop.fs.s3a.test.ExtraAssertions.failIf;
 import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.isUsingDefaultExternalDataFile;
 import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.requireDefaultExternalData;
@@ -200,9 +203,14 @@ public class ITestS3AFailureHandling extends AbstractS3ATestBase {
     Path path = requireDefaultExternalData(getConfiguration());
     S3AFileSystem fs = (S3AFileSystem) path.getFileSystem(
         getConfiguration());
-    AccessDeniedException aex = intercept(AccessDeniedException.class,
+    Class exceptionClass = AccessDeniedException.class;
+    if (CSEUtils.isCSEEnabled(getEncryptionAlgorithm(
+        getTestBucketName(getConfiguration()), getConfiguration()).getMethod())) {
+      exceptionClass = AWSClientIOException.class;
+    }
+    Exception ex = (Exception) intercept(exceptionClass,
         () -> fs.delete(path, false));
-    Throwable cause = aex.getCause();
-    failIf(cause == null, "no nested exception", aex);
+    Throwable cause = ex.getCause();
+    failIf(cause == null, "no nested exception", ex);
   }
 }
