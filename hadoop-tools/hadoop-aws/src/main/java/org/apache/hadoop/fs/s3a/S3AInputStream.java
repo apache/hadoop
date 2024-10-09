@@ -31,6 +31,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 import java.util.function.IntFunction;
 
 import software.amazon.awssdk.core.ResponseInputStream;
@@ -65,6 +66,7 @@ import org.apache.hadoop.util.functional.CallableRaisingIOE;
 
 import static java.util.Objects.requireNonNull;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
+import static org.apache.hadoop.fs.VectoredReadUtils.LOG_BYTE_BUFFER_RELEASED;
 import static org.apache.hadoop.fs.VectoredReadUtils.isOrderedDisjoint;
 import static org.apache.hadoop.fs.VectoredReadUtils.mergeSortedRanges;
 import static org.apache.hadoop.fs.VectoredReadUtils.validateAndSortRanges;
@@ -898,7 +900,8 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
 
   /**
    * {@inheritDoc}
-   * Vectored read implementation for S3AInputStream.
+   * Pass to {@link #readVectored(List, IntFunction, Consumer)}
+   * with the {@link VectoredReadUtils#LOG_BYTE_BUFFER_RELEASED} releaser.
    * @param ranges the byte ranges to read.
    * @param allocate the function to allocate ByteBuffer.
    * @throws IOException IOE if any.
@@ -906,11 +909,30 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   @Override
   public synchronized void readVectored(List<? extends FileRange> ranges,
                            IntFunction<ByteBuffer> allocate) throws IOException {
+    readVectored(ranges, allocate, LOG_BYTE_BUFFER_RELEASED);
+  }
+
+  /**
+   * {@inheritDoc}
+   * Vectored read implementation for S3AInputStream.
+   * @param ranges the byte ranges to read.
+   * @param allocate the function to allocate ByteBuffer.
+   * @param release the function to release a ByteBuffer.
+   * @throws IOException IOE if any.
+   */
+  @Override
+  public void readVectored(final List<? extends FileRange> ranges,
+      final IntFunction<ByteBuffer> allocate,
+      final Consumer<ByteBuffer> release) throws IOException {
     LOG.debug("Starting vectored read on path {} for ranges {} ", pathStr, ranges);
     checkNotClosed();
     if (stopVectoredIOOperations.getAndSet(false)) {
       LOG.debug("Reinstating vectored read operation for path {} ", pathStr);
     }
+    // fail fast on parameters which would otherwise only be checked
+    // in threads and/or in failures.
+    requireNonNull(allocate , "Null allocator");
+    requireNonNull(release, "Null releaser");
 
     // prepare to read
     List<? extends FileRange> sortedRanges = validateAndSortRanges(ranges,
@@ -942,7 +964,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
               ranges.size(), combinedFileRanges.size());
       for (CombinedFileRange combinedFileRange: combinedFileRanges) {
         boundedThreadPool.submit(
-            () -> readCombinedRangeAndUpdateChildren(combinedFileRange, allocate));
+            () -> readCombinedRangeAndUpdateChildren(combinedFileRange, allocate, release));
       }
     }
     LOG.debug("Finished submitting vectored read to threadpool" +
@@ -954,16 +976,18 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    * underlying ranges.
    * @param combinedFileRange big combined file range.
    * @param allocate method to create byte buffers to hold result data.
+   * @param release the function to release a ByteBuffer.
    */
   private void readCombinedRangeAndUpdateChildren(CombinedFileRange combinedFileRange,
-                                                  IntFunction<ByteBuffer> allocate) {
+      IntFunction<ByteBuffer> allocate,
+      final Consumer<ByteBuffer> release) {
     LOG.debug("Start reading {} from path {} ", combinedFileRange, pathStr);
     ResponseInputStream<GetObjectResponse> rangeContent = null;
     try {
       rangeContent = getS3ObjectInputStream("readCombinedFileRange",
               combinedFileRange.getOffset(),
               combinedFileRange.getLength());
-      populateChildBuffers(combinedFileRange, rangeContent, allocate);
+      populateChildBuffers(combinedFileRange, rangeContent, allocate, release);
     } catch (Exception ex) {
       LOG.debug("Exception while reading {} from path {} ", combinedFileRange, pathStr, ex);
       // complete exception all the underlying ranges which have not already
@@ -981,17 +1005,21 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
 
   /**
    * Populate underlying buffers of the child ranges.
-   * There is no attempt to recover from any read failures.
+   * There is no attempt to recover from any read failures,
+   * but the {@code release} function is invoked to attempt
+   * to release the buffer.
    * @param combinedFileRange big combined file range.
    * @param objectContent data from s3.
    * @param allocate method to allocate child byte buffers.
+   * @param release the function to release a ByteBuffer.
    * @throws IOException any IOE.
    * @throws EOFException if EOF if read() call returns -1
    * @throws InterruptedIOException if vectored IO operation is stopped.
    */
   private void populateChildBuffers(CombinedFileRange combinedFileRange,
                                     InputStream objectContent,
-                                    IntFunction<ByteBuffer> allocate) throws IOException {
+                                    IntFunction<ByteBuffer> allocate,
+      final Consumer<ByteBuffer> release) throws IOException {
     // If the combined file range just contains a single child
     // range, we only have to fill that one child buffer else
     // we drain the intermediate data between consecutive ranges
@@ -999,7 +1027,13 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     if (combinedFileRange.getUnderlying().size() == 1) {
       FileRange child = combinedFileRange.getUnderlying().get(0);
       ByteBuffer buffer = allocate.apply(child.getLength());
-      populateBuffer(child, buffer, objectContent);
+      try {
+        populateBuffer(child, buffer, objectContent);
+      } catch (IOException e) {
+        // release the buffer
+        release.accept(buffer);
+        throw e;
+      }
       child.getData().complete(buffer);
     } else {
       FileRange prev = null;
@@ -1016,7 +1050,13 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
           }
         }
         ByteBuffer buffer = allocate.apply(child.getLength());
-        populateBuffer(child, buffer, objectContent);
+        try {
+          populateBuffer(child, buffer, objectContent);
+        } catch (IOException e) {
+          // release the buffer
+          release.accept(buffer);
+          throw e;
+        }
         child.getData().complete(buffer);
         prev = child;
       }
@@ -1074,6 +1114,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    * @param range range of data to read.
    * @param buffer buffer to fill.
    */
+  @Retries.RetryTranslated("GET is retried; reads are not")
   private void readSingleRange(FileRange range, ByteBuffer buffer) {
     LOG.debug("Start reading {} from {} ", range, pathStr);
     if (range.getLength() == 0) {
@@ -1130,6 +1171,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    * @throws EOFException if EOF if read() call returns -1
    * @throws InterruptedIOException if vectored IO operation is stopped.
    */
+  @Retries.OnceTranslated
   private void populateBuffer(FileRange range,
                               ByteBuffer buffer,
                               InputStream objectContent) throws IOException {
@@ -1162,6 +1204,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    * @throws EOFException if EOF if read() call returns -1
    * @throws InterruptedIOException if vectored IO operation is stopped.
    */
+  @Retries.OnceTranslated
   private void readByteArray(InputStream objectContent,
                             final FileRange range,
                             byte[] dest,

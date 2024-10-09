@@ -21,10 +21,12 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.function.IntFunction;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.io.ByteBufferPool;
 
 /**
  * Stream that permits positional reading.
@@ -133,4 +135,30 @@ public interface PositionedReadable {
                             IntFunction<ByteBuffer> allocate) throws IOException {
     VectoredReadUtils.readVectored(this, ranges, allocate);
   }
+
+  /**
+   * Variant of {@link #readVectored(List, IntFunction)} where a release() function
+   * may be invoked if problems surface during reads -this method is called to
+   * try to return any allocated buffer which has not been read yet.
+   * Buffers which have successfully been read and returned to the caller do not
+   * get released: this is for failures only.
+   * <p>
+   * The default implementation calls readVectored/2 so as to ensure that
+   * if an existing stream implementation does not implement this method
+   * all is good.
+   * <p>
+   * Implementations SHOULD override this method if they can release buffers as
+   * part of their error handling.
+   * @param ranges the byte ranges to read
+   * @param allocate the function to allocate ByteBuffer
+   * @param release the function to release a ByteBuffer.
+   * @throws IOException any IOE.
+   * @throws IllegalArgumentException if the any of ranges are invalid, or they overlap.
+   */
+  default void readVectored(List<? extends FileRange> ranges,
+      IntFunction<ByteBuffer> allocate,
+      Consumer<ByteBuffer> release) throws IOException {
+    readVectored(ranges, allocate);
+  }
+
 }
