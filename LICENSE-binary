@@ -310,10 +310,10 @@ org.apache.commons:commons-validator:1.6
 org.apache.curator:curator-client:5.2.0
 org.apache.curator:curator-framework:5.2.0
 org.apache.curator:curator-recipes:5.2.0
-org.apache.hbase:hbase-annotations:1.7.1
-org.apache.hbase:hbase-client:1.7.1
-org.apache.hbase:hbase-common:1.7.1
-org.apache.hbase:hbase-protocol:1.7.1
+org.apache.hbase:hbase-annotations:2.5.8
+org.apache.hbase:hbase-client:2.5.8
+org.apache.hbase:hbase-common:2.5.8
+org.apache.hbase:hbase-protocol:2.5.8
 org.apache.htrace:htrace-core:3.1.0-incubating
 org.apache.htrace:htrace-core4:4.1.0-incubating
 org.apache.httpcomponents:httpclient:4.5.13
