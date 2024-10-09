@@ -4261,9 +4261,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       final File file)
       throws IOException {
     String key = putObjectRequest.key();
-    long len = getPutRequestLength(putObjectRequest);
     ProgressableProgressListener listener =
-        new ProgressableProgressListener(store, putObjectRequest.key(), progress);
+        new ProgressableProgressListener(store, key, progress);
     UploadInfo info = putObject(putObjectRequest, file, listener);
     PutObjectResponse result = store.waitForUploadCompletion(key, info).response();
     listener.uploadCompleted(info.getFileUpload());
