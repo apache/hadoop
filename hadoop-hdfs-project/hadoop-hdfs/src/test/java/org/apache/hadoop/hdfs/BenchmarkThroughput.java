@@ -133,9 +133,9 @@ public class BenchmarkThroughput extends Configured implements Tool {
     InputStream in = fs.open(f);
     byte[] data = new byte[BUFFER_SIZE];
     long val = 0;
-    while (val >= 0) {
+    do {
       val = in.read(data);
-    }
+    } while (val > 0);
     in.close();
     printMeasurements();
   }
