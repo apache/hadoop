@@ -628,7 +628,7 @@ being an exception) guarantees consistent behavior everywhere.
 The reason Raw Local doesn't have this precondition is ChecksumFileSystem
 creates the chunked ranges based on the checksum chunk size and then calls
 readVectored on Raw Local which may lead to overlapping ranges in some cases.
-For details see [HADOOP-19291](https://issues.apache.org/jira/browse/HADOOP-19291) 
+For details see [HADOOP-19291](https://issues.apache.org/jira/browse/HADOOP-19291)
 
 For reliable use with older hadoop releases with the API: sort the list of ranges
 and check for overlaps before calling `readVectored()`.
