@@ -354,7 +354,7 @@ public class TestFileChecksum {
 
   /**
    * Test to verify that the checksum can be computed by giving 'cellsize'
-   * length of file range for checksum calculation.
+   * length of file range for checksum calculation. run!
    */
   @Test(timeout = 90000)
   public void testStripedFileChecksumWithMissedDataBlocksRangeQuery4()
