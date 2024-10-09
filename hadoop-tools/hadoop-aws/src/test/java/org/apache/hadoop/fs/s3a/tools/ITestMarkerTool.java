@@ -87,7 +87,6 @@ public class ITestMarkerTool extends AbstractMarkerToolTest {
     markerTool(EXIT_INTERRUPTED, getFileSystem(),
         createdPaths.base, false, 0, 1, false);
   }
-  
 
   @Test
   public void testRenameKeepingFS() throws Throwable {
@@ -112,7 +111,7 @@ public class ITestMarkerTool extends AbstractMarkerToolTest {
     LOG.info("Auditing destination paths");
     verifyRenamed(dest, createdPaths);
   }
-  
+
   /**
    * Assert that an expected number of markers were deleted.
    * @param expected expected count.

@@ -126,7 +126,7 @@ public class ITestS3ARenameCost extends AbstractS3ACostTest {
       verifyMetrics(() -> {
         fs.rename(src, dest);
         return "after fs.rename(/src,/dest) " + getMetricSummary();
-        },
+      },
           always(FILE_STATUS_FILE_PROBE
               .plus(GET_FILE_STATUS_FNFE)
               .plus(COPY_OP)),
@@ -160,7 +160,7 @@ public class ITestS3ARenameCost extends AbstractS3ACostTest {
       verifyMetrics(() -> {
         fs.delete(src, false);
         return "after fs.delete(/dest) " + getMetricSummary();
-        },
+      },
           with(DIRECTORIES_CREATED, 0),
           with(DIRECTORIES_DELETED, 0),
           with(FAKE_DIRECTORIES_DELETED, 0),
