@@ -28,7 +28,6 @@ import org.junit.Test;
 import org.apache.hadoop.conf.Configuration;
 
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.SASTokenProviderException;
 import org.apache.hadoop.fs.azurebfs.extensions.MockSASTokenProvider;
@@ -80,7 +79,7 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
     final AzureBlobFileSystem testFs = new AzureBlobFileSystem();
     Configuration testConfig = new Configuration(this.getConfiguration().getRawConfiguration());
     testConfig.set(FS_AZURE_SAS_TOKEN_PROVIDER_TYPE, TEST_ERR_AUTHZ_CLASS);
-    testConfig.set(MOCK_SASTOKENPROVIDER_RETURN_EMPTY_SAS_TOKEN, "true");
+    testConfig.set(MOCK_SASTOKENPROVIDER_FAIL_INIT, "true");
     // Setting IS_HNS_ENABLED to avoid the exception thrown by the HNS check.
     testConfig.set(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, this.getIsNamespaceEnabled(fs) + "");
 

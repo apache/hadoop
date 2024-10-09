@@ -67,9 +67,9 @@ public class ITestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
   private static final String TEST_PATH = "/testfile";
   private static final double MULTIPLYING_FACTOR = 1.5;
   private static final int ANALYSIS_PERIOD = 10000;
-  private static final String dummyAccountName = "dummy.dfs.core.windows.net";
-  private static final String dummyAccountName1 = "dummy1.dfs.core.windows.net";
-  private static final String dummyAccountKey = "dummyKey";
+  private static final String DUMMY_ACCOUNT_NAME = "dummy.dfs.core.windows.net";
+  private static final String DUMMY_ACCOUNT_NAME_1 = "dummy1.dfs.core.windows.net";
+  private static final String DUMMY_ACCOUNT_KEY = "dummyKey";
 
   public ITestExponentialRetryPolicy() throws Exception {
     super();
@@ -102,12 +102,14 @@ public class ITestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
     final Configuration configuration = new Configuration();
     configuration.addResource(TEST_CONFIGURATION_FILE_NAME);
     configuration.setBoolean(FS_AZURE_ENABLE_AUTOTHROTTLING, false);
-    configuration.set(FS_AZURE_ACCOUNT_KEY + DOT + dummyAccountName, dummyAccountKey);
-    configuration.set(FS_AZURE_ACCOUNT_KEY + DOT + dummyAccountName1, dummyAccountKey);
+    configuration.set(FS_AZURE_ACCOUNT_KEY + DOT + DUMMY_ACCOUNT_NAME,
+        DUMMY_ACCOUNT_KEY);
+    configuration.set(FS_AZURE_ACCOUNT_KEY + DOT + DUMMY_ACCOUNT_NAME_1,
+        DUMMY_ACCOUNT_KEY);
 
     // On disabling throttling AbfsNoOpThrottlingIntercept object is returned
     AbfsConfiguration abfsConfiguration = new AbfsConfiguration(configuration,
-        dummyAccountName);
+        DUMMY_ACCOUNT_NAME);
     AbfsThrottlingIntercept intercept;
     AbfsClient abfsClient = ITestAbfsClient.createTestClientFromCurrentContext(fs.getAbfsStore().getClient(), abfsConfiguration);
     intercept = abfsClient.getIntercept();
@@ -119,7 +121,7 @@ public class ITestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
     configuration.setBoolean(FS_AZURE_ACCOUNT_LEVEL_THROTTLING_ENABLED, true);
     // On enabling throttling AbfsClientThrottlingIntercept object is returned
     AbfsConfiguration abfsConfiguration1 = new AbfsConfiguration(configuration,
-        dummyAccountName1);
+        DUMMY_ACCOUNT_NAME_1);
     AbfsClient abfsClient1 = ITestAbfsClient.createTestClientFromCurrentContext(fs.getAbfsStore().getClient(), abfsConfiguration1);
     intercept = abfsClient1.getIntercept();
     Assertions.assertThat(intercept)

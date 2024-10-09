@@ -30,12 +30,12 @@ import org.apache.hadoop.fs.azurebfs.oauth2.RetryTestTokenProvider;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.DOT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_CUSTOM_TOKEN_FETCH_RETRY_COUNT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_IS_HNS_ENABLED;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.accountProperty;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ABFS_ACCOUNT_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -143,19 +143,7 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
 
   public void testWithDifferentCustomTokenFetchRetry(int numOfRetries) throws Exception {
     AzureBlobFileSystem fs = this.getFileSystem();
-
-    Configuration config = new Configuration(this.getRawConfiguration());
-    String accountName = config.get(FS_AZURE_ABFS_ACCOUNT_NAME);
-    // Setup to configure custom token provider.
-    config.set(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME + DOT + accountName, "Custom");
-    config.set(FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME + DOT + accountName,
-        RETRY_TEST_TOKEN_PROVIDER);
-    config.set(AZURE_CUSTOM_TOKEN_FETCH_RETRY_COUNT, Integer.toString(numOfRetries));
-    // Stop filesystem creation as it will lead to calls to store.
-    config.set(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION, "false");
-    config.set(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, config.getBoolean(
-        FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, true) + "");
-
+    Configuration config = getEntries(numOfRetries);
     try (final AzureBlobFileSystem fs1 =
         (AzureBlobFileSystem) FileSystem.newInstance(fs.getUri(),
         config)) {
@@ -179,17 +167,7 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
 
   @Test
   public void testAuthFailException() throws Exception {
-    Configuration config = new Configuration(getRawConfiguration());
-    String accountName = config.get(FS_AZURE_ABFS_ACCOUNT_NAME);
-    // Setup to configure custom token provider
-    config.set(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME + DOT + accountName, "Custom");
-    config.set(FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME + DOT + accountName,
-        RETRY_TEST_TOKEN_PROVIDER);
-    // Stop filesystem creation as it will lead to calls to store.
-    config.set(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION, "false");
-    config.set(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, config.getBoolean(
-        FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, true) + "");
-
+    Configuration config = getEntries(0);
     final AzureBlobFileSystem fs = getFileSystem(config);
     AbfsRestOperationException e = intercept(AbfsRestOperationException.class, () -> {
       fs.getFileStatus(new Path("/"));
@@ -204,5 +182,21 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
     Assertions.assertThat(e.getErrorMessage())
         .describedAs("Incorrect error message: " + errorDesc)
         .contains("Auth failure: ");
+  }
+
+  private Configuration getEntries(final int numOfRetries) {
+    Configuration config = new Configuration(this.getRawConfiguration());
+    String accountName = config.get(FS_AZURE_ABFS_ACCOUNT_NAME);
+    // Setup to configure custom token provider.
+    config.set(accountProperty(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, accountName), "Custom");
+    config.set(accountProperty(FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME, accountName),
+        RETRY_TEST_TOKEN_PROVIDER);
+    config.set(AZURE_CUSTOM_TOKEN_FETCH_RETRY_COUNT, Integer.toString(
+        numOfRetries));
+    // Stop filesystem creation as it will lead to calls to store.
+    config.set(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION, "false");
+    config.set(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, config.getBoolean(
+        FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, true) + "");
+    return config;
   }
 }
