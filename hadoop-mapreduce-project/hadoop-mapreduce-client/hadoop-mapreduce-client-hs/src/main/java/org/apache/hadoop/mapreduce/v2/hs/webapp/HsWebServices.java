@@ -259,10 +259,12 @@ public class HsWebServices extends WebServices {
   @Path("/mapreduce/jobs/{jobid}/jobattempts")
   @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
       MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
-  public AMAttemptsInfo getJobAttempts(@PathParam("jobid") String jid) {
+  public AMAttemptsInfo getJobAttempts(@Context HttpServletRequest hsr,
+      @PathParam("jobid") String jid) {
 
     init();
     Job job = AMWebServices.getJobFromJobIdString(jid, ctx);
+    checkAccess(job, hsr);
     AMAttemptsInfo amAttempts = new AMAttemptsInfo();
     for (AMInfo amInfo : job.getAMInfos()) {
       AMAttemptInfo attempt = new AMAttemptInfo(amInfo, MRApps.toString(job
