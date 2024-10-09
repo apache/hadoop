@@ -71,7 +71,7 @@ public class AsyncErasureCoding extends ErasureCoding {
   }
 
   @Override
-  public Map getErasureCodingCodecs() throws IOException {
+  public Map<String, String> getErasureCodingCodecs() throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.READ);
 
     RemoteMethod method = new RemoteMethod("getErasureCodingCodecs");
@@ -80,7 +80,7 @@ public class AsyncErasureCoding extends ErasureCoding {
     rpcClient.invokeConcurrent(
         nss, method, true, false, Map.class);
 
-    asyncApply((ApplyFunction<Map<FederationNamespaceInfo, Map>, Map>) retCodecs -> {
+    asyncApply((ApplyFunction<Map<FederationNamespaceInfo, Map<String, String>>, Map<String, String>>) retCodecs -> {
       Map<String, String> ret = new HashMap<>();
       Object obj = retCodecs;
       @SuppressWarnings("unchecked")
