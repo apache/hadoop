@@ -226,7 +226,7 @@ public class HistoryViewer {
         for (JobHistoryParser.TaskAttemptInfo attempt : attempts.values()) {
           long startTime = attempt.getStartTime(); 
           long finishTime = attempt.getFinishTime();
-          if (attempt.getTaskType().equals(TaskType.MAP)) {
+          if (TaskType.MAP.equals(attempt.getTaskType())) {
             if (mapStarted== 0 || mapStarted > startTime) {
               mapStarted = startTime; 
             }
@@ -234,14 +234,13 @@ public class HistoryViewer {
               mapFinished = finishTime; 
             }
             totalMaps++; 
-            if (attempt.getTaskStatus().equals
-                (TaskStatus.State.FAILED.toString())) {
+            if (TaskStatus.State.FAILED.toString().equals(attempt.getTaskStatus())) {
               numFailedMaps++; 
             } else if (attempt.getTaskStatus().equals
                 (TaskStatus.State.KILLED.toString())) {
               numKilledMaps++;
             }
-          } else if (attempt.getTaskType().equals(TaskType.REDUCE)) {
+          } else if (TaskType.REDUCE.equals(attempt.getTaskType())) {
             if (reduceStarted==0||reduceStarted > startTime) {
               reduceStarted = startTime; 
             }
@@ -249,14 +248,14 @@ public class HistoryViewer {
               reduceFinished = finishTime; 
             }
             totalReduces++; 
-            if (attempt.getTaskStatus().equals
-                (TaskStatus.State.FAILED.toString())) {
+            if (TaskStatus.State.FAILED.toString().equals
+                    (attempt.getTaskStatus())) {
               numFailedReduces++; 
-            } else if (attempt.getTaskStatus().equals
-                (TaskStatus.State.KILLED.toString())) {
+            } else if (TaskStatus.State.KILLED.toString().equals
+                (attempt.getTaskStatus())) {
               numKilledReduces++;
             }
-          } else if (attempt.getTaskType().equals(TaskType.JOB_CLEANUP)) {
+          } else if (TaskType.JOB_CLEANUP.equals(attempt.getTaskType())) {
             if (cleanupStarted==0||cleanupStarted > startTime) {
               cleanupStarted = startTime; 
             }
@@ -264,17 +263,17 @@ public class HistoryViewer {
               cleanupFinished = finishTime; 
             }
             totalCleanups++; 
-            if (attempt.getTaskStatus().equals
-                (TaskStatus.State.SUCCEEDED.toString())) {
+            if (TaskStatus.State.SUCCEEDED.toString().equals
+                (attempt.getTaskStatus())) {
               numFinishedCleanups++; 
-            } else if (attempt.getTaskStatus().equals
-                (TaskStatus.State.FAILED.toString())) {
+            } else if (TaskStatus.State.FAILED.toString().equals
+                (attempt.getTaskStatus())) {
               numFailedCleanups++;
-            } else if (attempt.getTaskStatus().equals
-                (TaskStatus.State.KILLED.toString())) {
+            } else if (TaskStatus.State.KILLED.toString().equals
+                (attempt.getTaskStatus())) {
               numKilledCleanups++;
             }
-          } else if (attempt.getTaskType().equals(TaskType.JOB_SETUP)) {
+          } else if (TaskType.JOB_SETUP.equals(attempt.getTaskType())) {
             if (setupStarted==0||setupStarted > startTime) {
               setupStarted = startTime; 
             }
@@ -282,14 +281,14 @@ public class HistoryViewer {
               setupFinished = finishTime; 
             }
             totalSetups++; 
-            if (attempt.getTaskStatus().equals
-                (TaskStatus.State.SUCCEEDED.toString())) {
+            if (TaskStatus.State.SUCCEEDED.toString().equals
+                (attempt.getTaskStatus())) {
               numFinishedSetups++;
-            } else if (attempt.getTaskStatus().equals
-                (TaskStatus.State.FAILED.toString())) {
+            } else if (TaskStatus.State.FAILED.toString().equals
+                (attempt.getTaskStatus())) {
               numFailedSetups++;
-            } else if (attempt.getTaskStatus().equals
-                (TaskStatus.State.KILLED.toString())) {
+            } else if (TaskStatus.State.KILLED.toString().equals
+                (attempt.getTaskStatus())) {
               numKilledSetups++;
             }
           }
