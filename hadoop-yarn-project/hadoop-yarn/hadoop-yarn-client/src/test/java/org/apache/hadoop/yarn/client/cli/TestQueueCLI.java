@@ -1,0 +1,67 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.hadoop.yarn.client.cli;
+
+import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.*;
+
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
+
+import org.junit.Before;
+import org.junit.Test;
+
+public class TestQueueCLI {
+
+    ByteArrayOutputStream sysOutStream;
+    private PrintStream sysOut;
+    ByteArrayOutputStream sysErrStream;
+    private PrintStream sysErr;
+
+    @Before
+    public void setup() {
+        sysOutStream = new ByteArrayOutputStream();
+        sysOut = spy(new PrintStream(sysOutStream));
+        sysErrStream = new ByteArrayOutputStream();
+        sysErr = spy(new PrintStream(sysErrStream));
+        System.setOut(sysOut);
+    }
+
+    @Test
+    public void testGetQueueStatusMissingArgument() throws Exception {
+        QueueCLI cli = createAndGetQueueCLI();
+
+        int rc =
+                cli.run(new String[] { QueueCLI.QUEUE, "-" + QueueCLI.STATUS_CMD });
+        assertEquals(-1, rc);
+
+        cli.stop();
+    }
+
+    private QueueCLI createAndGetQueueCLI() {
+        QueueCLI cli = new QueueCLI() {
+            @Override protected void createAndStartYarnClient() {
+
+            }
+        };
+        cli.setSysOutPrintStream(sysOut);
+        cli.setSysErrPrintStream(sysErr);
+        return cli;
+    }
+}
