@@ -1255,6 +1255,81 @@ public class TestQuota {
     assertEquals(fromContentSummary, quotaUsage);
   }
 
+  /**
+   * Test to set quote with warn msg.
+   */
+  @Test(timeout = 30000)
+  public void testSetQuotaWarningMsg() throws Exception {
+
+    final DFSAdmin dfsAdmin = new DFSAdmin(conf);
+    final Path dir = new Path(
+            PathUtils.getTestDir(getClass()).getPath(),
+            GenericTestUtils.getMethodName());
+    assertTrue(dfs.mkdirs(dir));
+
+    final List<String> outs = Lists.newArrayList();
+
+    /* set quota HdfsConstants.QUOTA_DONT_SET */
+    resetStream();
+    outs.clear();
+    final int ret = ToolRunner.run(
+            dfsAdmin,
+            new String[] {"-setQuota",
+                    String.valueOf(HdfsConstants.QUOTA_DONT_SET),
+                            dir.toString()});
+    assertEquals(-1, ret);
+    scanIntoList(ERR_STREAM, outs);
+    assertEquals(2, outs.size());
+    assertThat(outs.get(0),
+            is(allOf(containsString("WARN:"),
+                    containsString("means QUOTA_DONT_SET, quota will " +
+                            "not be set, it keep the old values."))));
+
+    final List<String> outs1 = Lists.newArrayList();
+    /* set quota 0 */
+    resetStream();
+    outs1.clear();
+    final int ret1 = ToolRunner.run(
+            dfsAdmin,
+            new String[] {"-setQuota", "0", dir.toString()});
+    assertEquals(-1, ret1);
+    scanIntoList(ERR_STREAM, outs1);
+    assertEquals(2, outs1.size());
+    assertThat(outs1.get(0),
+            is(allOf(containsString("setQuota"),
+                    containsString("Invalid values for namespace quota"))));
+  }
+
+  /**
+   * Test to set quote with warn msg.
+   */
+  @Test(timeout = 30000)
+  public void testSetSpaceQuotaWarningMsg() throws Exception {
+
+    final DFSAdmin dfsAdmin = new DFSAdmin(conf);
+    final Path dir = new Path(
+            PathUtils.getTestDir(getClass()).getPath(),
+            GenericTestUtils.getMethodName());
+    assertTrue(dfs.mkdirs(dir));
+
+    final List<String> outs = Lists.newArrayList();
+
+    /* set quota HdfsConstants.QUOTA_DONT_SET */
+    resetStream();
+    outs.clear();
+    final int ret = ToolRunner.run(
+            dfsAdmin,
+            new String[] {"-setSpaceQuota",
+                    String.valueOf(HdfsConstants.QUOTA_DONT_SET),
+                            dir.toString()});
+    assertEquals(-1, ret);
+    scanIntoList(ERR_STREAM, outs);
+    assertEquals(2, outs.size());
+    assertThat(outs.get(0),
+            is(allOf(containsString("WARN:"),
+                    containsString("means QUOTA_DONT_SET, quota will " +
+                            "not be set, it keep the old values."))));
+  }
 
   /**
    * Test to set space quote using negative number.

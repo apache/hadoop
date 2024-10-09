@@ -202,8 +202,19 @@ public class DFSAdmin extends FsShell {
       super(conf);
       CommandFormat c = new CommandFormat(2, Integer.MAX_VALUE);
       List<String> parameters = c.parse(args, pos);
-      this.quota =
-          StringUtils.TraditionalBinaryPrefix.string2long(parameters.remove(0));
+      String str = parameters.get(0).trim();
+      try {
+        this.quota = StringUtils.TraditionalBinaryPrefix
+                .string2long(parameters.remove(0));
+      } catch(NumberFormatException e){
+        throw new IllegalArgumentException("\"" + str +
+                "\" is not a valid value for a quota.");
+      }
+      if (HdfsConstants.QUOTA_DONT_SET == this.quota) {
+        throw new IllegalArgumentException("WARN: \"" + this.quota +
+                "\" means QUOTA_DONT_SET, quota will not be set, " +
+                "it keep the old values.");
+      }
       this.args = parameters.toArray(new String[parameters.size()]);
     }
     
@@ -325,6 +336,11 @@ public class DFSAdmin extends FsShell {
         quota = StringUtils.TraditionalBinaryPrefix.string2long(str);
       } catch (NumberFormatException nfe) {
         throw new IllegalArgumentException("\"" + str + "\" is not a valid value for a quota.");
+      }
+      if (HdfsConstants.QUOTA_DONT_SET == quota) {
+        throw new IllegalArgumentException("WARN: \"" + this.quota +
+                "\" means QUOTA_DONT_SET, quota will not be set, " +
+                "it keep the old values.");
       }
       String storageTypeString =
           StringUtils.popOptionWithArgument("-storageType", parameters);
