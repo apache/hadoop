@@ -36,6 +36,8 @@ import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_IS_HNS_ENABLED;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_SAS_TOKEN_PROVIDER_TYPE;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.MOCK_SASTOKENPROVIDER_FAIL_INIT;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.MOCK_SASTOKENPROVIDER_RETURN_EMPTY_SAS_TOKEN;
 import static org.apache.hadoop.fs.azurebfs.utils.AclTestHelpers.aclEntry;
@@ -65,7 +67,7 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
         TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false);
     Assume.assumeTrue(isHNSEnabled);
     loadConfiguredFileSystem();
-    this.getConfiguration().set(ConfigurationKeys.FS_AZURE_SAS_TOKEN_PROVIDER_TYPE, TEST_AUTHZ_CLASS);
+    this.getConfiguration().set(FS_AZURE_SAS_TOKEN_PROVIDER_TYPE, TEST_AUTHZ_CLASS);
     this.getConfiguration().set(ConfigurationKeys.FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, "SAS");
     super.setup();
   }
@@ -75,13 +77,14 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
     final AzureBlobFileSystem fs = this.getFileSystem();
 
     final AzureBlobFileSystem testFs = new AzureBlobFileSystem();
-    Configuration testConfig = this.getConfiguration().getRawConfiguration();
-    testConfig.set(ConfigurationKeys.FS_AZURE_SAS_TOKEN_PROVIDER_TYPE, TEST_ERR_AUTHZ_CLASS);
-    testConfig.set(MOCK_SASTOKENPROVIDER_FAIL_INIT, "true");
+    Configuration testConfig = new Configuration(this.getConfiguration().getRawConfiguration());
+    testConfig.set(FS_AZURE_SAS_TOKEN_PROVIDER_TYPE, TEST_ERR_AUTHZ_CLASS);
+    testConfig.set(MOCK_SASTOKENPROVIDER_RETURN_EMPTY_SAS_TOKEN, "true");
+    testConfig.set(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, this.getIsNamespaceEnabled(fs) + "");
 
     intercept(SASTokenProviderException.class,
         ()-> {
-          testFs.initialize(fs.getUri(), this.getConfiguration().getRawConfiguration());
+          testFs.initialize(fs.getUri(), testConfig);
         });
   }
 
@@ -90,12 +93,12 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
     final AzureBlobFileSystem fs = this.getFileSystem();
 
     final AzureBlobFileSystem testFs = new AzureBlobFileSystem();
-    Configuration testConfig = this.getConfiguration().getRawConfiguration();
-    testConfig.set(ConfigurationKeys.FS_AZURE_SAS_TOKEN_PROVIDER_TYPE, TEST_ERR_AUTHZ_CLASS);
+    Configuration testConfig = new Configuration(this.getConfiguration().getRawConfiguration());
+    testConfig.set(FS_AZURE_SAS_TOKEN_PROVIDER_TYPE, TEST_ERR_AUTHZ_CLASS);
     testConfig.set(MOCK_SASTOKENPROVIDER_RETURN_EMPTY_SAS_TOKEN, "true");
+    testConfig.set(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, this.getIsNamespaceEnabled(fs) + "");
 
-    testFs.initialize(fs.getUri(),
-        this.getConfiguration().getRawConfiguration());
+    testFs.initialize(fs.getUri(), testConfig);
     intercept(SASTokenProviderException.class,
         () -> {
           testFs.create(new org.apache.hadoop.fs.Path("/testFile")).close();
@@ -107,10 +110,12 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
     final AzureBlobFileSystem fs = this.getFileSystem();
 
     final AzureBlobFileSystem testFs = new AzureBlobFileSystem();
-    Configuration testConfig = this.getConfiguration().getRawConfiguration();
-    testConfig.set(ConfigurationKeys.FS_AZURE_SAS_TOKEN_PROVIDER_TYPE, TEST_ERR_AUTHZ_CLASS);
+    Configuration testConfig = new Configuration(this.getConfiguration().getRawConfiguration());
+    testConfig.set(FS_AZURE_SAS_TOKEN_PROVIDER_TYPE, TEST_ERR_AUTHZ_CLASS);
+    testConfig.set(MOCK_SASTOKENPROVIDER_RETURN_EMPTY_SAS_TOKEN, "true");
+    testConfig.set(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, this.getIsNamespaceEnabled(fs) + "");
 
-    testFs.initialize(fs.getUri(), this.getConfiguration().getRawConfiguration());
+    testFs.initialize(fs.getUri(), testConfig);
     intercept(SASTokenProviderException.class,
         ()-> {
           testFs.create(new org.apache.hadoop.fs.Path("/testFile")).close();

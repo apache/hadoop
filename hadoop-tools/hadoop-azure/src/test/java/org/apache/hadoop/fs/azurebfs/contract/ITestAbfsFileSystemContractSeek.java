@@ -68,6 +68,9 @@ public class ITestAbfsFileSystemContractSeek extends AbstractContractSeekTest{
   protected AbstractFSContract createContract(final Configuration conf) {
     conf.setInt(AZURE_READ_AHEAD_RANGE, MIN_BUFFER_SIZE);
     conf.setInt(AZURE_READ_BUFFER_SIZE, MIN_BUFFER_SIZE);
+    // Disabling cache to make sure new configs are picked up.
+    conf.set("fs.abfss.impl.disable.cache", "true");
+    conf.set("fs.abfs.impl.disable.cache", "true");
     return new AbfsFileSystemContract(conf, isSecure);
   }
 
