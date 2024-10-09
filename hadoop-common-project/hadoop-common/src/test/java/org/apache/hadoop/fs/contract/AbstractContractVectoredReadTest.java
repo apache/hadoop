@@ -270,13 +270,23 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
   }
 
   /**
-   * Vectored IO doesn't support overlapping ranges.
+   * Most file systems won't support overlapping ranges.
+   * Currently, only Raw Local supports it.
    */
   @Test
   public void testOverlappingRanges() throws Exception {
-    verifyExceptionalVectoredRead(
-        getSampleOverlappingRanges(),
-        IllegalArgumentException.class);
+    if (!isSupported(VECTOR_IO_OVERLAPPING_RANGES)) {
+      verifyExceptionalVectoredRead(
+              getSampleOverlappingRanges(),
+              IllegalArgumentException.class);
+    } else {
+      try (FSDataInputStream in = openVectorFile()) {
+        List<FileRange> fileRanges = getSampleOverlappingRanges();
+        in.readVectored(fileRanges, allocate);
+        validateVectoredReadResult(fileRanges, DATASET, 0);
+        returnBuffersToPoolPostRead(fileRanges, pool);
+      }
+    }
   }
 
   /**
@@ -284,9 +294,18 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
    */
   @Test
   public void testSameRanges() throws Exception {
-    verifyExceptionalVectoredRead(
-        getSampleSameRanges(),
-        IllegalArgumentException.class);
+    if (!isSupported(VECTOR_IO_OVERLAPPING_RANGES)) {
+      verifyExceptionalVectoredRead(
+              getSampleSameRanges(),
+              IllegalArgumentException.class);
+    } else {
+      try (FSDataInputStream in = openVectorFile()) {
+        List<FileRange> fileRanges = getSampleSameRanges();
+        in.readVectored(fileRanges, allocate);
+        validateVectoredReadResult(fileRanges, DATASET, 0);
+        returnBuffersToPoolPostRead(fileRanges, pool);
+      }
+    }
   }
 
   /**
@@ -329,10 +348,9 @@ public abstract class AbstractContractVectoredReadTest extends AbstractFSContrac
   public void testConsecutiveRanges() throws Exception {
     List<FileRange> fileRanges = new ArrayList<>();
     final int offset = 500;
-    final int length = 100;
+    final int length = 2011;
     range(fileRanges, offset, length);
-    range(fileRanges, 600, 200);
-    range(fileRanges, 800, 100);
+    range(fileRanges, offset + length, length);
     try (FSDataInputStream in = openVectorFile()) {
       in.readVectored(fileRanges, allocate);
       validateVectoredReadResult(fileRanges, DATASET, 0);
