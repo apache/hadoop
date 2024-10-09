@@ -24,6 +24,8 @@ import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.net.NetUtils;
+import java.net.InetSocketAddress;
 
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY;
 
@@ -61,7 +63,10 @@ public class ConfiguredFailoverProxyProvider<T> extends
   }
 
   @Override
-  public  void performFailover(T currentProxy) {
+  public void performFailover(T currentProxy) {
+    //reset the IP address in case  the stale IP was the cause for failover
+    LOG.info("Resetting cached proxy: " + currentProxyIndex);
+    resetProxyAddress(proxies, currentProxyIndex);
     incrementProxyIndex();
   }
 
@@ -76,13 +81,7 @@ public class ConfiguredFailoverProxyProvider<T> extends
   @Override
   public synchronized void close() throws IOException {
     for (ProxyInfo<T> proxy : proxies) {
-      if (proxy.proxy != null) {
-        if (proxy.proxy instanceof Closeable) {
-          ((Closeable)proxy.proxy).close();
-        } else {
-          RPC.stopProxy(proxy.proxy);
-        }
-      }
+      stopProxy(proxy.proxy);
     }
   }
 
@@ -92,5 +91,35 @@ public class ConfiguredFailoverProxyProvider<T> extends
   @Override
   public boolean useLogicalURI() {
     return true;
+  }
+
+  /**
+   * Resets the NameNode proxy address in case it's stale
+   */
+  protected void resetProxyAddress(List<NNProxyInfo<T>> proxies, int index) {
+    try {
+      stopProxy(proxies.get(index).proxy);
+      InetSocketAddress oldAddress = proxies.get(index).getAddress();
+      InetSocketAddress address = NetUtils.createSocketAddr(
+              oldAddress.getHostName() + ":" + oldAddress.getPort());
+      LOG.debug("oldAddress {}, newAddress {}", oldAddress, address);
+      proxies.set(index, new NNProxyInfo<T>(address));
+    } catch (Exception e) {
+      throw new RuntimeException("Could not refresh NN address", e);
+    }
+  }
+
+  protected void stopProxy(T proxy) {
+    if (proxy != null) {
+      if (proxy instanceof Closeable) {
+        try {
+          ((Closeable)proxy).close();
+        } catch(IOException e) {
+          throw new RuntimeException("Could not close proxy", e);
+        }
+      } else {
+        RPC.stopProxy(proxy);
+      }
+    }
   }
 }
