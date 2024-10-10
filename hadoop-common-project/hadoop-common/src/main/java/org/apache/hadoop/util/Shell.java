@@ -977,7 +977,9 @@ public abstract class Shell {
       builder.environment().clear();
     }
 
-    builder.environment().putAll(this.environment);
+    if (!environment.isEmpty()) {
+      builder.environment().putAll(this.environment);
+    }
 
     if (dir != null) {
       builder.directory(this.dir);
