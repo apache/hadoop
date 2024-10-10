@@ -2116,8 +2116,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     String destKey = putTracker.getDestKey();
 
     // put options are derived from the option builder.
+    boolean conditionalCreate = options.isConditionalCreate();
     final PutObjectOptions putOptions =
-        new PutObjectOptions(null, options.getHeaders());
+        new PutObjectOptions(false, false, null, options.getHeaders());
 
     validateOutputStreamConfiguration(path, getConf());
 
@@ -2145,7 +2146,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         .withPutOptions(putOptions)
         .withIOStatisticsAggregator(
             IOStatisticsContext.getCurrentIOStatisticsContext().getAggregator())
-        .withMultipartEnabled(isMultipartUploadEnabled);
+        .withMultipartEnabled(isMultipartUploadEnabled)
+        .withConditionalPutEnabled(conditionalCreate);
     return new FSDataOutputStream(
         new S3ABlockOutputStream(builder),
         null);

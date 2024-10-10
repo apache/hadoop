@@ -90,7 +90,7 @@ public class TestCreateFileBuilder extends HadoopTestBase {
   public void testHeaderOptions() throws Throwable {
     final CreateFileBuilder builder = mkBuilder().create()
         .must(FS_S3A_CREATE_HEADER + ".retention", "permanent")
-        .must(FS_S3A_CREATE_HEADER + ".".concat(IF_NONE_MATCH), "*")
+        .must(FS_S3A_CREATE_HEADER + "." + IF_NONE_MATCH, "*")
         .opt(FS_S3A_CREATE_HEADER + ".owner", "engineering");
     final Map<String, String> headers = build(builder).getHeaders();
     Assertions.assertThat(headers)

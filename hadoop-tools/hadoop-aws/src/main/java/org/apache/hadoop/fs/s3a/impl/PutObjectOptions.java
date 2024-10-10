@@ -27,6 +27,16 @@ import javax.annotation.Nullable;
 public final class PutObjectOptions {
 
   /**
+   * Can the PUT operation skip marker deletion?
+   */
+  private final boolean keepMarkers;
+
+  /**
+   * Is this a conditional PUT operation
+   */
+  private final boolean conditionalPutEnabled;
+
+  /**
    * Storage class, if not null.
    */
   private final String storageClass;
@@ -39,13 +49,34 @@ public final class PutObjectOptions {
   /**
    * Constructor.
    * @param storageClass Storage class, if not null.
+   * @param conditionalPutEnabled Is this a conditional Put?
    * @param headers Headers; may be null.
    */
   public PutObjectOptions(
+      final boolean keepMarkers,
+      final boolean conditionalPutEnabled,
       @Nullable final String storageClass,
       @Nullable final Map<String, String> headers) {
+    this.keepMarkers = keepMarkers;
+    this.conditionalPutEnabled = conditionalPutEnabled;
     this.storageClass = storageClass;
     this.headers = headers;
+  }
+
+  /**
+   * Get the marker retention flag.
+   * @return true if markers are to be retained.
+   */
+  public boolean isKeepMarkers() {
+    return keepMarkers;
+  }
+
+  /**
+   * Get the conditional put flag.
+   * @return true if it's a conditional put
+   */
+  public boolean isconditionalPutEnabled() {
+    return conditionalPutEnabled;
   }
 
   /**
@@ -67,6 +98,9 @@ public final class PutObjectOptions {
    * Empty options.
    */
   private static final PutObjectOptions EMPTY_OPTIONS = new PutObjectOptions(
+  private static final PutObjectOptions KEEP_DIRS = new PutObjectOptions(true, false,
+      null, null);
+  private static final PutObjectOptions DELETE_DIRS = new PutObjectOptions(false, false,
       null, null);
 
   /**

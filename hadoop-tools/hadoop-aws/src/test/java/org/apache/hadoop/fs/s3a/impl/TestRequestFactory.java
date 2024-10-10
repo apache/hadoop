@@ -167,7 +167,7 @@ public class TestRequestFactory extends AbstractHadoopTestBase {
     String id = "1";
     a(factory.newAbortMultipartUploadRequestBuilder(path, id));
     a(factory.newCompleteMultipartUploadRequestBuilder(path, id,
-        new ArrayList<>(), new PutObjectOptions(false, "some class", Collections.emptyMap())));
+        new ArrayList<>(), new PutObjectOptions(false, false,"some class", Collections.emptyMap())));
     a(factory.newCopyObjectRequestBuilder(path, path2,
         HeadObjectResponse.builder().build()));
     a(factory.newDeleteObjectRequestBuilder(path));
