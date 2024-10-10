@@ -65,8 +65,7 @@ public class AsyncErasureCoding extends ErasureCoding {
         nss, method, true, false, ErasureCodingPolicyInfo[].class);
     asyncApply(
         (ApplyFunction<Map<FederationNamespaceInfo, ErasureCodingPolicyInfo[]>,
-            ErasureCodingPolicyInfo[]>)
-            ret -> merge(ret, ErasureCodingPolicyInfo.class));
+            ErasureCodingPolicyInfo[]>) ret -> merge(ret, ErasureCodingPolicyInfo.class));
 
     return asyncReturn(ErasureCodingPolicyInfo[].class);
   }
@@ -83,17 +82,17 @@ public class AsyncErasureCoding extends ErasureCoding {
 
     asyncApply((ApplyFunction<Map<FederationNamespaceInfo,
         Map<String, String>>, Map<String, String>>) retCodecs -> {
-      Map<String, String> ret = new HashMap<>();
-      Object obj = retCodecs;
-      @SuppressWarnings("unchecked")
-      Map<FederationNamespaceInfo, Map<String, String>> results =
-          (Map<FederationNamespaceInfo, Map<String, String>>)obj;
-      Collection<Map<String, String>> allCodecs = results.values();
-      for (Map<String, String> codecs : allCodecs) {
-        ret.putAll(codecs);
-      }
-      return ret;
-    });
+        Map<String, String> ret = new HashMap<>();
+        Object obj = retCodecs;
+        @SuppressWarnings("unchecked")
+        Map<FederationNamespaceInfo, Map<String, String>> results =
+            (Map<FederationNamespaceInfo, Map<String, String>>)obj;
+        Collection<Map<String, String>> allCodecs = results.values();
+        for (Map<String, String> codecs : allCodecs) {
+          ret.putAll(codecs);
+        }
+        return ret;
+      });
 
     return asyncReturn(Map.class);
   }
@@ -152,15 +151,15 @@ public class AsyncErasureCoding extends ErasureCoding {
         ECTopologyVerifierResult.class);
     asyncApply((ApplyFunction<Map<FederationNamespaceInfo, ECTopologyVerifierResult>,
         ECTopologyVerifierResult>) ret -> {
-      for (Map.Entry<FederationNamespaceInfo, ECTopologyVerifierResult> entry : ret
-          .entrySet()) {
-        if (!entry.getValue().isSupported()) {
-          return entry.getValue();
-        }
-      }
-      // If no negative result, return the result from the first namespace.
-      return ret.get(nss.iterator().next());
-    });
+        for (Map.Entry<FederationNamespaceInfo, ECTopologyVerifierResult> entry :
+            ret.entrySet()) {
+            if (!entry.getValue().isSupported()) {
+              return entry.getValue();
+            }
+          }
+        // If no negative result, return the result from the first namespace.
+        return ret.get(nss.iterator().next());
+      });
     return asyncReturn(ECTopologyVerifierResult.class);
   }
 
@@ -175,8 +174,8 @@ public class AsyncErasureCoding extends ErasureCoding {
 
     asyncApply((ApplyFunction<Map<FederationNamespaceInfo, ECBlockGroupStats>,
         ECBlockGroupStats>) allStats -> {
-      return ECBlockGroupStats.merge(allStats.values());
-    });
+        return ECBlockGroupStats.merge(allStats.values());
+      });
     return asyncReturn(ECBlockGroupStats.class);
   }
 }
