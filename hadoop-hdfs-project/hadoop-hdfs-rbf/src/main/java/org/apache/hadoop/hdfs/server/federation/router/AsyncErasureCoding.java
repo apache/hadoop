@@ -64,7 +64,8 @@ public class AsyncErasureCoding extends ErasureCoding {
     rpcClient.invokeConcurrent(
         nss, method, true, false, ErasureCodingPolicyInfo[].class);
     asyncApply(
-        (ApplyFunction<Map<FederationNamespaceInfo, ErasureCodingPolicyInfo[]>, ErasureCodingPolicyInfo[]>)
+        (ApplyFunction<Map<FederationNamespaceInfo, ErasureCodingPolicyInfo[]>,
+            ErasureCodingPolicyInfo[]>)
             ret -> merge(ret, ErasureCodingPolicyInfo.class));
 
     return asyncReturn(ErasureCodingPolicyInfo[].class);
@@ -80,7 +81,8 @@ public class AsyncErasureCoding extends ErasureCoding {
     rpcClient.invokeConcurrent(
         nss, method, true, false, Map.class);
 
-    asyncApply((ApplyFunction<Map<FederationNamespaceInfo, Map<String, String>>, Map<String, String>>) retCodecs -> {
+    asyncApply((ApplyFunction<Map<FederationNamespaceInfo,
+        Map<String, String>>, Map<String, String>>) retCodecs -> {
       Map<String, String> ret = new HashMap<>();
       Object obj = retCodecs;
       @SuppressWarnings("unchecked")
@@ -148,7 +150,8 @@ public class AsyncErasureCoding extends ErasureCoding {
 
     rpcClient.invokeConcurrent(nss, method, true, false,
         ECTopologyVerifierResult.class);
-    asyncApply((ApplyFunction<Map<FederationNamespaceInfo, ECTopologyVerifierResult>, ECTopologyVerifierResult>) ret -> {
+    asyncApply((ApplyFunction<Map<FederationNamespaceInfo, ECTopologyVerifierResult>,
+        ECTopologyVerifierResult>) ret -> {
       for (Map.Entry<FederationNamespaceInfo, ECTopologyVerifierResult> entry : ret
           .entrySet()) {
         if (!entry.getValue().isSupported()) {
@@ -170,7 +173,8 @@ public class AsyncErasureCoding extends ErasureCoding {
     rpcClient.invokeConcurrent(
         nss, method, true, false, ECBlockGroupStats.class);
 
-    asyncApply((ApplyFunction<Map<FederationNamespaceInfo, ECBlockGroupStats>, ECBlockGroupStats>) allStats -> {
+    asyncApply((ApplyFunction<Map<FederationNamespaceInfo, ECBlockGroupStats>,
+        ECBlockGroupStats>) allStats -> {
       return ECBlockGroupStats.merge(allStats.values());
     });
     return asyncReturn(ECBlockGroupStats.class);

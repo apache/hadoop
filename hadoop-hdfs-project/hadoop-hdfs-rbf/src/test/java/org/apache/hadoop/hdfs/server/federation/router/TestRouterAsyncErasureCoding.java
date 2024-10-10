@@ -66,7 +66,7 @@ public class TestRouterAsyncErasureCoding {
   private FileSystem routerFs;
   private RouterRpcServer routerRpcServer;
   private AsyncErasureCoding asyncErasureCoding;
-  
+
   private final String testfilePath = "/testdir/testAsyncErasureCoding.file";
 
   @BeforeClass
@@ -159,11 +159,11 @@ public class TestRouterAsyncErasureCoding {
 
     asyncErasureCoding.setErasureCodingPolicy("/testdir", ecPolicyName);
     syncReturn(null);
-    
+
     asyncErasureCoding.getErasureCodingPolicy("/testdir");
     ErasureCodingPolicy ecPolicy = syncReturn(ErasureCodingPolicy.class);
     assertEquals(StripedFileTestUtil.getDefaultECPolicy().getName(), ecPolicy.getName());
-    
+
     asyncErasureCoding.getErasureCodingPolicies();
     ErasureCodingPolicyInfo[] erasureCodingPolicies = syncReturn(ErasureCodingPolicyInfo[].class);
     int numECPolicies = erasureCodingPolicies.length;
@@ -171,14 +171,14 @@ public class TestRouterAsyncErasureCoding {
         cluster.getNamenodes().get(0).getClient().getErasureCodingPolicies();
 
     assertArrayEquals(erasureCodingPoliciesFromNameNode, erasureCodingPolicies);
-    
+
     asyncErasureCoding.getErasureCodingCodecs();
-    Map<String, String> erasureCodingCodecs = syncReturn(Map.class); 
+    Map<String, String> erasureCodingCodecs = syncReturn(Map.class);
     Map<String, String> erasureCodingCodecsFromNameNode =
         cluster.getNamenodes().get(0).getClient().getErasureCodingCodecs();
 
     assertEquals(erasureCodingCodecs, erasureCodingCodecsFromNameNode);
-    
+
     // RS-12-4-1024k
     final ECSchema schema = new ECSchema("rs", 12, 4);
     ErasureCodingPolicy erasureCodingPolicy = new ErasureCodingPolicy(schema, 1024 * 1024);
@@ -187,18 +187,18 @@ public class TestRouterAsyncErasureCoding {
     assertEquals(response[0].isSucceed(), true);
 
     asyncErasureCoding.getErasureCodingPolicies();
-    ErasureCodingPolicyInfo[] newErasureCodingPolicies = syncReturn(ErasureCodingPolicyInfo[].class);
-    int numNewECPolicies = newErasureCodingPolicies.length;
+    ErasureCodingPolicyInfo[] erasureCodingPolicies2 = syncReturn(ErasureCodingPolicyInfo[].class);
+    int numNewECPolicies = erasureCodingPolicies2.length;
     assertEquals(numECPolicies + 1, numNewECPolicies);
 
     asyncErasureCoding.getECTopologyResultForPolicies(
         new String[]{"RS-6-3-1024k", "RS-12-4-1024k"});
-    ECTopologyVerifierResult ecTopologyResultForPolicies = syncReturn(ECTopologyVerifierResult.class);
-    assertEquals(false, ecTopologyResultForPolicies.isSupported());
+    ECTopologyVerifierResult ecTResultForPolicies = syncReturn(ECTopologyVerifierResult.class);
+    assertEquals(false, ecTResultForPolicies.isSupported());
 
     asyncErasureCoding.getECTopologyResultForPolicies(
         new String[]{"XOR-2-1-1024k"});
-    ECTopologyVerifierResult ecTopologyResultForPolicies1 = syncReturn(ECTopologyVerifierResult.class);
-    assertEquals(true, ecTopologyResultForPolicies1.isSupported());
+    ECTopologyVerifierResult ecTResultForPolicies2 = syncReturn(ECTopologyVerifierResult.class);
+    assertEquals(true, ecTResultForPolicies2.isSupported());
   }
 }
