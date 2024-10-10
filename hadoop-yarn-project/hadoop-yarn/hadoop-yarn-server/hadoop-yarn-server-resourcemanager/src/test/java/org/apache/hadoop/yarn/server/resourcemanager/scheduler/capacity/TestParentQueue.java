@@ -88,7 +88,35 @@ public class TestParentQueue {
 
   private final ResourceCalculator resourceComparator =
       new DefaultResourceCalculator();
-  
+
+  private static final String A = "a";
+  private static final String B = "b";
+  private static final String C = "c";
+  private static final String C1 = "c1";
+  private static final String C11 = "c11";
+  private static final String C111 = "c111";
+  private static final String C1111 = "c1111";
+  private static final String D = "d";
+  private static final String A1 = "a1";
+  private static final String A2 = "a2";
+  private static final String B1 = "b1";
+  private static final String B2 = "b2";
+  private static final String B3 = "b3";
+  private static final QueuePath ROOT = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+  private static final QueuePath Q_A = ROOT.createNewLeaf(A);
+  private static final QueuePath Q_B = ROOT.createNewLeaf(B);
+  private static final QueuePath Q_C = ROOT.createNewLeaf(C);
+  private static final QueuePath Q_D = ROOT.createNewLeaf(D);
+  private static final QueuePath Q_A1 = Q_A.createNewLeaf(A1);
+  private static final QueuePath Q_A2 = Q_A.createNewLeaf(A2);
+  private static final QueuePath Q_B1 = Q_B.createNewLeaf(B1);
+  private static final QueuePath Q_B2 = Q_B.createNewLeaf(B2);
+  private static final QueuePath Q_B3 = Q_B.createNewLeaf(B3);
+  private static final QueuePath Q_C1 = Q_C.createNewLeaf(C1);
+  private static final QueuePath Q_C11 = Q_C1.createNewLeaf(C11);
+  private static final QueuePath Q_C111 = Q_C11.createNewLeaf(C111);
+  private static final QueuePath Q_C1111 = Q_C111.createNewLeaf(C1111);
+
   @Before
   public void setUp() throws Exception {
     rmContext = TestUtils.getMockRMContext();
@@ -113,17 +141,11 @@ public class TestParentQueue {
 
     queueContext = new CapacitySchedulerQueueContext(csContext);
   }
-  
-  private static final String A = "a";
-  private static final String B = "b";
-  private static final String Q_A =
-      CapacitySchedulerConfiguration.ROOT + "." + A;
-  private static final String Q_B =
-      CapacitySchedulerConfiguration.ROOT + "." + B;
+
   private void setupSingleLevelQueues(CapacitySchedulerConfiguration conf) {
     
     // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {A, B});
+    conf.setQueues(ROOT, new String[] {A, B});
     
     conf.setCapacity(Q_A, 30);
     
@@ -138,12 +160,12 @@ public class TestParentQueue {
       CapacitySchedulerConfiguration conf) {
 
     // Define top-level queues
-    conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[]{A, B});
+    conf.setQueues(ROOT, new String[]{A, B});
 
-    conf.setMinimumResourceRequirement("", new QueuePath(Q_A),
+    conf.setMinimumResourceRequirement("", Q_A,
         QUEUE_A_RESOURCE);
 
-    conf.setMinimumResourceRequirement("", new QueuePath(Q_B),
+    conf.setMinimumResourceRequirement("", Q_B,
         QUEUE_B_RESOURCE);
 
     queueContext.reinitialize();
@@ -433,60 +455,40 @@ public class TestParentQueue {
     }
   }
   
-  private static final String C = "c";
-  private static final String C1 = "c1";
-  private static final String C11 = "c11";
-  private static final String C111 = "c111";
-  private static final String C1111 = "c1111";
-
-  private static final String D = "d";
-  private static final String A1 = "a1";
-  private static final String A2 = "a2";
-  private static final String B1 = "b1";
-  private static final String B2 = "b2";
-  private static final String B3 = "b3";
-  private static final String B4 = "b4";
-  
   private void setupMultiLevelQueues(CapacitySchedulerConfiguration conf) {
     
     // Define top-level queues
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {A, B, C, D});
+    csConf.setQueues(ROOT, new String[] {A, B, C, D});
     
     conf.setCapacity(Q_A, 10);
     
     conf.setCapacity(Q_B, 50);
-    
-    final String Q_C = CapacitySchedulerConfiguration.ROOT + "." + C;
+
     conf.setCapacity(Q_C, 19.5f);
-    
-    final String Q_D = CapacitySchedulerConfiguration.ROOT + "." + D;
+
     conf.setCapacity(Q_D, 20.5f);
     
     // Define 2-nd level queues
     conf.setQueues(Q_A, new String[] {A1, A2});
-    conf.setCapacity(Q_A + "." + A1, 50);
-    conf.setCapacity(Q_A + "." + A2, 50);
+    conf.setCapacity(Q_A1, 50);
+    conf.setCapacity(Q_A2, 50);
     
     conf.setQueues(Q_B, new String[] {B1, B2, B3});
-    conf.setCapacity(Q_B + "." + B1, 10);
-    conf.setCapacity(Q_B + "." + B2, 20);
-    conf.setCapacity(Q_B + "." + B3, 70);
+    conf.setCapacity(Q_B1, 10);
+    conf.setCapacity(Q_B2, 20);
+    conf.setCapacity(Q_B3, 70);
 
     conf.setQueues(Q_C, new String[] {C1});
 
-    final String Q_C1= Q_C + "." + C1;
     conf.setCapacity(Q_C1, 100);
     conf.setQueues(Q_C1, new String[] {C11});
 
-    final String Q_C11= Q_C1 + "." + C11;
     conf.setCapacity(Q_C11, 100);
     conf.setQueues(Q_C11, new String[] {C111});
 
-    final String Q_C111= Q_C11 + "." + C111;
     conf.setCapacity(Q_C111, 100);
     //Leaf Queue
     conf.setQueues(Q_C111, new String[] {C1111});
-    final String Q_C1111= Q_C111 + "." + C1111;
     conf.setCapacity(Q_C1111, 100);
     queueContext.reinitialize();
   }
@@ -677,9 +679,9 @@ public class TestParentQueue {
     assumeThat(csConf.isLegacyQueueMode(), is(true));
 
     // set child queues capacity to 0 when parents not 0
-    csConf.setCapacity(Q_B + "." + B1, 0);
-    csConf.setCapacity(Q_B + "." + B2, 0);
-    csConf.setCapacity(Q_B + "." + B3, 0);
+    csConf.setCapacity(Q_B1, 0);
+    csConf.setCapacity(Q_B2, 0);
+    csConf.setCapacity(Q_B3, 0);
     queueContext.reinitialize();
 
     CSQueueStore queues = new CSQueueStore();
@@ -740,9 +742,9 @@ public class TestParentQueue {
     // and allow zero capacity sum
     csConf.setCapacity(Q_B, 0);
     csConf.setCapacity(Q_A, 100);
-    csConf.setCapacity(Q_B + "." + B1, 10);
-    csConf.setCapacity(Q_B + "." + B2, 20);
-    csConf.setCapacity(Q_B + "." + B3, 20);
+    csConf.setCapacity(Q_B1, 10);
+    csConf.setCapacity(Q_B2, 20);
+    csConf.setCapacity(Q_B3, 20);
     csConf.setAllowZeroCapacitySum(Q_B, true);
     queueContext.reinitialize();
     CSQueueStore queues = new CSQueueStore();
@@ -761,9 +763,9 @@ public class TestParentQueue {
     // and allow zero capacity sum
     csConf.setCapacity(Q_B, 10);
     csConf.setCapacity(Q_A, 50);
-    csConf.setCapacity(Q_B + "." + B1, 0);
-    csConf.setCapacity(Q_B + "." + B2, 0);
-    csConf.setCapacity(Q_B + "." + B3, 0);
+    csConf.setCapacity(Q_B1, 0);
+    csConf.setCapacity(Q_B2, 0);
+    csConf.setCapacity(Q_B3, 0);
     csConf.setAllowZeroCapacitySum(Q_B, true);
     queueContext.reinitialize();
     CSQueueStore queues = new CSQueueStore();
@@ -779,9 +781,9 @@ public class TestParentQueue {
     
     // set parent and child capacity to 0
     csConf.setCapacity(Q_B, 0);
-    csConf.setCapacity(Q_B + "." + B1, 0);
-    csConf.setCapacity(Q_B + "." + B2, 0);
-    csConf.setCapacity(Q_B + "." + B3, 0);
+    csConf.setCapacity(Q_B1, 0);
+    csConf.setCapacity(Q_B2, 0);
+    csConf.setCapacity(Q_B3, 0);
     csConf.setCapacity(Q_A, 60);
     queueContext.reinitialize();
 
@@ -977,12 +979,10 @@ public class TestParentQueue {
   public void testQueueAcl() throws Exception {
  
     setupMultiLevelQueues(csConf);
-    csConf.setAcl(CapacitySchedulerConfiguration.ROOT, QueueACL.SUBMIT_APPLICATIONS, " ");
-    csConf.setAcl(CapacitySchedulerConfiguration.ROOT, QueueACL.ADMINISTER_QUEUE, " ");
+    csConf.setAcl(ROOT, QueueACL.SUBMIT_APPLICATIONS, " ");
+    csConf.setAcl(ROOT, QueueACL.ADMINISTER_QUEUE, " ");
 
-    final String Q_C = CapacitySchedulerConfiguration.ROOT + "." + C;
     csConf.setAcl(Q_C, QueueACL.ADMINISTER_QUEUE, "*");
-    final String Q_C11= Q_C + "." + C1 +  "." + C11;
     csConf.setAcl(Q_C11, QueueACL.SUBMIT_APPLICATIONS, "*");
     queueContext.reinitialize();
 

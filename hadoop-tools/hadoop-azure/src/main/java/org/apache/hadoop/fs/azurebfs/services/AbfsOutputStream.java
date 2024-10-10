@@ -593,7 +593,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
         "writeCurrentBufferToService", "append")) {
       AppendRequestParameters reqParams = new AppendRequestParameters(offset, 0,
           bytesLength, APPEND_MODE, true, leaseId, isExpectHeaderEnabled);
-      AbfsRestOperation op = client.append(path, uploadData.toByteArray(),
+      AbfsRestOperation op = getClient().append(path, uploadData.toByteArray(),
           reqParams, cachedSasToken.get(), contextEncryptionAdapter,
           new TracingContext(tracingContext));
       cachedSasToken.update(op.getSasToken());
@@ -606,7 +606,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
       outputStreamStatistics.uploadFailed(bytesLength);
       failureWhileSubmit(ex);
     } finally {
-      IOUtils.close(uploadData);
+      IOUtils.close(uploadData, activeBlock);
     }
   }
 

@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.s3a.api.PerformanceFlagEnum;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentialBinding;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
@@ -102,9 +103,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
+import static org.apache.hadoop.fs.impl.FlagSet.createFlagSet;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletion;
 import static org.apache.hadoop.fs.s3a.impl.S3ExpressStorage.STORE_CAPABILITY_S3_EXPRESS_STORAGE;
+import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.getExternalData;
+import static org.apache.hadoop.fs.s3a.test.PublicDatasetTestUtils.requireDefaultExternalDataFile;
 import static org.apache.hadoop.test.GenericTestUtils.buildPaths;
 import static org.apache.hadoop.util.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CREDENTIAL_PROVIDER_PATH;
@@ -405,22 +409,22 @@ public final class S3ATestUtils {
    * Get the test CSV file; assume() that it is not empty.
    * @param conf test configuration
    * @return test file.
+   * @deprecated Retained only to assist cherrypicking patches
    */
+  @Deprecated
   public static String getCSVTestFile(Configuration conf) {
-    String csvFile = conf
-        .getTrimmed(KEY_CSVTEST_FILE, DEFAULT_CSVTEST_FILE);
-    Assume.assumeTrue("CSV test file is not the default",
-        isNotEmpty(csvFile));
-    return csvFile;
+    return getExternalData(conf).toUri().toString();
   }
 
   /**
    * Get the test CSV path; assume() that it is not empty.
    * @param conf test configuration
    * @return test file as a path.
+   * @deprecated Retained only to assist cherrypicking patches
    */
+  @Deprecated
   public static Path getCSVTestPath(Configuration conf) {
-    return new Path(getCSVTestFile(conf));
+    return getExternalData(conf);
   }
 
   /**
@@ -429,12 +433,11 @@ public final class S3ATestUtils {
    * read only).
    * @return test file.
    * @param conf test configuration
+   * @deprecated Retained only to assist cherrypicking patches
    */
+  @Deprecated
   public static String getLandsatCSVFile(Configuration conf) {
-    String csvFile = getCSVTestFile(conf);
-    Assume.assumeTrue("CSV test file is not the default",
-        DEFAULT_CSVTEST_FILE.equals(csvFile));
-    return csvFile;
+    return requireDefaultExternalDataFile(conf);
   }
   /**
    * Get the test CSV file; assume() that it is not modified (i.e. we haven't
@@ -442,9 +445,11 @@ public final class S3ATestUtils {
    * read only).
    * @param conf test configuration
    * @return test file as a path.
+   * @deprecated Retained only to assist cherrypicking patches
    */
+  @Deprecated
   public static Path getLandsatCSVPath(Configuration conf) {
-    return new Path(getLandsatCSVFile(conf));
+    return getExternalData(conf);
   }
 
   /**
@@ -551,6 +556,16 @@ public final class S3ATestUtils {
   }
 
   /**
+   * Skip a test if the test bucket is not an S3Express bucket.
+   * @param configuration configuration to probe
+   */
+  public static void skipIfNotS3ExpressBucket(
+      Configuration configuration) {
+    assume("Skipping test as bucket is not an S3Express bucket",
+        isS3ExpressTestBucket(configuration));
+  }
+
+  /**
    * Is the test bucket an S3Express bucket?
    * @param conf configuration
    * @return true if the bucket is an S3Express bucket.
@@ -588,12 +603,13 @@ public final class S3ATestUtils {
   /**
    * Create a test path, using the value of
    * {@link S3ATestConstants#TEST_UNIQUE_FORK_ID} if it is set.
+   * This path is *not* qualified.
    * @param defVal default value
    * @return a path
    */
   public static Path createTestPath(Path defVal) {
     String testUniqueForkId =
-        System.getProperty(S3ATestConstants.TEST_UNIQUE_FORK_ID);
+        System.getProperty(TEST_UNIQUE_FORK_ID);
     return testUniqueForkId == null ? defVal :
         new Path("/" + testUniqueForkId, "test");
   }
@@ -978,6 +994,9 @@ public final class S3ATestUtils {
         .setMultiObjectDeleteEnabled(multiDelete)
         .setUseListV1(false)
         .setContextAccessors(accessors)
+        .setPerformanceFlags(createFlagSet(
+            PerformanceFlagEnum.class,
+            FS_S3A_PERFORMANCE_FLAGS))
         .build();
   }
 
@@ -1106,6 +1125,25 @@ public final class S3ATestUtils {
     assume("store is not AWS S3",
         !NetworkBinding.isAwsEndpoint(fs.getConf()
             .getTrimmed(ENDPOINT, DEFAULT_ENDPOINT)));
+  }
+
+  /**
+   * Modify the config by setting the performance flags and return the modified config.
+   *
+   * @param conf The configuration object.
+   * @param flagStr The performance flag string.
+   * @return The modified configuration object.
+   */
+  public static Configuration setPerformanceFlags(final Configuration conf,
+      final String flagStr) {
+    removeBaseAndBucketOverrides(
+        conf,
+        FS_S3A_CREATE_PERFORMANCE,
+        FS_S3A_PERFORMANCE_FLAGS);
+    if (flagStr != null) {
+      conf.set(FS_S3A_PERFORMANCE_FLAGS, flagStr);
+    }
+    return conf;
   }
 
   /**
@@ -1723,6 +1761,15 @@ public final class S3ATestUtils {
    */
   public static void disablePrefetching(Configuration conf) {
     removeBaseAndBucketOverrides(conf, PREFETCH_ENABLED_KEY);
+  }
+
+  /**
+   * Skip root tests if the system properties/config says so.
+   * @param conf configuration to check
+   */
+  public static void maybeSkipRootTests(Configuration conf) {
+    assume("Root tests disabled",
+        getTestPropertyBool(conf, ROOT_TESTS_ENABLED, DEFAULT_ROOT_TESTS_ENABLED));
   }
 
   /**

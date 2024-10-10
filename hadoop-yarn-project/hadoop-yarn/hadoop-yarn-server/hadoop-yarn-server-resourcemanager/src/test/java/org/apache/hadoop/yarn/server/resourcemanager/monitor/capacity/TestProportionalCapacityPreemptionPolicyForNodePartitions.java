@@ -23,6 +23,7 @@ import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.TestProportionalCapacityPreemptionPolicy.IsPreemptionRequestFor;
 import org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity.mockframework.ProportionalCapacityPreemptionPolicyMockFramework;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.junit.Before;
 import org.junit.Test;
@@ -366,7 +367,7 @@ public class TestProportionalCapacityPreemptionPolicyForNodePartitions
         "c\t" // app3 in c
         + "(1,1,n1,x,20,false)"; // 20x in n1
 
-    conf.setPreemptionDisabled("root.b", true);
+    conf.setPreemptionDisabled(new QueuePath("root.b"), true);
     buildEnv(labelsConfig, nodesConfig, queuesConfig, appsConfig);
     policy.editSchedule();
 

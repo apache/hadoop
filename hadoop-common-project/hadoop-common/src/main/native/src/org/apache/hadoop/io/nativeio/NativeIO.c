@@ -104,24 +104,6 @@ static ssize_t get_pw_buflen();
 #endif
 
 /**
- * Returns non-zero if the user has specified that the system
- * has non-threadsafe implementations of getpwuid_r or getgrgid_r.
- **/
-static int workaround_non_threadsafe_calls(JNIEnv *env, jclass clazz) {
-  jboolean result;
-  jfieldID needs_workaround_field = (*env)->GetStaticFieldID(
-    env, clazz,
-    "workaroundNonThreadSafePasswdCalls",
-    "Z");
-  PASS_EXCEPTIONS_RET(env, 0);
-  assert(needs_workaround_field);
-
-  result = (*env)->GetStaticBooleanField(
-    env, clazz, needs_workaround_field);
-  return result;
-}
-
-/**
  * Sets a static boolean field to the specified value.
  */
 static void setStaticBoolean(JNIEnv *env, jclass clazz, char *field,
@@ -201,10 +183,9 @@ static void consts_init(JNIEnv *env) {
 }
 #endif
 
-static void stat_init(JNIEnv *env, jclass nativeio_class) {
+static void stat_init(JNIEnv *env) {
   jclass clazz = NULL;
-  jclass obj_class = NULL;
-  jmethodID  obj_ctor = NULL;
+  if (stat_ctor2 != NULL) return; //Already inited
   // Init Stat
   clazz = (*env)->FindClass(env, NATIVE_IO_STAT_CLASS);
   if (!clazz) {
@@ -224,6 +205,20 @@ static void stat_init(JNIEnv *env, jclass nativeio_class) {
   if (!stat_ctor2) {
     return; // exception has been raised
   }
+}
+
+static void stat_deinit(JNIEnv *env) {
+  if (stat_clazz != NULL) {
+    (*env)->DeleteGlobalRef(env, stat_clazz);
+    stat_clazz = NULL;
+  }
+}
+
+static void workaround_non_threadsafe_calls_init(JNIEnv *env){
+  jclass obj_class = NULL;
+  jmethodID  obj_ctor = NULL;
+  if (pw_lock_object != NULL) return; // Already inited
+
   obj_class = (*env)->FindClass(env, "java/lang/Object");
   if (!obj_class) {
     return; // exception has been raised
@@ -233,21 +228,13 @@ static void stat_init(JNIEnv *env, jclass nativeio_class) {
   if (!obj_ctor) {
     return; // exception has been raised
   }
-
-  if (workaround_non_threadsafe_calls(env, nativeio_class)) {
-    pw_lock_object = (*env)->NewObject(env, obj_class, obj_ctor);
-    PASS_EXCEPTIONS(env);
-    pw_lock_object = (*env)->NewGlobalRef(env, pw_lock_object);
-
-    PASS_EXCEPTIONS(env);
-  }
+  pw_lock_object = (*env)->NewObject(env, obj_class, obj_ctor);
+  PASS_EXCEPTIONS(env);
+  pw_lock_object = (*env)->NewGlobalRef(env, pw_lock_object);
+  PASS_EXCEPTIONS(env);
 }
 
-static void stat_deinit(JNIEnv *env) {
-  if (stat_clazz != NULL) {  
-    (*env)->DeleteGlobalRef(env, stat_clazz);
-    stat_clazz = NULL;
-  }
+static void workaround_non_threadsafe_calls_deinit(JNIEnv *env){
   if (pw_lock_object != NULL) {
     (*env)->DeleteGlobalRef(env, pw_lock_object);
     pw_lock_object = NULL;
@@ -255,6 +242,7 @@ static void stat_deinit(JNIEnv *env) {
 }
 
 static void nioe_init(JNIEnv *env) {
+  if (nioe_ctor != NULL) return; // Already inited
   // Init NativeIOException
   nioe_clazz = (*env)->FindClass(
     env, "org/apache/hadoop/io/nativeio/NativeIOException");
@@ -349,17 +337,53 @@ static void pmem_region_deinit(JNIEnv *env) {
  */
 JNIEXPORT void JNICALL
 Java_org_apache_hadoop_io_nativeio_NativeIO_initNative(
-  JNIEnv *env, jclass clazz) {
+  JNIEnv *env, jclass clazz, jboolean doThreadsafeWorkaround) {
+  nioe_init(env);
+  PASS_EXCEPTIONS_GOTO(env, error);
+  fd_init(env);
+  PASS_EXCEPTIONS_GOTO(env, error);
+#ifdef UNIX
+  errno_enum_init(env);
+  PASS_EXCEPTIONS_GOTO(env, error);
+#endif
+  if (doThreadsafeWorkaround) {
+    workaround_non_threadsafe_calls_init(env);
+    PASS_EXCEPTIONS_GOTO(env, error);
+  }
+  return;
+error:
+  // these are all idempotent and safe to call even if the
+  // class wasn't inited yet
+  nioe_deinit(env);
+  fd_deinit(env);
+#ifdef UNIX
+  errno_enum_deinit(env);
+#endif
+  if (doThreadsafeWorkaround) {
+    workaround_non_threadsafe_calls_deinit(env);
+  }
+}
+
+/*
+ * private static native void initNativePosix();
+ */
+JNIEXPORT void JNICALL
+Java_org_apache_hadoop_io_nativeio_NativeIO_00024POSIX_initNativePosix(
+  JNIEnv *env, jclass clazz, jboolean doThreadsafeWorkaround) {
 #ifdef UNIX
   consts_init(env);
   PASS_EXCEPTIONS_GOTO(env, error);
 #endif
-  stat_init(env, clazz);
+  stat_init(env);
   PASS_EXCEPTIONS_GOTO(env, error);
   nioe_init(env);
   PASS_EXCEPTIONS_GOTO(env, error);
   fd_init(env);
   PASS_EXCEPTIONS_GOTO(env, error);
+  if (doThreadsafeWorkaround) {
+    workaround_non_threadsafe_calls_init(env);
+    PASS_EXCEPTIONS_GOTO(env, error);
+  }
 #ifdef UNIX
   errno_enum_init(env);
   PASS_EXCEPTIONS_GOTO(env, error);
@@ -373,17 +397,43 @@ Java_org_apache_hadoop_io_nativeio_NativeIO_initNative(
 error:
   // these are all idempodent and safe to call even if the
   // class wasn't initted yet
-#ifdef UNIX
   stat_deinit(env);
 #ifdef HADOOP_PMDK_LIBRARY
   pmem_region_deinit(env);
-#endif
 #endif
   nioe_deinit(env);
   fd_deinit(env);
 #ifdef UNIX
   errno_enum_deinit(env);
 #endif
+  if (doThreadsafeWorkaround) {
+    workaround_non_threadsafe_calls_deinit(env);
+  }
+}
+
+/*
+ * private static native void initNativeWindows();
+ */
+JNIEXPORT void JNICALL
+Java_org_apache_hadoop_io_nativeio_NativeIO_00024Windows_initNativeWindows(
+  JNIEnv *env, jclass clazz, jboolean doThreadsafeWorkaround) {
+  nioe_init(env);
+  PASS_EXCEPTIONS_GOTO(env, error);
+  fd_init(env);
+  PASS_EXCEPTIONS_GOTO(env, error);
+  if (doThreadsafeWorkaround) {
+    workaround_non_threadsafe_calls_init(env);
+    PASS_EXCEPTIONS_GOTO(env, error);
+  }
+  return;
+error:
+  // these are all idempodent and safe to call even if the
+  // class wasn't initted yet
+  nioe_deinit(env);
+  fd_deinit(env);
+  if (doThreadsafeWorkaround) {
+    workaround_non_threadsafe_calls_deinit(env);
+  }
 }
 
 /*

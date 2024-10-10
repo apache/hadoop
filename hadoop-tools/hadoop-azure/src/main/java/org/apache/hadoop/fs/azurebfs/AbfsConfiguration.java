@@ -22,6 +22,10 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.azurebfs.constants.AbfsServiceType;
+import org.apache.hadoop.fs.azurebfs.services.FixedSASTokenProvider;
+import org.apache.hadoop.fs.azurebfs.constants.HttpOperationType;
+import org.apache.hadoop.fs.azurebfs.utils.MetricFormat;
 import org.apache.hadoop.util.Preconditions;
 
 import org.apache.commons.lang3.StringUtils;
@@ -57,6 +61,7 @@ import org.apache.hadoop.fs.azurebfs.oauth2.CustomTokenProviderAdapter;
 import org.apache.hadoop.fs.azurebfs.oauth2.MsiTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.RefreshTokenBasedTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.UserPasswordTokenProvider;
+import org.apache.hadoop.fs.azurebfs.oauth2.WorkloadIdentityTokenProvider;
 import org.apache.hadoop.fs.azurebfs.security.AbfsDelegationTokenManager;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azurebfs.services.ExponentialRetryPolicy;
@@ -70,6 +75,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.fs.FileSystem.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.*;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations.*;
@@ -83,12 +89,18 @@ public class AbfsConfiguration{
 
   private final Configuration rawConfig;
   private final String accountName;
+  // Service type identified from URL used to initialize FileSystem.
+  private final AbfsServiceType fsConfiguredServiceType;
   private final boolean isSecure;
   private static final Logger LOG = LoggerFactory.getLogger(AbfsConfiguration.class);
 
   @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ACCOUNT_IS_HNS_ENABLED,
       DefaultValue = DEFAULT_FS_AZURE_ACCOUNT_IS_HNS_ENABLED)
   private String isNamespaceEnabledAccount;
+
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ENABLE_DFSTOBLOB_FALLBACK,
+      DefaultValue = DEFAULT_FS_AZURE_ENABLE_DFSTOBLOB_FALLBACK)
+  private boolean isDfsToBlobFallbackEnabled;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_WRITE_MAX_CONCURRENT_REQUESTS,
       DefaultValue = -1)
@@ -152,6 +164,14 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_MAX_BACKOFF_INTERVAL)
   private int maxBackoffInterval;
 
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = AZURE_STATIC_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED,
+      DefaultValue = DEFAULT_STATIC_RETRY_FOR_CONNECTION_TIMEOUT_ENABLED)
+  private boolean staticRetryForConnectionTimeoutEnabled;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_STATIC_RETRY_INTERVAL,
+      DefaultValue = DEFAULT_STATIC_RETRY_INTERVAL)
+  private int staticRetryInterval;
+
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_BACKOFF_INTERVAL,
       DefaultValue = DEFAULT_BACKOFF_INTERVAL)
   private int backoffInterval;
@@ -165,6 +185,14 @@ public class AbfsConfiguration{
       MinValue = 0,
       DefaultValue = DEFAULT_CUSTOM_TOKEN_FETCH_RETRY_COUNT)
   private int customTokenFetchRetryCount;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_HTTP_CONNECTION_TIMEOUT,
+          DefaultValue = DEFAULT_HTTP_CONNECTION_TIMEOUT)
+  private int httpConnectionTimeout;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_HTTP_READ_TIMEOUT,
+          DefaultValue = DEFAULT_HTTP_READ_TIMEOUT)
+  private int httpReadTimeout;
 
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = AZURE_OAUTH_TOKEN_FETCH_RETRY_COUNT,
       MinValue = 0,
@@ -275,6 +303,26 @@ public class AbfsConfiguration{
       DefaultValue = DEFAULT_ENABLE_AUTOTHROTTLING)
   private boolean enableAutoThrottling;
 
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_METRIC_IDLE_TIMEOUT,
+      DefaultValue = DEFAULT_METRIC_IDLE_TIMEOUT_MS)
+  private int metricIdleTimeout;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_METRIC_ANALYSIS_TIMEOUT,
+      DefaultValue = DEFAULT_METRIC_ANALYSIS_TIMEOUT_MS)
+  private int metricAnalysisTimeout;
+
+  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_METRIC_URI,
+          DefaultValue = EMPTY_STRING)
+  private String metricUri;
+
+  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_METRIC_ACCOUNT_NAME,
+          DefaultValue = EMPTY_STRING)
+  private String metricAccount;
+
+  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_METRIC_ACCOUNT_KEY,
+          DefaultValue = EMPTY_STRING)
+  private String metricAccountKey;
+
   @IntegerConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_ACCOUNT_OPERATION_IDLE_TIMEOUT,
       DefaultValue = DEFAULT_ACCOUNT_OPERATION_IDLE_TIMEOUT_MS)
   private int accountOperationIdleTimeout;
@@ -343,15 +391,39 @@ public class AbfsConfiguration{
           FS_AZURE_ABFS_RENAME_RESILIENCE, DefaultValue = DEFAULT_ENABLE_ABFS_RENAME_RESILIENCE)
   private boolean renameResilience;
 
-  private String clientProvidedEncryptionKey;
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_ABFS_ENABLE_CHECKSUM_VALIDATION, DefaultValue = DEFAULT_ENABLE_ABFS_CHECKSUM_VALIDATION)
+  private boolean isChecksumValidationEnabled;
 
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_ENABLE_PAGINATED_DELETE, DefaultValue = DEFAULT_ENABLE_PAGINATED_DELETE)
+  private boolean isPaginatedDeleteEnabled;
+
+  @IntegerConfigurationValidatorAnnotation(ConfigurationKey =
+      FS_AZURE_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES, DefaultValue = DEFAULT_APACHE_HTTP_CLIENT_MAX_IO_EXCEPTION_RETRIES)
+  private int maxApacheHttpClientIoExceptionsRetries;
+
+  /**
+   * Max idle TTL configuration for connection given in
+   * {@value org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys#FS_AZURE_APACHE_HTTP_CLIENT_IDLE_CONNECTION_TTL}
+   * with default of
+   * {@value org.apache.hadoop.fs.azurebfs.constants.FileSystemConfigurations#DEFAULT_HTTP_CLIENT_CONN_MAX_IDLE_TIME}
+   */
+  @LongConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_APACHE_HTTP_CLIENT_IDLE_CONNECTION_TTL,
+      DefaultValue = DEFAULT_HTTP_CLIENT_CONN_MAX_IDLE_TIME)
+  private long maxApacheHttpClientConnectionIdleTime;
+
+  private String clientProvidedEncryptionKey;
   private String clientProvidedEncryptionKeySHA;
 
-  public AbfsConfiguration(final Configuration rawConfig, String accountName)
-      throws IllegalAccessException, InvalidConfigurationValueException, IOException {
+  public AbfsConfiguration(final Configuration rawConfig,
+      String accountName,
+      AbfsServiceType fsConfiguredServiceType)
+      throws IllegalAccessException, IOException {
     this.rawConfig = ProviderUtils.excludeIncompatibleCredentialProviders(
         rawConfig, AzureBlobFileSystem.class);
     this.accountName = accountName;
+    this.fsConfiguredServiceType = fsConfiguredServiceType;
     this.isSecure = getBoolean(FS_AZURE_SECURE_MODE, false);
 
     Field[] fields = this.getClass().getDeclaredFields();
@@ -373,8 +445,81 @@ public class AbfsConfiguration{
     }
   }
 
+  public AbfsConfiguration(final Configuration rawConfig, String accountName)
+      throws IllegalAccessException, IOException {
+    this(rawConfig, accountName, AbfsServiceType.DFS);
+  }
+
+  /**
+   * Returns the account type as per the user configuration. Gets the account
+   * specific value if it exists, then looks for an account agnostic value.
+   * If not configured driver makes additional getAcl call to determine
+   * the account type during file system initialization.
+   * @return TRUE/FALSE value if configured, UNKNOWN if not configured.
+   */
   public Trilean getIsNamespaceEnabledAccount() {
-    return Trilean.getTrilean(isNamespaceEnabledAccount);
+    return Trilean.getTrilean(
+        getString(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, isNamespaceEnabledAccount));
+  }
+
+  /**
+   * Returns the service type to be used based on the filesystem configuration.
+   * Precedence is given to service type configured for FNS Accounts using
+   * "fs.azure.fns.account.service.type". If not configured, then the service
+   * type identified from url used to initialize filesystem will be used.
+   * @return the service type.
+   */
+  public AbfsServiceType getFsConfiguredServiceType() {
+    return getEnum(FS_AZURE_FNS_ACCOUNT_SERVICE_TYPE, fsConfiguredServiceType);
+  }
+
+  /**
+   * Returns the service type configured for FNS Accounts to override the
+   * service type identified by URL used to initialize the filesystem.
+   * @return the service type.
+   */
+  public AbfsServiceType getConfiguredServiceTypeForFNSAccounts() {
+    return getEnum(FS_AZURE_FNS_ACCOUNT_SERVICE_TYPE, null);
+  }
+
+  /**
+   * Returns the service type to be used for Ingress Operations irrespective of account type.
+   * Default value is the same as the service type configured for the file system.
+   * @return the service type.
+   */
+  public AbfsServiceType getIngressServiceType() {
+    return getEnum(FS_AZURE_INGRESS_SERVICE_TYPE, getFsConfiguredServiceType());
+  }
+
+  /**
+   * Returns whether there is a need to move traffic from DFS to Blob.
+   * Needed when the service type is DFS and operations are experiencing compatibility issues.
+   * @return true if fallback enabled.
+   */
+  public boolean isDfsToBlobFallbackEnabled() {
+    return isDfsToBlobFallbackEnabled;
+  }
+
+  /**
+   * Checks if the service type configured is valid for account type used.
+   * HNS Enabled accounts cannot have service type as BLOB.
+   * @param isHNSEnabled Flag to indicate if HNS is enabled for the account.
+   * @throws InvalidConfigurationValueException if the service type is invalid.
+   */
+  public void validateConfiguredServiceType(boolean isHNSEnabled)
+      throws InvalidConfigurationValueException {
+    // Todo: [FnsOverBlob] - Remove this check, Failing FS Init with Blob Endpoint Until FNS over Blob is ready.
+    if (getFsConfiguredServiceType() == AbfsServiceType.BLOB) {
+      throw new InvalidConfigurationValueException(FS_DEFAULT_NAME_KEY,
+          "Blob Endpoint Support not yet available");
+    }
+    if (isHNSEnabled && getConfiguredServiceTypeForFNSAccounts() == AbfsServiceType.BLOB) {
+      throw new InvalidConfigurationValueException(
+          FS_AZURE_FNS_ACCOUNT_SERVICE_TYPE, "Cannot be BLOB for HNS Account");
+    } else if (isHNSEnabled && fsConfiguredServiceType == AbfsServiceType.BLOB) {
+      throw new InvalidConfigurationValueException(FS_DEFAULT_NAME_KEY,
+          "Blob Endpoint Url Cannot be used to initialize filesystem for HNS Account");
+    }
   }
 
   /**
@@ -417,6 +562,7 @@ public class AbfsConfiguration{
    * Returns the account-specific value if it exists, then looks for an
    * account-agnostic value.
    * @param key Account-agnostic configuration key
+   * @param defaultValue Value returned if none is configured
    * @return value if one exists, else the default value
    */
   public String getString(String key, String defaultValue) {
@@ -446,11 +592,22 @@ public class AbfsConfiguration{
   }
 
   /**
+   * Returns the account-specific value if it exists, then looks for an
+   * account-agnostic value, and finally tries the default value.
+   * @param key Account-agnostic configuration key
+   * @param defaultValue Value returned if none is configured
+   * @return value if one exists, else the default value
+   */
+  public int getInt(String key, int defaultValue) {
+    return rawConfig.getInt(accountConf(key), rawConfig.getInt(key, defaultValue));
+  }
+
+  /**
    * Returns the account-specific password in string form if it exists, then
    * looks for an account-agnostic value.
    * @param key Account-agnostic configuration key
    * @return value in String form if one exists, else null
-   * @throws IOException
+   * @throws IOException if parsing fails.
    */
   public String getPasswordString(String key) throws IOException {
     char[] passchars = rawConfig.getPassword(accountConf(key));
@@ -669,6 +826,14 @@ public class AbfsConfiguration{
     return this.maxBackoffInterval;
   }
 
+  public boolean getStaticRetryForConnectionTimeoutEnabled() {
+    return staticRetryForConnectionTimeoutEnabled;
+  }
+
+  public int getStaticRetryInterval() {
+    return staticRetryInterval;
+  }
+
   public int getBackoffIntervalMilliseconds() {
     return this.backoffInterval;
   }
@@ -679,6 +844,14 @@ public class AbfsConfiguration{
 
   public int getCustomTokenFetchRetryCount() {
     return this.customTokenFetchRetryCount;
+  }
+
+  public int getHttpConnectionTimeout() {
+    return this.httpConnectionTimeout;
+  }
+
+  public int getHttpReadTimeout() {
+    return this.httpReadTimeout;
   }
 
   public long getAzureBlockSize() {
@@ -779,6 +952,26 @@ public class AbfsConfiguration{
     return this.enableAutoThrottling;
   }
 
+  public int getMetricIdleTimeout() {
+    return this.metricIdleTimeout;
+  }
+
+  public int getMetricAnalysisTimeout() {
+    return this.metricAnalysisTimeout;
+  }
+
+  public String getMetricUri() {
+    return metricUri;
+  }
+
+  public String getMetricAccount() {
+    return metricAccount;
+  }
+
+  public String getMetricAccountKey() {
+    return metricAccountKey;
+  }
+
   public int getAccountOperationIdleTimeout() {
     return accountOperationIdleTimeout;
   }
@@ -808,11 +1001,33 @@ public class AbfsConfiguration{
   }
 
   /**
+   * @return Config to select netlib for server communication.
+   */
+  public HttpOperationType getPreferredHttpOperationType() {
+    return getEnum(FS_AZURE_NETWORKING_LIBRARY, DEFAULT_NETWORKING_LIBRARY);
+  }
+
+  public int getMaxApacheHttpClientIoExceptionsRetries() {
+    return maxApacheHttpClientIoExceptionsRetries;
+  }
+
+  /**
+   * @return {@link #maxApacheHttpClientConnectionIdleTime}.
+   */
+  public long getMaxApacheHttpClientConnectionIdleTime() {
+    return maxApacheHttpClientConnectionIdleTime;
+  }
+
+  /**
    * Enum config to allow user to pick format of x-ms-client-request-id header
    * @return tracingContextFormat config if valid, else default ALL_ID_FORMAT
    */
   public TracingHeaderFormat getTracingHeaderFormat() {
     return getEnum(FS_AZURE_TRACINGHEADER_FORMAT, TracingHeaderFormat.ALL_ID_FORMAT);
+  }
+
+  public MetricFormat getMetricFormat() {
+    return getEnum(FS_AZURE_METRIC_FORMAT, MetricFormat.EMPTY);
   }
 
   public AuthType getAuthType(String accountName) {
@@ -877,9 +1092,9 @@ public class AbfsConfiguration{
               FS_AZURE_ACCOUNT_OAUTH_MSI_ENDPOINT,
               AuthConfigurations.DEFAULT_FS_AZURE_ACCOUNT_OAUTH_MSI_ENDPOINT);
           String tenantGuid =
-              getMandatoryPasswordString(FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT);
+              getPasswordString(FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT);
           String clientId =
-              getMandatoryPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID);
+              getPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID);
           String authority = getTrimmedPasswordString(
               FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY,
               AuthConfigurations.DEFAULT_FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY);
@@ -898,6 +1113,20 @@ public class AbfsConfiguration{
           tokenProvider = new RefreshTokenBasedTokenProvider(authEndpoint,
               clientId, refreshToken);
           LOG.trace("RefreshTokenBasedTokenProvider initialized");
+        } else if (tokenProviderClass == WorkloadIdentityTokenProvider.class) {
+          String authority = appendSlashIfNeeded(
+              getTrimmedPasswordString(FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY,
+              AuthConfigurations.DEFAULT_FS_AZURE_ACCOUNT_OAUTH_MSI_AUTHORITY));
+          String tenantGuid =
+              getMandatoryPasswordString(FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT);
+          String clientId =
+              getMandatoryPasswordString(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID);
+          String tokenFile =
+              getTrimmedPasswordString(FS_AZURE_ACCOUNT_OAUTH_TOKEN_FILE,
+              AuthConfigurations.DEFAULT_FS_AZURE_ACCOUNT_OAUTH_TOKEN_FILE);
+          tokenProvider = new WorkloadIdentityTokenProvider(
+              authority, tenantGuid, clientId, tokenFile);
+          LOG.trace("WorkloadIdentityTokenProvider initialized");
         } else {
           throw new IllegalArgumentException("Failed to initialize " + tokenProviderClass);
         }
@@ -941,33 +1170,63 @@ public class AbfsConfiguration{
     }
   }
 
+  /**
+   * Returns the SASTokenProvider implementation to be used to generate SAS token.<br>
+   * Users can choose between a custom implementation of {@link SASTokenProvider}
+   * or an in house implementation {@link FixedSASTokenProvider}.<br>
+   * For Custom implementation "fs.azure.sas.token.provider.type" needs to be provided.<br>
+   * For Fixed SAS Token use "fs.azure.sas.fixed.token" needs to be provided.<br>
+   * In case both are provided, Preference will be given to Custom implementation.<br>
+   * Avoid using a custom tokenProvider implementation just to read the configured
+   * fixed token, as this could create confusion. Also,implementing the SASTokenProvider
+   * requires relying on the raw configurations. It is more stable to depend on
+   * the AbfsConfiguration with which a filesystem is initialized, and eliminate
+   * chances of dynamic modifications and spurious situations.<br>
+   * @return sasTokenProvider object based on configurations provided
+   * @throws AzureBlobFileSystemException
+   */
   public SASTokenProvider getSASTokenProvider() throws AzureBlobFileSystemException {
     AuthType authType = getEnum(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SharedKey);
     if (authType != AuthType.SAS) {
       throw new SASTokenProviderException(String.format(
-        "Invalid auth type: %s is being used, expecting SAS", authType));
+          "Invalid auth type: %s is being used, expecting SAS.", authType));
     }
 
     try {
-      String configKey = FS_AZURE_SAS_TOKEN_PROVIDER_TYPE;
-      Class<? extends SASTokenProvider> sasTokenProviderClass =
-          getTokenProviderClass(authType, configKey, null,
-              SASTokenProvider.class);
+      Class<? extends SASTokenProvider> customSasTokenProviderImplementation =
+          getTokenProviderClass(authType, FS_AZURE_SAS_TOKEN_PROVIDER_TYPE,
+              null, SASTokenProvider.class);
+      String configuredFixedToken = this.getTrimmedPasswordString(FS_AZURE_SAS_FIXED_TOKEN, EMPTY_STRING);
 
-      Preconditions.checkArgument(sasTokenProviderClass != null,
-          String.format("The configuration value for \"%s\" is invalid.", configKey));
+      if (customSasTokenProviderImplementation == null && configuredFixedToken.isEmpty()) {
+        throw new SASTokenProviderException(String.format(
+            "At least one of the \"%s\" and \"%s\" must be set.",
+            FS_AZURE_SAS_TOKEN_PROVIDER_TYPE, FS_AZURE_SAS_FIXED_TOKEN));
+      }
 
-      SASTokenProvider sasTokenProvider = ReflectionUtils
-          .newInstance(sasTokenProviderClass, rawConfig);
-      Preconditions.checkArgument(sasTokenProvider != null,
-          String.format("Failed to initialize %s", sasTokenProviderClass));
-
-      LOG.trace("Initializing {}", sasTokenProviderClass.getName());
-      sasTokenProvider.initialize(rawConfig, accountName);
-      LOG.trace("{} init complete", sasTokenProviderClass.getName());
-      return sasTokenProvider;
+      // Prefer Custom SASTokenProvider Implementation if configured.
+      if (customSasTokenProviderImplementation != null) {
+        LOG.trace("Using Custom SASTokenProvider implementation because it is given precedence when it is set.");
+        SASTokenProvider sasTokenProvider = ReflectionUtils.newInstance(
+            customSasTokenProviderImplementation, rawConfig);
+        if (sasTokenProvider == null) {
+          throw new SASTokenProviderException(String.format(
+              "Failed to initialize %s", customSasTokenProviderImplementation));
+        }
+        LOG.trace("Initializing {}", customSasTokenProviderImplementation.getName());
+        sasTokenProvider.initialize(rawConfig, accountName);
+        LOG.trace("{} init complete", customSasTokenProviderImplementation.getName());
+        return sasTokenProvider;
+      } else {
+        LOG.trace("Using FixedSASTokenProvider implementation");
+        FixedSASTokenProvider fixedSASTokenProvider = new FixedSASTokenProvider(configuredFixedToken);
+        return fixedSASTokenProvider;
+      }
+    } catch (SASTokenProviderException e) {
+      throw e;
     } catch (Exception e) {
-      throw new TokenAccessProviderException("Unable to load SAS token provider class: " + e, e);
+      throw new SASTokenProviderException(
+          "Unable to load SAS token provider class: " + e, e);
     }
   }
 
@@ -980,14 +1239,14 @@ public class AbfsConfiguration{
       Class<? extends EncryptionContextProvider> encryptionContextClass =
           getAccountSpecificClass(configKey, null,
               EncryptionContextProvider.class);
-      Preconditions.checkArgument(encryptionContextClass != null, String.format(
+      Preconditions.checkArgument(encryptionContextClass != null,
           "The configuration value for %s is invalid, or config key is not account-specific",
-          configKey));
+          configKey);
 
       EncryptionContextProvider encryptionContextProvider =
           ReflectionUtils.newInstance(encryptionContextClass, rawConfig);
       Preconditions.checkArgument(encryptionContextProvider != null,
-          String.format("Failed to initialize %s", encryptionContextClass));
+         "Failed to initialize %s", encryptionContextClass);
 
       LOG.trace("{} init complete", encryptionContextClass.getName());
       return encryptionContextProvider;
@@ -1192,11 +1451,6 @@ public class AbfsConfiguration{
   }
 
   @VisibleForTesting
-  public void setFooterReadBufferSize(int footerReadBufferSize) {
-    this.footerReadBufferSize = footerReadBufferSize;
-  }
-
-  @VisibleForTesting
   public void setEnableAbfsListIterator(boolean enableAbfsListIterator) {
     this.enableAbfsListIterator = enableAbfsListIterator;
   }
@@ -1205,7 +1459,16 @@ public class AbfsConfiguration{
     return renameResilience;
   }
 
-  void setRenameResilience(boolean actualResilience) {
-    renameResilience = actualResilience;
+  public boolean isPaginatedDeleteEnabled() {
+    return isPaginatedDeleteEnabled;
+  }
+
+  public boolean getIsChecksumValidationEnabled() {
+    return isChecksumValidationEnabled;
+  }
+
+  @VisibleForTesting
+  public void setIsChecksumValidationEnabled(boolean isChecksumValidationEnabled) {
+    this.isChecksumValidationEnabled = isChecksumValidationEnabled;
   }
 }

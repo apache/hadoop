@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a.commit.magic;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -48,8 +49,8 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.TASK_ATTEMPT_ID;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.TEMP_DATA;
 import static org.apache.hadoop.fs.s3a.commit.CommitUtils.*;
-import static org.apache.hadoop.fs.s3a.commit.MagicCommitPaths.*;
 import static org.apache.hadoop.fs.s3a.commit.impl.CommitUtilsWithMR.*;
+import static org.apache.hadoop.fs.s3a.commit.magic.MagicCommitTrackerUtils.isTrackMagicCommitsInMemoryEnabled;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.demandStringifyIOStatistics;
 
 /**
@@ -192,23 +193,9 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
    */
   private PendingSet innerCommitTask(
       TaskAttemptContext context) throws IOException {
-    Path taskAttemptPath = getTaskAttemptPath(context);
     // load in all pending commits.
-    CommitOperations actions = getCommitOperations();
-    PendingSet pendingSet;
+    PendingSet pendingSet = loadPendingCommits(context);
     try (CommitContext commitContext = initiateTaskOperation(context)) {
-      Pair<PendingSet, List<Pair<LocatedFileStatus, IOException>>>
-          loaded = actions.loadSinglePendingCommits(
-              taskAttemptPath, true, commitContext);
-      pendingSet = loaded.getKey();
-      List<Pair<LocatedFileStatus, IOException>> failures = loaded.getValue();
-      if (!failures.isEmpty()) {
-        // At least one file failed to load
-        // revert all which did; report failure with first exception
-        LOG.error("At least one commit file could not be read: failing");
-        abortPendingUploads(commitContext, pendingSet.getCommits(), true);
-        throw failures.get(0).getValue();
-      }
       // patch in IDs
       String jobId = getUUID();
       String taskId = String.valueOf(context.getTaskAttemptID());
@@ -249,6 +236,84 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
   }
 
   /**
+   * Loads pending commits from either memory or from the remote store (S3) based on the config.
+   * @param context TaskAttemptContext
+   * @return All pending commit data for the given TaskAttemptContext
+   * @throws IOException
+   *           if there is an error trying to read the commit data
+   */
+  protected PendingSet loadPendingCommits(TaskAttemptContext context) throws IOException {
+    PendingSet pendingSet = new PendingSet();
+    if (isTrackMagicCommitsInMemoryEnabled(context.getConfiguration())) {
+      // load from memory
+      List<SinglePendingCommit> pendingCommits = loadPendingCommitsFromMemory(context);
+
+      for (SinglePendingCommit singleCommit : pendingCommits) {
+        // aggregate stats
+        pendingSet.getIOStatistics()
+            .aggregate(singleCommit.getIOStatistics());
+        // then clear so they aren't marshalled again.
+        singleCommit.getIOStatistics().clear();
+      }
+      pendingSet.setCommits(pendingCommits);
+    } else {
+      // Load from remote store
+      CommitOperations actions = getCommitOperations();
+      Path taskAttemptPath = getTaskAttemptPath(context);
+      try (CommitContext commitContext = initiateTaskOperation(context)) {
+        Pair<PendingSet, List<Pair<LocatedFileStatus, IOException>>> loaded =
+            actions.loadSinglePendingCommits(taskAttemptPath, true, commitContext);
+        pendingSet = loaded.getKey();
+        List<Pair<LocatedFileStatus, IOException>> failures = loaded.getValue();
+        if (!failures.isEmpty()) {
+          // At least one file failed to load
+          // revert all which did; report failure with first exception
+          LOG.error("At least one commit file could not be read: failing");
+          abortPendingUploads(commitContext, pendingSet.getCommits(), true);
+          throw failures.get(0).getValue();
+        }
+      }
+    }
+    return pendingSet;
+  }
+
+  /**
+   * Loads the pending commits from the memory data structure for a given taskAttemptId.
+   * @param context TaskContext
+   * @return list of pending commits
+   */
+  private List<SinglePendingCommit> loadPendingCommitsFromMemory(TaskAttemptContext context) {
+    String taskAttemptId = String.valueOf(context.getTaskAttemptID());
+    // get all the pending commit metadata associated with the taskAttemptId.
+    // This will also remove the entry from the map.
+    List<SinglePendingCommit> pendingCommits =
+        InMemoryMagicCommitTracker.getTaskAttemptIdToMpuMetadata().remove(taskAttemptId);
+    // get all the path/files associated with the taskAttemptId.
+    // This will also remove the entry from the map.
+    List<Path> pathsAssociatedWithTaskAttemptId =
+        InMemoryMagicCommitTracker.getTaskAttemptIdToPath().remove(taskAttemptId);
+
+    // for each of the path remove the entry from map,
+    // This is done so that there is no memory leak.
+    if (pathsAssociatedWithTaskAttemptId != null) {
+      for (Path path : pathsAssociatedWithTaskAttemptId) {
+        boolean cleared =
+            InMemoryMagicCommitTracker.getPathToBytesWritten().remove(path) != null;
+        LOG.debug("Removing path: {} from the memory isSuccess: {}", path, cleared);
+      }
+    } else {
+      LOG.debug("No paths to remove for taskAttemptId: {}", taskAttemptId);
+    }
+
+    if (pendingCommits == null || pendingCommits.isEmpty()) {
+      LOG.info("No commit data present for the taskAttemptId: {} in the memory", taskAttemptId);
+      return new ArrayList<>();
+    }
+
+    return pendingCommits;
+  }
+
+  /**
    * Abort a task. Attempt load then abort all pending files,
    * then try to delete the task attempt path.
    * This method may be called on the job committer, rather than the
@@ -264,9 +329,14 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
     try (DurationInfo d = new DurationInfo(LOG,
         "Abort task %s", context.getTaskAttemptID());
         CommitContext commitContext = initiateTaskOperation(context)) {
-      getCommitOperations().abortAllSinglePendingCommits(attemptPath,
-          commitContext,
-          true);
+      if (isTrackMagicCommitsInMemoryEnabled(context.getConfiguration())) {
+        List<SinglePendingCommit> pendingCommits = loadPendingCommitsFromMemory(context);
+        for (SinglePendingCommit singleCommit : pendingCommits) {
+          commitContext.abortSingleCommit(singleCommit);
+        }
+      } else {
+        getCommitOperations().abortAllSinglePendingCommits(attemptPath, commitContext, true);
+      }
     } finally {
       deleteQuietly(
           attemptPath.getFileSystem(context.getConfiguration()),

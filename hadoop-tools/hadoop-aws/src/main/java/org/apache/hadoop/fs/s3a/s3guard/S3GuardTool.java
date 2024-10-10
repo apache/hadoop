@@ -57,7 +57,7 @@ import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants;
 import org.apache.hadoop.fs.s3a.impl.DirectoryPolicy;
 import org.apache.hadoop.fs.s3a.impl.DirectoryPolicyImpl;
-import org.apache.hadoop.fs.s3a.select.SelectTool;
+import org.apache.hadoop.fs.s3a.select.SelectConstants;
 import org.apache.hadoop.fs.s3a.tools.BucketTool;
 import org.apache.hadoop.fs.s3a.tools.MarkerTool;
 import org.apache.hadoop.fs.shell.CommandFormat;
@@ -76,6 +76,7 @@ import static org.apache.hadoop.fs.s3a.Invoker.LOG_EVENT;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 import static org.apache.hadoop.fs.s3a.commit.staging.StagingCommitterConstants.FILESYSTEM_TEMP_PATH;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.S3A_DYNAMIC_CAPABILITIES;
+import static org.apache.hadoop.fs.s3a.select.SelectConstants.SELECT_UNSUPPORTED;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsToPrettyString;
 import static org.apache.hadoop.fs.statistics.IOStatisticsSupport.retrieveIOStatistics;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.MULTIPART_UPLOAD_ABORTED;
@@ -121,7 +122,6 @@ public abstract class S3GuardTool extends Configured implements Tool,
       "\t" + BucketInfo.NAME + " - " + BucketInfo.PURPOSE + "\n" +
       "\t" + BucketTool.NAME + " - " + BucketTool.PURPOSE + "\n" +
       "\t" + MarkerTool.MARKERS + " - " + MarkerTool.PURPOSE + "\n" +
-      "\t" + SelectTool.NAME + " - " + SelectTool.PURPOSE + "\n" +
       "\t" + Uploads.NAME + " - " + Uploads.PURPOSE + "\n";
 
   private static final String E_UNSUPPORTED = "This command is no longer supported";
@@ -392,6 +392,8 @@ public abstract class S3GuardTool extends Configured implements Tool,
         "\tThe S3A connector is compatible with buckets where"
             + " directory markers are not deleted";
 
+    public static final String CAPABILITY_FORMAT = "\t%s %s%n";
+
     public BucketInfo(Configuration conf) {
       super(conf, GUARDED_FLAG, UNGUARDED_FLAG, FIPS_FLAG, MAGIC_FLAG);
       CommandFormat format = getCommandFormat();
@@ -560,9 +562,14 @@ public abstract class S3GuardTool extends Configured implements Tool,
       // and check for capabilities
       println(out, "%nStore Capabilities");
       for (String capability : S3A_DYNAMIC_CAPABILITIES) {
-        out.printf("\t%s %s%n", capability,
+        out.printf(CAPABILITY_FORMAT, capability,
             fs.hasPathCapability(root, capability));
       }
+      // the performance flags are dynamically generated
+      fs.createStoreContext().getPerformanceFlags().pathCapabilities()
+          .forEach(capability -> out.printf(CAPABILITY_FORMAT, capability, "true"));
+
+      // finish with a newline
       println(out, "");
 
       if (commands.getOpt(FIPS_FLAG) && !fs.hasPathCapability(root, FIPS_ENDPOINT)) {
@@ -1004,11 +1011,9 @@ public abstract class S3GuardTool extends Configured implements Tool,
     case Uploads.NAME:
       command = new Uploads(conf);
       break;
-    case SelectTool.NAME:
-      // the select tool is not technically a S3Guard tool, but it's on the CLI
-      // because this is the defacto S3 CLI.
-      command = new SelectTool(conf);
-      break;
+    case SelectConstants.NAME:
+      throw new ExitUtil.ExitException(
+          EXIT_UNSUPPORTED_VERSION, SELECT_UNSUPPORTED);
     default:
       printHelp();
       throw new ExitUtil.ExitException(E_USAGE,

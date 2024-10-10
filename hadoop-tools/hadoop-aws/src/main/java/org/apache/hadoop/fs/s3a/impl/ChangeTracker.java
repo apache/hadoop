@@ -223,7 +223,7 @@ public class ChangeTracker {
    * cause.
    * @param e the exception
    * @param operation the operation performed when the exception was
-   * generated (e.g. "copy", "read", "select").
+   * generated (e.g. "copy", "read").
    * @throws RemoteFileChangedException if the remote file has changed.
    */
   public void processException(SdkException e, String operation) throws

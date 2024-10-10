@@ -80,8 +80,8 @@ public class ITestAzureBlobFileSystemListStatus extends
   public void testListPath() throws Exception {
     Configuration config = new Configuration(this.getRawConfiguration());
     config.set(AZURE_LIST_MAX_RESULTS, "5000");
-    try (final AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem
-        .newInstance(getFileSystem().getUri(), config)) {
+    final AzureBlobFileSystem fs = (AzureBlobFileSystem) FileSystem
+        .newInstance(getFileSystem().getUri(), config);
       final List<Future<Void>> tasks = new ArrayList<>();
 
       ExecutorService es = Executors.newFixedThreadPool(10);
@@ -108,7 +108,10 @@ public class ITestAzureBlobFileSystemListStatus extends
                       fs.getFileSystemId(), FSOperationType.LISTSTATUS, true, 0));
       FileStatus[] files = fs.listStatus(new Path("/"));
       assertEquals(TEST_FILES_NUMBER, files.length /* user directory */);
-    }
+    fs.registerListener(
+            new TracingHeaderValidator(getConfiguration().getClientCorrelationId(),
+                    fs.getFileSystemId(), FSOperationType.GET_ATTR, true, 0));
+    fs.close();
   }
 
   /**
@@ -178,7 +181,7 @@ public class ITestAzureBlobFileSystemListStatus extends
         TEST_CONTINUATION_TOKEN, spiedTracingContext);
 
     // Assert that none of the API calls used the same tracing header.
-    Mockito.verify(spiedTracingContext, times(0)).constructHeader(any(), any());
+    Mockito.verify(spiedTracingContext, times(0)).constructHeader(any(), any(), any());
   }
 
   /**

@@ -340,7 +340,7 @@ public class DFSTestUtil {
         for (int idx = 0; idx < nLevels; idx++) {
           levels[idx] = gen.nextInt(10);
         }
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
         for (int idx = 0; idx < nLevels; idx++) {
           sb.append(dirNames[levels[idx]]);
           sb.append("/");
@@ -1124,7 +1124,7 @@ public class DFSTestUtil {
       return BlockOpResponseProto.parseDelimitedFrom(in);
     }
   }
-  
+
   public static void setFederatedConfiguration(MiniDFSCluster cluster,
       Configuration conf) {
     Set<String> nameservices = new HashSet<String>();

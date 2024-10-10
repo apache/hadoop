@@ -54,6 +54,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.ReconfigurationTaskStatus;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.fs.BatchedRemoteIterator.BatchedEntries;
+import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
 import org.apache.hadoop.hdfs.AddBlockFlag;
 import org.apache.hadoop.fs.CacheFlag;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -541,7 +542,8 @@ public class NameNodeRpcServer implements NamenodeProtocols {
         FSLimitException.PathComponentTooLongException.class,
         FSLimitException.MaxDirectoryItemsExceededException.class,
         DisallowedDatanodeException.class,
-        XAttrNotFoundException.class);
+        XAttrNotFoundException.class,
+        PathIsNotEmptyDirectoryException.class);
 
     clientRpcServer.addSuppressedLoggingExceptions(StandbyException.class,
         UnresolvedPathException.class);
@@ -993,6 +995,7 @@ public class NameNodeRpcServer implements NamenodeProtocols {
   public void reportBadBlocks(LocatedBlock[] blocks) throws IOException {
     checkNNStartup();
     namesystem.reportBadBlocks(blocks);
+    namesystem.logAuditEvent(true, "reportBadBlocks", null);
   }
 
   @Override // ClientProtocol
@@ -1360,6 +1363,14 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     namesystem.checkOperation(OperationCategory.UNCHECKED);
     namesystem.checkSuperuserPrivilege(operationName);
     return namesystem.getFSImage().getMostRecentCheckpointTxId();
+  }
+
+  @Override // NamenodeProtocol
+  public long getMostRecentNameNodeFileTxId(NNStorage.NameNodeFile nnf) throws IOException {
+    checkNNStartup();
+    namesystem.checkOperation(OperationCategory.UNCHECKED);
+    namesystem.checkSuperuserPrivilege();
+    return namesystem.getFSImage().getMostRecentNameNodeFileTxId(nnf);
   }
   
   @Override // NamenodeProtocol

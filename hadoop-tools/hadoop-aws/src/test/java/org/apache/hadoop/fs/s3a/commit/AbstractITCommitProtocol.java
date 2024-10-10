@@ -82,6 +82,7 @@ import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.FS_S3A_
 import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.FS_S3A_COMMITTER_UUID_SOURCE;
 import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.SPARK_WRITE_UUID;
 import static org.apache.hadoop.fs.s3a.Statistic.COMMITTER_TASKS_SUCCEEDED;
+import static org.apache.hadoop.fs.s3a.commit.magic.MagicCommitTrackerUtils.isTrackMagicCommitsInMemoryEnabled;
 import static org.apache.hadoop.fs.statistics.IOStatisticAssertions.assertThatStatisticCounter;
 import static org.apache.hadoop.fs.statistics.IOStatisticsLogging.ioStatisticsSourceToString;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -721,7 +722,7 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     }
     Path expectedFile = getPart0000(dir);
     log().debug("Validating content in {}", expectedFile);
-    StringBuffer expectedOutput = new StringBuffer();
+    StringBuilder expectedOutput = new StringBuilder();
     expectedOutput.append(KEY_1).append('\t').append(VAL_1).append("\n");
     expectedOutput.append(VAL_1).append("\n");
     expectedOutput.append(VAL_2).append("\n");
@@ -906,7 +907,14 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     assertNoMultipartUploadsPending(outDir);
 
     // commit task to fail on retry
-    expectFNFEonTaskCommit(committer, tContext);
+    // FNFE is not thrown in case of Magic committer when
+    // in memory commit data is enabled and hence skip the check.
+    boolean skipExpectFNFE = committer instanceof MagicS3GuardCommitter &&
+        isTrackMagicCommitsInMemoryEnabled(tContext.getConfiguration());
+
+    if (!skipExpectFNFE) {
+      expectFNFEonTaskCommit(committer, tContext);
+    }
   }
 
   /**
@@ -1422,7 +1430,10 @@ public abstract class AbstractITCommitProtocol extends AbstractCommitITest {
     validateTaskAttemptPathDuringWrite(dest, expectedLength, jobData.getCommitter().getUUID());
     recordWriter.close(tContext);
     // at this point
-    validateTaskAttemptPathAfterWrite(dest, expectedLength);
+    // Skip validation when commit data is stored in memory
+    if (!isTrackMagicCommitsInMemoryEnabled(conf)) {
+      validateTaskAttemptPathAfterWrite(dest, expectedLength);
+    }
     assertTrue("Committer does not have data to commit " + committer,
         committer.needsTaskCommit(tContext));
     commitTask(committer, tContext);

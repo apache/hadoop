@@ -243,6 +243,21 @@ The ID of the specific key used to encrypt the data should also be set in the pr
 </property>
 ```
 
+Optionally, you can specify the encryption context in the property `fs.s3a.encryption.context`:
+
+```xml
+<property>
+  <name>fs.s3a.encryption.context</name>
+    <value>
+        key1=value1,
+        key2=value2,
+        key3=value3,
+        key4=value4,
+        key5=value5
+    </value>
+</property>
+```
+
 Organizations may define a default key in the Amazon KMS; if a default key is set,
 then it will be used whenever SSE-KMS encryption is chosen and the value of `fs.s3a.encryption.key` is empty.
 
@@ -375,6 +390,21 @@ The ID of the specific key used to encrypt the data should also be set in the pr
 <property>
   <name>fs.s3a.encryption.key</name>
   <value>arn:aws:kms:us-west-2:360379543683:key/071a86ff-8881-4ba0-9230-95af6d01ca01</value>
+</property>
+```
+
+Optionally, you can specify the encryption context in the property `fs.s3a.encryption.context`:
+
+```xml
+<property>
+  <name>fs.s3a.encryption.context</name>
+    <value>
+        key1=value1,
+        key2=value2,
+        key3=value3,
+        key4=value4,
+        key5=value5
+    </value>
 </property>
 ```
 
@@ -616,15 +646,14 @@ header.x-amz-version-id="KcDOVmznIagWx3gP1HlDqcZvm1mFWZ2a"
 A file with no-encryption (on a bucket without versioning but with intelligent tiering):
 
 ```
-bin/hadoop fs -getfattr -d s3a://landsat-pds/scene_list.gz
+ bin/hadoop fs -getfattr -d s3a://noaa-cors-pds/raw/2024/001/akse/AKSE001x.24_.gz
 
-# file: s3a://landsat-pds/scene_list.gz
-header.Content-Length="45603307"
-header.Content-Type="application/octet-stream"
-header.ETag="39c34d489777a595b36d0af5726007db"
-header.Last-Modified="Wed Aug 29 01:45:15 BST 2018"
-header.x-amz-storage-class="INTELLIGENT_TIERING"
-header.x-amz-version-id="null"
+# file: s3a://noaa-cors-pds/raw/2024/001/akse/AKSE001x.24_.gz
+header.Content-Length="524671"
+header.Content-Type="binary/octet-stream"
+header.ETag=""3e39531220fbd3747d32cf93a79a7a0c""
+header.Last-Modified="Tue Jan 02 00:15:13 GMT 2024"
+header.x-amz-server-side-encryption="AES256"
 ```
 
 ###<a name="changing-encryption"></a> Use `rename()` to encrypt files with new keys
@@ -686,7 +715,6 @@ clients where S3-CSE has not been enabled.
 - Writing files may be slower, as only a single block can be encrypted and
  uploaded at a time.
 - Multipart Uploader API disabled.
-- S3 Select is not supported.
 - Multipart uploads would be serial, and partSize must be a multiple of 16
  bytes.
 - maximum message size in bytes that can be encrypted under this mode is

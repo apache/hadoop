@@ -136,6 +136,7 @@ public class TestBPOfferService {
   private FsDatasetSpi<?> mockFSDataset;
   private DataSetLockManager dataSetLockManager = new DataSetLockManager();
   private boolean isSlownode;
+  private String mockStorageID;
 
   @Before
   public void setupMocks() throws Exception {
@@ -143,8 +144,9 @@ public class TestBPOfferService {
     mockNN2 = setupNNMock(1);
 
     // Set up a mock DN with the bare-bones configuration
-    // objects, etc.
-    mockDn = Mockito.mock(DataNode.class);
+    // objects, etc. Set as stubOnly to save memory and avoid Mockito holding
+    // references to each invocation. This can cause OOM in some runs.
+    mockDn = Mockito.mock(DataNode.class, Mockito.withSettings().stubOnly());
     Mockito.doReturn(true).when(mockDn).shouldRun();
     Configuration conf = new Configuration();
     File dnDataDir = new File(new File(TEST_BUILD_DATA, "dfs"), "data");
@@ -157,6 +159,7 @@ public class TestBPOfferService {
     // Set up a simulated dataset with our fake BP
     mockFSDataset = Mockito.spy(new SimulatedFSDataset(null, conf));
     mockFSDataset.addBlockPool(FAKE_BPID, conf);
+    mockStorageID = ((SimulatedFSDataset) mockFSDataset).getStorages().get(0).getStorageUuid();
 
     // Wire the dataset to the DN.
     Mockito.doReturn(mockFSDataset).when(mockDn).getFSDataset();
@@ -289,7 +292,7 @@ public class TestBPOfferService {
       waitForBlockReport(mockNN2);
 
       // When we receive a block, it should report it to both NNs
-      bpos.notifyNamenodeReceivedBlock(FAKE_BLOCK, null, "", false);
+      bpos.notifyNamenodeReceivedBlock(FAKE_BLOCK, null, mockStorageID, false);
 
       ReceivedDeletedBlockInfo[] ret = waitForBlockReceived(FAKE_BLOCK, mockNN1);
       assertEquals(1, ret.length);
@@ -1099,7 +1102,7 @@ public class TestBPOfferService {
       waitForBlockReport(mockNN2);
 
       // When we receive a block, it should report it to both NNs
-      bpos.notifyNamenodeReceivedBlock(FAKE_BLOCK, null, "", false);
+      bpos.notifyNamenodeReceivedBlock(FAKE_BLOCK, null, mockStorageID, false);
 
       ReceivedDeletedBlockInfo[] ret = waitForBlockReceived(FAKE_BLOCK,
           mockNN1);
@@ -1140,7 +1143,7 @@ public class TestBPOfferService {
       Mockito.verify(mockNN3).registerDatanode(Mockito.any());
 
       // When we receive a block, it should report it to both NNs
-      bpos.notifyNamenodeReceivedBlock(FAKE_BLOCK, null, "", false);
+      bpos.notifyNamenodeReceivedBlock(FAKE_BLOCK, null, mockStorageID, false);
 
       // veridfy new NN recieved block report
       ret = waitForBlockReceived(FAKE_BLOCK, mockNN3);

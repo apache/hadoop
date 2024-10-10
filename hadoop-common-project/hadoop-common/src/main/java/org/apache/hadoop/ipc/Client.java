@@ -1081,15 +1081,15 @@ public class Client implements AutoCloseable {
 
     @Override
     public void run() {
-      // Don't start the ipc parameter sending thread until we start this
-      // thread, because the shutdown logic only gets triggered if this
-      // thread is started.
-      rpcRequestThread.start();
-      if (LOG.isDebugEnabled())
-        LOG.debug(getName() + ": starting, having connections " 
-            + connections.size());
-
       try {
+        // Don't start the ipc parameter sending thread until we start this
+        // thread, because the shutdown logic only gets triggered if this
+        // thread is started.
+        rpcRequestThread.start();
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(getName() + ": starting, having connections " + connections.size());
+        }
+
         while (waitForWork()) {//wait here for work - read or close connection
           receiveRpcResponse();
         }
@@ -1097,15 +1097,17 @@ public class Client implements AutoCloseable {
         // This truly is unexpected, since we catch IOException in receiveResponse
         // -- this is only to be really sure that we don't leave a client hanging
         // forever.
-        LOG.warn("Unexpected error reading responses on connection " + this, t);
-        markClosed(new IOException("Error reading responses", t));
+        String msg = String.format("Unexpected error on connection %s. Closing it.", this);
+        LOG.warn(msg, t);
+        markClosed(new IOException(msg, t));
       }
-      
+
       close();
-      
-      if (LOG.isDebugEnabled())
+
+      if (LOG.isDebugEnabled()) {
         LOG.debug(getName() + ": stopped, remaining connections "
             + connections.size());
+      }
     }
 
     /**
@@ -1126,8 +1128,7 @@ public class Client implements AutoCloseable {
             synchronized (ipcStreams.out) {
               if (LOG.isDebugEnabled()) {
                 Call call = pair.getLeft();
-                LOG.debug(getName() + "{} sending #{} {}", getName(), call.id,
-                    call.rpcRequest);
+                LOG.debug("{} sending #{} {}", getName(), call.id, call.rpcRequest);
               }
               // RpcRequestHeader + RpcRequest
               ipcStreams.sendRequest(buf.toByteArray());

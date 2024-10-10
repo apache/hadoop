@@ -69,6 +69,13 @@ public final class Constants {
       "fs.s3a.aws.credentials.provider";
 
   /**
+   * AWS credentials providers mapping with key/value pairs.
+   * Value = {@value}
+   */
+  public static final String AWS_CREDENTIALS_PROVIDER_MAPPING =
+      "fs.s3a.aws.credentials.provider.mapping";
+
+  /**
    * Extra set of security credentials which will be prepended to that
    * set in {@code "hadoop.security.credential.provider.path"}.
    * This extra option allows for per-bucket overrides.
@@ -86,6 +93,11 @@ public final class Constants {
    */
   public static final String ASSUMED_ROLE_ARN =
       "fs.s3a.assumed.role.arn";
+
+  /**
+   * external id for assume role request: {@value}.
+   */
+  public static final String ASSUMED_ROLE_EXTERNAL_ID = "fs.s3a.assumed.role.external.id";
 
   /**
    * Session name for the assumed role, must be valid characters according
@@ -337,16 +349,33 @@ public final class Constants {
   public static final int DEFAULT_SOCKET_TIMEOUT = (int)DEFAULT_SOCKET_TIMEOUT_DURATION.toMillis();
 
   /**
-   * Time until a request is timed-out: {@value}.
-   * If zero, there is no timeout.
+   * How long should the SDK retry/wait on a response from an S3 store: {@value}
+   * <i>including the time needed to sign the request</i>.
+   * <p>
+   * This is time to response, so for a GET request it is "time to 200 response"
+   * not the time limit to download the requested data.
+   * This makes it different from {@link #REQUEST_TIMEOUT}, which is for total
+   * HTTP request.
+   * <p>
+   * Default unit is milliseconds.
+   * <p>
+   * There is a minimum duration set in {@link #MINIMUM_NETWORK_OPERATION_DURATION};
+   * it is impossible to set a delay less than this, even for testing.
+   * Why so? Too many deployments where the configuration assumed the timeout was in seconds
+   * and that "120" was a reasonable value rather than "too short to work reliably"
+   * <p>
+   * Note for anyone writing tests which need to set a low value for this:
+   * to avoid the minimum duration overrides, call
+   * {@code AWSClientConfig.setMinimumOperationDuration()} and set a low value
+   * before creating the filesystem.
    */
   public static final String REQUEST_TIMEOUT =
       "fs.s3a.connection.request.timeout";
 
   /**
-   * Default duration of a request before it is timed out: Zero.
+   * Default duration of a request before it is timed out: 60s.
    */
-  public static final Duration DEFAULT_REQUEST_TIMEOUT_DURATION = Duration.ZERO;
+  public static final Duration DEFAULT_REQUEST_TIMEOUT_DURATION = Duration.ofSeconds(60);
 
   /**
    * Default duration of a request before it is timed out: Zero.
@@ -368,6 +397,21 @@ public final class Constants {
    */
   public static final Duration DEFAULT_CONNECTION_ACQUISITION_TIMEOUT_DURATION =
       Duration.ofSeconds(60);
+
+  /**
+   * Timeout for uploading all of a small object or a single part
+   * of a larger one.
+   * {@value}.
+   * Default unit is milliseconds for consistency with other options.
+   */
+  public static final String PART_UPLOAD_TIMEOUT =
+      "fs.s3a.connection.part.upload.timeout";
+
+  /**
+   * Default part upload timeout: 15 minutes.
+   */
+  public static final Duration DEFAULT_PART_UPLOAD_TIMEOUT =
+      Duration.ofMinutes(15);
 
   /**
    * Should TCP Keepalive be enabled on the socket?
@@ -711,6 +755,16 @@ public final class Constants {
    */
   public static final String S3_ENCRYPTION_KEY =
       "fs.s3a.encryption.key";
+
+  /**
+   * Set S3-SSE encryption context.
+   * The value of this property is a set of non-secret comma-separated key-value pairs
+   * of additional contextual information about the data that are separated by equal
+   * operator (=).
+   * value:{@value}
+   */
+  public static final String S3_ENCRYPTION_CONTEXT =
+      "fs.s3a.encryption.context";
 
   /**
    * List of custom Signers. The signer class will be loaded, and the signer
@@ -1090,6 +1144,22 @@ public final class Constants {
    */
   public static final String RETRY_THROTTLE_INTERVAL_DEFAULT = "500ms";
 
+
+  /**
+   * Should S3A connector retry on all 5xx errors which don't have
+   * explicit support: {@value}?
+   * <p>
+   * This is in addition to any retries the AWS SDK itself does, which
+   * is known to retry on many of these (e.g. 500).
+   */
+  public static final String RETRY_HTTP_5XX_ERRORS =
+      "fs.s3a.retry.http.5xx.errors";
+
+  /**
+   * Default value for {@link #RETRY_HTTP_5XX_ERRORS}: {@value}.
+   */
+  public static final boolean DEFAULT_RETRY_HTTP_5XX_ERRORS = true;
+
   /**
    * Should etags be exposed as checksums?
    */
@@ -1318,6 +1388,19 @@ public final class Constants {
   public static final String XA_HEADER_PREFIX = "header.";
 
   /**
+   * S3 cross region access enabled ?
+   * Value: {@value}.
+   */
+
+  public static final String AWS_S3_CROSS_REGION_ACCESS_ENABLED =
+      "fs.s3a.cross.region.access.enabled";
+  /**
+   * Default value for S3 cross region access enabled: {@value}.
+   */
+  public static final boolean AWS_S3_CROSS_REGION_ACCESS_ENABLED_DEFAULT = true;
+
+
+  /**
    * AWS S3 region for the bucket. When set bypasses the construction of
    * region through endpoint url.
    */
@@ -1371,6 +1454,11 @@ public final class Constants {
       FS_S3A_CREATE_PERFORMANCE + ".enabled";
 
   /**
+   * Comma separated list of performance flags.
+   */
+  public static final String FS_S3A_PERFORMANCE_FLAGS =
+      "fs.s3a.performance.flags";
+  /**
    * Prefix for adding a header to the object when created.
    * The actual value must have a "." suffix and then the actual header.
    * This is *not* a configuration option; it is only for use in the
@@ -1399,12 +1487,12 @@ public final class Constants {
   /**
    * Default minimum seek in bytes during vectored reads : {@value}.
    */
-  public static final int DEFAULT_AWS_S3_VECTOR_READS_MIN_SEEK_SIZE = 4896; // 4K
+  public static final int DEFAULT_AWS_S3_VECTOR_READS_MIN_SEEK_SIZE = 4096; // 4K
 
   /**
    * Default maximum read size in bytes during vectored reads : {@value}.
    */
-  public static final int DEFAULT_AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE = 1253376; //1M
+  public static final int DEFAULT_AWS_S3_VECTOR_READS_MAX_MERGED_READ_SIZE = 1048576; //1M
 
   /**
    * Maximum number of range reads a single input stream can have
@@ -1583,4 +1671,50 @@ public final class Constants {
    */
   public static final boolean CHECKSUM_VALIDATION_DEFAULT = false;
 
+  /**
+   * Are extensions classes, such as {@code fs.s3a.aws.credentials.provider},
+   * going to be loaded from the same classloader that loaded
+   * the {@link S3AFileSystem}?
+   * It is useful to turn classloader isolation off for Apache Spark applications
+   * that might load {@link S3AFileSystem} from the Spark distribution (Launcher classloader)
+   * while users might want to provide custom extensions (loaded by Spark MutableClassloader).
+   * Value: {@value}.
+   */
+  public static final String AWS_S3_CLASSLOADER_ISOLATION =
+            "fs.s3a.classloader.isolation";
+
+  /**
+   * Default value for {@link #AWS_S3_CLASSLOADER_ISOLATION}.
+   * Value: {@value}.
+   */
+  public static final boolean DEFAULT_AWS_S3_CLASSLOADER_ISOLATION = true;
+
+  /**
+   * Flag {@value}
+   * to enable S3 Access Grants to control authorization to S3 data. More information:
+   * https://aws.amazon.com/s3/features/access-grants/
+   * and
+   * https://github.com/aws/aws-s3-accessgrants-plugin-java-v2/
+   */
+  public static final String AWS_S3_ACCESS_GRANTS_ENABLED = "fs.s3a.access.grants.enabled";
+
+  /**
+   * Flag {@value} to enable jobs fall back to the Job Execution IAM role in
+   * case they get Access Denied from the S3 Access Grants call. More information:
+   * https://github.com/aws/aws-s3-accessgrants-plugin-java-v2/
+   */
+  public static final String AWS_S3_ACCESS_GRANTS_FALLBACK_TO_IAM_ENABLED =
+          "fs.s3a.access.grants.fallback.to.iam";
+  /**
+   * Default value for {@link #S3A_IO_RATE_LIMIT}.
+   * Value: {@value}.
+   * 0 means no rate limiting.
+   */
+  public static final int DEFAULT_S3A_IO_RATE_LIMIT = 0;
+
+  /**
+   * Config to set the rate limit for S3A IO operations.
+   * Value: {@value}.
+   */
+  public static final String S3A_IO_RATE_LIMIT = "fs.s3a.io.rate.limit";
 }

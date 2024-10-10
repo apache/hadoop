@@ -63,7 +63,7 @@ public class TestShellCommandFencer {
   
   private static ShellCommandFencer createFencer() {
     Configuration conf = new Configuration();
-    conf.set("in.fencing.tests", "yessir");
+    conf.set("in.fencing-tests", "yessir");
     ShellCommandFencer fencer = new ShellCommandFencer();
     fencer.setConf(conf);
     return fencer;

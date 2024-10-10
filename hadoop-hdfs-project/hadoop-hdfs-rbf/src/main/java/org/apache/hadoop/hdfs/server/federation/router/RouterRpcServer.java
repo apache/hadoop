@@ -56,7 +56,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
 import org.apache.hadoop.hdfs.HAUtil;
+import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheLoader;
 import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
@@ -145,6 +147,7 @@ import org.apache.hadoop.hdfs.server.federation.router.security.RouterSecurityMa
 import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
 import org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException;
 import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
+import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.hdfs.server.namenode.NotReplicatedYetException;
 import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
@@ -366,10 +369,11 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
         NotReplicatedYetException.class,
         IOException.class,
         ConnectException.class,
-        RetriableException.class);
+        RetriableException.class,
+        PathIsNotEmptyDirectoryException.class);
 
     this.rpcServer.addSuppressedLoggingExceptions(
-        StandbyException.class);
+        StandbyException.class, UnresolvedPathException.class);
 
     // The RPC-server port can be ephemeral... ensure we have the correct info
     InetSocketAddress listenAddress = this.rpcServer.getListenerAddress();
@@ -430,6 +434,9 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
    * Clear expired namespace in the shared RouterStateIdContext.
    */
   private void clearStaleNamespacesInRouterStateIdContext() {
+    if (!router.isRouterState(RouterServiceState.RUNNING)) {
+      return;
+    }
     try {
       final Set<String> resolvedNamespaces = namenodeResolver.getNamespaces()
           .stream()
@@ -1084,13 +1091,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   DatanodeInfo[] getCachedDatanodeReport(DatanodeReportType type)
       throws IOException {
     try {
-      DatanodeInfo[] dns = this.dnCache.get(type);
-      if (dns == null) {
-        LOG.debug("Get null DN report from cache");
-        dns = getCachedDatanodeReportImpl(type);
-        this.dnCache.put(type, dns);
-      }
-      return dns;
+      return this.dnCache.get(type);
     } catch (ExecutionException e) {
       LOG.error("Cannot get the DN report for {}", type, e);
       Throwable cause = e.getCause();
@@ -1638,6 +1639,12 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   }
 
   @Override // NamenodeProtocol
+  public long getMostRecentNameNodeFileTxId(NNStorage.NameNodeFile nnf)
+      throws IOException {
+    return nnProto.getMostRecentNameNodeFileTxId(nnf);
+  }
+
+  @Override // NamenodeProtocol
   public CheckpointSignature rollEditLog() throws IOException {
     return nnProto.rollEditLog();
   }
@@ -1690,42 +1697,6 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   @Override // NamenodeProtocol
   public Long getNextSPSPath() throws IOException {
     return nnProto.getNextSPSPath();
-  }
-
-  /**
-   * Locate the location with the matching block pool id.
-   *
-   * @param path Path to check.
-   * @param failIfLocked Fail the request if locked (top mount point).
-   * @param blockPoolId The block pool ID of the namespace to search for.
-   * @return Prioritized list of locations in the federated cluster.
-   * @throws IOException if the location for this path cannot be determined.
-   */
-  protected RemoteLocation getLocationForPath(
-      String path, boolean failIfLocked, String blockPoolId)
-          throws IOException {
-
-    final List<RemoteLocation> locations =
-        getLocationsForPath(path, failIfLocked);
-
-    String nameserviceId = null;
-    Set<FederationNamespaceInfo> namespaces =
-        this.namenodeResolver.getNamespaces();
-    for (FederationNamespaceInfo namespace : namespaces) {
-      if (namespace.getBlockPoolId().equals(blockPoolId)) {
-        nameserviceId = namespace.getNameserviceId();
-        break;
-      }
-    }
-    if (nameserviceId != null) {
-      for (RemoteLocation location : locations) {
-        if (location.getNameserviceId().equals(nameserviceId)) {
-          return location;
-        }
-      }
-    }
-    throw new IOException(
-        "Cannot locate a nameservice for block pool " + blockPoolId);
   }
 
   /**

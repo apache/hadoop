@@ -232,7 +232,10 @@ JNIEXPORT void JNICALL Java_org_apache_hadoop_crypto_OpensslCipher_initIDs
 #endif
 
   loadAesCtr(env);
+#if !defined(OPENSSL_NO_SM4)
   loadSm4Ctr(env);
+#endif
+
 #if OPENSSL_VERSION_NUMBER >= 0x10101001L
   int ret = dlsym_OPENSSL_init_crypto(OPENSSL_INIT_LOAD_CONFIG, NULL);
   if(!ret) {
@@ -245,7 +248,7 @@ JNIEXPORT void JNICALL Java_org_apache_hadoop_crypto_OpensslCipher_initIDs
   if (jthr) {
     (*env)->DeleteLocalRef(env, jthr);
     THROW(env, "java/lang/UnsatisfiedLinkError",  \
-        "Cannot find AES-CTR/SM4-CTR support, is your version of Openssl new enough?");
+        "Cannot find AES-CTR support, is your version of OpenSSL new enough?");
     return;
   }
 }
@@ -553,4 +556,25 @@ JNIEXPORT jstring JNICALL Java_org_apache_hadoop_crypto_OpensslCipher_getLibrary
     return (*env)->NewStringUTF(env, "Unavailable");
   }
 #endif
+}
+
+JNIEXPORT jboolean JNICALL Java_org_apache_hadoop_crypto_OpensslCipher_isSupportedSuite
+    (JNIEnv *env, jclass clazz, jint alg, jint padding)
+{
+  if (padding != NOPADDING) {
+    return JNI_FALSE;
+  }
+
+  if (alg == AES_CTR && (dlsym_EVP_aes_256_ctr != NULL && dlsym_EVP_aes_128_ctr != NULL)) {
+    return JNI_TRUE;
+  }
+
+  if (alg == SM4_CTR) {
+#if OPENSSL_VERSION_NUMBER >= 0x10101001L && !defined(OPENSSL_NO_SM4)
+    if (dlsym_EVP_sm4_ctr != NULL) {
+      return JNI_TRUE;
+    }
+#endif
+  }
+  return JNI_FALSE;
 }

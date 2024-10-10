@@ -48,6 +48,16 @@ There are multiple ways to connect to an S3 bucket
 
 The S3A connector supports all these; S3 Endpoints are the primary mechanism used -either explicitly declared or automatically determined from the declared region of the bucket.
 
+The S3A connector supports S3 cross region access via AWS SDK which is enabled by default. This allows users to access S3 buckets in a different region than the one defined in the S3 endpoint/region configuration, as long as they are within the same AWS partition. However, S3 cross-region access can be disabled by:
+```xml
+<property>
+  <name>fs.s3a.cross.region.access.enabled</name>
+  <value>false</value>
+  <description>S3 cross region access</description>
+</property>
+```
+
+
 Not supported:
 * AWS [Snowball](https://aws.amazon.com/snowball/).
 
@@ -74,7 +84,8 @@ There are three core settings to connect to an S3 store, endpoint, region and wh
   <name>fs.s3a.endpoint</name>
   <description>AWS S3 endpoint to connect to. An up-to-date list is
     provided in the AWS Documentation: regions and endpoints. Without this
-    property, the standard region (s3.amazonaws.com) is assumed.
+    property, the endpoint/hostname of the S3 Store is inferred from
+    the value of fs.s3a.endpoint.region, fs.s3a.endpoint.fips and more.
   </description>
 </property>
 
@@ -98,6 +109,42 @@ Historically the S3A connector has preferred the endpoint as defined by the opti
 With the move to the AWS V2 SDK, there is more emphasis on the region, set by the `fs.s3a.endpoint.region` option.
 
 Normally, declaring the region in `fs.s3a.endpoint.region` should be sufficient to set up the network connection to correctly connect to an AWS-hosted S3 store.
+
+### <a name="s3_endpoint_region_details"></a> S3 endpoint and region settings in detail
+
+* Configs `fs.s3a.endpoint` and `fs.s3a.endpoint.region` are used to set values
+  for S3 endpoint and region respectively.
+* If `fs.s3a.endpoint.region` is configured with valid AWS region value, S3A will
+  configure the S3 client to use this value. If this is set to a region that does
+  not match your bucket, you will receive a 301 redirect response.
+* If `fs.s3a.endpoint.region` is not set and `fs.s3a.endpoint` is set with valid
+  endpoint value, S3A will attempt to parse the region from the endpoint and
+  configure S3 client to use the region value.
+* If both `fs.s3a.endpoint` and `fs.s3a.endpoint.region` are not set, S3A will
+  use `us-east-2` as default region and enable cross region access. In this case,
+  S3A does not attempt to override the endpoint while configuring the S3 client.
+* If `fs.s3a.endpoint` is not set and `fs.s3a.endpoint.region` is set to an empty
+  string, S3A will configure S3 client without any region or endpoint override.
+  This will allow fallback to S3 SDK region resolution chain. More details
+  [here](https://docs.aws.amazon.com/sdk-for-java/latest/developer-guide/region-selection.html).
+* If `fs.s3a.endpoint` is set to central endpoint `s3.amazonaws.com` and
+  `fs.s3a.endpoint.region` is not set, S3A will use `us-east-2` as default region
+  and enable cross region access. In this case, S3A does not attempt to override
+  the endpoint while configuring the S3 client.
+* If `fs.s3a.endpoint` is set to central endpoint `s3.amazonaws.com` and
+  `fs.s3a.endpoint.region` is also set to some region, S3A will use that region
+  value and enable cross region access. In this case, S3A does not attempt to
+  override the endpoint while configuring the S3 client.
+
+When the cross region access is enabled while configuring the S3 client, even if the
+region set is incorrect, S3 SDK determines the region. This is done by making the
+request, and if the SDK receives 301 redirect response, it determines the region at
+the cost of a HEAD request, and caches it.
+
+Please note that some endpoint and region settings that require cross region access
+are complex and improving over time. Hence, they may be considered unstable.
+
+If you are working with third party stores, please check [third party stores in detail](third_party_stores.html).
 
 ### <a name="timeouts"></a> Network timeouts
 
@@ -230,8 +277,9 @@ S3 endpoint, documented [by Amazon](http://docs.aws.amazon.com/general/latest/gr
 use local buckets and local copies of data, wherever possible.
 2. With the V4 signing protocol, AWS requires the explicit region endpoint
 to be used —hence S3A must be configured to use the specific endpoint. This
-is done in the configuration option `fs.s3a.endpoint`.
-3. All endpoints other than the default endpoint only support interaction
+is done by setting the regon in the configuration option `fs.s3a.endpoint.region`,
+or by explicitly setting `fs.s3a.endpoint` and `fs.s3a.endpoint.region`.
+3. All endpoints other than the default region only support interaction
 with buckets local to that S3 instance.
 4. Standard S3 buckets support "cross-region" access where use of the original `us-east-1`
    endpoint allows access to the data, but newer storage types, particularly S3 Express are
@@ -246,27 +294,13 @@ a bucket.
 The up to date list of regions is [Available online](https://docs.aws.amazon.com/general/latest/gr/s3.html).
 
 This list can be used to specify the endpoint of individual buckets, for example
-for buckets in the central and EU/Ireland endpoints.
+for buckets in the us-west-2 and EU/Ireland endpoints.
+
 
 ```xml
 <property>
-  <name>fs.s3a.bucket.landsat-pds.endpoint</name>
-  <value>s3-us-west-2.amazonaws.com</value>
-</property>
-
-<property>
-  <name>fs.s3a.bucket.eu-dataset.endpoint</name>
-  <value>s3.eu-west-1.amazonaws.com</value>
-</property>
-```
-
-Declaring the region for the data is simpler, as it avoid having to look up the full URL and having to worry about historical quirks of regional endpoint hostnames.
-
-```xml
-<property>
-  <name>fs.s3a.bucket.landsat-pds.endpoint.region</name>
+  <name>fs.s3a.bucket.us-west-2-dataset.endpoint.region</name>
   <value>us-west-2</value>
-  <description>The endpoint for s3a://landsat-pds URLs</description>
 </property>
 
 <property>
@@ -329,14 +363,24 @@ The boolean option `fs.s3a.endpoint.fips` (default `false`) switches the S3A con
 For a single bucket:
 ```xml
 <property>
-  <name>fs.s3a.bucket.landsat-pds.endpoint.fips</name>
+  <name>fs.s3a.bucket.noaa-isd-pds.endpoint.fips</name>
   <value>true</value>
-  <description>Use the FIPS endpoint for the landsat dataset</description>
+  <description>Use the FIPS endpoint for the NOAA dataset</description>
 </property>
 ```
 
-If this option is `true`, the endpoint option `fs.s3a.endpoint` MUST NOT be set:
+If `fs.s3a.endpoint.fips` is `true`, the endpoint option `fs.s3a.endpoint` MUST NOT be set to
+any non-central endpoint value. If `fs.s3a.endpoint.fips` is `true`, the only *optionally* allowed
+value for `fs.s3a.endpoint` is central endpoint `s3.amazonaws.com`.
 
+S3A error message if `s3.eu-west-2.amazonaws.com` endpoint is used with FIPS:
+```
+Non central endpoint cannot be set when fs.s3a.endpoint.fips is true : https://s3.eu-west-2.amazonaws.com
+```
+
+S3A validation is used to fail-fast before the SDK returns error.
+
+AWS SDK error message if S3A does not fail-fast:
 ```
 A custom endpoint cannot be combined with FIPS: https://s3.eu-west-2.amazonaws.com
 ```
@@ -353,6 +397,9 @@ Received an UnknownHostException when attempting to interact with a service.
     example-london-1.s3-fips.eu-west-2.amazonaws.com
 
 ```
+
+For more details on endpoint and region settings, please check
+[S3 endpoint and region settings in detail](connecting.html#s3_endpoint_region_details).
 
 *Important* OpenSSL and FIPS endpoints
 
@@ -421,7 +468,6 @@ bucket by bucket basis i.e. `fs.s3a.bucket.{YOUR-BUCKET}.accesspoint.required`.
 ```
 
 Before using Access Points make sure you're not impacted by the following:
-- `ListObjectsV1` is not supported, this is also deprecated on AWS S3 for performance reasons;
 - The endpoint for S3 requests will automatically change to use
 `s3-accesspoint.REGION.amazonaws.{com | com.cn}` depending on the Access Point ARN. While
 considering endpoints, if you have any custom signers that use the host endpoint property make

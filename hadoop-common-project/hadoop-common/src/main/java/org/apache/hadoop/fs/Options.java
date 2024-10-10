@@ -574,6 +574,12 @@ public final class Options {
         FS_OPTION_OPENFILE + "buffer.size";
 
     /**
+     * OpenFile footer cache flag: {@value}.
+     */
+    public static final String FS_OPTION_OPENFILE_FOOTER_CACHE =
+        FS_OPTION_OPENFILE + "footer.cache";
+
+    /**
      * OpenFile option for read policies: {@value}.
      */
     public static final String FS_OPTION_OPENFILE_READ_POLICY =
@@ -586,6 +592,7 @@ public final class Options {
     public static final Set<String> FS_OPTION_OPENFILE_STANDARD_OPTIONS =
         Collections.unmodifiableSet(Stream.of(
                 FS_OPTION_OPENFILE_BUFFER_SIZE,
+                FS_OPTION_OPENFILE_FOOTER_CACHE,
                 FS_OPTION_OPENFILE_READ_POLICY,
                 FS_OPTION_OPENFILE_LENGTH,
                 FS_OPTION_OPENFILE_SPLIT_START,
@@ -599,10 +606,60 @@ public final class Options {
         "adaptive";
 
     /**
-     * Read policy {@value} -whateve the implementation does by default.
+     * We are an avro file: {@value}.
+     */
+    public static final String FS_OPTION_OPENFILE_READ_POLICY_AVRO = "avro";
+
+    /**
+     * This is a columnar file format.
+     * Do whatever is needed to optimize for it: {@value}.
+     */
+    public static final String FS_OPTION_OPENFILE_READ_POLICY_COLUMNAR =
+        "columnar";
+
+    /**
+     * This is a CSV file of plain or UTF-8 text
+     * to be read sequentially.
+     * Do whatever is needed to optimize for it: {@value}.
+     */
+    public static final String FS_OPTION_OPENFILE_READ_POLICY_CSV =
+        "csv";
+
+    /**
+     * Read policy {@value} -whatever the implementation does by default.
      */
     public static final String FS_OPTION_OPENFILE_READ_POLICY_DEFAULT =
         "default";
+
+    /**
+     * This is a table file for Apache HBase.
+     * Do whatever is needed to optimize for it: {@value}.
+     */
+    public static final String FS_OPTION_OPENFILE_READ_POLICY_HBASE =
+        "hbase";
+
+    /**
+     * This is a JSON file of UTF-8 text, including a
+     * JSON line file where each line is a JSON entity.
+     * Do whatever is needed to optimize for it: {@value}.
+     */
+    public static final String FS_OPTION_OPENFILE_READ_POLICY_JSON =
+        "json";
+
+    /**
+     * This is an ORC file.
+     * Do whatever is needed to optimize for it: {@value}.
+     */
+    public static final String FS_OPTION_OPENFILE_READ_POLICY_ORC =
+        "orc";
+
+    /**
+     * This is a parquet file with a v1/v3 footer: {@value}.
+     * Do whatever is needed to optimize for it, such as footer
+     * prefetch and cache,
+     */
+    public static final String FS_OPTION_OPENFILE_READ_POLICY_PARQUET =
+        "parquet";
 
     /**
      * Read policy for random IO: {@value}.
@@ -634,12 +691,23 @@ public final class Options {
     public static final Set<String> FS_OPTION_OPENFILE_READ_POLICIES =
         Collections.unmodifiableSet(Stream.of(
                 FS_OPTION_OPENFILE_READ_POLICY_ADAPTIVE,
+                FS_OPTION_OPENFILE_READ_POLICY_AVRO,
+                FS_OPTION_OPENFILE_READ_POLICY_COLUMNAR,
+                FS_OPTION_OPENFILE_READ_POLICY_CSV,
                 FS_OPTION_OPENFILE_READ_POLICY_DEFAULT,
+                FS_OPTION_OPENFILE_READ_POLICY_JSON,
+                FS_OPTION_OPENFILE_READ_POLICY_ORC,
+                FS_OPTION_OPENFILE_READ_POLICY_PARQUET,
                 FS_OPTION_OPENFILE_READ_POLICY_RANDOM,
                 FS_OPTION_OPENFILE_READ_POLICY_SEQUENTIAL,
                 FS_OPTION_OPENFILE_READ_POLICY_VECTOR,
                 FS_OPTION_OPENFILE_READ_POLICY_WHOLE_FILE)
             .collect(Collectors.toSet()));
 
+    /**
+     * EC policy to be set on the file that needs to be created : {@value}.
+     */
+    public static final String FS_OPTION_OPENFILE_EC_POLICY =
+        FS_OPTION_OPENFILE + "ec.policy";
   }
 }

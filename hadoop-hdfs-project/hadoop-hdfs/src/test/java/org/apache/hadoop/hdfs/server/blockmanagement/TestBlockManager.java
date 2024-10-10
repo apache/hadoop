@@ -522,7 +522,7 @@ public class TestBlockManager {
     try {
       cluster.waitActive();
       BlockManager blockManager = cluster.getNamesystem().getBlockManager();
-      blockManager.getDatanodeManager().markAllDatanodesStale();
+      blockManager.getDatanodeManager().markAllDatanodesStaleAndSetKeyUpdateIfNeed();
       FileSystem fs = cluster.getFileSystem();
       FSDataOutputStream out = fs.create(file);
       for (int i = 0; i < 1024 * 1024 * 1; i++) {
@@ -1833,7 +1833,7 @@ public class TestBlockManager {
     DataInputStream in = new DataInputStream(fstream);
 
     BufferedReader reader = new BufferedReader(new InputStreamReader(in));
-    StringBuffer buffer = new StringBuffer();
+    StringBuilder buffer = new StringBuilder();
     String line;
     try {
       while ((line = reader.readLine()) != null) {
@@ -1861,7 +1861,7 @@ public class TestBlockManager {
     FileInputStream fstream = new FileInputStream(file);
     DataInputStream in = new DataInputStream(fstream);
     BufferedReader reader = new BufferedReader(new InputStreamReader(in));
-    StringBuffer buffer = new StringBuffer();
+    StringBuilder buffer = new StringBuilder();
     String line;
     try {
       while ((line = reader.readLine()) != null) {
@@ -1933,7 +1933,7 @@ public class TestBlockManager {
     FileInputStream fstream = new FileInputStream(file);
     DataInputStream in = new DataInputStream(fstream);
     BufferedReader reader = new BufferedReader(new InputStreamReader(in));
-    StringBuffer buffer = new StringBuffer();
+    StringBuilder buffer = new StringBuilder();
     String line;
     try {
       while ((line = reader.readLine()) != null) {
@@ -1989,7 +1989,7 @@ public class TestBlockManager {
     FileInputStream fstream = new FileInputStream(file);
     DataInputStream in = new DataInputStream(fstream);
     BufferedReader reader = new BufferedReader(new InputStreamReader(in));
-    StringBuffer buffer = new StringBuffer();
+    StringBuilder buffer = new StringBuilder();
     String line;
     try {
       while ((line = reader.readLine()) != null) {

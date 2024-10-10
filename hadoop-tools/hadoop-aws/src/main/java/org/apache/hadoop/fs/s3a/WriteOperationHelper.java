@@ -21,10 +21,11 @@ package org.apache.hadoop.fs.s3a;
 import javax.annotation.Nullable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadResponse;
@@ -33,8 +34,6 @@ import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.MultipartUpload;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
-import software.amazon.awssdk.services.s3.model.SelectObjectContentRequest;
-import software.amazon.awssdk.services.s3.model.SelectObjectContentResponseHandler;
 import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 import org.slf4j.Logger;
@@ -49,16 +48,11 @@ import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.api.RequestFactory;
 import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
-import org.apache.hadoop.fs.s3a.select.SelectEventStreamPublisher;
-import org.apache.hadoop.fs.s3a.select.SelectObjectContentHelper;
 import org.apache.hadoop.fs.s3a.statistics.S3AStatisticsContext;
-import org.apache.hadoop.fs.s3a.select.SelectBinding;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.fs.store.audit.AuditSpanSource;
-import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
-import org.apache.hadoop.util.Preconditions;
 
 import static org.apache.hadoop.util.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.s3a.Invoker.*;
@@ -82,7 +76,6 @@ import static org.apache.hadoop.fs.store.audit.AuditingFunctions.withinAuditSpan
  *   <li>Other low-level access to S3 functions, for private use.</li>
  *   <li>Failure handling, including converting exceptions to IOEs.</li>
  *   <li>Integration with instrumentation.</li>
- *   <li>Evolution to add more low-level operations, such as S3 select.</li>
  * </ul>
  *
  * This API is for internal use only.
@@ -242,14 +235,12 @@ public class WriteOperationHelper implements WriteOperations {
    * @param destKey destination key
    * @param length size, if known. Use -1 for not known
    * @param options options for the request
-   * @param isFile is data to be uploaded a file
    * @return the request
    */
   @Retries.OnceRaw
   public PutObjectRequest createPutObjectRequest(String destKey,
       long length,
-      final PutObjectOptions options,
-      boolean isFile) {
+      final PutObjectOptions options) {
 
     activateAuditSpan();
 
@@ -298,7 +289,7 @@ public class WriteOperationHelper implements WriteOperations {
   /**
    * Finalize a multipart PUT operation.
    * This completes the upload, and, if that works, calls
-   * {@link S3AFileSystem#finishedWrite(String, long, String, String, org.apache.hadoop.fs.s3a.impl.PutObjectOptions)}
+   * {@link WriteOperationHelperCallbacks#finishedWrite(String, long, PutObjectOptions)}
    * to update the filesystem.
    * Retry policy: retrying, translated.
    * @param destKey destination of the commit
@@ -333,8 +324,7 @@ public class WriteOperationHelper implements WriteOperations {
                     destKey, uploadId, partETags);
             return writeOperationHelperCallbacks.completeMultipartUpload(requestBuilder.build());
           });
-      owner.finishedWrite(destKey, length, uploadResult.eTag(),
-          uploadResult.versionId(),
+      writeOperationHelperCallbacks.finishedWrite(destKey, length,
           putOptions);
       return uploadResult;
     }
@@ -413,11 +403,12 @@ public class WriteOperationHelper implements WriteOperations {
   /**
    * Abort a multipart commit operation.
    * @param upload upload to abort.
+   * @throws FileNotFoundException if the upload is unknown
    * @throws IOException on problems.
    */
   @Retries.RetryTranslated
   public void abortMultipartUpload(MultipartUpload upload)
-      throws IOException {
+      throws FileNotFoundException, IOException {
     invoker.retry("Aborting multipart commit", upload.key(), true,
         withinAuditSpan(getAuditSpan(),
             () -> owner.abortMultipartUpload(upload)));
@@ -517,20 +508,19 @@ public class WriteOperationHelper implements WriteOperations {
    * file, from the content length of the header.
    * @param putObjectRequest the request
    * @param putOptions put object options
-   * @param durationTrackerFactory factory for duration tracking
    * @param uploadData data to be uploaded
-   * @param isFile is data to be uploaded a file
-   *
+   * @param durationTrackerFactory factory for duration tracking
    * @return the upload initiated
    * @throws IOException on problems
    */
   @Retries.RetryTranslated
   public PutObjectResponse putObject(PutObjectRequest putObjectRequest,
-      PutObjectOptions putOptions, S3ADataBlocks.BlockUploadData uploadData, boolean isFile,
+      PutObjectOptions putOptions,
+      S3ADataBlocks.BlockUploadData uploadData,
       DurationTrackerFactory durationTrackerFactory)
       throws IOException {
     return retry("Writing Object", putObjectRequest.key(), true, withinAuditSpan(getAuditSpan(),
-        () -> owner.putObjectDirect(putObjectRequest, putOptions, uploadData, isFile,
+        () -> owner.putObjectDirect(putObjectRequest, putOptions, uploadData,
             durationTrackerFactory)));
   }
 
@@ -587,7 +577,6 @@ public class WriteOperationHelper implements WriteOperations {
 
   /**
    * Upload part of a multi-partition file.
-   * @param request request
    * @param durationTrackerFactory duration tracker factory for operation
    * @param request the upload part request.
    * @param body the request body.
@@ -603,7 +592,9 @@ public class WriteOperationHelper implements WriteOperations {
         request.key(),
         true,
         withinAuditSpan(getAuditSpan(),
-            () -> owner.uploadPart(request, body, durationTrackerFactory)));
+            () -> writeOperationHelperCallbacks.uploadPart(request,
+                body,
+                durationTrackerFactory)));
   }
 
   /**
@@ -613,63 +604,6 @@ public class WriteOperationHelper implements WriteOperations {
    */
   public Configuration getConf() {
     return conf;
-  }
-
-  public SelectObjectContentRequest.Builder newSelectRequestBuilder(Path path) {
-    try (AuditSpan span = getAuditSpan()) {
-      return getRequestFactory().newSelectRequestBuilder(
-          storeContext.pathToKey(path));
-    }
-  }
-
-  /**
-   * Execute an S3 Select operation.
-   * On a failure, the request is only logged at debug to avoid the
-   * select exception being printed.
-   *
-   * @param source  source for selection
-   * @param request Select request to issue.
-   * @param action  the action for use in exception creation
-   * @return response
-   * @throws IOException failure
-   */
-  @Retries.RetryTranslated
-  public SelectEventStreamPublisher select(
-      final Path source,
-      final SelectObjectContentRequest request,
-      final String action)
-      throws IOException {
-    // no setting of span here as the select binding is (statically) created
-    // without any span.
-    String bucketName = request.bucket();
-    Preconditions.checkArgument(bucket.equals(bucketName),
-        "wrong bucket: %s", bucketName);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Initiating select call {} {}",
-          source, request.expression());
-      LOG.debug(SelectBinding.toString(request));
-    }
-    return invoker.retry(
-        action,
-        source.toString(),
-        true,
-        withinAuditSpan(getAuditSpan(), () -> {
-          try (DurationInfo ignored =
-                   new DurationInfo(LOG, "S3 Select operation")) {
-            try {
-              return SelectObjectContentHelper.select(
-                  writeOperationHelperCallbacks, source, request, action);
-            } catch (Throwable e) {
-              LOG.error("Failure of S3 Select request against {}",
-                  source);
-              LOG.debug("S3 Select request against {}:\n{}",
-                  source,
-                  SelectBinding.toString(request),
-                  e);
-              throw e;
-            }
-          }
-        }));
   }
 
   @Override
@@ -706,21 +640,48 @@ public class WriteOperationHelper implements WriteOperations {
   public interface WriteOperationHelperCallbacks {
 
     /**
-     * Initiates a select request.
-     * @param request selectObjectContent request
-     * @param t selectObjectContent request handler
-     * @return selectObjectContentResult
-     */
-    CompletableFuture<Void> selectObjectContent(SelectObjectContentRequest request,
-        SelectObjectContentResponseHandler t);
-
-    /**
      * Initiates a complete multi-part upload request.
      * @param request Complete multi-part upload request
      * @return completeMultipartUploadResult
      */
-    CompleteMultipartUploadResponse completeMultipartUpload(CompleteMultipartUploadRequest request);
+    @Retries.OnceRaw
+    CompleteMultipartUploadResponse completeMultipartUpload(
+        CompleteMultipartUploadRequest request);
 
+    /**
+     * Upload part of a multi-partition file.
+     * Increments the write and put counters.
+     * <i>Important: this call does not close any input stream in the body.</i>
+     * <p>
+     * Retry Policy: none.
+     * @param durationTrackerFactory duration tracker factory for operation
+     * @param request the upload part request.
+     * @param body the request body.
+     * @return the result of the operation.
+     * @throws AwsServiceException on problems
+     * @throws UncheckedIOException failure to instantiate the s3 client
+     */
+    @Retries.OnceRaw
+    UploadPartResponse uploadPart(
+        UploadPartRequest request,
+        RequestBody body,
+        DurationTrackerFactory durationTrackerFactory)
+        throws AwsServiceException, UncheckedIOException;
+
+    /**
+     * Perform post-write actions.
+     * <p>
+     * This operation MUST be called after any PUT/multipart PUT completes
+     * successfully.
+     * @param key key written to
+     * @param length total length of file written
+     * @param putOptions put object options
+     */
+    @Retries.RetryExceptionsSwallowed
+    void finishedWrite(
+        String key,
+        long length,
+        PutObjectOptions putOptions);
   }
 
 }

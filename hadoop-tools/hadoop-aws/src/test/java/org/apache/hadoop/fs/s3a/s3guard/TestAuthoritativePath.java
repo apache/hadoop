@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.test.AbstractHadoopTestBase;
 
 import static org.apache.hadoop.fs.s3a.Constants.AUTHORITATIVE_PATH;
+import static org.apache.hadoop.fs.s3a.S3ATestConstants.UNIT_TEST_EXAMPLE_PATH;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -71,7 +72,7 @@ public class TestAuthoritativePath extends AbstractHadoopTestBase {
   @Test
   public void testOtherBucket() throws Throwable {
     assertAuthPaths(l("/one/",
-        "s3a://landsat-pds/",
+        UNIT_TEST_EXAMPLE_PATH,
         BASE + "/two/"),
         "/one/", "/two/");
   }
@@ -79,7 +80,7 @@ public class TestAuthoritativePath extends AbstractHadoopTestBase {
   @Test
   public void testOtherScheme() throws Throwable {
     assertAuthPaths(l("/one/",
-        "s3a://landsat-pds/",
+         UNIT_TEST_EXAMPLE_PATH,
         "http://bucket/two/"),
         "/one/");
   }

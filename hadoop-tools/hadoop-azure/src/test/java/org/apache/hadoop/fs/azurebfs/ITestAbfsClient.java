@@ -34,6 +34,7 @@ import org.junit.Test;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
 import org.apache.hadoop.fs.azurebfs.contracts.services.ListResultEntrySchema;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
@@ -102,11 +103,31 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
       setListMaxResults(listMaxResults);
       int expectedListResultsSize =
           listMaxResults > fileCount ? fileCount : listMaxResults;
-      Assertions.assertThat(listPath(directory.toString())).describedAs(
-          "AbfsClient.listPath result should contain %d items when "
-              + "listMaxResults is %d and directory contains %d items",
-          expectedListResultsSize, listMaxResults, fileCount)
-          .hasSize(expectedListResultsSize);
+
+      AbfsRestOperation op = getFileSystem().getAbfsClient().listPath(
+          directory.toString(), false, getListMaxResults(), null,
+          getTestTracingContext(getFileSystem(), true));
+
+      List<ListResultEntrySchema> list = op.getResult().getListResultSchema().paths();
+      String continuationToken = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
+
+      if (continuationToken == null) {
+        // Listing is complete and number of objects should be same as expected
+        Assertions.assertThat(list)
+            .describedAs("AbfsClient.listPath() should return %d items"
+                + " when listMaxResults is %d, directory contains %d items and "
+                + "listing is complete",
+                expectedListResultsSize, listMaxResults, fileCount)
+            .hasSize(expectedListResultsSize);
+      } else {
+        // Listing is incomplete and number of objects can be less than expected
+        Assertions.assertThat(list)
+            .describedAs("AbfsClient.listPath() should return %d items"
+                + " or less when listMaxResults is %d,  directory contains"
+                + " %d items and listing is incomplete",
+                expectedListResultsSize, listMaxResults, fileCount)
+            .hasSizeLessThanOrEqualTo(expectedListResultsSize);
+      }
     }
   }
 
@@ -117,12 +138,31 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     final Path directory = getUniquePath(
         "testWithValueGreaterThanServerMaximum");
     createDirectoryWithNFiles(directory, LIST_MAX_RESULTS_SERVER + 200);
-    Assertions.assertThat(listPath(directory.toString())).describedAs(
-        "AbfsClient.listPath result will contain a maximum of %d items "
-            + "even if listMaxResults >= %d or directory "
-            + "contains more than %d items", LIST_MAX_RESULTS_SERVER,
-        LIST_MAX_RESULTS_SERVER, LIST_MAX_RESULTS_SERVER)
-        .hasSize(LIST_MAX_RESULTS_SERVER);
+
+    AbfsRestOperation op = getFileSystem().getAbfsClient().listPath(
+        directory.toString(), false, getListMaxResults(), null,
+        getTestTracingContext(getFileSystem(), true));
+
+    List<ListResultEntrySchema> list = op.getResult().getListResultSchema().paths();
+    String continuationToken = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
+
+    if (continuationToken == null) {
+      // Listing is complete and number of objects should be same as expected
+      Assertions.assertThat(list)
+          .describedAs("AbfsClient.listPath() should return %d items"
+              + " when listMaxResults is %d directory contains %d items and "
+              + "listing is complete", LIST_MAX_RESULTS_SERVER,
+              LIST_MAX_RESULTS_SERVER, LIST_MAX_RESULTS_SERVER)
+          .hasSize(LIST_MAX_RESULTS_SERVER);
+    } else {
+      // Listing is incomplete and number of objects can be less than expected
+      Assertions.assertThat(list)
+          .describedAs("AbfsClient.listPath() should return %d items"
+              + " or less when listMaxResults is %d, directory contains"
+              + " %d items and listing is complete", LIST_MAX_RESULTS_SERVER,
+              LIST_MAX_RESULTS_SERVER, LIST_MAX_RESULTS_SERVER)
+          .hasSizeLessThanOrEqualTo(LIST_MAX_RESULTS_SERVER);
+    }
   }
 
   @Test

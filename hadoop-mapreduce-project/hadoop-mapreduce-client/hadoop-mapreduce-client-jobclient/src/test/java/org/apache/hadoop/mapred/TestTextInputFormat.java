@@ -42,6 +42,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.*;
 
 public class TestTextInputFormat {
@@ -330,14 +331,10 @@ public class TestTextInputFormat {
   }
 
   private static LineReader makeStream(String str) throws IOException {
-    return new LineReader(new ByteArrayInputStream
-                                             (str.getBytes("UTF-8")), 
-                                           defaultConf);
+    return new LineReader(new ByteArrayInputStream(str.getBytes(UTF_8)), defaultConf);
   }
   private static LineReader makeStream(String str, int bufsz) throws IOException {
-    return new LineReader(new ByteArrayInputStream
-                                             (str.getBytes("UTF-8")), 
-                                           bufsz);
+    return new LineReader(new ByteArrayInputStream(str.getBytes(UTF_8)), bufsz);
   }
 
   @Test (timeout=5000)
@@ -551,7 +548,7 @@ public class TestTextInputFormat {
   }
   
   private static String unquote(String in) {
-    StringBuffer result = new StringBuffer();
+    StringBuilder result = new StringBuilder();
     for(int i=0; i < in.length(); ++i) {
       char ch = in.charAt(i);
       if (ch == '\\') {

@@ -31,16 +31,13 @@ import software.amazon.awssdk.services.s3.model.CompletedPart;
 import software.amazon.awssdk.services.s3.model.MultipartUpload;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectResponse;
-import software.amazon.awssdk.services.s3.model.SelectObjectContentRequest;
 import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 import software.amazon.awssdk.services.s3.model.UploadPartResponse;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
 import org.apache.hadoop.fs.statistics.DurationTrackerFactory;
-import org.apache.hadoop.fs.s3a.select.SelectEventStreamPublisher;
 import org.apache.hadoop.fs.store.audit.AuditSpanSource;
 import org.apache.hadoop.util.functional.CallableRaisingIOE;
 
@@ -77,13 +74,11 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
    * @param destKey destination key
    * @param length size, if known. Use -1 for not known
    * @param options options for the request
-   * @param isFile is data to be uploaded a file
    * @return the request
    */
   PutObjectRequest createPutObjectRequest(String destKey,
       long length,
-      @Nullable PutObjectOptions options,
-      boolean isFile);
+      @Nullable PutObjectOptions options);
 
   /**
    * Callback on a successful write.
@@ -151,6 +146,7 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
   /**
    * Abort a multipart commit operation.
    * @param upload upload to abort.
+   * @throws FileNotFoundException if the upload is unknown
    * @throws IOException on problems.
    */
   @Retries.RetryTranslated
@@ -211,15 +207,15 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
    * file, from the content length of the header.
    * @param putObjectRequest the request
    * @param putOptions put object options
-   * @param durationTrackerFactory factory for duration tracking
    * @param uploadData data to be uploaded
-   * @param isFile is data to be uploaded a file
+   * @param durationTrackerFactory factory for duration tracking
    * @return the upload initiated
    * @throws IOException on problems
    */
   @Retries.RetryTranslated
   PutObjectResponse putObject(PutObjectRequest putObjectRequest,
-      PutObjectOptions putOptions, S3ADataBlocks.BlockUploadData uploadData, boolean isFile,
+      PutObjectOptions putOptions,
+      S3ADataBlocks.BlockUploadData uploadData,
       DurationTrackerFactory durationTrackerFactory)
       throws IOException;
 
@@ -273,32 +269,6 @@ public interface WriteOperations extends AuditSpanSource, Closeable {
    * @return the configuration.
    */
   Configuration getConf();
-
-  /**
-   * Create a S3 Select request builder for the destination path.
-   * This does not build the query.
-   * @param path pre-qualified path for query
-   * @return the request builder
-   */
-  SelectObjectContentRequest.Builder newSelectRequestBuilder(Path path);
-
-  /**
-   * Execute an S3 Select operation.
-   * On a failure, the request is only logged at debug to avoid the
-   * select exception being printed.
-   *
-   * @param source  source for selection
-   * @param request Select request to issue.
-   * @param action  the action for use in exception creation
-   * @return response
-   * @throws IOException failure
-   */
-  @Retries.RetryTranslated
-  SelectEventStreamPublisher select(
-      Path source,
-      SelectObjectContentRequest request,
-      String action)
-      throws IOException;
 
   /**
    * Increment the write operation counter

@@ -51,7 +51,7 @@ import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
-import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapterMockitoUtil;
 import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
 import org.apache.hadoop.hdfs.server.namenode.ha.ObserverReadProxyProvider;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
@@ -259,7 +259,7 @@ public class TestBalancerWithHANameNodes {
       List<FSNamesystem> namesystemSpies = new ArrayList<>();
       for (int i = 0; i < cluster.getNumNameNodes(); i++) {
         namesystemSpies.add(
-            NameNodeAdapter.spyOnNamesystem(cluster.getNameNode(i)));
+            NameNodeAdapterMockitoUtil.spyOnNamesystem(cluster.getNameNode(i)));
       }
       if (withObserverFailure) {
         // First observer NN is at index 2

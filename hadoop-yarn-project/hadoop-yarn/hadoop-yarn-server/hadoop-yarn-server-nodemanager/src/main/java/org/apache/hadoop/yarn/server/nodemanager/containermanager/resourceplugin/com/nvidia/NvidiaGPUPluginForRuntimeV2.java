@@ -172,7 +172,7 @@ public class NvidiaGPUPluginForRuntimeV2 implements DevicePlugin,
     if (yarnRuntime == YarnRuntimeType.RUNTIME_DOCKER) {
       String nvidiaRuntime = "nvidia";
       String nvidiaVisibleDevices = "NVIDIA_VISIBLE_DEVICES";
-      StringBuffer gpuMinorNumbersSB = new StringBuffer();
+      StringBuilder gpuMinorNumbersSB = new StringBuilder();
       for (Device device : allocatedDevices) {
         gpuMinorNumbersSB.append(device.getMinorNumber() + ",");
       }

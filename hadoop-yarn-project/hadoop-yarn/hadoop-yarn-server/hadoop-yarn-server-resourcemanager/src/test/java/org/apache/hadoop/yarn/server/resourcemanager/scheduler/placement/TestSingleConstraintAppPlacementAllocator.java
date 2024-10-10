@@ -21,7 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement;
 import org.apache.hadoop.yarn.api.records.*;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint.AllocationTags;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraints;
-import org.apache.hadoop.yarn.exceptions.SchedulerInvalidResoureRequestException;
+import org.apache.hadoop.yarn.exceptions.SchedulerInvalidResourceRequestException;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.AppSchedulingInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
@@ -104,7 +104,7 @@ public class TestSingleConstraintAppPlacementAllocator {
         allocator.initialize(appSchedulingInfo, schedulerRequestKey, rmContext);
       }
       allocator.updatePendingAsk(schedulerRequestKey, schedulingRequest, false);
-    } catch (SchedulerInvalidResoureRequestException e) {
+    } catch (SchedulerInvalidResourceRequestException e) {
       // Expected
       return;
     }

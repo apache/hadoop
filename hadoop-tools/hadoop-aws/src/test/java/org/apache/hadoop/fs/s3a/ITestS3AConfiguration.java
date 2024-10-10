@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.net.ConnectException;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
+import java.time.Duration;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Rule;
@@ -49,6 +50,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.auth.STSClientFactory;
+import org.apache.hadoop.fs.s3a.impl.AWSClientConfig;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -384,8 +386,10 @@ public class ITestS3AConfiguration {
           s3Configuration.pathStyleAccessEnabled());
       byte[] file = ContractTestUtils.toAsciiByteArray("test file");
       ContractTestUtils.writeAndRead(fs,
-          new Path("/path/style/access/testFile"), file, file.length,
-              (int) conf.getLongBytes(Constants.FS_S3A_BLOCK_SIZE, file.length), false, true);
+          createTestPath(new Path("/path/style/access/testFile")),
+          file, file.length,
+          (int) conf.getLongBytes(Constants.FS_S3A_BLOCK_SIZE, file.length),
+          false, true);
     } catch (final AWSRedirectException e) {
       LOG.error("Caught exception: ", e);
       // Catch/pass standard path style access behaviour when live bucket
@@ -436,15 +440,22 @@ public class ITestS3AConfiguration {
   public void testRequestTimeout() throws Exception {
     conf = new Configuration();
     skipIfCrossRegionClient(conf);
-    conf.set(REQUEST_TIMEOUT, "120");
-    fs = S3ATestUtils.createTestFileSystem(conf);
-    S3Client s3 = getS3Client("Request timeout (ms)");
-    SdkClientConfiguration clientConfiguration = getField(s3, SdkClientConfiguration.class,
-        "clientConfiguration");
-    assertEquals("Configured " + REQUEST_TIMEOUT +
-        " is different than what AWS sdk configuration uses internally",
-        120000,
-        clientConfiguration.option(SdkClientOption.API_CALL_ATTEMPT_TIMEOUT).toMillis());
+    // remove the safety check on minimum durations.
+    AWSClientConfig.setMinimumOperationDuration(Duration.ZERO);
+    try {
+      Duration timeout = Duration.ofSeconds(120);
+      conf.set(REQUEST_TIMEOUT, timeout.getSeconds() + "s");
+      fs = S3ATestUtils.createTestFileSystem(conf);
+      S3Client s3 = getS3Client("Request timeout (ms)");
+      SdkClientConfiguration clientConfiguration = getField(s3, SdkClientConfiguration.class,
+          "clientConfiguration");
+      Assertions.assertThat(clientConfiguration.option(SdkClientOption.API_CALL_ATTEMPT_TIMEOUT))
+          .describedAs("Configured " + REQUEST_TIMEOUT +
+              " is different than what AWS sdk configuration uses internally")
+          .isEqualTo(timeout);
+    } finally {
+      AWSClientConfig.resetMinimumOperationDuration();
+    }
   }
 
   @Test
@@ -622,8 +633,8 @@ public class ITestS3AConfiguration {
    */
   private static void skipIfCrossRegionClient(
       Configuration configuration) {
-    if (configuration.get(ENDPOINT, null) == null
-        && configuration.get(AWS_REGION, null) == null) {
+    if (configuration.getBoolean(AWS_S3_CROSS_REGION_ACCESS_ENABLED,
+        AWS_S3_CROSS_REGION_ACCESS_ENABLED_DEFAULT)) {
       skip("Skipping test as cross region client is in use ");
     }
   }

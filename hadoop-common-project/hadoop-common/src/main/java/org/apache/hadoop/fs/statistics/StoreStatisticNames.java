@@ -47,6 +47,9 @@ public final class StoreStatisticNames {
   public static final String OP_APPEND = "op_append";
 
   /** {@value}. */
+  public static final String OP_BULK_DELETE = "op_bulk-delete";
+
+  /** {@value}. */
   public static final String OP_COPY_FROM_LOCAL_FILE =
       "op_copy_from_local_file";
 
@@ -173,6 +176,11 @@ public final class StoreStatisticNames {
   public static final String DELEGATION_TOKENS_ISSUED
       = "delegation_tokens_issued";
 
+  /**
+   * How long did any store client creation take?
+   */
+  public static final String STORE_CLIENT_CREATION = "store_client_creation";
+
   /** Probe for store existing: {@value}. */
   public static final String STORE_EXISTS_PROBE
       = "store_exists_probe";
@@ -193,6 +201,10 @@ public final class StoreStatisticNames {
    */
   public static final String STORE_IO_RETRY
       = "store_io_retry";
+
+  public static final String STORE_IO_RATE_LIMITED_DURATION
+      = "store_io_rate_limited_duration";
+
 
   /**
    * A store's equivalent of a paged LIST request was initiated: {@value}.
@@ -371,6 +383,47 @@ public final class StoreStatisticNames {
    */
   public static final String ACTION_HTTP_PATCH_REQUEST
       = "action_http_patch_request";
+
+  /**
+   * HTTP error response: {@value}.
+   */
+  public static final String HTTP_RESPONSE_400
+      = "http_response_400";
+
+  /**
+   * HTTP error response: {@value}.
+   * Returned by some stores for throttling events.
+   */
+  public static final String HTTP_RESPONSE_429
+      = "http_response_429";
+
+  /**
+   * Other 4XX HTTP response: {@value}.
+   * (404 responses are excluded as they are rarely 'errors'
+   * and will be reported differently if they are.
+   */
+  public static final String HTTP_RESPONSE_4XX
+      = "http_response_4XX";
+
+  /**
+   * HTTP error response: {@value}.
+   * Sign of server-side problems, possibly transient
+   */
+  public static final String HTTP_RESPONSE_500
+      = "http_response_500";
+
+  /**
+   * HTTP error response: {@value}.
+   * AWS Throttle.
+   */
+  public static final String HTTP_RESPONSE_503
+      = "http_response_503";
+
+  /**
+   * Other 5XX HTTP response: {@value}.
+   */
+  public static final String HTTP_RESPONSE_5XX
+      = "http_response_5XX";
 
   /**
    * An HTTP POST request was made: {@value}.

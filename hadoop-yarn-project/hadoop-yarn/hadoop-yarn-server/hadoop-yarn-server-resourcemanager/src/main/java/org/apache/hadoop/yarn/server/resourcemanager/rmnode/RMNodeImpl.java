@@ -35,7 +35,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
-import org.apache.commons.collections.keyvalue.DefaultMapEntry;
+import org.apache.commons.collections4.keyvalue.DefaultMapEntry;
 import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.slf4j.Logger;
@@ -224,6 +224,9 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       .addTransition(NodeState.NEW, NodeState.DECOMMISSIONED,
           RMNodeEventType.DECOMMISSION,
           new DeactivateNodeTransition(NodeState.DECOMMISSIONED))
+      .addTransition(NodeState.NEW, NodeState.LOST,
+          RMNodeEventType.EXPIRE,
+          new DeactivateNodeTransition(NodeState.LOST))
       .addTransition(NodeState.NEW, NodeState.NEW,
           RMNodeEventType.FINISHED_CONTAINERS_PULLED_BY_AM,
           new AddContainersToBeRemovedFromNMTransition())
@@ -958,6 +961,16 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
         if (previousRMNode != null) {
           ClusterMetrics.getMetrics().decrDecommisionedNMs();
         }
+
+        // Check if the node was lost before
+        NodeId lostNodeId = NodesListManager.createLostNodeId(nodeId.getHost());
+        RMNode previousRMLostNode = rmNode.context.getInactiveRMNodes().remove(lostNodeId);
+        if (previousRMLostNode != null) {
+          // Remove the record of the lost node and update the metrics
+          rmNode.context.getRMNodes().remove(lostNodeId);
+          ClusterMetrics.getMetrics().decrNumLostNMs();
+        }
+
         containers = startEvent.getNMContainerStatuses();
         final Resource allocatedResource = Resource.newInstance(
             Resources.none());

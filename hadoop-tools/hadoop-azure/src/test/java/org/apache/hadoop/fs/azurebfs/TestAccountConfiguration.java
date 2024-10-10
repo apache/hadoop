@@ -27,8 +27,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.ConfigurationPropertyNotFoundException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidConfigurationValueException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.TokenAccessProviderException;
+import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider;
 import org.apache.hadoop.fs.azurebfs.oauth2.CustomTokenProviderAdapter;
+import org.apache.hadoop.fs.azurebfs.oauth2.MsiTokenProvider;
+import org.apache.hadoop.fs.azurebfs.oauth2.RefreshTokenBasedTokenProvider;
+import org.apache.hadoop.fs.azurebfs.oauth2.UserPasswordTokenProvider;
+import org.apache.hadoop.fs.azurebfs.oauth2.WorkloadIdentityTokenProvider;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
@@ -40,6 +45,10 @@ import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_CLIENT_ENDPOINT;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_CLIENT_SECRET;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_USER_NAME;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_OAUTH_USER_PASSWORD;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_SAS_TOKEN_PROVIDER_TYPE;
 import static org.junit.Assert.assertEquals;
@@ -58,6 +67,7 @@ import static org.junit.Assert.assertNull;
  */
 public class TestAccountConfiguration {
   private static final String TEST_OAUTH_PROVIDER_CLASS_CONFIG = "org.apache.hadoop.fs.azurebfs.oauth2.ClientCredsTokenProvider";
+  private static final String TEST_OAUTH_MSI_TOKEN_PROVIDER_CLASS_CONFIG = "org.apache.hadoop.fs.azurebfs.oauth2.MsiTokenProvider";
   private static final String TEST_CUSTOM_PROVIDER_CLASS_CONFIG = "org.apache.hadoop.fs.azurebfs.oauth2.RetryTestTokenProvider";
   private static final String TEST_SAS_PROVIDER_CLASS_CONFIG_1 = "org.apache.hadoop.fs.azurebfs.extensions.MockErrorSASTokenProvider";
   private static final String TEST_SAS_PROVIDER_CLASS_CONFIG_2 = "org.apache.hadoop.fs.azurebfs.extensions.MockSASTokenProvider";
@@ -65,12 +75,32 @@ public class TestAccountConfiguration {
   private static final String TEST_OAUTH_ENDPOINT = "oauthEndpoint";
   private static final String TEST_CLIENT_ID = "clientId";
   private static final String TEST_CLIENT_SECRET = "clientSecret";
+  private static final String TEST_USER_NAME = "userName";
+  private static final String TEST_USER_PASSWORD = "userPassword";
+  private static final String TEST_MSI_TENANT = "msiTenant";
+  private static final String TEST_REFRESH_TOKEN = "refreshToken";
 
-  private static final List<String> CONFIG_KEYS =
+  private static final List<String> CLIENT_CREDENTIAL_OAUTH_CONFIG_KEYS =
       Collections.unmodifiableList(Arrays.asList(
           FS_AZURE_ACCOUNT_OAUTH_CLIENT_ENDPOINT,
           FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID,
           FS_AZURE_ACCOUNT_OAUTH_CLIENT_SECRET));
+
+  private static final List<String> USER_PASSWORD_OAUTH_CONFIG_KEYS =
+      Collections.unmodifiableList(Arrays.asList(
+          FS_AZURE_ACCOUNT_OAUTH_CLIENT_ENDPOINT,
+          FS_AZURE_ACCOUNT_OAUTH_USER_NAME,
+          FS_AZURE_ACCOUNT_OAUTH_USER_PASSWORD));
+
+  private static final List<String> REFRESH_TOKEN_OAUTH_CONFIG_KEYS =
+      Collections.unmodifiableList(Arrays.asList(
+          FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN,
+          FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID));
+
+  private static final List<String> WORKLOAD_IDENTITY_OAUTH_CONFIG_KEYS =
+      Collections.unmodifiableList(Arrays.asList(
+          FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT,
+          FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID));
 
   @Test
   public void testStringPrecedence()
@@ -374,14 +404,22 @@ public class TestAccountConfiguration {
   }
 
   @Test
-  public void testConfigPropNotFound() throws Throwable {
+  public void testOAuthConfigPropNotFound() throws Throwable {
+    testConfigPropNotFound(CLIENT_CREDENTIAL_OAUTH_CONFIG_KEYS, ClientCredsTokenProvider.class.getName());
+    testConfigPropNotFound(USER_PASSWORD_OAUTH_CONFIG_KEYS, UserPasswordTokenProvider.class.getName());
+    testConfigPropNotFound(REFRESH_TOKEN_OAUTH_CONFIG_KEYS, RefreshTokenBasedTokenProvider.class.getName());
+    testConfigPropNotFound(WORKLOAD_IDENTITY_OAUTH_CONFIG_KEYS, WorkloadIdentityTokenProvider.class.getName());
+  }
+
+  private void testConfigPropNotFound(List<String> configKeys,
+      String tokenProviderClassName)throws Throwable {
     final String accountName = "account";
 
     final Configuration conf = new Configuration();
     final AbfsConfiguration abfsConf = new AbfsConfiguration(conf, accountName);
 
-    for (String key : CONFIG_KEYS) {
-      setAuthConfig(abfsConf, true, AuthType.OAuth);
+    for (String key : configKeys) {
+      setAuthConfig(abfsConf, true, AuthType.OAuth, tokenProviderClassName);
       abfsConf.unset(key);
       abfsConf.unset(key + "." + accountName);
       testMissingConfigKey(abfsConf, key);
@@ -401,6 +439,30 @@ public class TestAccountConfiguration {
                 () -> abfsConf.getTokenProvider().getClass().getTypeName())));
   }
 
+  @Test
+  public void testClientAndTenantIdOptionalWhenUsingMsiTokenProvider() throws Throwable {
+      final String accountName = "account";
+      final Configuration conf = new Configuration();
+      final AbfsConfiguration abfsConf = new AbfsConfiguration(conf, accountName);
+
+      final String accountNameSuffix = "." + abfsConf.getAccountName();
+      String authKey = FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME + accountNameSuffix;
+      String providerClassKey = "";
+      String providerClassValue = "";
+
+      providerClassKey = FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME + accountNameSuffix;
+      providerClassValue = TEST_OAUTH_MSI_TOKEN_PROVIDER_CLASS_CONFIG;
+
+      abfsConf.set(authKey, AuthType.OAuth.toString());
+      abfsConf.set(providerClassKey, providerClassValue);
+
+      AccessTokenProvider tokenProviderTypeName = abfsConf.getTokenProvider();
+      // Test that we managed to instantiate an MsiTokenProvider without having to define the tenant and client ID.
+      // Those 2 fields are optional as they can automatically be determined by the Azure Metadata service when
+      // running on an Azure VM.
+      Assertions.assertThat(tokenProviderTypeName).describedAs("Token Provider Should be MsiTokenProvider").isInstanceOf(MsiTokenProvider.class);
+  }
+
   public void testGlobalAndAccountOAuthPrecedence(AbfsConfiguration abfsConf,
       AuthType globalAuthType,
       AuthType accountSpecificAuthType)
@@ -408,13 +470,13 @@ public class TestAccountConfiguration {
     if (globalAuthType == null) {
       unsetAuthConfig(abfsConf, false);
     } else {
-      setAuthConfig(abfsConf, false, globalAuthType);
+      setAuthConfig(abfsConf, false, globalAuthType, TEST_OAUTH_PROVIDER_CLASS_CONFIG);
     }
 
     if (accountSpecificAuthType == null) {
       unsetAuthConfig(abfsConf, true);
     } else {
-      setAuthConfig(abfsConf, true, accountSpecificAuthType);
+      setAuthConfig(abfsConf, true, accountSpecificAuthType, TEST_OAUTH_PROVIDER_CLASS_CONFIG);
     }
 
     // If account specific AuthType is present, precedence is always for it.
@@ -445,7 +507,7 @@ public class TestAccountConfiguration {
 
   public void setAuthConfig(AbfsConfiguration abfsConf,
       boolean isAccountSetting,
-      AuthType authType) {
+      AuthType authType, String tokenProviderClassName) {
     final String accountNameSuffix = "." + abfsConf.getAccountName();
     String authKey = FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME
         + (isAccountSetting ? accountNameSuffix : "");
@@ -456,8 +518,9 @@ public class TestAccountConfiguration {
     case OAuth:
       providerClassKey = FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME
           + (isAccountSetting ? accountNameSuffix : "");
-      providerClassValue = TEST_OAUTH_PROVIDER_CLASS_CONFIG;
+      providerClassValue = tokenProviderClassName;
 
+      setOAuthConfigs(abfsConf, isAccountSetting, tokenProviderClassName);
       abfsConf.set(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ENDPOINT
           + ((isAccountSetting) ? accountNameSuffix : ""),
           TEST_OAUTH_ENDPOINT);
@@ -488,6 +551,45 @@ public class TestAccountConfiguration {
     abfsConf.set(providerClassKey, providerClassValue);
   }
 
+  private void setOAuthConfigs(AbfsConfiguration abfsConfig, boolean isAccountSettings, String tokenProviderClassName) {
+    String accountNameSuffix = isAccountSettings ? ("." + abfsConfig.getAccountName()) : "";
+
+    if (tokenProviderClassName.equals(ClientCredsTokenProvider.class.getName())) {
+      abfsConfig.set(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ENDPOINT + accountNameSuffix,
+          TEST_OAUTH_ENDPOINT);
+      abfsConfig.set(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID + accountNameSuffix,
+          TEST_CLIENT_ID);
+      abfsConfig.set(FS_AZURE_ACCOUNT_OAUTH_CLIENT_SECRET + accountNameSuffix,
+          TEST_CLIENT_SECRET);
+    }
+    if (tokenProviderClassName.equals(UserPasswordTokenProvider.class.getName())) {
+      abfsConfig.set(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ENDPOINT + accountNameSuffix,
+          TEST_OAUTH_ENDPOINT);
+      abfsConfig.set(FS_AZURE_ACCOUNT_OAUTH_USER_NAME + accountNameSuffix,
+          TEST_USER_NAME);
+      abfsConfig.set(FS_AZURE_ACCOUNT_OAUTH_USER_PASSWORD + accountNameSuffix,
+          TEST_USER_PASSWORD);
+    }
+    if (tokenProviderClassName.equals(MsiTokenProvider.class.getName())) {
+      abfsConfig.set(FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT + accountNameSuffix,
+          TEST_MSI_TENANT);
+      abfsConfig.set(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID + accountNameSuffix,
+          TEST_CLIENT_ID);
+    }
+    if (tokenProviderClassName.equals(RefreshTokenBasedTokenProvider.class.getName())) {
+      abfsConfig.set(FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN + accountNameSuffix,
+          TEST_REFRESH_TOKEN);
+      abfsConfig.set(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID + accountNameSuffix,
+          TEST_CLIENT_ID);
+    }
+    if (tokenProviderClassName.equals(WorkloadIdentityTokenProvider.class.getName())) {
+      abfsConfig.set(FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT + accountNameSuffix,
+          TEST_MSI_TENANT);
+      abfsConfig.set(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID + accountNameSuffix,
+          TEST_CLIENT_ID);
+    }
+  }
+
   private void unsetAuthConfig(AbfsConfiguration abfsConf, boolean isAccountSettings) {
     String accountNameSuffix =
         isAccountSettings ? ("." + abfsConf.getAccountName()) : "";
@@ -499,6 +601,10 @@ public class TestAccountConfiguration {
     abfsConf.unset(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ENDPOINT + accountNameSuffix);
     abfsConf.unset(FS_AZURE_ACCOUNT_OAUTH_CLIENT_ID + accountNameSuffix);
     abfsConf.unset(FS_AZURE_ACCOUNT_OAUTH_CLIENT_SECRET + accountNameSuffix);
+    abfsConf.unset(FS_AZURE_ACCOUNT_OAUTH_USER_NAME + accountNameSuffix);
+    abfsConf.unset(FS_AZURE_ACCOUNT_OAUTH_USER_PASSWORD + accountNameSuffix);
+    abfsConf.unset(FS_AZURE_ACCOUNT_OAUTH_MSI_TENANT + accountNameSuffix);
+    abfsConf.unset(FS_AZURE_ACCOUNT_OAUTH_REFRESH_TOKEN + accountNameSuffix);
   }
 
 }

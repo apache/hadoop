@@ -169,6 +169,10 @@
           <artifactId>commons-collections</artifactId>
         </exclusion>
         <exclusion>
+          <groupId>org.apache.commons</groupId>
+          <artifactId>commons-collections4</artifactId>
+        </exclusion>
+        <exclusion>
           <groupId>commons-io</groupId>
           <artifactId>commons-io</artifactId>
         </exclusion>
@@ -193,8 +197,12 @@
           <artifactId>slf4j-log4j12</artifactId>
         </exclusion>
         <exclusion>
-          <groupId>log4j</groupId>
-          <artifactId>log4j</artifactId>
+          <groupId>org.slf4j</groupId>
+          <artifactId>slf4j-reload4j</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>ch.qos.reload4j</groupId>
+          <artifactId>reload4j</artifactId>
         </exclusion>
         <exclusion>
           <groupId>com.fasterxml.jackson.core</groupId>
@@ -693,7 +701,7 @@
                       <exclude>commons-logging:commons-logging</exclude>
                       <exclude>junit:junit</exclude>
                       <exclude>com.google.code.findbugs:jsr305</exclude>
-                      <exclude>log4j:log4j</exclude>
+                      <exclude>ch.qos.reload4j:reload4j</exclude>
                       <exclude>org.eclipse.jetty.websocket:websocket-common</exclude>
                       <exclude>org.eclipse.jetty.websocket:websocket-api</exclude>
                       <!-- We need a filter that matches just those things that are included in the above artiacts -->

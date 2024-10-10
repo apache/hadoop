@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint;
 
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueuePath;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
@@ -416,10 +417,14 @@ public class TestPlacementProcessor {
     stopRM();
     CapacitySchedulerConfiguration csConf =
         new CapacitySchedulerConfiguration();
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
-        new String[] {"a", "b"});
-    csConf.setCapacity(CapacitySchedulerConfiguration.ROOT + ".a", 15.0f);
-    csConf.setCapacity(CapacitySchedulerConfiguration.ROOT + ".b", 85.0f);
+
+    QueuePath root = new QueuePath(CapacitySchedulerConfiguration.ROOT);
+    QueuePath queueA = new QueuePath(CapacitySchedulerConfiguration.ROOT + ".a");
+    QueuePath queueB = new QueuePath(CapacitySchedulerConfiguration.ROOT + ".b");
+
+    csConf.setQueues(root, new String[] {"a", "b"});
+    csConf.setCapacity(queueA, 15.0f);
+    csConf.setCapacity(queueB, 85.0f);
     YarnConfiguration conf = new YarnConfiguration(csConf);
     conf.setClass(YarnConfiguration.RM_SCHEDULER, CapacityScheduler.class,
         ResourceScheduler.class);
@@ -891,7 +896,7 @@ public class TestPlacementProcessor {
     for (MockNM nm : nodes) {
       Map<String, Long> nmTags = atm
           .getAllocationTagsWithCount(nm.getNodeId());
-      StringBuffer sb = new StringBuffer();
+      StringBuilder sb = new StringBuilder();
       if (nmTags != null) {
         nmTags.forEach((tag, count) ->
             sb.append(tag + "(" + count + "),"));

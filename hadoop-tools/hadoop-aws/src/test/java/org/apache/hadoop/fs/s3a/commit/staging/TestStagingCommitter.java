@@ -158,7 +158,7 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
     this.errors = new StagingTestBase.ClientErrors();
     this.mockClient = newMockS3Client(results, errors);
     this.mockFS = createAndBindMockFSInstance(jobConf,
-        Pair.of(results, errors));
+        Pair.of(results, errors), mockClient);
     this.wrapperFS = lookupWrapperFS(jobConf);
     // and bind the FS
     wrapperFS.setAmazonS3Client(mockClient);
@@ -200,6 +200,15 @@ public class TestStagingCommitter extends StagingTestBase.MiniDFSTest {
 
   private Configuration newConfig() {
     return new Configuration(false);
+  }
+
+  @Test
+  public void testMockFSclientWiredUp() throws Throwable {
+    final S3Client client = mockFS.getS3AInternals().getAmazonS3Client("test");
+    Assertions.assertThat(client)
+        .describedAs("S3Client from FS")
+        .isNotNull()
+        .isSameAs(mockClient);
   }
 
   @Test

@@ -38,6 +38,7 @@ import java.io.OutputStreamWriter;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -133,17 +134,17 @@ public class TestYarnCLI {
       ApplicationCLI cli = createAndGetAppCLI();
       ApplicationId applicationId = ApplicationId.newInstance(1234, 5);
       Map<String, Long> resourceSecondsMap = new HashMap<>();
-      Map<String, Long> preemptedResoureSecondsMap = new HashMap<>();
+      Map<String, Long> preemptedResourceSecondsMap = new HashMap<>();
       resourceSecondsMap.put(ResourceInformation.MEMORY_MB.getName(), 123456L);
       resourceSecondsMap.put(ResourceInformation.VCORES.getName(), 4567L);
-      preemptedResoureSecondsMap
+      preemptedResourceSecondsMap
           .put(ResourceInformation.MEMORY_MB.getName(), 1111L);
-      preemptedResoureSecondsMap
+      preemptedResourceSecondsMap
           .put(ResourceInformation.VCORES.getName(), 2222L);
       ApplicationResourceUsageReport usageReport = i == 0 ? null :
           ApplicationResourceUsageReport
               .newInstance(2, 0, null, null, null, resourceSecondsMap, 0, 0,
-                  preemptedResoureSecondsMap);
+                  preemptedResourceSecondsMap);
       ApplicationReport newApplicationReport = ApplicationReport.newInstance(
           applicationId, ApplicationAttemptId.newInstance(applicationId, 1),
           "user", "queue", "appname", "host", 124, null,
@@ -364,7 +365,7 @@ public class TestYarnCLI {
     verify(client).getContainers(attemptId);
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     OutputStreamWriter stream =
-        new OutputStreamWriter(baos, "UTF-8");
+        new OutputStreamWriter(baos, StandardCharsets.UTF_8);
     PrintWriter pw = new PrintWriter(stream);
     pw.println("Total number of containers :3");
     pw.printf(ApplicationCLI.CONTAINER_PATTERN, "Container-Id", "Start Time",

@@ -92,7 +92,7 @@ public class TestConcatenatedCompressedInput {
 
   private static LineReader makeStream(String str) throws IOException {
     return new LineReader(new ByteArrayInputStream(
-            str.getBytes("UTF-8")), defaultConf);
+            str.getBytes(StandardCharsets.UTF_8)), defaultConf);
   }
 
   private static void writeFile(FileSystem fs, Path name,
@@ -677,7 +677,7 @@ public class TestConcatenatedCompressedInput {
   }
 
   private static String unquote(String in) {
-    StringBuffer result = new StringBuffer();
+    StringBuilder result = new StringBuilder();
     for(int i=0; i < in.length(); ++i) {
       char ch = in.charAt(i);
       if (ch == '\\') {

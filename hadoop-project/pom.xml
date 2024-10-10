@@ -50,7 +50,7 @@
     <!-- Version number for xerces used by JDiff -->
     <xerces.jdiff.version>2.12.2</xerces.jdiff.version>
 
-    <kafka.version>2.8.2</kafka.version>
+    <kafka.version>3.4.0</kafka.version>
 
     <commons-daemon.version>1.0.13</commons-daemon.version>
 
@@ -77,8 +77,8 @@
     <httpcore.version>4.4.13</httpcore.version>
 
     <!-- SLF4J/LOG4J version -->
-    <slf4j.version>1.7.30</slf4j.version>
-    <log4j.version>1.2.17</log4j.version>
+    <slf4j.version>1.7.36</slf4j.version>
+    <reload4j.version>1.2.22</reload4j.version>
     <log4j2.version>2.17.1</log4j2.version>
 
     <!-- com.google.re2j version -->
@@ -93,25 +93,25 @@
     <!-- Protobuf scope in other modules which explicitly import the libarary -->
     <transient.protobuf2.scope>${common.protobuf2.scope}</transient.protobuf2.scope>
     <!-- ProtocolBuffer version, actually used in Hadoop -->
-    <hadoop.protobuf.version>3.7.1</hadoop.protobuf.version>
+    <hadoop.protobuf.version>3.23.4</hadoop.protobuf.version>
     <protoc.path>${env.HADOOP_PROTOC_PATH}</protoc.path>
 
-    <hadoop-thirdparty.version>1.1.1</hadoop-thirdparty.version>
+    <hadoop-thirdparty.version>1.3.0</hadoop-thirdparty.version>
     <hadoop-thirdparty-protobuf.version>${hadoop-thirdparty.version}</hadoop-thirdparty-protobuf.version>
     <hadoop-thirdparty-guava.version>${hadoop-thirdparty.version}</hadoop-thirdparty-guava.version>
     <hadoop-thirdparty-shaded-prefix>org.apache.hadoop.thirdparty</hadoop-thirdparty-shaded-prefix>
     <hadoop-thirdparty-shaded-protobuf-prefix>${hadoop-thirdparty-shaded-prefix}.protobuf</hadoop-thirdparty-shaded-protobuf-prefix>
     <hadoop-thirdparty-shaded-guava-prefix>${hadoop-thirdparty-shaded-prefix}.com.google.common</hadoop-thirdparty-shaded-guava-prefix>
 
-    <zookeeper.version>3.8.3</zookeeper.version>
+    <zookeeper.version>3.8.4</zookeeper.version>
     <curator.version>5.2.0</curator.version>
     <findbugs.version>3.0.5</findbugs.version>
-    <dnsjava.version>3.4.0</dnsjava.version>
+    <dnsjava.version>3.6.1</dnsjava.version>
 
     <guava.version>27.0-jre</guava.version>
-    <guice.version>4.2.3</guice.version>
+    <guice.version>5.1.0</guice.version>
 
-    <bouncycastle.version>1.70</bouncycastle.version>
+    <bouncycastle.version>1.78.1</bouncycastle.version>
 
     <!-- Required for testing LDAP integration -->
     <apacheds.version>2.0.0.AM26</apacheds.version>
@@ -121,19 +121,20 @@
     <commons-beanutils.version>1.9.4</commons-beanutils.version>
     <commons-cli.version>1.5.0</commons-cli.version>
     <commons-codec.version>1.15</commons-codec.version>
-    <commons-collections.version>3.2.2</commons-collections.version>
-    <commons-compress.version>1.24.0</commons-compress.version>
+    <commons-collections4.version>4.4</commons-collections4.version>
+    <commons-compress.version>1.26.1</commons-compress.version>
     <commons-csv.version>1.9.0</commons-csv.version>
-    <commons-io.version>2.14.0</commons-io.version>
+    <commons-io.version>2.16.1</commons-io.version>
     <commons-lang3.version>3.12.0</commons-lang3.version>
-    <commons-logging.version>1.1.3</commons-logging.version>
+    <commons-logging.version>1.2</commons-logging.version>
     <commons-math3.version>3.6.1</commons-math3.version>
     <commons-net.version>3.9.0</commons-net.version>
     <commons-text.version>1.10.0</commons-text.version>
 
     <kerby.version>2.0.3</kerby.version>
-    <jcache.version>1.0-alpha-1</jcache.version>
-    <ehcache.version>3.3.1</ehcache.version>
+    <ehcache.version>3.8.2</ehcache.version>
+    <cache.api.version>1.1.1</cache.api.version>
+    <caffeine.version>2.9.3</caffeine.version>
     <hikari.version>4.0.3</hikari.version>
     <derby.version>10.14.2.0</derby.version>
     <mssql.version>6.2.1.jre7</mssql.version>
@@ -157,7 +158,6 @@
 
     <!-- define the Java language version used by the compiler -->
     <javac.version>1.8</javac.version>
-    <javadoc.skip.jdk11>false</javadoc.skip.jdk11>
 
     <!-- The java version enforced by the maven enforcer -->
     <!-- more complex patterns can be used here, such as
@@ -167,8 +167,14 @@
     <enforced.java.version>[${javac.version},)</enforced.java.version>
     <enforced.maven.version>[3.3.0,)</enforced.maven.version>
 
+    <extraJavaTestArgs>
+      -XX:+IgnoreUnrecognizedVMOptions
+      --add-opens=java.base/java.util.zip=ALL-UNNAMED
+      --add-opens=java.base/sun.security.util=ALL-UNNAMED
+      --add-opens=java.base/sun.security.x509=ALL-UNNAMED
+    </extraJavaTestArgs>
     <!-- Plugin versions and config -->
-    <maven-surefire-plugin.argLine>-Xmx2048m -XX:+HeapDumpOnOutOfMemoryError</maven-surefire-plugin.argLine>
+    <maven-surefire-plugin.argLine>-Xmx2048m -XX:+HeapDumpOnOutOfMemoryError ${extraJavaTestArgs}</maven-surefire-plugin.argLine>
     <maven-surefire-plugin.version>3.0.0-M1</maven-surefire-plugin.version>
     <maven-surefire-report-plugin.version>${maven-surefire-plugin.version}</maven-surefire-report-plugin.version>
     <maven-failsafe-plugin.version>${maven-surefire-plugin.version}</maven-failsafe-plugin.version>
@@ -176,9 +182,9 @@
     <maven-clean-plugin.version>3.1.0</maven-clean-plugin.version>
     <maven-install-plugin.version>2.5.1</maven-install-plugin.version>
     <maven-resources-plugin.version>2.6</maven-resources-plugin.version>
-    <maven-shade-plugin.version>3.4.1</maven-shade-plugin.version>
+    <maven-shade-plugin.version>3.6.0</maven-shade-plugin.version>
     <maven-jar-plugin.version>2.5</maven-jar-plugin.version>
-    <maven-war-plugin.version>3.1.0</maven-war-plugin.version>
+    <maven-war-plugin.version>3.4.0</maven-war-plugin.version>
     <maven-source-plugin.version>2.3</maven-source-plugin.version>
     <maven-pdf-plugin.version>1.2</maven-pdf-plugin.version>
     <maven-remote-resources-plugin.version>1.5</maven-remote-resources-plugin.version>
@@ -186,8 +192,8 @@
     <exec-maven-plugin.version>1.3.1</exec-maven-plugin.version>
     <make-maven-plugin.version>1.0-beta-1</make-maven-plugin.version>
     <surefire.fork.timeout>900</surefire.fork.timeout>
-    <aws-java-sdk.version>1.12.599</aws-java-sdk.version>
-    <aws-java-sdk-v2.version>2.23.5</aws-java-sdk-v2.version>
+    <aws-java-sdk.version>1.12.720</aws-java-sdk.version>
+    <aws-java-sdk-v2.version>2.25.53</aws-java-sdk-v2.version>
     <aws.eventstream.version>1.0.1</aws.eventstream.version>
     <hsqldb.version>2.7.1</hsqldb.version>
     <frontend-maven-plugin.version>1.11.2</frontend-maven-plugin.version>
@@ -203,8 +209,7 @@
     <swagger-annotations-version>1.5.4</swagger-annotations-version>
     <snakeyaml.version>2.0</snakeyaml.version>
     <sshd.version>2.11.0</sshd.version>
-    <hbase.one.version>1.7.1</hbase.one.version>
-    <hbase.two.version>2.2.4</hbase.two.version>
+    <hbase.version>2.5.8-hadoop3</hbase.version>
     <junit.version>4.13.2</junit.version>
     <junit.jupiter.version>5.8.2</junit.jupiter.version>
     <junit.vintage.version>5.8.2</junit.vintage.version>
@@ -213,10 +218,10 @@
     <jline.version>3.9.0</jline.version>
     <powermock.version>1.5.6</powermock.version>
     <solr.version>8.11.2</solr.version>
-    <openssl-wildfly.version>1.1.3.Final</openssl-wildfly.version>
+    <openssl-wildfly.version>2.1.4.Final</openssl-wildfly.version>
     <jsonschema2pojo.version>1.0.2</jsonschema2pojo.version>
     <woodstox.version>5.4.0</woodstox.version>
-    <nimbus-jose-jwt.version>9.31</nimbus-jose-jwt.version>
+    <nimbus-jose-jwt.version>9.37.2</nimbus-jose-jwt.version>
     <nodejs.version>v12.22.1</nodejs.version>
     <yarnpkg.version>v1.22.5</yarnpkg.version>
     <apache-ant.version>1.10.13</apache-ant.version>
@@ -250,7 +255,7 @@
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop.thirdparty</groupId>
-        <artifactId>hadoop-shaded-protobuf_3_7</artifactId>
+        <artifactId>hadoop-shaded-protobuf_3_25</artifactId>
         <version>${hadoop-thirdparty-protobuf.version}</version>
       </dependency>
       <dependency>
@@ -310,12 +315,32 @@
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-common</artifactId>
         <version>${hadoop.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-reload4j</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-common</artifactId>
         <version>${hadoop.version}</version>
         <type>test-jar</type>
+        <exclusions>
+          <exclusion>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>commons-collections</groupId>
+            <artifactId>commons-collections</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
@@ -402,6 +427,12 @@
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-mapreduce-client-core</artifactId>
         <version>${hadoop.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-reload4j</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
 
       <dependency>
@@ -415,6 +446,12 @@
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-mapreduce-client-jobclient</artifactId>
         <version>${hadoop.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-reload4j</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
 
       <dependency>
@@ -472,6 +509,11 @@
         <artifactId>hadoop-yarn-common</artifactId>
         <version>${hadoop.version}</version>
         <type>test-jar</type>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-yarn-server-timelineservice-hbase-server-2</artifactId>
+        <version>${hadoop.version}</version>
       </dependency>
 
       <dependency>
@@ -774,6 +816,12 @@
         <groupId>org.apache.httpcomponents</groupId>
         <artifactId>httpclient</artifactId>
         <version>${httpclient.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>commons-collections</groupId>
+            <artifactId>commons-collections</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.apache.httpcomponents</groupId>
@@ -902,7 +950,7 @@
       <dependency>
         <groupId>com.github.pjfanning</groupId>
         <artifactId>jersey-json</artifactId>
-        <version>1.20</version>
+        <version>1.22.0</version>
         <exclusions>
           <exclusion>
             <groupId>com.fasterxml.jackson.core</groupId>
@@ -1073,9 +1121,9 @@
         </exclusions>
       </dependency>
       <dependency>
-        <groupId>log4j</groupId>
-        <artifactId>log4j</artifactId>
-        <version>${log4j.version}</version>
+        <groupId>ch.qos.reload4j</groupId>
+        <artifactId>reload4j</artifactId>
+        <version>${reload4j.version}</version>
         <exclusions>
           <exclusion>
             <groupId>com.sun.jdmk</groupId>
@@ -1120,11 +1168,6 @@
             <artifactId>*</artifactId>
           </exclusion>
         </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>software.amazon.eventstream</groupId>
-        <artifactId>eventstream</artifactId>
-        <version>${aws.eventstream.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.mina</groupId>
@@ -1209,9 +1252,9 @@
         </exclusions>
       </dependency>
       <dependency>
-        <groupId>commons-collections</groupId>
-        <artifactId>commons-collections</artifactId>
-        <version>${commons-collections.version}</version>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-collections4</artifactId>
+        <version>${commons-collections4.version}</version>
       </dependency>
       <dependency>
         <groupId>commons-beanutils</groupId>
@@ -1221,7 +1264,7 @@
       <dependency>
         <groupId>org.apache.commons</groupId>
         <artifactId>commons-configuration2</artifactId>
-        <version>2.8.0</version>
+        <version>2.10.1</version>
         <exclusions>
           <exclusion>
             <groupId>org.apache.commons</groupId>
@@ -1246,7 +1289,7 @@
       </dependency>
       <dependency>
         <groupId>org.slf4j</groupId>
-        <artifactId>slf4j-log4j12</artifactId>
+        <artifactId>slf4j-reload4j</artifactId>
         <version>${slf4j.version}</version>
       </dependency>
       <dependency>
@@ -1298,6 +1341,12 @@
         <groupId>org.mockito</groupId>
         <artifactId>mockito-core</artifactId>
         <version>2.28.2</version>
+        <exclusions>
+          <exclusion>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.mockito</groupId>
@@ -1406,15 +1455,11 @@
           </exclusion>
           <exclusion>
             <groupId>io.netty</groupId>
-            <artifactId>netty-all</artifactId>
+            <artifactId>*</artifactId>
           </exclusion>
           <exclusion>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-handler</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-transport-native-epoll</artifactId>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
           </exclusion>
           <exclusion>
             <groupId>commons-collections</groupId>
@@ -1433,6 +1478,10 @@
             <artifactId>kerby-config</artifactId>
           </exclusion>
           <exclusion>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+          </exclusion>
+          <exclusion>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
           </exclusion>
@@ -1441,16 +1490,16 @@
             <artifactId>slf4j-log4j12</artifactId>
           </exclusion>
           <exclusion>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-reload4j</artifactId>
+          </exclusion>
+          <exclusion>
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-client</artifactId>
           </exclusion>
           <exclusion>
             <groupId>ch.qos.logback</groupId>
-            <artifactId>logback-core</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>ch.qos.logback</groupId>
-            <artifactId>logback-classic</artifactId>
+            <artifactId>*</artifactId>
           </exclusion>
         </exclusions>
       </dependency>
@@ -1470,15 +1519,7 @@
           </exclusion>
           <exclusion>
             <groupId>io.netty</groupId>
-            <artifactId>netty-all</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-handler</artifactId>
-          </exclusion>
-          <exclusion>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-transport-native-epoll</artifactId>
+            <artifactId>*</artifactId>
           </exclusion>
           <exclusion>
             <groupId>org.eclipse.jetty</groupId>
@@ -1491,6 +1532,14 @@
           <exclusion>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
           </exclusion>
         </exclusions>
       </dependency>
@@ -1551,6 +1600,12 @@
         <groupId>${leveldbjni.group}</groupId>
         <artifactId>leveldbjni-all</artifactId>
         <version>1.8</version>
+        <exclusions>
+          <exclusion>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.fusesource.hawtjni</groupId>
@@ -1651,6 +1706,10 @@
            <groupId>org.slf4j</groupId>
            <artifactId>slf4j-api</artifactId>
          </exclusion>
+         <exclusion>
+           <groupId>log4j</groupId>
+           <artifactId>log4j</artifactId>
+         </exclusion>
        </exclusions>
      </dependency>
      <dependency>
@@ -1718,12 +1777,12 @@
      </dependency>
      <dependency>
        <groupId>org.bouncycastle</groupId>
-       <artifactId>bcprov-jdk15on</artifactId>
+       <artifactId>bcprov-jdk18on</artifactId>
        <version>${bouncycastle.version}</version>
      </dependency>
       <dependency>
         <groupId>org.bouncycastle</groupId>
-        <artifactId>bcpkix-jdk15on</artifactId>
+        <artifactId>bcpkix-jdk18on</artifactId>
         <version>${bouncycastle.version}</version>
       </dependency>
 
@@ -1735,7 +1794,7 @@
           <exclusions>
           <exclusion>
             <groupId>org.bouncycastle</groupId>
-            <artifactId>bcprov-jdk15on</artifactId>
+            <artifactId>bcprov-jdk18on</artifactId>
           </exclusion>
         </exclusions>
       </dependency>
@@ -1761,8 +1820,20 @@
             <groupId>jdk.tools</groupId>
           </exclusion>
           <exclusion>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+          </exclusion>
+          <exclusion>
             <groupId>org.apache.yetus</groupId>
             <artifactId>audience-annotations</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.core</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java</artifactId>
           </exclusion>
         </exclusions>
       </dependency>
@@ -1772,6 +1843,16 @@
         <version>${hbase.version}</version>
         <scope>test</scope>
         <classifier>tests</classifier>
+        <exclusions>
+          <exclusion>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.apache.hbase</groupId>
@@ -1787,6 +1868,10 @@
             <groupId>org.apache.yetus</groupId>
             <artifactId>audience-annotations</artifactId>
           </exclusion>
+          <exclusion>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java</artifactId>
+          </exclusion>
         </exclusions>
       </dependency>
       <dependency>
@@ -1794,6 +1879,10 @@
         <artifactId>hbase-server</artifactId>
         <version>${hbase.version}</version>
         <exclusions>
+          <exclusion>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+          </exclusion>
           <exclusion>
             <groupId>org.osgi</groupId>
             <artifactId>org.osgi.core</artifactId>
@@ -1814,6 +1903,14 @@
             <groupId>org.apache.yetus</groupId>
             <artifactId>audience-annotations</artifactId>
           </exclusion>
+          <exclusion>
+            <groupId>com.google.errorprone</groupId>
+            <artifactId>error_prone_annotations</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.checkerframework</groupId>
+            <artifactId>checker-qual</artifactId>
+          </exclusion>
         </exclusions>
       </dependency>
       <dependency>
@@ -1822,6 +1919,16 @@
         <version>${hbase.version}</version>
         <scope>test</scope>
         <classifier>tests</classifier>
+        <exclusions>
+          <exclusion>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.apache.hbase</groupId>
@@ -1846,6 +1953,14 @@
             <artifactId>jdk.tools</artifactId>
             <groupId>jdk.tools</groupId>
           </exclusion>
+          <exclusion>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+          </exclusion>
         </exclusions>
         </dependency>
         <dependency>
@@ -1865,19 +1980,36 @@
           <version>${kerby.version}</version>
         </dependency>
         <dependency>
-          <groupId>org.apache.geronimo.specs</groupId>
-          <artifactId>geronimo-jcache_1.0_spec</artifactId>
-          <version>${jcache.version}</version>
+          <groupId>org.apache.kerby</groupId>
+          <artifactId>kerb-util</artifactId>
+          <version>${kerby.version}</version>
         </dependency>
         <dependency>
           <groupId>org.ehcache</groupId>
           <artifactId>ehcache</artifactId>
           <version>${ehcache.version}</version>
+          <exclusions>
+            <exclusion>
+              <groupId>org.slf4j</groupId>
+              <artifactId>slf4j-api</artifactId>
+            </exclusion>
+          </exclusions>
+        </dependency>
+        <dependency>
+          <groupId>com.github.ben-manes.caffeine</groupId>
+          <artifactId>caffeine</artifactId>
+          <version>${caffeine.version}</version>
         </dependency>
         <dependency>
           <groupId>com.zaxxer</groupId>
           <artifactId>HikariCP</artifactId>
           <version>${hikari.version}</version>
+          <exclusions>
+            <exclusion>
+              <groupId>org.slf4j</groupId>
+              <artifactId>slf4j-api</artifactId>
+            </exclusion>
+          </exclusions>
         </dependency>
         <dependency>
           <groupId>org.apache.derby</groupId>
@@ -1939,6 +2071,12 @@
          <groupId>org.jsonschema2pojo</groupId>
          <artifactId>jsonschema2pojo-core</artifactId>
          <version>${jsonschema2pojo.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.xerial.snappy</groupId>
@@ -1980,6 +2118,11 @@
         <groupId>org.apache.logging.log4j</groupId>
         <artifactId>log4j-web</artifactId>
         <version>${log4j2.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>javax.cache</groupId>
+        <artifactId>cache-api</artifactId>
+        <version>${cache.api.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
@@ -2189,7 +2332,7 @@
           <executions>
             <execution>
               <id>replace-generated-sources</id>
-              <phase>process-sources</phase>
+              <phase>generate-sources</phase>
               <goals>
                 <goal>replace</goal>
               </goals>
@@ -2209,7 +2352,7 @@
             </execution>
             <execution>
               <id>replace-generated-test-sources</id>
-              <phase>process-test-resources</phase>
+              <phase>generate-test-resources</phase>
               <goals>
                 <goal>replace</goal>
               </goals>
@@ -2229,7 +2372,7 @@
             </execution>
             <execution>
               <id>replace-sources</id>
-              <phase>process-sources</phase>
+              <phase>generate-sources</phase>
               <goals>
                 <goal>replace</goal>
               </goals>
@@ -2249,7 +2392,7 @@
             </execution>
             <execution>
               <id>replace-test-sources</id>
-              <phase>process-test-sources</phase>
+              <phase>generate-test-sources</phase>
               <goals>
                 <goal>replace</goal>
               </goals>
@@ -2381,14 +2524,18 @@
                     <exclude>com.sun.jersey.jersey-test-framework:*</exclude>
                     <exclude>com.google.inject:guice</exclude>
                     <exclude>org.ow2.asm:asm</exclude>
+
+                    <exclude>org.slf4j:slf4j-log4j12</exclude>
+                    <exclude>log4j:log4j</exclude>
+                    <exclude>commons-collections:commons-collections</exclude>
                   </excludes>
                   <includes>
                     <!-- for JDK 8 support -->
                     <include>cglib:cglib:3.2.0</include>
-                    <include>com.google.inject:guice:4.0</include>
+                    <include>com.google.inject:guice:5.1.0</include>
                     <include>com.sun.jersey:jersey-core:1.19.4</include>
                     <include>com.sun.jersey:jersey-servlet:1.19.4</include>
-                    <include>com.github.pjfanning:jersey-json:1.20</include>
+                    <include>com.github.pjfanning:jersey-json:1.22.0</include>
                     <include>com.sun.jersey:jersey-server:1.19.4</include>
                     <include>com.sun.jersey:jersey-client:1.19.4</include>
                     <include>com.sun.jersey:jersey-grizzly2:1.19.4</include>
@@ -2577,33 +2724,6 @@
         </plugins>
       </build>
     </profile>
-    <!-- The profile for building against HBase 1.2.x
-     This is the default.
-     -->
-    <profile>
-      <id>hbase1</id>
-      <activation>
-        <property>
-          <name>!hbase.profile</name>
-        </property>
-      </activation>
-      <properties>
-        <hbase.version>${hbase.one.version}</hbase.version>
-        <hbase-compatible-hadoop.version>2.8.5</hbase-compatible-hadoop.version>
-        <hbase-compatible-guava.version>12.0.1</hbase-compatible-guava.version>
-        <hbase-compatible-guice.version>4.0</hbase-compatible-guice.version>
-        <hbase-server-artifactid>hadoop-yarn-server-timelineservice-hbase-server-1</hbase-server-artifactid>
-      </properties>
-      <dependencyManagement>
-        <dependencies>
-          <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>${hbase-server-artifactid}</artifactId>
-            <version>${hadoop.version}</version>
-          </dependency>
-        </dependencies>
-      </dependencyManagement>
-    </profile>
     <!-- The profile for building against HBase 2.0.0.
      Activate using: mvn -Dhbase.profile=2.0
     -->
@@ -2616,44 +2736,12 @@
         </property>
       </activation>
       <properties>
-        <hbase.version>${hbase.two.version}</hbase.version>
-        <hbase-compatible-hadoop.version>2.8.5</hbase-compatible-hadoop.version>
-        <hbase-compatible-guava.version>11.0.2</hbase-compatible-guava.version>
-        <hbase-server-artifactid>hadoop-yarn-server-timelineservice-hbase-server-2</hbase-server-artifactid>
-        <hbase-compatible-guice.version>4.0</hbase-compatible-guice.version>
-        <hbase-compatible-jetty.version>9.3.27.v20190418</hbase-compatible-jetty.version>
       </properties>
       <dependencyManagement>
         <dependencies>
-          <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>${hbase-server-artifactid}</artifactId>
-            <version>${hadoop.version}</version>
-          </dependency>
+
         </dependencies>
       </dependencyManagement>
-    </profile>
-    <profile>
-      <id>jdk11</id>
-      <activation>
-        <jdk>[11,)</jdk>
-      </activation>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-javadoc-plugin</artifactId>
-            <configuration>
-              <skip>${javadoc.skip.jdk11}</skip>
-              <detectJavaApiLink>false</detectJavaApiLink>
-              <additionalOptions>
-                <!-- TODO: remove -html4 option to generate html5 docs when we stop supporting JDK8 -->
-                <additionalOption>-html4</additionalOption>
-              </additionalOptions>
-            </configuration>
-          </plugin>
-        </plugins>
-      </build>
     </profile>
   </profiles>
 

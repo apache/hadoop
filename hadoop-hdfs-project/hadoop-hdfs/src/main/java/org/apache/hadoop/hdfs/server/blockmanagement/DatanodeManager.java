@@ -678,7 +678,15 @@ public class DatanodeManager {
     Consumer<List<DatanodeInfoWithStorage>> secondarySort = null;
     if (readConsiderStorageType) {
       Comparator<DatanodeInfoWithStorage> comp =
-          Comparator.comparing(DatanodeInfoWithStorage::getStorageType);
+          Comparator.comparing(DatanodeInfoWithStorage::getStorageType, (s1, s2) -> {
+            if (s1 == null) {
+              return (s2 == null) ? 0 : -1;
+            } else if (s2 == null) {
+              return 1;
+            } else {
+              return s1.compareTo(s2);
+            }
+          });
       secondarySort = list -> Collections.sort(list, comp);
     }
     if (readConsiderLoad) {
@@ -1729,12 +1737,13 @@ public class DatanodeManager {
             " where it is not under construction.");
       }
       final DatanodeStorageInfo[] storages = uc.getExpectedStorageLocations();
-      // Skip stale nodes during recovery
-      final List<DatanodeStorageInfo> recoveryLocations =
+      // Skip stale and dead nodes during recovery.
+      List<DatanodeStorageInfo> recoveryLocations =
           new ArrayList<>(storages.length);
-      final List<Integer> storageIdx = new ArrayList<>(storages.length);
+      List<Integer> storageIdx = new ArrayList<>(storages.length);
       for (int i = 0; i < storages.length; ++i) {
-        if (!storages[i].getDatanodeDescriptor().isStale(staleInterval)) {
+        if (!storages[i].getDatanodeDescriptor().isStale(staleInterval) &&
+            storages[i].getDatanodeDescriptor().isAlive()) {
           recoveryLocations.add(storages[i]);
           storageIdx.add(i);
         }
@@ -1747,20 +1756,31 @@ public class DatanodeManager {
       ExtendedBlock primaryBlock = (copyOnTruncateRecovery) ?
           new ExtendedBlock(blockPoolId, uc.getTruncateBlock()) :
           new ExtendedBlock(blockPoolId, b);
-      // If we only get 1 replica after eliminating stale nodes, choose all
+      // If we only get 1 replica after eliminating stale and dead nodes, choose all live
       // replicas for recovery and let the primary data node handle failures.
       DatanodeInfo[] recoveryInfos;
       if (recoveryLocations.size() > 1) {
         if (recoveryLocations.size() != storages.length) {
-          LOG.info("Skipped stale nodes for recovery : "
+          LOG.info("Skipped stale and dead nodes for recovery : "
               + (storages.length - recoveryLocations.size()));
         }
-        recoveryInfos = DatanodeStorageInfo.toDatanodeInfos(recoveryLocations);
       } else {
-        // If too many replicas are stale, then choose all replicas to
+        // If too many replicas are stale, then choose all live replicas to
         // participate in block recovery.
-        recoveryInfos = DatanodeStorageInfo.toDatanodeInfos(storages);
+        recoveryLocations.clear();
+        storageIdx.clear();
+        for (int i = 0; i < storages.length; ++i) {
+          if (storages[i].getDatanodeDescriptor().isAlive()) {
+            recoveryLocations.add(storages[i]);
+            storageIdx.add(i);
+          }
+        }
+        if (recoveryLocations.size() != storages.length) {
+          LOG.info("Skipped dead nodes for recovery : {}",
+              storages.length - recoveryLocations.size());
+        }
       }
+      recoveryInfos = DatanodeStorageInfo.toDatanodeInfos(recoveryLocations);
       RecoveringBlock rBlock;
       if (truncateRecovery) {
         Block recoveryBlock = (copyOnTruncateRecovery) ? b : uc.getTruncateBlock();
@@ -2043,10 +2063,13 @@ public class DatanodeManager {
     }
   }
   
-  public void markAllDatanodesStale() {
-    LOG.info("Marking all datanodes as stale");
+  public void markAllDatanodesStaleAndSetKeyUpdateIfNeed() {
+    LOG.info("Marking all datanodes as stale and schedule update block token if need.");
     synchronized (this) {
       for (DatanodeDescriptor dn : datanodeMap.values()) {
+        if (blockManager.isBlockTokenEnabled()) {
+          dn.setNeedKeyUpdate(true);
+        }
         for(DatanodeStorageInfo storage : dn.getStorageInfos()) {
           storage.markStaleAfterFailover();
         }

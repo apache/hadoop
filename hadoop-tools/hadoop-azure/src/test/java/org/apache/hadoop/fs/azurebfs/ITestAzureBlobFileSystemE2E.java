@@ -23,6 +23,9 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Random;
 
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidAbfsRestOperationException;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
@@ -32,7 +35,12 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys;
 
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_HTTP_CONNECTION_TIMEOUT;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_HTTP_READ_TIMEOUT;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_MAX_IO_RETRIES;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_TOLERATE_CONCURRENT_APPEND;
+import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.FS_AZURE_ACCOUNT_IS_HNS_ENABLED;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathDoesNotExist;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathExists;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -45,6 +53,9 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
   private static final int TEST_OFFSET = 100;
   private static final int TEST_DEFAULT_BUFFER_SIZE = 4 * 1024 * 1024;
   private static final int TEST_DEFAULT_READ_BUFFER_SIZE = 1023900;
+  private static final int TEST_STABLE_DEFAULT_CONNECTION_TIMEOUT_MS = 500;
+  private static final int TEST_STABLE_DEFAULT_READ_TIMEOUT_MS = 30000;
+  private static final int TEST_UNSTABLE_READ_TIMEOUT_MS = 1;
 
   public ITestAzureBlobFileSystemE2E() throws Exception {
     super();
@@ -228,5 +239,48 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
 
     FileStatus fileStatus = fs.getFileStatus(testFilePath);
     assertEquals(1, fileStatus.getLen());
+  }
+
+  @Test
+  public void testHttpConnectionTimeout() throws Exception {
+    // Not seeing connection failures while testing with 1 ms connection
+    // timeout itself and on repeated TPCDS runs when cluster
+    // and account are in same region, 10 ms is seen stable.
+    // 500 ms is seen stable for cross region.
+    testHttpTimeouts(TEST_STABLE_DEFAULT_CONNECTION_TIMEOUT_MS,
+            TEST_STABLE_DEFAULT_READ_TIMEOUT_MS);
+  }
+
+  @Test(expected = InvalidAbfsRestOperationException.class)
+  public void testHttpReadTimeout() throws Exception {
+    // Small read timeout is bound to make the request fail.
+    testHttpTimeouts(TEST_STABLE_DEFAULT_CONNECTION_TIMEOUT_MS,
+            TEST_UNSTABLE_READ_TIMEOUT_MS);
+  }
+
+  public void testHttpTimeouts(int connectionTimeoutMs, int readTimeoutMs)
+      throws Exception {
+    // This is to make sure File System creation goes through before network calls start failing.
+    assumeValidTestConfigPresent(this.getRawConfiguration(), FS_AZURE_ACCOUNT_IS_HNS_ENABLED);
+
+    Configuration conf = this.getRawConfiguration();
+    // set to small values that will cause timeouts
+    conf.setInt(AZURE_HTTP_CONNECTION_TIMEOUT, connectionTimeoutMs);
+    conf.setInt(AZURE_HTTP_READ_TIMEOUT, readTimeoutMs);
+    conf.setBoolean(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION,
+        false);
+    // Reduce retry count to reduce test run time
+    conf.setInt(AZURE_MAX_IO_RETRIES, 1);
+    final AzureBlobFileSystem fs = getFileSystem(conf);
+    Assertions.assertThat(
+            fs.getAbfsStore().getAbfsConfiguration().getHttpConnectionTimeout())
+        .describedAs("HTTP connection time should be picked from config")
+        .isEqualTo(connectionTimeoutMs);
+    Assertions.assertThat(
+            fs.getAbfsStore().getAbfsConfiguration().getHttpReadTimeout())
+        .describedAs("HTTP Read time should be picked from config")
+        .isEqualTo(readTimeoutMs);
+    Path testPath = path(methodName.getMethodName());
+    ContractTestUtils.createFile(fs, testPath, false, new byte[0]);
   }
 }

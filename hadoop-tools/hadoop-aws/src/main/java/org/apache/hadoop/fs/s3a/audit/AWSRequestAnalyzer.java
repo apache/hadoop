@@ -35,7 +35,6 @@ import software.amazon.awssdk.services.s3.model.ListObjectsRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import software.amazon.awssdk.services.s3.model.SelectObjectContentRequest;
 import software.amazon.awssdk.services.s3.model.UploadPartCopyRequest;
 import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 
@@ -50,7 +49,6 @@ import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_BULK_DE
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_DELETE_REQUEST;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_LIST_REQUEST;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_PUT_REQUEST;
-import static org.apache.hadoop.fs.statistics.StoreStatisticNames.OBJECT_SELECT_REQUESTS;
 import static org.apache.hadoop.fs.statistics.StoreStatisticNames.STORE_EXISTS_PROBE;
 
 /**
@@ -132,12 +130,6 @@ public class AWSRequestAnalyzer {
       return writing(OBJECT_PUT_REQUEST,
           r.key(),
           0);
-    } else if (request instanceof SelectObjectContentRequest) {
-      SelectObjectContentRequest r =
-          (SelectObjectContentRequest) request;
-      return reading(OBJECT_SELECT_REQUESTS,
-          r.key(),
-          1);
     } else if (request instanceof UploadPartRequest) {
       UploadPartRequest r = (UploadPartRequest) request;
       return writing(MULTIPART_UPLOAD_PART_PUT,

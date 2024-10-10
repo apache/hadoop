@@ -40,7 +40,7 @@ import software.amazon.awssdk.identity.spi.AwsCredentialsIdentity;
  *   fs.s3a.http.signer.class = org.apache.hadoop.fs.s3a.auth.CustomHttpSigner
  * </pre>
  */
-public final class CustomHttpSigner implements HttpSigner<AwsCredentialsIdentity> {
+public class CustomHttpSigner implements HttpSigner<AwsCredentialsIdentity> {
   private static final Logger LOG = LoggerFactory
       .getLogger(CustomHttpSigner.class);
 

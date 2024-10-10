@@ -57,7 +57,7 @@ import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
 import java.util.zip.GZIPInputStream;
 
-import org.apache.commons.collections.map.CaseInsensitiveMap;
+import org.apache.commons.collections4.map.CaseInsensitiveMap;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
@@ -1052,7 +1052,7 @@ public class FileUtil {
 
   private static void unTarUsingTar(File inFile, File untarDir,
       boolean gzipped) throws IOException {
-    StringBuffer untarCommand = new StringBuffer();
+    StringBuilder untarCommand = new StringBuilder();
     // not using canonical path here; this postpones relative path
     // resolution until bash is executed.
     final String source = "'" + FileUtil.makeSecureShellPath(inFile) + "'";
@@ -2107,5 +2107,24 @@ public class FileUtil {
     }
     LOG.info("Ignoring missing directory {}", path);
     LOG.debug("Directory missing", e);
+  }
+
+  /**
+   * Return true if the FS implements {@link WithErasureCoding} and
+   * supports EC_POLICY option in {@link Options.OpenFileOptions}.
+   * A message is logged when the filesystem does not support Erasure coding.
+   * @param fs filesystem
+   * @param path path
+   * @return true if the Filesystem supports EC
+   * @throws IOException if there is a failure in hasPathCapability call
+   */
+  public static boolean checkFSSupportsEC(FileSystem fs, Path path) throws IOException {
+    if (fs instanceof WithErasureCoding &&
+        fs.hasPathCapability(path, Options.OpenFileOptions.FS_OPTION_OPENFILE_EC_POLICY)) {
+      return true;
+    }
+    LOG.warn("Filesystem with scheme {}  does not support Erasure Coding" +
+        " at path {}", fs.getScheme(), path);
+    return false;
   }
 }

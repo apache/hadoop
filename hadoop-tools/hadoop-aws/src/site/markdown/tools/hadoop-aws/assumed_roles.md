@@ -154,6 +154,14 @@ Here are the full set of configuration options.
 </property>
 
 <property>
+  <name>fs.s3a.assumed.role.external.id</name>
+  <value>arbitrary value, specific by user in AWS console</value>
+  <description>
+    External id for assumed role, it's an optional configuration. "https://aws.amazon.com/cn/blogs/security/how-to-use-external-id-when-granting-access-to-your-aws-resources/"
+  </description>
+</property>
+
+<property>
   <name>fs.s3a.assumed.role.policy</name>
   <value/>
   <description>
@@ -585,7 +593,7 @@ If an operation fails with an `AccessDeniedException`, then the role does not ha
 the permission for the S3 Operation invoked during the call.
 
 ```
-> hadoop fs -touch  s3a://landsat-pds/a
+> hadoop fs -touch  s3a://noaa-isd-pds/a
 
 java.nio.file.AccessDeniedException: a: Writing Object on a:
  software.amazon.awssdk.services.s3.model.S3Exception: Access Denied

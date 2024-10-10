@@ -236,6 +236,9 @@ public interface HdfsClientConfigKeys {
   String DFS_DATA_TRANSFER_SASL_PROPS_RESOLVER_CLASS_KEY =
       "dfs.data.transfer.saslproperties.resolver.class";
 
+  String DFS_DATA_TRANSFER_SASL_CUSTOMIZEDCALLBACKHANDLER_CLASS_KEY
+      = "dfs.data.transfer.sasl.CustomizedCallbackHandler.class";
+
   String DFS_ENCRYPT_DATA_TRANSFER_CIPHER_KEY_BITLENGTH_KEY =
       "dfs.encrypt.data.transfer.cipher.key.bitlength";
   int    DFS_ENCRYPT_DATA_TRANSFER_CIPHER_KEY_BITLENGTH_DEFAULT = 128;
@@ -397,6 +400,8 @@ public interface HdfsClientConfigKeys {
     String RESOLVE_SERVICE_KEY = PREFIX + "resolver.impl";
     String  RESOLVE_ADDRESS_TO_FQDN = PREFIX + "resolver.useFQDN";
     boolean RESOLVE_ADDRESS_TO_FQDN_DEFAULT = true;
+    String DFS_CLIENT_LAZY_RESOLVED = PREFIX + "lazy.resolved";
+    boolean DFS_CLIENT_LAZY_RESOLVED_DEFAULT = false;
   }
 
   /** dfs.client.write configuration properties */

@@ -112,7 +112,7 @@ public class LeveldbIterator implements Iterator<Map.Entry<byte[], byte[]>>,
   }
 
   /**
-   * Returns <tt>true</tt> if the iteration has more elements.
+   * Returns <code>true</code> if the iteration has more elements.
    */
   public boolean hasNext() throws DBException {
     try {

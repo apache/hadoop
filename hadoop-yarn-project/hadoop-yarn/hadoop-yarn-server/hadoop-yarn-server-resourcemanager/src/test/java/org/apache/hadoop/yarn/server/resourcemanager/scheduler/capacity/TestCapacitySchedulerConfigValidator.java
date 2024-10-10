@@ -699,10 +699,10 @@ public class TestCapacitySchedulerConfigValidator {
       csConf.set(YarnConfiguration.RESOURCE_TYPES, ResourceInformation.GPU_URI);
     }
 
-    csConf.setQueues(CapacitySchedulerConfiguration.ROOT,
+    csConf.setQueues(new QueuePath(CapacitySchedulerConfiguration.ROOT),
         new String[]{PARENT_A, PARENT_B});
-    csConf.setQueues(PARENT_A_FULL_PATH.getFullPath(), new String[]{LEAF_A});
-    csConf.setQueues(PARENT_B_FULL_PATH.getFullPath(), new String[]{LEAF_B});
+    csConf.setQueues(PARENT_A_FULL_PATH, new String[]{LEAF_A});
+    csConf.setQueues(PARENT_B_FULL_PATH, new String[]{LEAF_B});
 
     if (useDominantRC) {
       setupGpuResourceValues();

@@ -24,15 +24,11 @@ import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperation;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationException;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
-import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -40,16 +36,16 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.security.Permission;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.verifyZeroInteractions;
@@ -57,88 +53,13 @@ import static org.mockito.Mockito.verifyZeroInteractions;
 /**
  * Tests for the CGroups handler implementation.
  */
-public class TestCGroupsHandlerImpl {
+public class TestCGroupsHandlerImpl extends TestCGroupsHandlerBase {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestCGroupsHandlerImpl.class);
 
-  private PrivilegedOperationExecutor privilegedOperationExecutorMock;
-  private String tmpPath;
-  private String hierarchy;
-  private CGroupsHandler.CGroupController controller;
-  private String controllerPath;
-
-  @Before
-  public void setup() {
-    privilegedOperationExecutorMock = mock(PrivilegedOperationExecutor.class);
-
-    // Prepare test directory
-    tmpPath = System.getProperty("test.build.data") + "/cgroups";
-    File tmpDir = new File(tmpPath);
-    FileUtils.deleteQuietly(tmpDir);
-    assertTrue(tmpDir.mkdirs());
-
-    //no leading or trailing slashes here
-    hierarchy = "test-hadoop-yarn";
-
-    // Sample subsystem. Not used by all the tests
-    controller = CGroupsHandler.CGroupController.NET_CLS;
-    controllerPath =
-        new File(new File(tmpPath, controller.getName()), hierarchy)
+  protected String getControllerFilePath(String controllerName) {
+    return new File(new File(tmpPath, controllerName), hierarchy)
             .getAbsolutePath();
-  }
-
-  @After
-  public void teardown() {
-    FileUtil.fullyDelete(new File(tmpPath));
-  }
-
-  /**
-   * Security manager simulating access denied.
-   */
-  private class MockSecurityManagerDenyWrite extends SecurityManager {
-    @Override
-    public void checkPermission(Permission perm) {
-      if(perm.getActions().equals("write")) {
-        throw new SecurityException("Mock not allowed");
-      }
-    }
-  }
-
-  /**
-   * Create configuration to mount cgroups that do not exist.
-   * @return configuration object
-   */
-  private YarnConfiguration createMountConfiguration() {
-    YarnConfiguration conf = new YarnConfiguration();
-    conf.set(YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_HIERARCHY, hierarchy);
-    conf.setBoolean(YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_MOUNT, true);
-    conf.set(YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_MOUNT_PATH, tmpPath);
-    return conf;
-  }
-
-  /**
-   * Create configuration where the cgroups are premounted.
-   * @param myHierarchy YARN cgroup
-   * @return configuration object
-   */
-  private Configuration createNoMountConfiguration(String myHierarchy) {
-    Configuration confNoMount = new Configuration();
-    confNoMount.set(YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_HIERARCHY,
-        myHierarchy);
-    confNoMount.setBoolean(YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_MOUNT,
-        false);
-    return confNoMount;
-  }
-
-  /**
-   * Create an empty mtab file. No cgroups are premounted
-   * @return mtab file
-   * @throws IOException could not create file
-   */
-  private File createEmptyCgroups() throws IOException {
-    File emptyMtab = new File(tmpPath, "mtab");
-    assertTrue("New file should have been created", emptyMtab.createNewFile());
-    return emptyMtab;
   }
 
   /**
@@ -149,24 +70,24 @@ public class TestCGroupsHandlerImpl {
    * @throws IOException mtab file was not created
    */
   public static File createPremountedCgroups(File parentDir, boolean cpuAcct)
-      throws IOException {
+          throws IOException {
     // Mark an empty directory called 'cp' cgroup. It is processed before 'cpu'
     String cpuMtabContentMissing =
-        "none " + parentDir.getAbsolutePath()
-            + "/cp cgroup rw,relatime,cpu 0 0\n";
+            "none " + parentDir.getAbsolutePath()
+                    + "/cp cgroup rw,relatime,cpu 0 0\n";
 
     File cpuCgroup = new File(parentDir, "cpu");
     String cpuMtabContent =
-        "none " + cpuCgroup.getAbsolutePath()
-            + " cgroup rw,relatime,cpu"
-            + (cpuAcct ? ",cpuacct" :"")
-            + " 0 0\n";
+            "none " + cpuCgroup.getAbsolutePath()
+                    + " cgroup rw,relatime,cpu"
+                    + (cpuAcct ? ",cpuacct" :"")
+                    + " 0 0\n";
     assertTrue("Directory should be created", cpuCgroup.mkdirs());
 
     File blkioCgroup = new File(parentDir, "blkio");
     String blkioMtabContent =
-        "none " + blkioCgroup.getAbsolutePath()
-            + " cgroup rw,relatime,blkio 0 0\n";
+            "none " + blkioCgroup.getAbsolutePath()
+                    + " cgroup rw,relatime,blkio 0 0\n";
     assertTrue("Directory should be created", blkioCgroup.mkdirs());
 
     File mockMtab = new File(parentDir, UUID.randomUUID().toString());
@@ -185,6 +106,7 @@ public class TestCGroupsHandlerImpl {
     return mockMtab;
   }
 
+
   @Test
   public void testMountController() throws IOException {
     File parentDir = new File(tmpPath);
@@ -193,7 +115,7 @@ public class TestCGroupsHandlerImpl {
     //Since we enabled (deferred) cgroup controller mounting, no interactions
     //should have occurred, with this mock
     verifyZeroInteractions(privilegedOperationExecutorMock);
-    File emptyMtab = createEmptyCgroups();
+    File emptyMtab = createEmptyMtabFile();
 
     try {
       CGroupsHandler cGroupsHandler = new CGroupsHandlerImpl(
@@ -225,12 +147,11 @@ public class TestCGroupsHandlerImpl {
         verifyNoMoreInteractions(privilegedOperationExecutorMock);
       } catch (PrivilegedOperationException e) {
         LOG.error("Caught exception: " + e);
-        assertTrue("Unexpected PrivilegedOperationException from mock!",
-            false);
+        fail("Unexpected PrivilegedOperationException from mock!");
       }
     } catch (ResourceHandlerException e) {
       LOG.error("Caught exception: " + e);
-      assertTrue("Unexpected ResourceHandler Exception!", false);
+      fail("Unexpected ResourceHandler Exception!");
     }
   }
 
@@ -240,9 +161,9 @@ public class TestCGroupsHandlerImpl {
     //in this test.
     verifyZeroInteractions(privilegedOperationExecutorMock);
     CGroupsHandler cGroupsHandler = null;
-    File mtab = createEmptyCgroups();
+    File mtab = createEmptyMtabFile();
 
-    // Lets manually create a path to (partially) simulate a controller mounted
+    // Let's manually create a path to (partially) simulate a controller mounted
     // later in the test. This is required because the handler uses a mocked
     // privileged operation executor
     assertTrue("Sample subsystem should be created",
@@ -254,9 +175,7 @@ public class TestCGroupsHandlerImpl {
       cGroupsHandler.initializeCGroupController(controller);
     } catch (ResourceHandlerException e) {
       LOG.error("Caught exception: " + e);
-      assertTrue(
-          "Unexpected ResourceHandlerException when mounting controller!",
-          false);
+      fail("Unexpected ResourceHandlerException when mounting controller!");
     }
 
     String testCGroup = "container_01";
@@ -283,7 +202,7 @@ public class TestCGroupsHandlerImpl {
     //in this test.
     verifyZeroInteractions(privilegedOperationExecutorMock);
     CGroupsHandler cGroupsHandler = null;
-    File mtab = createEmptyCgroups();
+    File mtab = createEmptyMtabFile();
 
     // Lets manually create a path to (partially) simulate a controller mounted
     // later in the test. This is required because the handler uses a mocked
@@ -341,11 +260,11 @@ public class TestCGroupsHandlerImpl {
       //We can't really do a delete test here. Linux cgroups
       //implementation provides additional semantics - the cgroup cannot be
       //deleted if there are any tasks still running in the cgroup even if
-      //the user attempting the delete has the file permissions to do so - we
+      //the user attempting the deletion has the file permissions to do so - we
       //cannot simulate that here. Even if we create a dummy 'tasks' file, we
       //wouldn't be able to simulate the delete behavior we need, since a cgroup
-      //can be deleted using using 'rmdir' if the tasks file is empty. Such a
-      //delete is not possible with a regular non-empty directory.
+      //can be deleted using 'rmdir' if the tasks file is empty. Such a
+      //deletion is not possible with a regular non-empty directory.
     } catch (ResourceHandlerException e) {
       LOG.error("Caught exception: " + e);
       Assert
@@ -364,11 +283,15 @@ public class TestCGroupsHandlerImpl {
     // create mock cgroup
     File mockMtabFile = createPremountedCgroups(parentDir, false);
 
+    CGroupsHandlerImpl cGroupsHandler = new CGroupsHandlerImpl(
+        createMountConfiguration(),
+        privilegedOperationExecutorMock, mockMtabFile.getAbsolutePath());
+
     // Run mtabs parsing
     Map<String, Set<String>> newMtab =
-        CGroupsHandlerImpl.parseMtab(mockMtabFile.getAbsolutePath());
+            cGroupsHandler.parseMtab(mockMtabFile.getAbsolutePath());
     Map<CGroupsHandler.CGroupController, String> controllerPaths =
-        CGroupsHandlerImpl.initializeControllerPathsFromMtab(
+            cGroupsHandler.initializeControllerPathsFromMtab(
             newMtab);
 
     // Verify
@@ -406,8 +329,7 @@ public class TestCGroupsHandlerImpl {
             ""));
     // Test that a missing yarn hierarchy will be created automatically
     if (!cpuCgroupMountDir.equals(mountPoint)) {
-      assertTrue("Directory should be deleted",
-          !cpuCgroupMountDir.exists());
+      assertFalse("Directory should be deleted", cpuCgroupMountDir.exists());
     }
     cGroupsHandler.initializeCGroupController(
         CGroupsHandler.CGroupController.CPU);
@@ -431,8 +353,7 @@ public class TestCGroupsHandlerImpl {
     // Test that a non-accessible mount directory results in an exception
     if (!cpuCgroupMountDir.equals(mountPoint)) {
       assertTrue("Could not delete cgroups", cpuCgroupMountDir.delete());
-      assertTrue("Directory should be deleted",
-          !cpuCgroupMountDir.exists());
+      assertFalse("Directory should be deleted", cpuCgroupMountDir.exists());
     }
     assertTrue(mountPoint.setWritable(false));
     try {
@@ -451,8 +372,7 @@ public class TestCGroupsHandlerImpl {
     if (!cpuCgroupMountDir.equals(mountPoint)) {
       Assert.assertFalse("Could not delete cgroups",
           cpuCgroupMountDir.delete());
-      assertTrue("Directory should be deleted",
-          !cpuCgroupMountDir.exists());
+      assertFalse("Directory should be deleted", cpuCgroupMountDir.exists());
       SecurityManager manager = System.getSecurityManager();
       System.setSecurityManager(new MockSecurityManagerDenyWrite());
       try {
@@ -471,12 +391,10 @@ public class TestCGroupsHandlerImpl {
     if (!cpuCgroupMountDir.equals(mountPoint)) {
       Assert.assertFalse("Could not delete cgroups",
           cpuCgroupMountDir.delete());
-      assertTrue("Directory should be deleted",
-          !cpuCgroupMountDir.exists());
+      assertFalse("Directory should be deleted", cpuCgroupMountDir.exists());
     }
     FileUtils.deleteQuietly(mountPoint);
-    assertTrue("cgroups mount point should be deleted",
-        !mountPoint.exists());
+    assertFalse("cgroups mount point should be deleted", mountPoint.exists());
     try {
       cGroupsHandler.initializeCGroupController(
           CGroupsHandler.CGroupController.CPU);
