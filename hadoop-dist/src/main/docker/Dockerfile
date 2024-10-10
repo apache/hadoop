@@ -19,4 +19,8 @@ COPY . /opt/hadoop
 
 WORKDIR /opt/hadoop
 
-RUN sudo chown -R hadoop:users /opt/hadoop
+USER root
+
+RUN chown -R hadoop:users /opt/hadoop
+
+USER hadoop
