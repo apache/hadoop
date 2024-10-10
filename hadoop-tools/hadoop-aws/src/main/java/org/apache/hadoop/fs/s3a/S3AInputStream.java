@@ -33,6 +33,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.IntFunction;
+import java.util.stream.Collectors;
 
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
@@ -981,29 +982,56 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    * are completed exceptionally.
    * @param combinedFileRange big combined file range.
    * @param bufferPool buffer pool
-   * @throws IOException any IOE
    */
+  @Retries.RetryExceptionsSwallowed
   private void readCombinedRangeAndUpdateChildren(CombinedFileRange combinedFileRange,
-      ByteBufferPool bufferPool)
-      throws IOException {
+      ByteBufferPool bufferPool) {
     LOG.debug("Start reading {} from path {} ", combinedFileRange, pathStr);
     ResponseInputStream<GetObjectResponse> rangeContent = null;
     try {
-      // this retries internally
+      // issue the GET request; this retries internally.
       rangeContent = getS3Object("readCombinedFileRange",
-              combinedFileRange.getOffset(),
-              combinedFileRange.getLength());
+          combinedFileRange.getOffset(),
+          combinedFileRange.getLength(),
+          true);
+    } catch (IOException ex) {
+      // any exception here means that repeated HEAD requests have failed;
+      // consider the request unrecoverable.
+      LOG.debug("Failed to initiating GET request to {} ", pathStr, ex);
+      combinedFileRange.getUnderlying().stream()
+          .map(FileRange::getData)
+          .forEach(f -> f.completeExceptionally(ex));
+      return;
+    }
+    // at this point there is a stream to read from, which
+    // MUST be closed in the finally block.
+    try {
       populateChildBuffers(combinedFileRange, rangeContent, bufferPool);
     } catch (IOException ex) {
       LOG.debug("Exception while reading {} from path {} ", combinedFileRange, pathStr, ex);
+
+      // close the ongoing read.
+      IOUtils.cleanupWithLogger(LOG, rangeContent);
+      rangeContent = null;
       // complete exception all the underlying ranges which have not already
       // finished.
-      for(FileRange child : combinedFileRange.getUnderlying()) {
-        if (!child.getData().isDone()) {
-          child.getData().completeExceptionally(ex);
-        }
+
+      // get all the incomplete reads.
+      final List<FileRange> incomplete = combinedFileRange.getUnderlying().stream()
+          .filter(f -> !f.getData().isDone())
+          .collect(Collectors.toList());
+      // previously these were completed exceptionally; now they are
+      // recovered from.
+      // while rebuilding a new combined range is possible, if there are problems
+      // we just fall back to each range being read individually,
+      // in sequence. Suboptimal, but simple -especially as this is
+      // already happening in a worker thread.
+
+      for (FileRange child : incomplete) {
+        // failure reporting is already handed internally.
+        readSingleRange(child, bufferPool);
       }
-      throw ex;
+
     } finally {
       IOUtils.cleanupWithLogger(LOG, rangeContent);
     }
@@ -1022,6 +1050,7 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    * @throws EOFException if EOF if read() call returns -1
    * @throws InterruptedIOException if vectored IO operation is stopped.
    */
+  @Retries.OnceTranslated
   private void populateChildBuffers(CombinedFileRange combinedFileRange,
       InputStream objectContent,
       ByteBufferPool bufferPool) throws IOException {
@@ -1053,7 +1082,6 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
             // work out how much
             long drainQuantity = child.getOffset() - position;
             // and drain it.
-            // TODO: drain failure should switch to recovery mode
             drainUnnecessaryData(objectContent, position, drainQuantity);
           }
         }
@@ -1125,24 +1153,30 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   @Retries.RetryTranslated("GET is retried; reads are not")
   private void readSingleRange(FileRange range, ByteBufferPool bufferPool) {
     LOG.debug("Start reading {} from {} ", range, pathStr);
-    ByteBuffer buffer = bufferPool.getBuffer(false, range.getLength());
     if (range.getLength() == 0) {
+      ByteBuffer buffer = bufferPool.getBuffer(false, range.getLength());
       // a zero byte read.
       buffer.flip();
       range.getData().complete(buffer);
       return;
     }
+    ByteBuffer buffer = null;
     ResponseInputStream<GetObjectResponse> objectRange = null;
     try {
       long position = range.getOffset();
       int length = range.getLength();
-      objectRange = getS3Object("readSingleRange", position, length);
+      objectRange = getS3Object("readSingleRange", position, length, true);
+      buffer = bufferPool.getBuffer(false, range.getLength());
+
+      // TODO: error handling if the read fails.
       populateBuffer(range, buffer, objectRange);
       range.getData().complete(buffer);
       LOG.debug("Finished reading range {} from path {} ", range, pathStr);
     } catch (IOException ex) {
       LOG.debug("Exception while reading a range {} from path {} ", range, pathStr, ex);
-      bufferPool.putBuffer(buffer);
+      if (buffer != null) {
+        bufferPool.putBuffer(buffer);
+      }
       range.getData().completeExceptionally(ex);
     } finally {
       IOUtils.cleanupWithLogger(LOG, objectRange);
@@ -1235,15 +1269,17 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    * @param operationName name of the operation for which get object on S3 is called.
    * @param position position of the object to be read from S3.
    * @param length length from position of the object to be read from S3.
+   * @param shouldRetry should GET requests be retried.
    * @return S3Object result s3 object.
-   * @throws IOException exception if any.
+   * @throws IOException exception if the S3 call fails.
    * @throws InterruptedIOException if vectored io operation is stopped.
    * @throws RemoteFileChangedException if file has changed on the store.
    */
-  @Retries.RetryTranslated
+  @Retries.RetryTranslated("if shouldRetry is true; OnceTranslated otherwise")
   private ResponseInputStream<GetObjectResponse> getS3Object(String operationName,
-                                                             long position,
-                                                             int length)
+      long position,
+      int length,
+      boolean shouldRetry)
       throws IOException {
     final GetObjectRequest request = client.newGetRequestBuilder(key)
         .range(S3AUtils.formatRange(position, position + length - 1))
@@ -1253,11 +1289,18 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     ResponseInputStream<GetObjectResponse> objectRange;
     Invoker invoker = context.getReadInvoker();
     try {
-      objectRange = invoker.retry(operationName, pathStr, true,
-        () -> {
-          checkIfVectoredIOStopped();
-          return client.getObject(request);
-        });
+      // the operation to invoke
+      CallableRaisingIOE<ResponseInputStream<GetObjectResponse>> operation = () -> {
+        checkIfVectoredIOStopped();
+        return client.getObject(request);
+      };
+      // should this be retried?
+      if (shouldRetry) {
+        objectRange = invoker.retry(operationName, pathStr, true,
+            operation);
+      } else {
+        objectRange = Invoker.once(operationName, pathStr, operation);
+      }
 
     } catch (IOException ex) {
       tracker.failed();
