@@ -261,4 +261,6 @@ public interface ContractOptions {
    * Does vector read check file length on open rather than in the read call?
    */
   String VECTOR_IO_EARLY_EOF_CHECK = "vector-io-early-eof-check";
+
+  String VECTOR_IO_OVERLAPPING_RANGES = "vector-io-overlapping-ranges";
 }

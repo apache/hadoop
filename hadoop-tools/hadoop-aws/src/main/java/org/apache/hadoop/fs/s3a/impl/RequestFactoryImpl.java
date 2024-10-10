@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
+import java.time.Duration;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
@@ -60,7 +61,9 @@ import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.apache.hadoop.fs.s3a.impl.AWSHeaders.IF_NONE_MATCH;
+import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_PART_UPLOAD_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.S3AEncryptionMethods.UNKNOWN_ALGORITHM;
+import static org.apache.hadoop.fs.s3a.impl.AWSClientConfig.setRequestTimeout;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.DEFAULT_UPLOAD_PART_COUNT_LIMIT;
 import static org.apache.hadoop.util.Preconditions.checkArgument;
 import static org.apache.hadoop.util.Preconditions.checkNotNull;
@@ -130,6 +133,12 @@ public class RequestFactoryImpl implements RequestFactory {
   private final boolean isMultipartUploadEnabled;
 
   /**
+   * Timeout for uploading objects/parts.
+   * This will be set on data put/post operations only.
+   */
+  private final Duration partUploadTimeout;
+
+  /**
    * Constructor.
    * @param builder builder with all the configuration.
    */
@@ -143,6 +152,7 @@ public class RequestFactoryImpl implements RequestFactory {
     this.contentEncoding = builder.contentEncoding;
     this.storageClass = builder.storageClass;
     this.isMultipartUploadEnabled = builder.isMultipartUploadEnabled;
+    this.partUploadTimeout = builder.partUploadTimeout;
   }
 
   /**
@@ -343,6 +353,11 @@ public class RequestFactoryImpl implements RequestFactory {
 
     if (storageClass != null) {
       putObjectRequestBuilder.storageClass(storageClass);
+    }
+
+    // Set the timeout for object uploads but not directory markers.
+    if (!isDirectoryMarker) {
+      setRequestTimeout(putObjectRequestBuilder, partUploadTimeout);
     }
 
     return prepareRequest(putObjectRequestBuilder);
@@ -604,6 +619,9 @@ public class RequestFactoryImpl implements RequestFactory {
         .partNumber(partNumber)
         .contentLength(size);
     uploadPartEncryptionParameters(builder);
+
+    // Set the request timeout for the part upload
+    setRequestTimeout(builder, partUploadTimeout);
     return prepareRequest(builder);
   }
 
@@ -711,6 +729,13 @@ public class RequestFactoryImpl implements RequestFactory {
      */
     private boolean isMultipartUploadEnabled = true;
 
+    /**
+     * Timeout for uploading objects/parts.
+     * This will be set on data put/post operations only.
+     * A zero value means "no custom timeout"
+     */
+    private Duration partUploadTimeout = DEFAULT_PART_UPLOAD_TIMEOUT;
+
     private RequestFactoryBuilder() {
     }
 
@@ -806,6 +831,18 @@ public class RequestFactoryImpl implements RequestFactory {
     public RequestFactoryBuilder withMultipartUploadEnabled(
         final boolean value) {
       this.isMultipartUploadEnabled = value;
+      return this;
+    }
+
+    /**
+     * Timeout for uploading objects/parts.
+     * This will be set on data put/post operations only.
+     * A zero value means "no custom timeout"
+     * @param value new value
+     * @return the builder
+     */
+    public RequestFactoryBuilder withPartUploadTimeout(final Duration value) {
+      partUploadTimeout = value;
       return this;
     }
   }
