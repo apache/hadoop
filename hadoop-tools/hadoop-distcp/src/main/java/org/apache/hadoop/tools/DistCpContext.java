@@ -155,6 +155,10 @@ public class DistCpContext {
     this.preserveRawXattrs = preserveRawXattrs;
   }
 
+  public boolean shouldPreserveParentDirs(){
+    return options.shouldPreserveParentDirs();
+  }
+
   public Path getAtomicWorkPath() {
     return options.getAtomicWorkPath();
   }

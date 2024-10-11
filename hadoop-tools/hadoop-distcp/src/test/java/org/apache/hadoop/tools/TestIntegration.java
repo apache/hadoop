@@ -345,18 +345,44 @@ public class TestIntegration {
     
     try {
       addEntries(listFile, "srcdir");
-      createFiles("srcdir/file1", "dstdir/file1", "dstdir/file2");
+      createFiles("srcdir/file1", "srcdir/dir1/file1", "dstdir/file1", "dstdir/file2");
       
       Path target = new Path(root + "/dstdir");
       runTest(listFile, target, false, true, true, false);
       
-      checkResult(target, 1, "file1");
+      checkResult(target, 2, "file1","dir1/file1");
     } catch (IOException e) {
       LOG.error("Exception encountered while running distcp", e);
       Assert.fail("distcp failure");
     } finally {
       TestDistCpUtils.delete(fs, root);
       TestDistCpUtils.delete(fs, "target/tmp1");
+    }
+  }
+
+
+  @Test
+  public void testUpdateAndDeleteMissingInDestination() {
+
+    try {
+      addEntries(listFile, "/srcdir/dir1","/srcdir/dir2");
+
+      mkdirs(root + "/srcdir/dir1");
+      mkdirs(root + "/srcdir/dir2");
+      mkdirs(root + "/srcdir/dir3");
+
+      createFiles("srcdir/dir1/file1", "srcdir/dir2/file1", "srcdir/dir3/file1");
+      createFiles("dstdir/dir1/file1", "dstdir/dir1/file2", "dstdir/dir3/file1");
+
+      Path target = new Path(root + "/dstdir");
+      runTest(listFile, target, true, true, true, false, true);
+
+      checkResult(target, 3, "dir1/file1","dir2/file1","dir3/file1");
+    } catch (IOException e) {
+      LOG.error("Exception encountered while running distcp", e);
+      Assert.fail("distcp failure");
+    } finally {
+      TestDistCpUtils.delete(fs, root);
     }
   }
   
@@ -559,11 +585,18 @@ public class TestIntegration {
   private void runTest(Path listFile, Path target, boolean targetExists, 
       boolean sync, boolean delete,
       boolean overwrite) throws IOException {
+    runTest(listFile, target, targetExists, sync, delete, overwrite, false);
+  }
+
+  private void runTest(Path listFile, Path target, boolean targetExists,
+                       boolean sync, boolean delete,
+                       boolean overwrite, boolean preserveDirs) throws IOException {
     final DistCpOptions options = new DistCpOptions.Builder(listFile, target)
         .withSyncFolder(sync)
         .withDeleteMissing(delete)
         .withOverwrite(overwrite)
         .withNumListstatusThreads(numListstatusThreads)
+        .withPreserveParentDirs(preserveDirs)
         .build();
     try {
       final DistCp distCp = new DistCp(getConf(), options);

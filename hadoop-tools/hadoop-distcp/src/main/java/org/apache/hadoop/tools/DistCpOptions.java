@@ -149,6 +149,9 @@ public final class DistCpOptions {
   /** File attributes that need to be preserved. */
   private final EnumSet<FileAttribute> preserveStatus;
 
+  /** Source directories that need to be preserved. */
+  private final boolean preserveParentDirs;
+
   // Size of chunk in number of blocks when splitting large file into chunks
   // to copy in parallel. Default is 0 and file are not splitted.
   private final int blocksPerChunk;
@@ -215,6 +218,8 @@ public final class DistCpOptions {
     this.maxMaps = builder.maxMaps;
 
     this.preserveStatus = builder.preserveStatus;
+
+    this.preserveParentDirs = builder.preserveParentDirs;
 
     this.blocksPerChunk = builder.blocksPerChunk;
 
@@ -336,6 +341,15 @@ public final class DistCpOptions {
     return preserveStatus.contains(attribute);
   }
 
+  /**
+   * Checks if the source directories should be preserved or not.
+   *
+   * @return true - True if source dirs should be preserved
+   */
+  public boolean shouldPreserveParentDirs(){
+    return preserveParentDirs;
+  }
+
   public int getBlocksPerChunk() {
     return blocksPerChunk;
   }
@@ -394,6 +408,8 @@ public final class DistCpOptions {
       DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.FILTERS,
           filtersFile);
     }
+    DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.PRESERVE_PARENT_DIRS,
+        String.valueOf(preserveParentDirs));
     DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.BLOCKS_PER_CHUNK,
         String.valueOf(blocksPerChunk));
     DistCpOptionSwitch.addToConf(conf, DistCpOptionSwitch.COPY_BUFFER_SIZE,
@@ -451,6 +467,7 @@ public final class DistCpOptions {
         ", verboseLog=" + verboseLog +
         ", directWrite=" + directWrite +
         ", useiterator=" + useIterator +
+        ", preserveParentDirs=" + preserveParentDirs +
         '}';
   }
 
@@ -494,6 +511,8 @@ public final class DistCpOptions {
 
     private EnumSet<FileAttribute> preserveStatus =
         EnumSet.noneOf(FileAttribute.class);
+
+    private boolean preserveParentDirs = false;
 
     private int blocksPerChunk = 0;
 
@@ -737,6 +756,11 @@ public final class DistCpOptions {
 
     public Builder preserve(FileAttribute attribute) {
       preserveStatus.add(attribute);
+      return this;
+    }
+
+    public Builder withPreserveParentDirs(boolean newPreserveDirs){
+      this.preserveParentDirs = newPreserveDirs;
       return this;
     }
 

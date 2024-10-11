@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.tools.mapred;
 
+import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,6 +47,7 @@ import org.apache.hadoop.tools.util.DistCpUtils;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -71,6 +73,9 @@ public class CopyCommitter extends FileOutputCommitter {
   private final TaskAttemptContext taskAttemptContext;
   private boolean syncFolder = false;
   private boolean overwrite = false;
+
+  private boolean preserveParentDirs = false;
+
   private boolean targetPathExists = true;
   private boolean ignoreFailures = false;
   private boolean skipCrc = false;
@@ -104,6 +109,7 @@ public class CopyCommitter extends FileOutputCommitter {
         DistCpConstants.CONF_LABEL_TARGET_PATH_EXISTS, true);
     ignoreFailures = conf.getBoolean(
         DistCpOptionSwitch.IGNORE_FAILURES.getConfigLabel(), false);
+    preserveParentDirs = conf.getBoolean(CONF_LABEL_PRESERVE_PARENT_DIRS, false);
 
     if (blocksPerChunk > 0) {
       concatFileChunks(conf);
@@ -451,8 +457,8 @@ public class CopyCommitter extends FileOutputCommitter {
           srcAvailable = sourceReader.next(srcRelPath, srcFileStatus);
         }
         Path targetEntry = trgtFileStatus.getPath();
-        LOG.debug("Comparing {} and {}",
-            srcFileStatus.getPath(), targetEntry);
+        LOG.debug("Comparing {} and {}. Source REL PATH: {}, target REL PATH: {}",
+            srcFileStatus.getPath(), targetEntry, srcRelPath, trgtRelPath);
 
         if (srcAvailable && trgtRelPath.equals(srcRelPath)) continue;
 
@@ -552,7 +558,19 @@ public class CopyCommitter extends FileOutputCommitter {
     Path targetFinalPath = new Path(
         conf.get(DistCpConstants.CONF_LABEL_TARGET_FINAL_PATH));
     List<Path> targets = new ArrayList<>(1);
-    targets.add(targetFinalPath);
+    boolean preserveParentDirs = conf.getBoolean(CONF_LABEL_PRESERVE_PARENT_DIRS, false);
+    if(preserveParentDirs){
+      String sourcePathsStr = conf.get(CONF_LABEL_SOURCE_PATHS);
+      String[] sourcePaths = StringUtils.split(sourcePathsStr);
+      LOG.info("sourcePaths: {}", Arrays.toString(sourcePaths));
+      for(String sourcePath : sourcePaths){
+        Path source = new Path(sourcePath);
+        targets.add(new Path(targetFinalPath, source.getName()));
+      }
+    }else{
+      targets.add(targetFinalPath);
+    }
+
     Path resultNonePath = Path.getPathWithoutSchemeAndAuthority(targetFinalPath)
         .toString().startsWith(DistCpConstants.HDFS_RESERVED_RAW_DIRECTORY_NAME)
         ? DistCpConstants.RAW_NONE_PATH
@@ -571,9 +589,11 @@ public class CopyCommitter extends FileOutputCommitter {
     DistCpOptions options = new DistCpOptions.Builder(targets, resultNonePath)
         .withOverwrite(overwrite)
         .withSyncFolder(syncFolder)
+        .withPreserveParentDirs(preserveParentDirs)
         .withNumListstatusThreads(threads)
         .withUseIterator(useIterator)
         .build();
+    LOG.info("Source directories: {}, target directories: {}", targets, resultNonePath);
     DistCpContext distCpContext = new DistCpContext(options);
     distCpContext.setTargetPathExists(targetPathExists);
 

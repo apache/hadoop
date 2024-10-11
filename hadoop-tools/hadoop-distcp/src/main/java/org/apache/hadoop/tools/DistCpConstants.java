@@ -64,7 +64,10 @@ public final class DistCpConstants {
   public static final String CONF_LABEL_LISTSTATUS_THREADS = "distcp.liststatus.threads";
   public static final String CONF_LABEL_MAX_MAPS = "distcp.max.maps";
   public static final String CONF_LABEL_SOURCE_LISTING = "distcp.source.listing";
+
+  public static final String CONF_LABEL_SOURCE_PATHS = "distcp.source.paths";
   public static final String CONF_LABEL_COPY_STRATEGY = "distcp.copy.strategy";
+  public static final String CONF_LABEL_PRESERVE_PARENT_DIRS = "distcp.preserve.parent.dirs";
   public static final String CONF_LABEL_SKIP_CRC = "distcp.skip.crc";
   public static final String CONF_LABEL_OVERWRITE = "distcp.copy.overwrite";
   public static final String CONF_LABEL_APPEND = "distcp.copy.append";

@@ -56,6 +56,10 @@ public enum DistCpOptionSwitch {
           "preservation is independent of the -p flag. " +
           "Refer to the DistCp documentation for more details.")),
 
+  PRESERVE_PARENT_DIRS(DistCpConstants.CONF_LABEL_PRESERVE_PARENT_DIRS,
+      new Option("preserveParentDirs", false, "Preserve source directories," +
+          " not the contents of the source-directories")),
+
   /**
    * Update target location by copying only files that are missing
    * in the target. This can be used to periodically sync two folders
