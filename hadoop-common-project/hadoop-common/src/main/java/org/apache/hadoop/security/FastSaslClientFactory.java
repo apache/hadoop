@@ -29,6 +29,9 @@ import javax.security.sasl.SaslClient;
 import javax.security.sasl.SaslClientFactory;
 import javax.security.sasl.SaslException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 
 /**
@@ -36,19 +39,29 @@ import org.apache.hadoop.classification.InterfaceAudience;
  */
 @InterfaceAudience.LimitedPrivate({ "HDFS", "MapReduce" })
 public class FastSaslClientFactory implements SaslClientFactory {
+
+  public static final Logger LOG = LoggerFactory.getLogger(FastSaslClientFactory.class);
+
   private final Map<String, List<SaslClientFactory>> factoryCache =
       new HashMap<String, List<SaslClientFactory>>();
 
   public FastSaslClientFactory(Map<String, ?> props) {
     final Enumeration<SaslClientFactory> factories =
         Sasl.getSaslClientFactories();
+    if (props == null) {
+      props = new HashMap<>();
+    }
     while (factories.hasMoreElements()) {
       SaslClientFactory factory = factories.nextElement();
-      for (String mech : factory.getMechanismNames(props)) {
-        if (!factoryCache.containsKey(mech)) {
-          factoryCache.put(mech, new ArrayList<SaslClientFactory>());
+      try{
+        for (String mech : factory.getMechanismNames(props)) {
+          if (!factoryCache.containsKey(mech)) {
+            factoryCache.put(mech, new ArrayList<SaslClientFactory>());
+          }
+          factoryCache.get(mech).add(factory);
         }
-        factoryCache.get(mech).add(factory);
+      } catch (Exception e) {
+        LOG.warn("Exception occurred while initialising {} factory. Exception details: {}\n", factory, e.getMessage(), e);
       }
     }
   }
