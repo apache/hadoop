@@ -77,6 +77,7 @@ import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.protocol.UnresolvedPathException;
 import org.apache.hadoop.hdfs.protocolPB.AsyncRpcProtocolPBUtil;
 import org.apache.hadoop.hdfs.server.federation.router.async.AsyncCatchFunction;
+import org.apache.hadoop.hdfs.server.federation.router.async.CatchFunction;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hadoop.thirdparty.com.google.common.cache.CacheLoader;
 import org.apache.hadoop.thirdparty.com.google.common.cache.LoadingCache;
@@ -821,7 +822,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
           throw ioe;
         }
         nss.removeIf(n -> n.getNameserviceId().equals(nsId));
-        invokeOnNs(method, clazz, io, nss);
+        invokeOnNsAsync(method, clazz, io, nss);
       }, IOException.class);
     } else {
       // If not have default NS.
@@ -885,13 +886,14 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
         });
       });
 
-      asyncCatch((AsyncCatchFunction<T, IOException>)(ret, ex) -> {
+      asyncCatch((CatchFunction<T, IOException>)(ret, ex) -> {
         LOG.debug("Failed to invoke {} on namespace {}", method, nsId, ex);
         // Ignore the exception and try on other namespace, if the tried
         // namespace is unavailable, else throw the received exception.
         if (!clientProto.isUnavailableSubclusterException(ex)) {
           throw ex;
         }
+        return null;
       }, IOException.class);
     });
 

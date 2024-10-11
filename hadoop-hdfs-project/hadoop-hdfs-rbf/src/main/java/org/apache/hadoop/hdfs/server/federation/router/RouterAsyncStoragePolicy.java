@@ -39,6 +39,20 @@ public class RouterAsyncStoragePolicy extends RouterStoragePolicy {
   }
 
   @Override
+  public BlockStoragePolicy getStoragePolicy(String path)
+      throws IOException {
+    rpcServer.checkOperation(NameNode.OperationCategory.READ, true);
+
+    List<RemoteLocation> locations =
+        rpcServer.getLocationsForPath(path, false, false);
+    RemoteMethod method = new RemoteMethod("getStoragePolicy",
+        new Class<?>[] {String.class},
+        new RemoteParam());
+    rpcClient.invokeSequential(locations, method);
+    return asyncReturn(BlockStoragePolicy.class);
+  }
+
+  @Override
   public BlockStoragePolicy[] getStoragePolicies() throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.READ);
 
