@@ -1024,6 +1024,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   /**
    * Get the location to create a file. It checks if the file already existed
    * in one of the locations.
+   * Asynchronous version of getCreateLocation method.
    *
    * @param src Path of the file to check.
    * @param locations Prefetched locations for the file.
