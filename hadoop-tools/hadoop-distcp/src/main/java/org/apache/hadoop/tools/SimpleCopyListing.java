@@ -465,6 +465,8 @@ public class SimpleCopyListing extends CopyListing {
       } else {
         return sourceStatus.getPath().getParent();
       }
+    } else if (context.shouldPreserveParentDirs()) {
+      return sourceStatus.getPath().getParent();
     } else {
       boolean specialHandling =
           (context.getSourcePaths().size() == 1 &&

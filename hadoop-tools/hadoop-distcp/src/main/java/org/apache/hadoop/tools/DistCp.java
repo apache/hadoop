@@ -19,9 +19,11 @@
 package org.apache.hadoop.tools;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Random;
 
 import org.apache.hadoop.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -203,6 +205,7 @@ public class DistCp extends Configured implements Tool {
         job = createJob();
       }
       prepareFileListing(job);
+      addSourcePathsToConf(job);
       job.submit();
       submitted = true;
     } finally {
@@ -221,6 +224,8 @@ public class DistCp extends Configured implements Tool {
     return job;
   }
 
+
+
   /**
    * Wait for the given job to complete.
    * @param job the given mapreduce job that has already been submitted
@@ -231,6 +236,27 @@ public class DistCp extends Configured implements Tool {
       throw new IOException("DistCp failure: Job " + job.getJobID()
           + " has failed: " + job.getStatus().getFailureInfo());
     }
+  }
+
+  private void addSourcePathsToConf(Job job){
+    List<Path> sourcePaths = context.getSourcePaths();
+
+    if(sourcePaths == null || sourcePaths.size() == 0){
+      return;
+    }
+
+    StringBuilder sb = new StringBuilder();
+    for(Path source : sourcePaths){
+      sb.append(StringUtils.escapeString(source.toString()));
+      sb.append(",");
+    }
+    if(sb.length() > 0){
+      sb.deleteCharAt(sb.length() -1);
+    }
+
+
+    job.getConfiguration().set(DistCpConstants.CONF_LABEL_SOURCE_PATHS,
+        sb.toString());
   }
 
   /**
