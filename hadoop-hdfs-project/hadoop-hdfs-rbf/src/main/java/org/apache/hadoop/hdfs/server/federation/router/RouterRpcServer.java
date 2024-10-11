@@ -1101,7 +1101,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
       }
       return null;
     });
-    return asyncReturn(null);
+    return asyncReturn(RemoteLocation.class);
   }
 
   @Override // ClientProtocol
