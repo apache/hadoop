@@ -1379,9 +1379,9 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     Set<FederationNamespaceInfo> nss = namenodeResolver.getNamespaces();
     rpcClient.invokeConcurrent(nss, method, requireResponse, false,
             timeOutMs, DatanodeInfo[].class);
-    
+
     asyncApply((ApplyFunction<Map<FederationNamespaceInfo, DatanodeInfo[]>,
-        DatanodeInfo[]>) results -> { 
+        DatanodeInfo[]>) results -> {
         updateDnMap(results, datanodesMap);
         // Map -> Array
         Collection<DatanodeInfo> datanodes = datanodesMap.values();
@@ -2293,7 +2293,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
 
   /**
    * Get the slow running datanodes report with a timeout.
-   * Asynchronous version of the getSlowDatanodeReport method. 
+   * Asynchronous version of the getSlowDatanodeReport method.
    *
    * @param requireResponse If we require all the namespaces to report.
    * @param timeOutMs Time out for the reply in milliseconds.
@@ -2310,7 +2310,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     Set<FederationNamespaceInfo> nss = namenodeResolver.getNamespaces();
     rpcClient.invokeConcurrent(nss, method, requireResponse, false,
             timeOutMs, DatanodeInfo[].class);
-    
+
     asyncApply((ApplyFunction<Map<FederationNamespaceInfo, DatanodeInfo[]>,
         DatanodeInfo[]>) results -> {
         updateDnMap(results, datanodesMap);
