@@ -32,13 +32,17 @@ include_directories(
     ../libhdfspp/lib
 )
 
-hadoop_add_dual_library(hdfs
+set(HDFS_SOURCES
     exception.c
     jni_helper.c
     hdfs.c
     jclasses.c
     ${OS_DIR}/mutexes.c
     ${OS_DIR}/thread_local_storage.c
+)
+add_library(hdfs_obj OBJECT ${HDFS_SOURCES})
+hadoop_add_dual_library(hdfs
+    $<TARGET_OBJECTS:hdfs_obj>
     $<TARGET_OBJECTS:x_platform_obj>
     $<TARGET_OBJECTS:x_platform_obj_c_api>
 )

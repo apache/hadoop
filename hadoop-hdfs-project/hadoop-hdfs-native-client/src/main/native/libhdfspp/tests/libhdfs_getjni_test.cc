@@ -38,6 +38,11 @@ DECLSPEC jint JNICALL JNI_CreateJavaVM(JavaVM**, void**, void*) {
     return 1;
 }
 
+// hook the jvm runtime function. expect always failure
+DECLSPEC jint JNICALL JNI_GetCreatedJavaVMs(JavaVM**, jsize, jsize*) {
+    return 1;
+}
+
 TEST(GetJNITest, TestRepeatedGetJNIFailsButNoCrash) {
     // connect to nothing, should fail but not crash
     EXPECT_EQ(NULL, hdfsConnectNewInstance(NULL, 0));
