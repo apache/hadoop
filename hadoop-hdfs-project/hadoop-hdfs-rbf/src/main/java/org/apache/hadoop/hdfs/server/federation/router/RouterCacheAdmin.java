@@ -59,15 +59,19 @@ public class RouterCacheAdmin {
 
   public long addCacheDirective(CacheDirectiveInfo path,
       EnumSet<CacheFlag> flags) throws IOException {
+    Map<RemoteLocation, Long> response = invokeAddCacheDirective(path, flags);
+    return response.values().iterator().next();
+  }
+
+  protected Map<RemoteLocation, Long> invokeAddCacheDirective(
+      CacheDirectiveInfo path, EnumSet<CacheFlag> flags) throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.WRITE, true);
     final List<RemoteLocation> locations =
         rpcServer.getLocationsForPath(path.getPath().toString(), true, false);
     RemoteMethod method = new RemoteMethod("addCacheDirective",
         new Class<?>[] {CacheDirectiveInfo.class, EnumSet.class},
         new RemoteParam(getRemoteMap(path, locations)), flags);
-    Map<RemoteLocation, Long> response =
-        rpcClient.invokeConcurrent(locations, method, false, false, long.class);
-    return response.values().iterator().next();
+    return rpcClient.invokeConcurrent(locations, method, false, false, long.class);
   }
 
   public void modifyCacheDirective(CacheDirectiveInfo directive,
@@ -100,6 +104,12 @@ public class RouterCacheAdmin {
 
   public BatchedEntries<CacheDirectiveEntry> listCacheDirectives(long prevId,
       CacheDirectiveInfo filter) throws IOException {
+    Map results = invokeListCacheDirectives(prevId, filter);
+    return (BatchedEntries<CacheDirectiveEntry>) results.values().iterator().next();
+  }
+
+  protected Map invokeListCacheDirectives(long prevId,
+      CacheDirectiveInfo filter) throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.READ, true);
     if (filter.getPath() != null) {
       final List<RemoteLocation> locations = rpcServer
@@ -107,17 +117,15 @@ public class RouterCacheAdmin {
       RemoteMethod method = new RemoteMethod("listCacheDirectives",
           new Class<?>[] {long.class, CacheDirectiveInfo.class}, prevId,
           new RemoteParam(getRemoteMap(filter, locations)));
-      Map<RemoteLocation, BatchedEntries> response = rpcClient.invokeConcurrent(
+      return rpcClient.invokeConcurrent(
           locations, method, false, false, BatchedEntries.class);
-      return response.values().iterator().next();
     }
     RemoteMethod method = new RemoteMethod("listCacheDirectives",
         new Class<?>[] {long.class, CacheDirectiveInfo.class}, prevId,
         filter);
     Set<FederationNamespaceInfo> nss = namenodeResolver.getNamespaces();
-    Map<FederationNamespaceInfo, BatchedEntries> results = rpcClient
-        .invokeConcurrent(nss, method, true, false, BatchedEntries.class);
-    return results.values().iterator().next();
+    return rpcClient.invokeConcurrent(
+        nss, method, true, false, BatchedEntries.class);
   }
 
   public void addCachePool(CachePoolInfo info) throws IOException {
@@ -146,13 +154,17 @@ public class RouterCacheAdmin {
 
   public BatchedEntries<CachePoolEntry> listCachePools(String prevKey)
       throws IOException {
+    Map<FederationNamespaceInfo, BatchedEntries> results = invokeListCachePools(prevKey);
+    return results.values().iterator().next();
+  }
+
+  protected Map<FederationNamespaceInfo, BatchedEntries> invokeListCachePools(
+      String prevKey) throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.READ, true);
     RemoteMethod method = new RemoteMethod("listCachePools",
         new Class<?>[] {String.class}, prevKey);
     Set<FederationNamespaceInfo> nss = namenodeResolver.getNamespaces();
-    Map<FederationNamespaceInfo, BatchedEntries> results = rpcClient
-        .invokeConcurrent(nss, method, true, false, BatchedEntries.class);
-    return results.values().iterator().next();
+    return rpcClient.invokeConcurrent(nss, method, true, false, BatchedEntries.class);
   }
 
   /**
@@ -161,7 +173,7 @@ public class RouterCacheAdmin {
    * @param locations the locations to map.
    * @return map with CacheDirectiveInfo mapped to the locations.
    */
-  private Map<RemoteLocation, CacheDirectiveInfo> getRemoteMap(
+  protected Map<RemoteLocation, CacheDirectiveInfo> getRemoteMap(
       CacheDirectiveInfo path, final List<RemoteLocation> locations) {
     final Map<RemoteLocation, CacheDirectiveInfo> dstMap = new HashMap<>();
     Iterator<RemoteLocation> iterator = locations.iterator();
