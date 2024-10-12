@@ -810,6 +810,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     IOException io = new IOException("No namespace available.");
 
     asyncComplete(null);
+    // If default Ns is present return result from that namespace.
     if (!nsId.isEmpty()) {
       asyncTry(() -> {
         rpcClient.invokeSingle(nsId, method, clazz);

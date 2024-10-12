@@ -57,6 +57,7 @@ public class RouterAsyncStoragePolicy extends RouterStoragePolicy {
     rpcServer.checkOperation(NameNode.OperationCategory.READ);
 
     RemoteMethod method = new RemoteMethod("getStoragePolicies");
-    return rpcServer.invokeAtAvailableNsAsync(method, BlockStoragePolicy[].class);
+    rpcServer.invokeAtAvailableNsAsync(method, BlockStoragePolicy[].class);
+    return asyncReturn(BlockStoragePolicy[].class);
   }
 }
