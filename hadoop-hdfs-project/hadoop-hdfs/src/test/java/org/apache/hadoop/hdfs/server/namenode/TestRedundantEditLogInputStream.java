@@ -60,8 +60,8 @@ public class TestRedundantEditLogInputStream {
     FSEditLogOp returnOp = redundantEditLogInputStream.nextOp();
     String log = capture.getOutput();
     assertTrue(log.contains("Got error skipUntil edit log input stream FAKE_STREAM0"));
-    assertTrue(log.contains(
-        "Got error reading edit log input stream FAKE_STREAM0; failing over to edit log FAKE_STREAM1"));
+    assertTrue(log.contains("Got error reading edit log input stream FAKE_STREAM0; "
+        + "failing over to edit log FAKE_STREAM1"));
     assertEquals(op, returnOp);
   }
 }
