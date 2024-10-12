@@ -865,7 +865,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
   }
 
   <T> T invokeOnNsAsync(RemoteMethod method, Class<T> clazz, IOException ioe,
-                        Set<FederationNamespaceInfo> nss) throws IOException {
+      Set<FederationNamespaceInfo> nss) throws IOException {
     if (nss.isEmpty()) {
       throw ioe;
     }
