@@ -74,9 +74,11 @@ add_executable(uri_test uri_test.cc)
 target_link_libraries(uri_test common gmock_main ${CMAKE_THREAD_LIBS_INIT})
 add_memcheck_test(uri uri_test)
 
+# We want to link to all the libraries of hdfs_static library,
+# except jvm.lib since we want to override some of the functions
+# provided by jvm.lib.
 get_target_property(HDFS_STATIC_LIBS_NO_JVM hdfs_static LINK_LIBRARIES)
 list(REMOVE_ITEM HDFS_STATIC_LIBS_NO_JVM ${JAVA_JVM_LIBRARY})
-
 add_executable(get_jni_test libhdfs_getjni_test.cc)
 target_link_libraries(get_jni_test
     gmock_main
