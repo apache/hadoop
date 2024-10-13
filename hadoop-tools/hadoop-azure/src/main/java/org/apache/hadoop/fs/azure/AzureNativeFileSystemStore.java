@@ -58,6 +58,7 @@ import org.apache.hadoop.fs.azure.metrics.AzureFileSystemInstrumentation;
 import org.apache.hadoop.fs.azure.metrics.BandwidthGaugeUpdater;
 import org.apache.hadoop.fs.azure.metrics.ErrorMetricUpdater;
 import org.apache.hadoop.fs.azure.metrics.ResponseReceivedMetricUpdater;
+import org.apache.hadoop.fs.azurebfs.http.AbfsHttpStatusCodes;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.io.IOUtils;
@@ -2837,7 +2838,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
         dstBlob.startCopyFromBlob(srcBlob, null,
             getInstrumentedContext(), overwriteDestination);
       } catch (StorageException se) {
-        if (se.getHttpStatusCode() == HttpURLConnection.HTTP_UNAVAILABLE) {
+        if (se.getHttpStatusCode() == AbfsHttpStatusCodes.UNAVAILABLE) {
           int copyBlobMinBackoff = sessionConfiguration.getInt(
             KEY_COPYBLOB_MIN_BACKOFF_INTERVAL,
             DEFAULT_COPYBLOB_MIN_BACKOFF_INTERVAL);
@@ -2867,7 +2868,7 @@ public class AzureNativeFileSystemStore implements NativeFileSystemStore {
       waitForCopyToComplete(dstBlob, getInstrumentedContext());
       safeDelete(srcBlob, lease);
     } catch (StorageException e) {
-      if (e.getHttpStatusCode() == HttpURLConnection.HTTP_UNAVAILABLE) {
+      if (e.getHttpStatusCode() == AbfsHttpStatusCodes.UNAVAILABLE) {
         LOG.warn("Rename: CopyBlob: StorageException: ServerBusy: Retry complete, will attempt client side copy for page blob");
         InputStream ipStream = null;
         OutputStream opStream = null;

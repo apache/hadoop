@@ -20,9 +20,9 @@ package org.apache.hadoop.fs.azure;
 
 import java.io.EOFException;
 import java.io.IOException;
-import java.net.HttpURLConnection;
 import java.util.Map;
 
+import org.apache.hadoop.fs.azurebfs.http.AbfsHttpStatusCodes;
 import org.apache.hadoop.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -108,7 +108,7 @@ final class NativeAzureFileSystemHelper {
    * exists; otherwise, returns false.
    */
   static boolean isBlobAlreadyExistsConflict(StorageException e) {
-    if (e.getHttpStatusCode() == HttpURLConnection.HTTP_CONFLICT
+    if (e.getHttpStatusCode() == AbfsHttpStatusCodes.CONFLICT
         && StorageErrorCodeStrings.BLOB_ALREADY_EXISTS.equals(e.getErrorCode())) {
       return true;
     }

@@ -29,6 +29,7 @@ import java.util.Date;
 import java.util.Hashtable;
 import java.util.Map;
 
+import org.apache.hadoop.fs.azurebfs.http.AbfsHttpStatusCodes;
 import org.apache.hadoop.util.Preconditions;
 
 import com.fasterxml.jackson.core.JsonFactory;
@@ -356,9 +357,10 @@ public final class AzureADAuthenticator {
     }
 
     try {
-      LOG.debug("Requesting an OAuth token by {} to {}",
-          httpMethod, authEndpoint);
+      LOG.debug("Requesting an OAuth token by {} to {}", httpMethod, authEndpoint);
       URL url = new URL(urlString);
+
+      // TODO ARNAUD replace with HttpClient
       conn = (HttpURLConnection) url.openConnection();
       conn.setRequestMethod(httpMethod);
       conn.setReadTimeout(READ_TIMEOUT);
@@ -387,7 +389,7 @@ public final class AzureADAuthenticator {
       long responseContentLength = conn.getHeaderFieldLong("Content-Length", 0);
 
       requestId = requestId == null ? "" : requestId;
-      if (httpResponseCode == HttpURLConnection.HTTP_OK
+      if (httpResponseCode == AbfsHttpStatusCodes.OK
               && responseContentType.startsWith("application/json") && responseContentLength > 0) {
         InputStream httpResponseStream = conn.getInputStream();
         token = parseTokenFromStream(httpResponseStream, isMsi);
@@ -414,7 +416,7 @@ public final class AzureADAuthenticator {
                           ? ""
                           : ("\nFirst 1K of Body: " + responseBody));
         LOG.debug(logMessage);
-        if (httpResponseCode == HttpURLConnection.HTTP_OK) {
+        if (httpResponseCode == AbfsHttpStatusCodes.OK) {
           // 200 is returned by some of the sign-on pages, but can also
           // come from proxies, utterly wrong URLs, etc.
           throw new UnexpectedResponseException(httpResponseCode,

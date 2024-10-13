@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.azurebfs;
 
 import java.io.FileNotFoundException;
+import java.net.http.HttpRequest.BodyPublishers;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -26,6 +27,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.apache.hadoop.fs.azurebfs.http.AbfsHttpStatusCodes;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Test;
@@ -47,10 +49,6 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
-
-import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
-import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
-import static java.net.HttpURLConnection.HTTP_OK;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doCallRealMethod;
@@ -191,7 +189,7 @@ public class ITestAzureBlobFileSystemDelete extends
     // Case 1: Mock instance of Http Operation response. This will return
     // HTTP:Not Found
     AbfsHttpOperation http404Op = mock(AbfsHttpOperation.class);
-    when(http404Op.getStatusCode()).thenReturn(HTTP_NOT_FOUND);
+    when(http404Op.getStatusCode()).thenReturn(AbfsHttpStatusCodes.NOT_FOUND);
 
     // Mock delete response to 404
     when(op.getResult()).thenReturn(http404Op);
@@ -202,12 +200,12 @@ public class ITestAzureBlobFileSystemDelete extends
         .getStatusCode())
         .describedAs(
             "Delete is considered idempotent by default and should return success.")
-        .isEqualTo(HTTP_OK);
+        .isEqualTo(AbfsHttpStatusCodes.OK);
 
     // Case 2: Mock instance of Http Operation response. This will return
     // HTTP:Bad Request
     AbfsHttpOperation http400Op = mock(AbfsHttpOperation.class);
-    when(http400Op.getStatusCode()).thenReturn(HTTP_BAD_REQUEST);
+    when(http400Op.getStatusCode()).thenReturn(AbfsHttpStatusCodes.BAD_REQUEST);
 
     // Mock delete response to 400
     when(op.getResult()).thenReturn(http400Op);
@@ -218,7 +216,7 @@ public class ITestAzureBlobFileSystemDelete extends
         .getStatusCode())
         .describedAs(
             "Idempotency check to happen only for HTTP 404 response.")
-        .isEqualTo(HTTP_BAD_REQUEST);
+        .isEqualTo(AbfsHttpStatusCodes.BAD_REQUEST);
 
   }
 
@@ -264,7 +262,7 @@ public class ITestAzureBlobFileSystemDelete extends
         DeletePath, mockClient, HTTP_METHOD_DELETE,
         ITestAbfsClient.getTestUrl(mockClient, "/NonExistingPath"),
         ITestAbfsClient.getTestRequestHeaders(mockClient)));
-    idempotencyRetOp.hardSetResult(HTTP_OK);
+    idempotencyRetOp.hardSetResult(AbfsHttpStatusCodes.OK);
 
     doReturn(idempotencyRetOp).when(mockClient).deleteIdempotencyCheckOp(any());
     TracingContext tracingContext = getTestTracingContext(fs, false);

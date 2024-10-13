@@ -19,10 +19,10 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.util.Random;
-import java.net.HttpURLConnection;
 
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.azurebfs.http.AbfsHttpStatusCodes;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_CONTINUE;
 
@@ -131,10 +131,10 @@ public class ExponentialRetryPolicy {
   public boolean shouldRetry(final int retryCount, final int statusCode) {
     return retryCount < this.retryCount
         && (statusCode < HTTP_CONTINUE
-        || statusCode == HttpURLConnection.HTTP_CLIENT_TIMEOUT
-        || (statusCode >= HttpURLConnection.HTTP_INTERNAL_ERROR
-            && statusCode != HttpURLConnection.HTTP_NOT_IMPLEMENTED
-            && statusCode != HttpURLConnection.HTTP_VERSION));
+        || statusCode == AbfsHttpStatusCodes.CLIENT_TIMEOUT
+        || (statusCode >= AbfsHttpStatusCodes.INTERNAL_ERROR
+            && statusCode != AbfsHttpStatusCodes.NOT_IMPLEMENTED
+            && statusCode != AbfsHttpStatusCodes.VERSION_NOT_SUPPORTED));
   }
 
   /**

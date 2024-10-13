@@ -18,7 +18,8 @@
 
 package org.apache.hadoop.fs.azurebfs.services.retryReasonCategories;
 
-import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
+import org.apache.hadoop.fs.azurebfs.http.AbfsHttpStatusCodes;
+
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_STATUS_CATEGORY_QUOTIENT;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.EGRESS_OVER_ACCOUNT_LIMIT;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.INGRESS_OVER_ACCOUNT_LIMIT;
@@ -45,7 +46,7 @@ public class ServerErrorRetryReason extends RetryReasonCategory {
   @Override
   String getAbbreviation(final Integer statusCode,
       final String serverErrorMessage) {
-    if (statusCode == HTTP_UNAVAILABLE && serverErrorMessage != null) {
+    if (statusCode == AbfsHttpStatusCodes.UNAVAILABLE && serverErrorMessage != null) {
       String splitedServerErrorMessage = serverErrorMessage.split(System.lineSeparator(),
           2)[0];
       if (INGRESS_OVER_ACCOUNT_LIMIT.getErrorMessage().equalsIgnoreCase(
@@ -60,7 +61,7 @@ public class ServerErrorRetryReason extends RetryReasonCategory {
           splitedServerErrorMessage)) {
         return OPERATION_LIMIT_BREACH_ABBREVIATION;
       }
-      return HTTP_UNAVAILABLE + "";
+      return AbfsHttpStatusCodes.UNAVAILABLE + "";
     }
     return statusCode + "";
   }

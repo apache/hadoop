@@ -21,10 +21,11 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.net.http.HttpRequest.BodyPublisher;
+import java.net.http.HttpRequest.BodyPublishers;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -38,6 +39,9 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.azurebfs.http.AbfsHttpClient;
+import org.apache.hadoop.fs.azurebfs.http.AbfsHttpClientFactory;
+import org.apache.hadoop.fs.azurebfs.http.AbfsHttpStatusCodes;
 import org.apache.hadoop.fs.store.LogExactlyOnce;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
@@ -96,6 +100,7 @@ public class AbfsClient implements Closeable {
   private final String filesystem;
   private final AbfsConfiguration abfsConfiguration;
   private final String userAgent;
+  private final AbfsHttpClient httpClient;
   private final AbfsPerfTracker abfsPerfTracker;
   private final String clientProvidedEncryptionKey;
   private final String clientProvidedEncryptionKeySHA;
@@ -125,6 +130,7 @@ public class AbfsClient implements Closeable {
     String baseUrlString = baseUrl.toString();
     this.filesystem = baseUrlString.substring(baseUrlString.lastIndexOf(FORWARD_SLASH) + 1);
     this.abfsConfiguration = abfsConfiguration;
+    this.httpClient = AbfsHttpClientFactory.getInstance(abfsConfiguration);
     this.retryPolicy = abfsClientContext.getExponentialRetryPolicy();
     this.accountName = abfsConfiguration.getAccountName().substring(0, abfsConfiguration.getAccountName().indexOf(AbfsHttpConstants.DOT));
     this.authType = abfsConfiguration.getAuthType(accountName);
@@ -214,6 +220,10 @@ public class AbfsClient implements Closeable {
     return filesystem;
   }
 
+  public AbfsHttpClient getHttpClient() {
+    return httpClient;
+  }
+
   protected AbfsPerfTracker getAbfsPerfTracker() {
     return abfsPerfTracker;
   }
@@ -270,7 +280,7 @@ public class AbfsClient implements Closeable {
     final URL url = createRequestUrl(abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = getAbfsRestOperation(
         AbfsRestOperationType.CreateFileSystem,
-        HTTP_METHOD_PUT, url, requestHeaders);
+        HTTP_METHOD_PUT, url, requestHeaders, BodyPublishers.noBody());
     op.execute(tracingContext);
     return op;
   }
@@ -403,7 +413,7 @@ public class AbfsClient implements Closeable {
       if (!op.hasResult()) {
         throw ex;
       }
-      if (!isFile && op.getResult().getStatusCode() == HttpURLConnection.HTTP_CONFLICT) {
+      if (!isFile && op.getResult().getStatusCode() == AbfsHttpStatusCodes.CONFLICT) {
         String existingResource =
             op.getResult().getResponseHeader(X_MS_EXISTING_RESOURCE_TYPE);
         if (existingResource != null && existingResource.equals(DIRECTORY)) {
@@ -677,7 +687,7 @@ public class AbfsClient implements Closeable {
     LOG.debug("rename({}, {}) failure {}; retry={} etag {}",
               source, destination, op.getResult().getStatusCode(), op.isARetriedRequest(), sourceEtag);
     if (!(op.isARetriedRequest()
-            && (op.getResult().getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND))) {
+            && (op.getResult().getStatusCode() == AbfsHttpStatusCodes.NOT_FOUND))) {
       // only attempt recovery if the failure was a 404 on a retried rename request.
       return false;
     }
@@ -691,7 +701,7 @@ public class AbfsClient implements Closeable {
         final AbfsRestOperation destStatusOp = getPathStatus(destination, false, tracingContext);
         final AbfsHttpOperation result = destStatusOp.getResult();
 
-        final boolean recovered = result.getStatusCode() == HttpURLConnection.HTTP_OK
+        final boolean recovered = result.getStatusCode() == AbfsHttpStatusCodes.OK
                 && sourceEtag.equals(extractEtagHeader(result));
         LOG.info("File rename has taken place: recovery {}",
                 recovered ? "succeeded" : "failed");
@@ -760,9 +770,8 @@ public class AbfsClient implements Closeable {
             HTTP_METHOD_PUT,
             url,
             requestHeaders,
-            buffer,
-            reqParams.getoffset(),
-            reqParams.getLength(),
+            BodyPublishers.ofByteArray(buffer, reqParams.getoffset(), reqParams.getLength()),
+            buffer, reqParams.getoffset(), reqParams.getLength(), // TODO ARNAUD Deprecated
             sasTokenForReuse);
     try {
       op.execute(tracingContext);
@@ -796,11 +805,10 @@ public class AbfsClient implements Closeable {
                 HTTP_METHOD_PUT,
                 url,
                 requestHeaders,
-                buffer,
-                reqParams.getoffset(),
-                reqParams.getLength(),
+                BodyPublishers.ofByteArray(buffer, reqParams.getoffset(), reqParams.getLength()),
+                buffer, reqParams.getoffset(), reqParams.getLength(), // TODO ARNAUD Deprecated
                 sasTokenForReuse);
-        successOp.hardSetResult(HttpURLConnection.HTTP_OK);
+        successOp.hardSetResult(AbfsHttpStatusCodes.OK);
         return successOp;
       }
       throw e;
@@ -815,8 +823,8 @@ public class AbfsClient implements Closeable {
    * @return True or False.
    */
   private boolean checkUserError(int responseStatusCode) {
-    return (responseStatusCode >= HttpURLConnection.HTTP_BAD_REQUEST
-        && responseStatusCode < HttpURLConnection.HTTP_INTERNAL_ERROR);
+    return (responseStatusCode >= AbfsHttpStatusCodes.BAD_REQUEST
+        && responseStatusCode < AbfsHttpStatusCodes.INTERNAL_ERROR);
   }
 
   // For AppendBlob its possible that the append succeeded in the backend but the request failed.
@@ -827,9 +835,9 @@ public class AbfsClient implements Closeable {
   public boolean appendSuccessCheckOp(AbfsRestOperation op, final String path,
                                        final long length, TracingContext tracingContext) throws AzureBlobFileSystemException {
     if ((op.isARetriedRequest())
-        && (op.getResult().getStatusCode() == HttpURLConnection.HTTP_BAD_REQUEST)) {
+        && (op.getResult().getStatusCode() == AbfsHttpStatusCodes.BAD_REQUEST)) {
       final AbfsRestOperation destStatusOp = getPathStatus(path, false, tracingContext);
-      if (destStatusOp.getResult().getStatusCode() == HttpURLConnection.HTTP_OK) {
+      if (destStatusOp.getResult().getStatusCode() == AbfsHttpStatusCodes.OK) {
         String fileLength = destStatusOp.getResult().getResponseHeader(
             HttpHeaderConfigurations.CONTENT_LENGTH);
         if (length <= Long.parseLong(fileLength)) {
@@ -928,8 +936,10 @@ public class AbfsClient implements Closeable {
     return op;
   }
 
-  public AbfsRestOperation read(final String path, final long position, final byte[] buffer, final int bufferOffset,
-                                final int bufferLength, final String eTag, String cachedSasToken,
+  public AbfsRestOperation read(final String path, final long position,
+                                // TODO ARNAUD BodyHandler?
+                                final byte[] buffer, final int bufferOffset, final int bufferLength,
+                                final String eTag, String cachedSasToken,
       TracingContext tracingContext) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     addCustomerProvidedKeyHeaders(requestHeaders);
@@ -947,7 +957,7 @@ public class AbfsClient implements Closeable {
             AbfsRestOperationType.ReadFile,
             HTTP_METHOD_GET,
             url,
-            requestHeaders,
+            requestHeaders, BodyPublishers.noBody(),
             buffer,
             bufferOffset,
             bufferLength, sasTokenForReuse);
@@ -973,7 +983,8 @@ public class AbfsClient implements Closeable {
             this,
             HTTP_METHOD_DELETE,
             url,
-            requestHeaders);
+            requestHeaders,
+            BodyPublishers.noBody());
     try {
     op.execute(tracingContext);
     } catch (AzureBlobFileSystemException e) {
@@ -1013,7 +1024,7 @@ public class AbfsClient implements Closeable {
   public AbfsRestOperation deleteIdempotencyCheckOp(final AbfsRestOperation op) {
     Preconditions.checkArgument(op.hasResult(), "Operations has null HTTP response");
     if ((op.isARetriedRequest())
-        && (op.getResult().getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND)
+        && (op.getResult().getStatusCode() == AbfsHttpStatusCodes.NOT_FOUND)
         && DEFAULT_DELETE_CONSIDERED_IDEMPOTENT) {
       // Server has returned HTTP 404, which means path no longer
       // exists. Assuming delete result to be idempotent, return success.
@@ -1022,7 +1033,7 @@ public class AbfsClient implements Closeable {
           HTTP_METHOD_DELETE,
           op.getUrl(),
           op.getRequestHeaders());
-      successOp.hardSetResult(HttpURLConnection.HTTP_OK);
+      successOp.hardSetResult(AbfsHttpStatusCodes.OK);
       LOG.debug("Returning success response from delete idempotency logic");
       return successOp;
     }
@@ -1428,7 +1439,8 @@ public class AbfsClient implements Closeable {
       final String httpMethod,
       final URL url,
       final List<AbfsHttpHeader> requestHeaders,
-      final byte[] buffer,
+      final BodyPublisher bodyPublisher,
+      final byte[] buffer, // TTODO ARNAUD deprecated
       final int bufferOffset,
       final int bufferLength,
       final String sasTokenForReuse) {
@@ -1438,6 +1450,7 @@ public class AbfsClient implements Closeable {
         httpMethod,
         url,
         requestHeaders,
+        bodyPublisher,
         buffer,
         bufferOffset,
         bufferLength,
@@ -1456,26 +1469,33 @@ public class AbfsClient implements Closeable {
   AbfsRestOperation getAbfsRestOperation(final AbfsRestOperationType operationType,
       final String httpMethod,
       final URL url,
-      final List<AbfsHttpHeader> requestHeaders) {
+      final List<AbfsHttpHeader> requestHeaders,
+      final BodyPublisher bodyPublisher) {
     return new AbfsRestOperation(
         operationType,
         this,
         httpMethod,
         url,
-        requestHeaders
-    );
+        requestHeaders, bodyPublisher);
   }
 
-  /**
-   * Creates an AbfsRestOperation with parameters including request headers and SAS token.
-   *
-   * @param operationType    The type of the operation.
-   * @param httpMethod       The HTTP method of the operation.
-   * @param url              The URL associated with the operation.
-   * @param requestHeaders   The list of HTTP headers for the request.
-   * @param sasTokenForReuse The SAS token for reusing authentication.
-   * @return An AbfsRestOperation instance.
-   */
+  AbfsRestOperation getAbfsRestOperation(final AbfsRestOperationType operationType,
+                                         final String httpMethod,
+                                         final URL url,
+                                         final List<AbfsHttpHeader> requestHeaders) {
+    return getAbfsRestOperation(operationType, httpMethod, url, requestHeaders, BodyPublishers.noBody());
+  }
+
+    /**
+     * Creates an AbfsRestOperation with parameters including request headers and SAS token.
+     *
+     * @param operationType    The type of the operation.
+     * @param httpMethod       The HTTP method of the operation.
+     * @param url              The URL associated with the operation.
+     * @param requestHeaders   The list of HTTP headers for the request.
+     * @param sasTokenForReuse The SAS token for reusing authentication.
+     * @return An AbfsRestOperation instance.
+     */
   AbfsRestOperation getAbfsRestOperation(final AbfsRestOperationType operationType,
       final String httpMethod,
       final URL url,
@@ -1486,6 +1506,6 @@ public class AbfsClient implements Closeable {
         this,
         httpMethod,
         url,
-        requestHeaders, sasTokenForReuse);
+        requestHeaders, BodyPublishers.noBody(), sasTokenForReuse);
   }
 }

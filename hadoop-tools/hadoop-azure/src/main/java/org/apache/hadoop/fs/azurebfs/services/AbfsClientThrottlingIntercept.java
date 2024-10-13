@@ -18,17 +18,15 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
-import java.net.HttpURLConnection;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.apache.hadoop.fs.azurebfs.http.AbfsHttpStatusCodes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.AbfsStatistic;
 import org.apache.hadoop.fs.azurebfs.constants.HttpHeaderConfigurations;
-
-import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 
 /**
  * Throttles Azure Blob File System read and write operations to achieve maximum
@@ -145,11 +143,11 @@ public final class AbfsClientThrottlingIntercept implements AbfsThrottlingInterc
     // If the socket is terminated prior to receiving a response, the HTTP
     // status may be 0 or -1.  A status less than 200 or greater than or equal
     // to 500 is considered an error.
-    boolean isFailedOperation = (status < HttpURLConnection.HTTP_OK
-        || status >= HttpURLConnection.HTTP_INTERNAL_ERROR);
+    boolean isFailedOperation = (status < AbfsHttpStatusCodes.OK
+        || status >= AbfsHttpStatusCodes.INTERNAL_ERROR);
 
     // If status code is 503, it is considered as a throttled operation.
-    boolean isThrottledOperation = (status == HTTP_UNAVAILABLE);
+    boolean isThrottledOperation = (status == AbfsHttpStatusCodes.UNAVAILABLE);
 
     switch (operationType) {
       case Append:
@@ -170,7 +168,7 @@ public final class AbfsClientThrottlingIntercept implements AbfsThrottlingInterc
         }
         break;
       case ReadFile:
-        String range = abfsHttpOperation.getConnection().getRequestProperty(HttpHeaderConfigurations.RANGE);
+        String range = abfsHttpOperation.getHttpRequestBuilder().getRequestProperty(HttpHeaderConfigurations.RANGE);
         contentLength = getContentLengthIfKnown(range);
         if (contentLength > 0) {
           readThrottler.addBytesTransferred(contentLength,

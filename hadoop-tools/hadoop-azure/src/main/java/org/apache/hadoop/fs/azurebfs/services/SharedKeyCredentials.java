@@ -39,6 +39,7 @@ import java.util.TimeZone;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.hadoop.fs.azurebfs.http.AbfsHttpRequestBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -80,18 +81,18 @@ public class SharedKeyCredentials {
     initializeMac();
   }
 
-  public void signRequest(HttpURLConnection connection, final long contentLength) throws UnsupportedEncodingException {
-
+  public void signRequest(AbfsHttpOperation httpOperation, final long contentLength) throws UnsupportedEncodingException {
+    AbfsHttpRequestBuilder httpRequestBuilder = httpOperation.getHttpRequestBuilder();
     String gmtTime = getGMTTime();
-    connection.setRequestProperty(HttpHeaderConfigurations.X_MS_DATE, gmtTime);
+    httpRequestBuilder.setRequestProperty(HttpHeaderConfigurations.X_MS_DATE, gmtTime);
 
-    final String stringToSign = canonicalize(connection, accountName, contentLength);
+    final String stringToSign = canonicalize(httpRequestBuilder, accountName, contentLength);
 
     final String computedBase64Signature = computeHmac256(stringToSign);
 
     String signature = String.format("%s %s:%s", "SharedKey", accountName,
         computedBase64Signature);
-    connection.setRequestProperty(HttpHeaderConfigurations.AUTHORIZATION,
+    httpRequestBuilder.setRequestProperty(HttpHeaderConfigurations.AUTHORIZATION,
         signature);
     LOG.debug("Signing request with timestamp of {} and signature {}",
         gmtTime, signature);
@@ -114,15 +115,16 @@ public class SharedKeyCredentials {
   /**
    * Add x-ms- prefixed headers in a fixed order.
    *
-   * @param conn                the HttpURLConnection for the operation
+   * @param httpRequestBuilder  the Http request builder for the operation
    * @param canonicalizedString the canonicalized string to add the canonicalized headerst to.
    */
-  private static void addCanonicalizedHeaders(final HttpURLConnection conn, final StringBuilder canonicalizedString) {
+  private static void addCanonicalizedHeaders(final AbfsHttpRequestBuilder httpRequestBuilder,
+                                              final StringBuilder canonicalizedString) {
     // Look for header names that start with
     // HeaderNames.PrefixForStorageHeader
     // Then sort them in case-insensitive manner.
 
-    final Map<String, List<String>> headers = conn.getRequestProperties();
+    final Map<String, List<String>> headers = httpRequestBuilder.getRequestProperties();
     final ArrayList<String> httpStorageHeaderNameArray = new ArrayList<String>();
 
     for (final String key : headers.keySet()) {
@@ -200,48 +202,49 @@ public class SharedKeyCredentials {
    * @param contentType   the content type of the HTTP request.
    * @param contentLength the length of the content written to the outputstream in bytes, -1 if unknown
    * @param date          the date/time specification for the HTTP request
-   * @param conn          the HttpURLConnection for the operation.
+   * @param httpRequestBuilder the HTTP request builder for the operation.
    * @return A canonicalized string.
    */
   private static String canonicalizeHttpRequest(final URL address,
       final String accountName, final String method, final String contentType,
-      final long contentLength, final String date, final HttpURLConnection conn)
+      final long contentLength, final String date,
+      final AbfsHttpRequestBuilder httpRequestBuilder)
       throws UnsupportedEncodingException {
 
     // The first element should be the Method of the request.
     // I.e. GET, POST, PUT, or HEAD.
     final StringBuilder canonicalizedString = new StringBuilder(EXPECTED_BLOB_QUEUE_CANONICALIZED_STRING_LENGTH);
-    canonicalizedString.append(conn.getRequestMethod());
+    canonicalizedString.append(method);
 
     // The next elements are
     // If any element is missing it may be empty.
     appendCanonicalizedElement(canonicalizedString,
-        getHeaderValue(conn, HttpHeaderConfigurations.CONTENT_ENCODING, AbfsHttpConstants.EMPTY_STRING));
+        getHeaderValue(httpRequestBuilder, HttpHeaderConfigurations.CONTENT_ENCODING, AbfsHttpConstants.EMPTY_STRING));
     appendCanonicalizedElement(canonicalizedString,
-        getHeaderValue(conn, HttpHeaderConfigurations.CONTENT_LANGUAGE, AbfsHttpConstants.EMPTY_STRING));
+        getHeaderValue(httpRequestBuilder, HttpHeaderConfigurations.CONTENT_LANGUAGE, AbfsHttpConstants.EMPTY_STRING));
     appendCanonicalizedElement(canonicalizedString,
         contentLength <= 0 ? "" : String.valueOf(contentLength));
     appendCanonicalizedElement(canonicalizedString,
-        getHeaderValue(conn, HttpHeaderConfigurations.CONTENT_MD5, AbfsHttpConstants.EMPTY_STRING));
+        getHeaderValue(httpRequestBuilder, HttpHeaderConfigurations.CONTENT_MD5, AbfsHttpConstants.EMPTY_STRING));
     appendCanonicalizedElement(canonicalizedString, contentType != null ? contentType : AbfsHttpConstants.EMPTY_STRING);
 
-    final String dateString = getHeaderValue(conn, HttpHeaderConfigurations.X_MS_DATE, AbfsHttpConstants.EMPTY_STRING);
+    final String dateString = getHeaderValue(httpRequestBuilder, HttpHeaderConfigurations.X_MS_DATE, AbfsHttpConstants.EMPTY_STRING);
     // If x-ms-date header exists, Date should be empty string
     appendCanonicalizedElement(canonicalizedString, dateString.equals(AbfsHttpConstants.EMPTY_STRING) ? date
         : "");
 
     appendCanonicalizedElement(canonicalizedString,
-        getHeaderValue(conn, HttpHeaderConfigurations.IF_MODIFIED_SINCE, AbfsHttpConstants.EMPTY_STRING));
+        getHeaderValue(httpRequestBuilder, HttpHeaderConfigurations.IF_MODIFIED_SINCE, AbfsHttpConstants.EMPTY_STRING));
     appendCanonicalizedElement(canonicalizedString,
-        getHeaderValue(conn, HttpHeaderConfigurations.IF_MATCH, AbfsHttpConstants.EMPTY_STRING));
+        getHeaderValue(httpRequestBuilder, HttpHeaderConfigurations.IF_MATCH, AbfsHttpConstants.EMPTY_STRING));
     appendCanonicalizedElement(canonicalizedString,
-        getHeaderValue(conn, HttpHeaderConfigurations.IF_NONE_MATCH, AbfsHttpConstants.EMPTY_STRING));
+        getHeaderValue(httpRequestBuilder, HttpHeaderConfigurations.IF_NONE_MATCH, AbfsHttpConstants.EMPTY_STRING));
     appendCanonicalizedElement(canonicalizedString,
-        getHeaderValue(conn, HttpHeaderConfigurations.IF_UNMODIFIED_SINCE, AbfsHttpConstants.EMPTY_STRING));
+        getHeaderValue(httpRequestBuilder, HttpHeaderConfigurations.IF_UNMODIFIED_SINCE, AbfsHttpConstants.EMPTY_STRING));
     appendCanonicalizedElement(canonicalizedString,
-        getHeaderValue(conn, HttpHeaderConfigurations.RANGE, AbfsHttpConstants.EMPTY_STRING));
+        getHeaderValue(httpRequestBuilder, HttpHeaderConfigurations.RANGE, AbfsHttpConstants.EMPTY_STRING));
 
-    addCanonicalizedHeaders(conn, canonicalizedString);
+    addCanonicalizedHeaders(httpRequestBuilder, canonicalizedString);
 
     appendCanonicalizedElement(canonicalizedString, getCanonicalizedResource(address, accountName));
 
@@ -450,8 +453,8 @@ public class SharedKeyCredentials {
     return value.substring(spaceDex);
   }
 
-  private static String getHeaderValue(final HttpURLConnection conn, final String headerName, final String defaultValue) {
-    final String headerValue = conn.getRequestProperty(headerName);
+  private static String getHeaderValue(final AbfsHttpRequestBuilder httpRequestBuilder, final String headerName, final String defaultValue) {
+    final String headerValue = httpRequestBuilder.getRequestProperty(headerName);
     return headerValue == null ? defaultValue : headerValue;
   }
 
@@ -459,13 +462,13 @@ public class SharedKeyCredentials {
   /**
    * Constructs a canonicalized string for signing a request.
    *
-   * @param conn          the HttpURLConnection to canonicalize
+   * @param httpRequestBuilder the HTTP request builder to canonicalize
    * @param accountName   the account name associated with the request
    * @param contentLength the length of the content written to the outputstream in bytes,
    *                      -1 if unknown
    * @return a canonicalized string.
    */
-  private String canonicalize(final HttpURLConnection conn,
+  private String canonicalize(final AbfsHttpRequestBuilder httpRequestBuilder,
                               final String accountName,
                               final Long contentLength) throws UnsupportedEncodingException {
 
@@ -474,10 +477,10 @@ public class SharedKeyCredentials {
           "The Content-Length header must be greater than or equal to -1.");
     }
 
-    String contentType = getHeaderValue(conn, HttpHeaderConfigurations.CONTENT_TYPE, "");
+    String contentType = getHeaderValue(httpRequestBuilder, HttpHeaderConfigurations.CONTENT_TYPE, "");
 
-    return canonicalizeHttpRequest(conn.getURL(), accountName,
-        conn.getRequestMethod(), contentType, contentLength, null, conn);
+    return canonicalizeHttpRequest(httpRequestBuilder.getURL(), accountName,
+            httpRequestBuilder.getMethod(), contentType, contentLength, null, httpRequestBuilder);
   }
 
   /**

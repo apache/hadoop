@@ -19,9 +19,9 @@
 package org.apache.hadoop.fs.azurebfs;
 
 import java.io.FileNotFoundException;
-import java.net.HttpURLConnection;
 import java.nio.file.AccessDeniedException;
 
+import org.apache.hadoop.fs.azurebfs.http.AbfsHttpStatusCodes;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.FileAlreadyExistsException;
@@ -45,7 +45,7 @@ public class TestAbfsErrorTranslation extends AbstractHadoopTestBase {
 
   @Test
   public void testConvert403ToAccessDenied() throws Throwable {
-    assertTranslated(HttpURLConnection.HTTP_FORBIDDEN,
+    assertTranslated(AbfsHttpStatusCodes.FORBIDDEN,
         AUTHORIZATION_PERMISSION_MISS_MATCH,
         AccessDeniedException.class,
         AUTHORIZATION_PERMISSION_MISS_MATCH.getErrorCode());
@@ -53,7 +53,7 @@ public class TestAbfsErrorTranslation extends AbstractHadoopTestBase {
 
   @Test
   public void testConvert404ToFNFE() throws Throwable {
-    assertTranslated(HttpURLConnection.HTTP_NOT_FOUND,
+    assertTranslated(AbfsHttpStatusCodes.NOT_FOUND,
         PATH_NOT_FOUND,
         FileNotFoundException.class,
         PATH_NOT_FOUND.getErrorCode());
@@ -61,7 +61,7 @@ public class TestAbfsErrorTranslation extends AbstractHadoopTestBase {
 
   @Test
   public void testConvert409ToFileAlreadyExistsException() throws Throwable {
-    assertTranslated(HttpURLConnection.HTTP_CONFLICT,
+    assertTranslated(AbfsHttpStatusCodes.CONFLICT,
         PATH_ALREADY_EXISTS,
         FileAlreadyExistsException.class,
         PATH_ALREADY_EXISTS.getErrorCode());

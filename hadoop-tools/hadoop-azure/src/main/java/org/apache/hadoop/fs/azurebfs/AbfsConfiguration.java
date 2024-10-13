@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.azurebfs.http.AbfsHttpClient;
+import org.apache.hadoop.fs.azurebfs.http.legacy.LegacyAbfsHttpClient;
 import org.apache.hadoop.util.Preconditions;
 
 import org.apache.commons.lang3.StringUtils;
@@ -337,6 +339,11 @@ public class AbfsConfiguration{
           FS_AZURE_ABFS_RENAME_RESILIENCE, DefaultValue = DEFAULT_ENABLE_ABFS_RENAME_RESILIENCE)
   private boolean renameResilience;
 
+//  @StringConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_HTTP_CLIENT_CLASS,
+//          DefaultValue = AZURE_HTTP_CLIENT_CLASS_DEFAULT)
+//  private String httpClientClass;
+
+
   public AbfsConfiguration(final Configuration rawConfig, String accountName)
       throws IllegalAccessException, InvalidConfigurationValueException, IOException {
     this.rawConfig = ProviderUtils.excludeIncompatibleCredentialProviders(
@@ -469,6 +476,16 @@ public class AbfsConfiguration{
       throw new ConfigurationPropertyNotFoundException(key);
     }
     return value;
+  }
+
+  /**
+   * Return implementation class for AbfsHttpClient
+   * legacy code using java.net.HttpURLConnection,
+   * since jdk >= 11, default to java.net.http.HttpClient
+   * @return Class object
+   */
+  public Class<? extends AbfsHttpClient> getHttpClientClass() {
+    return rawConfig.getClass(FS_AZURE_HTTP_CLIENT_CLASS, LegacyAbfsHttpClient.class, AbfsHttpClient.class);
   }
 
   /**

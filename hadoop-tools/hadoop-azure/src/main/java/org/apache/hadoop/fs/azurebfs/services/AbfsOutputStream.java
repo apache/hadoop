@@ -21,12 +21,12 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.net.HttpURLConnection;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.Future;
 import java.util.UUID;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.azurebfs.http.AbfsHttpStatusCodes;
 import org.apache.hadoop.fs.impl.BackReference;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.util.concurrent.ListeningExecutorService;
@@ -361,7 +361,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
   private void failureWhileSubmit(Exception ex) throws IOException {
     if (ex instanceof AbfsRestOperationException) {
       if (((AbfsRestOperationException) ex).getStatusCode()
-          == HttpURLConnection.HTTP_NOT_FOUND) {
+          == AbfsHttpStatusCodes.NOT_FOUND) {
         throw new FileNotFoundException(ex.getMessage());
       }
     }
@@ -610,7 +610,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
       } catch (Exception ex) {
         outputStreamStatistics.uploadFailed(writeOperation.length);
         if (ex.getCause() instanceof AbfsRestOperationException) {
-          if (((AbfsRestOperationException) ex.getCause()).getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
+          if (((AbfsRestOperationException) ex.getCause()).getStatusCode() == AbfsHttpStatusCodes.NOT_FOUND) {
             throw new FileNotFoundException(ex.getMessage());
           }
         }
@@ -654,7 +654,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable,
       perfInfo.registerResult(op.getResult()).registerSuccess(true);
     } catch (AzureBlobFileSystemException ex) {
       if (ex instanceof AbfsRestOperationException) {
-        if (((AbfsRestOperationException) ex).getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
+        if (((AbfsRestOperationException) ex).getStatusCode() == AbfsHttpStatusCodes.NOT_FOUND) {
           throw new FileNotFoundException(ex.getMessage());
         }
       }

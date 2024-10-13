@@ -145,5 +145,10 @@ public final class FileSystemConfigurations {
    */
   public static final int RATE_LIMIT_DEFAULT = 10_000;
 
+  /**
+   * Default Http Client class
+   */
+  public static final String AZURE_HTTP_CLIENT_CLASS_DEFAULT = "org.apache.hadoop.fs.azurebfs.http.legacy.LegacyAbfsHttpClient";
+
   private FileSystemConfigurations() {}
 }

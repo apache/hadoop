@@ -21,11 +21,11 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.io.EOFException;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.net.HttpURLConnection;
 import java.util.UUID;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.azurebfs.http.AbfsHttpStatusCodes;
 import org.apache.hadoop.fs.impl.BackReference;
 import org.apache.hadoop.util.Preconditions;
 
@@ -541,6 +541,7 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       throw new IllegalArgumentException("requested read length is more than will fit after requested offset in buffer");
     }
     final AbfsRestOperation op;
+    final AbfsHttpOperation opResult;
     AbfsPerfTracker tracker = client.getAbfsPerfTracker();
     try (AbfsPerfInfo perfInfo = new AbfsPerfInfo(tracker, "readRemote", "read")) {
       if (streamStatistics != null) {
@@ -549,21 +550,22 @@ public class AbfsInputStream extends FSInputStream implements CanUnbuffer,
       LOG.trace("Trigger client.read for path={} position={} offset={} length={}", path, position, offset, length);
       op = client.read(path, position, b, offset, length,
           tolerateOobAppends ? "*" : eTag, cachedSasToken.get(), tracingContext);
+      opResult = op.getResult();
       cachedSasToken.update(op.getSasToken());
       LOG.debug("issuing HTTP GET request params position = {} b.length = {} "
           + "offset = {} length = {}", position, b.length, offset, length);
-      perfInfo.registerResult(op.getResult()).registerSuccess(true);
+      perfInfo.registerResult(opResult).registerSuccess(true);
       incrementReadOps();
     } catch (AzureBlobFileSystemException ex) {
       if (ex instanceof AbfsRestOperationException) {
         AbfsRestOperationException ere = (AbfsRestOperationException) ex;
-        if (ere.getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
+        if (ere.getStatusCode() == AbfsHttpStatusCodes.NOT_FOUND) {
           throw new FileNotFoundException(ere.getMessage());
         }
       }
       throw new IOException(ex);
     }
-    long bytesRead = op.getResult().getBytesReceived();
+    long bytesRead = opResult.getBytesReceived();
     if (streamStatistics != null) {
       streamStatistics.remoteBytesRead(bytesRead);
     }

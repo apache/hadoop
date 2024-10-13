@@ -18,16 +18,13 @@
 
 package org.apache.hadoop.fs.azure.metrics;
 
-import static java.net.HttpURLConnection.HTTP_NOT_FOUND; //404
-import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;  //400
-import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR; //500
-
 import org.apache.hadoop.classification.InterfaceAudience;
 
 import com.microsoft.azure.storage.OperationContext;
 import com.microsoft.azure.storage.RequestResult;
 import com.microsoft.azure.storage.ResponseReceivedEvent;
 import com.microsoft.azure.storage.StorageEvent;
+import org.apache.hadoop.fs.azurebfs.http.AbfsHttpStatusCodes;
 
 
 /**
@@ -70,10 +67,10 @@ public final class ErrorMetricUpdater extends StorageEvent<ResponseReceivedEvent
     // We exclude 404 because it happens frequently during the normal
     // course of operation (each call to exists() would generate that
     // if it's not found).
-    if (statusCode >= HTTP_BAD_REQUEST && statusCode < HTTP_INTERNAL_ERROR 
-        && statusCode != HTTP_NOT_FOUND) {
+    if (statusCode >= AbfsHttpStatusCodes.BAD_REQUEST && statusCode < AbfsHttpStatusCodes.INTERNAL_ERROR
+        && statusCode != AbfsHttpStatusCodes.NOT_FOUND) {
       instrumentation.clientErrorEncountered();
-    } else if (statusCode >= HTTP_INTERNAL_ERROR) {
+    } else if (statusCode >= AbfsHttpStatusCodes.INTERNAL_ERROR) {
       // It's a server error: a 5xx status. Could be an Azure Storage
       // bug or (more likely) throttling.
       instrumentation.serverErrorEncountered();

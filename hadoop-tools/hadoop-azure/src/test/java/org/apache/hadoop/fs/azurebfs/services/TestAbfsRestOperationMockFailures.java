@@ -24,6 +24,7 @@ import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 
+import org.apache.hadoop.fs.azurebfs.http.AbfsHttpStatusCodes;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -31,10 +32,6 @@ import org.mockito.stubbing.Stubber;
 
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 
-import static java.net.HttpURLConnection.HTTP_BAD_REQUEST;
-import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
-import static java.net.HttpURLConnection.HTTP_OK;
-import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.EGRESS_OVER_ACCOUNT_LIMIT;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.INGRESS_OVER_ACCOUNT_LIMIT;
 import static org.apache.hadoop.fs.azurebfs.services.AbfsClientTestUtil.addGeneralMockBehaviourToAbfsClient;
@@ -125,37 +122,37 @@ public class TestAbfsRestOperationMockFailures {
 
   @Test
   public void testClientRequestIdFor400Retry() throws Exception {
-    testClientRequestIdForStatusRetry(HTTP_BAD_REQUEST, "", "400");
+    testClientRequestIdForStatusRetry(AbfsHttpStatusCodes.BAD_REQUEST, "", "400");
   }
 
   @Test
   public void testClientRequestIdFor500Retry() throws Exception {
-    testClientRequestIdForStatusRetry(HTTP_INTERNAL_ERROR, "", "500");
+    testClientRequestIdForStatusRetry(AbfsHttpStatusCodes.INTERNAL_ERROR, "", "500");
   }
 
   @Test
   public void testClientRequestIdFor503INGRetry() throws Exception {
-    testClientRequestIdForStatusRetry(HTTP_UNAVAILABLE,
+    testClientRequestIdForStatusRetry(AbfsHttpStatusCodes.UNAVAILABLE,
         INGRESS_OVER_ACCOUNT_LIMIT.getErrorMessage(),
         INGRESS_LIMIT_BREACH_ABBREVIATION);
   }
 
   @Test
   public void testClientRequestIdFor503egrRetry() throws Exception {
-    testClientRequestIdForStatusRetry(HTTP_UNAVAILABLE,
+    testClientRequestIdForStatusRetry(AbfsHttpStatusCodes.UNAVAILABLE,
         EGRESS_OVER_ACCOUNT_LIMIT.getErrorMessage(),
         EGRESS_LIMIT_BREACH_ABBREVIATION);
   }
 
   @Test
   public void testClientRequestIdFor503OPRRetry() throws Exception {
-    testClientRequestIdForStatusRetry(HTTP_UNAVAILABLE,
+    testClientRequestIdForStatusRetry(AbfsHttpStatusCodes.UNAVAILABLE,
         OPERATION_BREACH_MESSAGE, OPERATION_LIMIT_BREACH_ABBREVIATION);
   }
 
   @Test
   public void testClientRequestIdFor503OtherRetry() throws Exception {
-    testClientRequestIdForStatusRetry(HTTP_UNAVAILABLE, "Other.", "503");
+    testClientRequestIdForStatusRetry(AbfsHttpStatusCodes.UNAVAILABLE, "Other.", "503");
   }
 
   private void testClientRequestIdForStatusRetry(int status,
@@ -192,7 +189,7 @@ public class TestAbfsRestOperationMockFailures {
         statusCount[0]++;
         return status;
       }
-      return HTTP_OK;
+      return AbfsHttpStatusCodes.OK;
     }).when(httpOperation).getStatusCode();
 
     Mockito.doReturn(serverErrorMessage)
@@ -250,7 +247,7 @@ public class TestAbfsRestOperationMockFailures {
         .processResponse(nullable(byte[].class), nullable(int.class),
             nullable(int.class));
 
-    Mockito.doReturn(HTTP_OK).when(httpOperation).getStatusCode();
+    Mockito.doReturn(AbfsHttpStatusCodes.OK).when(httpOperation).getStatusCode();
 
     TracingContext tracingContext = Mockito.mock(TracingContext.class);
     Mockito.doNothing().when(tracingContext).setRetryCount(nullable(int.class));

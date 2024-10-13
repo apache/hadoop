@@ -267,5 +267,8 @@ public final class ConfigurationKeys {
    * @see FileSystem#openFile(org.apache.hadoop.fs.Path)
    */
   public static final String FS_AZURE_BUFFERED_PREAD_DISABLE = "fs.azure.buffered.pread.disable";
+  /** Key for HttpClient class. */
+  public static final String FS_AZURE_HTTP_CLIENT_CLASS = "fs.azure.http.client.class";
+
   private ConfigurationKeys() {}
 }

@@ -18,12 +18,12 @@
 
 package org.apache.hadoop.fs.azurebfs.contracts.services;
 
-import java.net.HttpURLConnection;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.azurebfs.http.AbfsHttpStatusCodes;
 
 /**
  * Azure service error codes.
@@ -31,22 +31,22 @@ import org.apache.hadoop.classification.InterfaceStability;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public enum AzureServiceErrorCode {
-  FILE_SYSTEM_ALREADY_EXISTS("FilesystemAlreadyExists", HttpURLConnection.HTTP_CONFLICT, null),
-  PATH_ALREADY_EXISTS("PathAlreadyExists", HttpURLConnection.HTTP_CONFLICT, null),
-  INTERNAL_OPERATION_ABORT("InternalOperationAbortError", HttpURLConnection.HTTP_CONFLICT, null),
-  PATH_CONFLICT("PathConflict", HttpURLConnection.HTTP_CONFLICT, null),
-  FILE_SYSTEM_NOT_FOUND("FilesystemNotFound", HttpURLConnection.HTTP_NOT_FOUND, null),
-  PATH_NOT_FOUND("PathNotFound", HttpURLConnection.HTTP_NOT_FOUND, null),
-  PRE_CONDITION_FAILED("PreconditionFailed", HttpURLConnection.HTTP_PRECON_FAILED, null),
-  SOURCE_PATH_NOT_FOUND("SourcePathNotFound", HttpURLConnection.HTTP_NOT_FOUND, null),
-  INVALID_SOURCE_OR_DESTINATION_RESOURCE_TYPE("InvalidSourceOrDestinationResourceType", HttpURLConnection.HTTP_CONFLICT, null),
-  RENAME_DESTINATION_PARENT_PATH_NOT_FOUND("RenameDestinationParentPathNotFound", HttpURLConnection.HTTP_NOT_FOUND, null),
-  INVALID_RENAME_SOURCE_PATH("InvalidRenameSourcePath", HttpURLConnection.HTTP_CONFLICT, null),
-  INGRESS_OVER_ACCOUNT_LIMIT(null, HttpURLConnection.HTTP_UNAVAILABLE, "Ingress is over the account limit."),
-  EGRESS_OVER_ACCOUNT_LIMIT(null, HttpURLConnection.HTTP_UNAVAILABLE, "Egress is over the account limit."),
-  INVALID_QUERY_PARAMETER_VALUE("InvalidQueryParameterValue", HttpURLConnection.HTTP_BAD_REQUEST, null),
-  AUTHORIZATION_PERMISSION_MISS_MATCH("AuthorizationPermissionMismatch", HttpURLConnection.HTTP_FORBIDDEN, null),
-  ACCOUNT_REQUIRES_HTTPS("AccountRequiresHttps", HttpURLConnection.HTTP_BAD_REQUEST, null),
+  FILE_SYSTEM_ALREADY_EXISTS("FilesystemAlreadyExists", AbfsHttpStatusCodes.CONFLICT, null),
+  PATH_ALREADY_EXISTS("PathAlreadyExists", AbfsHttpStatusCodes.CONFLICT, null),
+  INTERNAL_OPERATION_ABORT("InternalOperationAbortError", AbfsHttpStatusCodes.CONFLICT, null),
+  PATH_CONFLICT("PathConflict", AbfsHttpStatusCodes.CONFLICT, null),
+  FILE_SYSTEM_NOT_FOUND("FilesystemNotFound", AbfsHttpStatusCodes.NOT_FOUND, null),
+  PATH_NOT_FOUND("PathNotFound", AbfsHttpStatusCodes.NOT_FOUND, null),
+  PRE_CONDITION_FAILED("PreconditionFailed", AbfsHttpStatusCodes.PRECON_FAILED, null),
+  SOURCE_PATH_NOT_FOUND("SourcePathNotFound", AbfsHttpStatusCodes.NOT_FOUND, null),
+  INVALID_SOURCE_OR_DESTINATION_RESOURCE_TYPE("InvalidSourceOrDestinationResourceType", AbfsHttpStatusCodes.CONFLICT, null),
+  RENAME_DESTINATION_PARENT_PATH_NOT_FOUND("RenameDestinationParentPathNotFound", AbfsHttpStatusCodes.NOT_FOUND, null),
+  INVALID_RENAME_SOURCE_PATH("InvalidRenameSourcePath", AbfsHttpStatusCodes.CONFLICT, null),
+  INGRESS_OVER_ACCOUNT_LIMIT(null, AbfsHttpStatusCodes.UNAVAILABLE, "Ingress is over the account limit."),
+  EGRESS_OVER_ACCOUNT_LIMIT(null, AbfsHttpStatusCodes.UNAVAILABLE, "Egress is over the account limit."),
+  INVALID_QUERY_PARAMETER_VALUE("InvalidQueryParameterValue", AbfsHttpStatusCodes.BAD_REQUEST, null),
+  AUTHORIZATION_PERMISSION_MISS_MATCH("AuthorizationPermissionMismatch", AbfsHttpStatusCodes.FORBIDDEN, null),
+  ACCOUNT_REQUIRES_HTTPS("AccountRequiresHttps", AbfsHttpStatusCodes.BAD_REQUEST, null),
   UNKNOWN(null, -1, null);
 
   private final String errorCode;

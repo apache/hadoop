@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.Method;
-import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -38,6 +37,7 @@ import org.apache.commons.codec.DecoderException;
 import org.apache.commons.codec.net.URLCodec;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.azurebfs.http.AbfsHttpStatusCodes;
 import org.apache.http.client.utils.URIBuilder;
 
 import com.microsoft.azure.storage.AccessCondition;
@@ -441,7 +441,7 @@ public class MockStorageInterface extends StorageInterface {
       if (!overwriteDestination && backingStore.exists(convertUriToDecodedString(uri))) {
         throw new StorageException("BlobAlreadyExists",
             "The blob already exists.",
-            HttpURLConnection.HTTP_CONFLICT,
+            AbfsHttpStatusCodes.CONFLICT,
             null,
             null);
       }
@@ -500,7 +500,7 @@ public class MockStorageInterface extends StorageInterface {
       if (!backingStore.exists(convertUriToDecodedString(uri))) {
         throw new StorageException("BlobNotFound",
             "Resource does not exist.",
-            HttpURLConnection.HTTP_NOT_FOUND,
+            AbfsHttpStatusCodes.NOT_FOUND,
             null,
             null);
       }

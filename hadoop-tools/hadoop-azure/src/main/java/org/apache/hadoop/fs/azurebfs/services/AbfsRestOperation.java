@@ -20,11 +20,18 @@ package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.UnknownHostException;
+import java.net.http.HttpRequest.BodyPublisher;
+import java.net.http.HttpResponse.BodyHandler;
+import java.net.http.HttpResponse.BodySubscriber;
+import java.net.http.HttpResponse.ResponseInfo;
+import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.concurrent.CompletionStage;
+import java.util.concurrent.Flow.Subscription;
 
+import org.apache.hadoop.fs.azurebfs.http.AbfsHttpStatusCodes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,6 +63,8 @@ public class AbfsRestOperation {
   private final URL url;
   // all the custom HTTP request headers provided by the caller
   private final List<AbfsHttpHeader> requestHeaders;
+  private final BodyPublisher bodyPublisher;
+  private final BodyHandler<?> bodyHandler;
 
   // This is a simple operation class, where all the upload methods have a
   // request body and all the download methods have a response body.
@@ -66,6 +75,7 @@ public class AbfsRestOperation {
 
   private static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
 
+  // TODO ARNAUD Deprecated!! cf bodyPublisher + BodyHandler
   // For uploads, this is the request entity body.  For downloads,
   // this will hold the response entity body.
   private byte[] buffer;
@@ -100,8 +110,8 @@ public class AbfsRestOperation {
   }
 
   public void hardSetResult(int httpStatus) {
-    result = AbfsHttpOperation.getAbfsHttpOperationWithFixedResult(this.url,
-        this.method, httpStatus);
+    result = AbfsHttpOperation.getAbfsHttpOperationWithFixedResult(client.getHttpClient(), url,
+        method, httpStatus);
   }
 
   public URL getUrl() {
@@ -132,8 +142,9 @@ public class AbfsRestOperation {
                     final AbfsClient client,
                     final String method,
                     final URL url,
-                    final List<AbfsHttpHeader> requestHeaders) {
-    this(operationType, client, method, url, requestHeaders, null);
+                    final List<AbfsHttpHeader> requestHeaders,
+                    final BodyPublisher bodyPublisher) {
+    this(operationType, client, method, url, requestHeaders, bodyPublisher, null);
   }
 
   /**
@@ -150,12 +161,14 @@ public class AbfsRestOperation {
                     final String method,
                     final URL url,
                     final List<AbfsHttpHeader> requestHeaders,
+                    final BodyPublisher bodyPublisher,
                     final String sasToken) {
     this.operationType = operationType;
     this.client = client;
     this.method = method;
     this.url = url;
     this.requestHeaders = requestHeaders;
+    this.bodyPublisher = bodyPublisher;
     this.hasRequestBody = (AbfsHttpConstants.HTTP_METHOD_PUT.equals(method)
             || AbfsHttpConstants.HTTP_METHOD_POST.equals(method)
             || AbfsHttpConstants.HTTP_METHOD_PATCH.equals(method));
@@ -183,11 +196,12 @@ public class AbfsRestOperation {
                     String method,
                     URL url,
                     List<AbfsHttpHeader> requestHeaders,
+                    BodyPublisher bodyPublisher,
                     byte[] buffer,
                     int bufferOffset,
                     int bufferLength,
                     String sasToken) {
-    this(operationType, client, method, url, requestHeaders, sasToken);
+    this(operationType, client, method, url, requestHeaders, bodyPublisher, sasToken);
     this.buffer = buffer;
     this.bufferOffset = bufferOffset;
     this.bufferLength = bufferLength;
@@ -257,7 +271,7 @@ public class AbfsRestOperation {
       throw new InvalidAbfsRestOperationException(null, retryCount);
     }
 
-    if (status >= HttpURLConnection.HTTP_BAD_REQUEST) {
+    if (status >= AbfsHttpStatusCodes.BAD_REQUEST) {
       throw new AbfsRestOperationException(result.getStatusCode(), result.getStorageErrorCode(),
           result.getStorageErrorMessage(), null, result);
     }
@@ -279,9 +293,9 @@ public class AbfsRestOperation {
     AbfsHttpOperation httpOperation;
 
     try {
-      // initialize the HTTP request and open the connection
+      // initialize the HTTP request
       httpOperation = createHttpOperation();
-      incrementCounter(AbfsStatistic.CONNECTIONS_MADE, 1);
+      incrementCounter(AbfsStatistic.CONNECTIONS_MADE, 1); // Deprecated (meaningless with Http2)
       tracingContext.constructHeader(httpOperation, failureReason);
 
       signRequest(httpOperation, hasRequestBody ? bufferLength : 0);
@@ -295,23 +309,31 @@ public class AbfsRestOperation {
     try {
       // dump the headers
       AbfsIoUtils.dumpHeadersToDebugLog("Request Headers",
-          httpOperation.getConnection().getRequestProperties());
+          httpOperation.getHttpRequestBuilder().getRequestProperties());
       intercept.sendingRequest(operationType, abfsCounters);
+
+      InnerBodyHandler<?> innerBodyHandler = new InnerBodyHandler<>(bodyHandler);
+
+      // *** The Biggy: send request + headers + body -> read response status + headers ***
+      // TODO ARNAUD BodyHandler<T>
+      httpOperation.sendRequest(buffer, bufferOffset, bufferLength,
+              innerBodyHandler);
+
+      incrementCounter(AbfsStatistic.SEND_REQUESTS, 1);
       if (hasRequestBody) {
-        // HttpUrlConnection requires
-        httpOperation.sendRequest(buffer, bufferOffset, bufferLength);
-        incrementCounter(AbfsStatistic.SEND_REQUESTS, 1);
         incrementCounter(AbfsStatistic.BYTES_SENT, bufferLength);
       }
 
+      // *** The Biggy: read response body ***
       httpOperation.processResponse(buffer, bufferOffset, bufferLength);
+
       incrementCounter(AbfsStatistic.GET_RESPONSES, 1);
       //Only increment bytesReceived counter when the status code is 2XX.
-      if (httpOperation.getStatusCode() >= HttpURLConnection.HTTP_OK
-          && httpOperation.getStatusCode() <= HttpURLConnection.HTTP_PARTIAL) {
+      if (httpOperation.getStatusCode() >= AbfsHttpStatusCodes.OK
+          && httpOperation.getStatusCode() <= AbfsHttpStatusCodes.PARTIAL) {
         incrementCounter(AbfsStatistic.BYTES_RECEIVED,
             httpOperation.getBytesReceived());
-      } else if (httpOperation.getStatusCode() == HttpURLConnection.HTTP_UNAVAILABLE) {
+      } else if (httpOperation.getStatusCode() == AbfsHttpStatusCodes.UNAVAILABLE) {
         incrementCounter(AbfsStatistic.SERVER_UNAVAILABLE, 1);
       }
     } catch (UnknownHostException ex) {
@@ -346,8 +368,8 @@ public class AbfsRestOperation {
         and 4xx range is for user errors. These should not be a part of
         throttling backoff computation.
        */
-      boolean updateMetricsResponseCode = (status < HttpURLConnection.HTTP_MULT_CHOICE
-              || status >= HttpURLConnection.HTTP_INTERNAL_ERROR);
+      boolean updateMetricsResponseCode = (status < AbfsHttpStatusCodes.MULT_CHOICE
+              || status >= AbfsHttpStatusCodes.INTERNAL_ERROR);
       if (updateMetricsResponseCode) {
         intercept.updateMetrics(operationType, httpOperation);
       }
@@ -366,6 +388,55 @@ public class AbfsRestOperation {
     return true;
   }
 
+  private class InnerBodyHandler<T> implements BodyHandler<T> {
+    private final BodyHandler<T> delegate;
+
+    public InnerBodyHandler(BodyHandler<T> delegate) {
+      this.delegate = delegate;
+    }
+
+    @Override
+    public BodySubscriber<T> apply(ResponseInfo responseInfo) {
+      BodySubscriber<T> delegateBodySubscriber = (BodySubscriber<T>) bodyHandler.apply(responseInfo);
+      return new InnerBodySubscriber<T>(delegateBodySubscriber);
+    }
+  }
+
+  private class InnerBodySubscriber<T> implements BodySubscriber<T> {
+    private final BodySubscriber<T> delegate;
+
+    public InnerBodySubscriber(BodySubscriber<T> delegate) {
+      this.delegate = delegate;
+    }
+
+    @Override
+    public void onSubscribe(Subscription subscription) {
+      delegate.onSubscribe(subscription);
+    }
+
+    @Override
+    public void onNext(List<ByteBuffer> item) {
+      delegate.onNext(item);
+    }
+
+    @Override
+    public void onError(Throwable throwable) {
+      delegate.onError(throwable);
+    }
+
+    @Override
+    public void onComplete() {
+      delegate.onComplete();
+    }
+
+    @Override
+    public CompletionStage<T> getBody() {
+      return delegate.getBody();
+    }
+  }
+
+
+
   /**
    * Sign an operation.
    * @param httpOperation operation to sign
@@ -378,7 +449,7 @@ public class AbfsRestOperation {
       case Custom:
       case OAuth:
         LOG.debug("Authenticating request with OAuth2 access token");
-        httpOperation.getConnection().setRequestProperty(HttpHeaderConfigurations.AUTHORIZATION,
+        httpOperation.getHttpRequestBuilder().setRequestProperty(HttpHeaderConfigurations.AUTHORIZATION,
             client.getAccessToken());
         break;
       case SAS:
@@ -391,7 +462,7 @@ public class AbfsRestOperation {
         LOG.debug("Signing request with shared key");
         // sign the HTTP request
         client.getSharedKeyCredentials().signRequest(
-            httpOperation.getConnection(),
+            httpOperation,
             bytesToSign);
         break;
     }
@@ -403,7 +474,7 @@ public class AbfsRestOperation {
    */
   @VisibleForTesting
   AbfsHttpOperation createHttpOperation() throws IOException {
-    return new AbfsHttpOperation(url, method, requestHeaders);
+    return new AbfsHttpOperation(client.getHttpClient(), url, method, requestHeaders, bodyPublisher);
   }
 
   /**

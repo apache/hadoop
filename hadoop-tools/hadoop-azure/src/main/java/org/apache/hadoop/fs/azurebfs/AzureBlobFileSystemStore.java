@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
 import java.io.UnsupportedEncodingException;
-import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -55,6 +54,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.azurebfs.http.AbfsHttpStatusCodes;
+import org.apache.hadoop.fs.azurebfs.utils.*;
 import org.apache.hadoop.fs.impl.BackReference;
 import org.apache.hadoop.util.Preconditions;
 import org.apache.hadoop.thirdparty.com.google.common.base.Strings;
@@ -115,11 +116,6 @@ import org.apache.hadoop.fs.azurebfs.services.SharedKeyCredentials;
 import org.apache.hadoop.fs.azurebfs.services.AbfsPerfTracker;
 import org.apache.hadoop.fs.azurebfs.services.AbfsPerfInfo;
 import org.apache.hadoop.fs.azurebfs.services.ListingSupport;
-import org.apache.hadoop.fs.azurebfs.utils.Base64;
-import org.apache.hadoop.fs.azurebfs.utils.CRC64;
-import org.apache.hadoop.fs.azurebfs.utils.DateTimeUtils;
-import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
-import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
 import org.apache.hadoop.fs.impl.OpenFileParameters;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
@@ -374,7 +370,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
       // Get ACL status is a HEAD request, its response doesn't contain
       // errorCode
       // So can only rely on its status code to determine its account type.
-      if (HttpURLConnection.HTTP_BAD_REQUEST != ex.getStatusCode()) {
+      if (AbfsHttpStatusCodes.BAD_REQUEST != ex.getStatusCode()) {
         throw ex;
       }
 
@@ -430,9 +426,10 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
       final AbfsRestOperation op = client
           .getFilesystemProperties(tracingContext);
-      perfInfo.registerResult(op.getResult());
+      AbfsHttpOperation opResult = op.getResult();
+      perfInfo.registerResult(opResult);
 
-      final String xMsProperties = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_PROPERTIES);
+      final String xMsProperties = opResult.getResponseHeader(HttpHeaderConfigurations.X_MS_PROPERTIES);
 
       parsedXmsProperties = parseCommaSeparatedXmsProperties(xMsProperties);
       perfInfo.registerSuccess(true);
@@ -626,12 +623,12 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           isAppendBlob, null, tracingContext);
 
     } catch (AbfsRestOperationException e) {
-      if (e.getStatusCode() == HttpURLConnection.HTTP_CONFLICT) {
+      if (e.getStatusCode() == AbfsHttpStatusCodes.CONFLICT) {
         // File pre-exists, fetch eTag
         try {
           op = client.getPathStatus(relativePath, false, tracingContext);
         } catch (AbfsRestOperationException ex) {
-          if (ex.getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
+          if (ex.getStatusCode() == AbfsHttpStatusCodes.NOT_FOUND) {
             // Is a parallel access case, as file which was found to be
             // present went missing by this request.
             throw new ConcurrentWriteOperationDetectedException(
@@ -650,7 +647,7 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
           op = client.createPath(relativePath, true, true, permission, umask,
               isAppendBlob, eTag, tracingContext);
         } catch (AbfsRestOperationException ex) {
-          if (ex.getStatusCode() == HttpURLConnection.HTTP_PRECON_FAILED) {
+          if (ex.getStatusCode() == AbfsHttpStatusCodes.PRECON_FAILED) {
             // Is a parallel access case, as file with eTag was just queried
             // and precondition failure can happen only when another file with
             // different etag got created.
@@ -1110,18 +1107,19 @@ public class AzureBlobFileSystemStore implements Closeable, ListingSupport {
 
     do {
       try (AbfsPerfInfo perfInfo = startTracking("listStatus", "listPath")) {
-        AbfsRestOperation op = client.listPath(relativePath, false,
+        AbfsRestOperation _op = client.listPath(relativePath, false,
             abfsConfiguration.getListMaxResults(), continuation,
             tracingContext);
-        perfInfo.registerResult(op.getResult());
-        continuation = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
-        ListResultSchema retrievedSchema = op.getResult().getListResultSchema();
+        AbfsHttpOperation result = _op.getResult();
+        perfInfo.registerResult(result);
+        continuation = result.getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
+        ListResultSchema retrievedSchema = result.getListResultSchema();
         if (retrievedSchema == null) {
           throw new AbfsRestOperationException(
                   AzureServiceErrorCode.PATH_NOT_FOUND.getStatusCode(),
                   AzureServiceErrorCode.PATH_NOT_FOUND.getErrorCode(),
                   "listStatusAsync path not found",
-                  null, op.getResult());
+                  null, result);
         }
 
         long blockSize = abfsConfiguration.getAzureBlockSize();

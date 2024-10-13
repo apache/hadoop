@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
-import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
-
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_BACKOFF_INTERVAL;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_MAX_BACKOFF_INTERVAL;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_MAX_IO_RETRIES;
@@ -37,6 +35,7 @@ import static org.mockito.Mockito.when;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 
+import org.apache.hadoop.fs.azurebfs.http.AbfsHttpStatusCodes;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.mockito.Mockito;
@@ -137,7 +136,7 @@ public class TestExponentialRetryPolicy extends AbstractAbfsIntegrationTest {
 
     AbfsRestOperation successOp = mock(AbfsRestOperation.class);
     AbfsHttpOperation http500Op = mock(AbfsHttpOperation.class);
-    when(http500Op.getStatusCode()).thenReturn(HTTP_INTERNAL_ERROR);
+    when(http500Op.getStatusCode()).thenReturn(AbfsHttpStatusCodes.INTERNAL_ERROR);
     when(successOp.getResult()).thenReturn(http500Op);
 
     AbfsConfiguration configuration = Mockito.mock(AbfsConfiguration.class);

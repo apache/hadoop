@@ -21,11 +21,14 @@ package org.apache.hadoop.fs.azurebfs.services;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.http.HttpRequest.BodyPublisher;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.apache.hadoop.fs.azurebfs.http.AbfsHttpRequestBuilder;
+import org.apache.hadoop.fs.azurebfs.http.AbfsHttpStatusCodes;
 import org.assertj.core.api.Assertions;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
@@ -34,7 +37,6 @@ import org.mockito.stubbing.Answer;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.util.functional.FunctionRaisingIOE;
 
-import static java.net.HttpURLConnection.HTTP_OK;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.HTTP_METHOD_GET;
 import static org.apache.hadoop.fs.azurebfs.services.AuthType.OAuth;
 import static org.mockito.ArgumentMatchers.any;
@@ -84,10 +86,10 @@ public final class AbfsClientTestUtil {
    */
   public static void addGeneralMockBehaviourToRestOpAndHttpOp(final AbfsRestOperation abfsRestOperation,
                                                               final AbfsHttpOperation httpOperation) throws IOException {
-    HttpURLConnection httpURLConnection = Mockito.mock(HttpURLConnection.class);
-    Mockito.doNothing().when(httpURLConnection)
+    AbfsHttpRequestBuilder httpRequestBuilder = Mockito.mock(AbfsHttpRequestBuilder.class);
+    Mockito.doNothing().when(httpRequestBuilder)
         .setRequestProperty(nullable(String.class), nullable(String.class));
-    Mockito.doReturn(httpURLConnection).when(httpOperation).getConnection();
+    Mockito.doReturn(httpRequestBuilder).when(httpOperation).getHttpRequestBuilder();
     Mockito.doReturn("").when(abfsRestOperation).getClientLatency();
     Mockito.doReturn(httpOperation).when(abfsRestOperation).createHttpOperation();
   }
@@ -115,9 +117,9 @@ public final class AbfsClientTestUtil {
     Mockito.doReturn(true)
         .when(retryPolicy)
         .shouldRetry(nullable(Integer.class), nullable(Integer.class));
-    Mockito.doReturn(false).when(retryPolicy).shouldRetry(0, HTTP_OK);
-    Mockito.doReturn(false).when(retryPolicy).shouldRetry(1, HTTP_OK);
-    Mockito.doReturn(false).when(retryPolicy).shouldRetry(2, HTTP_OK);
+    Mockito.doReturn(false).when(retryPolicy).shouldRetry(0, AbfsHttpStatusCodes.OK);
+    Mockito.doReturn(false).when(retryPolicy).shouldRetry(1, AbfsHttpStatusCodes.OK);
+    Mockito.doReturn(false).when(retryPolicy).shouldRetry(2, AbfsHttpStatusCodes.OK);
   }
 
   public static void hookOnRestOpsForTracingContextSingularity(AbfsClient client) {
@@ -146,7 +148,7 @@ public final class AbfsClientTestUtil {
     Mockito.doAnswer(answer)
         .when(client)
         .getAbfsRestOperation(Mockito.any(AbfsRestOperationType.class),
-            Mockito.anyString(), Mockito.any(URL.class), Mockito.anyList(),
+            Mockito.anyString(), Mockito.any(URL.class), Mockito.anyList(), Mockito.any(BodyPublisher.class),
             Mockito.nullable(byte[].class), Mockito.anyInt(), Mockito.anyInt(),
             Mockito.nullable(String.class));
     Mockito.doAnswer(answer)

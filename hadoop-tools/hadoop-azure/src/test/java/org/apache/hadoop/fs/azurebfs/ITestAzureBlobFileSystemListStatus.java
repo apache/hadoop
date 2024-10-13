@@ -28,6 +28,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.apache.hadoop.fs.azurebfs.http.AbfsHttpStatusCodes;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.mockito.stubbing.Stubber;
@@ -49,7 +50,6 @@ import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderFormat;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 
-import static java.net.HttpURLConnection.HTTP_OK;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.EMPTY_STRING;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_LIST_MAX_RESULTS;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_TIMEOUT_JDK_MESSAGE;
@@ -158,7 +158,7 @@ public class ITestAzureBlobFileSystemListStatus extends
           stubber.doNothing().when(httpOperation).processResponse(
               nullable(byte[].class), nullable(int.class), nullable(int.class));
 
-          when(httpOperation.getStatusCode()).thenReturn(-1).thenReturn(HTTP_OK);
+          when(httpOperation.getStatusCode()).thenReturn(-1).thenReturn(AbfsHttpStatusCodes.OK);
           return httpOperation;
         });
 

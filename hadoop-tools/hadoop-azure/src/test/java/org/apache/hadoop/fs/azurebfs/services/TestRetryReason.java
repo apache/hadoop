@@ -23,12 +23,10 @@ import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 
+import org.apache.hadoop.fs.azurebfs.http.AbfsHttpStatusCodes;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
-import static java.net.HttpURLConnection.HTTP_FORBIDDEN;
-import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
-import static java.net.HttpURLConnection.HTTP_UNAVAILABLE;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.EGRESS_OVER_ACCOUNT_LIMIT;
 import static org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode.INGRESS_OVER_ACCOUNT_LIMIT;
 import static org.apache.hadoop.fs.azurebfs.services.RetryReasonConstants.CONNECTION_RESET_ABBREVIATION;
@@ -49,9 +47,9 @@ public class TestRetryReason {
 
   @Test
   public void test4xxStatusRetryReason() {
-    Assertions.assertThat(RetryReason.getAbbreviation(null, HTTP_FORBIDDEN, null))
+    Assertions.assertThat(RetryReason.getAbbreviation(null, AbfsHttpStatusCodes.FORBIDDEN, null))
         .describedAs("Abbreviation for 4xx should be equal to 4xx")
-        .isEqualTo(HTTP_FORBIDDEN + "");
+        .isEqualTo(AbfsHttpStatusCodes.FORBIDDEN + "");
   }
 
   @Test
@@ -78,35 +76,35 @@ public class TestRetryReason {
 
   @Test
   public void testEgressLimitRetryReason() {
-    Assertions.assertThat(RetryReason.getAbbreviation(null, HTTP_UNAVAILABLE, EGRESS_OVER_ACCOUNT_LIMIT.getErrorMessage())).isEqualTo(
+    Assertions.assertThat(RetryReason.getAbbreviation(null, AbfsHttpStatusCodes.UNAVAILABLE, EGRESS_OVER_ACCOUNT_LIMIT.getErrorMessage())).isEqualTo(
         EGRESS_LIMIT_BREACH_ABBREVIATION
     );
   }
 
   @Test
   public void testIngressLimitRetryReason() {
-    Assertions.assertThat(RetryReason.getAbbreviation(null, HTTP_UNAVAILABLE, INGRESS_OVER_ACCOUNT_LIMIT.getErrorMessage())).isEqualTo(
+    Assertions.assertThat(RetryReason.getAbbreviation(null, AbfsHttpStatusCodes.UNAVAILABLE, INGRESS_OVER_ACCOUNT_LIMIT.getErrorMessage())).isEqualTo(
         INGRESS_LIMIT_BREACH_ABBREVIATION
     );
   }
 
   @Test
   public void testOperationLimitRetryReason() {
-    Assertions.assertThat(RetryReason.getAbbreviation(null, HTTP_UNAVAILABLE, OPERATION_BREACH_MESSAGE)).isEqualTo(
+    Assertions.assertThat(RetryReason.getAbbreviation(null, AbfsHttpStatusCodes.UNAVAILABLE, OPERATION_BREACH_MESSAGE)).isEqualTo(
         OPERATION_LIMIT_BREACH_ABBREVIATION
     );
   }
 
   @Test
   public void test503UnknownRetryReason() {
-    Assertions.assertThat(RetryReason.getAbbreviation(null, HTTP_UNAVAILABLE, null)).isEqualTo(
+    Assertions.assertThat(RetryReason.getAbbreviation(null, AbfsHttpStatusCodes.UNAVAILABLE, null)).isEqualTo(
         "503"
     );
   }
 
   @Test
   public void test500RetryReason() {
-    Assertions.assertThat(RetryReason.getAbbreviation(null, HTTP_INTERNAL_ERROR, null)).isEqualTo(
+    Assertions.assertThat(RetryReason.getAbbreviation(null, AbfsHttpStatusCodes.INTERNAL_ERROR, null)).isEqualTo(
         "500"
     );
   }

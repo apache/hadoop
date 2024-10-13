@@ -32,6 +32,7 @@
   <packaging>jar</packaging>
 
   <properties>
+    <javac.version>11</javac.version>
     <file.encoding>UTF-8</file.encoding>
     <downloadSources>true</downloadSources>
     <hadoop.tmp.dir>${project.build.directory}/test</hadoop.tmp.dir>

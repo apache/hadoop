@@ -27,6 +27,7 @@ import com.microsoft.azure.storage.OperationContext;
 import com.microsoft.azure.storage.RequestResult;
 import com.microsoft.azure.storage.ResponseReceivedEvent;
 import com.microsoft.azure.storage.StorageEvent;
+import org.apache.hadoop.fs.azurebfs.http.AbfsHttpStatusCodes;
 
 
 /**
@@ -111,7 +112,7 @@ public final class ResponseReceivedMetricUpdater extends StorageEvent<ResponseRe
     long requestLatency = currentResult.getStopDate().getTime() 
         - currentResult.getStartDate().getTime();
 
-    if (currentResult.getStatusCode() == HttpURLConnection.HTTP_CREATED 
+    if (currentResult.getStatusCode() == AbfsHttpStatusCodes.CREATED
         && connection.getRequestMethod().equalsIgnoreCase("PUT")) {
       // If it's a PUT with an HTTP_CREATED status then it's a successful
       // block upload.
@@ -124,7 +125,7 @@ public final class ResponseReceivedMetricUpdater extends StorageEvent<ResponseRe
         instrumentation.rawBytesUploaded(length);
         instrumentation.blockUploaded(requestLatency);
       }
-    } else if (currentResult.getStatusCode() == HttpURLConnection.HTTP_PARTIAL 
+    } else if (currentResult.getStatusCode() == AbfsHttpStatusCodes.PARTIAL
         && connection.getRequestMethod().equalsIgnoreCase("GET")) {
       // If it's a GET with an HTTP_PARTIAL status then it's a successful
       // block download.

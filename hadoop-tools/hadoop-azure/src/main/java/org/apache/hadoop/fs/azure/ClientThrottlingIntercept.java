@@ -24,6 +24,7 @@ import com.microsoft.azure.storage.RequestResult;
 import com.microsoft.azure.storage.ResponseReceivedEvent;
 import com.microsoft.azure.storage.SendingRequestEvent;
 import com.microsoft.azure.storage.StorageEvent;
+import org.apache.hadoop.fs.azurebfs.http.AbfsHttpStatusCodes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -81,8 +82,8 @@ final class ClientThrottlingIntercept {
     // If the socket is terminated prior to receiving a response, the HTTP
     // status may be 0 or -1.  A status less than 200 or greater than or equal
     // to 500 is considered an error.
-    boolean isFailedOperation = (status < HttpURLConnection.HTTP_OK
-        || status >= java.net.HttpURLConnection.HTTP_INTERNAL_ERROR);
+    boolean isFailedOperation = (status < AbfsHttpStatusCodes.OK
+        || status >= AbfsHttpStatusCodes.INTERNAL_ERROR);
 
     switch (operationType) {
       case AppendBlock:

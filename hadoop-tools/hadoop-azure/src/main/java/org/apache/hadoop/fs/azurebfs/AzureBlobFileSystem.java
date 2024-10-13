@@ -23,7 +23,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.AccessDeniedException;
@@ -45,6 +44,7 @@ import java.util.concurrent.Future;
 import javax.annotation.Nullable;
 
 import org.apache.hadoop.classification.VisibleForTesting;
+import org.apache.hadoop.fs.azurebfs.http.AbfsHttpStatusCodes;
 import org.apache.hadoop.fs.impl.BackReference;
 import org.apache.hadoop.security.ProviderUtils;
 import org.apache.hadoop.util.Preconditions;
@@ -110,7 +110,6 @@ import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.LambdaUtils;
 import org.apache.hadoop.util.Progressable;
 
-import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.IOSTATISTICS_LOGGING_LEVEL_DEFAULT;
 import static org.apache.hadoop.fs.Options.OpenFileOptions.FS_OPTION_OPENFILE_STANDARD_OPTIONS;
@@ -327,7 +326,7 @@ public class AzureBlobFileSystem extends FileSystem
     statIncrement(CALL_CREATE);
     trailingPeriodCheck(f);
     if (f.isRoot()) {
-      throw new AbfsRestOperationException(HTTP_CONFLICT,
+      throw new AbfsRestOperationException(AbfsHttpStatusCodes.CONFLICT,
           AzureServiceErrorCode.PATH_CONFLICT.getErrorCode(),
           ERR_CREATE_ON_ROOT,
           null);
@@ -357,7 +356,7 @@ public class AzureBlobFileSystem extends FileSystem
 
     statIncrement(CALL_CREATE_NON_RECURSIVE);
     if (f.isRoot()) {
-      throw new AbfsRestOperationException(HTTP_CONFLICT,
+      throw new AbfsRestOperationException(AbfsHttpStatusCodes.CONFLICT,
           AzureServiceErrorCode.PATH_CONFLICT.getErrorCode(),
           ERR_CREATE_ON_ROOT,
           null);
@@ -1483,7 +1482,7 @@ public class AzureBlobFileSystem extends FileSystem
       final AzureBlobFileSystemException exception) throws IOException {
     if (exception instanceof AbfsRestOperationException) {
       AbfsRestOperationException ere = (AbfsRestOperationException) exception;
-      if (ere.getStatusCode() == HttpURLConnection.HTTP_FORBIDDEN) {
+      if (ere.getStatusCode() == AbfsHttpStatusCodes.FORBIDDEN) {
         throw (IOException) new AccessControlException(ere.getMessage())
             .initCause(exception);
       }
@@ -1515,14 +1514,14 @@ public class AzureBlobFileSystem extends FileSystem
       String message = ere.getMessage();
 
       switch (ere.getStatusCode()) {
-      case HttpURLConnection.HTTP_NOT_FOUND:
+      case AbfsHttpStatusCodes.NOT_FOUND:
         throw (IOException) new FileNotFoundException(message)
             .initCause(exception);
-      case HTTP_CONFLICT:
+      case AbfsHttpStatusCodes.CONFLICT:
         throw (IOException) new FileAlreadyExistsException(message)
             .initCause(exception);
-      case HttpURLConnection.HTTP_FORBIDDEN:
-      case HttpURLConnection.HTTP_UNAUTHORIZED:
+      case AbfsHttpStatusCodes.FORBIDDEN:
+      case AbfsHttpStatusCodes.UNAUTHORIZED:
         throw (IOException) new AccessDeniedException(message)
             .initCause(exception);
       default:

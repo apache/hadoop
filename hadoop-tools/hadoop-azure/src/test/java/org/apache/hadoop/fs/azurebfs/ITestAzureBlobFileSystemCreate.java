@@ -25,6 +25,7 @@ import java.lang.reflect.Field;
 import java.util.EnumSet;
 import java.util.UUID;
 
+import org.apache.hadoop.fs.azurebfs.http.AbfsHttpStatusCodes;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
@@ -48,12 +49,6 @@ import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
 import org.apache.hadoop.fs.azurebfs.services.ITestAbfsClient;
 import org.apache.hadoop.fs.azurebfs.utils.TracingContext;
 import org.apache.hadoop.fs.azurebfs.utils.TracingHeaderValidator;
-
-import static java.net.HttpURLConnection.HTTP_CONFLICT;
-import static java.net.HttpURLConnection.HTTP_INTERNAL_ERROR;
-import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
-import static java.net.HttpURLConnection.HTTP_OK;
-import static java.net.HttpURLConnection.HTTP_PRECON_FAILED;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -154,7 +149,7 @@ public class ITestAzureBlobFileSystemCreate extends
     Path testFile = path(AbfsHttpConstants.ROOT_PATH);
     AbfsRestOperationException ex = intercept(AbfsRestOperationException.class, () ->
         fs.create(testFile, true));
-    if (ex.getStatusCode() != HTTP_CONFLICT) {
+    if (ex.getStatusCode() != AbfsHttpStatusCodes.CONFLICT) {
       // Request should fail with 409.
       throw ex;
     }
@@ -162,7 +157,7 @@ public class ITestAzureBlobFileSystemCreate extends
     ex = intercept(AbfsRestOperationException.class, () ->
         fs.createNonRecursive(testFile, FsPermission.getDefault(),
             false, 1024, (short) 1, 1024, null));
-    if (ex.getStatusCode() != HTTP_CONFLICT) {
+    if (ex.getStatusCode() != AbfsHttpStatusCodes.CONFLICT) {
       // Request should fail with 409.
       throw ex;
     }
@@ -398,17 +393,17 @@ public class ITestAzureBlobFileSystemCreate extends
         AbfsRestOperation.class);
     AbfsHttpOperation http200Op = mock(
         AbfsHttpOperation.class);
-    when(http200Op.getStatusCode()).thenReturn(HTTP_OK);
+    when(http200Op.getStatusCode()).thenReturn(AbfsHttpStatusCodes.OK);
     when(successOp.getResult()).thenReturn(http200Op);
 
     AbfsRestOperationException conflictResponseEx
-        = getMockAbfsRestOperationException(HTTP_CONFLICT);
+        = getMockAbfsRestOperationException(AbfsHttpStatusCodes.CONFLICT);
     AbfsRestOperationException serverErrorResponseEx
-        = getMockAbfsRestOperationException(HTTP_INTERNAL_ERROR);
+        = getMockAbfsRestOperationException(AbfsHttpStatusCodes.INTERNAL_ERROR);
     AbfsRestOperationException fileNotFoundResponseEx
-        = getMockAbfsRestOperationException(HTTP_NOT_FOUND);
+        = getMockAbfsRestOperationException(AbfsHttpStatusCodes.NOT_FOUND);
     AbfsRestOperationException preConditionResponseEx
-        = getMockAbfsRestOperationException(HTTP_PRECON_FAILED);
+        = getMockAbfsRestOperationException(AbfsHttpStatusCodes.PRECON_FAILED);
 
     // mock for overwrite=false
     doThrow(conflictResponseEx) // Scn1: GFS fails with Http404
