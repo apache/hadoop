@@ -46,6 +46,7 @@ set(HDFS_SOURCES
 # link to hdfs's publicly linked libraries
 # (like jvm)
 add_library(hdfs_obj OBJECT ${HDFS_SOURCES})
+set_target_properties(hdfs_obj PROPERTIES POSITION_INDEPENDENT_CODE ON)
 hadoop_add_dual_library(hdfs
     $<TARGET_OBJECTS:hdfs_obj>
     $<TARGET_OBJECTS:x_platform_obj>
