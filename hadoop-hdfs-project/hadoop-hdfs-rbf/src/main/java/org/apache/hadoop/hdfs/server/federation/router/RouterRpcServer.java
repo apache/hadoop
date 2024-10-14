@@ -786,7 +786,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     // If default Ns is present return result from that namespace.
     if (!nsId.isEmpty()) {
       try {
-        return rpcClient.invokeSingle(nsId, method, clazz);
+        return getRPCClient().invokeSingle(nsId, method, clazz);
       } catch (IOException ioe) {
         if (!clientProto.isUnavailableSubclusterException(ioe)) {
           LOG.debug("{} exception cannot be retried",
@@ -809,11 +809,10 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     // If no namespace is available, throw IOException.
     IOException io = new IOException("No namespace available.");
 
-    asyncComplete(null);
     // If default Ns is present return result from that namespace.
     if (!nsId.isEmpty()) {
       asyncTry(() -> {
-        rpcClient.invokeSingle(nsId, method, clazz);
+        getRPCClient().invokeSingle(nsId, method, clazz);
       });
 
       asyncCatch((AsyncCatchFunction<T, IOException>)(res, ioe) -> {
@@ -871,7 +870,6 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
       throw ioe;
     }
 
-    asyncComplete(null);
     Iterator<FederationNamespaceInfo> nsIterator = nss.iterator();
     asyncForEach(nsIterator, (foreach, fnInfo) -> {
       String nsId = fnInfo.getNameserviceId();
