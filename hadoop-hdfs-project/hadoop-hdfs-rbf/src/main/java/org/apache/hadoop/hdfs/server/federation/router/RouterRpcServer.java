@@ -786,7 +786,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     // If default Ns is present return result from that namespace.
     if (!nsId.isEmpty()) {
       try {
-        return getRPCClient().invokeSingle(nsId, method, clazz);
+        return rpcClient.invokeSingle(nsId, method, clazz);
       } catch (IOException ioe) {
         if (!clientProto.isUnavailableSubclusterException(ioe)) {
           LOG.debug("{} exception cannot be retried",
@@ -875,7 +875,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
       String nsId = fnInfo.getNameserviceId();
       LOG.debug("Invoking {} on namespace {}", method, nsId);
       asyncTry(() -> {
-        rpcClient.invokeSingle(nsId, method, clazz);
+        getRPCClient().invokeSingle(nsId, method, clazz);
         asyncApply(result -> {
           if (result != null && isExpectedClass(clazz, result)) {
             foreach.breakNow();
