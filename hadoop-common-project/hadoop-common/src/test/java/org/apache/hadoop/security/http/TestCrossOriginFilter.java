@@ -35,6 +35,7 @@ import org.apache.hadoop.security.http.CrossOriginFilter;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
+
 import static org.apache.hadoop.test.MockitoUtil.verifyZeroInteractions;
 
 public class TestCrossOriginFilter {
