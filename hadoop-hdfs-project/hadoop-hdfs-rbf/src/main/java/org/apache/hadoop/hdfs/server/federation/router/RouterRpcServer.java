@@ -823,7 +823,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     asyncComplete(null);
     if (!nsId.isEmpty()) {
       asyncTry(() -> {
-        rpcClient.invokeSingle(nsId, method, clazz);
+        getRPCClient().invokeSingle(nsId, method, clazz);
       });
 
       asyncCatch((AsyncCatchFunction<T, IOException>)(res, ioe) -> {
@@ -898,7 +898,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
       String nsId = fnInfo.getNameserviceId();
       LOG.debug("Invoking {} on namespace {}", method, nsId);
       asyncTry(() -> {
-        rpcClient.invokeSingle(nsId, method, clazz);
+        getRPCClient().invokeSingle(nsId, method, clazz);
         asyncApply(result -> {
           if (result != null && isExpectedClass(clazz, result)) {
             foreach.breakNow();
@@ -1092,7 +1092,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
       List<RemoteLocation> locations) throws IOException {
     RemoteMethod method = new RemoteMethod("getFileInfo",
         new Class<?>[] {String.class}, new RemoteParam());
-    rpcClient.invokeConcurrent(
+    getRPCClient().invokeConcurrent(
         locations, method, true, false, HdfsFileStatus.class);
     asyncApply((ApplyFunction<Map<RemoteLocation, HdfsFileStatus>, Object>) results -> {
       for (RemoteLocation loc : locations) {
@@ -1378,7 +1378,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
         new Class<?>[] {DatanodeReportType.class}, type);
 
     Set<FederationNamespaceInfo> nss = namenodeResolver.getNamespaces();
-    rpcClient.invokeConcurrent(nss, method, requireResponse, false,
+    getRPCClient().invokeConcurrent(nss, method, requireResponse, false,
             timeOutMs, DatanodeInfo[].class);
 
     asyncApply((ApplyFunction<Map<FederationNamespaceInfo, DatanodeInfo[]>,
@@ -1460,7 +1460,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     RemoteMethod method = new RemoteMethod("getDatanodeStorageReport",
         new Class<?>[] {DatanodeReportType.class}, type);
     Set<FederationNamespaceInfo> nss = namenodeResolver.getNamespaces();
-    rpcClient.invokeConcurrent(
+    getRPCClient().invokeConcurrent(
             nss, method, requireResponse, false, timeOutMs, DatanodeStorageReport[].class);
 
     asyncApply((ApplyFunction<Map<FederationNamespaceInfo, DatanodeStorageReport[]>,
@@ -2309,7 +2309,7 @@ public class RouterRpcServer extends AbstractService implements ClientProtocol,
     RemoteMethod method = new RemoteMethod("getSlowDatanodeReport");
 
     Set<FederationNamespaceInfo> nss = namenodeResolver.getNamespaces();
-    rpcClient.invokeConcurrent(nss, method, requireResponse, false,
+    getRPCClient().invokeConcurrent(nss, method, requireResponse, false,
             timeOutMs, DatanodeInfo[].class);
 
     asyncApply((ApplyFunction<Map<FederationNamespaceInfo, DatanodeInfo[]>,
