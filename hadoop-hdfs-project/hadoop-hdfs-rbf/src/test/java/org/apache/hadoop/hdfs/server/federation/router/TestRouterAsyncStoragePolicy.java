@@ -144,7 +144,8 @@ public class TestRouterAsyncStoragePolicy {
 
   @Test
   public void testRouterAsyncStoragePolicy() throws Exception {
-    BlockStoragePolicy[] storagePolicies = cluster.getNamenodes().get(0).getClient().getStoragePolicies();
+    BlockStoragePolicy[] storagePolicies = cluster.getNamenodes().get(0)
+        .getClient().getStoragePolicies();
     asyncStoragePolicy.getStoragePolicies();
     BlockStoragePolicy[] storagePoliciesAsync = syncReturn(BlockStoragePolicy[].class);
     assertArrayEquals(storagePolicies, storagePoliciesAsync);

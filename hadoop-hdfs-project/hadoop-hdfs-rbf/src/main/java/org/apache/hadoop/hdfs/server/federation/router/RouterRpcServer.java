@@ -40,7 +40,6 @@ import static org.apache.hadoop.hdfs.server.federation.router.RouterFederationRe
 import static org.apache.hadoop.hdfs.server.federation.router.RouterRpcClient.isExpectedClass;
 import static org.apache.hadoop.hdfs.server.federation.router.async.AsyncUtil.asyncApply;
 import static org.apache.hadoop.hdfs.server.federation.router.async.AsyncUtil.asyncCatch;
-import static org.apache.hadoop.hdfs.server.federation.router.async.AsyncUtil.asyncComplete;
 import static org.apache.hadoop.hdfs.server.federation.router.async.AsyncUtil.asyncForEach;
 import static org.apache.hadoop.hdfs.server.federation.router.async.AsyncUtil.asyncReturn;
 import static org.apache.hadoop.hdfs.server.federation.router.async.AsyncUtil.asyncTry;
