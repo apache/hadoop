@@ -136,7 +136,6 @@ public class AsyncErasureCoding extends ErasureCoding {
     return asyncReturn(ErasureCodingPolicy.class);
   }
 
-
   @Override
   public ECTopologyVerifierResult getECTopologyResultForPolicies(
       String[] policyNames) throws IOException {
