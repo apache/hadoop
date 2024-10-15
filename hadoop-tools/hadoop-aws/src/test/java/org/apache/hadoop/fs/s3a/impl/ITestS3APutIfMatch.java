@@ -46,7 +46,6 @@ import static org.apache.hadoop.fs.s3a.Constants.MULTIPART_SIZE;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfNotEnabled;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.impl.InternalConstants.UPLOAD_PART_COUNT_LIMIT;
-import static org.apache.hadoop.fs.s3a.scale.ITestS3AMultipartUploadSizeLimits.MPU_SIZE;
 import static org.apache.hadoop.fs.s3a.scale.S3AScaleTestBase._1MB;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
@@ -63,9 +62,7 @@ public class ITestS3APutIfMatch extends AbstractS3ACostTest {
                 conf,
                 MULTIPART_SIZE,
                 UPLOAD_PART_COUNT_LIMIT,
-                MIN_MULTIPART_THRESHOLD,
-                MULTIPART_SIZE);
-        conf.setLong(MULTIPART_SIZE, MPU_SIZE);
+                MIN_MULTIPART_THRESHOLD);
         conf.setLong(UPLOAD_PART_COUNT_LIMIT, 2);
         conf.setLong(MIN_MULTIPART_THRESHOLD, MULTIPART_MIN_SIZE);
         conf.setInt(MULTIPART_SIZE, MULTIPART_MIN_SIZE);
