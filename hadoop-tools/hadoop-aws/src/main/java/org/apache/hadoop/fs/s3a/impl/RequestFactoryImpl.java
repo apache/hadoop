@@ -540,12 +540,12 @@ public class RequestFactoryImpl implements RequestFactory {
     // a copy of the list is required, so that the AWS SDK doesn't
     // attempt to sort an unmodifiable list.
     CompleteMultipartUploadRequest.Builder requestBuilder;
-
+    Map<String, String> optionHeaders = putOptions.getHeaders();
     requestBuilder = CompleteMultipartUploadRequest.builder().bucket(bucket).key(destKey).uploadId(uploadId)
             .multipartUpload(CompletedMultipartUpload.builder().parts(partETags).build());
     if (putOptions.isconditionalPutEnabled()){
       requestBuilder = CompleteMultipartUploadRequest.builder().overrideConfiguration(
-              override ->override.putHeader(IF_NONE_MATCH, "*"));
+              override ->override.putHeader(IF_NONE_MATCH, optionHeaders.get(IF_NONE_MATCH)));
 
     }
 
