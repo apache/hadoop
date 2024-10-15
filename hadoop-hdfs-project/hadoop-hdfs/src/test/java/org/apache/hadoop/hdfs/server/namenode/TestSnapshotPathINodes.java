@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.apache.hadoop.test.MockitoUtil.verifyZeroInteractions;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -41,6 +40,8 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.Mockito;
+
+import static org.apache.hadoop.test.MockitoUtil.verifyZeroInteractions;
 
 /** Test snapshot related operations. */
 public class TestSnapshotPathINodes {

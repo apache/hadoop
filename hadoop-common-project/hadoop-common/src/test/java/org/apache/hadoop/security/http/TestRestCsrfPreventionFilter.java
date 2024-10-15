@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.security.http;
 
-import static org.apache.hadoop.test.MockitoUtil.verifyZeroInteractions;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.verify;
 
@@ -32,6 +31,8 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.junit.Test;
 import org.mockito.Mockito;
+
+import static org.apache.hadoop.test.MockitoUtil.verifyZeroInteractions;
 
 /**
  * This class tests the behavior of the RestCsrfPreventionFilter.

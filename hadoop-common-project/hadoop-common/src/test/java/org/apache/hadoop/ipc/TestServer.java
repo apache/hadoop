@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.ipc;
 
-import static org.apache.hadoop.test.MockitoUtil.verifyZeroInteractions;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
@@ -35,6 +34,8 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.Server.Call;
 import org.junit.Test;
 import org.slf4j.Logger;
+
+import static org.apache.hadoop.test.MockitoUtil.verifyZeroInteractions;
 
 /**
  * This is intended to be a set of unit tests for the 
