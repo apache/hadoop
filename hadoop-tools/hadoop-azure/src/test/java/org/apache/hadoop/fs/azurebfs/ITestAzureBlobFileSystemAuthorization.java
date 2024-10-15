@@ -63,12 +63,12 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
 
   @Override
   public void setup() throws Exception {
-    boolean isHNSEnabled = this.getConfiguration().getBoolean(
+    boolean isHNSEnabled = getConfiguration().getBoolean(
         TestConfigurationKeys.FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, false);
     Assume.assumeTrue(isHNSEnabled);
     loadConfiguredFileSystem();
-    this.getConfiguration().set(FS_AZURE_SAS_TOKEN_PROVIDER_TYPE, TEST_AUTHZ_CLASS);
-    this.getConfiguration().set(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, "SAS");
+    getConfiguration().set(FS_AZURE_SAS_TOKEN_PROVIDER_TYPE, TEST_AUTHZ_CLASS);
+    getConfiguration().set(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SAS.toString());
     super.setup();
   }
 
@@ -79,9 +79,9 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
     final AzureBlobFileSystem testFs = new AzureBlobFileSystem();
     Configuration testConfig = new Configuration(this.getConfiguration().getRawConfiguration());
     testConfig.set(FS_AZURE_SAS_TOKEN_PROVIDER_TYPE, TEST_ERR_AUTHZ_CLASS);
-    testConfig.set(MOCK_SASTOKENPROVIDER_FAIL_INIT, "true");
+    testConfig.setBoolean(MOCK_SASTOKENPROVIDER_FAIL_INIT, true);
     // Setting IS_HNS_ENABLED to avoid the exception thrown by the HNS check.
-    testConfig.set(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, this.getIsNamespaceEnabled(fs) + "");
+    testConfig.setBoolean(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, this.getIsNamespaceEnabled(fs));
 
     intercept(SASTokenProviderException.class,
         ()-> {
@@ -96,9 +96,9 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
     final AzureBlobFileSystem testFs = new AzureBlobFileSystem();
     Configuration testConfig = new Configuration(this.getConfiguration().getRawConfiguration());
     testConfig.set(FS_AZURE_SAS_TOKEN_PROVIDER_TYPE, TEST_ERR_AUTHZ_CLASS);
-    testConfig.set(MOCK_SASTOKENPROVIDER_RETURN_EMPTY_SAS_TOKEN, "true");
+    testConfig.setBoolean(MOCK_SASTOKENPROVIDER_RETURN_EMPTY_SAS_TOKEN, true);
     // Setting IS_HNS_ENABLED to avoid the exception thrown by the HNS check.
-    testConfig.set(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, this.getIsNamespaceEnabled(fs) + "");
+    testConfig.setBoolean(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, this.getIsNamespaceEnabled(fs));
 
     testFs.initialize(fs.getUri(), testConfig);
     intercept(SASTokenProviderException.class,
@@ -114,9 +114,9 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
     final AzureBlobFileSystem testFs = new AzureBlobFileSystem();
     Configuration testConfig = new Configuration(this.getConfiguration().getRawConfiguration());
     testConfig.set(FS_AZURE_SAS_TOKEN_PROVIDER_TYPE, TEST_ERR_AUTHZ_CLASS);
-    testConfig.set(MOCK_SASTOKENPROVIDER_RETURN_EMPTY_SAS_TOKEN, "true");
+    testConfig.setBoolean(MOCK_SASTOKENPROVIDER_RETURN_EMPTY_SAS_TOKEN, true);
     // Setting IS_HNS_ENABLED to avoid the exception thrown by the HNS check.
-    testConfig.set(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, this.getIsNamespaceEnabled(fs) + "");
+    testConfig.setBoolean(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, this.getIsNamespaceEnabled(fs));
 
     testFs.initialize(fs.getUri(), testConfig);
     intercept(SASTokenProviderException.class,

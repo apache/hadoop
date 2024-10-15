@@ -21,6 +21,7 @@ import com.microsoft.azure.storage.CloudStorageAccount;
 import com.microsoft.azure.storage.blob.CloudBlobClient;
 import com.microsoft.azure.storage.blob.CloudBlobContainer;
 
+import org.apache.hadoop.conf.Configuration;
 import org.junit.Assume;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,6 +30,8 @@ import org.apache.hadoop.fs.azure.AzureBlobStorageTestAccount;
 import org.apache.hadoop.fs.azurebfs.AbstractAbfsIntegrationTest;
 import org.apache.hadoop.fs.azurebfs.services.AuthType;
 
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_SCHEME;
+import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_SECURE_SCHEME;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.TEST_CONTAINER_PREFIX;
 
 /**
@@ -82,4 +85,15 @@ public final class AbfsTestUtils extends AbstractAbfsIntegrationTest{
     }
     LOG.info("Deleted {} test containers", count);
   }
+
+    /**
+     * Turn off FS Caching: use if a filesystem with different options from
+     * the default is required.
+     * @param conf configuration to patch
+     */
+    public static void disableFilesystemCaching(Configuration conf) {
+        // Disabling cache to make sure new configs are picked up.
+        conf.setBoolean(String.format("fs.%s.impl.disable.cache", ABFS_SCHEME), true);
+        conf.setBoolean(String.format("fs.%s.impl.disable.cache", ABFS_SECURE_SCHEME), true);
+    }
 }

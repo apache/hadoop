@@ -143,7 +143,7 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
 
   public void testWithDifferentCustomTokenFetchRetry(int numOfRetries) throws Exception {
     AzureBlobFileSystem fs = this.getFileSystem();
-    Configuration config = getEntries(numOfRetries);
+    Configuration config = getCustomAuthConfiguration(numOfRetries);
     try (final AzureBlobFileSystem fs1 =
         (AzureBlobFileSystem) FileSystem.newInstance(fs.getUri(),
         config)) {
@@ -167,7 +167,7 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
 
   @Test
   public void testAuthFailException() throws Exception {
-    Configuration config = getEntries(0);
+    Configuration config = getCustomAuthConfiguration(0);
     final AzureBlobFileSystem fs = getFileSystem(config);
     AbfsRestOperationException e = intercept(AbfsRestOperationException.class, () -> {
       fs.getFileStatus(new Path("/"));
@@ -184,19 +184,23 @@ public class ITestAbfsRestOperationException extends AbstractAbfsIntegrationTest
         .contains("Auth failure: ");
   }
 
-  private Configuration getEntries(final int numOfRetries) {
+  /**
+   * Returns a configuration with a custom token provider configured. {@link RetryTestTokenProvider}
+   * @param numOfRetries Number of retries to be configured for token fetch.
+   * @return Configuration
+   */
+  private Configuration getCustomAuthConfiguration(final int numOfRetries) {
     Configuration config = new Configuration(this.getRawConfiguration());
     String accountName = config.get(FS_AZURE_ABFS_ACCOUNT_NAME);
     // Setup to configure custom token provider.
     config.set(accountProperty(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, accountName), "Custom");
     config.set(accountProperty(FS_AZURE_ACCOUNT_TOKEN_PROVIDER_TYPE_PROPERTY_NAME, accountName),
         RETRY_TEST_TOKEN_PROVIDER);
-    config.set(AZURE_CUSTOM_TOKEN_FETCH_RETRY_COUNT, Integer.toString(
-        numOfRetries));
+    config.setInt(AZURE_CUSTOM_TOKEN_FETCH_RETRY_COUNT, numOfRetries);
     // Stop filesystem creation as it will lead to calls to store.
-    config.set(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION, "false");
-    config.set(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, config.getBoolean(
-        FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, true) + "");
+    config.setBoolean(AZURE_CREATE_REMOTE_FILESYSTEM_DURING_INITIALIZATION, false);
+    config.setBoolean(FS_AZURE_ACCOUNT_IS_HNS_ENABLED, config.getBoolean(
+        FS_AZURE_TEST_NAMESPACE_ENABLED_ACCOUNT, true));
     return config;
   }
 }
