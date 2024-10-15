@@ -1370,7 +1370,7 @@ public class HttpFSFileSystem extends FileSystem
     JSONObject json = (JSONObject) HttpFSUtils.jsonParse(conn);
     Map<String, byte[]> xAttrs = createXAttrMap(
         (JSONArray) json.get(XATTRS_JSON));
-    return xAttrs != null ? xAttrs.get(name) : null;
+    return xAttrs.get(name);
   }
 
   /** Convert xAttrs json to xAttrs map */

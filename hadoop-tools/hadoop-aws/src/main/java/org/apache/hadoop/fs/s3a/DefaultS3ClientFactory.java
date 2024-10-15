@@ -271,8 +271,10 @@ public class DefaultS3ClientFactory extends Configured
    * <li>If endpoint is configured via via fs.s3a.endpoint, set it.
    *     If no region is configured, try to parse region from endpoint. </li>
    * <li> If no region is configured, and it could not be parsed from the endpoint,
-   *     set the default region as US_EAST_2 and enable cross region access. </li>
+   *     set the default region as US_EAST_2</li>
    * <li> If configured region is empty, fallback to SDK resolution chain. </li>
+   * <li> S3 cross region is enabled by default irrespective of region or endpoint
+   *      is set or not.</li>
    * </ol>
    *
    * @param builder S3 client builder.

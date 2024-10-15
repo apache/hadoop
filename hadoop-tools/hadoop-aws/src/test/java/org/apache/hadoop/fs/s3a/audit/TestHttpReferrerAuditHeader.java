@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 
+import org.assertj.core.api.Assertions;
 import software.amazon.awssdk.http.SdkHttpRequest;
 import org.junit.Before;
 import org.junit.Test;
@@ -32,6 +33,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.audit.impl.LoggingAuditor;
+import org.apache.hadoop.fs.s3a.audit.impl.ReferrerExtractor;
 import org.apache.hadoop.fs.store.audit.AuditSpan;
 import org.apache.hadoop.fs.audit.CommonAuditContext;
 import org.apache.hadoop.fs.store.audit.HttpReferrerAuditHeader;
@@ -416,5 +418,34 @@ public class TestHttpReferrerAuditHeader extends AbstractAuditingTest {
     assertThat(maybeStripWrappedQuotes(str))
         .describedAs("Stripped <%s>", str)
         .isEqualTo(ex);
+  }
+
+  /**
+   * Verify that exceptions raised when building referrer headers
+   * do not result in failures, just an empty header.
+   */
+  @Test
+  public void testSpanResilience() throws Throwable {
+    final CommonAuditContext auditContext = CommonAuditContext.currentAuditContext();
+    final String failing = "failing";
+    auditContext.put(failing, () -> {
+      throw new RuntimeException("raised");
+    });
+    try {
+      final HttpReferrerAuditHeader referrer = ReferrerExtractor.getReferrer(auditor, span());
+      Assertions.assertThat(referrer.buildHttpReferrer())
+          .describedAs("referrer header")
+          .isBlank();
+      // repeat
+      LOG.info("second attempt: there should be no second warning below");
+      Assertions.assertThat(referrer.buildHttpReferrer())
+          .describedAs("referrer header 2")
+          .isBlank();
+      referrer.buildHttpReferrer();
+    } finally {
+      // critical to remove this so it doesn't interfere with any other
+      // tests
+      auditContext.remove(failing);
+    }
   }
 }

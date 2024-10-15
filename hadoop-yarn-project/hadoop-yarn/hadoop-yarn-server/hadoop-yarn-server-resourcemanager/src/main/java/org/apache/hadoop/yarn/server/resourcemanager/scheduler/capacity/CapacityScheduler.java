@@ -40,6 +40,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.placement.ApplicationPlacem
 import org.apache.hadoop.yarn.server.resourcemanager.placement.CSMappingPlacementRule;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementFactory;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.PlacementRule;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Marker;
@@ -3374,14 +3375,45 @@ public class CapacityScheduler extends
 
   @Override
   public long checkAndGetApplicationLifetime(String queueName,
-      long lifetimeRequestedByApp) {
-    readLock.lock();
+                                     long lifetimeRequestedByApp, RMAppImpl app) {
+    CSQueue queue;
+
+    writeLock.lock();
     try {
-      CSQueue queue = getQueue(queueName);
-      if (!(queue instanceof AbstractLeafQueue)) {
+      queue = getQueue(queueName);
+
+      // This handles the case where the first submitted app in aqc queue
+      // does not exist, addressing the issue related to YARN-11708.
+      if (queue == null) {
+        queue = getOrCreateQueueFromPlacementContext(app.getApplicationId(),
+            app.getUser(), app.getQueue(), app.getApplicationPlacementContext(), false);
+      }
+
+      if (queue == null) {
+        String message = "Application " + app.getApplicationId()
+              + " submitted by user " + app.getUser();
+        if (isAmbiguous(queueName)) {
+          message = message + " to ambiguous queue: " + queueName
+              + " please use full queue path instead.";
+        } else {
+          message = message + "Application " + app.getApplicationId() +
+              " submitted by user " + app.getUser() + " to unknown queue: " + queueName;
+        }
+        this.rmContext.getDispatcher().getEventHandler().handle(
+            new RMAppEvent(app.getApplicationId(), RMAppEventType.APP_REJECTED,
+                message));
         return lifetimeRequestedByApp;
       }
 
+      if (!(queue instanceof AbstractLeafQueue)) {
+        return lifetimeRequestedByApp;
+      }
+    } finally {
+      writeLock.unlock();
+    }
+
+    readLock.lock();
+    try {
       long defaultApplicationLifetime =
           queue.getDefaultApplicationLifetime();
       long maximumApplicationLifetime =
