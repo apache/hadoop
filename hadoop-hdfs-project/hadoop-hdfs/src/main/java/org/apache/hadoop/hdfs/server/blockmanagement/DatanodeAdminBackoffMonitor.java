@@ -645,22 +645,25 @@ public class DatanodeAdminBackoffMonitor extends DatanodeAdminMonitorBase
         Iterator<BlockInfo> it = s.getBlockIterator();
         while (it.hasNext()) {
           BlockInfo b = it.next();
-          if (!initialScan || dn.isEnteringMaintenance()) {
-            // this is a rescan, so most blocks should be replicated now,
-            // or this node is going into maintenance. On a healthy
-            // cluster using racks or upgrade domain, a node should be
-            // able to go into maintenance without replicating many blocks
-            // so we will check them immediately.
-            if (!isBlockReplicatedOk(dn, b, false, null)) {
-              blockList.put(b, null);
-            }
-          } else {
-            blockList.put(b, null);
-          }
+          blockList.put(b, null);
           numBlocksChecked++;
         }
       } finally {
         namesystem.readUnlock("scanDatanodeStorage");
+      }
+    }
+    if (!initialScan || dn.isEnteringMaintenance()) {
+      // this is a rescan, so most blocks should be replicated now,
+      // or this node is going into maintenance. On a healthy
+      // cluster using racks or upgrade domain, a node should be
+      // able to go into maintenance without replicating many blocks
+      // so we will check them immediately.
+      Iterator<BlockInfo> iterator = blockList.keySet().iterator();
+      while(iterator.hasNext()) {
+        BlockInfo b = iterator.next();
+        if (isBlockReplicatedOk(dn, b, false, null)) {
+          iterator.remove();
+        }
       }
     }
   }
