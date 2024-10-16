@@ -78,6 +78,9 @@ public interface Schedulable {
    */
   Resource getMaxShare();
 
+  /** The ratio of Maximum Resource share that can be assigned to the schedulable. */
+  float getMaxAppShare();
+
   /**
    * Job/queue weight in fair sharing. Weights are only meaningful when
    * compared. A weight of 2.0f has twice the weight of a weight of 1.0f,

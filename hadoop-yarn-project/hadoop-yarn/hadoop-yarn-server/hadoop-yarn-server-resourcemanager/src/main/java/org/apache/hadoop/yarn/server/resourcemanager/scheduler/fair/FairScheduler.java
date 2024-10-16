@@ -183,6 +183,9 @@ public class FairScheduler extends
   private float reservableNodesRatio; // percentage of available nodes
                                       // an app can be reserved on
 
+  // App fair share resource ratio limit enabled or not
+  protected boolean appResourceLimitEnabled;
+
   protected boolean sizeBasedWeight; // Give larger weights to larger jobs
   // Continuous Scheduling enabled or not
   @Deprecated
@@ -418,6 +421,14 @@ public class FairScheduler extends
 
   public double getRackLocalityThreshold() {
     return rackLocalityThreshold;
+  }
+
+  /**
+   * Whether app resource limit is turned on.
+   * @return whether app resource limit is enabled
+   */
+  public boolean isAppResourceEnabled() {
+    return appResourceLimitEnabled;
   }
 
   /**
@@ -1458,6 +1469,7 @@ public class FairScheduler extends
       sizeBasedWeight = this.conf.getSizeBasedWeight();
       usePortForNodeName = this.conf.getUsePortForNodeName();
       reservableNodesRatio = this.conf.getReservableNodes();
+      appResourceLimitEnabled = this.conf.isAppSubmissionLimitEnabled();
 
       updateInterval = this.conf.getUpdateInterval();
       if (updateInterval < 0) {
