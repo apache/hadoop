@@ -2896,6 +2896,15 @@ The switch to turn S3A auditing on or off.
   </description>
 </property>
 
+<property>
+  <name>ipc.connection.maximum.stacked.call</name>
+  <value>0</value>
+  <description>This indicates the maximum number of call that can stacked in
+    one connection of the client. It is used to avoid possible OOMs in Server.
+    This setting should rarely need to be changed. Set to 0 to disable.
+  </description>
+</property>
+
 <!-- Proxy Configuration -->
 
 <property>
