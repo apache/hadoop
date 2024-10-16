@@ -20,6 +20,12 @@
 <configuration>
 
     <property>
+        <name>distcp.record.strategy.impl</name>
+        <value>org.apache.hadoop.tools.mapred.UniformRecordInputFormat</value>
+        <description>Implementation of record input format</description>
+    </property>
+
+    <property>
         <name>distcp.dynamic.strategy.impl</name>
         <value>org.apache.hadoop.tools.mapred.lib.DynamicInputFormat</value>
         <description>Implementation of dynamic input format</description>

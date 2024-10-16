@@ -517,6 +517,20 @@ public class SimpleCopyListing extends CopyListing {
     return copyFilter.shouldCopy(path);
   }
 
+  /**
+   * Provide another option to skip copy of a path, allows for exclusion of files such as
+   * {@link org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter#SUCCEEDED_FILE_NAME}
+   *
+   * shouldCopy(path) and shouldCopy(fileStatus) are mutually exclusive. In other words,
+   * you should use shouldCopy(path) or shouldCopy(fileStatus), but not both.
+   *
+   * @param fileStatus - FileStatus being considered for copy while building the file listing
+   * @return - True if the fileStatus should be considered for copy, false otherwise
+   */
+  protected boolean shouldCopy(CopyListingFileStatus fileStatus){
+    return copyFilter.shouldCopy(fileStatus);
+  }
+
   /** {@inheritDoc} */
   @Override
   protected long getBytesToCopy() {
@@ -662,7 +676,13 @@ public class SimpleCopyListing extends CopyListing {
         DistCpUtils.getRelativePath(sourcePathRoot, fileStatus.getPath()),
         fileStatus.getPath());
 
-    if (!shouldCopy(fileStatus.getPath())) {
+    // check if copyFilter to use shouldCopy(fileStatus) or shouldCopy(path)
+    // if true, use shouldCopy(fileStatus) or else use shouldCopy(path)
+    if(copyFilter.supportFileStatus()){
+      if(!shouldCopy(fileStatus)){
+        return;
+      }
+    }else if (!shouldCopy(fileStatus.getPath())) {
       return;
     }
 

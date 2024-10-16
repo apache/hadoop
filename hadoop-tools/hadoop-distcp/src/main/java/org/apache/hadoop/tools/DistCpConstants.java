@@ -92,7 +92,7 @@ public final class DistCpConstants {
   /* Total bytes to be copied. Updated by copylisting. Unfiltered count */
   public static final String CONF_LABEL_TOTAL_BYTES_TO_BE_COPIED = "mapred.total.bytes.expected";
 
-  /* Total number of paths to copy, includes directories. Unfiltered count */
+  /* Total number of paths to be copied, includes directories. */
   public static final String CONF_LABEL_TOTAL_NUMBER_OF_RECORDS = "mapred.number.of.records";
 
   /* If input is based -f <<source listing>>, file containing the src paths */
@@ -185,7 +185,7 @@ public final class DistCpConstants {
   public static final int SPLIT_RATIO_DEFAULT  = 2;
 
   /**
-   * Constants for NONE file deletion
+   * Constants for NONE file deletion.
    */
   public static final String NONE_PATH_NAME = "/NONE";
   public static final Path NONE_PATH = new Path(NONE_PATH_NAME);
