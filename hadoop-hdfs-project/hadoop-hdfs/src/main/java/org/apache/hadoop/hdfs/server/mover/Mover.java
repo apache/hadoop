@@ -107,6 +107,10 @@ public class Mover {
       return targets.get(uuid, storageType);
     }
 
+    private StorageGroupMap<StorageGroup> getTarget() {
+      return targets;
+    }
+
     private static <G extends StorageGroup> G get(StorageGroupMap<G> map, MLocation ml) {
       return map.get(ml.datanode.getDatanodeUuid(), ml.storageType);
     }
@@ -136,8 +140,8 @@ public class Mover {
         DFSConfigKeys.DFS_MOVER_MOVERTHREADS_KEY,
         DFSConfigKeys.DFS_MOVER_MOVERTHREADS_DEFAULT);
     final int maxConcurrentMovesPerNode = conf.getInt(
-        DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_KEY,
-        DFSConfigKeys.DFS_DATANODE_BALANCE_MAX_NUM_CONCURRENT_MOVES_DEFAULT);
+        DFSConfigKeys.DFS_DATANODE_MOVER_MAX_NUM_CONCURRENT_MOVES_KEY,
+        DFSConfigKeys.DFS_DATANODE_MOVER_MAX_NUM_CONCURRENT_MOVES_DEFAULT);
     final int maxNoMoveInterval = conf.getInt(
         DFSConfigKeys.DFS_MOVER_MAX_NO_MOVE_INTERVAL_KEY,
         DFSConfigKeys.DFS_MOVER_MAX_NO_MOVE_INTERVAL_DEFAULT);
@@ -178,6 +182,7 @@ public class Mover {
         storages.add(source, target);
       }
     }
+    dispatcher.setAllocatorLotSize(storages.getTarget().values().size());
   }
 
   private void initStoragePolicies() throws IOException {
