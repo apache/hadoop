@@ -977,7 +977,8 @@ public class TestReplicationPolicy extends BaseReplicationPolicyTest {
 
     //Even if this node has the most space, because the storage[5] has
     //the lowest it should be chosen in case of block delete.
-    storages[4].setRemainingForTests(100 * 1024 * 1024);
+    dataNodes[5].getStorageInfo(storages[5].getStorageID() + "-extra")
+        .setRemainingForTests(100 * 1024 * 1024);
     storages[5].setRemainingForTests(512 * 1024);
     dataNodes[5].setRemaining(calculateRemaining(dataNodes[5]));
     replicaList.add(storages[5]);
