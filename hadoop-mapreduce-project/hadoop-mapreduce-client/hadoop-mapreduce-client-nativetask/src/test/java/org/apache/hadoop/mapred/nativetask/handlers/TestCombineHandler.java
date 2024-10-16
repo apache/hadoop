@@ -24,8 +24,9 @@ import org.apache.hadoop.mapred.nativetask.Command;
 import org.apache.hadoop.mapred.nativetask.INativeHandler;
 import org.apache.hadoop.mapred.nativetask.buffer.BufferType;
 import org.apache.hadoop.mapred.nativetask.buffer.InputBuffer;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
 import org.mockito.Mockito;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -40,7 +41,7 @@ public class TestCombineHandler {
   private BufferPuller puller;
   private CombinerRunner combinerRunner;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     this.nativeHandler = Mockito.mock(INativeHandler.class);
     this.pusher = Mockito.mock(BufferPusher.class);
@@ -52,7 +53,7 @@ public class TestCombineHandler {
   }
 
   @Test
-  public void testCommandDispatcherSetting() throws IOException {
+  void testCommandDispatcherSetting() throws IOException {
     this.handler = new CombinerHandler(nativeHandler, combinerRunner, puller, pusher);
     Mockito.verify(nativeHandler,
         Mockito.times(1)).setCommandDispatcher(eq(handler));
@@ -61,14 +62,14 @@ public class TestCombineHandler {
   }
 
   @Test
-  public void testCombine() throws IOException, InterruptedException, ClassNotFoundException {
+  void testCombine() throws IOException, InterruptedException, ClassNotFoundException {
     this.handler = new CombinerHandler(nativeHandler, combinerRunner, puller, pusher);
     assertThat(handler.onCall(CombinerHandler.COMBINE, null)).isNull();
     handler.close();
     handler.close();
 
     Mockito.verify(combinerRunner, Mockito.times(1))
-      .combine(eq(puller), eq(pusher));
+        .combine(eq(puller), eq(pusher));
 
     Mockito.verify(pusher, Mockito.times(1)).close();
     Mockito.verify(puller, Mockito.times(1)).close();
@@ -76,7 +77,7 @@ public class TestCombineHandler {
   }
 
   @Test
-  public void testOnCall() throws IOException {
+  void testOnCall() throws IOException {
     this.handler = new CombinerHandler(nativeHandler, combinerRunner, puller, pusher);
     assertThat(handler.onCall(new Command(-1), null)).isNull();
   }
