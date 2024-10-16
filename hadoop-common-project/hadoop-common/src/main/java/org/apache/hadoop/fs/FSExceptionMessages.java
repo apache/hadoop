@@ -20,23 +20,29 @@ package org.apache.hadoop.fs;
 
 /**
  * Standard strings to use in exception messages in filesystems
- * HDFS is used as the reference source of the strings
+ * HDFS is used as the reference source of the strings.
  */
 public class FSExceptionMessages {
 
   /**
-   * The operation failed because the stream is closed: {@value}
+   * The operation failed because the stream is closed: {@value}.
    */
   public static final String STREAM_IS_CLOSED = "Stream is closed!";
 
   /**
-   * Negative offset seek forbidden : {@value}
+   * Negative offset seek forbidden : {@value}.
    */
   public static final String NEGATIVE_SEEK =
-    "Cannot seek to a negative offset";
+      "Cannot seek to a negative offset";
 
   /**
-   * Seeks : {@value}
+   * Negative offset read forbidden : {@value}.
+   */
+  public static final String NEGATIVE_POSITION_READ =
+      "Cannot read from a negative position";
+
+  /**
+   * Seeks : {@value}.
    */
   public static final String CANNOT_SEEK_PAST_EOF =
       "Attempted to seek or read past the end of the file";
