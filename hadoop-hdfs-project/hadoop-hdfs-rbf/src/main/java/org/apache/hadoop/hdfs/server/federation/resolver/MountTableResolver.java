@@ -29,6 +29,7 @@ import static org.apache.hadoop.hdfs.DFSUtil.isParentEntry;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -46,6 +47,7 @@ import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.ArrayList;
 
@@ -383,6 +385,17 @@ public class MountTableResolver
         getTrashRoot() + TRASH_PATTERN, "");
   }
 
+  public static String getTrashCurrentPath(String path)
+      throws IOException {
+    Pattern pattern = Pattern.compile(
+        "^" + getTrashRoot() + TRASH_PATTERN);
+    Matcher matcher = pattern.matcher(path);
+    if (matcher.find()) {
+      return matcher.group();
+    }
+    return "/";
+  }
+
   /**
    * If path is a path related to the trash can,
    * subtract TrashCurrent to return a new path.
@@ -536,6 +549,25 @@ public class MountTableResolver
       String to = path + Character.MAX_VALUE;
       SortedMap<String, MountTable> subMap = this.tree.subMap(from, to);
       return FileSubclusterResolver.getMountPoints(path, subMap.keySet());
+    } finally {
+      readLock.unlock();
+    }
+  }
+
+  @Override
+  public IdentityHashMap<String, String> getMountPointsWithSrc(final String str)
+      throws IOException {
+    verifyMountTable();
+    String path = RouterAdmin.normalizeFileSystemPath(str);
+    if (isTrashPath(path)) {
+      path = subtractTrashCurrentPath(path);
+    }
+    readLock.lock();
+    try {
+      String from = path;
+      String to = path + Character.MAX_VALUE;
+      SortedMap<String, MountTable> subMap = this.tree.subMap(from, to);
+      return FileSubclusterResolver.getMountPointsWithSrc(path, subMap);
     } finally {
       readLock.unlock();
     }
