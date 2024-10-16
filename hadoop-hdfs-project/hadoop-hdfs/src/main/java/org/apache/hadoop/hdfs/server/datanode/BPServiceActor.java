@@ -450,6 +450,8 @@ class BPServiceActor implements Runnable {
       }
       success = true;
     } finally {
+      // Reset fullBlockReportLeaseId to 0 regardless of success or failure.
+      fullBlockReportLeaseId = 0;
       // Log the block report processing stats from Datanode perspective
       long brSendCost = monotonicNow() - brSendStartTime;
       long brCreateCost = brSendStartTime - brCreateStartTime;
@@ -758,7 +760,6 @@ class BPServiceActor implements Runnable {
         }
         if ((fullBlockReportLeaseId != 0) || forceFullBr) {
           cmds = blockReport(fullBlockReportLeaseId);
-          fullBlockReportLeaseId = 0;
         }
         commandProcessingThread.enqueue(cmds);
 
