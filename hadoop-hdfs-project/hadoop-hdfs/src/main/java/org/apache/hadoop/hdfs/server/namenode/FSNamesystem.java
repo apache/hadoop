@@ -5949,6 +5949,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
    */
   void reportBadBlocks(LocatedBlock[] blocks) throws IOException {
     checkOperation(OperationCategory.WRITE);
+    InetAddress remoteIp = Server.getRemoteIp();
     writeLock();
     try {
       checkOperation(OperationCategory.WRITE);
@@ -5958,7 +5959,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         String[] storageIDs = blocks[i].getStorageIDs();
         for (int j = 0; j < nodes.length; j++) {
           NameNode.stateChangeLog.info("*DIR* reportBadBlocks for block: {} on"
-              + " datanode: {}", blk, nodes[j].getXferAddr());
+              + " datanode: {}" + " client: {}", blk, nodes[j].getXferAddr(), remoteIp);
           blockManager.findAndMarkBlockAsCorrupt(blk, nodes[j],
               storageIDs == null ? null: storageIDs[j],
               "client machine reported it");
