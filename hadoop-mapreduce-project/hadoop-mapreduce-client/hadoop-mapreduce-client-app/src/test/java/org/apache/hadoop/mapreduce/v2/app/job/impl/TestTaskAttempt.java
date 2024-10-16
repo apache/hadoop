@@ -88,6 +88,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptEventType;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskEventType;
+import org.apache.hadoop.mapreduce.v2.app.job.event.TaskTAttemptFailedEvent;
 import org.apache.hadoop.mapreduce.v2.app.job.event.TaskTAttemptKilledEvent;
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerRequestEvent;
 import org.apache.hadoop.mapreduce.v2.util.MRBuilderUtils;
@@ -1962,6 +1963,40 @@ public class TestTaskAttempt{
         TaskAttemptState.FAILED,
         taImpl.getState());
     assertFalse("InternalError occurred", eventHandler.internalError);
+  }
+
+  @Test
+  public void testFastFailEnabledWhenFailFinishing() throws Exception {
+    MockEventHandler eventHandler = new MockEventHandler();
+    TaskAttemptImpl taImpl = createTaskAttemptImpl(eventHandler);
+    boolean isFastFail = true;
+
+    taImpl.handle(new TaskAttemptFailEvent(taImpl.getID(), isFastFail));
+
+    TaskEvent taskEvent = eventHandler.lastTaskEvent;
+    Assert.assertTrue("Task event is not an TaskTAttemptFailedEvent event",
+        taskEvent instanceof TaskTAttemptFailedEvent);
+    TaskTAttemptFailedEvent taskTAttemptFailedEvent =
+        (TaskTAttemptFailedEvent) taskEvent;
+    Assert.assertTrue("Fast fail is not true",
+        taskTAttemptFailedEvent.isFastFail());
+  }
+
+  @Test
+  public void testFastFailDisabledWhenFailFinishing() throws Exception {
+    MockEventHandler eventHandler = new MockEventHandler();
+    TaskAttemptImpl taImpl = createTaskAttemptImpl(eventHandler);
+    boolean isFastFail = false;
+
+    taImpl.handle(new TaskAttemptFailEvent(taImpl.getID(), isFastFail));
+
+    TaskEvent taskEvent = eventHandler.lastTaskEvent;
+    Assert.assertTrue("Task event is not an TaskTAttemptFailedEvent event",
+        taskEvent instanceof TaskTAttemptFailedEvent);
+    TaskTAttemptFailedEvent taskTAttemptFailedEvent =
+        (TaskTAttemptFailedEvent) taskEvent;
+    Assert.assertFalse("Fast fail is not false",
+        taskTAttemptFailedEvent.isFastFail());
   }
 
   private void setupTaskAttemptFinishingMonitor(
