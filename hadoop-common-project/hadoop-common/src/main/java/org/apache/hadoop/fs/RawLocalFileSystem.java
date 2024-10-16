@@ -49,6 +49,7 @@ import java.util.StringTokenizer;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 import java.util.function.IntFunction;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -68,6 +69,7 @@ import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
 
+import static org.apache.hadoop.fs.VectoredReadUtils.LOG_BYTE_BUFFER_RELEASED;
 import static org.apache.hadoop.fs.VectoredReadUtils.sortRangeList;
 import static org.apache.hadoop.fs.VectoredReadUtils.validateRangeRequest;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
@@ -319,6 +321,13 @@ public class RawLocalFileSystem extends FileSystem {
     @Override
     public void readVectored(List<? extends FileRange> ranges,
                              IntFunction<ByteBuffer> allocate) throws IOException {
+      readVectored(ranges, allocate, LOG_BYTE_BUFFER_RELEASED);
+    }
+
+    @Override
+    public void readVectored(final List<? extends FileRange> ranges,
+        final IntFunction<ByteBuffer> allocate,
+        final Consumer<ByteBuffer> release) throws IOException {
 
       // Validate, but do not pass in a file length as it may change.
       List<? extends FileRange> sortedRanges = sortRangeList(ranges);
