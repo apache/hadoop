@@ -6315,7 +6315,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     String tokenId = null;
     Token<DelegationTokenIdentifier> token;
     checkOperation(OperationCategory.WRITE);
-    writeLock();
+    // edit log rolling is not thread-safe and must be protected by the
+    // fsn lock. Not updating namespace so read lock is sufficient, delegation
+    // token manager is thread-safe.
+    readLock();
     try {
       checkOperation(OperationCategory.WRITE);
       checkNameNodeSafeMode("Cannot issue delegation token");
@@ -6343,7 +6346,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       getEditLog().logGetDelegationToken(dtId, expiryTime);
       tokenId = dtId.toStringStable();
     } finally {
-      writeUnlock(operationName, getLockReportInfoSupplier(tokenId));
+      readUnlock(operationName, getLockReportInfoSupplier(tokenId));
     }
     getEditLog().logSync();
     logAuditEvent(true, operationName, tokenId);
@@ -6364,7 +6367,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     long expiryTime;
     checkOperation(OperationCategory.WRITE);
     try {
-      writeLock();
+      // edit log rolling is not thread-safe and must be protected by the
+      // fsn lock. Not updating namespace so read lock is sufficient, delegation
+      // token manager is thread-safe.
+      readLock();
       try {
         checkOperation(OperationCategory.WRITE);
 
@@ -6381,7 +6387,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         getEditLog().logRenewDelegationToken(id, expiryTime);
         tokenId = id.toStringStable();
       } finally {
-        writeUnlock(operationName, getLockReportInfoSupplier(tokenId));
+        readUnlock(operationName, getLockReportInfoSupplier(tokenId));
       }
     } catch (AccessControlException ace) {
       final DelegationTokenIdentifier id = DFSUtil.decodeDelegationToken(token);
@@ -6405,7 +6411,10 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     String tokenId = null;
     checkOperation(OperationCategory.WRITE);
     try {
-      writeLock();
+      // edit log rolling is not thread-safe and must be protected by the
+      // fsn lock. Not updating namespace so read lock is sufficient, delegation
+      // token manager is thread-safe.
+      readLock();
       try {
         checkOperation(OperationCategory.WRITE);
         checkNameNodeSafeMode("Cannot cancel delegation token");
@@ -6415,7 +6424,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         getEditLog().logCancelDelegationToken(id);
         tokenId = id.toStringStable();
       } finally {
-        writeUnlock(operationName, getLockReportInfoSupplier(tokenId));
+        readUnlock(operationName, getLockReportInfoSupplier(tokenId));
       }
     } catch (AccessControlException ace) {
       final DelegationTokenIdentifier id = DFSUtil.decodeDelegationToken(token);
