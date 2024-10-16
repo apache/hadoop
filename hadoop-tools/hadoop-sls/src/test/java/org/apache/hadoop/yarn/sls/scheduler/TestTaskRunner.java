@@ -40,7 +40,7 @@ public class TestTaskRunner {
   }
 
   public static class SingleTask extends TaskRunner.Task {
-    public static CountDownLatch latch = new CountDownLatch(1);
+    public static CountDownLatch latch;
     public static boolean first;
 
     public SingleTask(long startTime) {
@@ -69,6 +69,8 @@ public class TestTaskRunner {
 
   @Test
   public void testSingleTask() throws Exception {
+    SingleTask.first = false;
+    SingleTask.latch = new CountDownLatch(1);
     runner.start();
     runner.schedule(new SingleTask(0));
     SingleTask.latch.await(5000, TimeUnit.MILLISECONDS);
@@ -76,7 +78,7 @@ public class TestTaskRunner {
   }
 
   public static class DualTask extends TaskRunner.Task {
-    public static CountDownLatch latch = new CountDownLatch(1);
+    public static CountDownLatch latch;
     public static boolean first;
     public static boolean last;
 
@@ -109,6 +111,9 @@ public class TestTaskRunner {
 
   @Test
   public void testDualTask() throws Exception {
+    DualTask.first = false;
+    DualTask.last = false;
+    DualTask.latch = new CountDownLatch(1);
     runner.start();
     runner.schedule(new DualTask(0, 10, 10));
     DualTask.latch.await(5000, TimeUnit.MILLISECONDS);
@@ -117,7 +122,7 @@ public class TestTaskRunner {
   }
 
   public static class TriTask extends TaskRunner.Task {
-    public static CountDownLatch latch = new CountDownLatch(1);
+    public static CountDownLatch latch;
     public static boolean first;
     public static boolean middle;
     public static boolean last;
@@ -154,6 +159,10 @@ public class TestTaskRunner {
 
   @Test
   public void testTriTask() throws Exception {
+    TriTask.first = false;
+    TriTask.middle = false;
+    TriTask.last = false;
+    TriTask.latch = new CountDownLatch(1);
     runner.start();
     runner.schedule(new TriTask(0, 10, 5));
     TriTask.latch.await(5000, TimeUnit.MILLISECONDS);
@@ -163,7 +172,7 @@ public class TestTaskRunner {
   }
 
   public static class MultiTask extends TaskRunner.Task {
-    public static CountDownLatch latch = new CountDownLatch(1);
+    public static CountDownLatch latch;
     public static boolean first;
     public static int middle;
     public static boolean last;
@@ -197,6 +206,10 @@ public class TestTaskRunner {
 
   @Test
   public void testMultiTask() throws Exception {
+    MultiTask.first = false;
+    MultiTask.middle = 0;
+    MultiTask.last = false;
+    MultiTask.latch = new CountDownLatch(1);
     runner.start();
     runner.schedule(new MultiTask(0, 20, 5));
     MultiTask.latch.await(5000, TimeUnit.MILLISECONDS);
@@ -207,7 +220,7 @@ public class TestTaskRunner {
 
 
   public static class PreStartTask extends TaskRunner.Task {
-    public static CountDownLatch latch = new CountDownLatch(1);
+    public static CountDownLatch latch;
     public static boolean first;
 
     public PreStartTask(long startTime) {
@@ -234,6 +247,8 @@ public class TestTaskRunner {
 
   @Test
   public void testPreStartQueueing() throws Exception {
+    PreStartTask.first = false;
+    PreStartTask.latch = new CountDownLatch(1);
     runner.schedule(new PreStartTask(210));
     Thread.sleep(210);
     runner.start();
