@@ -603,6 +603,21 @@ public class AliyunOSSFileSystem extends FileSystem {
   }
 
   @Override
+  public FSDataInputStream open(Path path) throws IOException {
+    final FileStatus fileStatus = getFileStatus(path);
+    if (fileStatus.isDirectory()) {
+      throw new FileNotFoundException("Can't open " + path +
+              " because it is a directory");
+    }
+
+    return new FSDataInputStream(new AliyunOSSInputStream(getConf(),
+            new SemaphoredDelegatingExecutor(
+                    boundedThreadPool, maxReadAheadPartNumber, true),
+            maxReadAheadPartNumber, store, pathToKey(path), fileStatus.getLen(),
+            statistics));
+  }
+
+  @Override
   public FSDataInputStream open(Path path, int bufferSize) throws IOException {
     final FileStatus fileStatus = getFileStatus(path);
     if (fileStatus.isDirectory()) {
@@ -610,7 +625,7 @@ public class AliyunOSSFileSystem extends FileSystem {
           " because it is a directory");
     }
 
-    return new FSDataInputStream(new AliyunOSSInputStream(getConf(),
+    return new FSDataInputStream(new AliyunOSSInputStream(bufferSize,
         new SemaphoredDelegatingExecutor(
             boundedThreadPool, maxReadAheadPartNumber, true),
         maxReadAheadPartNumber, store, pathToKey(path), fileStatus.getLen(),
