@@ -21,6 +21,7 @@ package org.apache.hadoop.ipc;
 import java.lang.ref.WeakReference;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.AbstractQueue;
@@ -35,6 +36,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.classification.VisibleForTesting;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.ipc.CallQueueManager.CallQueueOverflowException;
 import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
@@ -64,6 +66,7 @@ public class FairCallQueue<E extends Schedulable> extends AbstractQueue<E>
    * is the same.
    */
   private final List<BlockingQueue<E>> queues;
+  public final int priorityLevels;
 
   /* Track available permits for scheduled objects.  All methods that will
    * mutate a subqueue must acquire or release a permit on the semaphore.
@@ -123,6 +126,7 @@ public class FairCallQueue<E extends Schedulable> extends AbstractQueue<E>
           "at least 1");
     }
     int numQueues = priorityLevels;
+    this.priorityLevels = numQueues;
     this.serverFailOverEnabled = serverFailOverEnabled;
     LOG.info("FairCallQueue is in use with " + numQueues +
         " queues with total capacity of " + capacity);
@@ -135,7 +139,7 @@ public class FairCallQueue<E extends Schedulable> extends AbstractQueue<E>
     }
     int residueCapacity = capacity % totalWeights;
     int unitCapacity = capacity / totalWeights;
-    int queueCapacity;
+    int queueCapacity = 0;
     for(int i=0; i < numQueues; i++) {
       queueCapacity = unitCapacity * capacityWeights[i];
       if (i == 0) {
@@ -147,12 +151,59 @@ public class FairCallQueue<E extends Schedulable> extends AbstractQueue<E>
       this.overflowedCalls.add(new AtomicLong(0));
     }
 
-    this.multiplexer = new WeightedRoundRobinMultiplexer(numQueues, ns, conf);
+    String[] reservedUsers = parseReservedUsers(conf, ns);
+    int numReservedQueues = reservedUsers != null ? reservedUsers.length : 0;
+    // Get capacities for each reserved queue. Queue length must be equal to number of reserved users.
+    int[] reservedQueueCapacities = parseReservedQueueCapacities(conf, ns, queueCapacity, numReservedQueues);
+    for (int i = 0; i < numReservedQueues; i++) {
+      this.queues.add(new LinkedBlockingQueue<>(reservedQueueCapacities[i]));
+    }
+    if (numReservedQueues > 0) {
+      LOG.info("FairCallQueueWithReservedUser is in use with additional " + numReservedQueues + " reserved queues. Reserved users: "
+          + String.join(",", reservedUsers) + ". Reserved user capacities: " + Arrays
+          .toString(reservedQueueCapacities));
+    }
+
+    this.multiplexer = new WeightedRoundRobinMultiplexer(numQueues, numReservedQueues, ns, conf);
     // Make this the active source of metrics
     MetricsProxy mp = MetricsProxy.getInstance(ns);
     mp.setDelegate(this);
   }
 
+  private String[] parseReservedUsers(Configuration conf, String ns) {
+    String[] users = conf.getStrings(ns + "." +
+        CommonConfigurationKeys.IPC_CALLQUEUE_RESERVED_USERS_KEY);
+    int reservedUserMax = conf.getInt(ns + "." +
+        CommonConfigurationKeys.IPC_CALLQUEUE_RESERVED_USERS_MAX_KEY, CommonConfigurationKeys.IPC_CALLQUEUE_RESERVED_USERS_MAX_KEY_DEFAULT);
+    if (users != null && users.length > reservedUserMax) {
+      throw new IllegalArgumentException("Number of reserved user exceeds max limit: " +
+          reservedUserMax);
+    }
+    return users;
+  }
+
+  private int[] parseReservedQueueCapacities(Configuration conf, String ns, int capacity,
+      int numReservedQueues) {
+    int[] userCapacity = conf.getInts(ns + "." +
+        CommonConfigurationKeys.IPC_CALLQUEUE_RESERVED_USERS_CAPACITIES_KEY);
+    if (userCapacity.length == 0) {
+      return getDefaultUserCapacity(capacity, numReservedQueues);
+    } else if (userCapacity.length != numReservedQueues) {
+      throw new IllegalArgumentException("Number of reserved user capacity should be " +
+          numReservedQueues + ". But it was: " + userCapacity.length);
+    }
+    return userCapacity;
+  }
+
+
+  private int[] getDefaultUserCapacity(int capacity, int numLevels) {
+    int[] res = new int[numLevels];
+    for (int i = 0; i < numLevels; i++) {
+      res[i] = capacity;
+    }
+    return res;
+  }
+  
   /**
    * Returns an element first non-empty queue equal to the priority returned
    * by the multiplexer or scans from highest to lowest priority queue.
@@ -194,6 +245,13 @@ public class FairCallQueue<E extends Schedulable> extends AbstractQueue<E>
   @Override
   public boolean add(E e) {
     final int priorityLevel = e.getPriorityLevel();
+    // add to dedicated queue and backoff if queue is full
+    if (priorityLevel >= this.priorityLevels) {
+      if (!offerQueue(priorityLevel, e)) {
+        throw CallQueueManager.CallQueueOverflowException.KEEPALIVE;
+      }
+      return true;
+    }
     // try offering to all queues.
     if (!offerQueues(priorityLevel, e, true)) {
 
@@ -215,9 +273,13 @@ public class FairCallQueue<E extends Schedulable> extends AbstractQueue<E>
   @Override
   public void put(E e) throws InterruptedException {
     final int priorityLevel = e.getPriorityLevel();
+    if (priorityLevel >= this.priorityLevels) {
+      putQueue(priorityLevel, e);
+      return;
+    }
     // try offering to all but last queue, put on last.
     if (!offerQueues(priorityLevel, e, false)) {
-      putQueue(queues.size() - 1, e);
+      putQueue(priorityLevels - 1, e);
     }
   }
 
@@ -255,7 +317,7 @@ public class FairCallQueue<E extends Schedulable> extends AbstractQueue<E>
    * @return boolean if added to a queue
    */
   private boolean offerQueues(int priority, E e, boolean includeLast) {
-    int lastPriority = queues.size() - (includeLast ? 1 : 2);
+    int lastPriority = priorityLevels - (includeLast ? 1 : 2);
     for (int i=priority; i <= lastPriority; i++) {
       if (offerQueue(i, e)) {
         return true;
