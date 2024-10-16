@@ -27,6 +27,8 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -85,12 +87,14 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.AutoCloseableLock;
+import org.apache.hadoop.util.Lists;
 import org.apache.hadoop.util.Time;
 import org.apache.log4j.SimpleLayout;
 import org.apache.log4j.WriterAppender;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
+import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
@@ -809,219 +813,221 @@ public class TestDirectoryScanner {
     }
   }
 
+  @Test
+  public void testCalculateSleepTime() {
+    // disabled
+    runCalculateSleepTimeTest(0, 100, 0);
+    runCalculateSleepTimeTest(-2, 100, 0);
+    runCalculateSleepTimeTest(1001, 10000, 0);
+    // below the limit
+    runCalculateSleepTimeTest(100, 99, 899);
+    // equals to the limit
+    runCalculateSleepTimeTest(100, 100, 900);
+    // above the limit
+    runCalculateSleepTimeTest(100, 101, 901);
+    // above 1s
+    runCalculateSleepTimeTest(100, 1001, 1000);
+  }
+
+  public void runCalculateSleepTimeTest(int throttleLimitMsPerSec, int runningTime, long expected) {
+    FsDatasetSpi<?> fds = mock(FsDatasetSpi.class);
+    FsVolumeSpi volumeSpi = mock(FsVolumeImpl.class);
+    Configuration conf = new Configuration(getConfiguration());
+    conf.setInt(
+            DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THROTTLE_LIMIT_MS_PER_SEC_KEY,
+            throttleLimitMsPerSec);
+    scanner = new DirectoryScanner(fds, conf);
+    ReportCompiler compiler = scanner.new ReportCompiler(volumeSpi);
+    assertTrue(compiler.calculateSleepTime(runningTime) == expected);
+  }
+
   /**
    * Test that the timeslice throttle limits the report compiler thread's
-   * execution time correctly. We test by scanning a large block pool and
-   * comparing the time spent waiting to the time spent running.
-   *
-   * The block pool has to be large, or the ratio will be off. The throttle
-   * allows the report compiler thread to finish its current cycle when blocking
-   * it, so the ratio will always be a little lower than expected. The smaller
-   * the block pool, the further off the ratio will be.
+   * execution time correctly. We test by mocking a FsVolumeSpi throttling
+   * every {@link DFSConfigKeys#DFS_DATANODE_DIRECTORYSCAN_THROTTLE_LIMIT_MS_PER_SEC_KEY}
+   * and comparing the time spent waiting to the time spent running.
    *
    * @throws Exception thrown on unexpected failure
    */
   @Test
   public void testThrottling() throws Exception {
+    FsDatasetSpi<?> fds = mock(FsDatasetSpi.class);
     Configuration conf = new Configuration(getConfiguration());
+    bpid = "bp01";
 
-    // We need lots of blocks so the report compiler threads have enough to
-    // keep them busy while we watch them.
-    int blocks = 20000;
-    int maxRetries = 3;
+    FsVolumeSpi volumeSpi = mock(FsVolumeImpl.class);
+    FsVolumeReference reference = mock(FsVolumeReference.class);
+    when(reference.getVolume()).thenReturn(volumeSpi);
+    when(volumeSpi.obtainReference()).thenReturn(reference);
+    when(fds.getFsVolumeReferences()).thenAnswer((Answer<FsVolumeReferences>)
+            invocationOnMock ->
+            new FsVolumeReferences(Lists.newArrayList(volumeSpi, volumeSpi)));
+    when(volumeSpi.getBlockPoolList()).thenReturn(new String[]{bpid});
+    doAnswer(invocationOnMock -> {
+      ReportCompiler compiler = invocationOnMock.getArgument(2, ReportCompiler.class);
+      int throttleLimitMs = conf.getInt(
+              DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THROTTLE_LIMIT_MS_PER_SEC_KEY,
+              0);
+      for (int i = 0; i < 3; i++) {
+        compiler.throttle();
+        // Make sure to throttle next time.
+        Thread.sleep(Math.max(1, throttleLimitMs));
+      }
+      return null;
+    }).when(volumeSpi).compileReport(any(), any(), any());
 
-    cluster = new MiniDFSCluster.Builder(conf).build();
+    float ratio;
+    int blocks = 0;
+
+    conf.setInt(
+            DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THROTTLE_LIMIT_MS_PER_SEC_KEY,
+            100);
+    scanner = new DirectoryScanner(fds, conf);
+    ratio = runThrottleTest(blocks);
+
+    // Waiting should be about 9x running.
+    LOG.info("RATIO: " + ratio);
+    assertTrue("Throttle is too restrictive", ratio <= 10f);
+    assertTrue("Throttle is too permissive" + ratio, ratio >= 7f);
+
+    // Test with a different limit
+    conf.setInt(
+            DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THROTTLE_LIMIT_MS_PER_SEC_KEY,
+            200);
+    scanner = new DirectoryScanner(fds, conf);
+    ratio = runThrottleTest(blocks);
+
+    // Waiting should be about 4x running.
+    LOG.info("RATIO: " + ratio);
+    assertTrue("Throttle is too restrictive", ratio <= 4.5f);
+    assertTrue("Throttle is too permissive", ratio >= 2.75f);
+
+    // Test with more than 1 thread
+    conf.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THREADS_KEY, 3);
+    conf.setInt(
+            DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THROTTLE_LIMIT_MS_PER_SEC_KEY,
+            100);
+    scanner = new DirectoryScanner(fds, conf);
+    ratio = runThrottleTest(blocks);
+
+    // Waiting should be about 9x running.
+    LOG.info("RATIO: " + ratio);
+    assertTrue("Throttle is too restrictive", ratio <= 10f);
+    assertTrue("Throttle is too permissive", ratio >= 7f);
+
+    // Test with no limit
+    scanner = new DirectoryScanner(fds, getConfiguration());
+    scanner.setRetainDiffs(true);
+    scan(blocks, 0, 0, 0, 0, 0);
+    scanner.shutdown();
+    assertFalse(scanner.getRunStatus());
+
+    assertTrue("Throttle appears to be engaged",
+            scanner.timeWaitingMs.get() < 10L);
+    assertTrue("Report complier threads logged no execution time",
+            scanner.timeRunningMs.get() > 0L);
+
+    // Test with a 1ms limit. This also tests whether the scanner can be
+    // shutdown cleanly in mid stride.
+    conf.setInt(
+            DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THROTTLE_LIMIT_MS_PER_SEC_KEY,
+            1);
+    ratio = 0.0f;
+    ScheduledExecutorService interruptor =
+            Executors.newScheduledThreadPool(1);
 
     try {
-      cluster.waitActive();
-      bpid = cluster.getNamesystem().getBlockPoolId();
-      fds = DataNodeTestUtils.getFSDataset(cluster.getDataNodes().get(0));
-      client = cluster.getFileSystem().getClient();
-      conf.setInt(
-          DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THROTTLE_LIMIT_MS_PER_SEC_KEY,
-          100);
-
-      final int maxBlocksPerFile =
-          (int) DFSConfigKeys.DFS_NAMENODE_MAX_BLOCKS_PER_FILE_DEFAULT;
-      int numBlocksToCreate = blocks;
-      while (numBlocksToCreate > 0) {
-        final int toCreate = Math.min(maxBlocksPerFile, numBlocksToCreate);
-        createFile(GenericTestUtils.getMethodName() + numBlocksToCreate,
-            BLOCK_LENGTH * toCreate, false);
-        numBlocksToCreate -= toCreate;
-      }
-
-      float ratio = 0.0f;
-      int retries = maxRetries;
-
-      while ((retries > 0) && ((ratio < 7f) || (ratio > 10f))) {
-        scanner = new DirectoryScanner(fds, conf);
-        ratio = runThrottleTest(blocks);
-        retries -= 1;
-      }
-
-      // Waiting should be about 9x running.
-      LOG.info("RATIO: " + ratio);
-      assertTrue("Throttle is too restrictive", ratio <= 10f);
-      assertTrue("Throttle is too permissive" + ratio, ratio >= 7f);
-
-      // Test with a different limit
-      conf.setInt(
-          DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THROTTLE_LIMIT_MS_PER_SEC_KEY,
-          200);
-      ratio = 0.0f;
-      retries = maxRetries;
-
-      while ((retries > 0) && ((ratio < 2.75f) || (ratio > 4.5f))) {
-        scanner = new DirectoryScanner(fds, conf);
-        ratio = runThrottleTest(blocks);
-        retries -= 1;
-      }
-
-      // Waiting should be about 4x running.
-      LOG.info("RATIO: " + ratio);
-      assertTrue("Throttle is too restrictive", ratio <= 4.5f);
-      assertTrue("Throttle is too permissive", ratio >= 2.75f);
-
-      // Test with more than 1 thread
-      conf.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THREADS_KEY, 3);
-      conf.setInt(
-          DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THROTTLE_LIMIT_MS_PER_SEC_KEY,
-          100);
-      ratio = 0.0f;
-      retries = maxRetries;
-
-      while ((retries > 0) && ((ratio < 7f) || (ratio > 10f))) {
-        scanner = new DirectoryScanner(fds, conf);
-        ratio = runThrottleTest(blocks);
-        retries -= 1;
-      }
-
-      // Waiting should be about 9x running.
-      LOG.info("RATIO: " + ratio);
-      assertTrue("Throttle is too restrictive", ratio <= 10f);
-      assertTrue("Throttle is too permissive", ratio >= 7f);
-
-      // Test with no limit
-      scanner = new DirectoryScanner(fds, getConfiguration());
+      scanner = new DirectoryScanner(fds, conf);
       scanner.setRetainDiffs(true);
-      scan(blocks, 0, 0, 0, 0, 0);
-      scanner.shutdown();
-      assertFalse(scanner.getRunStatus());
 
-      assertTrue("Throttle appears to be engaged",
-          scanner.timeWaitingMs.get() < 10L);
-      assertTrue("Report complier threads logged no execution time",
-          scanner.timeRunningMs.get() > 0L);
+      final AtomicLong nowMs = new AtomicLong();
 
-      // Test with a 1ms limit. This also tests whether the scanner can be
-      // shutdown cleanly in mid stride.
-      conf.setInt(
-          DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THROTTLE_LIMIT_MS_PER_SEC_KEY,
-          1);
-      ratio = 0.0f;
-      retries = maxRetries;
-      ScheduledExecutorService interruptor =
-          Executors.newScheduledThreadPool(maxRetries);
-
-      try {
-        while ((retries > 0) && (ratio < 10)) {
-          scanner = new DirectoryScanner(fds, conf);
-          scanner.setRetainDiffs(true);
-
-          final AtomicLong nowMs = new AtomicLong();
-
-          // Stop the scanner after 2 seconds because otherwise it will take an
-          // eternity to complete it's run
-          interruptor.schedule(new Runnable() {
-            @Override
-            public void run() {
-              nowMs.set(Time.monotonicNow());
-              scanner.shutdown();
-            }
-          }, 2L, TimeUnit.SECONDS);
-
-          scanner.reconcile();
-          assertFalse(scanner.getRunStatus());
-
-          long finalMs = nowMs.get();
-
-          // If the scan didn't complete before the shutdown was run, check
-          // that the shutdown was timely
-          if (finalMs > 0) {
-            LOG.info("Scanner took " + (Time.monotonicNow() - finalMs)
-                + "ms to shutdown");
-            assertTrue("Scanner took too long to shutdown",
-                Time.monotonicNow() - finalMs < 1000L);
-          }
-
-          ratio =
-              (float) scanner.timeWaitingMs.get() / scanner.timeRunningMs.get();
-          retries -= 1;
+      // Stop the scanner after 2 seconds because otherwise it will take an
+      // eternity to complete it's run
+      interruptor.schedule(new Runnable() {
+        @Override
+        public void run() {
+          nowMs.set(Time.monotonicNow());
+          scanner.shutdown();
         }
-      } finally {
-        interruptor.shutdown();
+      }, 2L, TimeUnit.SECONDS);
+
+      scanner.reconcile();
+      assertFalse(scanner.getRunStatus());
+
+      long finalMs = nowMs.get();
+
+      // If the scan didn't complete before the shutdown was run, check
+      // that the shutdown was timely
+      if (finalMs > 0) {
+        LOG.info("Scanner took " + (Time.monotonicNow() - finalMs)
+                + "ms to shutdown");
+        assertTrue("Scanner took too long to shutdown",
+                Time.monotonicNow() - finalMs < 1000L);
       }
 
-      // We just want to test that it waits a lot, but it also runs some
-      LOG.info("RATIO: " + ratio);
-      assertTrue("Throttle is too permissive", ratio > 8);
-      assertTrue("Report complier threads logged no execution time",
-          scanner.timeRunningMs.get() > 0L);
-
-      // Test with a 0 limit, i.e. disabled
-      conf.setInt(
-          DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THROTTLE_LIMIT_MS_PER_SEC_KEY,
-          0);
-      scanner = new DirectoryScanner(fds, conf);
-      scanner.setRetainDiffs(true);
-      scan(blocks, 0, 0, 0, 0, 0);
-      scanner.shutdown();
-      assertFalse(scanner.getRunStatus());
-
-      assertTrue("Throttle appears to be engaged",
-          scanner.timeWaitingMs.get() < 10L);
-      assertTrue("Report complier threads logged no execution time",
-          scanner.timeRunningMs.get() > 0L);
-
-      // Test with a 1000 limit, i.e. disabled
-      conf.setInt(
-          DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THROTTLE_LIMIT_MS_PER_SEC_KEY,
-          1000);
-      scanner = new DirectoryScanner(fds, conf);
-      scanner.setRetainDiffs(true);
-      scan(blocks, 0, 0, 0, 0, 0);
-      scanner.shutdown();
-      assertFalse(scanner.getRunStatus());
-
-      assertTrue("Throttle appears to be engaged",
-          scanner.timeWaitingMs.get() < 10L);
-      assertTrue("Report complier threads logged no execution time",
-          scanner.timeRunningMs.get() > 0L);
-
-      // Test that throttle works from regular start
-      conf.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THREADS_KEY, 1);
-      conf.setInt(
-          DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THROTTLE_LIMIT_MS_PER_SEC_KEY,
-          10);
-      conf.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY, 1);
-      scanner = new DirectoryScanner(fds, conf);
-      scanner.setRetainDiffs(true);
-      scanner.start();
-
-      int count = 50;
-
-      while ((count > 0) && (scanner.timeWaitingMs.get() < 500L)) {
-        Thread.sleep(100L);
-        count -= 1;
-      }
-
-      scanner.shutdown();
-      assertFalse(scanner.getRunStatus());
-      assertTrue("Throttle does not appear to be engaged", count > 0);
+      ratio =
+              (float) scanner.timeWaitingMs.get() / scanner.timeRunningMs.get();
     } finally {
-      cluster.shutdown();
+      interruptor.shutdown();
     }
+
+    // We just want to test that it waits a lot, but it also runs some
+    LOG.info("RATIO: " + ratio);
+    assertTrue("Throttle is too permissive", ratio > 8);
+    assertTrue("Report complier threads logged no execution time",
+            scanner.timeRunningMs.get() > 0L);
+
+    // Test with a 0 limit, i.e. disabled
+    conf.setInt(
+            DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THROTTLE_LIMIT_MS_PER_SEC_KEY,
+            0);
+    scanner = new DirectoryScanner(fds, conf);
+    scanner.setRetainDiffs(true);
+    scan(blocks, 0, 0, 0, 0, 0);
+    scanner.shutdown();
+    assertFalse(scanner.getRunStatus());
+
+    assertTrue("Throttle appears to be engaged",
+            scanner.timeWaitingMs.get() < 10L);
+    assertTrue("Report complier threads logged no execution time",
+            scanner.timeRunningMs.get() > 0L);
+
+    // Test with a 1000 limit, i.e. disabled
+    conf.setInt(
+            DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THROTTLE_LIMIT_MS_PER_SEC_KEY,
+            1000);
+    scanner = new DirectoryScanner(fds, conf);
+    scanner.setRetainDiffs(true);
+    scan(blocks, 0, 0, 0, 0, 0);
+    scanner.shutdown();
+    assertFalse(scanner.getRunStatus());
+
+    assertTrue("Throttle appears to be engaged",
+            scanner.timeWaitingMs.get() < 10L);
+    assertTrue("Report complier threads logged no execution time",
+            scanner.timeRunningMs.get() > 0L);
+
+    // Test that throttle works from regular start
+    conf.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THREADS_KEY, 1);
+    conf.setInt(
+            DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_THROTTLE_LIMIT_MS_PER_SEC_KEY,
+            10);
+    conf.setInt(DFSConfigKeys.DFS_DATANODE_DIRECTORYSCAN_INTERVAL_KEY, 1);
+    scanner = new DirectoryScanner(fds, conf);
+    scanner.setRetainDiffs(true);
+    scanner.start();
+
+    int count = 50;
+
+    while ((count > 0) && (scanner.timeWaitingMs.get() < 500L)) {
+      Thread.sleep(100L);
+      count -= 1;
+    }
+
+    scanner.shutdown();
+    assertFalse(scanner.getRunStatus());
+    assertTrue("Throttle does not appear to be engaged", count > 0);
   }
 
   private float runThrottleTest(int blocks)
