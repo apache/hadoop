@@ -3846,6 +3846,23 @@ The switch to turn S3A auditing on or off.
   </description>
 </property>
 
+<property>
+  <name>ipc.server.observer.stale.rpc.enable</name>
+  <value>true</value>
+  <description>
+     Whether to enable observer stale rpc. If enable when Observer's stateid is always
+    delayed it will thrown ObserverRetryOnActiveException after ipc.server.observer.stable.rpc.interval
+    is reached.
+  </description>
+</property>
+
+<property>
+  <name>ipc.server.observer.stale.rpc.interval</name>
+  <value>15s</value>
+  <description>
+    The interval that observer rpc is marked stale.
+  </description>
+</property>
 
   <!-- YARN registry -->
 
